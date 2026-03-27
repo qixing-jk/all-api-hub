@@ -28,7 +28,7 @@ export default function AutoDetectErrorAlert({
   const handleActionClick = async () => {
     if (onActionClick) {
       onActionClick()
-    } else if (error.type === "unauthorized" && siteUrl) {
+    } else if (error.type === AutoDetectErrorType.UNAUTHORIZED && siteUrl) {
       // 默认行为：打开登录页面
       await openLoginTab(siteUrl)
     } else if (error.type === AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED) {

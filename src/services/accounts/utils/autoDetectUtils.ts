@@ -90,20 +90,17 @@ export function analyzeAutoDetectError(error: any): AutoDetectError {
   const docsUrl = getDocsAutoDetectUrl()
   const currentTabReloadMessage = t("messages:autodetect.currentTabNeedsReload")
 
+  if (errorMessage === currentTabReloadMessage) {
+    return {
+      type: AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED,
+      message: currentTabReloadMessage,
+      actionText: t("accountDialog:actions.reloadCurrentPage"),
+      helpDocUrl: docsUrl,
+    }
+  }
+
   // Iterate known keyword buckets and return the first matching structured error
   for (const [type, keywords] of Object.entries(ERROR_KEYWORDS)) {
-    if (
-      errorMessage === currentTabReloadMessage &&
-      type === "CURRENT_TAB_RELOAD_REQUIRED"
-    ) {
-      return {
-        type: AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED,
-        message: currentTabReloadMessage,
-        actionText: t("accountDialog:actions.reloadCurrentPage"),
-        helpDocUrl: docsUrl,
-      }
-    }
-
     if (keywords.some((k) => msg.includes(k.toLowerCase()))) {
       switch (type) {
         case "TIMEOUT":

@@ -27,6 +27,14 @@ import { getSiteType } from "./detectSiteType"
  */
 const logger = createLogger("AutoDetectService")
 
+const AUTO_DETECT_ERROR_CODES = {
+  CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE:
+    "current_tab_content_script_unavailable",
+} as const
+
+type AutoDetectErrorCode =
+  (typeof AUTO_DETECT_ERROR_CODES)[keyof typeof AUTO_DETECT_ERROR_CODES]
+
 interface AutoDetectResult {
   success: boolean
   data?: {
@@ -37,7 +45,7 @@ interface AutoDetectResult {
     sub2apiAuth?: Sub2ApiAuthConfig
   }
   error?: string
-  errorCode?: "current_tab_content_script_unavailable"
+  errorCode?: AutoDetectErrorCode
 }
 
 interface UserDataResult {
@@ -201,21 +209,7 @@ async function getUserDataViaBackground(
 
     if (!response || !response.success || !response.data) {
       // Fallback: if content script/localStorage fetch fails, attempt API-based fetch
-      const userInfo = await getApiService(siteType).fetchUserInfo({
-        baseUrl: url,
-        auth: {
-          authType: AuthTypeEnum.Cookie,
-        },
-      })
-      if (userInfo) {
-        return {
-          userId: userInfo.id,
-          user: userInfo,
-          siteTypeHint: siteType,
-        }
-      } else {
-        return null
-      }
+      return await getUserDataViaAPI(url, siteType)
     }
 
     return {
@@ -307,19 +301,10 @@ async function getUserDataFromCurrentTab(
     }
 
     // fallback
-    const userInfo = await getApiService(siteType).fetchUserInfo({
-      baseUrl: url,
-      auth: {
-        authType: AuthTypeEnum.Cookie,
-      },
-    })
-    if (userInfo) {
+    const fallbackUserData = await getUserDataViaAPI(url, siteType)
+    if (fallbackUserData) {
       return {
-        userData: {
-          userId: userInfo.id,
-          user: userInfo,
-          siteTypeHint: siteType,
-        },
+        userData: fallbackUserData,
         contentScriptUnavailable,
       }
     }
@@ -355,7 +340,7 @@ async function autoDetectFromCurrentTab(
   if (!result.success && contentScriptUnavailable) {
     return {
       ...result,
-      errorCode: "current_tab_content_script_unavailable",
+      errorCode: AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE,
       error: t("messages:autodetect.currentTabNeedsReload"),
     }
   }
@@ -400,7 +385,7 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
 
           if (
             currentTabResult.errorCode ===
-            "current_tab_content_script_unavailable"
+            AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE
           ) {
             shouldHintCurrentTabReload = true
             currentTabReloadHintResult = currentTabResult
@@ -435,7 +420,8 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
       currentTabReloadHintResult ?? {
         success: false,
         error: t("messages:autodetect.currentTabNeedsReload"),
-        errorCode: "current_tab_content_script_unavailable",
+        errorCode:
+          AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE,
       }
     )
   }
