@@ -32,7 +32,7 @@ import { migrateSortingConfig } from "./sortingConfigMigration"
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 17
+export const CURRENT_PREFERENCES_VERSION = 18
 
 /**
  * Migration function type
@@ -387,6 +387,23 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
       ...prefs,
       language: normalizeAppLanguage(prefs.language) ?? prefs.language,
       preferencesVersion: 17,
+    }
+  },
+
+  // Version 17 -> 18: Reorder sort priorities so USER_SORT_FIELD precedes MANUAL_ORDER
+  18: (prefs: UserPreferences): UserPreferences => {
+    logger.debug(
+      "Migrating preferences from v17 to v18 (sorting priority reorder)",
+    )
+
+    const migratedSortingConfig = migrateSortingConfig(
+      prefs.sortingPriorityConfig,
+    )
+
+    return {
+      ...prefs,
+      sortingPriorityConfig: migratedSortingConfig,
+      preferencesVersion: 18,
     }
   },
 }

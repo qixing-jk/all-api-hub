@@ -45,15 +45,52 @@ describe("sortingConfigMigration", () => {
       expect(result).toBe(false)
     })
 
-    it("returns false when config has all criteria regardless of order", () => {
+    it("returns true when config still uses legacy MANUAL_ORDER before USER_SORT_FIELD priority", () => {
       const config = {
         ...DEFAULT_SORTING_PRIORITY_CONFIG,
-        criteria: DEFAULT_SORTING_PRIORITY_CONFIG.criteria
-          .map((c) => ({ ...c }))
-          .reverse(),
+        criteria: [
+          {
+            id: SortingCriteriaType.DISABLED_ACCOUNT,
+            enabled: true,
+            priority: 0,
+          },
+          {
+            id: SortingCriteriaType.CURRENT_SITE,
+            enabled: true,
+            priority: 1,
+          },
+          {
+            id: SortingCriteriaType.PINNED,
+            enabled: true,
+            priority: 2,
+          },
+          {
+            id: SortingCriteriaType.MANUAL_ORDER,
+            enabled: true,
+            priority: 3,
+          },
+          {
+            id: SortingCriteriaType.USER_SORT_FIELD,
+            enabled: true,
+            priority: 4,
+          },
+          ...DEFAULT_SORTING_PRIORITY_CONFIG.criteria
+            .filter(
+              (c) =>
+                c.id !== SortingCriteriaType.DISABLED_ACCOUNT &&
+                c.id !== SortingCriteriaType.CURRENT_SITE &&
+                c.id !== SortingCriteriaType.PINNED &&
+                c.id !== SortingCriteriaType.MANUAL_ORDER &&
+                c.id !== SortingCriteriaType.USER_SORT_FIELD,
+            )
+            .map((c, index) => ({
+              ...c,
+              priority: index + 5,
+            })),
+        ],
       }
       const result = needsSortingConfigMigration(config)
-      expect(result).toBe(false)
+      expect(result).toBe(true)
     })
   })
 
@@ -83,6 +120,58 @@ describe("sortingConfigMigration", () => {
 
       expect(result).toEqual(config)
       expect(result.lastModified).toBe(originalLastModified)
+    })
+
+    it("moves USER_SORT_FIELD ahead of MANUAL_ORDER for legacy configs", () => {
+      const config = {
+        criteria: [
+          {
+            id: SortingCriteriaType.DISABLED_ACCOUNT,
+            enabled: true,
+            priority: 0,
+          },
+          {
+            id: SortingCriteriaType.CURRENT_SITE,
+            enabled: true,
+            priority: 1,
+          },
+          {
+            id: SortingCriteriaType.PINNED,
+            enabled: true,
+            priority: 2,
+          },
+          {
+            id: SortingCriteriaType.MANUAL_ORDER,
+            enabled: true,
+            priority: 3,
+          },
+          {
+            id: SortingCriteriaType.USER_SORT_FIELD,
+            enabled: true,
+            priority: 4,
+          },
+          ...DEFAULT_SORTING_PRIORITY_CONFIG.criteria
+            .filter(
+              (c) =>
+                c.id !== SortingCriteriaType.DISABLED_ACCOUNT &&
+                c.id !== SortingCriteriaType.CURRENT_SITE &&
+                c.id !== SortingCriteriaType.PINNED &&
+                c.id !== SortingCriteriaType.MANUAL_ORDER &&
+                c.id !== SortingCriteriaType.USER_SORT_FIELD,
+            )
+            .map((c, index) => ({
+              ...c,
+              priority: index + 5,
+            })),
+        ],
+        lastModified: 1000,
+      }
+
+      const result = migrateSortingConfig(config)
+      const ids = result.criteria.map((criterion) => criterion.id)
+
+      expect(ids.indexOf(SortingCriteriaType.USER_SORT_FIELD)).toBe(3)
+      expect(ids.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(4)
     })
 
     it("adds PINNED criterion when missing", () => {
@@ -334,7 +423,7 @@ describe("sortingConfigMigration", () => {
       expect(healthStatus?.enabled).toBe(true)
     })
 
-    it("places DISABLED_ACCOUNT, CURRENT_SITE, PINNED, and MANUAL_ORDER at the top in that order", () => {
+    it("places DISABLED_ACCOUNT, CURRENT_SITE, PINNED, USER_SORT_FIELD, and MANUAL_ORDER at the top in that order", () => {
       const config = {
         criteria: [
           {
@@ -358,7 +447,8 @@ describe("sortingConfigMigration", () => {
       expect(ids.indexOf(SortingCriteriaType.DISABLED_ACCOUNT)).toBe(0)
       expect(ids.indexOf(SortingCriteriaType.CURRENT_SITE)).toBe(1)
       expect(ids.indexOf(SortingCriteriaType.PINNED)).toBe(2)
-      expect(ids.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(3)
+      expect(ids.indexOf(SortingCriteriaType.USER_SORT_FIELD)).toBe(3)
+      expect(ids.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(4)
     })
   })
 })

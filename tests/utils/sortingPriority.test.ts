@@ -90,7 +90,26 @@ describe("createDynamicSortComparator", () => {
       const manualFirst = createDisplaySiteData({ id: "manual-1" })
       const manualSecond = createDisplaySiteData({ id: "manual-2" })
 
-      const config = DEFAULT_SORTING_PRIORITY_CONFIG
+      const config = {
+        ...DEFAULT_SORTING_PRIORITY_CONFIG,
+        criteria: [
+          {
+            id: SortingCriteriaType.PINNED,
+            enabled: true,
+            priority: 0,
+          },
+          {
+            id: SortingCriteriaType.MANUAL_ORDER,
+            enabled: true,
+            priority: 1,
+          },
+          {
+            id: SortingCriteriaType.USER_SORT_FIELD,
+            enabled: true,
+            priority: 2,
+          },
+        ],
+      }
       const pinnedAccountIds = ["pinned-1"]
       const manualOrderIndices = { "manual-2": 0, "manual-1": 1 }
 

@@ -729,6 +729,64 @@ describe("preferencesMigration", () => {
       expect(result).toEqual(prefs)
     })
 
+    it("reorders legacy MANUAL_ORDER priority during v17->v18 migration", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: CURRENT_PREFERENCES_VERSION - 1,
+        sortingPriorityConfig: {
+          lastModified: 1000,
+          criteria: [
+            {
+              id: SortingCriteriaType.DISABLED_ACCOUNT,
+              enabled: true,
+              priority: 0,
+            },
+            {
+              id: SortingCriteriaType.CURRENT_SITE,
+              enabled: true,
+              priority: 1,
+            },
+            {
+              id: SortingCriteriaType.PINNED,
+              enabled: true,
+              priority: 2,
+            },
+            {
+              id: SortingCriteriaType.MANUAL_ORDER,
+              enabled: true,
+              priority: 3,
+            },
+            {
+              id: SortingCriteriaType.USER_SORT_FIELD,
+              enabled: true,
+              priority: 4,
+            },
+            ...DEFAULT_SORTING_PRIORITY_CONFIG.criteria
+              .filter(
+                (criterion) =>
+                  criterion.id !== SortingCriteriaType.DISABLED_ACCOUNT &&
+                  criterion.id !== SortingCriteriaType.CURRENT_SITE &&
+                  criterion.id !== SortingCriteriaType.PINNED &&
+                  criterion.id !== SortingCriteriaType.MANUAL_ORDER &&
+                  criterion.id !== SortingCriteriaType.USER_SORT_FIELD,
+              )
+              .map((criterion, index) => ({
+                ...criterion,
+                priority: index + 5,
+              })),
+          ],
+        },
+      })
+
+      const result = migratePreferences(prefs)
+      const ids = result.sortingPriorityConfig?.criteria.map(
+        (criterion) => criterion.id,
+      )
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(ids?.indexOf(SortingCriteriaType.USER_SORT_FIELD)).toBe(3)
+      expect(ids?.indexOf(SortingCriteriaType.MANUAL_ORDER)).toBe(4)
+    })
+
     it("removes all deprecated fields after full migration", () => {
       const prefs = createV0Preferences({
         // All deprecated fields
