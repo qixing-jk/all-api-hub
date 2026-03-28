@@ -289,6 +289,51 @@
         "title": "明文 API Key"
       }
     },
+    "cch": {
+      "actions": {
+        "export": "导出到 Claude Code Hub",
+        "exporting": "正在导出... ({{completed}}/{{total}})",
+        "verifyConnection": "验证连接"
+      },
+      "description": "批量导出选中的站点和令牌到 Claude Code Hub，创建供应商（Provider）。",
+      "descriptions": {
+        "selectedSites": "已选中站点：{{sites}}，已选中密钥：{{keys}}。"
+      },
+      "fields": {
+        "authToken": "CCH 认证令牌",
+        "baseUrl": "CCH 基础 URL"
+      },
+      "help": {
+        "prerequisitesDescription": "确保已在设置中配置 CCH 凭证，并且在 CCH 上拥有管理员权限。",
+        "prerequisitesTitle": "前置要求"
+      },
+      "labels": {
+        "selectedSites": "已选站点",
+        "selectedTokens": "已选密钥"
+      },
+      "messages": {
+        "connectionCheckFailed": "连接检查失败",
+        "connectionVerified": "CCH 连接已验证",
+        "exportFailed": "导出失败",
+        "exportPartialSuccess": "{{failed}} 个导出失败",
+        "exportSuccess": "成功导出 {{success}}/{{total}} 个",
+        "exportingDescription": "已导出 {{completed}}/{{total}} 个站点...",
+        "exportingTitle": "正在导出到 Claude Code Hub",
+        "loadTokensFailed": "加载令牌失败",
+        "loadingTokens": "正在加载令牌...",
+        "noTokensDescription": "此账户没有令牌，请先创建令牌。",
+        "noTokensTitle": "没有令牌"
+      },
+      "placeholders": {
+        "selectSites": "选择要导出的站点",
+        "selectTokens": "选择密钥"
+      },
+      "title": "导出到 Claude Code Hub",
+      "warning": {
+        "description": "导出将在 CCH 中创建供应商（Provider），请确保拥有管理员权限。",
+        "title": "需要管理员权限"
+      }
+    },
     "tempWindowFallbackReminder": {
       "actions": {
         "neverRemind": "不再提醒",

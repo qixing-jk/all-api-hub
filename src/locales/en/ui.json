@@ -294,6 +294,51 @@
         "title": "Plaintext API keys"
       }
     },
+    "cch": {
+      "actions": {
+        "export": "Export to Claude Code Hub",
+        "exporting": "Exporting... ({{completed}}/{{total}})",
+        "verifyConnection": "Verify Connection"
+      },
+      "description": "Batch export selected sites and tokens to Claude Code Hub as providers.",
+      "descriptions": {
+        "selectedSites": "Selected sites: {{sites}}, selected keys: {{keys}}."
+      },
+      "fields": {
+        "authToken": "CCH Auth Token",
+        "baseUrl": "CCH Base URL"
+      },
+      "help": {
+        "prerequisitesDescription": "Make sure you have configured CCH credentials in settings and have admin permissions on CCH.",
+        "prerequisitesTitle": "Prerequisites"
+      },
+      "labels": {
+        "selectedSites": "Selected sites",
+        "selectedTokens": "Selected tokens"
+      },
+      "messages": {
+        "connectionCheckFailed": "Connection check failed",
+        "connectionVerified": "CCH connection verified",
+        "exportFailed": "Export failed",
+        "exportPartialSuccess": "{{failed}} export(s) failed",
+        "exportSuccess": "Exported {{success}}/{{total}} successfully",
+        "exportingDescription": "Exported {{completed}}/{{total}} sites...",
+        "exportingTitle": "Exporting to Claude Code Hub",
+        "loadTokensFailed": "Failed to load tokens",
+        "loadingTokens": "Loading tokens...",
+        "noTokensDescription": "This account has no tokens. Create a token first.",
+        "noTokensTitle": "No tokens"
+      },
+      "placeholders": {
+        "selectSites": "Select sites to export",
+        "selectTokens": "Select tokens"
+      },
+      "title": "Export to Claude Code Hub",
+      "warning": {
+        "description": "Exporting will create providers in CCH. Make sure you have admin permissions.",
+        "title": "Admin Permissions Required"
+      }
+    },
     "tempWindowFallbackReminder": {
       "actions": {
         "neverRemind": "Never remind",

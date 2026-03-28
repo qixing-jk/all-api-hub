@@ -91,6 +91,8 @@ interface UserPreferencesContextType {
   cliProxyManagementKey: string
   claudeCodeRouterBaseUrl: string
   claudeCodeRouterApiKey: string
+  cchBaseUrl: string
+  cchAuthToken: string
   themeMode: ThemeMode
   loggingConsoleEnabled: boolean
   loggingLevel: LogLevel
@@ -138,6 +140,8 @@ interface UserPreferencesContextType {
   updateCliProxyManagementKey: (key: string) => Promise<boolean>
   updateClaudeCodeRouterBaseUrl: (url: string) => Promise<boolean>
   updateClaudeCodeRouterApiKey: (key: string) => Promise<boolean>
+  updateCCHBaseUrl: (url: string) => Promise<boolean>
+  updateCCHAuthToken: (token: string) => Promise<boolean>
   updateThemeMode: (themeMode: ThemeMode) => Promise<boolean>
   updateLoggingConsoleEnabled: (enabled: boolean) => Promise<boolean>
   updateLoggingLevel: (level: LogLevel) => Promise<boolean>
@@ -175,6 +179,7 @@ interface UserPreferencesContextType {
   resetNewApiModelSyncConfig: () => Promise<boolean>
   resetCliProxyConfig: () => Promise<boolean>
   resetClaudeCodeRouterConfig: () => Promise<boolean>
+  resetCCHConfig: () => Promise<boolean>
   resetAutoCheckinConfig: () => Promise<boolean>
   resetRedemptionAssistConfig: () => Promise<boolean>
   resetWebAiApiCheckConfig: () => Promise<boolean>
@@ -327,6 +332,22 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  const resetCCHConfig = useCallback(async () => {
+    const success = await userPreferences.resetCCHConfig()
+    if (success) {
+      const defaults = DEFAULT_PREFERENCES.cch
+      setPreferences((prev) =>
+        prev
+          ? deepOverride(prev, {
+              cch: defaults,
+              lastUpdated: Date.now(),
+            })
+          : prev,
+      )
+    }
+    return success
+  }, [])
+
   /**
    * Update the CLI proxy base URL and merge it into the preference tree so
    * dependent features read the latest endpoint.
@@ -374,6 +395,28 @@ export const UserPreferencesProvider = ({
   const updateClaudeCodeRouterApiKey = useCallback(async (apiKey: string) => {
     const updates = {
       claudeCodeRouter: { apiKey },
+    }
+    const success = await userPreferences.savePreferences(updates)
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    }
+    return success
+  }, [])
+
+  const updateCCHBaseUrl = useCallback(async (baseUrl: string) => {
+    const updates = {
+      cch: { baseUrl },
+    }
+    const success = await userPreferences.savePreferences(updates)
+    if (success) {
+      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    }
+    return success
+  }, [])
+
+  const updateCCHAuthToken = useCallback(async (authToken: string) => {
+    const updates = {
+      cch: { authToken },
     }
     const success = await userPreferences.savePreferences(updates)
     if (success) {
@@ -1431,6 +1474,8 @@ export const UserPreferencesProvider = ({
     cliProxyManagementKey: preferences?.cliProxy?.managementKey || "",
     claudeCodeRouterBaseUrl: preferences?.claudeCodeRouter?.baseUrl || "",
     claudeCodeRouterApiKey: preferences?.claudeCodeRouter?.apiKey || "",
+    cchBaseUrl: preferences?.cch?.baseUrl || "",
+    cchAuthToken: preferences?.cch?.authToken || "",
     themeMode: preferences?.themeMode || "system",
     loggingConsoleEnabled:
       preferences?.logging?.consoleEnabled ??
@@ -1477,6 +1522,8 @@ export const UserPreferencesProvider = ({
     updateCliProxyManagementKey,
     updateClaudeCodeRouterBaseUrl,
     updateClaudeCodeRouterApiKey,
+    updateCCHBaseUrl,
+    updateCCHAuthToken,
     updateThemeMode,
     updateLoggingConsoleEnabled,
     updateLoggingLevel,
@@ -1498,6 +1545,7 @@ export const UserPreferencesProvider = ({
     resetNewApiModelSyncConfig,
     resetCliProxyConfig,
     resetClaudeCodeRouterConfig,
+    resetCCHConfig,
     resetAutoCheckinConfig,
     resetRedemptionAssistConfig,
     resetWebAiApiCheckConfig,

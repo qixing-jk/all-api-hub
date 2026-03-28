@@ -8,7 +8,7 @@
   "manifest_commands_sidebar_action": {
     "message": "Open All API Hub in sidebar"
   },
-  "manifest_commands_browser_action": {
+  "manifest_commands_action": {
     "message": "Open All API Hub in popup"
   },
   "context_menu_redeem_selection": {

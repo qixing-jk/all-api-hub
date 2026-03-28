@@ -81,6 +81,20 @@
     "title": "CLIProxyAPI Settings",
     "urlDesc": "Set the Management API base URL, e.g. http://localhost:8317/v0/management"
   },
+  "cch": {
+    "actions": {
+      "verifyConnection": "Verify Connection",
+      "viewApiDocs": "View API Docs"
+    },
+    "authTokenDescription": "Bearer token for CCH API access authentication",
+    "authTokenLabel": "Auth Token",
+    "authTokenPlaceholder": "Enter CCH auth token",
+    "baseUrlDescription": "CCH Management API base URL",
+    "baseUrlLabel": "Base URL",
+    "baseUrlPlaceholder": "e.g. https://cch.skydog.cc.cd",
+    "description": "Configure connection to Claude Code Hub (CCH).",
+    "title": "Claude Code Hub Settings"
+  },
   "danger": {
     "resetAllSettings": "Reset All Settings",
     "resetDesc": "Reset all configurations to default values, this operation cannot be undone",
@@ -376,6 +390,7 @@
     "checkinRedeem": "Check-in & Redeem",
     "claudeCodeRouter": "Claude Code Router",
     "cliProxy": "CLIProxyAPI",
+    "cch": "Claude Code Hub",
     "dataBackup": "Data & Backup",
     "general": "General",
     "managedSite": "Managed site",

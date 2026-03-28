@@ -11,6 +11,7 @@
     "editKey": "キーを編集",
     "enable": "有効化",
     "expandAll": "すべて展開",
+    "exportToCCH": "Claude Code Hub にエクスポート",
     "exportToCCSwitch": "CC Switch にエクスポート",
     "exportToKiloCode": "Kilo Code にエクスポート",
     "hideKey": "キーを隠す",
