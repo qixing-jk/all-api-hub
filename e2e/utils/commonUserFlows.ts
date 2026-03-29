@@ -17,6 +17,7 @@ import {
   type AccountStorageConfig,
   type ApiToken,
   type SiteAccount,
+  type SiteBookmark,
 } from "~/types"
 import {
   API_CREDENTIAL_PROFILES_CONFIG_VERSION,
@@ -30,6 +31,7 @@ import { setPlasmoStorageValue } from "./extensionState"
 type StoredAccountOverrides = DeepPartial<SiteAccount>
 
 type StoredApiCredentialProfileOverrides = Partial<ApiCredentialProfile>
+type StoredBookmarkOverrides = Partial<SiteBookmark>
 
 type WaitForExtensionPageParams = {
   extensionId: string
@@ -151,6 +153,46 @@ export async function seedStoredAccounts(
     {
       ...createDefaultAccountStorageConfig(now),
       accounts,
+    },
+    now,
+  )
+
+  await setPlasmoStorageValue(serviceWorker, STORAGE_KEYS.ACCOUNTS, config)
+}
+
+/**
+ * Build the minimal persisted bookmark record needed by popup/options flows.
+ */
+export function createStoredBookmark(
+  overrides: StoredBookmarkOverrides = {},
+): SiteBookmark {
+  const now = Date.now()
+
+  return {
+    id: "e2e-bookmark-1",
+    name: "E2E Bookmark",
+    url: "https://example.com/docs",
+    tagIds: [],
+    notes: "",
+    created_at: now,
+    updated_at: now,
+    ...overrides,
+  }
+}
+
+/**
+ * Persist bookmarks through the shared account-storage payload so options and
+ * popup bookmark views start from a deterministic saved state.
+ */
+export async function seedStoredBookmarks(
+  serviceWorker: Worker,
+  bookmarks: SiteBookmark[],
+) {
+  const now = Date.now()
+  const config: AccountStorageConfig = normalizeAccountStorageConfigForWrite(
+    {
+      ...createDefaultAccountStorageConfig(now),
+      bookmarks,
     },
     now,
   )
@@ -480,6 +522,86 @@ export async function stubNewApiSiteRoutes(
         body: JSON.stringify({
           success: true,
           message: "created",
+        }),
+      })
+      return
+    }
+
+    if (method === "PUT" && url.pathname === "/api/token/") {
+      const payload = request.postDataJSON() as {
+        id?: number
+        name?: string
+        remain_quota?: number
+        unlimited_quota?: boolean
+        expired_time?: number
+        model_limits_enabled?: boolean
+        model_limits?: string
+        allow_ips?: string
+        group?: string
+      }
+
+      const tokenIndex = tokens.findIndex((token) => token.id === payload.id)
+      if (tokenIndex === -1) {
+        await route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: false,
+            message: `Token ${payload.id ?? "unknown"} not found`,
+          }),
+        })
+        return
+      }
+
+      const current = tokens[tokenIndex]
+      tokens[tokenIndex] = {
+        ...current,
+        name: payload.name?.trim() || current.name,
+        remain_quota: payload.remain_quota ?? current.remain_quota,
+        unlimited_quota: payload.unlimited_quota ?? current.unlimited_quota,
+        expired_time: payload.expired_time ?? current.expired_time,
+        model_limits_enabled:
+          payload.model_limits_enabled ?? current.model_limits_enabled,
+        model_limits: payload.model_limits ?? current.model_limits,
+        allow_ips: payload.allow_ips ?? current.allow_ips,
+        group: payload.group?.trim() || current.group,
+      }
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          message: "updated",
+        }),
+      })
+      return
+    }
+
+    if (method === "DELETE" && /^\/api\/token\/\d+$/.test(url.pathname)) {
+      const tokenId = Number(url.pathname.split("/").pop())
+      const tokenIndex = tokens.findIndex((token) => token.id === tokenId)
+
+      if (tokenIndex === -1) {
+        await route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({
+            success: false,
+            message: `Token ${tokenId} not found`,
+          }),
+        })
+        return
+      }
+
+      tokens.splice(tokenIndex, 1)
+
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          message: "deleted",
         }),
       })
       return

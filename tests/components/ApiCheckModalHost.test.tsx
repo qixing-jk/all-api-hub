@@ -13,6 +13,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ApiCheckModalHost } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost"
 import {
+  API_CHECK_MODAL_CLOSED_EVENT,
   API_CHECK_MODAL_HOST_READY_EVENT,
   dispatchOpenApiCheckModal,
   type ApiCheckOpenModalDetail,
@@ -106,6 +107,29 @@ describe("ApiCheckModalHost", () => {
 
     expect(baseUrlInput.value).toBe("")
     expect(apiKeyInput.value).toBe("")
+  })
+
+  it("dispatches a dismissed close event when closed before any fetch or probe result", async () => {
+    const user = userEvent.setup()
+    const closedDetailPromise = new Promise<any>((resolve) => {
+      window.addEventListener(
+        API_CHECK_MODAL_CLOSED_EVENT,
+        (event) => resolve((event as CustomEvent).detail),
+        { once: true },
+      )
+    })
+
+    await openModal()
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.close" }),
+    )
+
+    await expect(closedDetailPromise).resolves.toEqual({
+      pageUrl: "https://example.com",
+      trigger: "contextMenu",
+      reason: "dismissed",
+    })
   })
 
   it("auto-extract fills baseUrl + apiKey from pasted text", async () => {
@@ -218,6 +242,45 @@ describe("ApiCheckModalHost", () => {
 
     expect(
       await within(probeCard).findByText("Unauthorized: [REDACTED]"),
+    ).toBeInTheDocument()
+  })
+
+  it("falls back to the local probe error when the background probe call throws", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return { success: true, modelIds: [] }
+      }
+      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
+        throw new Error("probe transport failed")
+      }
+      return { success: false }
+    })
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-secret-xyz")
+
+    const probeCard = await screen.findByTestId(
+      "api-check-probe-text-generation",
+    )
+
+    await user.click(
+      await screen.findByText("webAiApiCheck:modal.actions.test"),
+    )
+
+    expect(
+      await within(probeCard).findByText(
+        "webAiApiCheck:modal.errors.runProbeFailed",
+      ),
     ).toBeInTheDocument()
   })
 
@@ -361,6 +424,47 @@ describe("ApiCheckModalHost", () => {
     expect(toast.dismiss).toHaveBeenCalledWith("toast-1")
   })
 
+  it("falls back to the local save-profile error when the background call throws", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return { success: true, modelIds: [] }
+      }
+      if (message.action === RuntimeActionIds.ApiCheckSaveProfile) {
+        throw new Error("save exploded")
+      }
+      return { success: false }
+    })
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-secret-xyz")
+
+    const saveButton = await screen.findByRole("button", {
+      name: "webAiApiCheck:modal.actions.saveToProfiles",
+    })
+
+    await waitFor(() => {
+      expect(saveButton).not.toBeDisabled()
+    })
+
+    await user.click(saveButton)
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "webAiApiCheck:modal.errors.saveToProfilesFailed",
+      )
+    })
+  })
+
   it("allows saving credentials while tests are running", async () => {
     const user = userEvent.setup()
 
@@ -459,6 +563,175 @@ describe("ApiCheckModalHost", () => {
         apiKey: "sk-secret-xyz",
         pageUrl: "https://example.com",
       })
+    })
+  })
+
+  it("falls back to the local probe error when background returns no result payload", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return { success: true, modelIds: [] }
+      }
+      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
+        return { success: false }
+      }
+      return { success: false }
+    })
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-secret-xyz")
+
+    const probeCard = await screen.findByTestId(
+      "api-check-probe-text-generation",
+    )
+
+    await user.click(
+      await screen.findByText("webAiApiCheck:modal.actions.test"),
+    )
+
+    expect(
+      await within(probeCard).findByText(
+        "webAiApiCheck:modal.errors.runProbeFailed",
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it("shows validation error instead of fetching models without credentials", async () => {
+    const user = userEvent.setup()
+
+    await openModal()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.actions.fetchModels",
+      }),
+    )
+
+    expect(
+      await screen.findByText("webAiApiCheck:modal.errors.missingBaseUrlOrKey"),
+    ).toBeInTheDocument()
+    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
+  it("falls back to local fetch-models error when background returns no message", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return { success: false }
+      }
+      return { success: false }
+    })
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-secret-xyz")
+
+    expect(
+      await screen.findByText("webAiApiCheck:modal.errors.fetchModelsFailed"),
+    ).toBeInTheDocument()
+  })
+
+  it("falls back to local save-profile error when background returns no message", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return { success: true, modelIds: [] }
+      }
+      if (message.action === RuntimeActionIds.ApiCheckSaveProfile) {
+        return { success: false }
+      }
+      return { success: false }
+    })
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-secret-xyz")
+
+    const saveButton = await screen.findByRole("button", {
+      name: "webAiApiCheck:modal.actions.saveToProfiles",
+    })
+
+    await waitFor(() => {
+      expect(saveButton).not.toBeDisabled()
+    })
+
+    await user.click(saveButton)
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "webAiApiCheck:modal.errors.saveToProfilesFailed",
+      )
+    })
+  })
+
+  it("dispatches a completed close event after model fetch succeeds", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return { success: true, modelIds: ["gpt-4o-mini"] }
+      }
+      return { success: false }
+    })
+
+    const closedDetailPromise = new Promise<any>((resolve) => {
+      window.addEventListener(
+        API_CHECK_MODAL_CLOSED_EVENT,
+        (event) => resolve((event as CustomEvent).detail),
+        { once: true },
+      )
+    })
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-secret-xyz")
+
+    await waitFor(() => {
+      expect(screen.getByTestId("api-check-model-id")).toHaveTextContent(
+        "gpt-4o-mini",
+      )
+    })
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.close" }),
+    )
+
+    await expect(closedDetailPromise).resolves.toEqual({
+      pageUrl: "https://example.com",
+      trigger: "contextMenu",
+      reason: "completed",
     })
   })
 })

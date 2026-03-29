@@ -5,6 +5,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
 import { setupWebAiApiCheckContent } from "~/entrypoints/content/webAiApiCheck"
 import {
+  API_CHECK_MODAL_CLOSED_EVENT,
   dispatchOpenApiCheckModal,
   waitForApiCheckModalHostReady,
 } from "~/entrypoints/content/webAiApiCheck/events"
@@ -208,6 +209,141 @@ describe("setupWebAiApiCheckContent", () => {
 
     expect(sendRuntimeMessage).not.toHaveBeenCalled()
     expect(dispatchOpenApiCheckModal).not.toHaveBeenCalled()
+
+    cleanup()
+  })
+
+  it("opens modal from context-menu listener and removes listener on cleanup", async () => {
+    const addListener = vi.fn()
+    const removeListener = vi.fn()
+    ;(globalThis as any).browser = {
+      runtime: {
+        onMessage: {
+          addListener,
+          removeListener,
+        },
+      },
+    }
+
+    const cleanup = setupWebAiApiCheckContent({ enableDetection: false })
+
+    const listener = addListener.mock.calls[0]?.[0]
+    expect(listener).toEqual(expect.any(Function))
+
+    await listener({
+      action: RuntimeActionIds.ApiCheckContextMenuTrigger,
+      selectionText: "",
+    })
+
+    await waitFor(() =>
+      expect(dispatchOpenApiCheckModal).toHaveBeenCalledWith({
+        sourceText: "",
+        pageUrl: window.location.href,
+        trigger: "contextMenu",
+      }),
+    )
+
+    cleanup()
+
+    expect(removeListener).toHaveBeenCalledWith(listener)
+  })
+
+  it("does not read clipboard when clipboard permission is denied", async () => {
+    vi.useFakeTimers()
+
+    const apiKey = buildApiKey()
+    const readText = vi.fn().mockResolvedValue(
+      buildApiCheckClipboardText({
+        baseUrl: "https://proxy.example.com/api",
+        apiKey,
+      }),
+    )
+
+    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+      success: true,
+      shouldPrompt: true,
+    })
+    vi.mocked(checkPermissionViaMessage).mockResolvedValue(false)
+
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: {
+        readText,
+      },
+    })
+
+    const button = document.createElement("button")
+    button.textContent = "Copy"
+    document.body.appendChild(button)
+
+    const cleanup = setupWebAiApiCheckContent()
+
+    button.dispatchEvent(new MouseEvent("click", { bubbles: true }))
+
+    await vi.advanceTimersByTimeAsync(500)
+
+    expect(checkPermissionViaMessage).toHaveBeenCalledWith({
+      permissions: ["clipboardRead"],
+    })
+    expect(readText).not.toHaveBeenCalled()
+    expect(showApiCheckConfirmToast).not.toHaveBeenCalled()
+    expect(dispatchOpenApiCheckModal).not.toHaveBeenCalled()
+
+    cleanup()
+  })
+
+  it("suppresses repeat auto-detect prompts during modal-close cooldown", async () => {
+    const nowSpy = vi.spyOn(Date, "now")
+    const apiKey = buildApiKey()
+    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+      success: true,
+      shouldPrompt: true,
+    })
+    vi.mocked(showApiCheckConfirmToast).mockResolvedValue(true)
+    nowSpy.mockReturnValue(10_000)
+
+    const cleanup = setupWebAiApiCheckContent()
+
+    document.dispatchEvent(
+      makeClipboardEvent("copy", buildApiCheckClipboardText({ apiKey })),
+    )
+
+    await waitFor(() =>
+      expect(dispatchOpenApiCheckModal).toHaveBeenCalledTimes(1),
+    )
+
+    window.dispatchEvent(
+      new CustomEvent(API_CHECK_MODAL_CLOSED_EVENT, {
+        detail: {
+          pageUrl: window.location.href,
+          trigger: "autoDetect",
+          reason: "dismissed",
+        },
+      }),
+    )
+
+    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+      success: true,
+      shouldPrompt: true,
+    })
+    vi.mocked(showApiCheckConfirmToast).mockResolvedValue(true)
+    nowSpy.mockReturnValue(11_500)
+
+    document.dispatchEvent(
+      makeClipboardEvent(
+        "copy",
+        buildApiCheckClipboardText({
+          baseUrl: "https://proxy.example.com/api",
+          apiKey: buildApiKey(),
+        }),
+      ),
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(sendRuntimeMessage).toHaveBeenCalledTimes(1)
+    expect(showApiCheckConfirmToast).toHaveBeenCalledTimes(1)
+    expect(dispatchOpenApiCheckModal).toHaveBeenCalledTimes(1)
 
     cleanup()
   })

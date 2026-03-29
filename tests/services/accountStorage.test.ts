@@ -986,6 +986,44 @@ describe("accountStorage core behaviors", () => {
     expect(updatedAccount?.checkIn?.enableDetection).toBe(false)
   })
 
+  it("refreshAccount should continue when check-in support detection throws", async () => {
+    const account = createAccount({
+      id: "support-check-fails",
+      site_url: "https://support.example.com",
+      site_type: "one-api",
+      checkIn: {
+        enableDetection: true,
+        autoCheckInEnabled: true,
+        siteStatus: { isCheckedInToday: false },
+      },
+    })
+    seedStorage([account])
+
+    mockFetchSupportCheckIn.mockRejectedValueOnce(new Error("support failed"))
+
+    const result = await accountStorage.refreshAccount(
+      "support-check-fails",
+      true,
+    )
+    const updatedAccount = await accountStorage.getAccountById(
+      "support-check-fails",
+    )
+
+    expect(result).toEqual(
+      expect.objectContaining({
+        refreshed: true,
+      }),
+    )
+    expect(mockRefreshAccountData).toHaveBeenCalledWith(
+      expect.objectContaining({
+        checkIn: expect.objectContaining({
+          enableDetection: true,
+        }),
+      }),
+    )
+    expect(updatedAccount?.health?.status).toBe(SiteHealthStatus.Healthy)
+  })
+
   it("refreshAccount should persist today_income from refreshAccountData", async () => {
     const account = createAccount({
       id: "income-sync",
@@ -1094,6 +1132,71 @@ describe("accountStorage core behaviors", () => {
     expect(updatedAccount?.sub2apiAuth).toEqual({
       refreshToken: "new-refresh",
       tokenExpiresAt: 456,
+    })
+  })
+
+  it("refreshAccount ignores blank auth updates and invalid Sub2API token refresh payloads", async () => {
+    const account = createAccount({
+      id: "sub2api-blank-auth",
+      site_url: "https://sub2.example.com",
+      site_type: "sub2api",
+      account_info: {
+        id: 7,
+        access_token: "old-jwt",
+        username: "old-user",
+        quota: 1_000_000,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+      sub2apiAuth: {
+        refreshToken: "old-refresh",
+        tokenExpiresAt: 123,
+      },
+    })
+    seedStorage([account])
+
+    mockFetchSupportCheckIn.mockResolvedValue(false)
+    mockRefreshAccountData.mockResolvedValueOnce({
+      success: true,
+      data: {
+        quota: 42,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+        checkIn: {
+          enableDetection: false,
+        },
+      },
+      healthStatus: {
+        status: SiteHealthStatus.Healthy,
+        message: "",
+      },
+      authUpdate: {
+        accessToken: "   ",
+        userId: Number.NaN,
+        username: " ",
+        sub2apiAuth: {
+          refreshToken: "   ",
+          tokenExpiresAt: Number.NaN,
+        },
+      },
+    })
+
+    await accountStorage.refreshAccount("sub2api-blank-auth", true)
+
+    const updatedAccount =
+      await accountStorage.getAccountById("sub2api-blank-auth")
+    expect(updatedAccount?.account_info.access_token).toBe("old-jwt")
+    expect(updatedAccount?.account_info.id).toBe(7)
+    expect(updatedAccount?.account_info.username).toBe("old-user")
+    expect(updatedAccount?.sub2apiAuth).toEqual({
+      refreshToken: "old-refresh",
+      tokenExpiresAt: 123,
     })
   })
 
@@ -1789,6 +1892,87 @@ describe("accountStorage bookmarks", () => {
       expect(restored.bookmarks).toEqual([backupBookmark])
       expect(restored.pinnedAccountIds).toEqual(["backup-1", "bookmark-1"])
       expect(restored.orderedAccountIds).toEqual(["bookmark-1", "backup-1"])
+    })
+
+    it("importData sanitizes bookmarks and filters pinned and ordered ids to surviving entries", async () => {
+      const result = await accountStorage.importData({
+        accounts: [createAccount({ id: "imported-1" })],
+        bookmarks: [
+          null as any,
+          {
+            id: "dup",
+            name: " Older ",
+            url: " https://old.example.com ",
+            tagIds: [" t1 ", "t1", 123 as any],
+            notes: 123 as any,
+            created_at: 1,
+            updated_at: 2,
+          },
+          {
+            id: "dup",
+            name: " Newer ",
+            url: " https://new.example.com ",
+            tagIds: ["t2", "t2", "" as any],
+            notes: "note",
+            created_at: 3,
+            updated_at: 4,
+          },
+          {
+            id: "bookmark-2",
+            name: " Bookmark 2 ",
+            url: " https://bookmark2.example.com ",
+            created_at: 5,
+          } as any,
+          {
+            id: "",
+            name: "Missing Id",
+            url: "https://skip.example.com",
+          } as any,
+        ],
+        pinnedAccountIds: ["dup", "imported-1", "missing", "dup"],
+        orderedAccountIds: [
+          "missing",
+          "dup",
+          "imported-1",
+          "bookmark-2",
+          "dup",
+        ],
+      })
+
+      expect(result).toEqual({
+        migratedCount: expect.any(Number),
+      })
+
+      const imported = storageData.get(
+        ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+      ) as AccountStorageConfig
+
+      expect(imported.bookmarks).toEqual([
+        {
+          id: "dup",
+          name: "Newer",
+          url: "https://new.example.com",
+          tagIds: ["t2"],
+          notes: "note",
+          created_at: 3,
+          updated_at: 4,
+        },
+        {
+          id: "bookmark-2",
+          name: "Bookmark 2",
+          url: "https://bookmark2.example.com",
+          tagIds: [],
+          notes: "",
+          created_at: 5,
+          updated_at: 5,
+        },
+      ])
+      expect(imported.pinnedAccountIds).toEqual(["dup", "imported-1"])
+      expect(imported.orderedAccountIds).toEqual([
+        "dup",
+        "imported-1",
+        "bookmark-2",
+      ])
     })
   })
 })

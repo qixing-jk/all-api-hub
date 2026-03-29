@@ -10,6 +10,7 @@ describe("tempWindowPool open/close handlers", () => {
   let onWindowRemovedMock: ReturnType<typeof vi.fn>
   let removeTabOrWindowMock: ReturnType<typeof vi.fn>
   let tabsQueryMock: ReturnType<typeof vi.fn>
+  let windowsGetMock: ReturnType<typeof vi.fn>
   let tempContextMode: "window" | "composite" | "tab"
 
   beforeEach(() => {
@@ -20,6 +21,7 @@ describe("tempWindowPool open/close handlers", () => {
     onWindowRemovedMock = vi.fn(() => () => {})
     removeTabOrWindowMock = vi.fn().mockResolvedValue(undefined)
     tabsQueryMock = vi.fn().mockResolvedValue([{ id: 902 }])
+    windowsGetMock = vi.fn().mockResolvedValue({ id: 901 })
     tempContextMode = "window"
 
     vi.useFakeTimers()
@@ -32,7 +34,7 @@ describe("tempWindowPool open/close handlers", () => {
         query: tabsQueryMock,
       },
       windows: {
-        get: vi.fn(),
+        get: windowsGetMock,
         update: vi.fn().mockResolvedValue(undefined),
       },
     }
@@ -139,6 +141,144 @@ describe("tempWindowPool open/close handlers", () => {
       success: true,
       windowId: 901,
       tabId: 902,
+    })
+  })
+
+  it("reuses the existing composite window for later temp opens", async () => {
+    tempContextMode = "composite"
+    createWindowMock.mockResolvedValueOnce({ id: 901 })
+    createTabMock.mockResolvedValueOnce({ id: 903 })
+
+    const { handleOpenTempWindow } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const firstResponse = vi.fn()
+    await handleOpenTempWindow(
+      {
+        requestId: "req-composite-first",
+        url: "https://example.com/composite/first",
+      },
+      firstResponse,
+    )
+
+    const secondResponse = vi.fn()
+    await handleOpenTempWindow(
+      {
+        requestId: "req-composite-second",
+        url: "https://example.com/composite/second",
+      },
+      secondResponse,
+    )
+
+    expect(createWindowMock).toHaveBeenCalledTimes(1)
+    expect(windowsGetMock).toHaveBeenCalledWith(901)
+    expect(createTabMock).toHaveBeenCalledWith(
+      "https://example.com/composite/second",
+      false,
+      { windowId: 901 },
+    )
+    expect(secondResponse).toHaveBeenCalledWith({
+      success: true,
+      windowId: 901,
+      tabId: 903,
+    })
+  })
+
+  it("recreates the composite window after a stale reuse failure", async () => {
+    tempContextMode = "composite"
+    createWindowMock
+      .mockResolvedValueOnce({ id: 901 })
+      .mockResolvedValueOnce({ id: 905 })
+    createTabMock.mockResolvedValueOnce({})
+    tabsQueryMock
+      .mockResolvedValueOnce([{ id: 902 }])
+      .mockResolvedValueOnce([{ id: 906 }])
+
+    const { handleOpenTempWindow } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const firstResponse = vi.fn()
+    await handleOpenTempWindow(
+      {
+        requestId: "req-composite-initial",
+        url: "https://example.com/composite/initial",
+      },
+      firstResponse,
+    )
+
+    const secondResponse = vi.fn()
+    await handleOpenTempWindow(
+      {
+        requestId: "req-composite-recreated",
+        url: "https://example.com/composite/recreated",
+      },
+      secondResponse,
+    )
+
+    expect(createWindowMock).toHaveBeenCalledTimes(2)
+    expect(removeTabOrWindowMock).toHaveBeenCalledWith(901)
+    expect(secondResponse).toHaveBeenCalledWith({
+      success: true,
+      windowId: 905,
+      tabId: 906,
+    })
+  })
+
+  it("shares an in-flight composite window creation across concurrent opens", async () => {
+    tempContextMode = "composite"
+
+    let resolveWindow!: (value: { id: number }) => void
+    const windowCreated = new Promise<{ id: number }>((resolve) => {
+      resolveWindow = resolve
+    })
+    createWindowMock.mockReturnValueOnce(windowCreated)
+    tabsQueryMock.mockResolvedValueOnce([{ id: 902 }])
+    createTabMock.mockResolvedValueOnce({ id: 903 })
+
+    const { handleOpenTempWindow } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const firstResponse = vi.fn()
+    const secondResponse = vi.fn()
+
+    const firstOpen = handleOpenTempWindow(
+      {
+        requestId: "req-composite-concurrent-1",
+        url: "https://example.com/composite/concurrent-1",
+      },
+      firstResponse,
+    )
+    const secondOpen = handleOpenTempWindow(
+      {
+        requestId: "req-composite-concurrent-2",
+        url: "https://example.com/composite/concurrent-2",
+      },
+      secondResponse,
+    )
+
+    await Promise.resolve()
+    await Promise.resolve()
+    resolveWindow({ id: 901 })
+    await Promise.all([firstOpen, secondOpen])
+
+    expect(createWindowMock).toHaveBeenCalledTimes(1)
+    expect(createTabMock).toHaveBeenCalledWith(
+      "https://example.com/composite/concurrent-2",
+      false,
+      { windowId: 901 },
+    )
+    expect(firstResponse).toHaveBeenCalledWith({
+      success: true,
+      windowId: 901,
+      tabId: 902,
+    })
+    expect(secondResponse).toHaveBeenCalledWith({
+      success: true,
+      windowId: 901,
+      tabId: 903,
     })
   })
 

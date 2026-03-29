@@ -5,6 +5,7 @@ import { defineConfig } from "vitest/config"
 const rootDir = path.dirname(fileURLToPath(import.meta.url))
 const domOnlyTsTests = [
   "tests/entrypoints/content/index.test.ts",
+  "tests/entrypoints/content/redemptionAssist/index.test.ts",
   "tests/entrypoints/content/messageHandlers/utils/capGuard.test.ts",
   "tests/entrypoints/content/messageHandlers/utils/turnstileGuard.test.ts",
   "tests/entrypoints/content/webAiApiCheck/index.test.ts",
@@ -70,10 +71,10 @@ export default defineConfig({
       ],
       // Coverage thresholds (can be adjusted - starting with lower targets)
       thresholds: {
-        statements: 60,
-        branches: 50,
-        functions: 60,
-        lines: 60,
+        statements: 70,
+        branches: 60,
+        functions: 70,
+        lines: 70,
       },
     },
 
