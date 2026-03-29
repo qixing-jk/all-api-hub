@@ -15,6 +15,11 @@ export default defineConfig({
     ? "{{browser}}-mv{{manifestVersion}}-test"
     : "{{browser}}-mv{{manifestVersion}}{{modeSuffix}}",
   modules: ["@wxt-dev/auto-icons", "@wxt-dev/module-react"],
+  dev: {
+    server: {
+      host: "127.0.0.1",
+    },
+  },
   manifest: (env) => {
     const projectPath = getProjectRootPath()
     const description =
@@ -66,8 +71,8 @@ export default defineConfig({
         _execute_sidebar_action: {
           description: "__MSG_manifest_commands_sidebar_action__",
         },
-        _execute_browser_action: {
-          description: "__MSG_manifest_commands_browser_action__",
+        _execute_action: {
+          description: "__MSG_manifest_commands_action__",
         },
       },
     }
@@ -84,6 +89,9 @@ export default defineConfig({
       build: {
         sourcemap: env.mode === "development" ? "inline" : false,
         minify: env.mode !== "development",
+      },
+      server: {
+        host: "127.0.0.1",
       },
     }
   },

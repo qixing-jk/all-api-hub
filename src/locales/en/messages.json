@@ -67,6 +67,20 @@
     "managementApiUnreachable": "Could not reach the CLIProxyAPI Management API. Check the base URL, service status, and browser network access to that address.",
     "updateSuccess": "Successfully updated CLIProxy provider {{name}}"
   },
+  "cch": {
+    "configMissing": "Please configure CCH base URL and auth token in settings first",
+    "connectionFailed": "Failed to connect to CCH",
+    "connectionVerified": "CCH connection verified",
+    "createProviderFailed": "Failed to create provider",
+    "exportFailed": "Failed to export to CCH",
+    "managementApiForbidden": "CCH rejected the request. Check whether the auth token is correct and whether you have admin permissions.",
+    "managementApiHttpError": "CCH API returned an unexpected status code (HTTP {{status}})",
+    "managementApiInvalidKey": "The CCH auth token is invalid. Please verify the token in settings.",
+    "managementApiNotFound": "CCH API was not found. Make sure the base URL is correct.",
+    "managementApiServerError": "CCH API returned a server error (HTTP {{status}})",
+    "managementApiUnreachable": "Could not reach the CCH API. Check the base URL, service status, and browser network access to that address.",
+    "providerCreated": "Provider created successfully"
+  },
   "content": {
     "userInfoNotFound": "User information not found, please ensure you are logged in",
     "waitUserInfoTimeout": "Waiting for user information timeout, please ensure you are logged in"
