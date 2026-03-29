@@ -1,5 +1,21 @@
 # Changelog
 
+## [3.32.0](https://github.com/qixing-jk/all-api-hub/compare/v3.31.0...v3.32.0) (2026-03-29)
+
+
+### Features
+
+* **managed-verification:** add inline quick-config for New API ([#673](https://github.com/qixing-jk/all-api-hub/issues/673)) ([f6b077f](https://github.com/qixing-jk/all-api-hub/commit/f6b077f4846eb10984c55da0720f9f0b2543d93c))
+
+
+### Bug Fixes
+
+* **account-dialog:** keep dialog open during permission flow ([#672](https://github.com/qixing-jk/all-api-hub/issues/672)) ([3b20766](https://github.com/qixing-jk/all-api-hub/commit/3b20766a38c7d87cf7f994bd862f6e70a99da952))
+* **constants:** update Sub2API path configuration ([407d86e](https://github.com/qixing-jk/all-api-hub/commit/407d86e38daafa26d670e788d054176cdbc31aab))
+* improve auto-detect hint when current tab needs reload after extension install/update ([#677](https://github.com/qixing-jk/all-api-hub/issues/677)) ([d2627c5](https://github.com/qixing-jk/all-api-hub/commit/d2627c5cf6f3fa41dd8794d0d864aa7984fff026))
+* **preferences:** reorder sorting criteria to prioritize USER_SORT_FIELD ([#676](https://github.com/qixing-jk/all-api-hub/issues/676)) ([18dbba7](https://github.com/qixing-jk/all-api-hub/commit/18dbba7536631da85380b85f567b5b1ce3b545ca))
+* **ui:** remove redundant cursor-pointer from interactive card variant ([a677b84](https://github.com/qixing-jk/all-api-hub/commit/a677b844f6541f846176ddc2dae49125bfa329d2))
+
 ## [3.31.0](https://github.com/qixing-jk/all-api-hub/compare/v3.30.0...v3.31.0) (2026-03-26)
 
 
