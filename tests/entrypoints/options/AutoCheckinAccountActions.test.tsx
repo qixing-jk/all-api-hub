@@ -214,6 +214,139 @@ describe("AutoCheckin account actions", () => {
     })
   })
 
+  it("opens the provider site from the row action", async () => {
+    const user = userEvent.setup()
+    const browserApi = await import("~/utils/browser/browserApi")
+    const navigation = await import("~/utils/navigation")
+
+    const sendRuntimeMessageSpy = vi
+      .spyOn(browserApi, "sendRuntimeMessage")
+      .mockImplementation(async (message: any) => {
+        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+          return {
+            success: true,
+            data: {
+              perAccount: {
+                alpha: {
+                  accountId: "alpha",
+                  accountName: "Alpha",
+                  status: CHECKIN_RESULT_STATUS.SUCCESS,
+                  timestamp: 1700000000000,
+                  message: "ok",
+                },
+              },
+            },
+          }
+        }
+
+        if (message.action === RuntimeActionIds.AutoCheckinGetAccountInfo) {
+          return {
+            success: true,
+            data: {
+              id: "alpha",
+              name: "Alpha",
+              baseUrl: "https://alpha.example",
+            },
+          }
+        }
+
+        return { success: true }
+      })
+    const openAccountBaseUrlSpy = vi
+      .spyOn(navigation, "openAccountBaseUrl")
+      .mockResolvedValue(undefined as any)
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:execution.actions.openSite",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeMessageSpy).toHaveBeenCalledWith({
+        action: RuntimeActionIds.AutoCheckinGetAccountInfo,
+        accountId: "alpha",
+        includeDisabled: true,
+      })
+    })
+    expect(openAccountBaseUrlSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "alpha",
+        baseUrl: "https://alpha.example",
+      }),
+    )
+  })
+
+  it("shows an error when site opening fails and restores the button state", async () => {
+    const user = userEvent.setup()
+    const browserApi = await import("~/utils/browser/browserApi")
+    const navigation = await import("~/utils/navigation")
+
+    let rejectOpen: ((reason?: unknown) => void) | undefined
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+      async (message: any) => {
+        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+          return {
+            success: true,
+            data: {
+              perAccount: {
+                alpha: {
+                  accountId: "alpha",
+                  accountName: "Alpha",
+                  status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+                  timestamp: 1700000000000,
+                  message: "already checked",
+                },
+              },
+            },
+          }
+        }
+
+        if (message.action === RuntimeActionIds.AutoCheckinGetAccountInfo) {
+          return {
+            success: true,
+            data: {
+              id: "alpha",
+              name: "Alpha",
+              baseUrl: "https://alpha.example",
+            },
+          }
+        }
+
+        return { success: true }
+      },
+    )
+    vi.spyOn(navigation, "openAccountBaseUrl").mockReturnValue(
+      new Promise((_, reject) => {
+        rejectOpen = reject
+      }) as any,
+    )
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    const openButton = await screen.findByRole("button", {
+      name: "autoCheckin:execution.actions.openSite",
+    })
+    await user.click(openButton)
+
+    await waitFor(() => {
+      expect(openButton).toBeDisabled()
+    })
+
+    rejectOpen?.(new Error("popup blocked"))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "autoCheckin:messages.error.openSiteFailed",
+      )
+    })
+    await waitFor(() => {
+      expect(openButton).not.toBeDisabled()
+    })
+  })
+
   it("reports a bulk-open failure when every failed account lookup fails", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")

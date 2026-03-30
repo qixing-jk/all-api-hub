@@ -5,6 +5,7 @@
       "devModeHint": "開發模式：為便於測試，操作按鈕將始終顯示。",
       "openFailedManual": "開啟失敗帳號的手動簽到頁",
       "openManual": "手動簽到",
+      "openSite": "開啟網站",
       "retryAccount": "重新嘗試"
     },
     "debug": {
@@ -69,6 +70,7 @@
       "openFailedManualNone": "沒有可開啟手動簽到頁的失敗帳號。",
       "openFailedManualPartial": "已開啟 {{openedCount}} 個失敗帳號的頁面，另有 {{failedCount}} 個開啟失敗。",
       "openManualFailed": "開啟手動簽到頁面失敗：{{error}}",
+      "openSiteFailed": "開啟網站頁面失敗：{{error}}",
       "retryAlarmTriggerFailed": "觸發重試鬧鐘失敗：{{error}}",
       "retryFailed": "重新嘗試失敗：{{error}}",
       "runFailed": "執行自動簽到失敗：{{error}}",

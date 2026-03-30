@@ -5,6 +5,7 @@
       "devModeHint": "开发模式：为便于测试，操作按钮将始终显示。",
       "openFailedManual": "打开失败账号的手动签到页",
       "openManual": "手动签到",
+      "openSite": "打开网站",
       "retryAccount": "重新尝试"
     },
     "debug": {
@@ -69,6 +70,7 @@
       "openFailedManualNone": "没有可打开手动签到页的失败账号。",
       "openFailedManualPartial": "已打开 {{openedCount}} 个失败账号的页面，另有 {{failedCount}} 个打开失败。",
       "openManualFailed": "打开手动签到页面失败：{{error}}",
+      "openSiteFailed": "打开网站页面失败：{{error}}",
       "retryAlarmTriggerFailed": "触发重试闹钟失败：{{error}}",
       "retryFailed": "重新尝试失败：{{error}}",
       "runFailed": "执行自动签到失败：{{error}}",

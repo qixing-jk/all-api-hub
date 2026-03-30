@@ -5,6 +5,7 @@
       "devModeHint": "開発モード: テスト用にアクションボタンを常に表示します。",
       "openFailedManual": "失敗した手動チェックインを開く",
       "openManual": "手動チェックイン",
+      "openSite": "サイトを開く",
       "retryAccount": "再試行"
     },
     "debug": {
@@ -69,6 +70,7 @@
       "openFailedManualNone": "手動チェックイン可能な失敗アカウントがありません。",
       "openFailedManualPartial": "{{openedCount}} 件の失敗アカウントの手動チェックインページを開きましたが、{{failedCount}} 件は開けませんでした。",
       "openManualFailed": "手動チェックインページを開けませんでした: {{error}}",
+      "openSiteFailed": "サイトページを開けませんでした: {{error}}",
       "retryAlarmTriggerFailed": "再試行アラームの起動に失敗しました: {{error}}",
       "retryFailed": "再試行に失敗しました: {{error}}",
       "runFailed": "自動チェックインの実行に失敗しました: {{error}}",

@@ -3120,7 +3120,34 @@ describe("handleAutoCheckinMessage", () => {
       sendResponse,
     )
 
-    expect(displaySpy).toHaveBeenCalledWith("account-1")
+    expect(displaySpy).toHaveBeenCalledWith("account-1", {
+      includeDisabled: false,
+    })
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: displayData,
+    })
+  })
+
+  it("should allow disabled account info lookup when includeDisabled is true", async () => {
+    const displayData = { id: "disabled-1", name: "Disabled Account" }
+    const displaySpy = vi
+      .spyOn(autoCheckinScheduler as any, "getAccountDisplayData")
+      .mockResolvedValueOnce(displayData)
+    const sendResponse = vi.fn()
+
+    await handleAutoCheckinMessage(
+      {
+        action: RuntimeActionIds.AutoCheckinGetAccountInfo,
+        accountId: "disabled-1",
+        includeDisabled: true,
+      },
+      sendResponse,
+    )
+
+    expect(displaySpy).toHaveBeenCalledWith("disabled-1", {
+      includeDisabled: true,
+    })
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
       data: displayData,
@@ -3144,7 +3171,9 @@ describe("handleAutoCheckinMessage", () => {
       sendResponse,
     )
 
-    expect(displaySpy).toHaveBeenCalledWith("account-1")
+    expect(displaySpy).toHaveBeenCalledWith("account-1", {
+      includeDisabled: false,
+    })
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "lookup failed",
@@ -3984,6 +4013,33 @@ describe("autoCheckinScheduler.getAccountDisplayData", () => {
       autoCheckinScheduler.getAccountDisplayData("disabled-account"),
     ).rejects.toThrow()
     expect(mockedAccountStorage.getDisplayDataById).not.toHaveBeenCalled()
+  })
+
+  it("returns disabled account display data when includeDisabled is enabled", async () => {
+    const account: any = {
+      id: "disabled-account",
+      disabled: true,
+      site_name: "Disabled Site",
+      account_info: { username: "user" },
+    }
+    const displayData = {
+      id: "disabled-account",
+      name: "Disabled Site · user",
+      username: "user",
+      disabled: true,
+    }
+
+    mockedAccountStorage.getAccountById.mockResolvedValueOnce(account)
+    mockedAccountStorage.getDisplayDataById.mockResolvedValueOnce(displayData)
+
+    await expect(
+      autoCheckinScheduler.getAccountDisplayData("disabled-account", {
+        includeDisabled: true,
+      }),
+    ).resolves.toEqual(displayData as any)
+    expect(mockedAccountStorage.getDisplayDataById).toHaveBeenCalledWith(
+      "disabled-account",
+    )
   })
 })
 

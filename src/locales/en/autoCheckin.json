@@ -5,6 +5,7 @@
       "devModeHint": "Dev mode: action buttons are always shown for testing.",
       "openFailedManual": "Open failed manual sign-ins",
       "openManual": "Manual sign-in",
+      "openSite": "Open site",
       "retryAccount": "Retry"
     },
     "debug": {
@@ -69,6 +70,7 @@
       "openFailedManualNone": "No failed accounts are available for manual sign-in.",
       "openFailedManualPartial": "Opened manual sign-in pages for {{openedCount}} failed accounts, but {{failedCount}} failed to open.",
       "openManualFailed": "Failed to open manual sign-in page: {{error}}",
+      "openSiteFailed": "Failed to open site page: {{error}}",
       "retryAlarmTriggerFailed": "Failed to trigger retry alarm: {{error}}",
       "retryFailed": "Retry failed: {{error}}",
       "runFailed": "Failed to run auto check-in: {{error}}",

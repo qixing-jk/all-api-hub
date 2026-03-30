@@ -2340,13 +2340,16 @@ class AutoCheckinScheduler {
   /**
    * Return display data for a specific account (used by UI).
    */
-  async getAccountDisplayData(accountId: string): Promise<DisplaySiteData> {
+  async getAccountDisplayData(
+    accountId: string,
+    options?: { includeDisabled?: boolean },
+  ): Promise<DisplaySiteData> {
     const account = await accountStorage.getAccountById(accountId)
 
     if (!account) {
       throw new Error(t("messages:storage.accountNotFound", { id: accountId }))
     }
-    if (account.disabled === true) {
+    if (account.disabled === true && !options?.includeDisabled) {
       throw new Error(t("messages:storage.accountDisabled", { id: accountId }))
     }
 
@@ -2531,6 +2534,7 @@ export const handleAutoCheckinMessage = async (
         }
         const displayData = await autoCheckinScheduler.getAccountDisplayData(
           request.accountId,
+          { includeDisabled: request.includeDisabled === true },
         )
         sendResponse({ success: true, data: displayData })
         break

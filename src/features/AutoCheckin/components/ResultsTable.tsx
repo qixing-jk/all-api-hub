@@ -28,8 +28,10 @@ interface ResultsTableProps {
   results: CheckinAccountResult[]
   showDevActions?: boolean
   retryingAccountId?: string | null
+  openingSiteAccountId?: string | null
   openingManualAccountId?: string | null
   onRetryAccount?: (accountId: string) => void | Promise<void>
+  onOpenAccountSite?: (accountId: string) => void | Promise<void>
   onOpenManualSignIn?: (accountId: string) => void | Promise<void>
 }
 
@@ -40,8 +42,10 @@ export default function ResultsTable({
   results,
   showDevActions,
   retryingAccountId,
+  openingSiteAccountId,
   openingManualAccountId,
   onRetryAccount,
+  onOpenAccountSite,
   onOpenManualSignIn,
 }: ResultsTableProps) {
   const { t } = useTranslation("autoCheckin")
@@ -246,6 +250,20 @@ export default function ResultsTable({
                             {t("execution.actions.openManual")}
                           </Button>
                         )}
+                      {onOpenAccountSite && (
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          loading={openingSiteAccountId === result.accountId}
+                          disabled={openingSiteAccountId === result.accountId}
+                          onClick={() => onOpenAccountSite(result.accountId)}
+                          leftIcon={
+                            <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
+                          }
+                        >
+                          {t("execution.actions.openSite")}
+                        </Button>
+                      )}
                     </div>
                   </td>
                 </tr>
