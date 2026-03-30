@@ -10,6 +10,17 @@ import {
 
 const originalBrowser = (globalThis as any).browser
 
+const createDeferred = <T>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+
+  return { promise, resolve, reject }
+}
+
 describe("tempWindowPool window fallback", () => {
   let createTabMock: ReturnType<typeof vi.fn>
   let createWindowMock: ReturnType<typeof vi.fn>
@@ -311,6 +322,51 @@ describe("tempWindowPool window fallback", () => {
     expect(removeTabOrWindowMock).toHaveBeenNthCalledWith(2, 304)
   })
 
+  it("continues composite temp-window fetches when minimizing the shared window fails", async () => {
+    tempContextMode = "composite"
+    createWindowMock.mockResolvedValueOnce({ id: 305 })
+    tabsQueryMock.mockResolvedValueOnce([{ id: 306 }])
+    ;(globalThis as any).browser.windows.update.mockRejectedValueOnce(
+      new Error("minimize failed"),
+    )
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com",
+        fetchUrl: "https://example.com/api/composite-minimize-failure",
+        fetchOptions: { method: "GET" },
+        requestId: "req-composite-minimize-failure",
+      },
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect((globalThis as any).browser.windows.update).toHaveBeenCalledWith(
+      305,
+      {
+        state: "minimized",
+      },
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "ok",
+      },
+    })
+
+    await vi.advanceTimersByTimeAsync(2500)
+    expect(removeTabOrWindowMock).toHaveBeenCalledWith(306)
+  })
+
   it("preserves a structured unsupported result for incognito temp contexts", async () => {
     tempContextMode = "window"
     createWindowMock.mockRejectedValueOnce(
@@ -530,6 +586,134 @@ describe("tempWindowPool window fallback", () => {
     })
   })
 
+  it("surfaces unexpected popup-window creation failures in temp fetch flows", async () => {
+    tempContextMode = "window"
+    createWindowMock.mockRejectedValueOnce(
+      new Error("unexpected popup creation failure"),
+    )
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    await handleTempWindowFetch(
+      {
+        originUrl: "https://example.com",
+        fetchUrl: "https://example.com/api/popup-error",
+        fetchOptions: { method: "GET" },
+        requestId: "req-popup-error",
+      },
+      sendResponse,
+    )
+
+    expect(createTabMock).not.toHaveBeenCalled()
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "unexpected popup creation failure",
+      code: undefined,
+    })
+  })
+
+  it("surfaces unexpected composite-window creation failures in temp fetch flows", async () => {
+    tempContextMode = "composite"
+    createWindowMock.mockRejectedValueOnce(
+      new Error("unexpected composite creation failure"),
+    )
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    await handleTempWindowFetch(
+      {
+        originUrl: "https://example.com",
+        fetchUrl: "https://example.com/api/composite-error",
+        fetchOptions: { method: "GET" },
+        requestId: "req-composite-error",
+      },
+      sendResponse,
+    )
+
+    expect(createTabMock).not.toHaveBeenCalled()
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "unexpected composite creation failure",
+      code: undefined,
+    })
+  })
+
+  it("allows a tracked temp fetch to be manually closed while the content request is still in flight", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 493 })
+
+    const deferredFetch = createDeferred<{
+      success: boolean
+      data: {
+        success: boolean
+        message: string
+        data: string
+      }
+    }>()
+
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: { action: string }) => {
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckCloudflareGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentPerformTempWindowFetch:
+            return deferredFetch.promise
+          default:
+            throw new Error(`Unexpected action: ${message.action}`)
+        }
+      },
+    )
+
+    const { handleCloseTempWindow, handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const fetchResponse = vi.fn()
+    const request = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com",
+        fetchUrl: "https://example.com/api/manual-close",
+        fetchOptions: { method: "GET" },
+        requestId: "req-manual-close",
+      },
+      fetchResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+
+    const closeResponse = vi.fn()
+    await handleCloseTempWindow(
+      { requestId: "req-manual-close" },
+      closeResponse,
+    )
+
+    expect(closeResponse).toHaveBeenCalledWith({ success: true })
+
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(removeTabOrWindowMock).toHaveBeenCalledWith(493)
+
+    deferredFetch.reject(new Error("manual close canceled the fetch"))
+    await request
+
+    expect(fetchResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "manual close canceled the fetch",
+      code: undefined,
+    })
+
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+  })
+
   it("rejects invalid temp-window fetch requests before opening any context", async () => {
     const { handleTempWindowFetch } = await import(
       "~/entrypoints/background/tempWindowPool"
@@ -551,6 +735,35 @@ describe("tempWindowPool window fallback", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "messages:background.invalidFetchRequest",
+    })
+  })
+
+  it("rejects invalid turnstile requests before opening any context", async () => {
+    const { handleTempWindowTurnstileFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    await handleTempWindowTurnstileFetch(
+      {
+        originUrl: "https://example.com",
+        pageUrl: "",
+        fetchUrl: "",
+        fetchOptions: { method: "POST" },
+        requestId: "req-invalid-turnstile",
+      },
+      sendResponse,
+    )
+
+    expect(createWindowMock).not.toHaveBeenCalled()
+    expect(createTabMock).not.toHaveBeenCalled()
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "messages:background.invalidFetchRequest",
+      turnstile: {
+        status: "error",
+        hasTurnstile: false,
+      },
     })
   })
 
@@ -667,6 +880,50 @@ describe("tempWindowPool window fallback", () => {
     expect(removeTabOrWindowMock).toHaveBeenCalledWith(510)
   })
 
+  it("returns a safe null auto-detect result when temp-context user data lookup throws", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 514 })
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: { action: string }) => {
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckCloudflareGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentGetUserFromLocalStorage:
+            throw new Error("local-storage unavailable")
+          default:
+            throw new Error(`Unexpected action: ${message.action}`)
+        }
+      },
+    )
+
+    const { handleAutoDetectSite } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleAutoDetectSite(
+      {
+        url: "https://example.com/account",
+        requestId: "req-auto-detect-user-read-error",
+      },
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: null,
+    })
+
+    await vi.advanceTimersByTimeAsync(2100)
+    expect(removeTabOrWindowMock).toHaveBeenCalledWith(514)
+  })
+
   it("returns a failure response when rendered-title content never answers and still cleans up the temp context", async () => {
     tempContextMode = "tab"
     createTabMock.mockResolvedValueOnce({ id: 511 })
@@ -710,6 +967,45 @@ describe("tempWindowPool window fallback", () => {
     await vi.advanceTimersByTimeAsync(2100)
     expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
     expect(removeTabOrWindowMock).toHaveBeenCalledWith(511)
+  })
+
+  it("keeps rendered-title fetches working when popup window minimization fails", async () => {
+    tempContextMode = "window"
+    createWindowMock.mockResolvedValueOnce({ id: 612 })
+    tabsQueryMock.mockResolvedValueOnce([{ id: 613 }])
+    ;(globalThis as any).browser.windows.update.mockRejectedValueOnce(
+      new Error("minimize failed"),
+    )
+
+    const { handleTempWindowGetRenderedTitle } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleTempWindowGetRenderedTitle(
+      {
+        originUrl: "https://example.com/rendered-title-minimize-failure",
+        requestId: "req-rendered-title-minimize-failure",
+      },
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect((globalThis as any).browser.windows.update).toHaveBeenCalledWith(
+      612,
+      {
+        state: "minimized",
+      },
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      title: "Example title",
+    })
+
+    await vi.advanceTimersByTimeAsync(2100)
+    expect(removeTabOrWindowMock).toHaveBeenCalledWith(612)
   })
 
   it("allows manual close while a rendered-title request is still in delayed-release state", async () => {
@@ -885,6 +1181,131 @@ describe("tempWindowPool window fallback", () => {
 
     await vi.advanceTimersByTimeAsync(2100)
     expect(removeTabOrWindowMock).not.toHaveBeenCalled()
+  })
+
+  it("cleans up pooled tab contexts on background suspend without double-closing delayed releases", async () => {
+    tempContextMode = "tab"
+    createTabMock
+      .mockResolvedValueOnce({ id: 615 })
+      .mockResolvedValueOnce({ id: 616 })
+
+    const { cleanupTempContextsOnSuspend, handleTempWindowFetch } =
+      await import("~/entrypoints/background/tempWindowPool")
+
+    const firstResponse = vi.fn()
+    const firstRequest = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com/suspend-one",
+        fetchUrl: "https://example.com/api/suspend-one",
+        fetchOptions: { method: "GET" },
+        requestId: "req-suspend-tab-1",
+      },
+      firstResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await firstRequest
+
+    expect(firstResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "ok",
+      },
+    })
+
+    await cleanupTempContextsOnSuspend()
+
+    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+    expect(removeTabOrWindowMock).toHaveBeenCalledWith(615)
+
+    await vi.advanceTimersByTimeAsync(2500)
+    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+
+    const secondResponse = vi.fn()
+    const secondRequest = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com/suspend-two",
+        fetchUrl: "https://example.com/api/suspend-two",
+        fetchOptions: { method: "GET" },
+        requestId: "req-suspend-tab-2",
+      },
+      secondResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await secondRequest
+
+    expect(createTabMock).toHaveBeenCalledTimes(2)
+    expect(createTabMock).toHaveBeenLastCalledWith(
+      "https://example.com/suspend-two",
+      false,
+    )
+    expect(secondResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "ok",
+      },
+    })
+  })
+
+  it("cleans up pooled popup contexts on background suspend and forces a fresh popup next time", async () => {
+    tempContextMode = "window"
+    createWindowMock
+      .mockResolvedValueOnce({ id: 617 })
+      .mockResolvedValueOnce({ id: 618 })
+    tabsQueryMock
+      .mockResolvedValueOnce([{ id: 619 }])
+      .mockResolvedValueOnce([{ id: 620 }])
+
+    const { cleanupTempContextsOnSuspend, handleTempWindowGetRenderedTitle } =
+      await import("~/entrypoints/background/tempWindowPool")
+
+    const firstResponse = vi.fn()
+    const firstRequest = handleTempWindowGetRenderedTitle(
+      {
+        originUrl: "https://example.com/rendered-title-suspend",
+        requestId: "req-suspend-window-1",
+      },
+      firstResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await firstRequest
+
+    expect(firstResponse).toHaveBeenCalledWith({
+      success: true,
+      title: "Example title",
+    })
+
+    await cleanupTempContextsOnSuspend()
+
+    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+    expect(removeTabOrWindowMock).toHaveBeenCalledWith(617)
+
+    await vi.advanceTimersByTimeAsync(2500)
+    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+
+    const secondResponse = vi.fn()
+    const secondRequest = handleTempWindowGetRenderedTitle(
+      {
+        originUrl: "https://example.com/rendered-title-suspend",
+        requestId: "req-suspend-window-2",
+      },
+      secondResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await secondRequest
+
+    expect(createWindowMock).toHaveBeenCalledTimes(2)
+    expect(secondResponse).toHaveBeenCalledWith({
+      success: true,
+      title: "Example title",
+    })
   })
 
   it("fails fast when the temp tab disappears before the page becomes ready", async () => {
@@ -1207,6 +1628,280 @@ describe("tempWindowPool window fallback", () => {
       "https://example.com/c",
       false,
     )
+  })
+
+  it("defers same-origin cleanup while a reused temp tab is still busy", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 608 })
+
+    const secondFetchDeferred = createDeferred<{
+      success: boolean
+      data: {
+        success: boolean
+        message: string
+        data: string
+      }
+    }>()
+    let fetchAttempt = 0
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: { action: string }) => {
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckCloudflareGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentGetRenderedTitle:
+            return { success: true, title: "Example title" }
+          case RuntimeActionIds.ContentGetUserFromLocalStorage:
+            return {
+              success: true,
+              data: {
+                userId: "user-1",
+                user: "alice",
+                accessToken: "access-token",
+                siteTypeHint: "new-api",
+              },
+            }
+          case RuntimeActionIds.ContentPerformTempWindowFetch:
+            fetchAttempt += 1
+            if (fetchAttempt === 1) {
+              return {
+                success: true,
+                data: {
+                  success: true,
+                  message: "",
+                  data: "first-result",
+                },
+              }
+            }
+
+            return secondFetchDeferred.promise
+          default:
+            throw new Error(`Unexpected action: ${message.action}`)
+        }
+      },
+    )
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const firstResponse = vi.fn()
+    const firstRequest = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com/one",
+        fetchUrl: "https://example.com/api/one",
+        fetchOptions: { method: "GET" },
+        requestId: "req-overlap-1",
+      },
+      firstResponse,
+    )
+    await vi.advanceTimersByTimeAsync(500)
+    await firstRequest
+
+    const secondResponse = vi.fn()
+    const secondRequest = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com/two",
+        fetchUrl: "https://example.com/api/two",
+        fetchOptions: { method: "GET" },
+        requestId: "req-overlap-2",
+      },
+      secondResponse,
+    )
+    await vi.advanceTimersByTimeAsync(1000)
+
+    expect(createTabMock).toHaveBeenCalledTimes(1)
+    expect(fetchAttempt).toBe(2)
+    expect(secondResponse).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(1500)
+    expect(removeTabOrWindowMock).not.toHaveBeenCalled()
+
+    await vi.advanceTimersByTimeAsync(5000)
+    expect(removeTabOrWindowMock).not.toHaveBeenCalled()
+
+    secondFetchDeferred.resolve({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "second-result",
+      },
+    })
+    await secondRequest
+
+    await vi.advanceTimersByTimeAsync(2500)
+    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+    expect(removeTabOrWindowMock).toHaveBeenCalledWith(608)
+    expect(secondResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "second-result",
+      },
+    })
+  })
+
+  it("force-closing one shared temp tab clears the other request mapping and requires a fresh context next time", async () => {
+    tempContextMode = "tab"
+    createTabMock
+      .mockResolvedValueOnce({ id: 650 })
+      .mockResolvedValueOnce({ id: 651 })
+
+    const firstFetchDeferred = createDeferred<{
+      success: boolean
+      data: {
+        success: boolean
+        message: string
+        data: string
+      }
+    }>()
+    const secondFetchDeferred = createDeferred<{
+      success: boolean
+      data: {
+        success: boolean
+        message: string
+        data: string
+      }
+    }>()
+    let fetchAttempt = 0
+    sendMessageMock.mockImplementation(
+      async (_tabId: number, message: { action: string }) => {
+        switch (message.action) {
+          case RuntimeActionIds.ContentShowShieldBypassUi:
+            return undefined
+          case RuntimeActionIds.ContentCheckCapGuard:
+          case RuntimeActionIds.ContentCheckCloudflareGuard:
+            return { success: true, passed: true }
+          case RuntimeActionIds.ContentPerformTempWindowFetch:
+            fetchAttempt += 1
+            if (fetchAttempt === 1) {
+              return firstFetchDeferred.promise
+            }
+
+            if (fetchAttempt === 2) {
+              return secondFetchDeferred.promise
+            }
+
+            if (fetchAttempt === 3) {
+              return {
+                success: true,
+                data: {
+                  success: true,
+                  message: "",
+                  data: `result-${fetchAttempt}`,
+                },
+              }
+            }
+
+            return secondFetchDeferred.promise
+          default:
+            throw new Error(`Unexpected action: ${message.action}`)
+        }
+      },
+    )
+
+    const { handleCloseTempWindow, handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const firstResponse = vi.fn()
+    const firstRequest = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com/force-close-one",
+        fetchUrl: "https://example.com/api/force-close-one",
+        fetchOptions: { method: "GET" },
+        requestId: "req-force-close-1",
+      },
+      firstResponse,
+    )
+    await vi.advanceTimersByTimeAsync(500)
+
+    const secondResponse = vi.fn()
+    const secondRequest = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com/force-close-two",
+        fetchUrl: "https://example.com/api/force-close-two",
+        fetchOptions: { method: "GET" },
+        requestId: "req-force-close-2",
+      },
+      secondResponse,
+    )
+    await vi.advanceTimersByTimeAsync(500)
+
+    expect(createTabMock).toHaveBeenCalledTimes(1)
+    expect(secondResponse).not.toHaveBeenCalled()
+
+    const closeResponse = vi.fn()
+    await handleCloseTempWindow(
+      { requestId: "req-force-close-1" },
+      closeResponse,
+    )
+
+    expect(closeResponse).toHaveBeenCalledWith({ success: true })
+
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+    expect(removeTabOrWindowMock).toHaveBeenCalledWith(650)
+
+    const otherCloseResponse = vi.fn()
+    await handleCloseTempWindow(
+      { requestId: "req-force-close-2" },
+      otherCloseResponse,
+    )
+
+    expect(otherCloseResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "messages:background.windowNotFound",
+    })
+
+    firstFetchDeferred.reject(new Error("shared temp tab was force-closed"))
+    secondFetchDeferred.reject(new Error("shared temp tab was force-closed"))
+    await Promise.all([firstRequest, secondRequest])
+
+    expect(firstResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "shared temp tab was force-closed",
+      code: undefined,
+    })
+    expect(secondResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "shared temp tab was force-closed",
+      code: undefined,
+    })
+
+    await vi.advanceTimersByTimeAsync(2000)
+    expect(removeTabOrWindowMock).toHaveBeenCalledTimes(1)
+
+    const thirdResponse = vi.fn()
+    const thirdRequest = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com/force-close-three",
+        fetchUrl: "https://example.com/api/force-close-three",
+        fetchOptions: { method: "GET" },
+        requestId: "req-force-close-3",
+      },
+      thirdResponse,
+    )
+    await vi.advanceTimersByTimeAsync(500)
+    await thirdRequest
+
+    expect(createTabMock).toHaveBeenCalledTimes(2)
+    expect(createTabMock).toHaveBeenLastCalledWith(
+      "https://example.com/force-close-three",
+      false,
+    )
+    expect(thirdResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "result-3",
+      },
+    })
   })
 
   it("drops a stale pooled context and creates a fresh tab for the next same-origin fetch", async () => {

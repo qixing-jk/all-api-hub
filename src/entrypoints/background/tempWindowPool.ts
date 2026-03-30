@@ -312,7 +312,7 @@ type TempContext = {
   tabId: number
   origin: string
   type: "window" | "tab"
-  busy: boolean
+  activeRequestIds: Set<string>
   lastUsed: number
   releaseTimer?: ReturnType<typeof setTimeout>
 }
@@ -353,9 +353,9 @@ function createRecoverableWindowCreationError(
   reason: WindowCreationFailureReason,
   error?: unknown,
 ): RecoverableWindowCreationError {
+  const message = error == null ? "" : getErrorMessage(error)
   const recoverableError = new Error(
-    getErrorMessage(error) ||
-      t("messages:background.windowCreationUnavailable"),
+    message || t("messages:background.windowCreationUnavailable"),
   ) as RecoverableWindowCreationError
 
   recoverableError.name = "RecoverableWindowCreationError"
@@ -1255,20 +1255,16 @@ async function acquireTempContext(
       throw new Error("Acquired temp context is no longer valid")
     }
 
-    context.busy = true
+    attachRequestToContext(requestId, context)
     context.lastUsed = Date.now()
-    if (context.releaseTimer) {
-      clearTimeout(context.releaseTimer)
-      context.releaseTimer = undefined
-    }
-
-    tempRequestContextMap.set(requestId, context)
+    clearContextReleaseTimer(context)
     logTempWindow("acquireTempContextSuccess", {
       requestId,
       origin,
       contextId: context.id,
       tabId: context.tabId,
       type: context.type,
+      activeRequestCount: context.activeRequestIds.size,
     })
     return context
   })
@@ -1277,7 +1273,7 @@ async function acquireTempContext(
 /**
  * 释放与 requestId 关联的临时上下文：
  * - 支持强制关闭（forceClose）直接销毁窗口/标签页
- * - 否则标记为非 busy，并在空闲一段时间后按池粒度销毁。
+ * - 否则从持有集合中移除 request，仅在最后一个持有者释放后才进入空闲清理/销毁流程。
  */
 async function releaseTempContext(
   requestId: string,
@@ -1303,7 +1299,9 @@ async function releaseTempContext(
     }
 
     await withOriginLock(context.origin, async () => {
-      if (!tempContextById.has(context.id)) {
+      context.activeRequestIds.delete(requestId)
+
+      if (!isTrackedContext(context)) {
         logTempWindow("releaseTempContextAlreadyDestroyed", {
           requestId,
           origin: context.origin,
@@ -1335,11 +1333,23 @@ async function releaseTempContext(
         return
       }
 
-      context.busy = false
+      if (hasActiveRequests(context)) {
+        logTempWindow("releaseTempContextStillInUse", {
+          requestId,
+          origin: context.origin,
+          contextId: context.id,
+          tabId: context.tabId,
+          type: context.type,
+          reason: options.reason ?? null,
+          activeRequestCount: context.activeRequestIds.size,
+        })
+        return
+      }
+
       context.lastUsed = Date.now()
 
       const pool = tempContextsByOrigin.get(context.origin)
-      if (pool && pool.every((ctx) => !ctx.busy)) {
+      if (pool && pool.every(isContextIdle)) {
         logTempWindow("releaseTempContextDestroyOriginPool", {
           requestId,
           origin: context.origin,
@@ -1371,7 +1381,7 @@ async function releaseTempContext(
 
 /**
  * 从指定 origin 的上下文池中获取一个仍然存活的上下文：
- * - 不根据 busy 过滤，依赖 withOriginLock 保证同一 origin 串行
+ * - 不根据 activeRequestIds 过滤，依赖 withOriginLock 保证同一 origin 串行
  * - 对已失效的上下文进行销毁并从池中移除。
  */
 async function getReusableContext(origin: string) {
@@ -1380,10 +1390,10 @@ async function getReusableContext(origin: string) {
     return null
   }
 
-  // 注意：这里不检查 context.busy。
+  // 注意：这里不检查 context.activeRequestIds。
   // 同一 origin 的并发通过 withOriginLock 串行化：
-  // - 后续请求会等待上一个请求释放再进入 acquireTempContext
-  // - 然后复用同一个上下文，而不是在 busy=true 时跳过并创建新的窗口/标签页
+  // - 后续请求会排队进入 acquireTempContext
+  // - 然后复用同一个上下文，而不是因为已有持有者就额外创建新的窗口/标签页
   for (const context of pool) {
     if (await isContextAlive(context)) {
       return context
@@ -1699,7 +1709,7 @@ async function createTempContextInstance(
       tabId,
       origin,
       type,
-      busy: false,
+      activeRequestIds: new Set<string>(),
       lastUsed: Date.now(),
     }
   } catch (error) {
@@ -1934,12 +1944,55 @@ function registerContext(origin: string, context: TempContext) {
 }
 
 /**
+ * Attach a request to the tracked temp context and move the ownership record if
+ * the request was previously bound elsewhere.
+ */
+function attachRequestToContext(requestId: string, context: TempContext) {
+  const previousContext = tempRequestContextMap.get(requestId)
+  if (previousContext && previousContext !== context) {
+    previousContext.activeRequestIds.delete(requestId)
+  }
+
+  tempRequestContextMap.set(requestId, context)
+  context.activeRequestIds.add(requestId)
+}
+
+/**
+ * Returns whether the temp context is still held by any active request.
+ */
+function hasActiveRequests(context: TempContext) {
+  return context.activeRequestIds.size > 0
+}
+
+/**
+ * Returns whether the temp context has no remaining active request holders.
+ */
+function isContextIdle(context: TempContext) {
+  return !hasActiveRequests(context)
+}
+
+/**
+ * Clears any pending idle-release timer attached to the temp context.
+ */
+function clearContextReleaseTimer(context: TempContext) {
+  if (context.releaseTimer) {
+    clearTimeout(context.releaseTimer)
+    context.releaseTimer = undefined
+  }
+}
+
+/**
+ * Checks whether the exact temp-context object is still the one tracked by id.
+ */
+function isTrackedContext(context: TempContext) {
+  return tempContextById.get(context.id) === context
+}
+
+/**
  * 为上下文安排空闲销毁定时器，长时间未使用的窗口/标签页会被自动关闭。
  */
 function scheduleContextCleanup(context: TempContext) {
-  if (context.releaseTimer) {
-    clearTimeout(context.releaseTimer)
-  }
+  clearContextReleaseTimer(context)
 
   const idleTimeoutMs =
     context.type === "window"
@@ -1955,17 +2008,33 @@ function scheduleContextCleanup(context: TempContext) {
   })
 
   context.releaseTimer = setTimeout(() => {
-    if (!context.busy) {
+    context.releaseTimer = undefined
+    withOriginLock(context.origin, async () => {
+      if (!isTrackedContext(context)) {
+        return
+      }
+
+      if (!isContextIdle(context)) {
+        logTempWindow("idleContextCleanupSkippedActiveContext", {
+          origin: context.origin,
+          contextId: context.id,
+          tabId: context.tabId,
+          type: context.type,
+          activeRequestCount: context.activeRequestIds.size,
+        })
+        return
+      }
+
       logTempWindow("idleContextCleanupTriggered", {
         origin: context.origin,
         contextId: context.id,
         tabId: context.tabId,
         type: context.type,
       })
-      destroyContext(context).catch((error) => {
-        logger.error("Failed to destroy idle temp context", error)
-      })
-    }
+      await destroyContext(context, { reason: "idleTimeout" })
+    }).catch((error) => {
+      logger.error("Failed to destroy idle temp context", error)
+    })
   }, idleTimeoutMs)
 }
 
@@ -1978,7 +2047,7 @@ async function destroyContext(
   context: TempContext,
   options: { skipBrowserRemoval?: boolean; reason?: string } = {},
 ) {
-  if (!tempContextById.has(context.id)) {
+  if (!isTrackedContext(context)) {
     return
   }
 
@@ -1991,10 +2060,7 @@ async function destroyContext(
     reason: options.reason ?? null,
   })
 
-  if (context.releaseTimer) {
-    clearTimeout(context.releaseTimer)
-    context.releaseTimer = undefined
-  }
+  clearContextReleaseTimer(context)
 
   tempContextById.delete(context.id)
   tempContextByTabId.delete(context.tabId)
@@ -2014,6 +2080,7 @@ async function destroyContext(
       tempRequestContextMap.delete(requestId)
     }
   }
+  context.activeRequestIds.clear()
 
   if (!options.skipBrowserRemoval) {
     try {
@@ -2032,8 +2099,9 @@ function clearStaleTempRequestMappings() {
   let cleared = 0
 
   for (const [requestId, context] of tempRequestContextMap.entries()) {
-    if (!tempContextById.has(context.id)) {
+    if (!isTrackedContext(context)) {
       tempRequestContextMap.delete(requestId)
+      context.activeRequestIds.delete(requestId)
       cleared += 1
     }
   }
