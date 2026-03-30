@@ -81,9 +81,8 @@ export default function AutoCheckin(props: {
   const [retryingAccountId, setRetryingAccountId] = useState<string | null>(
     null,
   )
-  const [openingSiteAccountId, setOpeningSiteAccountId] = useState<
-    string | null
-  >(null)
+  const [pendingOpeningSiteAccountIds, setPendingOpeningSiteAccountIds] =
+    useState<Set<string>>(() => new Set())
   const [openingManualAccountId, setOpeningManualAccountId] = useState<
     string | null
   >(null)
@@ -511,14 +510,22 @@ export default function AutoCheckin(props: {
 
   const handleOpenAccountSite = async (accountId: string) => {
     try {
-      setOpeningSiteAccountId(accountId)
+      setPendingOpeningSiteAccountIds((prev) => {
+        const next = new Set(prev)
+        next.add(accountId)
+        return next
+      })
       await openAccountSiteForAccount(accountId)
     } catch (error: unknown) {
       toast.error(
         t("messages.error.openSiteFailed", { error: getErrorMessage(error) }),
       )
     } finally {
-      setOpeningSiteAccountId(null)
+      setPendingOpeningSiteAccountIds((prev) => {
+        const next = new Set(prev)
+        next.delete(accountId)
+        return next
+      })
     }
   }
 
@@ -727,7 +734,7 @@ export default function AutoCheckin(props: {
           results={filteredResults}
           showDevActions={showDebugButtons}
           retryingAccountId={retryingAccountId}
-          openingSiteAccountId={openingSiteAccountId}
+          pendingOpeningSiteAccountIds={pendingOpeningSiteAccountIds}
           openingManualAccountId={openingManualAccountId}
           onRetryAccount={handleRetryAccount}
           onOpenAccountSite={handleOpenAccountSite}

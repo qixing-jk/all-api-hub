@@ -271,12 +271,14 @@ describe("AutoCheckin account actions", () => {
         includeDisabled: true,
       })
     })
-    expect(openAccountBaseUrlSpy).toHaveBeenCalledWith(
-      expect.objectContaining({
-        id: "alpha",
-        baseUrl: "https://alpha.example",
-      }),
-    )
+    await waitFor(() => {
+      expect(openAccountBaseUrlSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "alpha",
+          baseUrl: "https://alpha.example",
+        }),
+      )
+    })
   })
 
   it("shows an error when site opening fails and restores the button state", async () => {

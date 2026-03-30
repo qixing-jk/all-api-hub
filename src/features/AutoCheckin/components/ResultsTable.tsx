@@ -28,7 +28,7 @@ interface ResultsTableProps {
   results: CheckinAccountResult[]
   showDevActions?: boolean
   retryingAccountId?: string | null
-  openingSiteAccountId?: string | null
+  pendingOpeningSiteAccountIds?: Set<string>
   openingManualAccountId?: string | null
   onRetryAccount?: (accountId: string) => void | Promise<void>
   onOpenAccountSite?: (accountId: string) => void | Promise<void>
@@ -42,7 +42,7 @@ export default function ResultsTable({
   results,
   showDevActions,
   retryingAccountId,
-  openingSiteAccountId,
+  pendingOpeningSiteAccountIds,
   openingManualAccountId,
   onRetryAccount,
   onOpenAccountSite,
@@ -181,6 +181,8 @@ export default function ResultsTable({
           <tbody className="divide-y divide-gray-200 bg-white dark:divide-gray-700 dark:bg-gray-900">
             {visibleResults.map((result) => {
               const troubleshootingHintKey = getTroubleshootingHintKey(result)
+              const isOpeningSite =
+                pendingOpeningSiteAccountIds?.has(result.accountId) ?? false
 
               return (
                 <tr
@@ -254,8 +256,8 @@ export default function ResultsTable({
                         <Button
                           size="sm"
                           variant="outline"
-                          loading={openingSiteAccountId === result.accountId}
-                          disabled={openingSiteAccountId === result.accountId}
+                          loading={isOpeningSite}
+                          disabled={isOpeningSite}
                           onClick={() => onOpenAccountSite(result.accountId)}
                           leftIcon={
                             <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
