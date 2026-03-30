@@ -102,12 +102,27 @@ describe("ShieldSettings", () => {
       await screen.findByText("refresh.shieldPopupFirefoxNote"),
     ).toBeInTheDocument()
 
-    fireEvent.click(
-      screen.getByRole("button", { name: "refresh.shieldMethodTab" }),
-    )
-    fireEvent.click(screen.getAllByRole("checkbox")[1])
-    fireEvent.click(screen.getAllByRole("checkbox")[2])
-    fireEvent.click(screen.getAllByRole("checkbox")[3])
+    const tabModeButton = screen.getByRole("button", {
+      name: "refresh.shieldMethodTab",
+    })
+    await waitFor(() => {
+      expect(tabModeButton).toBeEnabled()
+    })
+
+    fireEvent.click(tabModeButton)
+
+    const [, sidePanelCheckbox, optionsCheckbox, autoRefreshCheckbox] =
+      screen.getAllByRole("checkbox")
+
+    await waitFor(() => {
+      expect(sidePanelCheckbox).toBeEnabled()
+      expect(optionsCheckbox).toBeEnabled()
+      expect(autoRefreshCheckbox).toBeEnabled()
+    })
+
+    fireEvent.click(sidePanelCheckbox)
+    fireEvent.click(optionsCheckbox)
+    fireEvent.click(autoRefreshCheckbox)
 
     await waitFor(() => {
       expect(updateTempWindowFallback).toHaveBeenCalledWith({
