@@ -475,11 +475,20 @@ export default function AutoCheckin(props: {
       accountId: string,
       options?: { includeDisabled?: boolean },
     ): Promise<DisplaySiteData> => {
-      const response = await sendRuntimeMessage({
+      const message = {
         action: RuntimeActionIds.AutoCheckinGetAccountInfo,
         accountId,
-        includeDisabled: options?.includeDisabled,
-      })
+      } as {
+        action: typeof RuntimeActionIds.AutoCheckinGetAccountInfo
+        accountId: string
+        includeDisabled?: boolean
+      }
+
+      if (typeof options?.includeDisabled !== "undefined") {
+        message.includeDisabled = options.includeDisabled
+      }
+
+      const response = await sendRuntimeMessage(message)
 
       if (!response.success || !response.data) {
         throw new Error(response.error || "Unknown error")

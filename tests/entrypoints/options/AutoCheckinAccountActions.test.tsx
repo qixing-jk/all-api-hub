@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const { toast } = vi.hoisted(() => ({
   toast: {
@@ -218,6 +218,7 @@ describe("AutoCheckin account actions", () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
     const navigation = await import("~/utils/navigation")
+    const openResolvers = new Map<string, () => void>()
 
     const sendRuntimeMessageSpy = vi
       .spyOn(browserApi, "sendRuntimeMessage")
@@ -234,12 +235,30 @@ describe("AutoCheckin account actions", () => {
                   timestamp: 1700000000000,
                   message: "ok",
                 },
+                beta: {
+                  accountId: "beta",
+                  accountName: "Beta",
+                  status: CHECKIN_RESULT_STATUS.SKIPPED,
+                  timestamp: 1700000001000,
+                  message: "needs manual attention",
+                },
               },
             },
           }
         }
 
         if (message.action === RuntimeActionIds.AutoCheckinGetAccountInfo) {
+          if (message.accountId === "beta") {
+            return {
+              success: true,
+              data: {
+                id: "beta",
+                name: "Beta",
+                baseUrl: "https://beta.example",
+              },
+            }
+          }
+
           return {
             success: true,
             data: {
@@ -254,23 +273,43 @@ describe("AutoCheckin account actions", () => {
       })
     const openAccountBaseUrlSpy = vi
       .spyOn(navigation, "openAccountBaseUrl")
-      .mockResolvedValue(undefined as any)
+      .mockImplementation(
+        (account: any) =>
+          new Promise<void>((resolve) => {
+            openResolvers.set(account.id, resolve)
+          }) as any,
+      )
 
     render(<AutoCheckin routeParams={{}} />)
 
-    await user.click(
-      await screen.findByRole("button", {
+    const alphaRow = await screen.findByText("Alpha")
+    const betaRow = await screen.findByText("Beta")
+    const alphaButton = within(alphaRow.closest("tr") as HTMLElement).getByRole(
+      "button",
+      {
         name: "autoCheckin:execution.actions.openSite",
-      }),
+      },
+    )
+    const betaButton = within(betaRow.closest("tr") as HTMLElement).getByRole(
+      "button",
+      {
+        name: "autoCheckin:execution.actions.openSite",
+      },
     )
 
+    await user.click(alphaButton)
+
     await waitFor(() => {
-      expect(sendRuntimeMessageSpy).toHaveBeenCalledWith({
-        action: RuntimeActionIds.AutoCheckinGetAccountInfo,
-        accountId: "alpha",
-        includeDisabled: true,
-      })
+      expect(alphaButton).toBeDisabled()
     })
+
+    await user.click(alphaButton)
+    await user.click(betaButton)
+
+    await waitFor(() => {
+      expect(betaButton).toBeDisabled()
+    })
+
     await waitFor(() => {
       expect(openAccountBaseUrlSpy).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -278,6 +317,53 @@ describe("AutoCheckin account actions", () => {
           baseUrl: "https://alpha.example",
         }),
       )
+    })
+    await waitFor(() => {
+      expect(openAccountBaseUrlSpy).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "beta",
+          baseUrl: "https://beta.example",
+        }),
+      )
+    })
+
+    const accountInfoRequests = sendRuntimeMessageSpy.mock.calls
+      .map(([message]) => message as any)
+      .filter(
+        (message) =>
+          message.action === RuntimeActionIds.AutoCheckinGetAccountInfo,
+      )
+
+    expect(accountInfoRequests).toEqual([
+      {
+        action: RuntimeActionIds.AutoCheckinGetAccountInfo,
+        accountId: "alpha",
+        includeDisabled: true,
+      },
+      {
+        action: RuntimeActionIds.AutoCheckinGetAccountInfo,
+        accountId: "beta",
+        includeDisabled: true,
+      },
+    ])
+    expect(openAccountBaseUrlSpy).toHaveBeenCalledTimes(2)
+    expect(
+      openAccountBaseUrlSpy.mock.calls.filter(
+        ([account]) => (account as any).id === "alpha",
+      ),
+    ).toHaveLength(1)
+    expect(
+      openAccountBaseUrlSpy.mock.calls.filter(
+        ([account]) => (account as any).id === "beta",
+      ),
+    ).toHaveLength(1)
+
+    openResolvers.get("alpha")?.()
+    openResolvers.get("beta")?.()
+
+    await waitFor(() => {
+      expect(alphaButton).not.toBeDisabled()
+      expect(betaButton).not.toBeDisabled()
     })
   })
 
