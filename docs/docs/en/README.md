@@ -1,4 +1,4 @@
-```yaml
+---
 home: true
 title: "Homepage"
 heroImage: "/512.png"
@@ -78,8 +78,7 @@ If you want to communicate faster about usage issues, troubleshoot configuration
 - WeChat Group: Scan the QR code below to join the Chinese communication group.
 
 <img
-  src="../../resources/wechat_group.png"
+  src="../../../resources/wechat_group.png"
   alt="All API Hub WeChat Group QR Code"
   style="width: min(280px, 100%);"
 />
-```

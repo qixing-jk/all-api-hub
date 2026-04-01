@@ -1,4 +1,4 @@
-```yaml
+---
 home: true
 title: "ホーム"
 heroImage: "/512.png"
@@ -78,8 +78,7 @@ All API Hubはブラウザ拡張機能として、これらのサイトのアカ
 - WeChatグループ：以下のQRコードをスキャンして、中国語の交流グループに参加してください。
 
 <img
-  src="../../resources/wechat_group.png"
+  src="../../../resources/wechat_group.png"
   alt="All API Hub WeChatグループQRコード"
   style="width: min(280px, 100%);"
 />
-```
