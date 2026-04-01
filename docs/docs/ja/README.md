@@ -1,58 +1,58 @@
----
+```yaml
 home: true
-title: ホーム
-heroImage: /512.png
-heroText: All API Hub - AI 聚合中継ステーションマネージャー
-tagline: "オープンソースのブラウザ拡張機能。サードパーティのAI集約中継ステーションと自社構築のNew APIを統一管理。アカウントの自動認識、残高表示、モデル同期、キー管理をサポートし、クロスプラットフォームとクラウドバックアップにも対応。"
+title: "ホーム"
+heroImage: "/512.png"
+heroText: "All API Hub - AI集約中継ステーションマネージャー"
+tagline: "オープンソースのブラウザ拡張機能。サードパーティ製AI集約中継ステーションと自社構築のNew APIを一元管理。アカウントの自動認識、残高表示、モデル同期、キー管理をサポートし、クロスプラットフォームとクラウドバックアップにも対応。"
 actions:
-  - text: 利用開始
-    link: /get-started.html # ご自身の実際のドキュメントパスに変更してください。例: /guide/
-    type: primary
+  - text: "利用開始"
+    link: "/get-started.html" # 実際のドキュメントパスに変更することを推奨します。例: /guide/
+    type: "primary"
     
-  - text: Chrome ウェブストア
-    link: https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo
-    type: secondary
+  - text: "Chrome ウェブストア"
+    link: "https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo"
+    type: "secondary"
 
-  - text: Edge アドオン
-    link: https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa
-    type: secondary
+  - text: "Edge アドオン"
+    link: "https://microsoftedge.microsoft.com/addons/detail/pcokpjaffghgipcgjhapgdpeddlhblaa"
+    type: "secondary"
 
-  - text: FireFox アドオン
-    link: https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}
-    type: secondary
+  - text: "FireFox アドオン"
+    link: "https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}"
+    type: "secondary"
 
 features:
-  - title: スマートサイト管理
-    details: AI集約中継サイトを自動認識し、アクセス トークンを生成します。サイト名とチャージ倍率をインテリジェントに取得し、重複検出と手動追加をサポートします。
-  - title: マルチアカウントシステム
-    details: 各サイトに複数アカウントを追加可能。アカウントのグループ化と高速切り替え、残高と詳細な使用ログのリアルタイム表示をサポートします。
-  - title: トークンとキーの管理
-    details: すべてのAPIキーを便利に管理。表示、コピー、リフレッシュ、一括操作をサポートします。
-  - title: モデル情報の表示
-    details: サイトがサポートするモデルリストと価格情報を明確に表示します。
-  - title: チェックイン状態の監視
-    details: チェックインをサポートするサイトを自動検出し、その日にまだチェックインしていないアカウントをマークします。これにより、1つのパネルで複数のサイトへのチェックインを順番に完了でき、チェックイン忘れによる無料額度の無駄を減らすことができます。
-  - title: 高速エクスポートと統合
-    details: 設定を一括でCherryStudio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router、および自社構築のホスティングサイトにエクスポートします。
-  - title: 自社構築サイトバックエンド連携
-    details: 自社構築のNew API、DoneHub、Veloera、Octopusインスタンスのバックエンド連携とチャネル関連操作をサポートします。
-  - title: データバックアップと復元
-    details: JSON形式でのインポート/エクスポート、およびWebDavによるクラウドバックアップをサポートし、クロスデバイスでのデータ同期を実現します。
-  - title: 全プラットフォーム対応
-    details: "Chrome、Edge、Firefoxなどのブラウザと互換性があり、モバイル/スマートフォンブラウザ（例: Mobile Edge、Firefox for Android、Kiwiなど）でも使用できます。ダークモードにも対応しています。"
-  - title: プライバシーとセキュリティ
-    details: 完全オフラインで動作し、すべてのデータはローカルに保存されます。インターネット接続なしで、すべてのコア機能を使用できます。
-  - title: Cloudflare保護ページバイパスアシスタント
-    details: 5秒ルール保護ページに遭遇した場合、自動的にポップアップして保護を解除し、サイトが認識および記録されることを保証します。
+  - title: "スマートサイト管理"
+    details: "AI集約中継サイトを自動認識し、アクセス・トークンを生成。サイト名とチャージ倍率をインテリジェントに取得。重複検出と手動追加をサポート。"
+  - title: "マルチアカウントシステム"
+    details: "各サイトに複数アカウントを追加可能。アカウントのグループ化と高速切り替え、残高と詳細な使用ログをリアルタイムで表示。"
+  - title: "トークンとキー管理"
+    details: "すべてのAPIキーを便利に管理。表示、コピー、リフレッシュ、一括操作をサポート。"
+  - title: "モデル情報表示"
+    details: "サイトがサポートするモデルリストと価格情報を明確に表示。"
+  - title: "サインイン状態監視"
+    details: "どのサイトがサインインをサポートしているかを自動検出。その日まだサインインしていないアカウントをマーク。1つのパネルで複数のサイトへのサインインを順番に完了させ、サインイン忘れによる無料枠の無駄遣いを削減。"
+  - title: "高速エクスポート・統合"
+    details: "CherryStudio、CC Switch、Kilo Code、CLIProxyAPI、Claude Code Router、および自社構築ホスティングサイトへ設定を一括エクスポート。"
+  - title: "自社構築サイトバックエンド連携"
+    details: "自社構築のNew API、DoneHub、Veloera、Octopusインスタンスのバックエンド連携とチャネル関連操作をサポート。"
+  - title: "データバックアップ・復元"
+    details: "JSON形式でのインポート・エクスポート、WebDavによるクラウドバックアップをサポートし、クロスデバイスでのデータ同期を実現。"
+  - title: "全プラットフォーム対応"
+    details: "Chrome、Edge、Firefoxなどのブラウザに対応。モバイルブラウザ（例: Mobile Edge、Firefox for Android、Kiwiなど）でも使用可能。ダークモードにも対応。"
+  - title: "プライバシーとセキュリティ"
+    details: "完全にオフラインで動作。すべてのデータはローカルに保存され、インターネット接続なしで全てのコア機能を使用可能。"
+  - title: "Cloudflare アンチDDosアシスタント"
+    details: "5秒ルールによる保護を自動的に解除し、サイトの認識と記録を確実にします。"
 
-footer: AGPL-3.0 Licensed | Copyright 2025-present All API Hub
+footer: "AGPL-3.0 Licensed | Copyright 2025-present All API Hub"
 ---
 
 ## 紹介
 
-現在、AIエコシステムにはNew APIシリーズに基づいた集約中継ステーションや自社構築パネルが増えています。各サイトの残高、モデルリスト、APIキーを同時に管理することは、しばしば分散しており時間がかかります。
+現在、AIエコシステムにはNew APIシリーズに基づいた集約中継ステーションや自社構築パネルが増加しており、各サイトの残高、モデルリスト、APIキーを同時に管理することは、分散的で時間がかかることがよくあります。
 
-All API Hubはブラウザ拡張機能として、これらのサイトのアカウントを自動認識し、残高の表示、モデル、キーの管理、自動チェックインを一括で行うことができます。また、自社構築のNew API、DoneHub、Veloera、Octopus向けにバックエンド連携とチャネル関連ツールを提供します。現在、以下のプロジェクトに基づいた中継ステーションアカウントをサポートしています。
+All API Hubはブラウザ拡張機能として、これらのサイトのアカウントを自動認識し、ワンクリックで残高の確認、モデルやキーの管理、自動サインインを行います。また、自社構築のNew API、DoneHub、Veloera、Octopus向けのバックエンド連携やチャネル関連ツールを提供します。現在、以下のプロジェクトに基づく中継ステーションアカウントをサポートしています。
 
 - [one-api](https://github.com/songquanpeng/one-api)
 - [new-api](https://github.com/QuantumNous/new-api)
@@ -70,7 +70,7 @@ All API Hubはブラウザ拡張機能として、これらのサイトのアカ
 <a id="community"></a>
 ## 💬 コミュニティ交流
 
-使用に関する問題の迅速なコミュニケーション、設定のトラブルシューティング、互換性のあるサイトの共有を行いたい場合は、以下のコミュニティチャネルをご利用ください。
+使用に関する問題の迅速なコミュニケーション、設定のトラブルシューティング、互換性のあるサイトの共有を行いたい場合は、以下のコミュニティチャネルの利用をお勧めします。
 
 - [GitHub Discussions](https://github.com/qixing-jk/all-api-hub/discussions)：問題の整理、経験の蓄積、長期的な議論に適しています。
 - [Discord コミュニティ](https://discord.gg/RmFXZ577ZQ)：多言語ユーザー向けで、機能が豊富、議論や問題解決に適しています。
@@ -78,7 +78,8 @@ All API Hubはブラウザ拡張機能として、これらのサイトのアカ
 - WeChatグループ：以下のQRコードをスキャンして、中国語の交流グループに参加してください。
 
 <img
-  src="../../../resources/wechat_group.png"
+  src="../../resources/wechat_group.png"
   alt="All API Hub WeChatグループQRコード"
   style="width: min(280px, 100%);"
 />
+```
