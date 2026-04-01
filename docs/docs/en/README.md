@@ -78,7 +78,7 @@ If you want to discuss usage issues faster, troubleshoot configurations, or shar
 - WeChat Group: Scan the QR code below to join the Chinese communication group.
 
 <img
-  src="../../resources/wechat_group.png"
+  src="../../../resources/wechat_group.png"
   alt="All API Hub WeChat Group QR Code"
   style="width: min(280px, 100%);"
 />
