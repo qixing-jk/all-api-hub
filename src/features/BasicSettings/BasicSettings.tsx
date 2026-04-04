@@ -84,6 +84,9 @@ const ClaudeCodeRouterTab = createLazyTabComponent(
 const CliProxyTab = createLazyTabComponent(
   () => import("./components/tabs/CliProxy/CliProxyTab"),
 )
+const CCHTab = createLazyTabComponent(
+  () => import("./components/tabs/CCH/CCHTab"),
+)
 const DataBackupTab = createLazyTabComponent(
   () => import("./components/tabs/DataBackup/DataBackupTab"),
 )
@@ -119,6 +122,7 @@ const TAB_CONFIGS = [
   { id: "managedSite", component: ManagedSiteTab },
   { id: "cliProxy", component: CliProxyTab },
   { id: "claudeCodeRouter", component: ClaudeCodeRouterTab },
+  { id: "cch", component: CCHTab },
   ...(hasOptionalPermissions ? [PERMISSIONS_TAB_CONFIG] : []),
   { id: "dataBackup", component: DataBackupTab },
 ] satisfies TabConfig[]
@@ -147,6 +151,7 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   "new-api-model-sync": "managedSite",
   "cli-proxy": "cliProxy",
   "claude-code-router": "claudeCodeRouter",
+  "cch": "cch",
   "dangerous-zone": "general",
   ...(hasOptionalPermissions ? { permissions: "permissions" } : {}),
 }
@@ -217,6 +222,8 @@ function getSettingsTabLabel(t: TFunction, tabId: TabId): string {
       return t("settings:tabs.cliProxy")
     case "claudeCodeRouter":
       return t("settings:tabs.claudeCodeRouter")
+    case "cch":
+      return t("settings:tabs.cch")
     case "permissions":
       return t("settings:tabs.permissions")
     default:

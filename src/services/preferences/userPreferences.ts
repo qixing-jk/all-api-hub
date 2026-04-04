@@ -50,6 +50,10 @@ import {
   type CliProxyConfig,
 } from "~/types/cliProxyConfig"
 import {
+  DEFAULT_CCH_CONFIG,
+  type CCHConfig,
+} from "~/types/cchConfig"
+import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
 } from "~/types/dailyBalanceHistory"
@@ -297,6 +301,9 @@ export interface UserPreferences {
   // Claude Code Router 配置
   claudeCodeRouter?: ClaudeCodeRouterConfig
 
+  // Claude Code Hub 配置
+  cch?: CCHConfig
+
   // New API Model Sync 配置
   managedSiteModelSync?: {
     enabled: boolean
@@ -472,6 +479,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   managedSiteType: NEW_API,
   cliProxy: DEFAULT_CLI_PROXY_CONFIG,
   claudeCodeRouter: DEFAULT_CLAUDE_CODE_ROUTER_CONFIG,
+  cch: DEFAULT_CCH_CONFIG,
   managedSiteModelSync: {
     enabled: false,
     interval: 24 * 60 * 60 * 1000, // 24小时
@@ -1048,6 +1056,12 @@ class UserPreferencesService {
   async resetClaudeCodeRouterConfig(): Promise<boolean> {
     return this.savePreferences({
       claudeCodeRouter: DEFAULT_PREFERENCES.claudeCodeRouter,
+    })
+  }
+
+  async resetCCHConfig(): Promise<boolean> {
+    return this.savePreferences({
+      cch: DEFAULT_PREFERENCES.cch,
     })
   }
 
