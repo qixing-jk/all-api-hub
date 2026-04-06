@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.32.0](https://github.com/qixing-jk/all-api-hub/compare/v3.31.0...v3.32.0) (2026-04-06)
+
+
+### Features
+
+* **auto-checkin:** add actionable hint for unsupported site-type check-in results ([e5f196d](https://github.com/qixing-jk/all-api-hub/commit/e5f196dda53e19d46893114dc8d3ec7f5293f449))
+* **auto-checkin:** add open-site action for all result rows ([#686](https://github.com/qixing-jk/all-api-hub/issues/686)) ([886a0c2](https://github.com/qixing-jk/all-api-hub/commit/886a0c24fc0aa90c9b6aee22d65fd41ca5549c68))
+* **managed-verification:** add inline quick-config for New API ([#673](https://github.com/qixing-jk/all-api-hub/issues/673)) ([f6b077f](https://github.com/qixing-jk/all-api-hub/commit/f6b077f4846eb10984c55da0720f9f0b2543d93c))
+
+
+### Bug Fixes
+
+* **account-dialog:** keep dialog open during permission flow ([#672](https://github.com/qixing-jk/all-api-hub/issues/672)) ([3b20766](https://github.com/qixing-jk/all-api-hub/commit/3b20766a38c7d87cf7f994bd862f6e70a99da952))
+* **background:** prevent shared temp contexts from being released prematurely ([#684](https://github.com/qixing-jk/all-api-hub/issues/684)) ([ee8bd05](https://github.com/qixing-jk/all-api-hub/commit/ee8bd05fd8c03bb7527d09cac8dc074186400b0e))
+* **constants:** update Sub2API path configuration ([407d86e](https://github.com/qixing-jk/all-api-hub/commit/407d86e38daafa26d670e788d054176cdbc31aab))
+* improve auto-detect hint when current tab needs reload after extension install/update ([#677](https://github.com/qixing-jk/all-api-hub/issues/677)) ([d2627c5](https://github.com/qixing-jk/all-api-hub/commit/d2627c5cf6f3fa41dd8794d0d864aa7984fff026))
+* **managed-site-sync:** improve settings save robustness & filter validation ([1a7b179](https://github.com/qixing-jk/all-api-hub/commit/1a7b17902cf51d426026b3fc528a28ffc4916eb4))
+* **preferences:** reorder sorting criteria to prioritize USER_SORT_FIELD ([#676](https://github.com/qixing-jk/all-api-hub/issues/676)) ([18dbba7](https://github.com/qixing-jk/all-api-hub/commit/18dbba7536631da85380b85f567b5b1ce3b545ca))
+* treat nullish error messages as empty in getErrorMessage ([97e2305](https://github.com/qixing-jk/all-api-hub/commit/97e2305be757c92e4c26166c4b917a04f36569a5))
+* **ui:** remove redundant cursor-pointer from interactive card variant ([a677b84](https://github.com/qixing-jk/all-api-hub/commit/a677b844f6541f846176ddc2dae49125bfa329d2))
+
 ## [3.31.0](https://github.com/qixing-jk/all-api-hub/compare/v3.30.0...v3.31.0) (2026-03-26)
 
 
