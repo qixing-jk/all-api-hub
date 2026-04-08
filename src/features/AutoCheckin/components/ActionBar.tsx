@@ -1,12 +1,12 @@
 import {
   ArrowPathIcon,
-  ArrowTopRightOnSquareIcon,
   BugAntIcon,
   PlayIcon,
 } from "@heroicons/react/24/outline"
 import type { MouseEventHandler } from "react"
 import { useTranslation } from "react-i18next"
 
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Button } from "~/components/ui"
 
 interface ActionBarProps {
@@ -92,7 +92,7 @@ export default function ActionBar({
             isBusy || !canOpenFailedManualSignIns || !onOpenFailedManualSignIns
           }
           loading={isOpeningFailedManualSignIns}
-          leftIcon={<ArrowTopRightOnSquareIcon className="h-4 w-4" />}
+          leftIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
           title={bulkManualHint}
         >
           {t("execution.actions.openFailedManual")}

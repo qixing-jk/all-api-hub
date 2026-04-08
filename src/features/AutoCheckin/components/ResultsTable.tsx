@@ -1,6 +1,5 @@
 import {
   ArrowPathIcon,
-  ArrowTopRightOnSquareIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
   XCircleIcon,
@@ -9,6 +8,7 @@ import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import AccountLinkButton from "~/components/AccountLinkButton"
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Button, Card } from "~/components/ui"
 import { Z_INDEX } from "~/constants/designTokens"
 import {
@@ -237,7 +237,7 @@ export default function ResultsTable({
                             }
                             onClick={() => onOpenManualSignIn(result.accountId)}
                             leftIcon={
-                              <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
+                              <WorkflowTransitionIcon className="h-3.5 w-3.5" />
                             }
                           >
                             {t("execution.actions.openManual")}
@@ -251,7 +251,7 @@ export default function ResultsTable({
                           disabled={isOpeningSite}
                           onClick={() => onOpenAccountSite(result.accountId)}
                           leftIcon={
-                            <ArrowTopRightOnSquareIcon className="h-3.5 w-3.5" />
+                            <WorkflowTransitionIcon className="h-3.5 w-3.5" />
                           }
                         >
                           {t("execution.actions.openSite")}

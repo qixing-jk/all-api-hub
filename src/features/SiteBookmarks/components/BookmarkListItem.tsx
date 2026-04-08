@@ -1,6 +1,5 @@
 import { Menu, MenuButton, MenuItems } from "@headlessui/react"
 import {
-  ArrowTopRightOnSquareIcon,
   EllipsisHorizontalIcon,
   LinkIcon,
   PencilIcon,
@@ -10,6 +9,7 @@ import { PinIcon, PinOffIcon } from "lucide-react"
 import type { MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import {
   Badge,
   BodySmall,
@@ -120,7 +120,7 @@ export default function BookmarkListItem({
               aria-label={t("bookmark:actions.open")}
               title={t("bookmark:actions.open")}
             >
-              <ArrowTopRightOnSquareIcon className="h-4 w-4" />
+              <WorkflowTransitionIcon className="h-4 w-4" />
             </IconButton>
 
             <IconButton

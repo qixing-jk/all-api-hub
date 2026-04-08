@@ -10,7 +10,7 @@ import { EmptyState } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation"
 
 interface EmptyResultsProps {
   hasHistory: boolean
@@ -45,7 +45,7 @@ export default function EmptyResults(props: EmptyResultsProps) {
           }
           action={{
             onClick: () => {
-              navigateWithinOptionsPage(`#${MENU_ITEM_IDS.BASIC}`)
+              pushWithinOptionsPage(`#${MENU_ITEM_IDS.BASIC}`)
             },
             label: t("execution.empty.goToSettings"),
           }}

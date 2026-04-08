@@ -17,7 +17,7 @@ import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHisto
 import { tagStorage } from "~/services/tags/tagStorage"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("react-hot-toast", () => ({
@@ -73,7 +73,7 @@ vi.mock("~/utils/navigation", async () => {
   const actual = await vi.importActual<any>("~/utils/navigation")
   return {
     ...actual,
-    navigateWithinOptionsPage: vi.fn(),
+    pushWithinOptionsPage: vi.fn(),
   }
 })
 
@@ -864,13 +864,10 @@ describe("BalanceHistory options page", () => {
       }),
     )
 
-    expect(vi.mocked(navigateWithinOptionsPage)).toHaveBeenCalledWith(
-      "#basic",
-      {
-        tab: "balanceHistory",
-        anchor: "balance-history",
-      },
-    )
+    expect(vi.mocked(pushWithinOptionsPage)).toHaveBeenCalledWith("#basic", {
+      tab: "balanceHistory",
+      anchor: "balance-history",
+    })
   })
 
   it("switches metrics across income, outcome, and net and forces histogram mode for negative net values", async () => {

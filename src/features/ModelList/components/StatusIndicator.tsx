@@ -1,8 +1,4 @@
-import {
-  ArrowPathIcon,
-  ArrowTopRightOnSquareIcon,
-  CpuChipIcon,
-} from "@heroicons/react/24/outline"
+import { ArrowPathIcon, CpuChipIcon } from "@heroicons/react/24/outline"
 import { useId } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -16,6 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
   Spinner,
+  WorkflowTransitionButton,
 } from "~/components/ui"
 import type { AccountFallbackControls } from "~/features/ModelList/hooks/useModelData"
 import type { ModelManagementSource } from "~/features/ModelList/modelManagementSources"
@@ -277,15 +274,14 @@ export function StatusIndicator({
           </h3>
           <p className="mb-4 text-sm">{t("status.incompatibleDesc")}</p>
           <div className="flex flex-col gap-3 sm:flex-row">
-            <Button
+            <WorkflowTransitionButton
               variant="warning"
               onClick={() =>
                 window.open(`${currentAccount.baseUrl}/pricing`, "_blank")
               }
-              rightIcon={<ArrowTopRightOnSquareIcon className="h-4 w-4" />}
             >
               {t("status.goToSitePricing")}
-            </Button>
+            </WorkflowTransitionButton>
             <Button
               variant="secondary"
               onClick={loadPricingData}

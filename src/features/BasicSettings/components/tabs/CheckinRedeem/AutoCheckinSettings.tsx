@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
 import {
-  Button,
   Card,
   CardItem,
   CardList,

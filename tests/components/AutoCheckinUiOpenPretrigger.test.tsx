@@ -1,4 +1,5 @@
-import { describe, expect, it, vi } from "vitest"
+import userEvent from "@testing-library/user-event"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AutoCheckinUiOpenPretrigger } from "~/components/AutoCheckinUiOpenPretrigger"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -6,6 +7,7 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
+import { openAutoCheckinPage, pushWithinOptionsPage } from "~/utils/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("react-hot-toast", () => ({
@@ -17,7 +19,21 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
+vi.mock("~/utils/navigation", async () => {
+  const actual = await vi.importActual<any>("~/utils/navigation")
+  return {
+    ...actual,
+    openAutoCheckinPage: vi.fn(),
+    pushWithinOptionsPage: vi.fn(),
+  }
+})
+
 describe("AutoCheckinUiOpenPretrigger", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    window.history.replaceState(null, "", "/")
+  })
+
   it("shows a started toast and a completion dialog with a View details button", async () => {
     const toast = (await import("react-hot-toast")).default
 
@@ -92,5 +108,65 @@ describe("AutoCheckinUiOpenPretrigger", () => {
         name: "autoCheckin:uiOpenPretrigger.viewDetails",
       }),
     ).toBeInTheDocument()
+  })
+
+  it("pushes the auto-checkin page into history when view details is clicked from options", async () => {
+    window.history.replaceState(null, "", "/options.html")
+
+    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
+      ...DEFAULT_PREFERENCES,
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin!,
+        globalEnabled: true,
+        pretriggerDailyOnUiOpen: true,
+      },
+    })
+
+    const browserApi = await import("~/utils/browser/browserApi")
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+      async (message: any) => {
+        if (
+          message.action === RuntimeActionIds.AutoCheckinPretriggerDailyOnUiOpen
+        ) {
+          void browser.runtime
+            .sendMessage({
+              action: RuntimeActionIds.AutoCheckinPretriggerStarted,
+              requestId: message.requestId,
+            })
+            .catch(() => undefined)
+
+          return {
+            success: true,
+            started: true,
+            lastRunResult: "success",
+            pendingRetry: false,
+            summary: {
+              totalEligible: 1,
+              executed: 1,
+              successCount: 1,
+              failedCount: 0,
+              skippedCount: 0,
+              needsRetry: false,
+            },
+          }
+        }
+
+        return { success: true }
+      },
+    )
+
+    render(<AutoCheckinUiOpenPretrigger />)
+
+    const user = userEvent.setup()
+    await user.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:uiOpenPretrigger.viewDetails",
+      }),
+    )
+
+    expect(vi.mocked(pushWithinOptionsPage)).toHaveBeenCalledWith(
+      "#autoCheckin",
+    )
+    expect(vi.mocked(openAutoCheckinPage)).not.toHaveBeenCalled()
   })
 })

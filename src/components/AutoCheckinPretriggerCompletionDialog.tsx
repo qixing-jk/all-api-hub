@@ -1,13 +1,10 @@
 import { useTranslation } from "react-i18next"
 
-import { Button } from "~/components/ui"
+import { Button, WorkflowTransitionButton } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import type { AutoCheckinRunSummary } from "~/types/autoCheckin"
-import {
-  navigateWithinOptionsPage,
-  openAutoCheckinPage,
-} from "~/utils/navigation"
+import { openAutoCheckinPage, pushWithinOptionsPage } from "~/utils/navigation"
 
 interface AutoCheckinPretriggerCompletionDialogProps {
   isOpen: boolean
@@ -52,7 +49,7 @@ export function AutoCheckinPretriggerCompletionDialog({
     const targetHash = `#${MENU_ITEM_IDS.AUTO_CHECKIN}`
 
     if (isOnOptionsPage()) {
-      navigateWithinOptionsPage(targetHash)
+      pushWithinOptionsPage(targetHash)
     } else {
       await openAutoCheckinPage()
     }
@@ -70,14 +67,14 @@ export function AutoCheckinPretriggerCompletionDialog({
       >
         {t("uiOpenPretrigger.close")}
       </Button>
-      <Button
+      <WorkflowTransitionButton
         type="button"
         variant="default"
         className="flex-1"
         onClick={handleViewDetails}
       >
         {t("uiOpenPretrigger.viewDetails")}
-      </Button>
+      </WorkflowTransitionButton>
     </div>
   )
 

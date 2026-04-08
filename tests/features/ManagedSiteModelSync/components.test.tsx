@@ -17,11 +17,12 @@ import ResultsTable from "~/features/ManagedSiteModelSync/components/ResultsTabl
 import StatisticsCard from "~/features/ManagedSiteModelSync/components/StatisticsCard"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
-const { mockHasValidManagedSiteConfig, mockNavigateWithinOptionsPage } =
-  vi.hoisted(() => ({
+const { mockHasValidManagedSiteConfig, mockPushWithinOptionsPage } = vi.hoisted(
+  () => ({
     mockHasValidManagedSiteConfig: vi.fn(),
-    mockNavigateWithinOptionsPage: vi.fn(),
-  }))
+    mockPushWithinOptionsPage: vi.fn(),
+  }),
+)
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
@@ -34,7 +35,7 @@ vi.mock("~/services/managedSites/managedSiteService", () => ({
 }))
 
 vi.mock("~/utils/navigation", () => ({
-  navigateWithinOptionsPage: mockNavigateWithinOptionsPage,
+  pushWithinOptionsPage: mockPushWithinOptionsPage,
 }))
 
 vi.mock("~/components/ManagedSiteChannelLinkButton", () => ({
@@ -304,7 +305,7 @@ describe("ManagedSiteModelSync components", () => {
         name: "managedSiteModelSync:execution.empty.goToSettings",
       }),
     )
-    expect(mockNavigateWithinOptionsPage).toHaveBeenCalled()
+    expect(mockPushWithinOptionsPage).toHaveBeenCalled()
 
     mockHasValidManagedSiteConfig.mockReturnValue(true)
     render(<EmptyResults hasHistory />)

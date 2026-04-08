@@ -5,7 +5,7 @@ import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHistory/core"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation"
 import { render, screen } from "~~/tests/test-utils/render"
 
 vi.mock("~/components/charts/echarts", async () => {
@@ -40,13 +40,13 @@ vi.mock("~/utils/navigation", async () => {
     )
   return {
     ...actual,
-    navigateWithinOptionsPage: vi.fn(),
+    pushWithinOptionsPage: vi.fn(),
   }
 })
 
 describe("UsageAnalytics navigation", () => {
   it("navigates to account usage settings from header", async () => {
-    vi.mocked(navigateWithinOptionsPage).mockClear()
+    vi.mocked(pushWithinOptionsPage).mockClear()
     vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
     const accountStore = createEmptyUsageHistoryAccountStore()
     accountStore.daily["2026-01-01"] = {
@@ -68,14 +68,14 @@ describe("UsageAnalytics navigation", () => {
     })
     fireEvent.click(settingsButton)
 
-    expect(navigateWithinOptionsPage).toHaveBeenCalledWith("#basic", {
+    expect(pushWithinOptionsPage).toHaveBeenCalledWith("#basic", {
       tab: "accountUsage",
       anchor: "usage-history-sync",
     })
   })
 
   it("shows a settings shortcut in the empty reminder", async () => {
-    vi.mocked(navigateWithinOptionsPage).mockClear()
+    vi.mocked(pushWithinOptionsPage).mockClear()
     vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
       schemaVersion: 2,
@@ -96,7 +96,7 @@ describe("UsageAnalytics navigation", () => {
     )
     fireEvent.click(settingsButton)
 
-    expect(navigateWithinOptionsPage).toHaveBeenCalledWith("#basic", {
+    expect(pushWithinOptionsPage).toHaveBeenCalledWith("#basic", {
       tab: "accountUsage",
       anchor: "usage-history-sync",
     })

@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { EChart } from "~/components/charts/EChart"
 import { PageHeader } from "~/components/PageHeader"
-import { Button, Card } from "~/components/ui"
+import { Button, Card, WorkflowTransitionButton } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { useTheme } from "~/contexts/ThemeContext"
@@ -12,7 +12,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { parseDayKey } from "~/services/history/usageHistory/core"
 import { formatPriceCompact } from "~/services/models/utils/modelPricing"
 import { formatTokenCount } from "~/utils/core/formatters"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation"
 
 import {
   buildDailyOverviewOption,
@@ -552,7 +552,7 @@ export default function UsageAnalytics() {
    * Navigate to the account usage settings tab (usage-history sync controls).
    */
   const handleOpenAccountUsageSettings = useCallback(() => {
-    navigateWithinOptionsPage(`#${MENU_ITEM_IDS.BASIC}`, {
+    pushWithinOptionsPage(`#${MENU_ITEM_IDS.BASIC}`, {
       tab: "accountUsage",
       anchor: "usage-history-sync",
     })
@@ -566,14 +566,14 @@ export default function UsageAnalytics() {
         description={t("description")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
-            <Button
+            <WorkflowTransitionButton
               size="sm"
               variant="outline"
               onClick={handleOpenAccountUsageSettings}
               leftIcon={<Settings className="h-4 w-4" />}
             >
               {t("actions.openAccountUsageSettings")}
-            </Button>
+            </WorkflowTransitionButton>
             <Button
               size="sm"
               variant="secondary"
@@ -669,14 +669,14 @@ export default function UsageAnalytics() {
             </div>
             {/* Quick navigation so users can enable sync immediately. */}
             <div className="pt-1">
-              <Button
+              <WorkflowTransitionButton
                 size="sm"
                 variant="outline"
                 onClick={handleOpenAccountUsageSettings}
                 leftIcon={<Settings className="h-4 w-4" />}
               >
                 {t("actions.openAccountUsageSettings")}
-              </Button>
+              </WorkflowTransitionButton>
             </div>
           </div>
         </Card>

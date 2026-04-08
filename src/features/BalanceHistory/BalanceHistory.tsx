@@ -20,6 +20,7 @@ import {
   Label,
   TagFilter,
   ToggleButton,
+  WorkflowTransitionButton,
 } from "~/components/ui"
 import {
   DropdownMenu,
@@ -62,7 +63,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { getCurrencySymbol } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
 import { formatMoneyFixed } from "~/utils/core/money"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation"
 
 import BalanceHistoryAccountSummaryTable, {
   type BalanceHistoryAccountSummaryRow,
@@ -259,7 +260,7 @@ export default function BalanceHistory() {
   }, [loadData, t])
 
   const openBalanceHistorySettings = useCallback(() => {
-    navigateWithinOptionsPage(`#${MENU_ITEM_IDS.BASIC}`, {
+    pushWithinOptionsPage(`#${MENU_ITEM_IDS.BASIC}`, {
       tab: "balanceHistory",
       anchor: "balance-history",
     })
@@ -924,14 +925,14 @@ export default function BalanceHistory() {
             >
               {t("actions.prune")}
             </Button>
-            <Button
+            <WorkflowTransitionButton
               size="sm"
               variant="outline"
               onClick={openBalanceHistorySettings}
               leftIcon={<Settings className="h-4 w-4" />}
             >
               {t("common:labels.settings")}
-            </Button>
+            </WorkflowTransitionButton>
           </div>
         }
       />
@@ -951,14 +952,14 @@ export default function BalanceHistory() {
           description={t("hints.disabled.description")}
         >
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button
+            <WorkflowTransitionButton
               size="sm"
               variant="outline"
               onClick={openBalanceHistorySettings}
               leftIcon={<Settings className="h-4 w-4" />}
             >
               {t("hints.disabled.actions.openSettings")}
-            </Button>
+            </WorkflowTransitionButton>
           </div>
         </Alert>
       ) : (
