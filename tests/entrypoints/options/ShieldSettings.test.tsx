@@ -89,7 +89,9 @@ describe("ShieldSettings", () => {
       screen.getByRole("button", { name: "permissions.actions.refresh" }),
     )
 
-    expect(openSettingsTabMock).toHaveBeenCalledWith("permissions")
+    expect(openSettingsTabMock).toHaveBeenCalledWith("permissions", {
+      preserveHistory: true,
+    })
     expect(canUseTempWindowFetchMock).toHaveBeenCalledTimes(2)
   })
 

@@ -1,7 +1,12 @@
 import { useCallback, useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button, Heading4, Modal } from "~/components/ui"
+import {
+  Button,
+  Heading4,
+  Modal,
+  WorkflowTransitionButton,
+} from "~/components/ui"
 import type { TempWindowFallbackIssue } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
 import { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 import {
@@ -76,7 +81,7 @@ export function TempWindowFallbackReminderDialog({
 
   const handleOpenSettings = useCallback(async () => {
     onClose()
-    await openSettingsTab(issue.settingsTab)
+    await openSettingsTab(issue.settingsTab, { preserveHistory: true })
   }, [issue.settingsTab, onClose])
 
   const handleNeverRemind = useCallback(async () => {
@@ -97,9 +102,9 @@ export function TempWindowFallbackReminderDialog({
           <Button variant="outline" onClick={handleNotNow}>
             {t("ui:dialog.tempWindowFallbackReminder.actions.notNow")}
           </Button>
-          <Button onClick={handleOpenSettings}>
+          <WorkflowTransitionButton onClick={handleOpenSettings}>
             {t("ui:dialog.tempWindowFallbackReminder.actions.openSettings")}
-          </Button>
+          </WorkflowTransitionButton>
         </div>
       }
     >

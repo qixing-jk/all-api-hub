@@ -47,6 +47,19 @@ vi.mock("~/components/ui", () => ({
       {children}
     </button>
   ),
+  WorkflowTransitionButton: ({
+    children,
+    onClick,
+    variant,
+  }: {
+    children: React.ReactNode
+    onClick?: () => void
+    variant?: string
+  }) => (
+    <button type="button" data-variant={variant} onClick={onClick}>
+      {children}
+    </button>
+  ),
   Heading4: ({ children }: { children: React.ReactNode }) => (
     <h4>{children}</h4>
   ),
@@ -136,7 +149,9 @@ describe("TempWindowFallbackReminderDialog", () => {
     )
 
     await waitFor(() => {
-      expect(openSettingsTabMock).toHaveBeenCalledWith("permissions")
+      expect(openSettingsTabMock).toHaveBeenCalledWith("permissions", {
+        preserveHistory: true,
+      })
     })
     expect(onClose).toHaveBeenCalledTimes(1)
 

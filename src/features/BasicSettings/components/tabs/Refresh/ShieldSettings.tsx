@@ -13,6 +13,7 @@ import {
   Checkbox,
   Muted,
   Switch,
+  WorkflowTransitionButton,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
@@ -77,7 +78,7 @@ export default function ShieldSettings() {
         : t("refresh.shieldMethodHintTab")
 
   const handleOpenPermissionsTab = useCallback(() => {
-    void openSettingsTab("permissions")
+    void openSettingsTab("permissions", { preserveHistory: true })
   }, [])
 
   return (
@@ -93,9 +94,12 @@ export default function ShieldSettings() {
           description={t("refresh.shieldPermissionWarningDesc")}
         >
           <div className="mt-3 flex flex-wrap gap-2">
-            <Button size="sm" onClick={handleOpenPermissionsTab}>
+            <WorkflowTransitionButton
+              size="sm"
+              onClick={handleOpenPermissionsTab}
+            >
               {t("refresh.shieldPermissionAction")}
-            </Button>
+            </WorkflowTransitionButton>
             <Button
               size="sm"
               variant="outline"

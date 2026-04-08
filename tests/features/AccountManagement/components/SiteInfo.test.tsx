@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import SiteInfo from "~/features/AccountManagement/components/AccountList/SiteInfo"
+import { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
@@ -260,6 +261,38 @@ describe("SiteInfo", () => {
     await user.click(ldohButton)
 
     expect(createTabMock).toHaveBeenCalledWith(ldohUrl, true)
+  })
+
+  it("opens the related settings tab from the health reason tooltip while preserving return history", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          health: {
+            status: "warning",
+            code: TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED,
+            reason: "Permission required",
+          },
+        })}
+      />,
+    )
+
+    await user.hover(
+      screen.getByRole("button", {
+        name: "account:list.site.refreshHealthStatus",
+      }),
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Permission required",
+      }),
+    )
+
+    expect(mockOpenSettingsTab).toHaveBeenCalledWith("permissions", {
+      preserveHistory: true,
+    })
   })
 
   it("renders current-site metadata, highlighted fragments, and supports unpinning", async () => {
