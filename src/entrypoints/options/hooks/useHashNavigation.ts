@@ -58,15 +58,7 @@ export function useHashNavigation() {
 
   // 初始化路由
   useEffect(() => {
-    const { page, params } = parseHash()
-    const validPage = menuItems.find((item) => item.id === page)
-      ? page
-      : MENU_ITEM_IDS.BASIC
-    setActiveMenuItem(validPage)
-    setRouteParams(params)
-
-    // 监听浏览器前进后退
-    const handleHashChange = () => {
+    const applyUrlState = () => {
       const { page, params } = parseHash()
       if (params.refresh === "true") {
         setRefreshKey((prev) => prev + 1)
@@ -78,8 +70,15 @@ export function useHashNavigation() {
       setRouteParams(params)
     }
 
-    window.addEventListener("hashchange", handleHashChange)
-    return () => window.removeEventListener("hashchange", handleHashChange)
+    applyUrlState()
+
+    // Listen to both hash/search-only changes and browser history traversal.
+    window.addEventListener("hashchange", applyUrlState)
+    window.addEventListener("popstate", applyUrlState)
+    return () => {
+      window.removeEventListener("hashchange", applyUrlState)
+      window.removeEventListener("popstate", applyUrlState)
+    }
   }, [])
 
   // 切换菜单项

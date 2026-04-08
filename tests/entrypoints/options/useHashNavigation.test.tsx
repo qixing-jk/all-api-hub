@@ -92,6 +92,27 @@ describe("useHashNavigation", () => {
     expect(screen.getByTestId("refresh-key")).toHaveTextContent("1")
   })
 
+  it("updates route params on popstate when only the search string changes", () => {
+    window.history.replaceState(null, "", "/options.html?search=alpha#account")
+
+    render(<Probe />)
+
+    expect(screen.getByTestId("active-menu")).toHaveTextContent(
+      MENU_ITEM_IDS.ACCOUNT,
+    )
+    expect(parseRouteParams()).toEqual({ search: "alpha" })
+
+    act(() => {
+      window.history.pushState(null, "", "/options.html?search=beta#account")
+      window.dispatchEvent(new PopStateEvent("popstate"))
+    })
+
+    expect(screen.getByTestId("active-menu")).toHaveTextContent(
+      MENU_ITEM_IDS.ACCOUNT,
+    )
+    expect(parseRouteParams()).toEqual({ search: "beta" })
+  })
+
   it("updates local state and delegates navigation when changing menu items", async () => {
     render(<Probe />)
 
