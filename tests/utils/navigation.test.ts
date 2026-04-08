@@ -45,9 +45,11 @@ import {
   openUsagePage,
 } from "~/utils/navigation"
 
+const OPTIONS_PAGE_URL = "http://localhost:3000/options.html"
+
 vi.mock("~/utils/browser", () => ({
   isExtensionPopup: vi.fn().mockReturnValue(false),
-  OPTIONS_PAGE_URL: "https://extension.local/options.html",
+  OPTIONS_PAGE_URL: "http://localhost:3000/options.html",
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -219,7 +221,7 @@ describe("navigation utilities", () => {
 
     expect(querySpy).toHaveBeenCalledWith({})
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://extension.local/options.html?runNow=true#autoCheckin",
+      `${OPTIONS_PAGE_URL}?runNow=true#autoCheckin`,
       true,
     )
     expect(closeSpy).toHaveBeenCalledTimes(1)
@@ -232,7 +234,7 @@ describe("navigation utilities", () => {
     const querySpy = vi.spyOn(browser.tabs, "query").mockResolvedValue([
       {
         id: 5,
-        url: "https://extension.local/options.html?runNow=true#autoCheckin",
+        url: `${OPTIONS_PAGE_URL}?runNow=true#autoCheckin`,
       } as browser.tabs.Tab,
     ])
     const updateSpy = vi
@@ -244,13 +246,13 @@ describe("navigation utilities", () => {
 
     expect(updateSpy).toHaveBeenCalledWith(5, {
       active: true,
-      url: "https://extension.local/options.html?runNow=true&refresh=true&t=123#autoCheckin",
+      url: `${OPTIONS_PAGE_URL}?runNow=true&refresh=true&t=123#autoCheckin`,
     })
     expect(mockedOpenSidePanel).not.toHaveBeenCalled()
     expect(mockedCreateTab).not.toHaveBeenCalled()
     expect(mockedFocusTab).toHaveBeenCalledWith({
       id: 5,
-      url: "https://extension.local/options.html?runNow=true#autoCheckin",
+      url: `${OPTIONS_PAGE_URL}?runNow=true#autoCheckin`,
     })
 
     nowSpy.mockRestore()
@@ -276,6 +278,31 @@ describe("navigation utilities", () => {
     expect(dispatchSpy).toHaveBeenCalledWith(expect.any(Event))
     expect(window.location.search).toBe("?runNow=true")
 
+    replaceStateSpy.mockRestore()
+    dispatchSpy.mockRestore()
+  })
+
+  it("navigateWithinOptionsPage should support preserving history with pushState", () => {
+    window.history.replaceState(null, "", "/options.html#basic")
+    const dispatchSpy = vi.spyOn(window, "dispatchEvent")
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState")
+    const pushStateSpy = vi.spyOn(window.history, "pushState")
+
+    navigateWithinOptionsPage(
+      "#account",
+      { search: "alpha" },
+      { historyMode: "push" },
+    )
+
+    expect(replaceStateSpy).not.toHaveBeenCalled()
+    expect(pushStateSpy).toHaveBeenCalledWith(
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}?search=alpha#account`,
+    )
+    expect(dispatchSpy).toHaveBeenCalledWith(expect.any(Event))
+
+    pushStateSpy.mockRestore()
     replaceStateSpy.mockRestore()
     dispatchSpy.mockRestore()
   })
@@ -552,7 +579,7 @@ describe("navigation utilities", () => {
 
     await vi.waitFor(() => {
       expect(mockedCreateTab).toHaveBeenCalledWith(
-        "https://extension.local/options.html#basic",
+        `${OPTIONS_PAGE_URL}#basic`,
         true,
       )
     })
@@ -586,7 +613,7 @@ describe("navigation utilities", () => {
     await openOrFocusOptionsPage("#basic")
 
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://extension.local/options.html#basic",
+      `${OPTIONS_PAGE_URL}#basic`,
       true,
     )
 
@@ -613,47 +640,47 @@ describe("navigation utilities", () => {
     await openManagedSiteModelSyncForChannel(100)
 
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://extension.local/options.html#account",
+      `${OPTIONS_PAGE_URL}#account`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://extension.local/options.html?search=alpha#account",
+      `${OPTIONS_PAGE_URL}?search=alpha#account`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://extension.local/options.html#bookmark",
+      `${OPTIONS_PAGE_URL}#bookmark`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://extension.local/options.html?search=beta#bookmark",
+      `${OPTIONS_PAGE_URL}?search=beta#bookmark`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://extension.local/options.html#basic",
+      `${OPTIONS_PAGE_URL}#basic`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://extension.local/options.html?tab=permissions#basic",
+      `${OPTIONS_PAGE_URL}?tab=permissions#basic`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://extension.local/options.html#apiCredentialProfiles",
+      `${OPTIONS_PAGE_URL}#apiCredentialProfiles`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://extension.local/options.html?channelId=42&search=relay#managedSiteChannels",
+      `${OPTIONS_PAGE_URL}?channelId=42&search=relay#managedSiteChannels`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://extension.local/options.html?channelId=77#managedSiteChannels",
+      `${OPTIONS_PAGE_URL}?channelId=77#managedSiteChannels`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://extension.local/options.html?channelId=99&tab=history#managedSiteModelSync",
+      `${OPTIONS_PAGE_URL}?channelId=99&tab=history#managedSiteModelSync`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://extension.local/options.html?channelId=100&tab=manual#managedSiteModelSync",
+      `${OPTIONS_PAGE_URL}?channelId=100&tab=manual#managedSiteModelSync`,
       true,
     )
   })
@@ -663,13 +690,59 @@ describe("navigation utilities", () => {
     await openManagedSiteModelSyncPage()
 
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://extension.local/options.html#managedSiteChannels",
+      `${OPTIONS_PAGE_URL}#managedSiteChannels`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://extension.local/options.html#managedSiteModelSync",
+      `${OPTIONS_PAGE_URL}#managedSiteModelSync`,
       true,
     )
+  })
+
+  it("preserves options-page history for account and managed-site drill-down navigation", async () => {
+    window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#autoCheckin`)
+    const pushStateSpy = vi.spyOn(window.history, "pushState")
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState")
+
+    await openAccountManagerWithSearch("alpha")
+    await openManagedSiteChannelsForChannel(77)
+
+    expect(mockedCreateTab).not.toHaveBeenCalled()
+    expect(pushStateSpy).toHaveBeenNthCalledWith(
+      1,
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}?search=alpha#account`,
+    )
+    expect(pushStateSpy).toHaveBeenNthCalledWith(
+      2,
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}?channelId=77#managedSiteChannels`,
+    )
+    expect(replaceStateSpy).not.toHaveBeenCalled()
+
+    replaceStateSpy.mockRestore()
+    pushStateSpy.mockRestore()
+  })
+
+  it("keeps settings-style options navigation on replaceState", async () => {
+    window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#autoCheckin`)
+    const pushStateSpy = vi.spyOn(window.history, "pushState")
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState")
+
+    await openSettingsPage()
+
+    expect(pushStateSpy).not.toHaveBeenCalled()
+    expect(replaceStateSpy).toHaveBeenCalledWith(
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}#basic`,
+    )
+    expect(mockedCreateTab).not.toHaveBeenCalled()
+
+    replaceStateSpy.mockRestore()
+    pushStateSpy.mockRestore()
   })
 
   it("opens the remaining wrapper destinations in fresh tabs", async () => {
@@ -695,7 +768,7 @@ describe("navigation utilities", () => {
     await openRedeemPage(account)
 
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://extension.local/options.html#about",
+      `${OPTIONS_PAGE_URL}#about`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(

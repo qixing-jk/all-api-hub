@@ -93,10 +93,16 @@ const buildSearchString = (params?: Record<string, string | undefined>) => {
  * Dispatches a hashchange event when URL remains unchanged to notify listeners.
  * @param hash Target hash (including #).
  * @param searchParams Optional query params to set.
+ * @param options Optional navigation behavior overrides.
+ * @param options.historyMode Choose whether the in-page navigation replaces the
+ * current history entry or pushes a new one that the browser back button can revisit.
  */
 export const navigateWithinOptionsPage = (
   hash: string,
   searchParams?: Record<string, string | undefined>,
+  options?: {
+    historyMode?: "replace" | "push"
+  },
 ) => {
   if (typeof window === "undefined") {
     return
@@ -116,7 +122,9 @@ export const navigateWithinOptionsPage = (
     return
   }
 
-  window.history.replaceState(null, "", nextUrl.toString())
+  const historyMethod =
+    options?.historyMode === "push" ? "pushState" : "replaceState"
+  window.history[historyMethod](null, "", nextUrl.toString())
   window.dispatchEvent(new Event("hashchange"))
 }
 
@@ -257,13 +265,21 @@ const withPopupClose = <T extends any[]>(
  * Opens or focuses the account manager page, preferring in-page navigation when already on options.html.
  * @param params Optional query parameters to prefilter accounts.
  * @param params.search Search keyword applied to the manager list.
+ * @param options Optional in-page navigation behavior tweaks.
+ * @param options.preserveHistory When true and already inside options.html,
+ * push a new history entry so users can return to the originating context.
  */
-const _openFullManagerPage = (params?: { search?: string }) => {
+const _openFullManagerPage = (
+  params?: { search?: string },
+  options?: { preserveHistory?: boolean },
+) => {
   const targetHash = getAccountHash()
   const searchParams = params?.search ? { search: params.search } : undefined
 
   if (isOnOptionsPage()) {
-    navigateWithinOptionsPage(targetHash, searchParams)
+    navigateWithinOptionsPage(targetHash, searchParams, {
+      historyMode: options?.preserveHistory ? "push" : "replace",
+    })
     return
   }
 
@@ -324,7 +340,9 @@ const _openManagedSiteChannelsPage = (params?: {
   const resolvedParams = Object.keys(searchParams).length ? searchParams : {}
 
   if (isOnOptionsPage()) {
-    navigateWithinOptionsPage(targetHash, resolvedParams)
+    navigateWithinOptionsPage(targetHash, resolvedParams, {
+      historyMode: "push",
+    })
     return
   }
 
@@ -625,7 +643,7 @@ export const openFullAccountManagerPage = withPopupClose(() =>
  * closing the popup, keeping the flow consistent with popup interactions.
  */
 export const openAccountManagerWithSearch = withPopupClose((search: string) =>
-  _openFullManagerPage({ search }),
+  _openFullManagerPage({ search }, { preserveHistory: true }),
 )
 
 /**
