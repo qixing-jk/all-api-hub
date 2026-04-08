@@ -4,12 +4,12 @@ import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
 import {
-  Button,
   Card,
   CardItem,
   CardList,
   IconButton,
   Input,
+  WorkflowTransitionButton,
 } from "~/components/ui"
 import { getSiteApiRouter, VELOERA } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -111,13 +111,13 @@ export default function VeloeraSettings() {
               title={t("veloera.adminCredentialsLink.title")}
               description={t("veloera.adminCredentialsLink.description")}
               rightContent={
-                <Button
+                <WorkflowTransitionButton
                   variant="link"
                   size="sm"
                   onClick={handleOpenAdminCredentials}
                 >
                   {t("veloera.adminCredentialsLink.open")}
-                </Button>
+                </WorkflowTransitionButton>
               }
             />
           )}

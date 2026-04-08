@@ -2,7 +2,7 @@ import type { TFunction } from "i18next"
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
-import { Button, Input, Modal } from "~/components/ui"
+import { Button, Input, Modal, WorkflowTransitionButton } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   NEW_API_MANAGED_VERIFICATION_STEPS,
@@ -201,13 +201,13 @@ export function NewApiManagedVerificationDialog(
     <div className="flex flex-wrap justify-end gap-2">
       {props.step === NEW_API_MANAGED_VERIFICATION_STEPS.PASSKEY_MANUAL ? (
         <>
-          <Button
+          <WorkflowTransitionButton
             variant="outline"
             onClick={props.onOpenSite}
             disabled={props.isBusy}
           >
             {t("dialog.actions.openSite")}
-          </Button>
+          </WorkflowTransitionButton>
           <Button onClick={props.onRetry} disabled={props.isBusy}>
             {t("dialog.actions.retryAfterPasskey")}
           </Button>

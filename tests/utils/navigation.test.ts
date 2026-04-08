@@ -770,6 +770,25 @@ describe("navigation utilities", () => {
     pushStateSpy.mockRestore()
   })
 
+  it("can preserve history when opening a settings tab from another workflow", async () => {
+    window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#account`)
+    const pushStateSpy = vi.spyOn(window.history, "pushState")
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState")
+
+    await openSettingsTab("managedSite", { preserveHistory: true })
+
+    expect(replaceStateSpy).not.toHaveBeenCalled()
+    expect(pushStateSpy).toHaveBeenCalledWith(
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}?tab=managedSite#basic`,
+    )
+    expect(mockedCreateTab).not.toHaveBeenCalled()
+
+    replaceStateSpy.mockRestore()
+    pushStateSpy.mockRestore()
+  })
+
   it("opens the remaining wrapper destinations in fresh tabs", async () => {
     const account = {
       baseUrl: "https://example.com",

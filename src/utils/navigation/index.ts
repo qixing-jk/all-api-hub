@@ -329,12 +329,23 @@ const _openFullBookmarkManagerPage = (params?: { search?: string }) => {
 /**
  * Navigates to the basic settings area, optionally focusing a sub-tab.
  * @param tabId Optional tab ID within settings.
+ * @param options Optional in-page navigation behavior tweaks.
+ * @param options.preserveHistory When true and already inside options.html,
+ * push a new history entry so users can return to the originating context.
  */
-const navigateToBasicSettings = (tabId?: string) => {
+const navigateToBasicSettings = (
+  tabId?: string,
+  options?: { preserveHistory?: boolean },
+) => {
   const targetHash = getBasicSettingsHash()
   const searchParams = tabId ? { tab: tabId } : undefined
 
   if (isOnOptionsPage()) {
+    if (options?.preserveHistory) {
+      pushWithinOptionsPage(targetHash, searchParams)
+      return
+    }
+
     replaceWithinOptionsPage(targetHash, searchParams)
     return
   }
@@ -412,8 +423,11 @@ const _openSettingsPage = () => {
  * Navigates directly to a named settings tab.
  * @param tabId Unique identifier for the tab to activate.
  */
-const _openSettingsTab = (tabId: string) => {
-  return navigateToBasicSettings(tabId)
+const _openSettingsTab = (
+  tabId: string,
+  options?: { preserveHistory?: boolean },
+) => {
+  return navigateToBasicSettings(tabId, options)
 }
 
 /**

@@ -10,6 +10,7 @@ import {
   CardList,
   IconButton,
   Input,
+  WorkflowTransitionButton,
 } from "~/components/ui"
 import { getSiteApiRouter, NEW_API } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -172,13 +173,13 @@ export default function NewApiSettings() {
               title={t("newApi.adminCredentialsLink.title")}
               description={t("newApi.adminCredentialsLink.description")}
               rightContent={
-                <Button
+                <WorkflowTransitionButton
                   variant="link"
                   size="sm"
                   onClick={handleOpenAdminCredentials}
                 >
                   {t("newApi.adminCredentialsLink.open")}
-                </Button>
+                </WorkflowTransitionButton>
               }
             />
           )}

@@ -4,12 +4,12 @@ import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
 import {
-  Button,
   Card,
   CardItem,
   CardList,
   IconButton,
   Input,
+  WorkflowTransitionButton,
 } from "~/components/ui"
 import { DONE_HUB, getSiteApiRouter } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -112,13 +112,13 @@ export default function DoneHubSettings() {
               title={t("doneHub.adminCredentialsLink.title")}
               description={t("doneHub.adminCredentialsLink.description")}
               rightContent={
-                <Button
+                <WorkflowTransitionButton
                   variant="link"
                   size="sm"
                   onClick={handleOpenAdminCredentials}
                 >
                   {t("doneHub.adminCredentialsLink.open")}
-                </Button>
+                </WorkflowTransitionButton>
               }
             />
           )}

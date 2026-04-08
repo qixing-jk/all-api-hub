@@ -31,7 +31,13 @@ import {
   SignalBadge,
 } from "~/components/ManagedSiteChannelAssessmentSignalHelpers"
 import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
-import { Badge, Button, Heading6, IconButton } from "~/components/ui"
+import {
+  Badge,
+  Button,
+  Heading6,
+  IconButton,
+  WorkflowTransitionButton,
+} from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
@@ -564,8 +570,8 @@ export function TokenHeader({
   }
 
   const handleOpenManagedSiteSettings = () => {
-    void openSettingsTab("managedSite").catch((error) =>
-      logger.error("Failed to open managed-site settings", error),
+    void openSettingsTab("managedSite", { preserveHistory: true }).catch(
+      (error) => logger.error("Failed to open managed-site settings", error),
     )
   }
 
@@ -689,7 +695,7 @@ export function TokenHeader({
               </Button>
             ) : null}
             {shouldShowManagedSiteSettingsAction ? (
-              <Button
+              <WorkflowTransitionButton
                 size="sm"
                 variant="outline"
                 className="h-auto px-2 py-0.5 text-xs"
@@ -697,7 +703,7 @@ export function TokenHeader({
                 title={managedSiteRecoveryMessage ?? undefined}
               >
                 {t("common:labels.settings")}
-              </Button>
+              </WorkflowTransitionButton>
             ) : null}
           </div>
         ) : null}

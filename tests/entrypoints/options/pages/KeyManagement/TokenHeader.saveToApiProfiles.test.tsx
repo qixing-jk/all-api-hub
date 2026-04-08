@@ -893,7 +893,9 @@ describe("TokenHeader save to API profiles", () => {
     )
 
     await waitFor(() => {
-      expect(mockOpenSettingsTab).toHaveBeenCalledWith("managedSite")
+      expect(mockOpenSettingsTab).toHaveBeenCalledWith("managedSite", {
+        preserveHistory: true,
+      })
       expect(mockLoggerError).toHaveBeenCalledWith(
         "Failed to open managed-site settings",
         navigationError,
