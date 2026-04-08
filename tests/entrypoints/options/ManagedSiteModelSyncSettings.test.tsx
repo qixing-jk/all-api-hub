@@ -7,7 +7,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import ManagedSiteModelSyncSettings from "~/features/BasicSettings/components/tabs/ManagedSite/managedSiteModelSyncSettings"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -54,7 +54,7 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
 
   return {
     ...actual,
-    navigateWithinOptionsPage: vi.fn(),
+    pushWithinOptionsPage: vi.fn(),
   }
 })
 
@@ -270,8 +270,8 @@ const mockedModelMetadataService = modelMetadataService as unknown as {
   initialize: ReturnType<typeof vi.fn>
   getAllMetadata: ReturnType<typeof vi.fn>
 }
-const mockedNavigateWithinOptionsPage =
-  navigateWithinOptionsPage as unknown as ReturnType<typeof vi.fn>
+const mockedPushWithinOptionsPage =
+  pushWithinOptionsPage as unknown as ReturnType<typeof vi.fn>
 
 const createContextValue = (overrides: Record<string, unknown> = {}) => ({
   preferences: {
@@ -1277,7 +1277,7 @@ describe("ManagedSiteModelSyncSettings", () => {
       expect(mockResetNewApiModelSyncConfig).toHaveBeenCalledTimes(1)
     })
 
-    expect(mockedNavigateWithinOptionsPage).toHaveBeenCalledWith(
+    expect(mockedPushWithinOptionsPage).toHaveBeenCalledWith(
       `#${MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC}`,
     )
   })

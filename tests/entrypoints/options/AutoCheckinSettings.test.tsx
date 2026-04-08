@@ -15,7 +15,7 @@ const { toastMocks, useUserPreferencesContextMock } = vi.hoisted(() => ({
   useUserPreferencesContextMock: vi.fn(),
 }))
 
-const navigateWithinOptionsPageMock = vi.fn()
+const pushWithinOptionsPageMock = vi.fn()
 
 vi.mock("react-hot-toast", () => ({
   default: toastMocks,
@@ -36,8 +36,8 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
 
   return {
     ...actual,
-    navigateWithinOptionsPage: (...args: unknown[]) =>
-      navigateWithinOptionsPageMock(...args),
+    pushWithinOptionsPage: (...args: unknown[]) =>
+      pushWithinOptionsPageMock(...args),
   }
 })
 
@@ -134,7 +134,7 @@ describe("AutoCheckinSettings", () => {
       },
     })
     expect(toastMocks.success).toHaveBeenCalled()
-    expect(navigateWithinOptionsPageMock).toHaveBeenCalledWith("#autoCheckin")
+    expect(pushWithinOptionsPageMock).toHaveBeenCalledWith("#autoCheckin")
   })
 
   it("reports invalid retry numbers and save failures", async () => {

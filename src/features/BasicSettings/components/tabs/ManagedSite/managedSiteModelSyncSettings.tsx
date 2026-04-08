@@ -1,10 +1,10 @@
-import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
 import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
@@ -29,7 +29,7 @@ import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation"
 
 type UserManagedSiteModelSyncConfig = NonNullable<
   typeof DEFAULT_PREFERENCES.managedSiteModelSync
@@ -354,7 +354,7 @@ export default function ManagedSiteModelSyncSettings() {
 
   const handleNavigateToExecution = () => {
     // Navigate to the ManagedSiteModelSync page
-    navigateWithinOptionsPage(`#${MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC}`)
+    pushWithinOptionsPage(`#${MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC}`)
   }
 
   return (
@@ -590,7 +590,7 @@ export default function ManagedSiteModelSyncSettings() {
                 variant="default"
                 size="sm"
                 className="flex items-center gap-2"
-                rightIcon={<ArrowTopRightOnSquareIcon className="h-4 w-4" />}
+                rightIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
               >
                 <span>
                   {t("managedSiteModelSync:settings.viewExecutionButton")}

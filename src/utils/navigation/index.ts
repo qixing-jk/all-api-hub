@@ -129,6 +129,26 @@ export const navigateWithinOptionsPage = (
 }
 
 /**
+ * Replaces the current options-page history entry while updating hash/search.
+ * Use this for URL normalization or in-place state sync that should not create
+ * an extra browser back entry.
+ */
+export const replaceWithinOptionsPage = (
+  hash: string,
+  searchParams?: Record<string, string | undefined>,
+) => navigateWithinOptionsPage(hash, searchParams, { historyMode: "replace" })
+
+/**
+ * Pushes a new options-page history entry while updating hash/search.
+ * Use this for user-initiated transitions that leave the current workflow and
+ * should be reversible via the browser back button.
+ */
+export const pushWithinOptionsPage = (
+  hash: string,
+  searchParams?: Record<string, string | undefined>,
+) => navigateWithinOptionsPage(hash, searchParams, { historyMode: "push" })
+
+/**
  * Normalized hash used by account manager navigations to keep routing consistent.
  */
 const getAccountHash = () => `#${MENU_ITEM_IDS.ACCOUNT}`
@@ -277,9 +297,12 @@ const _openFullManagerPage = (
   const searchParams = params?.search ? { search: params.search } : undefined
 
   if (isOnOptionsPage()) {
-    navigateWithinOptionsPage(targetHash, searchParams, {
-      historyMode: options?.preserveHistory ? "push" : "replace",
-    })
+    if (options?.preserveHistory) {
+      pushWithinOptionsPage(targetHash, searchParams)
+      return
+    }
+
+    replaceWithinOptionsPage(targetHash, searchParams)
     return
   }
 
@@ -296,7 +319,7 @@ const _openFullBookmarkManagerPage = (params?: { search?: string }) => {
   const searchParams = params?.search ? { search: params.search } : undefined
 
   if (isOnOptionsPage()) {
-    navigateWithinOptionsPage(targetHash, searchParams)
+    replaceWithinOptionsPage(targetHash, searchParams)
     return
   }
 
@@ -312,7 +335,7 @@ const navigateToBasicSettings = (tabId?: string) => {
   const searchParams = tabId ? { tab: tabId } : undefined
 
   if (isOnOptionsPage()) {
-    navigateWithinOptionsPage(targetHash, searchParams)
+    replaceWithinOptionsPage(targetHash, searchParams)
     return
   }
 
@@ -340,9 +363,7 @@ const _openManagedSiteChannelsPage = (params?: {
   const resolvedParams = Object.keys(searchParams).length ? searchParams : {}
 
   if (isOnOptionsPage()) {
-    navigateWithinOptionsPage(targetHash, resolvedParams, {
-      historyMode: "push",
-    })
+    pushWithinOptionsPage(targetHash, resolvedParams)
     return
   }
 
@@ -372,7 +393,7 @@ const _openManagedSiteModelSyncPage = (params?: {
   const resolvedParams = Object.keys(searchParams).length ? searchParams : {}
 
   if (isOnOptionsPage()) {
-    navigateWithinOptionsPage(targetHash, resolvedParams)
+    replaceWithinOptionsPage(targetHash, resolvedParams)
     return
   }
 
@@ -438,7 +459,7 @@ const _openApiCredentialProfilesPage = () => {
   const targetHash = getApiCredentialProfilesHash()
 
   if (isOnOptionsPage()) {
-    navigateWithinOptionsPage(targetHash)
+    replaceWithinOptionsPage(targetHash)
     return
   }
 

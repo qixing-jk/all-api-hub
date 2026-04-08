@@ -43,6 +43,8 @@ import {
   openSidePanelPage,
   openSidePanelWithFallback,
   openUsagePage,
+  pushWithinOptionsPage,
+  replaceWithinOptionsPage,
 } from "~/utils/navigation"
 
 const OPTIONS_PAGE_URL = "http://localhost:3000/options.html"
@@ -305,6 +307,29 @@ describe("navigation utilities", () => {
     pushStateSpy.mockRestore()
     replaceStateSpy.mockRestore()
     dispatchSpy.mockRestore()
+  })
+
+  it("pushWithinOptionsPage and replaceWithinOptionsPage should apply their named history semantics", () => {
+    window.history.replaceState(null, "", "/options.html#basic")
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState")
+    const pushStateSpy = vi.spyOn(window.history, "pushState")
+
+    pushWithinOptionsPage("#account", { search: "alpha" })
+    replaceWithinOptionsPage("#basic", { tab: "general" })
+
+    expect(pushStateSpy).toHaveBeenCalledWith(
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}?search=alpha#account`,
+    )
+    expect(replaceStateSpy).toHaveBeenLastCalledWith(
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}?tab=general#basic`,
+    )
+
+    pushStateSpy.mockRestore()
+    replaceStateSpy.mockRestore()
   })
 
   it("openMultiplePages should execute all operations and not close popup when isExtensionPopup is false", async () => {

@@ -1,8 +1,8 @@
-import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
 import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
@@ -21,7 +21,7 @@ import {
   AutoCheckinScheduleMode,
 } from "~/types/autoCheckin"
 import { createLogger } from "~/utils/core/logger"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation"
 
 /**
  * Unified logger scoped to the Basic Settings auto check-in section.
@@ -80,7 +80,7 @@ export default function AutoCheckinSettings() {
   }
 
   const handleNavigateToExecution = () => {
-    navigateWithinOptionsPage(`#${MENU_ITEM_IDS.AUTO_CHECKIN}`)
+    pushWithinOptionsPage(`#${MENU_ITEM_IDS.AUTO_CHECKIN}`)
   }
 
   const validateTimeWindow = (start: string, end: string): boolean => {
@@ -395,7 +395,7 @@ export default function AutoCheckinSettings() {
                 variant="default"
                 size="sm"
                 className="flex items-center gap-2"
-                rightIcon={<ArrowTopRightOnSquareIcon className="h-4 w-4" />}
+                rightIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
               >
                 <span>{t("autoCheckin:settings.viewExecutionButton")}</span>
               </Button>

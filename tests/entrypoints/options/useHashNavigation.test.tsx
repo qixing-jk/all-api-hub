@@ -3,14 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useHashNavigation } from "~/entrypoints/options/hooks/useHashNavigation"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation"
 
 vi.mock("~/utils/navigation", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/navigation")>()
 
   return {
     ...actual,
-    navigateWithinOptionsPage: vi.fn(),
+    pushWithinOptionsPage: vi.fn(),
   }
 })
 
@@ -126,7 +126,7 @@ describe("useHashNavigation", () => {
       )
     })
     expect(parseRouteParams()).toEqual({ foo: "bar" })
-    expect(navigateWithinOptionsPage).toHaveBeenCalledWith("#models", {
+    expect(pushWithinOptionsPage).toHaveBeenCalledWith("#models", {
       foo: "bar",
     })
   })

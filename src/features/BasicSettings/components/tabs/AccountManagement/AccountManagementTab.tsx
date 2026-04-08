@@ -1,9 +1,10 @@
 import { UsersIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Button, Card, CardContent, Heading4 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { pushWithinOptionsPage } from "~/utils/navigation"
 
 import AutoProvisionKeyOnAccountAddSettings from "./AutoProvisionKeyOnAccountAddSettings"
 import DuplicateAccountWarningOnAddSettings from "./DuplicateAccountWarningOnAddSettings"
@@ -17,7 +18,7 @@ export default function AccountManagementTab() {
   const { t } = useTranslation("settings")
 
   const handleNavigate = () => {
-    navigateWithinOptionsPage(`#${MENU_ITEM_IDS.ACCOUNT}`)
+    pushWithinOptionsPage(`#${MENU_ITEM_IDS.ACCOUNT}`)
   }
 
   return (
@@ -37,6 +38,7 @@ export default function AccountManagementTab() {
               variant="default"
               className="flex items-center gap-2 self-start"
               leftIcon={<UsersIcon className="h-5 w-5" />}
+              rightIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
             >
               <span>{t("accountManagement.openPage")}</span>
             </Button>
