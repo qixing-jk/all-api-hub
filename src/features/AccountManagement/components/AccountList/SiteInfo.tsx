@@ -404,6 +404,18 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
                         e.stopPropagation()
                         void openSettingsTab(healthSettingsTab, {
                           preserveHistory: true,
+                        }).catch((error) => {
+                          const errorMessage = getErrorMessage(
+                            error,
+                            t("messages:toast.error.operationFailedGeneric"),
+                          )
+                          logger.error("Failed to open health settings tab", {
+                            error,
+                            errorMessage,
+                            accountId: site.id,
+                            healthSettingsTab,
+                          })
+                          toast.error(errorMessage)
                         })
                       }}
                     >

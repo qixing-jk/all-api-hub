@@ -23,6 +23,7 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
 const {
   accountActionsScenario,
   accountDataScenario,
+  toastErrorMock,
   toastSuccessMock,
   mockOpenAccountBaseUrl,
   mockHandleRefreshAccount,
@@ -43,6 +44,7 @@ const {
     isAccountPinned: vi.fn(() => false),
     togglePinAccount: vi.fn(),
   },
+  toastErrorMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   mockOpenAccountBaseUrl: vi.fn(),
   mockHandleRefreshAccount: vi.fn(),
@@ -50,7 +52,7 @@ const {
   mockOpenCheckInAndRedeem: vi.fn(),
   mockOpenCheckInPage: vi.fn(),
   mockOpenCustomCheckInPage: vi.fn(),
-  mockOpenSettingsTab: vi.fn(),
+  mockOpenSettingsTab: vi.fn().mockResolvedValue(undefined),
   createTabMock: vi.fn(),
   getLdohSearchUrlForAccountUrlMock: vi.fn<
     (accountBaseUrl: string) => string | null
@@ -59,6 +61,7 @@ const {
 
 vi.mock("react-hot-toast", () => ({
   default: {
+    error: toastErrorMock,
     success: toastSuccessMock,
   },
 }))
@@ -292,6 +295,39 @@ describe("SiteInfo", () => {
 
     expect(mockOpenSettingsTab).toHaveBeenCalledWith("permissions", {
       preserveHistory: true,
+    })
+  })
+
+  it("shows a toast when opening the related settings tab fails", async () => {
+    const user = userEvent.setup()
+    mockOpenSettingsTab.mockRejectedValueOnce(new Error("settings page failed"))
+
+    render(
+      <SiteInfo
+        site={buildSite({
+          health: {
+            status: "warning",
+            code: TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED,
+            reason: "Permission required",
+          },
+        })}
+      />,
+    )
+
+    await user.hover(
+      screen.getByRole("button", {
+        name: "account:list.site.refreshHealthStatus",
+      }),
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Permission required",
+      }),
+    )
+
+    await vi.waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith("settings page failed")
     })
   })
 

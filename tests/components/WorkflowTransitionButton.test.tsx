@@ -14,7 +14,7 @@ describe("WorkflowTransitionButton", () => {
   })
 
   it("allows callers to override the trailing icon", () => {
-    render(
+    const { container } = render(
       <WorkflowTransitionButton
         rightIcon={<span data-testid="custom-icon">custom</span>}
       >
@@ -23,5 +23,6 @@ describe("WorkflowTransitionButton", () => {
     )
 
     expect(screen.getByTestId("custom-icon")).toHaveTextContent("custom")
+    expect(container.querySelector("svg")).toBeNull()
   })
 })

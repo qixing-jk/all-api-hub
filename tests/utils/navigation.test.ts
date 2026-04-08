@@ -309,6 +309,22 @@ describe("navigation utilities", () => {
     dispatchSpy.mockRestore()
   })
 
+  it("navigateWithinOptionsPage should clear stale query params when search params are omitted", () => {
+    window.history.replaceState(null, "", "/options.html?tab=managedSite#basic")
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState")
+
+    navigateWithinOptionsPage("#account")
+
+    expect(replaceStateSpy).toHaveBeenCalledWith(
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}#account`,
+    )
+    expect(window.location.search).toBe("")
+
+    replaceStateSpy.mockRestore()
+  })
+
   it("pushWithinOptionsPage and replaceWithinOptionsPage should apply their named history semantics", () => {
     window.history.replaceState(null, "", "/options.html#basic")
     const replaceStateSpy = vi.spyOn(window.history, "replaceState")
@@ -768,6 +784,40 @@ describe("navigation utilities", () => {
 
     replaceStateSpy.mockRestore()
     pushStateSpy.mockRestore()
+  })
+
+  it("root options-page navigations clear existing query params when no filters are requested", async () => {
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState")
+
+    window.history.replaceState(
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}?tab=managedSite#basic`,
+    )
+    await openSettingsPage()
+
+    window.history.replaceState(
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}?search=alpha#account`,
+    )
+    await openFullAccountManagerPage()
+
+    expect(replaceStateSpy).toHaveBeenNthCalledWith(
+      2,
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}#basic`,
+    )
+    expect(replaceStateSpy).toHaveBeenNthCalledWith(
+      4,
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}#account`,
+    )
+    expect(mockedCreateTab).not.toHaveBeenCalled()
+
+    replaceStateSpy.mockRestore()
   })
 
   it("can preserve history when opening a settings tab from another workflow", async () => {

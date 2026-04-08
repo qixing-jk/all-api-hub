@@ -111,9 +111,7 @@ export const navigateWithinOptionsPage = (
   const currentUrl = new URL(window.location.href)
   const nextUrl = new URL(window.location.href)
 
-  if (searchParams) {
-    nextUrl.search = buildSearchString(searchParams)
-  }
+  nextUrl.search = buildSearchString(searchParams)
 
   nextUrl.hash = hash
 
