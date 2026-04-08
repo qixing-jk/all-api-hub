@@ -1,5 +1,6 @@
 // Core UI Components
 export { Button, buttonVariants } from "./button"
+export { WorkflowTransitionButton } from "./WorkflowTransitionButton"
 export { Input, inputVariants } from "./input"
 export {
   Card,

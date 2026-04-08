@@ -162,6 +162,19 @@ vi.mock("~/components/ui", () => ({
       {children}
     </button>
   ),
+  WorkflowTransitionButton: ({
+    children,
+    onClick,
+    disabled,
+  }: {
+    children: ReactNode
+    onClick?: () => void
+    disabled?: boolean
+  }) => (
+    <button disabled={disabled} onClick={() => onClick?.()}>
+      {children}
+    </button>
+  ),
   Card: ({ children }: { children: ReactNode }) => <div>{children}</div>,
   CardItem: ({
     title,

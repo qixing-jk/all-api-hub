@@ -1,8 +1,7 @@
 import { useCallback } from "react"
 import { useTranslation } from "react-i18next"
 
-import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
-import { Button } from "~/components/ui"
+import { WorkflowTransitionButton } from "~/components/ui"
 import {
   openManagedSiteChannelsForChannel,
   openManagedSiteChannelsPage,
@@ -38,17 +37,14 @@ export default function ManagedSiteChannelLinkButton({
   }, [channelId, search])
 
   return (
-    <Button
+    <WorkflowTransitionButton
       variant="link"
       className={className}
       onClick={handleClick}
       disabled={channelId == null && !search}
       aria-label={`${t("managedSiteModelSync:execution.table.manageChannel")}: ${channelName}`}
-      rightIcon={
-        <WorkflowTransitionIcon className="h-4 w-4" aria-hidden="true" />
-      }
     >
       <span className="truncate">{channelName}</span>
-    </Button>
+    </WorkflowTransitionButton>
   )
 }

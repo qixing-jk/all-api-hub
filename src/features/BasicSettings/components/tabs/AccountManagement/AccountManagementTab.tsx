@@ -1,8 +1,12 @@
 import { UsersIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
-import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
-import { Button, Card, CardContent, Heading4 } from "~/components/ui"
+import {
+  Card,
+  CardContent,
+  Heading4,
+  WorkflowTransitionButton,
+} from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
@@ -33,15 +37,14 @@ export default function AccountManagementTab() {
             <p className="text-sm text-gray-700 dark:text-gray-300">
               {t("accountManagement.description")}
             </p>
-            <Button
+            <WorkflowTransitionButton
               onClick={handleNavigate}
               variant="default"
               className="flex items-center gap-2 self-start"
               leftIcon={<UsersIcon className="h-5 w-5" />}
-              rightIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
             >
               <span>{t("accountManagement.openPage")}</span>
-            </Button>
+            </WorkflowTransitionButton>
           </CardContent>
         </Card>
       </section>

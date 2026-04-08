@@ -2,7 +2,6 @@ import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
@@ -11,6 +10,7 @@ import {
   CardList,
   Input,
   Switch,
+  WorkflowTransitionButton,
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -390,15 +390,14 @@ export default function AutoCheckinSettings() {
             title={t("autoCheckin:settings.viewExecution")}
             description={t("autoCheckin:settings.viewExecutionDesc")}
             rightContent={
-              <Button
+              <WorkflowTransitionButton
                 onClick={handleNavigateToExecution}
                 variant="default"
                 size="sm"
                 className="flex items-center gap-2"
-                rightIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
               >
                 <span>{t("autoCheckin:settings.viewExecutionButton")}</span>
-              </Button>
+              </WorkflowTransitionButton>
             }
           />
         </CardList>
