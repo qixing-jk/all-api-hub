@@ -23,6 +23,10 @@ import {
   TempWindowFallbackPreferences,
   userPreferences,
 } from "~/services/preferences/userPreferences"
+import {
+  TEMP_WINDOW_HEALTH_STATUS_CODES,
+  type TempWindowHealthStatusCode,
+} from "~/types/tempWindow"
 import type {
   TempWindowFallbackAllowlist,
   TempWindowFallbackContext,
@@ -75,6 +79,146 @@ export async function canUseTempWindowFetch() {
     return await hasCookieInterceptorPermissions()
   } else {
     return true
+  }
+}
+
+type TempWindowFallbackBlockedReason =
+  | "master_disabled"
+  | "permission_required"
+  | "popup_disabled"
+  | "sidepanel_disabled"
+  | "options_disabled"
+  | "auto_refresh_disabled"
+  | "manual_refresh_disabled"
+
+type TempWindowFallbackBlockStatus =
+  | {
+      kind: "available"
+      code: null
+      reason: null
+    }
+  | {
+      kind: "not_applicable"
+      code: null
+      reason: "firefox_popup_unsupported"
+    }
+  | {
+      kind: "blocked"
+      code: TempWindowHealthStatusCode
+      reason: TempWindowFallbackBlockedReason
+    }
+
+/**
+ * Evaluates whether temp-window fallback is currently blocked for the active UI/runtime context.
+ *
+ * This is shared by the actual fallback path and reminder UIs so they stay aligned
+ * on the same enablement, context, and permission gates.
+ */
+export async function getTempWindowFallbackBlockStatus(
+  params: {
+    preferences?: TempWindowFallbackPreferences
+    isBackground?: boolean
+    inPopup?: boolean
+    inSidePanel?: boolean
+    inOptions?: boolean
+  } = {},
+): Promise<TempWindowFallbackBlockStatus> {
+  const isBackground = params.isBackground ?? isExtensionBackground()
+  let inPopup = params.inPopup ?? false
+  let inSidePanel = params.inSidePanel ?? false
+  let inOptions = params.inOptions ?? false
+
+  if (!isBackground) {
+    try {
+      if (params.inPopup === undefined && isExtensionPopup()) {
+        inPopup = true
+      } else if (params.inSidePanel === undefined && isExtensionSidePanel()) {
+        inSidePanel = true
+      } else if (
+        params.inOptions === undefined &&
+        typeof window !== "undefined"
+      ) {
+        const currentUrl = new URL(window.location.href)
+        if (currentUrl && currentUrl.href.startsWith(OPTIONS_PAGE_URL)) {
+          inOptions = true
+        }
+      }
+    } catch {
+      // ignore environment detection errors
+    }
+  }
+
+  if (!isBackground && inPopup && isProtectionBypassFirefoxEnv()) {
+    return {
+      kind: "not_applicable",
+      code: null,
+      reason: "firefox_popup_unsupported",
+    }
+  }
+
+  if (!params.preferences || !params.preferences.enabled) {
+    return {
+      kind: "blocked",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+      reason: "master_disabled",
+    }
+  }
+
+  if (!(await canUseTempWindowFetch())) {
+    return {
+      kind: "blocked",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED,
+      reason: "permission_required",
+    }
+  }
+
+  const isAutoRefreshContext = isBackground
+  const isManualRefreshContext = !isBackground
+
+  if (inPopup && !params.preferences.useInPopup) {
+    return {
+      kind: "blocked",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+      reason: "popup_disabled",
+    }
+  }
+
+  if (inSidePanel && !params.preferences.useInSidePanel) {
+    return {
+      kind: "blocked",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+      reason: "sidepanel_disabled",
+    }
+  }
+
+  if (inOptions && !params.preferences.useInOptions) {
+    return {
+      kind: "blocked",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+      reason: "options_disabled",
+    }
+  }
+
+  if (isAutoRefreshContext && !params.preferences.useForAutoRefresh) {
+    return {
+      kind: "blocked",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+      reason: "auto_refresh_disabled",
+    }
+  }
+
+  if (isManualRefreshContext && !params.preferences.useForManualRefresh) {
+    return {
+      kind: "blocked",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+      reason: "manual_refresh_disabled",
+    }
+  }
+
+  return {
+    kind: "available",
+    code: null,
+    reason: null,
   }
 }
 
@@ -410,102 +554,79 @@ async function shouldUseTempWindowFallback(
       DEFAULT_PREFERENCES.tempWindowFallback as TempWindowFallbackPreferences
   }
 
-  if (!prefsFallback || !prefsFallback.enabled) {
-    tagTempWindowFallbackBlocked(error, API_ERROR_CODES.TEMP_WINDOW_DISABLED)
-    logSkipTempWindowFallback(
-      "Temp window shield is disabled or preferences are missing.",
-      context,
-      {
-        enabled: prefsFallback?.enabled ?? null,
-      },
-    )
-    return false
+  const blockStatus = await getTempWindowFallbackBlockStatus({
+    preferences: prefsFallback,
+  })
+
+  if (blockStatus.kind === "available") {
+    return true
   }
 
-  if (!(await canUseTempWindowFetch())) {
-    tagTempWindowFallbackBlocked(
-      error,
-      API_ERROR_CODES.TEMP_WINDOW_PERMISSION_REQUIRED,
-    )
+  if (blockStatus.kind === "not_applicable") {
     logSkipTempWindowFallback(
-      "Cookie interceptor permissions not granted; skipping temp window fallback.",
-      context,
-      {
-        permissions: COOKIE_INTERCEPTOR_PERMISSIONS,
-      },
-    )
-    return false
-  }
-
-  const isBackground = isExtensionBackground()
-
-  let inPopup = false
-  let inSidePanel = false
-  let inOptions = false
-
-  if (!isBackground) {
-    try {
-      if (isExtensionPopup()) {
-        inPopup = true
-      } else if (isExtensionSidePanel()) {
-        inSidePanel = true
-      } else if (typeof window !== "undefined") {
-        const currentUrl = new URL(window.location.href)
-        if (currentUrl && currentUrl.href.startsWith(OPTIONS_PAGE_URL)) {
-          inOptions = true
-        }
-      }
-    } catch {
-      // ignore environment detection errors
-    }
-  }
-
-  const isAutoRefreshContext = isBackground
-  const isManualRefreshContext = !isBackground
-
-  if (inPopup && !prefsFallback.useInPopup) {
-    tagTempWindowFallbackBlocked(error, API_ERROR_CODES.TEMP_WINDOW_DISABLED)
-    logSkipTempWindowFallback(
-      "Popup context is disabled by user shield preferences.",
-      context,
-    )
-    return false
-  }
-  if (inSidePanel && !prefsFallback.useInSidePanel) {
-    tagTempWindowFallbackBlocked(error, API_ERROR_CODES.TEMP_WINDOW_DISABLED)
-    logSkipTempWindowFallback(
-      "Side panel context is disabled by user shield preferences.",
-      context,
-    )
-    return false
-  }
-  if (inOptions && !prefsFallback.useInOptions) {
-    tagTempWindowFallbackBlocked(error, API_ERROR_CODES.TEMP_WINDOW_DISABLED)
-    logSkipTempWindowFallback(
-      "Options page context is disabled by user shield preferences.",
+      "Running in Firefox popup; temp window fallback is forcibly disabled to avoid closing the popup.",
       context,
     )
     return false
   }
 
-  if (isAutoRefreshContext && !prefsFallback.useForAutoRefresh) {
-    tagTempWindowFallbackBlocked(error, API_ERROR_CODES.TEMP_WINDOW_DISABLED)
-    logSkipTempWindowFallback(
-      "Auto-refresh context is disabled by user shield preferences.",
-      context,
-    )
-    return false
-  }
-  if (isManualRefreshContext && !prefsFallback.useForManualRefresh) {
-    tagTempWindowFallbackBlocked(error, API_ERROR_CODES.TEMP_WINDOW_DISABLED)
-    logSkipTempWindowFallback(
-      "Manual refresh context is disabled by user shield preferences.",
-      context,
-    )
-    return false
-  }
+  tagTempWindowFallbackBlocked(
+    error,
+    blockStatus.code === TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED
+      ? API_ERROR_CODES.TEMP_WINDOW_PERMISSION_REQUIRED
+      : API_ERROR_CODES.TEMP_WINDOW_DISABLED,
+  )
 
-  return true
+  switch (blockStatus.reason) {
+    case "master_disabled":
+      logSkipTempWindowFallback(
+        "Temp window shield is disabled or preferences are missing.",
+        context,
+        {
+          enabled: prefsFallback?.enabled ?? null,
+        },
+      )
+      return false
+    case "permission_required":
+      logSkipTempWindowFallback(
+        "Cookie interceptor permissions not granted; skipping temp window fallback.",
+        context,
+        {
+          permissions: COOKIE_INTERCEPTOR_PERMISSIONS,
+        },
+      )
+      return false
+    case "popup_disabled":
+      logSkipTempWindowFallback(
+        "Popup context is disabled by user shield preferences.",
+        context,
+      )
+      return false
+    case "sidepanel_disabled":
+      logSkipTempWindowFallback(
+        "Side panel context is disabled by user shield preferences.",
+        context,
+      )
+      return false
+    case "options_disabled":
+      logSkipTempWindowFallback(
+        "Options page context is disabled by user shield preferences.",
+        context,
+      )
+      return false
+    case "auto_refresh_disabled":
+      logSkipTempWindowFallback(
+        "Auto-refresh context is disabled by user shield preferences.",
+        context,
+      )
+      return false
+    case "manual_refresh_disabled":
+      logSkipTempWindowFallback(
+        "Manual refresh context is disabled by user shield preferences.",
+        context,
+      )
+      return false
+  }
 }
 
 /**

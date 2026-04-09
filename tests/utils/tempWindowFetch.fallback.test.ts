@@ -2,11 +2,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
-import { AuthTypeEnum } from "~/types"
+import { AuthTypeEnum, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 import type { TempWindowFallbackContext } from "~/types/tempWindowFetch"
 import {
   canUseTempWindowFetch,
   executeWithTempWindowFallback,
+  getTempWindowFallbackBlockStatus,
   tempWindowFetch,
   tempWindowGetRenderedTitle,
   tempWindowTurnstileFetch,
@@ -152,6 +153,39 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     mocks.hasCookieInterceptorPermissionsMock.mockResolvedValue(false)
 
     await expect(canUseTempWindowFetch()).resolves.toBe(false)
+  })
+
+  it("reports popup manual-refresh preference blocks through the shared block-status helper", async () => {
+    await expect(
+      getTempWindowFallbackBlockStatus({
+        preferences: buildTempWindowPreferences({
+          useInPopup: false,
+        }),
+        isBackground: false,
+        inPopup: true,
+      }),
+    ).resolves.toEqual({
+      kind: "blocked",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
+      reason: "popup_disabled",
+    })
+  })
+
+  it("reports Firefox permission blocks through the shared block-status helper", async () => {
+    mocks.isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
+    mocks.hasCookieInterceptorPermissionsMock.mockResolvedValue(false)
+
+    await expect(
+      getTempWindowFallbackBlockStatus({
+        preferences: buildTempWindowPreferences(),
+        isBackground: false,
+        inPopup: false,
+      }),
+    ).resolves.toEqual({
+      kind: "blocked",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED,
+      reason: "permission_required",
+    })
   })
 
   it("routes tempWindowFetch through runtime messaging and defaults popup minimize suppression", async () => {
