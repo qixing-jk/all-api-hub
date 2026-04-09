@@ -171,6 +171,19 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
   })
 
+  it("uses default temp-window preferences when explicit preferences are omitted", async () => {
+    await expect(
+      getTempWindowFallbackBlockStatus({
+        isBackground: false,
+        inPopup: false,
+      }),
+    ).resolves.toEqual({
+      kind: "available",
+      code: null,
+      reason: null,
+    })
+  })
+
   it("reports Firefox permission blocks through the shared block-status helper", async () => {
     mocks.isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
     mocks.hasCookieInterceptorPermissionsMock.mockResolvedValue(false)

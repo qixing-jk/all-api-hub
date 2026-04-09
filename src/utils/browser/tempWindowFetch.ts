@@ -123,6 +123,10 @@ export async function getTempWindowFallbackBlockStatus(
     inOptions?: boolean
   } = {},
 ): Promise<TempWindowFallbackBlockStatus> {
+  const preferences: TempWindowFallbackPreferences = {
+    ...(DEFAULT_PREFERENCES.tempWindowFallback as TempWindowFallbackPreferences),
+    ...(params.preferences ?? {}),
+  }
   const isBackground = params.isBackground ?? isExtensionBackground()
   let inPopup = params.inPopup ?? false
   let inSidePanel = params.inSidePanel ?? false
@@ -156,7 +160,7 @@ export async function getTempWindowFallbackBlockStatus(
     }
   }
 
-  if (!params.preferences || !params.preferences.enabled) {
+  if (!preferences.enabled) {
     return {
       kind: "blocked",
       code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
@@ -167,7 +171,7 @@ export async function getTempWindowFallbackBlockStatus(
   const isAutoRefreshContext = isBackground
   const isManualRefreshContext = !isBackground
 
-  if (inPopup && !params.preferences.useInPopup) {
+  if (inPopup && !preferences.useInPopup) {
     return {
       kind: "blocked",
       code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
@@ -175,7 +179,7 @@ export async function getTempWindowFallbackBlockStatus(
     }
   }
 
-  if (inSidePanel && !params.preferences.useInSidePanel) {
+  if (inSidePanel && !preferences.useInSidePanel) {
     return {
       kind: "blocked",
       code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
@@ -183,7 +187,7 @@ export async function getTempWindowFallbackBlockStatus(
     }
   }
 
-  if (inOptions && !params.preferences.useInOptions) {
+  if (inOptions && !preferences.useInOptions) {
     return {
       kind: "blocked",
       code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
@@ -191,7 +195,7 @@ export async function getTempWindowFallbackBlockStatus(
     }
   }
 
-  if (isAutoRefreshContext && !params.preferences.useForAutoRefresh) {
+  if (isAutoRefreshContext && !preferences.useForAutoRefresh) {
     return {
       kind: "blocked",
       code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
@@ -199,7 +203,7 @@ export async function getTempWindowFallbackBlockStatus(
     }
   }
 
-  if (isManualRefreshContext && !params.preferences.useForManualRefresh) {
+  if (isManualRefreshContext && !preferences.useForManualRefresh) {
     return {
       kind: "blocked",
       code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
