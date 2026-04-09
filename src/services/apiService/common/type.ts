@@ -225,6 +225,12 @@ export interface LogResponseData {
   total: number
 }
 
+export interface LogStatResponseData {
+  quota?: number
+  rpm?: number
+  tpm?: number
+}
+
 export interface Payment {
   id: number
   type: string

@@ -437,29 +437,25 @@ describe("apiService common account-data helpers", () => {
     expect(mockFetchApiData).not.toHaveBeenCalled()
   })
 
-  it("fetchTodayUsage aggregates paginated consume logs", async () => {
+  it("fetchTodayUsage uses the stat endpoint plus a lightweight count query", async () => {
     mockFetchApiData
       .mockResolvedValueOnce({
-        items: [
-          { quota: 10, prompt_tokens: 2, completion_tokens: 3 },
-          { quota: 20, prompt_tokens: 4, completion_tokens: 5 },
-        ],
-        total: 3,
+        quota: 60,
       })
       .mockResolvedValueOnce({
-        items: [{ quota: 30, prompt_tokens: 6, completion_tokens: 7 }],
+        items: [{ quota: 10, prompt_tokens: 2, completion_tokens: 3 }],
         total: 3,
       })
 
     await expect(fetchTodayUsage(baseRequest as any)).resolves.toEqual({
       today_quota_consumption: 60,
-      today_prompt_tokens: 12,
-      today_completion_tokens: 15,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
       today_requests_count: 3,
     })
 
     expect(mockFetchApiData).toHaveBeenNthCalledWith(1, baseRequest, {
-      endpoint: `/api/log/self?${new URLSearchParams({
+      endpoint: `/api/log/self/stat?${new URLSearchParams({
         p: "1",
         page_size: "2",
         type: String(LogType.Consume),
@@ -470,10 +466,27 @@ describe("apiService common account-data helpers", () => {
         group: "",
       }).toString()}`,
     })
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, baseRequest, {
+      endpoint: `/api/log/self?${new URLSearchParams({
+        p: "1",
+        page_size: "1",
+        type: String(LogType.Consume),
+        token_name: "",
+        model_name: "",
+        start_timestamp: "111",
+        end_timestamp: "222",
+        group: "",
+      }).toString()}`,
+    })
   })
 
-  it("fetchTodayUsage warns when log pagination reaches the max page cap", async () => {
+  it("fetchTodayUsage falls back to full log aggregation when the fast path fails", async () => {
     mockFetchApiData
+      .mockRejectedValueOnce(new Error("stat unavailable"))
+      .mockResolvedValueOnce({
+        items: [{ quota: 999 }],
+        total: 999,
+      })
       .mockResolvedValueOnce({
         items: [{ quota: 10, prompt_tokens: 2, completion_tokens: 3 }],
         total: 99,
@@ -490,6 +503,10 @@ describe("apiService common account-data helpers", () => {
       today_requests_count: 2,
     })
 
+    expect(mockLoggerWarn).toHaveBeenCalledWith(
+      "今日消费快路径失败，回退到日志聚合",
+      expect.any(Error),
+    )
     expect(mockLoggerWarn).toHaveBeenCalledWith(
       "达到最大分页限制，数据可能不完整",
       {
