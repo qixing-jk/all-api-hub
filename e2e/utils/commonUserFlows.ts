@@ -46,6 +46,8 @@ type StubNewApiSiteRoutesOptions = {
   title?: string
   systemName?: string
   exchangeRate?: number
+  /** Quota total returned by the lightweight today-usage stat endpoint. */
+  todayQuotaConsumption?: number
   userId?: number
   username?: string
   accessToken?: string
@@ -387,6 +389,7 @@ export async function stubNewApiSiteRoutes(
   const username = options.username ?? "e2e-user"
   const accessToken = options.accessToken ?? "e2e-token"
   const exchangeRate = options.exchangeRate ?? 7
+  const todayQuotaConsumption = options.todayQuotaConsumption ?? 0
   const title = options.title ?? "new-api"
   const systemName = options.systemName ?? "E2E New API"
   const models = options.models ?? ["gpt-4o-mini", "gpt-4.1-mini"]
@@ -468,6 +471,24 @@ export async function stubNewApiSiteRoutes(
             page_size: Number(url.searchParams.get("page_size") ?? "100"),
             total: 0,
             items: [],
+          },
+        }),
+      })
+      return
+    }
+
+    if (method === "GET" && url.pathname === "/api/log/self/stat") {
+      // Keep the E2E backend mock aligned with the production fast path.
+      await route.fulfill({
+        status: 200,
+        contentType: "application/json",
+        body: JSON.stringify({
+          success: true,
+          message: "ok",
+          data: {
+            quota: todayQuotaConsumption,
+            rpm: 0,
+            tpm: 0,
           },
         }),
       })
