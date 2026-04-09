@@ -188,6 +188,23 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     })
   })
 
+  it("reports Firefox popup contexts as not applicable before permission checks", async () => {
+    mocks.isProtectionBypassFirefoxEnvMock.mockReturnValue(true)
+    mocks.hasCookieInterceptorPermissionsMock.mockResolvedValue(false)
+
+    await expect(
+      getTempWindowFallbackBlockStatus({
+        preferences: buildTempWindowPreferences(),
+        isBackground: false,
+        inPopup: true,
+      }),
+    ).resolves.toEqual({
+      kind: "not_applicable",
+      code: null,
+      reason: "firefox_popup_unsupported",
+    })
+  })
+
   it("routes tempWindowFetch through runtime messaging and defaults popup minimize suppression", async () => {
     setWindowHref("chrome-extension://test/popup.html")
     mocks.isExtensionPopupMock.mockReturnValue(true)

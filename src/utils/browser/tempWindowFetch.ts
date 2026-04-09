@@ -164,14 +164,6 @@ export async function getTempWindowFallbackBlockStatus(
     }
   }
 
-  if (!(await canUseTempWindowFetch())) {
-    return {
-      kind: "blocked",
-      code: TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED,
-      reason: "permission_required",
-    }
-  }
-
   const isAutoRefreshContext = isBackground
   const isManualRefreshContext = !isBackground
 
@@ -212,6 +204,14 @@ export async function getTempWindowFallbackBlockStatus(
       kind: "blocked",
       code: TEMP_WINDOW_HEALTH_STATUS_CODES.DISABLED,
       reason: "manual_refresh_disabled",
+    }
+  }
+
+  if (!(await canUseTempWindowFetch())) {
+    return {
+      kind: "blocked",
+      code: TEMP_WINDOW_HEALTH_STATUS_CODES.PERMISSION_REQUIRED,
+      reason: "permission_required",
     }
   }
 
