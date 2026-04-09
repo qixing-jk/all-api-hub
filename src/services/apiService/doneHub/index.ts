@@ -1,8 +1,22 @@
+import {
+  determineHealthStatus,
+  fetchAccountQuota,
+  fetchCheckInStatus,
+  fetchTodayIncome as fetchTodayIncomeFromCommon,
+  fetchTodayUsage as fetchTodayUsageFromCommon,
+} from "~/services/apiService/common"
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import { ApiError } from "~/services/apiService/common/errors"
 import { fetchAllItems } from "~/services/apiService/common/pagination"
-import type { ApiServiceRequest } from "~/services/apiService/common/type"
+import type {
+  AccountData,
+  ApiServiceAccountRequest,
+  ApiServiceRequest,
+  RefreshAccountResult,
+  TodayLogQueryConfig,
+} from "~/services/apiService/common/type"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
+import { CheckInConfig, SiteHealthStatus } from "~/types"
 import type {
   CreateChannelPayload,
   ManagedSiteChannel,
@@ -10,6 +24,7 @@ import type {
   UpdateChannelPayload,
 } from "~/types/managedSite"
 import { createLogger } from "~/utils/core/logger"
+import { t } from "~/utils/i18n/core"
 
 /**
  * Unified logger scoped to DoneHub API helpers.
@@ -19,6 +34,20 @@ const logger = createLogger("ApiService.DoneHub")
 const DONE_HUB_CHANNEL_ENDPOINT = "/api/channel/"
 const DONE_HUB_PROVIDER_MODELS_ENDPOINT = "/api/channel/provider_models_list"
 const DONE_HUB_GROUP_ENDPOINT = "/api/group/"
+/**
+ * DoneHub uses custom pagination and response field names for user log queries.
+ * Reuse the common today-log helpers with this compatibility mapping instead of
+ * maintaining a forked implementation for usage/income refreshes.
+ */
+const DONE_HUB_TODAY_LOG_QUERY_CONFIG: TodayLogQueryConfig = {
+  endpoint: "/api/log/self",
+  pageParamName: "page",
+  pageSizeParamName: "size",
+  logTypeParamName: "log_type",
+  itemsField: "data",
+  totalField: "total_count",
+  includeGroupParam: false,
+}
 
 type DoneHubDataResult<T> = {
   data?: T[] | null
@@ -113,6 +142,32 @@ const normalizeChannel = (raw: DoneHubChannelRaw): ManagedSiteChannel => {
     setting: raw.setting ?? "",
     settings: raw.settings ?? raw.setting ?? "",
   }
+}
+
+/**
+ * Fetch DoneHub today's usage via the common today-log helpers with DoneHub's
+ * custom pagination/response mapping.
+ * @param request ApiServiceAccountRequest.
+ * @returns Usage totals for the current day.
+ */
+export async function fetchTodayUsage(request: ApiServiceAccountRequest) {
+  return await fetchTodayUsageFromCommon(
+    request,
+    DONE_HUB_TODAY_LOG_QUERY_CONFIG,
+  )
+}
+
+/**
+ * Fetch DoneHub today's income via the common today-log helpers with DoneHub's
+ * custom pagination/response mapping.
+ * @param request ApiServiceAccountRequest.
+ * @returns Total income amount for the current day.
+ */
+export async function fetchTodayIncome(request: ApiServiceAccountRequest) {
+  return await fetchTodayIncomeFromCommon(
+    request,
+    DONE_HUB_TODAY_LOG_QUERY_CONFIG,
+  )
 }
 
 type ChannelListAllOptions = {
@@ -516,4 +571,81 @@ export async function fetchSiteUserGroups(
     .filter(Boolean)
 
   return Array.from(new Set(symbols))
+}
+
+/**
+ * Fetch a full DoneHub account snapshot while reusing the common today-log
+ * overrides defined for this backend.
+ * @param request ApiServiceAccountRequest.
+ * @returns Aggregated account data with check-in state.
+ */
+export async function fetchAccountData(
+  request: ApiServiceAccountRequest,
+): Promise<AccountData> {
+  const resolvedCheckIn: CheckInConfig = request.checkIn
+
+  const quotaPromise = fetchAccountQuota(request)
+  const todayUsagePromise = fetchTodayUsage(request)
+  const todayIncomePromise = fetchTodayIncome(request)
+  const checkInPromise = resolvedCheckIn?.enableDetection
+    ? fetchCheckInStatus(request)
+    : Promise.resolve<boolean | undefined>(undefined)
+
+  const [quota, todayUsage, todayIncome, canCheckIn] = await Promise.all([
+    quotaPromise,
+    todayUsagePromise,
+    todayIncomePromise,
+    checkInPromise,
+  ])
+
+  const didDetectCheckInStatus = resolvedCheckIn?.enableDetection === true
+  const checkInDetectedAt = didDetectCheckInStatus
+    ? Date.now()
+    : resolvedCheckIn.siteStatus?.lastDetectedAt
+
+  return {
+    quota,
+    ...todayUsage,
+    ...todayIncome,
+    checkIn: {
+      ...resolvedCheckIn,
+      siteStatus: {
+        ...(resolvedCheckIn.siteStatus ?? {}),
+        isCheckedInToday: didDetectCheckInStatus
+          ? canCheckIn === undefined
+            ? undefined
+            : !canCheckIn
+          : resolvedCheckIn.siteStatus?.isCheckedInToday,
+        lastDetectedAt: checkInDetectedAt,
+      },
+    },
+  }
+}
+
+/**
+ * Refresh a DoneHub account and convert runtime failures to user-facing health
+ * status metadata.
+ * @param request ApiServiceAccountRequest.
+ * @returns Success flag, data when available, and health status.
+ */
+export async function refreshAccountData(
+  request: ApiServiceAccountRequest,
+): Promise<RefreshAccountResult> {
+  try {
+    const data = await fetchAccountData(request)
+    return {
+      success: true,
+      data,
+      healthStatus: {
+        status: SiteHealthStatus.Healthy,
+        message: t("account:healthStatus.normal"),
+      },
+    }
+  } catch (error) {
+    logger.error("DoneHub 刷新账号数据失败", error)
+    return {
+      success: false,
+      healthStatus: determineHealthStatus(error),
+    }
+  }
 }

@@ -231,6 +231,17 @@ export interface LogStatResponseData {
   tpm?: number
 }
 
+export interface TodayLogQueryConfig {
+  endpoint?: string
+  pageParamName?: string
+  pageSizeParamName?: string
+  logTypeParamName?: string
+  itemsField?: "items" | "data"
+  totalField?: "total" | "total_count"
+  includeGroupParam?: boolean
+  extraParams?: Record<string, string>
+}
+
 export interface Payment {
   id: number
   type: string

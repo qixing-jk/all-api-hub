@@ -458,11 +458,11 @@ describe("apiService common account-data helpers", () => {
       endpoint: `/api/log/self/stat?${new URLSearchParams({
         p: "1",
         page_size: "2",
-        type: String(LogType.Consume),
         token_name: "",
         model_name: "",
         start_timestamp: "111",
         end_timestamp: "222",
+        type: String(LogType.Consume),
         group: "",
       }).toString()}`,
     })
@@ -470,12 +470,63 @@ describe("apiService common account-data helpers", () => {
       endpoint: `/api/log/self?${new URLSearchParams({
         p: "1",
         page_size: "1",
-        type: String(LogType.Consume),
         token_name: "",
         model_name: "",
         start_timestamp: "111",
         end_timestamp: "222",
+        type: String(LogType.Consume),
         group: "",
+      }).toString()}`,
+    })
+  })
+
+  it("fetchTodayUsage supports overridden log query params and response fields", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce({
+        quota: 60,
+      })
+      .mockResolvedValueOnce({
+        data: [{ quota: 10 }],
+        total_count: 3,
+      })
+
+    await expect(
+      fetchTodayUsage(baseRequest as any, {
+        endpoint: "/api/log/self",
+        pageParamName: "page",
+        pageSizeParamName: "size",
+        logTypeParamName: "log_type",
+        itemsField: "data",
+        totalField: "total_count",
+        includeGroupParam: false,
+      }),
+    ).resolves.toEqual({
+      today_quota_consumption: 60,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_requests_count: 3,
+    })
+
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(1, baseRequest, {
+      endpoint: `/api/log/self/stat?${new URLSearchParams({
+        page: "1",
+        size: "2",
+        token_name: "",
+        model_name: "",
+        start_timestamp: "111",
+        end_timestamp: "222",
+        log_type: String(LogType.Consume),
+      }).toString()}`,
+    })
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, baseRequest, {
+      endpoint: `/api/log/self?${new URLSearchParams({
+        page: "1",
+        size: "1",
+        token_name: "",
+        model_name: "",
+        start_timestamp: "111",
+        end_timestamp: "222",
+        log_type: String(LogType.Consume),
       }).toString()}`,
     })
   })
@@ -568,6 +619,56 @@ describe("apiService common account-data helpers", () => {
       baseRequest.baseUrl,
       7,
     )
+  })
+
+  it("fetchTodayIncome supports overridden log query params and response fields", async () => {
+    mockFetchApiData
+      .mockResolvedValueOnce({
+        data: [{ quota: 20 }],
+        total_count: 1,
+      })
+      .mockResolvedValueOnce({
+        data: [{ quota: 30 }],
+        total_count: 1,
+      })
+
+    await expect(
+      fetchTodayIncome(baseRequest as any, {
+        endpoint: "/api/log/self",
+        pageParamName: "page",
+        pageSizeParamName: "size",
+        logTypeParamName: "log_type",
+        itemsField: "data",
+        totalField: "total_count",
+        includeGroupParam: false,
+      }),
+    ).resolves.toEqual({
+      today_income: 50,
+    })
+
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(1, baseRequest, {
+      endpoint: `/api/log/self?${new URLSearchParams({
+        page: "1",
+        size: "2",
+        token_name: "",
+        model_name: "",
+        start_timestamp: "111",
+        end_timestamp: "222",
+        log_type: String(LogType.Topup),
+      }).toString()}`,
+    })
+
+    expect(mockFetchApiData).toHaveBeenNthCalledWith(2, baseRequest, {
+      endpoint: `/api/log/self?${new URLSearchParams({
+        page: "1",
+        size: "2",
+        token_name: "",
+        model_name: "",
+        start_timestamp: "111",
+        end_timestamp: "222",
+        log_type: String(LogType.System),
+      }).toString()}`,
+    })
   })
 
   it("fetchAccountData preserves existing siteStatus when detection is disabled", async () => {

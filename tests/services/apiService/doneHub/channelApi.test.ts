@@ -5,7 +5,10 @@ import {
   deleteChannel,
   fetchChannelModels,
   fetchSiteUserGroups,
+  fetchTodayIncome,
+  fetchTodayUsage,
   listAllChannels,
+  refreshAccountData,
   searchChannel,
   updateChannel,
   updateChannelModelMapping,
@@ -21,17 +24,83 @@ const { mockFetchApi } = vi.hoisted(() => ({
   mockFetchApi: vi.fn(),
 }))
 
+const {
+  mockDetermineHealthStatus,
+  mockFetchAccountQuota,
+  mockFetchCheckInStatus,
+  mockFetchTodayIncome,
+  mockFetchTodayUsage,
+} = vi.hoisted(() => ({
+  mockDetermineHealthStatus: vi.fn(() => ({
+    status: "unknown",
+    message: "unknown",
+  })),
+  mockFetchAccountQuota: vi.fn(),
+  mockFetchCheckInStatus: vi.fn(),
+  mockFetchTodayIncome: vi.fn(),
+  mockFetchTodayUsage: vi.fn(),
+}))
+
 vi.mock("~/services/apiService/common/utils", () => ({
   fetchApiData: mockFetchApiData,
   fetchApi: mockFetchApi,
-  aggregateUsageData: vi.fn(),
+  aggregateUsageData: vi.fn((items: any[]) => ({
+    today_quota_consumption: items.reduce(
+      (sum, item) => sum + (item.quota ?? 0),
+      0,
+    ),
+    today_prompt_tokens: items.reduce(
+      (sum, item) => sum + (item.prompt_tokens ?? 0),
+      0,
+    ),
+    today_completion_tokens: items.reduce(
+      (sum, item) => sum + (item.completion_tokens ?? 0),
+      0,
+    ),
+  })),
   extractAmount: vi.fn(),
-  getTodayTimestampRange: vi.fn(),
+  getTodayTimestampRange: vi.fn(() => ({
+    start: 111,
+    end: 222,
+  })),
+}))
+
+vi.mock("~/services/apiService/common", () => ({
+  determineHealthStatus: mockDetermineHealthStatus,
+  fetchAccountQuota: mockFetchAccountQuota,
+  fetchCheckInStatus: mockFetchCheckInStatus,
+  fetchTodayIncome: mockFetchTodayIncome,
+  fetchTodayUsage: mockFetchTodayUsage,
+}))
+
+vi.mock("~/utils/i18n/core", () => ({
+  t: vi.fn((key: string) => key),
 }))
 
 describe("apiService doneHub channel APIs", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockFetchApiData.mockReset()
+    mockFetchApi.mockReset()
+    mockDetermineHealthStatus.mockReset()
+    mockFetchAccountQuota.mockReset()
+    mockFetchCheckInStatus.mockReset()
+    mockFetchTodayIncome.mockReset()
+    mockFetchTodayUsage.mockReset()
+
+    mockDetermineHealthStatus.mockReturnValue({
+      status: "unknown",
+      message: "unknown",
+    })
+    mockFetchAccountQuota.mockResolvedValue(500)
+    mockFetchTodayIncome.mockResolvedValue({ today_income: 0 })
+    mockFetchTodayUsage.mockResolvedValue({
+      today_quota_consumption: 0,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_requests_count: 0,
+    })
+    mockFetchCheckInStatus.mockResolvedValue(undefined)
   })
 
   it("listAllChannels should paginate with page/size and normalize DataResult payload", async () => {
@@ -852,5 +921,115 @@ describe("apiService doneHub channel APIs", () => {
       "default",
       "vip",
     ])
+  })
+
+  it("fetchTodayUsage should delegate to common with DoneHub log query overrides", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: 1,
+      },
+      checkIn: {
+        enableDetection: false,
+        siteStatus: {},
+      },
+    }
+
+    mockFetchTodayUsage.mockResolvedValueOnce({
+      today_quota_consumption: 60,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_requests_count: 3,
+    })
+
+    await expect(fetchTodayUsage(request as any)).resolves.toEqual({
+      today_quota_consumption: 60,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_requests_count: 3,
+    })
+
+    expect(mockFetchTodayUsage).toHaveBeenCalledWith(
+      request,
+      expect.objectContaining({
+        endpoint: "/api/log/self",
+        pageParamName: "page",
+        pageSizeParamName: "size",
+        logTypeParamName: "log_type",
+        itemsField: "data",
+        totalField: "total_count",
+        includeGroupParam: false,
+      }),
+    )
+  })
+
+  it("fetchTodayIncome should delegate to common with DoneHub log query overrides", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: 1,
+      },
+      checkIn: {
+        enableDetection: false,
+        siteStatus: {},
+      },
+    }
+
+    mockFetchTodayIncome.mockResolvedValueOnce({ today_income: 42 })
+
+    await expect(fetchTodayIncome(request as any)).resolves.toEqual({
+      today_income: 42,
+    })
+
+    expect(mockFetchTodayIncome).toHaveBeenCalledWith(
+      request,
+      expect.objectContaining({
+        endpoint: "/api/log/self",
+        pageParamName: "page",
+        pageSizeParamName: "size",
+        logTypeParamName: "log_type",
+        itemsField: "data",
+        totalField: "total_count",
+        includeGroupParam: false,
+      }),
+    )
+  })
+
+  it("refreshAccountData should use the DoneHub today-usage override", async () => {
+    const request = {
+      baseUrl: "https://example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        accessToken: "token",
+        userId: 1,
+      },
+      checkIn: {
+        enableDetection: false,
+        siteStatus: {},
+      },
+    }
+
+    mockFetchTodayUsage.mockResolvedValueOnce({
+      today_quota_consumption: 88,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_requests_count: 7,
+    })
+
+    await expect(refreshAccountData(request as any)).resolves.toMatchObject({
+      success: true,
+      data: {
+        quota: 500,
+        today_quota_consumption: 88,
+        today_requests_count: 7,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_income: 0,
+      },
+    })
   })
 })
