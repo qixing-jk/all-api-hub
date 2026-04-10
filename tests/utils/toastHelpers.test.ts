@@ -106,6 +106,45 @@ describe("toastHelpers", () => {
       })
     })
 
+    it("passes an optional action through to the shared warning toast renderer", async () => {
+      const toast = (await import("react-hot-toast")).default
+      vi.clearAllMocks()
+
+      const actionMock = vi.fn()
+      showWarningToast("Warning with action", {
+        action: {
+          label: "Retry failed only",
+          onClick: actionMock,
+        },
+      })
+
+      const renderer = vi.mocked(toast.custom).mock.calls[0]?.[0] as
+        | ((toastInstance: any) => any)
+        | undefined
+      expect(renderer).toBeTypeOf("function")
+
+      const element = renderer?.({
+        id: "warning-toast-id",
+        type: "custom",
+        visible: true,
+        dismissed: false,
+        height: 0,
+        ariaProps: {
+          role: "status",
+          "aria-live": "polite",
+        },
+        message: "",
+        createdAt: Date.now(),
+        pauseDuration: 0,
+        position: "bottom-center",
+      } as any)
+
+      expect(element?.props.action).toEqual({
+        label: "Retry failed only",
+        onClick: actionMock,
+      })
+    })
+
     it("falls back to the shared warning icon when toast.custom is unavailable", async () => {
       const toast = (await import("react-hot-toast")).default as any
       toast.custom = undefined

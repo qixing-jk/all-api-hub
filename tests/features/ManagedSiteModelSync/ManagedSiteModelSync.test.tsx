@@ -319,12 +319,17 @@ describe("ManagedSiteModelSync page", () => {
 
     await waitFor(() => {
       expect(mockShowWarningToast).toHaveBeenCalledWith(
-        "managedSiteModelSync:messages.success.syncCompleted",
+        "managedSiteModelSync:messages.warning.syncCompletedWithFailures",
+        expect.objectContaining({
+          action: expect.objectContaining({
+            label: "managedSiteModelSync:execution.actions.retryFailed",
+          }),
+        }),
       )
     })
 
     expect(toast.success).not.toHaveBeenCalledWith(
-      "managedSiteModelSync:messages.success.syncCompleted",
+      "managedSiteModelSync:messages.warning.syncCompletedWithFailures",
     )
   })
 

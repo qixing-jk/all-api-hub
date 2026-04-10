@@ -145,7 +145,8 @@
       "syncCompletedNoSummary": "Sync completed"
     },
     "warning": {
-      "scheduleFallback": "Schedule fallback applied: {{warning}}"
+      "scheduleFallback": "This browser does not support scheduled sync, so it has been switched to \"After account refresh\": {{warning}}",
+      "syncCompletedWithIssues": "Sync completed with follow-up needed (success: {{success}}, skipped: {{skipped}}, error: {{error}}, unsupported: {{unsupported}})"
     }
   },
   "settings": {
@@ -184,7 +185,8 @@
       "refreshStatus": "Refresh status",
       "syncAccount": "Sync account",
       "syncing": "Syncing...",
-      "syncSelected": "Sync selected"
+      "syncSelected": "Sync selected",
+      "viewStatus": "View sync status"
     },
     "noAccounts": "No accounts found.",
     "searchPlaceholder": "Type to search…",

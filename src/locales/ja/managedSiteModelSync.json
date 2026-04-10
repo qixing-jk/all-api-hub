@@ -85,6 +85,9 @@
     "success": {
       "settingsSaved": "設定を正常に保存しました",
       "syncCompleted": "同期完了: {{success}}/{{total}} 成功"
+    },
+    "warning": {
+      "syncCompletedWithFailures": "同期は完了しましたが、{{failed}} 件のチャネルがまだ失敗しています（成功: {{success}}/{{total}}）。失敗分のみ再試行できます。"
     }
   },
   "settings": {

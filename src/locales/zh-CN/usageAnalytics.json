@@ -145,7 +145,8 @@
       "syncCompletedNoSummary": "同步完成"
     },
     "warning": {
-      "scheduleFallback": "已应用调度回退：{{warning}}"
+      "scheduleFallback": "当前浏览器不支持定时调度，已自动改为“账号刷新后同步”：{{warning}}",
+      "syncCompletedWithIssues": "同步已完成，但仍有未完成账号（成功：{{success}}，跳过：{{skipped}}，失败：{{error}}，不支持：{{unsupported}}）"
     }
   },
   "settings": {
@@ -184,7 +185,8 @@
       "refreshStatus": "刷新状态",
       "syncAccount": "同步该账号",
       "syncing": "同步中...",
-      "syncSelected": "同步已选"
+      "syncSelected": "同步已选",
+      "viewStatus": "查看同步状态"
     },
     "noAccounts": "未找到任何账号。",
     "searchPlaceholder": "输入关键词搜索…",

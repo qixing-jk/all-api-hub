@@ -314,15 +314,27 @@ export default function ManagedSiteModelSync({
       })
 
       if (response.success) {
-        const message = t("messages.success.syncCompleted", {
-          success: response.data.statistics.successCount,
-          total: response.data.statistics.total,
-        })
-
         if (hasModelSyncFailures(response.data)) {
-          showWarningToast(message)
+          showWarningToast(
+            t("messages.warning.syncCompletedWithFailures", {
+              success: response.data.statistics.successCount,
+              total: response.data.statistics.total,
+              failed: response.data.statistics.failureCount,
+            }),
+            {
+              action: {
+                label: t("execution.actions.retryFailed"),
+                onClick: handleRetryFailed,
+              },
+            },
+          )
         } else {
-          toast.success(message)
+          toast.success(
+            t("messages.success.syncCompleted", {
+              success: response.data.statistics.successCount,
+              total: response.data.statistics.total,
+            }),
+          )
         }
         setLastExecution(response.data)
       } else {
@@ -349,15 +361,27 @@ export default function ManagedSiteModelSync({
       })
 
       if (response.success) {
-        const message = t("messages.success.syncCompleted", {
-          success: response.data.statistics.successCount,
-          total: response.data.statistics.total,
-        })
-
         if (hasModelSyncFailures(response.data)) {
-          showWarningToast(message)
+          showWarningToast(
+            t("messages.warning.syncCompletedWithFailures", {
+              success: response.data.statistics.successCount,
+              total: response.data.statistics.total,
+              failed: response.data.statistics.failureCount,
+            }),
+            {
+              action: {
+                label: t("execution.actions.retryFailed"),
+                onClick: handleRetryFailed,
+              },
+            },
+          )
         } else {
-          toast.success(message)
+          toast.success(
+            t("messages.success.syncCompleted", {
+              success: response.data.statistics.successCount,
+              total: response.data.statistics.total,
+            }),
+          )
         }
         setLastExecution(response.data)
         if (source === "history") {
@@ -380,15 +404,27 @@ export default function ManagedSiteModelSync({
       })
 
       if (response.success) {
-        const message = t("messages.success.syncCompleted", {
-          success: response.data.statistics.successCount,
-          total: response.data.statistics.total,
-        })
-
         if (hasModelSyncFailures(response.data)) {
-          showWarningToast(message)
+          showWarningToast(
+            t("messages.warning.syncCompletedWithFailures", {
+              success: response.data.statistics.successCount,
+              total: response.data.statistics.total,
+              failed: response.data.statistics.failureCount,
+            }),
+            {
+              action: {
+                label: t("execution.actions.retryFailed"),
+                onClick: handleRetryFailed,
+              },
+            },
+          )
         } else {
-          toast.success(message)
+          toast.success(
+            t("messages.success.syncCompleted", {
+              success: response.data.statistics.successCount,
+              total: response.data.statistics.total,
+            }),
+          )
         }
         setLastExecution(response.data)
       } else {

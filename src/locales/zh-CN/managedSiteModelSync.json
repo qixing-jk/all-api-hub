@@ -85,6 +85,9 @@
     "success": {
       "settingsSaved": "设置保存成功",
       "syncCompleted": "同步完成：{{success}}/{{total}} 成功"
+    },
+    "warning": {
+      "syncCompletedWithFailures": "同步已完成，但仍有 {{failed}} 个渠道失败（成功：{{success}}/{{total}}）。你可以直接重试失败项。"
     }
   },
   "settings": {

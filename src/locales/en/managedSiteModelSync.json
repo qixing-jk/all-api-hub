@@ -87,6 +87,9 @@
     "success": {
       "settingsSaved": "Settings saved successfully",
       "syncCompleted": "Sync completed: {{success}}/{{total}} succeeded"
+    },
+    "warning": {
+      "syncCompletedWithFailures": "Sync finished, but {{failed}} channel(s) still failed ({{success}}/{{total}} succeeded). You can retry only the failed items."
     }
   },
   "settings": {

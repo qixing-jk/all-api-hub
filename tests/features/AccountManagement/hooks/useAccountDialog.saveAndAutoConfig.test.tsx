@@ -338,9 +338,35 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(toast.custom).toHaveBeenCalledWith(expect.any(Function), {
-      duration: 5000,
-    })
+    expect(toast.custom).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        duration: 5000,
+      }),
+    )
+    const saveWarningRenderer = vi.mocked(toast.custom).mock.calls[0]?.[0] as
+      | ((toastInstance: any) => any)
+      | undefined
+    const saveWarningElement = saveWarningRenderer?.({
+      id: "warning-toast-id",
+      type: "custom",
+      visible: true,
+      dismissed: false,
+      height: 0,
+      ariaProps: {
+        role: "status",
+        "aria-live": "polite",
+      },
+      message: "",
+      createdAt: Date.now(),
+      pauseDuration: 0,
+      position: "bottom-center",
+    } as any)
+    expect(saveWarningElement?.props.action).toEqual(
+      expect.objectContaining({
+        label: "common:actions.refresh",
+      }),
+    )
     expect(toast.success).not.toHaveBeenCalledWith(
       "Account saved, but latest metrics are placeholders.",
     )
@@ -378,9 +404,35 @@ describe("useAccountDialog save and auto-config flows", () => {
       await result.current.handlers.handleSaveAccount()
     })
 
-    expect(toast.custom).toHaveBeenCalledWith(expect.any(Function), {
-      duration: 5000,
-    })
+    expect(toast.custom).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        duration: 5000,
+      }),
+    )
+    const updateWarningRenderer = vi.mocked(toast.custom).mock.calls[0]?.[0] as
+      | ((toastInstance: any) => any)
+      | undefined
+    const updateWarningElement = updateWarningRenderer?.({
+      id: "warning-toast-id",
+      type: "custom",
+      visible: true,
+      dismissed: false,
+      height: 0,
+      ariaProps: {
+        role: "status",
+        "aria-live": "polite",
+      },
+      message: "",
+      createdAt: Date.now(),
+      pauseDuration: 0,
+      position: "bottom-center",
+    } as any)
+    expect(updateWarningElement?.props.action).toEqual(
+      expect.objectContaining({
+        label: "common:actions.refresh",
+      }),
+    )
     expect(toast.success).not.toHaveBeenCalledWith(
       "Account settings saved, but latest metrics are still stale.",
     )

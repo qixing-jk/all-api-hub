@@ -145,7 +145,8 @@
       "syncCompletedNoSummary": "同期が完了しました"
     },
     "warning": {
-      "scheduleFallback": "スケジュールのフォールバックを適用しました: {{warning}}"
+      "scheduleFallback": "このブラウザでは定期実行をサポートしていないため、「アカウント更新後」に自動で切り替えました: {{warning}}",
+      "syncCompletedWithIssues": "同期は完了しましたが、未完了のアカウントがあります（成功: {{success}}、スキップ: {{skipped}}、エラー: {{error}}、未対応: {{unsupported}}）"
     }
   },
   "settings": {
@@ -184,7 +185,8 @@
       "refreshStatus": "状態を更新",
       "syncAccount": "アカウントを同期",
       "syncing": "同期中...",
-      "syncSelected": "選択分を同期"
+      "syncSelected": "選択分を同期",
+      "viewStatus": "同期状態を見る"
     },
     "noAccounts": "アカウントが見つかりません。",
     "searchPlaceholder": "入力して検索…",

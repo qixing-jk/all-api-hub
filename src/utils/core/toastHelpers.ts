@@ -1,6 +1,7 @@
 import { createElement } from "react"
 import toast, { type ToastOptions } from "react-hot-toast"
 
+import type { WarningToastAction } from "~/components/toast/types"
 import { WarningToast } from "~/components/toast/WarningToast"
 import { WarningToastIcon } from "~/components/toast/WarningToastIcon"
 import { t } from "~/utils/i18n/core"
@@ -28,6 +29,10 @@ const getDefaultToastMessage = (success: boolean) =>
 
 const WARNING_TOAST_DEFAULTS: ToastOptions = {
   duration: 5000,
+}
+
+type WarningToastOptions = ToastOptions & {
+  action?: WarningToastAction
 }
 
 type WarningToastFallbackApi = {
@@ -92,7 +97,7 @@ export const showResetToast = (success: boolean): void => {
  */
 export const showWarningToast = (
   message: string,
-  options?: ToastOptions,
+  options?: WarningToastOptions,
 ): void => {
   const normalizedMessage = normalizeToastMessage(message)
   if (!normalizedMessage) return
@@ -116,6 +121,7 @@ export const showWarningToast = (
         createElement(WarningToast, {
           toastInstance,
           message: normalizedMessage,
+          action: options?.action,
         }),
       mergedOptions,
     )

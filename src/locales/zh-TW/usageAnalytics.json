@@ -145,7 +145,8 @@
       "syncCompletedNoSummary": "同步完成"
     },
     "warning": {
-      "scheduleFallback": "已應用排程回退：{{warning}}"
+      "scheduleFallback": "目前瀏覽器不支援定時排程，已自動改為「帳號重新整理後同步」：{{warning}}",
+      "syncCompletedWithIssues": "同步已完成，但仍有未完成的帳號（成功：{{success}}，跳過：{{skipped}}，失敗：{{error}}，不支援：{{unsupported}}）"
     }
   },
   "settings": {
@@ -184,7 +185,8 @@
       "refreshStatus": "重新整理狀態",
       "syncAccount": "同步該帳號",
       "syncing": "同步中...",
-      "syncSelected": "同步已選"
+      "syncSelected": "同步已選",
+      "viewStatus": "查看同步狀態"
     },
     "noAccounts": "未找到任何帳號。",
     "searchPlaceholder": "輸入關鍵詞搜尋…",

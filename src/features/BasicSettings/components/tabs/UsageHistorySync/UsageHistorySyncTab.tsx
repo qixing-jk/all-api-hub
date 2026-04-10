@@ -27,6 +27,7 @@ import UsageHistorySyncStateTable, {
  * Unified logger scoped to the Basic Settings usage-history sync tab.
  */
 const logger = createLogger("UsageHistorySyncTab")
+const USAGE_HISTORY_STATE_SECTION_ID = "usage-history-sync-state"
 
 const hasNonSuccessUsageHistoryTotals = (totals: {
   skipped?: number
@@ -36,6 +37,12 @@ const hasNonSuccessUsageHistoryTotals = (totals: {
   (totals.skipped ?? 0) > 0 ||
   (totals.error ?? 0) > 0 ||
   (totals.unsupported ?? 0) > 0
+
+const scrollToUsageHistoryStateSection = () => {
+  document
+    .getElementById(USAGE_HISTORY_STATE_SECTION_ID)
+    ?.scrollIntoView({ behavior: "smooth", block: "start" })
+}
 
 /**
  * Basic Settings tab for usage-history synchronization: sync settings + per-account sync state.
@@ -218,17 +225,34 @@ export default function UsageHistorySyncTab() {
 
         const totals = response?.data?.totals
         if (totals) {
-          const message = t("messages.success.syncCompleted", {
-            success: totals.success ?? 0,
-            skipped: totals.skipped ?? 0,
-            error: totals.error ?? 0,
-            unsupported: totals.unsupported ?? 0,
-          })
-
           if (hasNonSuccessUsageHistoryTotals(totals)) {
-            showWarningToast(message, { id: toastId })
+            showWarningToast(
+              t("messages.warning.syncCompletedWithIssues", {
+                success: totals.success ?? 0,
+                skipped: totals.skipped ?? 0,
+                error: totals.error ?? 0,
+                unsupported: totals.unsupported ?? 0,
+              }),
+              {
+                id: toastId,
+                action: {
+                  label: t("syncTab.actions.viewStatus"),
+                  onClick: () => {
+                    scrollToUsageHistoryStateSection()
+                  },
+                },
+              },
+            )
           } else {
-            toast.success(message, { id: toastId })
+            toast.success(
+              t("messages.success.syncCompleted", {
+                success: totals.success ?? 0,
+                skipped: totals.skipped ?? 0,
+                error: totals.error ?? 0,
+                unsupported: totals.unsupported ?? 0,
+              }),
+              { id: toastId },
+            )
           }
         } else {
           toast.success(t("messages.success.syncCompletedNoSummary"), {
@@ -285,7 +309,7 @@ export default function UsageHistorySyncTab() {
       />
 
       <SettingSection
-        id="usage-history-sync-state"
+        id={USAGE_HISTORY_STATE_SECTION_ID}
         title={t("syncTab.stateTitle")}
         description={t("syncTab.stateDescription")}
       >

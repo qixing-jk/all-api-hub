@@ -380,13 +380,18 @@ describe("UsageHistorySyncTab", () => {
 
     await waitFor(() => {
       expect(mockShowWarningToast).toHaveBeenCalledWith(
-        "usageAnalytics:messages.success.syncCompleted",
-        { id: "sync-toast" },
+        "usageAnalytics:messages.warning.syncCompletedWithIssues",
+        expect.objectContaining({
+          id: "sync-toast",
+          action: expect.objectContaining({
+            label: "usageAnalytics:syncTab.actions.viewStatus",
+          }),
+        }),
       )
     })
 
     expect(toast.success).not.toHaveBeenCalledWith(
-      "usageAnalytics:messages.success.syncCompleted",
+      "usageAnalytics:messages.warning.syncCompletedWithIssues",
       { id: "sync-toast" },
     )
   })
