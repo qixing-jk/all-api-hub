@@ -17,13 +17,13 @@ An open-source browser extension designed to optimize the experience of managing
 
 | Type | Download Link | Suitable For | Description |
 |---|---|---|---|
-| Stable Release | [Download Latest Stable](https://github.com/qixing-jk/all-api-hub/releases/latest) | Most users | Corresponds to officially released versions, with more complete release notes and higher stability, suitable for daily use. |
-| Nightly Pre-release | [Download Nightly](https://github.com/qixing-jk/all-api-hub/releases/tag/nightly) | Users who want to experience new features early, verify fixes, or assist with feedback | Automatically generated from the latest commit on `main`, with the fastest update speed, but may contain unverified changes; attachment filenames usually include `nightly`. |
+| Stable Release | [Download Latest Stable](https://github.com/qixing-jk/all-api-hub/releases/latest) | Most users | Official release builds with more complete release notes and better stability for day-to-day use. |
+| Nightly Pre-release | [Download Nightly](https://github.com/qixing-jk/all-api-hub/releases/tag/nightly) | Users who want early access to new features, to verify fixes, or to help with feedback | Automatically generated from the latest commit on `main`, updated the fastest, and may include changes that have not been fully validated yet; attachment filenames usually include `nightly`. |
 
 ::: tip How to Choose
-- If you just want to install a more stable version for long-term use, prioritize the Stable Release.
-- If you want to get the latest fixes immediately, confirm if a specific issue has been resolved, or are willing to help provide feedback, choose Nightly.
-- Store versions usually have a 1-3 day delay during the review process; GitHub Stable releases are typically earlier, and Nightly versions are even more cutting-edge than stable releases.
+- If you want the most stable option for long-term use, start with the Stable Release.
+- Choose Nightly if you want the latest fixes immediately, want to confirm whether a specific issue has been resolved, or want to help provide feedback.
+- Store versions usually lag by 1-3 days because of review. GitHub Stable releases are often available earlier, and Nightly builds move even faster.
 :::
 
 ## 2. Supported Sites
