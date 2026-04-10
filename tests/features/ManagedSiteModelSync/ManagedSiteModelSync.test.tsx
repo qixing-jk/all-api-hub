@@ -328,9 +328,7 @@ describe("ManagedSiteModelSync page", () => {
       )
     })
 
-    expect(toast.success).not.toHaveBeenCalledWith(
-      "managedSiteModelSync:messages.warning.syncCompletedWithFailures",
-    )
+    expect(toast.success).not.toHaveBeenCalled()
   })
 
   it("uses manual route params to load and preselect channels", async () => {

@@ -147,15 +147,21 @@ describe("toastHelpers", () => {
 
     it("falls back to the shared warning icon when toast.custom is unavailable", async () => {
       const toast = (await import("react-hot-toast")).default as any
-      toast.custom = undefined
-      vi.clearAllMocks()
+      const originalCustom = toast.custom
 
-      showWarningToast("Fallback warning")
+      try {
+        toast.custom = undefined
+        vi.clearAllMocks()
 
-      expect(mockToast).toHaveBeenCalledWith("Fallback warning", {
-        duration: 5000,
-        icon: expect.any(Object),
-      })
+        showWarningToast("Fallback warning")
+
+        expect(mockToast).toHaveBeenCalledWith("Fallback warning", {
+          duration: 5000,
+          icon: expect.any(Object),
+        })
+      } finally {
+        toast.custom = originalCustom
+      }
     })
   })
 })

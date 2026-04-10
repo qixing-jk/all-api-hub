@@ -1011,14 +1011,15 @@ export function useAccountDialog({
       }
 
       const feedbackMessage =
-        result.message ??
-        (mode === DIALOG_MODES.ADD
-          ? t("messages.addSuccess", {
-              name: siteName,
-            })
-          : t("messages.updateSuccess", {
-              name: siteName,
-            }))
+        typeof result.message === "string" && result.message.trim().length > 0
+          ? result.message
+          : mode === DIALOG_MODES.ADD
+            ? t("messages.addSuccess", {
+                name: siteName,
+              })
+            : t("messages.updateSuccess", {
+                name: siteName,
+              })
 
       if (result.feedbackLevel === "warning") {
         const warningAccountId =

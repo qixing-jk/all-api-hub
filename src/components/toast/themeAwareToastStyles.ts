@@ -1,5 +1,5 @@
 /**
- *
+ * Returns theme-aware styles for toast notifications based on the resolved theme.
  */
 export function getThemeAwareToastStyles(resolvedTheme?: string) {
   if (resolvedTheme === "dark") {

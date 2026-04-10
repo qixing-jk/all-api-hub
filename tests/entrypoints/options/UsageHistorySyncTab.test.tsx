@@ -390,10 +390,26 @@ describe("UsageHistorySyncTab", () => {
       )
     })
 
-    expect(toast.success).not.toHaveBeenCalledWith(
-      "usageAnalytics:messages.warning.syncCompletedWithIssues",
-      { id: "sync-toast" },
+    const warningOptions = mockShowWarningToast.mock.calls[0]?.[1]
+    const warningAction = warningOptions?.action
+    expect(warningAction).toEqual(
+      expect.objectContaining({
+        label: "usageAnalytics:syncTab.actions.viewStatus",
+      }),
     )
+
+    const stateSection = document.getElementById("usage-history-sync-state")
+    expect(stateSection).toBeTruthy()
+    const scrollIntoViewMock = vi.fn()
+    stateSection!.scrollIntoView = scrollIntoViewMock
+
+    warningAction?.onClick()
+
+    expect(scrollIntoViewMock).toHaveBeenCalledWith({
+      behavior: "smooth",
+      block: "start",
+    })
+    expect(toast.success).not.toHaveBeenCalled()
   })
 
   it("clears the syncing state and shows an error toast when a full sync fails", async () => {

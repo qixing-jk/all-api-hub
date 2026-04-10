@@ -1237,6 +1237,7 @@ describe("AccountActionButtons", () => {
         }),
       )
     })
+    expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(managedService.prepareChannelFormData).not.toHaveBeenCalled()
   })
 
@@ -1361,6 +1362,7 @@ describe("AccountActionButtons", () => {
         }),
       )
     })
+    expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(managedService.prepareChannelFormData).not.toHaveBeenCalled()
     expect(managedService.findMatchingChannel).not.toHaveBeenCalled()
   })
@@ -1537,6 +1539,7 @@ describe("AccountActionButtons", () => {
         }),
       )
     })
+    expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(fetchAccountTokensMock).not.toHaveBeenCalled()
     expect(managedService.prepareChannelFormData).not.toHaveBeenCalled()
   })

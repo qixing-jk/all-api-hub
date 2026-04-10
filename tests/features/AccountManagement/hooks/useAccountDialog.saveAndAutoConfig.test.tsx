@@ -367,9 +367,7 @@ describe("useAccountDialog save and auto-config flows", () => {
         label: "common:actions.refresh",
       }),
     )
-    expect(toast.success).not.toHaveBeenCalledWith(
-      "Account saved, but latest metrics are placeholders.",
-    )
+    expect(toast.success).not.toHaveBeenCalled()
   })
 
   it("uses a warning toast for partial-success updates when latest account data stays stale", async () => {
@@ -433,9 +431,70 @@ describe("useAccountDialog save and auto-config flows", () => {
         label: "common:actions.refresh",
       }),
     )
-    expect(toast.success).not.toHaveBeenCalledWith(
-      "Account settings saved, but latest metrics are still stale.",
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
+  it("falls back to the local warning copy when a partial-success save returns an empty message", async () => {
+    mockValidateAndSaveAccount.mockResolvedValueOnce({
+      success: true,
+      accountId: "saved-account-id",
+      message: "",
+      feedbackLevel: "warning",
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setSiteName("Example")
+      result.current.setters.setUsername("user")
+      result.current.setters.setAccessToken("token")
+      result.current.setters.setUserId("1")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("one-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(toast.custom).toHaveBeenCalledWith(
+      expect.any(Function),
+      expect.objectContaining({
+        duration: 5000,
+      }),
     )
+    const saveWarningRenderer = vi.mocked(toast.custom).mock.calls[0]?.[0] as
+      | ((toastInstance: any) => any)
+      | undefined
+    const saveWarningElement = saveWarningRenderer?.({
+      id: "warning-toast-id",
+      type: "custom",
+      visible: true,
+      dismissed: false,
+      height: 0,
+      ariaProps: {
+        role: "status",
+        "aria-live": "polite",
+      },
+      message: "",
+      createdAt: Date.now(),
+      pauseDuration: 0,
+      position: "bottom-center",
+    } as any)
+    expect(saveWarningElement?.props.message).toBe(
+      "accountDialog:messages.addSuccess",
+    )
+    expect(saveWarningElement?.props.action).toEqual(
+      expect.objectContaining({
+        label: "common:actions.refresh",
+      }),
+    )
+    expect(toast.success).not.toHaveBeenCalled()
   })
 
   it("prevents the native form submit and delegates to the normal save flow", async () => {

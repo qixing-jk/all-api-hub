@@ -45,8 +45,10 @@ export function WarningToast({
     setIsActionPending(true)
     try {
       await action.onClick()
-    } finally {
       toast.dismiss(toastInstance.id)
+    } catch {
+      // Keep the warning toast available so callers can surface retry/error UI.
+    } finally {
       setIsActionPending(false)
     }
   }
@@ -61,9 +63,7 @@ export function WarningToast({
             {action ? (
               <button
                 type="button"
-                onClick={() => {
-                  void handleActionClick()
-                }}
+                onClick={handleActionClick}
                 disabled={isActionPending}
                 className="w-fit text-sm font-medium text-blue-600 transition-opacity hover:opacity-80 disabled:cursor-not-allowed disabled:opacity-60 dark:text-blue-400"
               >
@@ -71,7 +71,11 @@ export function WarningToast({
               </button>
             ) : null}
           </div>
-          <button type="button" onClick={() => toast.dismiss(toastInstance.id)}>
+          <button
+            type="button"
+            aria-label="Close notification"
+            onClick={() => toast.dismiss(toastInstance.id)}
+          >
             <XMarkIcon className="h-4 w-4" />
           </button>
         </>

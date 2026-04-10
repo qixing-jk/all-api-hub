@@ -307,6 +307,55 @@ export default function ManagedSiteModelSync({
     routeParams?.tab,
   ])
 
+  /**
+   * Shows a toast notification based on the execution result, highlighting any failures and providing a retry action if needed.
+   */
+  function notifySyncCompletion(execution: ExecutionResult) {
+    if (hasModelSyncFailures(execution)) {
+      showWarningToast(
+        t("messages.warning.syncCompletedWithFailures", {
+          success: execution.statistics.successCount,
+          total: execution.statistics.total,
+          failed: execution.statistics.failureCount,
+        }),
+        {
+          action: {
+            label: t("execution.actions.retryFailed"),
+            onClick: handleRetryFailed,
+          },
+        },
+      )
+      return
+    }
+
+    toast.success(
+      t("messages.success.syncCompleted", {
+        success: execution.statistics.successCount,
+        total: execution.statistics.total,
+      }),
+    )
+  }
+
+  /**
+   * Handles retrying only the failed channels from the last execution, showing appropriate success or error toasts based on the result.
+   */
+  async function handleRetryFailed() {
+    try {
+      const response = await sendRuntimeMessage({
+        action: RuntimeActionIds.ModelSyncTriggerFailedOnly,
+      })
+
+      if (response.success) {
+        notifySyncCompletion(response.data)
+        setLastExecution(response.data)
+      } else {
+        toast.error(t("messages.error.syncFailed", { error: response.error }))
+      }
+    } catch (error: any) {
+      toast.error(t("messages.error.syncFailed", { error: error.message }))
+    }
+  }
+
   const handleRunAll = async () => {
     try {
       const response = await sendRuntimeMessage({
@@ -314,28 +363,7 @@ export default function ManagedSiteModelSync({
       })
 
       if (response.success) {
-        if (hasModelSyncFailures(response.data)) {
-          showWarningToast(
-            t("messages.warning.syncCompletedWithFailures", {
-              success: response.data.statistics.successCount,
-              total: response.data.statistics.total,
-              failed: response.data.statistics.failureCount,
-            }),
-            {
-              action: {
-                label: t("execution.actions.retryFailed"),
-                onClick: handleRetryFailed,
-              },
-            },
-          )
-        } else {
-          toast.success(
-            t("messages.success.syncCompleted", {
-              success: response.data.statistics.successCount,
-              total: response.data.statistics.total,
-            }),
-          )
-        }
+        notifySyncCompletion(response.data)
         setLastExecution(response.data)
       } else {
         toast.error(t("messages.error.syncFailed", { error: response.error }))
@@ -361,72 +389,13 @@ export default function ManagedSiteModelSync({
       })
 
       if (response.success) {
-        if (hasModelSyncFailures(response.data)) {
-          showWarningToast(
-            t("messages.warning.syncCompletedWithFailures", {
-              success: response.data.statistics.successCount,
-              total: response.data.statistics.total,
-              failed: response.data.statistics.failureCount,
-            }),
-            {
-              action: {
-                label: t("execution.actions.retryFailed"),
-                onClick: handleRetryFailed,
-              },
-            },
-          )
-        } else {
-          toast.success(
-            t("messages.success.syncCompleted", {
-              success: response.data.statistics.successCount,
-              total: response.data.statistics.total,
-            }),
-          )
-        }
+        notifySyncCompletion(response.data)
         setLastExecution(response.data)
         if (source === "history") {
           setHistorySelectedIds(new Set())
         } else {
           setManualSelectedIds(new Set())
         }
-      } else {
-        toast.error(t("messages.error.syncFailed", { error: response.error }))
-      }
-    } catch (error: any) {
-      toast.error(t("messages.error.syncFailed", { error: error.message }))
-    }
-  }
-
-  const handleRetryFailed = async () => {
-    try {
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.ModelSyncTriggerFailedOnly,
-      })
-
-      if (response.success) {
-        if (hasModelSyncFailures(response.data)) {
-          showWarningToast(
-            t("messages.warning.syncCompletedWithFailures", {
-              success: response.data.statistics.successCount,
-              total: response.data.statistics.total,
-              failed: response.data.statistics.failureCount,
-            }),
-            {
-              action: {
-                label: t("execution.actions.retryFailed"),
-                onClick: handleRetryFailed,
-              },
-            },
-          )
-        } else {
-          toast.success(
-            t("messages.success.syncCompleted", {
-              success: response.data.statistics.successCount,
-              total: response.data.statistics.total,
-            }),
-          )
-        }
-        setLastExecution(response.data)
       } else {
         toast.error(t("messages.error.syncFailed", { error: response.error }))
       }

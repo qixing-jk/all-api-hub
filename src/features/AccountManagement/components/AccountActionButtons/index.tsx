@@ -330,6 +330,10 @@ export default function AccountActionButtons({
     if (!normalizedAccountBaseUrl) {
       return
     }
+    const handleChannelLocateFallback = (message: string) => {
+      openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
+      showWarningToast(message)
+    }
 
     const secretsToRedact = new Set<string>(
       [site.token, site.cookieAuthSessionCookie].filter(Boolean) as string[],
@@ -340,9 +344,9 @@ export default function AccountActionButtons({
       const managedConfig = await service.getConfig()
 
       if (!managedConfig) {
-        openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
-        showWarningToast(t("actions.channelLocateConfigMissing"))
-        return
+        return handleChannelLocateFallback(
+          t("actions.channelLocateConfigMissing"),
+        )
       }
 
       if (managedConfig.token) {
@@ -369,15 +373,15 @@ export default function AccountActionButtons({
       }
 
       if (tokensResponse.length === 0) {
-        openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
-        showWarningToast(t("actions.channelLocateNoKeyFallback"))
-        return
+        return handleChannelLocateFallback(
+          t("actions.channelLocateNoKeyFallback"),
+        )
       }
 
       if (tokensResponse.length > 1) {
-        openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
-        showWarningToast(t("actions.channelLocateMultipleKeysFallback"))
-        return
+        return handleChannelLocateFallback(
+          t("actions.channelLocateMultipleKeysFallback"),
+        )
       }
 
       const apiToken = tokensResponse[0]
@@ -410,9 +414,9 @@ export default function AccountActionButtons({
             siteType: site.siteType,
           },
         )
-        openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
-        showWarningToast(t("actions.channelLocateInputPreparationFallback"))
-        return
+        return handleChannelLocateFallback(
+          t("actions.channelLocateInputPreparationFallback"),
+        )
       }
 
       const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(
@@ -420,9 +424,9 @@ export default function AccountActionButtons({
       )
 
       if (!searchBaseUrl || formData.models.length === 0) {
-        openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
-        showWarningToast(t("actions.channelLocateInputPreparationFallback"))
-        return
+        return handleChannelLocateFallback(
+          t("actions.channelLocateInputPreparationFallback"),
+        )
       }
 
       const resolution = await resolveManagedSiteChannelMatch({
