@@ -4,14 +4,25 @@ import {
   showResetToast,
   showResultToast,
   showUpdateToast,
+  showWarningToast,
 } from "~/utils/core/toastHelpers"
 
-vi.mock("react-hot-toast", () => ({
-  default: {
+const { mockToast } = vi.hoisted(() => ({
+  mockToast: vi.fn(),
+}))
+
+vi.mock("react-hot-toast", () => {
+  const toastMock = Object.assign(mockToast, {
     success: vi.fn(),
     error: vi.fn(),
-  },
-}))
+    custom: vi.fn(),
+    dismiss: vi.fn(),
+  })
+
+  return {
+    default: toastMock,
+  }
+})
 
 describe("toastHelpers", () => {
   describe("showResultToast", () => {
@@ -83,6 +94,29 @@ describe("toastHelpers", () => {
       const toast = (await import("react-hot-toast")).default
       showResetToast(false)
       expect(toast.error).toHaveBeenCalledWith("settings:danger.resetFailed")
+    })
+  })
+
+  describe("showWarningToast", () => {
+    it("shows a generic warning toast with the shared wrapper defaults", async () => {
+      const toast = (await import("react-hot-toast")).default
+      showWarningToast("Review this partial-success state")
+      expect(toast.custom).toHaveBeenCalledWith(expect.any(Function), {
+        duration: 5000,
+      })
+    })
+
+    it("falls back to the shared warning icon when toast.custom is unavailable", async () => {
+      const toast = (await import("react-hot-toast")).default as any
+      toast.custom = undefined
+      vi.clearAllMocks()
+
+      showWarningToast("Fallback warning")
+
+      expect(mockToast).toHaveBeenCalledWith("Fallback warning", {
+        duration: 5000,
+        icon: expect.any(Object),
+      })
     })
   })
 })

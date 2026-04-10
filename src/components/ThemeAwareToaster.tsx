@@ -2,6 +2,7 @@ import { XMarkIcon } from "@heroicons/react/24/outline"
 import type { CSSProperties } from "react"
 import toast, { ToastBar, Toaster } from "react-hot-toast"
 
+import { getThemeAwareToastStyles } from "~/components/toast/themeAwareToastStyles"
 import { useTheme } from "~/contexts/ThemeContext"
 
 interface ThemeAwareToasterProps {
@@ -25,21 +26,6 @@ export const ThemeAwareToaster = ({
 }: ThemeAwareToasterProps) => {
   const { resolvedTheme } = useTheme()
 
-  const getToastStyles = () => {
-    if (resolvedTheme === "dark") {
-      return {
-        background: "#1e293b",
-        color: "#f1f5f9",
-        border: "1px solid #334155",
-      }
-    }
-    return {
-      background: "#fff",
-      color: "#363636",
-      border: "1px solid #e5e7eb",
-    }
-  }
-
   return (
     <Toaster
       position={position}
@@ -50,7 +36,7 @@ export const ThemeAwareToaster = ({
       toastOptions={{
         className: "rounded-lg shadow-lg",
         duration: 4000,
-        style: getToastStyles(),
+        style: getThemeAwareToastStyles(resolvedTheme),
         success: {
           duration: 3000,
           iconTheme: {

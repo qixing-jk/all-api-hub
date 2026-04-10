@@ -193,8 +193,8 @@
     "noChannelsToSync": "同期するチャネルがありません"
   },
   "warnings": {
-    "accountSavedWithoutDataRefresh": "アカウントは正常に保存されましたが、アカウントデータの取得に失敗しました。後でアカウント一覧から更新できます。",
-    "accountUpdatedWithoutDataRefresh": "アカウント設定は保存されましたが、最新データの更新に失敗しました"
+    "accountSavedWithoutDataRefresh": "アカウントは保存されましたが、最新の残高・クォータ・本日の使用量を取得できませんでした。現在の表示は仮の値の可能性があります。後でアカウント一覧から更新してください。",
+    "accountUpdatedWithoutDataRefresh": "アカウント設定は保存されましたが、最新の残高・クォータ・本日の使用量を更新できませんでした。現在の表示は古いままの可能性があります。後でアカウント一覧から更新してください。"
   },
   "webdav": {
     "authFailed": "認証に失敗しました。ユーザー名 / パスワードを確認してください",

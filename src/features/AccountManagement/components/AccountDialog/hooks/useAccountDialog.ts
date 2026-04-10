@@ -42,6 +42,7 @@ import {
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+import { showWarningToast } from "~/utils/core/toastHelpers"
 import {
   normalizeUrlForOriginKey,
   tryParseOrigin,
@@ -1009,16 +1010,21 @@ export function useAccountDialog({
         throw new Error(result.message || t("messages.saveFailed"))
       }
 
-      toast.success(
+      const feedbackMessage =
         result.message ??
-          (mode === DIALOG_MODES.ADD
-            ? t("messages.addSuccess", {
-                name: siteName,
-              })
-            : t("messages.updateSuccess", {
-                name: siteName,
-              })),
-      )
+        (mode === DIALOG_MODES.ADD
+          ? t("messages.addSuccess", {
+              name: siteName,
+            })
+          : t("messages.updateSuccess", {
+              name: siteName,
+            }))
+
+      if (result.feedbackLevel === "warning") {
+        showWarningToast(feedbackMessage)
+      } else {
+        toast.success(feedbackMessage)
+      }
 
       if (
         siteType === SUB2API &&

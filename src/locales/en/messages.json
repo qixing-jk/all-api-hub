@@ -195,8 +195,8 @@
     "noChannelsToSync": "No channels to sync"
   },
   "warnings": {
-    "accountSavedWithoutDataRefresh": "Account saved successfully, but failed to fetch account data. You can refresh the data later from the account list.",
-    "accountUpdatedWithoutDataRefresh": "Account configuration saved, but failed to refresh latest data"
+    "accountSavedWithoutDataRefresh": "Account saved, but the latest balance, quota, and today's usage could not be fetched. The current values may be placeholders. Refresh this account later from the account list.",
+    "accountUpdatedWithoutDataRefresh": "Account settings saved, but the latest balance, quota, and today's usage could not be refreshed. The current values may still be stale. Refresh this account later from the account list."
   },
   "webdav": {
     "authFailed": "Authentication failed, please check username/password",

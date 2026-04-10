@@ -638,6 +638,7 @@ export async function validateAndSaveAccount(
       success: true,
       message: t("messages:toast.success.accountSaveSuccess"),
       accountId,
+      feedbackLevel: "success",
     }
   } catch (error) {
     // FALLBACK: 即使获取数据失败也要保存配置
@@ -702,6 +703,7 @@ export async function validateAndSaveAccount(
         success: true,
         message: t("messages:warnings.accountSavedWithoutDataRefresh"),
         accountId,
+        feedbackLevel: "warning",
       }
     } catch (saveError) {
       logger.error("Failed to save account", saveError)
@@ -872,6 +874,7 @@ export async function validateAndUpdateAccount(
       success: true,
       message: t("messages:toast.success.accountUpdateSuccess"),
       accountId,
+      feedbackLevel: "success",
     }
   } catch (error) {
     // FALLBACK: 即使获取数据失败也要保存配置
@@ -928,6 +931,7 @@ export async function validateAndUpdateAccount(
       success: true,
       message: t("messages:warnings.accountUpdatedWithoutDataRefresh"),
       accountId,
+      feedbackLevel: "warning",
     }
   }
 }

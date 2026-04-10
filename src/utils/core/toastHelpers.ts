@@ -1,5 +1,8 @@
-import toast from "react-hot-toast"
+import { createElement } from "react"
+import toast, { type ToastOptions } from "react-hot-toast"
 
+import { WarningToast } from "~/components/toast/WarningToast"
+import { WarningToastIcon } from "~/components/toast/WarningToastIcon"
 import { t } from "~/utils/i18n/core"
 
 type ToastResultObject = {
@@ -22,6 +25,18 @@ const getDefaultToastMessage = (success: boolean) =>
   success
     ? t("messages:toast.success.operationCompleted")
     : t("messages:toast.error.operationFailedGeneric")
+
+const WARNING_TOAST_DEFAULTS: ToastOptions = {
+  duration: 5000,
+}
+
+type WarningToastFallbackApi = {
+  success?: (message: string) => void
+  custom?: (
+    renderer: (toastInstance: any) => ReturnType<typeof createElement>,
+    options?: ToastOptions,
+  ) => void
+}
 
 /**
  * Shows a toast notification based on the success status of an operation.
@@ -67,4 +82,58 @@ export const showResetToast = (success: boolean): void => {
   const successMsg = t("settings:messages.updateSuccess")
   const errorMsg = t("settings:danger.resetFailed")
   showResultToast(success, successMsg, errorMsg)
+}
+
+/**
+ * Shows a warning-style toast using the generic toast container so callers can
+ * reuse a consistent non-error, non-success feedback treatment.
+ * @param message - The warning message to display.
+ * @param options - Optional toast overrides.
+ */
+export const showWarningToast = (
+  message: string,
+  options?: ToastOptions,
+): void => {
+  const normalizedMessage = normalizeToastMessage(message)
+  if (!normalizedMessage) return
+  const toastRuntime = toast as unknown
+  const toastApi = toastRuntime as WarningToastFallbackApi
+  const callableToast = toastRuntime as
+    | ((
+        message: string,
+        options?: ToastOptions & { icon?: ReturnType<typeof createElement> },
+      ) => void)
+    | undefined
+
+  const mergedOptions = {
+    ...WARNING_TOAST_DEFAULTS,
+    ...options,
+  }
+
+  if (typeof toastApi.custom === "function") {
+    toastApi.custom(
+      (toastInstance) =>
+        createElement(WarningToast, {
+          toastInstance,
+          message: normalizedMessage,
+        }),
+      mergedOptions,
+    )
+    return
+  }
+
+  // Compatibility fallback for simplified test mocks or environments that do
+  // not expose toast.custom. Runtime in this repo uses react-hot-toast with
+  // toast.custom available, so this path is only a graceful downgrade.
+  if (typeof toastRuntime === "function" && callableToast) {
+    callableToast(normalizedMessage, {
+      ...mergedOptions,
+      icon: createElement(WarningToastIcon),
+    })
+    return
+  }
+
+  if (typeof toastApi.success === "function") {
+    toastApi.success(normalizedMessage)
+  }
 }

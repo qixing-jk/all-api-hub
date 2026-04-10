@@ -11,6 +11,7 @@ import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const {
+  mockToast,
   mockValidateAndSaveAccount,
   mockValidateAndUpdateAccount,
   mockOpenWithAccount,
@@ -18,6 +19,7 @@ const {
   mockGetManagedSiteConfig,
   mockOpenSettingsTab,
 } = vi.hoisted(() => ({
+  mockToast: vi.fn(),
   mockValidateAndSaveAccount: vi.fn(),
   mockValidateAndUpdateAccount: vi.fn(),
   mockOpenWithAccount: vi.fn(),
@@ -26,13 +28,19 @@ const {
   mockOpenSettingsTab: vi.fn().mockResolvedValue(undefined),
 }))
 
-vi.mock("react-hot-toast", () => ({
-  default: {
+vi.mock("react-hot-toast", () => {
+  const toastMock = Object.assign(mockToast, {
     success: vi.fn(),
     error: vi.fn(),
     loading: vi.fn(),
-  },
-}))
+    custom: vi.fn(),
+    dismiss: vi.fn(),
+  })
+
+  return {
+    default: toastMock,
+  }
+})
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
@@ -100,6 +108,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       success: true,
       accountId: "saved-account-id",
       message: "Saved successfully",
+      feedbackLevel: "success",
     })
     mockGetManagedSiteConfig.mockResolvedValue({
       baseUrl: "https://managed.example.com",
@@ -108,6 +117,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
     mockValidateAndUpdateAccount.mockResolvedValue({
       success: true,
+      feedbackLevel: "success",
     })
   })
 
@@ -297,6 +307,82 @@ describe("useAccountDialog save and auto-config flows", () => {
     )
     expect(toast.success).toHaveBeenCalledWith(
       "accountDialog:messages.updateSuccess",
+    )
+  })
+
+  it("uses a warning toast for partial-success saves when account data refresh fails", async () => {
+    mockValidateAndSaveAccount.mockResolvedValueOnce({
+      success: true,
+      accountId: "saved-account-id",
+      message: "Account saved, but latest metrics are placeholders.",
+      feedbackLevel: "warning",
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com")
+      result.current.setters.setSiteName("Example")
+      result.current.setters.setUsername("user")
+      result.current.setters.setAccessToken("token")
+      result.current.setters.setUserId("1")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("one-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(toast.custom).toHaveBeenCalledWith(expect.any(Function), {
+      duration: 5000,
+    })
+    expect(toast.success).not.toHaveBeenCalledWith(
+      "Account saved, but latest metrics are placeholders.",
+    )
+  })
+
+  it("uses a warning toast for partial-success updates when latest account data stays stale", async () => {
+    mockValidateAndUpdateAccount.mockResolvedValueOnce({
+      success: true,
+      accountId: "existing-account-id",
+      message: "Account settings saved, but latest metrics are still stale.",
+      feedbackLevel: "warning",
+    })
+
+    const { result } = renderEditHook({
+      account: {
+        id: "existing-account-id",
+      },
+    })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://edit.example.com")
+      result.current.setters.setSiteName("Edit Example")
+      result.current.setters.setUsername("user")
+      result.current.setters.setAccessToken("token")
+      result.current.setters.setUserId("1")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("one-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(toast.custom).toHaveBeenCalledWith(expect.any(Function), {
+      duration: 5000,
+    })
+    expect(toast.success).not.toHaveBeenCalledWith(
+      "Account settings saved, but latest metrics are still stale.",
     )
   })
 

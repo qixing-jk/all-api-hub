@@ -193,8 +193,8 @@
     "noChannelsToSync": "沒有可同步的渠道"
   },
   "warnings": {
-    "accountSavedWithoutDataRefresh": "帳號儲存成功，但獲取帳號資料失敗。您可以稍後從帳號列表重新整理資料。",
-    "accountUpdatedWithoutDataRefresh": "帳號配置已儲存，但重新整理最新資料失敗"
+    "accountSavedWithoutDataRefresh": "帳號已儲存，但未能取得餘額、額度與今日用量，目前顯示可能是佔位值。請稍後在帳號列表中重新整理。",
+    "accountUpdatedWithoutDataRefresh": "帳號配置已儲存，但未能重新整理最新餘額、額度與今日用量，目前顯示可能仍是舊資料。請稍後在帳號列表中重新整理。"
   },
   "webdav": {
     "authFailed": "鑑權失敗，請檢查使用者名稱/密碼",

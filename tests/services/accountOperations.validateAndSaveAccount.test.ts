@@ -102,6 +102,7 @@ describe("accountOperations validateAndSaveAccount", () => {
 
     expect(result.success).toBe(true)
     expect(result.accountId).toBeTruthy()
+    expect(result.feedbackLevel).toBe("success")
 
     const saved = await accountStorage.getAccountById(result.accountId!)
     expect(saved).not.toBeNull()
@@ -160,6 +161,7 @@ describe("accountOperations validateAndSaveAccount", () => {
     expect(result).toMatchObject({
       success: true,
       message: "messages:warnings.accountSavedWithoutDataRefresh",
+      feedbackLevel: "warning",
     })
 
     const saved = await accountStorage.getAccountById(result.accountId!)
@@ -214,6 +216,7 @@ describe("accountOperations validateAndSaveAccount", () => {
       expect(result).toMatchObject({
         success: true,
         message: "messages:warnings.accountSavedWithoutDataRefresh",
+        feedbackLevel: "warning",
       })
 
       const saved = await accountStorage.getAccountById(result.accountId!)

@@ -193,8 +193,8 @@
     "noChannelsToSync": "没有可同步的渠道"
   },
   "warnings": {
-    "accountSavedWithoutDataRefresh": "账号保存成功，但获取账号数据失败。您可以稍后从账号列表刷新数据。",
-    "accountUpdatedWithoutDataRefresh": "账号配置已保存，但刷新最新数据失败"
+    "accountSavedWithoutDataRefresh": "账号已保存，但未能获取余额、额度和今日用量，当前显示可能为占位值。请稍后在账号列表中刷新。",
+    "accountUpdatedWithoutDataRefresh": "账号配置已保存，但未能刷新最新余额、额度和今日用量，当前显示可能仍是旧数据。请稍后在账号列表中刷新。"
   },
   "webdav": {
     "authFailed": "鉴权失败，请检查用户名/密码",

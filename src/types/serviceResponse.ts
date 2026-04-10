@@ -34,6 +34,7 @@ export interface AccountValidationResponse
  */
 export interface AccountSaveResponse extends ServiceResponse<void> {
   accountId?: string // Present on success
+  feedbackLevel?: "success" | "warning"
 }
 
 /**

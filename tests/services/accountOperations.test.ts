@@ -80,6 +80,7 @@ describe("accountOperations", () => {
       )
 
       expect(result.success).toBe(true)
+      expect(result.feedbackLevel).toBe("success")
       expect(mockUpdateAccount).toHaveBeenCalledWith(
         "account-1",
         expect.objectContaining({
@@ -109,6 +110,10 @@ describe("accountOperations", () => {
       )
 
       expect(result.success).toBe(true)
+      expect(result).toMatchObject({
+        message: "messages:warnings.accountUpdatedWithoutDataRefresh",
+        feedbackLevel: "warning",
+      })
       expect(mockUpdateAccount).toHaveBeenCalledWith(
         "account-1",
         expect.objectContaining({
