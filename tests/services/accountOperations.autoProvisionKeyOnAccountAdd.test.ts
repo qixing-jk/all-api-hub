@@ -17,6 +17,7 @@ const {
   ensureDefaultApiTokenForAccountMock,
   toastSuccessMock,
   toastErrorMock,
+  toastCustomMock,
   toastLoadingMock,
   toastDismissMock,
 } = vi.hoisted(() => ({
@@ -24,6 +25,7 @@ const {
   ensureDefaultApiTokenForAccountMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
+  toastCustomMock: vi.fn(),
   toastLoadingMock: vi.fn(),
   toastDismissMock: vi.fn(),
 }))
@@ -32,6 +34,7 @@ vi.mock("react-hot-toast", () => ({
   default: {
     success: toastSuccessMock,
     error: toastErrorMock,
+    custom: toastCustomMock,
     loading: toastLoadingMock,
     dismiss: toastDismissMock,
   },
@@ -80,6 +83,7 @@ describe("accountOperations auto-provision key on add", () => {
     ensureDefaultApiTokenForAccountMock.mockReset()
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
+    toastCustomMock.mockReset()
     toastLoadingMock.mockReset()
     toastDismissMock.mockReset()
 
@@ -95,7 +99,7 @@ describe("accountOperations auto-provision key on add", () => {
 
     ensureDefaultApiTokenForAccountMock.mockResolvedValue({
       token: { id: 1, name: "t", key: "k" },
-      created: false,
+      created: true,
     })
 
     await accountStorage.clearAllData()
@@ -131,6 +135,39 @@ describe("accountOperations auto-provision key on add", () => {
 
     expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).toHaveBeenCalledTimes(1)
+    expect(toastCustomMock).not.toHaveBeenCalled()
+    expect(toastErrorMock).not.toHaveBeenCalled()
+  })
+
+  it("uses warning toast when auto-provision is skipped because an API key already exists", async () => {
+    ensureDefaultApiTokenForAccountMock.mockResolvedValueOnce({
+      token: { id: 1, name: "t", key: "k" },
+      created: false,
+    })
+
+    const result = await validateAndSaveAccount(
+      "https://api.example.com",
+      "Test Site",
+      "tester",
+      "test-token",
+      "1",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      "unknown",
+      AuthTypeEnum.AccessToken,
+      "",
+    )
+
+    expect(result.success).toBe(true)
+
+    await flushPromises()
+    await flushPromises()
+
+    expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
+    expect(toastCustomMock).toHaveBeenCalledTimes(1)
+    expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(toastErrorMock).not.toHaveBeenCalled()
   })
 
@@ -212,6 +249,7 @@ describe("accountOperations auto-provision key on add", () => {
 
     expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).toHaveBeenCalledTimes(1)
+    expect(toastCustomMock).not.toHaveBeenCalled()
     expect(ensureDefaultApiTokenForAccountMock).toHaveBeenCalledWith(
       expect.objectContaining({
         displaySiteData: expect.objectContaining({

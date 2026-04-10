@@ -18,6 +18,7 @@ import type {
 } from "~/types/managedSiteModelSync"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
+import { showWarningToast } from "~/utils/core/toastHelpers"
 
 import ActionBar from "./components/ActionBar"
 import EmptyResults from "./components/EmptyResults"
@@ -37,6 +38,9 @@ const TAB_INDEX = {
   history: 0,
   manual: 1,
 } as const
+
+const hasModelSyncFailures = (execution: ExecutionResult) =>
+  execution.statistics.failureCount > 0
 
 /**
  * New API Model Sync dashboard showing history, manual runs, progress, and filters.
@@ -310,12 +314,16 @@ export default function ManagedSiteModelSync({
       })
 
       if (response.success) {
-        toast.success(
-          t("messages.success.syncCompleted", {
-            success: response.data.statistics.successCount,
-            total: response.data.statistics.total,
-          }),
-        )
+        const message = t("messages.success.syncCompleted", {
+          success: response.data.statistics.successCount,
+          total: response.data.statistics.total,
+        })
+
+        if (hasModelSyncFailures(response.data)) {
+          showWarningToast(message)
+        } else {
+          toast.success(message)
+        }
         setLastExecution(response.data)
       } else {
         toast.error(t("messages.error.syncFailed", { error: response.error }))
@@ -341,12 +349,16 @@ export default function ManagedSiteModelSync({
       })
 
       if (response.success) {
-        toast.success(
-          t("messages.success.syncCompleted", {
-            success: response.data.statistics.successCount,
-            total: response.data.statistics.total,
-          }),
-        )
+        const message = t("messages.success.syncCompleted", {
+          success: response.data.statistics.successCount,
+          total: response.data.statistics.total,
+        })
+
+        if (hasModelSyncFailures(response.data)) {
+          showWarningToast(message)
+        } else {
+          toast.success(message)
+        }
         setLastExecution(response.data)
         if (source === "history") {
           setHistorySelectedIds(new Set())
@@ -368,12 +380,16 @@ export default function ManagedSiteModelSync({
       })
 
       if (response.success) {
-        toast.success(
-          t("messages.success.syncCompleted", {
-            success: response.data.statistics.successCount,
-            total: response.data.statistics.total,
-          }),
-        )
+        const message = t("messages.success.syncCompleted", {
+          success: response.data.statistics.successCount,
+          total: response.data.statistics.total,
+        })
+
+        if (hasModelSyncFailures(response.data)) {
+          showWarningToast(message)
+        } else {
+          toast.success(message)
+        }
         setLastExecution(response.data)
       } else {
         toast.error(t("messages.error.syncFailed", { error: response.error }))

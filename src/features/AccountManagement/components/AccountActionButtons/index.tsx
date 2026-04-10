@@ -53,6 +53,7 @@ import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+import { showWarningToast } from "~/utils/core/toastHelpers"
 import { sanitizeOriginUrl } from "~/utils/core/url"
 import {
   openKeysPage,
@@ -340,7 +341,7 @@ export default function AccountActionButtons({
 
       if (!managedConfig) {
         openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
-        toast.success(t("actions.channelLocateConfigMissing"))
+        showWarningToast(t("actions.channelLocateConfigMissing"))
         return
       }
 
@@ -369,13 +370,13 @@ export default function AccountActionButtons({
 
       if (tokensResponse.length === 0) {
         openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
-        toast.success(t("actions.channelLocateNoKeyFallback"))
+        showWarningToast(t("actions.channelLocateNoKeyFallback"))
         return
       }
 
       if (tokensResponse.length > 1) {
         openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
-        toast.success(t("actions.channelLocateMultipleKeysFallback"))
+        showWarningToast(t("actions.channelLocateMultipleKeysFallback"))
         return
       }
 
@@ -410,7 +411,7 @@ export default function AccountActionButtons({
           },
         )
         openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
-        toast.success(t("actions.channelLocateInputPreparationFallback"))
+        showWarningToast(t("actions.channelLocateInputPreparationFallback"))
         return
       }
 
@@ -420,7 +421,7 @@ export default function AccountActionButtons({
 
       if (!searchBaseUrl || formData.models.length === 0) {
         openManagedSiteChannelsPage({ search: normalizedAccountBaseUrl })
-        toast.success(t("actions.channelLocateInputPreparationFallback"))
+        showWarningToast(t("actions.channelLocateInputPreparationFallback"))
         return
       }
 

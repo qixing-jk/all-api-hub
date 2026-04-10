@@ -15,6 +15,7 @@ import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { isEmptyModelMapping } from "~/services/models/modelRedirect/utils"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import { getErrorMessage } from "~/utils/core/error"
+import { showWarningToast } from "~/utils/core/toastHelpers"
 
 interface ClearModelRedirectMappingsDialogProps {
   isOpen: boolean
@@ -217,7 +218,7 @@ export function ClearModelRedirectMappingsDialog({
 
       if (result.success) {
         if (result.clearedChannels > 0 && result.skippedChannels > 0) {
-          toast.success(
+          showWarningToast(
             t("bulkClear.messages.successWithSkips", {
               cleared: result.clearedChannels,
               skipped: result.skippedChannels,
@@ -230,7 +231,7 @@ export function ClearModelRedirectMappingsDialog({
             }),
           )
         } else {
-          toast.success(t("bulkClear.messages.nothingToClear"))
+          showWarningToast(t("bulkClear.messages.nothingToClear"))
         }
         setIsConfirmOpen(false)
         onClose()

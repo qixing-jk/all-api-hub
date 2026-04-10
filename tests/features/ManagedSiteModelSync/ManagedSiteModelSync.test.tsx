@@ -15,23 +15,32 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import ManagedSiteModelSync from "~/features/ManagedSiteModelSync/ManagedSiteModelSync"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
-const { mockSendRuntimeMessage, mockUseUserPreferencesContext, loggerMocks } =
-  vi.hoisted(() => ({
-    mockSendRuntimeMessage: vi.fn(),
-    mockUseUserPreferencesContext: vi.fn(),
-    loggerMocks: {
-      error: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn(),
-    },
-  }))
+const {
+  mockSendRuntimeMessage,
+  mockUseUserPreferencesContext,
+  mockShowWarningToast,
+  loggerMocks,
+} = vi.hoisted(() => ({
+  mockSendRuntimeMessage: vi.fn(),
+  mockUseUserPreferencesContext: vi.fn(),
+  mockShowWarningToast: vi.fn(),
+  loggerMocks: {
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+  },
+}))
 
 vi.mock("react-hot-toast", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),
   },
+}))
+
+vi.mock("~/utils/core/toastHelpers", () => ({
+  showWarningToast: mockShowWarningToast,
 }))
 
 vi.mock("~/utils/core/logger", () => ({
@@ -201,6 +210,122 @@ describe("ManagedSiteModelSync page", () => {
       })
     })
     expect(toast.success).toHaveBeenCalled()
+  })
+
+  it("uses a warning toast when run-all completes with failed channels still present", async () => {
+    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
+      switch (message.action) {
+        case RuntimeActionIds.ModelSyncTriggerAll:
+          return {
+            success: true,
+            data: {
+              items: [
+                {
+                  channelId: 101,
+                  channelName: "Alpha",
+                  ok: true,
+                  attempts: 1,
+                  finishedAt: 1_700_000_005_000,
+                },
+                {
+                  channelId: 102,
+                  channelName: "Beta",
+                  ok: false,
+                  message: "rate limited",
+                  attempts: 2,
+                  finishedAt: 1_700_000_006_000,
+                },
+              ],
+              statistics: {
+                total: 2,
+                successCount: 1,
+                failureCount: 1,
+                durationMs: 2000,
+                startedAt: 1_700_000_004_000,
+                endedAt: 1_700_000_006_000,
+              },
+            },
+          }
+        default:
+          return {
+            success: true,
+            data:
+              message.action === RuntimeActionIds.ModelSyncGetLastExecution
+                ? {
+                    items: [
+                      {
+                        channelId: 101,
+                        channelName: "Alpha",
+                        ok: false,
+                        message: "failed",
+                        attempts: 2,
+                        finishedAt: 1_700_000_000_000,
+                        httpStatus: 500,
+                      },
+                      {
+                        channelId: 102,
+                        channelName: "Beta",
+                        ok: true,
+                        attempts: 1,
+                        finishedAt: 1_700_000_001_000,
+                      },
+                    ],
+                    statistics: {
+                      total: 2,
+                      successCount: 1,
+                      failureCount: 1,
+                      durationMs: 4000,
+                      startedAt: 1_700_000_000_000,
+                      endedAt: 1_700_000_004_000,
+                    },
+                  }
+                : message.action === RuntimeActionIds.ModelSyncGetProgress
+                  ? {
+                      isRunning: false,
+                      completed: 0,
+                      total: 0,
+                      failed: 0,
+                    }
+                  : message.action === RuntimeActionIds.ModelSyncGetNextRun
+                    ? { nextScheduledAt: "2026-03-28T10:00:00.000Z" }
+                    : message.action ===
+                        RuntimeActionIds.ModelSyncGetPreferences
+                      ? {
+                          enableSync: true,
+                          intervalMs: 2 * 60 * 60 * 1000,
+                        }
+                      : message.action ===
+                          RuntimeActionIds.ModelSyncListChannels
+                        ? {
+                            items: [
+                              { id: 201, name: "Manual Alpha" },
+                              { id: 202, name: "Manual Beta" },
+                            ],
+                          }
+                        : undefined,
+          }
+      }
+    })
+
+    render(<ManagedSiteModelSync />)
+
+    expect(await screen.findByText("Alpha#101")).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runAll",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockShowWarningToast).toHaveBeenCalledWith(
+        "managedSiteModelSync:messages.success.syncCompleted",
+      )
+    })
+
+    expect(toast.success).not.toHaveBeenCalledWith(
+      "managedSiteModelSync:messages.success.syncCompleted",
+    )
   })
 
   it("uses manual route params to load and preselect channels", async () => {
