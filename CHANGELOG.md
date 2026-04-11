@@ -1,5 +1,43 @@
 # Changelog
 
+## [3.33.0](https://github.com/qixing-jk/all-api-hub/compare/v3.32.0...v3.33.0) (2026-04-11)
+
+
+### Features
+
+* **account:** add timeout for manual account data fetch ([6925e89](https://github.com/qixing-jk/all-api-hub/commit/6925e89941b2320817c28ed9d7157968d8100352))
+* **accountDialog:** prompt managed-site setup before auto-config ([167b440](https://github.com/qixing-jk/all-api-hub/commit/167b4406ef3add0d99a489152ac4a12393e3a39b))
+* **keyManagement:** enhance empty state with account selection guidance ([3abdad0](https://github.com/qixing-jk/all-api-hub/commit/3abdad059fe2e9f414d37fb12b75229b57aea920))
+* **keyManagement:** show destructive empty state on key load failure ([24bc635](https://github.com/qixing-jk/all-api-hub/commit/24bc6357d3d087187ad591e57f97f98bd71a9381))
+* **ManagedSiteVerification:** implement OTP input for verification codes ([160706a](https://github.com/qixing-jk/all-api-hub/commit/160706a80a8ddab88b17a3e514d62a647022a18a))
+* **model-list:** add key management link to model key dialog ([10dcbd6](https://github.com/qixing-jk/all-api-hub/commit/10dcbd6e8bfea3eab75f3421ff52a45e229cd6be))
+* **model-list:** implement empty states for source selection ([d7cf9fe](https://github.com/qixing-jk/all-api-hub/commit/d7cf9fefba5c02e2383d8b7900df22806fb6faa9))
+* **model-list:** let source badges reuse account tag filtering ([d19ca17](https://github.com/qixing-jk/all-api-hub/commit/d19ca179c92efed850a61f7961df8b832ee77455))
+* refine verification history status display ([09c0a3f](https://github.com/qixing-jk/all-api-hub/commit/09c0a3fd9033026d8955cd3b67631f624b43aba6))
+* **translate:** implement incremental translation with git diff support ([bbbc93c](https://github.com/qixing-jk/all-api-hub/commit/bbbc93cf7adcd2f58ae4bcfab65ba0d746dab1b0))
+* **ui:** clarify workflow-exit actions and preserve navigation history ([#697](https://github.com/qixing-jk/all-api-hub/issues/697)) ([173ae0e](https://github.com/qixing-jk/all-api-hub/commit/173ae0e5ab6401f09d1fadd4f7f7e2ba7c51dd75))
+* Unify warning toasts and add follow-up actions for partial-success states ([#703](https://github.com/qixing-jk/all-api-hub/issues/703)) ([3a4719b](https://github.com/qixing-jk/all-api-hub/commit/3a4719bd8f155619f4ff2906f953bfa913e601dd))
+* **updates:** add release-channel update reminders for manual installs ([#707](https://github.com/qixing-jk/all-api-hub/issues/707)) ([7bdd477](https://github.com/qixing-jk/all-api-hub/commit/7bdd4778867f30c8ee82d13c9b40bfe73de74cb6))
+
+
+### Bug Fixes
+
+* **account-dialog:** clarify managed-site setup flow and button behavior ([bd82606](https://github.com/qixing-jk/all-api-hub/commit/bd82606de1991ee84cd4e4c6d75474d750da99f2))
+* **account-management:** verify current block status before showing temp window fallback reminder ([#701](https://github.com/qixing-jk/all-api-hub/issues/701)) ([1e9cf8f](https://github.com/qixing-jk/all-api-hub/commit/1e9cf8f9e24127f6648fae8207d8193ac9d14789))
+* **content:** avoid stale redemption toast selection after filtering ([c087fe4](https://github.com/qixing-jk/all-api-hub/commit/c087fe44b67bf84a7896e1a16d564f0a864837b6))
+* **docs:** refine translation guidelines and system prompt ([da4a737](https://github.com/qixing-jk/all-api-hub/commit/da4a737da31dce8771bf72060a0ac29e8e48ed68))
+* Fix theme hydration race and stabilize menu tests ([72aa9b6](https://github.com/qixing-jk/all-api-hub/commit/72aa9b69b3bd9a886c5dfa912ddee0b03acb1202))
+* **model-list:** restore account name badge for account-backed models ([45ea8f0](https://github.com/qixing-jk/all-api-hub/commit/45ea8f0dcbf8e84fafde49cf5b3ac8eab1603cf3))
+* **settings:** prevent non-numeric managed-site admin user IDs ([115d8c1](https://github.com/qixing-jk/all-api-hub/commit/115d8c1f8aae275e5e921474604787af86bdefbb))
+* **translate:** tighten changelog translation prompt guards ([14093ca](https://github.com/qixing-jk/all-api-hub/commit/14093ca2cd18935dedbf11a8432940a9aea459d8))
+* **webdav:** best-effort upload deleted account changes before regular sync ([#705](https://github.com/qixing-jk/all-api-hub/issues/705)) ([ea451dc](https://github.com/qixing-jk/all-api-hub/commit/ea451dc1fe308e3ced6d338b600c70aecdd28e62))
+
+
+### Performance Improvements
+
+* **api:** stop fetching today request count on fast path ([9165e4d](https://github.com/qixing-jk/all-api-hub/commit/9165e4dc843b8472fb9c40aaba8cfb3b9b994c13))
+* optimize today usage fetching with DoneHub query compatibility ([#700](https://github.com/qixing-jk/all-api-hub/issues/700)) ([0655288](https://github.com/qixing-jk/all-api-hub/commit/06552885aa47f96bb2fb81032551b01dbf34118d))
+
 ## [3.32.0](https://github.com/qixing-jk/all-api-hub/compare/v3.31.0...v3.32.0) (2026-04-06)
 
 
