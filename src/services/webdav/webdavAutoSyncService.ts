@@ -417,6 +417,9 @@ class WebdavAutoSyncService {
       return
     }
 
+    // Clear the one-shot alarm before uploading: this path is intentionally
+    // best-effort, so a failed upload may be lost here and later regular sync
+    // runs are responsible for propagating the latest local changes.
     await clearAlarm(WebdavAutoSyncService.BEST_EFFORT_UPLOAD_ALARM_NAME)
     await this.uploadLocalSnapshotToWebdav()
   }
