@@ -21,6 +21,11 @@ if (!deviceId) {
   process.exit(1)
 }
 
+if (!/^[A-Za-z0-9._:-]+$/.test(deviceId)) {
+  console.error("设备 ID 非法")
+  process.exit(1)
+}
+
 // 构建 WXT
 console.log("开始构建 WXT...")
 execSync("wxt build -b firefox --mode development", { stdio: "inherit" })
