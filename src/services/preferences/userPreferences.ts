@@ -206,6 +206,15 @@ export interface UserPreferences {
   autoProvisionKeyOnAccountAdd?: boolean
 
   /**
+   * Controls whether the add-account dialog automatically prefills the site URL
+   * field from the current browser tab's origin.
+   *
+   * Optional for backward compatibility with stored preferences created before
+   * this flag existed. Missing values MUST be treated as disabled via defaults.
+   */
+  autoFillCurrentSiteUrlOnAccountAdd?: boolean
+
+  /**
    * Controls whether All API Hub shows a confirmation modal when adding an
    * account whose site URL already exists in storage (possible duplicate).
    *
@@ -457,6 +466,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   actionClickBehavior: "popup",
   openChangelogOnUpdate: true,
   autoProvisionKeyOnAccountAdd: false, // 默认关闭，避免添加账号时无意创建密钥
+  autoFillCurrentSiteUrlOnAccountAdd: false,
   warnOnDuplicateAccountAdd: true,
   accountAutoRefresh: DEFAULT_ACCOUNT_AUTO_REFRESH,
   usageHistory: DEFAULT_USAGE_HISTORY_PREFERENCES,
@@ -685,6 +695,17 @@ class UserPreferencesService {
    */
   async updateAutoProvisionKeyOnAccountAdd(enabled: boolean): Promise<boolean> {
     return this.savePreferences({ autoProvisionKeyOnAccountAdd: enabled })
+  }
+
+  /**
+   * Enable/disable automatically prefilling the add-account URL field from the
+   * current browser tab.
+   * @param enabled - When true, add-account starts with the current site's origin.
+   */
+  async updateAutoFillCurrentSiteUrlOnAccountAdd(
+    enabled: boolean,
+  ): Promise<boolean> {
+    return this.savePreferences({ autoFillCurrentSiteUrlOnAccountAdd: enabled })
   }
 
   /**

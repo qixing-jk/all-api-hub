@@ -45,6 +45,12 @@
       "switchToLanguage": "切换界面语言为{{language}}"
     }
   },
+  "autoFillCurrentSiteUrlOnAccountAdd": {
+    "description": "控制新增账号时，是否自动把当前站点网址预填到 URL 输入框中。",
+    "title": "账号",
+    "toggleDesc": "开启后，打开新增账号弹窗时会把当前浏览器标签页的站点地址预填到 URL 输入框。识别流程仍需使用现有下一步操作。",
+    "toggleLabel": "新增账号时自动填充当前站点网址"
+  },
   "autoProvisionKeyOnAccountAdd": {
     "description": "控制添加账号后是否自动创建默认 API 密钥。",
     "title": "API 密钥",

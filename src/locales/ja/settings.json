@@ -45,6 +45,12 @@
       "switchToLanguage": "表示言語を {{language}} に切り替える"
     }
   },
+  "autoFillCurrentSiteUrlOnAccountAdd": {
+    "description": "アカウント追加時に、現在のサイト URL をあらかじめ入力するかどうかを制御します。",
+    "title": "アカウント",
+    "toggleDesc": "有効にすると、アカウント追加ダイアログを開いたときに現在のブラウザタブのサイト origin を URL 欄へ事前入力します。検出は既存の次の操作で続けます。",
+    "toggleLabel": "アカウント追加時に現在サイトの URL を事前入力"
+  },
   "autoProvisionKeyOnAccountAdd": {
     "description": "アカウント追加後に All API Hub が既定の API キーを自動作成するかどうかを制御します。",
     "title": "API キー",

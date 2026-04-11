@@ -45,6 +45,12 @@
       "switchToLanguage": "切換介面語言為{{language}}"
     }
   },
+  "autoFillCurrentSiteUrlOnAccountAdd": {
+    "description": "控制新增帳號時，是否自動把目前站點網址預先填入 URL 欄位。",
+    "title": "帳號",
+    "toggleDesc": "開啟後，開啟新增帳號視窗時會把目前瀏覽器分頁的站點 origin 預填到 URL 欄位。識別流程仍需沿用現有的下一步操作。",
+    "toggleLabel": "新增帳號時自動填入目前站點網址"
+  },
   "autoProvisionKeyOnAccountAdd": {
     "description": "控制新增帳號後是否自動建立預設 API 金鑰。",
     "title": "API 金鑰",

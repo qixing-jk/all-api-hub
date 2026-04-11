@@ -95,8 +95,11 @@ export function useAccountDialog({
   onSuccess,
 }: UseAccountDialogProps) {
   const { t } = useTranslation(["accountDialog", "settings", "messages"])
-  const { warnOnDuplicateAccountAdd, managedSiteType } =
-    useUserPreferencesContext()
+  const {
+    warnOnDuplicateAccountAdd,
+    managedSiteType,
+    autoFillCurrentSiteUrlOnAccountAdd,
+  } = useUserPreferencesContext()
 
   const [url, setUrl] = useState("")
   const [isDetecting, setIsDetecting] = useState(false)
@@ -173,6 +176,7 @@ export function useAccountDialog({
   const duplicateAccountWarningAcknowledgedSiteUrlRef = useRef<string | null>(
     null,
   )
+  const hasConsumedAutoFillCurrentSiteUrlRef = useRef(false)
 
   const cancelPendingDuplicateAccountWarning = useCallback(() => {
     duplicateAccountWarningResolverRef.current?.(false)
@@ -349,6 +353,7 @@ export function useAccountDialog({
 
   const resetForm = useCallback(() => {
     duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
+    hasConsumedAutoFillCurrentSiteUrlRef.current = false
     setUrl("")
     setIsDetected(false)
     setSiteName("")
@@ -511,6 +516,24 @@ export function useAccountDialog({
   }, [isOpen, mode, account, resetForm, loadAccountData, checkCurrentTab])
 
   useEffect(() => {
+    if (!isOpen || mode !== DIALOG_MODES.ADD) {
+      return
+    }
+    if (!autoFillCurrentSiteUrlOnAccountAdd) {
+      return
+    }
+    if (!currentTabUrl || url.trim()) {
+      return
+    }
+    if (hasConsumedAutoFillCurrentSiteUrlRef.current) {
+      return
+    }
+
+    hasConsumedAutoFillCurrentSiteUrlRef.current = true
+    setUrl(currentTabUrl)
+  }, [autoFillCurrentSiteUrlOnAccountAdd, currentTabUrl, isOpen, mode, url])
+
+  useEffect(() => {
     // 打开 popup 时立即检测一次
     checkCurrentTab()
 
@@ -560,6 +583,14 @@ export function useAccountDialog({
   const handleUseCurrentTabUrl = () => {
     if (currentTabUrl) {
       setUrl(currentTabUrl)
+    }
+  }
+
+  const handleClearUrl = () => {
+    hasConsumedAutoFillCurrentSiteUrlRef.current = true
+    setUrl("")
+    if (mode === DIALOG_MODES.ADD) {
+      setSiteName("")
     }
   }
 
@@ -1194,6 +1225,7 @@ export function useAccountDialog({
 
   const handleUrlChange = (newUrl: string) => {
     duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
+    hasConsumedAutoFillCurrentSiteUrlRef.current = true
     if (newUrl.trim()) {
       try {
         const urlObj = new URL(newUrl)
@@ -1308,6 +1340,7 @@ export function useAccountDialog({
       handleAutoDetect,
       handleShowManualForm,
       handleSaveAccount,
+      handleClearUrl,
       handleUrlChange,
       handleSubmit,
       handleAutoConfig,

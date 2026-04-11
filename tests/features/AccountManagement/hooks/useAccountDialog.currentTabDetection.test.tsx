@@ -12,11 +12,19 @@ const {
   mockGetActiveTabs,
   onTabActivatedMock,
   onTabUpdatedMock,
+  mockUserPreferencesContext,
 } = vi.hoisted(() => ({
   mockGetSiteName: vi.fn(),
   mockGetActiveTabs: vi.fn(),
   onTabActivatedMock: vi.fn(),
   onTabUpdatedMock: vi.fn(),
+  mockUserPreferencesContext: {
+    current: {
+      warnOnDuplicateAccountAdd: true,
+      managedSiteType: "new-api",
+      autoFillCurrentSiteUrlOnAccountAdd: false,
+    },
+  },
 }))
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
@@ -26,6 +34,16 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
     openSub2ApiTokenCreationDialog: vi.fn(),
   }),
 }))
+
+vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
+
+  return {
+    ...actual,
+    useUserPreferencesContext: () => mockUserPreferencesContext.current,
+  }
+})
 
 vi.mock("~/services/accounts/accountOperations", async (importOriginal) => {
   const actual =
@@ -51,8 +69,21 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 })
 
 describe("useAccountDialog current tab detection", () => {
+  const renderAccountDialogHook = (
+    props: Parameters<typeof useAccountDialog>[0],
+  ) =>
+    renderHook(() => useAccountDialog(props), {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
   beforeEach(() => {
     vi.clearAllMocks()
+    mockUserPreferencesContext.current = {
+      warnOnDuplicateAccountAdd: true,
+      managedSiteType: "new-api",
+      autoFillCurrentSiteUrlOnAccountAdd: false,
+    }
 
     const queryMock = vi.fn(async () => [])
     ;(globalThis as any).browser = {
@@ -266,6 +297,206 @@ describe("useAccountDialog current tab detection", () => {
     })
 
     expect(result.current.state.url).toBe("https://picked.example.com")
+  })
+
+  it("prefills the add-account url from the current tab when the setting is enabled", async () => {
+    mockUserPreferencesContext.current = {
+      ...mockUserPreferencesContext.current,
+      autoFillCurrentSiteUrlOnAccountAdd: true,
+    }
+
+    const tabsQueryMock = globalThis.browser.tabs.query as ReturnType<
+      typeof vi.fn
+    >
+    tabsQueryMock.mockResolvedValue([
+      {
+        id: 8,
+        url: "https://prefill.example.com/dashboard?x=1",
+      },
+    ])
+
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    })
+
+    await waitFor(() => {
+      expect(result.current).toBeTruthy()
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe(
+        "https://prefill.example.com",
+      )
+      expect(result.current.state.url).toBe("https://prefill.example.com")
+    })
+  })
+
+  it("keeps the url field empty when the setting is disabled", async () => {
+    const tabsQueryMock = globalThis.browser.tabs.query as ReturnType<
+      typeof vi.fn
+    >
+    tabsQueryMock.mockResolvedValue([
+      {
+        id: 9,
+        url: "https://manual.example.com/home",
+      },
+    ])
+
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    })
+
+    await waitFor(() => {
+      expect(result.current).toBeTruthy()
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe(
+        "https://manual.example.com",
+      )
+    })
+    expect(result.current.state.url).toBe("")
+  })
+
+  it("does not overwrite a prefilled url after later active-tab updates", async () => {
+    mockUserPreferencesContext.current = {
+      ...mockUserPreferencesContext.current,
+      autoFillCurrentSiteUrlOnAccountAdd: true,
+    }
+
+    const tabsQueryMock = globalThis.browser.tabs.query as ReturnType<
+      typeof vi.fn
+    >
+    let activeUrl = "https://first.example.com/path"
+    tabsQueryMock.mockImplementation(async () => [
+      {
+        id: 10,
+        url: activeUrl,
+      },
+    ])
+
+    let activatedListener: (() => void | Promise<void>) | undefined
+    onTabActivatedMock.mockImplementation((listener) => {
+      activatedListener = listener
+      return () => {}
+    })
+
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    })
+
+    await waitFor(() => {
+      expect(result.current).toBeTruthy()
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("https://first.example.com")
+    })
+
+    activeUrl = "https://second.example.com/path"
+
+    await act(async () => {
+      await activatedListener?.()
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe(
+        "https://second.example.com",
+      )
+    })
+    expect(result.current.state.url).toBe("https://first.example.com")
+  })
+
+  it("does not overwrite a manually edited url after current-tab detection completes", async () => {
+    mockUserPreferencesContext.current = {
+      ...mockUserPreferencesContext.current,
+      autoFillCurrentSiteUrlOnAccountAdd: true,
+    }
+
+    const tabsQueryMock = globalThis.browser.tabs.query as ReturnType<
+      typeof vi.fn
+    >
+    let resolveTabs: ((value: any[]) => void) | null = null
+    tabsQueryMock.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveTabs = resolve
+        }),
+    )
+
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    })
+
+    await waitFor(() => {
+      expect(result.current).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.handlers.handleUrlChange("https://typed.example.com/path")
+    })
+
+    expect(result.current.state.url).toBe("https://typed.example.com")
+
+    await act(async () => {
+      resolveTabs?.([
+        {
+          id: 11,
+          url: "https://detected.example.com/path",
+        },
+      ])
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe(
+        "https://detected.example.com",
+      )
+    })
+    expect(result.current.state.url).toBe("https://typed.example.com")
+  })
+
+  it("does not prefill in edit mode even when the setting is enabled", async () => {
+    mockUserPreferencesContext.current = {
+      ...mockUserPreferencesContext.current,
+      autoFillCurrentSiteUrlOnAccountAdd: true,
+    }
+
+    const tabsQueryMock = globalThis.browser.tabs.query as ReturnType<
+      typeof vi.fn
+    >
+    tabsQueryMock.mockResolvedValue([
+      {
+        id: 12,
+        url: "https://edit.example.com/path",
+      },
+    ])
+
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.EDIT,
+      account: {
+        id: "account-1",
+      } as any,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBeNull()
+    })
+    expect(result.current.state.url).toBe("")
   })
 
   it("refreshes current-tab detection when the active tab changes", async () => {

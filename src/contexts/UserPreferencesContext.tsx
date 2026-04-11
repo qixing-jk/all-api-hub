@@ -70,6 +70,7 @@ interface UserPreferencesContextType {
   actionClickBehavior: "popup" | "sidepanel"
   openChangelogOnUpdate: boolean
   autoProvisionKeyOnAccountAdd: boolean
+  autoFillCurrentSiteUrlOnAccountAdd: boolean
   warnOnDuplicateAccountAdd: boolean
   newApiBaseUrl: string
   newApiAdminToken: string
@@ -117,6 +118,9 @@ interface UserPreferencesContextType {
   ) => Promise<boolean>
   updateOpenChangelogOnUpdate: (enabled: boolean) => Promise<boolean>
   updateAutoProvisionKeyOnAccountAdd: (enabled: boolean) => Promise<boolean>
+  updateAutoFillCurrentSiteUrlOnAccountAdd: (
+    enabled: boolean,
+  ) => Promise<boolean>
   updateWarnOnDuplicateAccountAdd: (enabled: boolean) => Promise<boolean>
   updateNewApiBaseUrl: (url: string) => Promise<boolean>
   updateNewApiAdminToken: (token: string) => Promise<boolean>
@@ -285,6 +289,27 @@ export const UserPreferencesProvider = ({
       if (success) {
         setPreferences((prev) =>
           prev ? { ...prev, autoProvisionKeyOnAccountAdd: enabled } : prev,
+        )
+      }
+      return success
+    },
+    [],
+  )
+
+  /**
+   * Enable/disable automatically prefilling the add-account URL from the
+   * current browser tab.
+   * @param enabled - When true, add-account starts with the current site's origin.
+   */
+  const updateAutoFillCurrentSiteUrlOnAccountAdd = useCallback(
+    async (enabled: boolean) => {
+      const success =
+        await userPreferences.updateAutoFillCurrentSiteUrlOnAccountAdd(enabled)
+      if (success) {
+        setPreferences((prev) =>
+          prev
+            ? { ...prev, autoFillCurrentSiteUrlOnAccountAdd: enabled }
+            : prev,
         )
       }
       return success
@@ -1388,6 +1413,10 @@ export const UserPreferencesProvider = ({
       preferences?.autoProvisionKeyOnAccountAdd ??
       DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd ??
       false,
+    autoFillCurrentSiteUrlOnAccountAdd:
+      preferences?.autoFillCurrentSiteUrlOnAccountAdd ??
+      DEFAULT_PREFERENCES.autoFillCurrentSiteUrlOnAccountAdd ??
+      false,
     warnOnDuplicateAccountAdd:
       preferences?.warnOnDuplicateAccountAdd ??
       DEFAULT_PREFERENCES.warnOnDuplicateAccountAdd ??
@@ -1437,6 +1466,7 @@ export const UserPreferencesProvider = ({
     updateActionClickBehavior,
     updateOpenChangelogOnUpdate,
     updateAutoProvisionKeyOnAccountAdd,
+    updateAutoFillCurrentSiteUrlOnAccountAdd,
     updateWarnOnDuplicateAccountAdd,
     updateNewApiBaseUrl,
     updateNewApiAdminToken,

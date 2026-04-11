@@ -45,6 +45,12 @@
       "switchToLanguage": "Switch interface language to {{language}}"
     }
   },
+  "autoFillCurrentSiteUrlOnAccountAdd": {
+    "description": "Control whether Add Account starts with the current site's URL already filled in.",
+    "title": "Accounts",
+    "toggleDesc": "When enabled, opening Add Account prefills the URL field with the current browser tab's site origin. Detection still uses the existing next step.",
+    "toggleLabel": "Prefill URL from current site when adding accounts"
+  },
   "autoProvisionKeyOnAccountAdd": {
     "description": "Control whether All API Hub automatically provisions a default API key after you add an account.",
     "title": "API keys",

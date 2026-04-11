@@ -10,6 +10,7 @@ import {
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
+import AutoFillCurrentSiteUrlOnAccountAddSettings from "./AutoFillCurrentSiteUrlOnAccountAddSettings"
 import AutoProvisionKeyOnAccountAddSettings from "./AutoProvisionKeyOnAccountAddSettings"
 import DuplicateAccountWarningOnAddSettings from "./DuplicateAccountWarningOnAddSettings"
 import SortingPrioritySettings from "./SortingPrioritySettings"
@@ -50,6 +51,7 @@ export default function AccountManagementTab() {
       </section>
 
       <AutoProvisionKeyOnAccountAddSettings />
+      <AutoFillCurrentSiteUrlOnAccountAddSettings />
       <DuplicateAccountWarningOnAddSettings />
 
       <section id="sorting-priority">

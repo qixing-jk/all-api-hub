@@ -71,6 +71,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
       setSortingPriorityConfig: vi.fn(),
       updateOpenChangelogOnUpdate: vi.fn(),
       updateAutoProvisionKeyOnAccountAdd: vi.fn(),
+      updateAutoFillCurrentSiteUrlOnAccountAdd: vi.fn(),
       updateWarnOnDuplicateAccountAdd: vi.fn(),
       updateManagedSiteType: vi.fn(),
       updateLoggingPreferences: vi.fn(),
@@ -154,6 +155,9 @@ describe("UserPreferencesContext", () => {
     mockedUserPreferences.setSortingPriorityConfig.mockResolvedValue(true)
     mockedUserPreferences.updateOpenChangelogOnUpdate.mockResolvedValue(true)
     mockedUserPreferences.updateAutoProvisionKeyOnAccountAdd.mockResolvedValue(
+      true,
+    )
+    mockedUserPreferences.updateAutoFillCurrentSiteUrlOnAccountAdd.mockResolvedValue(
       true,
     )
     mockedUserPreferences.updateWarnOnDuplicateAccountAdd.mockResolvedValue(
@@ -247,6 +251,7 @@ describe("UserPreferencesContext", () => {
       await context.updateSortConfig(DATA_TYPE_INCOME, "asc")
       await context.updateOpenChangelogOnUpdate(false)
       await context.updateAutoProvisionKeyOnAccountAdd(true)
+      await context.updateAutoFillCurrentSiteUrlOnAccountAdd(true)
       await context.updateWarnOnDuplicateAccountAdd(false)
       await context.updateNewApiBaseUrl("https://new-api.example")
       await context.updateNewApiAdminToken("admin-token")
@@ -823,6 +828,9 @@ describe("UserPreferencesContext", () => {
     mockedUserPreferences.updateAutoProvisionKeyOnAccountAdd.mockResolvedValue(
       false,
     )
+    mockedUserPreferences.updateAutoFillCurrentSiteUrlOnAccountAdd.mockResolvedValue(
+      false,
+    )
     mockedUserPreferences.updateWarnOnDuplicateAccountAdd.mockResolvedValue(
       false,
     )
@@ -836,6 +844,9 @@ describe("UserPreferencesContext", () => {
       expect(await context.updateActionClickBehavior("sidepanel")).toBe(false)
       expect(await context.updateOpenChangelogOnUpdate(false)).toBe(false)
       expect(await context.updateAutoProvisionKeyOnAccountAdd(true)).toBe(false)
+      expect(await context.updateAutoFillCurrentSiteUrlOnAccountAdd(true)).toBe(
+        false,
+      )
       expect(await context.updateWarnOnDuplicateAccountAdd(false)).toBe(false)
       expect(await context.updateDefaultTab(DATA_TYPE_CASHFLOW)).toBe(false)
       expect(await context.updateCurrencyType("CNY")).toBe(false)
@@ -1286,6 +1297,8 @@ describe("UserPreferencesContext", () => {
     delete (preferences as Partial<UserPreferences>).openChangelogOnUpdate
     delete (preferences as Partial<UserPreferences>)
       .autoProvisionKeyOnAccountAdd
+    delete (preferences as Partial<UserPreferences>)
+      .autoFillCurrentSiteUrlOnAccountAdd
     delete (preferences as Partial<UserPreferences>).warnOnDuplicateAccountAdd
     delete (preferences as Partial<UserPreferences>).managedSiteType
     delete (preferences as Partial<UserPreferences>).themeMode
@@ -1318,6 +1331,9 @@ describe("UserPreferencesContext", () => {
     )
     expect((latestContext as any)?.autoProvisionKeyOnAccountAdd).toBe(
       DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd,
+    )
+    expect((latestContext as any)?.autoFillCurrentSiteUrlOnAccountAdd).toBe(
+      DEFAULT_PREFERENCES.autoFillCurrentSiteUrlOnAccountAdd,
     )
     expect((latestContext as any)?.warnOnDuplicateAccountAdd).toBe(
       DEFAULT_PREFERENCES.warnOnDuplicateAccountAdd,
