@@ -107,6 +107,17 @@ vi.mock("~/utils/core/toastHelpers", () => ({
   showResultToast: toastHelperMocks.showResultToast,
 }))
 
+vi.mock("~/contexts/ReleaseUpdateStatusContext", () => ({
+  useReleaseUpdateStatus: () => ({
+    status: null,
+    isLoading: false,
+    isChecking: false,
+    error: null,
+    refresh: vi.fn(),
+    checkNow: vi.fn(),
+  }),
+}))
+
 const SETTINGS_RESOURCES = {
   en: { settings: enSettings },
   ja: { settings: jaSettings },

@@ -4,12 +4,14 @@ import { I18nextProvider } from "react-i18next"
 
 import { ChannelDialogProvider } from "~/components/dialogs/ChannelDialog"
 import { DeviceProvider } from "~/contexts/DeviceContext"
+import { ReleaseUpdateStatusProvider } from "~/contexts/ReleaseUpdateStatusContext"
 import { ThemeProvider } from "~/contexts/ThemeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 interface AppProvidersProps {
   children: ReactNode
+  withReleaseUpdateStatusProvider?: boolean
   withUserPreferencesProvider?: boolean
   withThemeProvider?: boolean
 }
@@ -20,6 +22,7 @@ function IdentityProvider({ children }: { children: ReactNode }) {
 
 const AppProviders = ({
   children,
+  withReleaseUpdateStatusProvider = true,
   withUserPreferencesProvider = true,
   withThemeProvider = true,
 }: AppProvidersProps) => {
@@ -29,14 +32,19 @@ const AppProviders = ({
   const ActiveThemeProvider = withThemeProvider
     ? ThemeProvider
     : IdentityProvider
+  const ActiveReleaseUpdateStatusProvider = withReleaseUpdateStatusProvider
+    ? ReleaseUpdateStatusProvider
+    : IdentityProvider
 
   return (
     <I18nextProvider i18n={testI18n}>
       <DeviceProvider>
         <PreferencesProvider>
-          <ChannelDialogProvider>
-            <ActiveThemeProvider>{children}</ActiveThemeProvider>
-          </ChannelDialogProvider>
+          <ActiveThemeProvider>
+            <ActiveReleaseUpdateStatusProvider>
+              <ChannelDialogProvider>{children}</ChannelDialogProvider>
+            </ActiveReleaseUpdateStatusProvider>
+          </ActiveThemeProvider>
         </PreferencesProvider>
       </DeviceProvider>
     </I18nextProvider>
@@ -44,12 +52,14 @@ const AppProviders = ({
 }
 
 interface AppRenderOptions extends Omit<RenderOptions, "wrapper"> {
+  withReleaseUpdateStatusProvider?: boolean
   withUserPreferencesProvider?: boolean
   withThemeProvider?: boolean
 }
 
 const customRender = (ui: ReactElement, options?: AppRenderOptions) => {
   const {
+    withReleaseUpdateStatusProvider = true,
     withUserPreferencesProvider = true,
     withThemeProvider = true,
     ...renderOptions
@@ -58,6 +68,7 @@ const customRender = (ui: ReactElement, options?: AppRenderOptions) => {
   return render(ui, {
     wrapper: ({ children }) => (
       <AppProviders
+        withReleaseUpdateStatusProvider={withReleaseUpdateStatusProvider}
         withUserPreferencesProvider={withUserPreferencesProvider}
         withThemeProvider={withThemeProvider}
       >
@@ -70,10 +81,12 @@ const customRender = (ui: ReactElement, options?: AppRenderOptions) => {
 
 const customRenderHook: typeof renderHook = (callback, options) => {
   const {
+    withReleaseUpdateStatusProvider = true,
     withUserPreferencesProvider = true,
     withThemeProvider = true,
     ...renderHookOptions
   } = (options ?? {}) as {
+    withReleaseUpdateStatusProvider?: boolean
     withUserPreferencesProvider?: boolean
     withThemeProvider?: boolean
   }
@@ -81,6 +94,7 @@ const customRenderHook: typeof renderHook = (callback, options) => {
   return renderHook(callback, {
     wrapper: ({ children }) => (
       <AppProviders
+        withReleaseUpdateStatusProvider={withReleaseUpdateStatusProvider}
         withUserPreferencesProvider={withUserPreferencesProvider}
         withThemeProvider={withThemeProvider}
       >

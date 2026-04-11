@@ -58,6 +58,17 @@ vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   }),
 }))
 
+vi.mock("~/contexts/ReleaseUpdateStatusContext", () => ({
+  useReleaseUpdateStatus: () => ({
+    status: null,
+    isLoading: false,
+    isChecking: false,
+    error: null,
+    refresh: vi.fn(),
+    checkNow: vi.fn(),
+  }),
+}))
+
 vi.mock("~/utils/navigation", () => ({
   openApiCredentialProfilesPage: vi.fn(),
   openBugReportPage: vi.fn(),
@@ -92,7 +103,7 @@ describe("popup HeaderSection", () => {
   })
 
   it("shows open side panel button in popup", async () => {
-    render(<HeaderSection />)
+    render(<HeaderSection />, { withReleaseUpdateStatusProvider: false })
 
     expect(
       await screen.findByRole("button", {
@@ -103,7 +114,7 @@ describe("popup HeaderSection", () => {
 
   it("hides open side panel button inside side panel", async () => {
     mockedIsExtensionSidePanel.mockReturnValue(true)
-    render(<HeaderSection />)
+    render(<HeaderSection />, { withReleaseUpdateStatusProvider: false })
 
     expect(
       screen.queryByRole("button", { name: "common:actions.openSidePanel" }),
@@ -117,7 +128,7 @@ describe("popup HeaderSection", () => {
       reason: "missing",
     })
 
-    render(<HeaderSection />)
+    render(<HeaderSection />, { withReleaseUpdateStatusProvider: false })
 
     expect(
       screen.queryByRole("button", { name: "common:actions.openSidePanel" }),
@@ -125,7 +136,7 @@ describe("popup HeaderSection", () => {
   })
 
   it("routes the open side panel button through the shared navigation helper", async () => {
-    render(<HeaderSection />)
+    render(<HeaderSection />, { withReleaseUpdateStatusProvider: false })
 
     fireEvent.click(
       await screen.findByRole("button", {
@@ -137,7 +148,9 @@ describe("popup HeaderSection", () => {
   })
 
   it("routes open full page to account manager for accounts view", async () => {
-    render(<HeaderSection activeView="accounts" />)
+    render(<HeaderSection activeView="accounts" />, {
+      withReleaseUpdateStatusProvider: false,
+    })
 
     fireEvent.click(
       await screen.findByRole("button", { name: "ui:navigation.account" }),
@@ -147,7 +160,9 @@ describe("popup HeaderSection", () => {
   })
 
   it("routes open full page to bookmark manager for bookmarks view", async () => {
-    render(<HeaderSection activeView="bookmarks" />)
+    render(<HeaderSection activeView="bookmarks" />, {
+      withReleaseUpdateStatusProvider: false,
+    })
 
     fireEvent.click(
       await screen.findByRole("button", { name: "ui:navigation.bookmark" }),
@@ -157,7 +172,9 @@ describe("popup HeaderSection", () => {
   })
 
   it("routes open full page to API credential profiles for API credentials view", async () => {
-    render(<HeaderSection activeView="apiCredentialProfiles" />)
+    render(<HeaderSection activeView="apiCredentialProfiles" />, {
+      withReleaseUpdateStatusProvider: false,
+    })
 
     fireEvent.click(
       await screen.findByRole("button", {
@@ -171,7 +188,7 @@ describe("popup HeaderSection", () => {
   it("opens feedback actions from the header menu", async () => {
     const user = userEvent.setup()
 
-    render(<HeaderSection />)
+    render(<HeaderSection />, { withReleaseUpdateStatusProvider: false })
 
     await user.click(
       await screen.findByRole("button", { name: "ui:feedback.trigger" }),

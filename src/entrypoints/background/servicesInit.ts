@@ -5,6 +5,7 @@ import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { modelSyncScheduler } from "~/services/models/modelSync"
 import { redemptionAssistService } from "~/services/redemption/redemptionAssist"
+import { releaseUpdateService } from "~/services/updates/releaseUpdateService"
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 import { createLogger } from "~/utils/core/logger"
 import { initBackgroundI18n } from "~/utils/i18n/background"
@@ -54,6 +55,7 @@ export async function initializeServices() {
         modelSyncScheduler.initialize(),
         autoCheckinScheduler.initialize(),
         dailyBalanceHistoryScheduler.initialize(),
+        releaseUpdateService.initialize(),
       ])
 
       await initBackgroundI18n().catch((error) => {

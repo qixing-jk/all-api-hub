@@ -1,12 +1,23 @@
-import { describe, expect, it } from "vitest"
+import { describe, expect, it, vi } from "vitest"
 
 import About from "~/features/About/About"
 import { getFeedbackDestinationUrls } from "~/utils/navigation/feedbackLinks"
 import { render, screen } from "~~/tests/test-utils/render"
 
+vi.mock("~/contexts/ReleaseUpdateStatusContext", () => ({
+  useReleaseUpdateStatus: () => ({
+    status: null,
+    isLoading: false,
+    isChecking: false,
+    error: null,
+    refresh: vi.fn(),
+    checkNow: vi.fn(),
+  }),
+}))
+
 describe("About", () => {
   it("shows feedback and support links wired to the shared destinations", async () => {
-    render(<About />)
+    render(<About />, { withReleaseUpdateStatusProvider: false })
 
     expect(
       await screen.findByText("about:feedbackSection.title"),

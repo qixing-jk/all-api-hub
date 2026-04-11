@@ -343,6 +343,43 @@
     "shieldTitle": "一時ウィンドウによる保護回避",
     "title": "更新設定"
   },
+  "releaseUpdate": {
+    "checkNow": "今すぐ確認",
+    "downloadUpdate": "更新をダウンロード",
+    "helpers": {
+      "checkFailed": "後でもう一度試すか、リリースページで最新バージョンを手動確認してください。",
+      "manualUpdate": "現在のインストールは手動更新です。リリースページから新しいバージョンを取得してください。",
+      "manualUpdateGeneric": "現在のインストール経路で更新してください。必要ならリリースページから手動更新してください。",
+      "notChecked": "「今すぐ確認」を実行すると、現在のバージョンに更新が必要か確認できます。",
+      "openLatest": "リリースページで最新安定版と更新内容を確認できます。",
+      "storeUpdate": "このインストールは通常自動更新されます。必要ならストアまたはリリースページで最新バージョンを確認してください。",
+      "unavailable": "後でもう一度試すか、リリースページで最新安定版を直接確認してください。",
+      "upToDate": "必要ならリリースページでこのバージョンの変更内容を確認できます。"
+    },
+    "lastChecked": "最終確認: {{time}}",
+    "latestVersionPending": "最新安定版: 未確認",
+    "latestVersionUnavailable": "最新安定版: 取得不可",
+    "openLatest": "最新リリースを開く",
+    "reasons": {
+      "api-unavailable": "現在のブラウザ環境では自動検出を利用できません。必要なら最新安定版を手動で確認してください",
+      "chromium-development": "現在のインストール経路では最新安定版を確認できます。手動チェックでバージョン差分を確認してください",
+      "firefox-ambiguous": "Firefox では現在インストール経路を確実に判定できません。必要に応じて最新安定版を手動で確認してください",
+      "safari-unsupported": "Safari はまだ自動検出に対応していません。リリースページで最新安定版を確認してください",
+      "store-build": "現在のインストール経路は自動検出に対応していませんが、最新安定版は手動で確認できます",
+      "unknown": "現在のインストール経路は自動検出に対応していません。必要に応じて最新安定版を手動で確認してください"
+    },
+    "states": {
+      "checkFailed": "確認に失敗したため、最新安定版の情報を取得できませんでした",
+      "notChecked": "最新安定版はまだ確認していません。手動チェックで比較できます",
+      "unavailable": "更新状態を取得できませんでした",
+      "updateAvailable": "アップグレード可能な新しいバージョンがあります",
+      "upToDate": "確認完了。現在のバージョンはすでに最新安定版です"
+    },
+    "versionBadge": {
+      "changelogAriaLabel": "バージョン {{version}} の更新履歴",
+      "updateAvailableAriaLabel": "バージョン {{version}} に更新があります"
+    }
+  },
   "sorting": {
     "checkInDesc": "チェックインが必要なサイトを先頭に表示します",
     "checkInRequirement": "チェックイン要件",

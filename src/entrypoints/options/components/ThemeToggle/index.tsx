@@ -80,7 +80,7 @@ const ThemeToggle = () => {
       }
       leftContent={
         <Caption
-          className={`${COLORS.text.tertiary} mt-1 ${ANIMATIONS.transition.base}`}
+          className={`${COLORS.text.tertiary} ${ANIMATIONS.transition.base}`}
         >
           {t("theme.currentTheme", {
             theme: themeOptions.find((opt) => opt.mode === themeMode)?.label,

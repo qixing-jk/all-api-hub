@@ -23,6 +23,7 @@ export const RuntimeActionPrefixes = {
   OpenSettings: "openSettings:",
   Permissions: "permissions:",
   Preferences: "preferences:",
+  ReleaseUpdate: "releaseUpdate:",
   RedemptionAssist: "redemptionAssist:",
   UsageHistory: "usageHistory:",
   WebdavAutoSync: "webdavAutoSync:",
@@ -120,6 +121,15 @@ export const RuntimeActionIds = {
   PreferencesRefreshContextMenus: composeRuntimeAction(
     RuntimeActionPrefixes.Preferences,
     "refreshContextMenus",
+  ),
+
+  ReleaseUpdateGetStatus: composeRuntimeAction(
+    RuntimeActionPrefixes.ReleaseUpdate,
+    "getStatus",
+  ),
+  ReleaseUpdateCheckNow: composeRuntimeAction(
+    RuntimeActionPrefixes.ReleaseUpdate,
+    "checkNow",
   ),
 
   AutoRefreshSetup: composeRuntimeAction(

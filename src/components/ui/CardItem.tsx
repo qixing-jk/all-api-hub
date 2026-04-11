@@ -57,6 +57,7 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
     ref,
   ) => {
     const isClickable = onClick || interactive
+    const hasHeaderContent = !!(title || description)
 
     const Component = (isClickable ? "button" : "div") as any
 
@@ -96,7 +97,11 @@ const CardItem = React.forwardRef<HTMLDivElement, CardSectionProps>(
                     {description}
                   </BodySmall>
                 )}
-                {leftContent}
+                {leftContent && (
+                  <div className={cn(hasHeaderContent && "mt-2")}>
+                    {leftContent}
+                  </div>
+                )}
               </div>
             </div>
             {rightContent && (

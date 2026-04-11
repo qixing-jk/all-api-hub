@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   getCookieHeaderForUrlResult: vi.fn(),
   hasCookieReadPermissionForUrl: vi.fn(),
   handleManagedSiteModelSyncMessage: vi.fn(),
+  handleReleaseUpdateMessage: vi.fn(),
   handleAutoCheckinMessage: vi.fn(),
   handleAutoRefreshMessage: vi.fn(),
   handleChannelConfigMessage: vi.fn(),
@@ -74,6 +75,10 @@ vi.mock("~/entrypoints/background/tempWindowPool", () => ({
 
 vi.mock("~/services/models/modelSync", () => ({
   handleManagedSiteModelSyncMessage: mocks.handleManagedSiteModelSyncMessage,
+}))
+
+vi.mock("~/services/updates/releaseUpdateService", () => ({
+  handleReleaseUpdateMessage: mocks.handleReleaseUpdateMessage,
 }))
 
 vi.mock("~/services/checkin/autoCheckin/scheduler", () => ({
@@ -284,6 +289,28 @@ describe("setupRuntimeMessageListeners additional routing", () => {
         ...item.expectedArgs,
       )
     }
+  })
+
+  it("routes release update actions to the dedicated handler", async () => {
+    const listener = await loadListener()
+    const sendResponse = vi.fn()
+
+    expect(
+      listener(
+        {
+          action: RuntimeActionIds.ReleaseUpdateGetStatus,
+        },
+        {},
+        sendResponse,
+      ),
+    ).toBe(true)
+
+    expect(mocks.handleReleaseUpdateMessage).toHaveBeenCalledWith(
+      {
+        action: RuntimeActionIds.ReleaseUpdateGetStatus,
+      },
+      sendResponse,
+    )
   })
 
   it("routes additional prefix-based actions to their feature handlers", async () => {

@@ -48,6 +48,11 @@ export const STORAGE_LOCKS = {
    */
   CHANGELOG_ON_UPDATE: "all-api-hub:changelog-on-update",
   /**
+   * Exclusive lock used for read-modify-write sequences touching cached release
+   * update status.
+   */
+  RELEASE_UPDATE: "all-api-hub:release-update",
+  /**
    * Exclusive lock used for read-modify-write sequences touching the LDOH site
    * lookup cache.
    */
@@ -90,6 +95,10 @@ const CHANGELOG_ON_UPDATE_STORAGE_KEYS = {
   PENDING_VERSION: "changelogOnUpdate_pendingVersion",
 } as const
 
+const RELEASE_UPDATE_STORAGE_KEYS = {
+  STATUS: "releaseUpdate_status",
+} as const
+
 /**
  * Centralized storage keys registry.
  *
@@ -106,5 +115,6 @@ export const STORAGE_KEYS = {
   ...USER_PREFERENCES_STORAGE_KEYS,
   CHANGELOG_ON_UPDATE_PENDING_VERSION:
     CHANGELOG_ON_UPDATE_STORAGE_KEYS.PENDING_VERSION,
+  RELEASE_UPDATE_STATUS: RELEASE_UPDATE_STORAGE_KEYS.STATUS,
   DAILY_BALANCE_HISTORY_STORE: DAILY_BALANCE_HISTORY_STORAGE_KEYS.STORE,
 } as const

@@ -1,5 +1,13 @@
 import type { ExtensionStoreId } from "~/utils/browser"
 
+export const EXTENSION_STORE_IDS: Record<
+  Exclude<ExtensionStoreId, "firefox">,
+  string
+> = {
+  chrome: "lapnciffpekdengooeolaienkeoilfeo",
+  edge: "pcokpjaffghgipcgjhapgdpeddlhblaa",
+}
+
 export const EXTENSION_STORE_LISTING_URLS: Record<ExtensionStoreId, string> = {
   chrome:
     "https://chromewebstore.google.com/detail/lapnciffpekdengooeolaienkeoilfeo",

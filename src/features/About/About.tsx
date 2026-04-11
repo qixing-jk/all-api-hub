@@ -15,6 +15,7 @@ import { useTranslation } from "react-i18next"
 import FeatureList from "~/components/FeatureList"
 import LinkCard from "~/components/LinkCard"
 import { PageHeader } from "~/components/PageHeader"
+import { ReleaseUpdateStatusPanel } from "~/components/ReleaseUpdateStatusPanel"
 import { Heading4 } from "~/components/ui"
 import { FEATURES, FUTURE_FEATURES } from "~/constants/about"
 import { EXTENSION_STORE_LISTING_URLS } from "~/constants/extensionStores"
@@ -126,6 +127,11 @@ export default function About() {
               iconClass="text-blue-600 dark:text-blue-400"
             />
           </div>
+        </section>
+
+        <section>
+          <Heading4 className="mb-4">{t("releaseUpdate.title")}</Heading4>
+          <ReleaseUpdateStatusPanel />
         </section>
 
         <section>

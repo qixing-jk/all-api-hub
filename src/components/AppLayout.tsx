@@ -15,6 +15,7 @@ import {
 } from "~/components/dialogs/UpdateLogDialog"
 import { ThemeAwareToaster } from "~/components/ThemeAwareToaster"
 import { DeviceProvider } from "~/contexts/DeviceContext"
+import { ReleaseUpdateStatusProvider } from "~/contexts/ReleaseUpdateStatusContext"
 import { ThemeProvider } from "~/contexts/ThemeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
 
@@ -30,16 +31,18 @@ export function AppLayout({ children }: AppLayoutProps) {
     <DeviceProvider>
       <UserPreferencesProvider>
         <ThemeProvider>
-          <ChannelDialogProvider>
-            <UpdateLogDialogProvider>
-              <ChangelogOnUpdateUiOpenHandler />
-              <AutoCheckinUiOpenPretrigger />
-              <UpdateLogDialogContainer />
-              {children}
-              <ChannelDialogContainer />
-              <DuplicateChannelWarningDialogContainer />
-            </UpdateLogDialogProvider>
-          </ChannelDialogProvider>
+          <ReleaseUpdateStatusProvider>
+            <ChannelDialogProvider>
+              <UpdateLogDialogProvider>
+                <ChangelogOnUpdateUiOpenHandler />
+                <AutoCheckinUiOpenPretrigger />
+                <UpdateLogDialogContainer />
+                {children}
+                <ChannelDialogContainer />
+                <DuplicateChannelWarningDialogContainer />
+              </UpdateLogDialogProvider>
+            </ChannelDialogProvider>
+          </ReleaseUpdateStatusProvider>
           <ThemeAwareToaster reverseOrder={false} />
         </ThemeProvider>
       </UserPreferencesProvider>

@@ -30,6 +30,11 @@
   "privacyText": "本插件所有数据均存储在本地浏览器中，不会主动上传到任何服务器。您的账号信息和使用数据完全由您自己掌控，确保隐私安全",
   "privacyTitle": "隐私保护",
   "projectLinks": "项目链接",
+  "releaseUpdate": {
+    "currentVersion": "当前版本：v{{version}}",
+    "latestVersion": "最新正式版：v{{version}}",
+    "title": "版本更新"
+  },
   "starRepo": "去点个Star",
   "stores": {
     "chrome": "Chrome 应用商店",

@@ -343,6 +343,43 @@
     "shieldTitle": "临时窗口绕过防火墙防护",
     "title": "刷新设置"
   },
+  "releaseUpdate": {
+    "checkNow": "立即检查",
+    "downloadUpdate": "下载更新",
+    "helpers": {
+      "checkFailed": "可稍后重试，或前往发布页手动查看最新版本。",
+      "manualUpdate": "当前安装为手动更新渠道，请前往发布页获取新版本。",
+      "manualUpdateGeneric": "请按当前安装渠道完成更新，必要时可前往发布页手动获取新版本。",
+      "notChecked": "点击“立即检查”后即可确认当前版本是否需要更新。",
+      "openLatest": "可前往发布页查看最新正式版与更新内容。",
+      "storeUpdate": "当前安装通常会自动更新，也可前往商店或发布页查看最新版本。",
+      "unavailable": "可稍后重试，或直接前往发布页查看最新正式版。",
+      "upToDate": "可前往发布页查看更新内容，确认本次版本包含的变更。"
+    },
+    "lastChecked": "最近检查：{{time}}",
+    "latestVersionPending": "最新正式版：待检查",
+    "latestVersionUnavailable": "最新正式版：暂未获取",
+    "openLatest": "查看最新版本",
+    "reasons": {
+      "api-unavailable": "当前浏览器环境不支持自动检测，可手动检查最新正式版",
+      "chromium-development": "当前安装渠道支持检查最新正式版，可手动发起检查",
+      "firefox-ambiguous": "Firefox 当前无法可靠判断安装渠道，建议按需手动检查最新正式版",
+      "safari-unsupported": "Safari 暂不支持自动检测，建议前往发布页查看最新正式版",
+      "store-build": "当前安装渠道不支持自动检测，但仍可手动检查最新正式版",
+      "unknown": "当前安装渠道暂不支持自动检测，可手动检查最新正式版"
+    },
+    "states": {
+      "checkFailed": "检查失败，暂未获取最新正式版信息",
+      "notChecked": "尚未检查最新正式版，可手动检查",
+      "unavailable": "暂时无法读取更新状态",
+      "updateAvailable": "发现可升级的新版本",
+      "upToDate": "已完成检查，当前版本已是最新正式版"
+    },
+    "versionBadge": {
+      "changelogAriaLabel": "版本 {{version}} 更新日志",
+      "updateAvailableAriaLabel": "版本 {{version}} 有可用更新"
+    }
+  },
   "sorting": {
     "checkInDesc": "将需要签到的站点排在前面",
     "checkInRequirement": "签到需求",

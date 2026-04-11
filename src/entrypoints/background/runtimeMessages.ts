@@ -16,6 +16,7 @@ import { handleLdohSiteLookupMessage } from "~/services/integrations/ldohSiteLoo
 import { handleChannelConfigMessage } from "~/services/managedSites/channelConfigStorage"
 import { handleManagedSiteModelSyncMessage } from "~/services/models/modelSync"
 import { handleRedemptionAssistMessage } from "~/services/redemption/redemptionAssist"
+import { handleReleaseUpdateMessage } from "~/services/updates/releaseUpdateService"
 import { handleWebAiApiCheckMessage } from "~/services/verification/webAiApiCheck/background"
 import { handleWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncService"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
@@ -240,6 +241,16 @@ export function setupRuntimeMessageListeners() {
       }
 
       // 处理自动刷新相关消息
+      if (
+        hasRuntimeActionPrefix(
+          request.action,
+          RuntimeActionPrefixes.ReleaseUpdate,
+        )
+      ) {
+        void handleReleaseUpdateMessage(request, sendResponse)
+        return true
+      }
+
       if (
         hasRuntimeActionPrefix(
           request.action,

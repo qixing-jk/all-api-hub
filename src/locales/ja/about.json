@@ -30,6 +30,11 @@
   "privacyText": "このプラグインのすべてのデータはブラウザ内にローカル保存され、いかなるサーバーにも積極的に送信されることはありません。アカウント情報と利用データは完全にあなたの管理下にあり、プライバシーと安全性を確保します。",
   "privacyTitle": "プライバシー保護",
   "projectLinks": "プロジェクトリンク",
+  "releaseUpdate": {
+    "currentVersion": "現在のバージョン: v{{version}}",
+    "latestVersion": "最新安定版: v{{version}}",
+    "title": "バージョン更新"
+  },
   "starRepo": "Star を付けに行く",
   "stores": {
     "chrome": "Chrome ウェブストア",

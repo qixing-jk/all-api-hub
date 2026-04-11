@@ -30,6 +30,11 @@
   "privacyText": "本外掛所有資料均儲存在本地瀏覽器中，不會主動上傳到任何伺服器。您的帳號資訊和使用資料完全由您自己掌控，確保隱私安全",
   "privacyTitle": "隱私保護",
   "projectLinks": "專案連結",
+  "releaseUpdate": {
+    "currentVersion": "目前版本：v{{version}}",
+    "latestVersion": "最新正式版：v{{version}}",
+    "title": "版本更新"
+  },
   "starRepo": "去點個Star",
   "stores": {
     "chrome": "Chrome 應用商店",

@@ -343,6 +343,43 @@
     "shieldTitle": "Temp-window protection bypass",
     "title": "Refresh Settings"
   },
+  "releaseUpdate": {
+    "checkNow": "Check now",
+    "downloadUpdate": "Download update",
+    "helpers": {
+      "checkFailed": "Try again later, or open the release page to verify the latest version manually.",
+      "manualUpdate": "This install is updated manually. Open the release page to get the new version.",
+      "manualUpdateGeneric": "Update through your current install channel, or open the release page if you need to update manually.",
+      "notChecked": "Run “Check now” to confirm whether your current version needs an update.",
+      "openLatest": "Open the release page to review the latest stable release and release notes.",
+      "storeUpdate": "This install usually updates automatically. You can also check the store or release page for the newest version.",
+      "unavailable": "Try again later, or open the release page to review the latest stable release directly.",
+      "upToDate": "Open the release page if you want to review what changed in this version."
+    },
+    "lastChecked": "Last checked: {{time}}",
+    "latestVersionPending": "Latest stable: not checked yet",
+    "latestVersionUnavailable": "Latest stable: unavailable",
+    "openLatest": "Open latest release",
+    "reasons": {
+      "api-unavailable": "This browser environment does not support automatic detection. You can still check the latest stable release manually",
+      "chromium-development": "This install channel can check the latest stable release. Run a manual check to compare versions",
+      "firefox-ambiguous": "Firefox cannot reliably determine the install channel right now. Manually check the latest stable release when needed",
+      "safari-unsupported": "Safari does not support automatic detection yet. Open the release page to review the latest stable release",
+      "store-build": "This install channel does not support automatic detection, but you can still check the latest stable release manually",
+      "unknown": "This install channel does not currently support automatic detection. You can still check the latest stable release manually"
+    },
+    "states": {
+      "checkFailed": "Check failed, so the latest stable release could not be retrieved",
+      "notChecked": "The latest stable release has not been checked yet. Run a manual check to compare versions",
+      "unavailable": "Update status is currently unavailable",
+      "updateAvailable": "A newer version is available to upgrade",
+      "upToDate": "Check complete. Your current version is already the latest stable release"
+    },
+    "versionBadge": {
+      "changelogAriaLabel": "Version {{version}} changelog",
+      "updateAvailableAriaLabel": "Version {{version}} update available"
+    }
+  },
   "sorting": {
     "checkInDesc": "Place sites that need check-in at the front",
     "checkInRequirement": "Check-in Requirement",
