@@ -240,7 +240,7 @@ export function setupRuntimeMessageListeners() {
         return true
       }
 
-      // 处理自动刷新相关消息
+      // 处理 release-update 相关消息，路由到 handleReleaseUpdateMessage
       if (
         hasRuntimeActionPrefix(
           request.action,

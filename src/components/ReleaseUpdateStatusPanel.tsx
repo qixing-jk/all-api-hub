@@ -133,6 +133,36 @@ function getStatusHelper(options: {
 }
 
 /**
+ * Map the derived release-update state to the latest-version detail line.
+ */
+function getLatestVersionLine(options: {
+  latestVersion: string | null
+  state: ReturnType<typeof deriveReleaseUpdatePresentation>["state"]
+  t: TFunction
+}): string {
+  const { latestVersion, state, t } = options
+
+  if (latestVersion) {
+    return t("about:releaseUpdate.latestVersion", {
+      version: latestVersion,
+    })
+  }
+
+  switch (state) {
+    case RELEASE_UPDATE_PRESENTATION_STATES.Loading:
+    case RELEASE_UPDATE_PRESENTATION_STATES.NotChecked:
+      return t("settings:releaseUpdate.latestVersionPending")
+    case RELEASE_UPDATE_PRESENTATION_STATES.Unavailable:
+    case RELEASE_UPDATE_PRESENTATION_STATES.CheckFailed:
+    case RELEASE_UPDATE_PRESENTATION_STATES.Ineligible:
+    case RELEASE_UPDATE_PRESENTATION_STATES.UpdateAvailable:
+    case RELEASE_UPDATE_PRESENTATION_STATES.UpToDate:
+    default:
+      return t("settings:releaseUpdate.latestVersionUnavailable")
+  }
+}
+
+/**
  * Shared release-update status panel rendered in About and Settings surfaces.
  */
 export function ReleaseUpdateStatusPanel() {
@@ -145,13 +175,11 @@ export function ReleaseUpdateStatusPanel() {
     status,
   })
   const latestVersion = presentation.latestVersion
-  const latestVersionLine = latestVersion
-    ? t("about:releaseUpdate.latestVersion", {
-        version: latestVersion,
-      })
-    : status?.lastError
-      ? t("settings:releaseUpdate.latestVersionUnavailable")
-      : t("settings:releaseUpdate.latestVersionPending")
+  const latestVersionLine = getLatestVersionLine({
+    latestVersion,
+    state: presentation.state,
+    t,
+  })
 
   const statusReason = status?.reason ?? RELEASE_UPDATE_REASONS.Unknown
   const statusTitle = getStatusTitle({

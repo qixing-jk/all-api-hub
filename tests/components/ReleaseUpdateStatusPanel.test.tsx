@@ -261,6 +261,27 @@ describe("ReleaseUpdateStatusPanel", () => {
     ).toBeInTheDocument()
   })
 
+  it("shows an unavailable latest-version line for ineligible installs before any check", () => {
+    mockHook(
+      buildStatus({
+        eligible: false,
+        reason: "store-build",
+      }),
+    )
+
+    renderSubject()
+
+    expect(
+      screen.getByText("settings:releaseUpdate.reasons.store-build"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("settings:releaseUpdate.latestVersionUnavailable"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("settings:releaseUpdate.latestVersionPending"),
+    ).not.toBeInTheDocument()
+  })
+
   it("falls back to localized unavailable copy instead of exposing raw errors", () => {
     mockHookState({
       status: null,
@@ -271,6 +292,9 @@ describe("ReleaseUpdateStatusPanel", () => {
 
     expect(
       screen.getByText("settings:releaseUpdate.states.unavailable"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("settings:releaseUpdate.latestVersionUnavailable"),
     ).toBeInTheDocument()
     expect(screen.queryByText("No listeners available")).not.toBeInTheDocument()
   })

@@ -1,4 +1,9 @@
-import { render, renderHook, type RenderOptions } from "@testing-library/react"
+import {
+  render,
+  renderHook,
+  type RenderHookOptions,
+  type RenderOptions,
+} from "@testing-library/react"
 import type { ReactElement, ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
 
@@ -57,6 +62,13 @@ interface AppRenderOptions extends Omit<RenderOptions, "wrapper"> {
   withThemeProvider?: boolean
 }
 
+interface AppRenderHookOptions<Props>
+  extends Omit<RenderHookOptions<Props>, "wrapper"> {
+  withReleaseUpdateStatusProvider?: boolean
+  withUserPreferencesProvider?: boolean
+  withThemeProvider?: boolean
+}
+
 const customRender = (ui: ReactElement, options?: AppRenderOptions) => {
   const {
     withReleaseUpdateStatusProvider = true,
@@ -79,19 +91,18 @@ const customRender = (ui: ReactElement, options?: AppRenderOptions) => {
   })
 }
 
-const customRenderHook: typeof renderHook = (callback, options) => {
+const customRenderHook = <Result, Props>(
+  callback: (initialProps: Props) => Result,
+  options?: AppRenderHookOptions<Props>,
+) => {
   const {
     withReleaseUpdateStatusProvider = true,
     withUserPreferencesProvider = true,
     withThemeProvider = true,
     ...renderHookOptions
-  } = (options ?? {}) as {
-    withReleaseUpdateStatusProvider?: boolean
-    withUserPreferencesProvider?: boolean
-    withThemeProvider?: boolean
-  }
+  } = options ?? {}
 
-  return renderHook(callback, {
+  return renderHook<Result, Props>(callback, {
     wrapper: ({ children }) => (
       <AppProviders
         withReleaseUpdateStatusProvider={withReleaseUpdateStatusProvider}

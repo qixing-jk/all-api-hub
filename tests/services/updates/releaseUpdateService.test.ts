@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { fakeBrowser } from "wxt/testing/fake-browser"
 
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 
@@ -55,8 +56,8 @@ vi.mock("~/utils/browser/browserApi", () => ({
 }))
 
 describe("releaseUpdateService", () => {
-  const originalBrowser = (globalThis as any).browser
   const originalFetch = globalThis.fetch
+  const browserAny = fakeBrowser as any
 
   beforeEach(async () => {
     vi.resetModules()
@@ -64,21 +65,18 @@ describe("releaseUpdateService", () => {
 
     const { Storage } = await import("@plasmohq/storage")
     ;(Storage as any).__store.clear()
-    ;(globalThis as any).browser = {
-      runtime: {
-        id: "test-extension-id",
-        getURL: vi.fn(() => "chrome-extension://test-extension-id/"),
-      },
-      management: {
-        getSelf: vi.fn().mockResolvedValue({ installType: "normal" }),
-      },
-    }
+    browserAny.runtime.id = "test-extension-id"
+    browserAny.runtime.getURL = vi.fn(
+      () => "chrome-extension://test-extension-id/",
+    )
+    browserAny.management.getSelf = vi
+      .fn()
+      .mockResolvedValue({ installType: "normal" })
 
     globalThis.fetch = vi.fn()
   })
 
   afterEach(() => {
-    ;(globalThis as any).browser = originalBrowser
     globalThis.fetch = originalFetch
   })
 
@@ -125,12 +123,11 @@ describe("releaseUpdateService", () => {
   })
 
   it("classifies Firefox installs as ambiguous when install type cannot disambiguate origin", async () => {
-    ;(globalThis as any).browser = {
-      runtime: {
-        id: "{bc73541a-133d-4b50-b261-36ea20df0d24}",
-        getURL: vi.fn(() => "moz-extension://firefox-extension/"),
-      },
-    }
+    browserAny.runtime.id = "{bc73541a-133d-4b50-b261-36ea20df0d24}"
+    browserAny.runtime.getURL = vi.fn(
+      () => "moz-extension://firefox-extension/",
+    )
+    browserAny.management.getSelf = undefined
 
     const { releaseUpdateService } = await import(
       "~/services/updates/releaseUpdateService"
@@ -164,5 +161,62 @@ describe("releaseUpdateService", () => {
     expect(onAlarmMock).toHaveBeenCalledTimes(1)
     expect(getAlarmMock).toHaveBeenCalledWith("releaseUpdateDailyCheck")
     expect(createAlarmMock).not.toHaveBeenCalled()
+  })
+
+  it("memoizes concurrent initialization so alarm handlers are only registered once", async () => {
+    let resolveAlarm: (() => void) | undefined
+
+    getAlarmMock.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveAlarm = () => resolve(null)
+        }),
+    )
+
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+
+    const first = releaseUpdateService.initialize()
+    const second = releaseUpdateService.initialize()
+
+    expect(onAlarmMock).toHaveBeenCalledTimes(1)
+    expect(getAlarmMock).toHaveBeenCalledTimes(1)
+
+    if (resolveAlarm) {
+      resolveAlarm()
+    }
+    await Promise.all([first, second])
+
+    expect(createAlarmMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("returns the base status without fetching when the install is ineligible", async () => {
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+
+    const status = await releaseUpdateService.checkNow()
+
+    expect(status).toMatchObject({
+      eligible: false,
+      reason: "unknown",
+      currentVersion: "3.32.0",
+      latestVersion: null,
+      updateAvailable: false,
+      lastError: null,
+    })
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+
+    const { Storage } = await import("@plasmohq/storage")
+    expect(
+      (Storage as any).__store.get(STORAGE_KEYS.RELEASE_UPDATE_STATUS),
+    ).toEqual(
+      expect.objectContaining({
+        eligible: false,
+        latestVersion: null,
+        updateAvailable: false,
+      }),
+    )
   })
 })

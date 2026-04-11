@@ -43,6 +43,7 @@ class ReleaseUpdateService {
 
   private storage: Storage
   private isInitialized = false
+  private initializationPromise: Promise<void> | null = null
 
   constructor() {
     this.storage = new Storage({
@@ -56,26 +57,45 @@ class ReleaseUpdateService {
       return
     }
 
-    if (hasAlarmsAPI()) {
-      onAlarm(async (alarm) => {
-        if (alarm.name !== ReleaseUpdateService.ALARM_NAME) {
-          return
-        }
-
-        try {
-          await this.runScheduledCheck()
-        } catch (error) {
-          logger.error("Scheduled release update check failed", error)
-        }
-      })
-
-      await this.setupAlarm()
-    } else {
-      logger.warn("Alarms API not available; automatic release checks disabled")
+    if (this.initializationPromise) {
+      await this.initializationPromise
+      return
     }
 
-    await this.ensureBaseStatus()
-    this.isInitialized = true
+    const initializationPromise = (async () => {
+      if (hasAlarmsAPI()) {
+        onAlarm(async (alarm) => {
+          if (alarm.name !== ReleaseUpdateService.ALARM_NAME) {
+            return
+          }
+
+          try {
+            await this.runScheduledCheck()
+          } catch (error) {
+            logger.error("Scheduled release update check failed", error)
+          }
+        })
+
+        await this.setupAlarm()
+      } else {
+        logger.warn(
+          "Alarms API not available; automatic release checks disabled",
+        )
+      }
+
+      await this.ensureBaseStatus()
+      this.isInitialized = true
+    })()
+
+    this.initializationPromise = initializationPromise
+
+    try {
+      await initializationPromise
+    } finally {
+      if (this.initializationPromise === initializationPromise) {
+        this.initializationPromise = null
+      }
+    }
   }
 
   async getStatus(): Promise<ReleaseUpdateStatus> {
@@ -84,6 +104,10 @@ class ReleaseUpdateService {
 
   async checkNow(): Promise<ReleaseUpdateStatus> {
     const base = await this.ensureBaseStatus()
+    if (!base.eligible) {
+      return base
+    }
+
     return await this.refreshStatus(base, { allowNetwork: true })
   }
 
@@ -113,14 +137,19 @@ class ReleaseUpdateService {
   }
 
   private async ensureBaseStatus(): Promise<ReleaseUpdateStatus> {
-    const stored = await this.readStoredStatus()
-    const next = await this.buildBaseStatus(stored)
+    return await withExtensionStorageWriteLock(
+      STORAGE_LOCKS.RELEASE_UPDATE,
+      async () => {
+        const stored = await this.readStoredStatus()
+        const next = await this.buildBaseStatus(stored)
 
-    if (!stored || !areStatusesEquivalent(stored, next)) {
-      await this.writeStatus(next)
-    }
+        if (!stored || !areStatusesEquivalent(stored, next)) {
+          await this.writeStatusUnlocked(next)
+        }
 
-    return next
+        return next
+      },
+    )
   }
 
   private async refreshStatus(
@@ -193,9 +222,18 @@ class ReleaseUpdateService {
   }
 
   private async writeStatus(status: ReleaseUpdateStatus): Promise<void> {
-    await withExtensionStorageWriteLock(STORAGE_LOCKS.RELEASE_UPDATE, () =>
-      this.storage.set(STORAGE_KEYS.RELEASE_UPDATE_STATUS, status),
+    await withExtensionStorageWriteLock(
+      STORAGE_LOCKS.RELEASE_UPDATE,
+      async () => {
+        await this.writeStatusUnlocked(status)
+      },
     )
+  }
+
+  private async writeStatusUnlocked(
+    status: ReleaseUpdateStatus,
+  ): Promise<void> {
+    await this.storage.set(STORAGE_KEYS.RELEASE_UPDATE_STATUS, status)
   }
 }
 
