@@ -1,6 +1,6 @@
 # Getting Started
 
-An open-source browser extension designed to optimize the experience of managing AI proxy station accounts like New API. Users can easily manage and view account balances, models, and keys in a centralized location, with automatic site addition. Supports mobile devices via Kiwi or mobile Firefox browsers.
+An open-source browser extension designed to optimize the experience of managing AI proxy station accounts like New API. Users can easily manage and view account balances, models, and keys in a centralized location, with automatic site addition. In principle, as long as the browser supports extensions, it can usually be used on mobile devices.
 
 ## 1. Download
 
@@ -13,31 +13,52 @@ An open-source browser extension designed to optimize the experience of managing
 | Firefox Store | [Firefox Store](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) | [![Firefox version](https://img.shields.io/amo/v/%7Bbc73541a-133d-4b50-b261-36ea20df0d24%7D?label=Firefox&logo=firefoxbrowser&style=flat)](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) | [![Mozilla Add-on Users](https://img.shields.io/amo/users/%7Bbc73541a-133d-4b50-b261-36ea20df0d24%7D?label=Firefox%20Users)](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) |
 | GitHub Releases | [View All Releases](https://github.com/qixing-jk/all-api-hub/releases) | [![GitHub version](https://img.shields.io/github/v/release/qixing-jk/all-api-hub?label=GitHub&logo=github&style=flat)](https://github.com/qixing-jk/all-api-hub/releases/latest) | [![GitHub Downloads (all assets, all releases)](https://img.shields.io/github/downloads/qixing-jk/all-api-hub/total?label=Total%20Downloads)](https://github.com/qixing-jk/all-api-hub/releases) |
 
-### GitHub Release Download Choices
+::: tip Differences Between Store and Release Versions
+- Store versions are recommended by default.
+- Store versions are more suitable for most users, easier to install, and usually auto-update.
+- Release versions require manual download, extraction, and re-installation or reloading upon update.
+- Only consider using Release versions if you explicitly need to get new versions earlier, manually verify fixes, or must load extension packages.
 
-| Type | Download Link | Suitable For | Description |
+Notes for Mobile/Phone Usage:
+- In principle, as long as the browser supports extensions, it can usually be used, such as `Edge`, `Firefox for Android`, `Kiwi`, etc.
+- For more information, see [Mobile Usage in FAQ](./faq.md#mobile-browser-support).
+:::
+
+<details>
+<summary>Release Type Selection</summary>
+
+First, select the version type, then download the corresponding attachment:
+
+| Type | Recommended Scenario | Download Link | Features |
 |---|---|---|---|
-| Stable Release | [Download Latest Stable](https://github.com/qixing-jk/all-api-hub/releases/latest) | Most users | Official release builds with more complete release notes and better stability for day-to-day use. |
-| Nightly Pre-release | [Download Nightly](https://github.com/qixing-jk/all-api-hub/releases/tag/nightly) | Users who want early access to new features, to verify fixes, or to help with feedback | Automatically generated from the latest commit on `main`, updated the fastest, and may include changes that have not been fully validated yet; attachment filenames usually include `nightly`. |
+| Stable Release | Daily use, first-time installation, prioritize stability | [Download Latest Stable](https://github.com/qixing-jk/all-api-hub/releases/latest) | Corresponds to official release versions, with more complete release notes and higher stability. |
+| Nightly Pre-release | Want to get new features / fixes as soon as possible, or assist in verifying issues | [Download Nightly](https://github.com/qixing-jk/all-api-hub/releases/tag/nightly) | Automatically generated from the latest commit on `main`, updated faster, but may contain changes that have not been fully validated; attachment filenames usually include `nightly`. |
 
 ::: tip How to Choose
-- If you want the most stable option for long-term use, start with the Stable Release.
-- Choose Nightly if you want the latest fixes immediately, want to confirm whether a specific issue has been resolved, or want to help provide feedback.
-- Store versions usually lag by 1-3 days because of review. GitHub Stable releases are often available earlier, and Nightly builds move even faster.
+- If you are unsure which to choose, select the Stable Release first.
+- If you want to confirm whether a fix has been included, or are willing to help provide feedback, choose Nightly.
+- Store versions usually have a 1-3 day delay due to review; GitHub Stable releases are generally earlier, and Nightly is the fastest, but also carries higher risk.
 :::
+
+</details>
 
 ### Safari Browser Installation
 
 Safari cannot be installed directly from the store or loaded by unzipping like Chrome, Edge, or Firefox; it requires installation via Xcode. For complete steps, please see the [Safari Installation Guide](./safari-install.md).
 
-The installation method is consistent with the README and is mainly divided into two types:
+Recommended installation method:
 
 1. Download `all-api-hub-<version>-safari-xcode-bundle.zip` from GitHub Releases, unzip it, and directly open the Xcode project within to run.
-2. Build from source: `pnpm install` -> `pnpm run build:safari` -> `xcrun safari-web-extension-converter .output/safari-mv2/` -> Run with Xcode.
+
+Advanced usage:
+
+1. Build from source: `pnpm install` -> `pnpm run build:safari` -> `xcrun safari-web-extension-converter .output/safari-mv2/` -> Run with Xcode.
 
 ::: warning Safari Download Notes
 Please download `all-api-hub-<version>-safari-xcode-bundle.zip`, not `all-api-hub-<version>-safari.zip` separately. The former already includes the Xcode project that can be opened directly and the necessary files for running, making it more suitable for the standard installation process.
 :::
+
+If official signing and distribution via TestFlight / App Store is required, an Apple Developer Program account is usually needed; otherwise, it is generally only suitable for local debugging or personal use.
 
 ## 2. Supported Sites
 
