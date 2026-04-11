@@ -1,9 +1,34 @@
+import { trimToNull } from "~/utils/core/string"
+import { tryParseUrl } from "~/utils/core/urlParsing"
+
 import {
   createDefaultReleaseUpdateStatus,
   RELEASE_UPDATE_REASON_VALUES,
   type ReleaseUpdateReason,
   type ReleaseUpdateStatus,
 } from "./releaseUpdateStatus"
+
+/**
+ * Normalize a persisted release URL and fall back when the value is missing or unsafe.
+ */
+function normalizeReleaseUrl(value: unknown, fallback: string): string {
+  const normalized = trimToNull(value)
+  if (!normalized) {
+    return fallback
+  }
+
+  const parsed = tryParseUrl(normalized)
+  if (
+    parsed &&
+    (parsed.protocol === "http:" || parsed.protocol === "https:") &&
+    parsed.hostname
+  ) {
+    return parsed.toString()
+  }
+
+  // Fall back to the latest stable release URL when persisted data is malformed.
+  return fallback
+}
 
 /**
  * Check whether an unknown string is one of the supported release-update reasons.
@@ -26,12 +51,12 @@ export function parseReleaseUpdateStatus(
   }
 
   const record = raw as Record<string, unknown>
-  const currentVersion = record.currentVersion
-  if (typeof currentVersion !== "string" || !currentVersion.trim()) {
+  const normalizedCurrentVersion = trimToNull(record.currentVersion)
+  if (!normalizedCurrentVersion) {
     return null
   }
 
-  const fallback = createDefaultReleaseUpdateStatus(currentVersion)
+  const fallback = createDefaultReleaseUpdateStatus(normalizedCurrentVersion)
 
   return {
     eligible:
@@ -41,21 +66,17 @@ export function parseReleaseUpdateStatus(
     reason: isReleaseUpdateReason(record.reason)
       ? record.reason
       : fallback.reason,
-    currentVersion,
-    latestVersion:
-      typeof record.latestVersion === "string" ? record.latestVersion : null,
+    currentVersion: normalizedCurrentVersion,
+    latestVersion: trimToNull(record.latestVersion),
     updateAvailable:
       typeof record.updateAvailable === "boolean"
         ? record.updateAvailable
         : fallback.updateAvailable,
-    releaseUrl:
-      typeof record.releaseUrl === "string" && record.releaseUrl
-        ? record.releaseUrl
-        : fallback.releaseUrl,
+    releaseUrl: normalizeReleaseUrl(record.releaseUrl, fallback.releaseUrl),
     checkedAt:
       typeof record.checkedAt === "number" && Number.isFinite(record.checkedAt)
         ? record.checkedAt
         : null,
-    lastError: typeof record.lastError === "string" ? record.lastError : null,
+    lastError: trimToNull(record.lastError),
   }
 }

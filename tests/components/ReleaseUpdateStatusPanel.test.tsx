@@ -1,14 +1,18 @@
+import userEvent from "@testing-library/user-event"
+import React from "react"
 import { describe, expect, it, vi } from "vitest"
 
 import { ReleaseUpdateStatusPanel } from "~/components/ReleaseUpdateStatusPanel"
 import type { ReleaseUpdateStatus } from "~/services/updates/releaseUpdateStatus"
-import { render, screen } from "~~/tests/test-utils/render"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
+
+const toastMocks = vi.hoisted(() => ({
+  error: vi.fn(),
+  success: vi.fn(),
+}))
 
 vi.mock("react-hot-toast", () => ({
-  default: {
-    error: vi.fn(),
-    success: vi.fn(),
-  },
+  default: toastMocks,
 }))
 
 const mockUseReleaseUpdateStatus = vi.fn()
@@ -44,6 +48,37 @@ function mockHook(status: ReleaseUpdateStatus | null) {
   })
 }
 
+function mockInteractiveHook(params: {
+  initialStatus: ReleaseUpdateStatus | null
+  nextError?: string | null
+  nextStatus: ReleaseUpdateStatus | null
+}) {
+  const checkNow = vi.fn(async () => params.nextStatus)
+
+  mockUseReleaseUpdateStatus.mockImplementation(() => {
+    const [status, setStatus] = React.useState(params.initialStatus)
+    const [error, setError] = React.useState<string | null>(null)
+
+    return {
+      status,
+      isLoading: false,
+      isChecking: false,
+      error,
+      refresh: vi.fn(),
+      checkNow: async () => {
+        const next = await checkNow()
+        setError(params.nextError ?? null)
+        if (next) {
+          setStatus(next)
+        }
+        return next
+      },
+    }
+  })
+
+  return checkNow
+}
+
 function mockHookState(overrides: {
   checkNow?: ReturnType<typeof vi.fn>
   error?: string | null
@@ -69,6 +104,96 @@ const renderSubject = () =>
   })
 
 describe("ReleaseUpdateStatusPanel", () => {
+  it("shows an error toast when checking now returns a failed status", async () => {
+    const user = userEvent.setup()
+
+    mockInteractiveHook({
+      initialStatus: buildStatus(),
+      nextStatus: buildStatus({
+        checkedAt: Date.now(),
+        lastError: "network error",
+      }),
+    })
+
+    renderSubject()
+    await user.click(
+      screen.getByRole("button", { name: "settings:releaseUpdate.checkNow" }),
+    )
+
+    await waitFor(() => {
+      expect(toastMocks.error).toHaveBeenCalledWith(
+        "settings:releaseUpdate.states.checkFailed",
+      )
+      expect(
+        screen.getByText("settings:releaseUpdate.states.checkFailed"),
+      ).toBeInTheDocument()
+    })
+  })
+
+  it("updates the panel and shows a success toast when checking now finds an update", async () => {
+    const user = userEvent.setup()
+
+    mockInteractiveHook({
+      initialStatus: buildStatus(),
+      nextStatus: buildStatus({
+        checkedAt: Date.now(),
+        latestVersion: "3.32.0",
+        updateAvailable: true,
+        releaseUrl:
+          "https://github.com/qixing-jk/all-api-hub/releases/tag/v3.32.0",
+      }),
+    })
+
+    renderSubject()
+    await user.click(
+      screen.getByRole("button", { name: "settings:releaseUpdate.checkNow" }),
+    )
+
+    await waitFor(() => {
+      expect(toastMocks.success).toHaveBeenCalledWith(
+        "settings:releaseUpdate.states.updateAvailable",
+      )
+      expect(
+        screen.getByText("settings:releaseUpdate.states.updateAvailable"),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("link", {
+          name: "settings:releaseUpdate.downloadUpdate",
+        }),
+      ).toHaveAttribute(
+        "href",
+        "https://github.com/qixing-jk/all-api-hub/releases/tag/v3.32.0",
+      )
+    })
+  })
+
+  it("updates the panel and shows a success toast when checking now confirms the latest version", async () => {
+    const user = userEvent.setup()
+
+    mockInteractiveHook({
+      initialStatus: buildStatus(),
+      nextStatus: buildStatus({
+        checkedAt: Date.now(),
+        latestVersion: "3.31.0",
+        updateAvailable: false,
+      }),
+    })
+
+    renderSubject()
+    await user.click(
+      screen.getByRole("button", { name: "settings:releaseUpdate.checkNow" }),
+    )
+
+    await waitFor(() => {
+      expect(toastMocks.success).toHaveBeenCalledWith(
+        "settings:releaseUpdate.states.upToDate",
+      )
+      expect(
+        screen.getByText("settings:releaseUpdate.states.upToDate"),
+      ).toBeInTheDocument()
+    })
+  })
+
   it("shows not-checked copy instead of up-to-date before the first check", () => {
     mockHook(buildStatus())
 

@@ -77,9 +77,6 @@ function useCreateReleaseUpdateStatus(): ReleaseUpdateStatusContextValue {
       }
 
       setError(response.error)
-      if (status) {
-        return status
-      }
       return null
     } finally {
       setIsChecking(false)
