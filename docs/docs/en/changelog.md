@@ -8,6 +8,38 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 3.33.0
+- **New Features:**
+  - Account Addition: When a hosted site configuration is incomplete, you will now be prompted to complete the settings before `Save and Auto-configure`. You can directly jump to the relevant configuration page, reducing the situation where you discover missing configurations only after clicking auto-configure.
+  - Hosted Site Verification: The `New API` verification dialog has been changed to an `OTP` style more suitable for CAPTCHA input, making it more convenient to enter one-time verification codes.
+  - API Verification Records: Verification history status is now displayed more clearly. When viewing the last verification result in `API Credentials`, Model List, or other locations, it's easier to determine the current status.
+  - Hosted Site Settings: Administrator User IDs are now restricted to pure numbers only. Invalid values will be directly intercepted and prompted on the settings page, reducing verification or read exceptions caused by incorrect values.
+  - Model List: When no data source is selected, clearer empty state descriptions and next steps are provided, reducing confusion about what to do first after entering the page.
+  - Key Management: When there are no keys under an account or key loading fails, clearer empty state prompts are provided, along with options to retry or navigate to relevant pages.
+  - Model to Key Dialog: You can now directly jump to the `Key Management` for the corresponding account and quickly filter by account badges to identify the source. This makes it easier to troubleshoot models and keys for a specific account.
+  - Update Reminders: Users who manually install packages can now view the differences between the current version and the latest stable version, and directly open the download page or update notes, reducing the chance of staying on an old version unknowingly for extended periods.
+- **Experience Optimizations:**
+  - In-Page Navigation: For multiple entry points that require jumping from the current flow to the settings, account, or hosted site pages, navigation history is now better preserved, making returning to the previous step more natural.
+  - Exit Flow Prompts: Button copy will more clearly distinguish between "Leave Current Flow" and "Continue to Next Step," reducing accidental clicks that lead to leaving the current page.
+  - Warning Prompts: Some scenarios described as "partially successful / requires subsequent processing" are now displayed with a unified warning prompt style, accompanied by directly executable follow-up actions.
+  - Account Data Reading: Manually fetching account data that takes longer than approximately `20` seconds will now stop, preventing prolonged waiting and preserving any results that can still be saved, reducing instances of being stuck in a waiting state.
+- **Bug Fixes:**
+  - WebDAV Sync: Before automatic synchronization, the system will make its best effort to upload local changes for deleted accounts, reducing the chance of deleted accounts being reintroduced in other devices or subsequent synchronizations.
+  - Account Management: Temporary windows will only be suggested to assist the process when the current environment is genuinely restricted, reducing false alarms.
+  - Model List: Restored the original account name badge display, making it easier to identify which account a model originates from when viewing account-sourced models.
+  - DoneHub: Compatible with some sites' daily usage query methods, reducing abnormal reads or unstable results.
+- **Performance Optimizations:**
+  - Data Statistics: Reduced extra requests in the fast path for reading daily usage, lowering the refresh waiting time for some sites.
+
+**Location Hints:**
+- Hosted Site Configuration Completion: In the add or edit account dialog within "Settings → Account Management".
+- `OTP` Verification and Hosted Site Configuration: In "Settings → Self-Hosted Site Management", within `New API Integration Settings` and related verification dialogs.
+- Hosted Site Administrator User ID Validation: In "Settings → Self-Hosted Site Management", within the relevant hosted site settings.
+- Model List Empty State and Source Filtering: In "Settings → Model List".
+- Key Management Empty State and Quick Jump: In "Settings → Key Management" and the model-to-key dialog.
+- Version Update Reminder: In the extension popup or the version number at the top of the settings page, and in "Settings → About".
+- WebDAV Automatic Sync: In "Settings → Import/Export", under `WebDAV Settings` and `WebDAV Automatic Sync`.
+
 ## 3.32.0
 - **New Features:**
   - Automatic Check-in: Each row in the results table can now open its corresponding site directly. If the current site type does not support automatic check-in, the extension now shows a clearer message so you can decide whether to handle it manually or check the site's rules first.
@@ -112,7 +144,7 @@ This page records major updates for general users (feature changes / experience 
 - API Credentials: In "Settings → API Credentials", you can use operations like `Verify CLI Compatibility` and `Open in Model Management`.
 - Model List Data Source: In the data source selection area at the top of "Settings → Model List", you can switch to `API Credentials`.
 - Hosted Site Channel Status: View the hosted site status and matching prompts for each key in "Settings → Key Management".
-- New API Hosted Site Login Auxiliary: In the "Settings → Self-Hosted Site Management" under the `New API Integration Settings` area.
+- New API Hosted Site Login Auxiliary: In "Settings → Self-Hosted Site Management" under the `New API Integration Settings` area.
 - Initial Language Selection: In the welcome/permission guide popup that appears when the extension is first opened.
 
 ## 3.27.0
