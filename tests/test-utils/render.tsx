@@ -69,13 +69,44 @@ interface AppRenderHookOptions<Props>
   withThemeProvider?: boolean
 }
 
-const customRender = (ui: ReactElement, options?: AppRenderOptions) => {
+type ProviderToggleOptions = Pick<
+  AppProvidersProps,
+  | "withReleaseUpdateStatusProvider"
+  | "withUserPreferencesProvider"
+  | "withThemeProvider"
+>
+
+function normalizeProviderOptions<T extends ProviderToggleOptions>(
+  options?: T,
+): {
+  providerOptions: Required<ProviderToggleOptions>
+  remainingOptions: Omit<T, keyof ProviderToggleOptions>
+} {
   const {
     withReleaseUpdateStatusProvider = true,
     withUserPreferencesProvider = true,
     withThemeProvider = true,
-    ...renderOptions
-  } = options ?? {}
+    ...remainingOptions
+  } = (options ?? {}) as T & ProviderToggleOptions
+
+  return {
+    providerOptions: {
+      withReleaseUpdateStatusProvider,
+      withUserPreferencesProvider,
+      withThemeProvider,
+    },
+    remainingOptions: remainingOptions as Omit<T, keyof ProviderToggleOptions>,
+  }
+}
+
+const customRender = (ui: ReactElement, options?: AppRenderOptions) => {
+  const { providerOptions, remainingOptions } =
+    normalizeProviderOptions(options)
+  const {
+    withReleaseUpdateStatusProvider,
+    withUserPreferencesProvider,
+    withThemeProvider,
+  } = providerOptions
 
   return render(ui, {
     wrapper: ({ children }) => (
@@ -87,7 +118,7 @@ const customRender = (ui: ReactElement, options?: AppRenderOptions) => {
         {children}
       </AppProviders>
     ),
-    ...renderOptions,
+    ...remainingOptions,
   })
 }
 
@@ -95,12 +126,13 @@ const customRenderHook = <Result, Props>(
   callback: (initialProps: Props) => Result,
   options?: AppRenderHookOptions<Props>,
 ) => {
+  const { providerOptions, remainingOptions } =
+    normalizeProviderOptions(options)
   const {
-    withReleaseUpdateStatusProvider = true,
-    withUserPreferencesProvider = true,
-    withThemeProvider = true,
-    ...renderHookOptions
-  } = options ?? {}
+    withReleaseUpdateStatusProvider,
+    withUserPreferencesProvider,
+    withThemeProvider,
+  } = providerOptions
 
   return renderHook<Result, Props>(callback, {
     wrapper: ({ children }) => (
@@ -112,7 +144,7 @@ const customRenderHook = <Result, Props>(
         {children}
       </AppProviders>
     ),
-    ...renderHookOptions,
+    ...remainingOptions,
   })
 }
 

@@ -282,6 +282,29 @@ describe("ReleaseUpdateStatusPanel", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("shows an ineligible toast and skips checking when the install cannot use release checks", async () => {
+    const user = userEvent.setup()
+    const checkNow = vi.fn()
+
+    mockHookState({
+      status: buildStatus({
+        eligible: false,
+        reason: "store-build",
+      }),
+      checkNow,
+    })
+
+    renderSubject()
+    await user.click(
+      screen.getByRole("button", { name: "settings:releaseUpdate.checkNow" }),
+    )
+
+    expect(checkNow).not.toHaveBeenCalled()
+    expect(toastMocks.error).toHaveBeenCalledWith(
+      "settings:releaseUpdate.reasons.store-build",
+    )
+  })
+
   it("falls back to localized unavailable copy instead of exposing raw errors", () => {
     mockHookState({
       status: null,
@@ -296,6 +319,7 @@ describe("ReleaseUpdateStatusPanel", () => {
     expect(
       screen.getByText("settings:releaseUpdate.latestVersionUnavailable"),
     ).toBeInTheDocument()
+    expect(screen.queryByText("0.0.0")).not.toBeInTheDocument()
     expect(screen.queryByText("No listeners available")).not.toBeInTheDocument()
   })
 })

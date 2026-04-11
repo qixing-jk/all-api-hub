@@ -180,18 +180,55 @@ describe("releaseUpdateService", () => {
     const first = releaseUpdateService.initialize()
     const second = releaseUpdateService.initialize()
 
-    expect(onAlarmMock).toHaveBeenCalledTimes(1)
-    expect(getAlarmMock).toHaveBeenCalledTimes(1)
+    for (let index = 0; index < 10 && !resolveAlarm; index++) {
+      await Promise.resolve()
+    }
+
+    expect(resolveAlarm).toEqual(expect.any(Function))
 
     if (resolveAlarm) {
       resolveAlarm()
     }
     await Promise.all([first, second])
 
+    expect(getAlarmMock).toHaveBeenCalledTimes(1)
+    expect(onAlarmMock).toHaveBeenCalledTimes(1)
     expect(createAlarmMock).toHaveBeenCalledTimes(1)
   })
 
-  it("returns the base status without fetching when the install is ineligible", async () => {
+  it("registers the alarm listener only once when initialization retries after a setup failure", async () => {
+    createAlarmMock
+      .mockRejectedValueOnce(new Error("alarm setup failed"))
+      .mockResolvedValueOnce(undefined)
+
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+
+    await expect(releaseUpdateService.initialize()).rejects.toThrow(
+      "alarm setup failed",
+    )
+    expect(onAlarmMock).not.toHaveBeenCalled()
+
+    await releaseUpdateService.initialize()
+
+    expect(onAlarmMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("returns the base status without fetching and clears stale release metadata when the install is ineligible", async () => {
+    const { Storage } = await import("@plasmohq/storage")
+    ;(Storage as any).__store.set(STORAGE_KEYS.RELEASE_UPDATE_STATUS, {
+      eligible: true,
+      reason: "chromium-development",
+      currentVersion: "3.32.0",
+      latestVersion: "3.40.0",
+      updateAvailable: true,
+      releaseUrl:
+        "https://github.com/qixing-jk/all-api-hub/releases/tag/v3.40.0",
+      checkedAt: 123,
+      lastError: "old error",
+    })
+
     const { releaseUpdateService } = await import(
       "~/services/updates/releaseUpdateService"
     )
@@ -204,11 +241,12 @@ describe("releaseUpdateService", () => {
       currentVersion: "3.32.0",
       latestVersion: null,
       updateAvailable: false,
+      releaseUrl: "https://github.com/qixing-jk/all-api-hub/releases/latest",
+      checkedAt: null,
       lastError: null,
     })
     expect(globalThis.fetch).not.toHaveBeenCalled()
 
-    const { Storage } = await import("@plasmohq/storage")
     expect(
       (Storage as any).__store.get(STORAGE_KEYS.RELEASE_UPDATE_STATUS),
     ).toEqual(
@@ -216,6 +254,9 @@ describe("releaseUpdateService", () => {
         eligible: false,
         latestVersion: null,
         updateAvailable: false,
+        releaseUrl: "https://github.com/qixing-jk/all-api-hub/releases/latest",
+        checkedAt: null,
+        lastError: null,
       }),
     )
   })

@@ -204,6 +204,11 @@ export function ReleaseUpdateStatusPanel() {
   )
 
   const handleCheckNow = async () => {
+    if (presentation.state === RELEASE_UPDATE_PRESENTATION_STATES.Ineligible) {
+      toast.error(getReasonDescription(statusReason, t))
+      return
+    }
+
     const next = await checkNow()
     const outcome = deriveReleaseUpdateCheckOutcome(next)
 
@@ -231,11 +236,13 @@ export function ReleaseUpdateStatusPanel() {
           description={statusDescription}
           leftContent={
             <div className="space-y-1">
-              <BodySmall>
-                {t("about:releaseUpdate.currentVersion", {
-                  version: status?.currentVersion ?? "0.0.0",
-                })}
-              </BodySmall>
+              {status?.currentVersion && (
+                <BodySmall>
+                  {t("about:releaseUpdate.currentVersion", {
+                    version: status.currentVersion,
+                  })}
+                </BodySmall>
+              )}
               <BodySmall>{latestVersionLine}</BodySmall>
               {lastChecked && (
                 <BodySmall>

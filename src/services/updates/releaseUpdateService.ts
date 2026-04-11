@@ -63,7 +63,11 @@ class ReleaseUpdateService {
     }
 
     const initializationPromise = (async () => {
+      await this.ensureBaseStatus()
+
       if (hasAlarmsAPI()) {
+        await this.setupAlarm()
+
         onAlarm(async (alarm) => {
           if (alarm.name !== ReleaseUpdateService.ALARM_NAME) {
             return
@@ -75,15 +79,11 @@ class ReleaseUpdateService {
             logger.error("Scheduled release update check failed", error)
           }
         })
-
-        await this.setupAlarm()
       } else {
         logger.warn(
           "Alarms API not available; automatic release checks disabled",
         )
       }
-
-      await this.ensureBaseStatus()
       this.isInitialized = true
     })()
 
@@ -197,19 +197,23 @@ class ReleaseUpdateService {
     const detected = await detectInstallEligibility()
     const fallback = createDefaultReleaseUpdateStatus(currentVersion)
     const isSameVersion = stored?.currentVersion === currentVersion
+    const canReuseStoredReleaseFields = isSameVersion && detected.eligible
 
     return {
       ...fallback,
       eligible: detected.eligible,
       reason: detected.reason,
-      latestVersion: isSameVersion ? stored?.latestVersion ?? null : null,
-      updateAvailable:
-        isSameVersion && detected.eligible
-          ? stored?.updateAvailable ?? false
-          : false,
-      releaseUrl: stored?.releaseUrl ?? fallback.releaseUrl,
-      checkedAt: isSameVersion ? stored?.checkedAt ?? null : null,
-      lastError: isSameVersion ? stored?.lastError ?? null : null,
+      latestVersion: canReuseStoredReleaseFields
+        ? stored?.latestVersion ?? null
+        : null,
+      updateAvailable: canReuseStoredReleaseFields
+        ? stored?.updateAvailable ?? false
+        : false,
+      releaseUrl: canReuseStoredReleaseFields
+        ? stored?.releaseUrl ?? fallback.releaseUrl
+        : fallback.releaseUrl,
+      checkedAt: canReuseStoredReleaseFields ? stored?.checkedAt ?? null : null,
+      lastError: canReuseStoredReleaseFields ? stored?.lastError ?? null : null,
     }
   }
 
