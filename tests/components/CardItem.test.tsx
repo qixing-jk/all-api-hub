@@ -26,4 +26,15 @@ describe("CardItem", () => {
       "mt-2",
     )
   })
+
+  it("adds top spacing above left content when only description is present", () => {
+    render(
+      <CardItem
+        description="Desc"
+        leftContent={<span data-testid="left-content">Left</span>}
+      />,
+    )
+
+    expect(screen.getByTestId("left-content").parentElement).toHaveClass("mt-2")
+  })
 })

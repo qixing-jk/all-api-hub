@@ -65,6 +65,24 @@ describe("parseReleaseUpdateStatus", () => {
     })
   })
 
+  it("accepts and normalizes valid http release URLs", () => {
+    const parsed = parseReleaseUpdateStatus({
+      currentVersion: "3.31.0",
+      reason: RELEASE_UPDATE_REASONS.ChromiumDevelopment,
+      releaseUrl:
+        " http://github.com/qixing-jk/all-api-hub/releases/tag/v3.31.0 ",
+      lastError: " network issue ",
+    })
+
+    expect(parsed).toMatchObject({
+      currentVersion: "3.31.0",
+      reason: RELEASE_UPDATE_REASONS.ChromiumDevelopment,
+      releaseUrl:
+        "http://github.com/qixing-jk/all-api-hub/releases/tag/v3.31.0",
+      lastError: "network issue",
+    })
+  })
+
   it("falls back to the default release URL when releaseUrl is empty or non-string", () => {
     const fallback = createDefaultReleaseUpdateStatus("3.31.0").releaseUrl
 

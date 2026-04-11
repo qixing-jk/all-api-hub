@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState } from "react"
+import { createContext, useContext, useEffect, useRef, useState } from "react"
 import type { ReactNode } from "react"
 
 import { type ReleaseUpdateStatus } from "~/services/updates/releaseUpdateStatus"
@@ -6,6 +6,7 @@ import {
   requestReleaseUpdateCheckNow,
   requestReleaseUpdateStatus,
 } from "~/services/updates/runtime"
+import { getErrorMessage } from "~/utils/core/error"
 
 type ReleaseUpdateStatusContextValue = {
   status: ReleaseUpdateStatus | null
@@ -20,6 +21,8 @@ const ReleaseUpdateStatusContext = createContext<
   ReleaseUpdateStatusContextValue | undefined
 >(undefined)
 
+const RELEASE_UPDATE_REQUEST_ERROR = "Background request failed."
+
 /**
  * Build the shared release-update state used by UI consumers within one app surface.
  */
@@ -28,24 +31,33 @@ function useCreateReleaseUpdateStatus(): ReleaseUpdateStatusContextValue {
   const [error, setError] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [isChecking, setIsChecking] = useState(false)
+  const checkInFlightCountRef = useRef(0)
 
   useEffect(() => {
     let cancelled = false
 
     void (async () => {
-      const response = await requestReleaseUpdateStatus()
-      if (cancelled) {
-        return
-      }
+      try {
+        const response = await requestReleaseUpdateStatus()
+        if (cancelled) {
+          return
+        }
 
-      if (response.success) {
-        setStatus(response.data)
-        setError(null)
-      } else {
-        setError(response.error)
+        if (response.success) {
+          setStatus(response.data)
+          setError(null)
+        } else {
+          setError(response.error)
+        }
+      } catch (requestError) {
+        if (!cancelled) {
+          setError(getErrorMessage(requestError, RELEASE_UPDATE_REQUEST_ERROR))
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false)
+        }
       }
-
-      setIsLoading(false)
     })()
 
     return () => {
@@ -54,18 +66,23 @@ function useCreateReleaseUpdateStatus(): ReleaseUpdateStatusContextValue {
   }, [])
 
   const refresh = async () => {
-    const response = await requestReleaseUpdateStatus()
+    try {
+      const response = await requestReleaseUpdateStatus()
 
-    if (response.success) {
-      setStatus(response.data)
-      setError(null)
-      return
+      if (response.success) {
+        setStatus(response.data)
+        setError(null)
+        return
+      }
+
+      setError(response.error)
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, RELEASE_UPDATE_REQUEST_ERROR))
     }
-
-    setError(response.error)
   }
 
   const checkNow = async () => {
+    checkInFlightCountRef.current += 1
     setIsChecking(true)
 
     try {
@@ -78,8 +95,15 @@ function useCreateReleaseUpdateStatus(): ReleaseUpdateStatusContextValue {
 
       setError(response.error)
       return null
+    } catch (requestError) {
+      setError(getErrorMessage(requestError, RELEASE_UPDATE_REQUEST_ERROR))
+      return null
     } finally {
-      setIsChecking(false)
+      checkInFlightCountRef.current = Math.max(
+        0,
+        checkInFlightCountRef.current - 1,
+      )
+      setIsChecking(checkInFlightCountRef.current > 0)
     }
   }
 

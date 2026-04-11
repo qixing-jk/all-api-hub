@@ -20,10 +20,20 @@ describe("string utils", () => {
       "beta",
       "gamma",
     ])
+    expect(parseDelimitedList("")).toEqual([])
+    expect(parseDelimitedList("   ")).toEqual([])
+    expect(parseDelimitedList(null)).toEqual([])
+    expect(parseDelimitedList(undefined)).toEqual([])
   })
 
   it("normalizeList trims, removes blanks, and de-duplicates values", () => {
     expect(normalizeList([" alpha ", "", "beta", "alpha", " beta "])).toEqual([
+      "alpha",
+      "beta",
+    ])
+    expect(normalizeList([])).toEqual([])
+    expect(normalizeList(["", "  "])).toEqual([])
+    expect(normalizeList([" alpha ", " ", "beta", "alpha", " beta "])).toEqual([
       "alpha",
       "beta",
     ])
