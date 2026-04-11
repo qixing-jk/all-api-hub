@@ -6,7 +6,7 @@ heroText: "All API Hub - AI集約中継ステーションマネージャー"
 tagline: "オープンソースのブラウザ拡張機能。サードパーティ製AI集約中継ステーションと自社構築のNew APIを一元管理。アカウントの自動認識、残高表示、モデル同期、キー管理をサポートし、クロスプラットフォームとクラウドバックアップにも対応。"
 actions:
   - text: "利用開始"
-    link: "/get-started.html" # 実際のドキュメントパスに変更することを推奨します。例: /guide/
+    link: "./get-started.html"
     type: "primary"
     
   - text: "Chrome ウェブストア"
@@ -19,6 +19,10 @@ actions:
 
   - text: "FireFox アドオン"
     link: "https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}"
+    type: "secondary"
+    
+  - text: "Safari インストール"
+    link: "./safari-install.html"
     type: "secondary"
 
 features:
@@ -66,6 +70,8 @@ All API Hubはブラウザ拡張機能として、これらのサイトのアカ
 - Super-API（クローズドソース）
 - RIX_API（クローズドソース、基本機能サポート）
 - VoAPI（クローズドソース、旧バージョンサポート）
+
+macOSでSafari経由で拡張機能を使用する場合は、まず[Safariインストールガイド](./safari-install.md)を確認してください。SafariはXcode経由でインストールする必要があります。これは、Chrome/Edge/Firefoxのストアインストールや解凍ロードとは異なる方法です。
 
 <a id="community"></a>
 ## 💬 コミュニティ交流

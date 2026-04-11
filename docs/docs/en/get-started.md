@@ -26,6 +26,19 @@ An open-source browser extension designed to optimize the experience of managing
 - Store versions usually lag by 1-3 days because of review. GitHub Stable releases are often available earlier, and Nightly builds move even faster.
 :::
 
+### Safari Browser Installation
+
+Safari cannot be installed directly from the store or loaded by unzipping like Chrome, Edge, or Firefox; it requires installation via Xcode. For complete steps, please see the [Safari Installation Guide](./safari-install.md).
+
+The installation method is consistent with the README and is mainly divided into two types:
+
+1. Download `all-api-hub-<version>-safari-xcode-bundle.zip` from GitHub Releases, unzip it, and directly open the Xcode project within to run.
+2. Build from source: `pnpm install` -> `pnpm run build:safari` -> `xcrun safari-web-extension-converter .output/safari-mv2/` -> Run with Xcode.
+
+::: warning Safari Download Notes
+Please download `all-api-hub-<version>-safari-xcode-bundle.zip`, not `all-api-hub-<version>-safari.zip` separately. The former already includes the Xcode project that can be opened directly and the necessary files for running, making it more suitable for the standard installation process.
+:::
+
 ## 2. Supported Sites
 
 Supports proxy stations deployed based on the following projects:
@@ -167,6 +180,7 @@ Create/edit/delete channels directly within the extension. Combined with model w
 
 - [Supported Export Tools and Integration Targets](./supported-export-tools.md)
 - [Supported Sites and System Types](./supported-sites.md)
+- [Safari Installation Guide](./safari-install.md)
 - [Cloudflare Bypass Assistant](./cloudflare-helper.md)
 - [Quick Export Site Configurations](./quick-export.md)
 - [Automatic Refresh and Real-time Data](./auto-refresh.md)

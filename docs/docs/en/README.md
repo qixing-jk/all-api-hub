@@ -6,7 +6,7 @@ heroText: "All API Hub - AI Aggregation Relay Manager"
 tagline: "Open-source browser extension to unify the management of third-party AI aggregation relays and self-built New APIs: automatically identify accounts, view balances, synchronize models, manage keys, and support cross-platform and cloud backups."
 actions:
   - text: "Get Started"
-    link: "/get-started.html" # Recommended to modify to your actual documentation path, e.g., /guide/
+    link: "./get-started.html"
     type: "primary"
 
   - text: "Chrome Store"
@@ -19,6 +19,10 @@ actions:
 
   - text: "FireFox Store"
     link: "https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}"
+    type: "secondary"
+
+  - text: "Safari Install"
+    link: "./safari-install.html"
     type: "secondary"
 
 features:
@@ -66,6 +70,8 @@ All API Hub, as a browser extension, can automatically identify accounts on thes
 - Super-API (Closed-source)
 - RIX_API (Closed-source, basic functionality supported)
 - VoAPI (Closed-source, older versions supported)
+
+If you are using the extension on macOS via Safari, please refer to the [Safari Installation Guide](./safari-install.md) first. Safari requires installation via Xcode, which differs from the store installation or unpacked loading methods for Chrome/Edge/Firefox.
 
 <a id="community"></a>
 ## 💬 Community Communication
