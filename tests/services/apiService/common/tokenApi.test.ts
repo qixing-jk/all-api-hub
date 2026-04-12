@@ -7,7 +7,9 @@ import {
 } from "~/services/apiService/common"
 import {
   fetchTokenSecretKeyById,
+  fetchTokenSecretKeyByIdWithMethod,
   invalidateResolvedApiTokenKeyCache,
+  resolveApiTokenKeyWithFetcher,
   syncResolvedApiTokenKeyCache,
 } from "~/services/apiService/common/tokenKeyResolver"
 import { fetchApiData } from "~/services/apiService/common/utils"
@@ -142,6 +144,31 @@ describe("apiService common token APIs", () => {
     expect(result).toBe("sk-resolved-secret")
   })
 
+  it("fetchTokenSecretKeyByIdWithMethod uses the caller-provided HTTP method", async () => {
+    mockedFetchApiData.mockResolvedValueOnce({ key: "resolved-via-get" })
+
+    const request = {
+      baseUrl: "https://example.com",
+      accountId: "account-get-secret",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "token",
+      },
+    }
+
+    await expect(
+      fetchTokenSecretKeyByIdWithMethod(request as any, 70, "GET"),
+    ).resolves.toBe("sk-resolved-via-get")
+
+    expect(mockedFetchApiData).toHaveBeenCalledWith(request, {
+      endpoint: "/api/token/70/key",
+      options: {
+        method: "GET",
+      },
+    })
+  })
+
   it("resolveApiTokenKey passes through legacy full keys without an extra fetch", async () => {
     const request = {
       baseUrl: "https://example.com",
@@ -196,6 +223,48 @@ describe("apiService common token APIs", () => {
     expect(mockedFetchApiData).toHaveBeenCalledTimes(1)
     expect(first).toBe("sk-deduped-secret")
     expect(second).toBe("sk-deduped-secret")
+  })
+
+  it("resolveApiTokenKeyWithFetcher reuses the shared dedupe/cache path for custom site fetchers", async () => {
+    const fetchSecretKey = vi.fn().mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          setTimeout(() => resolve("sk-custom-secret"), 0)
+        }),
+    )
+
+    const request = {
+      baseUrl: "https://example.com",
+      accountId: "account-custom-fetcher",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "token",
+      },
+    }
+
+    const maskedToken = {
+      id: 71,
+      key: "sk-mask************site",
+    }
+
+    const [first, second] = await Promise.all([
+      resolveApiTokenKeyWithFetcher(
+        request as any,
+        maskedToken as any,
+        fetchSecretKey,
+      ),
+      resolveApiTokenKeyWithFetcher(
+        request as any,
+        maskedToken as any,
+        fetchSecretKey,
+      ),
+    ])
+
+    expect(fetchSecretKey).toHaveBeenCalledTimes(1)
+    expect(fetchSecretKey).toHaveBeenCalledWith(request, 71)
+    expect(first).toBe("sk-custom-secret")
+    expect(second).toBe("sk-custom-secret")
   })
 
   it("resolveApiTokenKey returns an empty normalized key without fetching", async () => {

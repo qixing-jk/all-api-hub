@@ -9,6 +9,11 @@ import {
 } from "./apiKey"
 
 type TokenKeyLike = Pick<ApiToken, "id" | "key">
+type TokenSecretResolutionMethod = "GET" | "POST"
+type TokenSecretKeyFetcher = (
+  request: ApiServiceRequest,
+  tokenId: number,
+) => Promise<string>
 
 const resolvedTokenKeyPromises = new Map<string, Promise<string>>()
 
@@ -46,14 +51,15 @@ const deleteTokenResolutionScopeEntries = (
 /**
  * Fetches the full secret key for a token from the explicit secret endpoint.
  */
-export async function fetchTokenSecretKeyById(
+export async function fetchTokenSecretKeyByIdWithMethod(
   request: ApiServiceRequest,
   tokenId: number,
+  method: TokenSecretResolutionMethod,
 ): Promise<string> {
   const response = await fetchApiData<{ key?: string }>(request, {
     endpoint: `/api/token/${tokenId}/key`,
     options: {
-      method: "POST",
+      method,
     },
   })
 
@@ -66,12 +72,24 @@ export async function fetchTokenSecretKeyById(
 }
 
 /**
+ * Fetches the full secret key for a token using the default compatible
+ * backend behavior.
+ */
+export async function fetchTokenSecretKeyById(
+  request: ApiServiceRequest,
+  tokenId: number,
+): Promise<string> {
+  return fetchTokenSecretKeyByIdWithMethod(request, tokenId, "POST")
+}
+
+/**
  * Resolves a usable token secret key while preserving pass-through behavior for
  * legacy backends that still return full keys in inventory APIs.
  */
-export async function resolveApiTokenKey(
+export async function resolveApiTokenKeyWithFetcher(
   request: ApiServiceRequest,
   token: TokenKeyLike,
+  fetchTokenSecretKey: TokenSecretKeyFetcher,
 ): Promise<string> {
   const normalizedInventoryKey = normalizeApiTokenKeyValue(token.key ?? "")
   if (!normalizedInventoryKey) {
@@ -100,13 +118,24 @@ export async function resolveApiTokenKey(
     return cachedPromise
   }
 
-  const promise = fetchTokenSecretKeyById(request, token.id).catch((error) => {
+  const promise = fetchTokenSecretKey(request, token.id).catch((error) => {
     resolvedTokenKeyPromises.delete(cacheKey)
     throw error
   })
 
   resolvedTokenKeyPromises.set(cacheKey, promise)
   return promise
+}
+
+/**
+ * Resolves a usable token secret key while preserving pass-through behavior for
+ * legacy backends that still return full keys in inventory APIs.
+ */
+export async function resolveApiTokenKey(
+  request: ApiServiceRequest,
+  token: TokenKeyLike,
+): Promise<string> {
+  return resolveApiTokenKeyWithFetcher(request, token, fetchTokenSecretKeyById)
 }
 
 /**

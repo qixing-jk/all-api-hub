@@ -5,6 +5,7 @@ import {
   fetchCheckInStatus,
   fetchSupportCheckIn,
   refreshAccountData,
+  resolveApiTokenKey,
 } from "~/services/apiService/wong"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
@@ -12,6 +13,7 @@ const {
   mockDetermineHealthStatus,
   mockFetchAccountQuota,
   mockFetchApi,
+  mockFetchApiData,
   mockFetchTodayIncome,
   mockFetchTodayUsage,
   mockT,
@@ -19,6 +21,7 @@ const {
   mockDetermineHealthStatus: vi.fn(),
   mockFetchAccountQuota: vi.fn(),
   mockFetchApi: vi.fn(),
+  mockFetchApiData: vi.fn(),
   mockFetchTodayIncome: vi.fn(),
   mockFetchTodayUsage: vi.fn(),
   mockT: vi.fn((key: string) => `translated:${key}`),
@@ -33,6 +36,7 @@ vi.mock("~/services/apiService/common", () => ({
 
 vi.mock("~/services/apiService/common/utils", () => ({
   fetchApi: mockFetchApi,
+  fetchApiData: mockFetchApiData,
 }))
 
 vi.mock("~/utils/i18n/core", () => ({
@@ -58,6 +62,7 @@ describe("apiService wong", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    mockFetchApiData.mockReset()
     mockDetermineHealthStatus.mockReturnValue({
       status: SiteHealthStatus.Unknown,
       message: "mapped error",
@@ -271,5 +276,34 @@ describe("apiService wong", () => {
       },
     })
     expect(mockDetermineHealthStatus).toHaveBeenCalled()
+  })
+
+  it("resolves masked WONG token secrets with GET /api/token/{id}/key", async () => {
+    mockFetchApiData.mockResolvedValueOnce({ key: "resolved-secret" })
+
+    await expect(
+      resolveApiTokenKey(baseRequest, {
+        id: 7,
+        key: "sk-abcd************wxyz",
+      } as any),
+    ).resolves.toBe("sk-resolved-secret")
+
+    expect(mockFetchApiData).toHaveBeenCalledWith(baseRequest, {
+      endpoint: "/api/token/7/key",
+      options: {
+        method: "GET",
+      },
+    })
+  })
+
+  it("surfaces missing WONG token secret payloads as resolution failures", async () => {
+    mockFetchApiData.mockResolvedValueOnce({})
+
+    await expect(
+      resolveApiTokenKey(baseRequest, {
+        id: 8,
+        key: "sk-efgh************uvwx",
+      } as any),
+    ).rejects.toThrow("token_secret_key_missing")
   })
 })

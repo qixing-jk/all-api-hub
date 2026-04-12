@@ -12,6 +12,10 @@ import {
   fetchTodayIncome,
   fetchTodayUsage,
 } from "~/services/apiService/common"
+import {
+  fetchTokenSecretKeyByIdWithMethod,
+  resolveApiTokenKeyWithFetcher,
+} from "~/services/apiService/common/tokenKeyResolver"
 import type {
   AccountData,
   ApiServiceAccountRequest,
@@ -19,7 +23,12 @@ import type {
   RefreshAccountResult,
 } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
-import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
+import {
+  AuthTypeEnum,
+  SiteHealthStatus,
+  type ApiToken,
+  type CheckInConfig,
+} from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
@@ -109,6 +118,11 @@ export async function fetchSupportCheckIn(
   const siteStatus = await fetchCheckInStatus(request)
   return siteStatus !== undefined
 }
+
+const fetchWongTokenSecretKeyById = (
+  request: ApiServiceRequest,
+  tokenId: number,
+) => fetchTokenSecretKeyByIdWithMethod(request, tokenId, "GET")
 
 const normalizeMessage = (message: unknown): string =>
   typeof message === "string" ? message : ""
@@ -258,4 +272,19 @@ export async function refreshAccountData(
       healthStatus: determineHealthStatus(error),
     }
   }
+}
+
+/**
+ * WONG reveals masked token secrets with GET `/api/token/{id}/key` rather than
+ * the shared POST variant used by other compatible backends.
+ */
+export async function resolveApiTokenKey(
+  request: ApiServiceRequest,
+  token: Pick<ApiToken, "id" | "key">,
+): Promise<string> {
+  return resolveApiTokenKeyWithFetcher(
+    request,
+    token,
+    fetchWongTokenSecretKeyById,
+  )
 }

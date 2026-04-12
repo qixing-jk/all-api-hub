@@ -1,32 +1,41 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DONE_HUB, ONE_HUB } from "~/constants/siteType"
+import { DONE_HUB, ONE_HUB, WONG_GONGYI } from "~/constants/siteType"
 import { getApiService } from "~/services/apiService"
 
 const {
   commonFetchUserInfo,
   commonFetchModelPricing,
   commonFetchAccountTokens,
+  commonResolveApiTokenKey,
   oneHubFetchModelPricing,
   oneHubFetchAccountTokens,
+  wongResolveApiTokenKey,
 } = vi.hoisted(() => ({
   commonFetchUserInfo: vi.fn(),
   commonFetchModelPricing: vi.fn(),
   commonFetchAccountTokens: vi.fn(),
+  commonResolveApiTokenKey: vi.fn(),
   oneHubFetchModelPricing: vi.fn(),
   oneHubFetchAccountTokens: vi.fn(),
+  wongResolveApiTokenKey: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/common", () => ({
   fetchUserInfo: commonFetchUserInfo,
   fetchModelPricing: commonFetchModelPricing,
   fetchAccountTokens: commonFetchAccountTokens,
+  resolveApiTokenKey: commonResolveApiTokenKey,
 }))
 
 vi.mock("~/services/apiService/oneHub", () => ({
   fetchModelPricing: oneHubFetchModelPricing,
   fetchAccountTokens: oneHubFetchAccountTokens,
   // Intentionally omit fetchUserInfo so getApiFunc falls back to common
+}))
+
+vi.mock("~/services/apiService/wong", () => ({
+  resolveApiTokenKey: wongResolveApiTokenKey,
 }))
 
 describe("apiService index wrapper", () => {
@@ -113,5 +122,24 @@ describe("apiService index wrapper", () => {
 
     expect(commonFetchUserInfo).toHaveBeenCalledTimes(1)
     expect(commonFetchUserInfo).toHaveBeenCalledWith(request)
+  })
+
+  it("should route WONG token secret resolution through the site override", async () => {
+    wongResolveApiTokenKey.mockResolvedValue("sk-wong-secret")
+
+    const request = {
+      baseUrl: "https://wong.example.com",
+      auth: { authType: "token", userId: 1 },
+    }
+    const token = {
+      id: 7,
+      key: "sk-abcd************wxyz",
+    }
+
+    await (getApiService(WONG_GONGYI).resolveApiTokenKey as any)(request, token)
+
+    expect(wongResolveApiTokenKey).toHaveBeenCalledTimes(1)
+    expect(wongResolveApiTokenKey).toHaveBeenCalledWith(request, token)
+    expect(commonResolveApiTokenKey).not.toHaveBeenCalled()
   })
 })
