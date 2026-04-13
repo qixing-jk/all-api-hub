@@ -62,6 +62,7 @@ beforeEach(() => {
   handleRefreshMock.mockResolvedValue({
     success: 0,
     failed: 0,
+    latestSyncTime: 0,
     refreshedCount: 0,
   })
 })
