@@ -6,6 +6,13 @@ import BookmarkManagement from "~/entrypoints/options/pages/BookmarkManagement"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 const openAddAccountMock = vi.fn()
+const handleRefreshMock = vi.fn()
+
+vi.mock("react-hot-toast", () => ({
+  default: {
+    promise: (promise: Promise<unknown>) => promise,
+  },
+}))
 
 vi.mock("~/features/AccountManagement/hooks/AccountManagementProvider", () => ({
   AccountManagementProvider: ({ children }: { children: ReactNode }) => (
@@ -25,6 +32,8 @@ vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   ),
   useAccountDataContext: () => ({
     displayData: [],
+    isRefreshing: false,
+    handleRefresh: handleRefreshMock,
   }),
 }))
 
@@ -49,6 +58,12 @@ vi.mock("~/features/SiteBookmarks/components/BookmarkDialog", () => ({
 
 beforeEach(() => {
   openAddAccountMock.mockReset()
+  handleRefreshMock.mockReset()
+  handleRefreshMock.mockResolvedValue({
+    success: 0,
+    failed: 0,
+    refreshedCount: 0,
+  })
 })
 
 describe("options AccountManagement page", () => {
@@ -65,6 +80,17 @@ describe("options AccountManagement page", () => {
     expect(
       screen.queryByRole("button", { name: "bookmark:switch.bookmarks" }),
     ).not.toBeInTheDocument()
+  })
+
+  it("renders a refresh action and triggers a forced global refresh", async () => {
+    render(<AccountManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "common:actions.refresh" }),
+    )
+
+    expect(handleRefreshMock).toHaveBeenCalledTimes(1)
+    expect(handleRefreshMock).toHaveBeenCalledWith(true)
   })
 })
 

@@ -1,5 +1,7 @@
+import { ArrowPathIcon } from "@heroicons/react/24/outline"
 import { CalendarCheck2, Search, UserRound } from "lucide-react"
-import { useState, type MouseEvent } from "react"
+import { useCallback, useState, type MouseEvent } from "react"
+import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/components/PageHeader"
@@ -10,7 +12,10 @@ import { useAccountActionsContext } from "~/features/AccountManagement/hooks/Acc
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
+import { createLogger } from "~/utils/core/logger"
 import { getExternalCheckInOpenOptions } from "~/utils/core/shortcutKeys"
+
+const logger = createLogger("AccountManagementPage")
 
 /**
  * Renders the Account Management page body: header with CTA and account list.
@@ -18,7 +23,7 @@ import { getExternalCheckInOpenOptions } from "~/utils/core/shortcutKeys"
 function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
   const { t } = useTranslation(["account", "common"])
   const { openAddAccount } = useDialogStateContext()
-  const { displayData } = useAccountDataContext()
+  const { displayData, handleRefresh, isRefreshing } = useAccountDataContext()
   const { handleOpenExternalCheckIns } = useAccountActionsContext()
   const [isDedupeDialogOpen, setIsDedupeDialogOpen] = useState(false)
 
@@ -40,6 +45,40 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
     })
   }
 
+  const handleGlobalRefresh = useCallback(async () => {
+    try {
+      await toast.promise(handleRefresh(true), {
+        loading: t("account:refresh.refreshingAll"),
+        success: (result) => {
+          if (result.failed > 0) {
+            return t("account:refresh.refreshComplete", {
+              success: result.success,
+              failed: result.failed,
+            })
+          }
+
+          const sum = result.success + result.failed
+          if (sum === 0) {
+            return null
+          }
+
+          const { refreshedCount } = result
+          if (refreshedCount < sum) {
+            return t("account:refresh.refreshPartialSkipped", {
+              success: refreshedCount,
+              skipped: sum - refreshedCount,
+            })
+          }
+
+          return t("account:refresh.refreshSuccess")
+        },
+        error: t("account:refresh.refreshFailed"),
+      })
+    } catch (error) {
+      logger.error("Error during global refresh", error)
+    }
+  }, [handleRefresh, t])
+
   return (
     <div className="dark:bg-dark-bg-secondary flex flex-col bg-white p-6">
       <PageHeader
@@ -48,6 +87,15 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
         description={t("account:description")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
+            <Button
+              onClick={() => void handleGlobalRefresh()}
+              variant="secondary"
+              leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+              loading={isRefreshing}
+              disabled={isRefreshing}
+            >
+              {t("common:actions.refresh")}
+            </Button>
             {canOpenExternalCheckIns && (
               <Button
                 onClick={handleOpenExternalCheckInsClick}
