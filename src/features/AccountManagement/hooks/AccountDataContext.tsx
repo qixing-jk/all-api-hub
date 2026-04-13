@@ -93,7 +93,12 @@ interface AccountDataContextType {
   loadAccountData: () => Promise<void>
   handleRefresh: (
     force?: boolean,
-  ) => Promise<{ success: number; failed: number; latestSyncTime?: number }>
+  ) => Promise<{
+    success: number
+    failed: number
+    latestSyncTime?: number
+    refreshedCount: number
+  }>
   handleSort: (field: SortField) => void
   sortField: SortField
   sortOrder: SortOrder
