@@ -19,6 +19,7 @@ import {
   SelectValue,
 } from "~/components/ui"
 import { SUB2API } from "~/constants/siteType"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
 
 interface SiteInfoInputProps {
@@ -101,6 +102,7 @@ export default function SiteInfoInput({
             onChange={(e) => onUrlChange(e.target.value)}
             placeholder="https://example.com"
             disabled={isDetected}
+            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput}
             rightIcon={
               url &&
               !isDetected && (
@@ -132,6 +134,8 @@ export default function SiteInfoInput({
             <SelectTrigger
               id="auth-type"
               className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary w-full"
+              data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.authTypeTrigger}
+              data-auth-type={authType}
             >
               <SelectValue placeholder={t("siteInfo.authMethodPlaceholder")} />
             </SelectTrigger>

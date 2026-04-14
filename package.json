@@ -42,6 +42,7 @@
     "test:ci": "vitest --run --coverage",
     "e2e:install": "playwright install --with-deps chromium",
     "e2e": "playwright test",
+    "e2e:real-site": "playwright test e2e/realSite",
     "e2e:diagnostics": "node scripts/diagnostics/e2e-diagnostics.mjs",
     "e2e:ui": "playwright test --ui",
     "prepare": "husky"

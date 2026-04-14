@@ -9,6 +9,7 @@ import { useTranslation } from "react-i18next"
 import { Button } from "~/components/ui"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 
 interface ActionButtonsProps {
@@ -65,6 +66,7 @@ export default function ActionButtons({
           bleed
           className="flex-1"
           variant="default"
+          data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton}
           leftIcon={
             !isDetecting ? <SparklesIcon className="h-4 w-4" /> : undefined
           }
@@ -80,6 +82,7 @@ export default function ActionButtons({
           bleed
           className="flex-1"
           variant="outline"
+          data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.manualAddButton}
           leftIcon={<PencilIcon className="h-4 w-4" />}
         >
           {t("accountDialog:mode.manualAdd")}
@@ -146,6 +149,7 @@ export default function ActionButtons({
         bleed
         className="flex-1"
         variant={isAddMode ? "success" : "default"}
+        data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton}
         leftIcon={!isSaving ? <CheckIcon className="h-4 w-4" /> : undefined}
       >
         {isSaving

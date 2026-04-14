@@ -12,6 +12,7 @@ import { useAccountActionsContext } from "~/features/AccountManagement/hooks/Acc
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { createLogger } from "~/utils/core/logger"
 import { getExternalCheckInOpenOptions } from "~/utils/core/shortcutKeys"
 
@@ -113,7 +114,12 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
             >
               {t("account:actions.scanDuplicates")}
             </Button>
-            <Button onClick={openAddAccount}>{t("account:addAccount")}</Button>
+            <Button
+              onClick={openAddAccount}
+              data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton}
+            >
+              {t("account:addAccount")}
+            </Button>
           </div>
         }
       />

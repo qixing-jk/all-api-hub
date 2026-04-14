@@ -18,6 +18,7 @@ interface ModalProps {
   footer?: ReactNode
   floatingContent?: ReactNode
   panelClassName?: string
+  panelTestId?: string
   showCloseButton?: boolean
   closeOnEsc?: boolean
   closeOnBackdropClick?: boolean
@@ -41,6 +42,7 @@ export function Modal({
   footer,
   floatingContent,
   panelClassName,
+  panelTestId,
   showCloseButton = true,
   closeOnEsc = true,
   closeOnBackdropClick = true,
@@ -104,7 +106,7 @@ export function Modal({
             leaveFrom="opacity-100 scale-100 translate-y-0"
             leaveTo="opacity-0 scale-95 translate-y-4"
           >
-            <Dialog.Panel className={panelBaseClass}>
+            <Dialog.Panel className={panelBaseClass} data-testid={panelTestId}>
               <FloatingLayerProvider layer="modal-contained">
                 {/* close button */}
                 {showCloseButton && (

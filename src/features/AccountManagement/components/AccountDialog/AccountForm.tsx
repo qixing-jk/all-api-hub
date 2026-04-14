@@ -28,6 +28,7 @@ import {
 } from "~/components/ui"
 import { SITE_TITLE_RULES, SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { isValidExchangeRate } from "~/services/accounts/accountOperations"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
@@ -142,6 +143,7 @@ export default function AccountForm({
           onChange={(e) => onSiteNameChange(e.target.value)}
           placeholder="example.com"
           leftIcon={<GlobeAltIcon className="h-5 w-5" />}
+          data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteNameInput}
           required
         />
       </FormField>
@@ -156,6 +158,8 @@ export default function AccountForm({
             className="w-full"
             aria-label={t("form.siteType")}
             title={t("form.siteType")}
+            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteTypeTrigger}
+            data-site-type={siteType ?? UNKNOWN_SITE}
           >
             <div className="flex items-center gap-2">
               <GlobeAltIcon className="text-muted-foreground h-5 w-5" />
@@ -180,6 +184,7 @@ export default function AccountForm({
           onChange={(e) => onUsernameChange(e.target.value)}
           placeholder={t("form.username")}
           leftIcon={<UserIcon className="h-5 w-5" />}
+          data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.usernameInput}
           required
         />
       </FormField>
@@ -192,6 +197,7 @@ export default function AccountForm({
           onChange={(e) => onUserIdChange(e.target.value)}
           placeholder={t("form.userIdNumber")}
           leftIcon={<span className="font-mono text-sm">#</span>}
+          data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput}
           required
         />
       </FormField>
@@ -205,6 +211,7 @@ export default function AccountForm({
             onChange={(e) => onAccessTokenChange(e.target.value)}
             placeholder={t("form.accessToken")}
             leftIcon={<KeyIcon className="h-5 w-5" />}
+            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput}
             rightIcon={
               <IconButton
                 type="button"
@@ -243,6 +250,9 @@ export default function AccountForm({
               checked={sub2apiUseRefreshToken}
               onChange={onSub2apiUseRefreshTokenChange}
               id="sub2api-refresh-token-mode"
+              data-testid={
+                ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiRefreshTokenSwitch
+              }
               className={`${
                 sub2apiUseRefreshToken ? "bg-green-600" : "bg-gray-200"
               } focus:ring-green-500`}
@@ -267,6 +277,9 @@ export default function AccountForm({
                     disabled={isImportingSub2apiSession}
                     loading={isImportingSub2apiSession}
                     className="w-full"
+                    data-testid={
+                      ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiImportSessionButton
+                    }
                     leftIcon={<ArrowDownTrayIcon className="h-4 w-4" />}
                   >
                     {t("form.sub2apiImportRefreshToken")}
@@ -279,6 +292,9 @@ export default function AccountForm({
                     }
                     placeholder={t("form.sub2apiRefreshTokenPlaceholder")}
                     leftIcon={<KeyIcon className="h-5 w-5" />}
+                    data-testid={
+                      ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiRefreshTokenInput
+                    }
                     rightIcon={
                       <IconButton
                         type="button"

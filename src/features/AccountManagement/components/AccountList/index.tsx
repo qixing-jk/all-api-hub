@@ -54,6 +54,7 @@ import {
 } from "~/utils/core/formatters"
 import { formatMoneyFixed } from "~/utils/core/money"
 
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "../../testIds"
 import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"
 import { NewcomerSupportCard } from "../NewcomerSupportCard"
@@ -561,7 +562,10 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
 
   if (!hasAccounts) {
     return (
-      <div className="space-y-2" data-testid="account-list-view">
+      <div
+        className="space-y-2"
+        data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListView}
+      >
         <NewcomerSupportCard />
         <EmptyState
           icon={<InboxIcon className="h-12 w-12" />}
@@ -621,7 +625,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     <Card
       padding="none"
       className="flex flex-col overflow-hidden"
-      data-testid="account-list-view"
+      data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountListView}
     >
       <CardContent padding={"none"} spacing={"none"}>
         {/* Search + Filters */}

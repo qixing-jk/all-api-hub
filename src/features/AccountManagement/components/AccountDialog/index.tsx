@@ -3,6 +3,7 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import type { DisplaySiteData } from "~/types"
 
 import AccountForm from "./AccountForm"
@@ -83,6 +84,7 @@ export default function AccountDialog({
       <Modal
         isOpen={isOpen}
         onClose={handlers.handleClose}
+        panelTestId={ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog}
         floatingContent={
           <ThemeAwareToaster
             position="top-center"
@@ -113,6 +115,7 @@ export default function AccountDialog({
             id="account-form"
             onSubmit={handleSubmit}
             className="flex flex-col gap-2"
+            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accountForm}
           >
             {state.detectionError && (
               <AutoDetectErrorAlert
