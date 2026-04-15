@@ -375,7 +375,7 @@ export function TokenList(props: TokenListProps) {
     setCCSwitchContext(null)
   }
 
-  if (isLoading && (!isAllAccountsMode || tokens.length === 0)) {
+  if (isLoading && tokens.length === 0) {
     return <LoadingSkeleton />
   }
 

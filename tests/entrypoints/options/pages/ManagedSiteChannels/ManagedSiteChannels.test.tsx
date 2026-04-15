@@ -497,6 +497,55 @@ describe("ManagedSiteChannels", () => {
     expect(vi.mocked(sendRuntimeMessage)).toHaveBeenCalledTimes(2)
   })
 
+  it("keeps the current channel rows visible while a manual refresh is loading", async () => {
+    const user = userEvent.setup()
+    let resolveRefresh:
+      | ((value: { success: boolean; data: { items: any[] } }) => void)
+      | undefined
+
+    mockChannels([{ id: 1, name: "Alpha", base_url: "https://alpha.example" }])
+    vi.mocked(sendRuntimeMessage)
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          items: [{ id: 1, name: "Alpha", base_url: "https://alpha.example" }],
+        },
+      } as any)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveRefresh = resolve as typeof resolveRefresh
+          }) as any,
+      )
+
+    render(<ManagedSiteChannels />)
+
+    await waitForRowText("Alpha")
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.refresh",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(vi.mocked(sendRuntimeMessage)).toHaveBeenCalledTimes(2)
+    })
+
+    expect(screen.getByText("Alpha")).toBeInTheDocument()
+
+    resolveRefresh?.({
+      success: true,
+      data: {
+        items: [{ id: 2, name: "Beta", base_url: "https://beta.example" }],
+      },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText("Beta")).toBeInTheDocument()
+    })
+  })
+
   it("shows a config warning and skips the channel query when managed-site config is missing", async () => {
     const preferences = buildPreferences({ managedSiteType: NEW_API })
 

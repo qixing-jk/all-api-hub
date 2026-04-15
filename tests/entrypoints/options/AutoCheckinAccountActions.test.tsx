@@ -894,4 +894,80 @@ describe("AutoCheckin account actions", () => {
       ).toBeInTheDocument()
     })
   })
+
+  it("keeps existing results rendered while a manual refresh is loading", async () => {
+    const user = userEvent.setup()
+    const browserApi = await import("~/utils/browser/browserApi")
+
+    let statusCalls = 0
+    let resolveRefresh:
+      | ((value: { success: boolean; data: any }) => void)
+      | undefined
+
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+      async (message: any) => {
+        if (message.action !== RuntimeActionIds.AutoCheckinGetStatus) {
+          return { success: true }
+        }
+
+        statusCalls += 1
+
+        if (statusCalls === 1) {
+          return {
+            success: true,
+            data: {
+              perAccount: {
+                alpha: {
+                  accountId: "alpha",
+                  accountName: "Alpha",
+                  status: CHECKIN_RESULT_STATUS.SUCCESS,
+                  timestamp: 1700000000000,
+                  message: "ok",
+                },
+              },
+            },
+          }
+        }
+
+        return await new Promise<{ success: boolean; data: any }>((resolve) => {
+          resolveRefresh = resolve
+        })
+      },
+    )
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    expect(await screen.findByText("Alpha")).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "autoCheckin:execution.refresh",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(statusCalls).toBe(2)
+    })
+
+    expect(screen.getByText("Alpha")).toBeInTheDocument()
+
+    resolveRefresh?.({
+      success: true,
+      data: {
+        perAccount: {
+          alpha: {
+            accountId: "alpha",
+            accountName: "Alpha",
+            status: CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+            timestamp: 1700000000000,
+            message: "already checked",
+          },
+        },
+      },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText("Alpha")).toBeInTheDocument()
+    })
+  })
 })

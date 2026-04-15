@@ -158,6 +158,7 @@ export default function UsageHistorySyncSettingsSection({
               size="sm"
               onClick={() => void onRefreshStatus()}
               disabled={isLoading || isSyncingAll}
+              loading={isLoading}
             >
               {t("syncTab.actions.refreshStatus")}
             </Button>

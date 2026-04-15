@@ -897,9 +897,12 @@ export default function BalanceHistory() {
     totalTrendCoverageSummary.partialDays > 0 &&
     totalTrendCoverageSummary.totalAccounts > 1
 
+  const isInitialLoading =
+    isLoading && accounts.length === 0 && store === null && tagStore === null
+
   // When balance history capture is disabled and no snapshots exist yet,
   // show a clear CTA instead of rendering filters + an empty state.
-  const shouldShowEnableBalanceHistoryHint = !enabled && !isLoading
+  const shouldShowEnableBalanceHistoryHint = !enabled && !isInitialLoading
 
   return (
     <div className="space-y-6 p-6">
@@ -1106,7 +1109,7 @@ export default function BalanceHistory() {
             </div>
           </Card>
 
-          {isLoading ? (
+          {isInitialLoading ? (
             <div className="dark:text-dark-text-secondary text-sm text-gray-600">
               {t("messages.loading.loadingData")}
             </div>

@@ -739,7 +739,9 @@ export default function AutoCheckin(props: {
     return true
   })
 
-  if (isLoading) {
+  const isInitialLoading = isLoading && status === null
+
+  if (isInitialLoading) {
     return <LoadingSkeleton />
   }
 
@@ -764,6 +766,7 @@ export default function AutoCheckin(props: {
       <div className="mb-6">
         <ActionBar
           isRunning={isRunning}
+          isRefreshing={isLoading && status !== null}
           isDebugTriggering={isDebugTriggering}
           isOpeningFailedManualSignIns={isOpeningFailedManualSignIns}
           canOpenFailedManualSignIns={failedManualAccountIds.length > 0}

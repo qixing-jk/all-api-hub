@@ -11,6 +11,7 @@ import { Button } from "~/components/ui"
 
 interface ActionBarProps {
   isRunning: boolean
+  isRefreshing?: boolean
   isDebugTriggering?: boolean
   isOpeningFailedManualSignIns?: boolean
   canOpenFailedManualSignIns?: boolean
@@ -30,6 +31,7 @@ interface ActionBarProps {
  * Provides run-now and refresh buttons for the auto-checkin dashboard.
  * @param props Component props bundle.
  * @param props.isRunning Disables the run-now action while execution is in progress.
+ * @param props.isRefreshing Shows a loading state while the latest snapshot is being refreshed.
  * @param props.isDebugTriggering Disables actions while triggering debug alarm handlers.
  * @param props.isOpeningFailedManualSignIns Disables actions while bulk-opening failed manual sign-in pages.
  * @param props.canOpenFailedManualSignIns Whether the current status contains failed accounts that can be bulk-opened.
@@ -46,6 +48,7 @@ interface ActionBarProps {
  */
 export default function ActionBar({
   isRunning,
+  isRefreshing,
   isDebugTriggering,
   isOpeningFailedManualSignIns,
   canOpenFailedManualSignIns,
@@ -80,7 +83,8 @@ export default function ActionBar({
         <Button
           onClick={onRefresh}
           variant="secondary"
-          disabled={isBusy}
+          disabled={isBusy || isRefreshing === true}
+          loading={isRefreshing}
           leftIcon={<ArrowPathIcon className="h-4 w-4" />}
         >
           {t("execution.refresh")}

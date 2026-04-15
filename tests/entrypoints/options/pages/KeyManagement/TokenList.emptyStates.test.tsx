@@ -125,4 +125,53 @@ describe("TokenList empty states", () => {
       screen.queryByText("keyManagement:selectAccountToContinue"),
     ).toBeNull()
   })
+
+  it("keeps the current single-account token list visible while refreshing", async () => {
+    const account = createAccount({
+      id: "acc-1",
+      name: "Account 1",
+    })
+
+    render(
+      <TokenList
+        isLoading={true}
+        tokens={
+          [
+            {
+              id: 1,
+              name: "Existing Token",
+              key: "sk-existing",
+              accountId: account.id,
+              accountName: account.name,
+              status: 1,
+            },
+          ] as any
+        }
+        filteredTokens={
+          [
+            {
+              id: 1,
+              name: "Existing Token",
+              key: "sk-existing",
+              accountId: account.id,
+              accountName: account.name,
+              status: 1,
+            },
+          ] as any
+        }
+        visibleKeys={new Set()}
+        resolvingVisibleKeys={new Set()}
+        getVisibleTokenKey={vi.fn((token: { key: string }) => token.key)}
+        toggleKeyVisibility={vi.fn()}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        handleAddToken={vi.fn()}
+        selectedAccount={account.id}
+        displayData={[account]}
+      />,
+    )
+
+    expect(await screen.findByText("Existing Token")).toBeInTheDocument()
+  })
 })

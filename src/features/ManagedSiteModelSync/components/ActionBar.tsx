@@ -5,6 +5,7 @@ import { Button } from "~/components/ui"
 
 interface ActionBarProps {
   isRunning: boolean
+  isRefreshing?: boolean
   selectedCount: number
   failedCount: number
   onRunAll: () => void
@@ -17,6 +18,7 @@ interface ActionBarProps {
  * Action button cluster for New API Model Sync execution controls.
  * @param props Component props container with run/retry callbacks.
  * @param props.isRunning Disables buttons while sync is in progress.
+ * @param props.isRefreshing Shows refresh progress while the latest snapshot is being reloaded.
  * @param props.selectedCount Number of selected items for targeted runs.
  * @param props.failedCount Number of failed items eligible for retry.
  * @param props.onRunAll Handler to run all channels.
@@ -26,6 +28,7 @@ interface ActionBarProps {
  */
 export default function ActionBar({
   isRunning,
+  isRefreshing,
   selectedCount,
   failedCount,
   onRunAll,
@@ -62,7 +65,8 @@ export default function ActionBar({
       <Button
         onClick={onRefresh}
         variant="ghost"
-        disabled={isRunning}
+        disabled={isRunning || isRefreshing === true}
+        loading={isRefreshing}
         leftIcon={<ArrowPathIcon className="h-4 w-4" />}
       >
         {t("execution.actions.refresh")}

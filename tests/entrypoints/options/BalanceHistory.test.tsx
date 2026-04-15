@@ -139,6 +139,17 @@ describe("BalanceHistory options page", () => {
       loadPreferences: vi.fn(),
     }) as unknown as MockUserPreferencesContextValue
 
+  const createDeferred = <T,>() => {
+    let resolve!: (value: T | PromiseLike<T>) => void
+    let reject!: (reason?: unknown) => void
+    const promise = new Promise<T>((res, rej) => {
+      resolve = res
+      reject = rej
+    })
+
+    return { promise, resolve, reject }
+  }
+
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([] as any)
@@ -734,6 +745,90 @@ describe("BalanceHistory options page", () => {
         "balanceHistory:messages.success.refreshCompleted",
         { id: "toast-id" },
       )
+    } finally {
+      dateNowSpy.mockRestore()
+    }
+  })
+
+  it("keeps the current balance history content visible while a refresh reload is pending", async () => {
+    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
+    const fixedNowMs = FIXED_NOW.getTime()
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
+
+    try {
+      const todayKey = getDayKeyFromUnixSeconds(Math.floor(fixedNowMs / 1000))
+      const deferredStore = createDeferred<any>()
+
+      vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+        {
+          id: "a1",
+          site_name: "Site A",
+          site_url: "https://a.example.com",
+          site_type: ONE_API,
+          account_info: { username: "User A" },
+        },
+      ] as any)
+
+      vi.mocked(dailyBalanceHistoryStorage.getStore)
+        .mockResolvedValueOnce({
+          schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+          snapshotsByAccountId: {
+            a1: {
+              [todayKey]: {
+                quota: 10 * factor,
+                today_income: 2 * factor,
+                today_quota_consumption: 1 * factor,
+                capturedAt: 0,
+                source: "refresh",
+              },
+            },
+          },
+        } as any)
+        .mockReturnValueOnce(deferredStore.promise)
+
+      vi.mocked(sendRuntimeMessage).mockResolvedValue({ success: true } as any)
+
+      render(<BalanceHistory />)
+
+      expect((await screen.findAllByText("Site A")).length).toBeGreaterThan(0)
+
+      const user = userEvent.setup()
+      await user.click(
+        screen.getByRole("button", {
+          name: "balanceHistory:actions.refreshNow",
+        }),
+      )
+
+      await waitFor(() => {
+        expect(
+          vi.mocked(dailyBalanceHistoryStorage.getStore),
+        ).toHaveBeenCalledTimes(2)
+      })
+
+      expect(screen.getAllByText("Site A").length).toBeGreaterThan(0)
+      expect(
+        screen.queryByText("balanceHistory:messages.loading.loadingData"),
+      ).not.toBeInTheDocument()
+
+      deferredStore.resolve({
+        schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+        snapshotsByAccountId: {
+          a1: {
+            [todayKey]: {
+              quota: 12 * factor,
+              today_income: 3 * factor,
+              today_quota_consumption: 1 * factor,
+              capturedAt: 0,
+              source: "refresh",
+            },
+          },
+        },
+      })
+
+      await waitFor(() => {
+        expect(screen.getAllByText("Site A").length).toBeGreaterThan(0)
+      })
     } finally {
       dateNowSpy.mockRestore()
     }

@@ -229,6 +229,8 @@ export default function UsageHistorySyncStateTable({
       .map(([id]) => id)
   }, [rowSelection])
 
+  const isInitialLoading = isLoading && rows.length === 0
+
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center justify-between gap-2">
@@ -285,7 +287,7 @@ export default function UsageHistorySyncStateTable({
             ))}
           </TableHeader>
           <TableBody>
-            {isLoading ? (
+            {isInitialLoading ? (
               <TableRow>
                 <TableCell colSpan={columns.length} className="h-32">
                   <div className="text-muted-foreground text-sm">

@@ -149,6 +149,9 @@ export function ApiCredentialProfilesListView({
     selectedTagIds,
   ])
 
+  const isInitialLoading =
+    controller.isLoading && controller.profiles.length === 0
+
   return (
     <div className={cn("space-y-4", className)}>
       <ApiCredentialProfilesDialogs controller={controller} />
@@ -219,7 +222,16 @@ export function ApiCredentialProfilesListView({
         allCount={controller.profiles.length}
       />
 
-      {controller.isLoading ? (
+      {controller.isLoading && !isInitialLoading ? (
+        <div className="flex items-center gap-2 py-1">
+          <Spinner size="sm" />
+          <div className="dark:text-dark-text-secondary text-sm text-gray-600">
+            {t("common:status.refreshing")}
+          </div>
+        </div>
+      ) : null}
+
+      {isInitialLoading ? (
         <div className="flex items-center gap-2 py-6">
           <Spinner size="sm" />
           <div className="dark:text-dark-text-secondary text-sm text-gray-600">

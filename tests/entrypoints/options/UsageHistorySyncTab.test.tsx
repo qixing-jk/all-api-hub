@@ -362,6 +362,46 @@ describe("UsageHistorySyncTab", () => {
     expect(usageHistoryStorage.getStore).toHaveBeenCalledTimes(2)
   })
 
+  it("keeps the current status rows visible while refreshing the sync state", async () => {
+    const deferredStore = createDeferred<any>()
+
+    vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue(
+      createEnabledAccounts(),
+    )
+    vi.mocked(usageHistoryStorage.getStore)
+      .mockResolvedValueOnce(createStore())
+      .mockReturnValueOnce(deferredStore.promise)
+
+    renderSubject()
+
+    expect(await screen.findByText("Account 1")).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "usageAnalytics:syncTab.actions.refreshStatus",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(usageHistoryStorage.getStore).toHaveBeenCalledTimes(2)
+    })
+
+    expect(screen.getByText("Account 1")).toBeInTheDocument()
+
+    deferredStore.resolve(
+      createStore({
+        accounts: {
+          a1: { status: { state: "success", lastSyncAt: 1_700_000_000_000 } },
+          a2: { status: { state: "never" } },
+        },
+      }),
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText("Account 1")).toBeInTheDocument()
+    })
+  })
+
   it("uses a warning toast when manual sync finishes with skipped or unsupported accounts", async () => {
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
       success: true,

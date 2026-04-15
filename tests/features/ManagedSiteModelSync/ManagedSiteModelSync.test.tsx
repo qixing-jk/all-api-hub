@@ -212,6 +212,123 @@ describe("ManagedSiteModelSync page", () => {
     expect(toast.success).toHaveBeenCalled()
   })
 
+  it("keeps the current history snapshot rendered while a manual refresh is loading", async () => {
+    let lastExecutionCalls = 0
+    let resolveRefresh:
+      | ((value: { success: boolean; data: any }) => void)
+      | undefined
+
+    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
+      switch (message.action) {
+        case RuntimeActionIds.ModelSyncGetLastExecution:
+          lastExecutionCalls += 1
+
+          if (lastExecutionCalls === 1) {
+            return {
+              success: true,
+              data: {
+                items: [
+                  {
+                    channelId: 101,
+                    channelName: "Alpha",
+                    ok: false,
+                    message: "failed",
+                    attempts: 2,
+                    finishedAt: 1_700_000_000_000,
+                    httpStatus: 500,
+                  },
+                ],
+                statistics: {
+                  total: 1,
+                  successCount: 0,
+                  failureCount: 1,
+                  durationMs: 4000,
+                  startedAt: 1_700_000_000_000,
+                  endedAt: 1_700_000_004_000,
+                },
+              },
+            }
+          }
+
+          return await new Promise<{ success: boolean; data: any }>(
+            (resolve) => {
+              resolveRefresh = resolve
+            },
+          )
+        case RuntimeActionIds.ModelSyncGetProgress:
+          return {
+            success: true,
+            data: { isRunning: false, completed: 0, total: 0, failed: 0 },
+          }
+        case RuntimeActionIds.ModelSyncGetNextRun:
+          return {
+            success: true,
+            data: { nextScheduledAt: "2026-03-28T10:00:00.000Z" },
+          }
+        case RuntimeActionIds.ModelSyncGetPreferences:
+          return {
+            success: true,
+            data: { enableSync: true, intervalMs: 2 * 60 * 60 * 1000 },
+          }
+        case RuntimeActionIds.ModelSyncListChannels:
+          return {
+            success: true,
+            data: {
+              items: [
+                { id: 201, name: "Manual Alpha" },
+                { id: 202, name: "Manual Beta" },
+              ],
+            },
+          }
+        default:
+          return { success: true }
+      }
+    })
+
+    render(<ManagedSiteModelSync />)
+
+    expect(await screen.findByText("Alpha#101")).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.refresh",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(lastExecutionCalls).toBe(2)
+    })
+
+    expect(screen.getByText("Alpha#101")).toBeInTheDocument()
+
+    resolveRefresh?.({
+      success: true,
+      data: {
+        items: [
+          {
+            channelId: 101,
+            channelName: "Alpha",
+            ok: true,
+            attempts: 1,
+            finishedAt: 1_700_000_005_000,
+          },
+        ],
+        statistics: {
+          total: 1,
+          successCount: 1,
+          failureCount: 0,
+          durationMs: 1000,
+          startedAt: 1_700_000_004_000,
+          endedAt: 1_700_000_005_000,
+        },
+      },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText("Alpha#101")).toBeInTheDocument()
+    })
+  })
+
   it("uses a warning toast when run-all completes with failed channels still present", async () => {
     mockSendRuntimeMessage.mockImplementation(async (message: any) => {
       switch (message.action) {

@@ -529,7 +529,9 @@ export default function ManagedSiteModelSync({
     }))
   }, [channels, manualSearchKeyword])
 
-  if (isLoading) {
+  const isInitialLoading = isLoading && lastExecution === null
+
+  if (isInitialLoading) {
     return <LoadingSkeleton />
   }
 
@@ -588,6 +590,7 @@ export default function ManagedSiteModelSync({
           <div className="space-y-4">
             <ActionBar
               isRunning={progress?.isRunning ?? false}
+              isRefreshing={isLoading && lastExecution !== null}
               selectedCount={historySelectedIds.size}
               failedCount={lastExecution?.statistics.failureCount ?? 0}
               onRunAll={handleRunAll}
