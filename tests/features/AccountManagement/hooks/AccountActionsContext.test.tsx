@@ -420,6 +420,33 @@ describe("AccountActionsContext", () => {
     )
   })
 
+  it("bulk-re-enables only accounts that still need updates and reports the updated count", async () => {
+    const { getContext } = await renderContext()
+
+    mockSetAccountsDisabled.mockResolvedValueOnce({ updatedCount: 2 })
+
+    await act(async () => {
+      await getContext().handleSetAccountsDisabled(
+        [
+          createAccount({ id: "enable-a", disabled: true }),
+          createAccount({ id: "enable-b", disabled: false }),
+          createAccount({ id: "enable-c", disabled: true }),
+          createAccount({ id: "enable-a", disabled: true }),
+        ],
+        false,
+      )
+    })
+
+    expect(mockSetAccountsDisabled).toHaveBeenCalledWith(
+      ["enable-a", "enable-c"],
+      false,
+    )
+    expect(mockLoadAccountData).toHaveBeenCalledTimes(1)
+    expect(mockToast.success).toHaveBeenCalledWith(
+      "messages:toast.success.accountsEnabled",
+    )
+  })
+
   it("shows a generic failure toast when bulk disable returns no updates", async () => {
     const { getContext } = await renderContext()
 

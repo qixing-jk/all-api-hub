@@ -29,7 +29,19 @@ export const AUTO_CHECKIN_STATUS_STORAGE_LOCK =
   "all-api-hub:auto-checkin-status" as const
 
 /**
+ * Recalculate the aggregated auto check-in run summary from per-account results.
  *
+ * @param perAccount Record of account ids to their latest check-in result.
+ * @param previousSummary Optional previous summary used to preserve
+ * `totalEligible` when the caller already knows the original eligible count.
+ * @returns A normalized summary containing `totalEligible`, `executed`,
+ * `successCount`, `failedCount`, `skippedCount`, and `needsRetry`.
+ *
+ * `successCount` includes both `CHECKIN_RESULT_STATUS.SUCCESS` and
+ * `CHECKIN_RESULT_STATUS.ALREADY_CHECKED`. `executed` counts only successful and
+ * failed executions, while `totalEligible` falls back to `executed + skipped`
+ * when no prior eligible total is provided. `needsRetry` is true whenever
+ * `failedCount > 0`.
  */
 function recalculateSummaryFromResults(
   perAccount: Record<string, CheckinAccountResult>,

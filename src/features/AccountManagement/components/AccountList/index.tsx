@@ -686,6 +686,12 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
         },
       )
 
+      // `handleBulkDelete` intentionally calls `handleDeleteAccount(selectedAccounts[0]!)`
+      // only to reuse the existing `handleDeleteAccount` side-effect flow after the
+      // bulk delete completes. Passing the first item from `selectedAccounts` is
+      // deliberate here because this call is about refresh/revalidation coupling,
+      // not about representing every deleted account. Refactor if this dependency
+      // between `handleBulkDelete` and `handleDeleteAccount` should be removed.
       handleDeleteAccount(selectedAccounts[0]!)
       setSelectedAccountIds((previous) =>
         previous.filter((accountId) => !selectedIds.includes(accountId)),
