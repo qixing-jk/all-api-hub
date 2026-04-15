@@ -792,6 +792,26 @@ describe("BalanceHistory options page", () => {
       render(<BalanceHistory />)
 
       expect((await screen.findAllByText("Site A")).length).toBeGreaterThan(0)
+      const getLatestTrendNumericValues = () => {
+        const options = vi
+          .mocked(echarts.init)
+          .mock.results.map((result) => result.value)
+          .flatMap((instance: any) =>
+            instance.setOption.mock.calls.map((c: any) => c[0]),
+          )
+        const trendOption = options
+          .filter((option: any) =>
+            option?.series?.some?.((series: any) => series?.type === "line"),
+          )
+          .at(-1)
+        return trendOption?.series?.[0]?.data?.filter(
+          (value: unknown) => typeof value === "number",
+        )
+      }
+
+      await waitFor(() => {
+        expect(getLatestTrendNumericValues()).toEqual([10])
+      })
 
       const user = userEvent.setup()
       await user.click(
@@ -806,7 +826,7 @@ describe("BalanceHistory options page", () => {
         ).toHaveBeenCalledTimes(2)
       })
 
-      expect(screen.getAllByText("Site A").length).toBeGreaterThan(0)
+      expect(getLatestTrendNumericValues()).toEqual([10])
       expect(
         screen.queryByText("balanceHistory:messages.loading.loadingData"),
       ).not.toBeInTheDocument()
@@ -827,7 +847,7 @@ describe("BalanceHistory options page", () => {
       })
 
       await waitFor(() => {
-        expect(screen.getAllByText("Site A").length).toBeGreaterThan(0)
+        expect(getLatestTrendNumericValues()).toEqual([12])
       })
     } finally {
       dateNowSpy.mockRestore()

@@ -327,6 +327,7 @@ describe("ManagedSiteModelSync page", () => {
     await waitFor(() => {
       expect(screen.getByText("Alpha#101")).toBeInTheDocument()
     })
+    expect(screen.queryByText("failed")).not.toBeInTheDocument()
   })
 
   it("uses a warning toast when run-all completes with failed channels still present", async () => {
