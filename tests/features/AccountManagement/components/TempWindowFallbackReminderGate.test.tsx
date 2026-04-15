@@ -156,9 +156,11 @@ describe("TempWindowFallbackReminderGate", () => {
     expect(
       await screen.findByTestId("temp-window-fallback-reminder"),
     ).toHaveAttribute("data-settings-tab", "refresh")
-    expect(
-      await screen.findByTestId("temp-window-fallback-reminder"),
-    ).toHaveAttribute("data-open", "true")
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("temp-window-fallback-reminder"),
+      ).toHaveAttribute("data-open", "true")
+    })
 
     fireEvent.click(screen.getByRole("button", { name: "close reminder" }))
 
@@ -278,12 +280,14 @@ describe("TempWindowFallbackReminderGate", () => {
 
     const { rerender } = render(<TempWindowFallbackReminderGate />)
 
-    expect(
-      await screen.findByTestId("temp-window-fallback-reminder"),
-    ).toHaveAttribute("data-open", "false")
-    expect(
-      await screen.findByTestId("temp-window-fallback-reminder"),
-    ).toHaveAttribute("data-settings-tab", "permissions")
+    await waitFor(() => {
+      expect(
+        screen.getByTestId("temp-window-fallback-reminder"),
+      ).toHaveAttribute("data-open", "false")
+      expect(
+        screen.getByTestId("temp-window-fallback-reminder"),
+      ).toHaveAttribute("data-settings-tab", "permissions")
+    })
 
     reminderPreferenceState.dismissed = false
     rerender(<TempWindowFallbackReminderGate />)

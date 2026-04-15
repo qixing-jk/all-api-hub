@@ -186,7 +186,7 @@ const openRowActionsMenu = async (row: HTMLElement) => {
     try {
       await waitFor(
         () => {
-          expect(isMenuOpen()).toBe(true)
+          expect(hasRowActionContent()).toBe(true)
         },
         { timeout: 1000 },
       )
@@ -197,7 +197,7 @@ const openRowActionsMenu = async (row: HTMLElement) => {
   }
 
   await waitFor(() => {
-    expect(isMenuOpen()).toBe(true)
+    expect(hasRowActionContent()).toBe(true)
   })
 }
 
