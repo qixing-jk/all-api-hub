@@ -1378,7 +1378,7 @@ export const UserPreferencesProvider = ({
     })()
   }, [preferences])
 
-  if (isLoading || !preferences) {
+  if (!preferences) {
     return null
   }
 

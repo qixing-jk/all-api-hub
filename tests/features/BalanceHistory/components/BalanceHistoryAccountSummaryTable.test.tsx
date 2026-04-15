@@ -60,10 +60,10 @@ const getAccountOrder = () =>
   screen.getAllByTestId("account-link").map((element) => element.textContent)
 
 describe("BalanceHistoryAccountSummaryTable", () => {
-  it("shows the loading state instead of rendering rows or the empty state", () => {
+  it("shows the loading state when there are no rows yet", () => {
     render(
       <BalanceHistoryAccountSummaryTable
-        rows={[buildRow()]}
+        rows={[]}
         isLoading={true}
         currencySymbol="$"
       />,
@@ -72,6 +72,21 @@ describe("BalanceHistoryAccountSummaryTable", () => {
     expect(screen.getByText("balanceHistory:table.loading")).toBeInTheDocument()
     expect(screen.queryByText("balanceHistory:table.empty")).toBeNull()
     expect(screen.queryByTestId("account-link")).toBeNull()
+  })
+
+  it("keeps rendered rows visible while a refresh is in flight", () => {
+    render(
+      <BalanceHistoryAccountSummaryTable
+        rows={[buildRow({ label: "Primary Account" })]}
+        isLoading={true}
+        currencySymbol="$"
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Primary Account" }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("balanceHistory:table.loading")).toBeNull()
   })
 
   it("shows the empty state when loading has finished without any rows", () => {

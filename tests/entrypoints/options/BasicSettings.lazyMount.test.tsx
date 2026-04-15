@@ -193,4 +193,21 @@ describe("BasicSettings tab mounting", () => {
     ).toBeInTheDocument()
     expect(screen.queryByTestId("general-tab-content")).not.toBeInTheDocument()
   })
+
+  it("keeps the current page visible during subsequent preference reloads", async () => {
+    const { rerender } = render(<BasicSettings />)
+
+    expect(screen.getByTestId("page-header")).toBeInTheDocument()
+    expect(screen.getByTestId("general-tab-content")).toBeInTheDocument()
+
+    mockedUseUserPreferencesContext.mockReturnValue({
+      isLoading: true,
+    })
+
+    rerender(<BasicSettings />)
+
+    expect(screen.getByTestId("page-header")).toBeInTheDocument()
+    expect(screen.getByTestId("general-tab-content")).toBeInTheDocument()
+    expect(screen.queryByTestId("loading-skeleton")).not.toBeInTheDocument()
+  })
 })

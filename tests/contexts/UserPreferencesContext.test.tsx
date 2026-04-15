@@ -108,6 +108,17 @@ let latestContext: ReturnType<typeof useUserPreferencesContext> | null = null
 const clonePreferences = (): UserPreferences =>
   JSON.parse(JSON.stringify(DEFAULT_PREFERENCES)) as UserPreferences
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  let reject!: (reason?: unknown) => void
+  const promise = new Promise<T>((res, rej) => {
+    resolve = res
+    reject = rej
+  })
+
+  return { promise, resolve, reject }
+}
+
 const Probe = ({ children }: { children?: ReactNode }) => {
   const context = useUserPreferencesContext()
   latestContext = context
@@ -810,6 +821,48 @@ describe("UserPreferencesContext", () => {
       action: RuntimeActionIds.ModelSyncUpdateSettings,
       settings: DEFAULT_PREFERENCES.managedSiteModelSync,
     })
+  })
+
+  it("keeps existing consumers mounted while preferences reload in the background", async () => {
+    const initialPreferences = clonePreferences()
+    initialPreferences.activeTab = DATA_TYPE_BALANCE
+
+    const refreshedPreferences = clonePreferences()
+    refreshedPreferences.activeTab = DATA_TYPE_CASHFLOW
+
+    const deferredPreferences = createDeferred<UserPreferences>()
+
+    mockedUserPreferences.getPreferences
+      .mockResolvedValueOnce(initialPreferences)
+      .mockReturnValueOnce(deferredPreferences.promise)
+
+    const context = await renderProvider(initialPreferences)
+
+    expect(screen.getByTestId("active-tab")).toHaveTextContent(
+      DATA_TYPE_BALANCE,
+    )
+
+    await act(async () => {
+      void context.loadPreferences()
+    })
+
+    expect(screen.getByTestId("loading-state")).toHaveTextContent("true")
+    expect(screen.getByTestId("active-tab")).toHaveTextContent(
+      DATA_TYPE_BALANCE,
+    )
+
+    await act(async () => {
+      deferredPreferences.resolve(refreshedPreferences)
+      await deferredPreferences.promise
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId("loading-state")).toHaveTextContent("false")
+    })
+
+    expect(screen.getByTestId("active-tab")).toHaveTextContent(
+      DATA_TYPE_CASHFLOW,
+    )
   })
 
   it("keeps the current state when persistence helpers fail and skips runtime broadcasts", async () => {

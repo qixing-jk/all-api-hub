@@ -347,6 +347,13 @@ export default function BasicSettings() {
     useState(false)
   const [permissionsOnboardingReason, setPermissionsOnboardingReason] =
     useState<string | null>(null)
+  const [hasResolvedInitialLoad, setHasResolvedInitialLoad] = useState(false)
+
+  useEffect(() => {
+    if (!isLoading) {
+      setHasResolvedInitialLoad(true)
+    }
+  }, [isLoading])
 
   const applyUrlState = useCallback(() => {
     const searchParams = new URLSearchParams(window.location.search)
@@ -421,7 +428,7 @@ export default function BasicSettings() {
     updateUrlWithTab(tab.id, { hashPage: MENU_ITEM_IDS.BASIC })
   }, [])
 
-  if (isLoading) {
+  if (isLoading && !hasResolvedInitialLoad) {
     return <LoadingSkeleton />
   }
 

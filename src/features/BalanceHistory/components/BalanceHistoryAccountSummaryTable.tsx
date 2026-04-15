@@ -68,6 +68,7 @@ export default function BalanceHistoryAccountSummaryTable({
   currencySymbol,
 }: BalanceHistoryAccountSummaryTableProps) {
   const { t } = useTranslation("balanceHistory")
+  const isInitialLoading = isLoading && rows.length === 0
 
   const [sorting, setSorting] = useState<SortingState>([
     { id: "label", desc: false },
@@ -214,7 +215,7 @@ export default function BalanceHistoryAccountSummaryTable({
           ))}
         </TableHeader>
         <TableBody>
-          {isLoading ? (
+          {isInitialLoading ? (
             <TableRow>
               <TableCell colSpan={columns.length} className="h-32 text-center">
                 <div className="text-muted-foreground text-sm">

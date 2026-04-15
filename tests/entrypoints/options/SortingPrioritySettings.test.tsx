@@ -177,6 +177,27 @@ describe("SortingPrioritySettings", () => {
     expect(screen.queryByText("settings:sorting.title")).not.toBeInTheDocument()
   })
 
+  it("keeps rendered criteria visible during later preference reloads", async () => {
+    const { rerender } = render(<SortingPrioritySettings />)
+
+    expect(
+      await screen.findByTestId(`sorting-item-${SortingCriteriaType.PINNED}`),
+    ).toBeInTheDocument()
+
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createContextValue({
+        isLoading: true,
+      }),
+    )
+
+    rerender(<SortingPrioritySettings />)
+
+    expect(
+      screen.getByTestId(`sorting-item-${SortingCriteriaType.PINNED}`),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("common:status.loading")).toBeNull()
+  })
+
   it("sorts initial criteria by priority and falls back to unknown-rule copy", async () => {
     render(<SortingPrioritySettings />)
 

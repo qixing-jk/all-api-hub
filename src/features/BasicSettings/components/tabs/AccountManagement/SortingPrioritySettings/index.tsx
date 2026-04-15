@@ -128,7 +128,10 @@ export default function SortingPrioritySettings() {
     }
   }
 
-  if (isLoading) {
+  const isInitialLoading =
+    isLoading && items.length === 0 && !initialConfig?.criteria?.length
+
+  if (isInitialLoading) {
     return <div>{t("common:status.loading")}</div>
   }
 
