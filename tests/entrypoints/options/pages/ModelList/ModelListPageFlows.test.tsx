@@ -455,6 +455,28 @@ describe("ModelList page flows", () => {
     ).toBeInTheDocument()
   })
 
+  it("renders the page-level refresh action in the header and triggers reload", async () => {
+    const user = userEvent.setup()
+    const loadPricingData = vi.fn()
+
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        loadPricingData,
+      }),
+    )
+
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await user.click(
+      await screen.findByRole("button", { name: "modelList:refreshData" }),
+    )
+
+    expect(loadPricingData).toHaveBeenCalledTimes(1)
+  })
+
   it("routes account verification and model-key actions through the page dialogs", async () => {
     const user = userEvent.setup()
     mockUseModelListData.mockReturnValue(buildState())

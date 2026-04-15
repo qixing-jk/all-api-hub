@@ -58,8 +58,6 @@ describe("ControlPanel profile capabilities", () => {
         setSelectedGroups={vi.fn()}
         availableGroups={["default", "vip"]}
         pricingData={{ group_ratio: { default: 1, vip: 2 } }}
-        loadPricingData={vi.fn()}
-        isLoading={false}
         showRealPrice={false}
         setShowRealPrice={vi.fn()}
         showRatioColumn={false}
@@ -98,7 +96,6 @@ describe("ControlPanel profile capabilities", () => {
     const setShowRealPrice = vi.fn()
     const setShowRatioColumn = vi.fn()
     const setShowEndpointTypes = vi.fn()
-    const loadPricingData = vi.fn()
 
     render(
       <ControlPanel
@@ -119,8 +116,6 @@ describe("ControlPanel profile capabilities", () => {
         setSelectedGroups={setSelectedGroups}
         availableGroups={["vip", "default"]}
         pricingData={{ group_ratio: { vip: 2 } }}
-        loadPricingData={loadPricingData}
-        isLoading={false}
         showRealPrice={false}
         setShowRealPrice={setShowRealPrice}
         showRatioColumn={true}
@@ -165,11 +160,6 @@ describe("ControlPanel profile capabilities", () => {
     expect(
       await screen.findByText("modelList:groupSelectionHint"),
     ).toBeInTheDocument()
-
-    fireEvent.click(
-      screen.getByRole("button", { name: "modelList:refreshData" }),
-    )
-    expect(loadPricingData).toHaveBeenCalledTimes(1)
 
     fireEvent.click(
       screen.getByRole("switch", { name: "modelList:realAmount" }),
@@ -220,8 +210,6 @@ describe("ControlPanel profile capabilities", () => {
         setSelectedGroups={vi.fn()}
         availableGroups={[]}
         pricingData={null}
-        loadPricingData={vi.fn()}
-        isLoading={false}
         showRealPrice={false}
         setShowRealPrice={vi.fn()}
         showRatioColumn={false}

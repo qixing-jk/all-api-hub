@@ -1,6 +1,5 @@
 import {
   AdjustmentsHorizontalIcon,
-  ArrowPathIcon,
   ClipboardDocumentListIcon,
   CpuChipIcon,
   MagnifyingGlassIcon,
@@ -46,8 +45,6 @@ interface ControlPanelProps {
   setSelectedGroups: (groups: string[]) => void
   availableGroups: string[]
   pricingData: any
-  loadPricingData: () => void
-  isLoading: boolean
   showRealPrice: boolean
   setShowRealPrice: (show: boolean) => void
   showRatioColumn: boolean
@@ -59,7 +56,7 @@ interface ControlPanelProps {
 }
 
 /**
- * Top control strip for searching, filtering, and refreshing model pricing data.
+ * Top control strip for searching, filtering, and display options.
  * @param props Component props bundle.
  * @param props.selectedSource Active model-management source.
  * @param props.sourceCapabilities Capability flags for the active source.
@@ -71,8 +68,6 @@ interface ControlPanelProps {
  * @param props.setSelectedGroups Setter for candidate group filter set.
  * @param props.availableGroups Available group options.
  * @param props.pricingData Pricing data used to show ratios.
- * @param props.loadPricingData Callback to refetch pricing data.
- * @param props.isLoading Loading state flag for refresh.
  * @param props.showRealPrice Whether to display real price values.
  * @param props.setShowRealPrice Setter for real price toggle.
  * @param props.showRatioColumn Whether to show ratio column.
@@ -96,8 +91,6 @@ export function ControlPanel({
   setSelectedGroups,
   availableGroups,
   pricingData,
-  loadPricingData,
-  isLoading,
   showRealPrice,
   setShowRealPrice,
   showRatioColumn,
@@ -226,18 +219,6 @@ export function ControlPanel({
               </p>
             </FormField>
           )}
-
-          <div className="w-full lg:flex lg:w-auto lg:items-end">
-            <Button
-              onClick={loadPricingData}
-              disabled={isLoading}
-              loading={isLoading}
-              className="w-full lg:w-auto"
-              leftIcon={!isLoading && <ArrowPathIcon className="h-4 w-4" />}
-            >
-              {t("refreshData")}
-            </Button>
-          </div>
         </div>
 
         <div className="dark:border-dark-bg-tertiary flex flex-col gap-4 border-t border-gray-100 pt-4 lg:flex-row lg:items-center lg:justify-between">
