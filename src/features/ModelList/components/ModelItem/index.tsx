@@ -63,7 +63,6 @@ export default function ModelItem(props: ModelItemProps) {
     selectedGroups,
     onGroupClick,
     availableGroups = [],
-    isAllGroupsMode = false,
     showsOptimalGroup = false,
     source,
     displayCapabilities = source.capabilities,
@@ -113,9 +112,7 @@ export default function ModelItem(props: ModelItemProps) {
   const activeGroups =
     selectedGroups.length > 0 ? selectedGroups : availableGroups
   const isAvailableForUser = showGroupDetails
-    ? isAllGroupsMode
-      ? activeGroups.some((group) => model.enable_groups.includes(group))
-      : activeGroups.some((group) => model.enable_groups.includes(group))
+    ? activeGroups.some((group) => model.enable_groups.includes(group))
     : true
 
   const sourceBadge = sourceLabel ? (

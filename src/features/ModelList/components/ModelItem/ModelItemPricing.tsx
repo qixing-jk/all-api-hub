@@ -46,16 +46,15 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   const perCallPrice = calculatedPrice.perCallPrice
   const shouldShowPriceMeta =
     effectiveGroup && (showsOptimalGroup || isLowestPrice)
-  const priceMetaTitle =
-    shouldShowPriceMeta && effectiveGroup
-      ? isLowestPrice
-        ? t("optimalGroupLowestPriceWithinBillingMode", {
-            group: effectiveGroup,
-          })
-        : t("optimalGroupWithinSelectedGroups", {
-            group: effectiveGroup,
-          })
-      : undefined
+  const priceMetaTitle = shouldShowPriceMeta
+    ? isLowestPrice
+      ? t("optimalGroupLowestPriceWithinBillingMode", {
+          group: effectiveGroup,
+        })
+      : t("optimalGroupWithinSelectedGroups", {
+          group: effectiveGroup,
+        })
+    : undefined
   const priceMeta = shouldShowPriceMeta ? (
     <Badge
       variant={isLowestPrice ? "success" : "secondary"}

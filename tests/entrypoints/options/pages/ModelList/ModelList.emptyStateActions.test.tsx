@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelList from "~/entrypoints/options/pages/ModelList"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
+import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -123,6 +124,8 @@ function buildState(overrides: Record<string, unknown> = {}) {
     setSelectedBillingMode: vi.fn(),
     selectedGroups: [],
     setSelectedGroups: vi.fn(),
+    sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
+    setSortMode: vi.fn(),
     showRealPrice: false,
     setShowRealPrice: vi.fn(),
     showRatioColumn: false,

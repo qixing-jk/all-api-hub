@@ -212,7 +212,6 @@ export function ControlPanel({
                 displayMode="summary"
                 placeholder={t("allGroups")}
                 emptyMessage={t("allGroups")}
-                label={undefined}
               />
               <p className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">
                 {t("groupSelectionHint")}

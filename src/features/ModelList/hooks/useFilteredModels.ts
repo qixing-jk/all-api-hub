@@ -71,16 +71,12 @@ const BILLING_MODE_ORDER: Record<BillingMode, number> = {
   "per-call": 1,
 }
 
-/**
- *
- */
+/** Returns true when the value is a finite number. */
 function isFiniteNumber(value: number | null | undefined): value is number {
   return typeof value === "number" && Number.isFinite(value)
 }
 
-/**
- *
- */
+/** Resolves the exchange rate for account-backed prices. */
 function getSourceExchangeRate(item: CalculatedModelItem) {
   if (item.source.kind !== "account") {
     return 1
@@ -90,34 +86,23 @@ function getSourceExchangeRate(item: CalculatedModelItem) {
   return USD > 0 ? CNY / USD : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
 }
 
-/**
- *
- */
+/** Builds a normalized price key used for comparisons and sorting. */
 function getComparablePriceKey(
   item: Pick<CalculatedModelItem, "model" | "calculatedPrice" | "source">,
   showRealPrice: boolean,
 ): ComparablePriceKey {
   if (isTokenBillingType(item.model.quota_type)) {
+    const inputPrice = showRealPrice
+      ? item.calculatedPrice.inputCNY
+      : item.calculatedPrice.inputUSD
+    const outputPrice = showRealPrice
+      ? item.calculatedPrice.outputCNY
+      : item.calculatedPrice.outputUSD
+
     return {
       billingMode: "token-based",
-      primary: isFiniteNumber(
-        showRealPrice
-          ? item.calculatedPrice.inputCNY
-          : item.calculatedPrice.inputUSD,
-      )
-        ? showRealPrice
-          ? item.calculatedPrice.inputCNY
-          : item.calculatedPrice.inputUSD
-        : null,
-      secondary: isFiniteNumber(
-        showRealPrice
-          ? item.calculatedPrice.outputCNY
-          : item.calculatedPrice.outputUSD,
-      )
-        ? showRealPrice
-          ? item.calculatedPrice.outputCNY
-          : item.calculatedPrice.outputUSD
-        : null,
+      primary: isFiniteNumber(inputPrice) ? inputPrice : null,
+      secondary: isFiniteNumber(outputPrice) ? outputPrice : null,
     }
   }
 
@@ -150,9 +135,7 @@ function getComparablePriceKey(
   }
 }
 
-/**
- *
- */
+/** Orders nullable numbers with finite values before missing ones. */
 function compareNullableNumber(a: number | null, b: number | null) {
   const aValid = isFiniteNumber(a)
   const bValid = isFiniteNumber(b)
@@ -172,9 +155,7 @@ function compareNullableNumber(a: number | null, b: number | null) {
   return 0
 }
 
-/**
- *
- */
+/** Compares normalized price keys in the requested sort direction. */
 function comparePriceKeys(
   a: ComparablePriceKey,
   b: ComparablePriceKey,
@@ -193,9 +174,7 @@ function comparePriceKeys(
   return 0
 }
 
-/**
- *
- */
+/** Creates a stable identifier for a calculated model item. */
 function getModelItemKey(item: Pick<CalculatedModelItem, "model" | "source">) {
   const sourceId =
     item.source.kind === "account"
@@ -205,18 +184,14 @@ function getModelItemKey(item: Pick<CalculatedModelItem, "model" | "source">) {
   return `${item.source.kind}:${sourceId}:${item.model.model_name}`
 }
 
-/**
- *
- */
+/** Returns the source label used for deterministic sorting. */
 function getSourceSortLabel(item: CalculatedModelItem) {
   return item.source.kind === "account"
     ? item.source.account.name
     : item.source.profile.name
 }
 
-/**
- *
- */
+/** Adds non-empty model groups to the shared available-group set. */
 function addAvailableGroups(
   target: Set<string>,
   model: PricingResponse["data"][number],
@@ -228,9 +203,7 @@ function addAvailableGroups(
   })
 }
 
-/**
- *
- */
+/** Resolves which groups should be evaluated for a raw model item. */
 function resolveCandidateGroups(
   rawItem: RawModelItem,
   groupCandidates: string[],
@@ -245,18 +218,14 @@ function resolveCandidateGroups(
   )
 }
 
-/**
- *
- */
+/** Maps quota type values onto the model-list billing modes. */
 function getModelBillingMode(quotaType: number): BillingMode {
   return isTokenBillingType(quotaType)
     ? MODEL_LIST_BILLING_MODES.TOKEN_BASED
     : MODEL_LIST_BILLING_MODES.PER_CALL
 }
 
-/**
- *
- */
+/** Picks the best priced calculated item across candidate groups. */
 function resolveBestCalculatedItem(
   rawItem: RawModelItem,
   groupCandidates: string[],
