@@ -29,6 +29,7 @@
     "description": "当前模型目录通过账号密钥回退加载，仅支持模型发现与验证。点击刷新数据会重新尝试账号接口。",
     "title": "账号密钥回退目录"
   },
+  "groupSelectionHint": "留空表示所有分组；价格排序会在已选分组范围内自动取最优价",
   "input": "输入:",
   "input1MTokens": "输入(1M tokens)",
   "keyDialog": {
@@ -74,6 +75,7 @@
   "noMatchingModels": "没有找到匹配的模型",
   "noSourcesDescription": "请先添加站点账号或 API 凭据，然后查看模型列表。",
   "noSourcesTitle": "暂无可用数据源",
+  "optimalGroup": "最优组 {{group}}",
   "output": "输出:",
   "output1MTokens": "输出(1M tokens)",
   "perCall": "每次调用:",

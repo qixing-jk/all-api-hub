@@ -36,7 +36,7 @@ interface ModelDisplayProps {
   showRealPrice: boolean
   showRatioColumn: boolean
   showEndpointTypes: boolean
-  selectedGroup: string
+  selectedGroups: string[]
   handleGroupClick: (group: string) => void
   availableGroups: string[]
   displayCapabilities?: ModelManagementSourceCapabilities
@@ -58,7 +58,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
     showRealPrice,
     showRatioColumn,
     showEndpointTypes,
-    selectedGroup,
+    selectedGroups,
     handleGroupClick,
     availableGroups,
     displayCapabilities,
@@ -121,11 +121,13 @@ export function ModelDisplay(props: ModelDisplayProps) {
               showRealPrice={showRealPrice}
               showRatioColumn={showRatioColumn}
               showEndpointTypes={showEndpointTypes}
-              userGroup={selectedGroup === "all" ? "default" : selectedGroup}
+              effectiveGroup={item.effectiveGroup}
+              selectedGroups={selectedGroups}
               onGroupClick={handleGroupClick}
               availableGroups={availableGroups}
-              isAllGroupsMode={selectedGroup === "all"}
+              isAllGroupsMode={selectedGroups.length === 0}
               isLowestPrice={item.isLowestPrice}
+              showsOptimalGroup={item.hasAutoSelectedGroup}
               source={sourceForModel}
               displayCapabilities={displayCapabilities}
               verificationSummary={verificationSummary}

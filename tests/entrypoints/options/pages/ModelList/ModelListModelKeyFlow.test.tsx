@@ -97,8 +97,8 @@ vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
     setSearchTerm: vi.fn(),
     selectedProvider: "all",
     setSelectedProvider: vi.fn(),
-    selectedGroup: "default",
-    setSelectedGroup: vi.fn(),
+    selectedGroups: [],
+    setSelectedGroups: vi.fn(),
 
     // Display options
     showRealPrice: false,

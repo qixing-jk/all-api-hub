@@ -19,6 +19,8 @@ interface ModelItemHeaderProps {
   isAvailableForUser: boolean
   handleCopyModelName: () => void
   isLowestPrice?: boolean
+  effectiveGroup?: string
+  showsOptimalGroup?: boolean
   showPricingMetadata: boolean
   showAvailabilityBadge: boolean
   verificationSummary?: ApiVerificationHistorySummary | null
@@ -32,6 +34,8 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   isAvailableForUser,
   handleCopyModelName,
   isLowestPrice = false,
+  effectiveGroup,
+  showsOptimalGroup = false,
   showPricingMetadata,
   showAvailabilityBadge,
   verificationSummary,
@@ -43,23 +47,20 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   const providerConfig = getProviderConfig(model.model_name)
   const IconComponent = providerConfig.icon
 
-  // 根据计费类型确定 Badge 变体
   const getBillingVariant = (quotaType: number) => {
-    if (quotaType === 2) return "default" // 按次计费
-    return "secondary" // 按量计费
+    if (quotaType === 2) return "default"
+    return "secondary"
   }
 
   return (
     <div className="min-w-0 flex-1 space-y-1.5">
       <div className="flex items-center gap-2 sm:gap-3">
-        {/* 厂商图标 */}
         <div className={`shrink-0 rounded-lg p-1.5 ${providerConfig.bgColor}`}>
           <IconComponent
             className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${providerConfig.color}`}
           />
         </div>
 
-        {/* 模型名称 */}
         <h3
           className={`truncate text-sm font-semibold sm:text-base md:text-lg ${
             isAvailableForUser
@@ -71,7 +72,6 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
         </h3>
 
         <div className="flex items-center gap-1">
-          {/* 复制按钮 */}
           <IconButton
             variant="ghost"
             size="sm"
@@ -123,9 +123,7 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
           )}
         </div>
 
-        {/* 标签 */}
         <div className="flex shrink-0 flex-wrap items-center gap-1.5 sm:gap-2">
-          {/* 计费模式标签 */}
           {showPricingMetadata && (
             <Badge
               variant={getBillingVariant(model.quota_type)}
@@ -136,7 +134,6 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
             </Badge>
           )}
 
-          {/* 可用状态标签 */}
           {showAvailabilityBadge && (
             <Badge
               variant={isAvailableForUser ? "success" : "secondary"}
@@ -157,6 +154,16 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
               title={t("modelList:lowestPriceWithinBillingMode")}
             >
               {t("modelList:lowestPrice")}
+            </Badge>
+          )}
+
+          {showsOptimalGroup && effectiveGroup && (
+            <Badge
+              variant="secondary"
+              size="sm"
+              className="text-[10px] sm:text-xs"
+            >
+              {t("modelList:optimalGroup", { group: effectiveGroup })}
             </Badge>
           )}
         </div>

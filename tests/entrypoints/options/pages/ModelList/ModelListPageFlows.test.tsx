@@ -253,8 +253,8 @@ function buildState(overrides: Record<string, any> = {}) {
     setSelectedProvider: vi.fn(),
     sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
     setSortMode: vi.fn(),
-    selectedGroup: "default",
-    setSelectedGroup: vi.fn(),
+    selectedGroups: [],
+    setSelectedGroups: vi.fn(),
 
     showRealPrice: false,
     setShowRealPrice: vi.fn(),

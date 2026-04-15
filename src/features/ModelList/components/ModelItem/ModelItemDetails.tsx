@@ -19,7 +19,7 @@ interface ModelItemDetailsProps {
   model: ModelPricing
   calculatedPrice: CalculatedPrice
   showEndpointTypes: boolean
-  userGroup: string
+  effectiveGroup?: string
   showGroupDetails: boolean
   showPricingDetails: boolean
   onGroupClick?: (group: string) => void
@@ -29,7 +29,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
   model,
   calculatedPrice,
   showEndpointTypes,
-  userGroup,
+  effectiveGroup,
   showGroupDetails,
   showPricingDetails,
   onGroupClick,
@@ -54,7 +54,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
             </div>
             <div className="flex flex-wrap gap-1.5">
               {model.enable_groups.map((group, index) => {
-                const isCurrentGroup = group === userGroup
+                const isCurrentGroup = group === effectiveGroup
                 const isClickable = onGroupClick && !isCurrentGroup
 
                 return (

@@ -63,8 +63,8 @@ export default function ModelList(props: {
     setSelectedProvider,
     sortMode,
     setSortMode,
-    selectedGroup,
-    setSelectedGroup,
+    selectedGroups,
+    setSelectedGroups,
 
     // Display options
     showRealPrice,
@@ -108,7 +108,7 @@ export default function ModelList(props: {
   )
 
   const handleGroupClick = (group: string) => {
-    setSelectedGroup(group)
+    setSelectedGroups([group])
   }
 
   const handleAccountSummaryClick = (accountId: string) => {
@@ -392,8 +392,8 @@ export default function ModelList(props: {
             setSearchTerm={setSearchTerm}
             sortMode={sortMode}
             setSortMode={setSortMode}
-            selectedGroup={selectedGroup}
-            setSelectedGroup={setSelectedGroup}
+            selectedGroups={selectedGroups}
+            setSelectedGroups={setSelectedGroups}
             availableGroups={availableGroups}
             pricingData={pricingData}
             loadPricingData={loadPricingData}
@@ -431,7 +431,7 @@ export default function ModelList(props: {
                   showRealPrice={showRealPrice}
                   showRatioColumn={showRatioColumn}
                   showEndpointTypes={showEndpointTypes}
-                  selectedGroup={selectedGroup}
+                  selectedGroups={selectedGroups}
                   handleGroupClick={handleGroupClick}
                   availableGroups={availableGroups}
                   displayCapabilities={sourceCapabilities}
@@ -453,7 +453,7 @@ export default function ModelList(props: {
                     showRealPrice={showRealPrice}
                     showRatioColumn={showRatioColumn}
                     showEndpointTypes={showEndpointTypes}
-                    selectedGroup={selectedGroup}
+                    selectedGroups={selectedGroups}
                     handleGroupClick={handleGroupClick}
                     availableGroups={availableGroups}
                     displayCapabilities={sourceCapabilities}

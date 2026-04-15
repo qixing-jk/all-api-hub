@@ -101,7 +101,7 @@ describe("ModelItemDetails", () => {
           } as any
         }
         showEndpointTypes={false}
-        userGroup="default"
+        effectiveGroup="default"
         showGroupDetails={false}
         showPricingDetails={false}
       />,
@@ -132,7 +132,7 @@ describe("ModelItemDetails", () => {
           } as any
         }
         showEndpointTypes={true}
-        userGroup="default"
+        effectiveGroup="default"
         showGroupDetails={true}
         showPricingDetails={false}
         onGroupClick={onGroupClick}
@@ -175,7 +175,7 @@ describe("ModelItemDetails", () => {
           } as any
         }
         showEndpointTypes={true}
-        userGroup="default"
+        effectiveGroup="default"
         showGroupDetails={false}
         showPricingDetails={true}
       />,
@@ -205,7 +205,7 @@ describe("ModelItemDetails", () => {
           } as any
         }
         showEndpointTypes={false}
-        userGroup="default"
+        effectiveGroup="default"
         showGroupDetails={false}
         showPricingDetails={true}
       />,

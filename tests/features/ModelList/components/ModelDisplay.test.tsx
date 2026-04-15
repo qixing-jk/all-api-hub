@@ -69,7 +69,8 @@ vi.mock("~/features/ModelList/components/ModelItem", () => ({
         data-testid="model-item"
         data-model-id={props.model.model_name}
         data-exchange-rate={String(props.exchangeRate)}
-        data-user-group={props.userGroup}
+        data-effective-group={props.effectiveGroup ?? ""}
+        data-selected-groups={props.selectedGroups.join(",")}
         data-all-groups={String(props.isAllGroupsMode)}
         data-summary-status={props.verificationSummary?.status ?? "none"}
         data-source-kind={props.source.kind}
@@ -133,6 +134,7 @@ type CalculatedModelOverrides = {
   model?: Partial<ModelPricing>
   calculatedPrice?: Partial<CalculatedPrice>
   source?: CalculatedModelItem["source"]
+  effectiveGroup?: string
 }
 
 function requireHistoryTarget(
@@ -173,6 +175,7 @@ const createCalculatedModel = (
     model,
     calculatedPrice,
     source: overrides.source ?? ACCOUNT_SOURCE,
+    effectiveGroup: overrides.effectiveGroup,
   }
 }
 
@@ -189,7 +192,7 @@ describe("ModelDisplay", () => {
         showRealPrice={true}
         showRatioColumn={true}
         showEndpointTypes={true}
-        selectedGroup="all"
+        selectedGroups={[]}
         handleGroupClick={vi.fn()}
         availableGroups={["default"]}
       />,
@@ -216,12 +219,15 @@ describe("ModelDisplay", () => {
     render(
       <ModelDisplay
         models={[
-          createCalculatedModel({}),
+          createCalculatedModel({
+            effectiveGroup: "vip",
+          }),
           createCalculatedModel({
             model: {
               model_name: "gemini-1.5-pro",
               enable_groups: ["default"],
             },
+            effectiveGroup: "default",
             source: {
               ...ACCOUNT_SOURCE,
               account: {
@@ -241,7 +247,7 @@ describe("ModelDisplay", () => {
         showRealPrice={true}
         showRatioColumn={true}
         showEndpointTypes={true}
-        selectedGroup="all"
+        selectedGroups={[]}
         handleGroupClick={handleGroupClick}
         availableGroups={["default", "vip"]}
         displayCapabilities={{ canVerify: true } as any}
@@ -252,7 +258,8 @@ describe("ModelDisplay", () => {
 
     expect(accountItem).toHaveAttribute("data-source-kind", "account")
     expect(accountItem).toHaveAttribute("data-exchange-rate", "8")
-    expect(accountItem).toHaveAttribute("data-user-group", "default")
+    expect(accountItem).toHaveAttribute("data-effective-group", "vip")
+    expect(accountItem).toHaveAttribute("data-selected-groups", "")
     expect(accountItem).toHaveAttribute("data-all-groups", "true")
     expect(accountItem).toHaveAttribute("data-summary-status", "success")
 
@@ -299,6 +306,7 @@ describe("ModelDisplay", () => {
               model_name: "claude-3-5-sonnet",
               enable_groups: ["vip"],
             },
+            effectiveGroup: "vip",
             source: PROFILE_SOURCE,
           }),
         ]}
@@ -308,7 +316,7 @@ describe("ModelDisplay", () => {
         showRealPrice={false}
         showRatioColumn={false}
         showEndpointTypes={false}
-        selectedGroup="vip"
+        selectedGroups={["vip"]}
         handleGroupClick={vi.fn()}
         availableGroups={["vip"]}
       />,
@@ -319,7 +327,7 @@ describe("ModelDisplay", () => {
       "profile",
     )
     expect(screen.getByTestId("model-item")).toHaveAttribute(
-      "data-user-group",
+      "data-effective-group",
       "vip",
     )
     expect(screen.getByTestId("model-item")).toHaveAttribute(

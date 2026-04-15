@@ -30,6 +30,7 @@
     "description": "This catalog is currently loaded through an account-key fallback, so it only supports model discovery and verification. Refresh Data will retry the direct account route.",
     "title": "Account-key fallback catalog"
   },
+  "groupSelectionHint": "Leave this empty to compare across all groups; price sorting uses the best price within the selected group set",
   "input": "Input:",
   "input1MTokens": "Input (1M tokens)",
   "keyDialog": {
@@ -75,6 +76,7 @@
   "noMatchingModels": "No matching models found",
   "noSourcesDescription": "Add a site account or API credential profile before viewing the model list.",
   "noSourcesTitle": "No model sources yet",
+  "optimalGroup": "Best Group {{group}}",
   "output": "Output:",
   "output1MTokens": "Output (1M tokens)",
   "perCall": "Per call:",

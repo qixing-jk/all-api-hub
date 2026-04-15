@@ -25,7 +25,7 @@ interface UseFilteredModelsProps {
   pricingData: PricingResponse | null
   pricingContexts: AccountPricingContext[]
   selectedSource: ModelManagementSource | null
-  selectedGroup: string
+  selectedGroups: string[]
   searchTerm: string
   selectedProvider: ProviderType | "all"
   sortMode: ModelListSortMode
@@ -41,12 +41,23 @@ interface ComparablePriceKey {
   secondary: number | null
 }
 
+interface RawModelItem {
+  model: PricingResponse["data"][number]
+  source:
+    | ReturnType<typeof createAccountSource>
+    | Extract<NonNullable<ModelManagementSource>, { kind: "profile" }>
+  groupRatios: Record<string, number>
+  exchangeRate: number
+}
+
 export type CalculatedModelItem = {
   model: PricingResponse["data"][number]
   calculatedPrice: ReturnType<typeof calculateModelPrice>
   source:
     | ReturnType<typeof createAccountSource>
     | Extract<NonNullable<ModelManagementSource>, { kind: "profile" }>
+  effectiveGroup?: string
+  hasAutoSelectedGroup?: boolean
   isLowestPrice?: boolean
 }
 
@@ -78,7 +89,7 @@ function getSourceExchangeRate(item: CalculatedModelItem) {
  *
  */
 function getComparablePriceKey(
-  item: CalculatedModelItem,
+  item: Pick<CalculatedModelItem, "model" | "calculatedPrice" | "source">,
   showRealPrice: boolean,
 ): ComparablePriceKey {
   if (isTokenBillingType(item.model.quota_type)) {
@@ -180,7 +191,7 @@ function comparePriceKeys(
 /**
  *
  */
-function getModelItemKey(item: CalculatedModelItem) {
+function getModelItemKey(item: Pick<CalculatedModelItem, "model" | "source">) {
   const sourceId =
     item.source.kind === "account"
       ? item.source.account.id
@@ -199,13 +210,109 @@ function getSourceSortLabel(item: CalculatedModelItem) {
 }
 
 /**
+ *
+ */
+function addAvailableGroups(
+  target: Set<string>,
+  model: PricingResponse["data"][number],
+) {
+  model.enable_groups.forEach((group) => {
+    if (group) {
+      target.add(group)
+    }
+  })
+}
+
+/**
+ *
+ */
+function resolveCandidateGroups(
+  rawItem: RawModelItem,
+  groupCandidates: string[],
+  supportsGroupFiltering: boolean,
+) {
+  if (!supportsGroupFiltering) {
+    return ["default"]
+  }
+
+  return rawItem.model.enable_groups.filter((group) =>
+    groupCandidates.includes(group),
+  )
+}
+
+/**
+ *
+ */
+function resolveBestCalculatedItem(
+  rawItem: RawModelItem,
+  groupCandidates: string[],
+  supportsGroupFiltering: boolean,
+  showRealPrice: boolean,
+): CalculatedModelItem | null {
+  const candidateGroups = resolveCandidateGroups(
+    rawItem,
+    groupCandidates,
+    supportsGroupFiltering,
+  )
+
+  if (supportsGroupFiltering && candidateGroups.length === 0) {
+    return null
+  }
+
+  const groupsToEvaluate =
+    candidateGroups.length > 0 ? candidateGroups : ["default"]
+
+  let bestResult: CalculatedModelItem | null = null
+  let bestKey: ComparablePriceKey | null = null
+
+  groupsToEvaluate.forEach((group) => {
+    const calculatedPrice = calculateModelPrice(
+      rawItem.model,
+      rawItem.groupRatios,
+      rawItem.exchangeRate,
+      group,
+    )
+    const candidateItem: CalculatedModelItem = {
+      model: rawItem.model,
+      calculatedPrice,
+      source: rawItem.source,
+      effectiveGroup: supportsGroupFiltering ? group : undefined,
+      hasAutoSelectedGroup: groupsToEvaluate.length > 1,
+    }
+    const candidateKey = getComparablePriceKey(candidateItem, showRealPrice)
+
+    if (!bestResult || !bestKey) {
+      bestResult = candidateItem
+      bestKey = candidateKey
+      return
+    }
+
+    if (comparePriceKeys(candidateKey, bestKey, 1) < 0) {
+      bestResult = candidateItem
+      bestKey = candidateKey
+      return
+    }
+
+    if (
+      comparePriceKeys(candidateKey, bestKey, 1) === 0 &&
+      group.localeCompare(bestResult.effectiveGroup ?? "") < 0
+    ) {
+      bestResult = candidateItem
+      bestKey = candidateKey
+    }
+  })
+
+  return bestResult
+}
+
+/**
  * Derives filtered model list with pricing and helper metadata for UI controls.
  * Applies group, search, provider, and account filters on priced models.
  * @param params Hook input parameters.
  * @param params.pricingData Pricing response for a single account.
  * @param params.pricingContexts Pricing data across multiple accounts.
  * @param params.selectedSource Currently selected model-management source.
- * @param params.selectedGroup User group to filter models by.
+ * @param params.selectedGroups Candidate user groups used for filtering/comparison.
  * @param params.searchTerm Search keyword for model name/description.
  * @param params.selectedProvider Provider filter value or "all".
  * @param params.accountFilterAccountId Optional account id filter in all-accounts mode.
@@ -216,19 +323,15 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     pricingData,
     pricingContexts,
     selectedSource,
-    selectedGroup,
+    selectedGroups,
     searchTerm,
     selectedProvider,
     sortMode,
     showRealPrice,
     accountFilterAccountId,
   } = params
-  const modelGroup = useMemo(
-    () => (selectedGroup === "all" ? "default" : selectedGroup),
-    [selectedGroup],
-  )
 
-  const modelsWithPricing = useMemo<CalculatedModelItem[]>(() => {
+  const rawModelItems = useMemo<RawModelItem[]>(() => {
     if (pricingContexts && pricingContexts.length > 0) {
       return pricingContexts.flatMap(({ account, pricing }) => {
         if (!pricing || !Array.isArray(pricing.data)) {
@@ -240,20 +343,12 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
             ? account.balance.CNY / account.balance.USD
             : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
 
-        return pricing.data.map((model) => {
-          const calculatedPrice = calculateModelPrice(
-            model,
-            pricing.group_ratio || {},
-            exchangeRate,
-            modelGroup,
-          )
-
-          return {
-            model,
-            calculatedPrice,
-            source: createAccountSource(account),
-          }
-        })
+        return pricing.data.map((model) => ({
+          model,
+          source: createAccountSource(account),
+          groupRatios: pricing.group_ratio || {},
+          exchangeRate,
+        }))
       })
     }
 
@@ -264,8 +359,9 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     if (selectedSource.kind === "profile") {
       return pricingData.data.map((model) => ({
         model,
-        calculatedPrice: calculateModelPrice(model, {}, 1, modelGroup),
         source: selectedSource,
+        groupRatios: {},
+        exchangeRate: 1,
       }))
     }
 
@@ -273,60 +369,61 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       return []
     }
 
-    return pricingData.data.map((model) => {
-      const exchangeRate =
-        selectedSource.account.balance?.USD > 0
-          ? selectedSource.account.balance.CNY /
-            selectedSource.account.balance.USD
-          : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+    const exchangeRate =
+      selectedSource.account.balance?.USD > 0
+        ? selectedSource.account.balance.CNY /
+          selectedSource.account.balance.USD
+        : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
 
-      const calculatedPrice = calculateModelPrice(
-        model,
-        pricingData.group_ratio || {},
-        exchangeRate,
-        modelGroup,
-      )
+    return pricingData.data.map((model) => ({
+      model,
+      source: selectedSource,
+      groupRatios: pricingData.group_ratio || {},
+      exchangeRate,
+    }))
+  }, [pricingContexts, pricingData, selectedSource])
 
-      return {
-        model,
-        calculatedPrice,
-        source: selectedSource,
-      }
-    })
-  }, [modelGroup, pricingContexts, pricingData, selectedSource])
-
-  const baseFilteredModels = useMemo(() => {
-    let filtered = modelsWithPricing
-
-    const supportsGroupFiltering =
-      selectedSource?.capabilities.supportsGroupFiltering ?? false
-
-    if (supportsGroupFiltering && selectedGroup !== "all") {
-      const groupSet = new Set<string>()
-
-      if (pricingContexts && pricingContexts.length > 0) {
-        pricingContexts.forEach((context) => {
-          const ratio = context.pricing.group_ratio || {}
-          Object.keys(ratio).forEach((key) => {
-            if (key) {
-              groupSet.add(key)
-            }
-          })
-        })
-      } else if (pricingData?.group_ratio) {
-        Object.keys(pricingData.group_ratio).forEach((key) => {
-          if (key) {
-            groupSet.add(key)
-          }
-        })
-      }
-
-      if (groupSet.has(selectedGroup)) {
-        filtered = filtered.filter((item) =>
-          item.model.enable_groups.includes(selectedGroup),
-        )
-      }
+  const availableGroups = useMemo(() => {
+    if (!selectedSource?.capabilities.supportsGroupFiltering) {
+      return []
     }
+
+    const groupSet = new Set<string>()
+
+    rawModelItems.forEach((item) => {
+      Object.keys(item.groupRatios).forEach((key) => {
+        if (key) {
+          groupSet.add(key)
+        }
+      })
+      addAvailableGroups(groupSet, item.model)
+    })
+
+    return Array.from(groupSet)
+  }, [rawModelItems, selectedSource?.capabilities.supportsGroupFiltering])
+
+  const effectiveGroupCandidates = useMemo(() => {
+    if (!selectedSource?.capabilities.supportsGroupFiltering) {
+      return ["default"]
+    }
+
+    const uniqueSelectedGroups = Array.from(
+      new Set(selectedGroups.filter(Boolean)),
+    )
+
+    if (uniqueSelectedGroups.length > 0) {
+      return uniqueSelectedGroups
+    }
+
+    return availableGroups.length > 0 ? availableGroups : ["default"]
+  }, [
+    availableGroups,
+    selectedGroups,
+    selectedSource?.capabilities.supportsGroupFiltering,
+  ])
+
+  const baseFilteredRawModels = useMemo(() => {
+    let filtered = rawModelItems
 
     if (searchTerm) {
       const searchLower = searchTerm.toLowerCase()
@@ -337,33 +434,67 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
           false,
       )
     }
-    return filtered
-  }, [
-    modelsWithPricing,
-    selectedSource?.capabilities.supportsGroupFiltering,
-    selectedGroup,
-    searchTerm,
-    pricingData,
-    pricingContexts,
-  ])
 
-  const accountFilteredBaseModels = useMemo(() => {
-    if (!accountFilterAccountId) {
-      return baseFilteredModels
+    const supportsGroupFiltering =
+      selectedSource?.capabilities.supportsGroupFiltering ?? false
+
+    if (supportsGroupFiltering) {
+      filtered = filtered.filter(
+        (item) =>
+          resolveCandidateGroups(
+            item,
+            effectiveGroupCandidates,
+            supportsGroupFiltering,
+          ).length > 0,
+      )
     }
 
-    return baseFilteredModels.filter(
+    return filtered
+  }, [
+    effectiveGroupCandidates,
+    rawModelItems,
+    searchTerm,
+    selectedSource?.capabilities.supportsGroupFiltering,
+  ])
+
+  const accountFilteredBaseRawModels = useMemo(() => {
+    if (!accountFilterAccountId) {
+      return baseFilteredRawModels
+    }
+
+    return baseFilteredRawModels.filter(
       (item) =>
         item.source.kind !== "account" ||
         item.source.account.id === accountFilterAccountId,
     )
-  }, [baseFilteredModels, accountFilterAccountId])
+  }, [accountFilterAccountId, baseFilteredRawModels])
+
+  const baseFilteredModels = useMemo(() => {
+    const supportsGroupFiltering =
+      selectedSource?.capabilities.supportsGroupFiltering ?? false
+
+    return accountFilteredBaseRawModels
+      .map((item) =>
+        resolveBestCalculatedItem(
+          item,
+          effectiveGroupCandidates,
+          supportsGroupFiltering,
+          showRealPrice,
+        ),
+      )
+      .filter((item): item is CalculatedModelItem => item !== null)
+  }, [
+    accountFilteredBaseRawModels,
+    effectiveGroupCandidates,
+    selectedSource?.capabilities.supportsGroupFiltering,
+    showRealPrice,
+  ])
 
   const filteredModels = useMemo(() => {
     const providerFilteredModels =
       selectedProvider === "all"
-        ? accountFilteredBaseModels
-        : accountFilteredBaseModels.filter(
+        ? baseFilteredModels
+        : baseFilteredModels.filter(
             (item) =>
               filterModelsByProvider([item.model], selectedProvider).length > 0,
           )
@@ -477,6 +608,13 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
           return priceComparison
         }
 
+        const effectiveGroupComparison = (
+          a.item.effectiveGroup ?? ""
+        ).localeCompare(b.item.effectiveGroup ?? "")
+        if (effectiveGroupComparison !== 0) {
+          return effectiveGroupComparison
+        }
+
         const modelNameComparison = a.item.model.model_name.localeCompare(
           b.item.model.model_name,
         )
@@ -503,7 +641,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       isLowestPrice: lowestPriceKeys.has(itemKey),
     }))
   }, [
-    accountFilteredBaseModels,
+    baseFilteredModels,
     selectedProvider,
     selectedSource?.kind,
     showRealPrice,
@@ -511,41 +649,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
   ])
 
   const getProviderFilteredCount = (provider: ProviderType) => {
-    return accountFilteredBaseModels.filter(
+    return baseFilteredModels.filter(
       (item) => filterModelsByProvider([item.model], provider).length > 0,
     ).length
   }
-
-  const availableGroups = useMemo(() => {
-    if (!selectedSource?.capabilities.supportsGroupFiltering) {
-      return []
-    }
-
-    const groupSet = new Set<string>()
-
-    if (pricingContexts && pricingContexts.length > 0) {
-      pricingContexts.forEach((context) => {
-        const ratio = context.pricing.group_ratio || {}
-        Object.keys(ratio).forEach((key) => {
-          if (key) {
-            groupSet.add(key)
-          }
-        })
-      })
-    } else if (pricingData?.group_ratio) {
-      Object.keys(pricingData.group_ratio).forEach((key) => {
-        if (key) {
-          groupSet.add(key)
-        }
-      })
-    }
-
-    return Array.from(groupSet)
-  }, [
-    pricingContexts,
-    pricingData,
-    selectedSource?.capabilities.supportsGroupFiltering,
-  ])
 
   return {
     filteredModels,

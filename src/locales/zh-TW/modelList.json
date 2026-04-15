@@ -29,6 +29,7 @@
     "description": "目前模型目錄是透過帳號金鑰回退載入，僅支援模型發現與驗證。點擊重新整理資料會重新嘗試帳號介面。",
     "title": "帳號金鑰回退目錄"
   },
+  "groupSelectionHint": "留空表示所有分組；價格排序會在已選分組範圍內自動取最優價",
   "input": "輸入:",
   "input1MTokens": "輸入(1M tokens)",
   "keyDialog": {
@@ -74,6 +75,7 @@
   "noMatchingModels": "沒有找到匹配的模型",
   "noSourcesDescription": "請先新增站點帳號或 API 憑據，然後查看模型列表。",
   "noSourcesTitle": "暫無可用資料來源",
+  "optimalGroup": "最優組 {{group}}",
   "output": "輸出:",
   "output1MTokens": "輸出(1M tokens)",
   "perCall": "每次呼叫:",

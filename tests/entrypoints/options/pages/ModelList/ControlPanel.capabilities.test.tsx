@@ -51,8 +51,8 @@ describe("ControlPanel profile capabilities", () => {
         setSearchTerm={vi.fn()}
         sortMode={MODEL_LIST_SORT_MODES.DEFAULT}
         setSortMode={vi.fn()}
-        selectedGroup="default"
-        setSelectedGroup={vi.fn()}
+        selectedGroups={[]}
+        setSelectedGroups={vi.fn()}
         availableGroups={["default", "vip"]}
         pricingData={{ group_ratio: { default: 1, vip: 2 } }}
         loadPricingData={vi.fn()}
@@ -89,7 +89,7 @@ describe("ControlPanel profile capabilities", () => {
   it("renders group ratio labels, uses the group fallback ratio, and copies visible model names", async () => {
     const setSearchTerm = vi.fn()
     const setSortMode = vi.fn()
-    const setSelectedGroup = vi.fn()
+    const setSelectedGroups = vi.fn()
     const setShowRealPrice = vi.fn()
     const setShowRatioColumn = vi.fn()
     const setShowEndpointTypes = vi.fn()
@@ -108,8 +108,8 @@ describe("ControlPanel profile capabilities", () => {
         setSearchTerm={setSearchTerm}
         sortMode={MODEL_LIST_SORT_MODES.DEFAULT}
         setSortMode={setSortMode}
-        selectedGroup={undefined as any}
-        setSelectedGroup={setSelectedGroup}
+        selectedGroups={[]}
+        setSelectedGroups={setSelectedGroups}
         availableGroups={["vip", "default"]}
         pricingData={{ group_ratio: { vip: 2 } }}
         loadPricingData={loadPricingData}
@@ -146,6 +146,11 @@ describe("ControlPanel profile capabilities", () => {
 
     expect(await screen.findByText("vip (2x)")).toBeInTheDocument()
     expect(screen.getByText("default (1x)")).toBeInTheDocument()
+    fireEvent.click(screen.getByText("vip (2x)"))
+    expect(setSelectedGroups).toHaveBeenCalledWith(["vip"])
+    expect(
+      await screen.findByText("modelList:groupSelectionHint"),
+    ).toBeInTheDocument()
 
     fireEvent.click(
       screen.getByRole("button", { name: "modelList:refreshData" }),
@@ -195,8 +200,8 @@ describe("ControlPanel profile capabilities", () => {
         setSearchTerm={vi.fn()}
         sortMode={MODEL_LIST_SORT_MODES.DEFAULT}
         setSortMode={vi.fn()}
-        selectedGroup="all"
-        setSelectedGroup={vi.fn()}
+        selectedGroups={[]}
+        setSelectedGroups={vi.fn()}
         availableGroups={[]}
         pricingData={null}
         loadPricingData={vi.fn()}

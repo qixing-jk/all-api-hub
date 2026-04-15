@@ -13,6 +13,7 @@ import {
   Button,
   Card,
   CardContent,
+  CompactMultiSelect,
   FormField,
   Input,
   Label,
@@ -35,8 +36,8 @@ interface ControlPanelProps {
   setSearchTerm: (term: string) => void
   sortMode: ModelListSortMode
   setSortMode: (mode: ModelListSortMode) => void
-  selectedGroup: string
-  setSelectedGroup: (group: string) => void
+  selectedGroups: string[]
+  setSelectedGroups: (groups: string[]) => void
   availableGroups: string[]
   pricingData: any
   loadPricingData: () => void
@@ -58,8 +59,8 @@ interface ControlPanelProps {
  * @param props.sourceCapabilities Capability flags for the active source.
  * @param props.searchTerm Current search keyword.
  * @param props.setSearchTerm Setter to update search keyword.
- * @param props.selectedGroup Active user group filter.
- * @param props.setSelectedGroup Setter for user group filter.
+ * @param props.selectedGroups Active candidate group filter set.
+ * @param props.setSelectedGroups Setter for candidate group filter set.
  * @param props.availableGroups Available group options.
  * @param props.pricingData Pricing data used to show ratios.
  * @param props.loadPricingData Callback to refetch pricing data.
@@ -81,8 +82,8 @@ export function ControlPanel({
   setSearchTerm,
   sortMode,
   setSortMode,
-  selectedGroup,
-  setSelectedGroup,
+  selectedGroups,
+  setSelectedGroups,
   availableGroups,
   pricingData,
   loadPricingData,
@@ -99,6 +100,10 @@ export function ControlPanel({
   const { t } = useTranslation("modelList")
   const isProfileSource = selectedSource?.kind === "profile"
   const supportsPriceSorting = sourceCapabilities.supportsPricing
+  const groupOptions = availableGroups.map((group) => ({
+    value: group,
+    label: `${group} (${pricingData?.group_ratio?.[group] || 1}x)`,
+  }))
   const sortOptions = [
     {
       value: MODEL_LIST_SORT_MODES.DEFAULT,
@@ -170,18 +175,18 @@ export function ControlPanel({
 
           {sourceCapabilities.supportsGroupFiltering && (
             <FormField label={t("userGroup")} className="w-full lg:w-64">
-              <SearchableSelect
-                options={[
-                  { value: "all", label: t("allGroups") },
-                  ...availableGroups.map((group) => ({
-                    value: group,
-                    label: `${group} (${pricingData?.group_ratio?.[group] || 1}x)`,
-                  })),
-                ]}
-                value={selectedGroup ?? ""}
-                onChange={setSelectedGroup}
+              <CompactMultiSelect
+                options={groupOptions}
+                selected={selectedGroups}
+                onChange={setSelectedGroups}
+                displayMode="summary"
                 placeholder={t("allGroups")}
+                emptyMessage={t("allGroups")}
+                label={undefined}
               />
+              <p className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">
+                {t("groupSelectionHint")}
+              </p>
             </FormField>
           )}
 

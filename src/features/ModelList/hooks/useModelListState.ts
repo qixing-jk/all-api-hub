@@ -21,7 +21,7 @@ export function useModelListState() {
   const [sortMode, setSortMode] = useState<ModelListSortMode>(
     MODEL_LIST_SORT_MODES.DEFAULT,
   )
-  const [selectedGroup, setSelectedGroup] = useState<string>("default") // 当前选中的用户分组
+  const [selectedGroups, setSelectedGroups] = useState<string[]>([]) // 当前选中的候选分组；空数组表示所有分组
   const [allAccountsFilterAccountId, setAllAccountsFilterAccountId] = useState<
     string | null
   >(null) // 在"所有账号"模式下用于临时筛选特定账号
@@ -40,8 +40,8 @@ export function useModelListState() {
     setSelectedProvider,
     sortMode,
     setSortMode,
-    selectedGroup,
-    setSelectedGroup,
+    selectedGroups,
+    setSelectedGroups,
     allAccountsFilterAccountId,
     setAllAccountsFilterAccountId,
     showRealPrice,

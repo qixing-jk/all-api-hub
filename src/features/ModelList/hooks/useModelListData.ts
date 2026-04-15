@@ -36,7 +36,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
   const {
     selectedSourceValue,
     setSelectedSourceValue,
-    selectedGroup,
+    selectedGroups,
     searchTerm,
     selectedProvider,
     sortMode,
@@ -187,7 +187,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
     pricingData: modelData.pricingData,
     pricingContexts: modelData.pricingContexts,
     selectedSource,
-    selectedGroup,
+    selectedGroups,
     searchTerm,
     selectedProvider,
     sortMode,

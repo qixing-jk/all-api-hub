@@ -40,7 +40,7 @@ const createPricingModel = (
   model_ratio: 0,
   model_price: 0,
   completion_ratio: 1,
-  enable_groups: [],
+  enable_groups: ["default"],
   supported_endpoint_types: [],
   ...overrides,
 })
@@ -68,7 +68,7 @@ function renderUseFilteredModels(
       pricingData: null,
       pricingContexts: [],
       selectedSource: null,
-      selectedGroup: "default",
+      selectedGroups: [],
       searchTerm: "",
       selectedProvider: "all",
       sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
@@ -171,10 +171,12 @@ describe("useFilteredModels", () => {
         },
       ),
       selectedSource: source,
-      selectedGroup: "vip",
+      selectedGroups: ["vip"],
     })
 
-    await waitFor(() => expect(result.current.availableGroups).toEqual(["vip"]))
+    await waitFor(() =>
+      expect(result.current.availableGroups).toEqual(["vip", "default"]),
+    )
 
     expect(result.current.baseFilteredModels).toHaveLength(1)
     expect(result.current.filteredModels).toHaveLength(1)
@@ -216,7 +218,7 @@ describe("useFilteredModels", () => {
         },
       ]),
       selectedSource: createAccountSource(account),
-      selectedGroup: "all",
+      selectedGroups: [],
       searchTerm: "batch",
       selectedProvider: "Claude",
     })
@@ -268,7 +270,7 @@ describe("useFilteredModels", () => {
         },
       ],
       selectedSource: createAllAccountsSource(),
-      selectedGroup: "all",
+      selectedGroups: [],
       selectedProvider: "Gemini",
     })
 
@@ -278,7 +280,7 @@ describe("useFilteredModels", () => {
       ).toEqual(["gemini-1.5-pro"])
     })
 
-    expect(result.current.availableGroups).toEqual([])
+    expect(result.current.availableGroups).toEqual(["default"])
     const filteredSource = result.current.filteredModels[0]?.source
     expect(filteredSource?.kind).toBe("account")
     if (!filteredSource || filteredSource.kind !== "account") {
@@ -426,6 +428,131 @@ describe("useFilteredModels", () => {
         .filter((item) => item.model.model_name === "shared-model")
         .map((item) => item.isLowestPrice),
     ).toEqual([true, false])
+  })
+
+  it("uses the cheapest eligible group per row and updates when the candidate group set narrows", async () => {
+    const multiGroupAccount = createDisplayAccount({
+      id: "account-multi-group",
+      name: "Multi Group Account",
+      balance: { USD: 10, CNY: 70 },
+    })
+    const defaultOnlyAccount = createDisplayAccount({
+      id: "account-default-only",
+      name: "Default Only Account",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const pricingContexts = [
+      {
+        account: multiGroupAccount,
+        pricing: createPricingResponse(
+          [
+            {
+              model_name: "shared-model",
+              quota_type: 0,
+              model_ratio: 1,
+              completion_ratio: 1,
+              enable_groups: ["default", "vip"],
+            },
+          ],
+          {
+            group_ratio: { default: 1, vip: 0.5 },
+          },
+        ),
+      },
+      {
+        account: defaultOnlyAccount,
+        pricing: createPricingResponse(
+          [
+            {
+              model_name: "shared-model",
+              quota_type: 0,
+              model_ratio: 1,
+              completion_ratio: 1,
+              enable_groups: ["default"],
+            },
+          ],
+          {
+            group_ratio: { default: 0.6 },
+          },
+        ),
+      },
+    ]
+
+    const allGroupsResult = renderUseFilteredModels({
+      pricingContexts,
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+      selectedGroups: [],
+    })
+
+    await waitFor(() => {
+      expect(
+        allGroupsResult.result.current.filteredModels.map((item) => [
+          item.source.kind === "account" ? item.source.account.id : "profile",
+          item.effectiveGroup,
+          item.calculatedPrice.inputUSD,
+          item.isLowestPrice,
+        ]),
+      ).toEqual([
+        ["account-multi-group", "vip", 1, true],
+        ["account-default-only", "default", 1.2, false],
+      ])
+    })
+
+    const narrowedResult = renderUseFilteredModels({
+      pricingContexts,
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+      selectedGroups: ["default"],
+    })
+
+    await waitFor(() => {
+      expect(
+        narrowedResult.result.current.filteredModels.map((item) => [
+          item.source.kind === "account" ? item.source.account.id : "profile",
+          item.effectiveGroup,
+          item.calculatedPrice.inputUSD,
+          item.isLowestPrice,
+        ]),
+      ).toEqual([
+        ["account-default-only", "default", 1.2, true],
+        ["account-multi-group", "default", 2, false],
+      ])
+    })
+  })
+
+  it("filters out models that do not support any selected candidate group", async () => {
+    const account = createDisplayAccount({
+      id: "account-group-filter",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "default-model",
+            enable_groups: ["default"],
+          },
+          {
+            model_name: "vip-model",
+            enable_groups: ["vip"],
+          },
+        ],
+        {
+          group_ratio: { default: 1, vip: 2 },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+      selectedGroups: ["vip"],
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["vip-model"])
+    })
   })
 
   it("recomputes cheapest order and badges using real recharge amounts when enabled", async () => {
