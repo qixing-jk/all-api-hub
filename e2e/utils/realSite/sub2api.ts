@@ -29,7 +29,7 @@ type Sub2ApiRealSiteResolution = {
   missingEnvKeys: RequiredSub2ApiRealSiteEnvKey[]
 }
 
-export interface Sub2ApiRealSiteConfig {
+interface Sub2ApiRealSiteConfig {
   baseUrl: string
   loginUrl: string
   loginApiUrl: string
@@ -41,14 +41,14 @@ export interface Sub2ApiRealSiteConfig {
   agreeSelector?: string
 }
 
-export interface Sub2ApiRealSiteAuthState {
+interface Sub2ApiRealSiteAuthState {
   accessToken: string
   refreshToken: string
   tokenExpiresAt: number | null
   user: Record<string, unknown>
 }
 
-export interface Sub2ApiRealSiteLoginResult {
+interface Sub2ApiRealSiteLoginResult {
   reusedSession: boolean
   authState: Sub2ApiRealSiteAuthState
 }

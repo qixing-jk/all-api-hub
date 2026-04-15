@@ -41,7 +41,6 @@ const config: KnipConfig = {
     "react-devtools",
     "shadcn",
     "tw-animate-css",
-    "vite",
     "web-ext",
   ],
   ignoreIssues: {

@@ -36,7 +36,7 @@ type NewApiLoginApiPayload = {
   require_2fa?: boolean
 }
 
-export interface NewApiRealSiteConfig {
+interface NewApiRealSiteConfig {
   baseUrl: string
   loginUrl: string
   loginApiUrl: string
@@ -50,7 +50,7 @@ export interface NewApiRealSiteConfig {
   totpSecret?: string
 }
 
-export interface NewApiRealSiteLoginResult {
+interface NewApiRealSiteLoginResult {
   reusedSession: boolean
   user: Record<string, unknown>
 }

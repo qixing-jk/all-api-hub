@@ -17,7 +17,7 @@ import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
 type ServiceWorker = Awaited<ReturnType<typeof getServiceWorker>>
 
-export function getAccountAddDialog(page: Page) {
+function getAccountAddDialog(page: Page) {
   const dialog = page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog)
 
   return {
@@ -65,7 +65,7 @@ export async function openAccountManagementPage(params: {
   await expectPermissionOnboardingHidden(params.page)
 }
 
-export async function openAccountAddDialog(page: Page) {
+async function openAccountAddDialog(page: Page) {
   await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
 
   const dialog = getAccountAddDialog(page)

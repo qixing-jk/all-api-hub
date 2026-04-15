@@ -66,11 +66,7 @@ export function installExtensionPageGuards(page: Page) {
   })
 
   page.on("console", (message) => {
-    const text = message.text()
-    if (
-      message.type() === "error" &&
-      !/^Failed to load resource:/iu.test(text.trim())
-    ) {
+    if (message.type() === "error") {
       throw new Error(message.text())
     }
   })
