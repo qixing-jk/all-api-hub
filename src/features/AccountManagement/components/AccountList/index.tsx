@@ -35,6 +35,7 @@ import {
 import {
   DATA_TYPE_BALANCE,
   DATA_TYPE_CONSUMPTION,
+  DATA_TYPE_CREATED_AT,
   DATA_TYPE_INCOME,
 } from "~/constants"
 import { SITE_TITLE_RULES } from "~/constants/siteType"
@@ -758,6 +759,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
         <SortableAccountListItem
           key={item.account.id}
           site={item.account}
+          showCreatedAt={sortField === DATA_TYPE_CREATED_AT}
           className={cn(
             detectedAccount?.id === item.account.id &&
               "rounded-lg border-l-4 border-l-blue-500 bg-blue-50 dark:border-l-blue-400 dark:bg-blue-900/50",
@@ -965,7 +967,18 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
           <div className="flex items-center justify-between gap-2 sm:gap-4">
             {/* Account Name Column */}
             <div className="flex min-w-0 flex-1 items-center gap-2">
-              {renderSortButton("name", t("account:list.header.account"))}
+              <div className="flex min-w-0 items-center gap-0.5">
+                {renderSortButton("name", t("account:list.header.account"))}
+                <div className="dark:text-dark-text-tertiary text-[10px] text-gray-400 sm:text-xs">
+                  /
+                </div>
+                <div className="dark:text-dark-text-tertiary flex items-center text-[9px] text-gray-400 sm:text-[10px]">
+                  {renderSortButton(
+                    DATA_TYPE_CREATED_AT,
+                    t("account:list.header.createdAt"),
+                  )}
+                </div>
+              </div>
               <span className="text-[10px] font-medium sm:text-xs">
                 {t("common:total") + ": " + displayedResults.length}
               </span>

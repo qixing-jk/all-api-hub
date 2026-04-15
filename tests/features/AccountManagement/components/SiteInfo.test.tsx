@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import SiteInfo from "~/features/AccountManagement/components/AccountList/SiteInfo"
 import { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
+import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
@@ -160,6 +161,43 @@ describe("SiteInfo", () => {
     expect(mockOpenAccountBaseUrl).toHaveBeenCalledWith(
       expect.objectContaining({ baseUrl: "https://example.com" }),
     )
+  })
+
+  it("renders a formatted created-time row", () => {
+    const createdAt = new Date(2026, 0, 2, 3, 4, 5).getTime()
+    const expected = formatLocaleDateTime(
+      createdAt,
+      "common:labels.notAvailable",
+    )
+
+    render(
+      <SiteInfo site={buildSite({ created_at: createdAt })} showCreatedAt />,
+    )
+
+    expect(
+      screen.getByText(`account:list.header.createdAt: ${expected}`),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByTitle(`account:list.header.createdAt: ${expected}`),
+    ).toBeInTheDocument()
+  })
+
+  it("falls back when created time is unavailable", () => {
+    render(<SiteInfo site={buildSite({ created_at: 0 })} showCreatedAt />)
+
+    expect(
+      screen.getByText(
+        "account:list.header.createdAt: common:labels.notAvailable",
+      ),
+    ).toBeInTheDocument()
+  })
+
+  it("hides created time when created-time sorting is not active", () => {
+    render(<SiteInfo site={buildSite({ created_at: 123 })} />)
+
+    expect(
+      screen.queryByText(/account:list.header.createdAt:/),
+    ).not.toBeInTheDocument()
   })
 
   it("shows a warning check-in indicator when the last check-in status detection is not today", async () => {

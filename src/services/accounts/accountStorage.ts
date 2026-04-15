@@ -1297,6 +1297,7 @@ class AccountStorageService {
         },
         health: normalized.health,
         last_sync_time: normalized.last_sync_time,
+        created_at: normalized.created_at,
         baseUrl: normalized.site_url,
         token: normalized.account_info.access_token,
         userId: normalized.account_info.id,

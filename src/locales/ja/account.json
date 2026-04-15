@@ -122,6 +122,7 @@
     "header": {
       "account": "アカウント",
       "balance": "残高",
+      "createdAt": "作成日時",
       "todayConsumption": "本日の消費",
       "todayIncome": "本日の収入"
     },

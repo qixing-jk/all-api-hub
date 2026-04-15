@@ -3,7 +3,11 @@ import { useEffect } from "react"
 import { I18nextProvider } from "react-i18next"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DATA_TYPE_BALANCE, DATA_TYPE_CONSUMPTION } from "~/constants"
+import {
+  DATA_TYPE_BALANCE,
+  DATA_TYPE_CONSUMPTION,
+  DATA_TYPE_CREATED_AT,
+} from "~/constants"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   AccountDataProvider,
@@ -1156,6 +1160,44 @@ describe("AccountDataContext sorting behavior", () => {
       2,
       DATA_TYPE_BALANCE,
       "desc",
+    )
+  })
+
+  it("initializes created-time sorting to newest first and then toggles", async () => {
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().sortField).toBe("name")
+      expect(getLatestCtx().sortOrder).toBe("asc")
+    })
+
+    act(() => {
+      getLatestCtx().handleSort(DATA_TYPE_CREATED_AT)
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().sortField).toBe(DATA_TYPE_CREATED_AT)
+      expect(getLatestCtx().sortOrder).toBe("desc")
+    })
+
+    act(() => {
+      getLatestCtx().handleSort(DATA_TYPE_CREATED_AT)
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().sortField).toBe(DATA_TYPE_CREATED_AT)
+      expect(getLatestCtx().sortOrder).toBe("asc")
+    })
+
+    expect(mockUpdateSortConfig).toHaveBeenNthCalledWith(
+      1,
+      DATA_TYPE_CREATED_AT,
+      "desc",
+    )
+    expect(mockUpdateSortConfig).toHaveBeenNthCalledWith(
+      2,
+      DATA_TYPE_CREATED_AT,
+      "asc",
     )
   })
 

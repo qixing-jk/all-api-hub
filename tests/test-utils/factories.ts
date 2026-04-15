@@ -99,6 +99,7 @@ export function buildDisplaySiteData(
     todayIncome: { USD: 0, CNY: 0 },
     todayTokens: { upload: 0, download: 0 },
     health: { status: SiteHealthStatus.Healthy },
+    created_at: 0,
     siteType: "test",
     baseUrl: "https://example.com",
     token: "test-token",

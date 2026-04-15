@@ -17,10 +17,11 @@ interface AccountListItemProps {
   highlights?: SearchResultWithHighlight["highlights"]
   onCopyKey: (site: DisplaySiteData) => void
   onDeleteWithDialog: (site: DisplaySiteData) => void
+  showCreatedAt?: boolean
 }
 
 const AccountListItem: React.FC<AccountListItemProps> = React.memo(
-  ({ site, highlights, onCopyKey, onDeleteWithDialog }) => {
+  ({ site, highlights, onCopyKey, onDeleteWithDialog, showCreatedAt }) => {
     const { handleMouseEnter, handleMouseLeave } = useAccountListItem()
     const { isTouchDevice } = useDevice()
 
@@ -44,7 +45,11 @@ const AccountListItem: React.FC<AccountListItemProps> = React.memo(
           {/* 左侧：站点信息 - 可压缩 */}
           {/* Clip any accidental overflow so long names/links never overlap the middle action buttons. */}
           <div className="min-w-[60px] flex-1 overflow-x-hidden sm:min-w-[80px]">
-            <SiteInfo site={site} highlights={highlights} />
+            <SiteInfo
+              site={site}
+              highlights={highlights}
+              showCreatedAt={showCreatedAt}
+            />
           </div>
 
           {/* 中间：操作按钮 */}

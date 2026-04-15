@@ -131,6 +131,7 @@
     "header": {
       "account": "Account",
       "balance": "Balance",
+      "createdAt": "Created At",
       "todayConsumption": "Today's Consumption",
       "todayIncome": "Today's Income"
     },

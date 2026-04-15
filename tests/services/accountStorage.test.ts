@@ -232,6 +232,7 @@ describe("accountStorage core behaviors", () => {
 
   it("convertToDisplayData should normalize currency values", () => {
     const account = createAccount({
+      created_at: 1_700_000_000_000,
       exchange_rate: 7,
       account_info: {
         id: 1,
@@ -254,6 +255,7 @@ describe("accountStorage core behaviors", () => {
     expect(display.todayIncome.USD).toBeCloseTo(0.5)
     expect(display.todayTokens.upload).toBe(600)
     expect(display.todayTokens.download).toBe(400)
+    expect(display.created_at).toBe(1_700_000_000_000)
   })
 
   it("convertToDisplayData should handle arrays", () => {

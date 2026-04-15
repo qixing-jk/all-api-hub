@@ -1,6 +1,7 @@
 import {
   DATA_TYPE_BALANCE,
   DATA_TYPE_CONSUMPTION,
+  DATA_TYPE_CREATED_AT,
   DATA_TYPE_INCOME,
 } from "~/constants"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
@@ -119,6 +120,19 @@ function compareByUserSortField(
       return sortOrder === "asc"
         ? a.todayIncome[currencyType] - b.todayIncome[currencyType]
         : b.todayIncome[currencyType] - a.todayIncome[currencyType]
+    case DATA_TYPE_CREATED_AT: {
+      const aCreatedAt =
+        typeof a.created_at === "number" && Number.isFinite(a.created_at)
+          ? a.created_at
+          : 0
+      const bCreatedAt =
+        typeof b.created_at === "number" && Number.isFinite(b.created_at)
+          ? b.created_at
+          : 0
+      return sortOrder === "asc"
+        ? aCreatedAt - bCreatedAt
+        : bCreatedAt - aCreatedAt
+    }
     default:
       return 0
   }

@@ -1,5 +1,6 @@
 import {
   ArrowPathIcon,
+  CalendarDaysIcon,
   CheckCircleIcon,
   CurrencyYenIcon,
   ExclamationTriangleIcon,
@@ -59,6 +60,7 @@ import {
 interface SiteInfoProps {
   site: DisplaySiteData
   highlights?: SearchResultWithHighlight["highlights"]
+  showCreatedAt?: boolean
 }
 
 /**
@@ -95,8 +97,12 @@ function renderHighlightedFragments(
 /**
  * Site info row combining metadata, status chips, and context actions for a display account entry.
  */
-export default function SiteInfo({ site, highlights }: SiteInfoProps) {
-  const { t } = useTranslation(["account", "messages"])
+export default function SiteInfo({
+  site,
+  highlights,
+  showCreatedAt = false,
+}: SiteInfoProps) {
+  const { t } = useTranslation(["account", "messages", "common"])
   const {
     detectedSiteAccounts,
     isAccountPinned,
@@ -121,6 +127,11 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
   const ldohSearchUrl = getLdohSearchUrlForAccountUrl(site.baseUrl)
   const customCheckInUrl = site.checkIn?.customCheckIn?.url
   const customRedeemUrl = site.checkIn?.customCheckIn?.redeemUrl
+  const createdAtLabel = t("account:list.header.createdAt")
+  const createdAtText = formatLocaleDateTime(
+    site.created_at,
+    t("common:labels.notAvailable"),
+  )
 
   const healthCode = site.health?.code
   const canOpenHealthSettings =
@@ -536,6 +547,18 @@ export default function SiteInfo({ site, highlights }: SiteInfoProps) {
               : site.username}
           </Caption>
         </div>
+
+        {showCreatedAt && (
+          <div className="mt-0.5 flex min-w-0 items-start gap-1">
+            <CalendarDaysIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
+            <Caption
+              className="truncate"
+              title={`${createdAtLabel}: ${createdAtText}`}
+            >
+              {createdAtLabel}: {createdAtText}
+            </Caption>
+          </div>
+        )}
 
         {highlights?.baseUrl && (
           <div className="mt-0.5 flex min-w-0 items-start gap-1">

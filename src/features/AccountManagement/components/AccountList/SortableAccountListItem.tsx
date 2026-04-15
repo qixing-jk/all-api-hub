@@ -14,6 +14,7 @@ interface SortableAccountListItemProps {
   highlights?: SearchResultWithHighlight["highlights"]
   onCopyKey: (site: DisplaySiteData) => void
   onDeleteWithDialog: (site: DisplaySiteData) => void
+  showCreatedAt?: boolean
   isDragDisabled: boolean
   handleLabel: string
   showHandle: boolean
@@ -29,6 +30,7 @@ function SortableAccountListItem({
   highlights,
   onCopyKey,
   onDeleteWithDialog,
+  showCreatedAt,
   isDragDisabled,
   handleLabel,
   showHandle,
@@ -86,6 +88,7 @@ function SortableAccountListItem({
             highlights={highlights}
             onDeleteWithDialog={onDeleteWithDialog}
             onCopyKey={onCopyKey}
+            showCreatedAt={showCreatedAt}
           />
         </div>
       </div>

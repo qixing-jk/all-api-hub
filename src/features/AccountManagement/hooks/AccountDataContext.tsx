@@ -14,6 +14,7 @@ import { useTranslation } from "react-i18next" // 1. 定义 Context 的值类型
 import {
   DATA_TYPE_BALANCE,
   DATA_TYPE_CONSUMPTION,
+  DATA_TYPE_CREATED_AT,
   DATA_TYPE_INCOME,
 } from "~/constants"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -91,9 +92,7 @@ interface AccountDataContextType {
   unpinAccount: (id: string) => Promise<boolean>
   togglePinAccount: (id: string) => Promise<boolean>
   loadAccountData: () => Promise<void>
-  handleRefresh: (
-    force?: boolean,
-  ) => Promise<{
+  handleRefresh: (force?: boolean) => Promise<{
     success: number
     failed: number
     latestSyncTime?: number
@@ -675,7 +674,7 @@ export const AccountDataProvider = ({
         newOrder = sortOrder === "asc" ? "desc" : "asc"
         setSortOrder(newOrder)
       } else {
-        newOrder = "asc"
+        newOrder = field === DATA_TYPE_CREATED_AT ? "desc" : "asc"
         setSortField(field)
         setSortOrder(newOrder)
       }

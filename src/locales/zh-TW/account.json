@@ -122,6 +122,7 @@
     "header": {
       "account": "帳號",
       "balance": "餘額",
+      "createdAt": "建立時間",
       "todayConsumption": "今日消費",
       "todayIncome": "今日收入"
     },

@@ -62,6 +62,15 @@ interface PrefilledDialogDuplicateState {
 }
 
 /**
+ *
+ */
+function isSiteAccount(
+  account: DisplaySiteData | SiteAccount,
+): account is SiteAccount {
+  return "site_name" in account && "account_info" in account
+}
+
+/**
  * Hook to easily trigger channel creation dialog from anywhere
  */
 export function useChannelDialog() {
@@ -306,7 +315,7 @@ export function useChannelDialog() {
       // Get full account if needed
       let siteAccount: SiteAccount
 
-      if ("created_at" in account) {
+      if (isSiteAccount(account)) {
         siteAccount = account
         displaySiteData =
           (await accountStorage.getDisplayDataById(account.id)) ??

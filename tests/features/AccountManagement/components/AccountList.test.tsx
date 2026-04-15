@@ -358,6 +358,16 @@ describe("AccountList", () => {
     mockUseAccountDataContext.mockReturnValue(createAccountDataContextValue())
   })
 
+  it("renders the created-time sort control", () => {
+    render(<AccountList />)
+
+    expect(
+      screen.getByRole("button", {
+        name: "account:list.sort account:list.header.createdAt",
+      }),
+    ).toBeInTheDocument()
+  })
+
   it("filters accounts by enabled state and combines with tag filters", async () => {
     const user = userEvent.setup()
 

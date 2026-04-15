@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import {
   DATA_TYPE_BALANCE,
   DATA_TYPE_CONSUMPTION,
+  DATA_TYPE_CREATED_AT,
   DATA_TYPE_INCOME,
 } from "~/constants"
 import {
@@ -1609,6 +1610,85 @@ describe("createDynamicSortComparator", () => {
 
       // Balances are equal, so comparison should be 0
       expect(comparator(account1, account2)).toBe(0)
+    })
+
+    it("should sort by created_at in both directions", () => {
+      const older = createDisplaySiteData({
+        id: "account-1",
+        created_at: 100,
+      })
+      const newer = createDisplaySiteData({
+        id: "account-2",
+        created_at: 200,
+      })
+      const config: SortingPriorityConfig = {
+        criteria: [
+          {
+            id: SortingCriteriaType.USER_SORT_FIELD,
+            enabled: true,
+            priority: 0,
+          },
+        ],
+        lastModified: Date.now(),
+      }
+
+      const descComparator = createDynamicSortComparator(
+        config,
+        null,
+        DATA_TYPE_CREATED_AT,
+        "USD",
+        "desc",
+      )
+      const ascComparator = createDynamicSortComparator(
+        config,
+        null,
+        DATA_TYPE_CREATED_AT,
+        "USD",
+        "asc",
+      )
+
+      expect(
+        [older, newer].sort(descComparator).map((item) => item.id),
+      ).toEqual(["account-2", "account-1"])
+      expect([older, newer].sort(ascComparator).map((item) => item.id)).toEqual(
+        ["account-1", "account-2"],
+      )
+    })
+
+    it("should treat missing created_at as 0 when sorting by created time", () => {
+      const missingTimestamp = createDisplaySiteData({
+        id: "account-1",
+        created_at: undefined,
+      })
+      const validTimestamp = createDisplaySiteData({
+        id: "account-2",
+        created_at: 50,
+      })
+      const config: SortingPriorityConfig = {
+        criteria: [
+          {
+            id: SortingCriteriaType.USER_SORT_FIELD,
+            enabled: true,
+            priority: 0,
+          },
+        ],
+        lastModified: Date.now(),
+      }
+
+      const comparator = createDynamicSortComparator(
+        config,
+        null,
+        DATA_TYPE_CREATED_AT,
+        "USD",
+        "desc",
+      )
+
+      expect(() => comparator(missingTimestamp, validTimestamp)).not.toThrow()
+      expect(
+        [missingTimestamp, validTimestamp]
+          .sort(comparator)
+          .map((item) => item.id),
+      ).toEqual(["account-2", "account-1"])
     })
 
     it("should handle default parameters", () => {

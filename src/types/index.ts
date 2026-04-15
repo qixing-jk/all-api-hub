@@ -2,6 +2,7 @@ import {
   DATA_TYPE_BALANCE,
   DATA_TYPE_CASHFLOW,
   DATA_TYPE_CONSUMPTION,
+  DATA_TYPE_CREATED_AT,
   DATA_TYPE_INCOME,
 } from "~/constants"
 import { TempWindowHealthStatusCode } from "~/types/tempWindow"
@@ -358,6 +359,7 @@ export type SortField =
   | typeof DATA_TYPE_CONSUMPTION
   | typeof DATA_TYPE_INCOME
   | typeof DATA_TYPE_BALANCE
+  | typeof DATA_TYPE_CREATED_AT
 export type SortOrder = "asc" | "desc"
 
 // 货币类型
@@ -386,6 +388,7 @@ export interface DisplaySiteData {
   todayTokens: TokenUsage
   health: HealthStatus
   last_sync_time?: number
+  created_at?: number
   siteType: string // 站点类型
   baseUrl: string // 站点 URL，用于复制功能
   token: string // 访问令牌，用于复制功能
