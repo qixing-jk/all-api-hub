@@ -431,17 +431,17 @@ class AccountStorageService {
   async setAccountsDisabled(
     ids: string[],
     disabled: boolean,
-  ): Promise<{ updatedCount: number }> {
+  ): Promise<{ updatedCount: number; updatedIds: string[] }> {
     const uniqueIds = Array.from(new Set(ids)).filter(Boolean)
     if (uniqueIds.length === 0) {
-      return { updatedCount: 0 }
+      return { updatedCount: 0, updatedIds: [] }
     }
 
     const idSet = new Set(uniqueIds)
     const normalized = Boolean(disabled)
 
     try {
-      const changedDisabledAccountIds: string[] = []
+      const changedAccountIds: string[] = []
 
       const result = await this.mutateStorageConfig((config) => {
         const now = Date.now()
@@ -453,9 +453,7 @@ class AccountStorageService {
           }
 
           updatedCount += 1
-          if (normalized) {
-            changedDisabledAccountIds.push(account.id)
-          }
+          changedAccountIds.push(account.id)
           return applySiteAccountUpdates({
             account,
             updates: { disabled: normalized },
@@ -464,18 +462,18 @@ class AccountStorageService {
         })
 
         return {
-          result: { updatedCount },
+          result: { updatedCount, updatedIds: changedAccountIds },
           changed: updatedCount > 0,
         }
       })
 
-      if (normalized && changedDisabledAccountIds.length > 0) {
+      if (normalized && changedAccountIds.length > 0) {
         const marked = await autoCheckinStorage.markAccountsDisabledInStatus(
-          changedDisabledAccountIds.map((accountId) => ({ accountId })),
+          changedAccountIds.map((accountId) => ({ accountId })),
         )
         if (!marked) {
           logger.warn("批量禁用账号后更新自动签到状态失败", {
-            accountIds: changedDisabledAccountIds,
+            accountIds: changedAccountIds,
           })
         }
       }
@@ -487,7 +485,7 @@ class AccountStorageService {
         disabled: normalized,
         error,
       })
-      return { updatedCount: 0 }
+      return { updatedCount: 0, updatedIds: [] }
     }
   }
 

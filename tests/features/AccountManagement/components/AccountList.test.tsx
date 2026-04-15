@@ -345,7 +345,10 @@ describe("AccountList", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     handleDeleteAccountsMock.mockResolvedValue({ deletedCount: 0 })
-    handleSetAccountsDisabledMock.mockResolvedValue(undefined)
+    handleSetAccountsDisabledMock.mockResolvedValue({
+      updatedCount: 0,
+      updatedIds: [],
+    })
     mockUseUserPreferencesContext.mockReturnValue({
       showTodayCashflow: true,
     })
@@ -559,6 +562,10 @@ describe("AccountList", () => {
 
   it("keeps selections across search changes for bulk disable", async () => {
     const user = userEvent.setup()
+    handleSetAccountsDisabledMock.mockResolvedValueOnce({
+      updatedCount: 2,
+      updatedIds: ["enabled-alpha", "enabled-gamma"],
+    })
 
     render(<AccountList />)
 
@@ -591,6 +598,10 @@ describe("AccountList", () => {
 
   it("clears only the currently visible selections during bulk mode", async () => {
     const user = userEvent.setup()
+    handleSetAccountsDisabledMock.mockResolvedValueOnce({
+      updatedCount: 1,
+      updatedIds: ["enabled-alpha"],
+    })
 
     render(<AccountList />)
 
@@ -617,6 +628,56 @@ describe("AccountList", () => {
 
     expect(handleSetAccountsDisabledMock).toHaveBeenCalledWith(
       [expect.objectContaining({ id: "enabled-alpha" })],
+      true,
+    )
+  })
+
+  it("keeps remaining selection when bulk disable only partially succeeds", async () => {
+    const user = userEvent.setup()
+    handleSetAccountsDisabledMock
+      .mockResolvedValueOnce({
+        updatedCount: 1,
+        updatedIds: ["enabled-alpha"],
+      })
+      .mockResolvedValueOnce({
+        updatedCount: 1,
+        updatedIds: ["enabled-gamma"],
+      })
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+
+    await user.click(screen.getAllByRole("checkbox")[0])
+
+    const searchInput = screen.getByPlaceholderText(
+      "account:search.placeholder",
+    )
+    await user.clear(searchInput)
+    await user.type(searchInput, "Gamma")
+
+    expect(await screen.findByText("Enabled Gamma")).toBeInTheDocument()
+    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.disableSelected" }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.disableSelected" }),
+    )
+
+    expect(handleSetAccountsDisabledMock).toHaveBeenNthCalledWith(
+      1,
+      expect.arrayContaining([
+        expect.objectContaining({ id: "enabled-alpha" }),
+        expect.objectContaining({ id: "enabled-gamma" }),
+      ]),
+      true,
+    )
+    expect(handleSetAccountsDisabledMock).toHaveBeenNthCalledWith(
+      2,
+      [expect.objectContaining({ id: "enabled-gamma" })],
       true,
     )
   })

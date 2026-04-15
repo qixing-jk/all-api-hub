@@ -367,6 +367,47 @@ describe("autoCheckinStorage", () => {
     expect(set).not.toHaveBeenCalled()
   })
 
+  it("preserves snapshot-derived totalEligible when current summary is missing", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({
+      accountsSnapshot: [
+        {
+          accountId: "drop",
+          accountName: "Drop",
+          siteType: "one-api",
+          detectionEnabled: true,
+          autoCheckinEnabled: true,
+          providerAvailable: true,
+        },
+        {
+          accountId: "keep",
+          accountName: "Keep",
+          siteType: "one-api",
+          detectionEnabled: true,
+          autoCheckinEnabled: true,
+          providerAvailable: true,
+        },
+      ],
+    })
+
+    const ok = await autoCheckinStorage.markAccountDisabledInStatus(
+      "drop",
+      "Drop",
+    )
+
+    expect(ok).toBe(true)
+    expect(set).toHaveBeenCalledWith(
+      "autoCheckin_status",
+      expect.objectContaining({
+        summary: expect.objectContaining({
+          totalEligible: 2,
+          executed: 0,
+          skippedCount: 1,
+        }),
+      }),
+    )
+  })
+
   it("returns true without persisting when disabled-account marking receives no usable ids or status", async () => {
     const { get, set } = (Storage as any).__mocks as any
 

@@ -657,8 +657,16 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
 
     setIsBulkDisabling(true)
     try {
-      await handleSetAccountsDisabled(selectedEnabledAccounts, true)
-      setSelectedAccountIds([])
+      const { updatedIds } = await handleSetAccountsDisabled(
+        selectedEnabledAccounts,
+        true,
+      )
+      if (updatedIds.length > 0) {
+        const updatedIdSet = new Set(updatedIds)
+        setSelectedAccountIds((previous) =>
+          previous.filter((accountId) => !updatedIdSet.has(accountId)),
+        )
+      }
     } finally {
       setIsBulkDisabling(false)
     }

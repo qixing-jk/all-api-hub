@@ -287,10 +287,21 @@ class AutoCheckinStorage {
                 : undefined
           }
 
-          const summary = recalculateSummaryFromResults(
+          const summaryBase = recalculateSummaryFromResults(
             perAccount,
             current.summary,
           )
+          const snapshotEligibleCount = nextSnapshots?.length ?? 0
+          const summary =
+            !current.summary && snapshotEligibleCount > 0
+              ? {
+                  ...summaryBase,
+                  totalEligible: Math.max(
+                    summaryBase.totalEligible,
+                    snapshotEligibleCount,
+                  ),
+                }
+              : summaryBase
           const pendingRetry = Boolean(
             retryState &&
               Array.isArray(retryState.pendingAccountIds) &&

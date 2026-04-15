@@ -1008,7 +1008,10 @@ describe("accountStorage core behaviors", () => {
       true,
     )
 
-    expect(result).toEqual({ updatedCount: 1 })
+    expect(result).toEqual({
+      updatedCount: 1,
+      updatedIds: ["disable-a"],
+    })
     expect((await accountStorage.getAccountById("disable-a"))?.disabled).toBe(
       true,
     )
@@ -1036,7 +1039,10 @@ describe("accountStorage core behaviors", () => {
       true,
     )
 
-    expect(result).toEqual({ updatedCount: 2 })
+    expect(result).toEqual({
+      updatedCount: 2,
+      updatedIds: ["disable-warning-a", "disable-warning-b"],
+    })
     expect(markAccountsDisabledInStatusMock).toHaveBeenCalledWith([
       { accountId: "disable-warning-a" },
       { accountId: "disable-warning-b" },
@@ -1055,13 +1061,17 @@ describe("accountStorage core behaviors", () => {
       false,
     )
 
-    expect(result).toEqual({ updatedCount: 1 })
+    expect(result).toEqual({
+      updatedCount: 1,
+      updatedIds: ["enable-a"],
+    })
     expect(markAccountsDisabledInStatusMock).not.toHaveBeenCalled()
   })
 
   it("setAccountsDisabled should no-op for empty id input", async () => {
     expect(await accountStorage.setAccountsDisabled([], true)).toEqual({
       updatedCount: 0,
+      updatedIds: [],
     })
     expect(markAccountsDisabledInStatusMock).not.toHaveBeenCalled()
   })

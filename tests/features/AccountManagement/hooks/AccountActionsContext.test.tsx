@@ -399,7 +399,10 @@ describe("AccountActionsContext", () => {
   it("bulk-disables only accounts that still need updates and reports the updated count", async () => {
     const { getContext } = await renderContext()
 
-    mockSetAccountsDisabled.mockResolvedValueOnce({ updatedCount: 2 })
+    mockSetAccountsDisabled.mockResolvedValueOnce({
+      updatedCount: 2,
+      updatedIds: ["bulk-a", "bulk-c"],
+    })
 
     await act(async () => {
       await getContext().handleSetAccountsDisabled(
@@ -426,7 +429,10 @@ describe("AccountActionsContext", () => {
   it("bulk-re-enables only accounts that still need updates and reports the updated count", async () => {
     const { getContext } = await renderContext()
 
-    mockSetAccountsDisabled.mockResolvedValueOnce({ updatedCount: 2 })
+    mockSetAccountsDisabled.mockResolvedValueOnce({
+      updatedCount: 2,
+      updatedIds: ["enable-a", "enable-c"],
+    })
 
     await act(async () => {
       await getContext().handleSetAccountsDisabled(
@@ -453,7 +459,10 @@ describe("AccountActionsContext", () => {
   it("shows a generic failure toast when bulk disable returns no updates", async () => {
     const { getContext } = await renderContext()
 
-    mockSetAccountsDisabled.mockResolvedValueOnce({ updatedCount: 0 })
+    mockSetAccountsDisabled.mockResolvedValueOnce({
+      updatedCount: 0,
+      updatedIds: [],
+    })
 
     await act(async () => {
       await getContext().handleSetAccountsDisabled(

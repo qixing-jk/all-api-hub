@@ -37,7 +37,7 @@ interface AccountActionsContextType {
   handleSetAccountsDisabled: (
     accounts: DisplaySiteData[],
     disabled: boolean,
-  ) => Promise<void>
+  ) => Promise<{ updatedCount: number; updatedIds: string[] }>
   handleDeleteAccounts: (
     accounts: DisplaySiteData[],
   ) => Promise<{ deletedCount: number }>
@@ -159,17 +159,18 @@ export const AccountActionsProvider = ({
         .map((account) => account.id)
 
       if (accountIds.length === 0) {
-        return
+        return { updatedCount: 0, updatedIds: [] }
       }
 
-      const { updatedCount } = await accountStorage.setAccountsDisabled(
+      const result = await accountStorage.setAccountsDisabled(
         accountIds,
         disabled,
       )
+      const { updatedCount } = result
 
       if (updatedCount === 0) {
         toast.error(t("messages:toast.error.operationFailedGeneric"))
-        return
+        return result
       }
 
       await loadAccountData()
@@ -183,6 +184,8 @@ export const AccountActionsProvider = ({
               count: updatedCount,
             }),
       )
+
+      return result
     },
     [loadAccountData],
   )
