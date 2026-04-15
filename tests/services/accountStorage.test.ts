@@ -916,7 +916,10 @@ describe("accountStorage core behaviors", () => {
       "",
     ])
 
-    expect(result).toEqual({ deletedCount: 2 })
+    expect(result).toEqual({
+      deletedCount: 2,
+      deletedIds: ["bulk-b", "bulk-c"],
+    })
 
     const config = storageData.get(
       ACCOUNT_STORAGE_KEYS.ACCOUNTS,
@@ -943,7 +946,7 @@ describe("accountStorage core behaviors", () => {
 
     const result = await accountStorage.deleteAccounts(["missing", "missing"])
 
-    expect(result).toEqual({ deletedCount: 0 })
+    expect(result).toEqual({ deletedCount: 0, deletedIds: [] })
     expect(storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)).toEqual(
       existingConfig,
     )

@@ -480,14 +480,22 @@ describe("AccountActionsContext", () => {
   it("bulk-deletes deduped accounts, reloads data, and reports success", async () => {
     const { getContext } = await renderContext()
 
-    mockDeleteAccounts.mockResolvedValueOnce({ deletedCount: 2 })
+    mockDeleteAccounts.mockResolvedValueOnce({
+      deletedCount: 2,
+      deletedIds: ["delete-a", "delete-b"],
+    })
 
     await act(async () => {
-      await getContext().handleDeleteAccounts([
-        createAccount({ id: "delete-a" }),
-        createAccount({ id: "delete-b" }),
-        createAccount({ id: "delete-a" }),
-      ])
+      await expect(
+        getContext().handleDeleteAccounts([
+          createAccount({ id: "delete-a" }),
+          createAccount({ id: "delete-b" }),
+          createAccount({ id: "delete-a" }),
+        ]),
+      ).resolves.toEqual({
+        deletedCount: 2,
+        deletedIds: ["delete-a", "delete-b"],
+      })
     })
 
     expect(mockDeleteAccounts).toHaveBeenCalledWith(["delete-a", "delete-b"])
@@ -500,6 +508,7 @@ describe("AccountActionsContext", () => {
 
     await expect(getContext().handleDeleteAccounts([])).resolves.toEqual({
       deletedCount: 0,
+      deletedIds: [],
     })
 
     expect(mockDeleteAccounts).not.toHaveBeenCalled()

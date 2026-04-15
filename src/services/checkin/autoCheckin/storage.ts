@@ -76,7 +76,11 @@ function recalculateSummaryFromResults(
 }
 
 /**
- *
+ * Derive the overall auto check-in run result from an aggregated summary.
+ * @param summary Aggregated run summary with success and failure counts.
+ * @returns `AUTO_CHECKIN_RUN_RESULT.PARTIAL` when both success and failure are
+ * present, `AUTO_CHECKIN_RUN_RESULT.FAILED` when only failures remain, or
+ * `AUTO_CHECKIN_RUN_RESULT.SUCCESS` otherwise.
  */
 function getRunResultFromSummary(
   summary: AutoCheckinRunSummary,
@@ -91,7 +95,14 @@ function getRunResultFromSummary(
 }
 
 /**
- *
+ * Merge a per-account result back into the stored account snapshots.
+ * @param snapshots Existing account snapshots for the latest run, if any.
+ * @param result Latest per-account result that should be reflected in the
+ * matching snapshot.
+ * @param skipReason Optional skip reason override used when the result is being
+ * synthesized from a disabled-account transition.
+ * @returns The updated snapshots array, or the original `snapshots` when there
+ * is nothing to update.
  */
 function updateSnapshotWithResult(
   snapshots: AutoCheckinAccountSnapshot[] | undefined,

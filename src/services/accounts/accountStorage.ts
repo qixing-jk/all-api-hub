@@ -535,10 +535,12 @@ class AccountStorageService {
    *
    * Ignores unknown ids to keep this operation resilient to concurrent changes.
    */
-  async deleteAccounts(ids: string[]): Promise<{ deletedCount: number }> {
+  async deleteAccounts(
+    ids: string[],
+  ): Promise<{ deletedCount: number; deletedIds: string[] }> {
     const uniqueIds = Array.from(new Set(ids)).filter(Boolean)
     if (uniqueIds.length === 0) {
-      return { deletedCount: 0 }
+      return { deletedCount: 0, deletedIds: [] }
     }
 
     const idSet = new Set(uniqueIds)
@@ -546,13 +548,19 @@ class AccountStorageService {
     try {
       const result = await this.mutateStorageConfig((config) => {
         const accounts = config.accounts
+        const deletedIds = accounts
+          .filter((account) => idSet.has(account.id))
+          .map((account) => account.id)
         const filteredAccounts = accounts.filter(
           (account) => !idSet.has(account.id),
         )
-        const deletedCount = accounts.length - filteredAccounts.length
+        const deletedCount = deletedIds.length
 
         if (deletedCount === 0) {
-          return { result: { deletedCount: 0 }, changed: false }
+          return {
+            result: { deletedCount: 0, deletedIds: [] },
+            changed: false,
+          }
         }
 
         config.accounts = filteredAccounts
@@ -562,15 +570,15 @@ class AccountStorageService {
         config.orderedAccountIds = config.orderedAccountIds.filter(
           (orderedId) => !idSet.has(orderedId),
         )
-        return { result: { deletedCount }, changed: true }
+        return { result: { deletedCount, deletedIds }, changed: true }
       })
 
       if (result.deletedCount > 0) {
         void autoCheckinStorage
-          .pruneStatusForAccountIds(uniqueIds)
+          .pruneStatusForAccountIds(result.deletedIds)
           .catch((error) => {
             logger.error("批量清理自动签到账号状态失败", {
-              accountIds: uniqueIds,
+              accountIds: result.deletedIds,
               error,
             })
           })

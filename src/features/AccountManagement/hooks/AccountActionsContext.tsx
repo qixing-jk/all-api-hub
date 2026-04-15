@@ -40,7 +40,7 @@ interface AccountActionsContextType {
   ) => Promise<{ updatedCount: number; updatedIds: string[] }>
   handleDeleteAccounts: (
     accounts: DisplaySiteData[],
-  ) => Promise<{ deletedCount: number }>
+  ) => Promise<{ deletedCount: number; deletedIds: string[] }>
   handleDeleteAccount: (account: DisplaySiteData) => void
   handleCopyUrl: (account: DisplaySiteData) => void
   handleMarkCustomCheckInAsCheckedIn: (
@@ -200,7 +200,7 @@ export const AccountActionsProvider = ({
         .filter(Boolean)
 
       if (accountIds.length === 0) {
-        return { deletedCount: 0 }
+        return { deletedCount: 0, deletedIds: [] }
       }
 
       const result = await toast.promise(

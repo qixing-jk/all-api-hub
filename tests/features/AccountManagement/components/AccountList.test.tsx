@@ -344,7 +344,10 @@ function createAccountDataContextValue() {
 describe("AccountList", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    handleDeleteAccountsMock.mockResolvedValue({ deletedCount: 0 })
+    handleDeleteAccountsMock.mockResolvedValue({
+      deletedCount: 0,
+      deletedIds: [],
+    })
     handleSetAccountsDisabledMock.mockResolvedValue({
       updatedCount: 0,
       updatedIds: [],
@@ -684,7 +687,10 @@ describe("AccountList", () => {
 
   it("shows a bulk delete confirmation and deletes all selected accounts", async () => {
     const user = userEvent.setup()
-    handleDeleteAccountsMock.mockResolvedValueOnce({ deletedCount: 2 })
+    handleDeleteAccountsMock.mockResolvedValueOnce({
+      deletedCount: 2,
+      deletedIds: ["enabled-alpha", "enabled-gamma"],
+    })
 
     render(<AccountList />)
 
@@ -721,6 +727,59 @@ describe("AccountList", () => {
 
     expect(handleDeleteAccountsMock).toHaveBeenCalledWith([
       expect.objectContaining({ id: "enabled-alpha" }),
+      expect.objectContaining({ id: "enabled-gamma" }),
+    ])
+  })
+
+  it("keeps remaining selection when bulk delete only partially succeeds", async () => {
+    const user = userEvent.setup()
+    handleDeleteAccountsMock
+      .mockResolvedValueOnce({
+        deletedCount: 1,
+        deletedIds: ["enabled-alpha"],
+      })
+      .mockResolvedValueOnce({
+        deletedCount: 1,
+        deletedIds: ["enabled-gamma"],
+      })
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+
+    await user.click(screen.getAllByRole("checkbox")[0])
+
+    const searchInput = screen.getByPlaceholderText(
+      "account:search.placeholder",
+    )
+    await user.clear(searchInput)
+    await user.type(searchInput, "Gamma")
+
+    expect(await screen.findByText("Enabled Gamma")).toBeInTheDocument()
+    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.deleteSelected" }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.deleteConfirmAction" }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.deleteSelected" }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.deleteConfirmAction" }),
+    )
+
+    expect(handleDeleteAccountsMock).toHaveBeenNthCalledWith(
+      1,
+      expect.arrayContaining([
+        expect.objectContaining({ id: "enabled-alpha" }),
+        expect.objectContaining({ id: "enabled-gamma" }),
+      ]),
+    )
+    expect(handleDeleteAccountsMock).toHaveBeenNthCalledWith(2, [
       expect.objectContaining({ id: "enabled-gamma" }),
     ])
   })

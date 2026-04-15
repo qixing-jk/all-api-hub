@@ -677,14 +677,16 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
       return
     }
 
-    const selectedIds = selectedAccounts.map((account) => account.id)
-
     setIsBulkDeleting(true)
     try {
-      const { deletedCount } = await handleDeleteAccounts(selectedAccounts)
-      setSelectedAccountIds((previous) =>
-        previous.filter((accountId) => !selectedIds.includes(accountId)),
-      )
+      const { deletedCount, deletedIds } =
+        await handleDeleteAccounts(selectedAccounts)
+      if (deletedIds.length > 0) {
+        const deletedIdSet = new Set(deletedIds)
+        setSelectedAccountIds((previous) =>
+          previous.filter((accountId) => !deletedIdSet.has(accountId)),
+        )
+      }
       setIsBulkDeleteConfirmOpen(false)
 
       if (deletedCount > 0 && displayData.length - deletedCount <= 0) {
