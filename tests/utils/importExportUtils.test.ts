@@ -339,6 +339,71 @@ describe("importFromBackupObject", () => {
     })
   })
 
+  it("imports backups with account key snapshots while ignoring the snapshot payload", async () => {
+    const backup: BackupFullV2 = {
+      version: BACKUP_VERSION,
+      timestamp: Date.now(),
+      accounts: {
+        accounts: [{ id: "a1", name: "Imported Account" } as any],
+        bookmarks: [{ id: "b1" } as any],
+        pinnedAccountIds: ["a1"],
+        orderedAccountIds: ["a1"],
+        last_updated: Date.now(),
+      } as any,
+      preferences: { themeMode: "dark" } as any,
+      channelConfigs: { 1: { enabled: true } } as any,
+      accountKeySnapshots: [
+        {
+          accountId: "a1",
+          accountName: "Imported Account",
+          baseUrl: "https://example.com",
+          siteType: "new-api",
+          tokens: [
+            {
+              id: 101,
+              name: "Primary Key",
+              key: "sk-should-be-ignored",
+              status: 1,
+            },
+          ],
+        },
+      ],
+      accountKeySnapshotErrors: [
+        {
+          accountId: "a2",
+          accountName: "Failed Account",
+          baseUrl: "https://failed.example.com",
+          siteType: "new-api",
+          errorMessage: "request timeout",
+        },
+      ],
+    }
+
+    const result = await importFromBackupObject(backup as BackupV2)
+
+    expect(mockAccountStorageImportData).toHaveBeenCalledWith({
+      accounts: [{ id: "a1", name: "Imported Account" }],
+      bookmarks: [{ id: "b1" }],
+      pinnedAccountIds: ["a1"],
+      orderedAccountIds: ["a1"],
+    })
+    expect(mockUserPreferencesImport).toHaveBeenCalledWith({
+      themeMode: "dark",
+    })
+    expect(mockChannelConfigImport).toHaveBeenCalledWith({
+      1: { enabled: true },
+    })
+    expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
+    expect(mockResolveDisplayAccountTokenForSecret).not.toHaveBeenCalled()
+    expect(result.allImported).toBe(true)
+    expect(result.sections).toEqual({
+      accounts: true,
+      preferences: true,
+      channelConfigs: true,
+      apiCredentialProfiles: false,
+    })
+  })
+
   it("merges API credential profiles when present in V2 backup", async () => {
     const backup: BackupFullV2 = {
       version: BACKUP_VERSION,
