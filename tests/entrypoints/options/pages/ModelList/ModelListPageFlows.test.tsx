@@ -490,9 +490,7 @@ describe("ModelList page flows", () => {
     })
 
     expect(
-      await screen
-        .findByText("modelList:refreshData")
-        .then((node) => node.closest("button")),
+      await screen.findByRole("button", { name: /modelList:refreshData/i }),
     ).toBeDisabled()
   })
 

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { UI_CONSTANTS } from "~/constants/ui"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { useFilteredModels } from "~/features/ModelList/hooks/useFilteredModels"
 import {
@@ -292,7 +293,7 @@ describe("useFilteredModels", () => {
     expect(result.current.getProviderFilteredCount("Gemini")).toBe(1)
   })
 
-  it("falls back to default candidates when single-account pricing metadata omits group ratios", async () => {
+  it("returns no groups or models when single-account pricing metadata omits group ratios", async () => {
     const account = createDisplayAccount({
       id: "account-missing-group-ratio",
       balance: { USD: 0, CNY: 70 },
@@ -990,6 +991,125 @@ describe("useFilteredModels", () => {
         ["account-high-usd", true],
         ["account-low-usd", false],
       ])
+    })
+  })
+
+  it("falls back to the default exchange rate when real-price sorting compares per-call account rows without USD balances", async () => {
+    const defaultRateAccount = createDisplayAccount({
+      id: "account-default-rate",
+      name: "Default Rate",
+      balance: { USD: 0, CNY: 70 },
+    })
+    const explicitRateAccount = createDisplayAccount({
+      id: "account-explicit-rate",
+      name: "Explicit Rate",
+      balance: { USD: 10, CNY: 50 },
+    })
+
+    const pricingContexts = [
+      {
+        account: explicitRateAccount,
+        pricing: createPricingResponse([
+          {
+            model_name: "shared-per-call-model",
+            quota_type: 1,
+            model_price: 1,
+            enable_groups: ["default"],
+          },
+        ]),
+      },
+      {
+        account: defaultRateAccount,
+        pricing: createPricingResponse([
+          {
+            model_name: "shared-per-call-model",
+            quota_type: 1,
+            model_price: 0.9,
+            enable_groups: ["default"],
+          },
+        ]),
+      },
+    ]
+
+    const usdResult = renderUseFilteredModels({
+      pricingContexts,
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+      showRealPrice: false,
+    })
+
+    await waitFor(() => {
+      expect(
+        usdResult.result.current.filteredModels.map((item) => [
+          item.source.kind === "account" ? item.source.account.id : "profile",
+          item.isLowestPrice,
+        ]),
+      ).toEqual([
+        ["account-default-rate", true],
+        ["account-explicit-rate", false],
+      ])
+    })
+
+    const realPriceResult = renderUseFilteredModels({
+      pricingContexts,
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+      showRealPrice: true,
+    })
+
+    await waitFor(() => {
+      expect(
+        realPriceResult.result.current.filteredModels.map((item) => [
+          item.source.kind === "account" ? item.source.account.id : "profile",
+          item.isLowestPrice,
+          item.calculatedPrice.perCallPrice,
+        ]),
+      ).toEqual([
+        ["account-explicit-rate", true, 1],
+        ["account-default-rate", false, 0.9],
+      ])
+    })
+
+    expect(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT * 0.9).toBeGreaterThan(5)
+  })
+
+  it("keeps profile-backed per-call sorting on raw prices when real-price mode is enabled", async () => {
+    const profileSource = createProfileSource({
+      id: "profile-per-call",
+      name: "Reusable Key",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://profile.example.com/v1",
+      apiKey: "sk-secret",
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        {
+          model_name: "per-call-b",
+          quota_type: 1,
+          model_price: 2,
+          enable_groups: ["default"],
+        },
+        {
+          model_name: "per-call-a",
+          quota_type: 1,
+          model_price: 1,
+          enable_groups: ["default"],
+        },
+      ]),
+      selectedSource: profileSource,
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+      showRealPrice: true,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["per-call-a", "per-call-b"])
     })
   })
 

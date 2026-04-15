@@ -40,27 +40,35 @@ vi.mock("~/services/models/utils/modelPricing", async (importOriginal) => {
 
   return {
     ...actual,
-    getBillingModeText: () => "billing-mode-per-call",
+    getBillingModeText: (quotaType: number) =>
+      quotaType === 0 ? "ui:billing.tokenBased" : "ui:billing.perCall",
   }
 })
 
+function renderModelItemHeader(quotaType: number) {
+  render(
+    <ModelItemHeader
+      model={
+        {
+          model_name: "per-call-model",
+          quota_type: quotaType,
+        } as any
+      }
+      isAvailableForUser={true}
+      handleCopyModelName={vi.fn()}
+      showPricingMetadata={true}
+      showAvailabilityBadge={false}
+    />,
+  )
+}
+
 describe("ModelItemHeader", () => {
   it("uses the default billing badge variant for quota_type 2 models", () => {
-    render(
-      <ModelItemHeader
-        model={
-          {
-            model_name: "per-call-model",
-            quota_type: 2,
-          } as any
-        }
-        isAvailableForUser={true}
-        handleCopyModelName={vi.fn()}
-        showPricingMetadata={true}
-        showAvailabilityBadge={false}
-      />,
-    )
+    renderModelItemHeader(2)
 
-    expect(screen.getByText("billing-mode-per-call")).toBeInTheDocument()
+    const billingBadge = screen.getByText("ui:billing.perCall")
+    expect(billingBadge).toBeInTheDocument()
+    expect(billingBadge).toHaveClass("bg-primary/10")
+    expect(billingBadge).not.toHaveClass("bg-secondary")
   })
 })
