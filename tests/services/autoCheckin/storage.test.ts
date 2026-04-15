@@ -109,8 +109,18 @@ describe("autoCheckinStorage", () => {
     const { get, set } = (Storage as any).__mocks as any
     get.mockResolvedValueOnce({
       perAccount: {
-        keep: { status: "success" },
-        drop: { status: "failed" },
+        keep: {
+          accountId: "keep",
+          accountName: "Keep",
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          timestamp: 1700000000000,
+        },
+        drop: {
+          accountId: "drop",
+          accountName: "Drop",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          timestamp: 1700000001000,
+        },
       },
       accountsSnapshot: [{ accountId: "keep" }, { accountId: "drop" }],
       retryState: {
@@ -136,9 +146,23 @@ describe("autoCheckinStorage", () => {
     expect(mockWithExtensionStorageWriteLock).toHaveBeenCalled()
     expect(set).toHaveBeenCalledWith("autoCheckin_status", {
       perAccount: {
-        keep: { status: "success" },
+        keep: {
+          accountId: "keep",
+          accountName: "Keep",
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          timestamp: 1700000000000,
+        },
       },
       accountsSnapshot: [{ accountId: "keep" }],
+      summary: {
+        totalEligible: 1,
+        executed: 1,
+        successCount: 1,
+        failedCount: 0,
+        skippedCount: 0,
+        needsRetry: false,
+      },
+      lastRunResult: "success",
       retryState: {
         day: "2026-03-28",
         pendingAccountIds: ["keep"],
@@ -173,6 +197,8 @@ describe("autoCheckinStorage", () => {
     expect(set).toHaveBeenCalledWith("autoCheckin_status", {
       perAccount: undefined,
       accountsSnapshot: undefined,
+      summary: undefined,
+      lastRunResult: undefined,
       retryState: undefined,
       pendingRetry: false,
       nextRetryScheduledAt: undefined,
@@ -298,5 +324,98 @@ describe("autoCheckinStorage", () => {
         ],
       }),
     )
+  })
+
+  it("does not synthesize disabled rows for accounts missing from status history and snapshots", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({
+      perAccount: {
+        keep: {
+          accountId: "keep",
+          accountName: "Keep",
+          status: CHECKIN_RESULT_STATUS.SUCCESS,
+          timestamp: 1700000000000,
+        },
+      },
+      accountsSnapshot: [
+        {
+          accountId: "keep",
+          accountName: "Keep",
+          siteType: "one-api",
+          detectionEnabled: true,
+          autoCheckinEnabled: true,
+          providerAvailable: true,
+        },
+      ],
+      summary: {
+        totalEligible: 1,
+        executed: 1,
+        successCount: 1,
+        failedCount: 0,
+        skippedCount: 0,
+        needsRetry: false,
+      },
+      lastRunResult: "success",
+    })
+
+    await expect(
+      autoCheckinStorage.markAccountsDisabledInStatus([
+        { accountId: "phantom", accountName: "Phantom" },
+      ]),
+    ).resolves.toBe(true)
+
+    expect(set).not.toHaveBeenCalled()
+  })
+
+  it("returns true without persisting when disabled-account marking receives no usable ids or status", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+
+    await expect(
+      autoCheckinStorage.markAccountsDisabledInStatus([
+        { accountId: "" },
+        { accountId: "" },
+      ]),
+    ).resolves.toBe(true)
+    expect(get).not.toHaveBeenCalled()
+    expect(set).not.toHaveBeenCalled()
+
+    get.mockResolvedValueOnce(null)
+
+    await expect(
+      autoCheckinStorage.markAccountsDisabledInStatus([
+        { accountId: "missing" },
+      ]),
+    ).resolves.toBe(true)
+    expect(set).not.toHaveBeenCalled()
+  })
+
+  it("returns false when disabled-account marking cannot persist the updated status", async () => {
+    const { get, set } = (Storage as any).__mocks as any
+    get.mockResolvedValueOnce({
+      perAccount: {
+        failed: {
+          accountId: "failed",
+          accountName: "Failed Account",
+          status: CHECKIN_RESULT_STATUS.FAILED,
+          timestamp: 1700000001000,
+        },
+      },
+      summary: {
+        totalEligible: 1,
+        executed: 1,
+        successCount: 0,
+        failedCount: 1,
+        skippedCount: 0,
+        needsRetry: true,
+      },
+      lastRunResult: "failed",
+    })
+    set.mockRejectedValueOnce(new Error("write failed"))
+
+    await expect(
+      autoCheckinStorage.markAccountsDisabledInStatus([
+        { accountId: "failed" },
+      ]),
+    ).resolves.toBe(false)
   })
 })

@@ -975,6 +975,26 @@ describe("accountStorage core behaviors", () => {
     expect(markAccountDisabledInStatusMock).toHaveBeenCalledTimes(1)
   })
 
+  it("setAccountDisabled should still persist when auto check-in marking fails", async () => {
+    const account = createAccount({
+      id: "toggle-disabled-warning",
+      disabled: false,
+    })
+    seedStorage([account])
+    markAccountDisabledInStatusMock.mockResolvedValueOnce(false)
+
+    expect(
+      await accountStorage.setAccountDisabled("toggle-disabled-warning", true),
+    ).toBe(true)
+    expect(
+      (await accountStorage.getAccountById("toggle-disabled-warning"))
+        ?.disabled,
+    ).toBe(true)
+    expect(markAccountDisabledInStatusMock).toHaveBeenCalledWith(
+      "toggle-disabled-warning",
+    )
+  })
+
   it("setAccountsDisabled should update only matching accounts that need changes", async () => {
     const accounts = [
       createAccount({ id: "disable-a", disabled: false }),
@@ -1003,6 +1023,26 @@ describe("accountStorage core behaviors", () => {
     ])
   })
 
+  it("setAccountsDisabled should still return updates when bulk auto check-in marking fails", async () => {
+    const accounts = [
+      createAccount({ id: "disable-warning-a", disabled: false }),
+      createAccount({ id: "disable-warning-b", disabled: false }),
+    ]
+    seedStorage(accounts)
+    markAccountsDisabledInStatusMock.mockResolvedValueOnce(false)
+
+    const result = await accountStorage.setAccountsDisabled(
+      ["disable-warning-a", "disable-warning-b"],
+      true,
+    )
+
+    expect(result).toEqual({ updatedCount: 2 })
+    expect(markAccountsDisabledInStatusMock).toHaveBeenCalledWith([
+      { accountId: "disable-warning-a" },
+      { accountId: "disable-warning-b" },
+    ])
+  })
+
   it("setAccountsDisabled should not mutate auto check-in status when re-enabling accounts", async () => {
     const accounts = [
       createAccount({ id: "enable-a", disabled: true }),
@@ -1016,6 +1056,13 @@ describe("accountStorage core behaviors", () => {
     )
 
     expect(result).toEqual({ updatedCount: 1 })
+    expect(markAccountsDisabledInStatusMock).not.toHaveBeenCalled()
+  })
+
+  it("setAccountsDisabled should no-op for empty id input", async () => {
+    expect(await accountStorage.setAccountsDisabled([], true)).toEqual({
+      updatedCount: 0,
+    })
     expect(markAccountsDisabledInStatusMock).not.toHaveBeenCalled()
   })
 

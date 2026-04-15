@@ -30,7 +30,6 @@ export const AUTO_CHECKIN_STATUS_STORAGE_LOCK =
 
 /**
  * Recalculate the aggregated auto check-in run summary from per-account results.
- *
  * @param perAccount Record of account ids to their latest check-in result.
  * @param previousSummary Optional previous summary used to preserve
  * `totalEligible` when the caller already knows the original eligible count.
@@ -213,11 +212,17 @@ class AutoCheckinStorage {
           }
 
           let nextSnapshots = currentSnapshots
+          const matchedAccountIds = new Set<string>()
           for (const account of normalizedAccounts) {
             const snapshotMatch = nextSnapshots?.find(
               (snapshot) => snapshot.accountId === account.accountId,
             )
             const previousResult = perAccount[account.accountId]
+            if (!previousResult && !snapshotMatch) {
+              continue
+            }
+
+            matchedAccountIds.add(account.accountId)
             const resolvedAccountName =
               account.accountName ||
               previousResult?.accountName ||
@@ -243,9 +248,11 @@ class AutoCheckinStorage {
             )
           }
 
-          const disabledIdSet = new Set(
-            normalizedAccounts.map((account) => account.accountId),
-          )
+          if (matchedAccountIds.size === 0) {
+            return true
+          }
+
+          const disabledIdSet = matchedAccountIds
           let retryState = isPlainObject(current.retryState)
             ? current.retryState
             : undefined
@@ -481,6 +488,32 @@ class AutoCheckinStorage {
           }
 
           if (!changed) return true
+
+          const nextPerAccount = isPlainObject(next.perAccount)
+            ? (next.perAccount as Record<string, CheckinAccountResult>)
+            : {}
+          const nextSnapshots = Array.isArray(next.accountsSnapshot)
+            ? (next.accountsSnapshot as AutoCheckinAccountSnapshot[])
+            : undefined
+          const resultCount = Object.keys(nextPerAccount).length
+          const remainingAccountCount = Math.max(
+            resultCount,
+            nextSnapshots?.length ?? 0,
+          )
+
+          if (remainingAccountCount > 0) {
+            const summary = {
+              ...recalculateSummaryFromResults(nextPerAccount),
+              totalEligible: remainingAccountCount,
+            }
+
+            next.summary = summary
+            next.lastRunResult =
+              resultCount > 0 ? getRunResultFromSummary(summary) : undefined
+          } else {
+            next.summary = undefined
+            next.lastRunResult = undefined
+          }
 
           const success = await this.saveStatus(next)
           if (!success) {
