@@ -2,6 +2,8 @@ import {
   ArrowPathIcon,
   CheckCircleIcon,
   ExclamationTriangleIcon,
+  NoSymbolIcon,
+  TrashIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline"
 import { useMemo } from "react"
@@ -29,9 +31,13 @@ interface ResultsTableProps {
   retryingAccountId?: string | null
   pendingOpeningSiteAccountIds?: Set<string>
   openingManualAccountId?: string | null
+  disablingAccountId?: string | null
+  deletingAccountId?: string | null
   onRetryAccount?: (accountId: string) => void | Promise<void>
   onOpenAccountSite?: (accountId: string) => void | Promise<void>
   onOpenManualSignIn?: (accountId: string) => void | Promise<void>
+  onDisableAccount?: (accountId: string) => void | Promise<void>
+  onDeleteAccount?: (accountId: string) => void | Promise<void>
 }
 
 /**
@@ -43,11 +49,15 @@ export default function ResultsTable({
   retryingAccountId,
   pendingOpeningSiteAccountIds,
   openingManualAccountId,
+  disablingAccountId,
+  deletingAccountId,
   onRetryAccount,
   onOpenAccountSite,
   onOpenManualSignIn,
+  onDisableAccount,
+  onDeleteAccount,
 }: ResultsTableProps) {
-  const { t } = useTranslation("autoCheckin")
+  const { t } = useTranslation(["autoCheckin", "account"])
   const forceShowActions = Boolean(showDevActions)
   const visibleResults = useMemo(
     () =>
@@ -174,6 +184,8 @@ export default function ResultsTable({
               const troubleshootingHintKey = getTroubleshootingHintKey(result)
               const isOpeningSite =
                 pendingOpeningSiteAccountIds?.has(result.accountId) ?? false
+              const isFailedResult =
+                result.status === CHECKIN_RESULT_STATUS.FAILED
 
               return (
                 <tr
@@ -210,8 +222,7 @@ export default function ResultsTable({
                   >
                     <div className="flex flex-wrap gap-2">
                       {onRetryAccount &&
-                        (forceShowActions ||
-                          result.status === CHECKIN_RESULT_STATUS.FAILED) && (
+                        (forceShowActions || isFailedResult) && (
                           <Button
                             size="sm"
                             variant="secondary"
@@ -224,8 +235,7 @@ export default function ResultsTable({
                           </Button>
                         )}
                       {onOpenManualSignIn &&
-                        (forceShowActions ||
-                          result.status === CHECKIN_RESULT_STATUS.FAILED) && (
+                        (forceShowActions || isFailedResult) && (
                           <Button
                             size="sm"
                             variant="outline"
@@ -243,6 +253,30 @@ export default function ResultsTable({
                             {t("execution.actions.openManual")}
                           </Button>
                         )}
+                      {onDisableAccount && isFailedResult && (
+                        <Button
+                          size="sm"
+                          variant="warning"
+                          loading={disablingAccountId === result.accountId}
+                          disabled={disablingAccountId === result.accountId}
+                          onClick={() => onDisableAccount(result.accountId)}
+                          leftIcon={<NoSymbolIcon className="h-3.5 w-3.5" />}
+                        >
+                          {t("account:actions.disableAccount")}
+                        </Button>
+                      )}
+                      {onDeleteAccount && isFailedResult && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          loading={deletingAccountId === result.accountId}
+                          disabled={deletingAccountId === result.accountId}
+                          onClick={() => onDeleteAccount(result.accountId)}
+                          leftIcon={<TrashIcon className="h-3.5 w-3.5" />}
+                        >
+                          {t("account:actions.delete")}
+                        </Button>
+                      )}
                       {onOpenAccountSite && (
                         <Button
                           size="sm"

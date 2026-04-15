@@ -164,6 +164,8 @@
       "accountEnabled": "已啟用 {{accountName}}",
       "accountPinned": "已置頂 {{accountName}}",
       "accountSaveSuccess": "帳號儲存成功",
+      "accountsDisabled_other": "已禁用 {{count}} 個帳號",
+      "accountsEnabled_other": "已啟用 {{count}} 個帳號",
       "accountUnpinned": "已取消置頂 {{accountName}}",
       "accountUpdateSuccess": "帳號更新成功",
       "bookmarkAdded": "書籤 {{name}} 新增成功!",

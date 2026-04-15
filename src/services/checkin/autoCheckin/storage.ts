@@ -76,10 +76,10 @@ class AutoCheckinStorage {
   /**
    * Best-effort pruning for account-scoped auto check-in status data.
    *
-   * This helps keep the status blob clean after bulk account deletions so UI
-   * components and retry schedulers don't retain stale per-account entries.
+   * This keeps the status blob clean when an account is deleted or intentionally
+   * removed from the current auto check-in workflow.
    */
-  async pruneStatusForDeletedAccounts(accountIds: string[]): Promise<boolean> {
+  async pruneStatusForAccountIds(accountIds: string[]): Promise<boolean> {
     const uniqueIds = Array.from(new Set(accountIds)).filter(Boolean)
     if (uniqueIds.length === 0) return true
 
@@ -212,25 +212,29 @@ class AutoCheckinStorage {
           const success = await this.saveStatus(next)
           if (!success) {
             logger.warn(
-              "Failed to prune auto check-in status after account deletion",
+              "Failed to prune auto check-in status for account ids",
               {
-                deletedAccountCount: uniqueIds.length,
+                accountCount: uniqueIds.length,
               },
             )
           }
           return success
         } catch (error) {
-          logger.warn(
-            "Failed to prune auto check-in status after account deletion",
-            {
-              deletedAccountCount: uniqueIds.length,
-              error,
-            },
-          )
+          logger.warn("Failed to prune auto check-in status for account ids", {
+            accountCount: uniqueIds.length,
+            error,
+          })
           return false
         }
       },
     )
+  }
+
+  /**
+   * Backward-compatible alias for delete-driven callers.
+   */
+  async pruneStatusForDeletedAccounts(accountIds: string[]): Promise<boolean> {
+    return this.pruneStatusForAccountIds(accountIds)
   }
 }
 

@@ -18,6 +18,7 @@ interface SortableAccountListItemProps {
   handleLabel: string
   showHandle: boolean
   className?: string
+  selectionControl?: React.ReactNode
 }
 
 /**
@@ -32,6 +33,7 @@ function SortableAccountListItem({
   handleLabel,
   showHandle,
   className,
+  selectionControl,
 }: SortableAccountListItemProps) {
   const {
     attributes,
@@ -63,6 +65,7 @@ function SortableAccountListItem({
           className,
         )}
       >
+        {selectionControl}
         {showHandle && (
           <IconButton
             ref={setActivatorNodeRef}

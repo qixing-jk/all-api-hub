@@ -12,11 +12,61 @@ const { toast } = vi.hoisted(() => ({
     dismiss: vi.fn(),
     success: vi.fn(),
     error: vi.fn(),
+    promise: vi.fn(
+      async (
+        promise: Promise<unknown>,
+        handlers?: {
+          success?: string | ((value: any) => string)
+          error?: string | ((error: Error) => string)
+        },
+      ) => {
+        try {
+          const value = await promise
+          return typeof handlers?.success === "function"
+            ? handlers.success(value)
+            : handlers?.success ?? value
+        } catch (error) {
+          if (typeof handlers?.error === "function") {
+            return handlers.error(error as Error)
+          }
+
+          if (handlers?.error) {
+            return handlers.error
+          }
+
+          throw error
+        }
+      },
+    ),
   },
 }))
 
 vi.mock("react-hot-toast", () => ({
   default: toast,
+}))
+
+const {
+  setAccountDisabledMock,
+  deleteAccountMock,
+  pruneStatusForAccountIdsMock,
+} = vi.hoisted(() => ({
+  setAccountDisabledMock: vi.fn(),
+  deleteAccountMock: vi.fn(),
+  pruneStatusForAccountIdsMock: vi.fn(),
+}))
+
+vi.mock("~/services/accounts/accountStorage", () => ({
+  accountStorage: {
+    setAccountDisabled: (...args: any[]) => setAccountDisabledMock(...args),
+    deleteAccount: (...args: any[]) => deleteAccountMock(...args),
+  },
+}))
+
+vi.mock("~/services/checkin/autoCheckin/storage", () => ({
+  autoCheckinStorage: {
+    pruneStatusForAccountIds: (...args: any[]) =>
+      pruneStatusForAccountIdsMock(...args),
+  },
 }))
 
 afterEach(() => {
@@ -433,6 +483,280 @@ describe("AutoCheckin account actions", () => {
     await waitFor(() => {
       expect(openButton).not.toBeDisabled()
     })
+  })
+
+  it("disables a failed account, keeps its auto-checkin record, and reloads the page data", async () => {
+    const user = userEvent.setup()
+    const browserApi = await import("~/utils/browser/browserApi")
+
+    let statusCalls = 0
+    setAccountDisabledMock.mockResolvedValueOnce(true)
+
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+      async (message: any) => {
+        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+          statusCalls += 1
+
+          return {
+            success: true,
+            data:
+              statusCalls === 1
+                ? {
+                    perAccount: {
+                      alpha: {
+                        accountId: "alpha",
+                        accountName: "Alpha",
+                        status: CHECKIN_RESULT_STATUS.FAILED,
+                        timestamp: 1700000000000,
+                        message: "needs disable",
+                      },
+                    },
+                  }
+                : {
+                    perAccount: {
+                      alpha: {
+                        accountId: "alpha",
+                        accountName: "Alpha",
+                        status: CHECKIN_RESULT_STATUS.FAILED,
+                        timestamp: 1700000000000,
+                        message: "needs disable",
+                      },
+                    },
+                  },
+          }
+        }
+
+        if (message.action === RuntimeActionIds.AutoCheckinGetAccountInfo) {
+          return {
+            success: true,
+            data: {
+              id: "alpha",
+              name: "Alpha",
+              baseUrl: "https://alpha.example",
+            },
+          }
+        }
+
+        return { success: true }
+      },
+    )
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "account:actions.disableAccount",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(setAccountDisabledMock).toHaveBeenCalledWith("alpha", true)
+    })
+    await waitFor(() => {
+      expect(pruneStatusForAccountIdsMock).not.toHaveBeenCalled()
+    })
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith(
+        "messages:toast.success.accountDisabled",
+      )
+    })
+    expect(
+      screen.getByRole("button", {
+        name: "account:actions.disableAccount",
+      }),
+    ).toBeInTheDocument()
+    expect(statusCalls).toBeGreaterThanOrEqual(2)
+  })
+
+  it("shows a generic error when disabling a failed account does not persist", async () => {
+    const user = userEvent.setup()
+    const browserApi = await import("~/utils/browser/browserApi")
+
+    setAccountDisabledMock.mockResolvedValueOnce(false)
+
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+      async (message: any) => {
+        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+          return {
+            success: true,
+            data: {
+              perAccount: {
+                alpha: {
+                  accountId: "alpha",
+                  accountName: "Alpha",
+                  status: CHECKIN_RESULT_STATUS.FAILED,
+                  timestamp: 1700000000000,
+                  message: "needs disable",
+                },
+              },
+            },
+          }
+        }
+
+        if (message.action === RuntimeActionIds.AutoCheckinGetAccountInfo) {
+          return {
+            success: true,
+            data: {
+              id: "alpha",
+              name: "Alpha",
+              baseUrl: "https://alpha.example",
+            },
+          }
+        }
+
+        return { success: true }
+      },
+    )
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "account:actions.disableAccount",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "messages:toast.error.operationFailedGeneric",
+      )
+    })
+    expect(pruneStatusForAccountIdsMock).not.toHaveBeenCalled()
+  })
+
+  it("deletes a failed account from the row action and reloads status after confirmation", async () => {
+    const user = userEvent.setup()
+    const browserApi = await import("~/utils/browser/browserApi")
+
+    let statusCalls = 0
+    deleteAccountMock.mockResolvedValueOnce(true)
+
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+      async (message: any) => {
+        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+          statusCalls += 1
+
+          return {
+            success: true,
+            data:
+              statusCalls === 1
+                ? {
+                    perAccount: {
+                      alpha: {
+                        accountId: "alpha",
+                        accountName: "Alpha",
+                        status: CHECKIN_RESULT_STATUS.FAILED,
+                        timestamp: 1700000000000,
+                        message: "needs delete",
+                      },
+                    },
+                  }
+                : {
+                    perAccount: {},
+                  },
+          }
+        }
+
+        if (message.action === RuntimeActionIds.AutoCheckinGetAccountInfo) {
+          return {
+            success: true,
+            data: {
+              id: "alpha",
+              name: "Alpha",
+              baseUrl: "https://alpha.example",
+            },
+          }
+        }
+
+        return { success: true }
+      },
+    )
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "account:actions.delete",
+      }),
+    )
+
+    expect(
+      await screen.findByText("ui:dialog.delete.title"),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "ui:dialog.delete.confirmDelete",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(deleteAccountMock).toHaveBeenCalledWith("alpha")
+    })
+    expect(statusCalls).toBeGreaterThanOrEqual(2)
+  })
+
+  it("keeps the delete dialog open when the failed-account deletion request fails", async () => {
+    const user = userEvent.setup()
+    const browserApi = await import("~/utils/browser/browserApi")
+
+    let statusCalls = 0
+    deleteAccountMock.mockRejectedValueOnce(new Error("delete blocked"))
+
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+      async (message: any) => {
+        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+          statusCalls += 1
+          return {
+            success: true,
+            data: {
+              perAccount: {
+                alpha: {
+                  accountId: "alpha",
+                  accountName: "Alpha",
+                  status: CHECKIN_RESULT_STATUS.FAILED,
+                  timestamp: 1700000000000,
+                  message: "needs delete",
+                },
+              },
+            },
+          }
+        }
+
+        if (message.action === RuntimeActionIds.AutoCheckinGetAccountInfo) {
+          return {
+            success: true,
+            data: {
+              id: "alpha",
+              name: "Alpha",
+              baseUrl: "https://alpha.example",
+            },
+          }
+        }
+
+        return { success: true }
+      },
+    )
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "account:actions.delete",
+      }),
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.delete.confirmDelete",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(deleteAccountMock).toHaveBeenCalledWith("alpha")
+    })
+    expect(screen.getByText("ui:dialog.delete.title")).toBeInTheDocument()
+    expect(statusCalls).toBe(1)
   })
 
   it("reports a bulk-open failure when every failed account lookup fails", async () => {

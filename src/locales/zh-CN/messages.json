@@ -164,6 +164,8 @@
       "accountEnabled": "已启用 {{accountName}}",
       "accountPinned": "已置顶 {{accountName}}",
       "accountSaveSuccess": "账号保存成功",
+      "accountsDisabled": "已禁用 {{count}} 个账号",
+      "accountsEnabled": "已启用 {{count}} 个账号",
       "accountUnpinned": "已取消置顶 {{accountName}}",
       "accountUpdateSuccess": "账号更新成功",
       "bookmarkAdded": "书签 {{name}} 添加成功!",

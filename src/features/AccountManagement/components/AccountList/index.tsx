@@ -18,13 +18,17 @@ import {
   InboxIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline"
-import { useMemo, useState } from "react"
+import { useEffect, useMemo, useState } from "react"
+import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
+  Button,
   Card,
   CardContent,
   CardList,
+  Checkbox,
+  DestructiveConfirmDialog,
   EmptyState,
   IconButton,
   TagFilter,
@@ -47,8 +51,10 @@ import { getHealthStatusDisplay } from "~/features/AccountManagement/utils/healt
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
 import { cn } from "~/lib/utils"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import type { DisplaySiteData, SortField } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 import {
   calculateTotalBalanceForSites,
   calculateTotalConsumptionForSites,
@@ -292,13 +298,19 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     isManualSortFeatureEnabled,
   } = useAccountDataContext()
   const { handleAddAccountClick } = useAddAccountHandler()
-  const { handleDeleteAccount } = useAccountActionsContext()
+  const { handleDeleteAccount, handleSetAccountsDisabled } =
+    useAccountActionsContext()
   const { detectedAccount } = useAccountDataContext()
 
   const [deleteDialogAccount, setDeleteDialogAccount] =
     useState<DisplaySiteData | null>(null)
   const [copyKeyDialogAccount, setCopyKeyDialogAccount] =
     useState<DisplaySiteData | null>(null)
+  const [isBulkMode, setIsBulkMode] = useState(false)
+  const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([])
+  const [isBulkDeleting, setIsBulkDeleting] = useState(false)
+  const [isBulkDisabling, setIsBulkDisabling] = useState(false)
+  const [isBulkDeleteConfirmOpen, setIsBulkDeleteConfirmOpen] = useState(false)
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
   const [siteTypeFilter, setSiteTypeFilter] = useState<string | null>(null)
   const [refreshStatusFilter, setRefreshStatusFilter] =
@@ -355,6 +367,24 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     () => applyAccountListFilters(baseResults, filterState),
     [baseResults, filterState],
   )
+
+  const allAccountIdSet = useMemo(
+    () => new Set(displayData.map((account) => account.id)),
+    [displayData],
+  )
+
+  useEffect(() => {
+    setSelectedAccountIds((previous) =>
+      previous.filter((accountId) => allAccountIdSet.has(accountId)),
+    )
+  }, [allAccountIdSet])
+
+  useEffect(() => {
+    if (displayData.length === 0) {
+      setIsBulkMode(false)
+      setSelectedAccountIds([])
+    }
+  }, [displayData.length])
 
   const disabledCountResults = useMemo(
     () =>
@@ -515,6 +545,37 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     () => displayedResults.map((item) => item.account),
     [displayedResults],
   )
+  const selectedIdSet = useMemo(
+    () => new Set(selectedAccountIds),
+    [selectedAccountIds],
+  )
+  const visibleAccountIds = useMemo(
+    () => filteredSites.map((account) => account.id),
+    [filteredSites],
+  )
+  const visibleAccountIdSet = useMemo(
+    () => new Set(visibleAccountIds),
+    [visibleAccountIds],
+  )
+  const selectedAccounts = useMemo(
+    () => displayData.filter((account) => selectedIdSet.has(account.id)),
+    [displayData, selectedIdSet],
+  )
+  const selectedVisibleCount = useMemo(
+    () =>
+      selectedAccounts.filter((account) => visibleAccountIdSet.has(account.id))
+        .length,
+    [selectedAccounts, visibleAccountIdSet],
+  )
+  const hiddenSelectedCount = selectedAccountIds.length - selectedVisibleCount
+  const selectedEnabledAccounts = useMemo(
+    () => selectedAccounts.filter((account) => account.disabled !== true),
+    [selectedAccounts],
+  )
+  const bulkDeletePreviewAccounts = useMemo(
+    () => selectedAccounts.slice(0, 6),
+    [selectedAccounts],
+  )
 
   const filteredBalance = useMemo(
     () => calculateTotalBalanceForSites(filteredSites),
@@ -537,13 +598,107 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     siteTypeFilter !== null ||
     refreshStatusFilter !== null ||
     disabledFilter !== null
-  const dragDisabled = inSearchMode || !isManualSortFeatureEnabled
+  const dragDisabled = inSearchMode || !isManualSortFeatureEnabled || isBulkMode
   const handleLabel = t("account:list.dragHandle")
+  const isBulkBusy = isBulkDeleting || isBulkDisabling
 
   const sortedIds = useMemo(
     () => baseResults.map((item) => item.account.id),
     [baseResults],
   )
+
+  const updateSelectedAccountIds = (
+    updater: (previous: string[]) => string[],
+  ) => {
+    setSelectedAccountIds((previous) => Array.from(new Set(updater(previous))))
+  }
+
+  const handleBulkModeExit = () => {
+    if (isBulkBusy) return
+
+    setIsBulkMode(false)
+    setSelectedAccountIds([])
+    setIsBulkDeleteConfirmOpen(false)
+  }
+
+  const handleToggleAccountSelection = (
+    accountId: string,
+    checked: boolean,
+  ) => {
+    updateSelectedAccountIds((previous) =>
+      checked
+        ? [...previous, accountId]
+        : previous.filter((selectedId) => selectedId !== accountId),
+    )
+  }
+
+  const handleSelectVisibleAccounts = () => {
+    updateSelectedAccountIds((previous) => [...previous, ...visibleAccountIds])
+  }
+
+  const handleClearVisibleSelection = () => {
+    if (visibleAccountIds.length === 0) return
+
+    const visibleIds = new Set(visibleAccountIds)
+    updateSelectedAccountIds((previous) =>
+      previous.filter((selectedId) => !visibleIds.has(selectedId)),
+    )
+  }
+
+  const handleClearAllSelection = () => {
+    if (isBulkBusy) return
+    setSelectedAccountIds([])
+  }
+
+  const handleBulkDisable = async () => {
+    if (selectedEnabledAccounts.length === 0 || isBulkBusy) {
+      return
+    }
+
+    setIsBulkDisabling(true)
+    try {
+      await handleSetAccountsDisabled(selectedEnabledAccounts, true)
+      setSelectedAccountIds([])
+    } finally {
+      setIsBulkDisabling(false)
+    }
+  }
+
+  const handleBulkDelete = async () => {
+    if (selectedAccounts.length === 0 || isBulkBusy) {
+      return
+    }
+
+    const selectedIds = selectedAccounts.map((account) => account.id)
+
+    setIsBulkDeleting(true)
+    try {
+      const { deletedCount } = await toast.promise(
+        accountStorage.deleteAccounts(selectedIds),
+        {
+          loading: t("account:bulk.deleting", { count: selectedIds.length }),
+          success: (result) =>
+            t("account:bulk.deleteSuccess", { count: result.deletedCount }),
+          error: (error) =>
+            t("ui:dialog.delete.deleteFailed", {
+              error: getErrorMessage(error),
+            }),
+        },
+      )
+
+      handleDeleteAccount(selectedAccounts[0]!)
+      setSelectedAccountIds((previous) =>
+        previous.filter((accountId) => !selectedIds.includes(accountId)),
+      )
+      setIsBulkDeleteConfirmOpen(false)
+
+      if (deletedCount > 0 && displayData.length - deletedCount <= 0) {
+        setIsBulkMode(false)
+      }
+    } finally {
+      setIsBulkDeleting(false)
+    }
+  }
 
   const onDragEnd = (event: DragEndEvent) => {
     if (dragDisabled) return
@@ -615,7 +770,24 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
           onCopyKey={handleCopyKeyWithDialog}
           isDragDisabled={dragDisabled}
           handleLabel={handleLabel}
-          showHandle={isManualSortFeatureEnabled}
+          showHandle={isManualSortFeatureEnabled && !isBulkMode}
+          selectionControl={
+            isBulkMode ? (
+              <Checkbox
+                checked={selectedIdSet.has(item.account.id)}
+                onCheckedChange={(checked) =>
+                  handleToggleAccountSelection(
+                    item.account.id,
+                    Boolean(checked),
+                  )
+                }
+                aria-label={t("account:bulk.selectAccount", {
+                  accountName: item.account.name,
+                })}
+                disabled={isBulkBusy}
+              />
+            ) : undefined
+          }
         />
       ))}
     </CardList>
@@ -686,6 +858,85 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
               allLabel={t("account:filter.tagsAllLabel")}
               allCount={displayData.length}
             />
+            {isBulkMode ? (
+              <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary/40 flex flex-col gap-2 rounded-lg border border-gray-200 bg-gray-50 p-3">
+                <div className="flex flex-col gap-1 text-sm">
+                  <span className="font-medium text-gray-800 dark:text-gray-100">
+                    {t("account:bulk.selectedSummary", {
+                      count: selectedAccountIds.length,
+                      selected: selectedAccountIds.length,
+                      visibleSelected: selectedVisibleCount,
+                    })}
+                  </span>
+                  {hiddenSelectedCount > 0 ? (
+                    <span className="text-xs text-gray-600 dark:text-gray-300">
+                      {t("account:bulk.hiddenSelectedHint", {
+                        count: hiddenSelectedCount,
+                      })}
+                    </span>
+                  ) : null}
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleSelectVisibleAccounts}
+                    disabled={visibleAccountIds.length === 0 || isBulkBusy}
+                  >
+                    {t("account:bulk.selectVisible")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearVisibleSelection}
+                    disabled={selectedVisibleCount === 0 || isBulkBusy}
+                  >
+                    {t("account:bulk.clearVisible")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={handleClearAllSelection}
+                    disabled={selectedAccountIds.length === 0 || isBulkBusy}
+                  >
+                    {t("account:bulk.clearAll")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="warning"
+                    size="sm"
+                    onClick={() => void handleBulkDisable()}
+                    disabled={
+                      selectedEnabledAccounts.length === 0 || isBulkBusy
+                    }
+                    loading={isBulkDisabling}
+                  >
+                    {t("account:bulk.disableSelected")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="destructive"
+                    size="sm"
+                    onClick={() => setIsBulkDeleteConfirmOpen(true)}
+                    disabled={selectedAccountIds.length === 0 || isBulkBusy}
+                  >
+                    {t("account:bulk.deleteSelected")}
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="secondary"
+                    size="sm"
+                    onClick={handleBulkModeExit}
+                    disabled={isBulkBusy}
+                  >
+                    {t("account:bulk.exit")}
+                  </Button>
+                </div>
+              </div>
+            ) : null}
             {showFilteredSummary && (
               <div className="flex flex-wrap items-center gap-3 text-xs text-gray-600 dark:text-gray-300">
                 <span>
@@ -716,11 +967,23 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
         <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary sticky top-0 z-10 border-b border-gray-200 bg-gray-50 px-3 py-2 sm:px-5">
           <div className="flex items-center justify-between gap-2 sm:gap-4">
             {/* Account Name Column */}
-            <div className="flex min-w-0 flex-1 gap-2">
+            <div className="flex min-w-0 flex-1 items-center gap-2">
               {renderSortButton("name", t("account:list.header.account"))}
               <span className="text-[10px] font-medium sm:text-xs">
                 {t("common:total") + ": " + displayedResults.length}
               </span>
+              <Button
+                type="button"
+                variant={isBulkMode ? "secondary" : "outline"}
+                size="sm"
+                className="h-7 shrink-0 px-2 text-xs"
+                onClick={
+                  isBulkMode ? handleBulkModeExit : () => setIsBulkMode(true)
+                }
+                disabled={isBulkBusy}
+              >
+                {isBulkMode ? t("account:bulk.exit") : t("account:bulk.manage")}
+              </Button>
             </div>
 
             {/* Balance & Consumption Column */}
@@ -796,6 +1059,55 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
         isOpen={copyKeyDialogAccount !== null}
         onClose={() => setCopyKeyDialogAccount(null)}
         account={copyKeyDialogAccount}
+      />
+
+      <DestructiveConfirmDialog
+        isOpen={isBulkDeleteConfirmOpen}
+        onClose={() => {
+          if (!isBulkDeleting) {
+            setIsBulkDeleteConfirmOpen(false)
+          }
+        }}
+        title={t("account:bulk.deleteConfirmTitle")}
+        warningTitle={t("account:bulk.deleteConfirmWarningTitle")}
+        description={t("account:bulk.deleteConfirmDescription", {
+          count: selectedAccountIds.length,
+        })}
+        cancelLabel={t("common:actions.cancel")}
+        confirmLabel={t("account:bulk.deleteConfirmAction")}
+        onConfirm={() => {
+          void handleBulkDelete()
+        }}
+        isWorking={isBulkDeleting}
+        size="md"
+        details={
+          <div className="space-y-3 text-sm">
+            <div className="font-medium text-gray-900 dark:text-gray-100">
+              {t("account:bulk.deletePreviewTitle")}
+            </div>
+            <div className="space-y-1 text-gray-600 dark:text-gray-300">
+              {bulkDeletePreviewAccounts.map((account) => (
+                <div key={account.id}>{account.name}</div>
+              ))}
+            </div>
+            {selectedAccountIds.length > bulkDeletePreviewAccounts.length ? (
+              <div className="text-xs text-gray-500 dark:text-gray-400">
+                {t("account:bulk.deletePreviewRemainder", {
+                  count:
+                    selectedAccountIds.length -
+                    bulkDeletePreviewAccounts.length,
+                })}
+              </div>
+            ) : null}
+            {hiddenSelectedCount > 0 ? (
+              <div className="text-xs text-amber-700 dark:text-amber-300">
+                {t("account:bulk.deleteHiddenSelectedHint", {
+                  count: hiddenSelectedCount,
+                })}
+              </div>
+            ) : null}
+          </div>
+        }
       />
     </Card>
   )

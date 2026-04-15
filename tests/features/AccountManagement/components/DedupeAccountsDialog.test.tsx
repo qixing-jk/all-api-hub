@@ -59,17 +59,13 @@ const accounts = [
   }),
 ]
 
-const {
-  deleteAccountsMock,
-  pruneStatusMock,
-  loadAccountDataMock,
-  onCloseMock,
-} = vi.hoisted(() => ({
-  deleteAccountsMock: vi.fn(),
-  pruneStatusMock: vi.fn(),
-  loadAccountDataMock: vi.fn(),
-  onCloseMock: vi.fn(),
-}))
+const { deleteAccountsMock, loadAccountDataMock, onCloseMock } = vi.hoisted(
+  () => ({
+    deleteAccountsMock: vi.fn(),
+    loadAccountDataMock: vi.fn(),
+    onCloseMock: vi.fn(),
+  }),
+)
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -81,12 +77,6 @@ vi.mock("react-hot-toast", () => ({
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     deleteAccounts: (...args: any[]) => deleteAccountsMock(...args),
-  },
-}))
-
-vi.mock("~/services/checkin/autoCheckin/storage", () => ({
-  autoCheckinStorage: {
-    pruneStatusForDeletedAccounts: (...args: any[]) => pruneStatusMock(...args),
   },
 }))
 
@@ -102,12 +92,10 @@ vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
 describe("DedupeAccountsDialog", () => {
   beforeEach(() => {
     deleteAccountsMock.mockReset()
-    pruneStatusMock.mockReset()
     loadAccountDataMock.mockReset()
     onCloseMock.mockReset()
 
     deleteAccountsMock.mockResolvedValue({ deletedCount: 1 })
-    pruneStatusMock.mockResolvedValue(true)
     loadAccountDataMock.mockResolvedValue(undefined)
   })
 
@@ -130,7 +118,6 @@ describe("DedupeAccountsDialog", () => {
 
     await waitFor(() => {
       expect(deleteAccountsMock).toHaveBeenCalledWith(["acc-del"])
-      expect(pruneStatusMock).toHaveBeenCalledWith(["acc-del"])
       expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
       expect(onCloseMock).toHaveBeenCalledTimes(1)
     })
@@ -190,7 +177,6 @@ describe("DedupeAccountsDialog", () => {
 
     await waitFor(() => {
       expect(deleteAccountsMock).toHaveBeenCalledWith(["acc-keep"])
-      expect(pruneStatusMock).toHaveBeenCalledWith(["acc-keep"])
       expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
       expect(onCloseMock).toHaveBeenCalledTimes(1)
     })

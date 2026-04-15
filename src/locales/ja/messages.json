@@ -164,6 +164,8 @@
       "accountEnabled": "{{accountName}} を有効化しました",
       "accountPinned": "{{accountName}} をピン留めしました",
       "accountSaveSuccess": "アカウントを正常に保存しました",
+      "accountsDisabled_other": "{{count}} 件のアカウントを無効化しました",
+      "accountsEnabled_other": "{{count}} 件のアカウントを有効化しました",
       "accountUnpinned": "{{accountName}} のピン留めを解除しました",
       "accountUpdateSuccess": "アカウントを正常に更新しました",
       "bookmarkAdded": "ブックマーク {{name}} を正常に追加しました",

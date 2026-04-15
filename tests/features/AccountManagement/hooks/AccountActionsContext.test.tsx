@@ -17,6 +17,7 @@ const {
   mockToast,
   mockRefreshAccount,
   mockSetAccountDisabled,
+  mockSetAccountsDisabled,
   mockMarkAccountAsCustomCheckedIn,
   mockLoggerError,
 } = vi.hoisted(() => ({
@@ -29,6 +30,7 @@ const {
   },
   mockRefreshAccount: vi.fn(),
   mockSetAccountDisabled: vi.fn(),
+  mockSetAccountsDisabled: vi.fn(),
   mockMarkAccountAsCustomCheckedIn: vi.fn(),
   mockLoggerError: vi.fn(),
 }))
@@ -41,6 +43,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     refreshAccount: mockRefreshAccount,
     setAccountDisabled: mockSetAccountDisabled,
+    setAccountsDisabled: mockSetAccountsDisabled,
     markAccountAsCustomCheckedIn: mockMarkAccountAsCustomCheckedIn,
   },
 }))
@@ -387,6 +390,51 @@ describe("AccountActionsContext", () => {
     expect(mockLoadAccountData).not.toHaveBeenCalled()
     expect(mockToast.error).toHaveBeenCalledWith(
       "messages:toast.error.operationFailed",
+    )
+  })
+
+  it("bulk-disables only accounts that still need updates and reports the updated count", async () => {
+    const { getContext } = await renderContext()
+
+    mockSetAccountsDisabled.mockResolvedValueOnce({ updatedCount: 2 })
+
+    await act(async () => {
+      await getContext().handleSetAccountsDisabled(
+        [
+          createAccount({ id: "bulk-a", disabled: false }),
+          createAccount({ id: "bulk-b", disabled: true }),
+          createAccount({ id: "bulk-c", disabled: false }),
+          createAccount({ id: "bulk-a", disabled: false }),
+        ],
+        true,
+      )
+    })
+
+    expect(mockSetAccountsDisabled).toHaveBeenCalledWith(
+      ["bulk-a", "bulk-c"],
+      true,
+    )
+    expect(mockLoadAccountData).toHaveBeenCalledTimes(1)
+    expect(mockToast.success).toHaveBeenCalledWith(
+      "messages:toast.success.accountsDisabled",
+    )
+  })
+
+  it("shows a generic failure toast when bulk disable returns no updates", async () => {
+    const { getContext } = await renderContext()
+
+    mockSetAccountsDisabled.mockResolvedValueOnce({ updatedCount: 0 })
+
+    await act(async () => {
+      await getContext().handleSetAccountsDisabled(
+        [createAccount({ id: "bulk-noop", disabled: false })],
+        true,
+      )
+    })
+
+    expect(mockLoadAccountData).not.toHaveBeenCalled()
+    expect(mockToast.error).toHaveBeenCalledWith(
+      "messages:toast.error.operationFailedGeneric",
     )
   })
 

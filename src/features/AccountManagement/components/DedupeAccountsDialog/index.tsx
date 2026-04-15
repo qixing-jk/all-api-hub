@@ -10,7 +10,6 @@ import {
   type AccountDedupeKeepStrategy,
 } from "~/services/accounts/accountDedupe"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import type { SiteAccount } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -185,14 +184,6 @@ export default function DedupeAccountsDialog({
         },
       )
 
-      void autoCheckinStorage
-        .pruneStatusForDeletedAccounts(idsToDelete)
-        .catch((error) => {
-          logger.error("pruneStatusForDeletedAccounts failed", {
-            error,
-            idsToDelete,
-          })
-        })
       await loadAccountData()
 
       setIsConfirmOpen(false)

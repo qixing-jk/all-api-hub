@@ -42,6 +42,12 @@ describe("AutoCheckin ResultsTable dev actions", () => {
         name: "autoCheckin:execution.actions.openManual",
       }),
     ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "account:actions.disableAccount" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "account:actions.delete" }),
+    ).not.toBeInTheDocument()
   })
 
   it("keeps action buttons hidden when not failed and showDevActions is false", () => {
@@ -68,5 +74,31 @@ describe("AutoCheckin ResultsTable dev actions", () => {
         name: "autoCheckin:execution.actions.openManual",
       }),
     ).not.toBeInTheDocument()
+  })
+
+  it("shows disable and delete actions only for failed rows", async () => {
+    render(
+      <ResultsTable
+        results={[
+          {
+            ...baseResult,
+            accountId: "failed-account",
+            accountName: "Failed Account",
+            status: CHECKIN_RESULT_STATUS.FAILED,
+          },
+        ]}
+        onDisableAccount={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "account:actions.disableAccount",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "account:actions.delete" }),
+    ).toBeInTheDocument()
   })
 })

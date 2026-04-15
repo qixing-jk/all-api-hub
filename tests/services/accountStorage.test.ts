@@ -35,12 +35,14 @@ const {
   mockGetSiteType,
   mockRefreshAccountData,
   mockFetchTodayIncome,
+  pruneStatusForAccountIdsMock,
 } = vi.hoisted(() => ({
   mockValidateAccountConnection: vi.fn(),
   mockFetchSupportCheckIn: vi.fn(),
   mockGetSiteType: vi.fn(),
   mockRefreshAccountData: vi.fn(),
   mockFetchTodayIncome: vi.fn(),
+  pruneStatusForAccountIdsMock: vi.fn(),
 }))
 
 vi.mock("@plasmohq/storage", () => {
@@ -75,6 +77,12 @@ vi.mock("~/services/apiService", () => ({
 
 vi.mock("~/services/siteDetection/detectSiteType", () => ({
   getSiteType: mockGetSiteType,
+}))
+
+vi.mock("~/services/checkin/autoCheckin/storage", () => ({
+  autoCheckinStorage: {
+    pruneStatusForAccountIds: pruneStatusForAccountIdsMock,
+  },
 }))
 
 const seedStorage = (
@@ -157,6 +165,8 @@ describe("accountStorage core behaviors", () => {
     mockGetSiteType.mockReset()
     mockRefreshAccountData.mockReset()
     mockFetchTodayIncome.mockReset()
+    pruneStatusForAccountIdsMock.mockReset()
+    pruneStatusForAccountIdsMock.mockResolvedValue(true)
 
     mockRefreshAccountData.mockImplementation(async (request) => ({
       success: true,
@@ -864,6 +874,7 @@ describe("accountStorage core behaviors", () => {
     const config = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
     expect(config?.accounts).toHaveLength(0)
     expect(config?.pinnedAccountIds).toEqual([])
+    expect(pruneStatusForAccountIdsMock).toHaveBeenCalledWith(["to-delete"])
   })
 
   it("deleteAccount should surface a missing-account error", async () => {
@@ -903,6 +914,10 @@ describe("accountStorage core behaviors", () => {
     expect(config.accounts.map((account) => account.id)).toEqual(["bulk-a"])
     expect(config.pinnedAccountIds).toEqual(["missing"])
     expect(config.orderedAccountIds).toEqual(["bulk-a", "missing"])
+    expect(pruneStatusForAccountIdsMock).toHaveBeenCalledWith([
+      "bulk-b",
+      "bulk-c",
+    ])
   })
 
   it("deleteAccounts should no-op when no surviving account ids match", async () => {
@@ -944,6 +959,31 @@ describe("accountStorage core behaviors", () => {
     expect(
       (await accountStorage.getAccountById("toggle-disabled"))?.disabled,
     ).toBe(false)
+  })
+
+  it("setAccountsDisabled should update only matching accounts that need changes", async () => {
+    const accounts = [
+      createAccount({ id: "disable-a", disabled: false }),
+      createAccount({ id: "disable-b", disabled: true }),
+      createAccount({ id: "disable-c", disabled: false }),
+    ]
+    seedStorage(accounts)
+
+    const result = await accountStorage.setAccountsDisabled(
+      ["disable-a", "disable-b", "disable-a", "missing", ""],
+      true,
+    )
+
+    expect(result).toEqual({ updatedCount: 1 })
+    expect((await accountStorage.getAccountById("disable-a"))?.disabled).toBe(
+      true,
+    )
+    expect((await accountStorage.getAccountById("disable-b"))?.disabled).toBe(
+      true,
+    )
+    expect((await accountStorage.getAccountById("disable-c"))?.disabled).toBe(
+      false,
+    )
   })
 
   it("setAccountDisabled should fail closed for missing accounts", async () => {

@@ -16,7 +16,9 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import type { DisplaySiteData } from "~/types"
 import {
@@ -61,7 +63,7 @@ const logger = createLogger("AutoCheckinOptionsPage")
 export default function AutoCheckin(props: {
   routeParams?: Record<string, string>
 }) {
-  const { t } = useTranslation("autoCheckin")
+  const { t } = useTranslation(["autoCheckin", "messages", "account", "common"])
   const { preferences: userPrefs } = useUserPreferencesContext()
   const autoCheckinPreferences =
     userPrefs?.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
@@ -81,11 +83,19 @@ export default function AutoCheckin(props: {
   const [retryingAccountId, setRetryingAccountId] = useState<string | null>(
     null,
   )
+  const [disablingAccountId, setDisablingAccountId] = useState<string | null>(
+    null,
+  )
   const [pendingOpeningSiteAccountIds, setPendingOpeningSiteAccountIds] =
     useState<Set<string>>(() => new Set())
   const [openingManualAccountId, setOpeningManualAccountId] = useState<
     string | null
   >(null)
+  const [deletingAccountId, setDeletingAccountId] = useState<string | null>(
+    null,
+  )
+  const [deleteDialogAccount, setDeleteDialogAccount] =
+    useState<DisplaySiteData | null>(null)
 
   // Dev-only: diagnostics and simulation state for the UI-open pre-trigger flow.
   // These controls are shown only when `import.meta.env.MODE === "development"`.
@@ -551,6 +561,54 @@ export default function AutoCheckin(props: {
     }
   }
 
+  const handleDisableAccount = async (accountId: string) => {
+    try {
+      setDisablingAccountId(accountId)
+      const displayData = await resolveAutoCheckinAccount(accountId, {
+        includeDisabled: true,
+      })
+      const success = await accountStorage.setAccountDisabled(accountId, true)
+
+      if (!success) {
+        toast.error(t("messages:toast.error.operationFailedGeneric"))
+        return
+      }
+
+      await loadStatus()
+      toast.success(
+        t("messages:toast.success.accountDisabled", {
+          accountName: displayData.name,
+        }),
+      )
+    } catch (error: unknown) {
+      toast.error(
+        t("messages:toast.error.operationFailed", {
+          error: getErrorMessage(error),
+        }),
+      )
+    } finally {
+      setDisablingAccountId(null)
+    }
+  }
+
+  const handleDeleteAccount = async (accountId: string) => {
+    try {
+      setDeletingAccountId(accountId)
+      const displayData = await resolveAutoCheckinAccount(accountId, {
+        includeDisabled: true,
+      })
+      setDeleteDialogAccount(displayData)
+    } catch (error: unknown) {
+      toast.error(
+        t("messages:toast.error.operationFailed", {
+          error: getErrorMessage(error),
+        }),
+      )
+    } finally {
+      setDeletingAccountId(null)
+    }
+  }
+
   const handleOpenFailedManualSignIns = async (
     event: MouseEvent<HTMLButtonElement>,
   ) => {
@@ -743,9 +801,13 @@ export default function AutoCheckin(props: {
           results={filteredResults}
           showDevActions={showDebugButtons}
           retryingAccountId={retryingAccountId}
+          disablingAccountId={disablingAccountId}
+          deletingAccountId={deletingAccountId}
           pendingOpeningSiteAccountIds={pendingOpeningSiteAccountIds}
           openingManualAccountId={openingManualAccountId}
           onRetryAccount={handleRetryAccount}
+          onDisableAccount={handleDisableAccount}
+          onDeleteAccount={handleDeleteAccount}
           onOpenAccountSite={handleOpenAccountSite}
           onOpenManualSignIn={handleOpenManualSignIn}
         />
@@ -772,6 +834,16 @@ export default function AutoCheckin(props: {
         onClose={() =>
           setUiOpenPretriggerCompletion((prev) => ({ ...prev, isOpen: false }))
         }
+      />
+
+      <DelAccountDialog
+        isOpen={deleteDialogAccount !== null}
+        onClose={() => setDeleteDialogAccount(null)}
+        account={deleteDialogAccount}
+        onDeleted={() => {
+          void loadStatus()
+          setDeleteDialogAccount(null)
+        }}
       />
 
       <Modal
