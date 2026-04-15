@@ -477,6 +477,25 @@ describe("ModelList page flows", () => {
     expect(loadPricingData).toHaveBeenCalledTimes(1)
   })
 
+  it("keeps the page-level refresh action disabled while loading", async () => {
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        isLoading: true,
+      }),
+    )
+
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(
+      await screen
+        .findByText("modelList:refreshData")
+        .then((node) => node.closest("button")),
+    ).toBeDisabled()
+  })
+
   it("routes account verification and model-key actions through the page dialogs", async () => {
     const user = userEvent.setup()
     mockUseModelListData.mockReturnValue(buildState())

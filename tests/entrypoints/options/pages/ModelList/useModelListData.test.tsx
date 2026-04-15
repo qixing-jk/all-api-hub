@@ -321,4 +321,54 @@ describe("useModelListData", () => {
       expect(result.current.sortMode).toBe(MODEL_LIST_SORT_MODES.DEFAULT)
     })
   })
+
+  it("resets price sorting when the selected source cannot provide pricing", async () => {
+    mockUseModelData.mockReturnValue({
+      pricingData: {
+        data: [],
+        group_ratio: {},
+        success: true,
+        usable_group: {},
+      },
+      pricingContexts: [],
+      isLoading: false,
+      dataFormatError: false,
+      accountQueryStates: [],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: {
+        isAvailable: true,
+        isActive: true,
+        hasLoadedTokens: true,
+        isLoadingTokens: false,
+        isLoadingCatalog: false,
+        tokenLoadErrorMessage: null,
+        catalogLoadErrorMessage: null,
+        tokens: [],
+        selectedTokenId: null,
+        activeTokenName: "Fallback key",
+        loadTokens: vi.fn(),
+        setSelectedTokenId: vi.fn(),
+        loadCatalog: vi.fn(),
+      },
+    })
+
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue("account:acc-1")
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe("account")
+    })
+
+    act(() => {
+      result.current.setSortMode(MODEL_LIST_SORT_MODES.PRICE_DESC)
+    })
+
+    await waitFor(() => {
+      expect(result.current.sortMode).toBe(MODEL_LIST_SORT_MODES.DEFAULT)
+    })
+  })
 })

@@ -233,4 +233,51 @@ describe("ControlPanel profile capabilities", () => {
     expect(screen.queryByText("modelList:sortBy")).toBeNull()
     expect(screen.queryByText("modelList:billingMode")).toBeNull()
   })
+
+  it("includes the per-model cheapest sort option in all-accounts mode", async () => {
+    const setSortMode = vi.fn()
+
+    render(
+      <ControlPanel
+        selectedSource={{ kind: "all-accounts" } as any}
+        sourceCapabilities={
+          {
+            supportsGroupFiltering: false,
+            supportsPricing: true,
+          } as any
+        }
+        searchTerm=""
+        setSearchTerm={vi.fn()}
+        sortMode={MODEL_LIST_SORT_MODES.DEFAULT}
+        setSortMode={setSortMode}
+        selectedBillingMode={MODEL_LIST_BILLING_MODES.ALL}
+        setSelectedBillingMode={vi.fn()}
+        selectedGroups={[]}
+        setSelectedGroups={vi.fn()}
+        availableGroups={[]}
+        pricingData={null}
+        showRealPrice={false}
+        setShowRealPrice={vi.fn()}
+        showRatioColumn={false}
+        setShowRatioColumn={vi.fn()}
+        showEndpointTypes={true}
+        setShowEndpointTypes={vi.fn()}
+        totalModels={2}
+        filteredModels={[
+          { model: { model_name: "gpt-4o-mini" } },
+          { model: { model_name: "claude-3-5-sonnet" } },
+        ]}
+      />,
+    )
+
+    const [sortSelect] = await screen.findAllByRole("combobox")
+    fireEvent.click(sortSelect)
+    fireEvent.click(
+      await screen.findByText("modelList:sortOptions.modelCheapestFirst"),
+    )
+
+    expect(setSortMode).toHaveBeenCalledWith(
+      MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+    )
+  })
 })

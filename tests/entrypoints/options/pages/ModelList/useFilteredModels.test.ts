@@ -292,6 +292,313 @@ describe("useFilteredModels", () => {
     expect(result.current.getProviderFilteredCount("Gemini")).toBe(1)
   })
 
+  it("falls back to default candidates when single-account pricing metadata omits group ratios", async () => {
+    const account = createDisplayAccount({
+      id: "account-missing-group-ratio",
+      balance: { USD: 0, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "ungrouped-model",
+            model_ratio: 1,
+            completion_ratio: 1,
+            enable_groups: [],
+          },
+        ],
+        {
+          group_ratio: undefined as any,
+        },
+      ),
+      selectedSource: createAccountSource(account),
+      showRealPrice: true,
+    })
+
+    await waitFor(() => {
+      expect(result.current.availableGroups).toEqual([])
+    })
+
+    expect(result.current.filteredModels).toEqual([])
+    expect(result.current.baseFilteredModels).toEqual([])
+  })
+
+  it("keeps account contexts usable when all-accounts pricing metadata omits group ratios", async () => {
+    const account = createDisplayAccount({
+      id: "account-context-missing-group-ratio",
+      balance: { USD: 0, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "context-model",
+                model_ratio: 1,
+                completion_ratio: 1,
+                enable_groups: ["default"],
+              },
+            ],
+            {
+              group_ratio: undefined as any,
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      showRealPrice: true,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["context-model"])
+    })
+
+    expect(result.current.availableGroups).toEqual(["default"])
+  })
+
+  it("keeps duplicate single-account rows in their original order when every sort key ties", async () => {
+    const account = createDisplayAccount({
+      id: "account-duplicate-order",
+      name: "Duplicate Order Account",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const sourceWithoutGroupFiltering = {
+      ...createAccountSource(account),
+      capabilities: {
+        ...createAccountSource(account).capabilities,
+        supportsGroupFiltering: undefined,
+      },
+    } as any
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "duplicate-model",
+            model_description: "first duplicate",
+            model_ratio: 1,
+            completion_ratio: 1,
+            enable_groups: ["default"],
+          },
+          {
+            model_name: "duplicate-model",
+            model_description: "second duplicate",
+            model_ratio: 1,
+            completion_ratio: 1,
+            enable_groups: ["default"],
+          },
+        ],
+        {
+          group_ratio: undefined as any,
+        },
+      ),
+      selectedSource: sourceWithoutGroupFiltering,
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map(
+          (item) => item.model.model_description,
+        ),
+      ).toEqual(["first duplicate", "second duplicate"])
+    })
+
+    expect(
+      result.current.filteredModels.every(
+        (item) => item.effectiveGroup === undefined,
+      ),
+    ).toBe(true)
+  })
+
+  it("leaves lowest-price badges unset when all-accounts rows have no comparable per-call prices", async () => {
+    const accountA = createDisplayAccount({
+      id: "account-unpriced-a",
+      name: "Account A",
+      balance: { USD: 10, CNY: 70 },
+    })
+    const accountB = createDisplayAccount({
+      id: "account-unpriced-b",
+      name: "Account B",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: accountA,
+          pricing: createPricingResponse([
+            {
+              model_name: "per-call-unpriced",
+              quota_type: 1,
+              model_price: { input: Number.NaN, output: Number.NaN } as any,
+              enable_groups: ["default"],
+            },
+          ]),
+        },
+        {
+          account: accountB,
+          pricing: createPricingResponse([
+            {
+              model_name: "per-call-unpriced",
+              quota_type: 1,
+              model_price: { input: Number.NaN, output: Number.NaN } as any,
+              enable_groups: ["default"],
+            },
+          ]),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+    })
+
+    await waitFor(() => {
+      expect(result.current.filteredModels).toHaveLength(2)
+    })
+
+    expect(
+      result.current.filteredModels.map((item) => item.isLowestPrice),
+    ).toEqual([false, false])
+  })
+
+  it("uses effective group names as the next tie-breaker when prices tie", async () => {
+    const account = createDisplayAccount({
+      id: "account-group-tie-breaker",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "shared-model",
+            model_description: "beta row",
+            model_ratio: 1,
+            completion_ratio: 1,
+            enable_groups: ["beta"],
+          },
+          {
+            model_name: "shared-model",
+            model_description: "alpha row",
+            model_ratio: 1,
+            completion_ratio: 1,
+            enable_groups: ["alpha"],
+          },
+        ],
+        {
+          group_ratio: { alpha: 1, beta: 1 },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map(
+          (item) => item.model.model_description,
+        ),
+      ).toEqual(["alpha row", "beta row"])
+    })
+  })
+
+  it("falls back to model-name ordering when prices and groups tie", async () => {
+    const account = createDisplayAccount({
+      id: "account-model-name-tie-breaker",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const sourceWithoutGroupFiltering = {
+      ...createAccountSource(account),
+      capabilities: {
+        ...createAccountSource(account).capabilities,
+        supportsGroupFiltering: false,
+      },
+    } as any
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        {
+          model_name: "z-model",
+          model_ratio: 1,
+          completion_ratio: 1,
+          enable_groups: ["default"],
+        },
+        {
+          model_name: "a-model",
+          model_ratio: 1,
+          completion_ratio: 1,
+          enable_groups: ["default"],
+        },
+      ]),
+      selectedSource: sourceWithoutGroupFiltering,
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["a-model", "z-model"])
+    })
+  })
+
+  it("falls back to stable item keys when all-accounts rows share the same source label and price", async () => {
+    const accountA = createDisplayAccount({
+      id: "account-a",
+      name: "Duplicate Name",
+      balance: { USD: 10, CNY: 70 },
+    })
+    const accountB = createDisplayAccount({
+      id: "account-b",
+      name: "Duplicate Name",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: accountB,
+          pricing: createPricingResponse([
+            {
+              model_name: "shared-model",
+              model_ratio: 1,
+              completion_ratio: 1,
+              enable_groups: ["default"],
+            },
+          ]),
+        },
+        {
+          account: accountA,
+          pricing: createPricingResponse([
+            {
+              model_name: "shared-model",
+              model_ratio: 1,
+              completion_ratio: 1,
+              enable_groups: ["default"],
+            },
+          ]),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) =>
+          item.source.kind === "account" ? item.source.account.id : "profile",
+        ),
+      ).toEqual(["account-a", "account-b"])
+    })
+  })
+
   it("sorts priced rows ascending and descending within each billing mode", async () => {
     const account = createDisplayAccount({
       id: "account-prices",

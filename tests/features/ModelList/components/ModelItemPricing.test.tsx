@@ -331,5 +331,30 @@ describe("Model item pricing and description", () => {
       )
       expect(screen.queryByText("lowestPrice")).toBeNull()
     })
+
+    it("uses the selected-group explanation when showing an auto-picked group without a lowest-price badge", () => {
+      isTokenBillingTypeMock.mockReturnValue(true)
+
+      render(
+        <ModelItemPricing
+          model={createModel({ model_ratio: 2 })}
+          calculatedPrice={createCalculatedPrice()}
+          exchangeRate={7}
+          showRealPrice={false}
+          showPricing={true}
+          showRatioColumn={false}
+          isAvailableForUser={true}
+          isLowestPrice={false}
+          effectiveGroup="vip"
+          showsOptimalGroup={true}
+        />,
+      )
+
+      expect(screen.getByText("optimalGroup")).toHaveAttribute(
+        "title",
+        "optimalGroupWithinSelectedGroups",
+      )
+      expect(screen.queryByText("ratio")).toBeNull()
+    })
   })
 })
