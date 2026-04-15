@@ -1,6 +1,7 @@
 import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { ControlPanel } from "~/features/ModelList/components/ControlPanel"
 import { createProfileSource } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
@@ -51,6 +52,8 @@ describe("ControlPanel profile capabilities", () => {
         setSearchTerm={vi.fn()}
         sortMode={MODEL_LIST_SORT_MODES.DEFAULT}
         setSortMode={vi.fn()}
+        selectedBillingMode={MODEL_LIST_BILLING_MODES.ALL}
+        setSelectedBillingMode={vi.fn()}
         selectedGroups={[]}
         setSelectedGroups={vi.fn()}
         availableGroups={["default", "vip"]}
@@ -81,6 +84,7 @@ describe("ControlPanel profile capabilities", () => {
     expect(screen.queryByText("modelList:realAmount")).not.toBeInTheDocument()
     expect(screen.queryByText("modelList:showRatio")).not.toBeInTheDocument()
     expect(screen.queryByText("modelList:sortBy")).not.toBeInTheDocument()
+    expect(screen.queryByText("modelList:billingMode")).not.toBeInTheDocument()
     expect(
       await screen.findByText("modelList:endpointTypes"),
     ).toBeInTheDocument()
@@ -89,6 +93,7 @@ describe("ControlPanel profile capabilities", () => {
   it("renders group ratio labels, uses the group fallback ratio, and copies visible model names", async () => {
     const setSearchTerm = vi.fn()
     const setSortMode = vi.fn()
+    const setSelectedBillingMode = vi.fn()
     const setSelectedGroups = vi.fn()
     const setShowRealPrice = vi.fn()
     const setShowRatioColumn = vi.fn()
@@ -108,6 +113,8 @@ describe("ControlPanel profile capabilities", () => {
         setSearchTerm={setSearchTerm}
         sortMode={MODEL_LIST_SORT_MODES.DEFAULT}
         setSortMode={setSortMode}
+        selectedBillingMode={MODEL_LIST_BILLING_MODES.ALL}
+        setSelectedBillingMode={setSelectedBillingMode}
         selectedGroups={[]}
         setSelectedGroups={setSelectedGroups}
         availableGroups={["vip", "default"]}
@@ -135,11 +142,18 @@ describe("ControlPanel profile capabilities", () => {
     expect(setSearchTerm).toHaveBeenCalledWith("claude")
 
     const comboboxes = await screen.findAllByRole("combobox")
-    const [sortSelect, groupSelect] = comboboxes
+    const [sortSelect, billingModeSelect, groupSelect] = comboboxes
     expect(sortSelect).toHaveTextContent("modelList:sortOptions.default")
     fireEvent.click(sortSelect)
     fireEvent.click(await screen.findByText("modelList:sortOptions.priceAsc"))
     expect(setSortMode).toHaveBeenCalledWith(MODEL_LIST_SORT_MODES.PRICE_ASC)
+
+    expect(billingModeSelect).toHaveTextContent("modelList:allBillingModes")
+    fireEvent.click(billingModeSelect)
+    fireEvent.click(await screen.findByText("ui:billing.perCall"))
+    expect(setSelectedBillingMode).toHaveBeenCalledWith(
+      MODEL_LIST_BILLING_MODES.PER_CALL,
+    )
 
     expect(groupSelect).toHaveTextContent("modelList:allGroups")
     fireEvent.click(groupSelect)
@@ -200,6 +214,8 @@ describe("ControlPanel profile capabilities", () => {
         setSearchTerm={vi.fn()}
         sortMode={MODEL_LIST_SORT_MODES.DEFAULT}
         setSortMode={vi.fn()}
+        selectedBillingMode={MODEL_LIST_BILLING_MODES.ALL}
+        setSelectedBillingMode={vi.fn()}
         selectedGroups={[]}
         setSelectedGroups={vi.fn()}
         availableGroups={[]}
@@ -227,5 +243,6 @@ describe("ControlPanel profile capabilities", () => {
     expect(screen.queryByText("modelList:realAmount")).toBeNull()
     expect(screen.queryByText("modelList:showRatio")).toBeNull()
     expect(screen.queryByText("modelList:sortBy")).toBeNull()
+    expect(screen.queryByText("modelList:billingMode")).toBeNull()
   })
 })

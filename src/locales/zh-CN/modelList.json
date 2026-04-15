@@ -12,10 +12,12 @@
     "verifyCliSupport": "验证 CLI 兼容性"
   },
   "allAccounts": "所有账号",
+  "allBillingModes": "所有计费方式",
   "allGroups": "所有分组",
   "allProviders": "所有厂商",
   "available": "可用",
   "availableGroups": "可用分组",
+  "billingMode": "计费方式",
   "clickSwitchGroup": "点击切换到 {{group}} 分组",
   "collapseDetails": "收起详细信息",
   "copyAllNames": "复制所有模型名称",

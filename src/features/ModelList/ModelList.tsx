@@ -63,6 +63,8 @@ export default function ModelList(props: {
     setSelectedProvider,
     sortMode,
     setSortMode,
+    selectedBillingMode,
+    setSelectedBillingMode,
     selectedGroups,
     setSelectedGroups,
 
@@ -392,6 +394,8 @@ export default function ModelList(props: {
             setSearchTerm={setSearchTerm}
             sortMode={sortMode}
             setSortMode={setSortMode}
+            selectedBillingMode={selectedBillingMode}
+            setSelectedBillingMode={setSelectedBillingMode}
             selectedGroups={selectedGroups}
             setSelectedGroups={setSelectedGroups}
             availableGroups={availableGroups}

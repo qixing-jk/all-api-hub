@@ -6,6 +6,11 @@ import {
 } from "~/features/ModelList/sortModes"
 import type { ProviderType } from "~/services/models/utils/modelProviders"
 
+import {
+  MODEL_LIST_BILLING_MODES,
+  type ModelListBillingMode,
+} from "../billingModes"
+
 /**
  * Manages view state for the model list page.
  * Keeps selected account, provider, group, search term, and display toggles.
@@ -21,6 +26,8 @@ export function useModelListState() {
   const [sortMode, setSortMode] = useState<ModelListSortMode>(
     MODEL_LIST_SORT_MODES.DEFAULT,
   )
+  const [selectedBillingMode, setSelectedBillingMode] =
+    useState<ModelListBillingMode>(MODEL_LIST_BILLING_MODES.ALL)
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]) // 当前选中的候选分组；空数组表示所有分组
   const [allAccountsFilterAccountId, setAllAccountsFilterAccountId] = useState<
     string | null
@@ -40,6 +47,8 @@ export function useModelListState() {
     setSelectedProvider,
     sortMode,
     setSortMode,
+    selectedBillingMode,
+    setSelectedBillingMode,
     selectedGroups,
     setSelectedGroups,
     allAccountsFilterAccountId,

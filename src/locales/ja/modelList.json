@@ -12,10 +12,12 @@
     "verifyCliSupport": "CLI 対応を検証"
   },
   "allAccounts": "すべてのアカウント",
+  "allBillingModes": "すべての課金方式",
   "allGroups": "すべてのグループ",
   "allProviders": "すべてのプロバイダー",
   "available": "利用可能",
   "availableGroups": "利用可能なグループ",
+  "billingMode": "課金方式",
   "clickSwitchGroup": "{{group}} グループへ切り替える",
   "collapseDetails": "詳細を折りたたむ",
   "copyAllNames": "すべてのモデル名をコピー",

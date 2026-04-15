@@ -12,10 +12,12 @@
     "verifyCliSupport": "驗證 CLI 相容性"
   },
   "allAccounts": "所有帳號",
+  "allBillingModes": "所有計費方式",
   "allGroups": "所有分組",
   "allProviders": "所有廠商",
   "available": "可用",
   "availableGroups": "可用分組",
+  "billingMode": "計費方式",
   "clickSwitchGroup": "點擊切換到 {{group}} 分組",
   "collapseDetails": "收起詳細資訊",
   "copyAllNames": "複製所有模型名稱",

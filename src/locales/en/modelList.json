@@ -13,10 +13,12 @@
     "verifyCliSupport": "Verify CLI Support"
   },
   "allAccounts": "All accounts",
+  "allBillingModes": "All Billing Modes",
   "allGroups": "All Groups",
   "allProviders": "All Providers",
   "available": "Available",
   "availableGroups": "Available Groups",
+  "billingMode": "Billing Mode",
   "clickSwitchGroup": "Click to switch to {{group}} group",
   "collapseDetails": "Collapse details",
   "copyAllNames": "Copy All Model Names",

@@ -20,6 +20,10 @@ import {
   SearchableSelect,
   Switch,
 } from "~/components/ui"
+import {
+  MODEL_LIST_BILLING_MODES,
+  type ModelListBillingMode,
+} from "~/features/ModelList/billingModes"
 import type {
   ModelManagementSource,
   ModelManagementSourceCapabilities,
@@ -36,6 +40,8 @@ interface ControlPanelProps {
   setSearchTerm: (term: string) => void
   sortMode: ModelListSortMode
   setSortMode: (mode: ModelListSortMode) => void
+  selectedBillingMode: ModelListBillingMode
+  setSelectedBillingMode: (mode: ModelListBillingMode) => void
   selectedGroups: string[]
   setSelectedGroups: (groups: string[]) => void
   availableGroups: string[]
@@ -59,6 +65,8 @@ interface ControlPanelProps {
  * @param props.sourceCapabilities Capability flags for the active source.
  * @param props.searchTerm Current search keyword.
  * @param props.setSearchTerm Setter to update search keyword.
+ * @param props.selectedBillingMode Active billing-mode filter value.
+ * @param props.setSelectedBillingMode Setter for billing-mode filter.
  * @param props.selectedGroups Active candidate group filter set.
  * @param props.setSelectedGroups Setter for candidate group filter set.
  * @param props.availableGroups Available group options.
@@ -82,6 +90,8 @@ export function ControlPanel({
   setSearchTerm,
   sortMode,
   setSortMode,
+  selectedBillingMode,
+  setSelectedBillingMode,
   selectedGroups,
   setSelectedGroups,
   availableGroups,
@@ -97,7 +107,7 @@ export function ControlPanel({
   totalModels,
   filteredModels,
 }: ControlPanelProps) {
-  const { t } = useTranslation("modelList")
+  const { t } = useTranslation(["modelList", "ui"])
   const isProfileSource = selectedSource?.kind === "profile"
   const supportsPriceSorting = sourceCapabilities.supportsPricing
   const groupOptions = availableGroups.map((group) => ({
@@ -125,6 +135,20 @@ export function ControlPanel({
           },
         ]
       : []),
+  ]
+  const billingModeOptions = [
+    {
+      value: MODEL_LIST_BILLING_MODES.ALL,
+      label: t("allBillingModes"),
+    },
+    {
+      value: MODEL_LIST_BILLING_MODES.TOKEN_BASED,
+      label: t("ui:billing.tokenBased"),
+    },
+    {
+      value: MODEL_LIST_BILLING_MODES.PER_CALL,
+      label: t("ui:billing.perCall"),
+    },
   ]
 
   const handleCopyModelNames = () => {
@@ -169,6 +193,19 @@ export function ControlPanel({
                 value={sortMode}
                 onChange={(value) => setSortMode(value as ModelListSortMode)}
                 placeholder={t("sortBy")}
+              />
+            </FormField>
+          )}
+
+          {sourceCapabilities.supportsPricing && (
+            <FormField label={t("billingMode")} className="w-full lg:w-64">
+              <SearchableSelect
+                options={billingModeOptions}
+                value={selectedBillingMode}
+                onChange={(value) =>
+                  setSelectedBillingMode(value as ModelListBillingMode)
+                }
+                placeholder={t("allBillingModes")}
               />
             </FormField>
           )}

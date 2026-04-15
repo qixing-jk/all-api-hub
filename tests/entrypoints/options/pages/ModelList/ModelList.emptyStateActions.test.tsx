@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelList from "~/entrypoints/options/pages/ModelList"
+import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -118,6 +119,8 @@ function buildState(overrides: Record<string, unknown> = {}) {
     setSearchTerm: vi.fn(),
     selectedProvider: "all",
     setSelectedProvider: vi.fn(),
+    selectedBillingMode: MODEL_LIST_BILLING_MODES.ALL,
+    setSelectedBillingMode: vi.fn(),
     selectedGroups: [],
     setSelectedGroups: vi.fn(),
     showRealPrice: false,

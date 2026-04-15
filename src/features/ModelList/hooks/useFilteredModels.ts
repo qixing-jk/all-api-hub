@@ -19,12 +19,17 @@ import {
   type ProviderType,
 } from "~/services/models/utils/modelProviders"
 
+import {
+  MODEL_LIST_BILLING_MODES,
+  type ModelListBillingMode,
+} from "../billingModes"
 import type { AccountPricingContext } from "./useModelData"
 
 interface UseFilteredModelsProps {
   pricingData: PricingResponse | null
   pricingContexts: AccountPricingContext[]
   selectedSource: ModelManagementSource | null
+  selectedBillingMode: ModelListBillingMode
   selectedGroups: string[]
   searchTerm: string
   selectedProvider: ProviderType | "all"
@@ -243,6 +248,15 @@ function resolveCandidateGroups(
 /**
  *
  */
+function getModelBillingMode(quotaType: number): BillingMode {
+  return isTokenBillingType(quotaType)
+    ? MODEL_LIST_BILLING_MODES.TOKEN_BASED
+    : MODEL_LIST_BILLING_MODES.PER_CALL
+}
+
+/**
+ *
+ */
 function resolveBestCalculatedItem(
   rawItem: RawModelItem,
   groupCandidates: string[],
@@ -312,6 +326,7 @@ function resolveBestCalculatedItem(
  * @param params.pricingData Pricing response for a single account.
  * @param params.pricingContexts Pricing data across multiple accounts.
  * @param params.selectedSource Currently selected model-management source.
+ * @param params.selectedBillingMode Active billing-mode filter value.
  * @param params.selectedGroups Candidate user groups used for filtering/comparison.
  * @param params.searchTerm Search keyword for model name/description.
  * @param params.selectedProvider Provider filter value or "all".
@@ -323,6 +338,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     pricingData,
     pricingContexts,
     selectedSource,
+    selectedBillingMode,
     selectedGroups,
     searchTerm,
     selectedProvider,
@@ -449,8 +465,16 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       )
     }
 
+    if (selectedBillingMode !== MODEL_LIST_BILLING_MODES.ALL) {
+      filtered = filtered.filter(
+        (item) =>
+          getModelBillingMode(item.model.quota_type) === selectedBillingMode,
+      )
+    }
+
     return filtered
   }, [
+    selectedBillingMode,
     effectiveGroupCandidates,
     rawModelItems,
     searchTerm,
@@ -657,7 +681,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
   return {
     filteredModels,
     baseFilteredModels,
-    allProvidersFilteredCount: accountFilteredBaseRawModels.length,
+    allProvidersFilteredCount: baseFilteredModels.length,
     getProviderFilteredCount,
     availableGroups,
   }

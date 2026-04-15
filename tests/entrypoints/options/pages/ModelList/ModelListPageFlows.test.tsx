@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelList from "~/entrypoints/options/pages/ModelList"
+import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import {
   createAccountSource,
   createAllAccountsSource,
@@ -253,6 +254,8 @@ function buildState(overrides: Record<string, any> = {}) {
     setSelectedProvider: vi.fn(),
     sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
     setSortMode: vi.fn(),
+    selectedBillingMode: MODEL_LIST_BILLING_MODES.ALL,
+    setSelectedBillingMode: vi.fn(),
     selectedGroups: [],
     setSelectedGroups: vi.fn(),
 

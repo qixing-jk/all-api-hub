@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { useFilteredModels } from "~/features/ModelList/hooks/useFilteredModels"
 import {
   createAccountSource,
@@ -68,6 +69,7 @@ function renderUseFilteredModels(
       pricingData: null,
       pricingContexts: [],
       selectedSource: null,
+      selectedBillingMode: MODEL_LIST_BILLING_MODES.ALL,
       selectedGroups: [],
       searchTerm: "",
       selectedProvider: "all",
@@ -552,6 +554,57 @@ describe("useFilteredModels", () => {
       expect(
         result.current.filteredModels.map((item) => item.model.model_name),
       ).toEqual(["vip-model"])
+    })
+  })
+
+  it("filters models by the selected billing mode", async () => {
+    const account = createDisplayAccount({
+      id: "account-billing-filter",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const pricingData = createPricingResponse([
+      {
+        model_name: "token-model",
+        quota_type: 0,
+        model_ratio: 2,
+        completion_ratio: 1,
+        enable_groups: ["default"],
+      },
+      {
+        model_name: "per-call-model",
+        quota_type: 1,
+        model_price: 0.5,
+        enable_groups: ["default"],
+      },
+    ])
+
+    const tokenOnly = renderUseFilteredModels({
+      pricingData,
+      selectedSource: createAccountSource(account),
+      selectedBillingMode: MODEL_LIST_BILLING_MODES.TOKEN_BASED,
+    })
+
+    await waitFor(() => {
+      expect(
+        tokenOnly.result.current.filteredModels.map(
+          (item) => item.model.model_name,
+        ),
+      ).toEqual(["token-model"])
+    })
+
+    const perCallOnly = renderUseFilteredModels({
+      pricingData,
+      selectedSource: createAccountSource(account),
+      selectedBillingMode: MODEL_LIST_BILLING_MODES.PER_CALL,
+    })
+
+    await waitFor(() => {
+      expect(
+        perCallOnly.result.current.filteredModels.map(
+          (item) => item.model.model_name,
+        ),
+      ).toEqual(["per-call-model"])
     })
   })
 
