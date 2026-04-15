@@ -31,6 +31,7 @@ interface ModelItemProps {
   isAllGroupsMode?: boolean // 新增：是否为"所有分组"模式
   source: ModelManagementItemSource
   displayCapabilities?: ModelManagementSourceCapabilities
+  isLowestPrice?: boolean
   verificationSummary?: ApiVerificationHistorySummary | null
   onFilterAccount?: (accountId: string) => void
   onVerifyModel?: (source: ModelManagementItemSource, modelId: string) => void
@@ -64,6 +65,7 @@ export default function ModelItem(props: ModelItemProps) {
     isAllGroupsMode = false,
     source,
     displayCapabilities = source.capabilities,
+    isLowestPrice = false,
     verificationSummary,
     onFilterAccount,
     onVerifyModel,
@@ -150,6 +152,7 @@ export default function ModelItem(props: ModelItemProps) {
             model={model}
             isAvailableForUser={isAvailableForUser}
             handleCopyModelName={handleCopyModelName}
+            isLowestPrice={isLowestPrice}
             showPricingMetadata={showPricing}
             showAvailabilityBadge={showGroupDetails}
             verificationSummary={verificationSummary}

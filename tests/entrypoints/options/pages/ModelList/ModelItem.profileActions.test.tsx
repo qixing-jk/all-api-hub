@@ -465,4 +465,53 @@ describe("ModelItem profile actions", () => {
       }),
     ).not.toBeInTheDocument()
   })
+
+  it("shows a lowest-price badge when the row is marked as the cheapest option", async () => {
+    const accountSource = createAccountSource({
+      id: "account-lowest",
+      name: "Cheapest Account",
+      username: "tester",
+      balance: { USD: 10, CNY: 70 },
+      todayConsumption: { USD: 0, CNY: 0 },
+      todayIncome: { USD: 0, CNY: 0 },
+      todayTokens: { upload: 0, download: 0 },
+      health: { status: SiteHealthStatus.Healthy },
+      siteType: "new-api",
+      baseUrl: "https://example.com",
+      token: "token",
+      userId: 1,
+      authType: AuthTypeEnum.AccessToken,
+      checkIn: { enableDetection: false },
+    })
+
+    render(
+      <ModelItem
+        model={{
+          model_name: "gpt-4o-mini",
+          quota_type: 0,
+          model_ratio: 1,
+          model_price: 0,
+          completion_ratio: 1,
+          enable_groups: ["default"],
+          supported_endpoint_types: [],
+        }}
+        calculatedPrice={{
+          inputUSD: 2,
+          outputUSD: 2,
+          inputCNY: 14,
+          outputCNY: 14,
+        }}
+        exchangeRate={7}
+        showRealPrice={true}
+        showRatioColumn={false}
+        showEndpointTypes={true}
+        userGroup="default"
+        availableGroups={["default"]}
+        source={accountSource}
+        isLowestPrice={true}
+      />,
+    )
+
+    expect(await screen.findByText("modelList:lowestPrice")).toBeInTheDocument()
+  })
 })

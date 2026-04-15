@@ -1,5 +1,9 @@
 import { useState } from "react"
 
+import {
+  MODEL_LIST_SORT_MODES,
+  type ModelListSortMode,
+} from "~/features/ModelList/sortModes"
 import type { ProviderType } from "~/services/models/utils/modelProviders"
 
 /**
@@ -14,6 +18,9 @@ export function useModelListState() {
   const [selectedProvider, setSelectedProvider] = useState<
     ProviderType | "all"
   >("all") // 当前选中的模型提供商
+  const [sortMode, setSortMode] = useState<ModelListSortMode>(
+    MODEL_LIST_SORT_MODES.DEFAULT,
+  )
   const [selectedGroup, setSelectedGroup] = useState<string>("default") // 当前选中的用户分组
   const [allAccountsFilterAccountId, setAllAccountsFilterAccountId] = useState<
     string | null
@@ -31,6 +38,8 @@ export function useModelListState() {
     setSearchTerm,
     selectedProvider,
     setSelectedProvider,
+    sortMode,
+    setSortMode,
     selectedGroup,
     setSelectedGroup,
     allAccountsFilterAccountId,

@@ -64,6 +64,8 @@
     "subtitle": "账号：{{accountName}} · 模型：{{modelId}}",
     "title": "模型对应密钥"
   },
+  "lowestPrice": "最低价",
+  "lowestPriceWithinBillingMode": "最低价仅在相同计费模式下比较",
   "messages": {
     "copyFailed": "复制失败",
     "modelNameCopied": "模型名称已复制",
@@ -96,6 +98,13 @@
   "selectSourceToContinue": "请先在上方选择一个数据源，然后查看模型列表。",
   "showing": "显示 {{count}} 个模型",
   "showRatio": "显示倍率",
+  "sortBy": "排序方式",
+  "sortOptions": {
+    "default": "默认顺序",
+    "modelCheapestFirst": "同模型最低价优先",
+    "priceAsc": "价格从低到高",
+    "priceDesc": "价格从高到低"
+  },
   "sourceLabels": {
     "profileBadge": "凭据：{{name}} · {{host}}",
     "profileOption": "API 凭据：{{name}} · {{host}}"

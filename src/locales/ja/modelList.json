@@ -64,6 +64,8 @@
     "subtitle": "アカウント: {{accountName}} · モデル: {{modelId}}",
     "title": "モデル用キー"
   },
+  "lowestPrice": "最安値",
+  "lowestPriceWithinBillingMode": "最安値の比較は同じ課金方式内でのみ行われます",
   "messages": {
     "copyFailed": "コピーに失敗しました",
     "modelNameCopied": "モデル名をコピーしました",
@@ -96,6 +98,13 @@
   "selectSourceToContinue": "上のデータソースを選択してから、モデル一覧を表示してください。",
   "showing_other": "{{count}} モデルを表示中",
   "showRatio": "倍率を表示",
+  "sortBy": "並び順",
+  "sortOptions": {
+    "default": "デフォルト順",
+    "modelCheapestFirst": "同一モデルの最安値を優先",
+    "priceAsc": "価格の安い順",
+    "priceDesc": "価格の高い順"
+  },
   "sourceLabels": {
     "profileBadge": "プロファイル: {{name}} · {{host}}",
     "profileOption": "API 認証情報: {{name}} · {{host}}"

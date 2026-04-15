@@ -125,6 +125,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
               onGroupClick={handleGroupClick}
               availableGroups={availableGroups}
               isAllGroupsMode={selectedGroup === "all"}
+              isLowestPrice={item.isLowestPrice}
               source={sourceForModel}
               displayCapabilities={displayCapabilities}
               verificationSummary={verificationSummary}

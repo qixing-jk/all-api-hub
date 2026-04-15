@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ControlPanel } from "~/features/ModelList/components/ControlPanel"
 import { createProfileSource } from "~/features/ModelList/modelManagementSources"
+import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -48,6 +49,8 @@ describe("ControlPanel profile capabilities", () => {
         sourceCapabilities={profileSource.capabilities}
         searchTerm=""
         setSearchTerm={vi.fn()}
+        sortMode={MODEL_LIST_SORT_MODES.DEFAULT}
+        setSortMode={vi.fn()}
         selectedGroup="default"
         setSelectedGroup={vi.fn()}
         availableGroups={["default", "vip"]}
@@ -77,6 +80,7 @@ describe("ControlPanel profile capabilities", () => {
     expect(screen.queryByText("modelList:userGroup")).not.toBeInTheDocument()
     expect(screen.queryByText("modelList:realAmount")).not.toBeInTheDocument()
     expect(screen.queryByText("modelList:showRatio")).not.toBeInTheDocument()
+    expect(screen.queryByText("modelList:sortBy")).not.toBeInTheDocument()
     expect(
       await screen.findByText("modelList:endpointTypes"),
     ).toBeInTheDocument()
@@ -84,6 +88,7 @@ describe("ControlPanel profile capabilities", () => {
 
   it("renders group ratio labels, uses the group fallback ratio, and copies visible model names", async () => {
     const setSearchTerm = vi.fn()
+    const setSortMode = vi.fn()
     const setSelectedGroup = vi.fn()
     const setShowRealPrice = vi.fn()
     const setShowRatioColumn = vi.fn()
@@ -101,6 +106,8 @@ describe("ControlPanel profile capabilities", () => {
         }
         searchTerm="gpt"
         setSearchTerm={setSearchTerm}
+        sortMode={MODEL_LIST_SORT_MODES.DEFAULT}
+        setSortMode={setSortMode}
         selectedGroup={undefined as any}
         setSelectedGroup={setSelectedGroup}
         availableGroups={["vip", "default"]}
@@ -127,7 +134,13 @@ describe("ControlPanel profile capabilities", () => {
     fireEvent.change(searchInput, { target: { value: "claude" } })
     expect(setSearchTerm).toHaveBeenCalledWith("claude")
 
-    const groupSelect = await screen.findByRole("combobox")
+    const comboboxes = await screen.findAllByRole("combobox")
+    const [sortSelect, groupSelect] = comboboxes
+    expect(sortSelect).toHaveTextContent("modelList:sortOptions.default")
+    fireEvent.click(sortSelect)
+    fireEvent.click(await screen.findByText("modelList:sortOptions.priceAsc"))
+    expect(setSortMode).toHaveBeenCalledWith(MODEL_LIST_SORT_MODES.PRICE_ASC)
+
     expect(groupSelect).toHaveTextContent("modelList:allGroups")
     fireEvent.click(groupSelect)
 
@@ -180,6 +193,8 @@ describe("ControlPanel profile capabilities", () => {
         }
         searchTerm=""
         setSearchTerm={vi.fn()}
+        sortMode={MODEL_LIST_SORT_MODES.DEFAULT}
+        setSortMode={vi.fn()}
         selectedGroup="all"
         setSelectedGroup={vi.fn()}
         availableGroups={[]}
@@ -206,5 +221,6 @@ describe("ControlPanel profile capabilities", () => {
     expect(screen.queryByText("modelList:userGroup")).toBeNull()
     expect(screen.queryByText("modelList:realAmount")).toBeNull()
     expect(screen.queryByText("modelList:showRatio")).toBeNull()
+    expect(screen.queryByText("modelList:sortBy")).toBeNull()
   })
 })

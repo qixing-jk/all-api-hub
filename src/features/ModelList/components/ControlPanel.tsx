@@ -23,12 +23,18 @@ import type {
   ModelManagementSource,
   ModelManagementSourceCapabilities,
 } from "~/features/ModelList/modelManagementSources"
+import {
+  MODEL_LIST_SORT_MODES,
+  type ModelListSortMode,
+} from "~/features/ModelList/sortModes"
 
 interface ControlPanelProps {
   selectedSource: ModelManagementSource | null
   sourceCapabilities: ModelManagementSourceCapabilities
   searchTerm: string
   setSearchTerm: (term: string) => void
+  sortMode: ModelListSortMode
+  setSortMode: (mode: ModelListSortMode) => void
   selectedGroup: string
   setSelectedGroup: (group: string) => void
   availableGroups: string[]
@@ -73,6 +79,8 @@ export function ControlPanel({
   sourceCapabilities,
   searchTerm,
   setSearchTerm,
+  sortMode,
+  setSortMode,
   selectedGroup,
   setSelectedGroup,
   availableGroups,
@@ -90,6 +98,29 @@ export function ControlPanel({
 }: ControlPanelProps) {
   const { t } = useTranslation("modelList")
   const isProfileSource = selectedSource?.kind === "profile"
+  const supportsPriceSorting = sourceCapabilities.supportsPricing
+  const sortOptions = [
+    {
+      value: MODEL_LIST_SORT_MODES.DEFAULT,
+      label: t("sortOptions.default"),
+    },
+    {
+      value: MODEL_LIST_SORT_MODES.PRICE_ASC,
+      label: t("sortOptions.priceAsc"),
+    },
+    {
+      value: MODEL_LIST_SORT_MODES.PRICE_DESC,
+      label: t("sortOptions.priceDesc"),
+    },
+    ...(selectedSource?.kind === "all-accounts"
+      ? [
+          {
+            value: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+            label: t("sortOptions.modelCheapestFirst"),
+          },
+        ]
+      : []),
+  ]
 
   const handleCopyModelNames = () => {
     if (filteredModels.length === 0) {
@@ -125,6 +156,17 @@ export function ControlPanel({
               leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
             />
           </FormField>
+
+          {supportsPriceSorting && (
+            <FormField label={t("sortBy")} className="w-full lg:w-72">
+              <SearchableSelect
+                options={sortOptions}
+                value={sortMode}
+                onChange={(value) => setSortMode(value as ModelListSortMode)}
+                placeholder={t("sortBy")}
+              />
+            </FormField>
+          )}
 
           {sourceCapabilities.supportsGroupFiltering && (
             <FormField label={t("userGroup")} className="w-full lg:w-64">

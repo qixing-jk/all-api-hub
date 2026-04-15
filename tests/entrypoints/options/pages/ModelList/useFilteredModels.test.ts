@@ -6,6 +6,7 @@ import {
   createAllAccountsSource,
   createProfileSource,
 } from "~/features/ModelList/modelManagementSources"
+import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import type { PricingResponse } from "~/services/apiService/common/type"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
@@ -59,6 +60,24 @@ const createPricingResponse = (
   ...overrides,
 })
 
+function renderUseFilteredModels(
+  overrides: Partial<Parameters<typeof useFilteredModels>[0]> = {},
+) {
+  return renderHook(() =>
+    useFilteredModels({
+      pricingData: null,
+      pricingContexts: [],
+      selectedSource: null,
+      selectedGroup: "default",
+      searchTerm: "",
+      selectedProvider: "all",
+      sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
+      showRealPrice: false,
+      ...overrides,
+    }),
+  )
+}
+
 describe("useFilteredModels", () => {
   it("preserves profile-backed items when an account filter is active", async () => {
     const profileSource = createProfileSource({
@@ -73,17 +92,11 @@ describe("useFilteredModels", () => {
       updatedAt: 1,
     })
 
-    const { result } = renderHook(() =>
-      useFilteredModels({
-        pricingData: createPricingResponse(["gpt-4o-mini"]),
-        pricingContexts: [],
-        selectedSource: profileSource,
-        selectedGroup: "default",
-        searchTerm: "",
-        selectedProvider: "all",
-        accountFilterAccountId: "account-1",
-      }),
-    )
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(["gpt-4o-mini"]),
+      selectedSource: profileSource,
+      accountFilterAccountId: "account-1",
+    })
 
     await waitFor(() => expect(result.current).not.toBeNull())
 
@@ -105,29 +118,20 @@ describe("useFilteredModels", () => {
       userId: 2,
     })
 
-    const { result } = renderHook(() =>
-      useFilteredModels({
-        pricingData: null,
-        pricingContexts: [
-          {
-            account: accountA,
-            pricing: createPricingResponse([
-              "gpt-4o-mini",
-              "claude-3-5-sonnet",
-            ]),
-          },
-          {
-            account: accountB,
-            pricing: createPricingResponse(["gemini-1.5-pro"]),
-          },
-        ],
-        selectedSource: createAllAccountsSource(),
-        selectedGroup: "default",
-        searchTerm: "",
-        selectedProvider: "all",
-        accountFilterAccountId: "account-a",
-      }),
-    )
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: accountA,
+          pricing: createPricingResponse(["gpt-4o-mini", "claude-3-5-sonnet"]),
+        },
+        {
+          account: accountB,
+          pricing: createPricingResponse(["gemini-1.5-pro"]),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      accountFilterAccountId: "account-a",
+    })
 
     await waitFor(() => expect(result.current).not.toBeNull())
 
@@ -146,34 +150,29 @@ describe("useFilteredModels", () => {
 
     const source = createAccountSource(account)
 
-    const { result } = renderHook(() =>
-      useFilteredModels({
-        pricingData: createPricingResponse(
-          [
-            {
-              model_name: "gpt-4o-mini",
-              model_ratio: 1,
-              completion_ratio: 1,
-              enable_groups: ["vip"],
-            },
-            {
-              model_name: "claude-3-5-sonnet",
-              model_ratio: 2,
-              completion_ratio: 1,
-              enable_groups: ["default"],
-            },
-          ],
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
           {
-            group_ratio: { vip: 2, "": 5 },
+            model_name: "gpt-4o-mini",
+            model_ratio: 1,
+            completion_ratio: 1,
+            enable_groups: ["vip"],
           },
-        ),
-        pricingContexts: [],
-        selectedSource: source,
-        selectedGroup: "vip",
-        searchTerm: "",
-        selectedProvider: "all",
-      }),
-    )
+          {
+            model_name: "claude-3-5-sonnet",
+            model_ratio: 2,
+            completion_ratio: 1,
+            enable_groups: ["default"],
+          },
+        ],
+        {
+          group_ratio: { vip: 2, "": 5 },
+        },
+      ),
+      selectedSource: source,
+      selectedGroup: "vip",
+    })
 
     await waitFor(() => expect(result.current.availableGroups).toEqual(["vip"]))
 
@@ -199,31 +198,28 @@ describe("useFilteredModels", () => {
       balance: { USD: 5, CNY: 35 },
     })
 
-    const { result } = renderHook(() =>
-      useFilteredModels({
-        pricingData: createPricingResponse([
-          {
-            model_name: "claude-3-5-sonnet",
-            model_description: "Batch summarizer",
-            enable_groups: ["default"],
-          },
-          {
-            model_name: "gemini-1.5-pro",
-            model_description: "Batch multimodal pipeline",
-            enable_groups: ["default"],
-          },
-          {
-            model_name: "gpt-4o-mini",
-            enable_groups: ["default"],
-          },
-        ]),
-        pricingContexts: [],
-        selectedSource: createAccountSource(account),
-        selectedGroup: "all",
-        searchTerm: "batch",
-        selectedProvider: "Claude",
-      }),
-    )
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        {
+          model_name: "claude-3-5-sonnet",
+          model_description: "Batch summarizer",
+          enable_groups: ["default"],
+        },
+        {
+          model_name: "gemini-1.5-pro",
+          model_description: "Batch multimodal pipeline",
+          enable_groups: ["default"],
+        },
+        {
+          model_name: "gpt-4o-mini",
+          enable_groups: ["default"],
+        },
+      ]),
+      selectedSource: createAccountSource(account),
+      selectedGroup: "all",
+      searchTerm: "batch",
+      selectedProvider: "Claude",
+    })
 
     await waitFor(() =>
       expect(result.current.baseFilteredModels).toHaveLength(2),
@@ -251,34 +247,30 @@ describe("useFilteredModels", () => {
       balance: { USD: 0, CNY: 0 },
     })
 
-    const { result } = renderHook(() =>
-      useFilteredModels({
-        pricingData: null,
-        pricingContexts: [
-          {
-            account: accountA,
-            pricing: createPricingResponse([
-              {
-                model_name: "gemini-1.5-pro",
-                enable_groups: ["default"],
-              },
-            ]),
-          },
-          {
-            account: accountB,
-            pricing: {
-              data: null,
-              success: true,
-              usable_group: {},
-            } as any,
-          },
-        ],
-        selectedSource: createAllAccountsSource(),
-        selectedGroup: "all",
-        searchTerm: "",
-        selectedProvider: "Gemini",
-      }),
-    )
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: accountA,
+          pricing: createPricingResponse([
+            {
+              model_name: "gemini-1.5-pro",
+              enable_groups: ["default"],
+            },
+          ]),
+        },
+        {
+          account: accountB,
+          pricing: {
+            data: null,
+            success: true,
+            usable_group: {},
+          } as any,
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      selectedGroup: "all",
+      selectedProvider: "Gemini",
+    })
 
     await waitFor(() => {
       expect(
@@ -294,5 +286,288 @@ describe("useFilteredModels", () => {
     }
     expect(filteredSource.account.id).toBe("account-valid")
     expect(result.current.getProviderFilteredCount("Gemini")).toBe(1)
+  })
+
+  it("sorts priced rows ascending and descending within each billing mode", async () => {
+    const account = createDisplayAccount({
+      id: "account-prices",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const pricingData = createPricingResponse([
+      {
+        model_name: "gpt-expensive",
+        quota_type: 0,
+        model_ratio: 3,
+        completion_ratio: 1,
+        enable_groups: ["default"],
+      },
+      {
+        model_name: "gpt-cheap",
+        quota_type: 0,
+        model_ratio: 1,
+        completion_ratio: 1,
+        enable_groups: ["default"],
+      },
+      {
+        model_name: "image-cheap",
+        quota_type: 1,
+        model_price: 0.01,
+        enable_groups: ["default"],
+      },
+      {
+        model_name: "image-expensive",
+        quota_type: 1,
+        model_price: 0.04,
+        enable_groups: ["default"],
+      },
+    ])
+
+    const asc = renderUseFilteredModels({
+      pricingData,
+      selectedSource: createAccountSource(account),
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+    })
+
+    await waitFor(() => {
+      expect(
+        asc.result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual([
+        "gpt-cheap",
+        "gpt-expensive",
+        "image-cheap",
+        "image-expensive",
+      ])
+    })
+
+    const desc = renderUseFilteredModels({
+      pricingData,
+      selectedSource: createAccountSource(account),
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_DESC,
+    })
+
+    await waitFor(() => {
+      expect(
+        desc.result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual([
+        "gpt-expensive",
+        "gpt-cheap",
+        "image-expensive",
+        "image-cheap",
+      ])
+    })
+  })
+
+  it("groups same-model rows and puts the cheapest account first in all-accounts mode", async () => {
+    const cheaperAccount = createDisplayAccount({
+      id: "account-cheaper",
+      name: "Cheaper Account",
+      balance: { USD: 10, CNY: 65 },
+    })
+    const expensiveAccount = createDisplayAccount({
+      id: "account-expensive",
+      name: "Expensive Account",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: expensiveAccount,
+          pricing: createPricingResponse([
+            {
+              model_name: "shared-model",
+              quota_type: 0,
+              model_ratio: 2,
+              completion_ratio: 1,
+              enable_groups: ["default"],
+            },
+            {
+              model_name: "other-model",
+              quota_type: 0,
+              model_ratio: 1,
+              completion_ratio: 1,
+              enable_groups: ["default"],
+            },
+          ]),
+        },
+        {
+          account: cheaperAccount,
+          pricing: createPricingResponse([
+            {
+              model_name: "shared-model",
+              quota_type: 0,
+              model_ratio: 1,
+              completion_ratio: 1,
+              enable_groups: ["default"],
+            },
+          ]),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => [
+          item.model.model_name,
+          item.source.kind === "account" ? item.source.account.id : "profile",
+        ]),
+      ).toEqual([
+        ["other-model", "account-expensive"],
+        ["shared-model", "account-cheaper"],
+        ["shared-model", "account-expensive"],
+      ])
+    })
+
+    expect(
+      result.current.filteredModels
+        .filter((item) => item.model.model_name === "shared-model")
+        .map((item) => item.isLowestPrice),
+    ).toEqual([true, false])
+  })
+
+  it("recomputes cheapest order and badges using real recharge amounts when enabled", async () => {
+    const lowUsdHighCny = createDisplayAccount({
+      id: "account-low-usd",
+      name: "Low USD",
+      balance: { USD: 10, CNY: 90 },
+    })
+    const highUsdLowCny = createDisplayAccount({
+      id: "account-high-usd",
+      name: "High USD",
+      balance: { USD: 10, CNY: 60 },
+    })
+
+    const pricingContexts = [
+      {
+        account: lowUsdHighCny,
+        pricing: createPricingResponse([
+          {
+            model_name: "shared-model",
+            quota_type: 0,
+            model_ratio: 1,
+            completion_ratio: 1,
+            enable_groups: ["default"],
+          },
+        ]),
+      },
+      {
+        account: highUsdLowCny,
+        pricing: createPricingResponse([
+          {
+            model_name: "shared-model",
+            quota_type: 0,
+            model_ratio: 1.2,
+            completion_ratio: 1,
+            enable_groups: ["default"],
+          },
+        ]),
+      },
+    ]
+
+    const usdResult = renderUseFilteredModels({
+      pricingContexts,
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+      showRealPrice: false,
+    })
+
+    await waitFor(() => {
+      expect(
+        usdResult.result.current.filteredModels.map((item) => [
+          item.source.kind === "account" ? item.source.account.id : "profile",
+          item.isLowestPrice,
+        ]),
+      ).toEqual([
+        ["account-low-usd", true],
+        ["account-high-usd", false],
+      ])
+    })
+
+    const realPriceResult = renderUseFilteredModels({
+      pricingContexts,
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+      showRealPrice: true,
+    })
+
+    await waitFor(() => {
+      expect(
+        realPriceResult.result.current.filteredModels.map((item) => [
+          item.source.kind === "account" ? item.source.account.id : "profile",
+          item.isLowestPrice,
+        ]),
+      ).toEqual([
+        ["account-high-usd", true],
+        ["account-low-usd", false],
+      ])
+    })
+  })
+
+  it("keeps token-based and per-call models in separate price-sorting groups", async () => {
+    const account = createDisplayAccount({
+      id: "account-mixed",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        {
+          model_name: "token-model",
+          quota_type: 0,
+          model_ratio: 2,
+          completion_ratio: 1,
+          enable_groups: ["default"],
+        },
+        {
+          model_name: "per-call-model",
+          quota_type: 1,
+          model_price: 0.0001,
+          enable_groups: ["default"],
+        },
+      ]),
+      selectedSource: createAccountSource(account),
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["token-model", "per-call-model"])
+    })
+  })
+
+  it("sorts per-call object pricing by input then output values", async () => {
+    const account = createDisplayAccount({
+      id: "account-per-call",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse([
+        {
+          model_name: "per-call-b",
+          quota_type: 1,
+          model_price: { input: 20, output: 30 },
+          enable_groups: ["default"],
+        },
+        {
+          model_name: "per-call-a",
+          quota_type: 1,
+          model_price: { input: 10, output: 50 },
+          enable_groups: ["default"],
+        },
+      ]),
+      selectedSource: createAccountSource(account),
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["per-call-a", "per-call-b"])
+    })
   })
 })

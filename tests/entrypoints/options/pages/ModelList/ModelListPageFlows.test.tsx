@@ -8,6 +8,7 @@ import {
   createAllAccountsSource,
   createProfileSource,
 } from "~/features/ModelList/modelManagementSources"
+import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
 import { render, screen } from "~~/tests/test-utils/render"
@@ -250,6 +251,8 @@ function buildState(overrides: Record<string, any> = {}) {
     setSearchTerm: vi.fn(),
     selectedProvider: "all",
     setSelectedProvider: vi.fn(),
+    sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
+    setSortMode: vi.fn(),
     selectedGroup: "default",
     setSelectedGroup: vi.fn(),
 

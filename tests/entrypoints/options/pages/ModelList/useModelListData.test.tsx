@@ -2,6 +2,7 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useModelListData } from "~/features/ModelList/hooks/useModelListData"
+import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
 const mockUseAccountData = vi.fn()
@@ -286,6 +287,38 @@ describe("useModelListData", () => {
       supportsTokenCompatibility: true,
       supportsCredentialVerification: true,
       supportsCliVerification: true,
+    })
+  })
+
+  it("resets the per-model cheapest sort when leaving the all-accounts view", async () => {
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue("all")
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe("all-accounts")
+    })
+
+    act(() => {
+      result.current.setSortMode(MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST)
+    })
+
+    expect(result.current.sortMode).toBe(
+      MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+    )
+
+    act(() => {
+      result.current.setSelectedSourceValue("account:acc-1")
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe("account")
+    })
+
+    await waitFor(() => {
+      expect(result.current.sortMode).toBe(MODEL_LIST_SORT_MODES.DEFAULT)
     })
   })
 })

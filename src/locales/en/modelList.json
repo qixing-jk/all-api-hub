@@ -65,6 +65,8 @@
     "subtitle": "Account: {{accountName}} · Model: {{modelId}}",
     "title": "Key for model"
   },
+  "lowestPrice": "Lowest Price",
+  "lowestPriceWithinBillingMode": "Lowest-price comparisons only apply within the same billing mode",
   "messages": {
     "copyFailed": "Copy failed",
     "modelNameCopied": "Model name copied",
@@ -98,6 +100,13 @@
   "showing_one": "Showing {{count}} model",
   "showing_other": "Showing {{count}} models",
   "showRatio": "Show Ratio",
+  "sortBy": "Sort By",
+  "sortOptions": {
+    "default": "Default Order",
+    "modelCheapestFirst": "Cheapest First Per Model",
+    "priceAsc": "Price: Low to High",
+    "priceDesc": "Price: High to Low"
+  },
   "sourceLabels": {
     "profileBadge": "Profile: {{name}} · {{host}}",
     "profileOption": "API Credential: {{name}} · {{host}}"

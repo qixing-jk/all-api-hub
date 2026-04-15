@@ -61,6 +61,8 @@ export default function ModelList(props: {
     setSearchTerm,
     selectedProvider,
     setSelectedProvider,
+    sortMode,
+    setSortMode,
     selectedGroup,
     setSelectedGroup,
 
@@ -388,6 +390,8 @@ export default function ModelList(props: {
             sourceCapabilities={sourceCapabilities}
             searchTerm={searchTerm}
             setSearchTerm={setSearchTerm}
+            sortMode={sortMode}
+            setSortMode={setSortMode}
             selectedGroup={selectedGroup}
             setSelectedGroup={setSelectedGroup}
             availableGroups={availableGroups}
