@@ -56,16 +56,20 @@ type StubNewApiSiteRoutesOptions = {
   groups?: Record<string, { desc: string; ratio: number }>
 }
 
+/** Scenario-specific console-error patterns that should not fail the test. */
+type ExtensionPageGuardOptions = {
+  ignoreConsoleErrorPatterns?: RegExp[]
+}
+
 /**
  * Surface unexpected runtime errors immediately instead of letting the popup or
  * options page fail silently in the background.
  */
-export function installExtensionPageGuards(page: Page) {
-  installExtensionPageGuardsWithOptions(page)
-}
-
-type ExtensionPageGuardOptions = {
-  ignoreConsoleErrorPatterns?: RegExp[]
+export function installExtensionPageGuards(
+  page: Page,
+  options?: ExtensionPageGuardOptions,
+) {
+  installExtensionPageGuardsWithOptions(page, options)
 }
 
 /**

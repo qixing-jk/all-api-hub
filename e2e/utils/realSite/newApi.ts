@@ -3,8 +3,11 @@ import type { Page } from "@playwright/test"
 import { generateNewApiTotpCode } from "~/services/managedSites/providers/newApiTotp"
 
 import {
+  createLocatorFactory,
   ensureRealSiteOriginPage,
   findVisibleLocator,
+  maybeCheckAgreement,
+  maybeRevealUsernamePasswordLogin,
   normalizeBaseUrl,
   readEnv,
   requireVisibleLocator,
@@ -59,6 +62,8 @@ const EMPTY_NEW_API_REAL_SITE_SELECTORS: Pick<
   NewApiRealSiteConfig,
   "usernameSelector" | "passwordSelector" | "submitSelector"
 > = {}
+const { getUsernameCandidates, getPasswordCandidates, getSubmitCandidates } =
+  createLocatorFactory("AAH_E2E_NEW_API")
 
 /**
  * Environment-driven config for the real New API E2E flow.
@@ -155,7 +160,11 @@ export async function loginToRealNewApiSite(
     }
   }
 
-  await maybeRevealUsernamePasswordLogin(page)
+  await maybeRevealUsernamePasswordLogin(
+    page,
+    () => getUsernameCandidates(EMPTY_NEW_API_REAL_SITE_SELECTORS),
+    () => getPasswordCandidates(EMPTY_NEW_API_REAL_SITE_SELECTORS),
+  )
 
   const usernameInput = await requireVisibleLocator(
     page,
@@ -170,7 +179,7 @@ export async function loginToRealNewApiSite(
 
   await usernameInput.fill(config.username)
   await passwordInput.fill(config.password)
-  await maybeCheckAgreement(page, config)
+  await maybeCheckAgreement(page, config.agreeSelector)
 
   const submitButton = await requireVisibleLocator(
     page,
@@ -348,76 +357,6 @@ function extractNewApiPayload(payload: unknown) {
   return "data" in record ? record.data ?? null : payload
 }
 
-async function maybeRevealUsernamePasswordLogin(page: Page) {
-  const usernameInput = await findVisibleLocator(
-    page,
-    getUsernameCandidates(EMPTY_NEW_API_REAL_SITE_SELECTORS),
-    500,
-  )
-  const passwordInput = await findVisibleLocator(
-    page,
-    getPasswordCandidates(EMPTY_NEW_API_REAL_SITE_SELECTORS),
-    500,
-  )
-
-  if (usernameInput && passwordInput) {
-    return
-  }
-
-  const revealButton = await findVisibleLocator(
-    page,
-    [
-      {
-        description: "username-password login switch",
-        getLocator: (currentPage) =>
-          currentPage.getByRole("button", {
-            name: /use email|username|email login|用户名|邮箱/i,
-          }),
-      },
-    ],
-    1_000,
-  )
-
-  if (!revealButton) {
-    return
-  }
-
-  await revealButton.click()
-}
-
-async function maybeCheckAgreement(page: Page, config: NewApiRealSiteConfig) {
-  if (!config.agreeSelector) {
-    return
-  }
-
-  const checkbox = await findVisibleLocator(
-    page,
-    [
-      {
-        description: "agreement checkbox",
-        getLocator: (currentPage) => currentPage.locator(config.agreeSelector!),
-      },
-    ],
-    1_000,
-  )
-
-  if (!checkbox) {
-    return
-  }
-
-  const isChecked = await checkbox.evaluate((node) => {
-    if (node instanceof HTMLInputElement) {
-      return node.checked
-    }
-
-    return node.getAttribute("aria-checked") === "true"
-  })
-
-  if (!isChecked) {
-    await checkbox.click()
-  }
-}
-
 async function maybeSubmitTotp(page: Page, config: NewApiRealSiteConfig) {
   const codeInput = await findVisibleLocator(page, getTotpCandidates(), 5_000)
   if (!codeInput) {
@@ -495,92 +434,6 @@ async function waitForStoredUser(
   } catch {
     return null
   }
-}
-
-function getUsernameCandidates(
-  config: Pick<NewApiRealSiteConfig, "usernameSelector">,
-): LocatorCandidate[] {
-  return [
-    ...(config.usernameSelector
-      ? [
-          {
-            description: "AAH_E2E_NEW_API_USERNAME_SELECTOR",
-            getLocator: (page: Page) => page.locator(config.usernameSelector!),
-          },
-        ]
-      : []),
-    {
-      description: "standard username/email input",
-      getLocator: (page: Page) =>
-        page.locator(
-          [
-            'input[name="username"]',
-            'input[name="email"]',
-            'input[autocomplete="username"]',
-            'input[type="email"]',
-            'input[placeholder*="username" i]',
-            'input[placeholder*="email" i]',
-            'input[placeholder*="用户名" i]',
-            'input[placeholder*="邮箱" i]',
-          ].join(", "),
-        ),
-    },
-  ]
-}
-
-function getPasswordCandidates(
-  config: Pick<NewApiRealSiteConfig, "passwordSelector">,
-): LocatorCandidate[] {
-  return [
-    ...(config.passwordSelector
-      ? [
-          {
-            description: "AAH_E2E_NEW_API_PASSWORD_SELECTOR",
-            getLocator: (page: Page) => page.locator(config.passwordSelector!),
-          },
-        ]
-      : []),
-    {
-      description: "standard password input",
-      getLocator: (page: Page) =>
-        page.locator(
-          [
-            'input[name="password"]',
-            'input[type="password"]',
-            'input[autocomplete="current-password"]',
-            'input[placeholder*="password" i]',
-            'input[placeholder*="密码" i]',
-          ].join(", "),
-        ),
-    },
-  ]
-}
-
-function getSubmitCandidates(
-  config: Pick<NewApiRealSiteConfig, "submitSelector">,
-): LocatorCandidate[] {
-  return [
-    ...(config.submitSelector
-      ? [
-          {
-            description: "AAH_E2E_NEW_API_SUBMIT_SELECTOR",
-            getLocator: (page: Page) => page.locator(config.submitSelector!),
-          },
-        ]
-      : []),
-    {
-      description: "submit button",
-      getLocator: (page: Page) =>
-        page.locator('button[type="submit"], input[type="submit"]'),
-    },
-    {
-      description: "common login button text",
-      getLocator: (page: Page) =>
-        page.getByRole("button", {
-          name: /continue|login|sign in|登录|继续/i,
-        }),
-    },
-  ]
 }
 
 function getTotpCandidates(): LocatorCandidate[] {

@@ -1,15 +1,16 @@
 import type { Page } from "@playwright/test"
 
 import {
+  createLocatorFactory,
   ensureRealSiteOriginPage,
-  findVisibleLocator,
+  maybeCheckAgreement,
+  maybeRevealUsernamePasswordLogin,
   normalizeBaseUrl,
   readEnv,
   requireVisibleLocator,
   resolveRealSiteUrl,
   safeParseJson,
   seedLocalStorageValues,
-  type LocatorCandidate,
 } from "./shared"
 
 const REQUIRED_SUB2API_REAL_SITE_ENV_KEYS = [
@@ -57,6 +58,28 @@ const EMPTY_SUB2API_REAL_SITE_SELECTORS: Pick<
   Sub2ApiRealSiteConfig,
   "usernameSelector" | "passwordSelector" | "submitSelector"
 > = {}
+const { getUsernameCandidates, getPasswordCandidates, getSubmitCandidates } =
+  createLocatorFactory("AAH_E2E_SUB2API", {
+    usernameCandidates: [
+      {
+        description: "upstream LoginView email input (#email)",
+        getLocator: (page: Page) => page.locator("input#email"),
+      },
+    ],
+    passwordCandidates: [
+      {
+        description: "upstream LoginView password input (#password)",
+        getLocator: (page: Page) => page.locator("input#password"),
+      },
+    ],
+    submitCandidates: [
+      {
+        description: "upstream LoginView primary submit button",
+        getLocator: (page: Page) =>
+          page.locator("form button.btn.btn-primary.w-full[type='submit']"),
+      },
+    ],
+  })
 
 /**
  * Environment-driven config for the real Sub2API E2E flow.
@@ -77,7 +100,7 @@ const EMPTY_SUB2API_REAL_SITE_SELECTORS: Pick<
 export function resolveSub2ApiRealSiteConfig(): Sub2ApiRealSiteResolution {
   const values = Object.fromEntries(
     REQUIRED_SUB2API_REAL_SITE_ENV_KEYS.map((key) => [key, readEnv(key)]),
-  ) as Record<RequiredSub2ApiRealSiteEnvKey, string>
+  ) as Record<RequiredSub2ApiRealSiteEnvKey, string | undefined>
 
   const missingEnvKeys = REQUIRED_SUB2API_REAL_SITE_ENV_KEYS.filter(
     (key) => !values[key],
@@ -90,7 +113,7 @@ export function resolveSub2ApiRealSiteConfig(): Sub2ApiRealSiteResolution {
     }
   }
 
-  const baseUrl = normalizeBaseUrl(values.AAH_E2E_SUB2API_BASE_URL)
+  const baseUrl = normalizeBaseUrl(values.AAH_E2E_SUB2API_BASE_URL!)
   const loginPath =
     readEnv("AAH_E2E_SUB2API_LOGIN_PATH") ??
     SUB2API_REAL_SITE_DEFAULT_LOGIN_PATH
@@ -101,10 +124,10 @@ export function resolveSub2ApiRealSiteConfig(): Sub2ApiRealSiteResolution {
   return {
     config: {
       baseUrl,
-      loginUrl: resolveLoginUrl(baseUrl, loginPath),
-      loginApiUrl: resolveApiUrl(baseUrl, loginApiPath),
-      username: values.AAH_E2E_SUB2API_USERNAME,
-      password: values.AAH_E2E_SUB2API_PASSWORD,
+      loginUrl: resolveRealSiteUrl(baseUrl, loginPath),
+      loginApiUrl: resolveRealSiteUrl(baseUrl, loginApiPath),
+      username: values.AAH_E2E_SUB2API_USERNAME!,
+      password: values.AAH_E2E_SUB2API_PASSWORD!,
       usernameSelector: readEnv("AAH_E2E_SUB2API_USERNAME_SELECTOR"),
       passwordSelector: readEnv("AAH_E2E_SUB2API_PASSWORD_SELECTOR"),
       submitSelector: readEnv("AAH_E2E_SUB2API_SUBMIT_SELECTOR"),
@@ -146,7 +169,11 @@ export async function loginToRealSub2ApiSite(
     }
   }
 
-  await maybeRevealUsernamePasswordLogin(page)
+  await maybeRevealUsernamePasswordLogin(
+    page,
+    () => getUsernameCandidates(EMPTY_SUB2API_REAL_SITE_SELECTORS),
+    () => getPasswordCandidates(EMPTY_SUB2API_REAL_SITE_SELECTORS),
+  )
 
   const usernameInput = await requireVisibleLocator(
     page,
@@ -161,7 +188,7 @@ export async function loginToRealSub2ApiSite(
 
   await usernameInput.fill(config.username)
   await passwordInput.fill(config.password)
-  await maybeCheckAgreement(page, config)
+  await maybeCheckAgreement(page, config.agreeSelector)
 
   const submitButton = await requireVisibleLocator(
     page,
@@ -331,76 +358,6 @@ async function seedSub2ApiAuthState(
   })
 }
 
-async function maybeRevealUsernamePasswordLogin(page: Page) {
-  const usernameInput = await findVisibleLocator(
-    page,
-    getUsernameCandidates(EMPTY_SUB2API_REAL_SITE_SELECTORS),
-    500,
-  )
-  const passwordInput = await findVisibleLocator(
-    page,
-    getPasswordCandidates(EMPTY_SUB2API_REAL_SITE_SELECTORS),
-    500,
-  )
-
-  if (usernameInput && passwordInput) {
-    return
-  }
-
-  const revealButton = await findVisibleLocator(
-    page,
-    [
-      {
-        description: "username-password login switch",
-        getLocator: (currentPage) =>
-          currentPage.getByRole("button", {
-            name: /use email|username|email login|用户名|邮箱/i,
-          }),
-      },
-    ],
-    1_000,
-  )
-
-  if (!revealButton) {
-    return
-  }
-
-  await revealButton.click()
-}
-
-async function maybeCheckAgreement(page: Page, config: Sub2ApiRealSiteConfig) {
-  if (!config.agreeSelector) {
-    return
-  }
-
-  const checkbox = await findVisibleLocator(
-    page,
-    [
-      {
-        description: "agreement checkbox",
-        getLocator: (currentPage) => currentPage.locator(config.agreeSelector!),
-      },
-    ],
-    1_000,
-  )
-
-  if (!checkbox) {
-    return
-  }
-
-  const isChecked = await checkbox.evaluate((node) => {
-    if (node instanceof HTMLInputElement) {
-      return node.checked
-    }
-
-    return node.getAttribute("aria-checked") === "true"
-  })
-
-  if (!isChecked) {
-    await checkbox.click()
-  }
-}
-
 async function waitForSub2ApiAuthState(
   page: Page,
   timeoutMs: number,
@@ -490,105 +447,3 @@ async function looksLikeSecurityVerificationPage(page: Page) {
     bodyText ?? "",
   )
 }
-
-function getUsernameCandidates(
-  config: Pick<Sub2ApiRealSiteConfig, "usernameSelector">,
-): LocatorCandidate[] {
-  return [
-    ...(config.usernameSelector
-      ? [
-          {
-            description: "AAH_E2E_SUB2API_USERNAME_SELECTOR",
-            getLocator: (page: Page) => page.locator(config.usernameSelector!),
-          },
-        ]
-      : []),
-    {
-      description: "upstream LoginView email input (#email)",
-      getLocator: (page: Page) => page.locator("input#email"),
-    },
-    {
-      description: "standard username/email input",
-      getLocator: (page: Page) =>
-        page.locator(
-          [
-            'input[name="username"]',
-            'input[name="email"]',
-            'input[autocomplete="username"]',
-            'input[type="email"]',
-            'input[placeholder*="username" i]',
-            'input[placeholder*="email" i]',
-            'input[placeholder*="用户名" i]',
-            'input[placeholder*="邮箱" i]',
-          ].join(", "),
-        ),
-    },
-  ]
-}
-
-function getPasswordCandidates(
-  config: Pick<Sub2ApiRealSiteConfig, "passwordSelector">,
-): LocatorCandidate[] {
-  return [
-    ...(config.passwordSelector
-      ? [
-          {
-            description: "AAH_E2E_SUB2API_PASSWORD_SELECTOR",
-            getLocator: (page: Page) => page.locator(config.passwordSelector!),
-          },
-        ]
-      : []),
-    {
-      description: "upstream LoginView password input (#password)",
-      getLocator: (page: Page) => page.locator("input#password"),
-    },
-    {
-      description: "standard password input",
-      getLocator: (page: Page) =>
-        page.locator(
-          [
-            'input[name="password"]',
-            'input[type="password"]',
-            'input[autocomplete="current-password"]',
-            'input[placeholder*="password" i]',
-            'input[placeholder*="密码" i]',
-          ].join(", "),
-        ),
-    },
-  ]
-}
-
-function getSubmitCandidates(
-  config: Pick<Sub2ApiRealSiteConfig, "submitSelector">,
-): LocatorCandidate[] {
-  return [
-    ...(config.submitSelector
-      ? [
-          {
-            description: "AAH_E2E_SUB2API_SUBMIT_SELECTOR",
-            getLocator: (page: Page) => page.locator(config.submitSelector!),
-          },
-        ]
-      : []),
-    {
-      description: "upstream LoginView primary submit button",
-      getLocator: (page: Page) =>
-        page.locator("form button.btn.btn-primary.w-full[type='submit']"),
-    },
-    {
-      description: "submit button",
-      getLocator: (page: Page) =>
-        page.locator('button[type="submit"], input[type="submit"]'),
-    },
-    {
-      description: "common login button text",
-      getLocator: (page: Page) =>
-        page.getByRole("button", {
-          name: /continue|login|sign in|登录|继续/i,
-        }),
-    },
-  ]
-}
-
-const resolveLoginUrl = resolveRealSiteUrl
-const resolveApiUrl = resolveRealSiteUrl

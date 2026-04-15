@@ -5,6 +5,12 @@ export type LocatorCandidate = {
   getLocator: (page: Page) => Locator
 }
 
+type LoginLocatorConfig = {
+  usernameSelector?: string
+  passwordSelector?: string
+  submitSelector?: string
+}
+
 export function readEnv(name: string) {
   const value = process.env[name]?.trim()
   return value ? value : undefined
@@ -108,4 +114,181 @@ export async function findVisibleLocator(
   } while (Date.now() < deadline)
 
   return null
+}
+
+export async function maybeRevealUsernamePasswordLogin(
+  page: Page,
+  getUsernameCandidates: () => LocatorCandidate[],
+  getPasswordCandidates: () => LocatorCandidate[],
+) {
+  const usernameInput = await findVisibleLocator(
+    page,
+    getUsernameCandidates(),
+    500,
+  )
+  const passwordInput = await findVisibleLocator(
+    page,
+    getPasswordCandidates(),
+    500,
+  )
+
+  if (usernameInput && passwordInput) {
+    return
+  }
+
+  const revealButton = await findVisibleLocator(
+    page,
+    [
+      {
+        description: "username-password login switch",
+        getLocator: (currentPage) =>
+          currentPage.getByRole("button", {
+            name: /use email|username|email login|用户名|邮箱/i,
+          }),
+      },
+    ],
+    1_000,
+  )
+
+  if (!revealButton) {
+    return
+  }
+
+  await revealButton.click()
+}
+
+export async function maybeCheckAgreement(page: Page, agreeSelector?: string) {
+  if (!agreeSelector) {
+    return
+  }
+
+  const checkbox = await findVisibleLocator(
+    page,
+    [
+      {
+        description: "agreement checkbox",
+        getLocator: (currentPage) => currentPage.locator(agreeSelector),
+      },
+    ],
+    1_000,
+  )
+
+  if (!checkbox) {
+    return
+  }
+
+  const isChecked = await checkbox.evaluate((node) => {
+    if (node instanceof HTMLInputElement) {
+      return node.checked
+    }
+
+    return node.getAttribute("aria-checked") === "true"
+  })
+
+  if (!isChecked) {
+    await checkbox.click()
+  }
+}
+
+export function createLocatorFactory(
+  envPrefix: string,
+  extras: {
+    usernameCandidates?: LocatorCandidate[]
+    passwordCandidates?: LocatorCandidate[]
+    submitCandidates?: LocatorCandidate[]
+  } = {},
+) {
+  return {
+    getUsernameCandidates(
+      config: Pick<LoginLocatorConfig, "usernameSelector">,
+    ): LocatorCandidate[] {
+      return [
+        ...(config.usernameSelector
+          ? [
+              {
+                description: `${envPrefix}_USERNAME_SELECTOR`,
+                getLocator: (page: Page) =>
+                  page.locator(config.usernameSelector!),
+              },
+            ]
+          : []),
+        ...(extras.usernameCandidates ?? []),
+        {
+          description: "standard username/email input",
+          getLocator: (page: Page) =>
+            page.locator(
+              [
+                'input[name="username"]',
+                'input[name="email"]',
+                'input[autocomplete="username"]',
+                'input[type="email"]',
+                'input[placeholder*="username" i]',
+                'input[placeholder*="email" i]',
+                'input[placeholder*="用户名" i]',
+                'input[placeholder*="邮箱" i]',
+              ].join(", "),
+            ),
+        },
+      ]
+    },
+
+    getPasswordCandidates(
+      config: Pick<LoginLocatorConfig, "passwordSelector">,
+    ): LocatorCandidate[] {
+      return [
+        ...(config.passwordSelector
+          ? [
+              {
+                description: `${envPrefix}_PASSWORD_SELECTOR`,
+                getLocator: (page: Page) =>
+                  page.locator(config.passwordSelector!),
+              },
+            ]
+          : []),
+        ...(extras.passwordCandidates ?? []),
+        {
+          description: "standard password input",
+          getLocator: (page: Page) =>
+            page.locator(
+              [
+                'input[name="password"]',
+                'input[type="password"]',
+                'input[autocomplete="current-password"]',
+                'input[placeholder*="password" i]',
+                'input[placeholder*="密码" i]',
+              ].join(", "),
+            ),
+        },
+      ]
+    },
+
+    getSubmitCandidates(
+      config: Pick<LoginLocatorConfig, "submitSelector">,
+    ): LocatorCandidate[] {
+      return [
+        ...(config.submitSelector
+          ? [
+              {
+                description: `${envPrefix}_SUBMIT_SELECTOR`,
+                getLocator: (page: Page) =>
+                  page.locator(config.submitSelector!),
+              },
+            ]
+          : []),
+        ...(extras.submitCandidates ?? []),
+        {
+          description: "submit button",
+          getLocator: (page: Page) =>
+            page.locator('button[type="submit"], input[type="submit"]'),
+        },
+        {
+          description: "common login button text",
+          getLocator: (page: Page) =>
+            page.getByRole("button", {
+              name: /continue|login|sign in|登录|继续/i,
+            }),
+        },
+      ]
+    },
+  }
 }

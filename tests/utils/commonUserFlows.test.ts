@@ -38,4 +38,24 @@ describe("installExtensionPageGuards", () => {
       }),
     ).not.toThrow()
   })
+
+  it("ignores configured console-error patterns", () => {
+    const handlers: Record<string, (value: unknown) => void> = {}
+    const page = {
+      on: vi.fn((event: string, handler: (value: unknown) => void) => {
+        handlers[event] = handler
+      }),
+    } as any
+
+    installExtensionPageGuards(page, {
+      ignoreConsoleErrorPatterns: [/ResizeObserver loop limit exceeded/],
+    })
+
+    expect(() =>
+      handlers.console({
+        type: () => "error",
+        text: () => "ResizeObserver loop limit exceeded",
+      }),
+    ).not.toThrow()
+  })
 })

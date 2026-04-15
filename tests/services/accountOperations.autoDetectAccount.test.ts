@@ -107,9 +107,10 @@ describe("accountOperations autoDetectAccount", () => {
       username: "tracked-user",
       access_token: "tracked-token",
     })
-    mockFetchSiteStatus
-      .mockResolvedValueOnce({ quota_per_unit: 42 })
-      .mockResolvedValueOnce({ system_name: "Tracked Portal" })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      quota_per_unit: 42,
+      system_name: "Tracked Portal",
+    })
     mockFetchSupportCheckIn.mockResolvedValueOnce(undefined)
     mockExtractDefaultExchangeRate.mockReturnValueOnce(8.8)
 
@@ -132,6 +133,7 @@ describe("accountOperations autoDetectAccount", () => {
       action: expect.any(String),
       url: "https://tracked.example.com",
     })
+    expect(mockFetchSiteStatus).toHaveBeenCalledTimes(1)
   })
 
   it("returns a get-user-id failure when detection succeeds without a user id", async () => {
@@ -169,9 +171,10 @@ describe("accountOperations autoDetectAccount", () => {
       username: "cookie-user",
       access_token: "",
     })
-    mockFetchSiteStatus
-      .mockResolvedValueOnce({ billing_mode: "quota" })
-      .mockResolvedValueOnce({ system_name: "Cookie Portal" })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      billing_mode: "quota",
+      system_name: "Cookie Portal",
+    })
     mockFetchSupportCheckIn.mockResolvedValueOnce(true)
     mockExtractDefaultExchangeRate.mockReturnValueOnce(6.6)
 
@@ -197,6 +200,7 @@ describe("accountOperations autoDetectAccount", () => {
       },
     })
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
+    expect(mockFetchSiteStatus).toHaveBeenCalledTimes(1)
   })
 
   it("returns a get-info failure when access-token auth cannot obtain a usable token", async () => {
@@ -212,9 +216,9 @@ describe("accountOperations autoDetectAccount", () => {
       username: "missing-token-user",
       access_token: "",
     })
-    mockFetchSiteStatus
-      .mockResolvedValueOnce({})
-      .mockResolvedValueOnce({ system_name: "Missing Token Portal" })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Missing Token Portal",
+    })
     mockFetchSupportCheckIn.mockResolvedValueOnce(false)
     mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 

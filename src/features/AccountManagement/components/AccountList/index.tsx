@@ -42,6 +42,7 @@ import {
   useAccountSearch,
   type SearchResultWithHighlight,
 } from "~/features/AccountManagement/hooks/useAccountSearch"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { getHealthStatusDisplay } from "~/features/AccountManagement/utils/healthStatusUtils"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
@@ -54,7 +55,6 @@ import {
 } from "~/utils/core/formatters"
 import { formatMoneyFixed } from "~/utils/core/money"
 
-import { ACCOUNT_MANAGEMENT_TEST_IDS } from "../../testIds"
 import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"
 import { NewcomerSupportCard } from "../NewcomerSupportCard"

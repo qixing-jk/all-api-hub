@@ -423,5 +423,18 @@ describe("accountOperations", () => {
         auth: { authType: AuthTypeEnum.None },
       })
     })
+
+    it("reuses provided site status instead of fetching it again", async () => {
+      const result = await getSiteName(
+        "https://example.com/console",
+        "new-api",
+        {
+          system_name: "Billing Center",
+        },
+      )
+
+      expect(result).toBe("Billing Center")
+      expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    })
   })
 })
