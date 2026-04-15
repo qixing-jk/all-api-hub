@@ -12,6 +12,7 @@ import {
   fetchAccountData,
   fetchAccountTokens,
   fetchCurrentUser,
+  fetchSiteStatus,
   fetchUserGroups,
   refreshAccountData,
   updateApiToken,
@@ -1062,6 +1063,14 @@ describe("apiService sub2api exported operations", () => {
         autoCheckInEnabled: true,
       }),
     })
+  })
+
+  it("provides an explicit synthetic site status instead of calling /api/status", async () => {
+    await expect(fetchSiteStatus(baseRequest as any)).resolves.toEqual({
+      checkin_enabled: false,
+    })
+
+    expect(vi.mocked(fetchApi)).not.toHaveBeenCalled()
   })
 
   it("fetches user groups by combining available groups and rates", async () => {

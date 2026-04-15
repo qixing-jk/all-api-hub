@@ -72,7 +72,7 @@ type ExtensionPageGuardOptions = {
  * Same as {@link installExtensionPageGuards}, but allows narrowly ignoring
  * known-noisy console errors for scenario-specific real-site flows.
  */
-export function installExtensionPageGuardsWithOptions(
+function installExtensionPageGuardsWithOptions(
   page: Page,
   options: ExtensionPageGuardOptions = {},
 ) {

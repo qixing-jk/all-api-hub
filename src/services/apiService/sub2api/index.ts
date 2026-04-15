@@ -12,6 +12,7 @@ import type {
   ApiServiceRequest,
   CreateTokenRequest,
   RefreshAccountResult,
+  SiteStatusInfo,
   TodayIncomeData,
   TodayUsageData,
   UserGroupInfo,
@@ -751,6 +752,19 @@ export async function fetchCurrentUser(
     username: identity.username,
     balanceUsd: identity.balanceUsd,
     quota: identity.quota,
+  }
+}
+
+/**
+ * Sub2API does not expose the One-API-style public `/api/status` endpoint.
+ * Return a synthetic status payload so shared callers can skip that request and
+ * still treat built-in check-in as unsupported.
+ */
+export async function fetchSiteStatus(
+  _request: ApiServiceRequest,
+): Promise<SiteStatusInfo> {
+  return {
+    checkin_enabled: false,
   }
 }
 

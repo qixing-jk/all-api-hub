@@ -10,6 +10,7 @@ import {
   parseManualQuotaFromUsd,
   validateAndUpdateAccount,
 } from "~/services/accounts/accountOperations"
+import { getApiService } from "~/services/apiService"
 import { AuthTypeEnum } from "~/types"
 
 const { mockFetchAccountData, mockFetchSiteStatus, mockUpdateAccount } =
@@ -363,7 +364,7 @@ describe("accountOperations", () => {
       expect(mockFetchSiteStatus).not.toHaveBeenCalled()
     })
 
-    it("falls back to system_name when the tab title is just a default site label", async () => {
+    it("falls back to the normalized domain when no site-type hint is available", async () => {
       mockFetchSiteStatus.mockResolvedValueOnce({
         system_name: "Billing Center",
       })
@@ -374,11 +375,8 @@ describe("accountOperations", () => {
         url: "https://example.com/console",
       } as browser.tabs.Tab)
 
-      expect(result).toBe("Billing Center")
-      expect(mockFetchSiteStatus).toHaveBeenCalledWith({
-        baseUrl: "https://example.com",
-        auth: { authType: AuthTypeEnum.None },
-      })
+      expect(result).toBe("Example")
+      expect(mockFetchSiteStatus).not.toHaveBeenCalled()
     })
 
     it("falls back to the normalized domain when site status also returns a default-like name", async () => {
@@ -389,6 +387,41 @@ describe("accountOperations", () => {
       const result = await getSiteName("https://api.example.co.uk/console")
 
       expect(result).toBe("Example")
+    })
+
+    it("uses the provided site-type hint when resolving site status", async () => {
+      mockFetchSiteStatus.mockResolvedValueOnce({
+        system_name: "Sub2 Portal",
+      })
+
+      const result = await getSiteName(
+        "https://sub2.example.com/console",
+        SUB2API,
+      )
+
+      expect(result).toBe("Sub2 Portal")
+      expect(vi.mocked(getApiService)).toHaveBeenCalledWith(SUB2API)
+    })
+
+    it("falls back to system_name when a default tab title is paired with a site-type hint", async () => {
+      mockFetchSiteStatus.mockResolvedValueOnce({
+        system_name: "Billing Center",
+      })
+
+      const result = await getSiteName(
+        {
+          id: 2,
+          title: "new-api",
+          url: "https://example.com/console",
+        } as browser.tabs.Tab,
+        "new-api",
+      )
+
+      expect(result).toBe("Billing Center")
+      expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+        baseUrl: "https://example.com",
+        auth: { authType: AuthTypeEnum.None },
+      })
     })
   })
 })

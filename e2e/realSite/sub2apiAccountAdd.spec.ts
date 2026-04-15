@@ -2,7 +2,7 @@ import { SUB2API } from "~/constants/siteType"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   forceExtensionLanguage,
-  installExtensionPageGuardsWithOptions,
+  installExtensionPageGuards,
   seedUserPreferences,
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
@@ -54,11 +54,7 @@ test.describe("real-site E2E: Sub2API auto-detect account add flow", () => {
     const loginResult = await loginToRealSub2ApiSite(sitePage, config)
     expect(loginResult.authState.accessToken).not.toBe("")
 
-    installExtensionPageGuardsWithOptions(page, {
-      ignoreConsoleErrorPatterns: [
-        /^Failed to load resource: the server responded with a status of 404\b/,
-      ],
-    })
+    installExtensionPageGuards(page)
     await openAccountManagementPage({ page, extensionId })
 
     const dialog = await autoDetectAccountFromAddDialog(page, config.baseUrl)

@@ -226,7 +226,7 @@ export async function autoDetectAccount(
           authType: AuthTypeEnum.None,
         },
       }),
-      getSiteName(url),
+      getSiteName(url, siteType),
     ])
 
     const { username: detectedUsername, access_token } = tokenInfo
@@ -989,10 +989,13 @@ function IsNotDefaultSiteName(siteName: string): boolean {
 /**
  * 根据 Tab、URL 或站点状态信息推断最终展示的站点名称。
  * @param input 可能为浏览器 Tab 对象或字符串 URL
+ * @param siteTypeHint Optional site-type hint so site-specific API overrides can
+ * be used when resolving the display name.
  * @returns 计算后的站点名称
  */
 export async function getSiteName(
   input: browser.tabs.Tab | string,
+  siteTypeHint?: string,
 ): Promise<string> {
   // 1. 统一提取信息
   const urlString = typeof input === "string" ? input : input.url ?? ""
@@ -1007,18 +1010,20 @@ export async function getSiteName(
   const urlObj = new URL(urlString)
   const hostWithProtocol = `${urlObj.protocol}//${urlObj.host}`
 
-  // 4. 从站点状态获取
-  const siteStatusInfo = await getApiService(undefined).fetchSiteStatus({
-    baseUrl: hostWithProtocol,
-    auth: {
-      authType: AuthTypeEnum.None,
-    },
-  })
-  if (
-    siteStatusInfo?.system_name &&
-    IsNotDefaultSiteName(siteStatusInfo.system_name)
-  ) {
-    return siteStatusInfo.system_name
+  // 4. 仅在已知 siteType 时才请求站点状态，避免为未知站点增加额外探测请求。
+  if (siteTypeHint) {
+    const siteStatusInfo = await getApiService(siteTypeHint).fetchSiteStatus({
+      baseUrl: hostWithProtocol,
+      auth: {
+        authType: AuthTypeEnum.None,
+      },
+    })
+    if (
+      siteStatusInfo?.system_name &&
+      IsNotDefaultSiteName(siteStatusInfo.system_name)
+    ) {
+      return siteStatusInfo.system_name
+    }
   }
 
   // 5. 最后从域名获取
