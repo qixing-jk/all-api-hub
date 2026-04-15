@@ -33,7 +33,13 @@ import {
   RefreshCcw,
   Trash2,
 } from "lucide-react"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useState,
+} from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -267,6 +273,13 @@ export default function ManagedSiteChannels({
       setIsLoading(false)
     }
   }, [t])
+
+  useLayoutEffect(() => {
+    setChannels([])
+    setError(null)
+    setConfigMissing(false)
+    setConfigMissingMessage(null)
+  }, [managedSiteType])
 
   useEffect(() => {
     void refreshChannels()

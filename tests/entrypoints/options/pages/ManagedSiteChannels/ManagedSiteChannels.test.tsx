@@ -405,6 +405,18 @@ describe("ManagedSiteChannels", () => {
       managedSiteType: currentManagedSiteType,
       withMigrationTarget: true,
     })
+    let resolveDoneHubChannels:
+      | ((value: {
+          success: boolean
+          data: {
+            items: Array<{
+              id: number
+              name: string
+              base_url: string
+            }>
+          }
+        }) => void)
+      | undefined
 
     vi.mocked(useUserPreferencesContext).mockImplementation(
       () =>
@@ -437,18 +449,23 @@ describe("ManagedSiteChannels", () => {
         }) as any,
     )
 
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
-      success: true,
-      data: {
-        items: [{ id: 1, name: "Alpha", base_url: "https://site-a.example" }],
-      },
-    } as any)
+    vi.mocked(sendRuntimeMessage)
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          items: [{ id: 1, name: "Alpha", base_url: "https://site-a.example" }],
+        },
+      } as any)
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveDoneHubChannels = resolve
+          }),
+      )
 
     const { rerender } = render(<ManagedSiteChannels />)
 
     await waitForRowText("Alpha")
-
-    vi.mocked(sendRuntimeMessage).mockClear()
 
     currentManagedSiteType = DONE_HUB
     currentPreferences = buildPreferences({
@@ -458,13 +475,29 @@ describe("ManagedSiteChannels", () => {
 
     rerender(<ManagedSiteChannels />)
 
-    await waitFor(() =>
-      expect(sendRuntimeMessage).toHaveBeenCalledWith(
+    await waitFor(() => {
+      expect(sendRuntimeMessage).toHaveBeenLastCalledWith(
         expect.objectContaining({
           action: RuntimeActionIds.ModelSyncListChannels,
         }),
-      ),
-    )
+      )
+      expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
+      expect(
+        screen.getByText("managedSiteChannels:table.loading"),
+      ).toBeInTheDocument()
+    })
+
+    resolveDoneHubChannels?.({
+      success: true,
+      data: {
+        items: [{ id: 2, name: "Beta", base_url: "https://site-b.example" }],
+      },
+    })
+
+    await waitFor(() => {
+      expect(screen.getByText("Beta")).toBeInTheDocument()
+      expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
+    })
   })
 
   it("reloads the channel list when refreshKey changes to a truthy value", async () => {
@@ -544,6 +577,7 @@ describe("ManagedSiteChannels", () => {
     await waitFor(() => {
       expect(screen.getByText("Beta")).toBeInTheDocument()
     })
+    expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
   })
 
   it("shows a config warning and skips the channel query when managed-site config is missing", async () => {
