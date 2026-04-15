@@ -511,11 +511,19 @@ describe("ModelItem profile actions", () => {
         effectiveGroup="default"
         selectedGroups={["default"]}
         availableGroups={["default"]}
+        showsOptimalGroup={true}
         source={accountSource}
         isLowestPrice={true}
       />,
     )
 
-    expect(await screen.findByText("modelList:lowestPrice")).toBeInTheDocument()
+    expect(
+      await screen.findByText("modelList:optimalGroup"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("modelList:optimalGroup")).toHaveAttribute(
+      "title",
+      "modelList:optimalGroupLowestPriceWithinBillingMode",
+    )
+    expect(screen.queryByText("modelList:lowestPrice")).toBeNull()
   })
 })

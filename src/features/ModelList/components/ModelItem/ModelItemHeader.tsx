@@ -18,9 +18,6 @@ interface ModelItemHeaderProps {
   model: ModelPricing
   isAvailableForUser: boolean
   handleCopyModelName: () => void
-  isLowestPrice?: boolean
-  effectiveGroup?: string
-  showsOptimalGroup?: boolean
   showPricingMetadata: boolean
   showAvailabilityBadge: boolean
   verificationSummary?: ApiVerificationHistorySummary | null
@@ -33,9 +30,6 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
   model,
   isAvailableForUser,
   handleCopyModelName,
-  isLowestPrice = false,
-  effectiveGroup,
-  showsOptimalGroup = false,
   showPricingMetadata,
   showAvailabilityBadge,
   verificationSummary,
@@ -143,27 +137,6 @@ export const ModelItemHeader: React.FC<ModelItemHeaderProps> = ({
               {isAvailableForUser
                 ? t("modelList:available")
                 : t("modelList:unavailable")}
-            </Badge>
-          )}
-
-          {isLowestPrice && (
-            <Badge
-              variant="success"
-              size="sm"
-              className="text-[10px] sm:text-xs"
-              title={t("modelList:lowestPriceWithinBillingMode")}
-            >
-              {t("modelList:lowestPrice")}
-            </Badge>
-          )}
-
-          {showsOptimalGroup && effectiveGroup && (
-            <Badge
-              variant="secondary"
-              size="sm"
-              className="text-[10px] sm:text-xs"
-            >
-              {t("modelList:optimalGroup", { group: effectiveGroup })}
             </Badge>
           )}
         </div>

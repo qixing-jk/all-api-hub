@@ -66,8 +66,6 @@
     "subtitle": "Account: {{accountName}} · Model: {{modelId}}",
     "title": "Key for model"
   },
-  "lowestPrice": "Lowest Price",
-  "lowestPriceWithinBillingMode": "Lowest-price comparisons only apply within the same billing mode",
   "messages": {
     "copyFailed": "Copy failed",
     "modelNameCopied": "Model name copied",
@@ -76,7 +74,9 @@
   "noMatchingModels": "No matching models found",
   "noSourcesDescription": "Add a site account or API credential profile before viewing the model list.",
   "noSourcesTitle": "No model sources yet",
-  "optimalGroup": "Best Group {{group}}",
+  "optimalGroup": "Best Group: {{group}}",
+  "optimalGroupLowestPriceWithinBillingMode": "Best group within the selected groups: {{group}}. This row is also the lowest price within the same billing mode.",
+  "optimalGroupWithinSelectedGroups": "Best group within the selected groups: {{group}}",
   "output": "Output:",
   "output1MTokens": "Output (1M tokens)",
   "perCall": "Per call:",

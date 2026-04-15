@@ -1,6 +1,7 @@
 import React from "react"
 import { useTranslation } from "react-i18next"
 
+import { Badge } from "~/components/ui"
 import type { ModelPricing } from "~/services/apiService/common/type"
 import {
   formatPriceCompact,
@@ -19,6 +20,9 @@ interface ModelItemPricingProps {
   showPricing: boolean
   showRatioColumn: boolean
   isAvailableForUser: boolean
+  isLowestPrice?: boolean
+  effectiveGroup?: string
+  showsOptimalGroup?: boolean
 }
 
 export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
@@ -29,6 +33,9 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   showPricing,
   showRatioColumn,
   isAvailableForUser,
+  isLowestPrice = false,
+  effectiveGroup,
+  showsOptimalGroup = false,
 }) => {
   const { t } = useTranslation("modelList")
   if (!showPricing) {
@@ -37,12 +44,33 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
 
   const tokenBillingType = isTokenBillingType(model.quota_type)
   const perCallPrice = calculatedPrice.perCallPrice
+  const shouldShowPriceMeta =
+    effectiveGroup && (showsOptimalGroup || isLowestPrice)
+  const priceMetaTitle =
+    shouldShowPriceMeta && effectiveGroup
+      ? isLowestPrice
+        ? t("optimalGroupLowestPriceWithinBillingMode", {
+            group: effectiveGroup,
+          })
+        : t("optimalGroupWithinSelectedGroups", {
+            group: effectiveGroup,
+          })
+      : undefined
+  const priceMeta = shouldShowPriceMeta ? (
+    <Badge
+      variant={isLowestPrice ? "success" : "secondary"}
+      size="sm"
+      className="shrink-0 text-[10px] sm:text-xs"
+      title={priceMetaTitle}
+    >
+      {t("optimalGroup", { group: effectiveGroup })}
+    </Badge>
+  ) : null
+
   return (
     <div className="mt-2">
       {tokenBillingType ? (
-        // 按量计费 - 横向并排显示价格
         <div className="flex flex-wrap items-center gap-3 sm:gap-4 md:gap-6">
-          {/* 输入价格 */}
           <PriceView
             calculatedPrice={calculatedPrice}
             showRealPrice={showRealPrice}
@@ -51,27 +79,30 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
             formatPriceCompact={formatPriceCompact}
           />
 
-          {/* 倍率显示 */}
-          {showRatioColumn && (
-            <div className="flex items-center gap-1.5 sm:gap-2">
-              <span className="dark:text-dark-text-tertiary text-xs whitespace-nowrap text-gray-500 sm:text-sm">
-                {t("ratio")}
-              </span>
-              <span
-                className={`text-xs font-medium sm:text-sm ${
-                  isAvailableForUser
-                    ? "dark:text-dark-text-primary text-gray-900"
-                    : "dark:text-dark-text-tertiary text-gray-500"
-                }`}
-              >
-                {model.model_ratio}x
-              </span>
+          {(showRatioColumn || priceMeta) && (
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              {showRatioColumn && (
+                <>
+                  <span className="dark:text-dark-text-tertiary text-xs whitespace-nowrap text-gray-500 sm:text-sm">
+                    {t("ratio")}
+                  </span>
+                  <span
+                    className={`text-xs font-medium sm:text-sm ${
+                      isAvailableForUser
+                        ? "dark:text-dark-text-primary text-gray-900"
+                        : "dark:text-dark-text-tertiary text-gray-500"
+                    }`}
+                  >
+                    {model.model_ratio}x
+                  </span>
+                </>
+              )}
+              {priceMeta}
             </div>
           )}
         </div>
       ) : (
         perCallPrice && (
-          // 按次计费
           <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
             <span className="dark:text-dark-text-secondary text-xs whitespace-nowrap text-gray-600 sm:text-sm">
               {t("perCall")}
@@ -83,6 +114,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
               showRealPrice={showRealPrice}
               tokenBillingType={tokenBillingType}
             />
+            {priceMeta}
           </div>
         )
       )}

@@ -48,6 +48,9 @@ interface ModelItemProps {
   ) => void
 }
 
+/**
+ *
+ */
 export default function ModelItem(props: ModelItemProps) {
   const {
     model,
@@ -150,9 +153,6 @@ export default function ModelItem(props: ModelItemProps) {
             model={model}
             isAvailableForUser={isAvailableForUser}
             handleCopyModelName={handleCopyModelName}
-            isLowestPrice={isLowestPrice}
-            effectiveGroup={effectiveGroup}
-            showsOptimalGroup={showsOptimalGroup}
             showPricingMetadata={showPricing}
             showAvailabilityBadge={showGroupDetails}
             verificationSummary={verificationSummary}
@@ -204,6 +204,9 @@ export default function ModelItem(props: ModelItemProps) {
           showPricing={showPricing}
           showRatioColumn={showRatioColumn}
           isAvailableForUser={isAvailableForUser}
+          isLowestPrice={isLowestPrice}
+          effectiveGroup={effectiveGroup}
+          showsOptimalGroup={showsOptimalGroup}
         />
 
         {isExpanded && source.kind === "account" && (

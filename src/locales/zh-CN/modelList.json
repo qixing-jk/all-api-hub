@@ -65,8 +65,6 @@
     "subtitle": "账号：{{accountName}} · 模型：{{modelId}}",
     "title": "模型对应密钥"
   },
-  "lowestPrice": "最低价",
-  "lowestPriceWithinBillingMode": "最低价仅在相同计费模式下比较",
   "messages": {
     "copyFailed": "复制失败",
     "modelNameCopied": "模型名称已复制",
@@ -75,7 +73,9 @@
   "noMatchingModels": "没有找到匹配的模型",
   "noSourcesDescription": "请先添加站点账号或 API 凭据，然后查看模型列表。",
   "noSourcesTitle": "暂无可用数据源",
-  "optimalGroup": "最优组 {{group}}",
+  "optimalGroup": "最优组: {{group}}",
+  "optimalGroupLowestPriceWithinBillingMode": "已在当前筛选分组范围内自动选择最优组: {{group}}；且在相同计费模式下价格最低",
+  "optimalGroupWithinSelectedGroups": "已在当前筛选分组范围内自动选择最优组: {{group}}",
   "output": "输出:",
   "output1MTokens": "输出(1M tokens)",
   "perCall": "每次调用:",

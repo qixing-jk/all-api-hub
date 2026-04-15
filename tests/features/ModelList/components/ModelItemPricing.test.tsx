@@ -304,5 +304,32 @@ describe("Model item pricing and description", () => {
       expect(screen.queryByText("perCall")).toBeNull()
       expect(screen.queryByText("ratio")).toBeNull()
     })
+
+    it("renders the optimal-group indicator beside ratio metadata and uses title-only explanation for the lowest price", () => {
+      isTokenBillingTypeMock.mockReturnValue(true)
+
+      render(
+        <ModelItemPricing
+          model={createModel({ model_ratio: 2 })}
+          calculatedPrice={createCalculatedPrice()}
+          exchangeRate={7}
+          showRealPrice={false}
+          showPricing={true}
+          showRatioColumn={true}
+          isAvailableForUser={true}
+          isLowestPrice={true}
+          effectiveGroup="vip"
+          showsOptimalGroup={true}
+        />,
+      )
+
+      expect(screen.getByText("ratio")).toBeInTheDocument()
+      expect(screen.getByText("optimalGroup")).toBeInTheDocument()
+      expect(screen.getByText("optimalGroup")).toHaveAttribute(
+        "title",
+        "optimalGroupLowestPriceWithinBillingMode",
+      )
+      expect(screen.queryByText("lowestPrice")).toBeNull()
+    })
   })
 })

@@ -65,8 +65,6 @@
     "subtitle": "アカウント: {{accountName}} · モデル: {{modelId}}",
     "title": "モデル用キー"
   },
-  "lowestPrice": "最安値",
-  "lowestPriceWithinBillingMode": "最安値の比較は同じ課金方式内でのみ行われます",
   "messages": {
     "copyFailed": "コピーに失敗しました",
     "modelNameCopied": "モデル名をコピーしました",
@@ -75,7 +73,9 @@
   "noMatchingModels": "一致するモデルが見つかりません",
   "noSourcesDescription": "モデル一覧を表示するには、先にサイトアカウントまたは API 認証情報を追加してください。",
   "noSourcesTitle": "利用できるデータソースがありません",
-  "optimalGroup": "最安グループ {{group}}",
+  "optimalGroup": "最安グループ: {{group}}",
+  "optimalGroupLowestPriceWithinBillingMode": "選択中のグループ内での最適グループ: {{group}}。さらに同じ課金方式内で最安です",
+  "optimalGroupWithinSelectedGroups": "選択中のグループ内での最適グループ: {{group}}",
   "output": "出力:",
   "output1MTokens": "出力（100 万トークン）",
   "perCall": "1 回あたり:",
