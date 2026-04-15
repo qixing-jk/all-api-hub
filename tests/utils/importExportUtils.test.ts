@@ -361,9 +361,16 @@ describe("importFromBackupObject", () => {
           tokens: [
             {
               id: 101,
+              user_id: 1,
               name: "Primary Key",
               key: "sk-should-be-ignored",
               status: 1,
+              created_time: 1,
+              accessed_time: 1,
+              expired_time: -1,
+              remain_quota: -1,
+              unlimited_quota: true,
+              used_quota: 0,
             },
           ],
         },
