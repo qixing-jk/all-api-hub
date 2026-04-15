@@ -38,6 +38,9 @@ interface AccountActionsContextType {
     accounts: DisplaySiteData[],
     disabled: boolean,
   ) => Promise<void>
+  handleDeleteAccounts: (
+    accounts: DisplaySiteData[],
+  ) => Promise<{ deletedCount: number }>
   handleDeleteAccount: (account: DisplaySiteData) => void
   handleCopyUrl: (account: DisplaySiteData) => void
   handleMarkCustomCheckInAsCheckedIn: (
@@ -184,6 +187,40 @@ export const AccountActionsProvider = ({
     [loadAccountData],
   )
 
+  const handleDeleteAccounts = useCallback(
+    async (accounts: DisplaySiteData[]) => {
+      const uniqueAccounts = Array.from(
+        new Map(accounts.map((account) => [account.id, account])).values(),
+      )
+      const accountIds = uniqueAccounts
+        .map((account) => account.id)
+        .filter(Boolean)
+
+      if (accountIds.length === 0) {
+        return { deletedCount: 0 }
+      }
+
+      const result = await toast.promise(
+        accountStorage.deleteAccounts(accountIds),
+        {
+          loading: t("account:bulk.deleting", { count: accountIds.length }),
+          success: (deleteResult) =>
+            t("account:bulk.deleteSuccess", {
+              count: deleteResult.deletedCount,
+            }),
+          error: (error) =>
+            t("ui:dialog.delete.deleteFailed", {
+              error: getErrorMessage(error),
+            }),
+        },
+      )
+
+      await loadAccountData()
+      return result
+    },
+    [loadAccountData],
+  )
+
   const handleDeleteAccount = useCallback(() => {
     // The actual deletion logic is in DelAccountDialog,
     // this just reloads the data after deletion.
@@ -292,6 +329,7 @@ export const AccountActionsProvider = ({
       handleRefreshAccount,
       handleSetAccountDisabled,
       handleSetAccountsDisabled,
+      handleDeleteAccounts,
       handleDeleteAccount,
       handleCopyUrl,
       handleMarkCustomCheckInAsCheckedIn,
@@ -302,6 +340,7 @@ export const AccountActionsProvider = ({
       handleRefreshAccount,
       handleSetAccountDisabled,
       handleSetAccountsDisabled,
+      handleDeleteAccounts,
       handleDeleteAccount,
       handleCopyUrl,
       handleMarkCustomCheckInAsCheckedIn,
@@ -324,6 +363,7 @@ export const useAccountActionsContext = () => {
     !context.handleRefreshAccount ||
     !context.handleSetAccountDisabled ||
     !context.handleSetAccountsDisabled ||
+    !context.handleDeleteAccounts ||
     !context.handleDeleteAccount ||
     !context.handleCopyUrl ||
     !context.handleMarkCustomCheckInAsCheckedIn

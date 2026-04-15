@@ -19,7 +19,6 @@ import {
   PlusIcon,
 } from "@heroicons/react/24/outline"
 import { useEffect, useMemo, useState } from "react"
-import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -51,10 +50,8 @@ import { getHealthStatusDisplay } from "~/features/AccountManagement/utils/healt
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
 import { cn } from "~/lib/utils"
-import { accountStorage } from "~/services/accounts/accountStorage"
 import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import type { DisplaySiteData, SortField } from "~/types"
-import { getErrorMessage } from "~/utils/core/error"
 import {
   calculateTotalBalanceForSites,
   calculateTotalConsumptionForSites,
@@ -298,8 +295,11 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     isManualSortFeatureEnabled,
   } = useAccountDataContext()
   const { handleAddAccountClick } = useAddAccountHandler()
-  const { handleDeleteAccount, handleSetAccountsDisabled } =
-    useAccountActionsContext()
+  const {
+    handleDeleteAccount,
+    handleDeleteAccounts,
+    handleSetAccountsDisabled,
+  } = useAccountActionsContext()
   const { detectedAccount } = useAccountDataContext()
 
   const [deleteDialogAccount, setDeleteDialogAccount] =
@@ -673,26 +673,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
 
     setIsBulkDeleting(true)
     try {
-      const { deletedCount } = await toast.promise(
-        accountStorage.deleteAccounts(selectedIds),
-        {
-          loading: t("account:bulk.deleting", { count: selectedIds.length }),
-          success: (result) =>
-            t("account:bulk.deleteSuccess", { count: result.deletedCount }),
-          error: (error) =>
-            t("ui:dialog.delete.deleteFailed", {
-              error: getErrorMessage(error),
-            }),
-        },
-      )
-
-      // `handleBulkDelete` intentionally calls `handleDeleteAccount(selectedAccounts[0]!)`
-      // only to reuse the existing `handleDeleteAccount` side-effect flow after the
-      // bulk delete completes. Passing the first item from `selectedAccounts` is
-      // deliberate here because this call is about refresh/revalidation coupling,
-      // not about representing every deleted account. Refactor if this dependency
-      // between `handleBulkDelete` and `handleDeleteAccount` should be removed.
-      handleDeleteAccount(selectedAccounts[0]!)
+      const { deletedCount } = await handleDeleteAccounts(selectedAccounts)
       setSelectedAccountIds((previous) =>
         previous.filter((accountId) => !selectedIds.includes(accountId)),
       )

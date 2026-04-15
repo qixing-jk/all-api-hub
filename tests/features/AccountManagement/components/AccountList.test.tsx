@@ -12,23 +12,15 @@ const {
   mockUseUserPreferencesContext,
   handleAddAccountClickMock,
   handleDeleteAccountMock,
+  handleDeleteAccountsMock,
   handleSetAccountsDisabledMock,
-  deleteAccountsMock,
-  toastPromiseMock,
 } = vi.hoisted(() => ({
   mockUseAccountDataContext: vi.fn(),
   mockUseUserPreferencesContext: vi.fn(),
   handleAddAccountClickMock: vi.fn(),
   handleDeleteAccountMock: vi.fn(),
+  handleDeleteAccountsMock: vi.fn(),
   handleSetAccountsDisabledMock: vi.fn(),
-  deleteAccountsMock: vi.fn(),
-  toastPromiseMock: vi.fn(),
-}))
-
-vi.mock("react-hot-toast", () => ({
-  default: {
-    promise: (...args: any[]) => toastPromiseMock(...args),
-  },
 }))
 
 vi.mock("~/components/ui", () => {
@@ -149,6 +141,7 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 vi.mock("~/features/AccountManagement/hooks/AccountActionsContext", () => ({
   useAccountActionsContext: () => ({
     handleDeleteAccount: handleDeleteAccountMock,
+    handleDeleteAccounts: handleDeleteAccountsMock,
     handleSetAccountsDisabled: handleSetAccountsDisabledMock,
   }),
 }))
@@ -186,12 +179,6 @@ vi.mock("~/features/AccountManagement/components/CopyKeyDialog", () => ({
 
 vi.mock("~/features/AccountManagement/components/DelAccountDialog", () => ({
   default: () => null,
-}))
-
-vi.mock("~/services/accounts/accountStorage", () => ({
-  accountStorage: {
-    deleteAccounts: (...args: any[]) => deleteAccountsMock(...args),
-  },
 }))
 
 vi.mock("~/features/AccountManagement/components/NewcomerSupportCard", () => ({
@@ -357,10 +344,7 @@ function createAccountDataContextValue() {
 describe("AccountList", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    toastPromiseMock.mockImplementation(
-      async (promise: Promise<unknown>) => promise,
-    )
-    deleteAccountsMock.mockResolvedValue({ deletedCount: 0 })
+    handleDeleteAccountsMock.mockResolvedValue({ deletedCount: 0 })
     handleSetAccountsDisabledMock.mockResolvedValue(undefined)
     mockUseUserPreferencesContext.mockReturnValue({
       showTodayCashflow: true,
@@ -639,7 +623,7 @@ describe("AccountList", () => {
 
   it("shows a bulk delete confirmation and deletes all selected accounts", async () => {
     const user = userEvent.setup()
-    deleteAccountsMock.mockResolvedValueOnce({ deletedCount: 2 })
+    handleDeleteAccountsMock.mockResolvedValueOnce({ deletedCount: 2 })
 
     render(<AccountList />)
 
@@ -674,10 +658,9 @@ describe("AccountList", () => {
       screen.getByRole("button", { name: "account:bulk.deleteConfirmAction" }),
     )
 
-    expect(deleteAccountsMock).toHaveBeenCalledWith([
-      "enabled-alpha",
-      "enabled-gamma",
+    expect(handleDeleteAccountsMock).toHaveBeenCalledWith([
+      expect.objectContaining({ id: "enabled-alpha" }),
+      expect.objectContaining({ id: "enabled-gamma" }),
     ])
-    expect(handleDeleteAccountMock).toHaveBeenCalled()
   })
 })

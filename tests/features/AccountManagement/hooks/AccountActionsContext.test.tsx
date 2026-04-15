@@ -15,6 +15,7 @@ const {
   mockLoadAccountData,
   mockSendRuntimeMessage,
   mockToast,
+  mockDeleteAccounts,
   mockRefreshAccount,
   mockSetAccountDisabled,
   mockSetAccountsDisabled,
@@ -28,6 +29,7 @@ const {
     error: vi.fn(),
     promise: vi.fn(),
   },
+  mockDeleteAccounts: vi.fn(),
   mockRefreshAccount: vi.fn(),
   mockSetAccountDisabled: vi.fn(),
   mockSetAccountsDisabled: vi.fn(),
@@ -41,6 +43,7 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
+    deleteAccounts: mockDeleteAccounts,
     refreshAccount: mockRefreshAccount,
     setAccountDisabled: mockSetAccountDisabled,
     setAccountsDisabled: mockSetAccountsDisabled,
@@ -463,6 +466,36 @@ describe("AccountActionsContext", () => {
     expect(mockToast.error).toHaveBeenCalledWith(
       "messages:toast.error.operationFailedGeneric",
     )
+  })
+
+  it("bulk-deletes deduped accounts, reloads data, and reports success", async () => {
+    const { getContext } = await renderContext()
+
+    mockDeleteAccounts.mockResolvedValueOnce({ deletedCount: 2 })
+
+    await act(async () => {
+      await getContext().handleDeleteAccounts([
+        createAccount({ id: "delete-a" }),
+        createAccount({ id: "delete-b" }),
+        createAccount({ id: "delete-a" }),
+      ])
+    })
+
+    expect(mockDeleteAccounts).toHaveBeenCalledWith(["delete-a", "delete-b"])
+    expect(mockLoadAccountData).toHaveBeenCalledTimes(1)
+    expect(mockToast.promise).toHaveBeenCalledTimes(1)
+  })
+
+  it("skips bulk-delete side effects when no account ids are provided", async () => {
+    const { getContext } = await renderContext()
+
+    await expect(getContext().handleDeleteAccounts([])).resolves.toEqual({
+      deletedCount: 0,
+    })
+
+    expect(mockDeleteAccounts).not.toHaveBeenCalled()
+    expect(mockLoadAccountData).not.toHaveBeenCalled()
+    expect(mockToast.promise).not.toHaveBeenCalled()
   })
 
   it("copies account URLs to the clipboard and reports success", async () => {
