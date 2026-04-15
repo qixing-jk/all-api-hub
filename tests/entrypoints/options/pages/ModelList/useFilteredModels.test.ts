@@ -63,21 +63,25 @@ const createPricingResponse = (
 })
 
 function renderUseFilteredModels(
-  overrides: Partial<Parameters<typeof useFilteredModels>[0]> = {},
+  initialOverrides: Partial<Parameters<typeof useFilteredModels>[0]> = {},
 ) {
-  return renderHook(() =>
-    useFilteredModels({
-      pricingData: null,
-      pricingContexts: [],
-      selectedSource: null,
-      selectedBillingMode: MODEL_LIST_BILLING_MODES.ALL,
-      selectedGroups: [],
-      searchTerm: "",
-      selectedProvider: "all",
-      sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
-      showRealPrice: false,
-      ...overrides,
-    }),
+  return renderHook(
+    (overrides: Partial<Parameters<typeof useFilteredModels>[0]>) =>
+      useFilteredModels({
+        pricingData: null,
+        pricingContexts: [],
+        selectedSource: null,
+        selectedBillingMode: MODEL_LIST_BILLING_MODES.ALL,
+        selectedGroups: [],
+        searchTerm: "",
+        selectedProvider: "all",
+        sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
+        showRealPrice: false,
+        ...overrides,
+      }),
+    {
+      initialProps: initialOverrides,
+    },
   )
 }
 
@@ -635,15 +639,17 @@ describe("useFilteredModels", () => {
       },
     ])
 
-    const asc = renderUseFilteredModels({
+    const source = createAccountSource(account)
+
+    const { result, rerender } = renderUseFilteredModels({
       pricingData,
-      selectedSource: createAccountSource(account),
+      selectedSource: source,
       sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
     })
 
     await waitFor(() => {
       expect(
-        asc.result.current.filteredModels.map((item) => item.model.model_name),
+        result.current.filteredModels.map((item) => item.model.model_name),
       ).toEqual([
         "gpt-cheap",
         "gpt-expensive",
@@ -652,15 +658,15 @@ describe("useFilteredModels", () => {
       ])
     })
 
-    const desc = renderUseFilteredModels({
+    rerender({
       pricingData,
-      selectedSource: createAccountSource(account),
+      selectedSource: source,
       sortMode: MODEL_LIST_SORT_MODES.PRICE_DESC,
     })
 
     await waitFor(() => {
       expect(
-        desc.result.current.filteredModels.map((item) => item.model.model_name),
+        result.current.filteredModels.map((item) => item.model.model_name),
       ).toEqual([
         "gpt-expensive",
         "gpt-cheap",
@@ -789,16 +795,18 @@ describe("useFilteredModels", () => {
       },
     ]
 
-    const allGroupsResult = renderUseFilteredModels({
+    const source = createAllAccountsSource()
+
+    const { result, rerender } = renderUseFilteredModels({
       pricingContexts,
-      selectedSource: createAllAccountsSource(),
+      selectedSource: source,
       sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
       selectedGroups: [],
     })
 
     await waitFor(() => {
       expect(
-        allGroupsResult.result.current.filteredModels.map((item) => [
+        result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
           item.effectiveGroup,
           item.calculatedPrice.inputUSD,
@@ -810,16 +818,16 @@ describe("useFilteredModels", () => {
       ])
     })
 
-    const narrowedResult = renderUseFilteredModels({
+    rerender({
       pricingContexts,
-      selectedSource: createAllAccountsSource(),
+      selectedSource: source,
       sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
       selectedGroups: ["default"],
     })
 
     await waitFor(() => {
       expect(
-        narrowedResult.result.current.filteredModels.map((item) => [
+        result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
           item.effectiveGroup,
           item.calculatedPrice.inputUSD,
@@ -887,31 +895,29 @@ describe("useFilteredModels", () => {
       },
     ])
 
-    const tokenOnly = renderUseFilteredModels({
+    const source = createAccountSource(account)
+
+    const { result, rerender } = renderUseFilteredModels({
       pricingData,
-      selectedSource: createAccountSource(account),
+      selectedSource: source,
       selectedBillingMode: MODEL_LIST_BILLING_MODES.TOKEN_BASED,
     })
 
     await waitFor(() => {
       expect(
-        tokenOnly.result.current.filteredModels.map(
-          (item) => item.model.model_name,
-        ),
+        result.current.filteredModels.map((item) => item.model.model_name),
       ).toEqual(["token-model"])
     })
 
-    const perCallOnly = renderUseFilteredModels({
+    rerender({
       pricingData,
-      selectedSource: createAccountSource(account),
+      selectedSource: source,
       selectedBillingMode: MODEL_LIST_BILLING_MODES.PER_CALL,
     })
 
     await waitFor(() => {
       expect(
-        perCallOnly.result.current.filteredModels.map(
-          (item) => item.model.model_name,
-        ),
+        result.current.filteredModels.map((item) => item.model.model_name),
       ).toEqual(["per-call-model"])
     })
   })
@@ -955,16 +961,18 @@ describe("useFilteredModels", () => {
       },
     ]
 
-    const usdResult = renderUseFilteredModels({
+    const source = createAllAccountsSource()
+
+    const { result, rerender } = renderUseFilteredModels({
       pricingContexts,
-      selectedSource: createAllAccountsSource(),
+      selectedSource: source,
       sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
       showRealPrice: false,
     })
 
     await waitFor(() => {
       expect(
-        usdResult.result.current.filteredModels.map((item) => [
+        result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
           item.isLowestPrice,
         ]),
@@ -974,16 +982,16 @@ describe("useFilteredModels", () => {
       ])
     })
 
-    const realPriceResult = renderUseFilteredModels({
+    rerender({
       pricingContexts,
-      selectedSource: createAllAccountsSource(),
+      selectedSource: source,
       sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
       showRealPrice: true,
     })
 
     await waitFor(() => {
       expect(
-        realPriceResult.result.current.filteredModels.map((item) => [
+        result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
           item.isLowestPrice,
         ]),
@@ -998,12 +1006,12 @@ describe("useFilteredModels", () => {
     const defaultRateAccount = createDisplayAccount({
       id: "account-default-rate",
       name: "Default Rate",
-      balance: { USD: 0, CNY: 70 },
+      balance: { USD: 0, CNY: 0 },
     })
     const explicitRateAccount = createDisplayAccount({
       id: "account-explicit-rate",
       name: "Explicit Rate",
-      balance: { USD: 10, CNY: 50 },
+      balance: { USD: 2, CNY: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT },
     })
 
     const pricingContexts = [
@@ -1031,16 +1039,18 @@ describe("useFilteredModels", () => {
       },
     ]
 
-    const usdResult = renderUseFilteredModels({
+    const source = createAllAccountsSource()
+
+    const { result, rerender } = renderUseFilteredModels({
       pricingContexts,
-      selectedSource: createAllAccountsSource(),
+      selectedSource: source,
       sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
       showRealPrice: false,
     })
 
     await waitFor(() => {
       expect(
-        usdResult.result.current.filteredModels.map((item) => [
+        result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
           item.isLowestPrice,
         ]),
@@ -1050,16 +1060,16 @@ describe("useFilteredModels", () => {
       ])
     })
 
-    const realPriceResult = renderUseFilteredModels({
+    rerender({
       pricingContexts,
-      selectedSource: createAllAccountsSource(),
+      selectedSource: source,
       sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
       showRealPrice: true,
     })
 
     await waitFor(() => {
       expect(
-        realPriceResult.result.current.filteredModels.map((item) => [
+        result.current.filteredModels.map((item) => [
           item.source.kind === "account" ? item.source.account.id : "profile",
           item.isLowestPrice,
           item.calculatedPrice.perCallPrice,
@@ -1069,8 +1079,6 @@ describe("useFilteredModels", () => {
         ["account-default-rate", false, 0.9],
       ])
     })
-
-    expect(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT * 0.9).toBeGreaterThan(5)
   })
 
   it("keeps profile-backed per-call sorting on raw prices when real-price mode is enabled", async () => {
