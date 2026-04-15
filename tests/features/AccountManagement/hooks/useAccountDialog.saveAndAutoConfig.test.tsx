@@ -259,6 +259,48 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(toast.success).toHaveBeenCalledWith("Saved successfully")
   })
 
+  it("does not persist Sub2API refresh-token auth until the mode is explicitly enabled", async () => {
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteName("Sub2API")
+      result.current.setters.setUsername("sub-user")
+      result.current.setters.setAccessToken("jwt-token")
+      result.current.setters.setUserId("42")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SUB2API)
+      result.current.setters.setSub2apiRefreshToken(" refresh-token ")
+      result.current.setters.setSub2apiTokenExpiresAt(123456789)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith(
+      "https://sub2.example.com",
+      "Sub2API",
+      "sub-user",
+      "jwt-token",
+      "42",
+      "7",
+      "",
+      [],
+      expect.any(Object),
+      SUB2API,
+      AuthTypeEnum.AccessToken,
+      "",
+      "",
+      false,
+      undefined,
+    )
+  })
+
   it("updates an existing account with trimmed values and uses the default update success toast", async () => {
     const { result } = renderEditHook({
       account: {

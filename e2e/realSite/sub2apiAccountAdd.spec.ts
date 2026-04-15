@@ -2,7 +2,7 @@ import { SUB2API } from "~/constants/siteType"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   forceExtensionLanguage,
-  installExtensionPageGuards,
+  installExtensionPageGuardsWithOptions,
   seedUserPreferences,
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
@@ -54,7 +54,11 @@ test.describe("real-site E2E: Sub2API auto-detect account add flow", () => {
     const loginResult = await loginToRealSub2ApiSite(sitePage, config)
     expect(loginResult.authState.accessToken).not.toBe("")
 
-    installExtensionPageGuards(page)
+    installExtensionPageGuardsWithOptions(page, {
+      ignoreConsoleErrorPatterns: [
+        /^Failed to load resource: the server responded with a status of 404\b/,
+      ],
+    })
     await openAccountManagementPage({ page, extensionId })
 
     const dialog = await autoDetectAccountFromAddDialog(page, config.baseUrl)
@@ -75,17 +79,20 @@ test.describe("real-site E2E: Sub2API auto-detect account add flow", () => {
       "data-site-type",
       SUB2API,
     )
+    await expect(dialog.sub2apiRefreshTokenSwitch).toHaveAttribute(
+      "aria-checked",
+      "false",
+    )
+    await expect(dialog.sub2apiImportSessionButton).toHaveCount(0)
 
     let importedHostedSession = false
 
     if (loginResult.authState.refreshToken) {
-      if (
-        (await dialog.sub2apiRefreshTokenSwitch.getAttribute(
-          "aria-checked",
-        )) !== "true"
-      ) {
-        await dialog.sub2apiRefreshTokenSwitch.click()
-      }
+      await dialog.sub2apiRefreshTokenSwitch.click()
+      await expect(dialog.sub2apiRefreshTokenSwitch).toHaveAttribute(
+        "aria-checked",
+        "true",
+      )
 
       let importSessionButtonCount = 0
       for (let attempt = 0; attempt < 10; attempt += 1) {

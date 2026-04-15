@@ -61,14 +61,38 @@ type StubNewApiSiteRoutesOptions = {
  * options page fail silently in the background.
  */
 export function installExtensionPageGuards(page: Page) {
+  installExtensionPageGuardsWithOptions(page)
+}
+
+type ExtensionPageGuardOptions = {
+  ignoreConsoleErrorPatterns?: RegExp[]
+}
+
+/**
+ * Same as {@link installExtensionPageGuards}, but allows narrowly ignoring
+ * known-noisy console errors for scenario-specific real-site flows.
+ */
+export function installExtensionPageGuardsWithOptions(
+  page: Page,
+  options: ExtensionPageGuardOptions = {},
+) {
   page.on("pageerror", (error) => {
     throw error
   })
 
   page.on("console", (message) => {
-    if (message.type() === "error") {
-      throw new Error(message.text())
+    if (message.type() !== "error") {
+      return
     }
+
+    const text = message.text()
+    if (
+      options.ignoreConsoleErrorPatterns?.some((pattern) => pattern.test(text))
+    ) {
+      return
+    }
+
+    throw new Error(text)
   })
 }
 

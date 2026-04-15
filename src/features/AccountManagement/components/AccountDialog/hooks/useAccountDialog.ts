@@ -779,7 +779,6 @@ export function useAccountDialog({
         return
       }
 
-      setSub2apiUseRefreshToken(true)
       setSub2apiRefreshToken(refreshToken)
       const tokenExpiresAtRaw = imported?.sub2apiAuth?.tokenExpiresAt
       setSub2apiTokenExpiresAt(
@@ -859,7 +858,6 @@ export function useAccountDialog({
         setUserId(resultData.userId)
 
         if (resultData.siteType === SUB2API && resultData.sub2apiAuth) {
-          setSub2apiUseRefreshToken(true)
           setSub2apiRefreshToken(resultData.sub2apiAuth.refreshToken)
           setSub2apiTokenExpiresAt(
             resultData.sub2apiAuth.tokenExpiresAt ?? null,

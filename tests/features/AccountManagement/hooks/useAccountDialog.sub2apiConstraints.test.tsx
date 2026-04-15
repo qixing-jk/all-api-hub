@@ -262,6 +262,7 @@ describe("useAccountDialog Sub2API constraints", () => {
       await result.current.handlers.handleImportSub2apiSession()
     })
 
+    expect(result.current.state.sub2apiUseRefreshToken).toBe(false)
     expect(result.current.state.sub2apiRefreshToken).toBe("refresh-from-tab")
     expect(result.current.state.sub2apiTokenExpiresAt).toBe(123456)
     expect(result.current.state.accessToken).toBe("jwt-from-tab")
@@ -391,6 +392,7 @@ describe("useAccountDialog Sub2API constraints", () => {
         url: "https://sub2.example.com",
       }),
     )
+    expect(result.current.state.sub2apiUseRefreshToken).toBe(false)
     expect(result.current.state.sub2apiRefreshToken).toBe(
       "refresh-from-background",
     )
