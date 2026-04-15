@@ -9,8 +9,8 @@ import {
   CardHeader,
   CardItem,
   CardList,
-  Checkbox,
   CardTitle,
+  Checkbox,
   Label,
 } from "~/components/ui"
 
@@ -50,7 +50,9 @@ const ExportSection = ({
             <Checkbox
               id="include-account-keys"
               checked={includeAccountKeys}
-              onCheckedChange={(checked) => setIncludeAccountKeys(checked === true)}
+              onCheckedChange={(checked) =>
+                setIncludeAccountKeys(checked === true)
+              }
             />
             <div className="space-y-1">
               <Label htmlFor="include-account-keys">
@@ -108,7 +110,7 @@ const ExportSection = ({
             description={t("export.userSettingsDescription")}
             rightContent={
               <Button
-                onClick={onExportPreferences}
+                onClick={() => onExportPreferences()}
                 disabled={isExporting}
                 variant="secondary"
                 size="sm"

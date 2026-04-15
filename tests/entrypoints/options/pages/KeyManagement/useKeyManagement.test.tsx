@@ -1638,6 +1638,38 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(result.current.tokens).toEqual([])
   })
 
+  it("maps timeout token-load failures to the fallback toast message", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "timeout-acc",
+      name: "Timeout Account",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    const fetchAccountTokens = vi
+      .fn()
+      .mockRejectedValue(new Error("request timeout"))
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() => {
+      expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+        "keyManagement:messages.loadFailed",
+      )
+    })
+    expect(result.current.tokens).toEqual([])
+  })
+
   it("copies a resolved token secret to the clipboard and shows success feedback", async () => {
     const account = createDisplayAccount({
       id: "copy-acc",

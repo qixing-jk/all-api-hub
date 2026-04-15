@@ -191,7 +191,15 @@ describe("parseBackupSummary", () => {
     const payload: RawBackupData = {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
-      accountKeySnapshots: [],
+      accountKeySnapshots: [
+        {
+          accountId: "acc-1",
+          accountName: "Account 1",
+          baseUrl: "https://example.com",
+          siteType: "new-api",
+          tokens: [],
+        },
+      ],
     }
 
     const result = parseBackupSummary(JSON.stringify(payload), "unknown")
@@ -199,6 +207,49 @@ describe("parseBackupSummary", () => {
     expect(result && "valid" in result && result.valid).toBe(true)
     if (result && "valid" in result && result.valid) {
       expect(result.hasAccountKeySnapshots).toBe(true)
+    }
+  })
+
+  it("ignores empty or malformed account key snapshot sections in summary parsing", () => {
+    const emptySnapshotPayload: RawBackupData = {
+      version: BACKUP_VERSION,
+      timestamp: Date.now(),
+      accountKeySnapshots: [],
+    }
+    const malformedSnapshotPayload = {
+      version: BACKUP_VERSION,
+      timestamp: Date.now(),
+      accountKeySnapshots: {
+        accountId: "acc-1",
+      },
+    }
+
+    const emptyResult = parseBackupSummary(
+      JSON.stringify(emptySnapshotPayload),
+      "unknown",
+    )
+    const malformedResult = parseBackupSummary(
+      JSON.stringify(malformedSnapshotPayload),
+      "unknown",
+    )
+
+    expect(emptyResult && "valid" in emptyResult && emptyResult.valid).toBe(
+      true,
+    )
+    expect(
+      malformedResult && "valid" in malformedResult && malformedResult.valid,
+    ).toBe(true)
+
+    if (emptyResult && "valid" in emptyResult && emptyResult.valid) {
+      expect(emptyResult.hasAccountKeySnapshots).toBe(false)
+    }
+
+    if (
+      malformedResult &&
+      "valid" in malformedResult &&
+      malformedResult.valid
+    ) {
+      expect(malformedResult.hasAccountKeySnapshots).toBe(false)
     }
   })
 

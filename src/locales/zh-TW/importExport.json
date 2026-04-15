@@ -19,7 +19,7 @@
   "import": {
     "backupTime": "備份時間",
     "containsAccountData": "包含帳號資料",
-    "containsAccountKeys": "包含帳號密鑰快照",
+    "containsAccountKeys": "偵測到帳號密鑰快照（匯入時會忽略）",
     "containsApiCredentialProfiles": "包含 API 配置",
     "containsChannelConfigs": "包含渠道配置",
     "containsUserSettings": "包含使用者設定",

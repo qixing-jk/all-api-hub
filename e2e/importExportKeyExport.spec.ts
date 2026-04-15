@@ -100,8 +100,9 @@ test("exports account keys while preserving per-account failures in the backup f
     const originalCreateObjectURL = URL.createObjectURL.bind(URL)
     const originalCreateElement = document.createElement.bind(document)
 
-    ;(window as typeof window & { __lastExportedBackupText?: string }).__lastExportedBackupText =
-      undefined
+    ;(
+      window as typeof window & { __lastExportedBackupText?: string }
+    ).__lastExportedBackupText = undefined
 
     URL.createObjectURL = (object: Blob | MediaSource) => {
       if (object instanceof Blob) {
@@ -115,7 +116,10 @@ test("exports account keys while preserving per-account failures in the backup f
       return originalCreateObjectURL(object)
     }
 
-    document.createElement = ((tagName: string, options?: ElementCreationOptions) => {
+    document.createElement = ((
+      tagName: string,
+      options?: ElementCreationOptions,
+    ) => {
       const element = originalCreateElement(tagName, options)
 
       if (tagName.toLowerCase() === "a") {
@@ -129,7 +133,9 @@ test("exports account keys while preserving per-account failures in the backup f
     }) as typeof document.createElement
   })
 
-  await page.getByRole("checkbox", { name: "Include account keys in export" }).click()
+  await page
+    .getByRole("checkbox", { name: "Include account keys in export" })
+    .click()
   await page
     .locator("#export-section")
     .getByRole("button", { name: "Export" })
@@ -137,24 +143,20 @@ test("exports account keys while preserving per-account failures in the backup f
     .evaluate((button) => {
       ;(button as HTMLButtonElement).click()
     })
-  await page.waitForTimeout(2000)
-
   await expect(page.getByText("Data exported successfully")).toBeVisible()
 
   await expect
     .poll(async () => {
       return await page.evaluate(() => {
-        return (
-          window as typeof window & { __lastExportedBackupText?: string }
-        ).__lastExportedBackupText
+        return (window as typeof window & { __lastExportedBackupText?: string })
+          .__lastExportedBackupText
       })
     })
     .toBeTruthy()
 
   const exportedRaw = await page.evaluate(() => {
-    return (
-      window as typeof window & { __lastExportedBackupText?: string }
-    ).__lastExportedBackupText
+    return (window as typeof window & { __lastExportedBackupText?: string })
+      .__lastExportedBackupText
   })
   if (!exportedRaw) {
     throw new Error("missing exported backup payload")

@@ -19,7 +19,7 @@
   "import": {
     "backupTime": "Backup Time",
     "containsAccountData": "Contains account data",
-    "containsAccountKeys": "Contains account key snapshots",
+    "containsAccountKeys": "Detected account key snapshots (ignored on import)",
     "containsApiCredentialProfiles": "Contains API credential profiles",
     "containsChannelConfigs": "Contains channel configuration",
     "containsUserSettings": "Contains user settings",

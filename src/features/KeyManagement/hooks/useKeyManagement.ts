@@ -80,6 +80,10 @@ const normalizeOrigin = (baseUrl: string) => {
   return normalizeUrlForOriginKey(baseUrl, { stripTrailingSlashes: false })
 }
 
+const shouldUseGenericTokenLoadError = (errorMessage: string) => {
+  return /\b(request timeout|timeout|timed out)\b/i.test(errorMessage)
+}
+
 const hashStringForCache = (value: string) => {
   let hash = 2166136261
 
@@ -489,10 +493,12 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         if (!isEpochActive(loadEpoch)) return
         if (!isLatestAccountRequest(accountId, requestEpoch)) return
 
+        const rawErrorMessage = getErrorMessage(error)
         const errorMessage =
-          error instanceof InvalidTokenPayloadError
+          error instanceof InvalidTokenPayloadError ||
+          shouldUseGenericTokenLoadError(rawErrorMessage)
             ? loadFailedMessageRef.current
-            : getErrorMessage(error) || loadFailedMessageRef.current
+            : rawErrorMessage || loadFailedMessageRef.current
         logger.error("获取账号密钥失败", errorMessage)
         setTokenInventories((prev) => ({
           ...prev,

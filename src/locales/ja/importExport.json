@@ -19,7 +19,7 @@
   "import": {
     "backupTime": "バックアップ時刻",
     "containsAccountData": "アカウントデータを含む",
-    "containsAccountKeys": "アカウントキーのスナップショットを含む",
+    "containsAccountKeys": "アカウントキーのスナップショットを検出（インポート時は無視）",
     "containsApiCredentialProfiles": "API 認証情報プロファイルを含む",
     "containsChannelConfigs": "チャネル設定を含む",
     "containsUserSettings": "ユーザー設定を含む",

@@ -202,7 +202,9 @@ export function parseBackupSummary(
     const data = JSON.parse(importData) as RawBackupData
 
     const hasAccounts = Boolean(data.accounts || data.type === "accounts")
-    const hasAccountKeySnapshots = Boolean((data as any).accountKeySnapshots)
+    const hasAccountKeySnapshots =
+      Array.isArray((data as any).accountKeySnapshots) &&
+      (data as any).accountKeySnapshots.length > 0
     const hasPreferences = Boolean(
       data.preferences || data.type === "preferences",
     )
