@@ -341,22 +341,15 @@ class AccountStorageService {
     updates: DeepPartial<SiteAccount>,
   ): Promise<boolean> {
     try {
-      return await this.mutateStorageConfig((config) => {
-        const accounts = config.accounts
-        const index = accounts.findIndex((account) => account.id === id)
-
-        if (index === -1) {
-          throw new Error(t("messages:storage.accountNotFound", { id }))
-        }
-
-        accounts[index] = applySiteAccountUpdates({
-          account: accounts[index],
+      return await this.mutateAccountById(id, ({ account }) => ({
+        nextAccount: applySiteAccountUpdates({
+          account,
           updates,
           now: Date.now(),
-        })
-        config.accounts = accounts
-        return { result: true, changed: true }
-      })
+        }),
+        result: true,
+        changed: true,
+      }))
     } catch (error) {
       logger.error(t("messages:storage.updateFailed", { error: "" }), error)
       return false
@@ -373,30 +366,23 @@ class AccountStorageService {
     const normalized = Boolean(disabled)
 
     try {
-      let shouldMarkDisabledInAutoCheckin = false
+      const { updated, didDisable } = await this.mutateAccountById(
+        id,
+        ({ account }) => ({
+          nextAccount: applySiteAccountUpdates({
+            account,
+            updates: { disabled: normalized },
+            now: Date.now(),
+          }),
+          result: {
+            updated: true,
+            didDisable: normalized && account.disabled !== normalized,
+          },
+          changed: true,
+        }),
+      )
 
-      const updated = await this.mutateStorageConfig((config) => {
-        const accounts = config.accounts
-        const index = accounts.findIndex((account) => account.id === id)
-
-        if (index === -1) {
-          throw new Error(t("messages:storage.accountNotFound", { id }))
-        }
-
-        const account = accounts[index]
-        shouldMarkDisabledInAutoCheckin =
-          normalized && account.disabled !== normalized
-
-        accounts[index] = applySiteAccountUpdates({
-          account,
-          updates: { disabled: normalized },
-          now: Date.now(),
-        })
-        config.accounts = accounts
-        return { result: true, changed: true }
-      })
-
-      if (shouldMarkDisabledInAutoCheckin) {
+      if (didDisable) {
         const marked = await autoCheckinStorage.markAccountDisabledInStatus(id)
         if (!marked) {
           logger.warn("禁用账号后更新自动签到状态失败", { accountId: id })
@@ -408,6 +394,32 @@ class AccountStorageService {
       logger.error(t("messages:storage.updateFailed", { error: "" }), error)
       return false
     }
+  }
+
+  private async mutateAccountById<T>(
+    id: string,
+    mutation: (input: { account: SiteAccount }) => {
+      nextAccount: SiteAccount
+      result: T
+      changed: boolean
+    },
+  ): Promise<T> {
+    return this.mutateStorageConfig((config) => {
+      const accounts = config.accounts
+      const index = accounts.findIndex((account) => account.id === id)
+
+      if (index === -1) {
+        throw new Error(t("messages:storage.accountNotFound", { id }))
+      }
+
+      const { nextAccount, result, changed } = mutation({
+        account: accounts[index],
+      })
+
+      accounts[index] = nextAccount
+      config.accounts = accounts
+      return { result, changed }
+    })
   }
 
   /**
