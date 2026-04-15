@@ -7,6 +7,8 @@ const hasNonEmptyString = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0
 
 const logger = createLogger("DisplayAccountApiContext")
+const DISPLAY_ACCOUNT_API_TIMEOUT_MS = 20_000
+const DISPLAY_ACCOUNT_API_TIMEOUT_MESSAGE = "request timeout"
 
 export class InvalidTokenPayloadError extends Error {
   readonly code = "INVALID_TOKEN_PAYLOAD"
@@ -27,6 +29,41 @@ export class InvalidTokenPayloadError extends Error {
     this.baseUrl = params.baseUrl
     this.siteType = params.siteType
     this.responseType = params.responseType
+  }
+}
+
+const withDisplayAccountApiTimeout = async <T>(
+  params: {
+    account: Pick<DisplaySiteData, "id" | "baseUrl" | "siteType">
+    operation: "fetchAccountTokens" | "resolveApiTokenKey"
+    promise: Promise<T>
+  },
+): Promise<T> => {
+  const { account, operation, promise } = params
+
+  let timeoutId: ReturnType<typeof setTimeout> | undefined
+
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timeoutId = setTimeout(() => {
+          logger.warn("Display-account API request timed out", {
+            accountId: account.id,
+            baseUrl: account.baseUrl,
+            siteType: account.siteType,
+            operation,
+            timeoutMs: DISPLAY_ACCOUNT_API_TIMEOUT_MS,
+          })
+
+          reject(new Error(DISPLAY_ACCOUNT_API_TIMEOUT_MESSAGE))
+        }, DISPLAY_ACCOUNT_API_TIMEOUT_MS)
+      }),
+    ])
+  } finally {
+    if (timeoutId) {
+      clearTimeout(timeoutId)
+    }
   }
 }
 
@@ -89,7 +126,11 @@ export async function fetchDisplayAccountTokens(
   >,
 ): Promise<ApiToken[]> {
   const { service, request } = createDisplayAccountApiContext(account)
-  const tokensResponse = await service.fetchAccountTokens(request)
+  const tokensResponse = await withDisplayAccountApiTimeout({
+    account,
+    operation: "fetchAccountTokens",
+    promise: service.fetchAccountTokens(request),
+  })
 
   if (Array.isArray(tokensResponse)) {
     return tokensResponse
@@ -130,7 +171,11 @@ export async function resolveDisplayAccountTokenForSecret<
   token: TToken,
 ): Promise<TToken> {
   const { service, request } = createDisplayAccountApiContext(account)
-  const resolvedKey = await service.resolveApiTokenKey(request, token)
+  const resolvedKey = await withDisplayAccountApiTimeout({
+    account,
+    operation: "resolveApiTokenKey",
+    promise: service.resolveApiTokenKey(request, token),
+  })
 
   if (resolvedKey === token.key) {
     return token

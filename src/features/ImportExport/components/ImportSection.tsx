@@ -22,6 +22,7 @@ interface ImportSectionProps {
   validation: {
     valid: boolean
     hasAccounts?: boolean
+    hasAccountKeySnapshots?: boolean
     hasPreferences?: boolean
     hasChannelConfigs?: boolean
     hasApiCredentialProfiles?: boolean
@@ -86,6 +87,9 @@ const ImportSection = ({
                     <div className="space-y-1 text-sm">
                       {validation.hasAccounts && (
                         <p>• {t("import.containsAccountData")}</p>
+                      )}
+                      {validation.hasAccountKeySnapshots && (
+                        <p>• {t("import.containsAccountKeys")}</p>
                       )}
                       {validation.hasPreferences && (
                         <p>• {t("import.containsUserSettings")}</p>

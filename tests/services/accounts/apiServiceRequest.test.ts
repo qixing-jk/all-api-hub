@@ -8,6 +8,7 @@ import {
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { getApiService } from "~/services/apiService"
+import type { ApiToken } from "~/types"
 import { AuthTypeEnum } from "~/types"
 
 vi.mock("~/services/apiService", () => ({
@@ -27,6 +28,7 @@ const ACCOUNT = {
 describe("fetchDisplayAccountTokens", () => {
   beforeEach(() => {
     vi.mocked(getApiService).mockReset()
+    vi.useRealTimers()
   })
 
   it("returns the token array when the API payload is valid", async () => {
@@ -77,6 +79,21 @@ describe("fetchDisplayAccountTokens", () => {
     }
   })
 
+  it("times out hung token inventory requests", async () => {
+    vi.useFakeTimers()
+
+    const fetchAccountTokens = vi.fn(
+      () => new Promise<ApiToken[]>(() => undefined),
+    )
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const requestPromise = fetchDisplayAccountTokens(ACCOUNT as any)
+    const rejection = expect(requestPromise).rejects.toThrow("request timeout")
+
+    await vi.advanceTimersByTimeAsync(20_000)
+    await rejection
+  })
+
   it("returns the original token object when the resolved secret key is unchanged", async () => {
     const token = { id: 1, key: "sk-test", status: 1 }
     const resolveApiTokenKey = vi.fn().mockResolvedValue("sk-test")
@@ -107,6 +124,25 @@ describe("fetchDisplayAccountTokens", () => {
       name: "Masked",
     })
     expect(result).not.toBe(token)
+  })
+
+  it("times out hung secret-key resolution requests", async () => {
+    vi.useFakeTimers()
+
+    const token = { id: 1, key: "sk-masked", status: 1, name: "Masked" }
+    const resolveApiTokenKey = vi.fn(
+      () => new Promise<string>(() => undefined),
+    )
+    vi.mocked(getApiService).mockReturnValue({ resolveApiTokenKey } as any)
+
+    const requestPromise = resolveDisplayAccountTokenForSecret(
+      ACCOUNT as any,
+      token as any,
+    )
+    const rejection = expect(requestPromise).rejects.toThrow("request timeout")
+
+    await vi.advanceTimersByTimeAsync(20_000)
+    await rejection
   })
 
   it("only allows token management for enabled accounts with complete auth context", () => {

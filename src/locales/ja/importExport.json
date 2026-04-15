@@ -9,6 +9,8 @@
     "exportFailed": "エクスポートに失敗しました。もう一度お試しください",
     "fullBackup": "完全エクスポート",
     "fullBackupDescription": "アカウントデータとユーザー設定をエクスポートします。WebDAV 同期ではなく端末ローカル設定を移行したい場合は、手動のエクスポート / インポートを使用してください。",
+    "includeAccountKeys": "エクスポートにアカウントキーを含める",
+    "includeAccountKeysDescription": "各アカウントで現在アクセス可能なキーのスナップショットも追加でエクスポートします。バックアップファイルには機密情報が含まれるため、厳重に保管してください。",
     "settingsExported": "ユーザー設定を正常にエクスポートしました",
     "title": "データをエクスポート",
     "userSettings": "ユーザー設定",
@@ -17,6 +19,7 @@
   "import": {
     "backupTime": "バックアップ時刻",
     "containsAccountData": "アカウントデータを含む",
+    "containsAccountKeys": "アカウントキーのスナップショットを含む",
     "containsApiCredentialProfiles": "API 認証情報プロファイルを含む",
     "containsChannelConfigs": "チャネル設定を含む",
     "containsUserSettings": "ユーザー設定を含む",

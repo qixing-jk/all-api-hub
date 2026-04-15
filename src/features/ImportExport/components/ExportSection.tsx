@@ -1,4 +1,5 @@
 import { ArrowUpTrayIcon } from "@heroicons/react/24/outline"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -8,25 +9,34 @@ import {
   CardHeader,
   CardItem,
   CardList,
+  Checkbox,
   CardTitle,
+  Label,
 } from "~/components/ui"
-
-import {
-  handleExportAccounts,
-  handleExportAll,
-  handleExportPreferences,
-} from "../utils"
 
 interface ExportSectionProps {
   isExporting: boolean
-  setIsExporting: (isExporting: boolean) => void
+  onExportAll: (options: { includeAccountKeys: boolean }) => void
+  onExportAccounts: (options: { includeAccountKeys: boolean }) => void
+  onExportPreferences: () => void
 }
 
 /**
  * Export section offering controls for full backup, account data, and user settings.
  */
-const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
+const ExportSection = ({
+  isExporting,
+  onExportAll,
+  onExportAccounts,
+  onExportPreferences,
+}: ExportSectionProps) => {
   const { t } = useTranslation("importExport")
+  const [includeAccountKeys, setIncludeAccountKeys] = useState(false)
+
+  const exportOptions = {
+    includeAccountKeys,
+  }
+
   return (
     <section id="export-section" className="flex h-full">
       <Card padding="none" className="flex flex-1 flex-col">
@@ -36,6 +46,21 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
             <CardTitle className="mb-0">{t("export.title")}</CardTitle>
           </div>
           <CardDescription>{t("export.description")}</CardDescription>
+          <div className="mt-3 flex items-start gap-2">
+            <Checkbox
+              id="include-account-keys"
+              checked={includeAccountKeys}
+              onCheckedChange={(checked) => setIncludeAccountKeys(checked === true)}
+            />
+            <div className="space-y-1">
+              <Label htmlFor="include-account-keys">
+                {t("export.includeAccountKeys")}
+              </Label>
+              <p className="text-muted-foreground text-sm">
+                {t("export.includeAccountKeysDescription")}
+              </p>
+            </div>
+          </div>
         </CardHeader>
 
         <CardList className="flex flex-1 flex-col">
@@ -45,7 +70,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
             description={t("export.fullBackupDescription")}
             rightContent={
               <Button
-                onClick={() => handleExportAll(setIsExporting)}
+                onClick={() => onExportAll(exportOptions)}
                 disabled={isExporting}
                 variant="success"
                 size="sm"
@@ -64,7 +89,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
             description={t("export.accountDataDescription")}
             rightContent={
               <Button
-                onClick={() => handleExportAccounts(setIsExporting)}
+                onClick={() => onExportAccounts(exportOptions)}
                 disabled={isExporting}
                 variant="default"
                 size="sm"
@@ -83,7 +108,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
             description={t("export.userSettingsDescription")}
             rightContent={
               <Button
-                onClick={() => handleExportPreferences(setIsExporting)}
+                onClick={onExportPreferences}
                 disabled={isExporting}
                 variant="secondary"
                 size="sm"

@@ -7,8 +7,6 @@ import { afterAll, afterEach, beforeAll, beforeEach, vi } from "vitest"
 // Use WXT official fakeBrowser for WebExtension API mocking
 import { fakeBrowser } from "wxt/testing/fake-browser"
 
-import { server } from "./msw/server"
-
 registerI18nextPlugin(initReactI18next)
 
 await init({
@@ -64,6 +62,64 @@ vi.mock("@lobehub/icons", () => {
 // No need to manually mock chrome API - fakeBrowser provides complete implementation
 
 const globalAny = globalThis as any
+
+const createStorageMock = (): Storage => {
+  const store = new Map<string, string>()
+
+  return {
+    get length() {
+      return store.size
+    },
+    clear() {
+      store.clear()
+    },
+    getItem(key: string) {
+      return store.get(String(key)) ?? null
+    },
+    key(index: number) {
+      return Array.from(store.keys())[index] ?? null
+    },
+    removeItem(key: string) {
+      store.delete(String(key))
+    },
+    setItem(key: string, value: string) {
+      store.set(String(key), String(value))
+    },
+  }
+}
+
+const ensureStorage = (storageKey: "localStorage" | "sessionStorage") => {
+  const existing = globalAny[storageKey]
+
+  if (
+    existing &&
+    typeof existing.getItem === "function" &&
+    typeof existing.setItem === "function" &&
+    typeof existing.removeItem === "function" &&
+    typeof existing.clear === "function" &&
+    typeof existing.key === "function"
+  ) {
+    return
+  }
+
+  const storage = createStorageMock()
+  Object.defineProperty(globalThis, storageKey, {
+    configurable: true,
+    value: storage,
+  })
+
+  if (typeof window !== "undefined") {
+    Object.defineProperty(window, storageKey, {
+      configurable: true,
+      value: storage,
+    })
+  }
+}
+
+ensureStorage("localStorage")
+ensureStorage("sessionStorage")
+
+const { server } = await import("./msw/server")
 
 if (!globalAny.browser) {
   globalAny.browser = fakeBrowser

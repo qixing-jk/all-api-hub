@@ -9,6 +9,8 @@
     "exportFailed": "Export failed, please try again",
     "fullBackup": "Full Export",
     "fullBackupDescription": "Export account data and user settings. Use manual export/import when you need to migrate device-local settings instead of WebDAV sync.",
+    "includeAccountKeys": "Include account keys in export",
+    "includeAccountKeysDescription": "Also export the currently accessible key snapshots for each account. The backup file will contain sensitive secrets, so store it carefully.",
     "settingsExported": "User settings exported successfully",
     "title": "Export Data",
     "userSettings": "User Settings",
@@ -17,6 +19,7 @@
   "import": {
     "backupTime": "Backup Time",
     "containsAccountData": "Contains account data",
+    "containsAccountKeys": "Contains account key snapshots",
     "containsApiCredentialProfiles": "Contains API credential profiles",
     "containsChannelConfigs": "Contains channel configuration",
     "containsUserSettings": "Contains user settings",

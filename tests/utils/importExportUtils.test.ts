@@ -11,6 +11,10 @@ import {
   type RawBackupData,
 } from "~/features/ImportExport/utils"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import {
+  fetchDisplayAccountTokens,
+  resolveDisplayAccountTokenForSecret,
+} from "~/services/accounts/utils/apiServiceRequest"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -21,9 +25,16 @@ import { DEFAULT_WEBDAV_SETTINGS } from "~/types/webdav"
 
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
+    convertToDisplayData: vi.fn(),
     importData: vi.fn(),
     exportData: vi.fn(),
   },
+}))
+
+vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
+  canManageDisplayAccountTokens: vi.fn((account) => Boolean(account)),
+  fetchDisplayAccountTokens: vi.fn(),
+  resolveDisplayAccountTokenForSecret: vi.fn(),
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
@@ -79,6 +90,15 @@ const mockAccountStorageImportData =
   accountStorage.importData as unknown as ReturnType<typeof vi.fn>
 const mockAccountStorageExportData =
   accountStorage.exportData as unknown as ReturnType<typeof vi.fn>
+const mockAccountStorageConvertToDisplayData =
+  accountStorage.convertToDisplayData as unknown as ReturnType<typeof vi.fn>
+const mockCanManageDisplayAccountTokens = (
+  await import("~/services/accounts/utils/apiServiceRequest")
+).canManageDisplayAccountTokens as unknown as ReturnType<typeof vi.fn>
+const mockFetchDisplayAccountTokens =
+  fetchDisplayAccountTokens as unknown as ReturnType<typeof vi.fn>
+const mockResolveDisplayAccountTokenForSecret =
+  resolveDisplayAccountTokenForSecret as unknown as ReturnType<typeof vi.fn>
 
 const mockUserPreferencesImport =
   userPreferences.importPreferences as unknown as ReturnType<typeof vi.fn>
@@ -164,6 +184,21 @@ describe("parseBackupSummary", () => {
     expect(result && "valid" in result && result.valid).toBe(true)
     if (result && "valid" in result && result.valid) {
       expect(result.hasApiCredentialProfiles).toBe(true)
+    }
+  })
+
+  it("detects account key snapshots when present", () => {
+    const payload: RawBackupData = {
+      version: BACKUP_VERSION,
+      timestamp: Date.now(),
+      accountKeySnapshots: [],
+    }
+
+    const result = parseBackupSummary(JSON.stringify(payload), "unknown")
+
+    expect(result && "valid" in result && result.valid).toBe(true)
+    if (result && "valid" in result && result.valid) {
+      expect(result.hasAccountKeySnapshots).toBe(true)
     }
   })
 
@@ -759,6 +794,12 @@ describe("export handlers", () => {
     mockTagStoreExport.mockResolvedValue({ version: 1, tagsById: {} })
     mockUserPreferencesExport.mockResolvedValue({} as any)
     mockChannelConfigExport.mockResolvedValue({} as any)
+    mockResolveDisplayAccountTokenForSecret.mockImplementation(
+      async (_account, token) => token,
+    )
+    mockCanManageDisplayAccountTokens.mockImplementation((account) =>
+      Boolean(account),
+    )
   })
 
   afterEach(() => {
@@ -778,6 +819,28 @@ describe("export handlers", () => {
       handleExportAccounts: mod.handleExportAccounts,
       handleExportPreferences: mod.handleExportPreferences,
     }
+  }
+
+  function parseExportPayload() {
+    const createObjectUrl = URL.createObjectURL as unknown as ReturnType<
+      typeof vi.fn
+    >
+    const blob = createObjectUrl.mock.calls[0]?.[0] as Blob
+
+    expect(blob).toBeInstanceOf(Blob)
+    return new Promise<Record<string, unknown>>((resolve, reject) => {
+      const reader = new FileReader()
+
+      reader.onload = () => {
+        try {
+          resolve(JSON.parse(String(reader.result ?? "")))
+        } catch (error) {
+          reject(error)
+        }
+      }
+      reader.onerror = () => reject(reader.error)
+      reader.readAsText(blob)
+    })
   }
 
   it("handleExportAll exports accounts, preferences and channelConfigs", async () => {
@@ -804,6 +867,237 @@ describe("export handlers", () => {
 
     expect(mockAccountStorageExportData).toHaveBeenCalled()
     expect(mockTagStoreExport).toHaveBeenCalled()
+  })
+
+  it("handleExportAll omits account key snapshots by default", async () => {
+    const { handleExportAll } = await loadHandlers()
+
+    await handleExportAll(vi.fn())
+
+    expect(mockAccountStorageConvertToDisplayData).not.toHaveBeenCalled()
+    expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
+
+    await expect(parseExportPayload()).resolves.not.toHaveProperty(
+      "accountKeySnapshots",
+    )
+  })
+
+  it("handleExportAll includes resolved account key snapshots when requested", async () => {
+    const { handleExportAll } = await loadHandlers()
+
+    mockAccountStorageExportData.mockResolvedValueOnce({
+      accounts: [
+        {
+          id: "account-1",
+          site_name: "Primary",
+        },
+      ],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+      last_updated: 0,
+    })
+    mockAccountStorageConvertToDisplayData.mockReturnValueOnce([
+      {
+        id: "account-1",
+        name: "Primary",
+        baseUrl: "https://example.com",
+        siteType: "new-api",
+        authType: "access_token",
+        userId: 1,
+        token: "session-token",
+      },
+    ])
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+      {
+        id: 101,
+        name: "Default",
+        key: "sk-masked",
+        status: 1,
+      },
+    ])
+    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+      id: 101,
+      name: "Default",
+      key: "sk-live-secret",
+      status: 1,
+    })
+
+    await handleExportAll(vi.fn(), { includeAccountKeys: true })
+
+    expect(mockAccountStorageConvertToDisplayData).toHaveBeenCalledWith([
+      {
+        id: "account-1",
+        site_name: "Primary",
+      },
+    ])
+    expect(mockFetchDisplayAccountTokens).toHaveBeenCalledWith({
+      id: "account-1",
+      name: "Primary",
+      baseUrl: "https://example.com",
+      siteType: "new-api",
+      authType: "access_token",
+      userId: 1,
+      token: "session-token",
+    })
+    expect(mockResolveDisplayAccountTokenForSecret).toHaveBeenCalledWith(
+      {
+        id: "account-1",
+        name: "Primary",
+        baseUrl: "https://example.com",
+        siteType: "new-api",
+        authType: "access_token",
+        userId: 1,
+        token: "session-token",
+      },
+      {
+        id: 101,
+        name: "Default",
+        key: "sk-masked",
+        status: 1,
+      },
+    )
+
+    await expect(parseExportPayload()).resolves.toMatchObject({
+      accountKeySnapshots: [
+        {
+          accountId: "account-1",
+          accountName: "Primary",
+          baseUrl: "https://example.com",
+          siteType: "new-api",
+          tokens: [
+            {
+              id: 101,
+              name: "Default",
+              key: "sk-live-secret",
+              status: 1,
+            },
+          ],
+        },
+      ],
+    })
+  })
+
+  it("handleExportAll keeps exporting when one account key fetch fails", async () => {
+    const { handleExportAll } = await loadHandlers()
+
+    mockAccountStorageExportData.mockResolvedValueOnce({
+      accounts: [
+        {
+          id: "account-1",
+          site_name: "Primary",
+        },
+        {
+          id: "account-2",
+          site_name: "Broken",
+        },
+      ],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+      last_updated: 0,
+    })
+    mockAccountStorageConvertToDisplayData.mockReturnValueOnce([
+      {
+        id: "account-1",
+        name: "Primary",
+        baseUrl: "https://ok.example.com",
+        siteType: "new-api",
+        authType: "access_token",
+        userId: 1,
+        token: "session-token-1",
+      },
+      {
+        id: "account-2",
+        name: "Broken",
+        baseUrl: "https://bad.example.com",
+        siteType: "new-api",
+        authType: "access_token",
+        userId: 2,
+        token: "session-token-2",
+      },
+    ])
+    mockFetchDisplayAccountTokens
+      .mockResolvedValueOnce([
+        {
+          id: 101,
+          name: "Default",
+          key: "sk-masked",
+          status: 1,
+        },
+      ])
+      .mockRejectedValueOnce(new Error("upstream timeout"))
+    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+      id: 101,
+      name: "Default",
+      key: "sk-live-secret",
+      status: 1,
+    })
+
+    await handleExportAll(vi.fn(), { includeAccountKeys: true })
+
+    await expect(parseExportPayload()).resolves.toMatchObject({
+      accountKeySnapshots: [
+        {
+          accountId: "account-1",
+          accountName: "Primary",
+        },
+      ],
+      accountKeySnapshotErrors: [
+        {
+          accountId: "account-2",
+          accountName: "Broken",
+          baseUrl: "https://bad.example.com",
+          siteType: "new-api",
+          errorMessage: "upstream timeout",
+        },
+      ],
+    })
+  })
+
+  it("handleExportAll sanitizes HTML error pages in account key export failures", async () => {
+    const { handleExportAll } = await loadHandlers()
+
+    mockAccountStorageExportData.mockResolvedValueOnce({
+      accounts: [
+        {
+          id: "account-html-error",
+          site_name: "HTML Error",
+        },
+      ],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+      last_updated: 0,
+    })
+    mockAccountStorageConvertToDisplayData.mockReturnValueOnce([
+      {
+        id: "account-html-error",
+        name: "HTML Error",
+        baseUrl: "https://html-error.example.com",
+        siteType: "new-api",
+        authType: "access_token",
+        userId: 9,
+        token: "session-token-html",
+      },
+    ])
+    mockFetchDisplayAccountTokens.mockRejectedValueOnce(
+      new Error(
+        '<!DOCTYPE html><html lang="en-US"><head><title>Just a moment...</title></head><body>challenge</body></html>',
+      ),
+    )
+
+    await handleExportAll(vi.fn(), { includeAccountKeys: true })
+
+    await expect(parseExportPayload()).resolves.toMatchObject({
+      accountKeySnapshotErrors: [
+        {
+          accountId: "account-html-error",
+          accountName: "HTML Error",
+          errorMessage: "Cloudflare challenge page returned",
+        },
+      ],
+    })
   })
 
   it("handleExportPreferences exports only preferences data", async () => {

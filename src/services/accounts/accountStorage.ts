@@ -1161,6 +1161,7 @@ class AccountStorageService {
         tagIds: normalized.tagIds,
         tags: normalized.tags,
         siteType: normalized.site_type,
+        cookieAuthSessionCookie: normalized.cookieAuth?.sessionCookie,
         checkIn: normalized.checkIn,
         can_check_in: normalized.can_check_in,
         supports_check_in: normalized.supports_check_in,

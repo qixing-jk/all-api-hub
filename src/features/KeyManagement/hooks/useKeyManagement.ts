@@ -7,6 +7,8 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountData } from "~/hooks/useAccountData"
 import {
   createDisplayAccountApiContext,
+  fetchDisplayAccountTokens,
+  InvalidTokenPayloadError,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
 import { getManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
@@ -464,27 +466,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       }))
 
       try {
-        const { service, request } = createDisplayAccountApiContext(account)
-        const tokens = await service.fetchAccountTokens(request)
+        const tokens = await fetchDisplayAccountTokens(account)
 
         if (!isEpochActive(loadEpoch)) return
         if (!isLatestAccountRequest(accountId, requestEpoch)) return
-
-        if (!Array.isArray(tokens)) {
-          const errorMessage = loadFailedMessageRef.current
-          setTokenInventories((prev) => ({
-            ...prev,
-            [accountId]: {
-              status: "error",
-              tokens: prev[accountId]?.tokens ?? [],
-              errorMessage,
-            },
-          }))
-          if (toastOnError) {
-            toast.error(errorMessage)
-          }
-          return
-        }
 
         const tokensWithAccount = tokens.map((token) => ({
           ...token,
@@ -505,7 +490,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         if (!isLatestAccountRequest(accountId, requestEpoch)) return
 
         const errorMessage =
-          getErrorMessage(error) || loadFailedMessageRef.current
+          error instanceof InvalidTokenPayloadError
+            ? loadFailedMessageRef.current
+            : getErrorMessage(error) || loadFailedMessageRef.current
         logger.error("获取账号密钥失败", errorMessage)
         setTokenInventories((prev) => ({
           ...prev,

@@ -9,6 +9,8 @@
     "exportFailed": "导出失败，请重试",
     "fullBackup": "完整导出",
     "fullBackupDescription": "导出账号数据和用户设置。如需迁移设备本地设置，请优先使用手动导出/导入，而不是 WebDAV 同步。",
+    "includeAccountKeys": "导出时包含密钥",
+    "includeAccountKeysDescription": "额外导出各账号当前可访问的密钥快照。备份文件会包含敏感信息，请妥善保管。",
     "settingsExported": "用户设置导出成功",
     "title": "导出数据",
     "userSettings": "用户设置",
@@ -17,6 +19,7 @@
   "import": {
     "backupTime": "备份时间",
     "containsAccountData": "包含账号数据",
+    "containsAccountKeys": "包含账号密钥快照",
     "containsApiCredentialProfiles": "包含 API 配置",
     "containsChannelConfigs": "包含渠道配置",
     "containsUserSettings": "包含用户设置",

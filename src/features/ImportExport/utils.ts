@@ -1,6 +1,11 @@
 import toast from "react-hot-toast"
 
 import { accountStorage } from "~/services/accounts/accountStorage"
+import {
+  canManageDisplayAccountTokens,
+  fetchDisplayAccountTokens,
+  resolveDisplayAccountTokenForSecret,
+} from "~/services/accounts/utils/apiServiceRequest"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import {
   BACKUP_VERSION,
@@ -8,6 +13,8 @@ import {
   importFromBackupObject as importFromBackupObjectService,
   normalizeBackupForMerge,
   parseBackupSummary,
+  type BackupAccountKeySnapshot,
+  type BackupAccountKeySnapshotError,
   type BackupAccountsPartialV2,
   type BackupFullV2,
   type BackupPreferencesPartialV2,
@@ -19,6 +26,8 @@ import {
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
+import type { AccountStorageConfig } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
@@ -33,6 +42,150 @@ export type {
   BackupPreferencesPartialV2,
   BackupV2,
   RawBackupData,
+}
+
+interface ExportOptions {
+  includeAccountKeys?: boolean
+}
+
+interface PreparedExportResult<TData> {
+  data: TData
+  accountKeySnapshots: BackupAccountKeySnapshot[]
+  accountKeySnapshotErrors: BackupAccountKeySnapshotError[]
+}
+
+const BACKUP_EXPORT_ERROR_MESSAGE_FALLBACK = "unknown export error"
+const BACKUP_EXPORT_ERROR_MESSAGE_MAX_LENGTH = 200
+
+const summarizeBackupExportErrorMessage = (error: unknown) => {
+  const rawMessage = getErrorMessage(
+    error,
+    BACKUP_EXPORT_ERROR_MESSAGE_FALLBACK,
+  )
+  const normalizedMessage = rawMessage.replace(/\s+/g, " ").trim()
+
+  if (!normalizedMessage) {
+    return BACKUP_EXPORT_ERROR_MESSAGE_FALLBACK
+  }
+
+  if (/<!doctype html|<html[\s>]/i.test(normalizedMessage)) {
+    if (/just a moment|cloudflare/i.test(normalizedMessage)) {
+      return "Cloudflare challenge page returned"
+    }
+
+    return "HTML error response returned"
+  }
+
+  if (normalizedMessage.length > BACKUP_EXPORT_ERROR_MESSAGE_MAX_LENGTH) {
+    return `${normalizedMessage.slice(
+      0,
+      BACKUP_EXPORT_ERROR_MESSAGE_MAX_LENGTH,
+    )}...`
+  }
+
+  return normalizedMessage
+}
+
+const downloadJsonFile = (data: unknown, filename: string) => {
+  const blob = new Blob([JSON.stringify(data, null, 2)], {
+    type: "application/json",
+  })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement("a")
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+const withOptionalAccountKeySections = <TData extends object>(
+  data: TData,
+  accountKeyExportResult?: {
+    snapshots: BackupAccountKeySnapshot[]
+    errors: BackupAccountKeySnapshotError[]
+  },
+) => {
+  return {
+    ...data,
+    ...(accountKeyExportResult?.snapshots.length
+      ? { accountKeySnapshots: accountKeyExportResult.snapshots }
+      : {}),
+    ...(accountKeyExportResult?.errors.length
+      ? { accountKeySnapshotErrors: accountKeyExportResult.errors }
+      : {}),
+  }
+}
+
+const buildAccountKeySnapshots = async (
+  accountData: AccountStorageConfig,
+): Promise<{
+  snapshots: BackupAccountKeySnapshot[]
+  errors: BackupAccountKeySnapshotError[]
+}> => {
+  const displayAccounts = accountStorage.convertToDisplayData(
+    accountData.accounts,
+  )
+  const manageableAccounts = displayAccounts.filter(
+    canManageDisplayAccountTokens,
+  )
+
+  const results = await Promise.all(
+    manageableAccounts.map(async (account) => {
+      try {
+        const tokens = await fetchDisplayAccountTokens(account)
+        const resolvedTokens = await Promise.all(
+          tokens.map((token) =>
+            resolveDisplayAccountTokenForSecret(account, token),
+          ),
+        )
+
+        return {
+          ok: true as const,
+          snapshot: {
+            accountId: account.id,
+            accountName: account.name,
+            baseUrl: account.baseUrl,
+            siteType: account.siteType,
+            tokens: resolvedTokens,
+          },
+        }
+      } catch (error) {
+        logger.warn("Failed to export account keys for backup", {
+          accountId: account.id,
+          accountName: account.name,
+          error,
+        })
+
+        return {
+          ok: false as const,
+          exportError: {
+            accountId: account.id,
+            accountName: account.name,
+            baseUrl: account.baseUrl,
+            siteType: account.siteType,
+            errorMessage: summarizeBackupExportErrorMessage(error),
+          },
+        }
+      }
+    }),
+  )
+
+  return results.reduce<{
+    snapshots: BackupAccountKeySnapshot[]
+    errors: BackupAccountKeySnapshotError[]
+  }>(
+    (acc, result) => {
+      if (result.ok) {
+        acc.snapshots.push(result.snapshot)
+      } else {
+        acc.errors.push(result.exportError)
+      }
+      return acc
+    },
+    { snapshots: [], errors: [] },
+  )
 }
 
 /**
@@ -58,33 +211,31 @@ export async function importFromBackupObject(
   }
 }
 
-// 导出所有数据
-/**
- * Export all persisted data (accounts, preferences, channelConfigs) as a
- * full V2 backup file and trigger a browser download.
- */
-export const handleExportAll = async (
-  setIsExporting: (isExporting: boolean) => void,
-) => {
-  try {
-    setIsExporting(true)
+const prepareFullExport = async (
+  options?: ExportOptions,
+): Promise<PreparedExportResult<BackupFullV2>> => {
+  const accountDataPromise = accountStorage.exportData()
 
-    // 获取账号数据、用户偏好设置以及通道配置
-    const [
-      accountData,
-      tagStore,
-      preferencesData,
-      channelConfigs,
-      apiCredentialProfiles,
-    ] = await Promise.all([
-      accountStorage.exportData(),
-      tagStorage.exportTagStore(),
-      userPreferences.exportPreferences(),
-      channelConfigStorage.exportConfigs(),
-      apiCredentialProfilesStorage.exportConfig(),
-    ])
+  const [
+    accountData,
+    tagStore,
+    preferencesData,
+    channelConfigs,
+    apiCredentialProfiles,
+    accountKeyExportResult,
+  ] = await Promise.all([
+    accountDataPromise,
+    tagStorage.exportTagStore(),
+    userPreferences.exportPreferences(),
+    channelConfigStorage.exportConfigs(),
+    apiCredentialProfilesStorage.exportConfig(),
+    options?.includeAccountKeys
+      ? accountDataPromise.then(buildAccountKeySnapshots)
+      : undefined,
+  ])
 
-    const exportData: BackupFullV2 = {
+  const data = withOptionalAccountKeySections(
+    {
       version: BACKUP_VERSION,
       timestamp: Date.now(),
       accounts: accountData,
@@ -92,20 +243,88 @@ export const handleExportAll = async (
       preferences: preferencesData,
       channelConfigs,
       apiCredentialProfiles,
-    }
+    } satisfies BackupFullV2,
+    accountKeyExportResult,
+  )
 
-    // 创建下载链接
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: "application/json",
-    })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `all-api-hub-backup-${new Date().toISOString().split("T")[0]}.json`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+  return {
+    data,
+    accountKeySnapshots: accountKeyExportResult?.snapshots ?? [],
+    accountKeySnapshotErrors: accountKeyExportResult?.errors ?? [],
+  }
+}
+
+const prepareAccountsExport = async (
+  options?: ExportOptions,
+): Promise<PreparedExportResult<BackupAccountsPartialV2>> => {
+  const accountData = await accountStorage.exportData()
+  const [tagStore, accountKeyExportResult] = await Promise.all([
+    tagStorage.exportTagStore(),
+    options?.includeAccountKeys
+      ? buildAccountKeySnapshots(accountData)
+      : undefined,
+  ])
+
+  const data = withOptionalAccountKeySections(
+    {
+      version: BACKUP_VERSION,
+      timestamp: Date.now(),
+      type: "accounts",
+      accounts: accountData,
+      tagStore,
+    } satisfies BackupAccountsPartialV2,
+    accountKeyExportResult,
+  )
+
+  return {
+    data,
+    accountKeySnapshots: accountKeyExportResult?.snapshots ?? [],
+    accountKeySnapshotErrors: accountKeyExportResult?.errors ?? [],
+  }
+}
+
+const preparePreferencesExport = async (): Promise<
+  PreparedExportResult<BackupPreferencesPartialV2>
+> => {
+  const preferencesData = await userPreferences.exportPreferences()
+
+  return {
+    data: {
+      version: BACKUP_VERSION,
+      timestamp: Date.now(),
+      type: "preferences",
+      preferences: preferencesData,
+    },
+    accountKeySnapshots: [],
+    accountKeySnapshotErrors: [],
+  }
+}
+
+const downloadPreparedExport = <TData extends object>(
+  prepared: PreparedExportResult<TData>,
+  filename: string,
+) => {
+  downloadJsonFile(prepared.data, filename)
+}
+
+// 导出所有数据
+/**
+ * Export all persisted data (accounts, preferences, channelConfigs) as a
+ * full V2 backup file and trigger a browser download.
+ */
+export const handleExportAll = async (
+  setIsExporting: (isExporting: boolean) => void,
+  options?: ExportOptions,
+) => {
+  try {
+    setIsExporting(true)
+
+    const prepared = await prepareFullExport(options)
+
+    downloadPreparedExport(
+      prepared,
+      `all-api-hub-backup-${new Date().toISOString().split("T")[0]}.json`,
+    )
 
     toast.success(t("importExport:export.dataExported"))
   } catch (error) {
@@ -123,33 +342,17 @@ export const handleExportAll = async (
  */
 export const handleExportAccounts = async (
   setIsExporting: (isExporting: boolean) => void,
+  options?: ExportOptions,
 ) => {
   try {
     setIsExporting(true)
 
-    const [accountData, tagStore] = await Promise.all([
-      accountStorage.exportData(),
-      tagStorage.exportTagStore(),
-    ])
-    const exportData: BackupAccountsPartialV2 = {
-      version: BACKUP_VERSION,
-      timestamp: Date.now(),
-      type: "accounts",
-      accounts: accountData,
-      tagStore,
-    }
+    const prepared = await prepareAccountsExport(options)
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: "application/json",
-    })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `accounts-backup-${new Date().toISOString().split("T")[0]}.json`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    downloadPreparedExport(
+      prepared,
+      `accounts-backup-${new Date().toISOString().split("T")[0]}.json`,
+    )
 
     toast.success(t("importExport:export.accountsExported"))
   } catch (error) {
@@ -171,25 +374,12 @@ export const handleExportPreferences = async (
   try {
     setIsExporting(true)
 
-    const preferencesData = await userPreferences.exportPreferences()
-    const exportData: BackupPreferencesPartialV2 = {
-      version: BACKUP_VERSION,
-      timestamp: Date.now(),
-      type: "preferences",
-      preferences: preferencesData,
-    }
+    const prepared = await preparePreferencesExport()
 
-    const blob = new Blob([JSON.stringify(exportData, null, 2)], {
-      type: "application/json",
-    })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = `preferences-backup-${new Date().toISOString().split("T")[0]}.json`
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    downloadPreparedExport(
+      prepared,
+      `preferences-backup-${new Date().toISOString().split("T")[0]}.json`,
+    )
 
     toast.success(t("importExport:export.settingsExported"))
   } catch (error) {

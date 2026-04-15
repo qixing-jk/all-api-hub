@@ -9,6 +9,11 @@ import ImportSection from "./components/ImportSection"
 import WebDAVAutoSyncSettings from "./components/WebDAVAutoSyncSettings"
 import WebDAVSettings from "./components/WebDAVSettings"
 import { useImportExport } from "./hooks/useImportExport"
+import {
+  handleExportAccounts,
+  handleExportAll,
+  handleExportPreferences,
+} from "./utils"
 
 /**
  * Import/Export page combining manual export/import sections plus WebDAV backup and notices.
@@ -39,7 +44,11 @@ export default function ImportExport() {
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 lg:items-stretch">
         <ExportSection
           isExporting={isExporting}
-          setIsExporting={setIsExporting}
+          onExportAll={(options) => handleExportAll(setIsExporting, options)}
+          onExportAccounts={(options) =>
+            handleExportAccounts(setIsExporting, options)
+          }
+          onExportPreferences={() => handleExportPreferences(setIsExporting)}
         />
         <ImportSection
           importData={importData}

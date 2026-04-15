@@ -8,22 +8,6 @@ import ImportSection from "~/features/ImportExport/components/ImportSection"
 import { WebDAVDecryptPasswordModal } from "~/features/ImportExport/components/WebDAVDecryptPasswordModal"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
-const {
-  mockHandleExportAll,
-  mockHandleExportAccounts,
-  mockHandleExportPreferences,
-} = vi.hoisted(() => ({
-  mockHandleExportAll: vi.fn(),
-  mockHandleExportAccounts: vi.fn(),
-  mockHandleExportPreferences: vi.fn(),
-}))
-
-vi.mock("~/features/ImportExport/utils", () => ({
-  handleExportAll: mockHandleExportAll,
-  handleExportAccounts: mockHandleExportAccounts,
-  handleExportPreferences: mockHandleExportPreferences,
-}))
-
 function render(ui: ReactNode) {
   return rtlRender(<I18nextProvider i18n={testI18n}>{ui}</I18nextProvider>)
 }
@@ -33,11 +17,18 @@ describe("ImportExport section components", () => {
     vi.clearAllMocks()
   })
 
-  it("routes export actions to utility helpers", () => {
-    const setIsExporting = vi.fn()
+  it("routes export actions through the provided callbacks", () => {
+    const onExportAll = vi.fn()
+    const onExportAccounts = vi.fn()
+    const onExportPreferences = vi.fn()
 
     render(
-      <ExportSection isExporting={false} setIsExporting={setIsExporting} />,
+      <ExportSection
+        isExporting={false}
+        onExportAll={onExportAll}
+        onExportAccounts={onExportAccounts}
+        onExportPreferences={onExportPreferences}
+      />,
     )
 
     const buttons = screen.getAllByRole("button", {
@@ -48,9 +39,47 @@ describe("ImportExport section components", () => {
     fireEvent.click(buttons[1])
     fireEvent.click(buttons[2])
 
-    expect(mockHandleExportAll).toHaveBeenCalledWith(setIsExporting)
-    expect(mockHandleExportAccounts).toHaveBeenCalledWith(setIsExporting)
-    expect(mockHandleExportPreferences).toHaveBeenCalledWith(setIsExporting)
+    expect(onExportAll).toHaveBeenCalledWith({
+      includeAccountKeys: false,
+    })
+    expect(onExportAccounts).toHaveBeenCalledWith({
+      includeAccountKeys: false,
+    })
+    expect(onExportPreferences).toHaveBeenCalledWith()
+  })
+
+  it("passes the include-account-keys option from the export toggle", () => {
+    const onExportAll = vi.fn()
+    const onExportAccounts = vi.fn()
+
+    render(
+      <ExportSection
+        isExporting={false}
+        onExportAll={onExportAll}
+        onExportAccounts={onExportAccounts}
+        onExportPreferences={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(
+      screen.getByRole("checkbox", {
+        name: "importExport:export.includeAccountKeys",
+      }),
+    )
+
+    const buttons = screen.getAllByRole("button", {
+      name: "common:actions.export",
+    })
+
+    fireEvent.click(buttons[0])
+    fireEvent.click(buttons[1])
+
+    expect(onExportAll).toHaveBeenCalledWith({
+      includeAccountKeys: true,
+    })
+    expect(onExportAccounts).toHaveBeenCalledWith({
+      includeAccountKeys: true,
+    })
   })
 
   it("renders import validation details and forwards input events", () => {
@@ -68,6 +97,7 @@ describe("ImportExport section components", () => {
         validation={{
           valid: true,
           hasAccounts: true,
+          hasAccountKeySnapshots: true,
           hasPreferences: true,
           hasChannelConfigs: true,
           hasApiCredentialProfiles: true,
@@ -98,6 +128,9 @@ describe("ImportExport section components", () => {
     ).toBeInTheDocument()
     expect(
       screen.getByText(/importExport:import\.containsAccountData/),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(/importExport:import\.containsAccountKeys/),
     ).toBeInTheDocument()
     expect(setImportData).toHaveBeenCalledWith('{"version":3}')
     expect(handleFileImport).toHaveBeenCalledTimes(1)

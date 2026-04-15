@@ -7,7 +7,7 @@ import { channelConfigStorage } from "~/services/managedSites/channelConfigStora
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { tagStorage } from "~/services/tags/tagStorage"
-import type { AccountStorageConfig, TagStore } from "~/types"
+import type { AccountStorageConfig, ApiToken, TagStore } from "~/types"
 import type { ApiCredentialProfilesConfig } from "~/types/apiCredentialProfiles"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
@@ -44,11 +44,28 @@ export const BACKUP_VERSION = "2.0"
 interface ParsedBackupSummary {
   valid: boolean
   hasAccounts: boolean
+  hasAccountKeySnapshots: boolean
   hasPreferences: boolean
   hasChannelConfigs: boolean
   hasTagStore: boolean
   hasApiCredentialProfiles: boolean
   timestamp: string
+}
+
+export interface BackupAccountKeySnapshot {
+  accountId: string
+  accountName: string
+  baseUrl: string
+  siteType: string
+  tokens: ApiToken[]
+}
+
+export interface BackupAccountKeySnapshotError {
+  accountId: string
+  accountName: string
+  baseUrl: string
+  siteType: string
+  errorMessage: string
 }
 
 /**
@@ -59,6 +76,16 @@ export interface BackupFullV2 {
   version: string
   timestamp: number
   accounts: AccountStorageConfig
+  /**
+   * Optional account key export snapshot.
+   *
+   * Present only when the user explicitly opts in to exporting account keys.
+   */
+  accountKeySnapshots?: BackupAccountKeySnapshot[]
+  /**
+   * Optional per-account key export failures captured during a partial-success export.
+   */
+  accountKeySnapshotErrors?: BackupAccountKeySnapshotError[]
   /**
    * Global tag store snapshot.
    *
@@ -84,6 +111,16 @@ export interface BackupAccountsPartialV2 {
   timestamp: number
   type: "accounts"
   accounts: AccountStorageConfig
+  /**
+   * Optional account key export snapshot.
+   *
+   * Present only when the user explicitly opts in to exporting account keys.
+   */
+  accountKeySnapshots?: BackupAccountKeySnapshot[]
+  /**
+   * Optional per-account key export failures captured during a partial-success export.
+   */
+  accountKeySnapshotErrors?: BackupAccountKeySnapshotError[]
   /**
    * Global tag store snapshot.
    *
@@ -117,6 +154,8 @@ type LegacyBackupLike = {
   timestamp?: number | string
   type?: "accounts" | "preferences" | "channelConfigs" | string
   accounts?: any
+  accountKeySnapshots?: any
+  accountKeySnapshotErrors?: any
   preferences?: any
   channelConfigs?: any
   tagStore?: any
@@ -163,6 +202,7 @@ export function parseBackupSummary(
     const data = JSON.parse(importData) as RawBackupData
 
     const hasAccounts = Boolean(data.accounts || data.type === "accounts")
+    const hasAccountKeySnapshots = Boolean((data as any).accountKeySnapshots)
     const hasPreferences = Boolean(
       data.preferences || data.type === "preferences",
     )
@@ -179,6 +219,7 @@ export function parseBackupSummary(
     return {
       valid: true,
       hasAccounts,
+      hasAccountKeySnapshots,
       hasPreferences,
       hasChannelConfigs,
       hasTagStore,
