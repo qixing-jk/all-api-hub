@@ -35,6 +35,8 @@ const {
   mockGetSiteType,
   mockRefreshAccountData,
   mockFetchTodayIncome,
+  markAccountDisabledInStatusMock,
+  markAccountsDisabledInStatusMock,
   pruneStatusForAccountIdsMock,
 } = vi.hoisted(() => ({
   mockValidateAccountConnection: vi.fn(),
@@ -42,6 +44,8 @@ const {
   mockGetSiteType: vi.fn(),
   mockRefreshAccountData: vi.fn(),
   mockFetchTodayIncome: vi.fn(),
+  markAccountDisabledInStatusMock: vi.fn(),
+  markAccountsDisabledInStatusMock: vi.fn(),
   pruneStatusForAccountIdsMock: vi.fn(),
 }))
 
@@ -81,6 +85,8 @@ vi.mock("~/services/siteDetection/detectSiteType", () => ({
 
 vi.mock("~/services/checkin/autoCheckin/storage", () => ({
   autoCheckinStorage: {
+    markAccountDisabledInStatus: markAccountDisabledInStatusMock,
+    markAccountsDisabledInStatus: markAccountsDisabledInStatusMock,
     pruneStatusForAccountIds: pruneStatusForAccountIdsMock,
   },
 }))
@@ -165,7 +171,11 @@ describe("accountStorage core behaviors", () => {
     mockGetSiteType.mockReset()
     mockRefreshAccountData.mockReset()
     mockFetchTodayIncome.mockReset()
+    markAccountDisabledInStatusMock.mockReset()
+    markAccountsDisabledInStatusMock.mockReset()
     pruneStatusForAccountIdsMock.mockReset()
+    markAccountDisabledInStatusMock.mockResolvedValue(true)
+    markAccountsDisabledInStatusMock.mockResolvedValue(true)
     pruneStatusForAccountIdsMock.mockResolvedValue(true)
 
     mockRefreshAccountData.mockImplementation(async (request) => ({
@@ -952,6 +962,9 @@ describe("accountStorage core behaviors", () => {
     expect(
       (await accountStorage.getAccountById("toggle-disabled"))?.disabled,
     ).toBe(true)
+    expect(markAccountDisabledInStatusMock).toHaveBeenCalledWith(
+      "toggle-disabled",
+    )
 
     expect(
       await accountStorage.setAccountDisabled("toggle-disabled", false),
@@ -959,6 +972,7 @@ describe("accountStorage core behaviors", () => {
     expect(
       (await accountStorage.getAccountById("toggle-disabled"))?.disabled,
     ).toBe(false)
+    expect(markAccountDisabledInStatusMock).toHaveBeenCalledTimes(1)
   })
 
   it("setAccountsDisabled should update only matching accounts that need changes", async () => {
@@ -984,6 +998,25 @@ describe("accountStorage core behaviors", () => {
     expect((await accountStorage.getAccountById("disable-c"))?.disabled).toBe(
       false,
     )
+    expect(markAccountsDisabledInStatusMock).toHaveBeenCalledWith([
+      { accountId: "disable-a" },
+    ])
+  })
+
+  it("setAccountsDisabled should not mutate auto check-in status when re-enabling accounts", async () => {
+    const accounts = [
+      createAccount({ id: "enable-a", disabled: true }),
+      createAccount({ id: "enable-b", disabled: false }),
+    ]
+    seedStorage(accounts)
+
+    const result = await accountStorage.setAccountsDisabled(
+      ["enable-a", "enable-b"],
+      false,
+    )
+
+    expect(result).toEqual({ updatedCount: 1 })
+    expect(markAccountsDisabledInStatusMock).not.toHaveBeenCalled()
   })
 
   it("setAccountDisabled should fail closed for missing accounts", async () => {
@@ -992,6 +1025,7 @@ describe("accountStorage core behaviors", () => {
     await expect(
       accountStorage.setAccountDisabled("missing", true),
     ).resolves.toBe(false)
+    expect(markAccountDisabledInStatusMock).not.toHaveBeenCalled()
   })
 
   it("updateSyncTime should persist a fresh last_sync_time for the target account", async () => {

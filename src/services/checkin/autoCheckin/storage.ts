@@ -1,7 +1,18 @@
 import { Storage } from "@plasmohq/storage"
 
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
-import type { AutoCheckinStatus } from "~/types/autoCheckin"
+import {
+  AUTO_CHECKIN_RUN_RESULT,
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+  getAutoCheckinSkipReasonTranslationKey,
+  type AutoCheckinAccountSnapshot,
+  type AutoCheckinRunResult,
+  type AutoCheckinRunSummary,
+  type AutoCheckinStatus,
+  type CheckinAccountResult,
+  type CheckinResultStatus,
+} from "~/types/autoCheckin"
 import { createLogger } from "~/utils/core/logger"
 import { isPlainObject } from "~/utils/core/object"
 
@@ -16,6 +27,85 @@ const STORAGE_KEYS = {
 
 export const AUTO_CHECKIN_STATUS_STORAGE_LOCK =
   "all-api-hub:auto-checkin-status" as const
+
+/**
+ *
+ */
+function recalculateSummaryFromResults(
+  perAccount: Record<string, CheckinAccountResult>,
+  previousSummary?: AutoCheckinRunSummary,
+): AutoCheckinRunSummary {
+  const values = Object.values(perAccount)
+  const successStatuses: CheckinResultStatus[] = [
+    CHECKIN_RESULT_STATUS.SUCCESS,
+    CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+  ]
+  const successCount = values.filter((value) =>
+    successStatuses.includes(value.status),
+  ).length
+  const failedCount = values.filter(
+    (value) => value.status === CHECKIN_RESULT_STATUS.FAILED,
+  ).length
+  const skippedCount = values.filter(
+    (value) => value.status === CHECKIN_RESULT_STATUS.SKIPPED,
+  ).length
+
+  const executed = successCount + failedCount
+  const totalEligible =
+    previousSummary?.totalEligible ?? executed + skippedCount
+
+  return {
+    totalEligible,
+    executed,
+    successCount,
+    failedCount,
+    skippedCount,
+    needsRetry: failedCount > 0,
+  }
+}
+
+/**
+ *
+ */
+function getRunResultFromSummary(
+  summary: AutoCheckinRunSummary,
+): AutoCheckinRunResult {
+  if (summary.failedCount > 0 && summary.successCount > 0) {
+    return AUTO_CHECKIN_RUN_RESULT.PARTIAL
+  }
+  if (summary.failedCount > 0) {
+    return AUTO_CHECKIN_RUN_RESULT.FAILED
+  }
+  return AUTO_CHECKIN_RUN_RESULT.SUCCESS
+}
+
+/**
+ *
+ */
+function updateSnapshotWithResult(
+  snapshots: AutoCheckinAccountSnapshot[] | undefined,
+  result: CheckinAccountResult,
+  skipReason?: (typeof AUTO_CHECKIN_SKIP_REASON)[keyof typeof AUTO_CHECKIN_SKIP_REASON],
+): AutoCheckinAccountSnapshot[] | undefined {
+  if (!snapshots || snapshots.length === 0) {
+    return snapshots
+  }
+
+  let updated = false
+  const nextSnapshots = snapshots.map((snapshot) => {
+    if (snapshot.accountId !== result.accountId) {
+      return snapshot
+    }
+    updated = true
+    return {
+      ...snapshot,
+      skipReason: skipReason ?? snapshot.skipReason,
+      lastResult: result,
+    }
+  })
+
+  return updated ? nextSnapshots : snapshots
+}
 
 /**
  * Storage service for Auto Check-in
@@ -71,6 +161,177 @@ class AutoCheckinStorage {
       logger.error("Failed to clear status", error)
       return false
     }
+  }
+
+  /**
+   * Preserve the account's historical row while converting it into a disabled skip.
+   *
+   * This keeps the Auto Check-in page truthful after a manual disable action:
+   * the record remains visible, but it no longer presents retry/disable flows as
+   * if the account were still an active failed item.
+   */
+  async markAccountsDisabledInStatus(
+    accounts: Array<{ accountId: string; accountName?: string }>,
+  ): Promise<boolean> {
+    const normalizedAccounts = Array.from(
+      new Map(
+        accounts
+          .filter((account) => Boolean(account.accountId))
+          .map((account) => [account.accountId, account]),
+      ).values(),
+    )
+    if (normalizedAccounts.length === 0) return true
+
+    return withExtensionStorageWriteLock(
+      AUTO_CHECKIN_STATUS_STORAGE_LOCK,
+      async () => {
+        try {
+          const current = (await this.getStatus()) as unknown as any
+          if (!current) return true
+
+          const currentPerAccount = isPlainObject(current.perAccount)
+            ? (current.perAccount as Record<string, CheckinAccountResult>)
+            : {}
+          const currentSnapshots = Array.isArray(current.accountsSnapshot)
+            ? (current.accountsSnapshot as AutoCheckinAccountSnapshot[])
+            : undefined
+
+          const perAccount: Record<string, CheckinAccountResult> = {
+            ...currentPerAccount,
+          }
+
+          let nextSnapshots = currentSnapshots
+          for (const account of normalizedAccounts) {
+            const snapshotMatch = nextSnapshots?.find(
+              (snapshot) => snapshot.accountId === account.accountId,
+            )
+            const previousResult = perAccount[account.accountId]
+            const resolvedAccountName =
+              account.accountName ||
+              previousResult?.accountName ||
+              snapshotMatch?.accountName ||
+              account.accountId
+
+            const disabledResult: CheckinAccountResult = {
+              accountId: account.accountId,
+              accountName: resolvedAccountName,
+              status: CHECKIN_RESULT_STATUS.SKIPPED,
+              messageKey: getAutoCheckinSkipReasonTranslationKey(
+                AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
+              ),
+              reasonCode: AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
+              timestamp: Date.now(),
+            }
+
+            perAccount[account.accountId] = disabledResult
+            nextSnapshots = updateSnapshotWithResult(
+              nextSnapshots,
+              disabledResult,
+              AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED,
+            )
+          }
+
+          const disabledIdSet = new Set(
+            normalizedAccounts.map((account) => account.accountId),
+          )
+          let retryState = isPlainObject(current.retryState)
+            ? current.retryState
+            : undefined
+
+          if (retryState) {
+            const pendingAccountIds = Array.isArray(
+              retryState.pendingAccountIds,
+            )
+              ? retryState.pendingAccountIds.filter(
+                  (pendingId: unknown): pendingId is string =>
+                    typeof pendingId === "string" &&
+                    !disabledIdSet.has(pendingId),
+                )
+              : []
+            const attemptsByAccount = isPlainObject(
+              retryState.attemptsByAccount,
+            )
+              ? Object.fromEntries(
+                  Object.entries(retryState.attemptsByAccount).filter(
+                    ([pendingId]) => !disabledIdSet.has(pendingId),
+                  ),
+                )
+              : {}
+
+            retryState =
+              typeof retryState.day === "string" && pendingAccountIds.length > 0
+                ? {
+                    day: retryState.day,
+                    pendingAccountIds,
+                    attemptsByAccount,
+                  }
+                : undefined
+          }
+
+          const summary = recalculateSummaryFromResults(
+            perAccount,
+            current.summary,
+          )
+          const pendingRetry = Boolean(
+            retryState &&
+              Array.isArray(retryState.pendingAccountIds) &&
+              retryState.pendingAccountIds.length > 0,
+          )
+
+          const nextStatus: AutoCheckinStatus = {
+            ...current,
+            lastRunResult: getRunResultFromSummary(summary),
+            perAccount,
+            summary,
+            retryState,
+            pendingRetry,
+            nextRetryScheduledAt: pendingRetry
+              ? current.nextRetryScheduledAt
+              : undefined,
+            retryAlarmTargetDay: pendingRetry
+              ? current.retryAlarmTargetDay
+              : undefined,
+            accountsSnapshot: nextSnapshots,
+          }
+
+          const success = await this.saveStatus(nextStatus)
+          if (!success) {
+            logger.warn(
+              "Failed to mark disabled accounts in auto check-in status",
+              {
+                accountIds: normalizedAccounts.map(
+                  (account) => account.accountId,
+                ),
+              },
+            )
+          }
+          return success
+        } catch (error) {
+          logger.warn(
+            "Failed to mark disabled accounts in auto check-in status",
+            {
+              accountIds: normalizedAccounts.map(
+                (account) => account.accountId,
+              ),
+              error,
+            },
+          )
+          return false
+        }
+      },
+    )
+  }
+
+  async markAccountDisabledInStatus(
+    accountId: string,
+    accountName?: string,
+  ): Promise<boolean> {
+    return this.markAccountsDisabledInStatus([
+      {
+        accountId,
+        accountName,
+      },
+    ])
   }
 
   /**

@@ -371,7 +371,43 @@ class AccountStorageService {
    */
   async setAccountDisabled(id: string, disabled: boolean): Promise<boolean> {
     const normalized = Boolean(disabled)
-    return this.updateAccount(id, { disabled: normalized })
+
+    try {
+      let shouldMarkDisabledInAutoCheckin = false
+
+      const updated = await this.mutateStorageConfig((config) => {
+        const accounts = config.accounts
+        const index = accounts.findIndex((account) => account.id === id)
+
+        if (index === -1) {
+          throw new Error(t("messages:storage.accountNotFound", { id }))
+        }
+
+        const account = accounts[index]
+        shouldMarkDisabledInAutoCheckin =
+          normalized && account.disabled !== normalized
+
+        accounts[index] = applySiteAccountUpdates({
+          account,
+          updates: { disabled: normalized },
+          now: Date.now(),
+        })
+        config.accounts = accounts
+        return { result: true, changed: true }
+      })
+
+      if (shouldMarkDisabledInAutoCheckin) {
+        const marked = await autoCheckinStorage.markAccountDisabledInStatus(id)
+        if (!marked) {
+          logger.warn("禁用账号后更新自动签到状态失败", { accountId: id })
+        }
+      }
+
+      return updated
+    } catch (error) {
+      logger.error(t("messages:storage.updateFailed", { error: "" }), error)
+      return false
+    }
   }
 
   /**
@@ -393,7 +429,9 @@ class AccountStorageService {
     const normalized = Boolean(disabled)
 
     try {
-      return await this.mutateStorageConfig((config) => {
+      const changedDisabledAccountIds: string[] = []
+
+      const result = await this.mutateStorageConfig((config) => {
         const now = Date.now()
         let updatedCount = 0
 
@@ -403,6 +441,9 @@ class AccountStorageService {
           }
 
           updatedCount += 1
+          if (normalized) {
+            changedDisabledAccountIds.push(account.id)
+          }
           return applySiteAccountUpdates({
             account,
             updates: { disabled: normalized },
@@ -415,6 +456,19 @@ class AccountStorageService {
           changed: updatedCount > 0,
         }
       })
+
+      if (normalized && changedDisabledAccountIds.length > 0) {
+        const marked = await autoCheckinStorage.markAccountsDisabledInStatus(
+          changedDisabledAccountIds.map((accountId) => ({ accountId })),
+        )
+        if (!marked) {
+          logger.warn("批量禁用账号后更新自动签到状态失败", {
+            accountIds: changedDisabledAccountIds,
+          })
+        }
+      }
+
+      return result
     } catch (error) {
       logger.error("批量更新账号禁用状态失败", {
         accountIds: uniqueIds,

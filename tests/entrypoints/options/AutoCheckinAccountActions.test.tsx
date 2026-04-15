@@ -45,27 +45,15 @@ vi.mock("react-hot-toast", () => ({
   default: toast,
 }))
 
-const {
-  setAccountDisabledMock,
-  deleteAccountMock,
-  pruneStatusForAccountIdsMock,
-} = vi.hoisted(() => ({
+const { setAccountDisabledMock, deleteAccountMock } = vi.hoisted(() => ({
   setAccountDisabledMock: vi.fn(),
   deleteAccountMock: vi.fn(),
-  pruneStatusForAccountIdsMock: vi.fn(),
 }))
 
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     setAccountDisabled: (...args: any[]) => setAccountDisabledMock(...args),
     deleteAccount: (...args: any[]) => deleteAccountMock(...args),
-  },
-}))
-
-vi.mock("~/services/checkin/autoCheckin/storage", () => ({
-  autoCheckinStorage: {
-    pruneStatusForAccountIds: (...args: any[]) =>
-      pruneStatusForAccountIdsMock(...args),
   },
 }))
 
@@ -485,7 +473,7 @@ describe("AutoCheckin account actions", () => {
     })
   })
 
-  it("disables a failed account, keeps its auto-checkin record, and reloads the page data", async () => {
+  it("disables a failed account, converts it to a disabled skip, and reloads the page data", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
 
@@ -517,9 +505,9 @@ describe("AutoCheckin account actions", () => {
                       alpha: {
                         accountId: "alpha",
                         accountName: "Alpha",
-                        status: CHECKIN_RESULT_STATUS.FAILED,
+                        status: CHECKIN_RESULT_STATUS.SKIPPED,
                         timestamp: 1700000000000,
-                        message: "needs disable",
+                        messageKey: "autoCheckin:skipReasons.account_disabled",
                       },
                     },
                   },
@@ -553,18 +541,15 @@ describe("AutoCheckin account actions", () => {
       expect(setAccountDisabledMock).toHaveBeenCalledWith("alpha", true)
     })
     await waitFor(() => {
-      expect(pruneStatusForAccountIdsMock).not.toHaveBeenCalled()
-    })
-    await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith(
         "messages:toast.success.accountDisabled",
       )
     })
     expect(
-      screen.getByRole("button", {
+      screen.queryByRole("button", {
         name: "account:actions.disableAccount",
       }),
-    ).toBeInTheDocument()
+    ).not.toBeInTheDocument()
     expect(statusCalls).toBeGreaterThanOrEqual(2)
   })
 
@@ -621,7 +606,6 @@ describe("AutoCheckin account actions", () => {
         "messages:toast.error.operationFailedGeneric",
       )
     })
-    expect(pruneStatusForAccountIdsMock).not.toHaveBeenCalled()
   })
 
   it("deletes a failed account from the row action and reloads status after confirmation", async () => {
