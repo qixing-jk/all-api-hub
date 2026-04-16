@@ -494,13 +494,14 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       return new Map<string, number>()
     }
 
+    // In all-accounts mode rawModelItems are built only from pricingContexts,
+    // so the filtered summary rows are account-backed by construction.
+    const accountSummaryItems = baseFilteredRawModels as Array<
+      RawModelItem & { source: ReturnType<typeof createAccountSource> }
+    >
     const countMap = new Map<string, number>()
 
-    baseFilteredRawModels.forEach((item) => {
-      if (item.source.kind !== "account") {
-        return
-      }
-
+    accountSummaryItems.forEach((item) => {
       const accountId = item.source.account.id
       countMap.set(accountId, (countMap.get(accountId) ?? 0) + 1)
     })
