@@ -473,7 +473,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
   ])
 
   const accountFilteredBaseRawModels = useMemo(() => {
-    if (accountFilterAccountIds.length === 0) {
+    if (
+      selectedSource?.kind !== "all-accounts" ||
+      accountFilterAccountIds.length === 0
+    ) {
       return baseFilteredRawModels
     }
 
@@ -484,24 +487,26 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         item.source.kind !== "account" ||
         selectedAccountIds.has(item.source.account.id),
     )
-  }, [accountFilterAccountIds, baseFilteredRawModels])
+  }, [accountFilterAccountIds, baseFilteredRawModels, selectedSource?.kind])
 
-  const accountSummaryBaseModels = useMemo(
-    () =>
-      resolveCalculatedModels({
-        rawItems: baseFilteredRawModels,
-        groupCandidates: effectiveGroupCandidates,
-        supportsGroupFiltering:
-          selectedSource?.capabilities.supportsGroupFiltering ?? false,
-        showRealPrice,
-      }),
-    [
-      baseFilteredRawModels,
-      effectiveGroupCandidates,
-      selectedSource?.capabilities.supportsGroupFiltering,
-      showRealPrice,
-    ],
-  )
+  const accountSummaryCountsByAccountId = useMemo(() => {
+    if (selectedSource?.kind !== "all-accounts") {
+      return new Map<string, number>()
+    }
+
+    const countMap = new Map<string, number>()
+
+    baseFilteredRawModels.forEach((item) => {
+      if (item.source.kind !== "account") {
+        return
+      }
+
+      const accountId = item.source.account.id
+      countMap.set(accountId, (countMap.get(accountId) ?? 0) + 1)
+    })
+
+    return countMap
+  }, [baseFilteredRawModels, selectedSource?.kind])
 
   const baseFilteredModels = useMemo(
     () =>
@@ -686,7 +691,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
 
   return {
     filteredModels,
-    accountSummaryBaseModels,
+    accountSummaryCountsByAccountId,
     baseFilteredModels,
     allProvidersFilteredCount: baseFilteredModels.length,
     getProviderFilteredCount,

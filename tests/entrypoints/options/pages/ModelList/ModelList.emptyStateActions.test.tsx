@@ -140,7 +140,7 @@ function buildState(overrides: Record<string, unknown> = {}) {
     accountFallback: null,
     isFallbackCatalogActive: false,
     filteredModels: [],
-    accountSummaryBaseModels: [],
+    accountSummaryCountsByAccountId: new Map(),
     baseFilteredModels: [],
     availableGroups: [],
     loadPricingData: vi.fn(),

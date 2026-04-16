@@ -111,6 +111,28 @@ describe("useFilteredModels", () => {
     expect(result.current.filteredModels[0]?.source.kind).toBe("profile")
   })
 
+  it("ignores stale account filters outside the all-accounts source", async () => {
+    const account = createDisplayAccount({
+      id: "account-single",
+      name: "Single Account",
+      baseUrl: "https://single.example.com",
+      userId: 1,
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(["gpt-4o-mini", "claude-3-5-sonnet"]),
+      selectedSource: createAccountSource(account),
+      accountFilterAccountIds: ["different-account"],
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
+
+    expect(
+      result.current.filteredModels.map((item) => item.model.model_name),
+    ).toEqual(["gpt-4o-mini", "claude-3-5-sonnet"])
+    expect(result.current.accountSummaryCountsByAccountId.size).toBe(0)
+  })
+
   it("computes provider counts from the account-filtered model set", async () => {
     const accountA = createDisplayAccount({
       id: "account-a",
@@ -196,10 +218,12 @@ describe("useFilteredModels", () => {
       ),
     ).toEqual(["account-a", "account-c"])
     expect(
-      result.current.accountSummaryBaseModels.map((item) =>
-        item.source.kind === "account" ? item.source.account.id : "profile",
-      ),
-    ).toEqual(["account-a", "account-b", "account-c"])
+      Array.from(result.current.accountSummaryCountsByAccountId.entries()),
+    ).toEqual([
+      ["account-a", 1],
+      ["account-b", 1],
+      ["account-c", 1],
+    ])
   })
 
   it("applies single-account group pricing and exposes available account groups", async () => {

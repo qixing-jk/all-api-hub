@@ -119,7 +119,7 @@ vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
     loadErrorMessage: null,
 
     filteredModels: [],
-    accountSummaryBaseModels: [],
+    accountSummaryCountsByAccountId: new Map(),
     baseFilteredModels: [],
     availableGroups: [],
 

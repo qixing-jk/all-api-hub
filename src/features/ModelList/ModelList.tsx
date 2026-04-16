@@ -87,7 +87,7 @@ export default function ModelList(props: {
     isFallbackCatalogActive,
 
     filteredModels,
-    accountSummaryBaseModels,
+    accountSummaryCountsByAccountId,
     allProvidersFilteredCount,
     availableGroups,
 
@@ -131,21 +131,13 @@ export default function ModelList(props: {
     !shouldShowSourceSetupEmptyState && !selectedSource
 
   const accountSummaryItems = useMemo(() => {
-    const countMap = new Map<string, number>()
-
-    accountSummaryBaseModels.forEach((item: any) => {
-      if (item.source?.kind !== "account") return
-      const account = item.source.account
-      countMap.set(account.id, (countMap.get(account.id) ?? 0) + 1)
-    })
-
     return (accountQueryStates ?? []).map((state) => ({
       accountId: state.account.id,
       name: state.account.name,
-      count: countMap.get(state.account.id) ?? 0,
+      count: accountSummaryCountsByAccountId.get(state.account.id) ?? 0,
       errorType: state.errorType,
     }))
-  }, [accountQueryStates, accountSummaryBaseModels])
+  }, [accountQueryStates, accountSummaryCountsByAccountId])
 
   const modelVerificationTargets = useMemo(() => {
     return filteredModels.reduce<ApiVerificationHistoryTarget[]>(

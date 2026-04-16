@@ -283,12 +283,7 @@ function buildState(overrides: Record<string, any> = {}) {
         source: ACCOUNT_SOURCE,
       },
     ],
-    accountSummaryBaseModels: [
-      {
-        model: { model_name: "gpt-4" },
-        source: ACCOUNT_SOURCE,
-      },
-    ],
+    accountSummaryCountsByAccountId: new Map([[ACCOUNT.id, 1]]),
     baseFilteredModels: [
       {
         model: { model_name: "gpt-4" },
@@ -349,20 +344,10 @@ describe("ModelList page flows", () => {
         pricingData: null,
         pricingContexts: [{ accountId: ACCOUNT.id }],
         isFallbackCatalogActive: true,
-        accountSummaryBaseModels: [
-          {
-            model: { model_name: "gpt-4" },
-            source: createAccountSource(ACCOUNT),
-          },
-          {
-            model: { model_name: "claude-3-5-sonnet" },
-            source: createAccountSource(ACCOUNT),
-          },
-          {
-            model: { model_name: "gpt-4o-mini" },
-            source: createAccountSource(SECOND_ACCOUNT),
-          },
-        ],
+        accountSummaryCountsByAccountId: new Map([
+          [ACCOUNT.id, 2],
+          [SECOND_ACCOUNT.id, 1],
+        ]),
         baseFilteredModels: [
           {
             model: { model_name: "gpt-4" },
@@ -415,20 +400,10 @@ describe("ModelList page flows", () => {
         pricingData: null,
         pricingContexts: [{ accountId: ACCOUNT.id }],
         isFallbackCatalogActive: true,
-        accountSummaryBaseModels: [
-          {
-            model: { model_name: "gpt-4" },
-            source: createAccountSource(ACCOUNT),
-          },
-          {
-            model: { model_name: "claude-3-5-sonnet" },
-            source: createAccountSource(ACCOUNT),
-          },
-          {
-            model: { model_name: "gpt-4o-mini" },
-            source: createAccountSource(SECOND_ACCOUNT),
-          },
-        ],
+        accountSummaryCountsByAccountId: new Map([
+          [ACCOUNT.id, 2],
+          [SECOND_ACCOUNT.id, 1],
+        ]),
         baseFilteredModels: [
           {
             model: { model_name: "gpt-4" },
@@ -465,20 +440,10 @@ describe("ModelList page flows", () => {
         pricingData: null,
         pricingContexts: [{ accountId: ACCOUNT.id }],
         allAccountsFilterAccountIds: ["acc-1"],
-        accountSummaryBaseModels: [
-          {
-            model: { model_name: "gpt-4" },
-            source: createAccountSource(ACCOUNT),
-          },
-          {
-            model: { model_name: "claude-3-5-sonnet" },
-            source: createAccountSource(ACCOUNT),
-          },
-          {
-            model: { model_name: "gpt-4o-mini" },
-            source: createAccountSource(SECOND_ACCOUNT),
-          },
-        ],
+        accountSummaryCountsByAccountId: new Map([
+          [ACCOUNT.id, 2],
+          [SECOND_ACCOUNT.id, 1],
+        ]),
         baseFilteredModels: [
           {
             model: { model_name: "gpt-4" },
