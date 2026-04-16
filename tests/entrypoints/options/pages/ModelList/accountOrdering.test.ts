@@ -91,4 +91,72 @@ describe("sortModelListAccounts", () => {
       backupAccount.id,
     ])
   })
+
+  it("preserves the original order when query states do not cover every account", () => {
+    const primaryAccount = createAccount("acc-1", "Primary")
+    const backupAccount = createAccount("acc-2", "Backup")
+
+    const sortedAccounts = sortModelListAccounts({
+      accounts: [primaryAccount, backupAccount],
+      accountQueryStates: [
+        {
+          account: primaryAccount,
+          isLoading: false,
+          hasError: false,
+        },
+        {
+          account: primaryAccount,
+          isLoading: false,
+          hasError: false,
+        },
+      ],
+      accountSummaryCountsByAccountId: new Map([
+        [primaryAccount.id, 1],
+        [backupAccount.id, 3],
+      ]),
+    })
+
+    expect(sortedAccounts.map((account) => account.id)).toEqual([
+      primaryAccount.id,
+      backupAccount.id,
+    ])
+  })
+
+  it("preserves original order when counts are equal", () => {
+    const primaryAccount = createAccount("acc-1", "Primary")
+    const backupAccount = createAccount("acc-2", "Backup")
+    const tertiaryAccount = createAccount("acc-3", "Tertiary")
+
+    const sortedAccounts = sortModelListAccounts({
+      accounts: [primaryAccount, backupAccount, tertiaryAccount],
+      accountQueryStates: [
+        {
+          account: primaryAccount,
+          isLoading: false,
+          hasError: false,
+        },
+        {
+          account: backupAccount,
+          isLoading: false,
+          hasError: false,
+        },
+        {
+          account: tertiaryAccount,
+          isLoading: false,
+          hasError: false,
+        },
+      ],
+      accountSummaryCountsByAccountId: new Map([
+        [primaryAccount.id, 2],
+        [backupAccount.id, 2],
+        [tertiaryAccount.id, 2],
+      ]),
+    })
+
+    expect(sortedAccounts.map((account) => account.id)).toEqual([
+      primaryAccount.id,
+      backupAccount.id,
+      tertiaryAccount.id,
+    ])
+  })
 })

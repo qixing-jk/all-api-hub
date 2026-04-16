@@ -18,10 +18,14 @@ function hasAccountLoadingCompleted(
   accounts: DisplaySiteData[],
   accountQueryStates: AccountQueryStateLike[],
 ) {
-  return (
-    accounts.length > 0 &&
-    accountQueryStates.length === accounts.length &&
-    accountQueryStates.every((state) => !state.isLoading)
+  if (accounts.length === 0) {
+    return false
+  }
+
+  return accounts.every((account) =>
+    accountQueryStates.some(
+      (state) => state.account.id === account.id && !state.isLoading,
+    ),
   )
 }
 
