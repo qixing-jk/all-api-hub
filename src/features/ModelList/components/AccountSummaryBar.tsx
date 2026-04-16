@@ -17,6 +17,11 @@ interface AccountSummaryBarProps {
   onAccountClick?: (accountId: string) => void
 }
 
+interface StatusPresentation {
+  label: string
+  className: string
+}
+
 /**
  * Shows clickable badges summarizing model counts per account.
  * @param props Component props.
@@ -37,32 +42,34 @@ export function AccountSummaryBar({
     return null
   }
 
-  const renderStatus = (item: AccountSummaryItem) => {
+  const getStatusPresentation = (
+    item: AccountSummaryItem,
+  ): StatusPresentation => {
     if (item.isLoading) {
-      return t("accountSummary.loading")
+      return {
+        label: t("accountSummary.loading"),
+        className: "text-amber-600 dark:text-amber-300",
+      }
     }
 
     if (item.errorType === "load-failed") {
-      return t("accountSummary.loadFailed")
+      return {
+        label: t("accountSummary.loadFailed"),
+        className: "text-red-500 dark:text-red-400",
+      }
     }
 
     if (item.errorType === "invalid-format") {
-      return t("accountSummary.incompatible")
+      return {
+        label: t("accountSummary.incompatible"),
+        className: "text-red-500 dark:text-red-400",
+      }
     }
 
-    return t("accountSummary.models", { count: item.count })
-  }
-
-  const getStatusClassName = (item: AccountSummaryItem) => {
-    if (item.isLoading) {
-      return "text-amber-600 dark:text-amber-300"
+    return {
+      label: t("accountSummary.models", { count: item.count }),
+      className: "text-emerald-600 dark:text-emerald-400",
     }
-
-    if (item.errorType) {
-      return "text-red-500 dark:text-red-400"
-    }
-
-    return "text-emerald-600 dark:text-emerald-400"
   }
 
   return (
@@ -73,22 +80,28 @@ export function AccountSummaryBar({
             {t("accountSummary.title")}
           </div>
           <div className="flex flex-wrap gap-2">
-            {items.map((item) => (
-              <Badge
-                key={item.accountId}
-                variant={
-                  activeAccountIdSet.has(item.accountId) ? "info" : "secondary"
-                }
-                size="default"
-                className="cursor-pointer"
-                onClick={() => onAccountClick?.(item.accountId)}
-              >
-                <span className="truncate font-medium">{item.name}</span>
-                <span className={cn("ml-2", getStatusClassName(item))}>
-                  {renderStatus(item)}
-                </span>
-              </Badge>
-            ))}
+            {items.map((item) => {
+              const statusPresentation = getStatusPresentation(item)
+
+              return (
+                <Badge
+                  key={item.accountId}
+                  variant={
+                    activeAccountIdSet.has(item.accountId)
+                      ? "info"
+                      : "secondary"
+                  }
+                  size="default"
+                  className="cursor-pointer"
+                  onClick={() => onAccountClick?.(item.accountId)}
+                >
+                  <span className="truncate font-medium">{item.name}</span>
+                  <span className={cn("ml-2", statusPresentation.className)}>
+                    {statusPresentation.label}
+                  </span>
+                </Badge>
+              )
+            })}
           </div>
         </div>
       </CardContent>

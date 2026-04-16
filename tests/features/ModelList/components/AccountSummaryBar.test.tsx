@@ -87,8 +87,7 @@ describe("AccountSummaryBar", () => {
       "text-amber-600",
       "dark:text-amber-300",
     )
-    expect(screen.queryByText(/0 model/i)).toBeNull()
-    expect(screen.queryByText(/0 models/i)).toBeNull()
+    expect(screen.queryByText("accountSummary.models")).toBeNull()
   })
 
   it("shows only the error label when an account load fails", () => {
@@ -110,7 +109,6 @@ describe("AccountSummaryBar", () => {
       "text-red-500",
       "dark:text-red-400",
     )
-    expect(screen.queryByText(/0 model/i)).toBeNull()
-    expect(screen.queryByText(/0 models/i)).toBeNull()
+    expect(screen.queryByText("accountSummary.models")).toBeNull()
   })
 })
