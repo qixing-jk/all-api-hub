@@ -5,7 +5,7 @@ import "~/styles/style.css"
 
 import { ApiCheckModalHost } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import type { ResolvedTheme, ThemeMode } from "~/types/theme"
+import type { ResolvedTheme } from "~/types/theme"
 import { createLogger } from "~/utils/core/logger"
 
 import { RedemptionToaster } from "../redemptionAssist/components/RedemptionToaster"
@@ -16,34 +16,40 @@ import { RedemptionToaster } from "../redemptionAssist/components/RedemptionToas
 const logger = createLogger("ContentReactRoot")
 
 export const ContentReactRoot: React.FC = () => {
-  const [themeMode, setThemeMode] = useState<ThemeMode>("system")
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light")
-  const [hasLoadedThemePreferences, setHasLoadedThemePreferences] =
-    useState(false)
 
   useEffect(() => {
     let active = true
+    let removeSystemThemeListener: (() => void) | undefined
 
     const loadPreferences = async () => {
       try {
         const prefs = await userPreferences.getPreferences()
         if (!active) return
         const mode = prefs.themeMode ?? "system"
-        setThemeMode(mode)
         if (mode === "system") {
-          const isDark = window.matchMedia(
-            "(prefers-color-scheme: dark)",
-          ).matches
-          setResolvedTheme(isDark ? "dark" : "light")
+          const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
+
+          const syncResolvedTheme = (isDark: boolean) => {
+            if (!active) return
+            setResolvedTheme(isDark ? "dark" : "light")
+          }
+
+          const handleChange = (event: MediaQueryListEvent) => {
+            syncResolvedTheme(event.matches)
+          }
+
+          mediaQuery.addEventListener("change", handleChange)
+          removeSystemThemeListener = () => {
+            mediaQuery.removeEventListener("change", handleChange)
+          }
+
+          syncResolvedTheme(mediaQuery.matches)
         } else {
           setResolvedTheme(mode)
         }
       } catch (error) {
         logger.warn("Failed to load theme preferences", error)
-      } finally {
-        if (active) {
-          setHasLoadedThemePreferences(true)
-        }
       }
     }
 
@@ -51,26 +57,9 @@ export const ContentReactRoot: React.FC = () => {
 
     return () => {
       active = false
+      removeSystemThemeListener?.()
     }
   }, [])
-
-  useEffect(() => {
-    if (!hasLoadedThemePreferences || themeMode !== "system") {
-      return
-    }
-
-    const mediaQuery = window.matchMedia("(prefers-color-scheme: dark)")
-
-    const handleChange = (event: MediaQueryListEvent) => {
-      setResolvedTheme(event.matches ? "dark" : "light")
-    }
-
-    mediaQuery.addEventListener("change", handleChange)
-
-    return () => {
-      mediaQuery.removeEventListener("change", handleChange)
-    }
-  }, [hasLoadedThemePreferences, themeMode])
 
   const wrapperClassName =
     resolvedTheme === "dark" ? "dark text-foreground bg-background" : ""
