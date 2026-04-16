@@ -176,7 +176,9 @@ function comparePriceKeys(
 }
 
 /** Creates a stable identifier for a calculated model item. */
-function getModelItemKey(item: Pick<CalculatedModelItem, "model" | "source">) {
+export function getModelItemKey(
+  item: Pick<CalculatedModelItem, "model" | "source">,
+) {
   const sourceId =
     item.source.kind === "account"
       ? item.source.account.id

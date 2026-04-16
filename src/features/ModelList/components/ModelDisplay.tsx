@@ -5,7 +5,10 @@ import { Virtuoso } from "react-virtuoso"
 
 import { EmptyState } from "~/components/ui"
 import { UI_CONSTANTS } from "~/constants/ui"
-import type { CalculatedModelItem } from "~/features/ModelList/hooks/useFilteredModels"
+import {
+  getModelItemKey,
+  type CalculatedModelItem,
+} from "~/features/ModelList/hooks/useFilteredModels"
 import type {
   ModelManagementItemSource,
   ModelManagementSourceCapabilities,
@@ -43,18 +46,6 @@ interface ModelDisplayProps {
   displayCapabilities?: ModelManagementSourceCapabilities
   onFilterAccount?: (accountId: string) => void
 }
-
-/**
- * Builds a stable identity for a model row across refreshes and reordering.
- */
-function getModelItemKey(item: CalculatedModelItem) {
-  const source = item.source as ModelManagementItemSource
-  const sourceKey =
-    source.kind === "profile" ? source.profile.id : source.account.id
-
-  return `${source.kind}:${sourceKey}:${item.model.model_name}`
-}
-
 /**
  * Virtualized list displaying model cards with pricing and availability data.
  * @param props Component props describing the rendered model list.

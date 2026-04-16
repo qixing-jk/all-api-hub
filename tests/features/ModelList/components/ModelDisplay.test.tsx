@@ -436,4 +436,89 @@ describe("ModelDisplay", () => {
       screen.getByRole("button", { name: "toggle-gpt-4o-mini" }),
     ).toBeInTheDocument()
   })
+
+  it("clears expanded state when a model is removed and later re-added", async () => {
+    const user = userEvent.setup()
+    const initialModels = [
+      createCalculatedModel({}),
+      createCalculatedModel({
+        model: {
+          model_name: "gemini-1.5-pro",
+          enable_groups: ["default"],
+        },
+      }),
+    ]
+    const modelsWithoutExpandedRow = [
+      createCalculatedModel({
+        model: {
+          model_name: "gemini-1.5-pro",
+          enable_groups: ["default"],
+        },
+      }),
+    ]
+    const readdedModels = [
+      createCalculatedModel({
+        calculatedPrice: {
+          inputUSD: 4,
+        },
+      }),
+      createCalculatedModel({
+        model: {
+          model_name: "gemini-1.5-pro",
+          enable_groups: ["default"],
+        },
+      }),
+    ]
+
+    const { rerender } = render(
+      <ModelDisplay
+        models={initialModels}
+        verificationSummariesByKey={{}}
+        showRealPrice={true}
+        showRatioColumn={true}
+        showEndpointTypes={true}
+        selectedGroups={[]}
+        handleGroupClick={vi.fn()}
+        availableGroups={["default", "vip"]}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "toggle-gpt-4o-mini" }))
+
+    expect(getRenderedModelItem("gpt-4o-mini")).toHaveAttribute(
+      "data-expanded",
+      "true",
+    )
+
+    rerender(
+      <ModelDisplay
+        models={modelsWithoutExpandedRow}
+        verificationSummariesByKey={{}}
+        showRealPrice={true}
+        showRatioColumn={true}
+        showEndpointTypes={true}
+        selectedGroups={[]}
+        handleGroupClick={vi.fn()}
+        availableGroups={["default", "vip"]}
+      />,
+    )
+
+    rerender(
+      <ModelDisplay
+        models={readdedModels}
+        verificationSummariesByKey={{}}
+        showRealPrice={true}
+        showRatioColumn={true}
+        showEndpointTypes={true}
+        selectedGroups={[]}
+        handleGroupClick={vi.fn()}
+        availableGroups={["default", "vip"]}
+      />,
+    )
+
+    expect(getRenderedModelItem("gpt-4o-mini")).toHaveAttribute(
+      "data-expanded",
+      "false",
+    )
+  })
 })

@@ -1,4 +1,4 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -10,6 +10,7 @@ import type {
 import type { ModelPricing } from "~/services/apiService/common/type"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
+import { createLogger } from "~/utils/core/logger"
 import { tryParseUrl } from "~/utils/core/urlParsing"
 
 import { ModelItemDescription } from "./ModelItemDescription"
@@ -17,6 +18,8 @@ import { ModelItemDetails } from "./ModelItemDetails"
 import { ModelItemExpandButton } from "./ModelItemExpandButton"
 import { ModelItemHeader } from "./ModelItemHeader"
 import { ModelItemPricing } from "./ModelItemPricing"
+
+const logger = createLogger("ModelItem")
 
 interface ModelItemProps {
   model: ModelPricing
@@ -81,11 +84,30 @@ export default function ModelItem(props: ModelItemProps) {
   } = props
   const { t } = useTranslation("modelList")
   const [uncontrolledIsExpanded, setUncontrolledIsExpanded] = useState(false)
+  const isExpansionControlled =
+    controlledIsExpanded !== undefined && onToggleExpand !== undefined
+  const hasExpansionPropMismatch =
+    (controlledIsExpanded !== undefined) !== (onToggleExpand !== undefined)
+  const isExpanded = isExpansionControlled
+    ? controlledIsExpanded
+    : uncontrolledIsExpanded
 
-  const isExpanded = controlledIsExpanded ?? uncontrolledIsExpanded
+  useEffect(() => {
+    if (!hasExpansionPropMismatch || process.env.NODE_ENV === "production") {
+      return
+    }
+
+    logger.warn(
+      "ModelItem expects isExpanded and onToggleExpand to be provided together. Falling back to uncontrolled expansion state.",
+      {
+        controlledIsExpandedProvided: controlledIsExpanded !== undefined,
+        onToggleExpandProvided: onToggleExpand !== undefined,
+      },
+    )
+  }, [controlledIsExpanded, hasExpansionPropMismatch, onToggleExpand])
 
   const handleToggleExpand = () => {
-    if (onToggleExpand) {
+    if (isExpansionControlled) {
       onToggleExpand()
       return
     }
