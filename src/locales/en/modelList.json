@@ -2,8 +2,6 @@
   "accountGroupFilterAllIncluded": "Include all groups for this account",
   "accountGroupFilterClearAll": "Clear all",
   "accountGroupFilterDescription": "Exclude account-specific groups from price comparison. By default, every account keeps all of its own available groups.",
-  "accountGroupFilterHint": "Right-click the selector or use the filter button",
-  "accountGroupFilterInlineDescription": "Account groups are filtered independently per account. Matching names do not link across accounts.",
   "accountGroupFilterNoGroups": "No account groups are available to filter right now.",
   "accountGroupFilterResetAll": "Reset all",
   "accountGroupFilterSelectAll": "Select all",
@@ -12,7 +10,6 @@
   "accountGroupFilterTrigger": "Filter Account Groups",
   "accountGroupFilterTriggerCount_one": "accountGroupFilterTriggerCount",
   "accountGroupFilterTriggerCount_other": "accountGroupFilterTriggerCount",
-  "accountGroupFilterTriggerTooltip": "Only applies in All Accounts mode. Exclude per-account groups from comparison.",
   "accountSummary": {
     "incompatible": "format incompatible",
     "loadFailed": "load failed",

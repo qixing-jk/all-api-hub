@@ -2,8 +2,6 @@
   "accountGroupFilterAllIncluded": "このアカウントの全グループを対象にする",
   "accountGroupFilterClearAll": "すべて解除",
   "accountGroupFilterDescription": "価格比較から、各アカウント固有のグループを除外できます。初期状態では各アカウントの利用可能グループをすべて含みます。",
-  "accountGroupFilterHint": "セレクターを右クリックするか、フィルターボタンを使ってください",
-  "accountGroupFilterInlineDescription": "アカウントのグループはアカウントごとに独立して絞り込まれます。同名でも相互には連動しません。",
   "accountGroupFilterNoGroups": "現在、絞り込めるアカウントグループはありません。",
   "accountGroupFilterResetAll": "すべてリセット",
   "accountGroupFilterSelectAll": "すべて選択",
@@ -11,7 +9,6 @@
   "accountGroupFilterTitle": "アカウントグループ絞り込み",
   "accountGroupFilterTrigger": "アカウントグループを絞り込む",
   "accountGroupFilterTriggerCount_other": "accountGroupFilterTriggerCount",
-  "accountGroupFilterTriggerTooltip": "「すべてのアカウント」モードでのみ有効です。アカウントごとのグループを比較対象から除外できます。",
   "accountSummary": {
     "incompatible": "形式非互換",
     "loadFailed": "読み込み失敗",

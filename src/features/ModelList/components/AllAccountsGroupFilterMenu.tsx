@@ -2,7 +2,6 @@ import { FunnelIcon } from "@heroicons/react/24/outline"
 import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
-import Tooltip from "~/components/Tooltip"
 import { Badge, Button, CompactMultiSelect } from "~/components/ui"
 import {
   Popover,
@@ -157,43 +156,26 @@ export function AllAccountsGroupFilterMenu({
 
   return (
     <Popover open={open} onOpenChange={onOpenChange}>
-      <Tooltip
-        content={t("accountGroupFilterTriggerTooltip")}
-        wrapperClassName="justify-start"
-      >
-        <PopoverTrigger asChild>
-          <Button
-            type="button"
-            variant={totalExcludedGroups > 0 ? "secondary" : "outline"}
-            size="sm"
-            aria-label={t("accountGroupFilterTrigger")}
-            className={cn(
-              "relative w-full justify-between sm:w-auto",
-              totalExcludedGroups === 0 &&
-                "border-blue-200 text-blue-700 hover:border-blue-300 hover:text-blue-800 dark:border-blue-500/40 dark:text-blue-300 dark:hover:border-blue-400",
-            )}
-          >
-            <span className="flex items-center gap-2">
-              <FunnelIcon className="h-4 w-4" />
-              <span>{t("accountGroupFilterTrigger")}</span>
-            </span>
-            <span className="flex items-center gap-2">
-              {activeFilteredAccountCount > 0 ? (
-                <Badge variant="info" size="sm">
-                  {t("accountGroupFilterTriggerCount", {
-                    count: activeFilteredAccountCount,
-                  })}
-                </Badge>
-              ) : (
-                <span className="relative inline-flex h-2.5 w-2.5">
-                  <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-blue-400 opacity-75" />
-                  <span className="relative inline-flex h-2.5 w-2.5 rounded-full bg-blue-500" />
-                </span>
-              )}
-            </span>
-          </Button>
-        </PopoverTrigger>
-      </Tooltip>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant={totalExcludedGroups > 0 ? "secondary" : "outline"}
+          aria-label={t("accountGroupFilterTrigger")}
+          className={cn("w-full justify-between px-3 sm:w-56")}
+        >
+          <span className="flex items-center gap-2">
+            <FunnelIcon className="h-4 w-4" />
+            <span>{t("accountGroupFilterTrigger")}</span>
+          </span>
+          {activeFilteredAccountCount > 0 ? (
+            <Badge variant="info" size="sm">
+              {t("accountGroupFilterTriggerCount", {
+                count: activeFilteredAccountCount,
+              })}
+            </Badge>
+          ) : null}
+        </Button>
+      </PopoverTrigger>
 
       <PopoverContent
         align="end"

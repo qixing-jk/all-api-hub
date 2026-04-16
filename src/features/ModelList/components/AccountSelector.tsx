@@ -1,4 +1,4 @@
-import type { MouseEvent, Ref } from "react"
+import type { Ref } from "react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -67,27 +67,13 @@ export function AccountSelector({
   const [isAccountGroupFilterOpen, setIsAccountGroupFilterOpen] =
     useState(false)
 
-  const handleSelectorContextMenu = (event: MouseEvent<HTMLDivElement>) => {
-    if (!showAllAccountsGroupFilter) {
-      return
-    }
-
-    event.preventDefault()
-    setIsAccountGroupFilterOpen(true)
-  }
-
   return (
-    <div className="mb-6" onContextMenu={handleSelectorContextMenu}>
+    <div className="mb-6">
       <div className="mb-3 flex flex-wrap items-center gap-2">
         <Heading3 className="mb-0">{t("selectSource")}</Heading3>
-        {showAllAccountsGroupFilter && (
-          <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs text-blue-700 dark:bg-blue-500/10 dark:text-blue-300">
-            {t("accountGroupFilterHint")}
-          </span>
-        )}
       </div>
 
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-start">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-stretch">
         <div className="min-w-0 flex-1">
           <SearchableSelect
             ref={selectorTriggerRef}
@@ -138,12 +124,6 @@ export function AccountSelector({
             />
           )}
       </div>
-
-      {showAllAccountsGroupFilter && (
-        <p className="mt-2 text-xs text-gray-500 dark:text-gray-400">
-          {t("accountGroupFilterInlineDescription")}
-        </p>
-      )}
     </div>
   )
 }

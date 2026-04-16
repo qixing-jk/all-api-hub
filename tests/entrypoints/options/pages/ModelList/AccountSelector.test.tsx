@@ -14,8 +14,6 @@ describe("AccountSelector", () => {
         allAccounts: "All accounts",
         pleaseSelectSource: "Please select a source",
         accountGroupFilterTrigger: "Filter Account Groups",
-        accountGroupFilterTriggerTooltip: "Filter tooltip",
-        accountGroupFilterHint: "Use the filter",
         accountGroupFilterTitle: "Account Group Filter",
         accountGroupFilterDescription: "Filter groups per account",
         accountGroupFilterResetAll: "Reset all",
@@ -23,7 +21,6 @@ describe("AccountSelector", () => {
         accountGroupFilterSelectAll: "Select all",
         accountGroupFilterClearAll: "Clear all",
         accountGroupFilterAllIncluded: "Include all groups",
-        accountGroupFilterInlineDescription: "Account groups stay independent",
         sourceLabels: {
           profileOption: "API Credential: {{name}} · {{host}}",
         },

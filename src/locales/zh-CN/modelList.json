@@ -2,8 +2,6 @@
   "accountGroupFilterAllIncluded": "保留该账号的全部分组",
   "accountGroupFilterClearAll": "清空",
   "accountGroupFilterDescription": "按账号分别排除不参与比价的分组；默认会保留每个账号自己的全部可用分组。",
-  "accountGroupFilterHint": "右键选择器或点击筛选按钮",
-  "accountGroupFilterInlineDescription": "账号分组会分别作用于各自账号，不会因为组名相同而跨账号联动。",
   "accountGroupFilterNoGroups": "当前没有可筛选的账号分组。",
   "accountGroupFilterResetAll": "恢复全部",
   "accountGroupFilterSelectAll": "全选",
@@ -11,7 +9,6 @@
   "accountGroupFilterTitle": "账号分组筛选",
   "accountGroupFilterTrigger": "筛选账号分组",
   "accountGroupFilterTriggerCount": "{{count}} 个账号",
-  "accountGroupFilterTriggerTooltip": "只在“所有账号”模式生效，可按账号分别排除不参与比价的分组",
   "accountSummary": {
     "incompatible": "格式不兼容",
     "loadFailed": "加载失败",
