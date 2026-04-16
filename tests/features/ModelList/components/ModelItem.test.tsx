@@ -158,8 +158,12 @@ describe("ModelItem", () => {
       />,
     )
 
-    expect(screen.queryByText("clickSwitchGroup:default")).toBeNull()
-    expect(screen.queryByText("availableGroups: vip")).toBeNull()
+    expect(
+      screen.queryByText("clickSwitchGroup:default (1x)"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("availableGroups: vip (1x)"),
+    ).not.toBeInTheDocument()
   })
 
   it("uses internal expansion state when expansion props are omitted", async () => {

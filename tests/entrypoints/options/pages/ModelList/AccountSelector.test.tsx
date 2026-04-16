@@ -14,8 +14,12 @@ describe("AccountSelector", () => {
         allAccounts: "All accounts",
         pleaseSelectSource: "Please select a source",
         accountGroupFilterTrigger: "Filter Account Groups",
+        accountGroupFilterTriggerCount_one: "{{count}} account filtered",
+        accountGroupFilterTriggerCount_other: "{{count}} accounts filtered",
         accountGroupFilterTitle: "Account Group Filter",
         accountGroupFilterDescription: "Filter groups per account",
+        accountGroupFilterNoGroupsIncluded:
+          "No groups are included for this account",
         accountGroupFilterResetAll: "Reset all",
         accountGroupFilterSelectedSummary: "{{selected}} / {{total}}",
         accountGroupFilterSelectAll: "Select all",
@@ -164,5 +168,73 @@ describe("AccountSelector", () => {
 
     expect(await screen.findByText("vip (2x)")).toBeInTheDocument()
     expect(screen.getByText("default (1x)")).toBeInTheDocument()
+  })
+
+  it("does not count stale excluded groups in the all-accounts filter badge", async () => {
+    render(
+      <AccountSelector
+        selectedSourceValue="all"
+        setSelectedSourceValue={vi.fn()}
+        accounts={[
+          {
+            id: "account-1",
+            name: "Primary Account",
+          } as any,
+        ]}
+        profiles={[]}
+        showAllAccountsGroupFilter={true}
+        availableAccountGroupsByAccountId={{
+          "account-1": ["default"],
+        }}
+        availableAccountGroupOptionsByAccountId={{
+          "account-1": [{ name: "default", ratio: 1 }],
+        }}
+        allAccountsExcludedGroupsByAccountId={{
+          "account-1": ["stale-group"],
+        }}
+        setAllAccountsExcludedGroupsByAccountId={vi.fn()}
+      />,
+    )
+
+    expect(screen.queryByText("1 account filtered")).not.toBeInTheDocument()
+  })
+
+  it("shows an empty-selection placeholder when an account excludes all groups", async () => {
+    render(
+      <AccountSelector
+        selectedSourceValue="all"
+        setSelectedSourceValue={vi.fn()}
+        accounts={[
+          {
+            id: "account-1",
+            name: "Primary Account",
+          } as any,
+        ]}
+        profiles={[]}
+        showAllAccountsGroupFilter={true}
+        availableAccountGroupsByAccountId={{
+          "account-1": ["vip", "default"],
+        }}
+        availableAccountGroupOptionsByAccountId={{
+          "account-1": [
+            { name: "vip", ratio: 2 },
+            { name: "default", ratio: 1 },
+          ],
+        }}
+        allAccountsExcludedGroupsByAccountId={{
+          "account-1": ["vip", "default"],
+        }}
+        setAllAccountsExcludedGroupsByAccountId={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Filter Account Groups" }),
+    )
+
+    const comboboxes = await screen.findAllByRole("combobox")
+    expect(comboboxes[1]).toHaveTextContent(
+      "No groups are included for this account",
+    )
   })
 })

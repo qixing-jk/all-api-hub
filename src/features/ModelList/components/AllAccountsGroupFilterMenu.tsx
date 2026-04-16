@@ -73,11 +73,11 @@ export function AllAccountsGroupFilterMenu({
   const activeFilteredAccountCount = useMemo(
     () =>
       accountSections.filter(({ accountId, groups }) => {
-        const excluded = toUniqueGroups(
+        const effectiveExcludedGroups = toUniqueGroups(
           excludedGroupsByAccountId[accountId] ?? [],
-        )
+        ).filter((group) => groups.includes(group))
 
-        return excluded.length > 0 && groups.length > 0
+        return effectiveExcludedGroups.length > 0
       }).length,
     [accountSections, excludedGroupsByAccountId],
   )
@@ -268,7 +268,11 @@ export function AllAccountsGroupFilterMenu({
                         handleAccountSelectionChange(accountId, values)
                       }
                       displayMode="summary"
-                      placeholder={t("accountGroupFilterAllIncluded")}
+                      placeholder={t(
+                        selectedGroups.length === 0
+                          ? "accountGroupFilterNoGroupsIncluded"
+                          : "accountGroupFilterAllIncluded",
+                      )}
                     />
                   </section>
                 )

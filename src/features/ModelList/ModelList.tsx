@@ -128,8 +128,12 @@ export default function ModelList(props: {
     setSelectedGroups([group])
   }
 
-  const displaySelectedGroups =
-    selectedSource?.kind === "all-accounts" ? [] : selectedGroups
+  const isAllAccountsScope = selectedSource?.kind === "all-accounts"
+  const displaySelectedGroups = isAllAccountsScope ? [] : selectedGroups
+  const modelDisplayGroupSelectionScope = isAllAccountsScope
+    ? "all-accounts"
+    : "single-source"
+  const isModelGroupSelectionInteractive = !isAllAccountsScope
 
   const handleAccountSummaryClick = (accountId: string) => {
     setAllAccountsFilterAccountIds((currentAccountIds) =>
@@ -306,7 +310,7 @@ export default function ModelList(props: {
         setSelectedSourceValue={setSelectedSourceValue}
         accounts={sortedAccounts}
         profiles={profiles}
-        showAllAccountsGroupFilter={selectedSource?.kind === "all-accounts"}
+        showAllAccountsGroupFilter={isAllAccountsScope}
         availableAccountGroupsByAccountId={availableAccountGroupsByAccountId}
         availableAccountGroupOptionsByAccountId={
           availableAccountGroupOptionsByAccountId
@@ -484,14 +488,8 @@ export default function ModelList(props: {
                   selectedGroups={displaySelectedGroups}
                   handleGroupClick={handleGroupClick}
                   availableGroups={availableGroups}
-                  groupSelectionScope={
-                    selectedSource?.kind === "all-accounts"
-                      ? "all-accounts"
-                      : "single-source"
-                  }
-                  isGroupSelectionInteractive={
-                    selectedSource?.kind !== "all-accounts"
-                  }
+                  groupSelectionScope={modelDisplayGroupSelectionScope}
+                  isGroupSelectionInteractive={isModelGroupSelectionInteractive}
                   displayCapabilities={sourceCapabilities}
                 />
               </Tab.Panel>
@@ -514,13 +512,9 @@ export default function ModelList(props: {
                     selectedGroups={displaySelectedGroups}
                     handleGroupClick={handleGroupClick}
                     availableGroups={availableGroups}
-                    groupSelectionScope={
-                      selectedSource?.kind === "all-accounts"
-                        ? "all-accounts"
-                        : "single-source"
-                    }
+                    groupSelectionScope={modelDisplayGroupSelectionScope}
                     isGroupSelectionInteractive={
-                      selectedSource?.kind !== "all-accounts"
+                      isModelGroupSelectionInteractive
                     }
                     displayCapabilities={sourceCapabilities}
                   />

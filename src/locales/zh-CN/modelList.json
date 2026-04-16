@@ -3,6 +3,7 @@
   "accountGroupFilterClearAll": "清空",
   "accountGroupFilterDescription": "按账号分别排除不参与比价的分组；默认会保留每个账号自己的全部可用分组。",
   "accountGroupFilterNoGroups": "当前没有可筛选的账号分组。",
+  "accountGroupFilterNoGroupsIncluded": "该账号当前未保留任何分组",
   "accountGroupFilterResetAll": "恢复全部",
   "accountGroupFilterSelectAll": "全选",
   "accountGroupFilterSelectedSummary": "已选 {{selected}} / {{total}}",
