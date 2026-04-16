@@ -11,7 +11,7 @@ interface AccountSummaryItem {
 
 interface AccountSummaryBarProps {
   items: AccountSummaryItem[]
-  activeAccountId?: string | null
+  activeAccountIds?: string[]
   onAccountClick?: (accountId: string) => void
 }
 
@@ -19,16 +19,17 @@ interface AccountSummaryBarProps {
  * Shows clickable badges summarizing model counts per account.
  * @param props Component props.
  * @param props.items Accounts with model counts and error states.
- * @param props.activeAccountId Currently highlighted account id.
+ * @param props.activeAccountIds Currently highlighted account ids.
  * @param props.onAccountClick Callback when a badge is clicked.
  * @returns Card containing account summary badges or null when empty.
  */
 export function AccountSummaryBar({
   items,
-  activeAccountId,
+  activeAccountIds = [],
   onAccountClick,
 }: AccountSummaryBarProps) {
   const { t } = useTranslation("modelList")
+  const activeAccountIdSet = new Set(activeAccountIds)
 
   if (!items || items.length === 0) {
     return null
@@ -46,9 +47,7 @@ export function AccountSummaryBar({
               <Badge
                 key={item.accountId}
                 variant={
-                  activeAccountId && activeAccountId === item.accountId
-                    ? "info"
-                    : "secondary"
+                  activeAccountIdSet.has(item.accountId) ? "info" : "secondary"
                 }
                 size="default"
                 className="cursor-pointer"

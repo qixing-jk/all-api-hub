@@ -102,7 +102,7 @@ describe("useFilteredModels", () => {
     const { result } = renderUseFilteredModels({
       pricingData: createPricingResponse(["gpt-4o-mini"]),
       selectedSource: profileSource,
-      accountFilterAccountId: "account-1",
+      accountFilterAccountIds: ["account-1"],
     })
 
     await waitFor(() => expect(result.current).not.toBeNull())
@@ -137,7 +137,7 @@ describe("useFilteredModels", () => {
         },
       ],
       selectedSource: createAllAccountsSource(),
-      accountFilterAccountId: "account-a",
+      accountFilterAccountIds: ["account-a"],
     })
 
     await waitFor(() => expect(result.current).not.toBeNull())
@@ -147,6 +147,59 @@ describe("useFilteredModels", () => {
     expect(result.current.getProviderFilteredCount("OpenAI")).toBe(1)
     expect(result.current.getProviderFilteredCount("Claude")).toBe(1)
     expect(result.current.getProviderFilteredCount("Gemini")).toBe(0)
+  })
+
+  it("keeps rows from every selected account when multiple account filters are active", async () => {
+    const accountA = createDisplayAccount({
+      id: "account-a",
+      name: "Account A",
+      baseUrl: "https://a.example.com",
+      userId: 1,
+    })
+    const accountB = createDisplayAccount({
+      id: "account-b",
+      name: "Account B",
+      baseUrl: "https://b.example.com",
+      userId: 2,
+    })
+    const accountC = createDisplayAccount({
+      id: "account-c",
+      name: "Account C",
+      baseUrl: "https://c.example.com",
+      userId: 3,
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: accountA,
+          pricing: createPricingResponse(["gpt-4o-mini"]),
+        },
+        {
+          account: accountB,
+          pricing: createPricingResponse(["claude-3-5-sonnet"]),
+        },
+        {
+          account: accountC,
+          pricing: createPricingResponse(["gemini-1.5-pro"]),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      accountFilterAccountIds: ["account-a", "account-c"],
+    })
+
+    await waitFor(() => expect(result.current.filteredModels).toHaveLength(2))
+
+    expect(
+      result.current.filteredModels.map((item) =>
+        item.source.kind === "account" ? item.source.account.id : "profile",
+      ),
+    ).toEqual(["account-a", "account-c"])
+    expect(
+      result.current.accountSummaryBaseModels.map((item) =>
+        item.source.kind === "account" ? item.source.account.id : "profile",
+      ),
+    ).toEqual(["account-a", "account-b", "account-c"])
   })
 
   it("applies single-account group pricing and exposes available account groups", async () => {

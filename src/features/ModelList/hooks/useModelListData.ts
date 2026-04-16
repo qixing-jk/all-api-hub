@@ -43,8 +43,8 @@ export function useModelListData(routeParams?: Record<string, string>) {
     sortMode,
     setSortMode,
     showRealPrice,
-    allAccountsFilterAccountId,
-    setAllAccountsFilterAccountId,
+    allAccountsFilterAccountIds,
+    setAllAccountsFilterAccountIds,
   } = state
 
   const routeSelectedSourceValue = useMemo(() => {
@@ -125,12 +125,12 @@ export function useModelListData(routeParams?: Record<string, string>) {
 
   useEffect(() => {
     if (selectedSource?.kind === "all-accounts") return
-    if (allAccountsFilterAccountId === null) return
-    setAllAccountsFilterAccountId(null)
+    if (allAccountsFilterAccountIds.length === 0) return
+    setAllAccountsFilterAccountIds([])
   }, [
-    allAccountsFilterAccountId,
+    allAccountsFilterAccountIds,
     selectedSource?.kind,
-    setAllAccountsFilterAccountId,
+    setAllAccountsFilterAccountIds,
   ])
 
   const currentAccount = useMemo(
@@ -194,7 +194,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
     selectedProvider,
     sortMode,
     showRealPrice,
-    accountFilterAccountId: allAccountsFilterAccountId,
+    accountFilterAccountIds: allAccountsFilterAccountIds,
   })
 
   return {

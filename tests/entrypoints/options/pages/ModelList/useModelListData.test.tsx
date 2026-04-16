@@ -322,6 +322,36 @@ describe("useModelListData", () => {
     })
   })
 
+  it("clears the all-accounts account filter when leaving the all-accounts view", async () => {
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue("all")
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe("all-accounts")
+    })
+
+    act(() => {
+      result.current.setAllAccountsFilterAccountIds(["acc-1"])
+    })
+
+    expect(result.current.allAccountsFilterAccountIds).toEqual(["acc-1"])
+
+    act(() => {
+      result.current.setSelectedSourceValue("account:acc-1")
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe("account")
+    })
+
+    await waitFor(() => {
+      expect(result.current.allAccountsFilterAccountIds).toEqual([])
+    })
+  })
+
   it("resets price sorting when the selected source cannot provide pricing", async () => {
     mockUseModelData.mockReturnValue({
       pricingData: {

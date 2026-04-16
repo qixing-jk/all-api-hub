@@ -140,13 +140,14 @@ function buildState(overrides: Record<string, unknown> = {}) {
     accountFallback: null,
     isFallbackCatalogActive: false,
     filteredModels: [],
+    accountSummaryBaseModels: [],
     baseFilteredModels: [],
     availableGroups: [],
     loadPricingData: vi.fn(),
     getProviderFilteredCount: vi.fn(() => 0),
     accountQueryStates: [],
-    allAccountsFilterAccountId: null,
-    setAllAccountsFilterAccountId: vi.fn(),
+    allAccountsFilterAccountIds: [],
+    setAllAccountsFilterAccountIds: vi.fn(),
     ...overrides,
   }
 }

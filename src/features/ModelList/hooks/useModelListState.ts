@@ -29,9 +29,8 @@ export function useModelListState() {
   const [selectedBillingMode, setSelectedBillingMode] =
     useState<ModelListBillingMode>(MODEL_LIST_BILLING_MODES.ALL)
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]) // 当前选中的候选分组；空数组表示所有分组
-  const [allAccountsFilterAccountId, setAllAccountsFilterAccountId] = useState<
-    string | null
-  >(null) // 在"所有账号"模式下用于临时筛选特定账号
+  const [allAccountsFilterAccountIds, setAllAccountsFilterAccountIds] =
+    useState<string[]>([]) // 在"所有账号"模式下用于临时筛选一个或多个账号
 
   // 显示选项
   const [showRealPrice, setShowRealPrice] = useState(false) // 是否显示真实价格
@@ -51,8 +50,8 @@ export function useModelListState() {
     setSelectedBillingMode,
     selectedGroups,
     setSelectedGroups,
-    allAccountsFilterAccountId,
-    setAllAccountsFilterAccountId,
+    allAccountsFilterAccountIds,
+    setAllAccountsFilterAccountIds,
     showRealPrice,
     setShowRealPrice,
     showRatioColumn,

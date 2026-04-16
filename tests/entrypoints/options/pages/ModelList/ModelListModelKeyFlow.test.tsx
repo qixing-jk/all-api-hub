@@ -119,14 +119,15 @@ vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
     loadErrorMessage: null,
 
     filteredModels: [],
+    accountSummaryBaseModels: [],
     baseFilteredModels: [],
     availableGroups: [],
 
     loadPricingData: vi.fn(),
     getProviderFilteredCount: vi.fn(() => 0),
     accountQueryStates: [],
-    allAccountsFilterAccountId: null,
-    setAllAccountsFilterAccountId: vi.fn(),
+    allAccountsFilterAccountIds: [],
+    setAllAccountsFilterAccountIds: vi.fn(),
   })),
 }))
 

@@ -15,7 +15,7 @@ import { AuthTypeEnum } from "~/types"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const mockUseModelListData = vi.fn()
-const mockSetAllAccountsFilterAccountId = vi.fn()
+const mockSetAllAccountsFilterAccountIds = vi.fn()
 
 vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
   useModelListData: (...args: any[]) => mockUseModelListData(...args),
@@ -91,9 +91,12 @@ vi.mock("~/features/ModelList/components/StatusIndicator", () => ({
 }))
 
 vi.mock("~/features/ModelList/components/AccountSummaryBar", () => ({
-  AccountSummaryBar: ({ items, activeAccountId, onAccountClick }: any) => (
+  AccountSummaryBar: ({ items, activeAccountIds, onAccountClick }: any) => (
     <div>
-      <div>Account Summary Bar active:{activeAccountId ?? "none"}</div>
+      <div>
+        Account Summary Bar active:
+        {activeAccountIds?.length ? activeAccountIds.join(",") : "none"}
+      </div>
       {items.map((item: any) => (
         <button
           key={item.accountId}
@@ -280,6 +283,12 @@ function buildState(overrides: Record<string, any> = {}) {
         source: ACCOUNT_SOURCE,
       },
     ],
+    accountSummaryBaseModels: [
+      {
+        model: { model_name: "gpt-4" },
+        source: ACCOUNT_SOURCE,
+      },
+    ],
     baseFilteredModels: [
       {
         model: { model_name: "gpt-4" },
@@ -291,15 +300,15 @@ function buildState(overrides: Record<string, any> = {}) {
     loadPricingData: vi.fn(),
     getProviderFilteredCount: vi.fn(() => 0),
     accountQueryStates: [],
-    allAccountsFilterAccountId: null,
-    setAllAccountsFilterAccountId: mockSetAllAccountsFilterAccountId,
+    allAccountsFilterAccountIds: [],
+    setAllAccountsFilterAccountIds: mockSetAllAccountsFilterAccountIds,
     ...overrides,
   }
 }
 
 describe("ModelList page flows", () => {
   beforeEach(() => {
-    mockSetAllAccountsFilterAccountId.mockReset()
+    mockSetAllAccountsFilterAccountIds.mockReset()
     mockUseModelListData.mockReset()
   })
 
@@ -340,6 +349,20 @@ describe("ModelList page flows", () => {
         pricingData: null,
         pricingContexts: [{ accountId: ACCOUNT.id }],
         isFallbackCatalogActive: true,
+        accountSummaryBaseModels: [
+          {
+            model: { model_name: "gpt-4" },
+            source: createAccountSource(ACCOUNT),
+          },
+          {
+            model: { model_name: "claude-3-5-sonnet" },
+            source: createAccountSource(ACCOUNT),
+          },
+          {
+            model: { model_name: "gpt-4o-mini" },
+            source: createAccountSource(SECOND_ACCOUNT),
+          },
+        ],
         baseFilteredModels: [
           {
             model: { model_name: "gpt-4" },
@@ -376,7 +399,12 @@ describe("ModelList page flows", () => {
     await user.click(
       screen.getByRole("button", { name: "Summary Primary Account:2" }),
     )
-    expect(mockSetAllAccountsFilterAccountId).toHaveBeenCalledWith("acc-1")
+    expect(mockSetAllAccountsFilterAccountIds).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
+    expect(
+      mockSetAllAccountsFilterAccountIds.mock.calls.at(-1)?.[0]([]),
+    ).toEqual(["acc-1"])
 
     mockUseModelListData.mockReturnValue(
       buildState({
@@ -387,6 +415,20 @@ describe("ModelList page flows", () => {
         pricingData: null,
         pricingContexts: [{ accountId: ACCOUNT.id }],
         isFallbackCatalogActive: true,
+        accountSummaryBaseModels: [
+          {
+            model: { model_name: "gpt-4" },
+            source: createAccountSource(ACCOUNT),
+          },
+          {
+            model: { model_name: "claude-3-5-sonnet" },
+            source: createAccountSource(ACCOUNT),
+          },
+          {
+            model: { model_name: "gpt-4o-mini" },
+            source: createAccountSource(SECOND_ACCOUNT),
+          },
+        ],
         baseFilteredModels: [
           {
             model: { model_name: "gpt-4" },
@@ -394,7 +436,7 @@ describe("ModelList page flows", () => {
           },
         ],
         accountQueryStates: [{ account: ACCOUNT, errorType: null }],
-        allAccountsFilterAccountId: "acc-1",
+        allAccountsFilterAccountIds: ["acc-1"],
       }),
     )
 
@@ -405,9 +447,62 @@ describe("ModelList page flows", () => {
     ).toBeInTheDocument()
 
     await user.click(
-      screen.getByRole("button", { name: "Summary Primary Account:1" }),
+      screen.getByRole("button", { name: "Summary Primary Account:2" }),
     )
-    expect(mockSetAllAccountsFilterAccountId).toHaveBeenCalledWith(null)
+    expect(mockSetAllAccountsFilterAccountIds).toHaveBeenCalledTimes(2)
+    expect(
+      mockSetAllAccountsFilterAccountIds.mock.calls.at(-1)?.[0](["acc-1"]),
+    ).toEqual([])
+  })
+
+  it("keeps summary counts sourced from the pre-account-filter model set", async () => {
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        selectedSource: ALL_ACCOUNTS_SOURCE,
+        selectedSourceValue: ALL_ACCOUNTS_SOURCE.value,
+        currentAccount: null,
+        sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
+        pricingData: null,
+        pricingContexts: [{ accountId: ACCOUNT.id }],
+        allAccountsFilterAccountIds: ["acc-1"],
+        accountSummaryBaseModels: [
+          {
+            model: { model_name: "gpt-4" },
+            source: createAccountSource(ACCOUNT),
+          },
+          {
+            model: { model_name: "claude-3-5-sonnet" },
+            source: createAccountSource(ACCOUNT),
+          },
+          {
+            model: { model_name: "gpt-4o-mini" },
+            source: createAccountSource(SECOND_ACCOUNT),
+          },
+        ],
+        baseFilteredModels: [
+          {
+            model: { model_name: "gpt-4" },
+            source: createAccountSource(ACCOUNT),
+          },
+        ],
+        accountQueryStates: [
+          { account: ACCOUNT, errorType: null },
+          { account: SECOND_ACCOUNT, errorType: null },
+        ],
+      }),
+    )
+
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(
+      await screen.findByRole("button", { name: "Summary Primary Account:2" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Summary Backup Account:1" }),
+    ).toBeInTheDocument()
   })
 
   it("aggregates total model count from all account pricing contexts", async () => {
@@ -545,7 +640,12 @@ describe("ModelList page flows", () => {
       await screen.findByRole("button", { name: "Filter account" }),
     )
 
-    expect(mockSetAllAccountsFilterAccountId).toHaveBeenCalledWith(ACCOUNT.id)
+    expect(mockSetAllAccountsFilterAccountIds).toHaveBeenCalledWith(
+      expect.any(Function),
+    )
+    expect(
+      mockSetAllAccountsFilterAccountIds.mock.calls.at(-1)?.[0]([]),
+    ).toEqual([ACCOUNT.id])
   })
 
   it("does not expose row account filtering outside the all-accounts view", () => {
