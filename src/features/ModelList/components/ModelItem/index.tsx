@@ -25,6 +25,7 @@ interface ModelItemProps {
   showRealPrice: boolean
   showRatioColumn: boolean
   showEndpointTypes: boolean
+  groupRatios: Record<string, number>
   effectiveGroup?: string
   selectedGroups: string[]
   onGroupClick?: (group: string) => void
@@ -59,6 +60,7 @@ export default function ModelItem(props: ModelItemProps) {
     showRealPrice,
     showRatioColumn,
     showEndpointTypes,
+    groupRatios,
     effectiveGroup,
     selectedGroups,
     onGroupClick,
@@ -212,6 +214,7 @@ export default function ModelItem(props: ModelItemProps) {
               model={model}
               calculatedPrice={calculatedPrice}
               showEndpointTypes={showEndpointTypes}
+              groupRatios={groupRatios}
               effectiveGroup={effectiveGroup}
               showGroupDetails={showGroupDetails}
               showPricingDetails={showPricing}

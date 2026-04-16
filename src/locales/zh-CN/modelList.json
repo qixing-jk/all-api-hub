@@ -32,6 +32,7 @@
     "description": "当前模型目录通过账号密钥回退加载，仅支持模型发现与验证。点击刷新数据会重新尝试账号接口。",
     "title": "账号密钥回退目录"
   },
+  "groupRatioTooltip": "{{group}} 分组倍率: {{ratio}}x",
   "groupSelectionHint": "留空表示所有分组；价格排序会在已选分组范围内自动取最优价",
   "input": "输入:",
   "input1MTokens": "输入(1M tokens)",

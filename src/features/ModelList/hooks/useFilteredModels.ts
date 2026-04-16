@@ -61,6 +61,7 @@ export type CalculatedModelItem = {
   source:
     | ReturnType<typeof createAccountSource>
     | Extract<NonNullable<ModelManagementSource>, { kind: "profile" }>
+  groupRatios: Record<string, number>
   effectiveGroup?: string
   hasAutoSelectedGroup?: boolean
   isLowestPrice?: boolean
@@ -77,7 +78,7 @@ function isFiniteNumber(value: number | null | undefined): value is number {
 }
 
 /** Resolves the exchange rate for account-backed prices. */
-function getSourceExchangeRate(item: CalculatedModelItem) {
+function getSourceExchangeRate(item: Pick<CalculatedModelItem, "source">) {
   if (item.source.kind !== "account") {
     return 1
   }
@@ -259,6 +260,7 @@ function resolveBestCalculatedItem(
       model: rawItem.model,
       calculatedPrice,
       source: rawItem.source,
+      groupRatios: rawItem.groupRatios,
       effectiveGroup: supportsGroupFiltering ? group : undefined,
       hasAutoSelectedGroup: groupsToEvaluate.length > 1,
     }
@@ -353,7 +355,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         return pricing.data.map((model) => ({
           model,
           source: createAccountSource(account),
-          groupRatios: pricing.group_ratio || {},
+          groupRatios: pricing.group_ratio ?? {},
           exchangeRate,
         }))
       })
@@ -385,7 +387,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     return pricingData.data.map((model) => ({
       model,
       source: selectedSource,
-      groupRatios: pricingData.group_ratio || {},
+      groupRatios: pricingData.group_ratio ?? {},
       exchangeRate,
     }))
   }, [pricingContexts, pricingData, selectedSource])

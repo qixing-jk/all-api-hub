@@ -6,6 +6,7 @@ import {
 import React from "react"
 import { useTranslation } from "react-i18next"
 
+import Tooltip from "~/components/Tooltip"
 import { Badge } from "~/components/ui"
 import type { ModelPricing } from "~/services/apiService/common/type"
 import {
@@ -19,6 +20,7 @@ interface ModelItemDetailsProps {
   model: ModelPricing
   calculatedPrice: CalculatedPrice
   showEndpointTypes: boolean
+  groupRatios: Record<string, number>
   effectiveGroup?: string
   showGroupDetails: boolean
   showPricingDetails: boolean
@@ -29,6 +31,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
   model,
   calculatedPrice,
   showEndpointTypes,
+  groupRatios,
   effectiveGroup,
   showGroupDetails,
   showPricingDetails,
@@ -56,27 +59,40 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
               {model.enable_groups.map((group, index) => {
                 const isCurrentGroup = group === effectiveGroup
                 const isClickable = onGroupClick && !isCurrentGroup
+                const groupRatio = groupRatios[group] || 1
+                const groupTooltipText = [
+                  t("groupRatioTooltip", {
+                    group,
+                    ratio: groupRatio,
+                  }),
+                  isClickable ? t("clickSwitchGroup", { group }) : null,
+                ]
+                  .filter(Boolean)
+                  .join("\n")
 
                 return (
-                  <Badge
+                  <Tooltip
                     key={index}
-                    variant={isCurrentGroup ? "default" : "secondary"}
-                    size="sm"
-                    onClick={
-                      isClickable ? () => onGroupClick(group) : undefined
-                    }
-                    className={
-                      isClickable
-                        ? "cursor-pointer transition-opacity hover:opacity-80"
-                        : ""
-                    }
-                    title={
-                      isClickable ? t("clickSwitchGroup", { group }) : undefined
-                    }
+                    content={groupTooltipText}
+                    className="whitespace-pre-line"
+                    wrapperClassName="inline-flex justify-start"
                   >
-                    {isCurrentGroup && <TagIcon className="h-3 w-3" />}
-                    {group}
-                  </Badge>
+                    <Badge
+                      variant={isCurrentGroup ? "default" : "secondary"}
+                      size="sm"
+                      onClick={
+                        isClickable ? () => onGroupClick(group) : undefined
+                      }
+                      className={
+                        isClickable
+                          ? "cursor-pointer transition-opacity hover:opacity-80"
+                          : ""
+                      }
+                    >
+                      {isCurrentGroup && <TagIcon className="h-3 w-3" />}
+                      {group}
+                    </Badge>
+                  </Tooltip>
                 )
               })}
             </div>

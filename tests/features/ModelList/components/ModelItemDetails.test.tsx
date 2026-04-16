@@ -18,8 +18,13 @@ vi.mock("react-i18next", async (importOriginal) => {
   return {
     ...actual,
     useTranslation: () => ({
-      t: (key: string, options?: { group?: string }) =>
-        options?.group ? `${key}:${options.group}` : key,
+      t: (key: string, options?: { group?: string; ratio?: number }) => {
+        if (key === "groupRatioTooltip" && options?.group) {
+          return `${key}:${options.group}:${options.ratio}`
+        }
+
+        return options?.group ? `${key}:${options.group}` : key
+      },
     }),
   }
 })
@@ -28,20 +33,17 @@ vi.mock("~/components/ui", () => ({
   Badge: ({
     children,
     onClick,
-    title,
     variant,
     className,
   }: {
     children: React.ReactNode
     onClick?: () => void
-    title?: string
     variant?: string
     className?: string
   }) =>
     onClick ? (
       <button
         type="button"
-        title={title}
         data-variant={variant}
         className={className}
         onClick={onClick}
@@ -49,10 +51,24 @@ vi.mock("~/components/ui", () => ({
         {children}
       </button>
     ) : (
-      <span title={title} data-variant={variant} className={className}>
+      <span data-variant={variant} className={className}>
         {children}
       </span>
     ),
+}))
+
+vi.mock("~/components/Tooltip", () => ({
+  default: ({
+    children,
+    content,
+  }: {
+    children: React.ReactNode
+    content: React.ReactNode
+  }) => (
+    <div data-tooltip-content={typeof content === "string" ? content : ""}>
+      {children}
+    </div>
+  ),
 }))
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
@@ -101,6 +117,7 @@ describe("ModelItemDetails", () => {
           } as any
         }
         showEndpointTypes={false}
+        groupRatios={{}}
         effectiveGroup="default"
         showGroupDetails={false}
         showPricingDetails={false}
@@ -132,6 +149,7 @@ describe("ModelItemDetails", () => {
           } as any
         }
         showEndpointTypes={true}
+        groupRatios={{ default: 1, vip: 2 }}
         effectiveGroup="default"
         showGroupDetails={true}
         showPricingDetails={false}
@@ -145,11 +163,18 @@ describe("ModelItemDetails", () => {
 
     const currentGroup = screen.getByText("default")
     expect(currentGroup).toHaveAttribute("data-variant", "default")
+    expect(currentGroup.closest("[data-tooltip-content]")).toHaveAttribute(
+      "data-tooltip-content",
+      "groupRatioTooltip:default:1",
+    )
     expect(currentGroup.tagName).toBe("SPAN")
 
     const vipGroup = screen.getByRole("button", { name: "vip" })
     expect(vipGroup).toHaveAttribute("data-variant", "secondary")
-    expect(vipGroup).toHaveAttribute("title", "clickSwitchGroup:vip")
+    expect(vipGroup.closest("[data-tooltip-content]")).toHaveAttribute(
+      "data-tooltip-content",
+      "groupRatioTooltip:vip:2\nclickSwitchGroup:vip",
+    )
 
     await user.click(vipGroup)
 
@@ -175,6 +200,7 @@ describe("ModelItemDetails", () => {
           } as any
         }
         showEndpointTypes={true}
+        groupRatios={{}}
         effectiveGroup="default"
         showGroupDetails={false}
         showPricingDetails={true}
@@ -205,6 +231,7 @@ describe("ModelItemDetails", () => {
           } as any
         }
         showEndpointTypes={false}
+        groupRatios={{}}
         effectiveGroup="default"
         showGroupDetails={false}
         showPricingDetails={true}
@@ -219,5 +246,40 @@ describe("ModelItemDetails", () => {
     expect(screen.getByText("USD: USD:2.5")).toBeInTheDocument()
     expect(screen.getByText("CNY: CNY:17.5")).toBeInTheDocument()
     expect(formatPriceMock).toHaveBeenCalledTimes(4)
+  })
+
+  it("falls back to a 1x tooltip when group ratios are missing", async () => {
+    render(
+      <ModelItemDetails
+        model={
+          {
+            enable_groups: ["beta"],
+            supported_endpoint_types: [],
+            quota_type: 1,
+          } as any
+        }
+        calculatedPrice={
+          {
+            inputUSD: 1,
+            outputUSD: 2,
+            inputCNY: 7,
+            outputCNY: 14,
+          } as any
+        }
+        showEndpointTypes={false}
+        groupRatios={{}}
+        effectiveGroup="beta"
+        showGroupDetails={true}
+        showPricingDetails={false}
+      />,
+    )
+
+    expect(await screen.findByText("beta")).toHaveAttribute(
+      "data-variant",
+      "default",
+    )
+    expect(
+      screen.getByText("beta").closest("[data-tooltip-content]"),
+    ).toHaveAttribute("data-tooltip-content", "groupRatioTooltip:beta:1")
   })
 })

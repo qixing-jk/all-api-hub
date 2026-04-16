@@ -33,6 +33,7 @@
     "description": "This catalog is currently loaded through an account-key fallback, so it only supports model discovery and verification. Refresh Data will retry the direct account route.",
     "title": "Account-key fallback catalog"
   },
+  "groupRatioTooltip": "Group {{group}} ratio: {{ratio}}x",
   "groupSelectionHint": "Leave this empty to compare across all groups; price sorting uses the best price within the selected group set",
   "input": "Input:",
   "input1MTokens": "Input (1M tokens)",

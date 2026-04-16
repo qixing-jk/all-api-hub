@@ -121,6 +121,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
               showRealPrice={showRealPrice}
               showRatioColumn={showRatioColumn}
               showEndpointTypes={showEndpointTypes}
+              groupRatios={item.groupRatios}
               effectiveGroup={item.effectiveGroup}
               selectedGroups={selectedGroups}
               onGroupClick={handleGroupClick}

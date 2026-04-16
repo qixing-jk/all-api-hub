@@ -85,6 +85,7 @@ describe("ModelItem", () => {
         showRealPrice={false}
         showRatioColumn={false}
         showEndpointTypes={false}
+        groupRatios={{}}
         selectedGroups={[]}
         availableGroups={[]}
         source={
