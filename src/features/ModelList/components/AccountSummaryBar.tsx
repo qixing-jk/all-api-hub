@@ -1,11 +1,13 @@
 import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CardContent } from "~/components/ui"
+import { cn } from "~/lib/utils"
 
 interface AccountSummaryItem {
   accountId: string
   name: string
   count: number
+  isLoading?: boolean
   errorType?: "invalid-format" | "load-failed"
 }
 
@@ -35,6 +37,34 @@ export function AccountSummaryBar({
     return null
   }
 
+  const renderStatus = (item: AccountSummaryItem) => {
+    if (item.isLoading) {
+      return t("accountSummary.loading")
+    }
+
+    if (item.errorType === "load-failed") {
+      return t("accountSummary.loadFailed")
+    }
+
+    if (item.errorType === "invalid-format") {
+      return t("accountSummary.incompatible")
+    }
+
+    return t("accountSummary.models", { count: item.count })
+  }
+
+  const getStatusClassName = (item: AccountSummaryItem) => {
+    if (item.isLoading) {
+      return "text-amber-600 dark:text-amber-300"
+    }
+
+    if (item.errorType) {
+      return "text-red-500 dark:text-red-400"
+    }
+
+    return "text-emerald-600 dark:text-emerald-400"
+  }
+
   return (
     <Card className="mb-4">
       <CardContent className="py-3">
@@ -54,16 +84,9 @@ export function AccountSummaryBar({
                 onClick={() => onAccountClick?.(item.accountId)}
               >
                 <span className="truncate font-medium">{item.name}</span>
-                <span className="dark:text-dark-text-tertiary ml-2 text-gray-500">
-                  {t("accountSummary.models", { count: item.count })}
+                <span className={cn("ml-2", getStatusClassName(item))}>
+                  {renderStatus(item)}
                 </span>
-                {item.errorType && (
-                  <span className="ml-2 text-xs text-red-500 dark:text-red-400">
-                    {item.errorType === "load-failed"
-                      ? t("accountSummary.loadFailed")
-                      : t("accountSummary.incompatible")}
-                  </span>
-                )}
               </Badge>
             ))}
           </div>

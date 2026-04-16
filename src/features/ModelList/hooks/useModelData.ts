@@ -39,6 +39,7 @@ type AccountErrorType = "invalid-format" | "load-failed"
 
 interface AccountQueryState {
   account: DisplaySiteData
+  isLoading: boolean
   hasData: boolean
   hasError: boolean
   errorType?: AccountErrorType
@@ -653,6 +654,8 @@ function useAllAccountsModelData(
         const error = query?.error as { code?: string } | null | undefined
         const hasData = !!query?.data
         const hasError = !!query?.error
+        const isLoading =
+          !hasData && Boolean(query?.isPending || query?.isFetching)
 
         let errorType: AccountErrorType | undefined
         if (error?.code === "INVALID_FORMAT") {
@@ -663,6 +666,7 @@ function useAllAccountsModelData(
 
         return {
           account,
+          isLoading,
           hasData,
           hasError,
           errorType,

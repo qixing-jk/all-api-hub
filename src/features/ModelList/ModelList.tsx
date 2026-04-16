@@ -135,6 +135,7 @@ export default function ModelList(props: {
       accountId: state.account.id,
       name: state.account.name,
       count: accountSummaryCountsByAccountId.get(state.account.id) ?? 0,
+      isLoading: state.isLoading,
       errorType: state.errorType,
     }))
   }, [accountQueryStates, accountSummaryCountsByAccountId])

@@ -2,6 +2,7 @@
   "accountSummary": {
     "incompatible": "形式非互換",
     "loadFailed": "読み込み失敗",
+    "loading": "読み込み中",
     "models_other": "{{count}} モデル",
     "title": "アカウント概要"
   },

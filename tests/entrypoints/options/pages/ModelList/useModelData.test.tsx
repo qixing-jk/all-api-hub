@@ -211,6 +211,104 @@ describe("useModelData all-accounts loading", () => {
     expect(calledAccountIds).toEqual(expect.arrayContaining(["a", "b"]))
   })
 
+  it("marks all-account queries as loading before each account returns data", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+
+    const firstDeferred = createDeferred<{
+      data: never[]
+      group_ratio: Record<string, never>
+      success: true
+      usable_group: Record<string, never>
+    }>()
+    const secondDeferred = createDeferred<{
+      data: never[]
+      group_ratio: Record<string, never>
+      success: true
+      usable_group: Record<string, never>
+    }>()
+    const fetchModelPricing = vi.fn().mockImplementation(({ accountId }) => {
+      return accountId === "a" ? firstDeferred.promise : secondDeferred.promise
+    })
+    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+
+    const accounts = [
+      createDisplayAccount({
+        id: "a",
+        baseUrl: "https://a.example.com",
+        userId: 1,
+      }),
+      createDisplayAccount({
+        id: "b",
+        baseUrl: "https://b.example.com",
+        userId: 2,
+      }),
+    ]
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAllAccountsSource(),
+          accounts,
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => {
+      expect(result.current.accountQueryStates).toEqual([
+        expect.objectContaining({
+          account: expect.objectContaining({ id: "a" }),
+          isLoading: true,
+          hasData: false,
+          hasError: false,
+          errorType: undefined,
+        }),
+        expect.objectContaining({
+          account: expect.objectContaining({ id: "b" }),
+          isLoading: true,
+          hasData: false,
+          hasError: false,
+          errorType: undefined,
+        }),
+      ])
+    })
+
+    await act(async () => {
+      firstDeferred.resolve({
+        data: [],
+        group_ratio: {},
+        success: true,
+        usable_group: {},
+      })
+      secondDeferred.resolve({
+        data: [],
+        group_ratio: {},
+        success: true,
+        usable_group: {},
+      })
+      await Promise.all([firstDeferred.promise, secondDeferred.promise])
+    })
+
+    await waitFor(() => {
+      expect(result.current.accountQueryStates).toEqual([
+        expect.objectContaining({
+          account: expect.objectContaining({ id: "a" }),
+          isLoading: false,
+          hasData: true,
+          hasError: false,
+          errorType: undefined,
+        }),
+        expect.objectContaining({
+          account: expect.objectContaining({ id: "b" }),
+          isLoading: false,
+          hasData: true,
+          hasError: false,
+          errorType: undefined,
+        }),
+      ])
+    })
+  })
+
   it("loads a profile-backed model catalog without a SiteAccount", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
@@ -796,12 +894,14 @@ describe("useModelData all-accounts loading", () => {
         expect(result.current.accountQueryStates).toEqual([
           expect.objectContaining({
             account: expect.objectContaining({ id: "bad-format" }),
+            isLoading: false,
             hasData: false,
             hasError: true,
             errorType: "invalid-format",
           }),
           expect.objectContaining({
             account: expect.objectContaining({ id: "load-failed" }),
+            isLoading: false,
             hasData: false,
             hasError: true,
             errorType: "load-failed",

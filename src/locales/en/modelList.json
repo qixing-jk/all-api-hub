@@ -2,6 +2,7 @@
   "accountSummary": {
     "incompatible": "format incompatible",
     "loadFailed": "load failed",
+    "loading": "loading",
     "models_one": "{{count}} model",
     "models_other": "{{count}} models",
     "title": "Accounts overview"

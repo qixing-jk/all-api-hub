@@ -2,6 +2,7 @@
   "accountSummary": {
     "incompatible": "格式不相容",
     "loadFailed": "載入失敗",
+    "loading": "載入中",
     "models_other": "{{count}} 個模型",
     "title": "帳號概覽"
   },

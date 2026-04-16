@@ -98,6 +98,12 @@ vi.mock("~/features/ModelList/components/AccountSummaryBar", () => ({
         {activeAccountIds?.length ? activeAccountIds.join(",") : "none"}
       </div>
       {items.map((item: any) => (
+        <div key={`status-${item.accountId}`}>
+          Summary Status {item.name}:
+          {item.isLoading ? "loading" : item.errorType ?? item.count}
+        </div>
+      ))}
+      {items.map((item: any) => (
         <button
           key={item.accountId}
           type="button"
@@ -468,6 +474,45 @@ describe("ModelList page flows", () => {
     expect(
       screen.getByRole("button", { name: "Summary Backup Account:1" }),
     ).toBeInTheDocument()
+  })
+
+  it("forwards loading and error states to the account summary bar instead of falling back to counts", async () => {
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        selectedSource: ALL_ACCOUNTS_SOURCE,
+        selectedSourceValue: ALL_ACCOUNTS_SOURCE.value,
+        currentAccount: null,
+        sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
+        pricingData: null,
+        pricingContexts: [{ accountId: ACCOUNT.id }],
+        accountSummaryCountsByAccountId: new Map([
+          [ACCOUNT.id, 0],
+          [SECOND_ACCOUNT.id, 0],
+        ]),
+        accountQueryStates: [
+          { account: ACCOUNT, isLoading: true, errorType: null },
+          {
+            account: SECOND_ACCOUNT,
+            isLoading: false,
+            errorType: "load-failed",
+          },
+        ],
+      }),
+    )
+
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(
+      await screen.findByText("Summary Status Primary Account:loading"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("Summary Status Backup Account:load-failed"),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("Summary Status Primary Account:0")).toBeNull()
+    expect(screen.queryByText("Summary Status Backup Account:0")).toBeNull()
   })
 
   it("aggregates total model count from all account pricing contexts", async () => {
