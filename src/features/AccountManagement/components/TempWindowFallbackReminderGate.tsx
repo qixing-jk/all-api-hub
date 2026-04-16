@@ -126,9 +126,7 @@ export function TempWindowFallbackReminderGate() {
   ])
 
   const isReminderDialogOpen =
-    hasConfirmedReminderIssue &&
-    !tempWindowFallbackReminder.dismissed &&
-    (isOpen || !hasShownInThisSession)
+    hasConfirmedReminderIssue && !tempWindowFallbackReminder.dismissed && isOpen
 
   const handleNeverRemind = async () => {
     await updateTempWindowFallbackReminder({ dismissed: true })
