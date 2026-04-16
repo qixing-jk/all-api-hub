@@ -147,6 +147,19 @@ describe("ModelItem", () => {
     expect(screen.getByText("availableGroups: vip")).toBeInTheDocument()
   })
 
+  it("does not mark rows as unavailable in all-accounts scope when account-level filtering already resolved eligibility", () => {
+    render(
+      <ModelItem
+        {...createDefaultProps()}
+        groupSelectionScope="all-accounts"
+        isGroupSelectionInteractive={false}
+      />,
+    )
+
+    expect(screen.queryByText("clickSwitchGroup:default")).toBeNull()
+    expect(screen.queryByText("availableGroups: vip")).toBeNull()
+  })
+
   it("uses internal expansion state when expansion props are omitted", async () => {
     const user = userEvent.setup()
 

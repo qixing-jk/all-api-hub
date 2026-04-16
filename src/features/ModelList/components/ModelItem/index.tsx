@@ -154,9 +154,12 @@ export default function ModelItem(props: ModelItemProps) {
 
   const activeGroups =
     selectedGroups.length > 0 ? selectedGroups : availableGroups
-  const isAvailableForUser = showGroupDetails
-    ? activeGroups.some((group) => model.enable_groups.includes(group))
-    : true
+  const isAvailableForUser =
+    groupSelectionScope === "all-accounts"
+      ? true
+      : showGroupDetails
+        ? activeGroups.some((group) => model.enable_groups.includes(group))
+        : true
 
   const sourceBadge = sourceLabel ? (
     handleFilterAccount ? (
