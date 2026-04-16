@@ -6,6 +6,10 @@ import { Virtuoso } from "react-virtuoso"
 import { EmptyState } from "~/components/ui"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
+  MODEL_LIST_GROUP_SELECTION_SCOPES,
+  type ModelListGroupSelectionScope,
+} from "~/features/ModelList/groupSelectionScopes"
+import {
   getModelItemKey,
   type CalculatedModelItem,
 } from "~/features/ModelList/hooks/useFilteredModels"
@@ -43,7 +47,7 @@ interface ModelDisplayProps {
   selectedGroups: string[]
   handleGroupClick: (group: string) => void
   availableGroups: string[]
-  groupSelectionScope?: "single-source" | "all-accounts"
+  groupSelectionScope?: ModelListGroupSelectionScope
   isGroupSelectionInteractive?: boolean
   displayCapabilities?: ModelManagementSourceCapabilities
   onFilterAccount?: (accountId: string) => void
@@ -66,7 +70,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
     selectedGroups,
     handleGroupClick,
     availableGroups,
-    groupSelectionScope = "single-source",
+    groupSelectionScope = MODEL_LIST_GROUP_SELECTION_SCOPES.SINGLE_SOURCE,
     isGroupSelectionInteractive = true,
     displayCapabilities,
     onFilterAccount,

@@ -3,6 +3,10 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CardContent } from "~/components/ui"
+import {
+  MODEL_LIST_GROUP_SELECTION_SCOPES,
+  type ModelListGroupSelectionScope,
+} from "~/features/ModelList/groupSelectionScopes"
 import type {
   ModelManagementItemSource,
   ModelManagementSourceCapabilities,
@@ -36,7 +40,7 @@ interface ModelItemProps {
   availableGroups?: string[]
   isAllGroupsMode?: boolean
   showsOptimalGroup?: boolean
-  groupSelectionScope?: "single-source" | "all-accounts"
+  groupSelectionScope?: ModelListGroupSelectionScope
   isGroupSelectionInteractive?: boolean
   source: ModelManagementItemSource
   displayCapabilities?: ModelManagementSourceCapabilities
@@ -74,7 +78,7 @@ export default function ModelItem(props: ModelItemProps) {
     onGroupClick,
     availableGroups = [],
     showsOptimalGroup = false,
-    groupSelectionScope = "single-source",
+    groupSelectionScope = MODEL_LIST_GROUP_SELECTION_SCOPES.SINGLE_SOURCE,
     isGroupSelectionInteractive = true,
     source,
     displayCapabilities = source.capabilities,
@@ -156,7 +160,7 @@ export default function ModelItem(props: ModelItemProps) {
   const activeGroups =
     selectedGroups.length > 0 ? selectedGroups : availableGroups
   const isAvailableForUser =
-    groupSelectionScope === "all-accounts"
+    groupSelectionScope === MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS
       ? true
       : showGroupDetails
         ? activeGroups.some((group) => model.enable_groups.includes(group))

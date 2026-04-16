@@ -5,6 +5,7 @@ import { ModelItemDescription } from "~/features/ModelList/components/ModelItem/
 import { ModelItemPerCallPricingView } from "~/features/ModelList/components/ModelItem/ModelItemPerCallPricingView"
 import { PriceView } from "~/features/ModelList/components/ModelItem/ModelItemPicingView"
 import { ModelItemPricing } from "~/features/ModelList/components/ModelItem/ModelItemPricing"
+import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "~/features/ModelList/groupSelectionScopes"
 
 const { formatPriceCompactMock, isTokenBillingTypeMock } = vi.hoisted(() => ({
   formatPriceCompactMock: vi.fn(
@@ -367,6 +368,58 @@ describe("Model item pricing and description", () => {
         "optimalGroupWithinSelectedGroups:vip (2x)",
       )
       expect(screen.queryByText("ratio")).toBeNull()
+    })
+
+    it("uses account-filter copy for all-accounts lowest-price metadata", () => {
+      isTokenBillingTypeMock.mockReturnValue(true)
+
+      render(
+        <ModelItemPricing
+          model={createModel({ model_ratio: 2 })}
+          calculatedPrice={createCalculatedPrice()}
+          exchangeRate={7}
+          showRealPrice={false}
+          showPricing={true}
+          showRatioColumn={false}
+          isAvailableForUser={true}
+          isLowestPrice={true}
+          effectiveGroup="vip"
+          groupRatios={{ vip: 2 }}
+          showsOptimalGroup={true}
+          groupSelectionScope={MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS}
+        />,
+      )
+
+      expect(screen.getByText("optimalGroup:vip (2x)")).toHaveAttribute(
+        "title",
+        "optimalGroupLowestPriceWithinAccountFilters:vip (2x)",
+      )
+    })
+
+    it("uses account-filter copy for all-accounts auto-picked groups", () => {
+      isTokenBillingTypeMock.mockReturnValue(true)
+
+      render(
+        <ModelItemPricing
+          model={createModel({ model_ratio: 2 })}
+          calculatedPrice={createCalculatedPrice()}
+          exchangeRate={7}
+          showRealPrice={false}
+          showPricing={true}
+          showRatioColumn={false}
+          isAvailableForUser={true}
+          isLowestPrice={false}
+          effectiveGroup="vip"
+          groupRatios={{ vip: 2 }}
+          showsOptimalGroup={true}
+          groupSelectionScope={MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS}
+        />,
+      )
+
+      expect(screen.getByText("optimalGroup:vip (2x)")).toHaveAttribute(
+        "title",
+        "optimalGroupWithinAccountFilters:vip (2x)",
+      )
     })
   })
 })

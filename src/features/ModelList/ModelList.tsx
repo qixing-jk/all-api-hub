@@ -31,6 +31,7 @@ import { ModelDisplay } from "./components/ModelDisplay"
 import ModelKeyDialog from "./components/ModelKeyDialog"
 import { ProviderTabs } from "./components/ProviderTabs"
 import { StatusIndicator } from "./components/StatusIndicator"
+import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "./groupSelectionScopes"
 import { useModelListData } from "./hooks/useModelListData"
 
 /**
@@ -131,8 +132,8 @@ export default function ModelList(props: {
   const isAllAccountsScope = selectedSource?.kind === "all-accounts"
   const displaySelectedGroups = isAllAccountsScope ? [] : selectedGroups
   const modelDisplayGroupSelectionScope = isAllAccountsScope
-    ? "all-accounts"
-    : "single-source"
+    ? MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS
+    : MODEL_LIST_GROUP_SELECTION_SCOPES.SINGLE_SOURCE
   const isModelGroupSelectionInteractive = !isAllAccountsScope
 
   const handleAccountSummaryClick = (accountId: string) => {

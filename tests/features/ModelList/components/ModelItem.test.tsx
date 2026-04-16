@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ModelItem from "~/features/ModelList/components/ModelItem"
+import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "~/features/ModelList/groupSelectionScopes"
 import type { ModelPricing } from "~/services/apiService/common/type"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
 
@@ -153,7 +154,7 @@ describe("ModelItem", () => {
     render(
       <ModelItem
         {...createDefaultProps()}
-        groupSelectionScope="all-accounts"
+        groupSelectionScope={MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS}
         isGroupSelectionInteractive={false}
       />,
     )

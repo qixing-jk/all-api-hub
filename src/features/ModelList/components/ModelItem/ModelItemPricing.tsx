@@ -3,6 +3,10 @@ import { useTranslation } from "react-i18next"
 
 import { Badge } from "~/components/ui"
 import { formatGroupLabelFromRatios } from "~/features/ModelList/groupLabels"
+import {
+  MODEL_LIST_GROUP_SELECTION_SCOPES,
+  type ModelListGroupSelectionScope,
+} from "~/features/ModelList/groupSelectionScopes"
 import type { ModelPricing } from "~/services/apiService/common/type"
 import {
   formatPriceCompact,
@@ -25,7 +29,7 @@ interface ModelItemPricingProps {
   effectiveGroup?: string
   groupRatios: Record<string, number>
   showsOptimalGroup?: boolean
-  groupSelectionScope?: "single-source" | "all-accounts"
+  groupSelectionScope?: ModelListGroupSelectionScope
 }
 
 export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
@@ -40,7 +44,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   effectiveGroup,
   groupRatios,
   showsOptimalGroup = false,
-  groupSelectionScope = "single-source",
+  groupSelectionScope = MODEL_LIST_GROUP_SELECTION_SCOPES.SINGLE_SOURCE,
 }) => {
   const { t } = useTranslation("modelList")
   if (!showPricing) {
@@ -57,7 +61,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   const priceMetaTitle = shouldShowPriceMeta
     ? isLowestPrice
       ? t(
-          groupSelectionScope === "all-accounts"
+          groupSelectionScope === MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS
             ? "optimalGroupLowestPriceWithinAccountFilters"
             : "optimalGroupLowestPriceWithinBillingMode",
           {
@@ -65,7 +69,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
           },
         )
       : t(
-          groupSelectionScope === "all-accounts"
+          groupSelectionScope === MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS
             ? "optimalGroupWithinAccountFilters"
             : "optimalGroupWithinSelectedGroups",
           {
