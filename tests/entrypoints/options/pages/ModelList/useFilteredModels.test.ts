@@ -364,7 +364,10 @@ describe("useFilteredModels", () => {
       ).toEqual(["gemini-1.5-pro"])
     })
 
-    expect(result.current.availableGroups).toEqual(["default"])
+    expect(result.current.availableGroups).toEqual([])
+    expect(result.current.availableAccountGroupsByAccountId).toEqual({
+      "account-valid": ["default"],
+    })
     const filteredSource = result.current.filteredModels[0]?.source
     expect(filteredSource?.kind).toBe("account")
     if (!filteredSource || filteredSource.kind !== "account") {
@@ -441,7 +444,10 @@ describe("useFilteredModels", () => {
       ).toEqual(["context-model"])
     })
 
-    expect(result.current.availableGroups).toEqual(["default"])
+    expect(result.current.availableGroups).toEqual([])
+    expect(result.current.availableAccountGroupsByAccountId).toEqual({
+      "account-context-missing-group-ratio": ["default"],
+    })
   })
 
   it("keeps duplicate single-account rows in their original order when every sort key ties", async () => {
@@ -823,7 +829,7 @@ describe("useFilteredModels", () => {
     ).toEqual([true, false])
   })
 
-  it("uses the cheapest eligible group per row and updates when the candidate group set narrows", async () => {
+  it("uses the cheapest eligible group per row and updates when account-specific group filters narrow", async () => {
     const multiGroupAccount = createDisplayAccount({
       id: "account-multi-group",
       name: "Multi Group Account",
@@ -878,7 +884,7 @@ describe("useFilteredModels", () => {
       pricingContexts,
       selectedSource: source,
       sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
-      selectedGroups: [],
+      allAccountsExcludedGroupsByAccountId: {},
     })
 
     await waitFor(() => {
@@ -899,7 +905,9 @@ describe("useFilteredModels", () => {
       pricingContexts,
       selectedSource: source,
       sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
-      selectedGroups: ["default"],
+      allAccountsExcludedGroupsByAccountId: {
+        "account-multi-group": ["vip"],
+      },
     })
 
     await waitFor(() => {
@@ -914,6 +922,75 @@ describe("useFilteredModels", () => {
         ["account-default-only", "default", 1.2, true],
         ["account-multi-group", "default", 2, false],
       ])
+    })
+  })
+
+  it("treats same-named groups on different accounts as unrelated filters", async () => {
+    const accountA = createDisplayAccount({
+      id: "account-a",
+      name: "Account A",
+      balance: { USD: 10, CNY: 70 },
+    })
+    const accountB = createDisplayAccount({
+      id: "account-b",
+      name: "Account B",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: accountA,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "shared-model",
+                model_ratio: 1,
+                completion_ratio: 1,
+                enable_groups: ["vip"],
+              },
+            ],
+            {
+              group_ratio: { vip: 0.5 },
+            },
+          ),
+        },
+        {
+          account: accountB,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "shared-model",
+                model_ratio: 1,
+                completion_ratio: 1,
+                enable_groups: ["vip"],
+              },
+            ],
+            {
+              group_ratio: { vip: 0.8 },
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+      allAccountsExcludedGroupsByAccountId: {
+        "account-a": ["vip"],
+      },
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => [
+          item.source.kind === "account" ? item.source.account.id : "profile",
+          item.effectiveGroup,
+        ]),
+      ).toEqual([["account-b", "vip"]])
+    })
+
+    expect(result.current.availableAccountGroupsByAccountId).toEqual({
+      "account-a": ["vip"],
+      "account-b": ["vip"],
     })
   })
 

@@ -1,4 +1,4 @@
-import { useMemo } from "react"
+import { useCallback, useMemo } from "react"
 
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
@@ -31,6 +31,7 @@ interface UseFilteredModelsProps {
   selectedSource: ModelManagementSource | null
   selectedBillingMode: ModelListBillingMode
   selectedGroups: string[]
+  allAccountsExcludedGroupsByAccountId?: Record<string, string[]>
   searchTerm: string
   selectedProvider: ProviderType | "all"
   sortMode: ModelListSortMode
@@ -206,6 +207,11 @@ function addAvailableGroups(
   })
 }
 
+/** Builds an ordered, deduplicated group list from a set of strings. */
+function toUniqueGroups(groups: Iterable<string>) {
+  return Array.from(new Set(Array.from(groups).filter(Boolean)))
+}
+
 /** Resolves which groups should be evaluated for a raw model item. */
 function resolveCandidateGroups(
   rawItem: RawModelItem,
@@ -295,18 +301,22 @@ function resolveBestCalculatedItem(
 /** Maps raw priced rows into calculated display rows for the current filters. */
 function resolveCalculatedModels(params: {
   rawItems: RawModelItem[]
-  groupCandidates: string[]
+  getGroupCandidates: (item: RawModelItem) => string[]
   supportsGroupFiltering: boolean
   showRealPrice: boolean
 }) {
-  const { rawItems, groupCandidates, supportsGroupFiltering, showRealPrice } =
-    params
+  const {
+    rawItems,
+    getGroupCandidates,
+    supportsGroupFiltering,
+    showRealPrice,
+  } = params
 
   return rawItems
     .map((item) =>
       resolveBestCalculatedItem(
         item,
-        groupCandidates,
+        getGroupCandidates(item),
         supportsGroupFiltering,
         showRealPrice,
       ),
@@ -335,6 +345,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     selectedSource,
     selectedBillingMode,
     selectedGroups,
+    allAccountsExcludedGroupsByAccountId = {},
     searchTerm,
     selectedProvider,
     sortMode,
@@ -395,7 +406,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
   }, [pricingContexts, pricingData, selectedSource])
 
   const availableGroups = useMemo(() => {
-    if (!selectedSource?.capabilities.supportsGroupFiltering) {
+    if (
+      !selectedSource?.capabilities.supportsGroupFiltering ||
+      selectedSource.kind === "all-accounts"
+    ) {
       return []
     }
 
@@ -411,11 +425,60 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     })
 
     return Array.from(groupSet)
-  }, [rawModelItems, selectedSource?.capabilities.supportsGroupFiltering])
+  }, [
+    rawModelItems,
+    selectedSource?.capabilities.supportsGroupFiltering,
+    selectedSource?.kind,
+  ])
 
-  const effectiveGroupCandidates = useMemo(() => {
+  const availableAccountGroupsByAccountId = useMemo(() => {
+    if (
+      !selectedSource?.capabilities.supportsGroupFiltering ||
+      selectedSource.kind !== "all-accounts"
+    ) {
+      return {}
+    }
+
+    const groupsByAccountId = new Map<string, Set<string>>()
+
+    rawModelItems.forEach((item) => {
+      if (item.source.kind !== "account") {
+        return
+      }
+
+      const accountId = item.source.account.id
+      const accountGroups =
+        groupsByAccountId.get(accountId) ?? new Set<string>()
+
+      Object.keys(item.groupRatios).forEach((group) => {
+        if (group) {
+          accountGroups.add(group)
+        }
+      })
+      addAvailableGroups(accountGroups, item.model)
+
+      groupsByAccountId.set(accountId, accountGroups)
+    })
+
+    return Object.fromEntries(
+      Array.from(groupsByAccountId.entries()).map(([accountId, groups]) => [
+        accountId,
+        toUniqueGroups(groups),
+      ]),
+    ) as Record<string, string[]>
+  }, [
+    rawModelItems,
+    selectedSource?.capabilities.supportsGroupFiltering,
+    selectedSource?.kind,
+  ])
+
+  const effectiveSingleSourceGroupCandidates = useMemo(() => {
     if (!selectedSource?.capabilities.supportsGroupFiltering) {
       return ["default"]
+    }
+
+    if (selectedSource.kind === "all-accounts") {
+      return []
     }
 
     const uniqueSelectedGroups = Array.from(
@@ -431,7 +494,60 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     availableGroups,
     selectedGroups,
     selectedSource?.capabilities.supportsGroupFiltering,
+    selectedSource?.kind,
   ])
+
+  const includedAllAccountsGroupsByAccountId = useMemo(() => {
+    if (selectedSource?.kind !== "all-accounts") {
+      return {}
+    }
+
+    return Object.fromEntries(
+      Object.entries(availableAccountGroupsByAccountId).map(
+        ([accountId, groups]) => {
+          const excludedGroups = new Set(
+            toUniqueGroups(
+              allAccountsExcludedGroupsByAccountId[accountId] ?? [],
+            ),
+          )
+
+          return [
+            accountId,
+            groups.filter((group) => !excludedGroups.has(group)),
+          ]
+        },
+      ),
+    ) as Record<string, string[]>
+  }, [
+    allAccountsExcludedGroupsByAccountId,
+    availableAccountGroupsByAccountId,
+    selectedSource?.kind,
+  ])
+
+  const getEffectiveGroupCandidatesForRawItem = useCallback(
+    (item: RawModelItem) => {
+      if (!selectedSource?.capabilities.supportsGroupFiltering) {
+        return ["default"]
+      }
+
+      if (
+        selectedSource.kind === "all-accounts" &&
+        item.source.kind === "account"
+      ) {
+        return (
+          includedAllAccountsGroupsByAccountId[item.source.account.id] ?? []
+        )
+      }
+
+      return effectiveSingleSourceGroupCandidates
+    },
+    [
+      effectiveSingleSourceGroupCandidates,
+      includedAllAccountsGroupsByAccountId,
+      selectedSource?.capabilities.supportsGroupFiltering,
+      selectedSource?.kind,
+    ],
+  )
 
   const baseFilteredRawModels = useMemo(() => {
     let filtered = rawModelItems
@@ -454,7 +570,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         (item) =>
           resolveCandidateGroups(
             item,
-            effectiveGroupCandidates,
+            getEffectiveGroupCandidatesForRawItem(item),
             supportsGroupFiltering,
           ).length > 0,
       )
@@ -470,7 +586,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     return filtered
   }, [
     selectedBillingMode,
-    effectiveGroupCandidates,
+    getEffectiveGroupCandidatesForRawItem,
     rawModelItems,
     searchTerm,
     selectedSource?.capabilities.supportsGroupFiltering,
@@ -517,14 +633,14 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     () =>
       resolveCalculatedModels({
         rawItems: accountFilteredBaseRawModels,
-        groupCandidates: effectiveGroupCandidates,
+        getGroupCandidates: getEffectiveGroupCandidatesForRawItem,
         supportsGroupFiltering:
           selectedSource?.capabilities.supportsGroupFiltering ?? false,
         showRealPrice,
       }),
     [
       accountFilteredBaseRawModels,
-      effectiveGroupCandidates,
+      getEffectiveGroupCandidatesForRawItem,
       selectedSource?.capabilities.supportsGroupFiltering,
       showRealPrice,
     ],
@@ -701,5 +817,6 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     allProvidersFilteredCount: baseFilteredModels.length,
     getProviderFilteredCount,
     availableGroups,
+    availableAccountGroupsByAccountId,
   }
 }

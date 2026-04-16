@@ -29,6 +29,10 @@ export function useModelListState() {
   const [selectedBillingMode, setSelectedBillingMode] =
     useState<ModelListBillingMode>(MODEL_LIST_BILLING_MODES.ALL)
   const [selectedGroups, setSelectedGroups] = useState<string[]>([]) // 当前选中的候选分组；空数组表示所有分组
+  const [
+    allAccountsExcludedGroupsByAccountId,
+    setAllAccountsExcludedGroupsByAccountId,
+  ] = useState<Record<string, string[]>>({}) // "所有账号"模式下按账号排除的分组；空对象表示所有账号都保留全部可用分组
   const [allAccountsFilterAccountIds, setAllAccountsFilterAccountIds] =
     useState<string[]>([]) // 在"所有账号"模式下用于临时筛选一个或多个账号
 
@@ -50,6 +54,8 @@ export function useModelListState() {
     setSelectedBillingMode,
     selectedGroups,
     setSelectedGroups,
+    allAccountsExcludedGroupsByAccountId,
+    setAllAccountsExcludedGroupsByAccountId,
     allAccountsFilterAccountIds,
     setAllAccountsFilterAccountIds,
     showRealPrice,

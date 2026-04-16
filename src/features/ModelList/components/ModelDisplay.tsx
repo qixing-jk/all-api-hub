@@ -43,6 +43,8 @@ interface ModelDisplayProps {
   selectedGroups: string[]
   handleGroupClick: (group: string) => void
   availableGroups: string[]
+  groupSelectionScope?: "single-source" | "all-accounts"
+  isGroupSelectionInteractive?: boolean
   displayCapabilities?: ModelManagementSourceCapabilities
   onFilterAccount?: (accountId: string) => void
 }
@@ -64,6 +66,8 @@ export function ModelDisplay(props: ModelDisplayProps) {
     selectedGroups,
     handleGroupClick,
     availableGroups,
+    groupSelectionScope = "single-source",
+    isGroupSelectionInteractive = true,
     displayCapabilities,
     onFilterAccount,
   } = props
@@ -158,6 +162,8 @@ export function ModelDisplay(props: ModelDisplayProps) {
               isAllGroupsMode={selectedGroups.length === 0}
               isLowestPrice={item.isLowestPrice}
               showsOptimalGroup={item.hasAutoSelectedGroup}
+              groupSelectionScope={groupSelectionScope}
+              isGroupSelectionInteractive={isGroupSelectionInteractive}
               source={sourceForModel}
               displayCapabilities={displayCapabilities}
               verificationSummary={verificationSummary}

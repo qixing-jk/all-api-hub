@@ -23,6 +23,7 @@ interface ModelItemPricingProps {
   isLowestPrice?: boolean
   effectiveGroup?: string
   showsOptimalGroup?: boolean
+  groupSelectionScope?: "single-source" | "all-accounts"
 }
 
 export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
@@ -36,6 +37,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   isLowestPrice = false,
   effectiveGroup,
   showsOptimalGroup = false,
+  groupSelectionScope = "single-source",
 }) => {
   const { t } = useTranslation("modelList")
   if (!showPricing) {
@@ -48,12 +50,22 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
     effectiveGroup && (showsOptimalGroup || isLowestPrice)
   const priceMetaTitle = shouldShowPriceMeta
     ? isLowestPrice
-      ? t("optimalGroupLowestPriceWithinBillingMode", {
-          group: effectiveGroup,
-        })
-      : t("optimalGroupWithinSelectedGroups", {
-          group: effectiveGroup,
-        })
+      ? t(
+          groupSelectionScope === "all-accounts"
+            ? "optimalGroupLowestPriceWithinAccountFilters"
+            : "optimalGroupLowestPriceWithinBillingMode",
+          {
+            group: effectiveGroup,
+          },
+        )
+      : t(
+          groupSelectionScope === "all-accounts"
+            ? "optimalGroupWithinAccountFilters"
+            : "optimalGroupWithinSelectedGroups",
+          {
+            group: effectiveGroup,
+          },
+        )
     : undefined
   const priceMeta = shouldShowPriceMeta ? (
     <Badge

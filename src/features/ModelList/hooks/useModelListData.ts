@@ -38,6 +38,8 @@ export function useModelListData(routeParams?: Record<string, string>) {
     setSelectedSourceValue,
     selectedBillingMode,
     selectedGroups,
+    allAccountsExcludedGroupsByAccountId,
+    setAllAccountsExcludedGroupsByAccountId,
     searchTerm,
     selectedProvider,
     sortMode,
@@ -133,6 +135,16 @@ export function useModelListData(routeParams?: Record<string, string>) {
     setAllAccountsFilterAccountIds,
   ])
 
+  useEffect(() => {
+    if (selectedSource?.kind === "all-accounts") return
+    if (Object.keys(allAccountsExcludedGroupsByAccountId).length === 0) return
+    setAllAccountsExcludedGroupsByAccountId({})
+  }, [
+    allAccountsExcludedGroupsByAccountId,
+    selectedSource?.kind,
+    setAllAccountsExcludedGroupsByAccountId,
+  ])
+
   const currentAccount = useMemo(
     () =>
       selectedSource?.kind === "account" ? selectedSource.account : undefined,
@@ -190,6 +202,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
     selectedSource,
     selectedBillingMode,
     selectedGroups,
+    allAccountsExcludedGroupsByAccountId,
     searchTerm,
     selectedProvider,
     sortMode,

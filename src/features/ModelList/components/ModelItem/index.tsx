@@ -35,6 +35,8 @@ interface ModelItemProps {
   availableGroups?: string[]
   isAllGroupsMode?: boolean
   showsOptimalGroup?: boolean
+  groupSelectionScope?: "single-source" | "all-accounts"
+  isGroupSelectionInteractive?: boolean
   source: ModelManagementItemSource
   displayCapabilities?: ModelManagementSourceCapabilities
   isLowestPrice?: boolean
@@ -71,6 +73,8 @@ export default function ModelItem(props: ModelItemProps) {
     onGroupClick,
     availableGroups = [],
     showsOptimalGroup = false,
+    groupSelectionScope = "single-source",
+    isGroupSelectionInteractive = true,
     source,
     displayCapabilities = source.capabilities,
     isLowestPrice = false,
@@ -243,6 +247,7 @@ export default function ModelItem(props: ModelItemProps) {
           isLowestPrice={isLowestPrice}
           effectiveGroup={effectiveGroup}
           showsOptimalGroup={showsOptimalGroup}
+          groupSelectionScope={groupSelectionScope}
         />
 
         {isExpanded && source.kind === "account" && (
@@ -255,7 +260,9 @@ export default function ModelItem(props: ModelItemProps) {
               effectiveGroup={effectiveGroup}
               showGroupDetails={showGroupDetails}
               showPricingDetails={showPricing}
-              onGroupClick={onGroupClick}
+              onGroupClick={
+                isGroupSelectionInteractive ? onGroupClick : undefined
+              }
             />
           </div>
         )}

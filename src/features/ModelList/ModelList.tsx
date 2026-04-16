@@ -69,6 +69,8 @@ export default function ModelList(props: {
     setSelectedBillingMode,
     selectedGroups,
     setSelectedGroups,
+    allAccountsExcludedGroupsByAccountId,
+    setAllAccountsExcludedGroupsByAccountId,
 
     // Display options
     showRealPrice,
@@ -91,6 +93,7 @@ export default function ModelList(props: {
     accountSummaryCountsByAccountId,
     allProvidersFilteredCount,
     availableGroups,
+    availableAccountGroupsByAccountId,
 
     // Operations
     loadPricingData,
@@ -123,6 +126,9 @@ export default function ModelList(props: {
   const handleGroupClick = (group: string) => {
     setSelectedGroups([group])
   }
+
+  const displaySelectedGroups =
+    selectedSource?.kind === "all-accounts" ? [] : selectedGroups
 
   const handleAccountSummaryClick = (accountId: string) => {
     setAllAccountsFilterAccountIds((currentAccountIds) =>
@@ -299,6 +305,14 @@ export default function ModelList(props: {
         setSelectedSourceValue={setSelectedSourceValue}
         accounts={sortedAccounts}
         profiles={profiles}
+        showAllAccountsGroupFilter={selectedSource?.kind === "all-accounts"}
+        availableAccountGroupsByAccountId={availableAccountGroupsByAccountId}
+        allAccountsExcludedGroupsByAccountId={
+          allAccountsExcludedGroupsByAccountId
+        }
+        setAllAccountsExcludedGroupsByAccountId={
+          setAllAccountsExcludedGroupsByAccountId
+        }
         selectorOpen={isSourceSelectorOpen}
         onSelectorOpenChange={setIsSourceSelectorOpen}
         selectorTriggerRef={sourceSelectorTriggerRef}
@@ -463,9 +477,17 @@ export default function ModelList(props: {
                   showRealPrice={showRealPrice}
                   showRatioColumn={showRatioColumn}
                   showEndpointTypes={showEndpointTypes}
-                  selectedGroups={selectedGroups}
+                  selectedGroups={displaySelectedGroups}
                   handleGroupClick={handleGroupClick}
                   availableGroups={availableGroups}
+                  groupSelectionScope={
+                    selectedSource?.kind === "all-accounts"
+                      ? "all-accounts"
+                      : "single-source"
+                  }
+                  isGroupSelectionInteractive={
+                    selectedSource?.kind !== "all-accounts"
+                  }
                   displayCapabilities={sourceCapabilities}
                 />
               </Tab.Panel>
@@ -485,9 +507,17 @@ export default function ModelList(props: {
                     showRealPrice={showRealPrice}
                     showRatioColumn={showRatioColumn}
                     showEndpointTypes={showEndpointTypes}
-                    selectedGroups={selectedGroups}
+                    selectedGroups={displaySelectedGroups}
                     handleGroupClick={handleGroupClick}
                     availableGroups={availableGroups}
+                    groupSelectionScope={
+                      selectedSource?.kind === "all-accounts"
+                        ? "all-accounts"
+                        : "single-source"
+                    }
+                    isGroupSelectionInteractive={
+                      selectedSource?.kind !== "all-accounts"
+                    }
                     displayCapabilities={sourceCapabilities}
                   />
                 </Tab.Panel>

@@ -104,6 +104,7 @@ export function ControlPanel({
 }: ControlPanelProps) {
   const { t } = useTranslation(["modelList", "ui"])
   const isProfileSource = selectedSource?.kind === "profile"
+  const isAllAccountsSource = selectedSource?.kind === "all-accounts"
   const supportsPriceSorting = sourceCapabilities.supportsPricing
   const groupOptions = availableGroups.map((group) => ({
     value: group,
@@ -205,21 +206,22 @@ export function ControlPanel({
             </FormField>
           )}
 
-          {sourceCapabilities.supportsGroupFiltering && (
-            <FormField label={t("userGroup")} className="w-full lg:w-64">
-              <CompactMultiSelect
-                options={groupOptions}
-                selected={selectedGroups}
-                onChange={setSelectedGroups}
-                displayMode="summary"
-                placeholder={t("allGroups")}
-                emptyMessage={t("allGroups")}
-              />
-              <p className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">
-                {t("groupSelectionHint")}
-              </p>
-            </FormField>
-          )}
+          {sourceCapabilities.supportsGroupFiltering &&
+            !isAllAccountsSource && (
+              <FormField label={t("userGroup")} className="w-full lg:w-64">
+                <CompactMultiSelect
+                  options={groupOptions}
+                  selected={selectedGroups}
+                  onChange={setSelectedGroups}
+                  displayMode="summary"
+                  placeholder={t("allGroups")}
+                  emptyMessage={t("allGroups")}
+                />
+                <p className="dark:text-dark-text-tertiary mt-1 text-xs text-gray-500">
+                  {t("groupSelectionHint")}
+                </p>
+              </FormField>
+            )}
         </div>
 
         <div className="dark:border-dark-bg-tertiary flex flex-col gap-4 border-t border-gray-100 pt-4 lg:flex-row lg:items-center lg:justify-between">
