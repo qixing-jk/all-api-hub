@@ -22,6 +22,7 @@ import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
+import { sortModelListAccounts } from "./accountOrdering"
 import { AccountSelector } from "./components/AccountSelector"
 import { AccountSummaryBar } from "./components/AccountSummaryBar"
 import { ControlPanel } from "./components/ControlPanel"
@@ -109,6 +110,15 @@ export default function ModelList(props: {
       ),
     [providers, getProviderFilteredCount],
   )
+  const sortedAccounts = useMemo(
+    () =>
+      sortModelListAccounts({
+        accounts,
+        accountQueryStates,
+        accountSummaryCountsByAccountId,
+      }),
+    [accountQueryStates, accountSummaryCountsByAccountId, accounts],
+  )
 
   const handleGroupClick = (group: string) => {
     setSelectedGroups([group])
@@ -131,14 +141,27 @@ export default function ModelList(props: {
     !shouldShowSourceSetupEmptyState && !selectedSource
 
   const accountSummaryItems = useMemo(() => {
-    return (accountQueryStates ?? []).map((state) => ({
-      accountId: state.account.id,
-      name: state.account.name,
-      count: accountSummaryCountsByAccountId.get(state.account.id) ?? 0,
-      isLoading: state.isLoading,
-      errorType: state.errorType,
-    }))
-  }, [accountQueryStates, accountSummaryCountsByAccountId])
+    const stateByAccountId = new Map(
+      (accountQueryStates ?? []).map((state) => [state.account.id, state]),
+    )
+
+    return sortedAccounts.flatMap((account) => {
+      const state = stateByAccountId.get(account.id)
+      if (!state) {
+        return []
+      }
+
+      return [
+        {
+          accountId: state.account.id,
+          name: state.account.name,
+          count: accountSummaryCountsByAccountId.get(state.account.id) ?? 0,
+          isLoading: state.isLoading,
+          errorType: state.errorType,
+        },
+      ]
+    })
+  }, [accountQueryStates, accountSummaryCountsByAccountId, sortedAccounts])
 
   const modelVerificationTargets = useMemo(() => {
     return filteredModels.reduce<ApiVerificationHistoryTarget[]>(
@@ -274,7 +297,7 @@ export default function ModelList(props: {
       <AccountSelector
         selectedSourceValue={selectedSourceValue}
         setSelectedSourceValue={setSelectedSourceValue}
-        accounts={accounts}
+        accounts={sortedAccounts}
         profiles={profiles}
         selectorOpen={isSourceSelectorOpen}
         onSelectorOpenChange={setIsSourceSelectorOpen}

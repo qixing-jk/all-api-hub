@@ -16,6 +16,7 @@ import { render, screen } from "~~/tests/test-utils/render"
 
 const mockUseModelListData = vi.fn()
 const mockSetAllAccountsFilterAccountIds = vi.fn()
+const mockAccountSelector = vi.fn()
 
 vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
   useModelListData: (...args: any[]) => mockUseModelListData(...args),
@@ -76,7 +77,10 @@ const ALL_ACCOUNTS_SOURCE = createAllAccountsSource()
 const PROFILE_SOURCE = createProfileSource(PROFILE)
 
 vi.mock("~/features/ModelList/components/AccountSelector", () => ({
-  AccountSelector: () => <div>Account Selector</div>,
+  AccountSelector: (props: any) => {
+    mockAccountSelector(props)
+    return <div>Account Selector</div>
+  },
 }))
 
 vi.mock("~/features/ModelList/components/StatusIndicator", () => ({
@@ -309,6 +313,7 @@ function buildState(overrides: Record<string, any> = {}) {
 
 describe("ModelList page flows", () => {
   beforeEach(() => {
+    mockAccountSelector.mockReset()
     mockSetAllAccountsFilterAccountIds.mockReset()
     mockUseModelListData.mockReset()
   })
@@ -513,6 +518,118 @@ describe("ModelList page flows", () => {
     ).toBeInTheDocument()
     expect(screen.queryByText("Summary Status Primary Account:0")).toBeNull()
     expect(screen.queryByText("Summary Status Backup Account:0")).toBeNull()
+  })
+
+  it("sorts the account selector and summary badges after all-account refreshes settle", async () => {
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        selectedSource: ALL_ACCOUNTS_SOURCE,
+        selectedSourceValue: ALL_ACCOUNTS_SOURCE.value,
+        currentAccount: null,
+        sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
+        pricingData: null,
+        pricingContexts: [
+          { account: ACCOUNT, pricing: { data: [{ model_name: "gpt-4" }] } },
+          {
+            account: SECOND_ACCOUNT,
+            pricing: {
+              data: [
+                { model_name: "gpt-4o-mini" },
+                { model_name: "claude-3-5-sonnet" },
+              ],
+            },
+          },
+        ],
+        accountSummaryCountsByAccountId: new Map([
+          [ACCOUNT.id, 1],
+          [SECOND_ACCOUNT.id, 2],
+        ]),
+        accountQueryStates: [
+          {
+            account: ACCOUNT,
+            isLoading: false,
+            hasError: false,
+            errorType: undefined,
+          },
+          {
+            account: SECOND_ACCOUNT,
+            isLoading: false,
+            hasError: false,
+            errorType: undefined,
+          },
+        ],
+      }),
+    )
+
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await screen.findByText("Account Summary Bar active:none")
+
+    expect(mockAccountSelector).toHaveBeenCalled()
+    expect(
+      mockAccountSelector.mock.calls
+        .at(-1)?.[0]
+        .accounts.map((account: any) => account.id),
+    ).toEqual([SECOND_ACCOUNT.id, ACCOUNT.id])
+    expect(
+      screen
+        .getAllByRole("button")
+        .filter((button) => button.textContent?.startsWith("Summary "))
+        .map((button) => button.textContent),
+    ).toEqual(["Summary Backup Account:2", "Summary Primary Account:1"])
+  })
+
+  it("keeps the original account order while all-account refreshes are still loading", async () => {
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        selectedSource: ALL_ACCOUNTS_SOURCE,
+        selectedSourceValue: ALL_ACCOUNTS_SOURCE.value,
+        currentAccount: null,
+        sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
+        pricingData: null,
+        pricingContexts: [{ account: ACCOUNT, pricing: { data: [] } }],
+        accountSummaryCountsByAccountId: new Map([
+          [ACCOUNT.id, 1],
+          [SECOND_ACCOUNT.id, 3],
+        ]),
+        accountQueryStates: [
+          {
+            account: ACCOUNT,
+            isLoading: false,
+            hasError: false,
+            errorType: undefined,
+          },
+          {
+            account: SECOND_ACCOUNT,
+            isLoading: true,
+            hasError: false,
+            errorType: undefined,
+          },
+        ],
+      }),
+    )
+
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await screen.findByText("Account Summary Bar active:none")
+
+    expect(
+      mockAccountSelector.mock.calls
+        .at(-1)?.[0]
+        .accounts.map((account: any) => account.id),
+    ).toEqual([ACCOUNT.id, SECOND_ACCOUNT.id])
+    expect(
+      screen
+        .getAllByRole("button")
+        .filter((button) => button.textContent?.startsWith("Summary "))
+        .map((button) => button.textContent),
+    ).toEqual(["Summary Primary Account:1", "Summary Backup Account:3"])
   })
 
   it("aggregates total model count from all account pricing contexts", async () => {
