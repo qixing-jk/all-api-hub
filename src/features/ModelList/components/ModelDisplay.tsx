@@ -1,4 +1,5 @@
 import { CpuChipIcon } from "@heroicons/react/24/outline"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 import { Virtuoso } from "react-virtuoso"
 
@@ -44,6 +45,17 @@ interface ModelDisplayProps {
 }
 
 /**
+ * Builds a stable identity for a model row across refreshes and reordering.
+ */
+function getModelItemKey(item: CalculatedModelItem) {
+  const source = item.source as ModelManagementItemSource
+  const sourceKey =
+    source.kind === "profile" ? source.profile.id : source.account.id
+
+  return `${source.kind}:${sourceKey}:${item.model.model_name}`
+}
+
+/**
  * Virtualized list displaying model cards with pricing and availability data.
  * @param props Component props describing the rendered model list.
  * @returns Virtualized model list or empty state when no matches.
@@ -65,6 +77,31 @@ export function ModelDisplay(props: ModelDisplayProps) {
     onFilterAccount,
   } = props
   const { t } = useTranslation("modelList")
+  const modelKeys = useMemo(() => models.map(getModelItemKey), [models])
+  const [expandedModelKeys, setExpandedModelKeys] = useState<string[]>([])
+
+  useEffect(() => {
+    const activeModelKeys = new Set(modelKeys)
+
+    setExpandedModelKeys((currentKeys) => {
+      const nextKeys = currentKeys.filter((key) => activeModelKeys.has(key))
+      return nextKeys.length === currentKeys.length ? currentKeys : nextKeys
+    })
+  }, [modelKeys])
+
+  const expandedModelKeySet = useMemo(
+    () => new Set(expandedModelKeys),
+    [expandedModelKeys],
+  )
+
+  const toggleModelExpand = useCallback((itemKey: string) => {
+    setExpandedModelKeys((currentKeys) =>
+      currentKeys.includes(itemKey)
+        ? currentKeys.filter((key) => key !== itemKey)
+        : [...currentKeys, itemKey],
+    )
+  }, [])
+
   if (models.length === 0) {
     return (
       <EmptyState
@@ -78,6 +115,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
     <div className="h-[70vh]">
       <Virtuoso
         data={models}
+        computeItemKey={(_, item) => getModelItemKey(item)}
         components={{
           Item: ({ children, ...props }) => (
             <div className="my-3 first:mt-0" {...props}>
@@ -85,7 +123,8 @@ export function ModelDisplay(props: ModelDisplayProps) {
             </div>
           ),
         }}
-        itemContent={(index, item) => {
+        itemContent={(_index, item) => {
+          const itemKey = getModelItemKey(item)
           const sourceForModel = item.source as ModelManagementItemSource
           const accountForModel =
             sourceForModel.kind === "account"
@@ -114,7 +153,6 @@ export function ModelDisplay(props: ModelDisplayProps) {
 
           return (
             <ModelItem
-              key={`${item.model.model_name}-${index}`}
               model={item.model}
               calculatedPrice={item.calculatedPrice}
               exchangeRate={exchangeRate}
@@ -136,6 +174,8 @@ export function ModelDisplay(props: ModelDisplayProps) {
               onVerifyModel={onVerifyModel}
               onVerifyCliSupport={onVerifyCliSupport}
               onOpenModelKeyDialog={onOpenModelKeyDialog}
+              isExpanded={expandedModelKeySet.has(itemKey)}
+              onToggleExpand={() => toggleModelExpand(itemKey)}
             />
           )
         }}

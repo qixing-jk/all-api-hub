@@ -47,6 +47,8 @@ interface ModelItemProps {
     modelId: string,
     modelEnableGroups: string[],
   ) => void
+  isExpanded?: boolean
+  onToggleExpand?: () => void
 }
 
 /**
@@ -74,9 +76,22 @@ export default function ModelItem(props: ModelItemProps) {
     onVerifyModel,
     onVerifyCliSupport,
     onOpenModelKeyDialog,
+    isExpanded: controlledIsExpanded,
+    onToggleExpand,
   } = props
   const { t } = useTranslation("modelList")
-  const [isExpanded, setIsExpanded] = useState(false)
+  const [uncontrolledIsExpanded, setUncontrolledIsExpanded] = useState(false)
+
+  const isExpanded = controlledIsExpanded ?? uncontrolledIsExpanded
+
+  const handleToggleExpand = () => {
+    if (onToggleExpand) {
+      onToggleExpand()
+      return
+    }
+
+    setUncontrolledIsExpanded((current) => !current)
+  }
 
   const handleCopyModelName = async () => {
     try {
@@ -185,7 +200,7 @@ export default function ModelItem(props: ModelItemProps) {
               {canExpand && (
                 <ModelItemExpandButton
                   isExpanded={isExpanded}
-                  onToggleExpand={() => setIsExpanded(!isExpanded)}
+                  onToggleExpand={handleToggleExpand}
                 />
               )}
             </div>

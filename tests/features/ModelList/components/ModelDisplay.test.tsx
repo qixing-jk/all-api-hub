@@ -40,10 +40,12 @@ vi.mock("react-virtuoso", () => ({
   Virtuoso: ({
     data,
     itemContent,
+    computeItemKey,
     components,
   }: {
     data: any[]
     itemContent: (index: number, item: any) => React.ReactNode
+    computeItemKey?: (index: number, item: any) => React.Key
     components?: { Item?: React.ComponentType<any> }
   }) => {
     const Item = components?.Item ?? ((props: any) => <div {...props} />)
@@ -51,7 +53,12 @@ vi.mock("react-virtuoso", () => ({
     return (
       <div data-testid="virtuoso">
         {data.map((item, index) => (
-          <Item key={`${item.model.model_name}-${index}`}>
+          <Item
+            key={
+              computeItemKey?.(index, item) ??
+              `${item.model.model_name}-${index}`
+            }
+          >
             {itemContent(index, item)}
           </Item>
         ))}
@@ -74,7 +81,11 @@ vi.mock("~/features/ModelList/components/ModelItem", () => ({
         data-all-groups={String(props.isAllGroupsMode)}
         data-summary-status={props.verificationSummary?.status ?? "none"}
         data-source-kind={props.source.kind}
+        data-expanded={String(props.isExpanded ?? false)}
       >
+        <button type="button" onClick={props.onToggleExpand}>
+          toggle-{props.model.model_name}
+        </button>
         <button
           type="button"
           onClick={() =>
@@ -178,6 +189,18 @@ const createCalculatedModel = (
     groupRatios: { default: 1, vip: 2 },
     effectiveGroup: overrides.effectiveGroup,
   }
+}
+
+function getRenderedModelItem(modelId: string) {
+  const item = screen
+    .getAllByTestId("model-item")
+    .find((element) => element.getAttribute("data-model-id") === modelId)
+
+  if (!item) {
+    throw new Error(`Model item not found: ${modelId}`)
+  }
+
+  return item
 }
 
 describe("ModelDisplay", () => {
@@ -342,5 +365,75 @@ describe("ModelDisplay", () => {
     expect(
       screen.queryByRole("button", { name: "key-claude-3-5-sonnet" }),
     ).not.toBeInTheDocument()
+  })
+
+  it("preserves expanded state for the same model across refreshed model data", async () => {
+    const user = userEvent.setup()
+    const initialModels = [
+      createCalculatedModel({}),
+      createCalculatedModel({
+        model: {
+          model_name: "gemini-1.5-pro",
+          enable_groups: ["default"],
+        },
+      }),
+    ]
+    const refreshedModels = [
+      createCalculatedModel({
+        model: {
+          model_name: "gemini-1.5-pro",
+          enable_groups: ["default"],
+        },
+        calculatedPrice: {
+          inputUSD: 3,
+        },
+      }),
+      createCalculatedModel({
+        calculatedPrice: {
+          inputUSD: 4,
+        },
+      }),
+    ]
+
+    const { rerender } = render(
+      <ModelDisplay
+        models={initialModels}
+        verificationSummariesByKey={{}}
+        showRealPrice={true}
+        showRatioColumn={true}
+        showEndpointTypes={true}
+        selectedGroups={[]}
+        handleGroupClick={vi.fn()}
+        availableGroups={["default", "vip"]}
+      />,
+    )
+
+    await user.click(screen.getByRole("button", { name: "toggle-gpt-4o-mini" }))
+
+    expect(getRenderedModelItem("gpt-4o-mini")).toHaveAttribute(
+      "data-expanded",
+      "true",
+    )
+
+    rerender(
+      <ModelDisplay
+        models={refreshedModels}
+        verificationSummariesByKey={{}}
+        showRealPrice={true}
+        showRatioColumn={true}
+        showEndpointTypes={true}
+        selectedGroups={[]}
+        handleGroupClick={vi.fn()}
+        availableGroups={["default", "vip"]}
+      />,
+    )
+
+    expect(getRenderedModelItem("gpt-4o-mini")).toHaveAttribute(
+      "data-expanded",
+      "true",
+    )
+    expect(
+      screen.getByRole("button", { name: "toggle-gpt-4o-mini" }),
+    ).toBeInTheDocument()
   })
 })
