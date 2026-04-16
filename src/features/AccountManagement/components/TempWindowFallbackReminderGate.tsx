@@ -94,7 +94,7 @@ export function TempWindowFallbackReminderGate() {
     }
   }, [blockCheckToken, issue, tempWindowFallback])
 
-  const shouldShowReminder = useMemo(() => {
+  const hasConfirmedReminderIssue = useMemo(() => {
     if (!issue || !blockCheckToken || resolvedBlockToken !== blockCheckToken) {
       return false
     }
@@ -108,7 +108,7 @@ export function TempWindowFallbackReminderGate() {
       return
     }
 
-    if (!shouldShowReminder) {
+    if (!hasConfirmedReminderIssue) {
       setIsOpen(false)
       return
     }
@@ -121,21 +121,26 @@ export function TempWindowFallbackReminderGate() {
     setIsOpen(true)
   }, [
     hasShownInThisSession,
-    shouldShowReminder,
+    hasConfirmedReminderIssue,
     tempWindowFallbackReminder.dismissed,
   ])
+
+  const isReminderDialogOpen =
+    hasConfirmedReminderIssue &&
+    !tempWindowFallbackReminder.dismissed &&
+    (isOpen || !hasShownInThisSession)
 
   const handleNeverRemind = async () => {
     await updateTempWindowFallbackReminder({ dismissed: true })
   }
 
-  if (!issue || !shouldShowReminder) {
+  if (!issue || !isReminderDialogOpen) {
     return null
   }
 
   return (
     <TempWindowFallbackReminderDialog
-      isOpen={isOpen}
+      isOpen={isReminderDialogOpen}
       issue={issue}
       onClose={() => setIsOpen(false)}
       onNeverRemind={handleNeverRemind}

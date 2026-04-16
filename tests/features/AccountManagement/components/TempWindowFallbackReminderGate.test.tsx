@@ -132,7 +132,7 @@ describe("TempWindowFallbackReminderGate", () => {
     })
   })
 
-  it("opens once for the first disabled issue when the shared fallback gate reports disabled and stays closed after the user dismisses it in the same session", async () => {
+  it("opens once for the first disabled issue when the shared fallback gate reports disabled and stays unmounted after the user dismisses it in the same session", async () => {
     accountDataState.displayData = [
       {
         id: "acc-1",
@@ -166,16 +166,16 @@ describe("TempWindowFallbackReminderGate", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByTestId("temp-window-fallback-reminder"),
-      ).toHaveAttribute("data-open", "false")
+        screen.queryByTestId("temp-window-fallback-reminder"),
+      ).not.toBeInTheDocument()
     })
 
     rerender(<TempWindowFallbackReminderGate />)
 
     await waitFor(() => {
       expect(
-        screen.getByTestId("temp-window-fallback-reminder"),
-      ).toHaveAttribute("data-open", "false")
+        screen.queryByTestId("temp-window-fallback-reminder"),
+      ).not.toBeInTheDocument()
     })
   })
 
@@ -261,7 +261,7 @@ describe("TempWindowFallbackReminderGate", () => {
     })
   })
 
-  it("keeps the dialog closed when the reminder is already dismissed and persists the never-remind action", async () => {
+  it("keeps the dialog unmounted when the reminder is already dismissed and still persists the never-remind action once re-enabled", async () => {
     accountDataState.displayData = [
       {
         id: "acc-2",
@@ -282,16 +282,16 @@ describe("TempWindowFallbackReminderGate", () => {
 
     await waitFor(() => {
       expect(
-        screen.getByTestId("temp-window-fallback-reminder"),
-      ).toHaveAttribute("data-open", "false")
-      expect(
-        screen.getByTestId("temp-window-fallback-reminder"),
-      ).toHaveAttribute("data-settings-tab", "permissions")
+        screen.queryByTestId("temp-window-fallback-reminder"),
+      ).not.toBeInTheDocument()
     })
 
     reminderPreferenceState.dismissed = false
     rerender(<TempWindowFallbackReminderGate />)
 
+    expect(
+      await screen.findByTestId("temp-window-fallback-reminder"),
+    ).toHaveAttribute("data-settings-tab", "permissions")
     fireEvent.click(await screen.findByRole("button", { name: "never remind" }))
 
     await waitFor(() => {
