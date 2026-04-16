@@ -161,7 +161,7 @@ describe("ModelItemDetails", () => {
     expect(screen.getByText("endpointType")).toBeInTheDocument()
     expect(screen.getByText("chat, embeddings")).toBeInTheDocument()
 
-    const currentGroup = screen.getByText("default")
+    const currentGroup = screen.getByText("default (1x)")
     expect(currentGroup).toHaveAttribute("data-variant", "default")
     expect(currentGroup.closest("[data-tooltip-content]")).toHaveAttribute(
       "data-tooltip-content",
@@ -169,11 +169,11 @@ describe("ModelItemDetails", () => {
     )
     expect(currentGroup.tagName).toBe("SPAN")
 
-    const vipGroup = screen.getByRole("button", { name: "vip" })
+    const vipGroup = screen.getByRole("button", { name: "vip (2x)" })
     expect(vipGroup).toHaveAttribute("data-variant", "secondary")
     expect(vipGroup.closest("[data-tooltip-content]")).toHaveAttribute(
       "data-tooltip-content",
-      "groupRatioTooltip:vip:2\nclickSwitchGroup:vip",
+      "groupRatioTooltip:vip:2\nclickSwitchGroup:vip (2x)",
     )
 
     await user.click(vipGroup)
@@ -274,12 +274,12 @@ describe("ModelItemDetails", () => {
       />,
     )
 
-    expect(await screen.findByText("beta")).toHaveAttribute(
+    expect(await screen.findByText("beta (1x)")).toHaveAttribute(
       "data-variant",
       "default",
     )
     expect(
-      screen.getByText("beta").closest("[data-tooltip-content]"),
+      screen.getByText("beta (1x)").closest("[data-tooltip-content]"),
     ).toHaveAttribute("data-tooltip-content", "groupRatioTooltip:beta:1")
   })
 })

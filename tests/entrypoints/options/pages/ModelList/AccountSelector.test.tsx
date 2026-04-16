@@ -13,6 +13,17 @@ describe("AccountSelector", () => {
         selectSource: "Select Source",
         allAccounts: "All accounts",
         pleaseSelectSource: "Please select a source",
+        accountGroupFilterTrigger: "Filter Account Groups",
+        accountGroupFilterTriggerTooltip: "Filter tooltip",
+        accountGroupFilterHint: "Use the filter",
+        accountGroupFilterTitle: "Account Group Filter",
+        accountGroupFilterDescription: "Filter groups per account",
+        accountGroupFilterResetAll: "Reset all",
+        accountGroupFilterSelectedSummary: "{{selected}} / {{total}}",
+        accountGroupFilterSelectAll: "Select all",
+        accountGroupFilterClearAll: "Clear all",
+        accountGroupFilterAllIncluded: "Include all groups",
+        accountGroupFilterInlineDescription: "Account groups stay independent",
         sourceLabels: {
           profileOption: "API Credential: {{name}} · {{host}}",
         },
@@ -119,5 +130,42 @@ describe("AccountSelector", () => {
     expect(
       screen.getByText("API Credential: Reusable Key · profile.example.com"),
     ).toBeInTheDocument()
+  })
+
+  it("shows account-specific group ratios in the all-accounts filter menu", async () => {
+    render(
+      <AccountSelector
+        selectedSourceValue="all"
+        setSelectedSourceValue={vi.fn()}
+        accounts={[
+          {
+            id: "account-1",
+            name: "Primary Account",
+          } as any,
+        ]}
+        profiles={[]}
+        showAllAccountsGroupFilter={true}
+        availableAccountGroupsByAccountId={{
+          "account-1": ["vip", "default"],
+        }}
+        availableAccountGroupOptionsByAccountId={{
+          "account-1": [
+            { name: "vip", ratio: 2 },
+            { name: "default", ratio: 1 },
+          ],
+        }}
+        allAccountsExcludedGroupsByAccountId={{}}
+        setAllAccountsExcludedGroupsByAccountId={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "Filter Account Groups" }),
+    )
+    const comboboxes = await screen.findAllByRole("combobox")
+    fireEvent.click(comboboxes[1])
+
+    expect(await screen.findByText("vip (2x)")).toBeInTheDocument()
+    expect(screen.getByText("default (1x)")).toBeInTheDocument()
   })
 })

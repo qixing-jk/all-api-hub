@@ -2,6 +2,7 @@ import React from "react"
 import { useTranslation } from "react-i18next"
 
 import { Badge } from "~/components/ui"
+import { formatGroupLabelFromRatios } from "~/features/ModelList/groupLabels"
 import type { ModelPricing } from "~/services/apiService/common/type"
 import {
   formatPriceCompact,
@@ -22,6 +23,7 @@ interface ModelItemPricingProps {
   isAvailableForUser: boolean
   isLowestPrice?: boolean
   effectiveGroup?: string
+  groupRatios: Record<string, number>
   showsOptimalGroup?: boolean
   groupSelectionScope?: "single-source" | "all-accounts"
 }
@@ -36,6 +38,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   isAvailableForUser,
   isLowestPrice = false,
   effectiveGroup,
+  groupRatios,
   showsOptimalGroup = false,
   groupSelectionScope = "single-source",
 }) => {
@@ -46,6 +49,9 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
 
   const tokenBillingType = isTokenBillingType(model.quota_type)
   const perCallPrice = calculatedPrice.perCallPrice
+  const effectiveGroupLabel = effectiveGroup
+    ? formatGroupLabelFromRatios(effectiveGroup, groupRatios)
+    : undefined
   const shouldShowPriceMeta =
     effectiveGroup && (showsOptimalGroup || isLowestPrice)
   const priceMetaTitle = shouldShowPriceMeta
@@ -55,7 +61,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
             ? "optimalGroupLowestPriceWithinAccountFilters"
             : "optimalGroupLowestPriceWithinBillingMode",
           {
-            group: effectiveGroup,
+            group: effectiveGroupLabel,
           },
         )
       : t(
@@ -63,7 +69,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
             ? "optimalGroupWithinAccountFilters"
             : "optimalGroupWithinSelectedGroups",
           {
-            group: effectiveGroup,
+            group: effectiveGroupLabel,
           },
         )
     : undefined
@@ -74,7 +80,7 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
       className="shrink-0 text-[10px] sm:text-xs"
       title={priceMetaTitle}
     >
-      {t("optimalGroup", { group: effectiveGroup })}
+      {t("optimalGroup", { group: effectiveGroupLabel })}
     </Badge>
   ) : null
 

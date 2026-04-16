@@ -13,6 +13,7 @@ import type { ApiVerificationHistorySummary } from "~/services/verification/veri
 import { createLogger } from "~/utils/core/logger"
 import { tryParseUrl } from "~/utils/core/urlParsing"
 
+import { formatGroupLabelFromRatios } from "../../groupLabels"
 import { ModelItemDescription } from "./ModelItemDescription"
 import { ModelItemDetails } from "./ModelItemDetails"
 import { ModelItemExpandButton } from "./ModelItemExpandButton"
@@ -249,6 +250,7 @@ export default function ModelItem(props: ModelItemProps) {
           isAvailableForUser={isAvailableForUser}
           isLowestPrice={isLowestPrice}
           effectiveGroup={effectiveGroup}
+          groupRatios={groupRatios}
           showsOptimalGroup={showsOptimalGroup}
           groupSelectionScope={groupSelectionScope}
         />
@@ -278,12 +280,18 @@ export default function ModelItem(props: ModelItemProps) {
               </Badge>
               <span>
                 {t("clickSwitchGroup", {
-                  group: effectiveGroup || selectedGroups[0] || "default",
+                  group: formatGroupLabelFromRatios(
+                    effectiveGroup || selectedGroups[0] || "default",
+                    groupRatios,
+                  ),
                 })}
               </span>
             </div>
             <div className="text-sm text-yellow-600 dark:text-yellow-400">
-              {t("availableGroups")}: {model.enable_groups.join(", ")}
+              {t("availableGroups")}:{" "}
+              {model.enable_groups
+                .map((group) => formatGroupLabelFromRatios(group, groupRatios))
+                .join(", ")}
             </div>
           </div>
         )}

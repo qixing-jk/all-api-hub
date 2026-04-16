@@ -94,6 +94,7 @@ export default function ModelList(props: {
     allProvidersFilteredCount,
     availableGroups,
     availableAccountGroupsByAccountId,
+    availableAccountGroupOptionsByAccountId,
 
     // Operations
     loadPricingData,
@@ -307,6 +308,9 @@ export default function ModelList(props: {
         profiles={profiles}
         showAllAccountsGroupFilter={selectedSource?.kind === "all-accounts"}
         availableAccountGroupsByAccountId={availableAccountGroupsByAccountId}
+        availableAccountGroupOptionsByAccountId={
+          availableAccountGroupOptionsByAccountId
+        }
         allAccountsExcludedGroupsByAccountId={
           allAccountsExcludedGroupsByAccountId
         }

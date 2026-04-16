@@ -8,6 +8,10 @@ import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
 import { Badge } from "~/components/ui"
+import {
+  formatGroupLabel,
+  resolveGroupRatio,
+} from "~/features/ModelList/groupLabels"
 import type { ModelPricing } from "~/services/apiService/common/type"
 import {
   formatPrice,
@@ -59,13 +63,16 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
               {model.enable_groups.map((group, index) => {
                 const isCurrentGroup = group === effectiveGroup
                 const isClickable = onGroupClick && !isCurrentGroup
-                const groupRatio = groupRatios[group] || 1
+                const groupRatio = resolveGroupRatio(group, groupRatios)
+                const groupLabel = formatGroupLabel(group, groupRatio)
                 const groupTooltipText = [
                   t("groupRatioTooltip", {
                     group,
                     ratio: groupRatio,
                   }),
-                  isClickable ? t("clickSwitchGroup", { group }) : null,
+                  isClickable
+                    ? t("clickSwitchGroup", { group: groupLabel })
+                    : null,
                 ]
                   .filter(Boolean)
                   .join("\n")
@@ -90,7 +97,7 @@ export const ModelItemDetails: React.FC<ModelItemDetailsProps> = ({
                       }
                     >
                       {isCurrentGroup && <TagIcon className="h-3 w-3" />}
-                      {group}
+                      {groupLabel}
                     </Badge>
                   </Tooltip>
                 )

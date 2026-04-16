@@ -9,12 +9,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from "~/components/ui/popover"
+import { formatGroupLabel } from "~/features/ModelList/groupLabels"
+import type { AccountGroupOption } from "~/features/ModelList/hooks/useFilteredModels"
 import { cn } from "~/lib/utils"
 import type { DisplaySiteData } from "~/types"
 
 interface AllAccountsGroupFilterMenuProps {
   accounts: DisplaySiteData[]
   availableAccountGroupsByAccountId: Record<string, string[]>
+  availableAccountGroupOptionsByAccountId: Record<string, AccountGroupOption[]>
   excludedGroupsByAccountId: Record<string, string[]>
   onExcludedGroupsChange: (next: Record<string, string[]>) => void
   open: boolean
@@ -32,6 +35,7 @@ function toUniqueGroups(groups: string[]) {
 export function AllAccountsGroupFilterMenu({
   accounts,
   availableAccountGroupsByAccountId,
+  availableAccountGroupOptionsByAccountId,
   excludedGroupsByAccountId,
   onExcludedGroupsChange,
   open,
@@ -55,10 +59,16 @@ export function AllAccountsGroupFilterMenu({
             accountId: account.id,
             accountName: account.name,
             groups,
+            groupOptions:
+              availableAccountGroupOptionsByAccountId[account.id] ?? [],
           },
         ]
       }),
-    [accounts, availableAccountGroupsByAccountId],
+    [
+      accounts,
+      availableAccountGroupOptionsByAccountId,
+      availableAccountGroupsByAccountId,
+    ],
   )
 
   const activeFilteredAccountCount = useMemo(
@@ -217,69 +227,71 @@ export function AllAccountsGroupFilterMenu({
               {t("accountGroupFilterNoGroups")}
             </div>
           ) : (
-            accountSections.map(({ accountId, accountName, groups }) => {
-              const excluded = new Set(
-                toUniqueGroups(excludedGroupsByAccountId[accountId] ?? []),
-              )
-              const selectedGroups = groups.filter(
-                (group) => !excluded.has(group),
-              )
+            accountSections.map(
+              ({ accountId, accountName, groups, groupOptions }) => {
+                const excluded = new Set(
+                  toUniqueGroups(excludedGroupsByAccountId[accountId] ?? []),
+                )
+                const selectedGroups = groups.filter(
+                  (group) => !excluded.has(group),
+                )
 
-              return (
-                <section
-                  key={accountId}
-                  className="space-y-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700"
-                >
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="space-y-1">
-                      <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
-                        {accountName}
+                return (
+                  <section
+                    key={accountId}
+                    className="space-y-3 rounded-lg border border-gray-200 p-3 dark:border-gray-700"
+                  >
+                    <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                      <div className="space-y-1">
+                        <div className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                          {accountName}
+                        </div>
+                        <div className="text-xs text-gray-500 dark:text-gray-400">
+                          {t("accountGroupFilterSelectedSummary", {
+                            selected: selectedGroups.length,
+                            total: groups.length,
+                          })}
+                        </div>
                       </div>
-                      <div className="text-xs text-gray-500 dark:text-gray-400">
-                        {t("accountGroupFilterSelectedSummary", {
-                          selected: selectedGroups.length,
-                          total: groups.length,
-                        })}
+
+                      <div className="flex items-center gap-2">
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleSelectAllForAccount(accountId)}
+                          disabled={selectedGroups.length === groups.length}
+                        >
+                          {t("accountGroupFilterSelectAll")}
+                        </Button>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleClearAllForAccount(accountId)}
+                          disabled={selectedGroups.length === 0}
+                        >
+                          {t("accountGroupFilterClearAll")}
+                        </Button>
                       </div>
                     </div>
 
-                    <div className="flex items-center gap-2">
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleSelectAllForAccount(accountId)}
-                        disabled={selectedGroups.length === groups.length}
-                      >
-                        {t("accountGroupFilterSelectAll")}
-                      </Button>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => handleClearAllForAccount(accountId)}
-                        disabled={selectedGroups.length === 0}
-                      >
-                        {t("accountGroupFilterClearAll")}
-                      </Button>
-                    </div>
-                  </div>
-
-                  <CompactMultiSelect
-                    options={groups.map((group) => ({
-                      value: group,
-                      label: group,
-                    }))}
-                    selected={selectedGroups}
-                    onChange={(values) =>
-                      handleAccountSelectionChange(accountId, values)
-                    }
-                    displayMode="summary"
-                    placeholder={t("accountGroupFilterAllIncluded")}
-                  />
-                </section>
-              )
-            })
+                    <CompactMultiSelect
+                      options={groupOptions.map((group) => ({
+                        value: group.name,
+                        label: formatGroupLabel(group.name, group.ratio),
+                      }))}
+                      selected={selectedGroups}
+                      onChange={(values) =>
+                        handleAccountSelectionChange(accountId, values)
+                      }
+                      displayMode="summary"
+                      placeholder={t("accountGroupFilterAllIncluded")}
+                    />
+                  </section>
+                )
+              },
+            )
           )}
         </div>
       </PopoverContent>

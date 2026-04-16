@@ -143,8 +143,10 @@ describe("ModelItem", () => {
   it("falls back to the default group label when an unavailable model has no selected or effective group", () => {
     render(<ModelItem {...createDefaultProps()} />)
 
-    expect(screen.getByText("clickSwitchGroup:default")).toBeInTheDocument()
-    expect(screen.getByText("availableGroups: vip")).toBeInTheDocument()
+    expect(
+      screen.getByText("clickSwitchGroup:default (1x)"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("availableGroups: vip (1x)")).toBeInTheDocument()
   })
 
   it("does not mark rows as unavailable in all-accounts scope when account-level filtering already resolved eligibility", () => {

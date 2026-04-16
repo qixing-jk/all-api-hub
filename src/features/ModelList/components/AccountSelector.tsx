@@ -3,6 +3,7 @@ import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Heading3, SearchableSelect } from "~/components/ui"
+import type { AccountGroupOption } from "~/features/ModelList/hooks/useFilteredModels"
 import {
   ALL_ACCOUNTS_SOURCE_VALUE,
   toAccountSourceValue,
@@ -21,6 +22,7 @@ interface AccountSelectorProps {
   profiles: ApiCredentialProfile[]
   showAllAccountsGroupFilter?: boolean
   availableAccountGroupsByAccountId?: Record<string, string[]>
+  availableAccountGroupOptionsByAccountId?: Record<string, AccountGroupOption[]>
   allAccountsExcludedGroupsByAccountId?: Record<string, string[]>
   setAllAccountsExcludedGroupsByAccountId?: (
     next: Record<string, string[]>,
@@ -39,6 +41,7 @@ interface AccountSelectorProps {
  * @param props.profiles Available API credential profiles to display.
  * @param props.showAllAccountsGroupFilter Whether to show the all-accounts group filter menu.
  * @param props.availableAccountGroupsByAccountId Available group names keyed by account id for all-accounts mode.
+ * @param props.availableAccountGroupOptionsByAccountId Available group metadata keyed by account id for all-accounts mode.
  * @param props.allAccountsExcludedGroupsByAccountId Currently excluded group names keyed by account id.
  * @param props.setAllAccountsExcludedGroupsByAccountId Setter for all-accounts excluded group names.
  * @param props.selectorOpen Controlled open state for the selector popover.
@@ -53,6 +56,7 @@ export function AccountSelector({
   profiles,
   showAllAccountsGroupFilter = false,
   availableAccountGroupsByAccountId = {},
+  availableAccountGroupOptionsByAccountId = {},
   allAccountsExcludedGroupsByAccountId = {},
   setAllAccountsExcludedGroupsByAccountId,
   selectorOpen,
@@ -123,6 +127,9 @@ export function AccountSelector({
               accounts={accounts}
               availableAccountGroupsByAccountId={
                 availableAccountGroupsByAccountId
+              }
+              availableAccountGroupOptionsByAccountId={
+                availableAccountGroupOptionsByAccountId
               }
               excludedGroupsByAccountId={allAccountsExcludedGroupsByAccountId}
               onExcludedGroupsChange={setAllAccountsExcludedGroupsByAccountId}

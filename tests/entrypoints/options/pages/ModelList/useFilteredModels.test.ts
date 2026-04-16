@@ -448,6 +448,9 @@ describe("useFilteredModels", () => {
     expect(result.current.availableAccountGroupsByAccountId).toEqual({
       "account-context-missing-group-ratio": ["default"],
     })
+    expect(result.current.availableAccountGroupOptionsByAccountId).toEqual({
+      "account-context-missing-group-ratio": [{ name: "default", ratio: 1 }],
+    })
   })
 
   it("keeps duplicate single-account rows in their original order when every sort key ties", async () => {
@@ -991,6 +994,10 @@ describe("useFilteredModels", () => {
     expect(result.current.availableAccountGroupsByAccountId).toEqual({
       "account-a": ["vip"],
       "account-b": ["vip"],
+    })
+    expect(result.current.availableAccountGroupOptionsByAccountId).toEqual({
+      "account-a": [{ name: "vip", ratio: 0.5 }],
+      "account-b": [{ name: "vip", ratio: 0.8 }],
     })
   })
 

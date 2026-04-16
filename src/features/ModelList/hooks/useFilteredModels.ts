@@ -56,6 +56,11 @@ interface RawModelItem {
   exchangeRate: number
 }
 
+export interface AccountGroupOption {
+  name: string
+  ratio: number
+}
+
 export type CalculatedModelItem = {
   model: PricingResponse["data"][number]
   calculatedPrice: ReturnType<typeof calculateModelPrice>
@@ -472,6 +477,58 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     selectedSource?.kind,
   ])
 
+  const availableAccountGroupOptionsByAccountId = useMemo(() => {
+    if (
+      !selectedSource?.capabilities.supportsGroupFiltering ||
+      selectedSource.kind !== "all-accounts"
+    ) {
+      return {}
+    }
+
+    const ratiosByAccountId = new Map<string, Map<string, number>>()
+
+    rawModelItems.forEach((item) => {
+      if (item.source.kind !== "account") {
+        return
+      }
+
+      const accountId = item.source.account.id
+      const ratioMap =
+        ratiosByAccountId.get(accountId) ?? new Map<string, number>()
+
+      Object.entries(item.groupRatios).forEach(([group, ratio]) => {
+        if (group) {
+          ratioMap.set(group, ratio || 1)
+        }
+      })
+
+      item.model.enable_groups.forEach((group) => {
+        if (group && !ratioMap.has(group)) {
+          ratioMap.set(group, 1)
+        }
+      })
+
+      ratiosByAccountId.set(accountId, ratioMap)
+    })
+
+    return Object.fromEntries(
+      Object.entries(availableAccountGroupsByAccountId).map(
+        ([accountId, groups]) => [
+          accountId,
+          groups.map((group) => ({
+            name: group,
+            ratio: ratiosByAccountId.get(accountId)?.get(group) ?? 1,
+          })),
+        ],
+      ),
+    ) as Record<string, AccountGroupOption[]>
+  }, [
+    availableAccountGroupsByAccountId,
+    rawModelItems,
+    selectedSource?.capabilities.supportsGroupFiltering,
+    selectedSource?.kind,
+  ])
+
   const effectiveSingleSourceGroupCandidates = useMemo(() => {
     if (!selectedSource?.capabilities.supportsGroupFiltering) {
       return ["default"]
@@ -818,5 +875,6 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     getProviderFilteredCount,
     availableGroups,
     availableAccountGroupsByAccountId,
+    availableAccountGroupOptionsByAccountId,
   }
 }

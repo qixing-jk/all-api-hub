@@ -23,6 +23,10 @@ import {
   MODEL_LIST_BILLING_MODES,
   type ModelListBillingMode,
 } from "~/features/ModelList/billingModes"
+import {
+  formatGroupLabel,
+  resolveGroupRatio,
+} from "~/features/ModelList/groupLabels"
 import type {
   ModelManagementSource,
   ModelManagementSourceCapabilities,
@@ -108,7 +112,10 @@ export function ControlPanel({
   const supportsPriceSorting = sourceCapabilities.supportsPricing
   const groupOptions = availableGroups.map((group) => ({
     value: group,
-    label: `${group} (${pricingData?.group_ratio?.[group] || 1}x)`,
+    label: formatGroupLabel(
+      group,
+      resolveGroupRatio(group, pricingData?.group_ratio ?? {}),
+    ),
   }))
   const sortOptions = [
     {
