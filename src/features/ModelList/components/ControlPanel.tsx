@@ -62,6 +62,8 @@ interface ControlPanelProps {
  * @param props.sourceCapabilities Capability flags for the active source.
  * @param props.searchTerm Current search keyword.
  * @param props.setSearchTerm Setter to update search keyword.
+ * @param props.sortMode Active sort mode.
+ * @param props.setSortMode Setter for sort mode.
  * @param props.selectedBillingMode Active billing-mode filter value.
  * @param props.setSelectedBillingMode Setter for billing-mode filter.
  * @param props.selectedGroups Active candidate group filter set.

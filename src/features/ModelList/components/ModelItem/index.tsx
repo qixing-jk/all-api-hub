@@ -49,7 +49,7 @@ interface ModelItemProps {
 }
 
 /**
- *
+ * Renders a single model row with pricing, availability, and expandable details.
  */
 export default function ModelItem(props: ModelItemProps) {
   const {

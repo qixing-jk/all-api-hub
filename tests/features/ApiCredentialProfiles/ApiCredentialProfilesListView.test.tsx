@@ -9,7 +9,9 @@ vi.mock("~/hooks/useMediaQuery", () => ({
 }))
 
 vi.mock("~/components/ui", () => ({
-  Input: ({ leftIcon, rightIcon, ...props }: any) => <input {...props} />,
+  Input: ({ leftIcon: _leftIcon, rightIcon: _rightIcon, ...props }: any) => (
+    <input {...props} />
+  ),
   SearchableSelect: ({ value, onChange }: any) => (
     <select
       aria-label="api-type-filter"

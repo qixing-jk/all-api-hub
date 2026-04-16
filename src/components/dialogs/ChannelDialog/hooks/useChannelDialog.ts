@@ -62,7 +62,7 @@ interface PrefilledDialogDuplicateState {
 }
 
 /**
- *
+ * Narrows a display account union to a persisted site account record.
  */
 function isSiteAccount(
   account: DisplaySiteData | SiteAccount,
@@ -71,7 +71,8 @@ function isSiteAccount(
 }
 
 /**
- * Hook to easily trigger channel creation dialog from anywhere
+ * Exposes helpers for opening channel dialogs from account data,
+ * raw credentials, or custom initial values.
  */
 export function useChannelDialog() {
   const { t } = useTranslation(["messages", "channelDialog"])
