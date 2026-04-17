@@ -164,6 +164,17 @@ describe("webdavService", () => {
       expect(content).toBe('{"ok":true}')
     })
 
+    it("returns response text when status is 206", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch.mockResolvedValue({
+        status: 206,
+        text: vi.fn().mockResolvedValue('{"partial":true}'),
+      })
+
+      const content = await downloadBackup()
+      expect(content).toBe('{"partial":true}')
+    })
+
     it("downloadBackupRaw returns raw response text when status is 200", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
       globalAny.fetch.mockResolvedValue({

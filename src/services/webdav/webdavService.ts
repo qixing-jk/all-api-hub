@@ -298,7 +298,7 @@ export async function downloadBackupRaw(
       Accept: "application/json",
     },
   })
-  if (res.status === 200) {
+  if (res.status >= 200 && res.status < 300) {
     return await res.text()
   }
   if (await isMissingWebdavBackupResponse(res))
