@@ -64,9 +64,7 @@ type BatchVerifyModelsDialogProps = {
 
 const logger = createLogger("BatchVerifyModelsDialog")
 
-/**
- *
- */
+/** Build the initial row state for the current batch item snapshot. */
 function buildRows(items: BatchVerifyModelItem[]): BatchVerifyRow[] {
   return items.map((item) => ({
     item,
@@ -77,28 +75,26 @@ function buildRows(items: BatchVerifyModelItem[]): BatchVerifyRow[] {
   }))
 }
 
-/**
- *
- */
+/** Resolve the initial API type mode from the first profile-backed item. */
 function getDefaultApiTypeMode(
   items: BatchVerifyModelItem[],
 ): BatchVerifyApiTypeMode {
-  const profileItem = items.find((item) => item.source.kind === "profile")
-  return profileItem?.source.kind === "profile"
-    ? profileItem.source.profile.apiType
-    : "auto"
+  const profileItem = items.find(
+    (
+      item,
+    ): item is BatchVerifyModelItem & {
+      source: Extract<BatchVerifyModelItem["source"], { kind: "profile" }>
+    } => item.source.kind === "profile",
+  )
+  return profileItem?.source.profile.apiType ?? "auto"
 }
 
-/**
- *
- */
+/** Check whether a row status is terminal for progress accounting. */
 function isCompletedStatus(status: BatchVerifyRowStatus) {
   return status === "pass" || status === "fail" || status === "skipped"
 }
 
-/**
- *
- */
+/** Collapse probe results into the row status shown in the batch table. */
 function deriveRowStatus(
   results: ApiVerificationProbeResult[],
 ): BatchVerifyRowStatus {
@@ -108,11 +104,23 @@ function deriveRowStatus(
   return "skipped"
 }
 
-/**
- *
- */
+/** Sum the latencies reported by all completed probes for a row. */
 function getRowLatency(results: ApiVerificationProbeResult[]) {
   return results.reduce((total, result) => total + (result.latencyMs || 0), 0)
+}
+
+/** Pick a valid probe id for synthetic failure records. */
+function getFirstApplicableProbeId(
+  apiType: ApiVerificationApiType,
+  selectedProbeIds: ApiVerificationProbeId[],
+): ApiVerificationProbeId {
+  const probeDefinitions = getApiVerificationProbeDefinitions(apiType)
+  const availableProbeIds = new Set(probeDefinitions.map((probe) => probe.id))
+  return (
+    selectedProbeIds.find((probeId) => availableProbeIds.has(probeId)) ??
+    probeDefinitions[0]?.id ??
+    "text-generation"
+  )
 }
 
 const DEFAULT_SELECTED_PROBE_IDS: ApiVerificationProbeId[] = ["text-generation"]
@@ -369,29 +377,13 @@ export function BatchVerifyModelsDialog({
                 const tokens = await getAccountTokens(item)
                 const token = pickBatchVerifyCompatibleToken(tokens, item)
                 if (!token) {
-                  const result: ApiVerificationProbeResult = {
-                    id: selectedProbeIds[0] ?? "text-generation",
-                    status: "fail",
-                    latencyMs: 0,
-                    summary: t(
-                      "modelList:batchVerify.messages.noCompatibleToken",
-                    ),
-                  }
-                  await persistResult(item, apiType, [result]).catch(
-                    (persistError) => {
-                      logger.error(
-                        "Failed to persist skipped batch verification result",
-                        {
-                          modelId: item.modelId,
-                          message: toSanitizedErrorSummary(persistError, []),
-                        },
-                      )
-                    },
+                  const summary = t(
+                    "modelList:batchVerify.messages.noCompatibleToken",
                   )
                   updateRow(item.key, {
                     status: "skipped",
                     latencyMs: 0,
-                    summary: result.summary,
+                    summary,
                     results: [],
                   })
                   return null
@@ -517,7 +509,7 @@ export function BatchVerifyModelsDialog({
         })
 
         const result: ApiVerificationProbeResult = {
-          id: selectedProbeIds[0] ?? "text-generation",
+          id: getFirstApplicableProbeId(apiType, selectedProbeIds),
           status: "fail",
           latencyMs: Date.now() - startedAt,
           summary: message,
