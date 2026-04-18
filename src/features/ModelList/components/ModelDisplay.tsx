@@ -1,5 +1,6 @@
 import { CpuChipIcon } from "@heroicons/react/24/outline"
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { forwardRef, useCallback, useEffect, useMemo, useState } from "react"
+import type { HTMLAttributes } from "react"
 import { useTranslation } from "react-i18next"
 import { Virtuoso } from "react-virtuoso"
 
@@ -18,6 +19,7 @@ import type {
   ModelManagementSourceCapabilities,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+import { cn } from "~/lib/utils"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import {
   createAccountModelVerificationHistoryTarget,
@@ -56,6 +58,38 @@ interface ModelDisplayProps {
   displayCapabilities?: ModelManagementSourceCapabilities
   onFilterAccount?: (accountId: string) => void
 }
+
+/** Cap the model list to the previous viewport-sized height while allowing short lists to shrink. */
+function getModelDisplayListMaxHeight() {
+  return typeof window === "undefined" ? 560 : window.innerHeight * 0.7
+}
+
+const ModelRowsList = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement>
+>(function ModelRowsList({ children, className, ...props }, ref) {
+  return (
+    <div
+      ref={ref}
+      className={cn("min-w-0 overflow-x-hidden", className)}
+      {...props}
+    >
+      {children}
+    </div>
+  )
+})
+
+const ModelRowsItem = forwardRef<
+  HTMLDivElement,
+  HTMLAttributes<HTMLDivElement>
+>(function ModelRowsItem({ children, className, ...props }, ref) {
+  return (
+    <div ref={ref} className={cn("min-w-0 pb-3", className)} {...props}>
+      {children}
+    </div>
+  )
+})
+
 /**
  * Virtualized list displaying model cards with pricing and availability data.
  * @param props Component props describing the rendered model list.
@@ -82,6 +116,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
   const { t } = useTranslation("modelList")
   const modelKeys = useMemo(() => models.map(getModelItemKey), [models])
   const [expandedModelKeys, setExpandedModelKeys] = useState<string[]>([])
+  const [listHeight, setListHeight] = useState(0)
 
   useEffect(() => {
     const activeModelKeys = new Set(modelKeys)
@@ -96,6 +131,9 @@ export function ModelDisplay(props: ModelDisplayProps) {
     () => new Set(expandedModelKeys),
     [expandedModelKeys],
   )
+  const listMaxHeight = getModelDisplayListMaxHeight()
+  const listContainerHeight =
+    listHeight > 0 ? Math.min(listHeight, listMaxHeight) : listMaxHeight
 
   const toggleModelExpand = useCallback((itemKey: string) => {
     setExpandedModelKeys((currentKeys) =>
@@ -115,17 +153,17 @@ export function ModelDisplay(props: ModelDisplayProps) {
   }
 
   return (
-    <div className="h-[70vh]">
+    <div className="overflow-hidden" style={{ height: listContainerHeight }}>
       <Virtuoso
+        className="h-full"
         data={models}
         computeItemKey={(_, item) => getModelItemKey(item)}
         components={{
-          Item: ({ children, ...props }) => (
-            <div className="my-3 first:mt-0" {...props}>
-              {children}
-            </div>
-          ),
+          Item: ModelRowsItem,
+          List: ModelRowsList,
         }}
+        totalListHeightChanged={setListHeight}
+        style={{ height: "100%" }}
         itemContent={(_index, item) => {
           const itemKey = getModelItemKey(item)
           const sourceForModel = item.source as ModelManagementItemSource

@@ -1,4 +1,4 @@
-import { render, screen } from "@testing-library/react"
+import { act, render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
@@ -15,7 +15,10 @@ import {
   type ApiVerificationHistoryTarget,
 } from "~/services/verification/verificationResultHistory"
 
-const { modelItemSpy } = vi.hoisted(() => ({
+const { mockTotalListHeightChanged, modelItemSpy } = vi.hoisted(() => ({
+  mockTotalListHeightChanged: {
+    current: undefined as undefined | ((height: number) => void),
+  },
   modelItemSpy: vi.fn(),
 }))
 
@@ -38,30 +41,44 @@ vi.mock("~/components/ui", () => ({
 
 vi.mock("react-virtuoso", () => ({
   Virtuoso: ({
+    className,
     data,
     itemContent,
     computeItemKey,
     components,
+    style,
+    totalListHeightChanged,
   }: {
+    className?: string
     data: any[]
     itemContent: (index: number, item: any) => React.ReactNode
     computeItemKey?: (index: number, item: any) => React.Key
-    components?: { Item?: React.ComponentType<any> }
+    components?: {
+      Item?: React.ComponentType<any>
+      List?: React.ComponentType<any>
+    }
+    style?: React.CSSProperties
+    totalListHeightChanged?: (height: number) => void
   }) => {
     const Item = components?.Item ?? ((props: any) => <div {...props} />)
+    const List = components?.List ?? ((props: any) => <div {...props} />)
+    mockTotalListHeightChanged.current = totalListHeightChanged
 
     return (
-      <div data-testid="virtuoso">
-        {data.map((item, index) => (
-          <Item
-            key={
-              computeItemKey?.(index, item) ??
-              `${item.model.model_name}-${index}`
-            }
-          >
-            {itemContent(index, item)}
-          </Item>
-        ))}
+      <div data-testid="virtuoso" className={className} style={style}>
+        <List data-testid="virtuoso-list">
+          {data.map((item, index) => (
+            <Item
+              data-testid="virtuoso-item"
+              key={
+                computeItemKey?.(index, item) ??
+                `${item.model.model_name}-${index}`
+              }
+            >
+              {itemContent(index, item)}
+            </Item>
+          ))}
+        </List>
       </div>
     )
   },
@@ -206,6 +223,7 @@ function getRenderedModelItem(modelId: string) {
 describe("ModelDisplay", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockTotalListHeightChanged.current = undefined
   })
 
   it("shows an empty state when no filtered models are available", () => {
@@ -226,6 +244,97 @@ describe("ModelDisplay", () => {
       "modelList:noMatchingModels",
     )
     expect(screen.queryByTestId("virtuoso")).not.toBeInTheDocument()
+  })
+
+  it("shrinks the virtual model list container to measured content height", () => {
+    render(
+      <ModelDisplay
+        models={[
+          createCalculatedModel({
+            model: { model_name: "gpt-4o-mini" },
+          }),
+        ]}
+        verificationSummariesByKey={{}}
+        showRealPrice={true}
+        showRatioColumn={true}
+        showEndpointTypes={true}
+        selectedGroups={[]}
+        handleGroupClick={vi.fn()}
+        availableGroups={["default"]}
+      />,
+    )
+
+    const virtualList = screen.getByTestId("virtuoso")
+    const listContainer = virtualList.parentElement
+
+    act(() => {
+      mockTotalListHeightChanged.current?.(144)
+    })
+
+    expect(listContainer).toHaveStyle({ height: "144px" })
+  })
+
+  it("caps the virtual model list container to the viewport height limit", () => {
+    render(
+      <ModelDisplay
+        models={[
+          createCalculatedModel({
+            model: { model_name: "gpt-4o-mini" },
+          }),
+          createCalculatedModel({
+            model: { model_name: "claude-3-5-sonnet" },
+          }),
+        ]}
+        verificationSummariesByKey={{}}
+        showRealPrice={true}
+        showRatioColumn={true}
+        showEndpointTypes={true}
+        selectedGroups={[]}
+        handleGroupClick={vi.fn()}
+        availableGroups={["default"]}
+      />,
+    )
+
+    const virtualList = screen.getByTestId("virtuoso")
+    const listContainer = virtualList.parentElement
+
+    act(() => {
+      mockTotalListHeightChanged.current?.(10_000)
+    })
+
+    expect(listContainer).toHaveStyle({
+      height: `${window.innerHeight * 0.7}px`,
+    })
+  })
+
+  it("uses consistent virtual row spacing without adding row margin", () => {
+    render(
+      <ModelDisplay
+        models={[
+          createCalculatedModel({
+            model: { model_name: "gpt-4o-mini" },
+          }),
+          createCalculatedModel({
+            model: { model_name: "claude-3-5-sonnet" },
+          }),
+        ]}
+        verificationSummariesByKey={{}}
+        showRealPrice={true}
+        showRatioColumn={true}
+        showEndpointTypes={true}
+        selectedGroups={[]}
+        handleGroupClick={vi.fn()}
+        availableGroups={["default"]}
+      />,
+    )
+
+    const [firstItem, lastItem] = screen.getAllByTestId("virtuoso-item")
+
+    expect(firstItem).not.toHaveClass("my-3")
+    expect(firstItem).not.toHaveClass("first:mt-0")
+    expect(lastItem).not.toHaveClass("my-3")
+    expect(firstItem).toHaveClass("pb-3")
+    expect(lastItem).toHaveClass("pb-3")
   })
 
   it("derives account exchange rates, group mode, and account verification summaries for rendered model cards", async () => {
