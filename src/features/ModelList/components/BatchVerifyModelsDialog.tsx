@@ -56,6 +56,10 @@ type BatchVerifyRow = {
   tokenName?: string
 }
 
+type AccountBatchVerifyModelItem = BatchVerifyModelItem & {
+  source: Extract<BatchVerifyModelItem["source"], { kind: "account" }>
+}
+
 type BatchVerifyModelsDialogProps = {
   isOpen: boolean
   onClose: () => void
@@ -87,6 +91,13 @@ function getDefaultApiTypeMode(
     } => item.source.kind === "profile",
   )
   return profileItem?.source.profile.apiType ?? "auto"
+}
+
+/** Narrow a batch row to account-backed sources before token lookup. */
+function isAccountBatchVerifyModelItem(
+  item: BatchVerifyModelItem,
+): item is AccountBatchVerifyModelItem {
+  return item.source.kind === "account"
 }
 
 /** Check whether a row status is terminal for progress accounting. */
@@ -281,11 +292,7 @@ export function BatchVerifyModelsDialog({
   }, [])
 
   const getAccountTokens = useCallback(
-    (item: BatchVerifyModelItem): Promise<ApiToken[]> => {
-      if (item.source.kind !== "account") {
-        return Promise.resolve([])
-      }
-
+    (item: AccountBatchVerifyModelItem): Promise<ApiToken[]> => {
       const account = item.source.account
       const cached = tokenCacheRef.current.get(account.id)
       if (cached) return cached
@@ -298,11 +305,7 @@ export function BatchVerifyModelsDialog({
   )
 
   const getResolvedToken = useCallback(
-    (item: BatchVerifyModelItem, token: ApiToken): Promise<ApiToken> => {
-      if (item.source.kind !== "account") {
-        return Promise.resolve(token)
-      }
-
+    (item: AccountBatchVerifyModelItem, token: ApiToken): Promise<ApiToken> => {
       const cacheKey = `${item.source.account.id}:${token.id}`
       const cached = resolvedTokenCacheRef.current.get(cacheKey)
       if (cached) return cached
@@ -372,7 +375,7 @@ export function BatchVerifyModelsDialog({
                 tokenName: undefined,
               }
             : await (async () => {
-                if (item.source.kind !== "account") return null
+                if (!isAccountBatchVerifyModelItem(item)) return null
                 const account = item.source.account
                 const tokens = await getAccountTokens(item)
                 const token = pickBatchVerifyCompatibleToken(tokens, item)

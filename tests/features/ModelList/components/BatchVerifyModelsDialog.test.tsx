@@ -431,6 +431,79 @@ describe("BatchVerifyModelsDialog", () => {
     expect(
       screen.getByText("modelList:batchVerify.modelSelection.noneSelected"),
     ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.modelSelection.selectAll",
+      }),
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    ).toBeEnabled()
+  })
+
+  it("marks unsupported-only probe results as skipped", async () => {
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "unsupported",
+      latencyMs: 0,
+      summary: "Not supported",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockUpsertLatestSummary).toHaveBeenCalledWith(
+        expect.objectContaining({
+          probes: [
+            expect.objectContaining({
+              id: "text-generation",
+              status: "unsupported",
+            }),
+          ],
+        }),
+      )
+    })
+    expect(
+      await screen.findByText("modelList:batchVerify.status.skipped"),
+    ).toBeInTheDocument()
   })
 
   it("skips an account model when no compatible token exists", async () => {
