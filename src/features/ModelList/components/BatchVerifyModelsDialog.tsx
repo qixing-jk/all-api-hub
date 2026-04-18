@@ -774,7 +774,7 @@ export function BatchVerifyModelsDialog({
           <p>{t("modelList:batchVerify.warning")}</p>
         </Alert>
 
-        <div className="dark:border-dark-bg-tertiary max-h-[52vh] space-y-2 overflow-y-auto rounded-md border border-gray-100 p-2">
+        <div className="dark:border-dark-bg-tertiary max-h-[50vh] space-y-2 overflow-y-auto rounded-md border border-gray-100 p-2">
           {rows.map((row) => (
             <div
               key={row.item.key}
