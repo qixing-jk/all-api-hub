@@ -177,19 +177,22 @@ describe("BatchVerifyModelsDialog", () => {
     )
 
     await waitFor(() => {
-      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith({
-        baseUrl: "https://api.example.com",
-        apiKey: "sk-real",
-        apiType: API_TYPES.OPENAI,
-        modelId: "gpt-4o",
-        tokenMeta: {
-          id: 1,
-          name: "default-token",
-          model_limits: "",
-          models: "",
-        },
-        probeId: "text-generation",
-      })
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://api.example.com",
+          apiKey: "sk-real",
+          apiType: API_TYPES.OPENAI,
+          modelId: "gpt-4o",
+          tokenMeta: {
+            id: 1,
+            name: "default-token",
+            model_limits: "",
+            models: "",
+          },
+          probeId: "text-generation",
+          abortSignal: expect.any(AbortSignal),
+        }),
+      )
     })
     expect(
       await screen.findByText("modelList:batchVerify.messages.probeSummary"),
@@ -350,6 +353,82 @@ describe("BatchVerifyModelsDialog", () => {
       await screen.findByText("modelList:batchVerify.messages.stopped"),
     ).toBeInTheDocument()
     expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+    expect(mockUpsertLatestSummary).not.toHaveBeenCalled()
+  })
+
+  it("aborts the running probe request when the batch is stopped", async () => {
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+
+    let receivedSignal: AbortSignal | undefined
+    mockRunApiVerificationProbe.mockImplementationOnce(
+      ({ abortSignal }: { abortSignal?: AbortSignal }) => {
+        receivedSignal = abortSignal
+        return new Promise((_, reject) => {
+          abortSignal?.addEventListener(
+            "abort",
+            () => reject(new DOMException("Aborted", "AbortError")),
+            { once: true },
+          )
+        })
+      },
+    )
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    const stopButton = await screen.findByRole("button", {
+      name: "modelList:batchVerify.actions.stop",
+    })
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+    })
+
+    fireEvent.click(stopButton)
+
+    await waitFor(() => {
+      expect(receivedSignal?.aborted).toBe(true)
+    })
+    expect(
+      await screen.findByText("modelList:batchVerify.messages.stopped"),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.rerun",
+      }),
+    ).toBeEnabled()
     expect(mockUpsertLatestSummary).not.toHaveBeenCalled()
   })
 
@@ -983,8 +1062,9 @@ describe("BatchVerifyModelsDialog", () => {
     })
 
     expect(
-      await screen.findByText("modelList:batchVerify.messages.stopped"),
-    ).toBeInTheDocument()
+      (await screen.findAllByText("modelList:batchVerify.messages.stopped"))
+        .length,
+    ).toBeGreaterThan(0)
   })
 
   it("runs profile-backed models with the profile api type and without account tokens", async () => {
@@ -1020,14 +1100,17 @@ describe("BatchVerifyModelsDialog", () => {
     )
 
     await waitFor(() => {
-      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith({
-        baseUrl: "https://anthropic.example.com",
-        apiKey: "profile-secret",
-        apiType: API_TYPES.ANTHROPIC,
-        modelId: "claude-3-5-sonnet",
-        tokenMeta: undefined,
-        probeId: "text-generation",
-      })
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://anthropic.example.com",
+          apiKey: "profile-secret",
+          apiType: API_TYPES.ANTHROPIC,
+          modelId: "claude-3-5-sonnet",
+          tokenMeta: undefined,
+          probeId: "text-generation",
+          abortSignal: expect.any(AbortSignal),
+        }),
+      )
     })
     expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
     await waitFor(() => {

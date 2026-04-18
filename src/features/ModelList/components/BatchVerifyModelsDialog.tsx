@@ -205,6 +205,7 @@ export function BatchVerifyModelsDialog({
   const [isRunning, setIsRunning] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
   const shouldStopRef = useRef(false)
+  const batchAbortControllerRef = useRef<AbortController | null>(null)
   const previousDialogSnapshotRef = useRef({
     isOpen: false,
     items,
@@ -413,7 +414,10 @@ export function BatchVerifyModelsDialog({
   )
 
   const runOne = useCallback(
-    async (item: BatchVerifyModelItem) => {
+    async (item: BatchVerifyModelItem, abortSignal: AbortSignal) => {
+      const isStopped = () => shouldStopRef.current || abortSignal.aborted
+      if (isStopped()) return
+
       const startedAt = Date.now()
       updateRow(item.key, {
         status: BATCH_VERIFY_ROW_STATUSES.RUNNING,
@@ -439,6 +443,8 @@ export function BatchVerifyModelsDialog({
                 if (!isAccountBatchVerifyModelItem(item)) return null
                 const account = item.source.account
                 const tokens = await getAccountTokens(item)
+                if (isStopped()) return null
+
                 const token = pickBatchVerifyCompatibleToken(tokens, item)
                 if (!token) {
                   const summary = t(
@@ -454,6 +460,8 @@ export function BatchVerifyModelsDialog({
                 }
 
                 const resolvedToken = await getResolvedToken(item, token)
+                if (isStopped()) return null
+
                 return {
                   baseUrl: account.baseUrl,
                   apiKey: resolvedToken.key,
@@ -462,7 +470,7 @@ export function BatchVerifyModelsDialog({
                 }
               })()
 
-        if (!credentials) return
+        if (!credentials || isStopped()) return
 
         apiKey = credentials.apiKey
         const probesToRun = getApiVerificationProbeDefinitions(apiType).filter(
@@ -495,7 +503,7 @@ export function BatchVerifyModelsDialog({
         const results: ApiVerificationProbeResult[] = []
         let stoppedBeforeCompletingProbes = false
         for (const probe of probesToRun) {
-          if (shouldStopRef.current) {
+          if (isStopped()) {
             stoppedBeforeCompletingProbes = true
             break
           }
@@ -508,9 +516,19 @@ export function BatchVerifyModelsDialog({
               modelId: item.modelId,
               tokenMeta,
               probeId: probe.id,
+              abortSignal,
             })
+            if (isStopped()) {
+              stoppedBeforeCompletingProbes = true
+              break
+            }
             results.push(result)
           } catch (error) {
+            if (isStopped()) {
+              stoppedBeforeCompletingProbes = true
+              break
+            }
+
             const redactions =
               item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
                 ? filterRedactions([
@@ -534,7 +552,7 @@ export function BatchVerifyModelsDialog({
           }
         }
 
-        if (stoppedBeforeCompletingProbes) return
+        if (stoppedBeforeCompletingProbes || isStopped()) return
 
         await persistResult(item, apiType, results).catch((persistError) => {
           logger.error("Failed to persist batch verification result", {
@@ -562,6 +580,8 @@ export function BatchVerifyModelsDialog({
           tokenName: credentials.tokenName,
         })
       } catch (error) {
+        if (isStopped()) return
+
         const redactions =
           item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
             ? filterRedactions([
@@ -638,6 +658,8 @@ export function BatchVerifyModelsDialog({
     )
     shouldStopRef.current = false
     clearCachedTokenPromises()
+    const abortController = new AbortController()
+    batchAbortControllerRef.current = abortController
     setHasStarted(true)
     setIsRunning(true)
     setRows(
@@ -664,7 +686,7 @@ export function BatchVerifyModelsDialog({
         nextIndex += 1
         const item = selectedItems[index]
         if (!item) return
-        await runOne(item)
+        await runOne(item, abortController.signal)
       }
     }
 
@@ -678,12 +700,16 @@ export function BatchVerifyModelsDialog({
       if (shouldStopRef.current) {
         markUnfinishedRowsStopped()
       }
+      if (batchAbortControllerRef.current === abortController) {
+        batchAbortControllerRef.current = null
+      }
       setIsRunning(false)
     }
   }
 
   const stopBatch = () => {
     shouldStopRef.current = true
+    batchAbortControllerRef.current?.abort()
   }
 
   const statusVariant = (status: BatchVerifyRowStatus) => {

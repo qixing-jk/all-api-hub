@@ -5,6 +5,7 @@ import { createLogger } from "~/utils/core/logger"
 type AnthropicAuthParams = {
   baseUrl: string
   apiKey: string
+  abortSignal?: AbortSignal
 }
 
 type AnthropicModelItem = {
@@ -51,6 +52,7 @@ export async function fetchAnthropicModelIds(
         {
           endpoint,
           options: {
+            signal: params.abortSignal,
             headers: {
               "x-api-key": params.apiKey,
               "anthropic-version": ANTHROPIC_VERSION,

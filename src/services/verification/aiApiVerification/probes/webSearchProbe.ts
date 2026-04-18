@@ -13,6 +13,7 @@ type RunWebSearchProbeParams = {
   apiKey: string
   apiType: ApiVerificationApiType
   modelId: string
+  abortSignal?: AbortSignal
 }
 
 /**
@@ -57,6 +58,7 @@ export async function runWebSearchProbe(
           }),
         },
         toolChoice: { type: "tool", toolName: "web_search" },
+        abortSignal: params.abortSignal,
       })
 
       const searched =
@@ -102,6 +104,7 @@ export async function runWebSearchProbe(
           google_search: google.tools.googleSearch({}),
         },
         toolChoice: { type: "tool", toolName: "google_search" },
+        abortSignal: params.abortSignal,
       })
 
       const searched =

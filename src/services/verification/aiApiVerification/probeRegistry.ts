@@ -17,6 +17,7 @@ type ProbeRunnerParams = {
   apiKey: string
   apiType: ApiVerificationApiType
   modelId?: string
+  abortSignal?: AbortSignal
 }
 
 /**
@@ -42,6 +43,7 @@ export const apiVerificationProbeRegistry: Record<
           baseUrl: params.baseUrl,
           apiKey: params.apiKey,
           apiType: params.apiType,
+          abortSignal: params.abortSignal,
         })
       ).result
     },
@@ -54,6 +56,7 @@ export const apiVerificationProbeRegistry: Record<
         apiKey: params.apiKey,
         apiType: params.apiType,
         modelId: params.modelId as string,
+        abortSignal: params.abortSignal,
       }),
   },
   "tool-calling": {
@@ -64,6 +67,7 @@ export const apiVerificationProbeRegistry: Record<
         apiKey: params.apiKey,
         apiType: params.apiType,
         modelId: params.modelId as string,
+        abortSignal: params.abortSignal,
       }),
   },
   "structured-output": {
@@ -74,6 +78,7 @@ export const apiVerificationProbeRegistry: Record<
         apiKey: params.apiKey,
         apiType: params.apiType,
         modelId: params.modelId as string,
+        abortSignal: params.abortSignal,
       }),
   },
   "web-search": {
@@ -84,6 +89,7 @@ export const apiVerificationProbeRegistry: Record<
         apiKey: params.apiKey,
         apiType: params.apiType,
         modelId: params.modelId as string,
+        abortSignal: params.abortSignal,
       }),
   },
 }

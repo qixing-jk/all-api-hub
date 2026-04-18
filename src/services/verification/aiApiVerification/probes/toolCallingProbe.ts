@@ -17,6 +17,7 @@ type RunToolCallingProbeParams = {
   apiKey: string
   apiType: ApiVerificationApiType
   modelId: string
+  abortSignal?: AbortSignal
 }
 
 /**
@@ -65,6 +66,7 @@ export async function runToolCallingProbe(
       prompt,
       tools: { verify_tool: verifyTool },
       toolChoice: "required",
+      abortSignal: params.abortSignal,
     })
 
     if (!toolCalled(result)) {

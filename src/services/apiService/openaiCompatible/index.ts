@@ -25,6 +25,9 @@ export const fetchOpenAICompatibleModels = async (params: OpenAIAuthParams) => {
   try {
     return await fetchApiData<UpstreamModelList>(request, {
       endpoint: OPENAI_COMPATIBLE_MODELS_ENDPOINT,
+      ...(params.abortSignal
+        ? { options: { signal: params.abortSignal } }
+        : {}),
     })
   } catch (error) {
     logger.error("Failed to fetch upstream model list", error)

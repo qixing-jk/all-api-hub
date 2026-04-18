@@ -13,6 +13,7 @@ type RunTextGenerationProbeParams = {
   apiKey: string
   apiType: ApiVerificationApiType
   modelId: string
+  abortSignal?: AbortSignal
 }
 
 /**
@@ -36,6 +37,7 @@ export async function runTextGenerationProbe(
     const result = await generateText({
       model,
       prompt,
+      abortSignal: params.abortSignal,
     })
 
     const text = (result.text ?? "").trim().toLowerCase()

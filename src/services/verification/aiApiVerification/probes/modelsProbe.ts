@@ -14,6 +14,7 @@ type RunModelsProbeParams = {
   baseUrl: string
   apiKey: string
   apiType: ApiVerificationApiType
+  abortSignal?: AbortSignal
 }
 
 /**
@@ -101,6 +102,7 @@ export async function runModelsProbe(
         return fetchOpenAICompatibleModelIds({
           baseUrl: normalizedBaseUrl,
           apiKey: params.apiKey,
+          abortSignal: params.abortSignal,
         })
       }
 
@@ -108,6 +110,7 @@ export async function runModelsProbe(
         return fetchAnthropicModelIds({
           baseUrl: normalizedBaseUrl,
           apiKey: params.apiKey,
+          abortSignal: params.abortSignal,
         })
       }
 
@@ -115,6 +118,7 @@ export async function runModelsProbe(
         return fetchGoogleModelIds({
           baseUrl: normalizedBaseUrl,
           apiKey: params.apiKey,
+          abortSignal: params.abortSignal,
         })
       }
 

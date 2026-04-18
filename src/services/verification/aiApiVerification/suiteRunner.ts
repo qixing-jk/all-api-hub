@@ -11,6 +11,7 @@ type RunApiVerificationSuiteParams = {
   apiKey: string
   apiType: ApiVerificationApiType
   requestedModelId?: string
+  abortSignal?: AbortSignal
 }
 
 type ApiVerificationSuiteResult = {
@@ -31,6 +32,7 @@ export async function runApiVerificationSuite(
     baseUrl: params.baseUrl,
     apiKey: params.apiKey,
     apiType: params.apiType,
+    abortSignal: params.abortSignal,
   })
   results.push(modelsProbe.result)
 
@@ -70,6 +72,7 @@ export async function runApiVerificationSuite(
         apiKey: params.apiKey,
         apiType: params.apiType,
         modelId: resolvedModelId,
+        abortSignal: params.abortSignal,
       }),
     )
   }

@@ -14,6 +14,7 @@ type RunStructuredOutputProbeParams = {
   apiKey: string
   apiType: ApiVerificationApiType
   modelId: string
+  abortSignal?: AbortSignal
 }
 
 /**
@@ -42,6 +43,7 @@ export async function runStructuredOutputProbe(
           ok: z.literal(true),
         }),
       }),
+      abortSignal: params.abortSignal,
     })
 
     return {

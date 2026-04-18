@@ -383,6 +383,8 @@ export interface OpenAIAuthParams {
   baseUrl: string
   /** API Key */
   apiKey: string
+  /** Optional cancellation signal for caller-scoped checks. */
+  abortSignal?: AbortSignal
 }
 
 // 上游模型列表（OpenAI格式）

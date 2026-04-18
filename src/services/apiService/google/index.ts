@@ -5,6 +5,7 @@ import { createLogger } from "~/utils/core/logger"
 type GoogleAuthParams = {
   baseUrl: string
   apiKey: string
+  abortSignal?: AbortSignal
 }
 
 type GoogleModelsListResponse = {
@@ -47,6 +48,7 @@ export async function fetchGoogleModelIds(
         {
           endpoint,
           options: {
+            signal: params.abortSignal,
             headers: {
               "x-goog-api-key": params.apiKey,
             },

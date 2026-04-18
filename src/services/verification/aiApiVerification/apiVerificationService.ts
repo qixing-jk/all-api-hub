@@ -19,6 +19,7 @@ type RunApiVerificationParams = {
   apiType: ApiVerificationApiType
   modelId?: string
   tokenMeta?: Pick<ApiToken, "models" | "model_limits" | "name" | "id">
+  abortSignal?: AbortSignal
 }
 
 /**
@@ -58,6 +59,7 @@ export async function runApiVerificationProbe(
     apiKey: params.apiKey,
     apiType: params.apiType,
     modelId: resolvedModelId,
+    abortSignal: params.abortSignal,
   })
 }
 
@@ -75,6 +77,7 @@ export async function runApiVerification(
     apiKey: params.apiKey,
     apiType: params.apiType,
     requestedModelId,
+    abortSignal: params.abortSignal,
   })
 
   return {
