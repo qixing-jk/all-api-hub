@@ -261,4 +261,50 @@ describe("Textarea", () => {
 
     expect(textareaRef).not.toHaveBeenCalled()
   })
+
+  it("does not show the clear button for empty, disabled, or read-only textareas", () => {
+    const { rerender } = render(
+      <Textarea
+        aria-label="empty"
+        value=""
+        onChange={vi.fn()}
+        onClear={vi.fn()}
+        clearButtonLabel="Clear textarea"
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "Clear textarea" }),
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <Textarea
+        aria-label="disabled"
+        value="disabled"
+        onChange={vi.fn()}
+        onClear={vi.fn()}
+        clearButtonLabel="Clear textarea"
+        disabled={true}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "Clear textarea" }),
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <Textarea
+        aria-label="read-only"
+        value="read-only"
+        onChange={vi.fn()}
+        onClear={vi.fn()}
+        clearButtonLabel="Clear textarea"
+        readOnly={true}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "Clear textarea" }),
+    ).not.toBeInTheDocument()
+  })
 })
