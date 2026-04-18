@@ -81,9 +81,7 @@ interface UseModelDataReturn {
   accountFallback: AccountFallbackControls | null
 }
 
-/**
- *
- */
+/** Creates the normalized invalid-format error used by pricing loaders. */
 function createInvalidFormatError() {
   const error = new Error(MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT)
   ;(error as { code?: string }).code =
@@ -91,11 +89,12 @@ function createInvalidFormatError() {
   return error
 }
 
-/**
- *
- */
+/** Builds the pricing query key from non-secret account identity fields. */
 function createModelPricingQueryKey(
-  account?: Pick<DisplaySiteData, "id" | "baseUrl" | "userId">,
+  account?: Pick<
+    DisplaySiteData,
+    "id" | "baseUrl" | "userId" | "siteType" | "authType"
+  >,
 ) {
   return account
     ? [
@@ -103,13 +102,29 @@ function createModelPricingQueryKey(
         account.id,
         account.baseUrl,
         account.userId,
+        account.siteType,
+        account.authType,
       ]
     : [MODEL_LIST_QUERY_KEYS.PRICING, MODEL_LIST_QUERY_SCOPE_VALUES.NONE]
 }
 
-/**
- *
- */
+/** Builds the persisted pricing-cache key from non-secret account fields. */
+function createModelPricingCacheKey(
+  account: Pick<
+    DisplaySiteData,
+    "id" | "baseUrl" | "userId" | "siteType" | "authType"
+  >,
+) {
+  return [
+    account.id,
+    account.baseUrl,
+    account.userId,
+    account.siteType,
+    account.authType,
+  ].join("|")
+}
+
+/** Builds the profile catalog query key from stable profile revision data. */
 function createProfileCatalogQueryKey(profile?: {
   id: string
   updatedAt: number
@@ -299,9 +314,9 @@ function useSingleAccountModelData(params: {
         throw new Error("No account selected")
       }
 
-      const accountId = currentAccount.id
+      const cacheKey = createModelPricingCacheKey(currentAccount)
 
-      const cached = await modelPricingCache.get(accountId)
+      const cached = await modelPricingCache.get(cacheKey)
       if (cached && Array.isArray(cached.data)) {
         return cached
       }
@@ -323,7 +338,7 @@ function useSingleAccountModelData(params: {
         throw createInvalidFormatError()
       }
 
-      await modelPricingCache.set(accountId, data)
+      await modelPricingCache.set(cacheKey, data)
 
       return data
     },
@@ -548,7 +563,9 @@ function useSingleAccountModelData(params: {
 
   const loadPricingData = useCallback(async () => {
     if (!currentAccount) return
-    await modelPricingCache.invalidate(currentAccount.id)
+    await modelPricingCache.invalidate(
+      createModelPricingCacheKey(currentAccount),
+    )
     await query.refetch()
   }, [currentAccount, query])
 
@@ -642,7 +659,8 @@ function useAllAccountsModelData(
       refetchOnWindowFocus: false,
       retry: 1,
       queryFn: async () => {
-        const cached = await modelPricingCache.get(account.id)
+        const cacheKey = createModelPricingCacheKey(account)
+        const cached = await modelPricingCache.get(cacheKey)
         if (cached && Array.isArray(cached.data)) {
           return cached
         }
@@ -662,7 +680,7 @@ function useAllAccountsModelData(
           throw createInvalidFormatError()
         }
 
-        await modelPricingCache.set(account.id, data)
+        await modelPricingCache.set(cacheKey, data)
 
         return data
       },
@@ -692,7 +710,7 @@ function useAllAccountsModelData(
   const loadPricingData = useCallback(async () => {
     await Promise.all(
       safeDisplayData.map(async (account, index) => {
-        await modelPricingCache.invalidate(account.id)
+        await modelPricingCache.invalidate(createModelPricingCacheKey(account))
         const query = queries[index]
         if (query) {
           await query.refetch()

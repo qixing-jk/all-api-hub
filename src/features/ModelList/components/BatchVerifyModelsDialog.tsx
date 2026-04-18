@@ -589,7 +589,7 @@ export function BatchVerifyModelsDialog({
           })
         })
         updateRow(item.key, {
-          status: "fail",
+          status: BATCH_VERIFY_ROW_STATUSES.FAIL,
           latencyMs: result.latencyMs,
           summary: message,
           results: [result],

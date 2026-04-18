@@ -1,12 +1,11 @@
 import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CardContent } from "~/components/ui"
-import { cn } from "~/lib/utils"
-
 import {
   MODEL_LIST_ACCOUNT_ERROR_TYPES,
   type ModelListAccountErrorType,
-} from "../modelDataStates"
+} from "~/features/ModelList/modelDataStates"
+import { cn } from "~/lib/utils"
 
 interface AccountSummaryItem {
   accountId: string

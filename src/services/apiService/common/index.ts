@@ -56,6 +56,7 @@ import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 const CHANNEL_API_BASE = "/api/channel/"
+const MODEL_PRICING_ENDPOINT = "/api/pricing"
 
 const logger = createLogger("ApiServiceCommon")
 
@@ -1257,8 +1258,6 @@ export async function deleteApiToken(
 export async function fetchModelPricing(
   request: ApiServiceRequest,
 ): Promise<PricingResponse> {
-  const MODEL_PRICING_ENDPOINT = "/api/pricing"
-
   try {
     // /api/pricing 接口直接返回 PricingResponse 格式，不需要通过 apiRequestData 包装
     return await fetchApi<PricingResponse>(

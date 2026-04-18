@@ -211,6 +211,109 @@ describe("useModelData all-accounts loading", () => {
     expect(calledAccountIds).toEqual(expect.arrayContaining(["a", "b"]))
   })
 
+  it("refetches single-account pricing when site or auth type changes", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+
+    const fetchModelPricing = vi
+      .fn()
+      .mockResolvedValueOnce({
+        data: [
+          {
+            model_name: "access-token-model",
+            quota_type: 0,
+            model_ratio: 1,
+            model_price: 1,
+            completion_ratio: 1,
+            enable_groups: ["default"],
+            supported_endpoint_types: [],
+          },
+        ],
+        group_ratio: { default: 1 },
+        success: true,
+        usable_group: { default: true },
+      })
+      .mockResolvedValueOnce({
+        data: [
+          {
+            model_name: "cookie-model",
+            quota_type: 0,
+            model_ratio: 1,
+            model_price: 1,
+            completion_ratio: 1,
+            enable_groups: ["default"],
+            supported_endpoint_types: [],
+          },
+        ],
+        group_ratio: { default: 1 },
+        success: true,
+        usable_group: { default: true },
+      })
+    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+
+    const firstAccount = createDisplayAccount({
+      id: "credential-change-account",
+      baseUrl: "https://credential-change.example.com",
+      userId: 61,
+      siteType: "default",
+      authType: AuthTypeEnum.AccessToken,
+    })
+    const secondAccount = createDisplayAccount({
+      id: "credential-change-account",
+      baseUrl: "https://credential-change.example.com",
+      userId: 61,
+      siteType: "new-api",
+      authType: AuthTypeEnum.Cookie,
+      cookieAuthSessionCookie: "session=updated",
+    })
+
+    type HookProps = {
+      selectedSource: ReturnType<typeof createAccountSource>
+      accounts: DisplaySiteData[]
+    }
+
+    const { result, rerender } = renderHook(
+      ({ selectedSource, accounts }: HookProps) =>
+        useModelData({
+          selectedSource,
+          accounts,
+        }),
+      {
+        initialProps: {
+          selectedSource: createAccountSource(firstAccount),
+          accounts: [firstAccount],
+        },
+        wrapper: createWrapper(),
+      },
+    )
+
+    await waitFor(() => {
+      expect(fetchModelPricing).toHaveBeenCalledTimes(1)
+    })
+    expect(result.current.pricingData?.data[0]?.model_name).toBe(
+      "access-token-model",
+    )
+
+    rerender({
+      selectedSource: createAccountSource(secondAccount),
+      accounts: [secondAccount],
+    })
+
+    await waitFor(() => {
+      expect(fetchModelPricing).toHaveBeenCalledTimes(2)
+    })
+    expect(fetchModelPricing).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        accountId: "credential-change-account",
+        auth: expect.objectContaining({
+          authType: AuthTypeEnum.Cookie,
+          cookie: "session=updated",
+        }),
+      }),
+    )
+    expect(result.current.pricingData?.data[0]?.model_name).toBe("cookie-model")
+  })
+
   it("marks all-account queries as loading before each account returns data", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()

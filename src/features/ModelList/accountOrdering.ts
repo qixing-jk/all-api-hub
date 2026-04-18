@@ -1,6 +1,5 @@
+import type { ModelListAccountErrorType } from "~/features/ModelList/modelDataStates"
 import type { DisplaySiteData } from "~/types"
-
-import type { ModelListAccountErrorType } from "./modelDataStates"
 
 type AccountQueryStateLike = {
   account: Pick<DisplaySiteData, "id">

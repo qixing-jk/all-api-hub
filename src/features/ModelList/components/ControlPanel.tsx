@@ -28,11 +28,11 @@ import {
   formatGroupLabel,
   resolveGroupRatio,
 } from "~/features/ModelList/groupLabels"
-import type {
-  ModelManagementSource,
-  ModelManagementSourceCapabilities,
+import {
+  MODEL_MANAGEMENT_SOURCE_KINDS,
+  type ModelManagementSource,
+  type ModelManagementSourceCapabilities,
 } from "~/features/ModelList/modelManagementSources"
-import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
 import {
   MODEL_LIST_SORT_MODES,
   type ModelListSortMode,
