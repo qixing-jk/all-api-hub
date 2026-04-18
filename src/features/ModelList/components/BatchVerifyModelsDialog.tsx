@@ -528,29 +528,27 @@ export function BatchVerifyModelsDialog({
             />
           </div>
 
-          <div className="dark:border-dark-bg-tertiary rounded-md border border-gray-100 p-3 text-sm">
-            <div className="flex flex-wrap gap-2">
-              <Badge variant="info">
-                {t("modelList:batchVerify.counts.total", {
-                  value: summary.total,
-                })}
-              </Badge>
-              <Badge variant="success">
-                {t("modelList:batchVerify.counts.pass", {
-                  value: summary.pass,
-                })}
-              </Badge>
-              <Badge variant="danger">
-                {t("modelList:batchVerify.counts.fail", {
-                  value: summary.fail,
-                })}
-              </Badge>
-              <Badge variant="warning">
-                {t("modelList:batchVerify.counts.skipped", {
-                  value: summary.skipped,
-                })}
-              </Badge>
-            </div>
+          <div className="flex flex-wrap items-end gap-2 sm:justify-end">
+            <Badge variant="info">
+              {t("modelList:batchVerify.counts.total", {
+                value: summary.total,
+              })}
+            </Badge>
+            <Badge variant="success">
+              {t("modelList:batchVerify.counts.pass", {
+                value: summary.pass,
+              })}
+            </Badge>
+            <Badge variant="danger">
+              {t("modelList:batchVerify.counts.fail", {
+                value: summary.fail,
+              })}
+            </Badge>
+            <Badge variant="warning">
+              {t("modelList:batchVerify.counts.skipped", {
+                value: summary.skipped,
+              })}
+            </Badge>
           </div>
         </div>
 
