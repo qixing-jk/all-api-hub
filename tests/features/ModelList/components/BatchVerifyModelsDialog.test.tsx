@@ -32,9 +32,11 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
     >()
   return {
     ...actual,
-    getApiVerificationProbeDefinitions: (...args: any[]) =>
-      mockGetApiVerificationProbeDefinitions(...args) ??
-      actual.getApiVerificationProbeDefinitions(...args),
+    getApiVerificationProbeDefinitions: (
+      apiType: Parameters<typeof actual.getApiVerificationProbeDefinitions>[0],
+    ) =>
+      mockGetApiVerificationProbeDefinitions(apiType) ??
+      actual.getApiVerificationProbeDefinitions(apiType),
     runApiVerificationProbe: (...args: any[]) =>
       mockRunApiVerificationProbe(...args),
   }
