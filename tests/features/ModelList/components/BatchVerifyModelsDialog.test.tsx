@@ -242,6 +242,79 @@ describe("BatchVerifyModelsDialog", () => {
     ])
   })
 
+  it("stops before the next probe and skips persisting partial model results", async () => {
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+
+    let resolveProbe: (result: any) => void = () => {}
+    mockRunApiVerificationProbe.mockReturnValueOnce(
+      new Promise((resolve) => {
+        resolveProbe = resolve
+      }),
+    )
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByText(
+        "aiApiVerification:verifyDialog.probes.tool-calling",
+      ),
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    const stopButton = await screen.findByRole("button", {
+      name: "modelList:batchVerify.actions.stop",
+    })
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+    })
+
+    fireEvent.click(stopButton)
+    resolveProbe({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 10,
+      summary: "Finished before stop",
+    })
+
+    expect(
+      await screen.findByText("modelList:batchVerify.messages.stopped"),
+    ).toBeInTheDocument()
+    expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+    expect(mockUpsertLatestSummary).not.toHaveBeenCalled()
+  })
+
   it("records probe errors and continues when history persistence fails", async () => {
     mockFetchDisplayAccountTokens.mockResolvedValueOnce([
       {
@@ -705,6 +778,100 @@ describe("BatchVerifyModelsDialog", () => {
         }),
       )
     })
+  })
+
+  it("does not reset an active batch when the item snapshot changes", async () => {
+    mockFetchDisplayAccountTokens.mockResolvedValue([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockResolveDisplayAccountTokenForSecret.mockResolvedValue({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+
+    let resolveProbe: (result: any) => void = () => {}
+    mockRunApiVerificationProbe.mockReturnValue(
+      new Promise((resolve) => {
+        resolveProbe = resolve
+      }),
+    )
+
+    const initialItems: any[] = [
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ]
+    const { rerender } = render(
+      <BatchVerifyModelsDialog
+        isOpen={true}
+        onClose={() => {}}
+        items={initialItems}
+      />,
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await screen.findByRole("button", {
+      name: "modelList:batchVerify.actions.stop",
+    })
+    rerender(
+      <BatchVerifyModelsDialog
+        isOpen={true}
+        onClose={() => {}}
+        items={[
+          ...initialItems,
+          {
+            key: "account:acc-1:model:gpt-4o-mini",
+            modelId: "gpt-4o-mini",
+            enableGroups: ["default"],
+            source: { kind: "account", account },
+          },
+        ]}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "modelList:batchVerify.actions.stop",
+        }),
+      ).toBeInTheDocument()
+    })
+
+    resolveProbe({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 10,
+      summary: "Finished before stop",
+    })
+
+    expect(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.rerun",
+      }),
+    ).toBeInTheDocument()
   })
 
   it("marks queued models as stopped when the running batch is stopped", async () => {

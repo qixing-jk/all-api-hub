@@ -68,6 +68,11 @@ type BatchVerifyModelsDialogProps = {
 
 const logger = createLogger("BatchVerifyModelsDialog")
 
+/** Normalize optional secrets before passing them to shared redaction. */
+function filterRedactions(values: Array<string | undefined>): string[] {
+  return values.filter(Boolean) as string[]
+}
+
 /** Build the initial row state for the current batch item snapshot. */
 function buildRows(items: BatchVerifyModelItem[]): BatchVerifyRow[] {
   return items.map((item) => ({
@@ -159,6 +164,10 @@ export function BatchVerifyModelsDialog({
   const [isRunning, setIsRunning] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
   const shouldStopRef = useRef(false)
+  const previousDialogSnapshotRef = useRef({
+    isOpen: false,
+    items,
+  })
   const tokenCacheRef = useRef(new Map<string, Promise<ApiToken[]>>())
   const resolvedTokenCacheRef = useRef(new Map<string, Promise<ApiToken>>())
   const clearCachedTokenPromises = useCallback(() => {
@@ -167,7 +176,15 @@ export function BatchVerifyModelsDialog({
   }, [])
 
   useEffect(() => {
+    const previousSnapshot = previousDialogSnapshotRef.current
+    previousDialogSnapshotRef.current = { isOpen, items }
+
     if (!isOpen) return
+
+    const opened = !previousSnapshot.isOpen
+    const itemsChanged = previousSnapshot.items !== items
+    if (!opened && !itemsChanged) return
+    if (isRunning) return
 
     shouldStopRef.current = false
     clearCachedTokenPromises()
@@ -177,7 +194,7 @@ export function BatchVerifyModelsDialog({
     setSelectedModelKeys(items.map((item) => item.key))
     setIsRunning(false)
     setHasStarted(false)
-  }, [clearCachedTokenPromises, isOpen, items])
+  }, [clearCachedTokenPromises, isOpen, isRunning, items])
 
   const summary = useMemo(() => {
     return rows.reduce(
@@ -432,7 +449,13 @@ export function BatchVerifyModelsDialog({
             : undefined
 
         const results: ApiVerificationProbeResult[] = []
+        let stoppedBeforeCompletingProbes = false
         for (const probe of probesToRun) {
+          if (shouldStopRef.current) {
+            stoppedBeforeCompletingProbes = true
+            break
+          }
+
           try {
             const result = await runApiVerificationProbe({
               baseUrl: credentials.baseUrl,
@@ -446,23 +469,28 @@ export function BatchVerifyModelsDialog({
           } catch (error) {
             const redactions =
               item.source.kind === "profile"
-                ? [item.source.profile.apiKey, item.source.profile.baseUrl]
-                : [
+                ? filterRedactions([
+                    item.source.profile.apiKey,
+                    item.source.profile.baseUrl,
+                  ])
+                : filterRedactions([
                     item.source.account.token,
                     item.source.account.cookieAuthSessionCookie,
                     apiKey,
-                  ].filter(Boolean)
+                  ])
 
             results.push({
               id: probe.id,
               status: "fail",
               latencyMs: 0,
               summary:
-                toSanitizedErrorSummary(error, redactions as string[]) ||
+                toSanitizedErrorSummary(error, redactions) ||
                 t("modelList:batchVerify.messages.unexpected"),
             })
           }
         }
+
+        if (stoppedBeforeCompletingProbes) return
 
         await persistResult(item, apiType, results).catch((persistError) => {
           logger.error("Failed to persist batch verification result", {
@@ -492,14 +520,17 @@ export function BatchVerifyModelsDialog({
       } catch (error) {
         const redactions =
           item.source.kind === "profile"
-            ? [item.source.profile.apiKey, item.source.profile.baseUrl]
-            : [
+            ? filterRedactions([
+                item.source.profile.apiKey,
+                item.source.profile.baseUrl,
+              ])
+            : filterRedactions([
                 item.source.account.token,
                 item.source.account.cookieAuthSessionCookie,
                 apiKey,
-              ].filter(Boolean)
+              ])
         const message =
-          toSanitizedErrorSummary(error, redactions as string[]) ||
+          toSanitizedErrorSummary(error, redactions) ||
           t("modelList:batchVerify.messages.unexpected")
 
         logger.error("Batch model verification failed", {
@@ -520,10 +551,7 @@ export function BatchVerifyModelsDialog({
         await persistResult(item, apiType, [result]).catch((persistError) => {
           logger.error("Failed to persist batch verification failure", {
             modelId: item.modelId,
-            message: toSanitizedErrorSummary(
-              persistError,
-              redactions as string[],
-            ),
+            message: toSanitizedErrorSummary(persistError, redactions),
           })
         })
         updateRow(item.key, {
@@ -545,10 +573,10 @@ export function BatchVerifyModelsDialog({
     ],
   )
 
-  const markPendingRowsStopped = useCallback(() => {
+  const markUnfinishedRowsStopped = useCallback(() => {
     setRows((currentRows) =>
       currentRows.map((row) =>
-        row.status === "pending"
+        row.status === "pending" || row.status === "running"
           ? {
               ...row,
               status: "skipped",
@@ -606,7 +634,7 @@ export function BatchVerifyModelsDialog({
       )
     } finally {
       if (shouldStopRef.current) {
-        markPendingRowsStopped()
+        markUnfinishedRowsStopped()
       }
       setIsRunning(false)
     }
