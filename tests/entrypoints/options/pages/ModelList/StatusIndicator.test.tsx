@@ -1,7 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { StatusIndicator } from "~/features/ModelList/components/StatusIndicator"
-import { createAccountSource } from "~/features/ModelList/modelManagementSources"
+import {
+  createAccountSource,
+  createProfileSource,
+} from "~/features/ModelList/modelManagementSources"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { render, screen } from "~~/tests/test-utils/render"
 
@@ -106,5 +110,50 @@ describe("StatusIndicator", () => {
     })
 
     expect(selectTrigger).toBeEnabled()
+  })
+
+  it("shows profile-specific load errors without account fallback actions", async () => {
+    render(
+      <StatusIndicator
+        selectedSource={createProfileSource({
+          id: "profile-1",
+          name: "Reusable Key",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://profile.example.com",
+          apiKey: "sk-secret",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        })}
+        isLoading={false}
+        dataFormatError={false}
+        loadErrorMessage="modelList:status.profileLoadFailed"
+        currentAccount={undefined}
+        loadPricingData={vi.fn()}
+        accountFallback={{
+          isAvailable: true,
+          isActive: false,
+          hasLoadedTokens: false,
+          isLoadingTokens: false,
+          isLoadingCatalog: false,
+          tokenLoadErrorMessage: null,
+          catalogLoadErrorMessage: null,
+          tokens: [],
+          selectedTokenId: null,
+          activeTokenName: null,
+          loadTokens: vi.fn(),
+          setSelectedTokenId: vi.fn(),
+          loadCatalog: vi.fn(),
+        }}
+      />,
+    )
+
+    expect(
+      await screen.findByText("modelList:status.profileLoadFailedTitle"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("modelList:status.fallback.title"),
+    ).not.toBeInTheDocument()
   })
 })

@@ -289,10 +289,10 @@ describe("useModelData all-accounts loading", () => {
 
     await waitFor(() => {
       expect(fetchModelPricing).toHaveBeenCalledTimes(1)
+      expect(result.current.pricingData?.data[0]?.model_name).toBe(
+        "access-token-model",
+      )
     })
-    expect(result.current.pricingData?.data[0]?.model_name).toBe(
-      "access-token-model",
-    )
 
     rerender({
       selectedSource: createAccountSource(secondAccount),
@@ -301,17 +301,19 @@ describe("useModelData all-accounts loading", () => {
 
     await waitFor(() => {
       expect(fetchModelPricing).toHaveBeenCalledTimes(2)
-    })
-    expect(fetchModelPricing).toHaveBeenLastCalledWith(
-      expect.objectContaining({
-        accountId: "credential-change-account",
-        auth: expect.objectContaining({
-          authType: AuthTypeEnum.Cookie,
-          cookie: "session=updated",
+      expect(fetchModelPricing).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          accountId: "credential-change-account",
+          auth: expect.objectContaining({
+            authType: AuthTypeEnum.Cookie,
+            cookie: "session=updated",
+          }),
         }),
-      }),
-    )
-    expect(result.current.pricingData?.data[0]?.model_name).toBe("cookie-model")
+      )
+      expect(result.current.pricingData?.data[0]?.model_name).toBe(
+        "cookie-model",
+      )
+    })
   })
 
   it("marks all-account queries as loading before each account returns data", async () => {
