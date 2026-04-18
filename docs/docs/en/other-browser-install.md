@@ -17,14 +17,14 @@ Extensions loaded manually are typically not updated automatically. For future u
 
 ## Supported Browsers
 
-| Browser | Recommended Installation Method | Notes |
+| Browser | Extension Management Page Entry | Installation Notes |
 |---|---|---|
-| QQ Browser | GitHub Release Chrome Package + Load Unpacked | High user base; refer to [QQ Browser Installation](#qq-browser) for specific guidance. |
-| 360 Secure Browser / 360 Speed Browser | GitHub Release Chrome Package + Load Unpacked | High user base; refer to [360 Series Browser Installation](#browser-360) for specific guidance. |
-| Cheetah Browser | GitHub Release Chrome Package + Load Unpacked | You can access the extension management page via `liebao://extensions/`. Refer to [Cheetah Browser Installation](#liebao-browser). |
-| Brave / Vivaldi / Opera | GitHub Release Chrome Package + Load Unpacked | Can usually be installed following the general procedure. |
-| Starry Wish / Percent / Cent Browser, etc. | GitHub Release Chrome Package + Load Unpacked | If the browser is based on Chromium and its extension management page supports "Developer mode" and "Load unpacked," you can typically try this method. |
-| Mobile Kiwi / Edge, etc. | Depends on browser extension support | Mobile devices have more limitations. First, check if the browser itself supports installing external extensions. |
+| QQ Browser | `qqbrowser://extensions`, try `chrome://extensions/` if unavailable | Enable Developer mode and load the unpacked directory; the entry might be in Extension Management or Application Center. See [QQ Browser Installation](#qq-browser) for details. |
+| 360 Secure Browser / 360 Speed Browser | `chrome://extensions/`, or Extensions / Plugin Management in the menu | Ensure the target webpage is using Speed Mode before loading the unpacked directory; security policies might block direct drag-and-drop installation. See [360 Series Browser Installation](#browser-360) for details. |
+| Cheetah Browser | `liebao://extensions/` | Enable Developer mode and load the unpacked directory; if prompted about homepage/tab changes, prioritize keeping current settings. See [Cheetah Browser Installation](#liebao-browser) for details. |
+| Brave / Vivaldi / Opera | `brave://extensions/`, `vivaldi://extensions/`, `opera://extensions/` | These browsers usually retain Developer mode and the "Load unpacked" option. Follow the [General Procedure for Other Desktop Browsers](#desktop-browser-common-flow) for installation. |
+| Starry Wish / Percent / Cent Browser, etc. | Try `chrome://extensions/` first | If the extension management page supports "Developer mode" and "Load unpacked extension," you can usually try installing; otherwise, consider switching to Chrome / Edge / Firefox. |
+| Mobile Kiwi / Edge, etc. | Depends on the browser's actual extension entry point | Mobile devices have more limitations, and support varies with browser versions. If you cannot find an entry point for installing external extensions, consider using a desktop browser. |
 
 If your browser's extension management page lacks "Developer mode" or "Load unpacked extension," it may indicate that the current version does not support manual installation of external extensions. In such cases, it is recommended to switch to Chrome, Edge, Firefox, or install the full/desktop version of the browser before trying again.
 
@@ -49,6 +49,8 @@ all-api-hub-3.32.0-chrome.zip
 ::: tip Directory Selection
 When loading an extension, select the directory that directly contains `manifest.json`. If you encounter errors like "Missing manifest.json" or "manifest.json not found," you have likely selected an outer parent directory.
 :::
+
+<a id="desktop-browser-common-flow"></a>
 
 ## General Procedure for Other Desktop Browsers
 
@@ -170,7 +172,7 @@ These browsers typically retain Chromium's extension management page, with sligh
 | Opera | `opera://extensions/` |
 | Other Chromium Browsers | Try `chrome://extensions/` first |
 
-Once on the extension management page, follow the [General Procedure for Other Desktop Browsers](#其他桌面浏览器通用流程) to enable Developer mode and load the unpacked directory.
+Once on the extension management page, follow the [General Procedure for Other Desktop Browsers](#desktop-browser-common-flow) to enable Developer mode and load the unpacked directory.
 
 ## Updating the Extension
 
