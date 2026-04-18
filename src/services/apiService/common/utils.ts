@@ -6,6 +6,7 @@ import {
   type ApiErrorCode,
 } from "~/services/apiService/common/errors"
 import { createMinIntervalLimiter } from "~/services/apiService/common/minIntervalLimiter"
+import { withSiteApiRequestLimit } from "~/services/apiService/common/siteRequestLimiter"
 import type {
   ApiResponse,
   ApiServiceRequest,
@@ -79,6 +80,16 @@ function isLogApiEndpoint(endpoint: string | undefined): boolean {
  */
 function resolveLogRateLimitKey(baseUrl: string): string {
   return normalizeUrlForOriginKey(baseUrl, { stripTrailingSlashes: true })
+}
+
+/**
+ * Extract the canonical site origin used for process-local API request limiting.
+ */
+function resolveSiteRequestLimitKey(baseUrl: string): string {
+  return normalizeUrlForOriginKey(baseUrl, {
+    lowerCase: true,
+    stripTrailingSlashes: true,
+  })
 }
 
 /**
@@ -399,27 +410,31 @@ const _fetchApi = async <T>(
       request.auth?.cookie ?? accountInfo?.cookieAuth?.sessionCookie,
   }
 
-  return await executeWithTempWindowFallback(context, async () => {
-    if (onlyData) {
-      return await apiRequestData<T>(
+  const siteRequestLimitKey = resolveSiteRequestLimitKey(baseUrl)
+
+  return await withSiteApiRequestLimit(siteRequestLimitKey, async () => {
+    return await executeWithTempWindowFallback(context, async () => {
+      if (onlyData) {
+        return await apiRequestData<T>(
+          url,
+          fetchOptions,
+          options.endpoint,
+          responseType,
+        )
+      }
+      const response = await apiRequest<T>(
         url,
         fetchOptions,
         options.endpoint,
         responseType,
       )
-    }
-    const response = await apiRequest<T>(
-      url,
-      fetchOptions,
-      options.endpoint,
-      responseType,
-    )
 
-    if (responseType === "json") {
-      return response as ApiResponse<T>
-    }
+      if (responseType === "json") {
+        return response as ApiResponse<T>
+      }
 
-    return response as T
+      return response as T
+    })
   })
 }
 

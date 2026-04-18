@@ -24,6 +24,14 @@ const { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter } = vi.hoisted(
   },
 )
 
+const { mockWithSiteApiRequestLimit } = vi.hoisted(() => {
+  const mockWithSiteApiRequestLimit = vi.fn(
+    async (_key: string, task: () => Promise<unknown>) => await task(),
+  )
+
+  return { mockWithSiteApiRequestLimit }
+})
+
 const { mockHasCookieInterceptorPermissions, mockGetPreferences } = vi.hoisted(
   () => ({
     mockHasCookieInterceptorPermissions: vi.fn(),
@@ -60,6 +68,16 @@ vi.mock("~/services/apiService/common/minIntervalLimiter", () => ({
   createMinIntervalLimiter: mockCreateMinIntervalLimiter,
 }))
 
+vi.mock("~/services/apiService/common/siteRequestLimiter", () => ({
+  SITE_API_REQUEST_LIMITS: {
+    maxConcurrentPerSite: 2,
+    requestsPerMinute: 18,
+    burst: 4,
+  },
+  createSiteRequestLimiter: vi.fn(),
+  withSiteApiRequestLimit: mockWithSiteApiRequestLimit,
+}))
+
 vi.mock("~/utils/browser/protectionBypass", () => ({
   isProtectionBypassFirefoxEnv: vi.fn(() => true),
 }))
@@ -90,6 +108,9 @@ describe("apiService common fetchApi helpers", () => {
     vi.restoreAllMocks()
     server.resetHandlers()
 
+    mockWithSiteApiRequestLimit.mockImplementation(
+      async (_key: string, task: () => Promise<unknown>) => await task(),
+    )
     mockHasCookieInterceptorPermissions.mockResolvedValue(true)
     mockGetPreferences.mockResolvedValue({
       tempWindowFallback: {
@@ -141,6 +162,69 @@ describe("apiService common fetchApi helpers", () => {
     expect(capturedCredentials).toBe("omit")
     expect(capturedAuthorization).toBe("Bearer token")
     expect(result).toEqual(data)
+  })
+
+  it("fetchApiData applies the site API limiter with a normalized origin key", async () => {
+    server.use(
+      http.get(/^https:\/\/example\.com\/base\//, () => {
+        return HttpResponse.json({
+          success: true,
+          data: { ok: true },
+          message: "ok",
+        })
+      }),
+    )
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: "HTTPS://Example.com/base/",
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        { endpoint: "/api/user/self" },
+      ),
+    ).resolves.toEqual({ ok: true })
+
+    expect(mockWithSiteApiRequestLimit).toHaveBeenCalledTimes(1)
+    expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
+      "https://example.com",
+      expect.any(Function),
+    )
+  })
+
+  it("fetchApiData uses the same site limiter key for different paths on the same origin", async () => {
+    server.use(
+      http.get(/^https:\/\/example\.com\/(?:base|admin)\//, () => {
+        return HttpResponse.json({
+          success: true,
+          data: { ok: true },
+          message: "ok",
+        })
+      }),
+    )
+
+    await fetchApiData(
+      {
+        baseUrl: "https://example.com/base/",
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+      },
+      { endpoint: "/api/user/self" },
+    )
+    await fetchApiData(
+      {
+        baseUrl: "https://example.com/admin/",
+        auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+      },
+      { endpoint: "/api/status" },
+    )
+
+    expect(mockWithSiteApiRequestLimit).toHaveBeenCalledTimes(2)
+    expect(mockWithSiteApiRequestLimit.mock.calls[0][0]).toBe(
+      "https://example.com",
+    )
+    expect(mockWithSiteApiRequestLimit.mock.calls[1][0]).toBe(
+      "https://example.com",
+    )
   })
 
   it("fetchApiData forwards cookie auth headers and a session override cookie when available", async () => {
@@ -586,6 +670,11 @@ describe("apiService common fetchApi helpers", () => {
           auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
         },
         { endpoint },
+      )
+
+      expect(mockWithSiteApiRequestLimit).toHaveBeenCalledWith(
+        "https://example.com",
+        expect.any(Function),
       )
 
       if (shouldRateLimit) {
