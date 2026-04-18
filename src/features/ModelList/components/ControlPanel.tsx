@@ -286,7 +286,7 @@ export function ControlPanel({
 
             {onBatchVerifyModels ? (
               <Button
-                variant="ghost"
+                variant="secondary"
                 size="sm"
                 onClick={onBatchVerifyModels}
                 disabled={filteredModels.length === 0}
