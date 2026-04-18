@@ -1257,11 +1257,13 @@ export async function deleteApiToken(
 export async function fetchModelPricing(
   request: ApiServiceRequest,
 ): Promise<PricingResponse> {
+  const MODEL_PRICING_ENDPOINT = "/api/pricing"
+
   try {
     // /api/pricing 接口直接返回 PricingResponse 格式，不需要通过 apiRequestData 包装
     return await fetchApi<PricingResponse>(
       request,
-      { endpoint: "/api/pricing" },
+      { endpoint: MODEL_PRICING_ENDPOINT },
       true,
     )
   } catch (error) {

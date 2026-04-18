@@ -2,6 +2,10 @@ import { Tab } from "@headlessui/react"
 import { describe, expect, it, vi } from "vitest"
 
 import { ProviderTabs } from "~/features/ModelList/components/ProviderTabs"
+import {
+  MODEL_PROVIDER_FILTER_VALUES,
+  type ModelProviderFilterValue,
+} from "~/services/models/utils/modelProviders"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const createProviders = () => ["OpenAI", "Claude", "Gemini"] as any
@@ -17,12 +21,12 @@ const DEFAULT_PROVIDER_COUNTS = {
 
 const renderProviderTabs = ({
   providerCounts = DEFAULT_PROVIDER_COUNTS,
-  selectedProvider = "all",
+  selectedProvider = MODEL_PROVIDER_FILTER_VALUES.ALL,
   allProvidersFilteredCount = BASE_FILTERED_MODELS_COUNT,
   setSelectedProvider = vi.fn(),
 }: {
   providerCounts?: Record<string, number>
-  selectedProvider?: "all" | "OpenAI" | "Claude" | "Gemini"
+  selectedProvider?: ModelProviderFilterValue
   allProvidersFilteredCount?: number
   setSelectedProvider?: ReturnType<typeof vi.fn>
 } = {}) => {
@@ -184,6 +188,8 @@ describe("ProviderTabs selection", () => {
 
     fireEvent.click(allProvidersTab)
 
-    expect(setSelectedProvider).toHaveBeenCalledWith("all")
+    expect(setSelectedProvider).toHaveBeenCalledWith(
+      MODEL_PROVIDER_FILTER_VALUES.ALL,
+    )
   })
 })

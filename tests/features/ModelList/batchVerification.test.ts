@@ -2,25 +2,28 @@ import { describe, expect, it } from "vitest"
 
 import {
   createBatchVerifyModelItems,
+  MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES,
   pickBatchVerifyCompatibleToken,
   resolveBatchVerifyApiType,
 } from "~/features/ModelList/batchVerification"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 
 describe("model list batch verification helpers", () => {
   it("deduplicates model items by model-list row key", () => {
     const source = {
-      kind: "account",
+      kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
       account: { id: "acc-1" },
     } as any
 
     const result = createBatchVerifyModelItems([
       {
-        model: { model_name: "gpt-4o", enable_groups: ["default"] },
+        model: { model_name: "gpt-4o", enable_groups: [DEFAULT_MODEL_GROUP] },
         source,
       },
       {
-        model: { model_name: "gpt-4o", enable_groups: ["default"] },
+        model: { model_name: "gpt-4o", enable_groups: [DEFAULT_MODEL_GROUP] },
         source,
       },
       {
@@ -38,7 +41,7 @@ describe("model list batch verification helpers", () => {
 
   it("keeps missing model group metadata unrestricted", () => {
     const source = {
-      kind: "account",
+      kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
       account: { id: "acc-1" },
     } as any
 
@@ -53,15 +56,24 @@ describe("model list batch verification helpers", () => {
   })
 
   it("auto-detects the closest verification API type from model id", () => {
-    expect(resolveBatchVerifyApiType("auto", "claude-3-5-sonnet")).toBe(
-      API_TYPES.ANTHROPIC,
-    )
-    expect(resolveBatchVerifyApiType("auto", "gemini-2.5-flash")).toBe(
-      API_TYPES.GOOGLE,
-    )
-    expect(resolveBatchVerifyApiType("auto", "gpt-4o-mini")).toBe(
-      API_TYPES.OPENAI_COMPATIBLE,
-    )
+    expect(
+      resolveBatchVerifyApiType(
+        MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES.AUTO,
+        "claude-3-5-sonnet",
+      ),
+    ).toBe(API_TYPES.ANTHROPIC)
+    expect(
+      resolveBatchVerifyApiType(
+        MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES.AUTO,
+        "gemini-2.5-flash",
+      ),
+    ).toBe(API_TYPES.GOOGLE)
+    expect(
+      resolveBatchVerifyApiType(
+        MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES.AUTO,
+        "gpt-4o-mini",
+      ),
+    ).toBe(API_TYPES.OPENAI_COMPATIBLE)
     expect(resolveBatchVerifyApiType(API_TYPES.OPENAI, "gpt-4o-mini")).toBe(
       API_TYPES.OPENAI,
     )
@@ -72,7 +84,7 @@ describe("model list batch verification helpers", () => {
       {
         id: 1,
         status: 0,
-        group: "default",
+        group: DEFAULT_MODEL_GROUP,
         model_limits_enabled: false,
         model_limits: "",
         models: "",
@@ -88,7 +100,7 @@ describe("model list batch verification helpers", () => {
       {
         id: 3,
         status: 1,
-        group: "default",
+        group: DEFAULT_MODEL_GROUP,
         model_limits_enabled: true,
         model_limits: "gpt-4o-mini",
         models: "",
@@ -96,7 +108,7 @@ describe("model list batch verification helpers", () => {
       {
         id: 4,
         status: 1,
-        group: "default",
+        group: DEFAULT_MODEL_GROUP,
         model_limits_enabled: false,
         model_limits: "",
         models: "",
@@ -106,7 +118,7 @@ describe("model list batch verification helpers", () => {
     expect(
       pickBatchVerifyCompatibleToken(tokens, {
         modelId: "gpt-4o-mini",
-        enableGroups: ["default"],
+        enableGroups: [DEFAULT_MODEL_GROUP],
       })?.id,
     ).toBe(3)
   })
@@ -146,7 +158,7 @@ describe("model list batch verification helpers", () => {
     expect(
       pickBatchVerifyCompatibleToken(tokens, {
         modelId: "gpt-4o-mini",
-        enableGroups: ["default"],
+        enableGroups: [DEFAULT_MODEL_GROUP],
       }),
     ).toBeNull()
   })

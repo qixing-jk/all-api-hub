@@ -14,7 +14,10 @@ import {
   createBatchVerifyModelItems,
   type BatchVerifyModelItem,
 } from "~/features/ModelList/batchVerification"
-import { type ModelManagementItemSource } from "~/features/ModelList/modelManagementSources"
+import {
+  MODEL_MANAGEMENT_SOURCE_KINDS,
+  type ModelManagementItemSource,
+} from "~/features/ModelList/modelManagementSources"
 import { getAllProviders } from "~/services/models/utils/modelProviders"
 import {
   createAccountModelVerificationHistoryTarget,
@@ -134,7 +137,8 @@ export default function ModelList(props: {
     setSelectedGroups([group])
   }
 
-  const isAllAccountsScope = selectedSource?.kind === "all-accounts"
+  const isAllAccountsScope =
+    selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
   const displaySelectedGroups = isAllAccountsScope ? [] : selectedGroups
   const modelDisplayGroupSelectionScope = isAllAccountsScope
     ? MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS
@@ -150,7 +154,7 @@ export default function ModelList(props: {
   }
 
   const hasModelData =
-    selectedSource?.kind === "all-accounts"
+    selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
       ? pricingContexts && pricingContexts.length > 0
       : !!pricingData
   const shouldShowSourceSetupEmptyState = !hasAnySources
@@ -188,7 +192,7 @@ export default function ModelList(props: {
         if (!modelId) return acc
 
         const historyTarget =
-          source.kind === "profile"
+          source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
             ? createProfileModelVerificationHistoryTarget(
                 source.profile.id,
                 modelId,
@@ -238,7 +242,7 @@ export default function ModelList(props: {
     source: ModelManagementItemSource,
     modelId: string,
   ) => {
-    if (source.kind === "profile") {
+    if (source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE) {
       setVerifyProfileContext({
         profile: source.profile,
         modelId,
@@ -291,7 +295,7 @@ export default function ModelList(props: {
   }, [])
 
   const totalModels = useMemo(() => {
-    if (selectedSource?.kind === "all-accounts") {
+    if (selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
       return pricingContexts.reduce((count, context) => {
         const models = context.pricing?.data
         return count + (Array.isArray(models) ? models.length : 0)
@@ -409,7 +413,8 @@ export default function ModelList(props: {
 
           {verifyCliContext && (
             <>
-              {verifyCliContext.source.kind === "account" ? (
+              {verifyCliContext.source.kind ===
+              MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT ? (
                 <VerifyCliSupportDialog
                   isOpen={true}
                   onClose={() => setVerifyCliContext(null)}
@@ -454,7 +459,8 @@ export default function ModelList(props: {
             />
           )}
 
-          {selectedSource?.kind === "all-accounts" &&
+          {selectedSource?.kind ===
+            MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS &&
             sourceCapabilities.supportsAccountSummary &&
             accountSummaryItems.length > 0 && (
               <AccountSummaryBar
@@ -486,7 +492,8 @@ export default function ModelList(props: {
             filteredModels={filteredModels}
             onBatchVerifyModels={
               sourceCapabilities.supportsCredentialVerification &&
-              selectedSource?.kind !== "all-accounts"
+              selectedSource?.kind !==
+                MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
                 ? handleOpenBatchVerify
                 : undefined
             }
@@ -508,7 +515,8 @@ export default function ModelList(props: {
                   onVerifyCliSupport={handleVerifyCliSupport}
                   onOpenModelKeyDialog={handleOpenModelKeyDialog}
                   onFilterAccount={
-                    selectedSource?.kind === "all-accounts"
+                    selectedSource?.kind ===
+                    MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
                       ? handleAccountSummaryClick
                       : undefined
                   }
@@ -532,7 +540,8 @@ export default function ModelList(props: {
                     onVerifyCliSupport={handleVerifyCliSupport}
                     onOpenModelKeyDialog={handleOpenModelKeyDialog}
                     onFilterAccount={
-                      selectedSource?.kind === "all-accounts"
+                      selectedSource?.kind ===
+                      MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
                         ? handleAccountSummaryClick
                         : undefined
                     }

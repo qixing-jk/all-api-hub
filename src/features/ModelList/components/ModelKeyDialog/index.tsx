@@ -16,6 +16,7 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
+import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import type { DisplaySiteData } from "~/types"
 import { openKeysPage } from "~/utils/navigation"
 
@@ -56,7 +57,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
         options.push(group)
       })
 
-    return options.length > 0 ? options : ["default"]
+    return options.length > 0 ? options : [DEFAULT_MODEL_GROUP]
   }, [modelEnableGroups])
 
   const requiresCreateGroupSelection = createGroupOptions.length > 1
@@ -334,9 +335,9 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
           modelId,
           group: createGroup
             ? createGroup
-            : createGroupOptions.includes("default")
-              ? "default"
-              : createGroupOptions[0] ?? "default",
+            : createGroupOptions.includes(DEFAULT_MODEL_GROUP)
+              ? DEFAULT_MODEL_GROUP
+              : createGroupOptions[0] ?? DEFAULT_MODEL_GROUP,
           allowedGroups: createGroupOptions,
         }}
         onSuccess={refreshTokensAfterCreate}

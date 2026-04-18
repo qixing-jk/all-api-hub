@@ -2,6 +2,13 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useModelListData } from "~/features/ModelList/hooks/useModelListData"
+import {
+  ALL_ACCOUNTS_SOURCE_VALUE,
+  MODEL_MANAGEMENT_SOURCE_KINDS,
+  NO_MODEL_MANAGEMENT_SOURCE_VALUE,
+  toAccountSourceValue,
+  toProfileSourceValue,
+} from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
@@ -95,11 +102,16 @@ describe("useModelListData", () => {
     const { result, rerender } = renderHook(() => useModelListData())
 
     act(() => {
-      result.current.setSelectedSourceValue("profile:profile-1")
+      result.current.setSelectedSourceValue(toProfileSourceValue(PROFILE.id))
     })
 
-    expect(result.current.selectedSource?.kind).toBe("profile")
-    if (result.current.selectedSource?.kind !== "profile") {
+    expect(result.current.selectedSource?.kind).toBe(
+      MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE,
+    )
+    if (
+      result.current.selectedSource?.kind !==
+      MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
+    ) {
       throw new Error("Expected profile source to be selected")
     }
     expect(result.current.selectedSource.profile.name).toBe("Reusable Key")
@@ -112,24 +124,33 @@ describe("useModelListData", () => {
     rerender()
 
     await waitFor(() => {
-      expect(result.current.selectedSource?.kind).toBe("profile")
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE,
+      )
     })
 
-    if (result.current.selectedSource?.kind !== "profile") {
+    if (
+      result.current.selectedSource?.kind !==
+      MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
+    ) {
       throw new Error("Expected updated profile source to remain selected")
     }
     expect(result.current.selectedSource.profile.name).toBe("Updated Profile")
-    expect(result.current.selectedSourceValue).toBe("profile:profile-1")
+    expect(result.current.selectedSourceValue).toBe(
+      toProfileSourceValue(PROFILE.id),
+    )
   })
 
   it("clears a stale profile selection when the backing profile is deleted", async () => {
     const { result, rerender } = renderHook(() => useModelListData())
 
     act(() => {
-      result.current.setSelectedSourceValue("profile:profile-1")
+      result.current.setSelectedSourceValue(toProfileSourceValue(PROFILE.id))
     })
 
-    expect(result.current.selectedSource?.kind).toBe("profile")
+    expect(result.current.selectedSource?.kind).toBe(
+      MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE,
+    )
 
     mockUseApiCredentialProfiles.mockReturnValue({
       profiles: [],
@@ -139,7 +160,9 @@ describe("useModelListData", () => {
     rerender()
 
     await waitFor(() => {
-      expect(result.current.selectedSourceValue).toBe("")
+      expect(result.current.selectedSourceValue).toBe(
+        NO_MODEL_MANAGEMENT_SOURCE_VALUE,
+      )
     })
 
     expect(result.current.selectedSource).toBeNull()
@@ -149,10 +172,12 @@ describe("useModelListData", () => {
     const { result, rerender } = renderHook(() => useModelListData())
 
     act(() => {
-      result.current.setSelectedSourceValue("profile:profile-1")
+      result.current.setSelectedSourceValue(toProfileSourceValue(PROFILE.id))
     })
 
-    expect(result.current.selectedSource?.kind).toBe("profile")
+    expect(result.current.selectedSource?.kind).toBe(
+      MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE,
+    )
 
     mockUseApiCredentialProfiles.mockReturnValue({
       profiles: [],
@@ -162,7 +187,9 @@ describe("useModelListData", () => {
     rerender()
 
     await waitFor(() => {
-      expect(result.current.selectedSourceValue).toBe("profile:profile-1")
+      expect(result.current.selectedSourceValue).toBe(
+        toProfileSourceValue(PROFILE.id),
+      )
     })
 
     expect(result.current.selectedSource).toBeNull()
@@ -177,11 +204,13 @@ describe("useModelListData", () => {
     const { result } = renderHook(() => useModelListData())
 
     act(() => {
-      result.current.setSelectedSourceValue("account:account-1")
+      result.current.setSelectedSourceValue(toAccountSourceValue("account-1"))
     })
 
     await waitFor(() => {
-      expect(result.current.selectedSourceValue).toBe("")
+      expect(result.current.selectedSourceValue).toBe(
+        NO_MODEL_MANAGEMENT_SOURCE_VALUE,
+      )
     })
 
     expect(result.current.selectedSource).toBeNull()
@@ -193,10 +222,14 @@ describe("useModelListData", () => {
     )
 
     await waitFor(() => {
-      expect(result.current.selectedSourceValue).toBe("profile:profile-1")
+      expect(result.current.selectedSourceValue).toBe(
+        toProfileSourceValue(PROFILE.id),
+      )
     })
 
-    expect(result.current.selectedSource?.kind).toBe("profile")
+    expect(result.current.selectedSource?.kind).toBe(
+      MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE,
+    )
   })
 
   it("prefers a valid route profile over a simultaneous account target", async () => {
@@ -205,10 +238,14 @@ describe("useModelListData", () => {
     )
 
     await waitFor(() => {
-      expect(result.current.selectedSourceValue).toBe("profile:profile-1")
+      expect(result.current.selectedSourceValue).toBe(
+        toProfileSourceValue(PROFILE.id),
+      )
     })
 
-    expect(result.current.selectedSource?.kind).toBe("profile")
+    expect(result.current.selectedSource?.kind).toBe(
+      MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE,
+    )
   })
 
   it("waits for profile storage before falling back from a stale profile deep link to accountId", async () => {
@@ -221,7 +258,9 @@ describe("useModelListData", () => {
       useModelListData({ profileId: "missing-profile", accountId: "acc-1" }),
     )
 
-    expect(result.current.selectedSourceValue).toBe("")
+    expect(result.current.selectedSourceValue).toBe(
+      NO_MODEL_MANAGEMENT_SOURCE_VALUE,
+    )
     expect(result.current.selectedSource).toBeNull()
 
     mockUseApiCredentialProfiles.mockReturnValue({
@@ -232,10 +271,14 @@ describe("useModelListData", () => {
     rerender()
 
     await waitFor(() => {
-      expect(result.current.selectedSourceValue).toBe("account:acc-1")
+      expect(result.current.selectedSourceValue).toBe(
+        toAccountSourceValue(ACCOUNT.id),
+      )
     })
 
-    expect(result.current.selectedSource?.kind).toBe("account")
+    expect(result.current.selectedSource?.kind).toBe(
+      MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+    )
   })
 
   it("downgrades account capabilities while a fallback catalog is active", async () => {
@@ -272,11 +315,13 @@ describe("useModelListData", () => {
     const { result } = renderHook(() => useModelListData())
 
     act(() => {
-      result.current.setSelectedSourceValue("account:acc-1")
+      result.current.setSelectedSourceValue(toAccountSourceValue(ACCOUNT.id))
     })
 
     await waitFor(() => {
-      expect(result.current.selectedSource?.kind).toBe("account")
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      )
     })
 
     expect(result.current.isFallbackCatalogActive).toBe(true)
@@ -294,11 +339,13 @@ describe("useModelListData", () => {
     const { result } = renderHook(() => useModelListData())
 
     act(() => {
-      result.current.setSelectedSourceValue("all")
+      result.current.setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)
     })
 
     await waitFor(() => {
-      expect(result.current.selectedSource?.kind).toBe("all-accounts")
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+      )
     })
 
     act(() => {
@@ -310,11 +357,13 @@ describe("useModelListData", () => {
     )
 
     act(() => {
-      result.current.setSelectedSourceValue("account:acc-1")
+      result.current.setSelectedSourceValue(toAccountSourceValue(ACCOUNT.id))
     })
 
     await waitFor(() => {
-      expect(result.current.selectedSource?.kind).toBe("account")
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      )
     })
 
     await waitFor(() => {
@@ -326,11 +375,13 @@ describe("useModelListData", () => {
     const { result } = renderHook(() => useModelListData())
 
     act(() => {
-      result.current.setSelectedSourceValue("all")
+      result.current.setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)
     })
 
     await waitFor(() => {
-      expect(result.current.selectedSource?.kind).toBe("all-accounts")
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+      )
     })
 
     act(() => {
@@ -340,11 +391,13 @@ describe("useModelListData", () => {
     expect(result.current.allAccountsFilterAccountIds).toEqual(["acc-1"])
 
     act(() => {
-      result.current.setSelectedSourceValue("account:acc-1")
+      result.current.setSelectedSourceValue(toAccountSourceValue(ACCOUNT.id))
     })
 
     await waitFor(() => {
-      expect(result.current.selectedSource?.kind).toBe("account")
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      )
     })
 
     await waitFor(() => {
@@ -356,11 +409,13 @@ describe("useModelListData", () => {
     const { result } = renderHook(() => useModelListData())
 
     act(() => {
-      result.current.setSelectedSourceValue("all")
+      result.current.setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)
     })
 
     await waitFor(() => {
-      expect(result.current.selectedSource?.kind).toBe("all-accounts")
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+      )
     })
 
     act(() => {
@@ -374,11 +429,13 @@ describe("useModelListData", () => {
     })
 
     act(() => {
-      result.current.setSelectedSourceValue("account:acc-1")
+      result.current.setSelectedSourceValue(toAccountSourceValue(ACCOUNT.id))
     })
 
     await waitFor(() => {
-      expect(result.current.selectedSource?.kind).toBe("account")
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      )
     })
 
     await waitFor(() => {
@@ -420,11 +477,13 @@ describe("useModelListData", () => {
     const { result } = renderHook(() => useModelListData())
 
     act(() => {
-      result.current.setSelectedSourceValue("account:acc-1")
+      result.current.setSelectedSourceValue(toAccountSourceValue(ACCOUNT.id))
     })
 
     await waitFor(() => {
-      expect(result.current.selectedSource?.kind).toBe("account")
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      )
     })
 
     act(() => {

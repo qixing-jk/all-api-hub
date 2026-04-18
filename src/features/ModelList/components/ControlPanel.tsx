@@ -32,6 +32,7 @@ import type {
   ModelManagementSource,
   ModelManagementSourceCapabilities,
 } from "~/features/ModelList/modelManagementSources"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
 import {
   MODEL_LIST_SORT_MODES,
   type ModelListSortMode,
@@ -111,8 +112,10 @@ export function ControlPanel({
   onBatchVerifyModels,
 }: ControlPanelProps) {
   const { t } = useTranslation(["modelList", "ui"])
-  const isProfileSource = selectedSource?.kind === "profile"
-  const isAllAccountsSource = selectedSource?.kind === "all-accounts"
+  const isProfileSource =
+    selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
+  const isAllAccountsSource =
+    selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
   const supportsPriceSorting = sourceCapabilities.supportsPricing
   const groupOptions = availableGroups.map((group) => ({
     value: group,
@@ -134,7 +137,7 @@ export function ControlPanel({
       value: MODEL_LIST_SORT_MODES.PRICE_DESC,
       label: t("sortOptions.priceDesc"),
     },
-    ...(selectedSource?.kind === "all-accounts"
+    ...(selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
       ? [
           {
             value: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,

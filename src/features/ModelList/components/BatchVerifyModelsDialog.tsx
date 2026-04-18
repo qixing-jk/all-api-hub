@@ -12,12 +12,14 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import {
+  MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES,
   MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
   pickBatchVerifyCompatibleToken,
   resolveBatchVerifyApiType,
   type BatchVerifyApiTypeMode,
   type BatchVerifyModelItem,
 } from "~/features/ModelList/batchVerification"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
 import {
   fetchDisplayAccountTokens,
   resolveDisplayAccountTokenForSecret,
@@ -44,7 +46,16 @@ import {
 import type { ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
-type BatchVerifyRowStatus = "pending" | "running" | "pass" | "fail" | "skipped"
+const BATCH_VERIFY_ROW_STATUSES = {
+  PENDING: "pending",
+  RUNNING: "running",
+  PASS: "pass",
+  FAIL: "fail",
+  SKIPPED: "skipped",
+} as const
+
+type BatchVerifyRowStatus =
+  (typeof BATCH_VERIFY_ROW_STATUSES)[keyof typeof BATCH_VERIFY_ROW_STATUSES]
 
 type BatchVerifyRow = {
   item: BatchVerifyModelItem
@@ -56,7 +67,10 @@ type BatchVerifyRow = {
 }
 
 type AccountBatchVerifyModelItem = BatchVerifyModelItem & {
-  source: Extract<BatchVerifyModelItem["source"], { kind: "account" }>
+  source: Extract<
+    BatchVerifyModelItem["source"],
+    { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT }
+  >
 }
 
 type BatchVerifyModelsDialogProps = {
@@ -76,7 +90,7 @@ function filterRedactions(values: Array<string | undefined>): string[] {
 function buildRows(items: BatchVerifyModelItem[]): BatchVerifyRow[] {
   return items.map((item) => ({
     item,
-    status: "pending",
+    status: BATCH_VERIFY_ROW_STATUSES.PENDING,
     latencyMs: 0,
     summary: "",
     results: [],
@@ -91,32 +105,46 @@ function getDefaultApiTypeMode(
     (
       item,
     ): item is BatchVerifyModelItem & {
-      source: Extract<BatchVerifyModelItem["source"], { kind: "profile" }>
-    } => item.source.kind === "profile",
+      source: Extract<
+        BatchVerifyModelItem["source"],
+        { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE }
+      >
+    } => item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE,
   )
-  return profileItem?.source.profile.apiType ?? "auto"
+  return (
+    profileItem?.source.profile.apiType ??
+    MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES.AUTO
+  )
 }
 
 /** Narrow a batch row to account-backed sources before token lookup. */
 function isAccountBatchVerifyModelItem(
   item: BatchVerifyModelItem,
 ): item is AccountBatchVerifyModelItem {
-  return item.source.kind === "account"
+  return item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
 }
 
 /** Check whether a row status is terminal for progress accounting. */
 function isCompletedStatus(status: BatchVerifyRowStatus) {
-  return status === "pass" || status === "fail" || status === "skipped"
+  return (
+    status === BATCH_VERIFY_ROW_STATUSES.PASS ||
+    status === BATCH_VERIFY_ROW_STATUSES.FAIL ||
+    status === BATCH_VERIFY_ROW_STATUSES.SKIPPED
+  )
 }
 
 /** Collapse probe results into the row status shown in the batch table. */
 function deriveRowStatus(
   results: ApiVerificationProbeResult[],
 ): BatchVerifyRowStatus {
-  if (results.length === 0) return "skipped"
-  if (results.some((result) => result.status === "fail")) return "fail"
-  if (results.some((result) => result.status === "pass")) return "pass"
-  return "skipped"
+  if (results.length === 0) return BATCH_VERIFY_ROW_STATUSES.SKIPPED
+  if (results.some((result) => result.status === "fail")) {
+    return BATCH_VERIFY_ROW_STATUSES.FAIL
+  }
+  if (results.some((result) => result.status === "pass")) {
+    return BATCH_VERIFY_ROW_STATUSES.PASS
+  }
+  return BATCH_VERIFY_ROW_STATUSES.SKIPPED
 }
 
 /** Sum the latencies reported by all completed probes for a row. */
@@ -202,11 +230,11 @@ export function BatchVerifyModelsDialog({
     return rows.reduce(
       (acc, row) => {
         acc.total += 1
-        if (row.status === "pass") acc.pass += 1
-        if (row.status === "fail") acc.fail += 1
-        if (row.status === "skipped") acc.skipped += 1
-        if (row.status === "running") acc.running += 1
-        if (row.status === "pending") acc.pending += 1
+        if (row.status === BATCH_VERIFY_ROW_STATUSES.PASS) acc.pass += 1
+        if (row.status === BATCH_VERIFY_ROW_STATUSES.FAIL) acc.fail += 1
+        if (row.status === BATCH_VERIFY_ROW_STATUSES.SKIPPED) acc.skipped += 1
+        if (row.status === BATCH_VERIFY_ROW_STATUSES.RUNNING) acc.running += 1
+        if (row.status === BATCH_VERIFY_ROW_STATUSES.PENDING) acc.pending += 1
         if (isCompletedStatus(row.status)) acc.completed += 1
         return acc
       },
@@ -225,7 +253,7 @@ export function BatchVerifyModelsDialog({
   const apiTypeOptions = useMemo(
     () => [
       {
-        value: "auto",
+        value: MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES.AUTO,
         label: t("modelList:batchVerify.apiType.auto"),
       },
       {
@@ -346,7 +374,7 @@ export function BatchVerifyModelsDialog({
       results: ApiVerificationProbeResult[],
     ) => {
       const target =
-        item.source.kind === "profile"
+        item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
           ? createProfileModelVerificationHistoryTarget(
               item.source.profile.id,
               item.modelId,
@@ -374,7 +402,7 @@ export function BatchVerifyModelsDialog({
     async (item: BatchVerifyModelItem) => {
       const startedAt = Date.now()
       updateRow(item.key, {
-        status: "running",
+        status: BATCH_VERIFY_ROW_STATUSES.RUNNING,
         latencyMs: 0,
         summary: t("modelList:batchVerify.status.running"),
         results: [],
@@ -387,7 +415,7 @@ export function BatchVerifyModelsDialog({
 
       try {
         const credentials =
-          item.source.kind === "profile"
+          item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
             ? {
                 baseUrl: item.source.profile.baseUrl,
                 apiKey: item.source.profile.apiKey,
@@ -403,7 +431,7 @@ export function BatchVerifyModelsDialog({
                     "modelList:batchVerify.messages.noCompatibleToken",
                   )
                   updateRow(item.key, {
-                    status: "skipped",
+                    status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
                     latencyMs: 0,
                     summary,
                     results: [],
@@ -431,7 +459,7 @@ export function BatchVerifyModelsDialog({
 
         if (probesToRun.length === 0) {
           updateRow(item.key, {
-            status: "skipped",
+            status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
             latencyMs: 0,
             summary: t("modelList:batchVerify.messages.noApplicableProbes"),
             results: [],
@@ -470,7 +498,7 @@ export function BatchVerifyModelsDialog({
             results.push(result)
           } catch (error) {
             const redactions =
-              item.source.kind === "profile"
+              item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
                 ? filterRedactions([
                     item.source.profile.apiKey,
                     item.source.profile.baseUrl,
@@ -521,7 +549,7 @@ export function BatchVerifyModelsDialog({
         })
       } catch (error) {
         const redactions =
-          item.source.kind === "profile"
+          item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
             ? filterRedactions([
                 item.source.profile.apiKey,
                 item.source.profile.baseUrl,
@@ -537,16 +565,20 @@ export function BatchVerifyModelsDialog({
 
         logger.error("Batch model verification failed", {
           accountId:
-            item.source.kind === "account" ? item.source.account.id : undefined,
+            item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+              ? item.source.account.id
+              : undefined,
           profileId:
-            item.source.kind === "profile" ? item.source.profile.id : undefined,
+            item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
+              ? item.source.profile.id
+              : undefined,
           modelId: item.modelId,
           message,
         })
 
         const result: ApiVerificationProbeResult = {
           id: getFirstApplicableProbeId(apiType, selectedProbeIds),
-          status: "fail",
+          status: BATCH_VERIFY_ROW_STATUSES.FAIL,
           latencyMs: Date.now() - startedAt,
           summary: message,
         }
@@ -578,10 +610,11 @@ export function BatchVerifyModelsDialog({
   const markUnfinishedRowsStopped = useCallback(() => {
     setRows((currentRows) =>
       currentRows.map((row) =>
-        row.status === "pending" || row.status === "running"
+        row.status === BATCH_VERIFY_ROW_STATUSES.PENDING ||
+        row.status === BATCH_VERIFY_ROW_STATUSES.RUNNING
           ? {
               ...row,
-              status: "skipped",
+              status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
               summary: t("modelList:batchVerify.messages.stopped"),
               results: [],
             }
@@ -606,7 +639,7 @@ export function BatchVerifyModelsDialog({
           ? row
           : {
               ...row,
-              status: "skipped",
+              status: BATCH_VERIFY_ROW_STATUSES.SKIPPED,
               summary: t("modelList:batchVerify.messages.notSelected"),
             },
       ),
@@ -647,10 +680,10 @@ export function BatchVerifyModelsDialog({
   }
 
   const statusVariant = (status: BatchVerifyRowStatus) => {
-    if (status === "pass") return "success"
-    if (status === "fail") return "danger"
-    if (status === "skipped") return "warning"
-    if (status === "running") return "info"
+    if (status === BATCH_VERIFY_ROW_STATUSES.PASS) return "success"
+    if (status === BATCH_VERIFY_ROW_STATUSES.FAIL) return "danger"
+    if (status === BATCH_VERIFY_ROW_STATUSES.SKIPPED) return "warning"
+    if (status === BATCH_VERIFY_ROW_STATUSES.RUNNING) return "info"
     return "outline"
   }
 
@@ -832,13 +865,13 @@ export function BatchVerifyModelsDialog({
                       {row.item.modelId}
                     </div>
                     <Badge variant={statusVariant(row.status)} size="sm">
-                      {row.status === "pass"
+                      {row.status === BATCH_VERIFY_ROW_STATUSES.PASS
                         ? t("modelList:batchVerify.status.pass")
-                        : row.status === "fail"
+                        : row.status === BATCH_VERIFY_ROW_STATUSES.FAIL
                           ? t("modelList:batchVerify.status.fail")
-                          : row.status === "skipped"
+                          : row.status === BATCH_VERIFY_ROW_STATUSES.SKIPPED
                             ? t("modelList:batchVerify.status.skipped")
-                            : row.status === "running"
+                            : row.status === BATCH_VERIFY_ROW_STATUSES.RUNNING
                               ? t("modelList:batchVerify.status.running")
                               : t("modelList:batchVerify.status.pending")}
                     </Badge>
@@ -863,7 +896,7 @@ export function BatchVerifyModelsDialog({
                           key={result.id}
                           variant={statusVariant(
                             result.status === "unsupported"
-                              ? "skipped"
+                              ? BATCH_VERIFY_ROW_STATUSES.SKIPPED
                               : result.status,
                           )}
                           size="sm"

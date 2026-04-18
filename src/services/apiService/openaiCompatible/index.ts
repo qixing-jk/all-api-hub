@@ -12,6 +12,8 @@ import { createLogger } from "~/utils/core/logger"
  */
 const logger = createLogger("ApiService.OpenAICompatible")
 
+const OPENAI_COMPATIBLE_MODELS_ENDPOINT = "/v1/models"
+
 export const fetchOpenAICompatibleModels = async (params: OpenAIAuthParams) => {
   const request = {
     baseUrl: params.baseUrl,
@@ -22,7 +24,7 @@ export const fetchOpenAICompatibleModels = async (params: OpenAIAuthParams) => {
   }
   try {
     return await fetchApiData<UpstreamModelList>(request, {
-      endpoint: "/v1/models",
+      endpoint: OPENAI_COMPATIBLE_MODELS_ENDPOINT,
     })
   } catch (error) {
     logger.error("Failed to fetch upstream model list", error)

@@ -10,6 +10,8 @@ import {
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import type { PricingResponse } from "~/services/apiService/common/type"
+import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
+import { MODEL_PROVIDER_FILTER_VALUES } from "~/services/models/utils/modelProviders"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
@@ -42,7 +44,7 @@ const createPricingModel = (
   model_ratio: 0,
   model_price: 0,
   completion_ratio: 1,
-  enable_groups: ["default"],
+  enable_groups: [DEFAULT_MODEL_GROUP],
   supported_endpoint_types: [],
   ...overrides,
 })
@@ -74,7 +76,7 @@ function renderUseFilteredModels(
         selectedBillingMode: MODEL_LIST_BILLING_MODES.ALL,
         selectedGroups: [],
         searchTerm: "",
-        selectedProvider: "all",
+        selectedProvider: MODEL_PROVIDER_FILTER_VALUES.ALL,
         sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
         showRealPrice: false,
         ...overrides,

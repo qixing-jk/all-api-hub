@@ -6,6 +6,8 @@ import { useAccountData } from "~/hooks/useAccountData"
 import {
   EMPTY_MODEL_MANAGEMENT_CAPABILITIES,
   isProfileSourceValue,
+  MODEL_MANAGEMENT_SOURCE_KINDS,
+  NO_MODEL_MANAGEMENT_SOURCE_VALUE,
   resolveModelManagementSource,
   toAccountSourceValue,
   toCatalogOnlyCapabilities,
@@ -70,7 +72,9 @@ export function useModelListData(routeParams?: Record<string, string>) {
       const matchedAccount = requestedAccountId
         ? accounts.find((account) => account.id === requestedAccountId)
         : null
-      return matchedAccount ? toAccountSourceValue(matchedAccount.id) : ""
+      return matchedAccount
+        ? toAccountSourceValue(matchedAccount.id)
+        : NO_MODEL_MANAGEMENT_SOURCE_VALUE
     }
 
     if (requestedAccountId) {
@@ -117,7 +121,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
     if (profilesLoading && isProfileSourceValue(selectedSourceValue)) return
     if (selectedSource) return
 
-    setSelectedSourceValue("")
+    setSelectedSourceValue(NO_MODEL_MANAGEMENT_SOURCE_VALUE)
   }, [
     profilesLoading,
     selectedSource,
@@ -126,7 +130,9 @@ export function useModelListData(routeParams?: Record<string, string>) {
   ])
 
   useEffect(() => {
-    if (selectedSource?.kind === "all-accounts") return
+    if (selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
+      return
+    }
     if (allAccountsFilterAccountIds.length === 0) return
     setAllAccountsFilterAccountIds([])
   }, [
@@ -136,7 +142,9 @@ export function useModelListData(routeParams?: Record<string, string>) {
   ])
 
   useEffect(() => {
-    if (selectedSource?.kind === "all-accounts") return
+    if (selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
+      return
+    }
     if (Object.keys(allAccountsExcludedGroupsByAccountId).length === 0) return
     setAllAccountsExcludedGroupsByAccountId({})
   }, [
@@ -147,13 +155,17 @@ export function useModelListData(routeParams?: Record<string, string>) {
 
   const currentAccount = useMemo(
     () =>
-      selectedSource?.kind === "account" ? selectedSource.account : undefined,
+      selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+        ? selectedSource.account
+        : undefined,
     [selectedSource],
   )
 
   const currentProfile = useMemo(
     () =>
-      selectedSource?.kind === "profile" ? selectedSource.profile : undefined,
+      selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
+        ? selectedSource.profile
+        : undefined,
     [selectedSource],
   )
 
@@ -185,7 +197,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
 
     if (
       sortMode === MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST &&
-      selectedSource?.kind !== "all-accounts"
+      selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
     ) {
       setSortMode(MODEL_LIST_SORT_MODES.DEFAULT)
     }

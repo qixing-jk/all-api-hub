@@ -4,7 +4,10 @@ import {
   MODEL_LIST_SORT_MODES,
   type ModelListSortMode,
 } from "~/features/ModelList/sortModes"
-import type { ProviderType } from "~/services/models/utils/modelProviders"
+import {
+  MODEL_PROVIDER_FILTER_VALUES,
+  type ModelProviderFilterValue,
+} from "~/services/models/utils/modelProviders"
 
 import {
   MODEL_LIST_BILLING_MODES,
@@ -20,9 +23,8 @@ export function useModelListState() {
   // 状态管理
   const [selectedSourceValue, setSelectedSourceValue] = useState("") // 当前选中的数据源
   const [searchTerm, setSearchTerm] = useState("") // 搜索关键词
-  const [selectedProvider, setSelectedProvider] = useState<
-    ProviderType | "all"
-  >("all") // 当前选中的模型提供商
+  const [selectedProvider, setSelectedProvider] =
+    useState<ModelProviderFilterValue>(MODEL_PROVIDER_FILTER_VALUES.ALL) // 当前选中的模型提供商
   const [sortMode, setSortMode] = useState<ModelListSortMode>(
     MODEL_LIST_SORT_MODES.DEFAULT,
   )

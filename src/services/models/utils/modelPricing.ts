@@ -3,6 +3,7 @@
  */
 
 import type { ModelPricing } from "~/services/apiService/common/type"
+import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import type { CurrencyType } from "~/types"
 import { t } from "~/utils/i18n/core"
 
@@ -28,7 +29,7 @@ export const calculateModelPrice = (
   model: ModelPricing,
   groupRatio: Record<string, number>,
   exchangeRate: number,
-  userGroup: string = "default",
+  userGroup: string = DEFAULT_MODEL_GROUP,
 ): CalculatedPrice => {
   // 获取用户分组的倍率，默认为1
   const groupMultiplier = groupRatio[userGroup] || 1

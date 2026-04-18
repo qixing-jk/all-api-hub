@@ -13,8 +13,13 @@ import {
 import { type ModelManagementItemSource } from "./modelManagementSources"
 
 export const MODEL_LIST_BATCH_VERIFY_CONCURRENCY = 5
+export const MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES = {
+  AUTO: "auto",
+} as const
 
-export type BatchVerifyApiTypeMode = "auto" | ApiVerificationApiType
+export type BatchVerifyApiTypeMode =
+  | (typeof MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES)[keyof typeof MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES]
+  | ApiVerificationApiType
 
 export type BatchVerifyModelItem = {
   key: string
@@ -61,7 +66,7 @@ export function resolveBatchVerifyApiType(
   mode: BatchVerifyApiTypeMode,
   modelId: string,
 ): ApiVerificationApiType {
-  if (mode !== "auto") return mode
+  if (mode !== MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES.AUTO) return mode
 
   const providerType = modelId.trim() ? identifyProvider(modelId) : null
   if (providerType === "Claude") return API_TYPES.ANTHROPIC

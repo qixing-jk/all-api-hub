@@ -25,6 +25,14 @@ import {
 // 厂商类型
 export type ProviderType = keyof typeof PROVIDER_CONFIGS
 
+export const MODEL_PROVIDER_FILTER_VALUES = {
+  ALL: "all",
+} as const
+
+export type ModelProviderFilterValue =
+  | ProviderType
+  | (typeof MODEL_PROVIDER_FILTER_VALUES)[keyof typeof MODEL_PROVIDER_FILTER_VALUES]
+
 // 厂商配置接口
 interface ProviderConfig {
   name: string
@@ -210,9 +218,9 @@ export const getAllProviders = (): ProviderType[] => {
  */
 export const filterModelsByProvider = <T extends { model_name: string }>(
   models: T[],
-  providerType: ProviderType | "all",
+  providerType: ModelProviderFilterValue,
 ): T[] => {
-  if (providerType === "all") return models
+  if (providerType === MODEL_PROVIDER_FILTER_VALUES.ALL) return models
 
   return models.filter(
     (model) => identifyProvider(model.model_name) === providerType,

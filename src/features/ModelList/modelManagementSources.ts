@@ -1,9 +1,19 @@
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 
+export const MODEL_MANAGEMENT_SOURCE_KINDS = {
+  ALL_ACCOUNTS: "all-accounts",
+  ACCOUNT: "account",
+  PROFILE: "profile",
+} as const
+
+export const NO_MODEL_MANAGEMENT_SOURCE_VALUE = ""
 export const ALL_ACCOUNTS_SOURCE_VALUE = "all"
-const ACCOUNT_SOURCE_PREFIX = "account:"
-const PROFILE_SOURCE_PREFIX = "profile:"
+
+const MODEL_MANAGEMENT_SOURCE_VALUE_PREFIXES = {
+  ACCOUNT: "account:",
+  PROFILE: "profile:",
+} as const
 
 export type ModelManagementSourceCapabilities = {
   supportsPricing: boolean
@@ -16,18 +26,18 @@ export type ModelManagementSourceCapabilities = {
 
 export type ModelManagementSource =
   | {
-      kind: "all-accounts"
+      kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
       value: typeof ALL_ACCOUNTS_SOURCE_VALUE
       capabilities: ModelManagementSourceCapabilities
     }
   | {
-      kind: "account"
+      kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
       value: string
       account: DisplaySiteData
       capabilities: ModelManagementSourceCapabilities
     }
   | {
-      kind: "profile"
+      kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
       value: string
       profile: ApiCredentialProfile
       capabilities: ModelManagementSourceCapabilities
@@ -35,12 +45,12 @@ export type ModelManagementSource =
 
 export type ModelManagementAccountSource = Extract<
   ModelManagementSource,
-  { kind: "account" }
+  { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT }
 >
 
 export type ModelManagementProfileSource = Extract<
   ModelManagementSource,
-  { kind: "profile" }
+  { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE }
 >
 
 export type ModelManagementItemSource =
@@ -103,21 +113,21 @@ export function toCatalogOnlyCapabilities(
  * Create the serialized selector value for an account-backed source.
  */
 export function toAccountSourceValue(accountId: string) {
-  return `${ACCOUNT_SOURCE_PREFIX}${accountId}`
+  return `${MODEL_MANAGEMENT_SOURCE_VALUE_PREFIXES.ACCOUNT}${accountId}`
 }
 
 /**
  * Create the serialized selector value for a profile-backed source.
  */
 export function toProfileSourceValue(profileId: string) {
-  return `${PROFILE_SOURCE_PREFIX}${profileId}`
+  return `${MODEL_MANAGEMENT_SOURCE_VALUE_PREFIXES.PROFILE}${profileId}`
 }
 
 /**
  * Check whether a serialized selector value refers to a profile-backed source.
  */
 export function isProfileSourceValue(value: string) {
-  return value.startsWith(PROFILE_SOURCE_PREFIX)
+  return value.startsWith(MODEL_MANAGEMENT_SOURCE_VALUE_PREFIXES.PROFILE)
 }
 
 /**
@@ -125,7 +135,7 @@ export function isProfileSourceValue(value: string) {
  */
 export function createAllAccountsSource(): ModelManagementSource {
   return {
-    kind: "all-accounts",
+    kind: MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
     value: ALL_ACCOUNTS_SOURCE_VALUE,
     capabilities: ALL_ACCOUNTS_SOURCE_CAPABILITIES,
   }
@@ -138,7 +148,7 @@ export function createAccountSource(
   account: DisplaySiteData,
 ): ModelManagementAccountSource {
   return {
-    kind: "account",
+    kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
     value: toAccountSourceValue(account.id),
     account,
     capabilities: ACCOUNT_SOURCE_CAPABILITIES,
@@ -152,7 +162,7 @@ export function createProfileSource(
   profile: ApiCredentialProfile,
 ): ModelManagementProfileSource {
   return {
-    kind: "profile",
+    kind: MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE,
     value: toProfileSourceValue(profile.id),
     profile,
     capabilities: PROFILE_SOURCE_CAPABILITIES,
@@ -174,14 +184,18 @@ export function resolveModelManagementSource(params: {
     return createAllAccountsSource()
   }
 
-  if (value.startsWith(ACCOUNT_SOURCE_PREFIX)) {
-    const accountId = value.slice(ACCOUNT_SOURCE_PREFIX.length)
+  if (value.startsWith(MODEL_MANAGEMENT_SOURCE_VALUE_PREFIXES.ACCOUNT)) {
+    const accountId = value.slice(
+      MODEL_MANAGEMENT_SOURCE_VALUE_PREFIXES.ACCOUNT.length,
+    )
     const account = accounts.find((item) => item.id === accountId)
     return account ? createAccountSource(account) : null
   }
 
-  if (value.startsWith(PROFILE_SOURCE_PREFIX)) {
-    const profileId = value.slice(PROFILE_SOURCE_PREFIX.length)
+  if (value.startsWith(MODEL_MANAGEMENT_SOURCE_VALUE_PREFIXES.PROFILE)) {
+    const profileId = value.slice(
+      MODEL_MANAGEMENT_SOURCE_VALUE_PREFIXES.PROFILE.length,
+    )
     const profile = profiles.find((item) => item.id === profileId)
     return profile ? createProfileSource(profile) : null
   }

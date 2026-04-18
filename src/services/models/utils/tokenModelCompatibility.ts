@@ -1,3 +1,4 @@
+import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import type { ApiToken } from "~/types"
 
 /**
@@ -54,7 +55,7 @@ const normalizeTokenGroup = (
   group: Pick<ApiToken, "group">["group"],
 ): string => {
   const normalized = typeof group === "string" ? group.trim() : ""
-  return normalized || "default"
+  return normalized || DEFAULT_MODEL_GROUP
 }
 
 /**

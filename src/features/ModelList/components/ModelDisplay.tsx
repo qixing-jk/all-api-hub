@@ -17,6 +17,7 @@ import type {
   ModelManagementItemSource,
   ModelManagementSourceCapabilities,
 } from "~/features/ModelList/modelManagementSources"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import {
   createAccountModelVerificationHistoryTarget,
@@ -35,7 +36,10 @@ interface ModelDisplayProps {
     modelId: string,
   ) => void
   onOpenModelKeyDialog?: (
-    account: Extract<ModelManagementItemSource, { kind: "account" }>["account"],
+    account: Extract<
+      ModelManagementItemSource,
+      { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT }
+    >["account"],
     modelId: string,
     modelEnableGroups: string[],
   ) => void
@@ -126,7 +130,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
           const itemKey = getModelItemKey(item)
           const sourceForModel = item.source as ModelManagementItemSource
           const accountForModel =
-            sourceForModel.kind === "account"
+            sourceForModel.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
               ? sourceForModel.account
               : undefined
           const exchangeRate =
@@ -135,7 +139,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
               : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
           const modelId = item.model.model_name
           const historyTarget =
-            sourceForModel.kind === "profile"
+            sourceForModel.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
               ? createProfileModelVerificationHistoryTarget(
                   sourceForModel.profile.id,
                   modelId,

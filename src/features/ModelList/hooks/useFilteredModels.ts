@@ -3,6 +3,7 @@ import { useCallback, useMemo } from "react"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
   createAccountSource,
+  MODEL_MANAGEMENT_SOURCE_KINDS,
   type ModelManagementSource,
 } from "~/features/ModelList/modelManagementSources"
 import {
@@ -10,12 +11,15 @@ import {
   type ModelListSortMode,
 } from "~/features/ModelList/sortModes"
 import type { PricingResponse } from "~/services/apiService/common/type"
+import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import {
   calculateModelPrice,
   isTokenBillingType,
 } from "~/services/models/utils/modelPricing"
 import {
   filterModelsByProvider,
+  MODEL_PROVIDER_FILTER_VALUES,
+  type ModelProviderFilterValue,
   type ProviderType,
 } from "~/services/models/utils/modelProviders"
 
@@ -33,16 +37,18 @@ interface UseFilteredModelsProps {
   selectedGroups: string[]
   allAccountsExcludedGroupsByAccountId?: Record<string, string[]>
   searchTerm: string
-  selectedProvider: ProviderType | "all"
+  selectedProvider: ModelProviderFilterValue
   sortMode: ModelListSortMode
   showRealPrice: boolean
   accountFilterAccountIds?: string[]
 }
 
-type BillingMode = "token-based" | "per-call"
+type PricingBillingMode =
+  | typeof MODEL_LIST_BILLING_MODES.TOKEN_BASED
+  | typeof MODEL_LIST_BILLING_MODES.PER_CALL
 
 interface ComparablePriceKey {
-  billingMode: BillingMode
+  billingMode: PricingBillingMode
   primary: number | null
   secondary: number | null
 }
@@ -51,7 +57,10 @@ interface RawModelItem {
   model: PricingResponse["data"][number]
   source:
     | ReturnType<typeof createAccountSource>
-    | Extract<NonNullable<ModelManagementSource>, { kind: "profile" }>
+    | Extract<
+        NonNullable<ModelManagementSource>,
+        { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE }
+      >
   groupRatios: Record<string, number>
   exchangeRate: number
 }
@@ -66,16 +75,19 @@ export type CalculatedModelItem = {
   calculatedPrice: ReturnType<typeof calculateModelPrice>
   source:
     | ReturnType<typeof createAccountSource>
-    | Extract<NonNullable<ModelManagementSource>, { kind: "profile" }>
+    | Extract<
+        NonNullable<ModelManagementSource>,
+        { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE }
+      >
   groupRatios: Record<string, number>
   effectiveGroup?: string
   hasAutoSelectedGroup?: boolean
   isLowestPrice?: boolean
 }
 
-const BILLING_MODE_ORDER: Record<BillingMode, number> = {
-  "token-based": 0,
-  "per-call": 1,
+const BILLING_MODE_ORDER: Record<PricingBillingMode, number> = {
+  [MODEL_LIST_BILLING_MODES.TOKEN_BASED]: 0,
+  [MODEL_LIST_BILLING_MODES.PER_CALL]: 1,
 }
 
 /** Returns true when the value is a finite number. */
@@ -85,7 +97,7 @@ function isFiniteNumber(value: number | null | undefined): value is number {
 
 /** Resolves the exchange rate for account-backed prices. */
 function getSourceExchangeRate(item: Pick<CalculatedModelItem, "source">) {
-  if (item.source.kind !== "account") {
+  if (item.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
     return 1
   }
 
@@ -107,7 +119,7 @@ function getComparablePriceKey(
       : item.calculatedPrice.outputUSD
 
     return {
-      billingMode: "token-based",
+      billingMode: MODEL_LIST_BILLING_MODES.TOKEN_BASED,
       primary: isFiniteNumber(inputPrice) ? inputPrice : null,
       secondary: isFiniteNumber(outputPrice) ? outputPrice : null,
     }
@@ -119,7 +131,7 @@ function getComparablePriceKey(
   if (typeof perCallPrice === "number") {
     const normalized = perCallPrice * exchangeRate
     return {
-      billingMode: "per-call",
+      billingMode: MODEL_LIST_BILLING_MODES.PER_CALL,
       primary: isFiniteNumber(normalized) ? normalized : null,
       secondary: isFiniteNumber(normalized) ? normalized : null,
     }
@@ -129,14 +141,14 @@ function getComparablePriceKey(
     const input = perCallPrice.input * exchangeRate
     const output = perCallPrice.output * exchangeRate
     return {
-      billingMode: "per-call",
+      billingMode: MODEL_LIST_BILLING_MODES.PER_CALL,
       primary: isFiniteNumber(input) ? input : null,
       secondary: isFiniteNumber(output) ? output : null,
     }
   }
 
   return {
-    billingMode: "per-call",
+    billingMode: MODEL_LIST_BILLING_MODES.PER_CALL,
     primary: null,
     secondary: null,
   }
@@ -186,7 +198,7 @@ export function getModelItemKey(
   item: Pick<CalculatedModelItem, "model" | "source">,
 ) {
   const sourceId =
-    item.source.kind === "account"
+    item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
       ? item.source.account.id
       : item.source.profile.id
 
@@ -195,7 +207,7 @@ export function getModelItemKey(
 
 /** Returns the source label used for deterministic sorting. */
 function getSourceSortLabel(item: CalculatedModelItem) {
-  return item.source.kind === "account"
+  return item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
     ? item.source.account.name
     : item.source.profile.name
 }
@@ -224,7 +236,7 @@ function resolveCandidateGroups(
   supportsGroupFiltering: boolean,
 ) {
   if (!supportsGroupFiltering) {
-    return ["default"]
+    return [DEFAULT_MODEL_GROUP]
   }
 
   return rawItem.model.enable_groups.filter((group) =>
@@ -233,7 +245,7 @@ function resolveCandidateGroups(
 }
 
 /** Maps quota type values onto the model-list billing modes. */
-function getModelBillingMode(quotaType: number): BillingMode {
+function getModelBillingMode(quotaType: number): PricingBillingMode {
   return isTokenBillingType(quotaType)
     ? MODEL_LIST_BILLING_MODES.TOKEN_BASED
     : MODEL_LIST_BILLING_MODES.PER_CALL
@@ -257,7 +269,7 @@ function resolveBestCalculatedItem(
   }
 
   const groupsToEvaluate =
-    candidateGroups.length > 0 ? candidateGroups : ["default"]
+    candidateGroups.length > 0 ? candidateGroups : [DEFAULT_MODEL_GROUP]
 
   let bestResult: CalculatedModelItem | null = null
   let bestKey: ComparablePriceKey | null = null
@@ -339,7 +351,7 @@ function resolveCalculatedModels(params: {
  * @param params.selectedBillingMode Active billing-mode filter value.
  * @param params.selectedGroups Candidate user groups used for filtering/comparison.
  * @param params.searchTerm Search keyword for model name/description.
- * @param params.selectedProvider Provider filter value or "all".
+ * @param params.selectedProvider Provider filter value.
  * @param params.accountFilterAccountIds Optional account id filters in all-accounts mode.
  * @returns Filtered models plus counts and available groups metadata.
  */
@@ -383,7 +395,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       return []
     }
 
-    if (selectedSource.kind === "profile") {
+    if (selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE) {
       return pricingData.data.map((model) => ({
         model,
         source: selectedSource,
@@ -392,7 +404,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       }))
     }
 
-    if (selectedSource.kind !== "account") {
+    if (selectedSource.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
       return []
     }
 
@@ -413,7 +425,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
   const availableGroups = useMemo(() => {
     if (
       !selectedSource?.capabilities.supportsGroupFiltering ||
-      selectedSource.kind === "all-accounts"
+      selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
     ) {
       return []
     }
@@ -439,7 +451,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
   const availableAccountGroupsByAccountId = useMemo(() => {
     if (
       !selectedSource?.capabilities.supportsGroupFiltering ||
-      selectedSource.kind !== "all-accounts"
+      selectedSource.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
     ) {
       return {}
     }
@@ -447,7 +459,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     const groupsByAccountId = new Map<string, Set<string>>()
 
     rawModelItems.forEach((item) => {
-      if (item.source.kind !== "account") {
+      if (item.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
         return
       }
 
@@ -480,7 +492,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
   const availableAccountGroupOptionsByAccountId = useMemo(() => {
     if (
       !selectedSource?.capabilities.supportsGroupFiltering ||
-      selectedSource.kind !== "all-accounts"
+      selectedSource.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS
     ) {
       return {}
     }
@@ -488,7 +500,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     const ratiosByAccountId = new Map<string, Map<string, number>>()
 
     rawModelItems.forEach((item) => {
-      if (item.source.kind !== "account") {
+      if (item.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT) {
         return
       }
 
@@ -531,10 +543,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
 
   const effectiveSingleSourceGroupCandidates = useMemo(() => {
     if (!selectedSource?.capabilities.supportsGroupFiltering) {
-      return ["default"]
+      return [DEFAULT_MODEL_GROUP]
     }
 
-    if (selectedSource.kind === "all-accounts") {
+    if (selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
       return []
     }
 
@@ -546,7 +558,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       return uniqueSelectedGroups
     }
 
-    return availableGroups.length > 0 ? availableGroups : ["default"]
+    return availableGroups.length > 0 ? availableGroups : [DEFAULT_MODEL_GROUP]
   }, [
     availableGroups,
     selectedGroups,
@@ -555,7 +567,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
   ])
 
   const includedAllAccountsGroupsByAccountId = useMemo(() => {
-    if (selectedSource?.kind !== "all-accounts") {
+    if (selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
       return {}
     }
 
@@ -584,12 +596,12 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
   const getEffectiveGroupCandidatesForRawItem = useCallback(
     (item: RawModelItem) => {
       if (!selectedSource?.capabilities.supportsGroupFiltering) {
-        return ["default"]
+        return [DEFAULT_MODEL_GROUP]
       }
 
       if (
-        selectedSource.kind === "all-accounts" &&
-        item.source.kind === "account"
+        selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS &&
+        item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
       ) {
         return (
           includedAllAccountsGroupsByAccountId[item.source.account.id] ?? []
@@ -651,7 +663,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
 
   const accountFilteredBaseRawModels = useMemo(() => {
     if (
-      selectedSource?.kind !== "all-accounts" ||
+      selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS ||
       accountFilterAccountIds.length === 0
     ) {
       return baseFilteredRawModels
@@ -661,13 +673,13 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
 
     return baseFilteredRawModels.filter(
       (item) =>
-        item.source.kind !== "account" ||
+        item.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT ||
         selectedAccountIds.has(item.source.account.id),
     )
   }, [accountFilterAccountIds, baseFilteredRawModels, selectedSource?.kind])
 
   const accountSummaryCountsByAccountId = useMemo(() => {
-    if (selectedSource?.kind !== "all-accounts") {
+    if (selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
       return new Map<string, number>()
     }
 
@@ -705,7 +717,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
 
   const filteredModels = useMemo(() => {
     const providerFilteredModels =
-      selectedProvider === "all"
+      selectedProvider === MODEL_PROVIDER_FILTER_VALUES.ALL
         ? baseFilteredModels
         : baseFilteredModels.filter(
             (item) =>
@@ -721,7 +733,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     })
 
     const lowestPriceKeys = new Set<string>()
-    if (selectedSource?.kind === "all-accounts") {
+    if (selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
       const groups = new Map<string, CalculatedModelItem[]>()
 
       providerFilteredModels.forEach((item) => {

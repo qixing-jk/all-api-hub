@@ -9,13 +9,15 @@ import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
 import {
   getProviderConfig,
+  MODEL_PROVIDER_FILTER_VALUES,
+  type ModelProviderFilterValue,
   type ProviderType,
 } from "~/services/models/utils/modelProviders"
 
 interface ProviderTabsProps {
   providers: ProviderType[]
-  selectedProvider: ProviderType | "all"
-  setSelectedProvider: (provider: ProviderType | "all") => void
+  selectedProvider: ModelProviderFilterValue
+  setSelectedProvider: (provider: ModelProviderFilterValue) => void
   allProvidersFilteredCount: number
   getProviderFilteredCount: (provider: ProviderType) => number
   children: ReactNode
@@ -136,7 +138,7 @@ function ProviderTabList({
  * Provider filter tabs with horizontal scroll and counts.
  * @param props Component props container.
  * @param props.providers Provider list with available models.
- * @param props.selectedProvider Currently selected provider or "all".
+ * @param props.selectedProvider Currently selected provider or all providers.
  * @param props.setSelectedProvider Setter to change provider filter.
  * @param props.allProvidersFilteredCount Count of models after non-provider filters.
  * @param props.getProviderFilteredCount Helper to get count per provider.
@@ -157,7 +159,7 @@ export function ProviderTabs({
   )
 
   const selectedIndex =
-    selectedProvider === "all"
+    selectedProvider === MODEL_PROVIDER_FILTER_VALUES.ALL
       ? 0
       : Math.max(
           0,
@@ -168,7 +170,10 @@ export function ProviderTabs({
     <Tab.Group
       selectedIndex={selectedIndex}
       onChange={(index) => {
-        const newProvider = index === 0 ? "all" : filteredProviders[index - 1]
+        const newProvider =
+          index === 0
+            ? MODEL_PROVIDER_FILTER_VALUES.ALL
+            : filteredProviders[index - 1]
         setSelectedProvider(newProvider)
       }}
     >

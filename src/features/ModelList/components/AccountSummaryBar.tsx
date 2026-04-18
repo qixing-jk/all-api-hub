@@ -3,12 +3,17 @@ import { useTranslation } from "react-i18next"
 import { Badge, Card, CardContent } from "~/components/ui"
 import { cn } from "~/lib/utils"
 
+import {
+  MODEL_LIST_ACCOUNT_ERROR_TYPES,
+  type ModelListAccountErrorType,
+} from "../modelDataStates"
+
 interface AccountSummaryItem {
   accountId: string
   name: string
   count: number
   isLoading?: boolean
-  errorType?: "invalid-format" | "load-failed"
+  errorType?: ModelListAccountErrorType
 }
 
 interface AccountSummaryBarProps {
@@ -52,14 +57,14 @@ export function AccountSummaryBar({
       }
     }
 
-    if (item.errorType === "load-failed") {
+    if (item.errorType === MODEL_LIST_ACCOUNT_ERROR_TYPES.LOAD_FAILED) {
       return {
         label: t("accountSummary.loadFailed"),
         className: "text-red-500 dark:text-red-400",
       }
     }
 
-    if (item.errorType === "invalid-format") {
+    if (item.errorType === MODEL_LIST_ACCOUNT_ERROR_TYPES.INVALID_FORMAT) {
       return {
         label: t("accountSummary.incompatible"),
         className: "text-red-500 dark:text-red-400",

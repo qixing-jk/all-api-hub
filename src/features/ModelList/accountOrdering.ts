@@ -1,10 +1,12 @@
 import type { DisplaySiteData } from "~/types"
 
+import type { ModelListAccountErrorType } from "./modelDataStates"
+
 type AccountQueryStateLike = {
   account: Pick<DisplaySiteData, "id">
   isLoading?: boolean
   hasError?: boolean
-  errorType?: "invalid-format" | "load-failed"
+  errorType?: ModelListAccountErrorType
 }
 
 interface SortModelListAccountsParams {

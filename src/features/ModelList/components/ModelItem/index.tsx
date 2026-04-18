@@ -11,7 +11,9 @@ import type {
   ModelManagementItemSource,
   ModelManagementSourceCapabilities,
 } from "~/features/ModelList/modelManagementSources"
+import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
 import type { ModelPricing } from "~/services/apiService/common/type"
+import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import { createLogger } from "~/utils/core/logger"
@@ -53,7 +55,10 @@ interface ModelItemProps {
     modelId: string,
   ) => void
   onOpenModelKeyDialog?: (
-    account: Extract<ModelManagementItemSource, { kind: "account" }>["account"],
+    account: Extract<
+      ModelManagementItemSource,
+      { kind: typeof MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT }
+    >["account"],
     modelId: string,
     modelEnableGroups: string[],
   ) => void
@@ -134,28 +139,33 @@ export default function ModelItem(props: ModelItemProps) {
   }
 
   const profileBaseUrl =
-    source.kind === "profile" ? source.profile.baseUrl.trim() : ""
+    source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
+      ? source.profile.baseUrl.trim()
+      : ""
   const profileHost =
-    source.kind === "profile"
+    source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
       ? tryParseUrl(source.profile.baseUrl)?.host || profileBaseUrl || undefined
       : undefined
   const sourceLabel =
-    source.kind === "profile"
+    source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
       ? t("sourceLabels.profileBadge", {
           name: source.profile.name,
           host: profileHost,
         })
       : source.account.name
   const handleFilterAccount =
-    source.kind === "account" && onFilterAccount
+    source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT && onFilterAccount
       ? () => onFilterAccount(source.account.id)
       : undefined
 
   const showPricing =
-    source.kind === "account" && displayCapabilities.supportsPricing
+    source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
+    displayCapabilities.supportsPricing
   const showGroupDetails =
-    source.kind === "account" && displayCapabilities.supportsGroupFiltering
-  const canExpand = source.kind === "account" && showGroupDetails
+    source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
+    displayCapabilities.supportsGroupFiltering
+  const canExpand =
+    source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT && showGroupDetails
 
   const activeGroups =
     selectedGroups.length > 0 ? selectedGroups : availableGroups
@@ -205,7 +215,7 @@ export default function ModelItem(props: ModelItemProps) {
             showAvailabilityBadge={showGroupDetails}
             verificationSummary={verificationSummary}
             onOpenKeyDialog={
-              source.kind === "account" &&
+              source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
               source.capabilities.supportsTokenCompatibility &&
               onOpenModelKeyDialog
                 ? () =>
@@ -259,22 +269,23 @@ export default function ModelItem(props: ModelItemProps) {
           groupSelectionScope={groupSelectionScope}
         />
 
-        {isExpanded && source.kind === "account" && (
-          <div className="border-t pt-4 dark:border-gray-700">
-            <ModelItemDetails
-              model={model}
-              calculatedPrice={calculatedPrice}
-              showEndpointTypes={showEndpointTypes}
-              groupRatios={groupRatios}
-              effectiveGroup={effectiveGroup}
-              showGroupDetails={showGroupDetails}
-              showPricingDetails={showPricing}
-              onGroupClick={
-                isGroupSelectionInteractive ? onGroupClick : undefined
-              }
-            />
-          </div>
-        )}
+        {isExpanded &&
+          source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT && (
+            <div className="border-t pt-4 dark:border-gray-700">
+              <ModelItemDetails
+                model={model}
+                calculatedPrice={calculatedPrice}
+                showEndpointTypes={showEndpointTypes}
+                groupRatios={groupRatios}
+                effectiveGroup={effectiveGroup}
+                showGroupDetails={showGroupDetails}
+                showPricingDetails={showPricing}
+                onGroupClick={
+                  isGroupSelectionInteractive ? onGroupClick : undefined
+                }
+              />
+            </div>
+          )}
 
         {!isAvailableForUser && showGroupDetails && (
           <div className="mt-3 rounded-lg border border-yellow-200 bg-yellow-50 p-3 dark:border-yellow-800 dark:bg-yellow-900/20">
@@ -285,7 +296,7 @@ export default function ModelItem(props: ModelItemProps) {
               <span>
                 {t("clickSwitchGroup", {
                   group: formatGroupLabelFromRatios(
-                    effectiveGroup || selectedGroups[0] || "default",
+                    effectiveGroup || selectedGroups[0] || DEFAULT_MODEL_GROUP,
                     groupRatios,
                   ),
                 })}

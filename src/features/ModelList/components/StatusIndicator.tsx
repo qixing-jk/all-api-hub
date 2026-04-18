@@ -15,7 +15,10 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import type { AccountFallbackControls } from "~/features/ModelList/hooks/useModelData"
-import type { ModelManagementSource } from "~/features/ModelList/modelManagementSources"
+import {
+  MODEL_MANAGEMENT_SOURCE_KINDS,
+  type ModelManagementSource,
+} from "~/features/ModelList/modelManagementSources"
 import type { DisplaySiteData } from "~/types"
 
 interface StatusIndicatorProps {
@@ -243,7 +246,7 @@ export function StatusIndicator({
         variant="destructive"
         className="mb-6"
         title={
-          selectedSource.kind === "profile"
+          selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
             ? t("status.profileLoadFailedTitle")
             : t("status.genericLoadFailedTitle")
         }
@@ -258,7 +261,7 @@ export function StatusIndicator({
             {t("status.retryLoad")}
           </Button>
         </div>
-        {selectedSource.kind === "account"
+        {selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
           ? renderAccountFallbackSection()
           : null}
       </Alert>
