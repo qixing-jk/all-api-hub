@@ -120,10 +120,26 @@ vi.mock("~/features/ModelList/components/AccountSummaryBar", () => ({
   ),
 }))
 
+vi.mock("~/features/ModelList/components/BatchVerifyModelsDialog", () => ({
+  BatchVerifyModelsDialog: ({ items, onClose }: any) => (
+    <div>
+      <div>Batch Verify Dialog {items.length}</div>
+      <button type="button" onClick={onClose}>
+        Close batch verify
+      </button>
+    </div>
+  ),
+}))
+
 vi.mock("~/features/ModelList/components/ControlPanel", () => ({
-  ControlPanel: ({ totalModels, filteredModels }: any) => (
+  ControlPanel: ({ totalModels, filteredModels, onBatchVerifyModels }: any) => (
     <div>
       Control Panel total:{totalModels} filtered:{filteredModels.length}
+      {onBatchVerifyModels ? (
+        <button type="button" onClick={onBatchVerifyModels}>
+          Batch verify
+        </button>
+      ) : null}
     </div>
   ),
 }))
@@ -742,6 +758,34 @@ describe("ModelList page flows", () => {
 
     await user.click(screen.getByRole("button", { name: "Close key dialog" }))
     expect(screen.queryByText("Model Key Dialog acc-1:gpt-4:vip")).toBeNull()
+  })
+
+  it("opens batch verification with the current filtered model snapshot", async () => {
+    const user = userEvent.setup()
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        filteredModels: [
+          {
+            model: { model_name: "gpt-4", enable_groups: ["default"] },
+            source: ACCOUNT_SOURCE,
+          },
+        ],
+      }),
+    )
+
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await user.click(
+      await screen.findByRole("button", { name: "Batch verify" }),
+    )
+
+    expect(await screen.findByText("Batch Verify Dialog 1")).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Close batch verify" }))
+    expect(screen.queryByText("Batch Verify Dialog 1")).toBeNull()
   })
 
   it("lets all-accounts rows reuse the top-level account tag filter", async () => {

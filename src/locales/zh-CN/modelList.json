@@ -29,6 +29,43 @@
   "allProviders": "所有厂商",
   "available": "可用",
   "availableGroups": "可用分组",
+  "batchVerify": {
+    "actions": {
+      "open": "批量测试",
+      "rerun": "重新批量测试",
+      "start": "开始批量测试",
+      "stop": "停止测试"
+    },
+    "apiType": {
+      "auto": "自动识别",
+      "label": "接口类型"
+    },
+    "counts": {
+      "fail": "失败 {{value}}",
+      "pass": "通过 {{value}}",
+      "skipped": "跳过 {{value}}",
+      "total": "总计 {{value}}"
+    },
+    "idleHint": "将对当前筛选模型运行文本生成可用性测试。",
+    "messages": {
+      "noCompatibleToken": "未找到兼容该模型的可用密钥。",
+      "pending": "等待测试",
+      "stopped": "已停止，未启动该模型测试。",
+      "unexpected": "测试失败"
+    },
+    "status": {
+      "fail": "失败",
+      "pass": "通过",
+      "pending": "待运行",
+      "running": "测试中",
+      "skipped": "跳过"
+    },
+    "subtitle": "当前筛选 {{value}} 个模型",
+    "summary": "已完成 {{completed}} / {{total}}，通过 {{pass}}，失败 {{fail}}，跳过 {{skipped}}",
+    "title": "批量测试模型",
+    "tokenUsed": "密钥：{{name}}",
+    "warning": "批量测试仅运行文本生成探针，用于快速确认模型基础可用性；工具调用、结构化输出和联网搜索等高级能力请使用单模型验证。"
+  },
   "billingMode": "计费方式",
   "clickSwitchGroup": "点击切换到 {{group}} 分组",
   "collapseDetails": "收起详细信息",

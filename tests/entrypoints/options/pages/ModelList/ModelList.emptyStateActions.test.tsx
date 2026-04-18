@@ -63,6 +63,10 @@ vi.mock("~/features/ModelList/components/AccountSummaryBar", () => ({
   AccountSummaryBar: () => <div>Account Summary Bar</div>,
 }))
 
+vi.mock("~/features/ModelList/components/BatchVerifyModelsDialog", () => ({
+  BatchVerifyModelsDialog: () => null,
+}))
+
 vi.mock("~/features/ModelList/components/ControlPanel", () => ({
   ControlPanel: () => <div>Control Panel</div>,
 }))

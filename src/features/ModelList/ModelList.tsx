@@ -10,6 +10,10 @@ import { PageHeader } from "~/components/PageHeader"
 import { Alert, Button, EmptyState } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
+import {
+  createBatchVerifyModelItems,
+  type BatchVerifyModelItem,
+} from "~/features/ModelList/batchVerification"
 import { type ModelManagementItemSource } from "~/features/ModelList/modelManagementSources"
 import { getAllProviders } from "~/services/models/utils/modelProviders"
 import {
@@ -25,6 +29,7 @@ import { pushWithinOptionsPage } from "~/utils/navigation"
 import { sortModelListAccounts } from "./accountOrdering"
 import { AccountSelector } from "./components/AccountSelector"
 import { AccountSummaryBar } from "./components/AccountSummaryBar"
+import { BatchVerifyModelsDialog } from "./components/BatchVerifyModelsDialog"
 import { ControlPanel } from "./components/ControlPanel"
 import { Footer } from "./components/Footer"
 import { ModelDisplay } from "./components/ModelDisplay"
@@ -225,6 +230,10 @@ export default function ModelList(props: {
     modelEnableGroups: string[]
   } | null>(null)
 
+  const [batchVerifyContext, setBatchVerifyContext] = useState<{
+    items: BatchVerifyModelItem[]
+  } | null>(null)
+
   const handleVerifyModel = (
     source: ModelManagementItemSource,
     modelId: string,
@@ -252,6 +261,12 @@ export default function ModelList(props: {
     modelId: string,
     modelEnableGroups: string[],
   ) => setModelKeyContext({ account, modelId, modelEnableGroups })
+
+  const handleOpenBatchVerify = () => {
+    const items = createBatchVerifyModelItems(filteredModels)
+    if (items.length === 0) return
+    setBatchVerifyContext({ items })
+  }
 
   const handleOpenAccountManagement = useCallback(() => {
     pushWithinOptionsPage(`#${MENU_ITEM_IDS.ACCOUNT}`)
@@ -431,6 +446,14 @@ export default function ModelList(props: {
             />
           )}
 
+          {batchVerifyContext && (
+            <BatchVerifyModelsDialog
+              isOpen={true}
+              onClose={() => setBatchVerifyContext(null)}
+              items={batchVerifyContext.items}
+            />
+          )}
+
           {selectedSource?.kind === "all-accounts" &&
             sourceCapabilities.supportsAccountSummary &&
             accountSummaryItems.length > 0 && (
@@ -461,6 +484,12 @@ export default function ModelList(props: {
             setShowEndpointTypes={setShowEndpointTypes}
             totalModels={totalModels}
             filteredModels={filteredModels}
+            onBatchVerifyModels={
+              sourceCapabilities.supportsCredentialVerification &&
+              selectedSource?.kind !== "all-accounts"
+                ? handleOpenBatchVerify
+                : undefined
+            }
           />
 
           <ProviderTabs

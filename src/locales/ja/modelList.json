@@ -29,6 +29,43 @@
   "allProviders": "すべてのプロバイダー",
   "available": "利用可能",
   "availableGroups": "利用可能なグループ",
+  "batchVerify": {
+    "actions": {
+      "open": "一括テスト",
+      "rerun": "再度一括テスト",
+      "start": "一括テストを開始",
+      "stop": "テストを停止"
+    },
+    "apiType": {
+      "auto": "自動判定",
+      "label": "API 種別"
+    },
+    "counts": {
+      "fail": "失敗 {{value}}",
+      "pass": "成功 {{value}}",
+      "skipped": "スキップ {{value}}",
+      "total": "合計 {{value}}"
+    },
+    "idleHint": "現在フィルターされたモデルに対してテキスト生成の可用性テストを実行します。",
+    "messages": {
+      "noCompatibleToken": "このモデルに対応する有効なトークンが見つかりません。",
+      "pending": "テスト待ち",
+      "stopped": "このモデルのテスト開始前に停止しました。",
+      "unexpected": "テストに失敗しました"
+    },
+    "status": {
+      "fail": "失敗",
+      "pass": "成功",
+      "pending": "保留中",
+      "running": "テスト中",
+      "skipped": "スキップ"
+    },
+    "subtitle": "フィルター済み {{value}} モデル",
+    "summary": "完了 {{completed}} / {{total}}、成功 {{pass}}、失敗 {{fail}}、スキップ {{skipped}}",
+    "title": "モデルを一括テスト",
+    "tokenUsed": "トークン: {{name}}",
+    "warning": "一括テストでは、基本的なモデル可用性を素早く確認するためにテキスト生成プローブのみを実行します。ツール呼び出し、構造化出力、Web 検索などの高度な機能確認には単一モデル検証を使用してください。"
+  },
   "billingMode": "課金方式",
   "clickSwitchGroup": "{{group}} グループへ切り替える",
   "collapseDetails": "詳細を折りたたむ",

@@ -1,5 +1,6 @@
 import {
   AdjustmentsHorizontalIcon,
+  BeakerIcon,
   ClipboardDocumentListIcon,
   CpuChipIcon,
   MagnifyingGlassIcon,
@@ -57,6 +58,7 @@ interface ControlPanelProps {
   setShowEndpointTypes: (show: boolean) => void
   totalModels: number
   filteredModels: any[]
+  onBatchVerifyModels?: () => void
 }
 
 /**
@@ -82,6 +84,7 @@ interface ControlPanelProps {
  * @param props.setShowEndpointTypes Setter for endpoint type toggle.
  * @param props.totalModels Total models available.
  * @param props.filteredModels Currently filtered model list.
+ * @param props.onBatchVerifyModels Optional handler for batch API verification.
  * @returns Card with filters, toggles, and actions.
  */
 export function ControlPanel({
@@ -105,6 +108,7 @@ export function ControlPanel({
   setShowEndpointTypes,
   totalModels,
   filteredModels,
+  onBatchVerifyModels,
 }: ControlPanelProps) {
   const { t } = useTranslation(["modelList", "ui"])
   const isProfileSource = selectedSource?.kind === "profile"
@@ -279,6 +283,18 @@ export function ControlPanel({
             >
               {t("copyAllNames")}
             </Button>
+
+            {onBatchVerifyModels ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={onBatchVerifyModels}
+                disabled={filteredModels.length === 0}
+                leftIcon={<BeakerIcon className="h-4 w-4" />}
+              >
+                {t("batchVerify.actions.open")}
+              </Button>
+            ) : null}
           </div>
 
           <div className="flex items-center space-x-4 text-sm">

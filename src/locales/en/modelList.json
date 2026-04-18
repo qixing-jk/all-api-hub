@@ -31,6 +31,43 @@
   "allProviders": "All Providers",
   "available": "Available",
   "availableGroups": "Available Groups",
+  "batchVerify": {
+    "actions": {
+      "open": "Batch test",
+      "rerun": "Run batch again",
+      "start": "Start batch test",
+      "stop": "Stop test"
+    },
+    "apiType": {
+      "auto": "Auto-detect",
+      "label": "API type"
+    },
+    "counts": {
+      "fail": "Failed {{value}}",
+      "pass": "Passed {{value}}",
+      "skipped": "Skipped {{value}}",
+      "total": "Total {{value}}"
+    },
+    "idleHint": "This will run a text-generation availability test for the currently filtered models.",
+    "messages": {
+      "noCompatibleToken": "No enabled compatible token was found for this model.",
+      "pending": "Waiting to test",
+      "stopped": "Stopped before this model test started.",
+      "unexpected": "Test failed"
+    },
+    "status": {
+      "fail": "Fail",
+      "pass": "Pass",
+      "pending": "Pending",
+      "running": "Testing",
+      "skipped": "Skipped"
+    },
+    "subtitle": "{{value}} filtered models",
+    "summary": "Completed {{completed}} / {{total}}, passed {{pass}}, failed {{fail}}, skipped {{skipped}}",
+    "title": "Batch Test Models",
+    "tokenUsed": "Token: {{name}}",
+    "warning": "Batch testing only runs the text-generation probe to quickly check basic model availability. Use single-model verification for tool calling, structured output, web search, and other advanced capability checks."
+  },
   "billingMode": "Billing Mode",
   "clickSwitchGroup": "Click to switch to {{group}} group",
   "collapseDetails": "Collapse details",

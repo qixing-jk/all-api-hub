@@ -234,6 +234,49 @@ describe("ControlPanel profile capabilities", () => {
     expect(screen.queryByText("modelList:billingMode")).toBeNull()
   })
 
+  it("renders the batch verification action when a handler is provided", async () => {
+    const onBatchVerifyModels = vi.fn()
+
+    render(
+      <ControlPanel
+        selectedSource={{ kind: "account" } as any}
+        sourceCapabilities={
+          {
+            supportsGroupFiltering: false,
+            supportsPricing: false,
+          } as any
+        }
+        searchTerm=""
+        setSearchTerm={vi.fn()}
+        sortMode={MODEL_LIST_SORT_MODES.DEFAULT}
+        setSortMode={vi.fn()}
+        selectedBillingMode={MODEL_LIST_BILLING_MODES.ALL}
+        setSelectedBillingMode={vi.fn()}
+        selectedGroups={[]}
+        setSelectedGroups={vi.fn()}
+        availableGroups={[]}
+        pricingData={null}
+        showRealPrice={false}
+        setShowRealPrice={vi.fn()}
+        showRatioColumn={false}
+        setShowRatioColumn={vi.fn()}
+        showEndpointTypes={true}
+        setShowEndpointTypes={vi.fn()}
+        totalModels={1}
+        filteredModels={[{ model: { model_name: "gpt-4o-mini" } }]}
+        onBatchVerifyModels={onBatchVerifyModels}
+      />,
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.open",
+      }),
+    )
+
+    expect(onBatchVerifyModels).toHaveBeenCalledTimes(1)
+  })
+
   it("includes the per-model cheapest sort option in all-accounts mode", async () => {
     const setSortMode = vi.fn()
 
