@@ -61,7 +61,7 @@
       "label": "実行するモデル",
       "noneSelected": "テストするモデルを少なくとも 1 つ選択してください。",
       "selectAll": "すべてのモデルを選択",
-      "selectedSummary": "{{selected}} / {{total}} を選択",
+      "selectedSummary_other": "{{selected}} / {{total}} 件を選択",
       "toggle": "モデル {{model}} を選択"
     },
     "probes": {

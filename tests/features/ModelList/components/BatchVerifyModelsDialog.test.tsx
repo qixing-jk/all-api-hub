@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { MODEL_LIST_BATCH_VERIFY_CONCURRENCY } from "~/features/ModelList/batchVerification"
 import { BatchVerifyModelsDialog } from "~/features/ModelList/components/BatchVerifyModelsDialog"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -868,10 +869,15 @@ describe("BatchVerifyModelsDialog", () => {
     })
 
     expect(
-      await screen.findByRole("button", {
-        name: "modelList:batchVerify.actions.rerun",
-      }),
+      await screen.findByTestId(
+        "batch-verify-model-checkbox-account:acc-1:model:gpt-4o-mini",
+      ),
     ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    ).toBeEnabled()
   })
 
   it("marks queued models as stopped when the running batch is stopped", async () => {
@@ -905,12 +911,15 @@ describe("BatchVerifyModelsDialog", () => {
     mockRunApiVerificationProbe.mockReturnValue(blockedProbe)
 
     renderDialog(
-      Array.from({ length: 6 }, (_, index) => ({
-        key: `account:acc-1:model:gpt-4o-${index}`,
-        modelId: `gpt-4o-${index}`,
-        enableGroups: ["default"],
-        source: { kind: "account", account },
-      })),
+      Array.from(
+        { length: MODEL_LIST_BATCH_VERIFY_CONCURRENCY + 1 },
+        (_, index) => ({
+          key: `account:acc-1:model:gpt-4o-${index}`,
+          modelId: `gpt-4o-${index}`,
+          enableGroups: ["default"],
+          source: { kind: "account", account },
+        }),
+      ),
     )
 
     fireEvent.click(
@@ -923,7 +932,9 @@ describe("BatchVerifyModelsDialog", () => {
       name: "modelList:batchVerify.actions.stop",
     })
     await waitFor(() => {
-      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(5)
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(
+        MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
+      )
     })
 
     fireEvent.click(stopButton)

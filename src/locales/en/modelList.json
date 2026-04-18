@@ -64,7 +64,8 @@
       "label": "Models to run",
       "noneSelected": "Select at least one model to test.",
       "selectAll": "Select all models",
-      "selectedSummary": "{{selected}} selected / {{total}}",
+      "selectedSummary_one": "{{selected}} model selected / {{total}}",
+      "selectedSummary_other": "{{selected}} models selected / {{total}}",
       "toggle": "Select model {{model}}"
     },
     "probes": {

@@ -12,6 +12,13 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import {
+  MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
+  pickBatchVerifyCompatibleToken,
+  resolveBatchVerifyApiType,
+  type BatchVerifyApiTypeMode,
+  type BatchVerifyModelItem,
+} from "~/features/ModelList/batchVerification"
+import {
   fetchDisplayAccountTokens,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
@@ -36,14 +43,6 @@ import {
 } from "~/services/verification/verificationResultHistory"
 import type { ApiToken } from "~/types"
 import { createLogger } from "~/utils/core/logger"
-
-import {
-  MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
-  pickBatchVerifyCompatibleToken,
-  resolveBatchVerifyApiType,
-  type BatchVerifyApiTypeMode,
-  type BatchVerifyModelItem,
-} from "../batchVerification"
 
 type BatchVerifyRowStatus = "pending" | "running" | "pass" | "fail" | "skipped"
 
@@ -177,15 +176,18 @@ export function BatchVerifyModelsDialog({
 
   useEffect(() => {
     const previousSnapshot = previousDialogSnapshotRef.current
-    previousDialogSnapshotRef.current = { isOpen, items }
 
-    if (!isOpen) return
+    if (!isOpen) {
+      previousDialogSnapshotRef.current = { isOpen, items }
+      return
+    }
 
     const opened = !previousSnapshot.isOpen
     const itemsChanged = previousSnapshot.items !== items
     if (!opened && !itemsChanged) return
     if (isRunning) return
 
+    previousDialogSnapshotRef.current = { isOpen, items }
     shouldStopRef.current = false
     clearCachedTokenPromises()
     setRows(buildRows(items))
@@ -776,6 +778,7 @@ export function BatchVerifyModelsDialog({
             <div className="flex items-center gap-2">
               <span className="dark:text-dark-text-tertiary text-xs text-gray-500">
                 {t("modelList:batchVerify.modelSelection.selectedSummary", {
+                  count: selectedModelKeys.length,
                   selected: selectedModelKeys.length,
                   total: items.length,
                 })}

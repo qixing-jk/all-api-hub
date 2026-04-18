@@ -61,7 +61,7 @@
       "label": "執行模型",
       "noneSelected": "請至少選擇一個要測試的模型。",
       "selectAll": "全選模型",
-      "selectedSummary": "已選 {{selected}} / {{total}}",
+      "selectedSummary_other": "已選 {{selected}} / {{total}}",
       "toggle": "選擇模型 {{model}}"
     },
     "probes": {
