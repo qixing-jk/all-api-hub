@@ -142,20 +142,23 @@ export function BatchVerifyModelsDialog({
   const shouldStopRef = useRef(false)
   const tokenCacheRef = useRef(new Map<string, Promise<ApiToken[]>>())
   const resolvedTokenCacheRef = useRef(new Map<string, Promise<ApiToken>>())
+  const clearCachedTokenPromises = useCallback(() => {
+    tokenCacheRef.current.clear()
+    resolvedTokenCacheRef.current.clear()
+  }, [])
 
   useEffect(() => {
     if (!isOpen) return
 
     shouldStopRef.current = false
-    tokenCacheRef.current.clear()
-    resolvedTokenCacheRef.current.clear()
+    clearCachedTokenPromises()
     setRows(buildRows(items))
     setApiTypeMode(getDefaultApiTypeMode(items))
     setSelectedProbeIds(DEFAULT_SELECTED_PROBE_IDS)
     setSelectedModelKeys(items.map((item) => item.key))
     setIsRunning(false)
     setHasStarted(false)
-  }, [isOpen, items])
+  }, [clearCachedTokenPromises, isOpen, items])
 
   const summary = useMemo(() => {
     return rows.reduce(
@@ -483,7 +486,7 @@ export function BatchVerifyModelsDialog({
           status: deriveRowStatus(results),
           latencyMs: getRowLatency(results),
           summary: t("modelList:batchVerify.messages.probeSummary", {
-            total: results.length,
+            count: results.length,
             pass,
             fail,
             unsupported,
@@ -569,6 +572,7 @@ export function BatchVerifyModelsDialog({
       selectedModelKeySet.has(item.key),
     )
     shouldStopRef.current = false
+    clearCachedTokenPromises()
     setHasStarted(true)
     setIsRunning(true)
     setRows(
@@ -631,7 +635,7 @@ export function BatchVerifyModelsDialog({
         {t("modelList:batchVerify.title")}
       </Heading5>
       <div className="dark:text-dark-text-tertiary mt-1 truncate text-xs text-gray-500">
-        {t("modelList:batchVerify.subtitle", { value: items.length })}
+        {t("modelList:batchVerify.subtitle", { count: items.length })}
       </div>
     </div>
   )
@@ -640,7 +644,10 @@ export function BatchVerifyModelsDialog({
     <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
       <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
         {hasStarted
-          ? t("modelList:batchVerify.summary", summary)
+          ? t("modelList:batchVerify.summary", {
+              ...summary,
+              count: summary.total,
+            })
           : t("modelList:batchVerify.idleHint")}
       </div>
       <div className="flex justify-end gap-2">

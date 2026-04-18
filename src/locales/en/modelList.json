@@ -54,7 +54,8 @@
       "noCompatibleToken": "No enabled compatible token was found for this model.",
       "notSelected": "This model was not selected, so it was skipped in this batch run.",
       "pending": "Waiting to test",
-      "probeSummary": "Ran {{total}} items, passed {{pass}}, failed {{fail}}, unsupported {{unsupported}}",
+      "probeSummary_one": "Ran {{count}} item, passed {{pass}}, failed {{fail}}, unsupported {{unsupported}}",
+      "probeSummary_other": "Ran {{count}} items, passed {{pass}}, failed {{fail}}, unsupported {{unsupported}}",
       "stopped": "Stopped before this model test started.",
       "unexpected": "Test failed"
     },
@@ -77,8 +78,10 @@
       "running": "Testing",
       "skipped": "Skipped"
     },
-    "subtitle": "{{value}} filtered models",
-    "summary": "Completed {{completed}} / {{total}}, passed {{pass}}, failed {{fail}}, skipped {{skipped}}",
+    "subtitle_one": "{{count}} filtered model",
+    "subtitle_other": "{{count}} filtered models",
+    "summary_one": "Completed {{completed}} / {{count}} model, passed {{pass}}, failed {{fail}}, skipped {{skipped}}",
+    "summary_other": "Completed {{completed}} / {{count}} models, passed {{pass}}, failed {{fail}}, skipped {{skipped}}",
     "title": "Batch Test Models",
     "tokenUsed": "Token: {{name}}",
     "warning": "Batch testing runs the selected items according to each model’s resolved API type. Inapplicable items are skipped automatically. Results are advisory; rely on real tool calls for final confirmation."

@@ -36,6 +36,22 @@ describe("model list batch verification helpers", () => {
     ])
   })
 
+  it("keeps missing model group metadata unrestricted", () => {
+    const source = {
+      kind: "account",
+      account: { id: "acc-1" },
+    } as any
+
+    const [item] = createBatchVerifyModelItems([
+      {
+        model: { model_name: "gpt-4o" },
+        source,
+      },
+    ] as any)
+
+    expect(item.enableGroups).toBeNull()
+  })
+
   it("auto-detects the closest verification API type from model id", () => {
     expect(resolveBatchVerifyApiType("auto", "claude-3-5-sonnet")).toBe(
       API_TYPES.ANTHROPIC,
@@ -93,6 +109,26 @@ describe("model list batch verification helpers", () => {
         enableGroups: ["default"],
       })?.id,
     ).toBe(3)
+  })
+
+  it("selects an enabled token when model group metadata is unavailable", () => {
+    const tokens = [
+      {
+        id: 1,
+        status: 1,
+        group: "vip",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ] as any
+
+    expect(
+      pickBatchVerifyCompatibleToken(tokens, {
+        modelId: "gpt-4o-mini",
+        enableGroups: null,
+      })?.id,
+    ).toBe(1)
   })
 
   it("returns null when no enabled token is model-compatible", () => {

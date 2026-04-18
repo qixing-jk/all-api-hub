@@ -52,7 +52,7 @@
       "noCompatibleToken": "このモデルに対応する有効なトークンが見つかりません。",
       "notSelected": "このモデルは選択されていないため、今回の一括テストではスキップされました。",
       "pending": "テスト待ち",
-      "probeSummary": "{{total}} 件実行、成功 {{pass}}、失敗 {{fail}}、非対応 {{unsupported}}",
+      "probeSummary_other": "{{count}} 件実行、成功 {{pass}}、失敗 {{fail}}、非対応 {{unsupported}}",
       "stopped": "このモデルのテスト開始前に停止しました。",
       "unexpected": "テストに失敗しました"
     },
@@ -75,8 +75,8 @@
       "running": "テスト中",
       "skipped": "スキップ"
     },
-    "subtitle": "フィルター済み {{value}} モデル",
-    "summary": "完了 {{completed}} / {{total}}、成功 {{pass}}、失敗 {{fail}}、スキップ {{skipped}}",
+    "subtitle_other": "フィルター済み {{count}} モデル",
+    "summary_other": "完了 {{completed}} / {{count}}、成功 {{pass}}、失敗 {{fail}}、スキップ {{skipped}}",
     "title": "モデルを一括テスト",
     "tokenUsed": "トークン: {{name}}",
     "warning": "一括テストは、各モデルで解決された API 種別に応じて選択項目を実行します。適用できない項目は自動的にスキップされます。結果は参考情報です。最終確認は実際のツール呼び出しで行ってください。"

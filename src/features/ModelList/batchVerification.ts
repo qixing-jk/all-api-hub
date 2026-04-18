@@ -19,7 +19,7 @@ export type BatchVerifyApiTypeMode = "auto" | ApiVerificationApiType
 export type BatchVerifyModelItem = {
   key: string
   modelId: string
-  enableGroups: string[]
+  enableGroups: string[] | null
   source: ModelManagementItemSource
 }
 
@@ -45,7 +45,7 @@ export function createBatchVerifyModelItems(
       modelId,
       enableGroups: Array.isArray(item.model.enable_groups)
         ? item.model.enable_groups
-        : [],
+        : null,
       source: item.source,
     })
   }

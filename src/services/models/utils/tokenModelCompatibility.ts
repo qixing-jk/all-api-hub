@@ -62,7 +62,7 @@ const normalizeTokenGroup = (
  *
  * Rules:
  * - Token must be enabled (`status === 1`).
- * - Model must be available for the token's group (model's enable_groups includes token group).
+ * - If model group metadata is present, the model must be available for the token's group.
  * - If no allow-list is active/present, token is compatible with all models.
  * - If an allow-list is active/present, token is compatible only when it includes the model id.
  */
@@ -71,19 +71,21 @@ export function isTokenCompatibleWithModel(
     ApiToken,
     "status" | "group" | "model_limits_enabled" | "model_limits" | "models"
   >,
-  model: { id: string; enableGroups: string[] },
+  model: { id: string; enableGroups?: string[] | null },
 ): boolean {
   if (token.status !== 1) return false
 
   const normalizedModelId = model.id.trim()
   if (!normalizedModelId) return false
 
-  const tokenGroup = normalizeTokenGroup(token.group)
-  const isModelGroupEnabled = model.enableGroups.some(
-    (group) => normalizeTokenGroup(group) === tokenGroup,
-  )
-  if (!isModelGroupEnabled) {
-    return false
+  if (Array.isArray(model.enableGroups)) {
+    const tokenGroup = normalizeTokenGroup(token.group)
+    const isModelGroupEnabled = model.enableGroups.some(
+      (group) => normalizeTokenGroup(group) === tokenGroup,
+    )
+    if (!isModelGroupEnabled) {
+      return false
+    }
   }
 
   const allowList = getTokenActiveModelAllowList(token)

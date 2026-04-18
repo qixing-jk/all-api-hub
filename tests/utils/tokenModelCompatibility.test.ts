@@ -168,6 +168,38 @@ describe("tokenModelCompatibility", () => {
       ).toBe(false)
     })
 
+    it("skips group matching when model group metadata is unavailable", () => {
+      const token = {
+        status: 1,
+        group: "vip",
+        model_limits_enabled: false,
+        model_limits: "",
+      } as any
+
+      expect(
+        isTokenCompatibleWithModel(token, {
+          id: "gpt-4",
+          enableGroups: null,
+        }),
+      ).toBe(true)
+    })
+
+    it("keeps an explicit empty model group list restrictive", () => {
+      const token = {
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+      } as any
+
+      expect(
+        isTokenCompatibleWithModel(token, {
+          id: "gpt-4",
+          enableGroups: [],
+        }),
+      ).toBe(false)
+    })
+
     it("treats empty token group as default group", () => {
       const token = {
         status: 1,

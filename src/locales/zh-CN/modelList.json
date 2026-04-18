@@ -52,7 +52,7 @@
       "noCompatibleToken": "未找到兼容该模型的可用密钥。",
       "notSelected": "未选择该模型，本次批量测试已跳过。",
       "pending": "等待测试",
-      "probeSummary": "已运行 {{total}} 项，通过 {{pass}}，失败 {{fail}}，不支持 {{unsupported}}",
+      "probeSummary": "已运行 {{count}} 项，通过 {{pass}}，失败 {{fail}}，不支持 {{unsupported}}",
       "stopped": "已停止，未启动该模型测试。",
       "unexpected": "测试失败"
     },
@@ -75,8 +75,8 @@
       "running": "测试中",
       "skipped": "跳过"
     },
-    "subtitle": "当前筛选 {{value}} 个模型",
-    "summary": "已完成 {{completed}} / {{total}}，通过 {{pass}}，失败 {{fail}}，跳过 {{skipped}}",
+    "subtitle": "当前筛选 {{count}} 个模型",
+    "summary": "已完成 {{completed}} / {{count}}，通过 {{pass}}，失败 {{fail}}，跳过 {{skipped}}",
     "title": "批量测试模型",
     "tokenUsed": "密钥：{{name}}",
     "warning": "批量测试会按每个模型解析后的接口类型执行所选项目；不适用的项目会自动跳过。检测结果仅供参考，请以工具实际调用情况为准。"
