@@ -353,7 +353,7 @@ describe("useModelData all-accounts loading", () => {
       ],
       group_ratio: { default: 1 },
       success: true,
-      usable_group: { default: true },
+      usable_group: { default: "default" },
     }
 
     await modelPricingCache.invalidate(cacheKey)
