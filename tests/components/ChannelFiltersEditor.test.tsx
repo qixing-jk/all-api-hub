@@ -298,9 +298,11 @@ describe("ChannelFiltersEditor", () => {
     const clearButtons = screen.getAllByRole("button", {
       name: "common:actions.clear",
     })
-    await user.click(clearButtons[0])
-    await user.click(clearButtons[1])
-    await user.click(clearButtons[2])
+    expect(clearButtons).toHaveLength(2)
+
+    for (const clearButton of clearButtons) {
+      await user.click(clearButton)
+    }
 
     expect(props.onFieldChange).toHaveBeenCalledWith("rule-1", "name", "")
     expect(props.onFieldChange).toHaveBeenCalledWith("rule-1", "pattern", "")
@@ -333,6 +335,28 @@ describe("ChannelFiltersEditor", () => {
     await user.click(screen.getByRole("button", { name: "filters.addRule" }))
 
     expect(props.onAddFilter).toHaveBeenCalledTimes(1)
+  })
+
+  it("clears a populated visual rule description", async () => {
+    const user = userEvent.setup()
+    const { props } = renderEditor({
+      filters: [
+        buildFilter({
+          description: "Clear this description",
+        }),
+      ],
+    })
+
+    const clearButtons = screen.getAllByRole("button", {
+      name: "common:actions.clear",
+    })
+    await user.click(clearButtons[2])
+
+    expect(props.onFieldChange).toHaveBeenCalledWith(
+      "rule-1",
+      "description",
+      "",
+    )
   })
 
   it("renders the json editor and propagates mode switches and text changes", async () => {

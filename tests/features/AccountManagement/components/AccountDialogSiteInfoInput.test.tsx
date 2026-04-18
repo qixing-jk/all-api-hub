@@ -42,7 +42,9 @@ describe("AccountDialog SiteInfoInput", () => {
       "https://updated.example.com",
     )
 
-    await user.click(screen.getByRole("button", { name: "clear-url" }))
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.clear" }),
+    )
     expect(props.onClearUrl).toHaveBeenCalledTimes(1)
 
     await user.click(
@@ -109,7 +111,9 @@ describe("AccountDialog SiteInfoInput", () => {
         name: "accountDialog:siteInfo.authMethod",
       }),
     ).toBeDisabled()
-    expect(screen.queryByRole("button", { name: "clear-url" })).toBeNull()
+    expect(
+      screen.queryByRole("button", { name: "common:actions.clear" }),
+    ).toBeNull()
     expect(
       screen.queryByRole("button", {
         name: "accountDialog:siteInfo.useCurrent",

@@ -68,15 +68,18 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       !props.disabled &&
       !props.readOnly
 
-    const setTextareaRef = (node: HTMLTextAreaElement | null) => {
-      textareaRef.current = node
+    const setTextareaRef = React.useCallback(
+      (node: HTMLTextAreaElement | null) => {
+        textareaRef.current = node
 
-      if (typeof ref === "function") {
-        ref(node)
-      } else if (ref) {
-        ref.current = node
-      }
-    }
+        if (typeof ref === "function") {
+          ref(node)
+        } else if (ref) {
+          ref.current = node
+        }
+      },
+      [ref],
+    )
 
     const focusTextareaAfterClear = () => {
       const focusTextarea = () => textareaRef.current?.focus()

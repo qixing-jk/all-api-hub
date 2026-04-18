@@ -66,7 +66,7 @@ export default function SiteInfoInput({
   onUseCurrentTab,
   onEditAccount,
 }: SiteInfoInputProps) {
-  const { t } = useTranslation("accountDialog")
+  const { t } = useTranslation(["accountDialog", "common"])
   const isSub2Api = siteType === SUB2API
 
   const handleEditClick = () => {
@@ -102,7 +102,7 @@ export default function SiteInfoInput({
             disabled={isDetected}
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput}
             onClear={onClearUrl}
-            clearButtonLabel="clear-url"
+            clearButtonLabel={t("common:actions.clear")}
           />
         </div>
         <Tooltip

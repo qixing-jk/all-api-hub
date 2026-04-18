@@ -93,15 +93,18 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     const rightPaddingClass =
       rightIcon && showClearButton ? "pr-16" : showRightContent ? "pr-10" : ""
 
-    const setInputRef = (node: HTMLInputElement | null) => {
-      inputRef.current = node
+    const setInputRef = React.useCallback(
+      (node: HTMLInputElement | null) => {
+        inputRef.current = node
 
-      if (typeof ref === "function") {
-        ref(node)
-      } else if (ref) {
-        ref.current = node
-      }
-    }
+        if (typeof ref === "function") {
+          ref(node)
+        } else if (ref) {
+          ref.current = node
+        }
+      },
+      [ref],
+    )
 
     const focusInputAfterClear = () => {
       const focusInput = () => inputRef.current?.focus()
@@ -136,9 +139,9 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           {...props}
         />
         {showRightContent && (
-          <div className="absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
             {rightIcon && (
-              <span className="text-gray-400 dark:text-gray-500">
+              <span className="pointer-events-auto text-gray-400 dark:text-gray-500">
                 {rightIcon}
               </span>
             )}
@@ -149,6 +152,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
                   onClear?.()
                   focusInputAfterClear()
                 }}
+                className="pointer-events-auto"
               />
             )}
           </div>
