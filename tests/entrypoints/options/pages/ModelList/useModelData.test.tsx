@@ -12,6 +12,7 @@ import {
 } from "~/features/ModelList/modelManagementSources"
 import { InvalidTokenPayloadError } from "~/services/accounts/utils/apiServiceRequest"
 import { getApiService } from "~/services/apiService"
+import { modelPricingCache } from "~/services/models/modelPricingCache"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { testI18n } from "~~/tests/test-utils/i18n"
@@ -314,6 +315,67 @@ describe("useModelData all-accounts loading", () => {
         "cookie-model",
       )
     })
+  })
+
+  it("uses cached single-account pricing scoped by site and auth type", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+
+    const fetchModelPricing = vi.fn()
+    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+
+    const account = createDisplayAccount({
+      id: "cached-pricing-account",
+      baseUrl: "https://cached-pricing.example.com",
+      userId: 64,
+      siteType: "new-api",
+      authType: AuthTypeEnum.Cookie,
+      cookieAuthSessionCookie: "session=cached",
+    })
+    const cacheKey = [
+      account.id,
+      account.baseUrl,
+      account.userId,
+      account.siteType,
+      account.authType,
+    ].join("|")
+    const cachedPricing = {
+      data: [
+        {
+          model_name: "cached-model",
+          quota_type: 0,
+          model_ratio: 1,
+          model_price: 1,
+          completion_ratio: 1,
+          enable_groups: ["default"],
+          supported_endpoint_types: [],
+        },
+      ],
+      group_ratio: { default: 1 },
+      success: true,
+      usable_group: { default: true },
+    }
+
+    await modelPricingCache.invalidate(cacheKey)
+    await modelPricingCache.set(cacheKey, cachedPricing)
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(() => {
+      expect(result.current.pricingData?.data[0]?.model_name).toBe(
+        "cached-model",
+      )
+    })
+    expect(fetchModelPricing).not.toHaveBeenCalled()
+
+    await modelPricingCache.invalidate(cacheKey)
   })
 
   it("marks all-account queries as loading before each account returns data", async () => {
