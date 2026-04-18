@@ -1015,6 +1015,46 @@ describe("useModelData all-accounts loading", () => {
     )
   })
 
+  it("does not load fallback tokens for single-account invalid-format responses", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+
+    const fetchModelPricing = vi.fn().mockResolvedValue({
+      data: null,
+      group_ratio: {},
+      success: true,
+      usable_group: {},
+    })
+    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+
+    const account = createDisplayAccount({
+      id: "single-invalid-format",
+      baseUrl: "https://single-invalid-format.example.com",
+      userId: 62,
+    })
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(
+      () => {
+        expect(result.current.dataFormatError).toBe(true)
+        expect(result.current.loadErrorMessage).toBeNull()
+      },
+      { timeout: 3000 },
+    )
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "modelList:status.formatNotStandard",
+    )
+    expect(mockFetchDisplayAccountTokens).not.toHaveBeenCalled()
+  })
+
   it("sanitizes profile load failures into a user-visible profile error", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()

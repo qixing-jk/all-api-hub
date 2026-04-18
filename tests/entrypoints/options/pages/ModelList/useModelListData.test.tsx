@@ -281,6 +281,28 @@ describe("useModelListData", () => {
     )
   })
 
+  it("clears a stale profile deep link when its fallback account is also missing", async () => {
+    mockUseApiCredentialProfiles.mockReturnValue({
+      profiles: [],
+      isLoading: false,
+    })
+
+    const { result } = renderHook(() =>
+      useModelListData({
+        profileId: "missing-profile",
+        accountId: "missing-account",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.selectedSourceValue).toBe(
+        NO_MODEL_MANAGEMENT_SOURCE_VALUE,
+      )
+    })
+
+    expect(result.current.selectedSource).toBeNull()
+  })
+
   it("downgrades account capabilities while a fallback catalog is active", async () => {
     mockUseModelData.mockReturnValue({
       pricingData: {

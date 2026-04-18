@@ -134,7 +134,7 @@ function isCompletedStatus(status: BatchVerifyRowStatus) {
 }
 
 /** Collapse probe results into the row status shown in the batch table. */
-function deriveRowStatus(
+export function deriveBatchVerifyRowStatus(
   results: ApiVerificationProbeResult[],
 ): BatchVerifyRowStatus {
   if (results.length === 0) return BATCH_VERIFY_ROW_STATUSES.SKIPPED
@@ -145,6 +145,20 @@ function deriveRowStatus(
     return BATCH_VERIFY_ROW_STATUSES.PASS
   }
   return BATCH_VERIFY_ROW_STATUSES.SKIPPED
+}
+
+/** Extract stable identifiers for failure logs without exposing secrets. */
+export function getBatchVerifyFailureLogIds(item: BatchVerifyModelItem) {
+  return {
+    accountId:
+      item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
+        ? item.source.account.id
+        : undefined,
+    profileId:
+      item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
+        ? item.source.profile.id
+        : undefined,
+  }
 }
 
 /** Sum the latencies reported by all completed probes for a row. */
@@ -536,7 +550,7 @@ export function BatchVerifyModelsDialog({
         ).length
 
         updateRow(item.key, {
-          status: deriveRowStatus(results),
+          status: deriveBatchVerifyRowStatus(results),
           latencyMs: getRowLatency(results),
           summary: t("modelList:batchVerify.messages.probeSummary", {
             count: results.length,
@@ -564,14 +578,7 @@ export function BatchVerifyModelsDialog({
           t("modelList:batchVerify.messages.unexpected")
 
         logger.error("Batch model verification failed", {
-          accountId:
-            item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT
-              ? item.source.account.id
-              : undefined,
-          profileId:
-            item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
-              ? item.source.profile.id
-              : undefined,
+          ...getBatchVerifyFailureLogIds(item),
           modelId: item.modelId,
           message,
         })

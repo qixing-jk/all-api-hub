@@ -1,7 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MODEL_LIST_BATCH_VERIFY_CONCURRENCY } from "~/features/ModelList/batchVerification"
-import { BatchVerifyModelsDialog } from "~/features/ModelList/components/BatchVerifyModelsDialog"
+import {
+  BatchVerifyModelsDialog,
+  deriveBatchVerifyRowStatus,
+  getBatchVerifyFailureLogIds,
+} from "~/features/ModelList/components/BatchVerifyModelsDialog"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -86,6 +90,39 @@ describe("BatchVerifyModelsDialog", () => {
     mockRunApiVerificationProbe.mockReset()
     mockUpsertLatestSummary.mockReset()
     mockUpsertLatestSummary.mockImplementation(async (summary) => summary)
+  })
+
+  it("derives skipped status for empty probe results", () => {
+    expect(deriveBatchVerifyRowStatus([])).toBe("skipped")
+  })
+
+  it("extracts account and profile ids for failure logs", () => {
+    expect(
+      getBatchVerifyFailureLogIds({
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      } as any),
+    ).toEqual({ accountId: "acc-1", profileId: undefined })
+
+    expect(
+      getBatchVerifyFailureLogIds({
+        key: "profile:profile-1:model:claude-3-5-sonnet",
+        modelId: "claude-3-5-sonnet",
+        enableGroups: [],
+        source: {
+          kind: "profile",
+          profile: {
+            id: "profile-1",
+            name: "Profile One",
+            baseUrl: "https://anthropic.example.com",
+            apiKey: "profile-secret",
+            apiType: API_TYPES.ANTHROPIC,
+          },
+        },
+      } as any),
+    ).toEqual({ accountId: undefined, profileId: "profile-1" })
   })
 
   it("uses the first compatible account token and runs text-generation for the model", async () => {
