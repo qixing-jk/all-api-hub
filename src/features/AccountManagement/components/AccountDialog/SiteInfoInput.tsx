@@ -3,14 +3,12 @@ import {
   GlobeAltIcon,
   InformationCircleIcon,
   PencilIcon,
-  XCircleIcon,
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
 import {
   Button,
-  IconButton,
   Input,
   Select,
   SelectContent,
@@ -103,20 +101,8 @@ export default function SiteInfoInput({
             placeholder="https://example.com"
             disabled={isDetected}
             data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput}
-            rightIcon={
-              url &&
-              !isDetected && (
-                <IconButton
-                  type="button"
-                  onClick={onClearUrl}
-                  variant="ghost"
-                  size="sm"
-                  aria-label="clear-url"
-                >
-                  <XCircleIcon className="h-5 w-5 text-gray-400" />
-                </IconButton>
-              )
-            }
+            onClear={onClearUrl}
+            clearButtonLabel="clear-url"
           />
         </div>
         <Tooltip

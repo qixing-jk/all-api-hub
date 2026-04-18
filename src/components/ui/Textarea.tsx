@@ -1,6 +1,10 @@
 import { cva, type VariantProps } from "class-variance-authority"
 import React from "react"
 
+import {
+  ClearableFieldButton,
+  getClearableFieldValue,
+} from "~/components/ui/clearableField"
 import { cn } from "~/lib/utils"
 
 const textareaVariants = cva(
@@ -34,6 +38,8 @@ export interface TextareaProps
   success?: string
   showCount?: boolean
   maxLength?: number
+  onClear?: () => void
+  clearButtonLabel?: string
 }
 
 const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
@@ -47,24 +53,64 @@ const Textarea = React.forwardRef<HTMLTextAreaElement, TextareaProps>(
       showCount,
       maxLength,
       value,
+      onClear,
+      clearButtonLabel = "Clear",
       ...props
     },
     ref,
   ) => {
+    const textareaRef = React.useRef<HTMLTextAreaElement | null>(null)
     const textareaVariant = error ? "error" : success ? "success" : variant
     const currentLength = typeof value === "string" ? value.length : 0
+    const showClearButton =
+      Boolean(onClear) &&
+      getClearableFieldValue(value).length > 0 &&
+      !props.disabled &&
+      !props.readOnly
+
+    const setTextareaRef = (node: HTMLTextAreaElement | null) => {
+      textareaRef.current = node
+
+      if (typeof ref === "function") {
+        ref(node)
+      } else if (ref) {
+        ref.current = node
+      }
+    }
+
+    const focusTextareaAfterClear = () => {
+      const focusTextarea = () => textareaRef.current?.focus()
+
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(focusTextarea)
+        return
+      }
+
+      focusTextarea()
+    }
 
     return (
       <div className="relative">
         <textarea
           className={cn(
             textareaVariants({ variant: textareaVariant, size, className }),
+            showClearButton && "pr-10",
           )}
-          ref={ref}
+          ref={setTextareaRef}
           value={value}
           maxLength={maxLength}
           {...props}
         />
+        {showClearButton && (
+          <ClearableFieldButton
+            label={clearButtonLabel}
+            onClick={() => {
+              onClear?.()
+              focusTextareaAfterClear()
+            }}
+            className="absolute top-2 right-2"
+          />
+        )}
         {(error || success) && (
           <p
             className={cn(

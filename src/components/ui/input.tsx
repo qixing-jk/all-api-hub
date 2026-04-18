@@ -1,6 +1,10 @@
 import { cva, type VariantProps } from "class-variance-authority"
 import React from "react"
 
+import {
+  ClearableFieldButton,
+  getClearableFieldValue,
+} from "~/components/ui/clearableField"
 import { cn } from "~/lib/utils"
 
 const inputVariants = cva(
@@ -53,6 +57,8 @@ export interface InputProps
   containerClassName?: string
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
+  onClear?: () => void
+  clearButtonLabel?: string
   error?: string
   success?: string
 }
@@ -66,15 +72,47 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       size,
       leftIcon,
       rightIcon,
+      onClear,
+      clearButtonLabel = "Clear",
       error,
       success,
       ...props
     },
     ref,
   ) => {
+    const inputRef = React.useRef<HTMLInputElement | null>(null)
     const inputVariant = error ? "error" : success ? "success" : variant
     const variantSize = typeof size === "string" ? size : undefined
     const nativeSize = typeof size === "number" ? size : undefined
+    const showClearButton =
+      Boolean(onClear) &&
+      getClearableFieldValue(props.value).length > 0 &&
+      !props.disabled &&
+      !props.readOnly
+    const showRightContent = Boolean(rightIcon) || showClearButton
+    const rightPaddingClass =
+      rightIcon && showClearButton ? "pr-16" : showRightContent ? "pr-10" : ""
+
+    const setInputRef = (node: HTMLInputElement | null) => {
+      inputRef.current = node
+
+      if (typeof ref === "function") {
+        ref(node)
+      } else if (ref) {
+        ref.current = node
+      }
+    }
+
+    const focusInputAfterClear = () => {
+      const focusInput = () => inputRef.current?.focus()
+
+      if (typeof requestAnimationFrame === "function") {
+        requestAnimationFrame(focusInput)
+        return
+      }
+
+      focusInput()
+    }
 
     return (
       <div className={cn("relative", containerClassName)}>
@@ -91,17 +129,28 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
               className,
             }),
             leftIcon && "pl-10",
-            rightIcon && "pr-10",
+            rightPaddingClass,
           )}
           size={nativeSize}
-          ref={ref}
+          ref={setInputRef}
           {...props}
         />
-        {rightIcon && (
-          <div className="absolute inset-y-0 right-0 flex items-center pr-2">
-            <span className="text-gray-400 dark:text-gray-500">
-              {rightIcon}
-            </span>
+        {showRightContent && (
+          <div className="absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
+            {rightIcon && (
+              <span className="text-gray-400 dark:text-gray-500">
+                {rightIcon}
+              </span>
+            )}
+            {showClearButton && (
+              <ClearableFieldButton
+                label={clearButtonLabel}
+                onClick={() => {
+                  onClear?.()
+                  focusInputAfterClear()
+                }}
+              />
+            )}
           </div>
         )}
         {(error || success) && (
