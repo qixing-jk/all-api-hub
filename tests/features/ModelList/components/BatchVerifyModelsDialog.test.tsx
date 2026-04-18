@@ -247,6 +247,113 @@ describe("BatchVerifyModelsDialog", () => {
     ).toBeInTheDocument()
   })
 
+  it("defaults to all models selected and only runs checked models", async () => {
+    mockFetchDisplayAccountTokens.mockResolvedValue([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockResolveDisplayAccountTokenForSecret.mockResolvedValue({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 12,
+      summary: "Selected model ok",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+      {
+        key: "account:acc-1:model:gpt-4o-mini",
+        modelId: "gpt-4o-mini",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    expect(
+      await screen.findByTestId(
+        "batch-verify-model-checkbox-account:acc-1:model:gpt-4o",
+      ),
+    ).toBeChecked()
+    expect(
+      screen.getByTestId(
+        "batch-verify-model-checkbox-account:acc-1:model:gpt-4o-mini",
+      ),
+    ).toBeChecked()
+
+    fireEvent.click(
+      screen.getByTestId(
+        "batch-verify-model-checkbox-account:acc-1:model:gpt-4o",
+      ),
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(1)
+    })
+    expect(mockRunApiVerificationProbe).toHaveBeenCalledWith(
+      expect.objectContaining({
+        modelId: "gpt-4o-mini",
+        probeId: "text-generation",
+      }),
+    )
+    expect(
+      await screen.findByText("modelList:batchVerify.messages.notSelected"),
+    ).toBeInTheDocument()
+  })
+
+  it("requires at least one selected model before starting", async () => {
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.modelSelection.clearAll",
+      }),
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    ).toBeDisabled()
+    expect(
+      screen.getByText("modelList:batchVerify.modelSelection.noneSelected"),
+    ).toBeInTheDocument()
+  })
+
   it("skips an account model when no compatible token exists", async () => {
     mockFetchDisplayAccountTokens.mockResolvedValueOnce([
       {

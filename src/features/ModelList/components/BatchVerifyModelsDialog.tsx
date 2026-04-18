@@ -134,6 +134,9 @@ export function BatchVerifyModelsDialog({
   const [selectedProbeIds, setSelectedProbeIds] = useState<
     ApiVerificationProbeId[]
   >(DEFAULT_SELECTED_PROBE_IDS)
+  const [selectedModelKeys, setSelectedModelKeys] = useState<string[]>(() =>
+    items.map((item) => item.key),
+  )
   const [isRunning, setIsRunning] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
   const shouldStopRef = useRef(false)
@@ -149,6 +152,7 @@ export function BatchVerifyModelsDialog({
     setRows(buildRows(items))
     setApiTypeMode(getDefaultApiTypeMode(items))
     setSelectedProbeIds(DEFAULT_SELECTED_PROBE_IDS)
+    setSelectedModelKeys(items.map((item) => item.key))
     setIsRunning(false)
     setHasStarted(false)
   }, [isOpen, items])
@@ -220,7 +224,13 @@ export function BatchVerifyModelsDialog({
   }, [t])
 
   const canClose = !isRunning
-  const canStart = items.length > 0 && selectedProbeIds.length > 0
+  const selectedModelKeySet = useMemo(
+    () => new Set(selectedModelKeys),
+    [selectedModelKeys],
+  )
+  const canStart = selectedModelKeys.length > 0 && selectedProbeIds.length > 0
+  const areAllModelsSelected =
+    items.length > 0 && selectedModelKeys.length === items.length
 
   const updateRow = useCallback(
     (key: string, patch: Partial<Omit<BatchVerifyRow, "item">>) => {
@@ -239,6 +249,24 @@ export function BatchVerifyModelsDialog({
         ? currentProbeIds.filter((currentProbeId) => currentProbeId !== probeId)
         : [...currentProbeIds, probeId],
     )
+  }, [])
+
+  const toggleModel = useCallback((modelKey: string) => {
+    setSelectedModelKeys((currentModelKeys) =>
+      currentModelKeys.includes(modelKey)
+        ? currentModelKeys.filter(
+            (currentModelKey) => currentModelKey !== modelKey,
+          )
+        : [...currentModelKeys, modelKey],
+    )
+  }, [])
+
+  const selectAllModels = useCallback(() => {
+    setSelectedModelKeys(items.map((item) => item.key))
+  }, [items])
+
+  const clearSelectedModels = useCallback(() => {
+    setSelectedModelKeys([])
   }, [])
 
   const getAccountTokens = useCallback(
@@ -537,22 +565,35 @@ export function BatchVerifyModelsDialog({
   const runBatch = async () => {
     if (isRunning || !canStart) return
 
+    const selectedItems = items.filter((item) =>
+      selectedModelKeySet.has(item.key),
+    )
     shouldStopRef.current = false
     setHasStarted(true)
     setIsRunning(true)
-    setRows(buildRows(items))
+    setRows(
+      buildRows(items).map((row) =>
+        selectedModelKeySet.has(row.item.key)
+          ? row
+          : {
+              ...row,
+              status: "skipped",
+              summary: t("modelList:batchVerify.messages.notSelected"),
+            },
+      ),
+    )
 
     let nextIndex = 0
     const workerCount = Math.min(
       MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
-      items.length,
+      selectedItems.length,
     )
 
     const worker = async () => {
       while (!shouldStopRef.current) {
         const index = nextIndex
         nextIndex += 1
-        const item = items[index]
+        const item = selectedItems[index]
         if (!item) return
         await runOne(item)
       }
@@ -697,6 +738,39 @@ export function BatchVerifyModelsDialog({
           ) : null}
         </div>
 
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              {t("modelList:batchVerify.modelSelection.label")}
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                {t("modelList:batchVerify.modelSelection.selectedSummary", {
+                  selected: selectedModelKeys.length,
+                  total: items.length,
+                })}
+              </span>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={
+                  areAllModelsSelected ? clearSelectedModels : selectAllModels
+                }
+                disabled={isRunning || items.length === 0}
+              >
+                {areAllModelsSelected
+                  ? t("modelList:batchVerify.modelSelection.clearAll")
+                  : t("modelList:batchVerify.modelSelection.selectAll")}
+              </Button>
+            </div>
+          </div>
+          {selectedModelKeys.length === 0 ? (
+            <div className="text-xs text-red-500">
+              {t("modelList:batchVerify.modelSelection.noneSelected")}
+            </div>
+          ) : null}
+        </div>
+
         <Alert variant="warning">
           <p>{t("modelList:batchVerify.warning")}</p>
         </Alert>
@@ -709,6 +783,16 @@ export function BatchVerifyModelsDialog({
               className="dark:border-dark-bg-tertiary rounded-md border border-gray-100 p-3"
             >
               <div className="flex items-start justify-between gap-3">
+                <Checkbox
+                  checked={selectedModelKeySet.has(row.item.key)}
+                  onCheckedChange={() => toggleModel(row.item.key)}
+                  disabled={isRunning}
+                  aria-label={t("modelList:batchVerify.modelSelection.toggle", {
+                    model: row.item.modelId,
+                  })}
+                  data-testid={`batch-verify-model-checkbox-${row.item.key}`}
+                  className="mt-0.5"
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex min-w-0 flex-wrap items-center gap-2">
                     <div className="dark:text-dark-text-primary min-w-0 truncate text-sm font-medium text-gray-900">

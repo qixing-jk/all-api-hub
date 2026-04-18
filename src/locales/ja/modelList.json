@@ -50,10 +50,19 @@
     "messages": {
       "noApplicableProbes": "選択したテスト項目はこのモデルに適用できません。",
       "noCompatibleToken": "このモデルに対応する有効なトークンが見つかりません。",
+      "notSelected": "このモデルは選択されていないため、今回の一括テストではスキップされました。",
       "pending": "テスト待ち",
       "probeSummary": "{{total}} 件実行、成功 {{pass}}、失敗 {{fail}}、非対応 {{unsupported}}",
       "stopped": "このモデルのテスト開始前に停止しました。",
       "unexpected": "テストに失敗しました"
+    },
+    "modelSelection": {
+      "clearAll": "選択をクリア",
+      "label": "実行するモデル",
+      "noneSelected": "テストするモデルを少なくとも 1 つ選択してください。",
+      "selectAll": "すべてのモデルを選択",
+      "selectedSummary": "{{selected}} / {{total}} を選択",
+      "toggle": "モデル {{model}} を選択"
     },
     "probes": {
       "label": "テスト項目",

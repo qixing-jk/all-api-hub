@@ -50,10 +50,19 @@
     "messages": {
       "noApplicableProbes": "当前选择的测试项目不适用于该模型。",
       "noCompatibleToken": "未找到兼容该模型的可用密钥。",
+      "notSelected": "未选择该模型，本次批量测试已跳过。",
       "pending": "等待测试",
       "probeSummary": "已运行 {{total}} 项，通过 {{pass}}，失败 {{fail}}，不支持 {{unsupported}}",
       "stopped": "已停止，未启动该模型测试。",
       "unexpected": "测试失败"
+    },
+    "modelSelection": {
+      "clearAll": "清空选择",
+      "label": "执行模型",
+      "noneSelected": "请至少选择一个要测试的模型。",
+      "selectAll": "全选模型",
+      "selectedSummary": "已选 {{selected}} / {{total}}",
+      "toggle": "选择模型 {{model}}"
     },
     "probes": {
       "label": "测试项目",
