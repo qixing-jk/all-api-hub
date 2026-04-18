@@ -59,11 +59,6 @@ interface ModelDisplayProps {
   onFilterAccount?: (accountId: string) => void
 }
 
-/** Cap the model list to the previous viewport-sized height while allowing short lists to shrink. */
-function getModelDisplayListMaxHeight() {
-  return typeof window === "undefined" ? 560 : window.innerHeight * 0.7
-}
-
 const ModelRowsList = forwardRef<
   HTMLDivElement,
   HTMLAttributes<HTMLDivElement>
@@ -131,9 +126,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
     () => new Set(expandedModelKeys),
     [expandedModelKeys],
   )
-  const listMaxHeight = getModelDisplayListMaxHeight()
-  const listContainerHeight =
-    listHeight > 0 ? Math.min(listHeight, listMaxHeight) : listMaxHeight
+  const listContainerHeight = listHeight > 0 ? listHeight : "70vh"
 
   const toggleModelExpand = useCallback((itemKey: string) => {
     setExpandedModelKeys((currentKeys) =>
@@ -153,7 +146,10 @@ export function ModelDisplay(props: ModelDisplayProps) {
   }
 
   return (
-    <div className="overflow-hidden" style={{ height: listContainerHeight }}>
+    <div
+      className="max-h-[70vh] overflow-hidden"
+      style={{ height: listContainerHeight }}
+    >
       <Virtuoso
         className="h-full"
         data={models}

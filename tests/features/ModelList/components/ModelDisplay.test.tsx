@@ -274,7 +274,7 @@ describe("ModelDisplay", () => {
     expect(listContainer).toHaveStyle({ height: "144px" })
   })
 
-  it("caps the virtual model list container to the viewport height limit", () => {
+  it("caps the virtual model list container with responsive CSS max-height", () => {
     render(
       <ModelDisplay
         models={[
@@ -303,8 +303,9 @@ describe("ModelDisplay", () => {
     })
 
     expect(listContainer).toHaveStyle({
-      height: `${window.innerHeight * 0.7}px`,
+      height: "10000px",
     })
+    expect(listContainer).toHaveClass("max-h-[70vh]")
   })
 
   it("uses consistent virtual row spacing without adding row margin", () => {
