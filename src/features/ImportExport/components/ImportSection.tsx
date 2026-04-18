@@ -73,6 +73,8 @@ const ImportSection = ({
               onChange={(e) => setImportData(e.target.value)}
               placeholder={t("import.pasteJsonData")}
               className="h-16 w-full resize-none font-mono"
+              onClear={() => setImportData("")}
+              clearButtonLabel={t("common:actions.clear")}
             />
           </FormField>
 

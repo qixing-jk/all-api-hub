@@ -92,6 +92,9 @@ describe("ImportExport section components", () => {
     fireEvent.click(
       screen.getByRole("button", { name: "common:actions.import" }),
     )
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:actions.clear" }),
+    )
 
     expect(
       screen.getByText("importExport:import.dataValid"),
@@ -100,6 +103,7 @@ describe("ImportExport section components", () => {
       screen.getByText(/importExport:import\.containsAccountData/),
     ).toBeInTheDocument()
     expect(setImportData).toHaveBeenCalledWith('{"version":3}')
+    expect(setImportData).toHaveBeenCalledWith("")
     expect(handleFileImport).toHaveBeenCalledTimes(1)
     expect(handleImport).toHaveBeenCalledTimes(1)
 

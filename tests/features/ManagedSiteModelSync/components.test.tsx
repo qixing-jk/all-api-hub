@@ -191,7 +191,7 @@ describe("ManagedSiteModelSync components", () => {
             startedAt: 0,
             endedAt: 1000,
           }}
-          keyword=""
+          keyword="Alpha"
           onStatusChange={onStatusChange}
           onKeywordChange={onKeywordChange}
         />
@@ -236,6 +236,11 @@ describe("ManagedSiteModelSync components", () => {
     expect(onRefresh).toHaveBeenCalledTimes(1)
     expect(onStatusChange).toHaveBeenCalledWith("success")
     expect(onKeywordChange).toHaveBeenCalledWith("alpha")
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:actions.clear" }),
+    )
+    expect(onKeywordChange).toHaveBeenCalledWith("")
   })
 
   it("renders results and empty states across branches", async () => {

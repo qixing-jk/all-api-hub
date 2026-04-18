@@ -125,6 +125,8 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                         onFieldChange(filter.id, "name", event.target.value)
                       }
                       placeholder={t("filters.placeholders.name")}
+                      onClear={() => onFieldChange(filter.id, "name", "")}
+                      clearButtonLabel={t("common:actions.clear")}
                     />
                   </div>
                   <div className="space-y-2">
@@ -180,6 +182,8 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                         onFieldChange(filter.id, "pattern", event.target.value)
                       }
                       placeholder={t("filters.placeholders.pattern")}
+                      onClear={() => onFieldChange(filter.id, "pattern", "")}
+                      clearButtonLabel={t("common:actions.clear")}
                     />
                     <p className="text-muted-foreground text-xs">
                       {filter.isRegex
@@ -223,6 +227,8 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                     }
                     placeholder={t("filters.placeholders.description")}
                     rows={2}
+                    onClear={() => onFieldChange(filter.id, "description", "")}
+                    clearButtonLabel={t("common:actions.clear")}
                   />
                 </div>
               </div>
@@ -246,6 +252,8 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
             onChange={(event) => onChangeJsonText(event.target.value)}
             placeholder={t("filters.jsonEditor.placeholder")}
             rows={10}
+            onClear={() => onChangeJsonText("")}
+            clearButtonLabel={t("common:actions.clear")}
           />
           <p className="text-muted-foreground text-xs">
             {t("filters.jsonEditor.hint")}

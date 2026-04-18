@@ -85,6 +85,45 @@ describe("TagPicker", () => {
     })
   })
 
+  it("clears the tag search from the shared input clear button", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <TagPicker
+        tags={[
+          { id: "t1", name: "Work", createdAt: 1, updatedAt: 1 },
+          { id: "t2", name: "Personal", createdAt: 1, updatedAt: 1 },
+        ]}
+        selectedTagIds={[]}
+        onSelectedTagIdsChange={vi.fn()}
+        onCreateTag={vi.fn()}
+        onRenameTag={vi.fn()}
+        onDeleteTag={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "accountDialog:form.tagsPlaceholder",
+      }),
+    )
+    const input = await screen.findByPlaceholderText(
+      "accountDialog:form.tagsSearchPlaceholder",
+    )
+    await user.type(input, "work")
+
+    expect(screen.getByText("Work")).toBeInTheDocument()
+    expect(screen.queryByText("Personal")).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.clear" }),
+    )
+
+    expect(input).toHaveValue("")
+    expect(screen.getByText("Work")).toBeInTheDocument()
+    expect(screen.getByText("Personal")).toBeInTheDocument()
+  })
+
   it("does not offer duplicate creation and ignores Enter without an active option", async () => {
     const user = userEvent.setup()
 

@@ -20,31 +20,59 @@ vi.mock("~/components/ui", async (importOriginal) => {
   return {
     ...actual,
     Input: ({
+      clearButtonLabel,
+      onClear,
       value,
       onChange,
       placeholder,
     }: {
+      clearButtonLabel?: string
+      onClear?: () => void
       value: string
       onChange: (event: { target: { value: string } }) => void
       placeholder?: string
-    }) => <input value={value} onChange={onChange} placeholder={placeholder} />,
+    }) => (
+      <div>
+        <input value={value} onChange={onChange} placeholder={placeholder} />
+        {value && onClear ? (
+          <button
+            type="button"
+            aria-label={clearButtonLabel}
+            onClick={onClear}
+          />
+        ) : null}
+      </div>
+    ),
     Textarea: ({
+      clearButtonLabel,
+      onClear,
       value,
       onChange,
       placeholder,
       rows,
     }: {
+      clearButtonLabel?: string
+      onClear?: () => void
       value: string
       onChange: (event: { target: { value: string } }) => void
       placeholder?: string
       rows?: number
     }) => (
-      <textarea
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        rows={rows}
-      />
+      <div>
+        <textarea
+          value={value}
+          onChange={onChange}
+          placeholder={placeholder}
+          rows={rows}
+        />
+        {value && onClear ? (
+          <button
+            type="button"
+            aria-label={clearButtonLabel}
+            onClick={onClear}
+          />
+        ) : null}
+      </div>
     ),
   }
 })
@@ -267,6 +295,16 @@ describe("ChannelFiltersEditor", () => {
       "Block provider-specific models",
     )
 
+    const clearButtons = screen.getAllByRole("button", {
+      name: "common:actions.clear",
+    })
+    await user.click(clearButtons[0])
+    await user.click(clearButtons[1])
+    await user.click(clearButtons[2])
+
+    expect(props.onFieldChange).toHaveBeenCalledWith("rule-1", "name", "")
+    expect(props.onFieldChange).toHaveBeenCalledWith("rule-1", "pattern", "")
+
     await user.click(
       screen.getByRole("button", { name: "filters.labels.delete" }),
     )
@@ -333,5 +371,10 @@ describe("ChannelFiltersEditor", () => {
       },
     )
     expect(props.onChangeJsonText).toHaveBeenCalledWith("[]")
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.clear" }),
+    )
+    expect(props.onChangeJsonText).toHaveBeenCalledWith("")
   })
 })

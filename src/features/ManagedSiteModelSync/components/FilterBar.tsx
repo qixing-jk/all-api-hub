@@ -102,6 +102,8 @@ export default function FilterBar({
           value={keyword}
           onChange={(e) => onKeywordChange(e.target.value)}
           leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
+          onClear={() => onKeywordChange("")}
+          clearButtonLabel={t("common:actions.clear")}
         />
       </div>
     </div>

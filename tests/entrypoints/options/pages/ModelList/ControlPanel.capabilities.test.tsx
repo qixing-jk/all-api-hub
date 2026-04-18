@@ -186,6 +186,10 @@ describe("ControlPanel profile capabilities", () => {
     expect(toast.success).toHaveBeenCalledWith(
       "modelList:messages.modelNamesCopied",
     )
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:actions.clear" }),
+    )
+    expect(setSearchTerm).toHaveBeenCalledWith("")
     expect(await screen.findByText("modelList:totalModels")).toBeInTheDocument()
     expect(await screen.findByText("modelList:showing")).toBeInTheDocument()
   })

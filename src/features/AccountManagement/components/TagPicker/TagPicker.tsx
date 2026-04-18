@@ -352,6 +352,8 @@ export function TagPicker({
               aria-expanded={isOpen}
               aria-controls={listboxId}
               aria-activedescendant={activeOptionId}
+              onClear={() => setQuery("")}
+              clearButtonLabel={t("common:actions.clear")}
             />
 
             {tagActionError && (

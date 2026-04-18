@@ -26,6 +26,8 @@ export function TokenSearchBar({
         value={searchTerm}
         onChange={(e) => setSearchTerm(e.target.value)}
         leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
+        onClear={() => setSearchTerm("")}
+        clearButtonLabel={t("common:actions.clear")}
       />
     </div>
   )
