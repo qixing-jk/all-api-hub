@@ -231,4 +231,25 @@ describe("createSiteRequestLimiter", () => {
       "empty-key",
     )
   })
+
+  it.each([
+    ["maxConcurrentPerSite", Number.NaN],
+    ["maxConcurrentPerSite", Number.POSITIVE_INFINITY],
+    ["maxConcurrentPerSite", 0],
+    ["burst", Number.NaN],
+    ["burst", Number.POSITIVE_INFINITY],
+    ["burst", 0],
+    ["requestsPerMinute", Number.NaN],
+    ["requestsPerMinute", Number.POSITIVE_INFINITY],
+    ["requestsPerMinute", -1],
+  ])("rejects malformed %s config values", (field, value) => {
+    expect(() =>
+      createSiteRequestLimiter({
+        maxConcurrentPerSite: 1,
+        requestsPerMinute: 1,
+        burst: 1,
+        [field]: value,
+      }),
+    ).toThrow(TypeError)
+  })
 })

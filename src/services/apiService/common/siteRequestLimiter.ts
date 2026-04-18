@@ -29,6 +29,51 @@ const SITE_API_REQUEST_LIMITS = {
 const IDLE_STATE_TTL_MS = 5 * 60 * 1000
 
 /**
+ * Resolve a numeric limiter config field and reject NaN/Infinity early.
+ */
+function resolveFiniteNumber(
+  config: SiteRequestLimiterConfig,
+  field: keyof Pick<
+    SiteRequestLimiterConfig,
+    "maxConcurrentPerSite" | "requestsPerMinute" | "burst"
+  >,
+): number {
+  const value = Number(config[field])
+  if (!Number.isFinite(value)) {
+    throw new TypeError(`Site request limiter ${field} must be a finite number`)
+  }
+  return value
+}
+
+/**
+ * Resolve a limiter field that must create at least one slot/token.
+ */
+function resolvePositiveInteger(
+  config: SiteRequestLimiterConfig,
+  field: keyof Pick<SiteRequestLimiterConfig, "maxConcurrentPerSite" | "burst">,
+): number {
+  const value = resolveFiniteNumber(config, field)
+  if (value < 1) {
+    throw new TypeError(`Site request limiter ${field} must be >= 1`)
+  }
+  return Math.floor(value)
+}
+
+/**
+ * Resolve a limiter rate field where zero disables queued throttling.
+ */
+function resolveNonNegativeNumber(
+  config: SiteRequestLimiterConfig,
+  field: keyof Pick<SiteRequestLimiterConfig, "requestsPerMinute">,
+): number {
+  const value = resolveFiniteNumber(config, field)
+  if (value < 0) {
+    throw new TypeError(`Site request limiter ${field} must be >= 0`)
+  }
+  return value
+}
+
+/**
  * Creates a per-site FIFO token-bucket limiter.
  *
  * Defaults are chosen to stay below New API's dashboard/web default of
@@ -36,12 +81,15 @@ const IDLE_STATE_TTL_MS = 5 * 60 * 1000
  */
 export function createSiteRequestLimiter(config: SiteRequestLimiterConfig) {
   const enabled = config.enabled !== false
-  const maxConcurrentPerSite = Math.max(
-    1,
-    Math.floor(config.maxConcurrentPerSite),
+  const maxConcurrentPerSite = resolvePositiveInteger(
+    config,
+    "maxConcurrentPerSite",
   )
-  const capacity = Math.max(1, Math.floor(config.burst))
-  const requestsPerMinute = Math.max(0, config.requestsPerMinute)
+  const capacity = resolvePositiveInteger(config, "burst")
+  const requestsPerMinute = resolveNonNegativeNumber(
+    config,
+    "requestsPerMinute",
+  )
   const refillRatePerMs = requestsPerMinute / 60_000
   const states = new Map<string, SiteLimiterState>()
 
