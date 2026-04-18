@@ -1,3 +1,4 @@
+import type React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MODEL_LIST_BATCH_VERIFY_CONCURRENCY } from "~/features/ModelList/batchVerification"
@@ -28,6 +29,38 @@ vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
     mockFetchDisplayAccountTokens(...args),
   resolveDisplayAccountTokenForSecret: (...args: any[]) =>
     mockResolveDisplayAccountTokenForSecret(...args),
+}))
+
+vi.mock("react-virtuoso", () => ({
+  Virtuoso: ({
+    data,
+    itemContent,
+    computeItemKey,
+    components,
+  }: {
+    data: any[]
+    itemContent: (index: number, item: any) => React.ReactNode
+    computeItemKey?: (index: number, item: any) => React.Key
+    components?: {
+      Item?: React.ComponentType<any>
+      List?: React.ComponentType<any>
+    }
+  }) => {
+    const Item = components?.Item ?? ((props: any) => <div {...props} />)
+    const List = components?.List ?? ((props: any) => <div {...props} />)
+
+    return (
+      <div data-testid="batch-verify-virtual-list">
+        <List>
+          {data.map((item, index) => (
+            <Item key={computeItemKey?.(index, item) ?? index}>
+              {itemContent(index, item)}
+            </Item>
+          ))}
+        </List>
+      </div>
+    )
+  },
 }))
 
 vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
@@ -123,6 +156,24 @@ describe("BatchVerifyModelsDialog", () => {
         },
       } as any),
     ).toEqual({ accountId: undefined, profileId: "profile-1" })
+  })
+
+  it("uses the virtual row list for every batch size", async () => {
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    expect(
+      await screen.findByTestId("batch-verify-virtual-list"),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByTestId("batch-verify-row-account:acc-1:model:gpt-4o"),
+    ).toBeInTheDocument()
   })
 
   it("uses the first compatible account token and runs text-generation for the model", async () => {
