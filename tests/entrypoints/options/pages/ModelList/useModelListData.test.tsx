@@ -353,6 +353,7 @@ describe("useModelListData", () => {
       supportsAccountSummary: false,
       supportsTokenCompatibility: true,
       supportsCredentialVerification: true,
+      supportsBatchCredentialVerification: true,
       supportsCliVerification: true,
     })
   })

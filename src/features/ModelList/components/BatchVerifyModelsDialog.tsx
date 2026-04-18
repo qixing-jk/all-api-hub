@@ -6,7 +6,7 @@ import {
   useRef,
   useState,
 } from "react"
-import type { HTMLAttributes, Key } from "react"
+import type { HTMLAttributes } from "react"
 import { useTranslation } from "react-i18next"
 import { Virtuoso } from "react-virtuoso"
 
@@ -192,12 +192,21 @@ function getFirstApplicableProbeId(
 
 const DEFAULT_SELECTED_PROBE_IDS: ApiVerificationProbeId[] = ["text-generation"]
 
+/** Cap the batch row list to half the viewport while preserving a test-safe fallback. */
+function getBatchVerifyListMaxHeight() {
+  return typeof window === "undefined" ? 360 : window.innerHeight * 0.5
+}
+
 const BatchVerifyRowsList = forwardRef<
   HTMLDivElement,
   HTMLAttributes<HTMLDivElement>
 >(function BatchVerifyRowsList({ children, className, ...props }, ref) {
   return (
-    <div ref={ref} className={cn(className)} {...props}>
+    <div
+      ref={ref}
+      className={cn("min-w-0 overflow-x-hidden", className)}
+      {...props}
+    >
       {children}
     </div>
   )
@@ -208,8 +217,8 @@ const BatchVerifyRowsItem = forwardRef<
   HTMLAttributes<HTMLDivElement>
 >(function BatchVerifyRowsItem({ children, className, ...props }, ref) {
   return (
-    <div ref={ref} className={cn(className)} {...props}>
-      <div className="mx-2 my-2">{children}</div>
+    <div ref={ref} className={cn("px-2 py-2", className)} {...props}>
+      {children}
     </div>
   )
 })
@@ -234,6 +243,7 @@ export function BatchVerifyModelsDialog({
   const [selectedModelKeys, setSelectedModelKeys] = useState<string[]>(() =>
     items.map((item) => item.key),
   )
+  const [listHeight, setListHeight] = useState(0)
   const [isRunning, setIsRunning] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
   const shouldStopRef = useRef(false)
@@ -266,6 +276,7 @@ export function BatchVerifyModelsDialog({
     shouldStopRef.current = false
     clearCachedTokenPromises()
     setRows(buildRows(items))
+    setListHeight(0)
     setApiTypeMode(getDefaultApiTypeMode(items))
     setSelectedProbeIds(DEFAULT_SELECTED_PROBE_IDS)
     setSelectedModelKeys(items.map((item) => item.key))
@@ -752,9 +763,8 @@ export function BatchVerifyModelsDialog({
     return "outline"
   }
 
-  const renderRow = (row: BatchVerifyRow, key?: Key) => (
+  const renderRow = (row: BatchVerifyRow) => (
     <div
-      key={key}
       data-testid={`batch-verify-row-${row.item.key}`}
       className="dark:border-dark-bg-tertiary rounded-md border border-gray-100 p-3"
     >
@@ -867,6 +877,11 @@ export function BatchVerifyModelsDialog({
         )}
       </div>
     </div>
+  )
+  const listMaxHeight = getBatchVerifyListMaxHeight()
+  const listContainerHeight = Math.min(
+    listHeight || listMaxHeight,
+    listMaxHeight,
   )
 
   return (
@@ -983,17 +998,23 @@ export function BatchVerifyModelsDialog({
           <p>{t("modelList:batchVerify.warning")}</p>
         </Alert>
 
-        <Virtuoso
-          className="dark:border-dark-bg-tertiary overflow-x-hidden rounded-md border border-gray-100"
-          data={rows}
-          computeItemKey={(_, row) => row.item.key}
-          components={{
-            Item: BatchVerifyRowsItem,
-            List: BatchVerifyRowsList,
-          }}
-          style={{ height: "50vh" }}
-          itemContent={(_, row) => renderRow(row)}
-        />
+        <div
+          className="dark:border-dark-bg-tertiary overflow-hidden rounded-md border border-gray-100"
+          style={{ height: listContainerHeight }}
+        >
+          <Virtuoso
+            className="h-full"
+            data={rows}
+            computeItemKey={(_, row) => row.item.key}
+            components={{
+              Item: BatchVerifyRowsItem,
+              List: BatchVerifyRowsList,
+            }}
+            totalListHeightChanged={setListHeight}
+            style={{ height: "100%" }}
+            itemContent={(_, row) => renderRow(row)}
+          />
+        </div>
       </div>
     </Modal>
   )

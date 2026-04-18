@@ -130,6 +130,7 @@ function createDefaultProps() {
         supportsAccountSummary: false,
         supportsTokenCompatibility: false,
         supportsCredentialVerification: false,
+        supportsBatchCredentialVerification: false,
         supportsCliVerification: false,
       },
     } as any,

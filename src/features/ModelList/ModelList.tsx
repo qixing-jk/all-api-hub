@@ -273,9 +273,7 @@ export default function ModelList(props: {
   }
 
   const canBatchVerifyModels =
-    !!selectedSource &&
-    (sourceCapabilities.supportsCredentialVerification ||
-      selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS)
+    !!selectedSource && sourceCapabilities.supportsBatchCredentialVerification
 
   const handleOpenAccountManagement = useCallback(() => {
     pushWithinOptionsPage(`#${MENU_ITEM_IDS.ACCOUNT}`)

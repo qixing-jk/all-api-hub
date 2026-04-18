@@ -21,6 +21,7 @@ export type ModelManagementSourceCapabilities = {
   supportsAccountSummary: boolean
   supportsTokenCompatibility: boolean
   supportsCredentialVerification: boolean
+  supportsBatchCredentialVerification: boolean
   supportsCliVerification: boolean
 }
 
@@ -64,6 +65,7 @@ export const EMPTY_MODEL_MANAGEMENT_CAPABILITIES: ModelManagementSourceCapabilit
     supportsAccountSummary: false,
     supportsTokenCompatibility: false,
     supportsCredentialVerification: false,
+    supportsBatchCredentialVerification: false,
     supportsCliVerification: false,
   }
 
@@ -73,6 +75,7 @@ const ACCOUNT_SOURCE_CAPABILITIES: ModelManagementSourceCapabilities = {
   supportsAccountSummary: false,
   supportsTokenCompatibility: true,
   supportsCredentialVerification: true,
+  supportsBatchCredentialVerification: true,
   supportsCliVerification: true,
 }
 
@@ -82,6 +85,7 @@ const ALL_ACCOUNTS_SOURCE_CAPABILITIES: ModelManagementSourceCapabilities = {
   supportsAccountSummary: true,
   supportsTokenCompatibility: false,
   supportsCredentialVerification: false,
+  supportsBatchCredentialVerification: true,
   supportsCliVerification: false,
 }
 
@@ -91,6 +95,7 @@ const PROFILE_SOURCE_CAPABILITIES: ModelManagementSourceCapabilities = {
   supportsAccountSummary: false,
   supportsTokenCompatibility: false,
   supportsCredentialVerification: true,
+  supportsBatchCredentialVerification: true,
   supportsCliVerification: true,
 }
 

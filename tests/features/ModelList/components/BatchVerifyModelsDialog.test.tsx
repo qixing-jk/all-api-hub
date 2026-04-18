@@ -1,3 +1,4 @@
+import { act } from "@testing-library/react"
 import type React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -15,12 +16,16 @@ const {
   mockGetApiVerificationProbeDefinitions,
   mockResolveDisplayAccountTokenForSecret,
   mockRunApiVerificationProbe,
+  mockTotalListHeightChanged,
   mockUpsertLatestSummary,
 } = vi.hoisted(() => ({
   mockFetchDisplayAccountTokens: vi.fn(),
   mockGetApiVerificationProbeDefinitions: vi.fn(),
   mockResolveDisplayAccountTokenForSecret: vi.fn(),
   mockRunApiVerificationProbe: vi.fn(),
+  mockTotalListHeightChanged: {
+    current: undefined as undefined | ((height: number) => void),
+  },
   mockUpsertLatestSummary: vi.fn(),
 }))
 
@@ -31,37 +36,42 @@ vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
     mockResolveDisplayAccountTokenForSecret(...args),
 }))
 
-vi.mock("react-virtuoso", () => ({
-  Virtuoso: ({
-    data,
-    itemContent,
-    computeItemKey,
-    components,
-  }: {
-    data: any[]
-    itemContent: (index: number, item: any) => React.ReactNode
-    computeItemKey?: (index: number, item: any) => React.Key
-    components?: {
-      Item?: React.ComponentType<any>
-      List?: React.ComponentType<any>
-    }
-  }) => {
-    const Item = components?.Item ?? ((props: any) => <div {...props} />)
-    const List = components?.List ?? ((props: any) => <div {...props} />)
+vi.mock("react-virtuoso", () => {
+  return {
+    Virtuoso: ({
+      data,
+      itemContent,
+      computeItemKey,
+      components,
+      totalListHeightChanged,
+    }: {
+      data: any[]
+      itemContent: (index: number, item: any) => React.ReactNode
+      computeItemKey?: (index: number, item: any) => React.Key
+      totalListHeightChanged?: (height: number) => void
+      components?: {
+        Item?: React.ComponentType<any>
+        List?: React.ComponentType<any>
+      }
+    }) => {
+      const Item = components?.Item ?? ((props: any) => <div {...props} />)
+      const List = components?.List ?? ((props: any) => <div {...props} />)
+      mockTotalListHeightChanged.current = totalListHeightChanged
 
-    return (
-      <div data-testid="batch-verify-virtual-list">
-        <List>
-          {data.map((item, index) => (
-            <Item key={computeItemKey?.(index, item) ?? index}>
-              {itemContent(index, item)}
-            </Item>
-          ))}
-        </List>
-      </div>
-    )
-  },
-}))
+      return (
+        <div data-testid="batch-verify-virtual-list">
+          <List>
+            {data.map((item, index) => (
+              <Item key={computeItemKey?.(index, item) ?? index}>
+                {itemContent(index, item)}
+              </Item>
+            ))}
+          </List>
+        </div>
+      )
+    },
+  }
+})
 
 vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
   const actual =
@@ -121,6 +131,7 @@ describe("BatchVerifyModelsDialog", () => {
     mockGetApiVerificationProbeDefinitions.mockReset()
     mockResolveDisplayAccountTokenForSecret.mockReset()
     mockRunApiVerificationProbe.mockReset()
+    mockTotalListHeightChanged.current = undefined
     mockUpsertLatestSummary.mockReset()
     mockUpsertLatestSummary.mockImplementation(async (summary) => summary)
   })
@@ -174,6 +185,26 @@ describe("BatchVerifyModelsDialog", () => {
     expect(
       await screen.findByTestId("batch-verify-row-account:acc-1:model:gpt-4o"),
     ).toBeInTheDocument()
+  })
+
+  it("shrinks the virtual row container to the measured content height", async () => {
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    const virtualList = await screen.findByTestId("batch-verify-virtual-list")
+    const listContainer = virtualList.parentElement
+
+    act(() => {
+      mockTotalListHeightChanged.current?.(48)
+    })
+
+    expect(listContainer).toHaveStyle({ height: "48px" })
   })
 
   it("uses the first compatible account token and runs text-generation for the model", async () => {
