@@ -60,6 +60,10 @@ Please download `all-api-hub-<version>-safari-xcode-bundle.zip`, not `all-api-hu
 
 If official signing and distribution via TestFlight / App Store is required, an Apple Developer Program account is usually needed; otherwise, it is generally only suitable for local debugging or personal use.
 
+### QQ / 360 and Other Browser Installation
+
+If you use browsers like QQ Browser, 360 Secure Browser, 360 Speed Browser, Cheetah Browser, Brave, Vivaldi, Opera, etc., please download the Chrome version zip package from GitHub Releases and refer to the [QQ / 360 and Other Browser Installation Guide](./other-browser-install.md) for unzipping and loading.
+
 ## 2. Supported Sites
 
 Supports proxy stations deployed based on the following projects:
@@ -202,6 +206,7 @@ Create/edit/delete channels directly within the extension. Combined with model w
 - [Supported Export Tools and Integration Targets](./supported-export-tools.md)
 - [Supported Sites and System Types](./supported-sites.md)
 - [Safari Installation Guide](./safari-install.md)
+- [QQ / 360 and Other Browser Installation Guide](./other-browser-install.md)
 - [Cloudflare Bypass Assistant](./cloudflare-helper.md)
 - [Quick Export Site Configurations](./quick-export.md)
 - [Automatic Refresh and Real-time Data](./auto-refresh.md)

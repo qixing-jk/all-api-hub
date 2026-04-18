@@ -73,6 +73,8 @@ All API Hub, as a browser extension, can automatically identify accounts on thes
 
 If you are using the extension on macOS via Safari, please refer to the [Safari Installation Guide](./safari-install.md) first. Safari requires installation via Xcode, which differs from the store installation or unpacked loading methods for Chrome/Edge/Firefox.
 
+If you use browsers such as QQ Browser, 360 Secure Browser, 360 Speed Browser, Cheetah Browser, Brave, Vivaldi, Opera, etc., please refer to the [QQ / 360 and Other Browsers Installation Guide](./other-browser-install.md).
+
 <a id="community"></a>
 ## 💬 Community Communication
 

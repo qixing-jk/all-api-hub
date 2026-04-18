@@ -73,6 +73,8 @@ All API Hubはブラウザ拡張機能として、これらのサイトのアカ
 
 macOSでSafari経由で拡張機能を使用する場合は、まず[Safariインストールガイド](./safari-install.md)を確認してください。SafariはXcode経由でインストールする必要があります。これは、Chrome/Edge/Firefoxのストアインストールや解凍ロードとは異なる方法です。
 
+もしQQブラウザ、360セキュアブラウザ、360クイックブラウザ、Cheetahブラウザ、Brave、Vivaldi、Operaなどのブラウザを使用している場合は、[QQ/360等ブラウザインストールガイド](./other-browser-install.md)を確認してください。
+
 <a id="community"></a>
 ## 💬 コミュニティ交流
 

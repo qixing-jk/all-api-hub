@@ -132,7 +132,7 @@ The plugin is released on multiple platforms, with varying update speeds:
 | **Firefox Add-ons**  | ⚡ Fast (a few hours review)                | [Install Here](https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}) |
 
 ::: tip Recommendation
-If you encounter a bug that has been fixed, it is recommended to download the latest version from GitHub Releases and install it manually.
+If you encounter a bug that has been fixed, it is recommended to download the latest version from GitHub Releases and install it manually. For browsers like QQ Browser, 360 Series Browsers, Cheetah Browser, Brave, Vivaldi, Opera, etc., please refer to the [QQ / 360 and Other Browser Installation Guide](./other-browser-install.md).
 :::
 
 ## ⚙️ Feature Usage Issues
@@ -288,6 +288,8 @@ Balance History is used to view account balance changes and daily income/expendi
 
 The plugin supports use in mobile browsers such as mobile `Edge`, `Firefox for Android`, `Kiwi`, etc. Actual usability depends on the browser's support for extension capabilities.
 
+If you are using QQ Browser, 360 Series Browsers, Cheetah Browser, or other desktop browsers that support Chrome extensions, please refer to the [QQ / 360 and Other Browser Installation Guide](./other-browser-install.md).
+
 ### Mobile Usage Recommendations
 
 1. **Disable Automatic Refresh**: Mobile devices have limited resources. It is recommended to disable automatic refresh and use manual refresh instead. Also, due to the anti-bot helper, refreshing will create a temporary tab, affecting the daily user experience.
@@ -356,6 +358,7 @@ See details: [CONTRIBUTING.md](https://github.com/qixing-jk/all-api-hub/blob/mai
 ## 📚 Related Documentation
 
 - [Tutorial](./get-started.md)
+- [QQ / 360 and Other Browser Installation Guide](./other-browser-install.md)
 - [GitHub Repository](https://github.com/qixing-jk/all-api-hub)
 - [Feedback](https://github.com/qixing-jk/all-api-hub/issues)
 - [Changelog](./changelog.md)
