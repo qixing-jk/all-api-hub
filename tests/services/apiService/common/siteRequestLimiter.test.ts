@@ -1,6 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { createSiteRequestLimiter } from "~/services/apiService/common/siteRequestLimiter"
+import {
+  createSiteRequestLimiter,
+  withSiteApiRequestLimit,
+} from "~/services/apiService/common/siteRequestLimiter"
 
 const flushMicrotasks = async () => {
   await Promise.resolve()
@@ -189,6 +192,54 @@ describe("createSiteRequestLimiter", () => {
     expect(events).toEqual(["first", "second", "third"])
   })
 
+  it("reschedules a pending token refill when more same-site work is queued", async () => {
+    const limiter = createSiteRequestLimiter({
+      maxConcurrentPerSite: 1,
+      requestsPerMinute: 60,
+      burst: 1,
+    })
+    const events: string[] = []
+
+    await limiter("site-a", async () => {
+      events.push("first")
+    })
+
+    const second = limiter("site-a", async () => {
+      events.push("second")
+    })
+    await flushMicrotasks()
+    expect(events).toEqual(["first"])
+
+    const third = limiter("site-a", async () => {
+      events.push("third")
+    })
+    await flushMicrotasks()
+    expect(events).toEqual(["first"])
+
+    vi.advanceTimersByTime(1_000)
+    await second
+    await flushMicrotasks()
+    expect(events).toEqual(["first", "second"])
+
+    vi.advanceTimersByTime(1_000)
+    await third
+    expect(events).toEqual(["first", "second", "third"])
+  })
+
+  it("runs the idle cleanup timer after a site queue drains", async () => {
+    const limiter = createSiteRequestLimiter({
+      maxConcurrentPerSite: 1,
+      requestsPerMinute: 60,
+      burst: 1,
+    })
+
+    await limiter("site-a", async () => "done")
+    vi.advanceTimersByTime(5 * 60 * 1_000)
+    await flushMicrotasks()
+
+    expect(vi.getTimerCount()).toBe(0)
+  })
+
   it("releases the concurrency slot when a task rejects", async () => {
     const limiter = createSiteRequestLimiter({
       maxConcurrentPerSite: 1,
@@ -251,5 +302,11 @@ describe("createSiteRequestLimiter", () => {
         [field]: value,
       }),
     ).toThrow(TypeError)
+  })
+
+  it("withSiteApiRequestLimit delegates to the production limiter", async () => {
+    await expect(
+      withSiteApiRequestLimit("site-a", async () => "wrapped"),
+    ).resolves.toBe("wrapped")
   })
 })
