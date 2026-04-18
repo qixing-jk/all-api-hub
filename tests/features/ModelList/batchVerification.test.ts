@@ -39,6 +39,38 @@ describe("model list batch verification helpers", () => {
     ])
   })
 
+  it("keeps matching model names from different accounts as separate items", () => {
+    const firstAccountSource = {
+      kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      account: { id: "acc-1" },
+    } as any
+    const secondAccountSource = {
+      kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      account: { id: "acc-2" },
+    } as any
+
+    const result = createBatchVerifyModelItems([
+      {
+        model: { model_name: "gpt-4o", enable_groups: [DEFAULT_MODEL_GROUP] },
+        source: firstAccountSource,
+      },
+      {
+        model: { model_name: "gpt-4o", enable_groups: [DEFAULT_MODEL_GROUP] },
+        source: secondAccountSource,
+      },
+      {
+        model: { model_name: "gpt-4o", enable_groups: [DEFAULT_MODEL_GROUP] },
+        source: firstAccountSource,
+      },
+    ] as any)
+
+    expect(result).toHaveLength(2)
+    expect(result.map((item) => item.key)).toEqual([
+      "account:acc-1:gpt-4o",
+      "account:acc-2:gpt-4o",
+    ])
+  })
+
   it("keeps missing model group metadata unrestricted", () => {
     const source = {
       kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,

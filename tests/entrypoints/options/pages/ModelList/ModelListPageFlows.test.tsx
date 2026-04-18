@@ -788,6 +788,50 @@ describe("ModelList page flows", () => {
     expect(screen.queryByText("Batch Verify Dialog 1")).toBeNull()
   })
 
+  it("opens batch verification in all-accounts mode with the current filtered model snapshot", async () => {
+    const user = userEvent.setup()
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        selectedSource: ALL_ACCOUNTS_SOURCE,
+        selectedSourceValue: ALL_ACCOUNTS_SOURCE.value,
+        currentAccount: null,
+        sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
+        pricingData: null,
+        pricingContexts: [
+          {
+            account: ACCOUNT,
+            pricing: { data: [{ model_name: "gpt-4o" }] },
+          },
+          {
+            account: SECOND_ACCOUNT,
+            pricing: { data: [{ model_name: "gpt-4o" }] },
+          },
+        ],
+        filteredModels: [
+          {
+            model: { model_name: "gpt-4o", enable_groups: ["default"] },
+            source: createAccountSource(ACCOUNT),
+          },
+          {
+            model: { model_name: "gpt-4o", enable_groups: ["default"] },
+            source: createAccountSource(SECOND_ACCOUNT),
+          },
+        ],
+      }),
+    )
+
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await user.click(
+      await screen.findByRole("button", { name: "Batch verify" }),
+    )
+
+    expect(await screen.findByText("Batch Verify Dialog 2")).toBeInTheDocument()
+  })
+
   it("lets all-accounts rows reuse the top-level account tag filter", async () => {
     const user = userEvent.setup()
 
