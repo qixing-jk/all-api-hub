@@ -6,7 +6,7 @@ import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
 } from "../types"
-import { toSanitizedErrorSummary } from "../utils"
+import { isAbortError, toSanitizedErrorSummary } from "../utils"
 
 type RunWebSearchProbeParams = {
   baseUrl: string
@@ -150,6 +150,10 @@ export async function runWebSearchProbe(
       },
     }
   } catch (error) {
+    if (isAbortError(error, params.abortSignal)) {
+      throw error
+    }
+
     return {
       id: "web-search",
       status: "fail",

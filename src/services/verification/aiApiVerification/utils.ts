@@ -24,6 +24,21 @@ export function toSanitizedErrorSummary(
 }
 
 /**
+ * Identify caller-initiated cancellation before probe error fallbacks convert it
+ * into a failed verification result.
+ */
+export function isAbortError(
+  error: unknown,
+  abortSignal?: AbortSignal,
+): boolean {
+  if (abortSignal?.aborted) return true
+  if (!error || typeof error !== "object") return false
+
+  const candidate = error as { code?: unknown; name?: unknown }
+  return candidate.name === "AbortError" || candidate.code === "ABORT_ERR"
+}
+
+/**
  * Map inferred HTTP status to a stable i18n summary key.
  *
  * These keys are shared between verification UIs (API verification + CLI support verification).

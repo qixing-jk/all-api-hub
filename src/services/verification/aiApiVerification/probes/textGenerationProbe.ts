@@ -6,7 +6,7 @@ import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
 } from "../types"
-import { toSanitizedErrorSummary } from "../utils"
+import { isAbortError, toSanitizedErrorSummary } from "../utils"
 
 type RunTextGenerationProbeParams = {
   baseUrl: string
@@ -65,6 +65,10 @@ export async function runTextGenerationProbe(
         : { responsePreview: (result.text ?? "").slice(0, 80) },
     }
   } catch (error) {
+    if (isAbortError(error, params.abortSignal)) {
+      throw error
+    }
+
     return {
       id: "text-generation",
       status: "fail",

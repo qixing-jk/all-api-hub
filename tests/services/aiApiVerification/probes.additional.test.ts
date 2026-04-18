@@ -5,6 +5,9 @@ const mocks = vi.hoisted(() => ({
   createModel: vi.fn(),
   createOpenAIProvider: vi.fn(),
   createGoogleProvider: vi.fn(),
+  fetchOpenAICompatibleModelIds: vi.fn(),
+  fetchAnthropicModelIds: vi.fn(),
+  fetchGoogleModelIds: vi.fn(),
 }))
 
 vi.mock("ai", () => ({
@@ -22,6 +25,25 @@ vi.mock("~/services/verification/aiApiVerification/providers", () => ({
   createGoogleProvider: mocks.createGoogleProvider,
 }))
 
+vi.mock("~/services/apiService/openaiCompatible", () => ({
+  fetchOpenAICompatibleModelIds: mocks.fetchOpenAICompatibleModelIds,
+}))
+
+vi.mock("~/services/apiService/anthropic", () => ({
+  fetchAnthropicModelIds: mocks.fetchAnthropicModelIds,
+}))
+
+vi.mock("~/services/apiService/google", () => ({
+  fetchGoogleModelIds: mocks.fetchGoogleModelIds,
+}))
+
+function createAbortedSignalFixture() {
+  const controller = new AbortController()
+  const abortError = new DOMException("Aborted", "AbortError")
+  controller.abort()
+  return { abortError, abortSignal: controller.signal }
+}
+
 describe("AI API verification probes", () => {
   beforeEach(() => {
     vi.resetModules()
@@ -30,6 +52,9 @@ describe("AI API verification probes", () => {
     mocks.createModel.mockReset()
     mocks.createOpenAIProvider.mockReset()
     mocks.createGoogleProvider.mockReset()
+    mocks.fetchOpenAICompatibleModelIds.mockReset()
+    mocks.fetchAnthropicModelIds.mockReset()
+    mocks.fetchGoogleModelIds.mockReset()
 
     mocks.createOpenAIProvider.mockImplementation(() => {
       const provider = ((modelId: string) => ({
@@ -54,6 +79,26 @@ describe("AI API verification probes", () => {
     })
 
     mocks.createModel.mockImplementation((params) => params)
+  })
+
+  describe("runModelsProbe", () => {
+    it("rethrows aborted model-list fetches", async () => {
+      const { abortError, abortSignal } = createAbortedSignalFixture()
+      mocks.fetchOpenAICompatibleModelIds.mockRejectedValueOnce(abortError)
+
+      const { runModelsProbe } = await import(
+        "~/services/verification/aiApiVerification/probes/modelsProbe"
+      )
+
+      await expect(
+        runModelsProbe({
+          apiType: "openai",
+          baseUrl: "https://example.com",
+          apiKey: "sk-secret",
+          abortSignal,
+        }),
+      ).rejects.toBe(abortError)
+    })
   })
 
   describe("runWebSearchProbe", () => {
@@ -151,6 +196,25 @@ describe("AI API verification probes", () => {
       expect(result.summary).not.toContain("sk-secret")
     })
 
+    it("rethrows aborted OpenAI web-search requests", async () => {
+      const { abortError, abortSignal } = createAbortedSignalFixture()
+      mocks.generateText.mockRejectedValueOnce(abortError)
+
+      const { runWebSearchProbe } = await import(
+        "~/services/verification/aiApiVerification/probes/webSearchProbe"
+      )
+
+      await expect(
+        runWebSearchProbe({
+          apiType: "openai",
+          baseUrl: "https://example.com",
+          apiKey: "sk-secret",
+          modelId: "gpt-4.1",
+          abortSignal,
+        }),
+      ).rejects.toBe(abortError)
+    })
+
     it("fails for OpenAI endpoints when neither tool results nor sources are returned", async () => {
       mocks.generateText.mockResolvedValueOnce({
         toolResults: [],
@@ -234,6 +298,25 @@ describe("AI API verification probes", () => {
           toolResultsCount: 1,
         },
       })
+    })
+
+    it("rethrows aborted Google web-search requests", async () => {
+      const { abortError, abortSignal } = createAbortedSignalFixture()
+      mocks.generateText.mockRejectedValueOnce(abortError)
+
+      const { runWebSearchProbe } = await import(
+        "~/services/verification/aiApiVerification/probes/webSearchProbe"
+      )
+
+      await expect(
+        runWebSearchProbe({
+          apiType: "google",
+          baseUrl: "https://generativelanguage.googleapis.com",
+          apiKey: "AIza-secret",
+          modelId: "gemini-2.5-pro",
+          abortSignal,
+        }),
+      ).rejects.toBe(abortError)
     })
 
     it("treats omitted OpenAI tool-results and sources arrays as an empty-result failure", async () => {
@@ -387,6 +470,25 @@ describe("AI API verification probes", () => {
       })
       expect(result.summary).not.toContain("sk-secret")
     })
+
+    it("rethrows aborted text-generation requests", async () => {
+      const { abortError, abortSignal } = createAbortedSignalFixture()
+      mocks.generateText.mockRejectedValueOnce(abortError)
+
+      const { runTextGenerationProbe } = await import(
+        "~/services/verification/aiApiVerification/probes/textGenerationProbe"
+      )
+
+      await expect(
+        runTextGenerationProbe({
+          apiType: "openai",
+          baseUrl: "https://example.com",
+          apiKey: "sk-secret",
+          modelId: "gpt-4.1",
+          abortSignal,
+        }),
+      ).rejects.toBe(abortError)
+    })
   })
 
   describe("runStructuredOutputProbe", () => {
@@ -463,6 +565,25 @@ describe("AI API verification probes", () => {
         status: "fail",
       })
       expect(result.summary).not.toContain("sk-secret")
+    })
+
+    it("rethrows aborted structured-output requests", async () => {
+      const { abortError, abortSignal } = createAbortedSignalFixture()
+      mocks.generateText.mockRejectedValueOnce(abortError)
+
+      const { runStructuredOutputProbe } = await import(
+        "~/services/verification/aiApiVerification/probes/structuredOutputProbe"
+      )
+
+      await expect(
+        runStructuredOutputProbe({
+          apiType: "openai",
+          baseUrl: "https://example.com",
+          apiKey: "sk-secret",
+          modelId: "gpt-4.1",
+          abortSignal,
+        }),
+      ).rejects.toBe(abortError)
     })
   })
 
@@ -617,6 +738,25 @@ describe("AI API verification probes", () => {
         status: "fail",
         summary: expect.any(String),
       })
+    })
+
+    it("rethrows aborted tool-calling requests", async () => {
+      const { abortError, abortSignal } = createAbortedSignalFixture()
+      mocks.generateText.mockRejectedValueOnce(abortError)
+
+      const { runToolCallingProbe } = await import(
+        "~/services/verification/aiApiVerification/probes/toolCallingProbe"
+      )
+
+      await expect(
+        runToolCallingProbe({
+          apiType: "openai",
+          baseUrl: "https://example.com",
+          apiKey: "sk-secret",
+          modelId: "gpt-4.1",
+          abortSignal,
+        }),
+      ).rejects.toBe(abortError)
     })
   })
 })

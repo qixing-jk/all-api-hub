@@ -53,6 +53,35 @@ describe("OpenAI-compatible model fetchers", () => {
     )
   })
 
+  it("passes caller abort signals to the model-list request", async () => {
+    const models = [{ id: "gpt-4.1" }]
+    const abortController = new AbortController()
+    mockFetchApiData.mockResolvedValueOnce(models)
+
+    await expect(
+      fetchOpenAICompatibleModels({
+        ...params,
+        abortSignal: abortController.signal,
+      } as any),
+    ).resolves.toEqual(models)
+
+    expect(mockFetchApiData).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://openai-compatible.example.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "secret-key",
+        },
+      },
+      {
+        endpoint: "/v1/models",
+        options: {
+          signal: abortController.signal,
+        },
+      },
+    )
+  })
+
   it("maps upstream models into plain model id lists", async () => {
     mockFetchApiData.mockResolvedValueOnce([
       { id: "gpt-4.1", owned_by: "openai" },

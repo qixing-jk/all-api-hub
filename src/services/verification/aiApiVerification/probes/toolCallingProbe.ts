@@ -8,6 +8,7 @@ import type {
 } from "../types"
 import {
   inferHttpStatus,
+  isAbortError,
   summaryKeyFromHttpStatus,
   toSanitizedErrorSummary,
 } from "../utils"
@@ -121,6 +122,10 @@ export async function runToolCallingProbe(
       },
     }
   } catch (error) {
+    if (isAbortError(error, params.abortSignal)) {
+      throw error
+    }
+
     const summary = toSanitizedErrorSummary(error, secretsToRedact)
     const inferredStatus = inferHttpStatus(error, summary)
     return {

@@ -8,7 +8,7 @@ import type {
   ApiVerificationProbeResult,
 } from "../types"
 import { API_TYPES } from "../types"
-import { toSanitizedErrorSummary } from "../utils"
+import { isAbortError, toSanitizedErrorSummary } from "../utils"
 
 type RunModelsProbeParams = {
   baseUrl: string
@@ -157,6 +157,10 @@ export async function runModelsProbe(
       },
     }
   } catch (error) {
+    if (isAbortError(error, params.abortSignal)) {
+      throw error
+    }
+
     return {
       result: {
         id: "models",

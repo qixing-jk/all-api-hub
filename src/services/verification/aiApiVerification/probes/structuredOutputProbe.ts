@@ -7,7 +7,7 @@ import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
 } from "../types"
-import { toSanitizedErrorSummary } from "../utils"
+import { isAbortError, toSanitizedErrorSummary } from "../utils"
 
 type RunStructuredOutputProbeParams = {
   baseUrl: string
@@ -68,6 +68,10 @@ export async function runStructuredOutputProbe(
       },
     }
   } catch (error) {
+    if (isAbortError(error, params.abortSignal)) {
+      throw error
+    }
+
     const summary = toSanitizedErrorSummary(error, secretsToRedact)
     return {
       id: "structured-output",
