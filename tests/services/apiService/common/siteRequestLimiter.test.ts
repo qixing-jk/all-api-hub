@@ -210,13 +210,19 @@ describe("createSiteRequestLimiter", () => {
     await flushMicrotasks()
     expect(events).toEqual(["first"])
 
+    vi.advanceTimersByTime(400)
+
     const third = limiter("site-a", async () => {
       events.push("third")
     })
     await flushMicrotasks()
     expect(events).toEqual(["first"])
 
-    vi.advanceTimersByTime(1_000)
+    vi.advanceTimersByTime(599)
+    await flushMicrotasks()
+    expect(events).toEqual(["first"])
+
+    vi.advanceTimersByTime(1)
     await second
     await flushMicrotasks()
     expect(events).toEqual(["first", "second"])
@@ -275,12 +281,25 @@ describe("createSiteRequestLimiter", () => {
       burst: 1,
     })
 
+    let releasePending: (() => void) | undefined
+    const pendingRequest = enabledLimiter("site-a", async () => {
+      await new Promise<void>((resolve) => {
+        releasePending = resolve
+      })
+      return "pending"
+    })
+    await flushMicrotasks()
+    expect(releasePending).toBeTypeOf("function")
+
     await expect(
       disabledLimiter("site-a", async () => "disabled"),
     ).resolves.toBe("disabled")
     await expect(enabledLimiter("", async () => "empty-key")).resolves.toBe(
       "empty-key",
     )
+
+    releasePending?.()
+    await expect(pendingRequest).resolves.toBe("pending")
   })
 
   it.each([
@@ -304,7 +323,7 @@ describe("createSiteRequestLimiter", () => {
     ).toThrow(TypeError)
   })
 
-  it("withSiteApiRequestLimit delegates to the production limiter", async () => {
+  it("withSiteApiRequestLimit runs the wrapped task in test mode", async () => {
     await expect(
       withSiteApiRequestLimit("site-a", async () => "wrapped"),
     ).resolves.toBe("wrapped")
