@@ -6,6 +6,7 @@ import {
   Alert,
   Badge,
   Button,
+  Checkbox,
   Heading5,
   Modal,
   SearchableSelect,
@@ -16,11 +17,16 @@ import {
 } from "~/services/accounts/utils/apiServiceRequest"
 import {
   API_TYPES,
+  getApiVerificationProbeDefinitions,
   runApiVerificationProbe,
   type ApiVerificationApiType,
+  type ApiVerificationProbeId,
   type ApiVerificationProbeResult,
 } from "~/services/verification/aiApiVerification"
-import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
+import {
+  getApiVerificationApiTypeLabel,
+  getApiVerificationProbeLabel,
+} from "~/services/verification/aiApiVerification/i18n"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import {
   createAccountModelVerificationHistoryTarget,
@@ -46,6 +52,7 @@ type BatchVerifyRow = {
   status: BatchVerifyRowStatus
   latencyMs: number
   summary: string
+  results: ApiVerificationProbeResult[]
   tokenName?: string
 }
 
@@ -66,6 +73,7 @@ function buildRows(items: BatchVerifyModelItem[]): BatchVerifyRow[] {
     status: "pending",
     latencyMs: 0,
     summary: "",
+    results: [],
   }))
 }
 
@@ -89,6 +97,27 @@ function isCompletedStatus(status: BatchVerifyRowStatus) {
 }
 
 /**
+ *
+ */
+function deriveRowStatus(
+  results: ApiVerificationProbeResult[],
+): BatchVerifyRowStatus {
+  if (results.length === 0) return "skipped"
+  if (results.some((result) => result.status === "fail")) return "fail"
+  if (results.some((result) => result.status === "pass")) return "pass"
+  return "skipped"
+}
+
+/**
+ *
+ */
+function getRowLatency(results: ApiVerificationProbeResult[]) {
+  return results.reduce((total, result) => total + (result.latencyMs || 0), 0)
+}
+
+const DEFAULT_SELECTED_PROBE_IDS: ApiVerificationProbeId[] = ["text-generation"]
+
+/**
  * Dialog for running a New API-style batch model availability test over the
  * currently filtered model list snapshot.
  */
@@ -102,6 +131,9 @@ export function BatchVerifyModelsDialog({
   const [apiTypeMode, setApiTypeMode] = useState<BatchVerifyApiTypeMode>(() =>
     getDefaultApiTypeMode(items),
   )
+  const [selectedProbeIds, setSelectedProbeIds] = useState<
+    ApiVerificationProbeId[]
+  >(DEFAULT_SELECTED_PROBE_IDS)
   const [isRunning, setIsRunning] = useState(false)
   const [hasStarted, setHasStarted] = useState(false)
   const shouldStopRef = useRef(false)
@@ -116,6 +148,7 @@ export function BatchVerifyModelsDialog({
     resolvedTokenCacheRef.current.clear()
     setRows(buildRows(items))
     setApiTypeMode(getDefaultApiTypeMode(items))
+    setSelectedProbeIds(DEFAULT_SELECTED_PROBE_IDS)
     setIsRunning(false)
     setHasStarted(false)
   }, [isOpen, items])
@@ -170,7 +203,24 @@ export function BatchVerifyModelsDialog({
     [t],
   )
 
+  const probeOptions = useMemo(() => {
+    const seenProbeIds = new Set<ApiVerificationProbeId>()
+    return Object.values(API_TYPES).flatMap((apiType) =>
+      getApiVerificationProbeDefinitions(apiType).flatMap((probe) => {
+        if (seenProbeIds.has(probe.id)) return []
+        seenProbeIds.add(probe.id)
+        return [
+          {
+            id: probe.id,
+            label: getApiVerificationProbeLabel(t, probe.id),
+          },
+        ]
+      }),
+    )
+  }, [t])
+
   const canClose = !isRunning
+  const canStart = items.length > 0 && selectedProbeIds.length > 0
 
   const updateRow = useCallback(
     (key: string, patch: Partial<Omit<BatchVerifyRow, "item">>) => {
@@ -182,6 +232,14 @@ export function BatchVerifyModelsDialog({
     },
     [],
   )
+
+  const toggleProbe = useCallback((probeId: ApiVerificationProbeId) => {
+    setSelectedProbeIds((currentProbeIds) =>
+      currentProbeIds.includes(probeId)
+        ? currentProbeIds.filter((currentProbeId) => currentProbeId !== probeId)
+        : [...currentProbeIds, probeId],
+    )
+  }, [])
 
   const getAccountTokens = useCallback(
     (item: BatchVerifyModelItem): Promise<ApiToken[]> => {
@@ -224,7 +282,7 @@ export function BatchVerifyModelsDialog({
     async (
       item: BatchVerifyModelItem,
       apiType: ApiVerificationApiType,
-      result: ApiVerificationProbeResult,
+      results: ApiVerificationProbeResult[],
     ) => {
       const target =
         item.source.kind === "profile"
@@ -242,7 +300,7 @@ export function BatchVerifyModelsDialog({
         target,
         apiType,
         preferredModelId: item.modelId,
-        results: [result],
+        results,
       })
       if (!historySummary) return
 
@@ -258,11 +316,13 @@ export function BatchVerifyModelsDialog({
         status: "running",
         latencyMs: 0,
         summary: t("modelList:batchVerify.status.running"),
+        results: [],
         tokenName: undefined,
       })
 
       let apiKey = ""
       const apiType = resolveBatchVerifyApiType(apiTypeMode, item.modelId)
+      const selectedProbeIdSet = new Set(selectedProbeIds)
 
       try {
         const credentials =
@@ -279,14 +339,14 @@ export function BatchVerifyModelsDialog({
                 const token = pickBatchVerifyCompatibleToken(tokens, item)
                 if (!token) {
                   const result: ApiVerificationProbeResult = {
-                    id: "text-generation",
+                    id: selectedProbeIds[0] ?? "text-generation",
                     status: "fail",
                     latencyMs: 0,
                     summary: t(
                       "modelList:batchVerify.messages.noCompatibleToken",
                     ),
                   }
-                  await persistResult(item, apiType, result).catch(
+                  await persistResult(item, apiType, [result]).catch(
                     (persistError) => {
                       logger.error(
                         "Failed to persist skipped batch verification result",
@@ -301,6 +361,7 @@ export function BatchVerifyModelsDialog({
                     status: "skipped",
                     latencyMs: 0,
                     summary: result.summary,
+                    results: [],
                   })
                   return null
                 }
@@ -317,34 +378,89 @@ export function BatchVerifyModelsDialog({
         if (!credentials) return
 
         apiKey = credentials.apiKey
-        const result = await runApiVerificationProbe({
-          baseUrl: credentials.baseUrl,
-          apiKey: credentials.apiKey,
-          apiType,
-          modelId: item.modelId,
-          tokenMeta:
-            "token" in credentials && credentials.token
-              ? {
-                  id: credentials.token.id,
-                  name: credentials.token.name,
-                  model_limits: credentials.token.model_limits,
-                  models: credentials.token.models,
-                }
-              : undefined,
-          probeId: "text-generation",
-        })
+        const probesToRun = getApiVerificationProbeDefinitions(apiType).filter(
+          (probe) =>
+            selectedProbeIdSet.has(probe.id) &&
+            (!probe.requiresModelId || item.modelId.trim()),
+        )
 
-        await persistResult(item, apiType, result).catch((persistError) => {
+        if (probesToRun.length === 0) {
+          updateRow(item.key, {
+            status: "skipped",
+            latencyMs: 0,
+            summary: t("modelList:batchVerify.messages.noApplicableProbes"),
+            results: [],
+            tokenName: credentials.tokenName,
+          })
+          return
+        }
+
+        const tokenMeta =
+          "token" in credentials && credentials.token
+            ? {
+                id: credentials.token.id,
+                name: credentials.token.name,
+                model_limits: credentials.token.model_limits,
+                models: credentials.token.models,
+              }
+            : undefined
+
+        const results: ApiVerificationProbeResult[] = []
+        for (const probe of probesToRun) {
+          try {
+            const result = await runApiVerificationProbe({
+              baseUrl: credentials.baseUrl,
+              apiKey: credentials.apiKey,
+              apiType,
+              modelId: item.modelId,
+              tokenMeta,
+              probeId: probe.id,
+            })
+            results.push(result)
+          } catch (error) {
+            const redactions =
+              item.source.kind === "profile"
+                ? [item.source.profile.apiKey, item.source.profile.baseUrl]
+                : [
+                    item.source.account.token,
+                    item.source.account.cookieAuthSessionCookie,
+                    apiKey,
+                  ].filter(Boolean)
+
+            results.push({
+              id: probe.id,
+              status: "fail",
+              latencyMs: 0,
+              summary:
+                toSanitizedErrorSummary(error, redactions as string[]) ||
+                t("modelList:batchVerify.messages.unexpected"),
+            })
+          }
+        }
+
+        await persistResult(item, apiType, results).catch((persistError) => {
           logger.error("Failed to persist batch verification result", {
             modelId: item.modelId,
             message: toSanitizedErrorSummary(persistError, [apiKey]),
           })
         })
 
+        const pass = results.filter((result) => result.status === "pass").length
+        const fail = results.filter((result) => result.status === "fail").length
+        const unsupported = results.filter(
+          (result) => result.status === "unsupported",
+        ).length
+
         updateRow(item.key, {
-          status: result.status === "pass" ? "pass" : "fail",
-          latencyMs: result.latencyMs,
-          summary: result.summary,
+          status: deriveRowStatus(results),
+          latencyMs: getRowLatency(results),
+          summary: t("modelList:batchVerify.messages.probeSummary", {
+            total: results.length,
+            pass,
+            fail,
+            unsupported,
+          }),
+          results,
           tokenName: credentials.tokenName,
         })
       } catch (error) {
@@ -370,12 +486,12 @@ export function BatchVerifyModelsDialog({
         })
 
         const result: ApiVerificationProbeResult = {
-          id: "text-generation",
+          id: selectedProbeIds[0] ?? "text-generation",
           status: "fail",
           latencyMs: Date.now() - startedAt,
           summary: message,
         }
-        await persistResult(item, apiType, result).catch((persistError) => {
+        await persistResult(item, apiType, [result]).catch((persistError) => {
           logger.error("Failed to persist batch verification failure", {
             modelId: item.modelId,
             message: toSanitizedErrorSummary(
@@ -388,6 +504,7 @@ export function BatchVerifyModelsDialog({
           status: "fail",
           latencyMs: result.latencyMs,
           summary: message,
+          results: [result],
         })
       }
     },
@@ -396,6 +513,7 @@ export function BatchVerifyModelsDialog({
       getAccountTokens,
       getResolvedToken,
       persistResult,
+      selectedProbeIds,
       t,
       updateRow,
     ],
@@ -409,6 +527,7 @@ export function BatchVerifyModelsDialog({
               ...row,
               status: "skipped",
               summary: t("modelList:batchVerify.messages.stopped"),
+              results: [],
             }
           : row,
       ),
@@ -416,7 +535,7 @@ export function BatchVerifyModelsDialog({
   }, [t])
 
   const runBatch = async () => {
-    if (isRunning || rows.length === 0) return
+    if (isRunning || !canStart) return
 
     shouldStopRef.current = false
     setHasStarted(true)
@@ -492,7 +611,7 @@ export function BatchVerifyModelsDialog({
             {t("modelList:batchVerify.actions.stop")}
           </Button>
         ) : (
-          <Button onClick={runBatch} disabled={items.length === 0}>
+          <Button onClick={runBatch} disabled={!canStart}>
             {hasStarted
               ? t("modelList:batchVerify.actions.rerun")
               : t("modelList:batchVerify.actions.start")}
@@ -552,6 +671,32 @@ export function BatchVerifyModelsDialog({
           </div>
         </div>
 
+        <div className="space-y-2">
+          <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+            {t("modelList:batchVerify.probes.label")}
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {probeOptions.map((probe) => (
+              <label
+                key={probe.id}
+                className="dark:border-dark-bg-tertiary flex cursor-pointer items-center gap-2 rounded-md border border-gray-100 px-2 py-1.5 text-xs"
+              >
+                <Checkbox
+                  checked={selectedProbeIds.includes(probe.id)}
+                  onCheckedChange={() => toggleProbe(probe.id)}
+                  disabled={isRunning}
+                />
+                <span>{probe.label}</span>
+              </label>
+            ))}
+          </div>
+          {selectedProbeIds.length === 0 ? (
+            <div className="text-xs text-red-500">
+              {t("modelList:batchVerify.probes.noneSelected")}
+            </div>
+          ) : null}
+        </div>
+
         <Alert variant="warning">
           <p>{t("modelList:batchVerify.warning")}</p>
         </Alert>
@@ -592,6 +737,33 @@ export function BatchVerifyModelsDialog({
                       {t("modelList:batchVerify.tokenUsed", {
                         name: row.tokenName,
                       })}
+                    </div>
+                  ) : null}
+                  {row.results.length > 0 ? (
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {row.results.map((result) => (
+                        <Badge
+                          key={result.id}
+                          variant={statusVariant(
+                            result.status === "unsupported"
+                              ? "skipped"
+                              : result.status,
+                          )}
+                          size="sm"
+                        >
+                          {getApiVerificationProbeLabel(t, result.id)}
+                          {" · "}
+                          {result.status === "pass"
+                            ? t("modelList:batchVerify.status.pass")
+                            : result.status === "fail"
+                              ? t("modelList:batchVerify.status.fail")
+                              : t(
+                                  "aiApiVerification:verifyDialog.status.unsupported",
+                                )}
+                          {" · "}
+                          {formatLatency(result.latencyMs)}
+                        </Badge>
+                      ))}
                     </div>
                   ) : null}
                 </div>

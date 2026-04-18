@@ -133,12 +133,118 @@ describe("BatchVerifyModelsDialog", () => {
       })
     })
     expect(
-      await screen.findByText("Text generation succeeded"),
+      await screen.findByText("modelList:batchVerify.messages.probeSummary"),
     ).toBeInTheDocument()
+    expect(
+      screen.getAllByText(
+        "aiApiVerification:verifyDialog.probes.text-generation",
+      ).length,
+    ).toBeGreaterThan(0)
     expect(
       await screen.findByText("modelList:batchVerify.tokenUsed"),
     ).toBeInTheDocument()
     expect(mockUpsertLatestSummary).toHaveBeenCalledTimes(1)
+  })
+
+  it("runs the selected probe set for each model and persists combined results", async () => {
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe
+      .mockResolvedValueOnce({
+        id: "text-generation",
+        status: "pass",
+        latencyMs: 12,
+        summary: "Text generation succeeded",
+      })
+      .mockResolvedValueOnce({
+        id: "tool-calling",
+        status: "pass",
+        latencyMs: 18,
+        summary: "Tool calling succeeded",
+      })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByText(
+        "aiApiVerification:verifyDialog.probes.tool-calling",
+      ),
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockRunApiVerificationProbe).toHaveBeenCalledTimes(2)
+    })
+    expect(mockRunApiVerificationProbe).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ probeId: "text-generation" }),
+    )
+    expect(mockRunApiVerificationProbe).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ probeId: "tool-calling" }),
+    )
+    expect(mockUpsertLatestSummary).toHaveBeenCalledTimes(1)
+    expect(mockUpsertLatestSummary.mock.calls[0][0].probes).toEqual([
+      expect.objectContaining({ id: "text-generation", status: "pass" }),
+      expect.objectContaining({ id: "tool-calling", status: "pass" }),
+    ])
+  })
+
+  it("requires at least one selected probe before starting", async () => {
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByText(
+        "aiApiVerification:verifyDialog.probes.text-generation",
+      ),
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    ).toBeDisabled()
+    expect(
+      screen.getByText("modelList:batchVerify.probes.noneSelected"),
+    ).toBeInTheDocument()
   })
 
   it("skips an account model when no compatible token exists", async () => {

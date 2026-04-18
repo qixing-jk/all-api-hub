@@ -48,12 +48,18 @@
       "skipped": "Skipped {{value}}",
       "total": "Total {{value}}"
     },
-    "idleHint": "This will run a text-generation availability test for the currently filtered models.",
+    "idleHint": "This will batch-verify the currently filtered models with the selected test items.",
     "messages": {
+      "noApplicableProbes": "None of the selected test items apply to this model.",
       "noCompatibleToken": "No enabled compatible token was found for this model.",
       "pending": "Waiting to test",
+      "probeSummary": "Ran {{total}} items, passed {{pass}}, failed {{fail}}, unsupported {{unsupported}}",
       "stopped": "Stopped before this model test started.",
       "unexpected": "Test failed"
+    },
+    "probes": {
+      "label": "Test items",
+      "noneSelected": "Select at least one test item."
     },
     "status": {
       "fail": "Fail",
@@ -66,7 +72,7 @@
     "summary": "Completed {{completed}} / {{total}}, passed {{pass}}, failed {{fail}}, skipped {{skipped}}",
     "title": "Batch Test Models",
     "tokenUsed": "Token: {{name}}",
-    "warning": "Batch testing only runs the text-generation probe to quickly check basic model availability. Use single-model verification for tool calling, structured output, web search, and other advanced capability checks."
+    "warning": "Batch testing runs the selected items according to each model’s resolved API type. Inapplicable items are skipped automatically. Results are advisory; rely on real tool calls for final confirmation."
   },
   "billingMode": "Billing Mode",
   "clickSwitchGroup": "Click to switch to {{group}} group",

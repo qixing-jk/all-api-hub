@@ -46,12 +46,18 @@
       "skipped": "跳過 {{value}}",
       "total": "總計 {{value}}"
     },
-    "idleHint": "將對目前篩選模型執行文字生成可用性測試。",
+    "idleHint": "將按所選測試項目批量驗證目前篩選模型。",
     "messages": {
+      "noApplicableProbes": "目前選擇的測試項目不適用於此模型。",
       "noCompatibleToken": "未找到相容該模型的可用金鑰。",
       "pending": "等待測試",
+      "probeSummary": "已執行 {{total}} 項，通過 {{pass}}，失敗 {{fail}}，不支援 {{unsupported}}",
       "stopped": "已停止，未啟動該模型測試。",
       "unexpected": "測試失敗"
+    },
+    "probes": {
+      "label": "測試項目",
+      "noneSelected": "請至少選擇一個測試項目。"
     },
     "status": {
       "fail": "失敗",
@@ -64,7 +70,7 @@
     "summary": "已完成 {{completed}} / {{total}}，通過 {{pass}}，失敗 {{fail}}，跳過 {{skipped}}",
     "title": "批量測試模型",
     "tokenUsed": "金鑰：{{name}}",
-    "warning": "批量測試僅執行文字生成探針，用於快速確認模型基礎可用性；工具呼叫、結構化輸出和聯網搜尋等進階能力請使用單模型驗證。"
+    "warning": "批量測試會按每個模型解析後的介面型別執行所選項目；不適用的項目會自動跳過。檢測結果僅供參考，請以工具實際呼叫情況為準。"
   },
   "billingMode": "計費方式",
   "clickSwitchGroup": "點擊切換到 {{group}} 分組",

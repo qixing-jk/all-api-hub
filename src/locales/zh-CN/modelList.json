@@ -46,12 +46,18 @@
       "skipped": "跳过 {{value}}",
       "total": "总计 {{value}}"
     },
-    "idleHint": "将对当前筛选模型运行文本生成可用性测试。",
+    "idleHint": "将按所选测试项目批量验证当前筛选模型。",
     "messages": {
+      "noApplicableProbes": "当前选择的测试项目不适用于该模型。",
       "noCompatibleToken": "未找到兼容该模型的可用密钥。",
       "pending": "等待测试",
+      "probeSummary": "已运行 {{total}} 项，通过 {{pass}}，失败 {{fail}}，不支持 {{unsupported}}",
       "stopped": "已停止，未启动该模型测试。",
       "unexpected": "测试失败"
+    },
+    "probes": {
+      "label": "测试项目",
+      "noneSelected": "请至少选择一个测试项目。"
     },
     "status": {
       "fail": "失败",
@@ -64,7 +70,7 @@
     "summary": "已完成 {{completed}} / {{total}}，通过 {{pass}}，失败 {{fail}}，跳过 {{skipped}}",
     "title": "批量测试模型",
     "tokenUsed": "密钥：{{name}}",
-    "warning": "批量测试仅运行文本生成探针，用于快速确认模型基础可用性；工具调用、结构化输出和联网搜索等高级能力请使用单模型验证。"
+    "warning": "批量测试会按每个模型解析后的接口类型执行所选项目；不适用的项目会自动跳过。检测结果仅供参考，请以工具实际调用情况为准。"
   },
   "billingMode": "计费方式",
   "clickSwitchGroup": "点击切换到 {{group}} 分组",
