@@ -45,6 +45,20 @@ type JsonFetchResult = {
 }
 
 const OPENAI_BILLING_LIMIT_BALANCE_MAX_USD = 1_000_000
+const REDACTED_QUERY_VALUE = "[REDACTED]"
+
+const TELEMETRY_ENDPOINTS = {
+  models: {
+    google: "/v1beta/models",
+    openAiCompatible: "/v1/models",
+  },
+  openAiBilling: {
+    subscription: "/v1/dashboard/billing/subscription",
+    usage: "/v1/dashboard/billing/usage",
+  },
+  newApiTokenUsage: "/api/usage/token/",
+  sub2ApiUsage: "/v1/usage",
+} as const
 
 class TelemetryEndpointError extends Error {
   constructor(
@@ -130,6 +144,39 @@ function getPathValue(input: unknown, path: string): unknown {
 }
 
 /**
+ * Redacts sensitive query values before attempts are persisted with snapshots.
+ */
+function sanitizeTelemetryEndpoint(
+  endpoint: string,
+  secrets: string[],
+): string {
+  const redactedEndpoint = toSanitizedErrorSummary(endpoint, secrets)
+  const parsed = new URL(redactedEndpoint, "https://telemetry.local")
+
+  for (const key of Array.from(parsed.searchParams.keys())) {
+    parsed.searchParams.set(key, REDACTED_QUERY_VALUE)
+  }
+
+  return `${parsed.pathname}${parsed.search}`
+}
+
+/**
+ * Resolves the model catalog endpoint used for telemetry attempts.
+ */
+function getModelsEndpoint(profile: ApiCredentialProfile): string {
+  return profile.apiType === "google"
+    ? TELEMETRY_ENDPOINTS.models.google
+    : TELEMETRY_ENDPOINTS.models.openAiCompatible
+}
+
+/**
+ * Builds the OpenAI-compatible billing usage endpoint for the current date range.
+ */
+function createOpenAiBillingUsageEndpoint(start: string, end: string): string {
+  return `${TELEMETRY_ENDPOINTS.openAiBilling.usage}?start_date=${start}&end_date=${end}`
+}
+
+/**
  * Fetches a read-only telemetry endpoint with bearer-token authentication.
  */
 async function fetchJson(params: {
@@ -191,10 +238,11 @@ function createAttempt(
   endpoint: string,
   status: ApiCredentialTelemetryAttempt["status"],
   message?: string,
+  secrets: string[] = [],
 ): ApiCredentialTelemetryAttempt {
   return {
     source,
-    endpoint,
+    endpoint: sanitizeTelemetryEndpoint(endpoint, secrets),
     status,
     ...(message ? { message } : {}),
   }
@@ -215,6 +263,7 @@ function attemptFromError(
       error.endpoint || endpoint,
       error.unsupported ? "unsupported" : "error",
       toSanitizedErrorSummary(error, secrets),
+      secrets,
     )
   }
 
@@ -223,6 +272,7 @@ function attemptFromError(
     endpoint,
     "error",
     toSanitizedErrorSummary(error, secrets),
+    secrets,
   )
 }
 
@@ -253,9 +303,7 @@ function parseOpenAiBillingUsage(
     hardLimit !== undefined &&
     hardLimit >= OPENAI_BILLING_LIMIT_BALANCE_MAX_USD
   ) {
-    return {
-      ...(usedUsd !== undefined ? { totalUsedUsd: usedUsd } : {}),
-    }
+    return {}
   }
 
   return {
@@ -275,7 +323,7 @@ async function queryOpenAiBilling(
 ): Promise<AdapterSuccess> {
   const subscription = await fetchJson({
     baseUrl: profile.baseUrl,
-    endpoint: "/v1/dashboard/billing/subscription",
+    endpoint: TELEMETRY_ENDPOINTS.openAiBilling.subscription,
     apiKey: profile.apiKey,
   })
   const subscriptionData = dataLike(subscription.json)
@@ -291,7 +339,7 @@ async function queryOpenAiBilling(
   const now = new Date()
   const start = `${now.getFullYear()}-01-01`
   const end = now.toISOString().slice(0, 10)
-  const usageEndpoint = `/v1/dashboard/billing/usage?start_date=${start}&end_date=${end}`
+  const usageEndpoint = createOpenAiBillingUsageEndpoint(start, end)
   const usage = await fetchJson({
     baseUrl: profile.baseUrl,
     endpoint: usageEndpoint,
@@ -313,7 +361,7 @@ async function queryNewApiTokenUsage(
 ): Promise<AdapterSuccess> {
   const result = await fetchJson({
     baseUrl: profile.baseUrl,
-    endpoint: "/api/usage/token/",
+    endpoint: TELEMETRY_ENDPOINTS.newApiTokenUsage,
     apiKey: profile.apiKey,
   })
   const data = dataLike(result.json)
@@ -358,7 +406,7 @@ async function querySub2ApiUsage(
 ): Promise<AdapterSuccess> {
   const result = await fetchJson({
     baseUrl: profile.baseUrl,
-    endpoint: "/v1/usage",
+    endpoint: TELEMETRY_ENDPOINTS.sub2ApiUsage,
     apiKey: profile.apiKey,
   })
   const data = dataLike(result.json)
@@ -522,11 +570,12 @@ async function queryModels(
     attempts.push(
       createAttempt(
         "models",
-        profile.apiType === "google" ? "/v1beta/models" : "/v1/models",
+        getModelsEndpoint(profile),
         modelIds.length > 0 ? "success" : "unsupported",
         modelIds.length > 0
           ? `Fetched ${modelIds.length} models`
           : "No models returned",
+        [profile.apiKey],
       ),
     )
     return {
@@ -535,12 +584,9 @@ async function queryModels(
     }
   } catch (error) {
     attempts.push(
-      attemptFromError(
-        "models",
-        profile.apiType === "google" ? "/v1beta/models" : "/v1/models",
-        error,
-        [profile.apiKey],
-      ),
+      attemptFromError("models", getModelsEndpoint(profile), error, [
+        profile.apiKey,
+      ]),
     )
     return undefined
   }
@@ -589,7 +635,10 @@ function hasUsageData(data: TelemetryPatch): boolean {
     data.todayRequests !== undefined ||
     data.todayTokens !== undefined ||
     data.unlimitedQuota === true ||
-    data.totalAvailableUsd !== undefined
+    data.totalUsedUsd !== undefined ||
+    data.totalGrantedUsd !== undefined ||
+    data.totalAvailableUsd !== undefined ||
+    data.expiresAt !== undefined
   )
 }
 
@@ -605,12 +654,14 @@ export async function refreshApiCredentialProfileTelemetry(
   }
 
   const config = coerceApiCredentialTelemetryConfig(profile.telemetryConfig)
+  const modes = resolveModes(config)
   const attempts: ApiCredentialTelemetryAttempt[] = []
   const now = Date.now()
-  const models = await queryModels(profile, attempts)
+  const models =
+    modes.length > 0 ? await queryModels(profile, attempts) : undefined
   let usageResult: AdapterSuccess | null = null
 
-  for (const mode of resolveModes(config)) {
+  for (const mode of modes) {
     try {
       const result = await runUsageAdapter(profile, mode, config)
       if (hasUsageData(result.data)) {
@@ -621,6 +672,7 @@ export async function refreshApiCredentialProfileTelemetry(
             result.endpoint,
             "success",
             "Fetched usage",
+            [profile.apiKey],
           ),
         )
         break
@@ -632,16 +684,17 @@ export async function refreshApiCredentialProfileTelemetry(
           result.endpoint,
           "unsupported",
           "No usage fields returned",
+          [profile.apiKey],
         ),
       )
     } catch (error) {
       const endpoint =
         mode === "openaiBilling"
-          ? "/v1/dashboard/billing/subscription"
+          ? TELEMETRY_ENDPOINTS.openAiBilling.subscription
           : mode === "newApiTokenUsage"
-            ? "/api/usage/token/"
+            ? TELEMETRY_ENDPOINTS.newApiTokenUsage
             : mode === "sub2apiUsage"
-              ? "/v1/usage"
+              ? TELEMETRY_ENDPOINTS.sub2ApiUsage
               : config.customEndpoint?.endpoint || "custom"
       attempts.push(attemptFromError(mode, endpoint, error, [profile.apiKey]))
     }

@@ -335,4 +335,113 @@ describe("api credential profile telemetry", () => {
       ]),
     )
   })
+
+  it("skips credentialed network calls when telemetry is disabled", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Disabled",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://disabled.example.com",
+      apiKey: "sk-disabled",
+      telemetryConfig: { mode: "disabled" },
+    })
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(fetchApiCredentialModelIdsMock).not.toHaveBeenCalled()
+    expect(fetchMock).not.toHaveBeenCalled()
+    expect(snapshot).toEqual(
+      expect.objectContaining({
+        attempts: [],
+        health: {
+          reason: "No supported telemetry endpoint returned data",
+          status: SiteHealthStatus.Warning,
+        },
+      }),
+    )
+  })
+
+  it("accepts custom total-only telemetry as a successful refresh", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Custom Totals",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://custom-total.example.com",
+      apiKey: "sk-custom-total",
+      telemetryConfig: {
+        mode: "customReadOnlyEndpoint",
+        customEndpoint: {
+          endpoint: "/usage/totals",
+          jsonPaths: {
+            expiresAt: "data.expiresAt",
+            totalUsedUsd: "data.total.used",
+          },
+        },
+      },
+    })
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        jsonResponse({
+          data: {
+            expiresAt: 1776556800,
+            total: { used: 8.75 },
+          },
+        }),
+      ),
+    )
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot).toEqual(
+      expect.objectContaining({
+        expiresAt: 1776556800000,
+        source: "customReadOnlyEndpoint",
+        totalUsedUsd: 8.75,
+      }),
+    )
+    expect(snapshot.attempts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          endpoint: "/usage/totals",
+          source: "customReadOnlyEndpoint",
+          status: "success",
+        }),
+      ]),
+    )
+  })
+
+  it("redacts custom endpoint query values before persisting attempts", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Custom Query",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://custom-query.example.com",
+      apiKey: "sk-custom-query",
+      telemetryConfig: {
+        mode: "customReadOnlyEndpoint",
+        customEndpoint: {
+          endpoint: "/usage?token=sk-custom-query&cursor=secret-cursor",
+          jsonPaths: {
+            balanceUsd: "balance",
+          },
+        },
+      },
+    })
+
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => jsonResponse({ balance: 4.5 })),
+    )
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+    const customAttempt = snapshot.attempts.find(
+      (attempt) => attempt.source === "customReadOnlyEndpoint",
+    )
+
+    expect(customAttempt?.endpoint).toContain("/usage?")
+    expect(customAttempt?.endpoint).not.toContain("sk-custom-query")
+    expect(customAttempt?.endpoint).not.toContain("secret-cursor")
+    expect(customAttempt?.endpoint).toContain("REDACTED")
+  })
 })

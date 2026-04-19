@@ -40,6 +40,21 @@ export type ApiCredentialTelemetryConfig = {
   customEndpoint?: ApiCredentialTelemetryCustomEndpoint
 }
 
+export const API_CREDENTIAL_TELEMETRY_CAPABILITY_MODES: ApiCredentialTelemetryCapabilityMode[] =
+  [
+    "disabled",
+    "auto",
+    "openaiBilling",
+    "newApiTokenUsage",
+    "sub2apiUsage",
+    "customReadOnlyEndpoint",
+  ]
+
+export const DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG: ApiCredentialTelemetryConfig =
+  {
+    mode: "auto",
+  }
+
 export type ApiCredentialTelemetryAttemptStatus =
   | "success"
   | "unsupported"

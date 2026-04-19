@@ -9,6 +9,10 @@ describe("sanitizeUrlForLog", () => {
     ).toBe("https://example.com/path/to")
   })
 
+  it("drops query parameters and fragments from relative endpoints", () => {
+    expect(sanitizeUrlForLog("/usage?token=secret#fragment")).toBe("/usage")
+  })
+
   it("returns the original string when the input is not a parseable URL", () => {
     expect(sanitizeUrlForLog("not a valid url")).toBe("not a valid url")
   })

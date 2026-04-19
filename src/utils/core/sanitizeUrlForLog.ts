@@ -6,5 +6,5 @@ import { tryParseUrlPrefix } from "~/utils/core/urlParsing"
  * @returns The formatted URL.
  */
 export function sanitizeUrlForLog(url: string) {
-  return tryParseUrlPrefix(url) ?? url
+  return tryParseUrlPrefix(url) ?? url.replace(/[?#].*$/, "")
 }

@@ -378,6 +378,31 @@ describe("apiCredentialProfilesStorage additional flows", () => {
     )
   })
 
+  it("rejects invalid telemetry snapshots instead of storing raw data", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Telemetry",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://telemetry.example.com",
+      apiKey: "sk-telemetry",
+    })
+
+    await expect(
+      apiCredentialProfilesStorage.updateTelemetrySnapshot(profile.id, {
+        attempts: [],
+        health: { status: SiteHealthStatus.Healthy },
+        lastSyncTime: Number.NaN,
+      }),
+    ).rejects.toThrow("Invalid telemetry snapshot.")
+
+    await expect(
+      apiCredentialProfilesStorage.getProfileById(profile.id),
+    ).resolves.toEqual(
+      expect.not.objectContaining({
+        telemetrySnapshot: expect.anything(),
+      }),
+    )
+  })
+
   it("imports and merges configs through the storage service", async () => {
     const imported = await apiCredentialProfilesStorage.importConfig({
       profiles: [

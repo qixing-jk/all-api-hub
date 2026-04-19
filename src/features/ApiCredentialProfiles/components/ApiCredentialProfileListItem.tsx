@@ -29,18 +29,13 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import type { ManagedSiteType } from "~/constants/siteType"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import { SiteHealthStatus } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import {
-  formatLocaleDateTime,
-  formatTokenCount,
-  getCurrencySymbol,
-} from "~/utils/core/formatters"
-import { getDisplayMoneyValue } from "~/utils/core/money"
+import { formatLocaleDateTime, formatTokenCount } from "~/utils/core/formatters"
+import { formatTelemetryMoney } from "~/utils/core/money"
 
 /**
  * Formats a secret for display (masked by default, revealable per-profile).
@@ -125,20 +120,18 @@ function getTelemetrySourceLabel(
 }
 
 /**
- * Formats a USD telemetry amount using the user's selected display currency.
+ * Returns a localized label for telemetry health states.
  */
-function formatMoney(
-  valueUsd: number | undefined,
-  currencyType: "USD" | "CNY",
+function getHealthStatusLabel(
+  t: TFunction,
+  status: SiteHealthStatus | undefined,
 ): string {
-  if (typeof valueUsd !== "number" || !Number.isFinite(valueUsd)) return "-"
-  const value =
-    currencyType === "CNY"
-      ? valueUsd * UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
-      : valueUsd
-  return `${getCurrencySymbol(currencyType)}${getDisplayMoneyValue(
-    value,
-  ).toFixed(UI_CONSTANTS.MONEY.DECIMALS)}`
+  if (status === SiteHealthStatus.Healthy)
+    return t("account:healthStatus.healthy")
+  if (status === SiteHealthStatus.Warning)
+    return t("account:healthStatus.warning")
+  if (status === SiteHealthStatus.Error) return t("account:healthStatus.error")
+  return t("account:healthStatus.unknown")
 }
 
 /**
@@ -169,16 +162,17 @@ export function ApiCredentialProfileListItem({
     "aiApiVerification",
     "keyManagement",
     "common",
+    "account",
   ])
   const { currencyType } = useUserPreferencesContext()
   const telemetry = profile.telemetrySnapshot
-  const missingTelemetryValue = telemetry?.source
+  const missingTelemetryValue = telemetry
     ? t("apiCredentialProfiles:telemetry.notProvided")
     : "-"
   const health = telemetry?.health
   const healthTitle = [
     t("apiCredentialProfiles:telemetry.health"),
-    health?.status ?? SiteHealthStatus.Unknown,
+    getHealthStatusLabel(t, health?.status),
     health?.reason || telemetry?.lastError || "",
   ]
     .filter(Boolean)
@@ -312,19 +306,33 @@ export function ApiCredentialProfileListItem({
                     <div className="dark:text-dark-text-tertiary text-gray-500">
                       {t("apiCredentialProfiles:telemetry.balance")}
                     </div>
-                    <div className="dark:text-dark-text-primary font-semibold text-gray-900">
+                    <div
+                      className="dark:text-dark-text-primary font-semibold text-gray-900"
+                      data-testid="api-credential-telemetry-balance"
+                    >
                       {telemetry?.unlimitedQuota
                         ? t("common:quota.unlimited")
-                        : formatMoney(telemetry?.balanceUsd, currencyType)}
+                        : telemetry?.balanceUsd !== undefined
+                          ? formatTelemetryMoney(
+                              telemetry.balanceUsd,
+                              currencyType,
+                            )
+                          : missingTelemetryValue}
                     </div>
                   </div>
                   <div>
                     <div className="dark:text-dark-text-tertiary text-gray-500">
                       {t("apiCredentialProfiles:telemetry.todayUsage")}
                     </div>
-                    <div className="font-semibold text-emerald-600 dark:text-emerald-400">
+                    <div
+                      className="font-semibold text-emerald-600 dark:text-emerald-400"
+                      data-testid="api-credential-telemetry-today-usage"
+                    >
                       {telemetry?.todayCostUsd !== undefined
-                        ? formatMoney(telemetry.todayCostUsd, currencyType)
+                        ? formatTelemetryMoney(
+                            telemetry.todayCostUsd,
+                            currencyType,
+                          )
                         : missingTelemetryValue}
                     </div>
                   </div>
@@ -332,7 +340,10 @@ export function ApiCredentialProfileListItem({
                     <div className="dark:text-dark-text-tertiary text-gray-500">
                       {t("apiCredentialProfiles:telemetry.todayRequests")}
                     </div>
-                    <div className="dark:text-dark-text-primary font-semibold text-gray-900">
+                    <div
+                      className="dark:text-dark-text-primary font-semibold text-gray-900"
+                      data-testid="api-credential-telemetry-today-requests"
+                    >
                       {typeof telemetry?.todayRequests === "number"
                         ? telemetry.todayRequests.toLocaleString()
                         : missingTelemetryValue}
@@ -344,13 +355,14 @@ export function ApiCredentialProfileListItem({
                     </div>
                     <div
                       className="dark:text-dark-text-primary truncate font-semibold text-gray-900"
+                      data-testid="api-credential-telemetry-models"
                       title={telemetry?.models?.preview.join(", ")}
                     >
                       {telemetry?.models
                         ? t("apiCredentialProfiles:telemetry.modelCount", {
                             count: telemetry.models.count,
                           })
-                        : "-"}
+                        : missingTelemetryValue}
                     </div>
                   </div>
                 </div>

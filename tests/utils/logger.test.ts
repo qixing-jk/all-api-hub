@@ -115,6 +115,7 @@ describe("unified logger", () => {
       backupPayload: "backup-secret",
       url: "https://example.com/path?token=leak#fragment",
       rawUrl: "https://example.com/other?x=y#hash",
+      endpoint: "/usage?token=leak#fragment",
       nested: {
         adminToken: "admin-secret",
         managementKey: "mgmt-secret",
@@ -137,6 +138,7 @@ describe("unified logger", () => {
 
     expect(details.url).toBe("https://example.com/path")
     expect(details.rawUrl).toBe("https://example.com/other")
+    expect(details.endpoint).toBe("/usage")
 
     expect(details.nested.adminToken).toBe("[REDACTED]")
     expect(details.nested.managementKey).toBe("[REDACTED]")

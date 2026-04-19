@@ -23,7 +23,11 @@ import type {
   ApiCredentialTelemetryJsonPathMap,
   ApiCredentialTelemetrySnapshot,
 } from "~/types/apiCredentialProfiles"
-import { API_CREDENTIAL_PROFILES_CONFIG_VERSION } from "~/types/apiCredentialProfiles"
+import {
+  API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+  API_CREDENTIAL_TELEMETRY_CAPABILITY_MODES,
+  DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG,
+} from "~/types/apiCredentialProfiles"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 
@@ -43,19 +47,6 @@ type ApiCredentialProfileCreateInput = {
 }
 
 type ApiCredentialProfileUpdateInput = Partial<ApiCredentialProfileCreateInput>
-
-const TELEMETRY_CAPABILITY_MODES: ApiCredentialTelemetryCapabilityMode[] = [
-  "disabled",
-  "auto",
-  "openaiBilling",
-  "newApiTokenUsage",
-  "sub2apiUsage",
-  "customReadOnlyEndpoint",
-]
-
-const DEFAULT_TELEMETRY_CONFIG: ApiCredentialTelemetryConfig = {
-  mode: "auto",
-}
 
 const createDefaultConfig = (): ApiCredentialProfilesConfig => ({
   version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
@@ -191,11 +182,11 @@ export function coerceApiCredentialTelemetryConfig(
   const obj =
     raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
   const rawMode = typeof obj.mode === "string" ? obj.mode : ""
-  const mode = TELEMETRY_CAPABILITY_MODES.includes(
+  const mode = API_CREDENTIAL_TELEMETRY_CAPABILITY_MODES.includes(
     rawMode as ApiCredentialTelemetryCapabilityMode,
   )
     ? (rawMode as ApiCredentialTelemetryCapabilityMode)
-    : DEFAULT_TELEMETRY_CONFIG.mode
+    : DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode
   const customEndpoint = coerceCustomEndpoint(obj.customEndpoint)
 
   return {
@@ -220,7 +211,7 @@ function coerceTelemetryAttempts(
       const source =
         typeof rawSource === "string" &&
         (rawSource === "models" ||
-          TELEMETRY_CAPABILITY_MODES.includes(
+          API_CREDENTIAL_TELEMETRY_CAPABILITY_MODES.includes(
             rawSource as ApiCredentialTelemetryCapabilityMode,
           ))
           ? (rawSource as ApiCredentialTelemetryAttempt["source"])
@@ -283,7 +274,7 @@ function coerceTelemetrySnapshot(
   const source =
     typeof rawSource === "string" &&
     (rawSource === "models" ||
-      TELEMETRY_CAPABILITY_MODES.includes(
+      API_CREDENTIAL_TELEMETRY_CAPABILITY_MODES.includes(
         rawSource as ApiCredentialTelemetryCapabilityMode,
       ))
       ? (rawSource as ApiCredentialTelemetrySnapshot["source"])
@@ -393,10 +384,10 @@ function mergeTelemetryConfig(
 ): ApiCredentialTelemetryConfig {
   const normalizedNewer = coerceApiCredentialTelemetryConfig(newer)
   const normalizedOlder = coerceApiCredentialTelemetryConfig(older)
-  if (normalizedNewer.mode !== DEFAULT_TELEMETRY_CONFIG.mode) {
+  if (normalizedNewer.mode !== DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode) {
     return normalizedNewer
   }
-  if (normalizedOlder.mode !== DEFAULT_TELEMETRY_CONFIG.mode) {
+  if (normalizedOlder.mode !== DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode) {
     return normalizedOlder
   }
   return normalizedNewer
@@ -869,9 +860,14 @@ class ApiCredentialProfilesStorageService {
         throw new Error("Profile not found.")
       }
 
+      const telemetrySnapshot = coerceTelemetrySnapshot(snapshot)
+      if (!telemetrySnapshot) {
+        throw new Error("Invalid telemetry snapshot.")
+      }
+
       const nextProfile: ApiCredentialProfile = {
         ...profiles[index],
-        telemetrySnapshot: coerceTelemetrySnapshot(snapshot) ?? snapshot,
+        telemetrySnapshot,
       }
 
       const nextProfiles = profiles.map((profile) =>

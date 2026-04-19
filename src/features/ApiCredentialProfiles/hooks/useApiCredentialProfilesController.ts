@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -18,6 +18,7 @@ import {
 import type { Tag } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
 import { openModelsPage } from "~/utils/navigation"
 
@@ -38,6 +39,8 @@ type SaveApiCredentialProfileInput = {
 type RuntimeBroadcastMessage = {
   type?: (typeof RuntimeMessageTypes)[keyof typeof RuntimeMessageTypes]
 }
+
+const logger = createLogger("ApiCredentialProfilesController")
 
 /**
  * Controller hook for managing API credential profiles, including CRUD operations,
@@ -248,6 +251,7 @@ export function useApiCredentialProfilesController() {
     useState<ApiCredentialProfile | null>(null)
   const [cliVerifyingProfile, setCliVerifyingProfile] =
     useState<ApiCredentialProfile | null>(null)
+  const refreshingTelemetryProfileIdRef = useRef<string | null>(null)
   const [refreshingTelemetryProfileId, setRefreshingTelemetryProfileId] =
     useState<string | null>(null)
 
@@ -331,23 +335,25 @@ export function useApiCredentialProfilesController() {
 
   const handleRefreshTelemetry = useCallback(
     async (profile: ApiCredentialProfile) => {
-      if (refreshingTelemetryProfileId) return
+      if (refreshingTelemetryProfileIdRef.current) return
 
+      refreshingTelemetryProfileIdRef.current = profile.id
       setRefreshingTelemetryProfileId(profile.id)
       try {
         await toast.promise(refreshApiCredentialProfileTelemetry(profile.id), {
           loading: t("apiCredentialProfiles:telemetry.messages.refreshing"),
           success: t("apiCredentialProfiles:telemetry.messages.refreshed"),
-          error: (error) =>
-            error instanceof Error && error.message
-              ? error.message
-              : t("apiCredentialProfiles:telemetry.messages.refreshFailed"),
+          error: (error) => {
+            logger.warn("Telemetry refresh failed", error)
+            return t("apiCredentialProfiles:telemetry.messages.refreshFailed")
+          },
         })
       } finally {
+        refreshingTelemetryProfileIdRef.current = null
         setRefreshingTelemetryProfileId(null)
       }
     },
-    [refreshingTelemetryProfileId, t],
+    [t],
   )
 
   const [deletingProfile, setDeletingProfile] =

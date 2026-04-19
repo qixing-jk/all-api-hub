@@ -1,4 +1,5 @@
-import { UI_CONSTANTS } from "~/constants/ui"
+import { CURRENCY_SYMBOLS, UI_CONSTANTS } from "~/constants/ui"
+import type { CurrencyType } from "~/types"
 
 /**
  * Formatting options for money-like numeric values used across the UI.
@@ -64,4 +65,23 @@ export const formatMoneyFixed = (
   { decimals, minNonZero }: MoneyFormatOptions = DEFAULT_MONEY_FORMAT_OPTIONS,
 ): string => {
   return getDisplayMoneyValue(value, { decimals, minNonZero }).toFixed(decimals)
+}
+
+/**
+ * Formats a USD telemetry amount in the selected display currency.
+ */
+export const formatTelemetryMoney = (
+  valueUsd: number | undefined,
+  currencyType: CurrencyType,
+): string => {
+  if (typeof valueUsd !== "number" || !Number.isFinite(valueUsd)) return "-"
+
+  const value =
+    currencyType === "CNY"
+      ? valueUsd * UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+      : valueUsd
+
+  return `${CURRENCY_SYMBOLS[currencyType]}${getDisplayMoneyValue(
+    value,
+  ).toFixed(UI_CONSTANTS.MONEY.DECIMALS)}`
 }

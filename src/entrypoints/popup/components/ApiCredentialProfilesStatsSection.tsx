@@ -2,12 +2,10 @@ import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { BodySmall, Caption } from "~/components/ui"
-import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
 import { SiteHealthStatus } from "~/types"
-import { getCurrencySymbol } from "~/utils/core/formatters"
-import { getDisplayMoneyValue } from "~/utils/core/money"
+import { formatTelemetryMoney } from "~/utils/core/money"
 
 import { AnimatedStatValue } from "./AnimatedStatValue"
 
@@ -47,7 +45,7 @@ export default function ApiCredentialProfilesStatsSection() {
   }, [profiles])
 
   const telemetryStats = useMemo(() => {
-    return profiles.reduce(
+    const stats = profiles.reduce(
       (acc, profile) => {
         const snapshot = profile.telemetrySnapshot
         if (!snapshot) return acc
@@ -55,7 +53,10 @@ export default function ApiCredentialProfilesStatsSection() {
         if (snapshot.health.status === SiteHealthStatus.Healthy) {
           acc.healthyCount += 1
         }
-        acc.balanceUsd += snapshot.balanceUsd ?? 0
+        if (typeof snapshot.balanceUsd === "number") {
+          acc.balanceUsd += snapshot.balanceUsd
+          acc.balanceSources += 1
+        }
         if (typeof snapshot.todayCostUsd === "number") {
           acc.todayUsageUsd += snapshot.todayCostUsd
           acc.todayUsageSources += 1
@@ -65,22 +66,20 @@ export default function ApiCredentialProfilesStatsSection() {
       {
         healthyCount: 0,
         balanceUsd: 0,
+        balanceSources: 0,
         profileTelemetryCount: 0,
         todayUsageSources: 0,
         todayUsageUsd: 0,
       },
     )
-  }, [profiles])
 
-  const formatMoney = (valueUsd: number) => {
-    const value =
-      currencyType === "CNY"
-        ? valueUsd * UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
-        : valueUsd
-    return `${getCurrencySymbol(currencyType)}${getDisplayMoneyValue(
-      value,
-    ).toFixed(UI_CONSTANTS.MONEY.DECIMALS)}`
-  }
+    return {
+      ...stats,
+      balanceUsd: stats.balanceSources > 0 ? stats.balanceUsd : undefined,
+      todayUsageUsd:
+        stats.profileTelemetryCount > 0 ? stats.todayUsageUsd : undefined,
+    }
+  }, [profiles])
 
   return (
     <div className="space-y-3">
@@ -133,7 +132,9 @@ export default function ApiCredentialProfilesStatsSection() {
             {t("apiCredentialProfiles:stats.totalBalance")}
           </Caption>
           <span className="text-base font-semibold">
-            {formatMoney(telemetryStats.balanceUsd)}
+            {telemetryStats.balanceUsd === undefined
+              ? t("apiCredentialProfiles:telemetry.notProvided")
+              : formatTelemetryMoney(telemetryStats.balanceUsd, currencyType)}
           </span>
         </div>
         <div className="space-y-1">
@@ -141,10 +142,13 @@ export default function ApiCredentialProfilesStatsSection() {
             {t("apiCredentialProfiles:stats.todayUsage")}
           </Caption>
           <span className="text-base font-semibold text-emerald-600 dark:text-emerald-400">
-            {telemetryStats.profileTelemetryCount > 0 &&
+            {telemetryStats.todayUsageUsd === undefined ||
             telemetryStats.todayUsageSources === 0
               ? t("apiCredentialProfiles:telemetry.notProvided")
-              : formatMoney(telemetryStats.todayUsageUsd)}
+              : formatTelemetryMoney(
+                  telemetryStats.todayUsageUsd,
+                  currencyType,
+                )}
           </span>
         </div>
       </div>
