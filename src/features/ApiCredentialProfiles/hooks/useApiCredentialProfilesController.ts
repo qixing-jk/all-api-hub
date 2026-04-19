@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { refreshApiCredentialProfileTelemetry } from "~/services/apiCredentialProfiles/telemetry"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import { tagStorage } from "~/services/tags/tagStorage"
@@ -247,6 +248,8 @@ export function useApiCredentialProfilesController() {
     useState<ApiCredentialProfile | null>(null)
   const [cliVerifyingProfile, setCliVerifyingProfile] =
     useState<ApiCredentialProfile | null>(null)
+  const [refreshingTelemetryProfileId, setRefreshingTelemetryProfileId] =
+    useState<string | null>(null)
 
   const [ccSwitchProfile, setCCSwitchProfile] =
     useState<ApiCredentialProfile | null>(null)
@@ -326,6 +329,27 @@ export function useApiCredentialProfilesController() {
     ],
   )
 
+  const handleRefreshTelemetry = useCallback(
+    async (profile: ApiCredentialProfile) => {
+      if (refreshingTelemetryProfileId) return
+
+      setRefreshingTelemetryProfileId(profile.id)
+      try {
+        await toast.promise(refreshApiCredentialProfileTelemetry(profile.id), {
+          loading: t("apiCredentialProfiles:telemetry.messages.refreshing"),
+          success: t("apiCredentialProfiles:telemetry.messages.refreshed"),
+          error: (error) =>
+            error instanceof Error && error.message
+              ? error.message
+              : t("apiCredentialProfiles:telemetry.messages.refreshFailed"),
+        })
+      } finally {
+        setRefreshingTelemetryProfileId(null)
+      }
+    },
+    [refreshingTelemetryProfileId, t],
+  )
+
   const [deletingProfile, setDeletingProfile] =
     useState<ApiCredentialProfile | null>(null)
   const [isDeleting, setIsDeleting] = useState(false)
@@ -383,6 +407,8 @@ export function useApiCredentialProfilesController() {
     setVerifyingProfile,
     cliVerifyingProfile,
     setCliVerifyingProfile,
+    refreshingTelemetryProfileId,
+    handleRefreshTelemetry,
 
     ccSwitchProfile,
     setCCSwitchProfile,

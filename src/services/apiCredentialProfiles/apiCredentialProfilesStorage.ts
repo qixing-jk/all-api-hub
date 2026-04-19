@@ -16,6 +16,12 @@ import {
 import type {
   ApiCredentialProfile,
   ApiCredentialProfilesConfig,
+  ApiCredentialTelemetryAttempt,
+  ApiCredentialTelemetryCapabilityMode,
+  ApiCredentialTelemetryConfig,
+  ApiCredentialTelemetryCustomEndpoint,
+  ApiCredentialTelemetryJsonPathMap,
+  ApiCredentialTelemetrySnapshot,
 } from "~/types/apiCredentialProfiles"
 import { API_CREDENTIAL_PROFILES_CONFIG_VERSION } from "~/types/apiCredentialProfiles"
 import { safeRandomUUID } from "~/utils/core/identifier"
@@ -33,9 +39,23 @@ type ApiCredentialProfileCreateInput = {
   apiKey: string
   tagIds?: string[]
   notes?: string
+  telemetryConfig?: Partial<ApiCredentialTelemetryConfig>
 }
 
 type ApiCredentialProfileUpdateInput = Partial<ApiCredentialProfileCreateInput>
+
+const TELEMETRY_CAPABILITY_MODES: ApiCredentialTelemetryCapabilityMode[] = [
+  "disabled",
+  "auto",
+  "openaiBilling",
+  "newApiTokenUsage",
+  "sub2apiUsage",
+  "customReadOnlyEndpoint",
+]
+
+const DEFAULT_TELEMETRY_CONFIG: ApiCredentialTelemetryConfig = {
+  mode: "auto",
+}
 
 const createDefaultConfig = (): ApiCredentialProfilesConfig => ({
   version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
@@ -97,6 +117,286 @@ function normalizeTagIdList(input: unknown): string[] {
   }
 
   return tagIds
+}
+
+/**
+ * Coerces a numeric-like value into a finite number.
+ */
+function coerceFiniteNumber(raw: unknown): number | undefined {
+  if (typeof raw === "number" && Number.isFinite(raw)) return raw
+  if (typeof raw === "string" && raw.trim()) {
+    const parsed = Number(raw)
+    if (Number.isFinite(parsed)) return parsed
+  }
+  return undefined
+}
+
+/**
+ * Normalizes configured JSON paths for a custom telemetry endpoint.
+ */
+function coerceJsonPathMap(raw: unknown): ApiCredentialTelemetryJsonPathMap {
+  const obj =
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
+  const out: ApiCredentialTelemetryJsonPathMap = {}
+  const keys: Array<keyof ApiCredentialTelemetryJsonPathMap> = [
+    "balanceUsd",
+    "todayCostUsd",
+    "todayRequests",
+    "todayPromptTokens",
+    "todayCompletionTokens",
+    "todayTotalTokens",
+    "totalUsedUsd",
+    "totalGrantedUsd",
+    "totalAvailableUsd",
+    "expiresAt",
+  ]
+
+  for (const key of keys) {
+    const value = obj[key]
+    if (typeof value === "string" && value.trim()) {
+      out[key] = value.trim()
+    }
+  }
+
+  return out
+}
+
+/**
+ * Coerces custom endpoint telemetry config into a usable persisted shape.
+ */
+function coerceCustomEndpoint(
+  raw: unknown,
+): ApiCredentialTelemetryCustomEndpoint | undefined {
+  const obj =
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
+  const endpoint =
+    typeof obj.endpoint === "string" && obj.endpoint.trim()
+      ? obj.endpoint.trim()
+      : ""
+  const jsonPaths = coerceJsonPathMap(obj.jsonPaths)
+
+  if (!endpoint || Object.keys(jsonPaths).length === 0) {
+    return undefined
+  }
+
+  return { endpoint, jsonPaths }
+}
+
+/**
+ * Coerces profile telemetry config and falls back to automatic probing.
+ */
+export function coerceApiCredentialTelemetryConfig(
+  raw: unknown,
+): ApiCredentialTelemetryConfig {
+  const obj =
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
+  const rawMode = typeof obj.mode === "string" ? obj.mode : ""
+  const mode = TELEMETRY_CAPABILITY_MODES.includes(
+    rawMode as ApiCredentialTelemetryCapabilityMode,
+  )
+    ? (rawMode as ApiCredentialTelemetryCapabilityMode)
+    : DEFAULT_TELEMETRY_CONFIG.mode
+  const customEndpoint = coerceCustomEndpoint(obj.customEndpoint)
+
+  return {
+    mode,
+    ...(customEndpoint ? { customEndpoint } : {}),
+  }
+}
+
+/**
+ * Normalizes persisted telemetry endpoint attempts.
+ */
+function coerceTelemetryAttempts(
+  raw: unknown,
+): ApiCredentialTelemetryAttempt[] {
+  if (!Array.isArray(raw)) return []
+
+  return raw
+    .map((item): ApiCredentialTelemetryAttempt | null => {
+      if (!item || typeof item !== "object") return null
+      const candidate = item as Record<string, unknown>
+      const rawSource = candidate.source
+      const source =
+        typeof rawSource === "string" &&
+        (rawSource === "models" ||
+          TELEMETRY_CAPABILITY_MODES.includes(
+            rawSource as ApiCredentialTelemetryCapabilityMode,
+          ))
+          ? (rawSource as ApiCredentialTelemetryAttempt["source"])
+          : null
+      const endpoint =
+        typeof candidate.endpoint === "string" ? candidate.endpoint.trim() : ""
+      const rawStatus = candidate.status
+      const status =
+        rawStatus === "success" ||
+        rawStatus === "unsupported" ||
+        rawStatus === "error"
+          ? rawStatus
+          : null
+
+      if (!source || !endpoint || !status) return null
+
+      const message =
+        typeof candidate.message === "string" && candidate.message.trim()
+          ? candidate.message.trim()
+          : undefined
+
+      return {
+        source,
+        endpoint,
+        status,
+        ...(message ? { message } : {}),
+      }
+    })
+    .filter((item): item is ApiCredentialTelemetryAttempt => item !== null)
+}
+
+/**
+ * Normalizes a persisted telemetry snapshot and drops unusable snapshots.
+ */
+function coerceTelemetrySnapshot(
+  raw: unknown,
+): ApiCredentialTelemetrySnapshot | undefined {
+  const obj =
+    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
+  const lastSyncTime = coerceFiniteNumber(obj.lastSyncTime)
+  if (!lastSyncTime || lastSyncTime <= 0) return undefined
+
+  const rawHealth =
+    obj.health && typeof obj.health === "object" ? obj.health : {}
+  const healthRecord = rawHealth as Record<string, unknown>
+  const health = {
+    status:
+      healthRecord.status === "healthy" ||
+      healthRecord.status === "warning" ||
+      healthRecord.status === "error" ||
+      healthRecord.status === "unknown"
+        ? healthRecord.status
+        : "unknown",
+    ...(typeof healthRecord.reason === "string" && healthRecord.reason.trim()
+      ? { reason: healthRecord.reason.trim() }
+      : {}),
+  } as ApiCredentialTelemetrySnapshot["health"]
+
+  const rawSource = obj.source
+  const source =
+    typeof rawSource === "string" &&
+    (rawSource === "models" ||
+      TELEMETRY_CAPABILITY_MODES.includes(
+        rawSource as ApiCredentialTelemetryCapabilityMode,
+      ))
+      ? (rawSource as ApiCredentialTelemetrySnapshot["source"])
+      : undefined
+
+  const rawModels =
+    obj.models && typeof obj.models === "object"
+      ? (obj.models as Record<string, unknown>)
+      : null
+  const models =
+    rawModels &&
+    typeof rawModels.count === "number" &&
+    Number.isFinite(rawModels.count)
+      ? {
+          count: Math.max(0, Math.trunc(rawModels.count)),
+          preview: Array.isArray(rawModels.preview)
+            ? rawModels.preview
+                .filter((item): item is string => typeof item === "string")
+                .map((item) => item.trim())
+                .filter(Boolean)
+                .slice(0, 20)
+            : [],
+        }
+      : undefined
+
+  const todayPromptTokens = coerceFiniteNumber(
+    (obj.todayTokens as Record<string, unknown> | undefined)?.upload,
+  )
+  const todayCompletionTokens = coerceFiniteNumber(
+    (obj.todayTokens as Record<string, unknown> | undefined)?.download,
+  )
+
+  return {
+    health,
+    lastSyncTime,
+    ...(coerceFiniteNumber(obj.lastSuccessTime)
+      ? { lastSuccessTime: coerceFiniteNumber(obj.lastSuccessTime) }
+      : {}),
+    ...(typeof obj.lastError === "string" && obj.lastError.trim()
+      ? { lastError: obj.lastError.trim() }
+      : {}),
+    ...(source ? { source } : {}),
+    ...(coerceFiniteNumber(obj.balanceUsd) !== undefined
+      ? { balanceUsd: coerceFiniteNumber(obj.balanceUsd) }
+      : {}),
+    ...(coerceFiniteNumber(obj.todayCostUsd) !== undefined
+      ? { todayCostUsd: coerceFiniteNumber(obj.todayCostUsd) }
+      : {}),
+    ...(coerceFiniteNumber(obj.todayRequests) !== undefined
+      ? { todayRequests: coerceFiniteNumber(obj.todayRequests) }
+      : {}),
+    ...(todayPromptTokens !== undefined || todayCompletionTokens !== undefined
+      ? {
+          todayTokens: {
+            upload: todayPromptTokens ?? 0,
+            download: todayCompletionTokens ?? 0,
+          },
+        }
+      : {}),
+    ...(coerceFiniteNumber(obj.totalUsedUsd) !== undefined
+      ? { totalUsedUsd: coerceFiniteNumber(obj.totalUsedUsd) }
+      : {}),
+    ...(coerceFiniteNumber(obj.totalGrantedUsd) !== undefined
+      ? { totalGrantedUsd: coerceFiniteNumber(obj.totalGrantedUsd) }
+      : {}),
+    ...(coerceFiniteNumber(obj.totalAvailableUsd) !== undefined
+      ? { totalAvailableUsd: coerceFiniteNumber(obj.totalAvailableUsd) }
+      : {}),
+    ...(coerceFiniteNumber(obj.expiresAt) !== undefined
+      ? { expiresAt: coerceFiniteNumber(obj.expiresAt) }
+      : {}),
+    ...(models ? { models } : {}),
+    attempts: coerceTelemetryAttempts(obj.attempts),
+  }
+}
+
+/**
+ * Keeps the newest telemetry snapshot when duplicate profiles are merged.
+ */
+function mergeTelemetrySnapshot(
+  first?: ApiCredentialTelemetrySnapshot,
+  second?: ApiCredentialTelemetrySnapshot,
+): ApiCredentialTelemetrySnapshot | undefined {
+  if (!first) return second
+  if (!second) return first
+
+  const firstRank = Math.max(
+    first.lastSuccessTime ?? 0,
+    first.lastSyncTime ?? 0,
+  )
+  const secondRank = Math.max(
+    second.lastSuccessTime ?? 0,
+    second.lastSyncTime ?? 0,
+  )
+  return secondRank >= firstRank ? second : first
+}
+
+/**
+ * Preserves explicit telemetry config when duplicate profiles are merged.
+ */
+function mergeTelemetryConfig(
+  newer: ApiCredentialTelemetryConfig | undefined,
+  older: ApiCredentialTelemetryConfig | undefined,
+): ApiCredentialTelemetryConfig {
+  const normalizedNewer = coerceApiCredentialTelemetryConfig(newer)
+  const normalizedOlder = coerceApiCredentialTelemetryConfig(older)
+  if (normalizedNewer.mode !== DEFAULT_TELEMETRY_CONFIG.mode) {
+    return normalizedNewer
+  }
+  if (normalizedOlder.mode !== DEFAULT_TELEMETRY_CONFIG.mode) {
+    return normalizedOlder
+  }
+  return normalizedNewer
 }
 
 /**
@@ -165,6 +465,14 @@ function dedupeProfiles(profiles: ApiCredentialProfile[]): {
       createdAt:
         Math.min(newer.createdAt || 0, older.createdAt || 0) || newer.createdAt,
       tagIds: mergedTagIds,
+      telemetryConfig: mergeTelemetryConfig(
+        newer.telemetryConfig,
+        older.telemetryConfig,
+      ),
+      telemetrySnapshot: mergeTelemetrySnapshot(
+        newer.telemetrySnapshot,
+        older.telemetrySnapshot,
+      ),
     })
   }
 
@@ -231,6 +539,10 @@ export function coerceApiCredentialProfilesConfig(
       apiKey,
       tagIds,
       notes: notes.trim(),
+      telemetryConfig: coerceApiCredentialTelemetryConfig(
+        candidate.telemetryConfig,
+      ),
+      telemetrySnapshot: coerceTelemetrySnapshot(candidate.telemetrySnapshot),
       createdAt,
       updatedAt,
     })
@@ -404,6 +716,9 @@ class ApiCredentialProfilesStorageService {
       apiKey: normalizedKey,
       tagIds: normalizeTagIdList(input.tagIds),
       notes: typeof input.notes === "string" ? input.notes.trim() : "",
+      telemetryConfig: coerceApiCredentialTelemetryConfig(
+        input.telemetryConfig,
+      ),
       createdAt: now,
       updatedAt: now,
     }
@@ -493,6 +808,16 @@ class ApiCredentialProfilesStorageService {
           typeof updates.notes === "string"
             ? updates.notes.trim()
             : current.notes,
+        telemetryConfig:
+          updates.telemetryConfig !== undefined
+            ? coerceApiCredentialTelemetryConfig(updates.telemetryConfig)
+            : current.telemetryConfig,
+        telemetrySnapshot:
+          nextApiType !== current.apiType ||
+          nextBaseUrl !== current.baseUrl ||
+          nextApiKey !== current.apiKey
+            ? undefined
+            : current.telemetrySnapshot,
         updatedAt: Date.now(),
       }
 
@@ -523,6 +848,40 @@ class ApiCredentialProfilesStorageService {
       }
 
       return next
+    })
+  }
+
+  /**
+   * Persist the latest read-only telemetry query snapshot for a profile.
+   */
+  async updateTelemetrySnapshot(
+    id: string,
+    snapshot: ApiCredentialTelemetrySnapshot,
+  ): Promise<ApiCredentialProfile> {
+    return this.withStorageWriteLock(async () => {
+      const config = cloneConfig(await this.readConfig())
+      const profiles = Array.isArray(config.profiles) ? config.profiles : []
+      const index = profiles.findIndex((profile) => profile.id === id)
+      if (index === -1) {
+        throw new Error("Profile not found.")
+      }
+
+      const nextProfile: ApiCredentialProfile = {
+        ...profiles[index],
+        telemetrySnapshot: coerceTelemetrySnapshot(snapshot) ?? snapshot,
+      }
+
+      const nextProfiles = profiles.map((profile) =>
+        profile.id === id ? nextProfile : profile,
+      )
+
+      await this.saveConfig({
+        version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+        profiles: nextProfiles,
+        lastUpdated: Date.now(),
+      })
+
+      return nextProfile
     })
   }
 

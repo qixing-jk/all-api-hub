@@ -6,7 +6,7 @@ import { cn } from "~/lib/utils"
 type ClearableFieldValue = string | number | readonly string[] | undefined
 
 /**
- *
+ * Converts supported input values into a string for emptiness checks.
  */
 function getClearableFieldValue(value: ClearableFieldValue) {
   if (typeof value === "string" || typeof value === "number") {
@@ -26,7 +26,7 @@ interface ClearableFieldButtonProps
 }
 
 /**
- *
+ * Renders the compact clear button used by clearable form fields.
  */
 function ClearableFieldButton({
   className,

@@ -1,9 +1,79 @@
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
+import type { HealthStatus, TokenUsage } from "~/types"
 
 /**
  * Current schema version for the API credential profiles storage payload.
  */
-export const API_CREDENTIAL_PROFILES_CONFIG_VERSION = 2
+export const API_CREDENTIAL_PROFILES_CONFIG_VERSION = 3
+
+export type ApiCredentialTelemetryCapabilityMode =
+  | "disabled"
+  | "auto"
+  | "openaiBilling"
+  | "newApiTokenUsage"
+  | "sub2apiUsage"
+  | "customReadOnlyEndpoint"
+
+export type ApiCredentialTelemetryJsonPathMap = {
+  balanceUsd?: string
+  todayCostUsd?: string
+  todayRequests?: string
+  todayPromptTokens?: string
+  todayCompletionTokens?: string
+  todayTotalTokens?: string
+  totalUsedUsd?: string
+  totalGrantedUsd?: string
+  totalAvailableUsd?: string
+  expiresAt?: string
+}
+
+export type ApiCredentialTelemetryCustomEndpoint = {
+  /**
+   * Read-only endpoint path or URL under the profile base URL origin.
+   */
+  endpoint: string
+  jsonPaths: ApiCredentialTelemetryJsonPathMap
+}
+
+export type ApiCredentialTelemetryConfig = {
+  mode: ApiCredentialTelemetryCapabilityMode
+  customEndpoint?: ApiCredentialTelemetryCustomEndpoint
+}
+
+export type ApiCredentialTelemetryAttemptStatus =
+  | "success"
+  | "unsupported"
+  | "error"
+
+export type ApiCredentialTelemetryAttempt = {
+  source: ApiCredentialTelemetryCapabilityMode | "models"
+  endpoint: string
+  status: ApiCredentialTelemetryAttemptStatus
+  message?: string
+}
+
+export type ApiCredentialModelTelemetry = {
+  count: number
+  preview: string[]
+}
+
+export type ApiCredentialTelemetrySnapshot = {
+  health: HealthStatus
+  lastSyncTime: number
+  lastSuccessTime?: number
+  lastError?: string
+  source?: ApiCredentialTelemetryCapabilityMode | "models"
+  balanceUsd?: number
+  todayCostUsd?: number
+  todayRequests?: number
+  todayTokens?: TokenUsage
+  totalUsedUsd?: number
+  totalGrantedUsd?: number
+  totalAvailableUsd?: number
+  expiresAt?: number
+  models?: ApiCredentialModelTelemetry
+  attempts: ApiCredentialTelemetryAttempt[]
+}
 
 /**
  * Standalone persisted API credential bundle (baseUrl + apiKey) that is not tied
@@ -29,6 +99,8 @@ export type ApiCredentialProfile = {
    */
   tagIds: string[]
   notes: string
+  telemetryConfig?: ApiCredentialTelemetryConfig
+  telemetrySnapshot?: ApiCredentialTelemetrySnapshot
   createdAt: number
   updatedAt: number
 }

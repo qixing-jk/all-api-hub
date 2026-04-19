@@ -8,6 +8,8 @@ import {
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { API_CREDENTIAL_PROFILES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { SiteHealthStatus } from "~/types"
+import { API_CREDENTIAL_PROFILES_CONFIG_VERSION } from "~/types/apiCredentialProfiles"
 
 const storageData = new Map<string, any>()
 
@@ -161,7 +163,7 @@ describe("apiCredentialProfilesStorage additional flows", () => {
       { now: 54321 },
     )
 
-    expect(coerced.version).toBe(2)
+    expect(coerced.version).toBe(API_CREDENTIAL_PROFILES_CONFIG_VERSION)
     expect(coerced.lastUpdated).toBe(54321)
     expect(coerced.profiles).toEqual([
       expect.objectContaining({
@@ -235,6 +237,143 @@ describe("apiCredentialProfilesStorage additional flows", () => {
     ).toEqual(
       expect.objectContaining({
         tagIds: ["remote", "local"],
+      }),
+    )
+  })
+
+  it("coerces telemetry config and snapshot fields for backup compatibility", () => {
+    const coerced = coerceApiCredentialProfilesConfig(
+      {
+        profiles: [
+          {
+            id: "profile-1",
+            name: "Profile",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-1",
+            telemetryConfig: {
+              mode: "customReadOnlyEndpoint",
+              customEndpoint: {
+                endpoint: "/usage",
+                jsonPaths: {
+                  balanceUsd: "data.balance",
+                  todayRequests: "data.today.requests",
+                },
+              },
+            },
+            telemetrySnapshot: {
+              health: { status: SiteHealthStatus.Healthy },
+              lastSyncTime: 1000,
+              lastSuccessTime: 1000,
+              balanceUsd: "12.5",
+              todayTokens: { upload: "100", download: 50 },
+              models: { count: 2, preview: ["gpt-4o", "", 1] },
+              attempts: [
+                {
+                  source: "newApiTokenUsage",
+                  endpoint: "/api/usage/token/",
+                  status: "success",
+                  message: "ok",
+                },
+              ],
+            },
+          },
+        ],
+      },
+      { now: 12345 },
+    )
+
+    expect(coerced.profiles[0]).toEqual(
+      expect.objectContaining({
+        telemetryConfig: {
+          mode: "customReadOnlyEndpoint",
+          customEndpoint: {
+            endpoint: "/usage",
+            jsonPaths: {
+              balanceUsd: "data.balance",
+              todayRequests: "data.today.requests",
+            },
+          },
+        },
+        telemetrySnapshot: expect.objectContaining({
+          lastSyncTime: 1000,
+          balanceUsd: 12.5,
+          todayTokens: { upload: 100, download: 50 },
+          models: { count: 2, preview: ["gpt-4o"] },
+          attempts: [
+            {
+              source: "newApiTokenUsage",
+              endpoint: "/api/usage/token/",
+              status: "success",
+              message: "ok",
+            },
+          ],
+        }),
+      }),
+    )
+  })
+
+  it("merges telemetry snapshots by newest successful query without changing identity winner", () => {
+    const merged = mergeApiCredentialProfilesConfigs({
+      now: 67890,
+      local: {
+        version: 2,
+        lastUpdated: 1,
+        profiles: [
+          {
+            id: "local-1",
+            name: "Local",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-1",
+            tagIds: ["local"],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 10,
+            telemetryConfig: { mode: "auto" },
+            telemetrySnapshot: {
+              health: { status: SiteHealthStatus.Healthy },
+              lastSyncTime: 5000,
+              lastSuccessTime: 5000,
+              balanceUsd: 1,
+              attempts: [],
+            },
+          },
+        ],
+      },
+      incoming: {
+        version: 2,
+        lastUpdated: 2,
+        profiles: [
+          {
+            id: "incoming-1",
+            name: "Incoming",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-1",
+            tagIds: ["remote"],
+            notes: "",
+            createdAt: 2,
+            updatedAt: 20,
+            telemetryConfig: { mode: "newApiTokenUsage" },
+            telemetrySnapshot: {
+              health: { status: SiteHealthStatus.Healthy },
+              lastSyncTime: 9000,
+              lastSuccessTime: 9000,
+              balanceUsd: 9,
+              attempts: [],
+            },
+          },
+        ],
+      },
+    })
+
+    expect(merged.profiles).toHaveLength(1)
+    expect(merged.profiles[0]).toEqual(
+      expect.objectContaining({
+        id: "incoming-1",
+        telemetryConfig: { mode: "newApiTokenUsage" },
+        telemetrySnapshot: expect.objectContaining({ balanceUsd: 9 }),
       }),
     )
   })
@@ -492,7 +631,7 @@ describe("apiCredentialProfilesStorage additional flows", () => {
     const config = await apiCredentialProfilesStorage.getConfig()
 
     expect(config).toEqual({
-      version: 2,
+      version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
       profiles: [],
       lastUpdated: Date.now(),
     })
