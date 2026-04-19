@@ -271,6 +271,8 @@ export function ApiCredentialProfileListItem({
                         health?.status,
                       )}`}
                       title={healthTitle}
+                      aria-label={healthTitle}
+                      role="img"
                     />
                     <span className="dark:text-dark-text-secondary text-xs font-medium text-gray-700">
                       {t("apiCredentialProfiles:telemetry.title")}

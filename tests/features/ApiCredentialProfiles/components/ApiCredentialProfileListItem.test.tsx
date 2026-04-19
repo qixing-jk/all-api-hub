@@ -3,7 +3,36 @@ import { describe, expect, it, vi } from "vitest"
 import { ApiCredentialProfileListItem } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfileListItem"
 import { SiteHealthStatus } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { render, screen } from "~~/tests/test-utils/render"
+import { fireEvent, render, screen } from "~~/tests/test-utils/render"
+
+vi.mock("react-i18next", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-i18next")>()
+
+  return {
+    ...actual,
+    useTranslation: () => ({
+      t: (key: string, options?: { count?: number }) => {
+        if (key === "common:quota.unlimited") return "Unlimited"
+        if (key === "apiCredentialProfiles:telemetry.notProvided") {
+          return "Not provided"
+        }
+        if (key === "apiCredentialProfiles:telemetry.modelCount") {
+          return `${options?.count ?? 0} models`
+        }
+        if (key === "account:healthStatus.warning") return "Warning"
+        if (key === "account:healthStatus.healthy") return "Healthy"
+        if (key === "apiCredentialProfiles:telemetry.health") return "Health"
+        if (key === "apiCredentialProfiles:telemetry.actions.refresh") {
+          return "Refresh telemetry"
+        }
+        if (key === "apiCredentialProfiles:telemetry.refreshing") {
+          return "Refreshing telemetry"
+        }
+        return key
+      },
+    }),
+  }
+})
 
 vi.mock(
   "~/components/dialogs/VerifyApiDialog/VerificationHistorySummary",
@@ -92,7 +121,14 @@ function buildProfile(
   }
 }
 
-function renderListItem(profile: ApiCredentialProfile) {
+function renderListItem(
+  profile: ApiCredentialProfile,
+  overrides: {
+    isTelemetryRefreshing?: boolean
+    onRefreshTelemetry?: (profile: ApiCredentialProfile) => void
+  } = {},
+) {
+  const onRefreshTelemetry = overrides.onRefreshTelemetry ?? vi.fn()
   return render(
     <ApiCredentialProfileListItem
       profile={profile}
@@ -106,11 +142,11 @@ function renderListItem(profile: ApiCredentialProfile) {
       onOpenModelManagement={vi.fn()}
       onVerify={vi.fn()}
       onVerifyCliSupport={vi.fn()}
-      onRefreshTelemetry={vi.fn()}
+      onRefreshTelemetry={onRefreshTelemetry}
       onEdit={vi.fn()}
       onDelete={vi.fn()}
       onExport={vi.fn()}
-      isTelemetryRefreshing={false}
+      isTelemetryRefreshing={overrides.isTelemetryRefreshing ?? false}
       managedSiteType="new-api"
       managedSiteLabel="New API"
     />,
@@ -128,13 +164,13 @@ describe("ApiCredentialProfileListItem", () => {
 
     expect(
       screen.getByTestId("api-credential-telemetry-balance"),
-    ).toHaveTextContent("common:quota.unlimited")
+    ).toHaveTextContent("Unlimited")
     expect(
       screen.getByTestId("api-credential-telemetry-today-usage"),
-    ).toHaveTextContent("apiCredentialProfiles:telemetry.notProvided")
+    ).toHaveTextContent("Not provided")
     expect(
       screen.getByTestId("api-credential-telemetry-today-requests"),
-    ).toHaveTextContent("apiCredentialProfiles:telemetry.notProvided")
+    ).toHaveTextContent("Not provided")
   })
 
   it("explicitly marks missing balance from a successful usage source as not provided", () => {
@@ -153,7 +189,7 @@ describe("ApiCredentialProfileListItem", () => {
 
     expect(
       screen.getByTestId("api-credential-telemetry-balance"),
-    ).toHaveTextContent("apiCredentialProfiles:telemetry.notProvided")
+    ).toHaveTextContent("Not provided")
   })
 
   it("uses not provided fallbacks for model-only refreshed snapshots", () => {
@@ -171,16 +207,16 @@ describe("ApiCredentialProfileListItem", () => {
 
     expect(
       screen.getByTestId("api-credential-telemetry-balance"),
-    ).toHaveTextContent("apiCredentialProfiles:telemetry.notProvided")
+    ).toHaveTextContent("Not provided")
     expect(
       screen.getByTestId("api-credential-telemetry-today-usage"),
-    ).toHaveTextContent("apiCredentialProfiles:telemetry.notProvided")
+    ).toHaveTextContent("Not provided")
     expect(
       screen.getByTestId("api-credential-telemetry-today-requests"),
-    ).toHaveTextContent("apiCredentialProfiles:telemetry.notProvided")
+    ).toHaveTextContent("Not provided")
     expect(
       screen.getByTestId("api-credential-telemetry-models"),
-    ).toHaveTextContent("apiCredentialProfiles:telemetry.modelCount")
+    ).toHaveTextContent("2 models")
   })
 
   it("renders dash fallbacks when telemetry has never been refreshed", () => {
@@ -200,7 +236,7 @@ describe("ApiCredentialProfileListItem", () => {
     ).toHaveTextContent("-")
   })
 
-  it("uses localized health status text in the telemetry tooltip", () => {
+  it("exposes localized health status text accessibly", () => {
     renderListItem(
       buildProfile({
         telemetrySnapshot: {
@@ -215,7 +251,47 @@ describe("ApiCredentialProfileListItem", () => {
     )
 
     expect(
-      document.querySelector('[title*="account:healthStatus.warning"]'),
-    ).toBeInTheDocument()
+      screen.getByLabelText("Health: Warning: quota is low"),
+    ).toHaveAttribute("role", "img")
+  })
+
+  it("wires the telemetry refresh button and reflects the refreshing state", () => {
+    const onRefreshTelemetry = vi.fn()
+
+    const { rerender } = renderListItem(buildProfile(), { onRefreshTelemetry })
+
+    fireEvent.click(screen.getByRole("button", { name: "Refresh telemetry" }))
+
+    expect(onRefreshTelemetry).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "profile-1" }),
+    )
+
+    rerender(
+      <ApiCredentialProfileListItem
+        profile={buildProfile()}
+        verificationSummary={null}
+        tagNames={[]}
+        visibleKeys={new Set()}
+        toggleKeyVisibility={vi.fn()}
+        onCopyBaseUrl={vi.fn()}
+        onCopyApiKey={vi.fn()}
+        onCopyBundle={vi.fn()}
+        onOpenModelManagement={vi.fn()}
+        onVerify={vi.fn()}
+        onVerifyCliSupport={vi.fn()}
+        onRefreshTelemetry={onRefreshTelemetry}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+        onExport={vi.fn()}
+        isTelemetryRefreshing
+        managedSiteType="new-api"
+        managedSiteLabel="New API"
+      />,
+    )
+
+    expect(
+      screen.getByRole("button", { name: "Refresh telemetry" }),
+    ).toBeDisabled()
+    expect(screen.getByText("Refreshing telemetry")).toBeInTheDocument()
   })
 })

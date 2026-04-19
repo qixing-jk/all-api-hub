@@ -109,13 +109,19 @@ function buildProfile(): ApiCredentialProfile {
 }
 
 describe("useApiCredentialProfilesController", () => {
-  it("guards telemetry refreshes synchronously and localizes errors", async () => {
+  it("allows concurrent refreshes for different profiles and localizes errors", async () => {
     tagStorageListTagsMock.mockResolvedValue([])
-    let resolveRefresh: (() => void) | undefined
-    const refreshPromise = new Promise<void>((resolve) => {
-      resolveRefresh = resolve
+    let resolveFirstRefresh: (() => void) | undefined
+    let resolveSecondRefresh: (() => void) | undefined
+    const firstRefreshPromise = new Promise<void>((resolve) => {
+      resolveFirstRefresh = resolve
     })
-    refreshTelemetryMock.mockReturnValue(refreshPromise)
+    const secondRefreshPromise = new Promise<void>((resolve) => {
+      resolveSecondRefresh = resolve
+    })
+    refreshTelemetryMock
+      .mockReturnValueOnce(firstRefreshPromise)
+      .mockReturnValueOnce(secondRefreshPromise)
     toastPromiseMock.mockImplementation(
       async (
         promise: Promise<unknown>,
@@ -133,22 +139,40 @@ describe("useApiCredentialProfilesController", () => {
       withThemeProvider: false,
       withUserPreferencesProvider: false,
     })
-    const profile = buildProfile()
+    const firstProfile = buildProfile()
+    const secondProfile = buildProfile()
+    secondProfile.id = "profile-2"
 
     let firstRefresh!: Promise<void>
+    let duplicateRefresh!: Promise<void>
+    let secondRefresh!: Promise<void>
     await act(async () => {
-      firstRefresh = result.current.handleRefreshTelemetry(profile)
-      await result.current.handleRefreshTelemetry(profile)
+      firstRefresh = result.current.handleRefreshTelemetry(firstProfile)
+      duplicateRefresh = result.current.handleRefreshTelemetry(firstProfile)
+      secondRefresh = result.current.handleRefreshTelemetry(secondProfile)
     })
 
-    expect(refreshTelemetryMock).toHaveBeenCalledTimes(1)
-    expect(result.current.refreshingTelemetryProfileId).toBe("profile-1")
+    expect(refreshTelemetryMock).toHaveBeenCalledTimes(2)
+    expect(refreshTelemetryMock).toHaveBeenNthCalledWith(1, "profile-1")
+    expect(refreshTelemetryMock).toHaveBeenNthCalledWith(2, "profile-2")
+    expect(result.current.refreshingTelemetryProfileIds).toEqual([
+      "profile-1",
+      "profile-2",
+    ])
 
     await act(async () => {
-      resolveRefresh?.()
+      resolveFirstRefresh?.()
       await firstRefresh
+      await duplicateRefresh
     })
 
-    expect(result.current.refreshingTelemetryProfileId).toBeNull()
+    expect(result.current.refreshingTelemetryProfileIds).toEqual(["profile-2"])
+
+    await act(async () => {
+      resolveSecondRefresh?.()
+      await secondRefresh
+    })
+
+    expect(result.current.refreshingTelemetryProfileIds).toEqual([])
   })
 })

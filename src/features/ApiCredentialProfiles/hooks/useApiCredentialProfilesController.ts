@@ -251,9 +251,9 @@ export function useApiCredentialProfilesController() {
     useState<ApiCredentialProfile | null>(null)
   const [cliVerifyingProfile, setCliVerifyingProfile] =
     useState<ApiCredentialProfile | null>(null)
-  const refreshingTelemetryProfileIdRef = useRef<string | null>(null)
-  const [refreshingTelemetryProfileId, setRefreshingTelemetryProfileId] =
-    useState<string | null>(null)
+  const refreshingTelemetryProfileIdsRef = useRef(new Set<string>())
+  const [refreshingTelemetryProfileIds, setRefreshingTelemetryProfileIds] =
+    useState<string[]>([])
 
   const [ccSwitchProfile, setCCSwitchProfile] =
     useState<ApiCredentialProfile | null>(null)
@@ -335,10 +335,12 @@ export function useApiCredentialProfilesController() {
 
   const handleRefreshTelemetry = useCallback(
     async (profile: ApiCredentialProfile) => {
-      if (refreshingTelemetryProfileIdRef.current) return
+      if (refreshingTelemetryProfileIdsRef.current.has(profile.id)) return
 
-      refreshingTelemetryProfileIdRef.current = profile.id
-      setRefreshingTelemetryProfileId(profile.id)
+      refreshingTelemetryProfileIdsRef.current.add(profile.id)
+      setRefreshingTelemetryProfileIds([
+        ...refreshingTelemetryProfileIdsRef.current,
+      ])
       try {
         await toast.promise(refreshApiCredentialProfileTelemetry(profile.id), {
           loading: t("apiCredentialProfiles:telemetry.messages.refreshing"),
@@ -349,8 +351,10 @@ export function useApiCredentialProfilesController() {
           },
         })
       } finally {
-        refreshingTelemetryProfileIdRef.current = null
-        setRefreshingTelemetryProfileId(null)
+        refreshingTelemetryProfileIdsRef.current.delete(profile.id)
+        setRefreshingTelemetryProfileIds([
+          ...refreshingTelemetryProfileIdsRef.current,
+        ])
       }
     },
     [t],
@@ -413,7 +417,7 @@ export function useApiCredentialProfilesController() {
     setVerifyingProfile,
     cliVerifyingProfile,
     setCliVerifyingProfile,
-    refreshingTelemetryProfileId,
+    refreshingTelemetryProfileIds,
     handleRefreshTelemetry,
 
     ccSwitchProfile,

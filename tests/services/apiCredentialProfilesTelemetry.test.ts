@@ -5,8 +5,10 @@ import { refreshApiCredentialProfileTelemetry } from "~/services/apiCredentialPr
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { SiteHealthStatus } from "~/types"
 
-const storageData = new Map<string, any>()
-const fetchApiCredentialModelIdsMock = vi.fn()
+const { fetchApiCredentialModelIdsMock, storageData } = vi.hoisted(() => ({
+  fetchApiCredentialModelIdsMock: vi.fn(),
+  storageData: new Map<string, any>(),
+}))
 
 vi.mock("@plasmohq/storage", () => {
   class Storage {
@@ -292,7 +294,7 @@ describe("api credential profile telemetry", () => {
     )
   })
 
-  it("does not treat huge OpenAI billing hard limits as real balance", async () => {
+  it("preserves total usage when huge OpenAI billing hard limits are sentinel values", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "Gateway",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -323,14 +325,15 @@ describe("api credential profile telemetry", () => {
 
     const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
 
-    expect(snapshot.source).toBeUndefined()
+    expect(snapshot.source).toBe("openaiBilling")
     expect(snapshot.balanceUsd).toBeUndefined()
     expect(snapshot.totalGrantedUsd).toBeUndefined()
+    expect(snapshot.totalUsedUsd).toBe(1.88131)
     expect(snapshot.attempts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           source: "openaiBilling",
-          status: "unsupported",
+          status: "success",
         }),
       ]),
     )
@@ -443,5 +446,45 @@ describe("api credential profile telemetry", () => {
     expect(customAttempt?.endpoint).not.toContain("sk-custom-query")
     expect(customAttempt?.endpoint).not.toContain("secret-cursor")
     expect(customAttempt?.endpoint).toContain("REDACTED")
+  })
+
+  it("persists an error attempt when the custom endpoint string is malformed", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "Malformed Custom Endpoint",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://custom-malformed.example.com",
+      apiKey: "sk-malformed",
+      telemetryConfig: {
+        mode: "customReadOnlyEndpoint",
+        customEndpoint: {
+          endpoint: "http://%",
+          jsonPaths: {
+            balanceUsd: "balance",
+          },
+        },
+      },
+    })
+
+    fetchApiCredentialModelIdsMock.mockRejectedValueOnce(
+      new Error("models failed"),
+    )
+    vi.stubGlobal("fetch", vi.fn())
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot.health).toEqual({
+      reason: "models failed",
+      status: SiteHealthStatus.Warning,
+    })
+    expect(snapshot.attempts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          endpoint: "http://%",
+          message: expect.stringContaining("Invalid URL"),
+          source: "customReadOnlyEndpoint",
+          status: "error",
+        }),
+      ]),
+    )
   })
 })

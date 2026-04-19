@@ -151,13 +151,17 @@ function sanitizeTelemetryEndpoint(
   secrets: string[],
 ): string {
   const redactedEndpoint = toSanitizedErrorSummary(endpoint, secrets)
-  const parsed = new URL(redactedEndpoint, "https://telemetry.local")
+  try {
+    const parsed = new URL(redactedEndpoint, "https://telemetry.local")
 
-  for (const key of Array.from(parsed.searchParams.keys())) {
-    parsed.searchParams.set(key, REDACTED_QUERY_VALUE)
+    for (const key of Array.from(parsed.searchParams.keys())) {
+      parsed.searchParams.set(key, REDACTED_QUERY_VALUE)
+    }
+
+    return `${parsed.pathname}${parsed.search}`
+  } catch {
+    return redactedEndpoint
   }
-
-  return `${parsed.pathname}${parsed.search}`
 }
 
 /**
@@ -303,7 +307,7 @@ function parseOpenAiBillingUsage(
     hardLimit !== undefined &&
     hardLimit >= OPENAI_BILLING_LIMIT_BALANCE_MAX_USD
   ) {
-    return {}
+    return usedUsd !== undefined ? { totalUsedUsd: usedUsd } : {}
   }
 
   return {

@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   formatMoneyFixed,
+  formatTelemetryMoney,
   getDisplayMoneyValue,
   normalizeMoneyForDisplay,
 } from "~/utils/core/money"
@@ -48,5 +49,15 @@ describe("money utils", () => {
 
   it("formatMoneyFixed should honor custom decimals for rounded integer output", () => {
     expect(formatMoneyFixed(12.6, { decimals: 0, minNonZero: 0.01 })).toBe("13")
+  })
+
+  it("formatTelemetryMoney should return fallback text for invalid values", () => {
+    expect(formatTelemetryMoney(undefined, "USD")).toBe("-")
+    expect(formatTelemetryMoney(Number.NaN, "USD")).toBe("-")
+  })
+
+  it("formatTelemetryMoney should format USD and CNY values", () => {
+    expect(formatTelemetryMoney(12.345, "USD")).toBe("$12.35")
+    expect(formatTelemetryMoney(1, "CNY")).toMatch(/^¥/)
   })
 })

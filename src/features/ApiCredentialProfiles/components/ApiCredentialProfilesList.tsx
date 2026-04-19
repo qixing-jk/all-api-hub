@@ -37,9 +37,9 @@ export function ApiCredentialProfilesList({
           onOpenModelManagement={controller.handleOpenModelManagement}
           onRefreshTelemetry={controller.handleRefreshTelemetry}
           onExport={controller.handleExport}
-          isTelemetryRefreshing={
-            controller.refreshingTelemetryProfileId === profile.id
-          }
+          isTelemetryRefreshing={controller.refreshingTelemetryProfileIds.includes(
+            profile.id,
+          )}
           managedSiteType={controller.managedSiteType}
           managedSiteLabel={controller.managedSiteLabel}
           onVerify={(p) => controller.setVerifyingProfile(p)}
