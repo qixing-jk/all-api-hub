@@ -4,8 +4,10 @@ import {
   coerceApiCredentialTelemetryConfig,
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { fetchApiCredentialModelIds } from "~/services/apiCredentialProfiles/modelCatalog"
+import { ApiError } from "~/services/apiService/common/errors"
+import { fetchApi } from "~/services/apiService/common/utils"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
-import { SiteHealthStatus } from "~/types"
+import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type {
   ApiCredentialProfile,
   ApiCredentialTelemetryAttempt,
@@ -15,7 +17,6 @@ import type {
   ApiCredentialTelemetrySnapshot,
 } from "~/types/apiCredentialProfiles"
 import { getErrorMessage } from "~/utils/core/error"
-import { joinUrl } from "~/utils/core/url"
 
 type TelemetryPatch = Partial<
   Pick<
@@ -129,34 +130,6 @@ function getPathValue(input: unknown, path: string): unknown {
 }
 
 /**
- * Classifies non-JSON response bodies before JSON parsing.
- */
-function classifyBodyIssue(contentType: string, text: string): string | null {
-  const trimmed = text.trim()
-  if (!trimmed) return "Empty response"
-
-  const lowerContentType = contentType.toLowerCase()
-  const lowerText = trimmed.slice(0, 500).toLowerCase()
-  const looksHtml =
-    lowerContentType.includes("text/html") ||
-    lowerContentType.includes("application/xhtml+xml") ||
-    lowerText.startsWith("<!doctype html") ||
-    lowerText.startsWith("<html") ||
-    lowerText.includes("cloudflare") ||
-    lowerText.includes("cf-ray") ||
-    lowerText.includes("waf")
-
-  if (looksHtml) {
-    if (lowerText.includes("cloudflare") || lowerText.includes("cf-ray")) {
-      return "Cloudflare or origin protection returned HTML"
-    }
-    return "HTML response, likely WAF or unsupported endpoint"
-  }
-
-  return null
-}
-
-/**
  * Fetches a read-only telemetry endpoint with bearer-token authentication.
  */
 async function fetchJson(params: {
@@ -164,48 +137,49 @@ async function fetchJson(params: {
   endpoint: string
   apiKey: string
 }): Promise<JsonFetchResult> {
-  const url = joinUrl(params.baseUrl, params.endpoint)
-  let response: Response
-
   try {
-    response = await fetch(url, {
-      method: "GET",
-      headers: {
-        Accept: "application/json",
-        Authorization: `Bearer ${params.apiKey}`,
+    const json = await fetchApi<unknown>(
+      {
+        baseUrl: params.baseUrl,
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: params.apiKey,
+        },
       },
-    })
+      {
+        endpoint: params.endpoint,
+        options: {
+          method: "GET",
+          headers: {
+            Accept: "application/json",
+          },
+        },
+      },
+      true,
+    )
+
+    return {
+      endpoint: params.endpoint,
+      json,
+    }
   } catch (error) {
+    if (error instanceof ApiError) {
+      throw new TelemetryEndpointError(
+        error.message,
+        error.endpoint ?? params.endpoint,
+        error.statusCode,
+        error.statusCode === 404 || error.statusCode === 405,
+      )
+    }
+
+    if (error instanceof SyntaxError) {
+      throw new TelemetryEndpointError("Non-JSON response", params.endpoint)
+    }
+
     throw new TelemetryEndpointError(
       `Network request failed: ${getErrorMessage(error)}`,
       params.endpoint,
     )
-  }
-
-  const contentType = response.headers.get("content-type") ?? ""
-  const text = await response.text()
-  const bodyIssue = classifyBodyIssue(contentType, text)
-
-  if (!response.ok) {
-    throw new TelemetryEndpointError(
-      bodyIssue ?? `HTTP ${response.status}`,
-      params.endpoint,
-      response.status,
-      response.status === 404 || response.status === 405,
-    )
-  }
-
-  if (bodyIssue) {
-    throw new TelemetryEndpointError(bodyIssue, params.endpoint)
-  }
-
-  try {
-    return {
-      endpoint: params.endpoint,
-      json: JSON.parse(text),
-    }
-  } catch {
-    throw new TelemetryEndpointError("Non-JSON response", params.endpoint)
   }
 }
 

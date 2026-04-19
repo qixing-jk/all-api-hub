@@ -164,6 +164,46 @@ describe("apiService common fetchApi helpers", () => {
     expect(result).toEqual(data)
   })
 
+  it("fetchApiData merges custom headers without dropping auth headers", async () => {
+    let capturedAccept: string | null = null
+    let capturedAuthorization: string | null = null
+
+    server.use(
+      http.get(API_URL, ({ request }) => {
+        capturedAccept = request.headers.get("accept")
+        capturedAuthorization = request.headers.get("authorization")
+        return HttpResponse.json({
+          success: true,
+          data: { ok: true },
+          message: "ok",
+        })
+      }),
+    )
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: "token",
+          },
+        },
+        {
+          endpoint: ENDPOINT,
+          options: {
+            headers: {
+              Accept: "application/json",
+            },
+          },
+        },
+      ),
+    ).resolves.toEqual({ ok: true })
+
+    expect(capturedAccept).toBe("application/json")
+    expect(capturedAuthorization).toBe("Bearer token")
+  })
+
   it("fetchApiData applies the site API limiter with a normalized origin key", async () => {
     server.use(
       http.get(/^https:\/\/example\.com\/base\//, () => {

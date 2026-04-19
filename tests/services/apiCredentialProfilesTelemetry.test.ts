@@ -201,7 +201,7 @@ describe("api credential profile telemetry", () => {
     expect(snapshot.unlimitedQuota).toBeUndefined()
   })
 
-  it("falls through auto presets and classifies HTML/WAF responses", async () => {
+  it("falls through auto presets after unsupported usage endpoint responses", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "Auto",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -213,8 +213,8 @@ describe("api credential profile telemetry", () => {
     const fetchMock = vi
       .fn()
       .mockResolvedValueOnce(
-        new Response("<!doctype html><title>Cloudflare</title>", {
-          status: 403,
+        new Response("<!doctype html><title>Not found</title>", {
+          status: 404,
           headers: { "content-type": "text/html" },
         }),
       )
@@ -236,8 +236,7 @@ describe("api credential profile telemetry", () => {
       expect.arrayContaining([
         expect.objectContaining({
           source: "newApiTokenUsage",
-          status: "error",
-          message: expect.stringContaining("Cloudflare"),
+          status: "unsupported",
         }),
         expect.objectContaining({
           source: "sub2apiUsage",

@@ -171,6 +171,10 @@ const createBaseRequest = (
   options: RequestInit = {},
 ): RequestInit => {
   const method = (options.method ?? "GET").toUpperCase()
+  const requestOptions = { ...options }
+  delete requestOptions.credentials
+  delete requestOptions.headers
+  delete requestOptions.method
 
   const defaultHeaders: HeadersInit = {
     ...headers,
@@ -185,7 +189,7 @@ const createBaseRequest = (
       ...(options.headers || {}), // 用户自定义 headers 可覆盖默认值
     },
     credentials,
-    ...options,
+    ...requestOptions,
   }
 }
 
