@@ -172,6 +172,9 @@ export function ApiCredentialProfileListItem({
   ])
   const { currencyType } = useUserPreferencesContext()
   const telemetry = profile.telemetrySnapshot
+  const missingTelemetryValue = telemetry?.source
+    ? t("apiCredentialProfiles:telemetry.notProvided")
+    : "-"
   const health = telemetry?.health
   const healthTitle = [
     t("apiCredentialProfiles:telemetry.health"),
@@ -320,7 +323,9 @@ export function ApiCredentialProfileListItem({
                       {t("apiCredentialProfiles:telemetry.todayUsage")}
                     </div>
                     <div className="font-semibold text-emerald-600 dark:text-emerald-400">
-                      {formatMoney(telemetry?.todayCostUsd, currencyType)}
+                      {telemetry?.todayCostUsd !== undefined
+                        ? formatMoney(telemetry.todayCostUsd, currencyType)
+                        : missingTelemetryValue}
                     </div>
                   </div>
                   <div>
@@ -330,7 +335,7 @@ export function ApiCredentialProfileListItem({
                     <div className="dark:text-dark-text-primary font-semibold text-gray-900">
                       {typeof telemetry?.todayRequests === "number"
                         ? telemetry.todayRequests.toLocaleString()
-                        : "-"}
+                        : missingTelemetryValue}
                     </div>
                   </div>
                   <div>

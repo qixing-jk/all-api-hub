@@ -51,14 +51,24 @@ export default function ApiCredentialProfilesStatsSection() {
       (acc, profile) => {
         const snapshot = profile.telemetrySnapshot
         if (!snapshot) return acc
+        acc.profileTelemetryCount += 1
         if (snapshot.health.status === SiteHealthStatus.Healthy) {
           acc.healthyCount += 1
         }
         acc.balanceUsd += snapshot.balanceUsd ?? 0
-        acc.todayUsageUsd += snapshot.todayCostUsd ?? 0
+        if (typeof snapshot.todayCostUsd === "number") {
+          acc.todayUsageUsd += snapshot.todayCostUsd
+          acc.todayUsageSources += 1
+        }
         return acc
       },
-      { healthyCount: 0, balanceUsd: 0, todayUsageUsd: 0 },
+      {
+        healthyCount: 0,
+        balanceUsd: 0,
+        profileTelemetryCount: 0,
+        todayUsageSources: 0,
+        todayUsageUsd: 0,
+      },
     )
   }, [profiles])
 
@@ -131,7 +141,10 @@ export default function ApiCredentialProfilesStatsSection() {
             {t("apiCredentialProfiles:stats.todayUsage")}
           </Caption>
           <span className="text-base font-semibold text-emerald-600 dark:text-emerald-400">
-            {formatMoney(telemetryStats.todayUsageUsd)}
+            {telemetryStats.profileTelemetryCount > 0 &&
+            telemetryStats.todayUsageSources === 0
+              ? t("apiCredentialProfiles:telemetry.notProvided")
+              : formatMoney(telemetryStats.todayUsageUsd)}
           </span>
         </div>
       </div>
