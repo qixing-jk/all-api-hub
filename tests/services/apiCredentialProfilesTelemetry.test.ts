@@ -121,7 +121,6 @@ describe("api credential profile telemetry", () => {
 
     const fetchMock = vi
       .fn()
-      .mockResolvedValueOnce(jsonResponse({ message: "missing" }, 404))
       .mockResolvedValueOnce(
         new Response("<!doctype html><title>Cloudflare</title>", {
           status: 403,
@@ -145,10 +144,6 @@ describe("api credential profile telemetry", () => {
     expect(snapshot.attempts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          source: "openaiBilling",
-          status: "unsupported",
-        }),
-        expect.objectContaining({
           source: "newApiTokenUsage",
           status: "error",
           message: expect.stringContaining("Cloudflare"),
@@ -161,12 +156,59 @@ describe("api credential profile telemetry", () => {
     )
   })
 
+  it("prefers NewAPI token telemetry before OpenAI billing in auto mode", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "NewAPI Auto",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://newapi-auto.example.com",
+      apiKey: "sk-newapi-auto",
+    })
+
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        success: true,
+        message: "",
+        data: {
+          total_granted: 5000000,
+          total_used: 1250000,
+          total_available: 3750000,
+        },
+      }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://newapi-auto.example.com/api/usage/token/",
+      expect.objectContaining({
+        method: "GET",
+        headers: expect.objectContaining({
+          Authorization: "Bearer sk-newapi-auto",
+        }),
+      }),
+    )
+    expect(snapshot.source).toBe("newApiTokenUsage")
+    expect(snapshot.balanceUsd).toBe(7.5)
+    expect(snapshot.totalUsedUsd).toBe(2.5)
+    expect(snapshot.attempts).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          source: "newApiTokenUsage",
+          status: "success",
+        }),
+      ]),
+    )
+  })
+
   it("does not treat huge OpenAI billing hard limits as real balance", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "Gateway",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
       baseUrl: "https://gateway.example.com",
       apiKey: "sk-gateway",
+      telemetryConfig: { mode: "openaiBilling" },
     })
 
     const fetchMock = vi
@@ -187,33 +229,18 @@ describe("api credential profile telemetry", () => {
           total_usage: 188.131,
         }),
       )
-      .mockResolvedValueOnce(
-        jsonResponse({
-          success: true,
-          message: "",
-          data: {
-            total_granted: 5000000,
-            total_used: 1250000,
-            total_available: 3750000,
-          },
-        }),
-      )
     vi.stubGlobal("fetch", fetchMock)
 
     const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
 
-    expect(snapshot.source).toBe("newApiTokenUsage")
-    expect(snapshot.balanceUsd).toBe(7.5)
-    expect(snapshot.totalUsedUsd).toBe(2.5)
+    expect(snapshot.source).toBeUndefined()
+    expect(snapshot.balanceUsd).toBeUndefined()
+    expect(snapshot.totalGrantedUsd).toBeUndefined()
     expect(snapshot.attempts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           source: "openaiBilling",
           status: "unsupported",
-        }),
-        expect.objectContaining({
-          source: "newApiTokenUsage",
-          status: "success",
         }),
       ]),
     )

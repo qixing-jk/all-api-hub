@@ -583,7 +583,9 @@ function resolveModes(
 ): ApiCredentialTelemetryCapabilityMode[] {
   if (config.mode === "disabled") return []
   if (config.mode === "auto") {
-    return ["openaiBilling", "newApiTokenUsage", "sub2apiUsage"]
+    // Prefer provider-specific key telemetry. OpenAI billing endpoints often
+    // expose compatibility limits, not spendable gateway balance.
+    return ["newApiTokenUsage", "sub2apiUsage", "openaiBilling"]
   }
   return [config.mode]
 }
