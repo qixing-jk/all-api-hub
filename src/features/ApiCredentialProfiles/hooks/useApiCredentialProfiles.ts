@@ -5,7 +5,10 @@ import {
   subscribeToApiCredentialProfilesChanges,
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
-import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import type {
+  ApiCredentialProfile,
+  ApiCredentialTelemetryConfig,
+} from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -20,6 +23,7 @@ type CreateProfileInput = {
   apiKey: string
   tagIds?: string[]
   notes?: string
+  telemetryConfig?: ApiCredentialTelemetryConfig
 }
 
 type UpdateProfileInput = Partial<CreateProfileInput>

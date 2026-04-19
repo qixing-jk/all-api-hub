@@ -1,20 +1,24 @@
 import type { ReactNode } from "react"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useApiCredentialProfilesController } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfilesController"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { act, renderHook } from "~~/tests/test-utils/render"
 
 const {
+  createProfileMock,
   deleteProfileMock,
   refreshTelemetryMock,
   tagStorageListTagsMock,
   toastPromiseMock,
+  updateProfileMock,
 } = vi.hoisted(() => ({
+  createProfileMock: vi.fn(),
   deleteProfileMock: vi.fn(),
   refreshTelemetryMock: vi.fn(),
   tagStorageListTagsMock: vi.fn(),
   toastPromiseMock: vi.fn(),
+  updateProfileMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -85,11 +89,11 @@ vi.mock(
   "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles",
   () => ({
     useApiCredentialProfiles: () => ({
-      createProfile: vi.fn(),
+      createProfile: createProfileMock,
       deleteProfile: deleteProfileMock,
       isLoading: false,
       profiles: [],
-      updateProfile: vi.fn(),
+      updateProfile: updateProfileMock,
     }),
   }),
 )
@@ -109,6 +113,81 @@ function buildProfile(): ApiCredentialProfile {
 }
 
 describe("useApiCredentialProfilesController", () => {
+  beforeEach(() => {
+    createProfileMock.mockReset()
+    deleteProfileMock.mockReset()
+    refreshTelemetryMock.mockReset()
+    tagStorageListTagsMock.mockReset()
+    toastPromiseMock.mockReset()
+    updateProfileMock.mockReset()
+  })
+
+  it("passes telemetry config through create and update flows", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+    createProfileMock.mockResolvedValue(buildProfile())
+    updateProfileMock.mockResolvedValue(buildProfile())
+
+    const { result } = renderHook(() => useApiCredentialProfilesController(), {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+
+    await act(async () => {
+      await result.current.handleSave({
+        name: "Custom",
+        apiType: "openai-compatible",
+        baseUrl: "https://custom.example.com",
+        apiKey: "sk-custom",
+        tagIds: [],
+        notes: "",
+        telemetryConfig: {
+          mode: "customReadOnlyEndpoint",
+          customEndpoint: {
+            endpoint: "/usage",
+            jsonPaths: {
+              balanceUsd: "data.balance",
+            },
+          },
+        },
+      })
+    })
+
+    expect(createProfileMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        telemetryConfig: {
+          mode: "customReadOnlyEndpoint",
+          customEndpoint: {
+            endpoint: "/usage",
+            jsonPaths: {
+              balanceUsd: "data.balance",
+            },
+          },
+        },
+      }),
+    )
+
+    await act(async () => {
+      await result.current.handleSave({
+        id: "profile-1",
+        name: "Disabled",
+        apiType: "openai-compatible",
+        baseUrl: "https://disabled.example.com",
+        apiKey: "sk-disabled",
+        tagIds: [],
+        notes: "",
+        telemetryConfig: { mode: "disabled" },
+      })
+    })
+
+    expect(updateProfileMock).toHaveBeenCalledWith(
+      "profile-1",
+      expect.objectContaining({
+        telemetryConfig: { mode: "disabled" },
+      }),
+    )
+  })
+
   it("allows concurrent refreshes for different profiles and localizes errors", async () => {
     tagStorageListTagsMock.mockResolvedValue([])
     let resolveFirstRefresh: (() => void) | undefined

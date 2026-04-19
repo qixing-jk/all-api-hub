@@ -16,7 +16,10 @@ import {
   useVerificationResultHistorySummaries,
 } from "~/services/verification/verificationResultHistory"
 import type { Tag } from "~/types"
-import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import type {
+  ApiCredentialProfile,
+  ApiCredentialTelemetryConfig,
+} from "~/types/apiCredentialProfiles"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
@@ -34,6 +37,7 @@ type SaveApiCredentialProfileInput = {
   apiKey: string
   tagIds: string[]
   notes: string
+  telemetryConfig?: ApiCredentialTelemetryConfig
 }
 
 type RuntimeBroadcastMessage = {
@@ -169,6 +173,7 @@ export function useApiCredentialProfilesController() {
           apiKey: input.apiKey,
           tagIds: input.tagIds,
           notes: input.notes,
+          telemetryConfig: input.telemetryConfig,
         })
         return
       }
@@ -180,6 +185,7 @@ export function useApiCredentialProfilesController() {
         apiKey: input.apiKey,
         tagIds: input.tagIds,
         notes: input.notes,
+        telemetryConfig: input.telemetryConfig,
       })
     },
     [createProfile, updateProfile],

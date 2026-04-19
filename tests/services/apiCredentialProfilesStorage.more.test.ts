@@ -313,6 +313,40 @@ describe("apiCredentialProfilesStorage additional flows", () => {
     )
   })
 
+  it("drops incomplete custom telemetry endpoint details while keeping the selected mode", () => {
+    const coerced = coerceApiCredentialProfilesConfig(
+      {
+        profiles: [
+          {
+            id: "profile-custom-incomplete",
+            name: "Incomplete Custom",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-custom",
+            telemetryConfig: {
+              mode: "customReadOnlyEndpoint",
+              customEndpoint: {
+                endpoint: "   ",
+                jsonPaths: {
+                  balanceUsd: "   ",
+                },
+              },
+            },
+          },
+        ],
+      },
+      { now: 12345 },
+    )
+
+    expect(coerced.profiles[0]).toEqual(
+      expect.objectContaining({
+        telemetryConfig: {
+          mode: "customReadOnlyEndpoint",
+        },
+      }),
+    )
+  })
+
   it("merges telemetry snapshots by newest successful query without changing identity winner", () => {
     const merged = mergeApiCredentialProfilesConfigs({
       now: 67890,

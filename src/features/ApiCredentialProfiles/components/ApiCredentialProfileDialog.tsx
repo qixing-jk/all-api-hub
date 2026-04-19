@@ -6,6 +6,7 @@ import {
   PencilIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline"
+import type { ChangeEvent } from "react"
 import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -30,7 +31,13 @@ import {
   normalizeOpenAiFamilyBaseUrl,
 } from "~/services/verification/webAiApiCheck/extractCredentials"
 import type { Tag } from "~/types"
-import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
+import type {
+  ApiCredentialProfile,
+  ApiCredentialTelemetryCapabilityMode,
+  ApiCredentialTelemetryConfig,
+  ApiCredentialTelemetryJsonPathMap,
+} from "~/types/apiCredentialProfiles"
+import { DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -46,6 +53,7 @@ type SaveProfileInput = {
   apiKey: string
   tagIds: string[]
   notes: string
+  telemetryConfig?: ApiCredentialTelemetryConfig
 }
 
 interface ApiCredentialProfileDialogProps {
@@ -69,6 +77,56 @@ function normalizeBaseUrl(
   return apiType === API_TYPES.GOOGLE
     ? normalizeGoogleFamilyBaseUrl(baseUrl)
     : normalizeOpenAiFamilyBaseUrl(baseUrl)
+}
+
+type TelemetryJsonPathField = keyof ApiCredentialTelemetryJsonPathMap
+
+const TELEMETRY_JSON_PATH_FIELDS: TelemetryJsonPathField[] = [
+  "balanceUsd",
+  "todayCostUsd",
+  "todayRequests",
+  "todayPromptTokens",
+  "todayCompletionTokens",
+  "todayTotalTokens",
+  "totalUsedUsd",
+  "totalGrantedUsd",
+  "totalAvailableUsd",
+  "expiresAt",
+]
+
+/**
+ * Falls back to the default telemetry preset when the profile has no mode yet.
+ */
+function normalizeTelemetryMode(
+  mode: ApiCredentialTelemetryConfig["mode"] | undefined,
+): ApiCredentialTelemetryCapabilityMode {
+  return mode ?? DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode
+}
+
+/**
+ * Accepts the simple dot-path format supported by custom telemetry mapping.
+ */
+function isSupportedJsonPath(path: string): boolean {
+  const segments = path.split(".").map((segment) => segment.trim())
+  return segments.length > 0 && segments.every(Boolean)
+}
+
+/**
+ * Trims and drops empty custom telemetry JSON path mappings before save.
+ */
+function normalizeJsonPaths(
+  paths: ApiCredentialTelemetryJsonPathMap,
+): ApiCredentialTelemetryJsonPathMap {
+  const next: ApiCredentialTelemetryJsonPathMap = {}
+
+  for (const field of TELEMETRY_JSON_PATH_FIELDS) {
+    const value = paths[field]
+    if (typeof value === "string" && value.trim()) {
+      next[field] = value.trim()
+    }
+  }
+
+  return next
 }
 
 /**
@@ -101,6 +159,13 @@ export function ApiCredentialProfileDialog({
   const [apiKey, setApiKey] = useState("")
   const [tagIds, setTagIds] = useState<string[]>([])
   const [notes, setNotes] = useState("")
+  const [telemetryMode, setTelemetryMode] =
+    useState<ApiCredentialTelemetryCapabilityMode>(
+      DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode,
+    )
+  const [customEndpoint, setCustomEndpoint] = useState("")
+  const [customJsonPaths, setCustomJsonPaths] =
+    useState<ApiCredentialTelemetryJsonPathMap>({})
 
   const [showKey, setShowKey] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
@@ -109,12 +174,17 @@ export function ApiCredentialProfileDialog({
     name?: string
     baseUrl?: string
     apiKey?: string
+    telemetryEndpoint?: string
+    telemetryJsonPaths?: string
   }>({})
 
   const nameInputId = "api-credential-profile-name"
   const baseUrlInputId = "api-credential-profile-baseUrl"
   const apiKeyInputId = "api-credential-profile-apiKey"
   const notesInputId = "api-credential-profile-notes"
+  const telemetryModeInputId = "api-credential-profile-telemetry-mode"
+  const customEndpointInputId =
+    "api-credential-profile-telemetry-custom-endpoint"
 
   useEffect(() => {
     if (!isOpen) return
@@ -129,6 +199,11 @@ export function ApiCredentialProfileDialog({
       setApiKey(profile.apiKey ?? "")
       setTagIds(profile.tagIds ?? [])
       setNotes(profile.notes ?? "")
+      setTelemetryMode(normalizeTelemetryMode(profile.telemetryConfig?.mode))
+      setCustomEndpoint(profile.telemetryConfig?.customEndpoint?.endpoint ?? "")
+      setCustomJsonPaths(
+        profile.telemetryConfig?.customEndpoint?.jsonPaths ?? {},
+      )
       return
     }
 
@@ -138,12 +213,77 @@ export function ApiCredentialProfileDialog({
     setApiKey("")
     setTagIds([])
     setNotes("")
+    setTelemetryMode(DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode)
+    setCustomEndpoint("")
+    setCustomJsonPaths({})
   }, [isOpen, profile])
 
   const normalizedBaseUrlPreview = useMemo(() => {
     const normalized = normalizeBaseUrl(apiType, baseUrl)
     return normalized ?? ""
   }, [apiType, baseUrl])
+
+  const telemetryJsonPathFields = useMemo(
+    () => [
+      {
+        field: "balanceUsd" as const,
+        label: t("apiCredentialProfiles:dialog.telemetryJsonPaths.balanceUsd"),
+      },
+      {
+        field: "todayCostUsd" as const,
+        label: t(
+          "apiCredentialProfiles:dialog.telemetryJsonPaths.todayCostUsd",
+        ),
+      },
+      {
+        field: "todayRequests" as const,
+        label: t(
+          "apiCredentialProfiles:dialog.telemetryJsonPaths.todayRequests",
+        ),
+      },
+      {
+        field: "todayPromptTokens" as const,
+        label: t(
+          "apiCredentialProfiles:dialog.telemetryJsonPaths.todayPromptTokens",
+        ),
+      },
+      {
+        field: "todayCompletionTokens" as const,
+        label: t(
+          "apiCredentialProfiles:dialog.telemetryJsonPaths.todayCompletionTokens",
+        ),
+      },
+      {
+        field: "todayTotalTokens" as const,
+        label: t(
+          "apiCredentialProfiles:dialog.telemetryJsonPaths.todayTotalTokens",
+        ),
+      },
+      {
+        field: "totalUsedUsd" as const,
+        label: t(
+          "apiCredentialProfiles:dialog.telemetryJsonPaths.totalUsedUsd",
+        ),
+      },
+      {
+        field: "totalGrantedUsd" as const,
+        label: t(
+          "apiCredentialProfiles:dialog.telemetryJsonPaths.totalGrantedUsd",
+        ),
+      },
+      {
+        field: "totalAvailableUsd" as const,
+        label: t(
+          "apiCredentialProfiles:dialog.telemetryJsonPaths.totalAvailableUsd",
+        ),
+      },
+      {
+        field: "expiresAt" as const,
+        label: t("apiCredentialProfiles:dialog.telemetryJsonPaths.expiresAt"),
+      },
+    ],
+    [t],
+  )
 
   const validate = () => {
     const nextErrors: typeof errors = {}
@@ -165,9 +305,53 @@ export function ApiCredentialProfileDialog({
       )
     }
 
+    if (telemetryMode === "customReadOnlyEndpoint") {
+      if (!customEndpoint.trim()) {
+        nextErrors.telemetryEndpoint = t(
+          "apiCredentialProfiles:dialog.errors.telemetryEndpointRequired",
+        )
+      }
+
+      const jsonPaths = normalizeJsonPaths(customJsonPaths)
+      if (Object.keys(jsonPaths).length === 0) {
+        nextErrors.telemetryJsonPaths = t(
+          "apiCredentialProfiles:dialog.errors.telemetryJsonPathRequired",
+        )
+      } else if (
+        Object.values(jsonPaths).some((path) => !isSupportedJsonPath(path))
+      ) {
+        nextErrors.telemetryJsonPaths = t(
+          "apiCredentialProfiles:dialog.errors.telemetryJsonPathInvalid",
+        )
+      }
+    }
+
     setErrors(nextErrors)
     return Object.keys(nextErrors).length === 0 ? normalizedBaseUrl : null
   }
+
+  const buildTelemetryConfig = (): ApiCredentialTelemetryConfig => {
+    if (telemetryMode !== "customReadOnlyEndpoint") {
+      return { mode: telemetryMode }
+    }
+
+    return {
+      mode: "customReadOnlyEndpoint",
+      customEndpoint: {
+        endpoint: customEndpoint.trim(),
+        jsonPaths: normalizeJsonPaths(customJsonPaths),
+      },
+    }
+  }
+
+  const handleJsonPathChange =
+    (field: TelemetryJsonPathField) =>
+    (event: ChangeEvent<HTMLInputElement>) => {
+      setCustomJsonPaths((prev) => ({
+        ...prev,
+        [field]: event.target.value,
+      }))
+    }
 
   const handleClose = () => {
     if (isSaving) return
@@ -188,6 +372,7 @@ export function ApiCredentialProfileDialog({
         apiKey: apiKey.trim(),
         tagIds,
         notes: notes.trim(),
+        telemetryConfig: buildTelemetryConfig(),
       })
 
       toast.success(
@@ -368,6 +553,131 @@ export function ApiCredentialProfileDialog({
             disabled={isSaving}
           />
         </FormField>
+
+        <FormField
+          label={t("apiCredentialProfiles:dialog.fields.telemetryPreset")}
+          description={t("apiCredentialProfiles:dialog.hints.telemetryPreset")}
+          htmlFor={telemetryModeInputId}
+        >
+          <SearchableSelect
+            id={telemetryModeInputId}
+            aria-label={t(
+              "apiCredentialProfiles:dialog.fields.telemetryPreset",
+            )}
+            options={[
+              {
+                value: "auto",
+                label: t("apiCredentialProfiles:dialog.telemetryModes.auto"),
+              },
+              {
+                value: "disabled",
+                label: t(
+                  "apiCredentialProfiles:dialog.telemetryModes.disabled",
+                ),
+              },
+              {
+                value: "newApiTokenUsage",
+                label: t(
+                  "apiCredentialProfiles:dialog.telemetryModes.newApiTokenUsage",
+                ),
+              },
+              {
+                value: "sub2apiUsage",
+                label: t(
+                  "apiCredentialProfiles:dialog.telemetryModes.sub2apiUsage",
+                ),
+              },
+              {
+                value: "openaiBilling",
+                label: t(
+                  "apiCredentialProfiles:dialog.telemetryModes.openaiBilling",
+                ),
+              },
+              {
+                value: "customReadOnlyEndpoint",
+                label: t(
+                  "apiCredentialProfiles:dialog.telemetryModes.customReadOnlyEndpoint",
+                ),
+              },
+            ]}
+            value={telemetryMode}
+            onChange={(value) =>
+              setTelemetryMode(value as ApiCredentialTelemetryCapabilityMode)
+            }
+            placeholder={t(
+              "apiCredentialProfiles:dialog.placeholders.telemetryPreset",
+            )}
+            disabled={isSaving}
+          />
+        </FormField>
+
+        {telemetryMode === "customReadOnlyEndpoint" && (
+          <details
+            open
+            className="dark:border-dark-bg-tertiary rounded-lg border border-gray-200 p-3"
+          >
+            <summary className="dark:text-dark-text-primary cursor-pointer text-sm font-medium text-gray-700">
+              {t("apiCredentialProfiles:dialog.customTelemetry.title")}
+            </summary>
+            <div className="mt-3 space-y-4">
+              <FormField
+                label={t(
+                  "apiCredentialProfiles:dialog.fields.telemetryEndpoint",
+                )}
+                required
+                error={errors.telemetryEndpoint}
+                description={t(
+                  "apiCredentialProfiles:dialog.hints.telemetryEndpoint",
+                )}
+                htmlFor={customEndpointInputId}
+              >
+                <Input
+                  id={customEndpointInputId}
+                  value={customEndpoint}
+                  onChange={(e) => setCustomEndpoint(e.target.value)}
+                  placeholder={t(
+                    "apiCredentialProfiles:dialog.placeholders.telemetryEndpoint",
+                  )}
+                  disabled={isSaving}
+                />
+              </FormField>
+
+              <div className="space-y-2">
+                <div>
+                  <div className="dark:text-dark-text-primary text-sm font-medium text-gray-700">
+                    {t("apiCredentialProfiles:dialog.customTelemetry.paths")}
+                  </div>
+                  <p className="dark:text-dark-text-secondary text-xs text-gray-500">
+                    {t("apiCredentialProfiles:dialog.hints.telemetryJsonPaths")}
+                  </p>
+                </div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  {telemetryJsonPathFields.map(({ field, label }) => {
+                    const inputId = `api-credential-profile-telemetry-path-${field}`
+                    return (
+                      <FormField key={field} label={label} htmlFor={inputId}>
+                        <Input
+                          id={inputId}
+                          value={customJsonPaths[field] ?? ""}
+                          onChange={handleJsonPathChange(field)}
+                          placeholder={t(
+                            "apiCredentialProfiles:dialog.placeholders.telemetryJsonPath",
+                          )}
+                          disabled={isSaving}
+                        />
+                      </FormField>
+                    )
+                  })}
+                </div>
+                {errors.telemetryJsonPaths && (
+                  <p className="text-xs text-red-600 dark:text-red-400">
+                    {errors.telemetryJsonPaths}
+                  </p>
+                )}
+              </div>
+            </div>
+          </details>
+        )}
 
         <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
           {t("apiCredentialProfiles:dialog.meta.apiTypeHint", {
