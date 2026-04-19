@@ -110,6 +110,97 @@ describe("api credential profile telemetry", () => {
     )
   })
 
+  it("treats NewAPI unlimited token quota as unlimited instead of negative balance", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "NewAPI Unlimited",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://newapi-unlimited.example.com",
+      apiKey: "sk-newapi-unlimited",
+      telemetryConfig: { mode: "newApiTokenUsage" },
+    })
+
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        code: true,
+        message: "ok",
+        data: {
+          expires_at: 0,
+          model_limits: {},
+          model_limits_enabled: false,
+          name: "test",
+          object: "token_usage",
+          total_available: -940656,
+          total_granted: -1,
+          total_used: 940655,
+          unlimited_quota: true,
+        },
+      }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot).toEqual(
+      expect.objectContaining({
+        health: { status: SiteHealthStatus.Healthy },
+        source: "newApiTokenUsage",
+        unlimitedQuota: true,
+        totalUsedUsd: 1.88131,
+      }),
+    )
+    expect(snapshot.balanceUsd).toBeUndefined()
+    expect(snapshot.totalGrantedUsd).toBeUndefined()
+    expect(snapshot.totalAvailableUsd).toBeUndefined()
+
+    await expect(
+      apiCredentialProfilesStorage.getProfileById(profile.id),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        telemetrySnapshot: expect.objectContaining({
+          unlimitedQuota: true,
+          totalUsedUsd: 1.88131,
+        }),
+      }),
+    )
+  })
+
+  it("clamps overdrawn NewAPI token balance to zero for limited tokens", async () => {
+    const profile = await apiCredentialProfilesStorage.createProfile({
+      name: "NewAPI Overdrawn",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://newapi-overdrawn.example.com",
+      apiKey: "sk-newapi-overdrawn",
+      telemetryConfig: { mode: "newApiTokenUsage" },
+    })
+
+    const fetchMock = vi.fn(async () =>
+      jsonResponse({
+        success: true,
+        message: "",
+        data: {
+          total_granted: 1000000,
+          total_used: 1250000,
+          total_available: -250000,
+          unlimited_quota: false,
+        },
+      }),
+    )
+    vi.stubGlobal("fetch", fetchMock)
+
+    const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
+
+    expect(snapshot).toEqual(
+      expect.objectContaining({
+        source: "newApiTokenUsage",
+        balanceUsd: 0,
+        totalAvailableUsd: 0,
+        totalGrantedUsd: 2,
+        totalUsedUsd: 2.5,
+      }),
+    )
+    expect(snapshot.unlimitedQuota).toBeUndefined()
+  })
+
   it("falls through auto presets and classifies HTML/WAF responses", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "Auto",

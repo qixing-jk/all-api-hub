@@ -343,6 +343,9 @@ function coerceTelemetrySnapshot(
           },
         }
       : {}),
+    ...(typeof obj.unlimitedQuota === "boolean"
+      ? { unlimitedQuota: obj.unlimitedQuota }
+      : {}),
     ...(coerceFiniteNumber(obj.totalUsedUsd) !== undefined
       ? { totalUsedUsd: coerceFiniteNumber(obj.totalUsedUsd) }
       : {}),

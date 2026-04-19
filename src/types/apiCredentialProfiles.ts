@@ -67,6 +67,7 @@ export type ApiCredentialTelemetrySnapshot = {
   todayCostUsd?: number
   todayRequests?: number
   todayTokens?: TokenUsage
+  unlimitedQuota?: boolean
   totalUsedUsd?: number
   totalGrantedUsd?: number
   totalAvailableUsd?: number

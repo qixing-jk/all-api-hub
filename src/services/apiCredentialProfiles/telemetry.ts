@@ -24,6 +24,7 @@ type TelemetryPatch = Partial<
     | "todayCostUsd"
     | "todayRequests"
     | "todayTokens"
+    | "unlimitedQuota"
     | "totalUsedUsd"
     | "totalGrantedUsd"
     | "totalAvailableUsd"
@@ -90,6 +91,14 @@ function readNumber(value: unknown): number | undefined {
 function quotaToUsd(value: number | undefined): number | undefined {
   if (value === undefined) return undefined
   return value / UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+}
+
+/**
+ * Converts quota units into a non-negative USD amount.
+ */
+function nonNegativeQuotaToUsd(value: number | undefined): number | undefined {
+  if (value === undefined) return undefined
+  return quotaToUsd(Math.max(0, value))
 }
 
 /**
@@ -337,23 +346,29 @@ async function queryNewApiTokenUsage(
   const totalGranted = readNumber(data.total_granted)
   const totalUsed = readNumber(data.total_used)
   const totalAvailable = readNumber(data.total_available)
+  const unlimitedQuota =
+    data.unlimited_quota === true ||
+    (totalGranted !== undefined && totalGranted < 0)
+  const balanceUsd = unlimitedQuota
+    ? undefined
+    : nonNegativeQuotaToUsd(totalAvailable)
+  const totalUsedUsd = nonNegativeQuotaToUsd(totalUsed)
+  const totalGrantedUsd = unlimitedQuota
+    ? undefined
+    : nonNegativeQuotaToUsd(totalGranted)
+  const totalAvailableUsd = unlimitedQuota
+    ? undefined
+    : nonNegativeQuotaToUsd(totalAvailable)
 
   return {
     source: "newApiTokenUsage",
     endpoint: result.endpoint,
     data: {
-      ...(quotaToUsd(totalAvailable) !== undefined
-        ? { balanceUsd: quotaToUsd(totalAvailable) }
-        : {}),
-      ...(quotaToUsd(totalUsed) !== undefined
-        ? { totalUsedUsd: quotaToUsd(totalUsed) }
-        : {}),
-      ...(quotaToUsd(totalGranted) !== undefined
-        ? { totalGrantedUsd: quotaToUsd(totalGranted) }
-        : {}),
-      ...(quotaToUsd(totalAvailable) !== undefined
-        ? { totalAvailableUsd: quotaToUsd(totalAvailable) }
-        : {}),
+      ...(unlimitedQuota ? { unlimitedQuota: true } : {}),
+      ...(balanceUsd !== undefined ? { balanceUsd } : {}),
+      ...(totalUsedUsd !== undefined ? { totalUsedUsd } : {}),
+      ...(totalGrantedUsd !== undefined ? { totalGrantedUsd } : {}),
+      ...(totalAvailableUsd !== undefined ? { totalAvailableUsd } : {}),
       ...(normalizeTimestamp(data.expires_at) !== undefined
         ? { expiresAt: normalizeTimestamp(data.expires_at) }
         : {}),
@@ -599,6 +614,7 @@ function hasUsageData(data: TelemetryPatch): boolean {
     data.todayCostUsd !== undefined ||
     data.todayRequests !== undefined ||
     data.todayTokens !== undefined ||
+    data.unlimitedQuota === true ||
     data.totalAvailableUsd !== undefined
   )
 }

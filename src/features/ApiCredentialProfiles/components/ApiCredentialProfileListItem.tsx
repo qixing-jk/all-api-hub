@@ -310,7 +310,9 @@ export function ApiCredentialProfileListItem({
                       {t("apiCredentialProfiles:telemetry.balance")}
                     </div>
                     <div className="dark:text-dark-text-primary font-semibold text-gray-900">
-                      {formatMoney(telemetry?.balanceUsd, currencyType)}
+                      {telemetry?.unlimitedQuota
+                        ? t("common:quota.unlimited")
+                        : formatMoney(telemetry?.balanceUsd, currencyType)}
                     </div>
                   </div>
                   <div>
