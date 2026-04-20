@@ -515,6 +515,74 @@ describe("AccountDataContext initial load orchestration", () => {
     })
   })
 
+  it("resolves the initial load when current-tab detection fails", async () => {
+    mockGetAllAccounts.mockResolvedValue([
+      {
+        id: "acc-1",
+        site_url: "https://alpha.example.com",
+        account_info: { id: 1 },
+        last_sync_time: 0,
+      },
+    ])
+    mockConvertToDisplayData.mockReturnValue([
+      {
+        id: "acc-1",
+        name: "Alpha",
+        username: "alice",
+        baseUrl: "https://alpha.example.com",
+        token: "token",
+        tagIds: [],
+        tags: [],
+        balance: { USD: 0, CNY: 0 },
+        todayConsumption: { USD: 0, CNY: 0 },
+        todayIncome: { USD: 0, CNY: 0 },
+        checkIn: { enableDetection: false },
+      },
+    ])
+    mockGetActiveTabs.mockRejectedValue(new Error("tabs query failed"))
+    mockGetAllTabs.mockResolvedValue([])
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().isInitialLoad).toBe(false)
+    })
+  })
+
+  it("resolves the initial load when open-tab matching fails", async () => {
+    mockGetAllAccounts.mockResolvedValue([
+      {
+        id: "acc-1",
+        site_url: "https://alpha.example.com",
+        account_info: { id: 1 },
+        last_sync_time: 0,
+      },
+    ])
+    mockConvertToDisplayData.mockReturnValue([
+      {
+        id: "acc-1",
+        name: "Alpha",
+        username: "alice",
+        baseUrl: "https://alpha.example.com",
+        token: "token",
+        tagIds: [],
+        tags: [],
+        balance: { USD: 0, CNY: 0 },
+        todayConsumption: { USD: 0, CNY: 0 },
+        todayIncome: { USD: 0, CNY: 0 },
+        checkIn: { enableDetection: false },
+      },
+    ])
+    mockGetActiveTabs.mockResolvedValue([])
+    mockGetAllTabs.mockRejectedValue(new Error("tab scan failed"))
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().isInitialLoad).toBe(false)
+    })
+  })
+
   it("resolves the initial load even when account storage reads fail", async () => {
     mockGetAllAccounts.mockRejectedValue(new Error("storage unavailable"))
 

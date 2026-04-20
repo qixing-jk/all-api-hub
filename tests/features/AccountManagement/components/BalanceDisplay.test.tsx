@@ -165,6 +165,41 @@ describe("BalanceDisplay", () => {
     expect(handleRefreshAccount).not.toHaveBeenCalled()
   })
 
+  it("animates from zero when no previous balance snapshot exists for the account", () => {
+    const site = buildDisplaySiteData({
+      balance: { USD: 14.5, CNY: 101.5 },
+      todayConsumption: { USD: 0, CNY: 0 },
+      todayIncome: { USD: 0, CNY: 0 },
+    })
+    const updatedSite = buildDisplaySiteData({
+      ...site,
+      balance: { USD: 16.5, CNY: 115.5 },
+    })
+
+    mockUseAccountDataContext.mockReturnValue({
+      isInitialLoad: false,
+      prevBalances: {},
+    })
+
+    const { rerender } = render(<BalanceDisplay site={site} />)
+
+    expect(screen.queryByTestId("countup")).toBeNull()
+
+    rerender(<BalanceDisplay site={updatedSite} />)
+
+    const [balanceValue] = screen.getAllByTestId("countup")
+
+    expect(balanceValue).toHaveAttribute("data-start", "0")
+    expect(balanceValue).toHaveAttribute(
+      "data-end",
+      String(getDisplayMoneyValue(16.5)),
+    )
+    expect(balanceValue).toHaveAttribute(
+      "data-duration",
+      String(UI_CONSTANTS.ANIMATION.FAST_DURATION),
+    )
+  })
+
   it("keeps the refreshing state visible and ignores repeat refresh clicks while the account is already refreshing", async () => {
     const user = userEvent.setup()
     const site = buildDisplaySiteData({
