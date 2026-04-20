@@ -67,6 +67,20 @@
     "managementApiUnreachable": "无法连接到 CLIProxyAPI Management API。请检查基础 URL、服务状态，以及浏览器到该地址的网络连通性。",
     "updateSuccess": "已成功更新 CLIProxy 提供商 {{name}}"
   },
+  "cch": {
+    "configMissing": "请先在设置中配置 CCH 基础 URL 和认证令牌",
+    "connectionFailed": "连接到 CCH 失败",
+    "connectionVerified": "CCH 连接已验证",
+    "createProviderFailed": "创建供应商失败",
+    "exportFailed": "导出到 CCH 失败",
+    "managementApiForbidden": "CCH 拒绝了当前请求。请检查认证令牌是否正确，以及是否拥有管理员权限。",
+    "managementApiHttpError": "CCH API 返回了异常状态码（HTTP {{status}}）",
+    "managementApiInvalidKey": "CCH 认证令牌无效，请检查设置中的认证令牌是否正确。",
+    "managementApiNotFound": "未找到 CCH API。请确认基础 URL 是否正确。",
+    "managementApiServerError": "CCH API 返回了服务端错误（HTTP {{status}}）",
+    "managementApiUnreachable": "无法连接到 CCH API。请检查基础 URL、服务状态，以及浏览器到该地址的网络连通性。",
+    "providerCreated": "供应商创建成功"
+  },
   "content": {
     "userInfoNotFound": "未找到用户信息，请确保已登录",
     "waitUserInfoTimeout": "等待用户信息超时，请确保已登录"

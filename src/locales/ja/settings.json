@@ -87,6 +87,20 @@
     "title": "CLIProxyAPI 設定",
     "urlDesc": "Management API の Base URL を設定します。例: http://localhost:8317/v0/management"
   },
+  "cch": {
+    "actions": {
+      "verifyConnection": "接続を検証",
+      "viewApiDocs": "API ドキュメントを表示"
+    },
+    "authTokenDescription": "CCH API アクセス認証用のベアラートークン",
+    "authTokenLabel": "認証トークン",
+    "authTokenPlaceholder": "CCH 認証トークンを入力",
+    "baseUrlDescription": "CCH Management API の Base URL",
+    "baseUrlLabel": "Base URL",
+    "baseUrlPlaceholder": "例：https://cch.skydog.cc.cd",
+    "description": "Claude Code Hub (CCH) への接続を設定します。",
+    "title": "Claude Code Hub 設定"
+  },
   "danger": {
     "resetAllSettings": "すべての設定をリセット",
     "resetDesc": "すべての設定を初期値に戻します。この操作は元に戻せません。",
@@ -419,6 +433,7 @@
     "checkinRedeem": "チェックインと引き換え",
     "claudeCodeRouter": "Claude Code Router",
     "cliProxy": "CLIProxyAPI",
+    "cch": "Claude Code Hub",
     "dataBackup": "データとバックアップ",
     "general": "一般",
     "managedSite": "管理対象サイト",

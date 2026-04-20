@@ -8,7 +8,7 @@
   "manifest_commands_sidebar_action": {
     "message": "在侧边栏中打开 All API Hub"
   },
-  "manifest_commands_browser_action": {
+  "manifest_commands_action": {
     "message": "在弹窗中打开 All API Hub"
   },
   "context_menu_redeem_selection": {

@@ -53,6 +53,21 @@
     "modelsMissing": "少なくとも 1 つのモデルを指定してください",
     "updateSuccess": "Claude Code Router のプロバイダー {{name}} を正常に更新しました"
   },
+    "cch": {
+      "configMissing": "先に設定で CCH の Base URL と認証トークンを設定してください",
+      "connectionFailed": "CCH への接続に失敗しました",
+      "connectionVerified": "CCH 接続を検証しました",
+      "createKeyFailed": "API キーの作成に失敗しました",
+      "createProviderEndpointFailed": "Provider Endpoint の作成に失敗しました",
+      "createUserFailed": "ユーザーの作成に失敗しました",
+      "exportFailed": "CCH へのエクスポートに失敗しました",
+      "managementApiForbidden": "CCH がリクエストを拒否しました。認証トークンが正しいか、および管理者権限を持っているか確認してください。",
+      "managementApiHttpError": "CCH API が想定外のステータスコードを返しました（HTTP {{status}}）",
+      "managementApiInvalidKey": "CCH 認証トークンが無効です。設定内の認証トークンを確認してください。",
+      "managementApiNotFound": "CCH API が見つかりません。Base URL が正しいか確認してください。",
+      "managementApiServerError": "CCH API がサーバーエラーを返しました（HTTP {{status}}）",
+      "managementApiUnreachable": "CCH API に接続できません。Base URL、サービス状態、ブラウザーからそのアドレスへのネットワーク到達性を確認してください。"
+    },
   "cliproxy": {
     "configMissing": "先に設定で CLIProxyAPI Management API の Base URL とキーを設定してください",
     "importFailed": "CLIProxyAPI へのプロバイダーインポートに失敗しました",
