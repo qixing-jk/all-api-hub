@@ -18,6 +18,20 @@ import type { DisplaySiteData } from "~/types"
 import { SortingCriteriaType } from "~/types/sorting"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
+type MockIndexedAccountSearchEntry = {
+  __indexed: true
+  account: DisplaySiteData
+}
+
+function createMockIndexedAccountSearchEntries(
+  accounts: DisplaySiteData[],
+): MockIndexedAccountSearchEntry[] {
+  return accounts.map((account) => ({
+    __indexed: true,
+    account,
+  }))
+}
+
 const {
   mockGetAllAccounts,
   mockGetAllBookmarks,
@@ -107,9 +121,12 @@ const {
       ) => void | Promise<void>,
     ) => () => void
   >((_listener) => () => {}),
-  mockBuildAccountSearchIndex: vi.fn((accounts: DisplaySiteData[]) => accounts),
+  mockBuildAccountSearchIndex: vi.fn(
+    (accounts: DisplaySiteData[]): MockIndexedAccountSearchEntry[] =>
+      createMockIndexedAccountSearchEntries(accounts),
+  ),
   mockSearchAccountSearchIndex: vi.fn<
-    (accounts: DisplaySiteData[], query: string) => SearchResult[]
+    (accounts: MockIndexedAccountSearchEntry[], query: string) => SearchResult[]
   >(() => []),
   mockUpdateSortConfig: vi.fn(),
 }))
@@ -253,7 +270,8 @@ beforeEach(() => {
   mockPinAccount.mockResolvedValue(true)
   mockUnpinAccount.mockResolvedValue(true)
   mockBuildAccountSearchIndex.mockImplementation(
-    (accounts: DisplaySiteData[]) => accounts,
+    (accounts: DisplaySiteData[]) =>
+      createMockIndexedAccountSearchEntries(accounts),
   )
   mockSearchAccountSearchIndex.mockReturnValue([])
   mockUpdateSortConfig.mockResolvedValue(true)
@@ -491,6 +509,16 @@ describe("AccountDataContext initial load orchestration", () => {
       resolveAllTabs?.([])
       await Promise.resolve()
     })
+
+    await waitFor(() => {
+      expect(getLatestCtx().isInitialLoad).toBe(false)
+    })
+  })
+
+  it("resolves the initial load even when account storage reads fail", async () => {
+    mockGetAllAccounts.mockRejectedValue(new Error("storage unavailable"))
+
+    const getLatestCtx = await renderAccountDataProvider()
 
     await waitFor(() => {
       expect(getLatestCtx().isInitialLoad).toBe(false)
@@ -1333,8 +1361,13 @@ describe("AccountDataContext sorting behavior", () => {
         title: "Beta workspace",
       }),
     ])
+    const builtIndex = createMockIndexedAccountSearchEntries([
+      { id: "acc-a" } as DisplaySiteData,
+      { id: "acc-b" } as DisplaySiteData,
+    ])
+    mockBuildAccountSearchIndex.mockReturnValue(builtIndex)
     mockSearchAccountSearchIndex.mockImplementation(
-      (_displayData, query: string) => {
+      (_indexedAccounts, query: string) => {
         if (query === "https://b.example.com/dashboard") {
           return [
             {
@@ -1367,11 +1400,11 @@ describe("AccountDataContext sorting behavior", () => {
     })
 
     expect(mockSearchAccountSearchIndex).toHaveBeenCalledWith(
-      expect.any(Array),
+      builtIndex,
       "https://b.example.com/dashboard",
     )
     expect(mockSearchAccountSearchIndex).toHaveBeenCalledWith(
-      expect.any(Array),
+      builtIndex,
       "Beta workspace",
     )
   })

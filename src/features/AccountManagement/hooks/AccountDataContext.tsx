@@ -430,7 +430,7 @@ export const AccountDataProvider = ({
         ),
       )
 
-      if (hasLoadedAccountData) {
+      if (hasLoadedAccountDataRef.current) {
         setPrevTotalConsumption(prevTotalConsumption)
         setPrevBalances(prevBalances)
       }
@@ -457,19 +457,14 @@ export const AccountDataProvider = ({
           setLastUpdateTime(new Date(latestSyncTime))
         }
       }
-
+    } catch (error) {
+      logger.error("Failed to load account data", error)
+    } finally {
       if (!hasLoadedAccountDataRef.current) {
         setHasLoadedAccountData(true)
       }
-    } catch (error) {
-      logger.error("Failed to load account data", error)
     }
-  }, [
-    buildDisplayDataWithResolvedTags,
-    hasLoadedAccountData,
-    prevTotalConsumption,
-    prevBalances,
-  ])
+  }, [buildDisplayDataWithResolvedTags, prevTotalConsumption, prevBalances])
 
   /**
    * Tag CRUD actions exposed to UIs (AccountDialog, filters).

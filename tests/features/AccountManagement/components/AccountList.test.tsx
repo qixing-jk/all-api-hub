@@ -15,6 +15,8 @@ const {
   handleDeleteAccountsMock,
   handleSetAccountsDisabledMock,
   dndState,
+  sortableKeyboardCoordinatesMock,
+  useSensorMock,
   useSortableMock,
 } = vi.hoisted(() => ({
   mockUseAccountDataContext: vi.fn(),
@@ -26,6 +28,8 @@ const {
   dndState: {
     onDragEnd: undefined as ((event: any) => void) | undefined,
   },
+  sortableKeyboardCoordinatesMock: vi.fn(),
+  useSensorMock: vi.fn(),
   useSortableMock: vi.fn(),
 }))
 
@@ -50,7 +54,7 @@ vi.mock("@dnd-kit/core", () => ({
   },
   KeyboardSensor: vi.fn(),
   PointerSensor: vi.fn(),
-  useSensor: vi.fn(),
+  useSensor: useSensorMock,
   useSensors: () => [],
 }))
 
@@ -64,6 +68,7 @@ vi.mock("@dnd-kit/sortable", () => ({
   SortableContext: ({ children }: { children: React.ReactNode }) => (
     <div data-testid="sortable-context">{children}</div>
   ),
+  sortableKeyboardCoordinates: sortableKeyboardCoordinatesMock,
   verticalListSortingStrategy: vi.fn(),
   useSortable: (options: any) => {
     useSortableMock(options)
@@ -478,6 +483,10 @@ describe("AccountList", () => {
 
     expect(await screen.findByTestId("dnd-context")).toBeInTheDocument()
     expect(screen.getByTestId("sortable-context")).toBeInTheDocument()
+    expect(useSensorMock).toHaveBeenCalledWith(expect.any(Function))
+    expect(useSensorMock).toHaveBeenCalledWith(expect.any(Function), {
+      coordinateGetter: sortableKeyboardCoordinatesMock,
+    })
     expect(useSortableMock).toHaveBeenCalledTimes(4)
   })
 
@@ -572,6 +581,39 @@ describe("AccountList", () => {
     ).not.toBeInTheDocument()
     expect(screen.queryByTestId("dnd-context")).not.toBeInTheDocument()
     expect(useSortableMock).not.toHaveBeenCalled()
+  })
+
+  it("falls back to non-sortable rows when search disables drag after dnd is ready", async () => {
+    const user = userEvent.setup()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        isManualSortFeatureEnabled: true,
+      }),
+    )
+
+    const { rerender } = render(<AccountList />)
+
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "account:list.dragHandle",
+      })[0],
+    )
+
+    expect(await screen.findByTestId("dnd-context")).toBeInTheDocument()
+    expect(screen.getByTestId("sortable-context")).toBeInTheDocument()
+
+    rerender(<AccountList initialSearchQuery="Alpha" />)
+
+    await act(async () => {
+      await new Promise((resolve) => setTimeout(resolve, 200))
+    })
+
+    expect(screen.queryByTestId("dnd-context")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("sortable-context")).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "account:list.dragHandle" }),
+    ).toBeDisabled()
   })
 
   it("filters accounts by enabled state and combines with tag filters", async () => {

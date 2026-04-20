@@ -138,6 +138,10 @@ function scoreParsedUrlMatch(
   parsedUrl: IndexedUrlField,
   normalizedQuery: string,
 ): number {
+  if (!normalizedQuery) {
+    return 0
+  }
+
   let score = 0
 
   // Domain matching

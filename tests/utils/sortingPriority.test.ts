@@ -225,6 +225,26 @@ describe("createDynamicSortComparator", () => {
       expect(comparator(account1, account3)).toBeGreaterThan(0)
     })
 
+    it("should preserve the first duplicate pinned index when persisted ids repeat", () => {
+      const account1 = createDisplaySiteData({ id: "account-1" })
+      const account2 = createDisplaySiteData({ id: "account-2" })
+      const account3 = createDisplaySiteData({ id: "account-3" })
+
+      const comparator = createDynamicSortComparator(
+        DEFAULT_SORTING_PRIORITY_CONFIG,
+        null,
+        "name",
+        "USD",
+        "asc",
+        {},
+        ["account-3", "account-2", "account-3"],
+      )
+
+      expect(comparator(account3, account2)).toBeLessThan(0)
+      expect(comparator(account2, account3)).toBeGreaterThan(0)
+      expect(comparator(account1, account3)).toBeGreaterThan(0)
+    })
+
     it("should return 0 when both accounts are not pinned", () => {
       const account1 = createDisplaySiteData({ id: "account-1" })
       const account2 = createDisplaySiteData({ id: "account-2" })

@@ -1,5 +1,4 @@
 import type { DragEndEvent } from "@dnd-kit/core"
-import { arrayMove } from "@dnd-kit/sortable"
 import {
   ChevronDownIcon,
   ChevronUpIcon,
@@ -76,6 +75,16 @@ type AccountCheckInFilterValue =
   | "not-checked-in"
   | "outdated"
   | "unsupported"
+
+/**
+ * Moves an account id within the manual ordering array.
+ */
+function moveAccountId(ids: string[], fromIndex: number, toIndex: number) {
+  const nextIds = ids.slice()
+  const [movedId] = nextIds.splice(fromIndex, 1)
+  nextIds.splice(toIndex, 0, movedId)
+  return nextIds
+}
 
 interface AccountListFilterState {
   disabledFilter: AccountDisabledFilterValue | null
@@ -619,6 +628,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   const isBulkBusy = isBulkDeleting || isBulkDisabling
   const shouldRenderSortableList =
     isManualSortFeatureEnabled &&
+    !dragDisabled &&
     dndLoadState === "ready" &&
     dndRuntimeRef.current !== null
 
@@ -726,7 +736,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     const newIndex = sortedIds.indexOf(over.id as string)
     if (oldIndex === -1 || newIndex === -1) return
 
-    const newOrder = arrayMove(sortedIds, oldIndex, newIndex)
+    const newOrder = moveAccountId(sortedIds, oldIndex, newIndex)
     void handleReorder(newOrder)
   }
 

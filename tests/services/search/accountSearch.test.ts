@@ -214,6 +214,12 @@ describe("accountSearch", () => {
       )
     })
 
+    it("does not treat query-only url fragments as a match for every account url", () => {
+      const results = searchAccounts(mockAccounts, "?unmatched")
+
+      expect(results).toEqual([])
+    })
+
     it("matches tags without exposing token-only fields", () => {
       const results = searchAccounts(
         [

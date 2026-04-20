@@ -298,8 +298,14 @@ export function createDynamicSortComparator(
   const enabledCriteria = config.criteria
     .filter((c) => c.enabled)
     .sort((c1, c2) => c1.priority - c2.priority)
-  const pinnedAccountIndices = Object.fromEntries(
-    pinnedAccountIds.map((id, index) => [id, index]),
+  const pinnedAccountIndices = pinnedAccountIds.reduce<Record<string, number>>(
+    (indices, id, index) => {
+      if (typeof indices[id] !== "number") {
+        indices[id] = index
+      }
+      return indices
+    },
+    {},
   )
 
   return (a: DisplaySiteData, b: DisplaySiteData): number => {

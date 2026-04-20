@@ -13,6 +13,11 @@ import { testI18n } from "~~/tests/test-utils/i18n"
 let activeTabs: any[] = []
 let tabUpdatedListener: any = null
 
+type MockIndexedAccountSearchEntry = {
+  __indexed: true
+  account: any
+}
+
 const {
   mockResetExpiredCheckIns,
   mockGetAllAccounts,
@@ -70,7 +75,13 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 }))
 
 vi.mock("~/services/search/accountSearch", () => ({
-  buildAccountSearchIndex: vi.fn((accounts: any[]) => accounts),
+  buildAccountSearchIndex: vi.fn(
+    (accounts: any[]): MockIndexedAccountSearchEntry[] =>
+      accounts.map((account) => ({
+        __indexed: true,
+        account,
+      })),
+  ),
   searchAccountSearchIndex: vi.fn(() => []),
 }))
 
