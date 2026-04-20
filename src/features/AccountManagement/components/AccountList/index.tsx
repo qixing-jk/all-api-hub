@@ -633,8 +633,8 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     dndRuntimeRef.current !== null
 
   const sortedIds = useMemo(
-    () => baseResults.map((item) => item.account.id),
-    [baseResults],
+    () => displayedResults.map((item) => item.account.id),
+    [displayedResults],
   )
 
   const updateSelectedAccountIds = (

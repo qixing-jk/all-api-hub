@@ -452,6 +452,51 @@ describe("AccountDataContext handleReorder", () => {
       ids: ["p-1", "p-2", "u-1"],
     })
   })
+
+  it("optimistically updates account order before persistence finishes", async () => {
+    let resolveOrderedWrite: ((value: boolean) => void) | null = null
+
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    mockGetAllAccounts.mockResolvedValue([{ id: "acc-1" }, { id: "acc-2" }])
+    mockGetAllBookmarks.mockResolvedValue([])
+    mockGetOrderedList.mockResolvedValue(["acc-1", "acc-2"])
+    mockGetPinnedList.mockResolvedValue([])
+    mockGetAccountStats.mockResolvedValue(createEmptyStats())
+    mockSetOrderedListSubset.mockImplementation(
+      () =>
+        new Promise<boolean>((resolve) => {
+          resolveOrderedWrite = resolve
+        }),
+    )
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().orderedAccountIds).toEqual(["acc-1", "acc-2"])
+    })
+
+    let reorderPromise: Promise<void> | undefined
+
+    act(() => {
+      reorderPromise = getLatestCtx().handleReorder(["acc-2", "acc-1"])
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().orderedAccountIds).toEqual(["acc-2", "acc-1"])
+    })
+
+    await act(async () => {
+      mockGetPinnedList.mockResolvedValueOnce([])
+      mockGetOrderedList.mockResolvedValueOnce(["acc-2", "acc-1"])
+      resolveOrderedWrite?.(true)
+      await reorderPromise
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().orderedAccountIds).toEqual(["acc-2", "acc-1"])
+    })
+  })
 })
 
 describe("AccountDataContext initial load orchestration", () => {

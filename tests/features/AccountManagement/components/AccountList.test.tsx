@@ -611,6 +611,46 @@ describe("AccountList", () => {
     ])
   })
 
+  it("reorders only the visible subset after filters are applied", async () => {
+    const user = userEvent.setup()
+    const handleReorder = vi.fn()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        isManualSortFeatureEnabled: true,
+        handleReorder,
+      }),
+    )
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "common:status.enabled" }),
+    )
+
+    expect(screen.getAllByTestId("account-row")).toHaveLength(3)
+
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "account:list.dragHandle",
+      })[0],
+    )
+
+    expect(await screen.findByTestId("dnd-context")).toBeInTheDocument()
+    expect(dndState.onDragEnd).toBeTypeOf("function")
+
+    dndState.onDragEnd?.({
+      active: { id: "enabled-alpha" },
+      over: { id: "enabled-gamma" },
+    })
+
+    expect(handleReorder).toHaveBeenCalledWith([
+      "enabled-gamma",
+      "enabled-alpha",
+      "unsynced-delta",
+    ])
+  })
+
   it("does not activate dnd from disabled search handles or bulk mode", async () => {
     const user = userEvent.setup()
 
