@@ -1,24 +1,12 @@
-import {
-  closestCenter,
-  DndContext,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-} from "@dnd-kit/core"
-import {
-  arrayMove,
-  SortableContext,
-  verticalListSortingStrategy,
-} from "@dnd-kit/sortable"
+import type { DragEndEvent } from "@dnd-kit/core"
+import { arrayMove } from "@dnd-kit/sortable"
 import {
   ChevronDownIcon,
   ChevronUpIcon,
   InboxIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline"
-import { useEffect, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -63,11 +51,9 @@ import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"
 import { NewcomerSupportCard } from "../NewcomerSupportCard"
 import AccountFilterBar from "./AccountFilterBar"
+import { NonSortableAccountListItem } from "./AccountListBaseItem"
 import { AccountListInitialLoadingState } from "./AccountListLoadingState"
 import AccountSearchInput from "./AccountSearchInput"
-import SortableAccountListItem, {
-  NonSortableAccountListItem,
-} from "./SortableAccountListItem"
 
 interface AccountListProps {
   initialSearchQuery?: string
@@ -111,11 +97,27 @@ interface AccountListFilterAggregation {
   checkInCounts: Map<AccountCheckInFilterValue, number>
 }
 
-interface AccountListDndWrapperProps {
-  sortedIds: string[]
-  onDragEnd: (event: DragEndEvent) => void
-  children: React.ReactNode
+type DndLoadState = "inactive" | "loading" | "ready"
+type RequestIdleCallbackHandle = number
+type RequestIdleCallbackDeadline = {
+  didTimeout: boolean
+  timeRemaining: () => number
 }
+type RequestIdleCallbackFn = (
+  callback: (deadline: RequestIdleCallbackDeadline) => void,
+) => RequestIdleCallbackHandle
+type CancelIdleCallbackFn = (handle: RequestIdleCallbackHandle) => void
+
+/**
+ *
+ */
+function loadAccountListDndRuntime() {
+  return import("./AccountListDndRuntime")
+}
+
+type AccountListDndRuntime = Awaited<
+  ReturnType<typeof loadAccountListDndRuntime>
+>
 
 const ACCOUNT_REFRESH_FILTER_OPTION_ORDER: AccountRefreshFilterValue[] = [
   "never-synced",
@@ -323,32 +325,6 @@ function aggregateAccountListFilters(
 }
 
 /**
- *
- */
-function AccountListDndWrapper({
-  sortedIds,
-  onDragEnd,
-  children,
-}: AccountListDndWrapperProps) {
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor),
-  )
-
-  return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={closestCenter}
-      onDragEnd={onDragEnd}
-    >
-      <SortableContext items={sortedIds} strategy={verticalListSortingStrategy}>
-        {children}
-      </SortableContext>
-    </DndContext>
-  )
-}
-
-/**
  * Master list view for user accounts, including search, tagging, sorting, filtering, and manual reordering controls.
  */
 export default function AccountList({ initialSearchQuery }: AccountListProps) {
@@ -392,10 +368,19 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     useState<AccountCheckInFilterValue | null>(null)
   const [disabledFilter, setDisabledFilter] =
     useState<AccountDisabledFilterValue | null>(null)
-  const [isDndActivated, setIsDndActivated] = useState(false)
+  const [dndLoadState, setDndLoadState] = useState<DndLoadState>("inactive")
+  const dndLoadPromiseRef = useRef<Promise<AccountListDndRuntime> | null>(null)
+  const dndRuntimeRef = useRef<AccountListDndRuntime | null>(null)
+  const isMountedRef = useRef(true)
 
   const { query, setQuery, clearSearch, searchResults, inSearchMode } =
     useAccountSearch(displayData, initialSearchQuery)
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false
+    }
+  }, [])
 
   const handleDeleteWithDialog = (site: DisplaySiteData) => {
     setDeleteDialogAccount(site)
@@ -632,7 +617,10 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   const dragDisabled = inSearchMode || !isManualSortFeatureEnabled || isBulkMode
   const handleLabel = t("account:list.dragHandle")
   const isBulkBusy = isBulkDeleting || isBulkDisabling
-  const shouldRenderSortableList = isManualSortFeatureEnabled && isDndActivated
+  const shouldRenderSortableList =
+    isManualSortFeatureEnabled &&
+    dndLoadState === "ready" &&
+    dndRuntimeRef.current !== null
 
   const sortedIds = useMemo(
     () => baseResults.map((item) => item.account.id),
@@ -742,13 +730,101 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     void handleReorder(newOrder)
   }
 
-  const handleActivateDnd = () => {
+  const ensureDndReady = useCallback(() => {
+    if (!isManualSortFeatureEnabled) {
+      return Promise.resolve(null)
+    }
+
+    if (dndRuntimeRef.current !== null) {
+      if (dndLoadState !== "ready") {
+        setDndLoadState("ready")
+      }
+      return Promise.resolve(dndRuntimeRef.current)
+    }
+
+    if (dndLoadPromiseRef.current !== null) {
+      if (dndLoadState === "inactive") {
+        setDndLoadState("loading")
+      }
+      return dndLoadPromiseRef.current
+    }
+
+    setDndLoadState("loading")
+
+    const loadPromise = loadAccountListDndRuntime()
+      .then((runtime) => {
+        dndRuntimeRef.current = runtime
+        dndLoadPromiseRef.current = Promise.resolve(runtime)
+        if (isMountedRef.current) {
+          setDndLoadState("ready")
+        }
+        return runtime
+      })
+      .catch((error) => {
+        dndLoadPromiseRef.current = null
+        if (isMountedRef.current) {
+          setDndLoadState("inactive")
+        }
+        throw error
+      })
+
+    dndLoadPromiseRef.current = loadPromise
+    return loadPromise
+  }, [dndLoadState, isManualSortFeatureEnabled])
+
+  const handleActivateDnd = useCallback(() => {
     if (dragDisabled || !isManualSortFeatureEnabled) {
       return
     }
 
-    setIsDndActivated(true)
-  }
+    void ensureDndReady()
+  }, [dragDisabled, ensureDndReady, isManualSortFeatureEnabled])
+
+  useEffect(() => {
+    if (
+      !isManualSortFeatureEnabled ||
+      dragDisabled ||
+      !hasAccounts ||
+      dndLoadState !== "inactive"
+    ) {
+      return
+    }
+
+    const requestIdleCallbackFn = (
+      globalThis as typeof globalThis & {
+        requestIdleCallback?: RequestIdleCallbackFn
+      }
+    ).requestIdleCallback
+    const cancelIdleCallbackFn = (
+      globalThis as typeof globalThis & {
+        cancelIdleCallback?: CancelIdleCallbackFn
+      }
+    ).cancelIdleCallback
+
+    if (typeof requestIdleCallbackFn === "function") {
+      const idleHandle = requestIdleCallbackFn(() => {
+        void ensureDndReady()
+      })
+
+      return () => {
+        cancelIdleCallbackFn?.(idleHandle)
+      }
+    }
+
+    const timeoutHandle = window.setTimeout(() => {
+      void ensureDndReady()
+    }, 0)
+
+    return () => {
+      window.clearTimeout(timeoutHandle)
+    }
+  }, [
+    dndLoadState,
+    dragDisabled,
+    ensureDndReady,
+    hasAccounts,
+    isManualSortFeatureEnabled,
+  ])
 
   const maxTagFilterLines = isSmallScreen ? 2 : isDesktop ? 3 : 2
 
@@ -798,41 +874,44 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
 
   const listContent = (
     <CardList>
-      {displayedResults.map((item) =>
-        shouldRenderSortableList ? (
-          <SortableAccountListItem
-            key={item.account.id}
-            site={item.account}
-            showCreatedAt={sortField === DATA_TYPE_CREATED_AT}
-            className={cn(
-              detectedAccount?.id === item.account.id &&
-                "rounded-lg border-l-4 border-l-blue-500 bg-blue-50 dark:border-l-blue-400 dark:bg-blue-900/50",
-            )}
-            highlights={item.highlights}
-            onDeleteWithDialog={handleDeleteWithDialog}
-            onCopyKey={handleCopyKeyWithDialog}
-            isDragDisabled={dragDisabled}
-            handleLabel={handleLabel}
-            showHandle={isManualSortFeatureEnabled && !isBulkMode}
-            selectionControl={
-              isBulkMode ? (
-                <Checkbox
-                  checked={selectedIdSet.has(item.account.id)}
-                  onCheckedChange={(checked) =>
-                    handleToggleAccountSelection(
-                      item.account.id,
-                      Boolean(checked),
-                    )
-                  }
-                  aria-label={t("account:bulk.selectAccount", {
-                    accountName: item.account.name,
-                  })}
-                  disabled={isBulkBusy}
-                />
-              ) : undefined
+      {displayedResults.map((item) => {
+        const selectionControl = isBulkMode ? (
+          <Checkbox
+            checked={selectedIdSet.has(item.account.id)}
+            onCheckedChange={(checked) =>
+              handleToggleAccountSelection(item.account.id, Boolean(checked))
             }
+            aria-label={t("account:bulk.selectAccount", {
+              accountName: item.account.name,
+            })}
+            disabled={isBulkBusy}
           />
-        ) : (
+        ) : undefined
+
+        if (shouldRenderSortableList && dndRuntimeRef.current !== null) {
+          const { SortableAccountListItem } = dndRuntimeRef.current
+
+          return (
+            <SortableAccountListItem
+              key={item.account.id}
+              site={item.account}
+              showCreatedAt={sortField === DATA_TYPE_CREATED_AT}
+              className={cn(
+                detectedAccount?.id === item.account.id &&
+                  "rounded-lg border-l-4 border-l-blue-500 bg-blue-50 dark:border-l-blue-400 dark:bg-blue-900/50",
+              )}
+              highlights={item.highlights}
+              onDeleteWithDialog={handleDeleteWithDialog}
+              onCopyKey={handleCopyKeyWithDialog}
+              isDragDisabled={dragDisabled}
+              handleLabel={handleLabel}
+              showHandle={isManualSortFeatureEnabled && !isBulkMode}
+              selectionControl={selectionControl}
+            />
+          )
+        }
+
+        return (
           <NonSortableAccountListItem
             key={item.account.id}
             site={item.account}
@@ -848,28 +927,13 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
             handleLabel={handleLabel}
             showHandle={isManualSortFeatureEnabled && !isBulkMode}
             onActivateDnd={handleActivateDnd}
-            selectionControl={
-              isBulkMode ? (
-                <Checkbox
-                  checked={selectedIdSet.has(item.account.id)}
-                  onCheckedChange={(checked) =>
-                    handleToggleAccountSelection(
-                      item.account.id,
-                      Boolean(checked),
-                    )
-                  }
-                  aria-label={t("account:bulk.selectAccount", {
-                    accountName: item.account.name,
-                  })}
-                  disabled={isBulkBusy}
-                />
-              ) : undefined
-            }
+            selectionControl={selectionControl}
           />
-        ),
-      )}
+        )
+      })}
     </CardList>
   )
+  const DndWrapper = dndRuntimeRef.current?.AccountListDndWrapper
 
   return (
     <Card
@@ -1115,10 +1179,10 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
             icon={<InboxIcon className="h-12 w-12" />}
             title={t("account:search.noResults")}
           />
-        ) : shouldRenderSortableList ? (
-          <AccountListDndWrapper sortedIds={sortedIds} onDragEnd={onDragEnd}>
+        ) : shouldRenderSortableList && DndWrapper ? (
+          <DndWrapper sortedIds={sortedIds} onDragEnd={onDragEnd}>
             {listContent}
-          </AccountListDndWrapper>
+          </DndWrapper>
         ) : (
           listContent
         )}

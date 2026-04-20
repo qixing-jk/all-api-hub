@@ -1,11 +1,11 @@
 import userEvent from "@testing-library/user-event"
 import React from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import AccountList from "~/features/AccountManagement/components/AccountList"
 import { SiteHealthStatus } from "~/types"
 import { buildDisplaySiteData, buildTag } from "~~/tests/test-utils/factories"
-import { render, screen } from "~~/tests/test-utils/render"
+import { act, render, screen } from "~~/tests/test-utils/render"
 
 const {
   mockUseAccountDataContext,
@@ -28,6 +28,13 @@ const {
   },
   useSortableMock: vi.fn(),
 }))
+
+const idleCallbackState = {
+  callback: null as
+    | ((deadline: { didTimeout: boolean; timeRemaining: () => number }) => void)
+    | null,
+  handle: 0,
+}
 
 vi.mock("@dnd-kit/core", () => ({
   closestCenter: vi.fn(),
@@ -395,6 +402,17 @@ describe("AccountList", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     dndState.onDragEnd = undefined
+    idleCallbackState.callback = null
+    idleCallbackState.handle = 0
+    vi.stubGlobal(
+      "requestIdleCallback",
+      vi.fn((callback: NonNullable<typeof idleCallbackState.callback>) => {
+        idleCallbackState.callback = callback
+        idleCallbackState.handle += 1
+        return idleCallbackState.handle
+      }),
+    )
+    vi.stubGlobal("cancelIdleCallback", vi.fn())
     handleDeleteAccountsMock.mockResolvedValue({
       deletedCount: 0,
       deletedIds: [],
@@ -407,6 +425,10 @@ describe("AccountList", () => {
       showTodayCashflow: true,
     })
     mockUseAccountDataContext.mockReturnValue(createAccountDataContextValue())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it("shows a loading skeleton instead of the empty state during the initial load", () => {
@@ -434,9 +456,7 @@ describe("AccountList", () => {
     ).toBeInTheDocument()
   })
 
-  it("does not mount sortable rows until the drag handle activates dnd", async () => {
-    const user = userEvent.setup()
-
+  it("auto-loads dnd during idle time after the first render settles", async () => {
     mockUseAccountDataContext.mockReturnValue(
       createAccountDataContextValue({
         isManualSortFeatureEnabled: true,
@@ -449,13 +469,36 @@ describe("AccountList", () => {
     expect(screen.queryByTestId("sortable-context")).not.toBeInTheDocument()
     expect(useSortableMock).not.toHaveBeenCalled()
 
+    await act(async () => {
+      idleCallbackState.callback?.({
+        didTimeout: false,
+        timeRemaining: () => 50,
+      })
+    })
+
+    expect(await screen.findByTestId("dnd-context")).toBeInTheDocument()
+    expect(screen.getByTestId("sortable-context")).toBeInTheDocument()
+    expect(useSortableMock).toHaveBeenCalledTimes(4)
+  })
+
+  it("uses the drag handle as a manual fallback before idle loading finishes", async () => {
+    const user = userEvent.setup()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        isManualSortFeatureEnabled: true,
+      }),
+    )
+
+    render(<AccountList />)
+
     await user.click(
       screen.getAllByRole("button", {
         name: "account:list.dragHandle",
       })[0],
     )
 
-    expect(screen.getByTestId("dnd-context")).toBeInTheDocument()
+    expect(await screen.findByTestId("dnd-context")).toBeInTheDocument()
     expect(screen.getByTestId("sortable-context")).toBeInTheDocument()
     expect(useSortableMock).toHaveBeenCalledTimes(4)
   })
@@ -479,6 +522,7 @@ describe("AccountList", () => {
       })[0],
     )
 
+    expect(await screen.findByTestId("dnd-context")).toBeInTheDocument()
     expect(dndState.onDragEnd).toBeTypeOf("function")
 
     dndState.onDragEnd?.({
