@@ -65,7 +65,9 @@ import { NewcomerSupportCard } from "../NewcomerSupportCard"
 import AccountFilterBar from "./AccountFilterBar"
 import { AccountListInitialLoadingState } from "./AccountListLoadingState"
 import AccountSearchInput from "./AccountSearchInput"
-import SortableAccountListItem from "./SortableAccountListItem"
+import SortableAccountListItem, {
+  NonSortableAccountListItem,
+} from "./SortableAccountListItem"
 
 interface AccountListProps {
   initialSearchQuery?: string
@@ -107,6 +109,12 @@ interface AccountListFilterAggregation {
   siteTypeCounts: Map<string, number>
   refreshCounts: Map<AccountRefreshFilterValue, number>
   checkInCounts: Map<AccountCheckInFilterValue, number>
+}
+
+interface AccountListDndWrapperProps {
+  sortedIds: string[]
+  onDragEnd: (event: DragEndEvent) => void
+  children: React.ReactNode
 }
 
 const ACCOUNT_REFRESH_FILTER_OPTION_ORDER: AccountRefreshFilterValue[] = [
@@ -315,6 +323,32 @@ function aggregateAccountListFilters(
 }
 
 /**
+ *
+ */
+function AccountListDndWrapper({
+  sortedIds,
+  onDragEnd,
+  children,
+}: AccountListDndWrapperProps) {
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor),
+  )
+
+  return (
+    <DndContext
+      sensors={sensors}
+      collisionDetection={closestCenter}
+      onDragEnd={onDragEnd}
+    >
+      <SortableContext items={sortedIds} strategy={verticalListSortingStrategy}>
+        {children}
+      </SortableContext>
+    </DndContext>
+  )
+}
+
+/**
  * Master list view for user accounts, including search, tagging, sorting, filtering, and manual reordering controls.
  */
 export default function AccountList({ initialSearchQuery }: AccountListProps) {
@@ -358,13 +392,10 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     useState<AccountCheckInFilterValue | null>(null)
   const [disabledFilter, setDisabledFilter] =
     useState<AccountDisabledFilterValue | null>(null)
+  const [isDndActivated, setIsDndActivated] = useState(false)
 
   const { query, setQuery, clearSearch, searchResults, inSearchMode } =
     useAccountSearch(displayData, initialSearchQuery)
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor),
-  )
 
   const handleDeleteWithDialog = (site: DisplaySiteData) => {
     setDeleteDialogAccount(site)
@@ -601,6 +632,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   const dragDisabled = inSearchMode || !isManualSortFeatureEnabled || isBulkMode
   const handleLabel = t("account:list.dragHandle")
   const isBulkBusy = isBulkDeleting || isBulkDisabling
+  const shouldRenderSortableList = isManualSortFeatureEnabled && isDndActivated
 
   const sortedIds = useMemo(
     () => baseResults.map((item) => item.account.id),
@@ -710,6 +742,14 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     void handleReorder(newOrder)
   }
 
+  const handleActivateDnd = () => {
+    if (dragDisabled || !isManualSortFeatureEnabled) {
+      return
+    }
+
+    setIsDndActivated(true)
+  }
+
   const maxTagFilterLines = isSmallScreen ? 2 : isDesktop ? 3 : 2
 
   if (isInitialLoad) {
@@ -758,40 +798,76 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
 
   const listContent = (
     <CardList>
-      {displayedResults.map((item) => (
-        <SortableAccountListItem
-          key={item.account.id}
-          site={item.account}
-          showCreatedAt={sortField === DATA_TYPE_CREATED_AT}
-          className={cn(
-            detectedAccount?.id === item.account.id &&
-              "rounded-lg border-l-4 border-l-blue-500 bg-blue-50 dark:border-l-blue-400 dark:bg-blue-900/50",
-          )}
-          highlights={item.highlights}
-          onDeleteWithDialog={handleDeleteWithDialog}
-          onCopyKey={handleCopyKeyWithDialog}
-          isDragDisabled={dragDisabled}
-          handleLabel={handleLabel}
-          showHandle={isManualSortFeatureEnabled && !isBulkMode}
-          selectionControl={
-            isBulkMode ? (
-              <Checkbox
-                checked={selectedIdSet.has(item.account.id)}
-                onCheckedChange={(checked) =>
-                  handleToggleAccountSelection(
-                    item.account.id,
-                    Boolean(checked),
-                  )
-                }
-                aria-label={t("account:bulk.selectAccount", {
-                  accountName: item.account.name,
-                })}
-                disabled={isBulkBusy}
-              />
-            ) : undefined
-          }
-        />
-      ))}
+      {displayedResults.map((item) =>
+        shouldRenderSortableList ? (
+          <SortableAccountListItem
+            key={item.account.id}
+            site={item.account}
+            showCreatedAt={sortField === DATA_TYPE_CREATED_AT}
+            className={cn(
+              detectedAccount?.id === item.account.id &&
+                "rounded-lg border-l-4 border-l-blue-500 bg-blue-50 dark:border-l-blue-400 dark:bg-blue-900/50",
+            )}
+            highlights={item.highlights}
+            onDeleteWithDialog={handleDeleteWithDialog}
+            onCopyKey={handleCopyKeyWithDialog}
+            isDragDisabled={dragDisabled}
+            handleLabel={handleLabel}
+            showHandle={isManualSortFeatureEnabled && !isBulkMode}
+            selectionControl={
+              isBulkMode ? (
+                <Checkbox
+                  checked={selectedIdSet.has(item.account.id)}
+                  onCheckedChange={(checked) =>
+                    handleToggleAccountSelection(
+                      item.account.id,
+                      Boolean(checked),
+                    )
+                  }
+                  aria-label={t("account:bulk.selectAccount", {
+                    accountName: item.account.name,
+                  })}
+                  disabled={isBulkBusy}
+                />
+              ) : undefined
+            }
+          />
+        ) : (
+          <NonSortableAccountListItem
+            key={item.account.id}
+            site={item.account}
+            showCreatedAt={sortField === DATA_TYPE_CREATED_AT}
+            className={cn(
+              detectedAccount?.id === item.account.id &&
+                "rounded-lg border-l-4 border-l-blue-500 bg-blue-50 dark:border-l-blue-400 dark:bg-blue-900/50",
+            )}
+            highlights={item.highlights}
+            onDeleteWithDialog={handleDeleteWithDialog}
+            onCopyKey={handleCopyKeyWithDialog}
+            isDragDisabled={dragDisabled}
+            handleLabel={handleLabel}
+            showHandle={isManualSortFeatureEnabled && !isBulkMode}
+            onActivateDnd={handleActivateDnd}
+            selectionControl={
+              isBulkMode ? (
+                <Checkbox
+                  checked={selectedIdSet.has(item.account.id)}
+                  onCheckedChange={(checked) =>
+                    handleToggleAccountSelection(
+                      item.account.id,
+                      Boolean(checked),
+                    )
+                  }
+                  aria-label={t("account:bulk.selectAccount", {
+                    accountName: item.account.name,
+                  })}
+                  disabled={isBulkBusy}
+                />
+              ) : undefined
+            }
+          />
+        ),
+      )}
     </CardList>
   )
 
@@ -1039,19 +1115,10 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
             icon={<InboxIcon className="h-12 w-12" />}
             title={t("account:search.noResults")}
           />
-        ) : isManualSortFeatureEnabled ? (
-          <DndContext
-            sensors={sensors}
-            collisionDetection={closestCenter}
-            onDragEnd={onDragEnd}
-          >
-            <SortableContext
-              items={sortedIds}
-              strategy={verticalListSortingStrategy}
-            >
-              {listContent}
-            </SortableContext>
-          </DndContext>
+        ) : shouldRenderSortableList ? (
+          <AccountListDndWrapper sortedIds={sortedIds} onDragEnd={onDragEnd}>
+            {listContent}
+          </AccountListDndWrapper>
         ) : (
           listContent
         )}

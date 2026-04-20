@@ -14,6 +14,8 @@ const {
   handleDeleteAccountMock,
   handleDeleteAccountsMock,
   handleSetAccountsDisabledMock,
+  dndState,
+  useSortableMock,
 } = vi.hoisted(() => ({
   mockUseAccountDataContext: vi.fn(),
   mockUseUserPreferencesContext: vi.fn(),
@@ -21,6 +23,53 @@ const {
   handleDeleteAccountMock: vi.fn(),
   handleDeleteAccountsMock: vi.fn(),
   handleSetAccountsDisabledMock: vi.fn(),
+  dndState: {
+    onDragEnd: undefined as ((event: any) => void) | undefined,
+  },
+  useSortableMock: vi.fn(),
+}))
+
+vi.mock("@dnd-kit/core", () => ({
+  closestCenter: vi.fn(),
+  DndContext: ({
+    children,
+    onDragEnd,
+  }: {
+    children: React.ReactNode
+    onDragEnd: (event: any) => void
+  }) => {
+    dndState.onDragEnd = onDragEnd
+    return <div data-testid="dnd-context">{children}</div>
+  },
+  KeyboardSensor: vi.fn(),
+  PointerSensor: vi.fn(),
+  useSensor: vi.fn(),
+  useSensors: () => [],
+}))
+
+vi.mock("@dnd-kit/sortable", () => ({
+  arrayMove: (array: any[], from: number, to: number) => {
+    const next = array.slice()
+    const [item] = next.splice(from, 1)
+    next.splice(to, 0, item)
+    return next
+  },
+  SortableContext: ({ children }: { children: React.ReactNode }) => (
+    <div data-testid="sortable-context">{children}</div>
+  ),
+  verticalListSortingStrategy: vi.fn(),
+  useSortable: (options: any) => {
+    useSortableMock(options)
+    return {
+      attributes: {},
+      listeners: {},
+      setNodeRef: vi.fn(),
+      setActivatorNodeRef: vi.fn(),
+      transform: null,
+      transition: undefined,
+      isDragging: false,
+    }
+  },
 }))
 
 vi.mock("~/components/ui", () => {
@@ -162,13 +211,10 @@ vi.mock("~/hooks/useMediaQuery", () => ({
 }))
 
 vi.mock(
-  "~/features/AccountManagement/components/AccountList/SortableAccountListItem",
+  "~/features/AccountManagement/components/AccountList/AccountListItem",
   () => ({
-    default: ({ site, selectionControl }: any) => (
-      <div data-testid="account-row">
-        {selectionControl}
-        <span>{site.name}</span>
-      </div>
+    default: ({ site }: any) => (
+      <div data-testid="account-row">{site.name}</div>
     ),
   }),
 )
@@ -348,6 +394,7 @@ function createAccountDataContextValue(
 describe("AccountList", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    dndState.onDragEnd = undefined
     handleDeleteAccountsMock.mockResolvedValue({
       deletedCount: 0,
       deletedIds: [],
@@ -385,6 +432,102 @@ describe("AccountList", () => {
         name: "account:list.sort account:list.header.createdAt",
       }),
     ).toBeInTheDocument()
+  })
+
+  it("does not mount sortable rows until the drag handle activates dnd", async () => {
+    const user = userEvent.setup()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        isManualSortFeatureEnabled: true,
+      }),
+    )
+
+    render(<AccountList />)
+
+    expect(screen.queryByTestId("dnd-context")).not.toBeInTheDocument()
+    expect(screen.queryByTestId("sortable-context")).not.toBeInTheDocument()
+    expect(useSortableMock).not.toHaveBeenCalled()
+
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "account:list.dragHandle",
+      })[0],
+    )
+
+    expect(screen.getByTestId("dnd-context")).toBeInTheDocument()
+    expect(screen.getByTestId("sortable-context")).toBeInTheDocument()
+    expect(useSortableMock).toHaveBeenCalledTimes(4)
+  })
+
+  it("keeps the existing reorder flow after dnd activation", async () => {
+    const user = userEvent.setup()
+    const handleReorder = vi.fn()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        isManualSortFeatureEnabled: true,
+        handleReorder,
+      }),
+    )
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "account:list.dragHandle",
+      })[0],
+    )
+
+    expect(dndState.onDragEnd).toBeTypeOf("function")
+
+    dndState.onDragEnd?.({
+      active: { id: "enabled-alpha" },
+      over: { id: "enabled-gamma" },
+    })
+
+    expect(handleReorder).toHaveBeenCalledWith([
+      "disabled-beta",
+      "enabled-gamma",
+      "enabled-alpha",
+      "unsynced-delta",
+    ])
+  })
+
+  it("does not activate dnd from disabled search handles or bulk mode", async () => {
+    const user = userEvent.setup()
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        isManualSortFeatureEnabled: true,
+      }),
+    )
+
+    const { unmount } = render(<AccountList initialSearchQuery="Alpha" />)
+
+    const searchHandle = screen.getByRole("button", {
+      name: "account:list.dragHandle",
+    })
+    expect(searchHandle).toBeDisabled()
+
+    await user.click(searchHandle)
+
+    expect(screen.queryByTestId("dnd-context")).not.toBeInTheDocument()
+    expect(useSortableMock).not.toHaveBeenCalled()
+
+    unmount()
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+
+    expect(
+      screen.queryByRole("button", { name: "account:list.dragHandle" }),
+    ).not.toBeInTheDocument()
+    expect(screen.queryByTestId("dnd-context")).not.toBeInTheDocument()
+    expect(useSortableMock).not.toHaveBeenCalled()
   })
 
   it("filters accounts by enabled state and combines with tag filters", async () => {
