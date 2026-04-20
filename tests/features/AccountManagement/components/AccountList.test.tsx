@@ -247,7 +247,9 @@ vi.mock(
 /**
  * Creates an account data context value for tests.
  */
-function createAccountDataContextValue() {
+function createAccountDataContextValue(
+  overrides: Record<string, unknown> = {},
+) {
   const enabledAlpha = buildDisplaySiteData({
     id: "enabled-alpha",
     name: "Enabled Alpha",
@@ -324,6 +326,7 @@ function createAccountDataContextValue() {
   return {
     sortedData: [enabledAlpha, disabledBeta, enabledGamma, unsyncedDelta],
     displayData: [enabledAlpha, disabledBeta, enabledGamma, unsyncedDelta],
+    isInitialLoad: false,
     handleSort: vi.fn(),
     sortField: "name",
     sortOrder: "asc",
@@ -338,6 +341,7 @@ function createAccountDataContextValue() {
     },
     isManualSortFeatureEnabled: false,
     detectedAccount: null,
+    ...overrides,
   }
 }
 
@@ -356,6 +360,21 @@ describe("AccountList", () => {
       showTodayCashflow: true,
     })
     mockUseAccountDataContext.mockReturnValue(createAccountDataContextValue())
+  })
+
+  it("shows a loading skeleton instead of the empty state during the initial load", () => {
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        sortedData: [],
+        displayData: [],
+        isInitialLoad: true,
+      }),
+    )
+
+    render(<AccountList />)
+
+    expect(screen.getByText("common:status.loading")).toBeInTheDocument()
+    expect(screen.queryByText("account:emptyState")).not.toBeInTheDocument()
   })
 
   it("renders the created-time sort control", () => {

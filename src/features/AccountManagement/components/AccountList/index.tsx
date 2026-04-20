@@ -63,6 +63,7 @@ import CopyKeyDialog from "../CopyKeyDialog"
 import DelAccountDialog from "../DelAccountDialog"
 import { NewcomerSupportCard } from "../NewcomerSupportCard"
 import AccountFilterBar from "./AccountFilterBar"
+import { AccountListInitialLoadingState } from "./AccountListLoadingState"
 import AccountSearchInput from "./AccountSearchInput"
 import SortableAccountListItem from "./SortableAccountListItem"
 
@@ -287,6 +288,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   const {
     sortedData,
     displayData,
+    isInitialLoad,
     handleSort,
     sortField,
     sortOrder,
@@ -294,6 +296,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     tags,
     tagCountsById,
     isManualSortFeatureEnabled,
+    detectedAccount,
   } = useAccountDataContext()
   const { handleAddAccountClick } = useAddAccountHandler()
   const {
@@ -301,8 +304,6 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     handleDeleteAccounts,
     handleSetAccountsDisabled,
   } = useAccountActionsContext()
-  const { detectedAccount } = useAccountDataContext()
-
   const [deleteDialogAccount, setDeleteDialogAccount] =
     useState<DisplaySiteData | null>(null)
   const [copyKeyDialogAccount, setCopyKeyDialogAccount] =
@@ -712,6 +713,10 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   }
 
   const maxTagFilterLines = isSmallScreen ? 2 : isDesktop ? 3 : 2
+
+  if (isInitialLoad) {
+    return <AccountListInitialLoadingState label={t("common:status.loading")} />
+  }
 
   if (!hasAccounts) {
     return (
