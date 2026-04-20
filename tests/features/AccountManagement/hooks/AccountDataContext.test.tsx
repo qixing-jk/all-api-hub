@@ -328,6 +328,11 @@ async function renderAccountDataProvider() {
   return () => latestCtx as ReturnType<typeof useAccountDataContext>
 }
 
+async function flushReactMicrotasks() {
+  await Promise.resolve()
+  await Promise.resolve()
+}
+
 /**
  * Captures the latest AccountDataContext value for assertions in tests.
  */
@@ -500,14 +505,14 @@ describe("AccountDataContext initial load orchestration", () => {
 
     await act(async () => {
       resolveActiveTabs?.([])
-      await Promise.resolve()
+      await flushReactMicrotasks()
     })
 
     expect(getLatestCtx().isInitialLoad).toBe(true)
 
     await act(async () => {
       resolveAllTabs?.([])
-      await Promise.resolve()
+      await flushReactMicrotasks()
     })
 
     await waitFor(() => {
@@ -565,14 +570,14 @@ describe("AccountDataContext initial load orchestration", () => {
 
     await act(async () => {
       resolveAllTabs?.([])
-      await Promise.resolve()
+      await flushReactMicrotasks()
     })
 
     expect(getLatestCtx().isInitialLoad).toBe(true)
 
     await act(async () => {
       resolveActiveTabs?.([])
-      await Promise.resolve()
+      await flushReactMicrotasks()
     })
 
     await waitFor(() => {
