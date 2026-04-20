@@ -33,6 +33,7 @@ function createMockIndexedAccountSearchEntries(
 }
 
 const {
+  mockLogger,
   mockGetAllAccounts,
   mockGetAllBookmarks,
   mockGetOrderedList,
@@ -63,6 +64,12 @@ const {
   mockSearchAccountSearchIndex,
   mockUpdateSortConfig,
 } = vi.hoisted(() => ({
+  mockLogger: {
+    debug: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  },
   mockGetAllAccounts: vi.fn(),
   mockGetAllBookmarks: vi.fn(),
   mockGetOrderedList: vi.fn(),
@@ -187,6 +194,10 @@ vi.mock("~/services/tags/tagStorage", () => ({
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => mockUserPreferencesContext.current,
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => mockLogger,
 }))
 
 vi.mock("~/utils/browser/browserApi", () => ({
@@ -496,6 +507,90 @@ describe("AccountDataContext handleReorder", () => {
     await waitFor(() => {
       expect(getLatestCtx().orderedAccountIds).toEqual(["acc-2", "acc-1"])
     })
+  })
+
+  it("preserves hidden account ids when persisting a filtered reorder", async () => {
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    mockGetAllAccounts.mockResolvedValue([
+      { id: "a1" },
+      { id: "a2" },
+      { id: "a3" },
+      { id: "a4" },
+    ])
+    mockGetAllBookmarks.mockResolvedValue([])
+    mockGetOrderedList.mockResolvedValue(["a1", "a2", "a3", "a4"])
+    mockGetPinnedList.mockResolvedValue(["a1", "a2", "a3"])
+    mockGetAccountStats.mockResolvedValue(createEmptyStats())
+    mockSetPinnedListSubset.mockResolvedValue(true)
+    mockSetOrderedListSubset.mockResolvedValue(true)
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().pinnedAccountIds).toEqual(["a1", "a2", "a3"])
+      expect(getLatestCtx().orderedAccountIds).toEqual(["a1", "a2", "a3", "a4"])
+    })
+
+    mockGetPinnedList.mockResolvedValueOnce(["a3", "a2", "a1"])
+    mockGetOrderedList.mockResolvedValueOnce(["a3", "a2", "a1", "a4"])
+
+    await act(async () => {
+      await getLatestCtx().handleReorder(["a3", "a1", "a4"])
+    })
+
+    expect(mockSetPinnedListSubset).toHaveBeenCalledWith({
+      entryType: "account",
+      ids: ["a3", "a2", "a1"],
+    })
+    expect(mockSetOrderedListSubset).toHaveBeenCalledWith({
+      entryType: "account",
+      ids: ["a3", "a2", "a1", "a4"],
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().pinnedAccountIds).toEqual(["a3", "a2", "a1"])
+      expect(getLatestCtx().orderedAccountIds).toEqual(["a3", "a2", "a1", "a4"])
+    })
+  })
+
+  it("rolls back failed account reorder writes and logs the account path", async () => {
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    mockGetAllAccounts.mockResolvedValue([{ id: "acc-1" }, { id: "acc-2" }])
+    mockGetAllBookmarks.mockResolvedValue([])
+    mockGetOrderedList.mockResolvedValue(["acc-1", "acc-2"])
+    mockGetPinnedList.mockResolvedValue([])
+    mockGetAccountStats.mockResolvedValue(createEmptyStats())
+    mockSetOrderedListSubset.mockResolvedValue(false)
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().orderedAccountIds).toEqual(["acc-1", "acc-2"])
+    })
+
+    mockLogger.error.mockClear()
+
+    await act(async () => {
+      await getLatestCtx().handleReorder(["acc-2", "acc-1"])
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().orderedAccountIds).toEqual(["acc-1", "acc-2"])
+    })
+
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      "Failed to persist account reorder",
+      expect.objectContaining({
+        ids: ["acc-2", "acc-1"],
+        error: expect.any(Error),
+      }),
+    )
+
+    const [, details] = mockLogger.error.mock.calls.at(-1)!
+    expect(details.error).toBeInstanceOf(Error)
+    expect(details.error.message).toBe("Failed to persist account order")
   })
 })
 
@@ -909,6 +1004,90 @@ describe("AccountDataContext actions", () => {
       expect(getLatestCtx().pinnedAccountIds).toEqual(["b2", "b1"])
       expect(getLatestCtx().orderedAccountIds).toEqual(["b2", "b1", "b3"])
     })
+  })
+
+  it("preserves hidden bookmark ids when persisting a filtered reorder", async () => {
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    mockGetAllAccounts.mockResolvedValue([])
+    mockGetAllBookmarks.mockResolvedValue([
+      { id: "b1" },
+      { id: "b2" },
+      { id: "b3" },
+      { id: "b4" },
+    ])
+    mockGetOrderedList.mockResolvedValue(["b1", "b2", "b3", "b4"])
+    mockGetPinnedList.mockResolvedValue(["b1", "b2", "b3"])
+    mockGetAccountStats.mockResolvedValue(createEmptyStats())
+    mockSetPinnedListSubset.mockResolvedValue(true)
+    mockSetOrderedListSubset.mockResolvedValue(true)
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().pinnedAccountIds).toEqual(["b1", "b2", "b3"])
+      expect(getLatestCtx().orderedAccountIds).toEqual(["b1", "b2", "b3", "b4"])
+    })
+
+    mockGetPinnedList.mockResolvedValueOnce(["b3", "b2", "b1"])
+    mockGetOrderedList.mockResolvedValueOnce(["b3", "b2", "b1", "b4"])
+
+    await act(async () => {
+      await getLatestCtx().handleBookmarkReorder(["b3", "b1", "b4"])
+    })
+
+    expect(mockSetPinnedListSubset).toHaveBeenCalledWith({
+      entryType: "bookmark",
+      ids: ["b3", "b2", "b1"],
+    })
+    expect(mockSetOrderedListSubset).toHaveBeenCalledWith({
+      entryType: "bookmark",
+      ids: ["b3", "b2", "b1", "b4"],
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().pinnedAccountIds).toEqual(["b3", "b2", "b1"])
+      expect(getLatestCtx().orderedAccountIds).toEqual(["b3", "b2", "b1", "b4"])
+    })
+  })
+
+  it("rolls back failed bookmark reorder writes and logs the bookmark path", async () => {
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    mockGetAllAccounts.mockResolvedValue([])
+    mockGetAllBookmarks.mockResolvedValue([{ id: "b1" }, { id: "b2" }])
+    mockGetOrderedList.mockResolvedValue(["b1", "b2"])
+    mockGetPinnedList.mockResolvedValue([])
+    mockGetAccountStats.mockResolvedValue(createEmptyStats())
+    mockSetOrderedListSubset.mockResolvedValue(false)
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().orderedAccountIds).toEqual(["b1", "b2"])
+    })
+
+    mockLogger.error.mockClear()
+
+    await act(async () => {
+      await getLatestCtx().handleBookmarkReorder(["b2", "b1"])
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().orderedAccountIds).toEqual(["b1", "b2"])
+    })
+
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      "Failed to persist bookmark reorder",
+      expect.objectContaining({
+        ids: ["b2", "b1"],
+        error: expect.any(Error),
+      }),
+    )
+
+    const [, details] = mockLogger.error.mock.calls.at(-1)!
+    expect(details.error).toBeInstanceOf(Error)
+    expect(details.error.message).toBe("Failed to persist bookmark order")
   })
 
   it("toggles pin state through the provider and keeps local pinned ids in sync", async () => {

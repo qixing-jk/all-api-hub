@@ -56,7 +56,7 @@ import { tryParseOrigin } from "~/utils/core/urlParsing"
 const logger = createLogger("AccountDataContext")
 
 /**
- *
+ * Replaces only IDs that belong to `subsetIdSet`, preserving non-subset IDs in place.
  */
 function replaceIdListSubset(input: {
   existingIds: string[]
@@ -795,7 +795,7 @@ export const AccountDataProvider = ({
     async (ids: string[]) => {
       // Ensure pinned accounts stay at top but allow pinned relative order to follow ids
       const pinnedSet = new Set(pinnedAccountIds)
-      const accountIdSet = new Set(ids)
+      const visibleAccountIdSet = new Set(ids)
       const allAccountIdSet = new Set(displayData.map((account) => account.id))
       const pinnedSegment = ids.filter((id) => pinnedSet.has(id))
       const nonPinnedSegment = ids.filter((id) => !pinnedSet.has(id))
@@ -805,7 +805,7 @@ export const AccountDataProvider = ({
 
       // Check if pinned order has changed
       const pinnedAccountsInState = pinnedAccountIds.filter((id) =>
-        accountIdSet.has(id),
+        visibleAccountIdSet.has(id),
       )
       const shouldUpdatePinnedOrder =
         pinnedSegment.length > 0 &&
@@ -815,13 +815,13 @@ export const AccountDataProvider = ({
       const optimisticPinnedIds = shouldUpdatePinnedOrder
         ? replaceIdListSubset({
             existingIds: previousPinnedIds,
-            subsetIdSet: allAccountIdSet,
+            subsetIdSet: visibleAccountIdSet,
             nextSubsetIds: pinnedSegment,
           })
         : previousPinnedIds
       const optimisticOrderedIds = replaceIdListSubset({
         existingIds: previousOrderedIds,
-        subsetIdSet: allAccountIdSet,
+        subsetIdSet: visibleAccountIdSet,
         nextSubsetIds: merged,
       })
 
@@ -832,7 +832,7 @@ export const AccountDataProvider = ({
         if (shouldUpdatePinnedOrder) {
           const didPersistPinned = await accountStorage.setPinnedListSubset({
             entryType: "account",
-            ids: pinnedSegment,
+            ids: optimisticPinnedIds.filter((id) => allAccountIdSet.has(id)),
           })
 
           if (!didPersistPinned) {
@@ -842,80 +842,7 @@ export const AccountDataProvider = ({
 
         const didPersistOrder = await accountStorage.setOrderedListSubset({
           entryType: "account",
-          ids: merged,
-        })
-
-        if (!didPersistOrder) {
-          throw new Error("Failed to persist bookmark order")
-        }
-
-        const [nextPinnedIds, nextOrderedIds] = await Promise.all([
-          accountStorage.getPinnedList(),
-          accountStorage.getOrderedList(),
-        ])
-
-        setPinnedAccountIds(nextPinnedIds)
-        setOrderedAccountIds(nextOrderedIds)
-      } catch (error) {
-        logger.error("Failed to persist bookmark reorder", { ids, error })
-        setPinnedAccountIds(previousPinnedIds)
-        setOrderedAccountIds(previousOrderedIds)
-      }
-    },
-    [displayData, orderedAccountIds, pinnedAccountIds],
-  )
-
-  const handleBookmarkReorder = useCallback(
-    async (ids: string[]) => {
-      const pinnedSet = new Set(pinnedAccountIds)
-      const bookmarkIdSet = new Set(ids)
-      const allBookmarkIdSet = new Set(bookmarks.map((bookmark) => bookmark.id))
-      const pinnedSegment = ids.filter((id) => pinnedSet.has(id))
-      const nonPinnedSegment = ids.filter((id) => !pinnedSet.has(id))
-      const merged = [...pinnedSegment, ...nonPinnedSegment]
-      const previousPinnedIds = pinnedAccountIds
-      const previousOrderedIds = orderedAccountIds
-
-      const pinnedBookmarksInState = pinnedAccountIds.filter((id) =>
-        bookmarkIdSet.has(id),
-      )
-
-      const shouldUpdatePinnedOrder =
-        pinnedSegment.length > 0 &&
-        pinnedSegment.length === pinnedBookmarksInState.length &&
-        pinnedSegment.some((id, index) => id !== pinnedBookmarksInState[index])
-
-      const optimisticPinnedIds = shouldUpdatePinnedOrder
-        ? replaceIdListSubset({
-            existingIds: previousPinnedIds,
-            subsetIdSet: allBookmarkIdSet,
-            nextSubsetIds: pinnedSegment,
-          })
-        : previousPinnedIds
-      const optimisticOrderedIds = replaceIdListSubset({
-        existingIds: previousOrderedIds,
-        subsetIdSet: allBookmarkIdSet,
-        nextSubsetIds: merged,
-      })
-
-      setPinnedAccountIds(optimisticPinnedIds)
-      setOrderedAccountIds(optimisticOrderedIds)
-
-      try {
-        if (shouldUpdatePinnedOrder) {
-          const didPersistPinned = await accountStorage.setPinnedListSubset({
-            entryType: "bookmark",
-            ids: pinnedSegment,
-          })
-
-          if (!didPersistPinned) {
-            throw new Error("Failed to persist pinned bookmark order")
-          }
-        }
-
-        const didPersistOrder = await accountStorage.setOrderedListSubset({
-          entryType: "bookmark",
-          ids: merged,
+          ids: optimisticOrderedIds.filter((id) => allAccountIdSet.has(id)),
         })
 
         if (!didPersistOrder) {
@@ -931,6 +858,79 @@ export const AccountDataProvider = ({
         setOrderedAccountIds(nextOrderedIds)
       } catch (error) {
         logger.error("Failed to persist account reorder", { ids, error })
+        setPinnedAccountIds(previousPinnedIds)
+        setOrderedAccountIds(previousOrderedIds)
+      }
+    },
+    [displayData, orderedAccountIds, pinnedAccountIds],
+  )
+
+  const handleBookmarkReorder = useCallback(
+    async (ids: string[]) => {
+      const pinnedSet = new Set(pinnedAccountIds)
+      const visibleBookmarkIdSet = new Set(ids)
+      const allBookmarkIdSet = new Set(bookmarks.map((bookmark) => bookmark.id))
+      const pinnedSegment = ids.filter((id) => pinnedSet.has(id))
+      const nonPinnedSegment = ids.filter((id) => !pinnedSet.has(id))
+      const merged = [...pinnedSegment, ...nonPinnedSegment]
+      const previousPinnedIds = pinnedAccountIds
+      const previousOrderedIds = orderedAccountIds
+
+      const pinnedBookmarksInState = pinnedAccountIds.filter((id) =>
+        visibleBookmarkIdSet.has(id),
+      )
+
+      const shouldUpdatePinnedOrder =
+        pinnedSegment.length > 0 &&
+        pinnedSegment.length === pinnedBookmarksInState.length &&
+        pinnedSegment.some((id, index) => id !== pinnedBookmarksInState[index])
+
+      const optimisticPinnedIds = shouldUpdatePinnedOrder
+        ? replaceIdListSubset({
+            existingIds: previousPinnedIds,
+            subsetIdSet: visibleBookmarkIdSet,
+            nextSubsetIds: pinnedSegment,
+          })
+        : previousPinnedIds
+      const optimisticOrderedIds = replaceIdListSubset({
+        existingIds: previousOrderedIds,
+        subsetIdSet: visibleBookmarkIdSet,
+        nextSubsetIds: merged,
+      })
+
+      setPinnedAccountIds(optimisticPinnedIds)
+      setOrderedAccountIds(optimisticOrderedIds)
+
+      try {
+        if (shouldUpdatePinnedOrder) {
+          const didPersistPinned = await accountStorage.setPinnedListSubset({
+            entryType: "bookmark",
+            ids: optimisticPinnedIds.filter((id) => allBookmarkIdSet.has(id)),
+          })
+
+          if (!didPersistPinned) {
+            throw new Error("Failed to persist pinned bookmark order")
+          }
+        }
+
+        const didPersistOrder = await accountStorage.setOrderedListSubset({
+          entryType: "bookmark",
+          ids: optimisticOrderedIds.filter((id) => allBookmarkIdSet.has(id)),
+        })
+
+        if (!didPersistOrder) {
+          throw new Error("Failed to persist bookmark order")
+        }
+
+        const [nextPinnedIds, nextOrderedIds] = await Promise.all([
+          accountStorage.getPinnedList(),
+          accountStorage.getOrderedList(),
+        ])
+
+        setPinnedAccountIds(nextPinnedIds)
+        setOrderedAccountIds(nextOrderedIds)
+      } catch (error) {
+        logger.error("Failed to persist bookmark reorder", { ids, error })
         setPinnedAccountIds(previousPinnedIds)
         setOrderedAccountIds(previousOrderedIds)
       }
