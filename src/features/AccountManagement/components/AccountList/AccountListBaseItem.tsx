@@ -32,7 +32,7 @@ interface AccountListItemRowLayoutProps {
 }
 
 /**
- *
+ * Renders the shared row layout used by account list items.
  */
 export function AccountListItemRowLayout({
   site,
@@ -71,7 +71,7 @@ interface NonSortableAccountListItemProps extends AccountListHandleItemProps {
 }
 
 /**
- *
+ * Renders a static account list item with an optional drag handle activator.
  */
 export function NonSortableAccountListItem({
   site,

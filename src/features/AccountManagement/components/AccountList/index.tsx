@@ -109,7 +109,7 @@ type RequestIdleCallbackFn = (
 type CancelIdleCallbackFn = (handle: RequestIdleCallbackHandle) => void
 
 /**
- *
+ * Lazily loads the account list drag-and-drop runtime for manual ordering mode.
  */
 function loadAccountListDndRuntime() {
   return import("./AccountListDndRuntime")

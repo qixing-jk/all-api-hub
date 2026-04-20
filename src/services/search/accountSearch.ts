@@ -53,7 +53,7 @@ interface IndexedUrlField {
   path: string
 }
 
-export interface IndexedAccountSearchEntry {
+interface IndexedAccountSearchEntry {
   account: DisplaySiteData
   normalizedName: string
   normalizedUsername: string

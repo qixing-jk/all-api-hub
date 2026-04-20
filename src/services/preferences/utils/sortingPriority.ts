@@ -148,7 +148,7 @@ function compareByUserSortField(
  * @param currencyType Currency type referenced by balance/consumption fields.
  * @param sortOrder Sort direction (`asc` or `desc`).
  * @param matchedAccountScores Map of account IDs to open-tab match scores.
- * @param pinnedAccountIds List of pinned account IDs ordered by priority.
+ * @param pinnedAccountIndices Map of pinned account IDs to their priority index.
  * @param manualOrderIndices Optional map of manual order positions by account ID.
  */
 function applySortingCriteria(

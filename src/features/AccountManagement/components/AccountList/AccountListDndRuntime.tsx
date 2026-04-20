@@ -18,7 +18,7 @@ interface AccountListDndWrapperProps {
 }
 
 /**
- *
+ * Wraps account list children with the drag-and-drop runtime and sortable context.
  */
 export function AccountListDndWrapper({
   sortedIds,
