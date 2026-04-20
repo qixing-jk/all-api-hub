@@ -160,7 +160,7 @@ function applySortingCriteria(
   currencyType: CurrencyType,
   sortOrder: "asc" | "desc",
   matchedAccountScores: Record<string, number>,
-  pinnedAccountIds: string[],
+  pinnedAccountIndices: Record<string, number>,
   manualOrderIndices?: Record<string, number>,
 ): number {
   switch (criteriaId) {
@@ -172,10 +172,10 @@ function applySortingCriteria(
     }
 
     case SortingCriteriaType.PINNED: {
-      const indexA = pinnedAccountIds.indexOf(a.id)
-      const indexB = pinnedAccountIds.indexOf(b.id)
-      const isPinnedA = indexA !== -1
-      const isPinnedB = indexB !== -1
+      const indexA = pinnedAccountIndices[a.id]
+      const indexB = pinnedAccountIndices[b.id]
+      const isPinnedA = typeof indexA === "number"
+      const isPinnedB = typeof indexB === "number"
 
       if (isPinnedA && isPinnedB) {
         return indexA - indexB
@@ -298,6 +298,10 @@ export function createDynamicSortComparator(
   const enabledCriteria = config.criteria
     .filter((c) => c.enabled)
     .sort((c1, c2) => c1.priority - c2.priority)
+  const pinnedAccountIndices = Object.fromEntries(
+    pinnedAccountIds.map((id, index) => [id, index]),
+  )
+
   return (a: DisplaySiteData, b: DisplaySiteData): number => {
     for (const criteria of enabledCriteria) {
       const comparison = applySortingCriteria(
@@ -309,7 +313,7 @@ export function createDynamicSortComparator(
         currencyType,
         sortOrder,
         matchedAccountScores,
-        pinnedAccountIds,
+        pinnedAccountIndices,
         manualOrderIndices,
       )
       if (comparison !== 0) return comparison

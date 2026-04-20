@@ -21,7 +21,10 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { createDynamicSortComparator } from "~/services/preferences/utils/sortingPriority"
-import { searchAccounts } from "~/services/search/accountSearch"
+import {
+  buildAccountSearchIndex,
+  searchAccountSearchIndex,
+} from "~/services/search/accountSearch"
 import { tagStorage } from "~/services/tags/tagStorage"
 import type {
   AccountStats,
@@ -141,7 +144,11 @@ export const AccountDataProvider = ({
     today_total_income: 0,
   })
   const [lastUpdateTime, setLastUpdateTime] = useState<Date>()
-  const [isInitialLoad, setIsInitialLoad] = useState(true)
+  const [hasLoadedAccountData, setHasLoadedAccountData] = useState(false)
+  const [hasResolvedInitialCurrentTab, setHasResolvedInitialCurrentTab] =
+    useState(false)
+  const [hasResolvedInitialOpenTabs, setHasResolvedInitialOpenTabs] =
+    useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
   const [prevTotalConsumption, setPrevTotalConsumption] =
     useState<CurrencyAmount>({ USD: 0, CNY: 0 })
@@ -198,6 +205,17 @@ export const AccountDataProvider = ({
 
   const accountsRef = useRef<SiteAccount[]>([])
   accountsRef.current = accounts
+  const hasLoadedAccountDataRef = useRef(false)
+  hasLoadedAccountDataRef.current = hasLoadedAccountData
+  const hasResolvedInitialCurrentTabRef = useRef(false)
+  hasResolvedInitialCurrentTabRef.current = hasResolvedInitialCurrentTab
+  const hasResolvedInitialOpenTabsRef = useRef(false)
+  hasResolvedInitialOpenTabsRef.current = hasResolvedInitialOpenTabs
+
+  const isInitialLoad =
+    !hasLoadedAccountData ||
+    !hasResolvedInitialCurrentTab ||
+    !hasResolvedInitialOpenTabs
 
   const currentTabUserCacheRef = useRef<{
     tabId: number
@@ -372,6 +390,9 @@ export const AccountDataProvider = ({
       setDetectedSiteAccounts([])
       setDetectedAccount(null)
     } finally {
+      if (!hasResolvedInitialCurrentTabRef.current) {
+        setHasResolvedInitialCurrentTab(true)
+      }
       if (seq === currentTabCheckSeqRef.current) {
         setIsDetecting(false)
       }
@@ -409,7 +430,7 @@ export const AccountDataProvider = ({
         ),
       )
 
-      if (!isInitialLoad) {
+      if (hasLoadedAccountData) {
         setPrevTotalConsumption(prevTotalConsumption)
         setPrevBalances(prevBalances)
       }
@@ -437,15 +458,15 @@ export const AccountDataProvider = ({
         }
       }
 
-      if (isInitialLoad) {
-        setIsInitialLoad(false)
+      if (!hasLoadedAccountDataRef.current) {
+        setHasLoadedAccountData(true)
       }
     } catch (error) {
       logger.error("Failed to load account data", error)
     }
   }, [
     buildDisplayDataWithResolvedTags,
-    isInitialLoad,
+    hasLoadedAccountData,
     prevTotalConsumption,
     prevBalances,
   ])
@@ -565,16 +586,20 @@ export const AccountDataProvider = ({
   }, [loadAccountData, refreshKey])
 
   useEffect(() => {
+    if (!hasLoadedAccountData) {
+      return
+    }
+
     // Tab 激活变化时检测
     const cleanupActivated = onTabActivated(() => {
-      checkCurrentTab()
+      void checkCurrentTab()
     })
 
     // Tab URL 或状态更新时检测（只对当前 tab）
     const cleanupUpdated = onTabUpdated(async (tabId) => {
       const tabs = await getActiveTabs()
       if (tabs[0]?.id === tabId) {
-        checkCurrentTab()
+        void checkCurrentTab()
       }
     })
 
@@ -583,12 +608,16 @@ export const AccountDataProvider = ({
       cleanupActivated()
       cleanupUpdated()
     }
-  }, [checkCurrentTab])
+  }, [checkCurrentTab, hasLoadedAccountData])
 
   useEffect(() => {
+    if (!hasLoadedAccountData) {
+      return
+    }
+
     // accounts refresh/update may change origin matches; re-check current tab to keep UI hints accurate.
     void checkCurrentTab()
-  }, [accounts, checkCurrentTab])
+  }, [accounts, checkCurrentTab, hasLoadedAccountData])
 
   // 监听后台自动刷新的更新通知
   useEffect(() => {
@@ -790,12 +819,16 @@ export const AccountDataProvider = ({
   const [matchedAccountScores, setMatchedAccountScores] = useState<
     Record<string, number>
   >({})
+  const indexedDisplayData = useMemo(
+    () => buildAccountSearchIndex(displayData),
+    [displayData],
+  )
 
   // Check and match open tabs with accounts
   const checkOpenTabs = useCallback(async () => {
     try {
       const tabs = await getAllTabs()
-      if (!tabs || tabs.length === 0 || displayData.length === 0) {
+      if (!tabs || tabs.length === 0 || indexedDisplayData.length === 0) {
         setMatchedAccountScores({})
         return
       }
@@ -811,7 +844,10 @@ export const AccountDataProvider = ({
           if (!searchQuery) continue
 
           // Search accounts using the combined query
-          const results = searchAccounts(displayData, searchQuery)
+          const results = searchAccountSearchIndex(
+            indexedDisplayData,
+            searchQuery,
+          )
 
           // Accumulate scores for matched accounts
           results.forEach((result) => {
@@ -825,23 +861,40 @@ export const AccountDataProvider = ({
     } catch (error) {
       logger.error("Error matching open tabs", error)
       setMatchedAccountScores({})
+    } finally {
+      if (!hasResolvedInitialOpenTabsRef.current) {
+        setHasResolvedInitialOpenTabs(true)
+      }
     }
-  }, [displayData])
+  }, [indexedDisplayData])
 
   // Update matched scores when displayData changes or tabs change
   useEffect(() => {
+    if (!hasLoadedAccountData) {
+      return
+    }
+
     void checkOpenTabs()
 
     // Listen for tab changes
     const cleanupActivated = onTabActivated(() => {
+      if (!hasLoadedAccountDataRef.current) {
+        return
+      }
       void checkOpenTabs()
     })
 
     const cleanupUpdated = onTabUpdated(() => {
+      if (!hasLoadedAccountDataRef.current) {
+        return
+      }
       void checkOpenTabs()
     })
 
     const cleanupRemoved = onTabRemoved(() => {
+      if (!hasLoadedAccountDataRef.current) {
+        return
+      }
       void checkOpenTabs()
     })
 
@@ -850,7 +903,7 @@ export const AccountDataProvider = ({
       cleanupUpdated()
       cleanupRemoved()
     }
-  }, [checkOpenTabs])
+  }, [checkOpenTabs, hasLoadedAccountData])
 
   const isAccountPinned = useCallback(
     (id: string) => pinnedAccountIds.includes(id),

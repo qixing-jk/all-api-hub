@@ -97,6 +97,18 @@ interface AccountListFilterState {
   selectedTagIds: string[]
 }
 
+interface AccountListFilterAggregation {
+  displayedResults: AccountListResultItem[]
+  disabledCounts: {
+    enabled: number
+    disabled: number
+    total: number
+  }
+  siteTypeCounts: Map<string, number>
+  refreshCounts: Map<AccountRefreshFilterValue, number>
+  checkInCounts: Map<AccountCheckInFilterValue, number>
+}
+
 const ACCOUNT_REFRESH_FILTER_OPTION_ORDER: AccountRefreshFilterValue[] = [
   "never-synced",
   "healthy",
@@ -212,69 +224,94 @@ function getAccountCheckInFilterValue(
 }
 
 /**
- * Applies the account-list filters to a result set while allowing faceted counts
- * to ignore one dimension at a time.
+ * Aggregates displayed results and per-filter faceted counts in one pass.
  */
-function applyAccountListFilters(
+function aggregateAccountListFilters(
   results: AccountListResultItem[],
   filters: AccountListFilterState,
-  options?: {
-    skipDisabled?: boolean
-    skipSiteType?: boolean
-    skipRefresh?: boolean
-    skipCheckIn?: boolean
-    skipTags?: boolean
-  },
-) {
-  const {
-    skipDisabled = false,
-    skipSiteType = false,
-    skipRefresh = false,
-    skipCheckIn = false,
-    skipTags = false,
-  } = options ?? {}
-
-  const disabledFilteredResults =
-    skipDisabled || filters.disabledFilter === null
-      ? results
-      : results.filter(({ account }) =>
-          filters.disabledFilter === "disabled"
-            ? account.disabled === true
-            : account.disabled !== true,
-        )
-
-  const siteTypeFilteredResults =
-    skipSiteType || filters.siteTypeFilter === null
-      ? disabledFilteredResults
-      : disabledFilteredResults.filter(
-          ({ account }) => account.siteType === filters.siteTypeFilter,
-        )
-
-  const refreshFilteredResults =
-    skipRefresh || filters.refreshStatusFilter === null
-      ? siteTypeFilteredResults
-      : siteTypeFilteredResults.filter(
-          ({ account }) =>
-            getAccountRefreshFilterValue(account) ===
-            filters.refreshStatusFilter,
-        )
-
-  const checkInFilteredResults =
-    skipCheckIn || filters.checkInFilter === null
-      ? refreshFilteredResults
-      : refreshFilteredResults.filter(
-          ({ account }) =>
-            getAccountCheckInFilterValue(account) === filters.checkInFilter,
-        )
-
-  if (skipTags || filters.selectedTagIds.length === 0) {
-    return checkInFilteredResults
+): AccountListFilterAggregation {
+  const aggregation: AccountListFilterAggregation = {
+    displayedResults: [],
+    disabledCounts: {
+      enabled: 0,
+      disabled: 0,
+      total: 0,
+    },
+    siteTypeCounts: new Map<string, number>(),
+    refreshCounts: new Map<AccountRefreshFilterValue, number>(),
+    checkInCounts: new Map<AccountCheckInFilterValue, number>(),
   }
 
-  return checkInFilteredResults.filter(({ account }) => {
-    const ids = account.tagIds || []
-    return filters.selectedTagIds.some((tagId) => ids.includes(tagId))
-  })
+  for (const result of results) {
+    const { account } = result
+    const refreshValue = getAccountRefreshFilterValue(account)
+    const checkInValue = getAccountCheckInFilterValue(account)
+    const accountTagIds = account.tagIds || []
+    const matchesDisabled =
+      filters.disabledFilter === null
+        ? true
+        : filters.disabledFilter === "disabled"
+          ? account.disabled === true
+          : account.disabled !== true
+    const matchesSiteType =
+      filters.siteTypeFilter === null
+        ? true
+        : account.siteType === filters.siteTypeFilter
+    const matchesRefresh =
+      filters.refreshStatusFilter === null
+        ? true
+        : refreshValue === filters.refreshStatusFilter
+    const matchesCheckIn =
+      filters.checkInFilter === null
+        ? true
+        : checkInValue === filters.checkInFilter
+    const matchesTags =
+      filters.selectedTagIds.length === 0
+        ? true
+        : filters.selectedTagIds.some((tagId) => accountTagIds.includes(tagId))
+
+    if (matchesSiteType && matchesRefresh && matchesCheckIn && matchesTags) {
+      aggregation.disabledCounts.total += 1
+      if (account.disabled === true) {
+        aggregation.disabledCounts.disabled += 1
+      } else {
+        aggregation.disabledCounts.enabled += 1
+      }
+    }
+
+    if (matchesDisabled && matchesRefresh && matchesCheckIn && matchesTags) {
+      aggregation.siteTypeCounts.set(
+        account.siteType,
+        (aggregation.siteTypeCounts.get(account.siteType) ?? 0) + 1,
+      )
+    }
+
+    if (matchesDisabled && matchesSiteType && matchesCheckIn && matchesTags) {
+      aggregation.refreshCounts.set(
+        refreshValue,
+        (aggregation.refreshCounts.get(refreshValue) ?? 0) + 1,
+      )
+    }
+
+    if (matchesDisabled && matchesSiteType && matchesRefresh && matchesTags) {
+      aggregation.checkInCounts.set(
+        checkInValue,
+        (aggregation.checkInCounts.get(checkInValue) ?? 0) + 1,
+      )
+    }
+
+    if (
+      matchesDisabled &&
+      matchesSiteType &&
+      matchesRefresh &&
+      matchesCheckIn &&
+      matchesTags
+    ) {
+      aggregation.displayedResults.push(result)
+    }
+  }
+
+  return aggregation
 }
 
 /**
@@ -365,10 +402,11 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     ],
   )
 
-  const displayedResults = useMemo(
-    () => applyAccountListFilters(baseResults, filterState),
+  const filterAggregation = useMemo(
+    () => aggregateAccountListFilters(baseResults, filterState),
     [baseResults, filterState],
   )
+  const displayedResults = filterAggregation.displayedResults
 
   const allAccountIdSet = useMemo(
     () => new Set(displayData.map((account) => account.id)),
@@ -388,30 +426,6 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     }
   }, [displayData.length])
 
-  const disabledCountResults = useMemo(
-    () =>
-      applyAccountListFilters(baseResults, filterState, { skipDisabled: true }),
-    [baseResults, filterState],
-  )
-
-  const siteTypeCountResults = useMemo(
-    () =>
-      applyAccountListFilters(baseResults, filterState, { skipSiteType: true }),
-    [baseResults, filterState],
-  )
-
-  const refreshCountResults = useMemo(
-    () =>
-      applyAccountListFilters(baseResults, filterState, { skipRefresh: true }),
-    [baseResults, filterState],
-  )
-
-  const checkInCountResults = useMemo(
-    () =>
-      applyAccountListFilters(baseResults, filterState, { skipCheckIn: true }),
-    [baseResults, filterState],
-  )
-
   const tagFilterOptions = useMemo(() => {
     if (tags.length === 0) {
       return []
@@ -425,14 +439,6 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
   }, [tags, tagCountsById])
 
   const siteTypeFilterOptions = useMemo(() => {
-    const siteTypeCounts = siteTypeCountResults.reduce(
-      (counts, { account }) => {
-        counts.set(account.siteType, (counts.get(account.siteType) ?? 0) + 1)
-        return counts
-      },
-      new Map<string, number>(),
-    )
-
     const availableSiteTypes = Array.from(
       new Set(displayData.map((account) => account.siteType)),
     )
@@ -447,28 +453,28 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
       {
         value: "all",
         label: t("filter.siteType.all"),
-        count: siteTypeCountResults.length,
+        count: Array.from(filterAggregation.siteTypeCounts.values()).reduce(
+          (sum, count) => sum + count,
+          0,
+        ),
       },
       ...[...knownSiteTypes, ...extraSiteTypes].map((siteType) => ({
         value: siteType,
         label: siteType,
-        count: siteTypeCounts.get(siteType) ?? 0,
+        count: filterAggregation.siteTypeCounts.get(siteType) ?? 0,
       })),
     ]
-  }, [displayData, siteTypeCountResults, t])
+  }, [displayData, filterAggregation.siteTypeCounts, t])
 
   const refreshFilterOptions = useMemo(() => {
-    const refreshCounts = refreshCountResults.reduce((counts, { account }) => {
-      const refreshStatus = getAccountRefreshFilterValue(account)
-      counts.set(refreshStatus, (counts.get(refreshStatus) ?? 0) + 1)
-      return counts
-    }, new Map<AccountRefreshFilterValue, number>())
-
     return [
       {
         value: "all",
         label: t("filter.refresh.all"),
-        count: refreshCountResults.length,
+        count: Array.from(filterAggregation.refreshCounts.values()).reduce(
+          (sum, count) => sum + count,
+          0,
+        ),
       },
       ...ACCOUNT_REFRESH_FILTER_OPTION_ORDER.map((refreshStatus) => ({
         value: refreshStatus,
@@ -476,18 +482,12 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
           refreshStatus === "never-synced"
             ? t("account:filter.refresh.neverSynced")
             : getHealthStatusDisplay(refreshStatus, t).text,
-        count: refreshCounts.get(refreshStatus) ?? 0,
+        count: filterAggregation.refreshCounts.get(refreshStatus) ?? 0,
       })),
     ]
-  }, [refreshCountResults, t])
+  }, [filterAggregation.refreshCounts, t])
 
   const checkInFilterOptions = useMemo(() => {
-    const checkInCounts = checkInCountResults.reduce((counts, { account }) => {
-      const checkInStatus = getAccountCheckInFilterValue(account)
-      counts.set(checkInStatus, (counts.get(checkInStatus) ?? 0) + 1)
-      return counts
-    }, new Map<AccountCheckInFilterValue, number>())
-
     const getCheckInFilterLabel = (
       checkInStatus: AccountCheckInFilterValue,
     ) => {
@@ -508,40 +508,38 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
       {
         value: "all",
         label: t("filter.checkIn.all"),
-        count: checkInCountResults.length,
+        count: Array.from(filterAggregation.checkInCounts.values()).reduce(
+          (sum, count) => sum + count,
+          0,
+        ),
       },
       ...ACCOUNT_CHECK_IN_FILTER_OPTION_ORDER.map((checkInStatus) => ({
         value: checkInStatus,
         label: getCheckInFilterLabel(checkInStatus),
-        count: checkInCounts.get(checkInStatus) ?? 0,
+        count: filterAggregation.checkInCounts.get(checkInStatus) ?? 0,
       })),
     ]
-  }, [checkInCountResults, t])
+  }, [filterAggregation.checkInCounts, t])
 
   const disabledFilterOptions = useMemo(() => {
-    const enabledCount = disabledCountResults.filter(
-      ({ account }) => account.disabled !== true,
-    ).length
-    const disabledCount = disabledCountResults.length - enabledCount
-
     return [
       {
         value: "all",
         label: t("filter.disabled.all"),
-        count: disabledCountResults.length,
+        count: filterAggregation.disabledCounts.total,
       },
       {
         value: "enabled",
         label: t("common:status.enabled"),
-        count: enabledCount,
+        count: filterAggregation.disabledCounts.enabled,
       },
       {
         value: "disabled",
         label: t("common:status.disabled"),
-        count: disabledCount,
+        count: filterAggregation.disabledCounts.disabled,
       },
     ]
-  }, [disabledCountResults, t])
+  }, [filterAggregation.disabledCounts, t])
 
   const filteredSites = useMemo(
     () => displayedResults.map((item) => item.account),

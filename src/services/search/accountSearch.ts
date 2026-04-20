@@ -48,6 +48,54 @@ function parseUrl(url: string): { domain: string; path: string } {
   }
 }
 
+interface IndexedUrlField {
+  domain: string
+  path: string
+}
+
+export interface IndexedAccountSearchEntry {
+  account: DisplaySiteData
+  normalizedName: string
+  normalizedUsername: string
+  normalizedTags: string[]
+  normalizedToken: string
+  normalizedAccountId: string
+  baseUrl: IndexedUrlField
+  customCheckInUrl: IndexedUrlField | null
+  customRedeemUrl: IndexedUrlField | null
+}
+
+interface SearchToken {
+  text: string
+  url: string
+}
+
+/**
+ * Builds a reusable search index so repeated queries can avoid re-normalizing
+ * every account field on each pass.
+ */
+export function buildAccountSearchIndex(
+  accounts: DisplaySiteData[],
+): IndexedAccountSearchEntry[] {
+  return accounts.map((account) => ({
+    account,
+    normalizedName: normalizeSearchText(account.name),
+    normalizedUsername: normalizeSearchText(account.username),
+    normalizedTags: (account.tags ?? [])
+      .map((tag) => normalizeSearchText(tag))
+      .filter(Boolean),
+    normalizedToken: normalizeSearchText(account.token),
+    normalizedAccountId: normalizeSearchText(account.id),
+    baseUrl: parseUrl(account.baseUrl),
+    customCheckInUrl: account.checkIn?.customCheckIn?.url
+      ? parseUrl(account.checkIn.customCheckIn.url)
+      : null,
+    customRedeemUrl: account.checkIn?.customCheckIn?.redeemUrl
+      ? parseUrl(account.checkIn.customCheckIn.redeemUrl)
+      : null,
+  }))
+}
+
 /**
  * Calculates the score for name field matching
  */
@@ -66,18 +114,16 @@ function scoreTagMatch(tags: string[] | undefined, query: string): number {
     return 0
   }
 
-  const normalizedQuery = normalizeSearchText(query)
-  if (!normalizedQuery) {
+  if (!query) {
     return 0
   }
 
   let score = 0
   for (const tag of tags) {
-    const normalizedTag = normalizeSearchText(tag)
-    if (!normalizedTag) continue
-    if (normalizedTag === normalizedQuery) {
+    if (!tag) continue
+    if (tag === query) {
       score = Math.max(score, 4)
-    } else if (normalizedTag.includes(normalizedQuery)) {
+    } else if (tag.includes(query)) {
       score = Math.max(score, 2)
     }
   }
@@ -88,22 +134,22 @@ function scoreTagMatch(tags: string[] | undefined, query: string): number {
 /**
  * Calculates the score for URL field matching
  */
-function scoreUrlMatch(url: string, query: string): number {
-  const { domain, path } = parseUrl(url)
-  const normalizedQuery = normalizeSearchUrl(query)
-
+function scoreParsedUrlMatch(
+  parsedUrl: IndexedUrlField,
+  normalizedQuery: string,
+): number {
   let score = 0
 
   // Domain matching
-  if (domain === normalizedQuery) {
+  if (parsedUrl.domain === normalizedQuery) {
     score += 6 // Exact domain match
-  } else if (domain.includes(normalizedQuery)) {
+  } else if (parsedUrl.domain.includes(normalizedQuery)) {
     score += 3 // Domain contains query
   }
 
   // Path matching
-  if (path && normalizedQuery.length > 0) {
-    const pathSegments = path.split("/").filter(Boolean)
+  if (parsedUrl.path && normalizedQuery.length > 0) {
+    const pathSegments = parsedUrl.path.split("/").filter(Boolean)
     for (const segment of pathSegments) {
       if (segment.includes(normalizedQuery)) {
         score += 2 // Path segment contains query
@@ -119,10 +165,7 @@ function scoreUrlMatch(url: string, query: string): number {
  * Calculates the score for access token matching
  */
 function scoreTokenMatch(token: string, query: string): number {
-  const normalized = normalizeSearchText(token)
-  const normalizedQuery = normalizeSearchText(query)
-
-  if (normalized.includes(normalizedQuery)) {
+  if (token.includes(query)) {
     return 1 // Lowest weight for token matching
   }
 
@@ -137,10 +180,7 @@ function scoreAccountIdMatch(accountId: string, query: string): number {
     return 0
   }
 
-  const normalizedId = normalizeSearchText(accountId)
-  const normalizedQuery = normalizeSearchText(query)
-
-  if (normalizedId.includes(normalizedQuery)) {
+  if (accountId.includes(query)) {
     return 1 // Lowest priority, same as token matching
   }
 
@@ -154,6 +194,139 @@ export interface SearchResult {
 }
 
 /**
+ * Normalizes a search query into reusable token metadata.
+ */
+function buildSearchTokens(query: string): SearchToken[] {
+  return query
+    .trim()
+    .split(/\s+/)
+    .map((token) => ({
+      text: normalizeSearchText(token),
+      url: normalizeSearchUrl(token),
+    }))
+    .filter((token) => token.text.length > 0 || token.url.length > 0)
+}
+
+/**
+ * Searches a pre-built account index.
+ */
+export function searchAccountSearchIndex(
+  indexedAccounts: IndexedAccountSearchEntry[],
+  query: string,
+): SearchResult[] {
+  if (!query || !query.trim()) {
+    return []
+  }
+
+  const tokens = buildSearchTokens(query)
+  if (tokens.length === 0) {
+    return []
+  }
+
+  const results: SearchResult[] = []
+
+  for (const indexedAccount of indexedAccounts) {
+    let totalScore = 0
+    const matchedFields = new Set<string>()
+
+    for (const token of tokens) {
+      let tokenScore = 0
+      const tokenMatchedFields = new Set<string>()
+
+      const nameScore = scoreNameMatch(
+        indexedAccount.normalizedName,
+        token.text,
+      )
+      if (nameScore > 0) {
+        tokenScore += nameScore
+        tokenMatchedFields.add("name")
+      }
+
+      const baseUrlScore = scoreParsedUrlMatch(
+        indexedAccount.baseUrl,
+        token.url,
+      )
+      if (baseUrlScore > 0) {
+        tokenScore += baseUrlScore
+        tokenMatchedFields.add("baseUrl")
+      }
+
+      if (indexedAccount.customCheckInUrl) {
+        const checkInScore = scoreParsedUrlMatch(
+          indexedAccount.customCheckInUrl,
+          token.url,
+        )
+        if (checkInScore > 0) {
+          tokenScore += checkInScore
+          tokenMatchedFields.add("customCheckInUrl")
+        }
+      }
+
+      if (indexedAccount.customRedeemUrl) {
+        const redeemScore = scoreParsedUrlMatch(
+          indexedAccount.customRedeemUrl,
+          token.url,
+        )
+        if (redeemScore > 0) {
+          tokenScore += redeemScore
+          tokenMatchedFields.add("customRedeemUrl")
+        }
+      }
+
+      const usernameScore = scoreNameMatch(
+        indexedAccount.normalizedUsername,
+        token.text,
+      )
+      if (usernameScore > 0) {
+        tokenScore += usernameScore
+        tokenMatchedFields.add("username")
+      }
+
+      const accountIdScore = scoreAccountIdMatch(
+        indexedAccount.normalizedAccountId,
+        token.text,
+      )
+      if (accountIdScore > 0) {
+        tokenScore += accountIdScore
+      }
+
+      const tagScore = scoreTagMatch(indexedAccount.normalizedTags, token.text)
+      if (tagScore > 0) {
+        tokenScore += tagScore
+        tokenMatchedFields.add("tags")
+      }
+
+      const accessTokenScore = scoreTokenMatch(
+        indexedAccount.normalizedToken,
+        token.text,
+      )
+      if (accessTokenScore > 0) {
+        tokenScore += accessTokenScore
+      }
+
+      if (tokenScore > 0) {
+        totalScore += tokenScore
+        tokenMatchedFields.forEach((field) => matchedFields.add(field))
+      } else {
+        totalScore = 0
+        matchedFields.clear()
+        break
+      }
+    }
+
+    if (totalScore > 0) {
+      results.push({
+        account: indexedAccount.account,
+        score: totalScore,
+        matchedFields: Array.from(matchedFields),
+      })
+    }
+  }
+
+  return results
+}
+
+/**
  * Searches accounts based on a query string
  * @param accounts - Array of accounts to search
  * @param query - Search query string (supports multiple keywords separated by space)
@@ -163,123 +336,5 @@ export function searchAccounts(
   accounts: DisplaySiteData[],
   query: string,
 ): SearchResult[] {
-  if (!query || !query.trim()) {
-    return []
-  }
-
-  // Split query into tokens (keywords)
-  const tokens = query
-    .trim()
-    .split(/\s+/)
-    .map((token) => ({
-      text: normalizeSearchText(token),
-      url: normalizeSearchUrl(token),
-    }))
-    .filter((token) => token.text.length > 0 || token.url.length > 0)
-
-  if (tokens.length === 0) {
-    return []
-  }
-
-  const results: SearchResult[] = []
-
-  for (const account of accounts) {
-    let totalScore = 0
-    const matchedFields = new Set<string>()
-
-    // For each token, calculate the best matching score across all fields
-    for (const token of tokens) {
-      let tokenScore = 0
-      const tokenMatchedFields = new Set<string>()
-
-      // Match against name
-      const nameScore = scoreNameMatch(
-        normalizeSearchText(account.name),
-        token.text,
-      )
-      if (nameScore > 0) {
-        tokenScore += nameScore
-        tokenMatchedFields.add("name")
-      }
-
-      // Match against baseUrl (site_url)
-      const baseUrlScore = scoreUrlMatch(account.baseUrl, token.url)
-      if (baseUrlScore > 0) {
-        tokenScore += baseUrlScore
-        tokenMatchedFields.add("baseUrl")
-      }
-
-      // Match against customCheckInUrl
-      const customCheckInUrl = account.checkIn?.customCheckIn?.url
-      if (customCheckInUrl) {
-        const checkInScore = scoreUrlMatch(customCheckInUrl, token.url)
-        if (checkInScore > 0) {
-          tokenScore += checkInScore
-          tokenMatchedFields.add("customCheckInUrl")
-        }
-      }
-
-      // Match against customRedeemUrl
-      const customRedeemUrl = account.checkIn?.customCheckIn?.redeemUrl
-      if (customRedeemUrl) {
-        const redeemScore = scoreUrlMatch(customRedeemUrl, token.url)
-        if (redeemScore > 0) {
-          tokenScore += redeemScore
-          tokenMatchedFields.add("customRedeemUrl")
-        }
-      }
-
-      // Match against username
-      const usernameScore = scoreNameMatch(
-        normalizeSearchText(account.username),
-        token.text,
-      )
-      if (usernameScore > 0) {
-        tokenScore += usernameScore
-        tokenMatchedFields.add("username")
-      }
-
-      const accountIdScore = scoreAccountIdMatch(account.id, token.text)
-      if (accountIdScore > 0) {
-        tokenScore += accountIdScore
-        // accountId is internal-only, no highlight needed
-      }
-
-      // Match against tags
-      const tagScore = scoreTagMatch(account.tags, token.text)
-      if (tagScore > 0) {
-        tokenScore += tagScore
-        tokenMatchedFields.add("tags")
-      }
-
-      // Match against accessToken (lowest weight, not added to matchedFields for UI)
-      const accessTokenScore = scoreTokenMatch(account.token, token.text)
-      if (accessTokenScore > 0) {
-        tokenScore += accessTokenScore
-        // Note: We don't add "accessToken" to matchedFields as it should not be displayed/highlighted
-      }
-
-      // Only consider this token matched if it scored anything
-      if (tokenScore > 0) {
-        totalScore += tokenScore
-        tokenMatchedFields.forEach((field) => matchedFields.add(field))
-      } else {
-        // If any token doesn't match, this account doesn't match the composite query
-        totalScore = 0
-        matchedFields.clear()
-        break
-      }
-    }
-
-    // Only include accounts that matched all tokens
-    if (totalScore > 0) {
-      results.push({
-        account,
-        score: totalScore,
-        matchedFields: Array.from(matchedFields),
-      })
-    }
-  }
-
-  return results
+  return searchAccountSearchIndex(buildAccountSearchIndex(accounts), query)
 }

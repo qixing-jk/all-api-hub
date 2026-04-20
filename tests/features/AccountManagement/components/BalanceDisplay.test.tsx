@@ -83,6 +83,12 @@ describe("BalanceDisplay", () => {
       todayConsumption: { USD: 3, CNY: 21 },
       todayIncome: { USD: 2, CNY: 14 },
     })
+    const updatedSite = buildDisplaySiteData({
+      ...site,
+      balance: { USD: 30.25, CNY: 211.75 },
+      todayConsumption: { USD: 4, CNY: 28 },
+      todayIncome: { USD: 3, CNY: 21 },
+    })
     const handleRefreshAccount = vi.fn().mockResolvedValue(undefined)
 
     mockUseAccountActionsContext.mockReturnValue({
@@ -90,7 +96,13 @@ describe("BalanceDisplay", () => {
       refreshingAccountId: null,
     })
 
-    render(<BalanceDisplay site={site} />)
+    const { rerender } = render(<BalanceDisplay site={site} />)
+    expect(screen.queryByTestId("countup")).toBeNull()
+    expect(
+      screen.getByTitle("account:list.balance.refreshBalance"),
+    ).toHaveTextContent("$25.25")
+
+    rerender(<BalanceDisplay site={updatedSite} />)
 
     const [balanceValue, consumptionValue, incomeValue] =
       screen.getAllByTestId("countup")
@@ -101,7 +113,7 @@ describe("BalanceDisplay", () => {
     )
     expect(balanceValue).toHaveAttribute(
       "data-end",
-      String(getDisplayMoneyValue(25.25)),
+      String(getDisplayMoneyValue(30.25)),
     )
     expect(balanceValue).toHaveAttribute(
       "data-duration",
@@ -117,12 +129,12 @@ describe("BalanceDisplay", () => {
     expect(balanceNode).toHaveClass("cursor-pointer")
     expect(consumptionNode).toHaveClass("text-green-500")
     expect(incomeNode).toHaveClass("text-blue-500")
-    expect(consumptionValue).toHaveAttribute("data-end", "3")
-    expect(incomeValue).toHaveAttribute("data-end", "2")
+    expect(consumptionValue).toHaveAttribute("data-end", "4")
+    expect(incomeValue).toHaveAttribute("data-end", "3")
 
     await user.click(balanceNode)
 
-    expect(handleRefreshAccount).toHaveBeenCalledWith(site, true)
+    expect(handleRefreshAccount).toHaveBeenCalledWith(updatedSite, true)
   })
 
   it("shows disabled titles and neutral cashflow styling without refreshing disabled accounts", async () => {
@@ -177,7 +189,7 @@ describe("BalanceDisplay", () => {
     expect(handleRefreshAccount).not.toHaveBeenCalled()
   })
 
-  it("uses zero-based slow animations on initial load and hides today cashflow when that preference is disabled", () => {
+  it("renders static values on the first paint and hides today cashflow when that preference is disabled", () => {
     const site = buildDisplaySiteData({
       balance: { USD: 4, CNY: 28 },
       todayConsumption: { USD: 9, CNY: 63 },
@@ -197,19 +209,13 @@ describe("BalanceDisplay", () => {
 
     render(<BalanceDisplay site={site} />)
 
-    const [balanceValue] = screen.getAllByTestId("countup")
     const balanceNode = screen.getByTitle("account:list.balance.refreshBalance")
 
     expect(
       screen.queryByTitle("account:list.balance.refreshCashflow"),
     ).toBeNull()
     expect(screen.queryByTitle("account:list.balance.refreshIncome")).toBeNull()
-    expect(balanceValue).toHaveAttribute("data-start", "0")
-    expect(balanceValue).toHaveAttribute("data-end", "28")
-    expect(balanceValue).toHaveAttribute(
-      "data-duration",
-      String(UI_CONSTANTS.ANIMATION.SLOW_DURATION),
-    )
+    expect(screen.queryByTestId("countup")).toBeNull()
     expect(balanceNode).toHaveTextContent("¥28.00")
   })
 })

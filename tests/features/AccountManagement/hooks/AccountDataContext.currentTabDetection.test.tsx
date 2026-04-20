@@ -70,7 +70,8 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
 }))
 
 vi.mock("~/services/search/accountSearch", () => ({
-  searchAccounts: vi.fn(() => []),
+  buildAccountSearchIndex: vi.fn((accounts: any[]) => accounts),
+  searchAccountSearchIndex: vi.fn(() => []),
 }))
 
 vi.mock("~/utils/browser/browserApi", () => ({

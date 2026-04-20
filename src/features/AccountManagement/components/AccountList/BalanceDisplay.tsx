@@ -1,4 +1,4 @@
-import React from "react"
+import React, { useEffect, useRef } from "react"
 import CountUp from "react-countup"
 import { useTranslation } from "react-i18next"
 
@@ -37,11 +37,17 @@ const AnimatedValue: React.FC<{
   }) => {
     const { isInitialLoad } = useAccountDataContext()
     const { currencyType } = useUserPreferencesContext()
+    const hasCommittedRef = useRef(false)
+
+    useEffect(() => {
+      hasCommittedRef.current = true
+    }, [])
 
     const displayEndValue = getDisplayMoneyValue(value)
     const displayStartValue = isInitialLoad
       ? 0
       : getDisplayMoneyValue(startValue)
+    const shouldAnimate = hasCommittedRef.current
 
     return (
       <div
@@ -57,17 +63,21 @@ const AnimatedValue: React.FC<{
       >
         {prefix}
         {getCurrencySymbol(currencyType)}
-        <CountUp
-          start={displayStartValue}
-          end={displayEndValue}
-          duration={
-            isInitialLoad
-              ? UI_CONSTANTS.ANIMATION.SLOW_DURATION
-              : UI_CONSTANTS.ANIMATION.FAST_DURATION
-          }
-          decimals={UI_CONSTANTS.MONEY.DECIMALS}
-          preserveValue
-        />
+        {shouldAnimate ? (
+          <CountUp
+            start={displayStartValue}
+            end={displayEndValue}
+            duration={
+              isInitialLoad
+                ? UI_CONSTANTS.ANIMATION.SLOW_DURATION
+                : UI_CONSTANTS.ANIMATION.FAST_DURATION
+            }
+            decimals={UI_CONSTANTS.MONEY.DECIMALS}
+            preserveValue
+          />
+        ) : (
+          displayEndValue.toFixed(UI_CONSTANTS.MONEY.DECIMALS)
+        )}
         {suffix}
       </div>
     )

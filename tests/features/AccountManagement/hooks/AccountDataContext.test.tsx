@@ -45,7 +45,8 @@ const {
   mockOnTabActivated,
   mockOnTabRemoved,
   mockOnTabUpdated,
-  mockSearchAccounts,
+  mockBuildAccountSearchIndex,
+  mockSearchAccountSearchIndex,
   mockUpdateSortConfig,
 } = vi.hoisted(() => ({
   mockGetAllAccounts: vi.fn(),
@@ -106,7 +107,8 @@ const {
       ) => void | Promise<void>,
     ) => () => void
   >((_listener) => () => {}),
-  mockSearchAccounts: vi.fn<
+  mockBuildAccountSearchIndex: vi.fn((accounts: DisplaySiteData[]) => accounts),
+  mockSearchAccountSearchIndex: vi.fn<
     (accounts: DisplaySiteData[], query: string) => SearchResult[]
   >(() => []),
   mockUpdateSortConfig: vi.fn(),
@@ -180,7 +182,8 @@ vi.mock("~/utils/browser/browserApi", () => ({
 }))
 
 vi.mock("~/services/search/accountSearch", () => ({
-  searchAccounts: mockSearchAccounts,
+  buildAccountSearchIndex: mockBuildAccountSearchIndex,
+  searchAccountSearchIndex: mockSearchAccountSearchIndex,
 }))
 
 afterEach(() => {
@@ -249,7 +252,10 @@ beforeEach(() => {
   mockOnTabUpdated.mockImplementation(() => () => {})
   mockPinAccount.mockResolvedValue(true)
   mockUnpinAccount.mockResolvedValue(true)
-  mockSearchAccounts.mockReturnValue([])
+  mockBuildAccountSearchIndex.mockImplementation(
+    (accounts: DisplaySiteData[]) => accounts,
+  )
+  mockSearchAccountSearchIndex.mockReturnValue([])
   mockUpdateSortConfig.mockResolvedValue(true)
   ;(globalThis as any).browser = {
     ...(globalThis as any).browser,
@@ -421,6 +427,73 @@ describe("AccountDataContext handleReorder", () => {
     expect(mockSetOrderedListSubset).toHaveBeenCalledWith({
       entryType: "account",
       ids: ["p-1", "p-2", "u-1"],
+    })
+  })
+})
+
+describe("AccountDataContext initial load orchestration", () => {
+  it("keeps initial load active until current-tab and open-tab checks complete", async () => {
+    let resolveActiveTabs: ((tabs: browser.tabs.Tab[]) => void) | undefined
+    let resolveAllTabs: ((tabs: browser.tabs.Tab[]) => void) | undefined
+
+    mockGetAllAccounts.mockResolvedValue([
+      {
+        id: "acc-1",
+        site_url: "https://alpha.example.com",
+        account_info: { id: 1 },
+        last_sync_time: 0,
+      },
+    ])
+    mockConvertToDisplayData.mockReturnValue([
+      {
+        id: "acc-1",
+        name: "Alpha",
+        username: "alice",
+        baseUrl: "https://alpha.example.com",
+        token: "token",
+        tagIds: [],
+        tags: [],
+        balance: { USD: 0, CNY: 0 },
+        todayConsumption: { USD: 0, CNY: 0 },
+        todayIncome: { USD: 0, CNY: 0 },
+        checkIn: { enableDetection: false },
+      },
+    ])
+    mockGetActiveTabs.mockReturnValue(
+      new Promise((resolve) => {
+        resolveActiveTabs = resolve
+      }),
+    )
+    mockGetAllTabs.mockReturnValue(
+      new Promise((resolve) => {
+        resolveAllTabs = resolve
+      }),
+    )
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().displayData).toHaveLength(1)
+      expect(mockGetActiveTabs).toHaveBeenCalled()
+      expect(mockGetAllTabs).toHaveBeenCalled()
+    })
+
+    expect(getLatestCtx().isInitialLoad).toBe(true)
+
+    await act(async () => {
+      resolveActiveTabs?.([])
+      await Promise.resolve()
+    })
+
+    expect(getLatestCtx().isInitialLoad).toBe(true)
+
+    await act(async () => {
+      resolveAllTabs?.([])
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().isInitialLoad).toBe(false)
     })
   })
 })
@@ -1260,27 +1333,29 @@ describe("AccountDataContext sorting behavior", () => {
         title: "Beta workspace",
       }),
     ])
-    mockSearchAccounts.mockImplementation((_displayData, query: string) => {
-      if (query === "https://b.example.com/dashboard") {
-        return [
-          {
-            account: { id: "acc-b" } as DisplaySiteData,
-            score: 4,
-            matchedFields: [],
-          },
-        ]
-      }
-      if (query === "Beta workspace") {
-        return [
-          {
-            account: { id: "acc-b" } as DisplaySiteData,
-            score: 2,
-            matchedFields: [],
-          },
-        ]
-      }
-      return []
-    })
+    mockSearchAccountSearchIndex.mockImplementation(
+      (_displayData, query: string) => {
+        if (query === "https://b.example.com/dashboard") {
+          return [
+            {
+              account: { id: "acc-b" } as DisplaySiteData,
+              score: 4,
+              matchedFields: [],
+            },
+          ]
+        }
+        if (query === "Beta workspace") {
+          return [
+            {
+              account: { id: "acc-b" } as DisplaySiteData,
+              score: 2,
+              matchedFields: [],
+            },
+          ]
+        }
+        return []
+      },
+    )
 
     const getLatestCtx = await renderAccountDataProvider()
 
@@ -1291,11 +1366,11 @@ describe("AccountDataContext sorting behavior", () => {
       ])
     })
 
-    expect(mockSearchAccounts).toHaveBeenCalledWith(
+    expect(mockSearchAccountSearchIndex).toHaveBeenCalledWith(
       expect.any(Array),
       "https://b.example.com/dashboard",
     )
-    expect(mockSearchAccounts).toHaveBeenCalledWith(
+    expect(mockSearchAccountSearchIndex).toHaveBeenCalledWith(
       expect.any(Array),
       "Beta workspace",
     )
