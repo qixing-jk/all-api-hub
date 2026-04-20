@@ -3,7 +3,6 @@ import React from "react"
 import { CardItem } from "~/components/ui"
 import { useDevice } from "~/contexts/DeviceContext"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
-import { useAccountListItem } from "~/features/AccountManagement/components/AccountList/hooks/useAccountListItem"
 import type { SearchResultWithHighlight } from "~/features/AccountManagement/hooks/useAccountSearch"
 import { getAccountManagementListItemTestId } from "~/features/AccountManagement/testIds"
 import { cn } from "~/lib/utils"
@@ -22,7 +21,6 @@ interface AccountListItemProps {
 
 const AccountListItem: React.FC<AccountListItemProps> = React.memo(
   ({ site, highlights, onCopyKey, onDeleteWithDialog, showCreatedAt }) => {
-    const { handleMouseEnter, handleMouseLeave } = useAccountListItem()
     const { isTouchDevice } = useDevice()
 
     // 触摸设备始终显示按钮，PC端根据hover状态显示
@@ -38,8 +36,6 @@ const AccountListItem: React.FC<AccountListItemProps> = React.memo(
         })}
         data-testid={getAccountManagementListItemTestId(site.id)}
         data-disabled={site.disabled ? "true" : undefined}
-        onMouseEnter={() => handleMouseEnter(site.id)}
-        onMouseLeave={handleMouseLeave}
       >
         <div className="flex w-full min-w-0 items-center gap-1 sm:gap-2">
           {/* 左侧：站点信息 - 可压缩 */}

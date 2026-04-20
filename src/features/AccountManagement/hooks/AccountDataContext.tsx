@@ -382,11 +382,21 @@ export const AccountDataProvider = ({
     try {
       logger.debug("Loading account data")
       await accountStorage.resetExpiredCheckIns()
-      const allAccounts = await accountStorage.getAllAccounts()
-      const allBookmarks = await accountStorage.getAllBookmarks()
-      const storedOrderedIds = await accountStorage.getOrderedList()
-      const accountStats = await accountStorage.getAccountStats()
-      const currentTagStore = await tagStorage.getTagStore()
+      const [
+        allAccounts,
+        allBookmarks,
+        storedOrderedIds,
+        accountStats,
+        currentTagStore,
+        pinnedIds,
+      ] = await Promise.all([
+        accountStorage.getAllAccounts(),
+        accountStorage.getAllBookmarks(),
+        accountStorage.getOrderedList(),
+        accountStorage.getAccountStats(),
+        tagStorage.getTagStore(),
+        accountStorage.getPinnedList(),
+      ])
       const displaySiteData = buildDisplayDataWithResolvedTags(
         allAccounts,
         currentTagStore,
@@ -416,7 +426,6 @@ export const AccountDataProvider = ({
 
       setOrderedAccountIds(storedOrderedIds.filter((id) => entryIdSet.has(id)))
 
-      const pinnedIds = await accountStorage.getPinnedList()
       setPinnedAccountIds(pinnedIds.filter((id) => entryIdSet.has(id)))
 
       if (allAccounts.length > 0) {
