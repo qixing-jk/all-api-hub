@@ -10,6 +10,7 @@ export type EmptyStateAction = {
   variant?: React.ComponentProps<typeof Button>["variant"]
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
+  /** @deprecated Prefer `leftIcon`. When both are set, `leftIcon` takes precedence. */
   icon?: React.ReactNode
   disabled?: boolean
   loading?: boolean

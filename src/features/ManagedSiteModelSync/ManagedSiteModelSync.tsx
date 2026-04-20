@@ -77,10 +77,6 @@ export default function ManagedSiteModelSync({
     preferences,
     managedSiteType,
   )
-  const configMissingMessage = getManagedSiteConfigMissingMessage(
-    t,
-    getManagedSiteMessagesKeyFromSiteType(managedSiteType),
-  )
   const [lastExecution, setLastExecution] = useState<ExecutionResult | null>(
     null,
   )
@@ -445,10 +441,6 @@ export default function ManagedSiteModelSync({
   }
 
   const handleRefresh = () => {
-    if (isConfigMissing) {
-      return
-    }
-
     void loadLastExecution()
     void loadProgress()
     void loadNextRun()
@@ -771,7 +763,10 @@ export default function ManagedSiteModelSync({
 
       {isConfigMissing ? (
         <ManagedSiteConfigRequiredState
-          description={configMissingMessage}
+          description={getManagedSiteConfigMissingMessage(
+            t,
+            getManagedSiteMessagesKeyFromSiteType(managedSiteType),
+          )}
           className="mt-6"
         />
       ) : (

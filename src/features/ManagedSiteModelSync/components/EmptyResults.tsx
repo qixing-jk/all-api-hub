@@ -8,9 +8,9 @@ interface EmptyResultsProps {
 }
 
 /**
- * Displays empty states for execution history with config awareness.
- * @param props Component props containing history awareness.
- * @returns Appropriate empty state prompting config or search actions.
+ * Displays empty states for execution history.
+ * @param props Component props indicating whether history is present.
+ * @returns Appropriate empty state for "no data" or "no results".
  */
 export default function EmptyResults(props: EmptyResultsProps) {
   const { hasHistory } = props

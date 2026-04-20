@@ -205,10 +205,6 @@ export default function ManagedSiteChannels({
     preferences,
     managedSiteType,
   )
-  const configMissingMessage = getManagedSiteConfigMissingMessage(
-    t,
-    getManagedSiteMessagesKeyFromSiteType(managedSiteType),
-  )
 
   const [channels, setChannels] = useState<ChannelRow[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -1005,7 +1001,12 @@ export default function ManagedSiteChannels({
       />
 
       {isConfigMissing ? (
-        <ManagedSiteConfigRequiredState description={configMissingMessage} />
+        <ManagedSiteConfigRequiredState
+          description={getManagedSiteConfigMissingMessage(
+            t,
+            getManagedSiteMessagesKeyFromSiteType(managedSiteType),
+          )}
+        />
       ) : (
         <>
           {error && (

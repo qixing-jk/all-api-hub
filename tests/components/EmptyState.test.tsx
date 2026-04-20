@@ -6,7 +6,7 @@ import { render, screen } from "~~/tests/test-utils/render"
 describe("EmptyState", () => {
   it("renders a trailing action icon when rightIcon is provided", async () => {
     const onClick = vi.fn()
-    const { container } = render(
+    render(
       <EmptyState
         icon={<span data-testid="state-icon">state</span>}
         title="Configuration required"
@@ -23,16 +23,25 @@ describe("EmptyState", () => {
     )
 
     const button = await screen.findByRole("button", { name: "Open settings" })
-    expect(button).toBeInTheDocument()
-    expect(screen.getByTestId("right-icon")).toHaveTextContent("arrow")
-    expect(container.querySelector("button span:last-child")).toHaveTextContent(
-      "arrow",
+    const rightIcon = screen.getByTestId("right-icon")
+    const labelNode = Array.from(button.childNodes).find(
+      (node) =>
+        node.nodeType === Node.TEXT_NODE &&
+        node.textContent?.includes("Open settings"),
     )
+
+    expect(button).toBeInTheDocument()
+    expect(labelNode).toBeTruthy()
+    expect(rightIcon).toHaveTextContent("arrow")
+    expect(
+      rightIcon.parentElement!.compareDocumentPosition(labelNode!) &
+        Node.DOCUMENT_POSITION_PRECEDING,
+    ).toBeTruthy()
   })
 
   it("keeps the legacy action icon as the leading button icon", async () => {
     const onClick = vi.fn()
-    const { container } = render(
+    render(
       <EmptyState
         icon={<span data-testid="state-icon">state</span>}
         title="Configuration required"
@@ -49,10 +58,19 @@ describe("EmptyState", () => {
     )
 
     const button = await screen.findByRole("button", { name: "Open settings" })
+    const leftIcon = screen.getByTestId("left-icon")
+    const labelNode = Array.from(button.childNodes).find(
+      (node) =>
+        node.nodeType === Node.TEXT_NODE &&
+        node.textContent?.includes("Open settings"),
+    )
+
     expect(button).toBeInTheDocument()
-    expect(screen.getByTestId("left-icon")).toHaveTextContent("gear")
+    expect(labelNode).toBeTruthy()
+    expect(leftIcon).toHaveTextContent("gear")
     expect(
-      container.querySelector("button span:first-child"),
-    ).toHaveTextContent("gear")
+      leftIcon.parentElement!.compareDocumentPosition(labelNode!) &
+        Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy()
   })
 })
