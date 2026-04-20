@@ -1,9 +1,5 @@
 {
   "alerts": {
-    "configMissing": {
-      "description": "チャネルを管理する前に、設定で管理対象サイトの認証情報を構成してください。",
-      "title": "設定が不足しています"
-    },
     "loadError": {
       "description": "{{error}}",
       "title": "チャネルを読み込めません"

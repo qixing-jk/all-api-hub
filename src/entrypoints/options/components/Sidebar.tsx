@@ -12,7 +12,6 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { getMenuItemLabel } from "~/features/OptionsMenu/getMenuItemLabel"
 import { cn } from "~/lib/utils"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 
 import { menuItems } from "../constants"
 
@@ -175,14 +174,6 @@ function Sidebar({
                 if (
                   item.id === MENU_ITEM_IDS.AUTO_CHECKIN &&
                   !preferences?.autoCheckin?.globalEnabled
-                ) {
-                  return null
-                }
-
-                if (
-                  !hasValidManagedSiteConfig(preferences ?? null) &&
-                  (item.id === MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC ||
-                    item.id === MENU_ITEM_IDS.MANAGED_SITE_CHANNELS)
                 ) {
                   return null
                 }

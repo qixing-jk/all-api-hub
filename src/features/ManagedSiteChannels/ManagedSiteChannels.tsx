@@ -44,6 +44,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
+import ManagedSiteConfigRequiredState from "~/components/ManagedSiteConfigRequiredState"
 import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
 import { PageHeader } from "~/components/PageHeader"
 import {
@@ -96,9 +97,13 @@ import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVeri
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import { cn } from "~/lib/utils"
-import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
+import {
+  getManagedSiteService,
+  hasValidManagedSiteConfig,
+} from "~/services/managedSites/managedSiteService"
 import {
   getManagedSiteConfigMissingMessage,
+  getManagedSiteMessagesKeyFromSiteType,
   getManagedSiteTargetOptions,
   needsManagedSiteChannelKeyResolution,
 } from "~/services/managedSites/utils/managedSite"
@@ -196,14 +201,18 @@ export default function ManagedSiteChannels({
   const isNewApiManagedSite = managedSiteType === NEW_API
   const supportsDetailBackedRealKeyLoading =
     managedSiteType === DONE_HUB || managedSiteType === VELOERA
+  const isConfigMissing = !hasValidManagedSiteConfig(
+    preferences,
+    managedSiteType,
+  )
+  const configMissingMessage = getManagedSiteConfigMissingMessage(
+    t,
+    getManagedSiteMessagesKeyFromSiteType(managedSiteType),
+  )
 
   const [channels, setChannels] = useState<ChannelRow[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const [configMissing, setConfigMissing] = useState(false)
-  const [configMissingMessage, setConfigMissingMessage] = useState<
-    string | null
-  >(null)
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     base_url: false,
@@ -243,21 +252,16 @@ export default function ManagedSiteChannels({
   const hasMigrationTargets = migrationTargets.length > 0
 
   const refreshChannels = useCallback(async () => {
+    if (isConfigMissing) {
+      setChannels([])
+      setError(null)
+      setIsLoading(false)
+      return
+    }
+
     setIsLoading(true)
     setError(null)
     try {
-      const service = await getManagedSiteService()
-      const config = await service.getConfig()
-      if (!config) {
-        setConfigMissing(true)
-        setConfigMissingMessage(
-          getManagedSiteConfigMissingMessage(t, service.messagesKey),
-        )
-        setChannels([])
-        return
-      }
-      setConfigMissing(false)
-      setConfigMissingMessage(null)
       const response = await sendRuntimeMessage({
         action: RuntimeActionIds.ModelSyncListChannels,
       })
@@ -272,13 +276,11 @@ export default function ManagedSiteChannels({
     } finally {
       setIsLoading(false)
     }
-  }, [t])
+  }, [isConfigMissing, t])
 
   useLayoutEffect(() => {
     setChannels([])
     setError(null)
-    setConfigMissing(false)
-    setConfigMissingMessage(null)
   }, [managedSiteType])
 
   useEffect(() => {
@@ -954,7 +956,7 @@ export default function ManagedSiteChannels({
   }
 
   const isInitialLoading =
-    isLoading && channels.length === 0 && !error && !configMissing
+    isLoading && channels.length === 0 && !error && !isConfigMissing
 
   return (
     <div className="space-y-6 p-6">
@@ -971,397 +973,410 @@ export default function ManagedSiteChannels({
               size="sm"
               triggerClassName="w-auto min-w-[172px]"
             />
-            <Button
-              variant="outline"
-              onClick={() => void refreshChannels()}
-              disabled={isLoading}
-              loading={isLoading && channels.length > 0}
-              leftIcon={<RefreshCcw className="h-4 w-4" />}
-            >
-              {t("toolbar.refresh")}
-            </Button>
-            <Button
-              variant={isMigrationMode ? "default" : "outline"}
-              onClick={handleToggleMigrationMode}
-              leftIcon={<ArrowRightLeft className="h-4 w-4" />}
-            >
-              <span>
-                {isMigrationMode
-                  ? t("toolbar.exitMigrationMode")
-                  : t("toolbar.enterMigrationMode")}
-              </span>
-              <Badge variant="warning" size="sm" className="shrink-0">
-                {t("migration.betaBadge")}
-              </Badge>
-            </Button>
+            {!isConfigMissing && (
+              <>
+                <Button
+                  variant="outline"
+                  onClick={() => void refreshChannels()}
+                  disabled={isLoading}
+                  loading={isLoading && channels.length > 0}
+                  leftIcon={<RefreshCcw className="h-4 w-4" />}
+                >
+                  {t("toolbar.refresh")}
+                </Button>
+                <Button
+                  variant={isMigrationMode ? "default" : "outline"}
+                  onClick={handleToggleMigrationMode}
+                  leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+                >
+                  <span>
+                    {isMigrationMode
+                      ? t("toolbar.exitMigrationMode")
+                      : t("toolbar.enterMigrationMode")}
+                  </span>
+                  <Badge variant="warning" size="sm" className="shrink-0">
+                    {t("migration.betaBadge")}
+                  </Badge>
+                </Button>
+              </>
+            )}
           </div>
         }
       />
 
-      {configMissing && (
-        <Alert variant="warning">
-          <AlertTitle>{t("alerts.configMissing.title")}</AlertTitle>
-          <AlertDescription>
-            {configMissingMessage ?? t("alerts.configMissing.description")}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {error && !configMissing && (
-        <Alert variant="destructive">
-          <AlertTitle>{t("alerts.loadError.title")}</AlertTitle>
-          <AlertDescription>
-            {t("alerts.loadError.description", { error })}
-          </AlertDescription>
-        </Alert>
-      )}
-
-      {/* Responsive toolbar: search input takes its own row on small screens, buttons wrap in a 2-column grid. */}
-      <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
-        <div className="relative w-full md:max-w-sm">
-          <Input
-            value={searchValue}
-            onChange={(event) => handleSearchChange(event.target.value)}
-            placeholder={t("toolbar.searchPlaceholder")}
-            className="ps-9"
-          />
-          <ListFilter className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
-          {searchValue && (
-            <button
-              type="button"
-              aria-label={t("toolbar.clearSearch")}
-              className="text-muted-foreground/80 absolute top-1/2 right-2 -translate-y-1/2"
-              onClick={() => handleSearchChange("")}
-            >
-              <CircleX className="h-4 w-4" />
-            </button>
+      {isConfigMissing ? (
+        <ManagedSiteConfigRequiredState description={configMissingMessage} />
+      ) : (
+        <>
+          {error && (
+            <Alert variant="destructive">
+              <AlertTitle>{t("alerts.loadError.title")}</AlertTitle>
+              <AlertDescription>
+                {t("alerts.loadError.description", { error })}
+              </AlertDescription>
+            </Alert>
           )}
-        </div>
 
-        <div className="grid grid-cols-2 gap-2 md:flex md:flex-1 md:items-center md:gap-2">
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant="outline"
-                leftIcon={<Filter className="h-4 w-4" />}
-              >
-                {t("toolbar.status")}
-                {selectedStatuses.length > 0 && (
-                  <span className="text-muted-foreground ml-2 text-xs">
-                    ({selectedStatuses.length})
-                  </span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-64" align="start">
-              <div className="space-y-2">
-                <p className="text-muted-foreground text-xs font-medium">
-                  {t("filter.statusLabel")}
-                </p>
-                <div className="space-y-2">
-                  {uniqueStatusValues.map((value) => (
-                    <div
-                      key={value}
-                      className="flex items-center justify-between gap-2"
-                    >
-                      <div className="flex items-center gap-2">
-                        <Checkbox
-                          id={`status-${value}`}
-                          checked={selectedStatuses.includes(value)}
-                          onCheckedChange={(checked: CheckboxState) =>
-                            handleStatusChange(checked, value)
-                          }
-                        />
-                        <Label
-                          htmlFor={`status-${value}`}
-                          className="text-sm font-normal"
-                        >
-                          {getManagedSiteChannelStatusFilterLabel(t, value)}
-                        </Label>
-                      </div>
-                      <span className="text-muted-foreground text-xs">
-                        {statusCounts.get(value) ?? 0}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </PopoverContent>
-          </Popover>
+          {/* Responsive toolbar: search input takes its own row on small screens, buttons wrap in a 2-column grid. */}
+          <div className="flex flex-col gap-3 md:flex-row md:flex-wrap md:items-center">
+            <div className="relative w-full md:max-w-sm">
+              <Input
+                value={searchValue}
+                onChange={(event) => handleSearchChange(event.target.value)}
+                placeholder={t("toolbar.searchPlaceholder")}
+                className="ps-9"
+              />
+              <ListFilter className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+              {searchValue && (
+                <button
+                  type="button"
+                  aria-label={t("toolbar.clearSearch")}
+                  className="text-muted-foreground/80 absolute top-1/2 right-2 -translate-y-1/2"
+                  onClick={() => handleSearchChange("")}
+                >
+                  <CircleX className="h-4 w-4" />
+                </button>
+              )}
+            </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button
-                variant="outline"
-                leftIcon={<Columns3 className="h-4 w-4" />}
-              >
-                {t("toolbar.columns")}
-              </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end" className="w-48">
-              <DropdownMenuLabel>
-                {t("toolbar.toggleColumns")}
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-              {table
-                .getAllLeafColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => (
-                  <DropdownMenuCheckboxItem
-                    key={column.id}
-                    className="capitalize"
-                    checked={column.getIsVisible()}
-                    onCheckedChange={(value: CheckboxState) =>
-                      column.toggleVisibility(!!value)
-                    }
-                    onSelect={(event: Event) => event.preventDefault()}
+            <div className="grid grid-cols-2 gap-2 md:flex md:flex-1 md:items-center md:gap-2">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    leftIcon={<Filter className="h-4 w-4" />}
                   >
-                    {getManagedSiteChannelColumnLabel(t, column.id)}
-                  </DropdownMenuCheckboxItem>
-                ))}
-            </DropdownMenuContent>
-          </DropdownMenu>
-
-          <div className="col-span-2 grid grid-cols-2 gap-2 md:ml-auto md:flex md:items-center md:justify-end md:gap-2">
-            {isMigrationMode && hasMigrationTargets && (
-              <Button
-                variant="outline"
-                disabled={!selectedCount}
-                onClick={() =>
-                  openMigrationDialog(selectedRows.map((row) => row.original))
-                }
-                leftIcon={<ArrowRightLeft className="h-4 w-4" />}
-              >
-                {t("toolbar.migrateSelected")}
-              </Button>
-            )}
-            {isMigrationMode && hasMigrationTargets && (
-              <Button
-                variant="outline"
-                disabled={!filteredCount}
-                onClick={() =>
-                  openMigrationDialog(filteredRows.map((row) => row.original))
-                }
-                leftIcon={<ArrowRightLeft className="h-4 w-4" />}
-              >
-                {t("toolbar.migrateFiltered")}
-              </Button>
-            )}
-            {!isMigrationMode && (
-              <Button
-                variant="outline"
-                disabled={!selectedCount}
-                onClick={() =>
-                  scheduleDelete(selectedRows.map((row) => row.original.id))
-                }
-                leftIcon={<Trash2 className="h-4 w-4" />}
-              >
-                {t("toolbar.deleteSelected")}
-              </Button>
-            )}
-            {!isMigrationMode && (
-              <Button
-                variant="outline"
-                disabled={!selectedCount}
-                onClick={() =>
-                  handleSyncChannels(selectedRows.map((row) => row.original.id))
-                }
-                leftIcon={<RefreshCcw className="h-4 w-4" />}
-              >
-                {t("toolbar.syncSelected")}
-              </Button>
-            )}
-            {!isMigrationMode && (
-              <Button
-                onClick={handleOpenCreateDialog}
-                leftIcon={<Plus className="h-4 w-4" />}
-              >
-                {t("toolbar.addChannel")}
-              </Button>
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="border-border bg-background overflow-hidden rounded-lg border">
-        <Table>
-          <TableHeader>
-            {table
-              .getHeaderGroups()
-              .map((headerGroup: HeaderGroup<ChannelRow>) => (
-                <TableRow key={headerGroup.id} className="hover:bg-transparent">
-                  {headerGroup.headers.map((header) => (
-                    <TableHead
-                      key={header.id}
-                      className={cn(
-                        header.column.id === "actions" &&
-                          cn(
-                            "bg-background sticky right-0 border-l",
-                            Z_INDEX.tableStickyHeader,
-                          ),
-                      )}
-                      style={{ width: header.getSize() }}
-                    >
-                      {header.isPlaceholder ? null : header.column.getCanSort() ? (
-                        <button
-                          type="button"
-                          className="flex w-full items-center gap-2"
-                          onClick={header.column.getToggleSortingHandler()}
+                    {t("toolbar.status")}
+                    {selectedStatuses.length > 0 && (
+                      <span className="text-muted-foreground ml-2 text-xs">
+                        ({selectedStatuses.length})
+                      </span>
+                    )}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-64" align="start">
+                  <div className="space-y-2">
+                    <p className="text-muted-foreground text-xs font-medium">
+                      {t("filter.statusLabel")}
+                    </p>
+                    <div className="space-y-2">
+                      {uniqueStatusValues.map((value) => (
+                        <div
+                          key={value}
+                          className="flex items-center justify-between gap-2"
                         >
-                          {flexRender(
-                            header.column.columnDef.header,
-                            header.getContext(),
-                          )}
-                          {header.column.getIsSorted() === "asc" && (
-                            <ChevronUp className="h-3.5 w-3.5 opacity-60" />
-                          )}
-                          {header.column.getIsSorted() === "desc" && (
-                            <ChevronDown className="h-3.5 w-3.5 opacity-60" />
-                          )}
-                        </button>
-                      ) : (
-                        flexRender(
-                          header.column.columnDef.header,
-                          header.getContext(),
-                        )
-                      )}
-                    </TableHead>
-                  ))}
-                </TableRow>
-              ))}
-          </TableHeader>
-          <TableBody>
-            {isInitialLoading ? (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-32 text-center"
-                >
-                  <div className="text-muted-foreground flex items-center justify-center gap-2">
-                    <Loader2 className="h-4 w-4 animate-spin" />
-                    {t("table.loading")}
+                          <div className="flex items-center gap-2">
+                            <Checkbox
+                              id={`status-${value}`}
+                              checked={selectedStatuses.includes(value)}
+                              onCheckedChange={(checked: CheckboxState) =>
+                                handleStatusChange(checked, value)
+                              }
+                            />
+                            <Label
+                              htmlFor={`status-${value}`}
+                              className="text-sm font-normal"
+                            >
+                              {getManagedSiteChannelStatusFilterLabel(t, value)}
+                            </Label>
+                          </div>
+                          <span className="text-muted-foreground text-xs">
+                            {statusCounts.get(value) ?? 0}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </TableCell>
-              </TableRow>
-            ) : table.getRowModel().rows.length ? (
-              table.getRowModel().rows.map((row: Row<ChannelRow>) => (
-                <TableRow
-                  key={row.id}
-                  data-state={row.getIsSelected() && "selected"}
-                  className="group align-middle"
-                >
-                  {row
-                    .getVisibleCells()
-                    .map((cell: Cell<ChannelRow, unknown>) => (
-                      <TableCell
-                        key={cell.id}
-                        data-state={
-                          cell.column.id === "actions" && row.getIsSelected()
-                            ? "selected"
-                            : undefined
+                </PopoverContent>
+              </Popover>
+
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    leftIcon={<Columns3 className="h-4 w-4" />}
+                  >
+                    {t("toolbar.columns")}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48">
+                  <DropdownMenuLabel>
+                    {t("toolbar.toggleColumns")}
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  {table
+                    .getAllLeafColumns()
+                    .filter((column) => column.getCanHide())
+                    .map((column) => (
+                      <DropdownMenuCheckboxItem
+                        key={column.id}
+                        className="capitalize"
+                        checked={column.getIsVisible()}
+                        onCheckedChange={(value: CheckboxState) =>
+                          column.toggleVisibility(!!value)
                         }
-                        className={cn(
-                          "py-3",
-                          cell.column.id === "actions" &&
-                            cn(
-                              "bg-background group-hover:bg-muted/50 data-[state=selected]:bg-muted sticky right-0 border-l",
-                              Z_INDEX.tableStickyCell,
-                            ),
-                        )}
+                        onSelect={(event: Event) => event.preventDefault()}
                       >
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext(),
-                        )}
-                      </TableCell>
+                        {getManagedSiteChannelColumnLabel(t, column.id)}
+                      </DropdownMenuCheckboxItem>
                     ))}
-                </TableRow>
-              ))
-            ) : (
-              <TableRow>
-                <TableCell
-                  colSpan={columns.length}
-                  className="h-32 text-center"
+                </DropdownMenuContent>
+              </DropdownMenu>
+
+              <div className="col-span-2 grid grid-cols-2 gap-2 md:ml-auto md:flex md:items-center md:justify-end md:gap-2">
+                {isMigrationMode && hasMigrationTargets && (
+                  <Button
+                    variant="outline"
+                    disabled={!selectedCount}
+                    onClick={() =>
+                      openMigrationDialog(
+                        selectedRows.map((row) => row.original),
+                      )
+                    }
+                    leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+                  >
+                    {t("toolbar.migrateSelected")}
+                  </Button>
+                )}
+                {isMigrationMode && hasMigrationTargets && (
+                  <Button
+                    variant="outline"
+                    disabled={!filteredCount}
+                    onClick={() =>
+                      openMigrationDialog(
+                        filteredRows.map((row) => row.original),
+                      )
+                    }
+                    leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+                  >
+                    {t("toolbar.migrateFiltered")}
+                  </Button>
+                )}
+                {!isMigrationMode && (
+                  <Button
+                    variant="outline"
+                    disabled={!selectedCount}
+                    onClick={() =>
+                      scheduleDelete(selectedRows.map((row) => row.original.id))
+                    }
+                    leftIcon={<Trash2 className="h-4 w-4" />}
+                  >
+                    {t("toolbar.deleteSelected")}
+                  </Button>
+                )}
+                {!isMigrationMode && (
+                  <Button
+                    variant="outline"
+                    disabled={!selectedCount}
+                    onClick={() =>
+                      handleSyncChannels(
+                        selectedRows.map((row) => row.original.id),
+                      )
+                    }
+                    leftIcon={<RefreshCcw className="h-4 w-4" />}
+                  >
+                    {t("toolbar.syncSelected")}
+                  </Button>
+                )}
+                {!isMigrationMode && (
+                  <Button
+                    onClick={handleOpenCreateDialog}
+                    leftIcon={<Plus className="h-4 w-4" />}
+                  >
+                    {t("toolbar.addChannel")}
+                  </Button>
+                )}
+              </div>
+            </div>
+          </div>
+
+          <div className="border-border bg-background overflow-hidden rounded-lg border">
+            <Table>
+              <TableHeader>
+                {table
+                  .getHeaderGroups()
+                  .map((headerGroup: HeaderGroup<ChannelRow>) => (
+                    <TableRow
+                      key={headerGroup.id}
+                      className="hover:bg-transparent"
+                    >
+                      {headerGroup.headers.map((header) => (
+                        <TableHead
+                          key={header.id}
+                          className={cn(
+                            header.column.id === "actions" &&
+                              cn(
+                                "bg-background sticky right-0 border-l",
+                                Z_INDEX.tableStickyHeader,
+                              ),
+                          )}
+                          style={{ width: header.getSize() }}
+                        >
+                          {header.isPlaceholder ? null : header.column.getCanSort() ? (
+                            <button
+                              type="button"
+                              className="flex w-full items-center gap-2"
+                              onClick={header.column.getToggleSortingHandler()}
+                            >
+                              {flexRender(
+                                header.column.columnDef.header,
+                                header.getContext(),
+                              )}
+                              {header.column.getIsSorted() === "asc" && (
+                                <ChevronUp className="h-3.5 w-3.5 opacity-60" />
+                              )}
+                              {header.column.getIsSorted() === "desc" && (
+                                <ChevronDown className="h-3.5 w-3.5 opacity-60" />
+                              )}
+                            </button>
+                          ) : (
+                            flexRender(
+                              header.column.columnDef.header,
+                              header.getContext(),
+                            )
+                          )}
+                        </TableHead>
+                      ))}
+                    </TableRow>
+                  ))}
+              </TableHeader>
+              <TableBody>
+                {isInitialLoading ? (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-32 text-center"
+                    >
+                      <div className="text-muted-foreground flex items-center justify-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {t("table.loading")}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ) : table.getRowModel().rows.length ? (
+                  table.getRowModel().rows.map((row: Row<ChannelRow>) => (
+                    <TableRow
+                      key={row.id}
+                      data-state={row.getIsSelected() && "selected"}
+                      className="group align-middle"
+                    >
+                      {row
+                        .getVisibleCells()
+                        .map((cell: Cell<ChannelRow, unknown>) => (
+                          <TableCell
+                            key={cell.id}
+                            data-state={
+                              cell.column.id === "actions" &&
+                              row.getIsSelected()
+                                ? "selected"
+                                : undefined
+                            }
+                            className={cn(
+                              "py-3",
+                              cell.column.id === "actions" &&
+                                cn(
+                                  "bg-background group-hover:bg-muted/50 data-[state=selected]:bg-muted sticky right-0 border-l",
+                                  Z_INDEX.tableStickyCell,
+                                ),
+                            )}
+                          >
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext(),
+                            )}
+                          </TableCell>
+                        ))}
+                    </TableRow>
+                  ))
+                ) : (
+                  <TableRow>
+                    <TableCell
+                      colSpan={columns.length}
+                      className="h-32 text-center"
+                    >
+                      <div className="text-muted-foreground text-sm">
+                        {t("table.empty")}
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+              </TableBody>
+            </Table>
+          </div>
+
+          <div className="flex flex-wrap items-center gap-4 text-sm">
+            <div className="flex items-center gap-2">
+              <Label htmlFor="rows-per-page" className="text-xs font-medium">
+                {t("table.rowsPerPage")}
+              </Label>
+              <Select
+                value={String(table.getState().pagination.pageSize)}
+                onValueChange={(value: string) =>
+                  table.setPageSize(Number(value))
+                }
+              >
+                <SelectTrigger
+                  id="rows-per-page"
+                  size="sm"
+                  aria-label={t("table.rowsPerPage")}
+                  className="w-[110px]"
                 >
-                  <div className="text-muted-foreground text-sm">
-                    {t("table.empty")}
-                  </div>
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+                  <SelectValue placeholder={t("table.rowsPerPage") ?? ""} />
+                </SelectTrigger>
+                <SelectContent>
+                  {rowsPerPageOptions.map((option) => (
+                    <SelectItem key={option} value={String(option)}>
+                      {option}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-      <div className="flex flex-wrap items-center gap-4 text-sm">
-        <div className="flex items-center gap-2">
-          <Label htmlFor="rows-per-page" className="text-xs font-medium">
-            {t("table.rowsPerPage")}
-          </Label>
-          <Select
-            value={String(table.getState().pagination.pageSize)}
-            onValueChange={(value: string) => table.setPageSize(Number(value))}
-          >
-            <SelectTrigger
-              id="rows-per-page"
-              size="sm"
-              aria-label={t("table.rowsPerPage")}
-              className="w-[110px]"
-            >
-              <SelectValue placeholder={t("table.rowsPerPage") ?? ""} />
-            </SelectTrigger>
-            <SelectContent>
-              {rowsPerPageOptions.map((option) => (
-                <SelectItem key={option} value={String(option)}>
-                  {option}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
+            <div className="text-muted-foreground ml-auto">
+              {table.getRowCount() ? (
+                <span>
+                  {t("table.paginationSummary", {
+                    start:
+                      table.getState().pagination.pageIndex *
+                        table.getState().pagination.pageSize +
+                      1,
+                    end: Math.min(
+                      (table.getState().pagination.pageIndex + 1) *
+                        table.getState().pagination.pageSize,
+                      table.getRowCount(),
+                    ),
+                    total: table.getRowCount(),
+                  })}
+                </span>
+              ) : (
+                <span>{t("table.noEntries")}</span>
+              )}
+            </div>
 
-        <div className="text-muted-foreground ml-auto">
-          {table.getRowCount() ? (
-            <span>
-              {t("table.paginationSummary", {
-                start:
-                  table.getState().pagination.pageIndex *
-                    table.getState().pagination.pageSize +
-                  1,
-                end: Math.min(
-                  (table.getState().pagination.pageIndex + 1) *
-                    table.getState().pagination.pageSize,
-                  table.getRowCount(),
-                ),
-                total: table.getRowCount(),
-              })}
-            </span>
-          ) : (
-            <span>{t("table.noEntries")}</span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2">
-          <Button
-            size="icon"
-            variant="outline"
-            onClick={() => table.previousPage()}
-            disabled={!table.getCanPreviousPage()}
-            aria-label={t("table.paginationPrev")}
-          >
-            <ChevronLeft className="h-4 w-4" />
-          </Button>
-          <Button
-            size="icon"
-            variant="outline"
-            onClick={() => table.nextPage()}
-            disabled={!table.getCanNextPage()}
-            aria-label={t("table.paginationNext")}
-          >
-            <ChevronRight className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
+            <div className="flex items-center gap-2">
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => table.previousPage()}
+                disabled={!table.getCanPreviousPage()}
+                aria-label={t("table.paginationPrev")}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                size="icon"
+                variant="outline"
+                onClick={() => table.nextPage()}
+                disabled={!table.getCanNextPage()}
+                aria-label={t("table.paginationNext")}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </>
+      )}
 
       <DestructiveConfirmDialog
         isOpen={isDeleteDialogOpen}

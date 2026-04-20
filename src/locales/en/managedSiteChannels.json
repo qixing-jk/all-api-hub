@@ -1,9 +1,5 @@
 {
   "alerts": {
-    "configMissing": {
-      "description": "Please configure your managed site credentials in settings before managing channels.",
-      "title": "Missing configuration"
-    },
     "loadError": {
       "description": "{{error}}",
       "title": "Unable to load channels"

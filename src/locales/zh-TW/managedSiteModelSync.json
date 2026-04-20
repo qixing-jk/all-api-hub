@@ -8,8 +8,6 @@
       "runSelected": "執行所選"
     },
     "empty": {
-      "configWarningDesc": "請先配置管理站點的基礎 URL、管理員令牌和使用者 ID，然後再執行模型列表同步",
-      "goToSettings": "前往設定",
       "noData": "暫無執行記錄",
       "noDataDesc": "點擊\"執行全部\"開始同步所有渠道",
       "noResults": "沒有匹配的結果",

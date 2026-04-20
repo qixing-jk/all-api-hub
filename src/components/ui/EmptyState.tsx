@@ -8,6 +8,8 @@ export type EmptyStateAction = {
   label: string
   onClick: () => void
   variant?: React.ComponentProps<typeof Button>["variant"]
+  leftIcon?: React.ReactNode
+  rightIcon?: React.ReactNode
   icon?: React.ReactNode
   disabled?: boolean
   loading?: boolean
@@ -83,7 +85,8 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
           <Button
             variant={resolvedActions[0].variant || "default"}
             onClick={resolvedActions[0].onClick}
-            leftIcon={resolvedActions[0].icon}
+            leftIcon={resolvedActions[0].leftIcon ?? resolvedActions[0].icon}
+            rightIcon={resolvedActions[0].rightIcon}
             disabled={resolvedActions[0].disabled}
             loading={resolvedActions[0].loading}
           >
@@ -96,7 +99,8 @@ export const EmptyState = React.forwardRef<HTMLDivElement, EmptyStateProps>(
                 key={`${resolvedAction.label}-${index}`}
                 variant={resolvedAction.variant || "default"}
                 onClick={resolvedAction.onClick}
-                leftIcon={resolvedAction.icon}
+                leftIcon={resolvedAction.leftIcon ?? resolvedAction.icon}
+                rightIcon={resolvedAction.rightIcon}
                 disabled={resolvedAction.disabled}
                 loading={resolvedAction.loading}
               >

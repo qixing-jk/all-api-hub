@@ -5,11 +5,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import ManagedSiteConfigRequiredState from "~/components/ManagedSiteConfigRequiredState"
 import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
 import { PageHeader } from "~/components/PageHeader"
 import { Button, EmptyState, Input } from "~/components/ui"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
+import {
+  getManagedSiteConfigMissingMessage,
+  getManagedSiteMessagesKeyFromSiteType,
+} from "~/services/managedSites/utils/managedSite"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import type {
   ExecutionItemResult,
@@ -59,9 +65,22 @@ export default function ManagedSiteModelSync({
   refreshKey,
   routeParams,
 }: ManagedSiteModelSyncProps) {
-  const { t } = useTranslation(["managedSiteModelSync", "settings"])
-  const { managedSiteType } = useUserPreferencesContext()
+  const { t } = useTranslation([
+    "managedSiteModelSync",
+    "settings",
+    "messages",
+    "common",
+  ])
+  const { managedSiteType, preferences } = useUserPreferencesContext()
   const hasInitializedTab = useRef(false)
+  const isConfigMissing = !hasValidManagedSiteConfig(
+    preferences,
+    managedSiteType,
+  )
+  const configMissingMessage = getManagedSiteConfigMissingMessage(
+    t,
+    getManagedSiteMessagesKeyFromSiteType(managedSiteType),
+  )
   const [lastExecution, setLastExecution] = useState<ExecutionResult | null>(
     null,
   )
@@ -175,6 +194,11 @@ export default function ManagedSiteModelSync({
   }, [t])
 
   useEffect(() => {
+    if (isConfigMissing) {
+      setIsLoading(false)
+      return
+    }
+
     void loadLastExecution()
     void loadProgress()
     void loadNextRun()
@@ -198,6 +222,7 @@ export default function ManagedSiteModelSync({
       browser.runtime.onMessage.removeListener(handleMessage)
     }
   }, [
+    isConfigMissing,
     loadLastExecution,
     loadNextRun,
     loadPreferences,
@@ -210,13 +235,16 @@ export default function ManagedSiteModelSync({
     setLastExecution(null)
     setProgress(null)
     setNextScheduledAt(null)
+    setIsAutoSyncEnabled(false)
+    setIntervalMs(undefined)
     setHistorySelectedIds(new Set())
     setManualSelectedIds(new Set())
     setRunningChannelId(null)
     setChannels([])
     setChannelsError(null)
     setHasAttemptedChannelsLoad(false)
-  }, [managedSiteType])
+    setIsLoading(!isConfigMissing)
+  }, [isConfigMissing, managedSiteType])
 
   useEffect(() => {
     if (!progress?.isRunning) {
@@ -237,6 +265,7 @@ export default function ManagedSiteModelSync({
 
   useEffect(() => {
     if (
+      !isConfigMissing &&
       selectedTab === TAB_INDEX.manual &&
       channels.length === 0 &&
       !isChannelsLoading &&
@@ -247,12 +276,17 @@ export default function ManagedSiteModelSync({
   }, [
     channels.length,
     hasAttemptedChannelsLoad,
+    isConfigMissing,
     isChannelsLoading,
     loadChannels,
     selectedTab,
   ])
 
   useEffect(() => {
+    if (isConfigMissing) {
+      return
+    }
+
     if (refreshKey) {
       void loadLastExecution()
       void loadProgress()
@@ -260,6 +294,7 @@ export default function ManagedSiteModelSync({
       void loadPreferences()
     }
   }, [
+    isConfigMissing,
     loadLastExecution,
     loadNextRun,
     loadPreferences,
@@ -268,6 +303,10 @@ export default function ManagedSiteModelSync({
   ])
 
   useEffect(() => {
+    if (isConfigMissing) {
+      return
+    }
+
     const channelIdRaw = routeParams?.channelId?.trim()
     const channelId = channelIdRaw ? Number(channelIdRaw) : NaN
     const requestedTab = routeParams?.tab?.trim()
@@ -300,6 +339,7 @@ export default function ManagedSiteModelSync({
   }, [
     channels.length,
     hasAttemptedChannelsLoad,
+    isConfigMissing,
     isChannelsLoading,
     loadChannels,
     routeParams?.channelId,
@@ -405,6 +445,10 @@ export default function ManagedSiteModelSync({
   }
 
   const handleRefresh = () => {
+    if (isConfigMissing) {
+      return
+    }
+
     void loadLastExecution()
     void loadProgress()
     void loadNextRun()
@@ -531,7 +575,7 @@ export default function ManagedSiteModelSync({
 
   const isInitialLoading = isLoading && lastExecution === null
 
-  if (isInitialLoading) {
+  if (!isConfigMissing && isInitialLoading) {
     return <LoadingSkeleton />
   }
 
@@ -725,28 +769,37 @@ export default function ManagedSiteModelSync({
         spacing="compact"
       />
 
-      <div className="mb-6">
-        <OverviewCard
-          enabled={isAutoSyncEnabled}
-          intervalMs={intervalMs}
-          nextScheduledAt={nextScheduledAt}
-          lastRunAt={lastExecution?.statistics?.endedAt ?? null}
+      {isConfigMissing ? (
+        <ManagedSiteConfigRequiredState
+          description={configMissingMessage}
+          className="mt-6"
         />
-      </div>
+      ) : (
+        <>
+          <div className="mb-6">
+            <OverviewCard
+              enabled={isAutoSyncEnabled}
+              intervalMs={intervalMs}
+              nextScheduledAt={nextScheduledAt}
+              lastRunAt={lastExecution?.statistics?.endedAt ?? null}
+            />
+          </div>
 
-      {progress?.isRunning && (
-        <div className="mb-6">
-          <ProgressCard progress={progress} />
-        </div>
+          {progress?.isRunning && (
+            <div className="mb-6">
+              <ProgressCard progress={progress} />
+            </div>
+          )}
+
+          {lastExecution?.statistics && (
+            <div className="mb-6">
+              <StatisticsCard statistics={lastExecution.statistics} />
+            </div>
+          )}
+
+          {renderTabs()}
+        </>
       )}
-
-      {lastExecution?.statistics && (
-        <div className="mb-6">
-          <StatisticsCard statistics={lastExecution.statistics} />
-        </div>
-      )}
-
-      {renderTabs()}
     </div>
   )
 }

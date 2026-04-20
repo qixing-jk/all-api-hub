@@ -5,11 +5,9 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import Sidebar from "~/entrypoints/options/components/Sidebar"
 import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
 
-const { hasValidManagedSiteConfigMock, useUserPreferencesContextMock } =
-  vi.hoisted(() => ({
-    hasValidManagedSiteConfigMock: vi.fn(),
-    useUserPreferencesContextMock: vi.fn(),
-  }))
+const { useUserPreferencesContextMock } = vi.hoisted(() => ({
+  useUserPreferencesContextMock: vi.fn(),
+}))
 
 vi.mock("framer-motion", () => ({
   motion: {
@@ -38,14 +36,9 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/managedSites/managedSiteService", () => ({
-  hasValidManagedSiteConfig: hasValidManagedSiteConfigMock,
-}))
-
 describe("Options Sidebar", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    hasValidManagedSiteConfigMock.mockReturnValue(true)
     useUserPreferencesContextMock.mockReturnValue({
       preferences: {
         autoCheckin: {
@@ -108,8 +101,7 @@ describe("Options Sidebar", () => {
     expect(onCollapseToggle).toHaveBeenCalledTimes(1)
   })
 
-  it("uses collapsed desktop labels and hides gated menu items when features are unavailable", () => {
-    hasValidManagedSiteConfigMock.mockReturnValue(false)
+  it("uses collapsed desktop labels and keeps managed-site pages visible when config is missing", () => {
     useUserPreferencesContextMock.mockReturnValue({
       preferences: {
         autoCheckin: {
@@ -140,15 +132,15 @@ describe("Options Sidebar", () => {
       within(nav).queryByRole("button", { name: "ui:navigation.autoCheckin" }),
     ).toBeNull()
     expect(
-      within(nav).queryByRole("button", {
+      within(nav).getByRole("button", {
         name: "ui:navigation.managedSiteChannels",
       }),
-    ).toBeNull()
+    ).toBeInTheDocument()
     expect(
-      within(nav).queryByRole("button", {
+      within(nav).getByRole("button", {
         name: "ui:navigation.managedSiteModelSync",
       }),
-    ).toBeNull()
+    ).toBeInTheDocument()
 
     expect(
       screen.getAllByRole("button", {

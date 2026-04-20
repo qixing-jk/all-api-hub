@@ -7,6 +7,7 @@
     "delete": "削除",
     "edit": "編集",
     "export": "エクスポート",
+    "goToSettings": "設定へ移動",
     "import": "インポート",
     "more": "その他",
     "openSidePanel": "サイドパネルで開く",
@@ -31,6 +32,7 @@
     "unlimited": "無制限"
   },
   "status": {
+    "configurationRequired": "設定が必要です",
     "creating": "作成中...",
     "disabled": "無効",
     "enabled": "有効",

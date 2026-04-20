@@ -7,6 +7,7 @@
     "delete": "删除",
     "edit": "编辑",
     "export": "导出",
+    "goToSettings": "前往设置",
     "import": "导入",
     "more": "更多",
     "openSidePanel": "在侧边栏中打开",
@@ -31,6 +32,7 @@
     "unlimited": "无限额度"
   },
   "status": {
+    "configurationRequired": "缺少配置",
     "creating": "创建中...",
     "disabled": "已禁用",
     "enabled": "已启用",

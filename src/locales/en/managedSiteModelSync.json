@@ -8,8 +8,6 @@
       "runSelected": "Run Selected"
     },
     "empty": {
-      "configWarningDesc": "Please configure your managed site base URL, admin token, and user ID before running model list sync",
-      "goToSettings": "Go to Settings",
       "noData": "No execution history yet",
       "noDataDesc": "Click \"Run All\" to start synchronizing all channels",
       "noResults": "No matching results",

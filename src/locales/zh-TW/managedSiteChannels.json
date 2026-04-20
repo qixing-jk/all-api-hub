@@ -1,9 +1,5 @@
 {
   "alerts": {
-    "configMissing": {
-      "description": "請先在設定中配置託管站點憑據，然後再管理渠道。",
-      "title": "缺少配置"
-    },
     "loadError": {
       "description": "{{error}}",
       "title": "無法載入渠道"

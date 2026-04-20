@@ -7,6 +7,7 @@
     "delete": "Delete",
     "edit": "Edit",
     "export": "Export",
+    "goToSettings": "Go to Settings",
     "import": "Import",
     "more": "More",
     "openSidePanel": "Open in SidePanel",
@@ -31,6 +32,7 @@
     "unlimited": "Unlimited"
   },
   "status": {
+    "configurationRequired": "Configuration required",
     "creating": "Creating...",
     "disabled": "Disabled",
     "enabled": "Enabled",

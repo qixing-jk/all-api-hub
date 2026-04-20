@@ -1,16 +1,7 @@
-import {
-  ArrowPathIcon,
-  ExclamationTriangleIcon,
-  MagnifyingGlassIcon,
-} from "@heroicons/react/24/outline"
-import { useEffect, useState } from "react"
+import { ArrowPathIcon, MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
 import { EmptyState } from "~/components/ui"
-import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
-import { userPreferences } from "~/services/preferences/userPreferences"
-import { pushWithinOptionsPage } from "~/utils/navigation"
 
 interface EmptyResultsProps {
   hasHistory: boolean
@@ -24,35 +15,8 @@ interface EmptyResultsProps {
 export default function EmptyResults(props: EmptyResultsProps) {
   const { hasHistory } = props
   const { t } = useTranslation("managedSiteModelSync")
-  const [hasValidConfig, setHasValidConfig] = useState(true)
-
-  useEffect(() => {
-    const checkConfig = async () => {
-      const prefs = await userPreferences.getPreferences()
-      setHasValidConfig(hasValidManagedSiteConfig(prefs))
-    }
-    void checkConfig()
-  }, [])
 
   if (!hasHistory) {
-    // Show config warning if config is invalid
-    if (!hasValidConfig) {
-      return (
-        <EmptyState
-          title={t("execution.empty.configWarningDesc")}
-          icon={
-            <ExclamationTriangleIcon className="h-12 w-12 text-yellow-500" />
-          }
-          action={{
-            onClick: () => {
-              pushWithinOptionsPage(`#${MENU_ITEM_IDS.BASIC}`)
-            },
-            label: t("execution.empty.goToSettings"),
-          }}
-        />
-      )
-    }
-
     return (
       <EmptyState
         title={t("execution.empty.noData")}

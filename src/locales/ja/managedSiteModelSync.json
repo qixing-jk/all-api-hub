@@ -8,8 +8,6 @@
       "runSelected": "選択分を実行"
     },
     "empty": {
-      "configWarningDesc": "モデル一覧同期を実行する前に、管理対象サイトの Base URL、管理者トークン、ユーザー ID を設定してください",
-      "goToSettings": "設定へ移動",
       "noData": "まだ実行履歴がありません",
       "noDataDesc": "「すべて実行」をクリックして全チャネルの同期を開始してください",
       "noResults": "一致する結果がありません",

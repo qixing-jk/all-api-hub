@@ -19,11 +19,13 @@ const {
   mockSendRuntimeMessage,
   mockUseUserPreferencesContext,
   mockShowWarningToast,
+  mockOpenSettingsTab,
   loggerMocks,
 } = vi.hoisted(() => ({
   mockSendRuntimeMessage: vi.fn(),
   mockUseUserPreferencesContext: vi.fn(),
   mockShowWarningToast: vi.fn(),
+  mockOpenSettingsTab: vi.fn(),
   loggerMocks: {
     error: vi.fn(),
     info: vi.fn(),
@@ -60,6 +62,10 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: mockUseUserPreferencesContext,
 }))
 
+vi.mock("~/utils/navigation", () => ({
+  openSettingsTab: mockOpenSettingsTab,
+}))
+
 vi.mock("~/components/ManagedSiteTypeSwitcher", () => ({
   default: ({ ariaLabel }: { ariaLabel: string }) => (
     <div data-testid="managed-site-switcher">{ariaLabel}</div>
@@ -84,6 +90,14 @@ describe("ManagedSiteModelSync page", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockUseUserPreferencesContext.mockReturnValue({
+      preferences: {
+        managedSiteType: "new-api",
+        newApi: {
+          baseUrl: "https://admin.example",
+          adminToken: "token",
+          userId: "1",
+        },
+      },
       managedSiteType: "new-api",
     })
     mockSendRuntimeMessage.mockImplementation(async (message: any) => {
@@ -210,6 +224,38 @@ describe("ManagedSiteModelSync page", () => {
       })
     })
     expect(toast.success).toHaveBeenCalled()
+  })
+
+  it("shows a configuration empty state and skips model-sync loading when managed-site config is missing", async () => {
+    mockUseUserPreferencesContext.mockReturnValue({
+      preferences: {
+        managedSiteType: "new-api",
+        newApi: {
+          baseUrl: "",
+          adminToken: "",
+          userId: "",
+        },
+      },
+      managedSiteType: "new-api",
+    })
+
+    render(<ManagedSiteModelSync />)
+
+    expect(
+      await screen.findByText("common:status.configurationRequired"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("messages:newapi.configMissing"),
+    ).toBeInTheDocument()
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:actions.goToSettings" }),
+    )
+
+    expect(mockOpenSettingsTab).toHaveBeenCalledWith("managedSite", {
+      preserveHistory: true,
+    })
   })
 
   it("keeps the current history snapshot rendered while a manual refresh is loading", async () => {

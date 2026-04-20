@@ -17,27 +17,6 @@ import ResultsTable from "~/features/ManagedSiteModelSync/components/ResultsTabl
 import StatisticsCard from "~/features/ManagedSiteModelSync/components/StatisticsCard"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
-const { mockHasValidManagedSiteConfig, mockPushWithinOptionsPage } = vi.hoisted(
-  () => ({
-    mockHasValidManagedSiteConfig: vi.fn(),
-    mockPushWithinOptionsPage: vi.fn(),
-  }),
-)
-
-vi.mock("~/services/preferences/userPreferences", () => ({
-  userPreferences: {
-    getPreferences: vi.fn(async () => ({})),
-  },
-}))
-
-vi.mock("~/services/managedSites/managedSiteService", () => ({
-  hasValidManagedSiteConfig: mockHasValidManagedSiteConfig,
-}))
-
-vi.mock("~/utils/navigation", () => ({
-  pushWithinOptionsPage: mockPushWithinOptionsPage,
-}))
-
 vi.mock("~/components/ManagedSiteChannelLinkButton", () => ({
   default: ({
     channelId,
@@ -61,7 +40,6 @@ function render(ui: ReactNode) {
 describe("ManagedSiteModelSync components", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockHasValidManagedSiteConfig.mockReturnValue(true)
   })
 
   it("renders overview, progress, and statistics states", () => {
@@ -295,24 +273,14 @@ describe("ManagedSiteModelSync components", () => {
     expect(onSelectItem).toHaveBeenCalledWith(11, false)
     expect(onRunSingle).toHaveBeenCalledWith(11)
 
-    mockHasValidManagedSiteConfig.mockReturnValue(false)
     render(<EmptyResults hasHistory={false} />)
 
     await waitFor(() => {
       expect(
-        screen.getByText(
-          "managedSiteModelSync:execution.empty.configWarningDesc",
-        ),
+        screen.getByText("managedSiteModelSync:execution.empty.noData"),
       ).toBeInTheDocument()
     })
-    fireEvent.click(
-      screen.getByRole("button", {
-        name: "managedSiteModelSync:execution.empty.goToSettings",
-      }),
-    )
-    expect(mockPushWithinOptionsPage).toHaveBeenCalled()
 
-    mockHasValidManagedSiteConfig.mockReturnValue(true)
     render(<EmptyResults hasHistory />)
     expect(
       screen.getByText("managedSiteModelSync:execution.empty.noResults"),

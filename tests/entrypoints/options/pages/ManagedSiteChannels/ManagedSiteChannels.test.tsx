@@ -19,7 +19,7 @@ import {
   NEW_API_MANAGED_SESSION_STATUSES,
 } from "~/services/managedSites/providers/newApiSession"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
-import { navigateWithinOptionsPage } from "~/utils/navigation"
+import { navigateWithinOptionsPage, openSettingsTab } from "~/utils/navigation"
 import {
   fireEvent,
   render,
@@ -33,10 +33,14 @@ vi.mock("~/utils/browser/browserApi", async (importActual) => {
   return { ...actual, sendRuntimeMessage: vi.fn() }
 })
 
-vi.mock("~/services/managedSites/managedSiteService", () => ({
-  getManagedSiteService: vi.fn(),
-  getManagedSiteServiceForType: vi.fn(),
-}))
+vi.mock("~/services/managedSites/managedSiteService", async (importActual) => {
+  const actual = (await importActual()) as any
+  return {
+    ...actual,
+    getManagedSiteService: vi.fn(),
+    getManagedSiteServiceForType: vi.fn(),
+  }
+})
 
 vi.mock(
   "~/services/managedSites/providers/newApiSession",
@@ -61,6 +65,7 @@ vi.mock("~/utils/navigation", async (importActual) => {
   return {
     ...actual,
     navigateWithinOptionsPage: vi.fn(),
+    openSettingsTab: vi.fn(),
   }
 })
 
@@ -261,11 +266,18 @@ describe("ManagedSiteChannels", () => {
               adminToken: "",
               userId: "",
             },
-      octopus: {
-        baseUrl: "",
-        username: "",
-        password: "",
-      },
+      octopus:
+        managedSiteType === OCTOPUS
+          ? {
+              baseUrl: "https://octopus.example",
+              username: "octopus-admin",
+              password: "octopus-password",
+            }
+          : {
+              baseUrl: "",
+              username: "",
+              password: "",
+            },
     }
   }
 
@@ -682,6 +694,12 @@ describe("ManagedSiteChannels", () => {
 
   it("shows a config warning and skips the channel query when managed-site config is missing", async () => {
     const preferences = buildPreferences({ managedSiteType: NEW_API })
+    preferences.newApi = {
+      ...preferences.newApi,
+      baseUrl: "",
+      adminToken: "",
+      userId: "",
+    }
 
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences,
@@ -693,22 +711,27 @@ describe("ManagedSiteChannels", () => {
       newApiTotpSecret: preferences.newApi.totpSecret,
     } as any)
 
-    vi.mocked(getManagedSiteService).mockResolvedValue({
-      siteType: NEW_API,
-      messagesKey: "newapi",
-      getConfig: vi.fn().mockResolvedValue(null),
-    } as any)
-
     render(<ManagedSiteChannels />)
 
     expect(
-      await screen.findByText("managedSiteChannels:alerts.configMissing.title"),
+      await screen.findByText("common:status.configurationRequired"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("messages:newapi.configMissing"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "common:actions.goToSettings" }),
     ).toBeInTheDocument()
     expect(sendRuntimeMessage).not.toHaveBeenCalled()
     expect(toast.error).not.toHaveBeenCalled()
-    expect(
-      screen.getByText("managedSiteChannels:table.empty"),
-    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:actions.goToSettings" }),
+    )
+
+    expect(openSettingsTab).toHaveBeenCalledWith("managedSite", {
+      preserveHistory: true,
+    })
   })
 
   it("shows a load error alert when fetching channels fails", async () => {
