@@ -1,3 +1,4 @@
+import { CSS, type Transform } from "@dnd-kit/utilities"
 import userEvent from "@testing-library/user-event"
 import React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
@@ -5,14 +6,14 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import AccountList from "~/features/AccountManagement/components/AccountList"
 import { SiteHealthStatus } from "~/types"
 import { buildDisplaySiteData, buildTag } from "~~/tests/test-utils/factories"
-import { act, render, screen } from "~~/tests/test-utils/render"
+import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 type SortableMockState = {
   attributes: Record<string, unknown>
   listeners: Record<string, unknown>
   setNodeRef: ReturnType<typeof vi.fn>
   setActivatorNodeRef: ReturnType<typeof vi.fn>
-  transform: { x: number; y: number } | null
+  transform: Transform | null
   transition: string | undefined
   isDragging: boolean
 }
@@ -668,15 +669,14 @@ describe("AccountList", () => {
 
     rerender(<AccountList initialSearchQuery="Alpha" />)
 
-    await act(async () => {
-      await new Promise((resolve) => setTimeout(resolve, 200))
+    await waitFor(() => {
+      expect(screen.getByRole("textbox")).toHaveValue("Alpha")
+      expect(screen.queryByTestId("dnd-context")).not.toBeInTheDocument()
+      expect(screen.queryByTestId("sortable-context")).not.toBeInTheDocument()
+      expect(
+        screen.getByRole("button", { name: "account:list.dragHandle" }),
+      ).toBeDisabled()
     })
-
-    expect(screen.queryByTestId("dnd-context")).not.toBeInTheDocument()
-    expect(screen.queryByTestId("sortable-context")).not.toBeInTheDocument()
-    expect(
-      screen.getByRole("button", { name: "account:list.dragHandle" }),
-    ).toBeDisabled()
   })
 
   it("applies sortable dragging styles when dnd-kit marks a row as dragging", async () => {
@@ -687,7 +687,7 @@ describe("AccountList", () => {
       listeners: {},
       setNodeRef: vi.fn(),
       setActivatorNodeRef: vi.fn(),
-      transform: { x: 8, y: 12 },
+      transform: { x: 8, y: 12, scaleX: 1, scaleY: 1 },
       transition: "transform 150ms ease",
       isDragging: true,
     }
@@ -709,6 +709,17 @@ describe("AccountList", () => {
     expect(await screen.findByTestId("dnd-context")).toBeInTheDocument()
     expect(screen.getByTestId("sortable-context")).toBeInTheDocument()
     expect(useSortableMock).toHaveBeenCalled()
+
+    const sortableHandle = screen.getAllByRole("button", {
+      name: "account:list.dragHandle",
+    })[0]
+    const sortableWrapper = sortableHandle.closest("div[style]")
+
+    expect(sortableWrapper).toHaveClass("relative", "z-10")
+    expect(sortableWrapper).toHaveStyle({
+      transform: CSS.Transform.toString(sortableReturnState.current.transform),
+      transition: sortableReturnState.current.transition,
+    })
   })
 
   it("filters accounts by enabled state and combines with tag filters", async () => {

@@ -515,6 +515,71 @@ describe("AccountDataContext initial load orchestration", () => {
     })
   })
 
+  it("keeps initial load active when open-tab matching resolves before current-tab detection", async () => {
+    let resolveActiveTabs: ((tabs: browser.tabs.Tab[]) => void) | undefined
+    let resolveAllTabs: ((tabs: browser.tabs.Tab[]) => void) | undefined
+
+    mockGetAllAccounts.mockResolvedValue([
+      {
+        id: "acc-1",
+        site_url: "https://alpha.example.com",
+        account_info: { id: 1 },
+        last_sync_time: 0,
+      },
+    ])
+    mockConvertToDisplayData.mockReturnValue([
+      {
+        id: "acc-1",
+        name: "Alpha",
+        username: "alice",
+        baseUrl: "https://alpha.example.com",
+        token: "token",
+        tagIds: [],
+        tags: [],
+        balance: { USD: 0, CNY: 0 },
+        todayConsumption: { USD: 0, CNY: 0 },
+        todayIncome: { USD: 0, CNY: 0 },
+        checkIn: { enableDetection: false },
+      },
+    ])
+    mockGetActiveTabs.mockReturnValue(
+      new Promise((resolve) => {
+        resolveActiveTabs = resolve
+      }),
+    )
+    mockGetAllTabs.mockReturnValue(
+      new Promise((resolve) => {
+        resolveAllTabs = resolve
+      }),
+    )
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().displayData).toHaveLength(1)
+      expect(mockGetActiveTabs).toHaveBeenCalled()
+      expect(mockGetAllTabs).toHaveBeenCalled()
+    })
+
+    expect(getLatestCtx().isInitialLoad).toBe(true)
+
+    await act(async () => {
+      resolveAllTabs?.([])
+      await Promise.resolve()
+    })
+
+    expect(getLatestCtx().isInitialLoad).toBe(true)
+
+    await act(async () => {
+      resolveActiveTabs?.([])
+      await Promise.resolve()
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().isInitialLoad).toBe(false)
+    })
+  })
+
   it("resolves the initial load when current-tab detection fails", async () => {
     mockGetAllAccounts.mockResolvedValue([
       {
