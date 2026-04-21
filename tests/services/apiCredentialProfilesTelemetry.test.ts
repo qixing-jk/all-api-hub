@@ -448,7 +448,7 @@ describe("api credential profile telemetry", () => {
     expect(customAttempt?.endpoint).toContain("REDACTED")
   })
 
-  it("falls back to a configuration error when malformed custom endpoints are dropped during coercion", async () => {
+  it("prefers the custom configuration error when malformed custom endpoints are dropped during coercion", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "Malformed Custom Endpoint",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -473,9 +473,10 @@ describe("api credential profile telemetry", () => {
     const snapshot = await refreshApiCredentialProfileTelemetry(profile.id)
 
     expect(snapshot.health).toEqual({
-      reason: "models failed",
+      reason: "Custom endpoint is not configured",
       status: SiteHealthStatus.Warning,
     })
+    expect(snapshot.lastError).toBe("Custom endpoint is not configured")
     expect(snapshot.attempts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({

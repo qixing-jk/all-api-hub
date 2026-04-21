@@ -748,6 +748,11 @@ class ApiCredentialProfilesStorageService {
         throw new Error("Base URL is invalid.")
       }
 
+      const shouldReCoerceTelemetryConfig =
+        updates.telemetryConfig !== undefined ||
+        nextApiType !== current.apiType ||
+        nextBaseUrl !== current.baseUrl
+
       const next: ApiCredentialProfile = {
         ...current,
         name: nextName,
@@ -762,12 +767,16 @@ class ApiCredentialProfilesStorageService {
           typeof updates.notes === "string"
             ? updates.notes.trim()
             : current.notes,
-        telemetryConfig:
-          updates.telemetryConfig !== undefined
-            ? coerceApiCredentialTelemetryConfig(updates.telemetryConfig, {
+        telemetryConfig: shouldReCoerceTelemetryConfig
+          ? coerceApiCredentialTelemetryConfig(
+              updates.telemetryConfig !== undefined
+                ? updates.telemetryConfig
+                : current.telemetryConfig,
+              {
                 baseUrl: nextBaseUrl,
-              })
-            : current.telemetryConfig,
+              },
+            )
+          : current.telemetryConfig,
         telemetrySnapshot:
           nextApiType !== current.apiType ||
           nextBaseUrl !== current.baseUrl ||

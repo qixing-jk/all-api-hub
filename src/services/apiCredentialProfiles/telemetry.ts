@@ -690,10 +690,24 @@ export async function refreshApiCredentialProfileTelemetry(
 
   const modelSucceeded = Boolean(models && models.count > 0)
   const usageSucceeded = Boolean(usageResult)
+  const customEndpointError = attempts.find((attempt) => {
+    if (
+      attempt.status !== "error" ||
+      attempt.source !== "customReadOnlyEndpoint"
+    ) {
+      return false
+    }
+
+    return (
+      attempt.message === "Custom endpoint is not configured" ||
+      attempt.endpoint === config.customEndpoint?.endpoint
+    )
+  })?.message
   const lastError =
     usageSucceeded || modelSucceeded
       ? undefined
-      : attempts.find((attempt) => attempt.status === "error")?.message ||
+      : customEndpointError ||
+        attempts.find((attempt) => attempt.status === "error")?.message ||
         "No supported telemetry endpoint returned data"
 
   const snapshot: ApiCredentialTelemetrySnapshot = {
