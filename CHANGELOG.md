@@ -1,5 +1,57 @@
 # Changelog
 
+## [3.34.0](https://github.com/qixing-jk/all-api-hub/compare/v3.33.0...v3.34.0) (2026-04-21)
+
+
+### Features
+
+* **account:** add created_at sorting and display support ([#727](https://github.com/qixing-jk/all-api-hub/issues/727)) ([d650555](https://github.com/qixing-jk/all-api-hub/commit/d650555fb313604fe874353ca110bff208e0ec6d))
+* **account:** add opt-in current-site URL prefill for new accounts ([#713](https://github.com/qixing-jk/all-api-hub/issues/713)) ([ef5c77c](https://github.com/qixing-jk/all-api-hub/commit/ef5c77c250ebee6688e755e98e9131cce0313956))
+* **accounts:** add bulk actions and failed-account controls in auto check-in ([#723](https://github.com/qixing-jk/all-api-hub/issues/723)) ([7e2abae](https://github.com/qixing-jk/all-api-hub/commit/7e2abae6a74dba8f1da1f3c71d148689bb3e0d18))
+* **api-credential-profiles:** add telemetry config to profile dialog ([#754](https://github.com/qixing-jk/all-api-hub/issues/754)) ([76b36b1](https://github.com/qixing-jk/all-api-hub/commit/76b36b1ad2c9141501ead28b698d0caddac7436c))
+* **api-credentials:** add usage telemetry and manual refresh ([#749](https://github.com/qixing-jk/all-api-hub/issues/749)) ([cac390d](https://github.com/qixing-jk/all-api-hub/commit/cac390d022d8ccab995814941dab459ed84a754f))
+* **api-credentials:** improve profile card responsiveness ([9982edc](https://github.com/qixing-jk/all-api-hub/commit/9982edc62ae6bc09bd1e01fa1f666491c5c99686))
+* **api:** add per-site API request limiting ([#739](https://github.com/qixing-jk/all-api-hub/issues/739)) ([3af9a4e](https://github.com/qixing-jk/all-api-hub/commit/3af9a4e77711ce67094dce6cf69ed3a7fe4adced))
+* **KeyManagement:** auto-preselect account in add-token dialog ([95779c9](https://github.com/qixing-jk/all-api-hub/commit/95779c9e1f8c7455e53a1380462913eb7d15295a))
+* **managed-site:** move header site switcher to right and allow unconfigured targets ([27883f9](https://github.com/qixing-jk/all-api-hub/commit/27883f93b75dc3e0196b0e017ef7652d61f76717))
+* **model-list:** add account group filtering and group ratio display ([#735](https://github.com/qixing-jk/all-api-hub/issues/735)) ([3f5cb6a](https://github.com/qixing-jk/all-api-hub/commit/3f5cb6ab2c32b281d4a42805685a67e0546b86c6))
+* **model-list:** add selectable batch model verification ([#741](https://github.com/qixing-jk/all-api-hub/issues/741)) ([7b1da47](https://github.com/qixing-jk/all-api-hub/commit/7b1da4749e0639d20c1d2566233467bc4817867a))
+* **model-list:** enhance pricing discovery and filtering in model list ([#726](https://github.com/qixing-jk/all-api-hub/issues/726)) ([0325189](https://github.com/qixing-jk/all-api-hub/commit/0325189a0ffd1c0320f40c3f1e72a0bb12580c60))
+* **model-list:** show account group ratio on hover ([#732](https://github.com/qixing-jk/all-api-hub/issues/732)) ([4ad0966](https://github.com/qixing-jk/all-api-hub/commit/4ad0966f123ff95ea0ebcd68854bbdbfa6f85f13))
+* **model-list:** sort all-accounts selectors by loaded model count ([#734](https://github.com/qixing-jk/all-api-hub/issues/734)) ([5d30309](https://github.com/qixing-jk/all-api-hub/commit/5d303096e4ceaaca2316dbb38f332d192f17d371))
+* **model-list:** support batch verification across all accounts ([#744](https://github.com/qixing-jk/all-api-hub/issues/744)) ([3e08f4f](https://github.com/qixing-jk/all-api-hub/commit/3e08f4f562f2a4d1a1fb13d487034b6cc90a0ceb))
+* **model-list:** support multi-account filtering in all-accounts view ([#730](https://github.com/qixing-jk/all-api-hub/issues/730)) ([6fa15cb](https://github.com/qixing-jk/all-api-hub/commit/6fa15cb2c4e7f8e25fb8a90340e92f51c8e30cec))
+* show managed-site channels and model sync pages when unconfigured ([#750](https://github.com/qixing-jk/all-api-hub/issues/750)) ([6ea974f](https://github.com/qixing-jk/all-api-hub/commit/6ea974f3a13404b80f65b54ed7100beac5158778))
+* **ui:** add clear buttons to shared and business inputs ([#748](https://github.com/qixing-jk/all-api-hub/issues/748)) ([e579be8](https://github.com/qixing-jk/all-api-hub/commit/e579be82da404c21091b372019abfb97b28d1861))
+
+
+### Bug Fixes
+
+* **account:** add options page refresh action ([#716](https://github.com/qixing-jk/all-api-hub/issues/716)) ([da16ca6](https://github.com/qixing-jk/all-api-hub/commit/da16ca60b12dcf60147e3829a4f2f765ae2deff2))
+* **AccountManagement:** correct reminder dialog visibility logic ([#729](https://github.com/qixing-jk/all-api-hub/issues/729)) ([4489d62](https://github.com/qixing-jk/all-api-hub/commit/4489d62192f830c3c1473cbf2fa0c3aca8951691))
+* **AccountManagement:** resolve odd swap-like animation during reorder ([#752](https://github.com/qixing-jk/all-api-hub/issues/752)) ([8fad1e2](https://github.com/qixing-jk/all-api-hub/commit/8fad1e2298e027f998ed032b9a7503382feb5b09))
+* **content:** avoid missed system theme changes in content root ([#728](https://github.com/qixing-jk/all-api-hub/issues/728)) ([6f6d44c](https://github.com/qixing-jk/all-api-hub/commit/6f6d44c74ada1090c9889c0c7c3d2d4eda209880))
+* **device:** respect userAgentData.mobile for device classification ([3d51f4c](https://github.com/qixing-jk/all-api-hub/commit/3d51f4cc449c1f581706d46a04f55698fdd401ff))
+* **docs:** stabilize translated anchor links ([c0eec43](https://github.com/qixing-jk/all-api-hub/commit/c0eec436cd883ed9f5518476395d60dbc7ba7bfd))
+* **managed-site-channels:** stabilize row selection by channel id ([c995a29](https://github.com/qixing-jk/all-api-hub/commit/c995a29fa1d86eda028d7ef3cb7001f4db96432a))
+* **model-list:** abort batch verification on stop ([#743](https://github.com/qixing-jk/all-api-hub/issues/743)) ([6c2879b](https://github.com/qixing-jk/all-api-hub/commit/6c2879be2347a1e0946512764e48653703bf43de))
+* **model-list:** align all-model count with provider filter scope ([0ce1614](https://github.com/qixing-jk/all-api-hub/commit/0ce1614b178b3f6428b87bfd38dfeb7dac252afd))
+* **model-list:** align model item header rows ([f4f42ce](https://github.com/qixing-jk/all-api-hub/commit/f4f42ce3813247b324eea220b8c5608a0b20cacf))
+* **model-list:** improve small-screen model item layout ([48a8ef3](https://github.com/qixing-jk/all-api-hub/commit/48a8ef37a66dbe47962dc593b204548f0d6acd9d))
+* **model-list:** improve virtual list layout ([#747](https://github.com/qixing-jk/all-api-hub/issues/747)) ([ae9ce49](https://github.com/qixing-jk/all-api-hub/commit/ae9ce490a3ac918f76882452f91ab7bf17ea46ff))
+* **model-list:** replace zero-count fallback with loading/error states ([#731](https://github.com/qixing-jk/all-api-hub/issues/731)) ([b0b203b](https://github.com/qixing-jk/all-api-hub/commit/b0b203b6b95d8084da0f25bc100eb238b231996f))
+* **model-sync:** keep row actions visible ([005706a](https://github.com/qixing-jk/all-api-hub/commit/005706a2c6f0ce4bed6bea7ab4ddba025103261b))
+* **ModelList:** correct total model count calculation for all accounts ([2d0d1c7](https://github.com/qixing-jk/all-api-hub/commit/2d0d1c7b8edadf1d50e26b4fc240be2374c6be93))
+* **ModelList:** preserve expanded state across model data refreshes ([#733](https://github.com/qixing-jk/all-api-hub/issues/733)) ([b1dcf20](https://github.com/qixing-jk/all-api-hub/commit/b1dcf203d105aa514ac7ca0fcf79890d49a654de))
+* **options:** prevent options content from disappearing while refreshing ([#725](https://github.com/qixing-jk/all-api-hub/issues/725)) ([49fb323](https://github.com/qixing-jk/all-api-hub/commit/49fb32373e60e1c42d38022858a8ebc0d88c1313))
+* **webdav:** accept partial content downloads ([#738](https://github.com/qixing-jk/all-api-hub/issues/738)) ([d1fe5b6](https://github.com/qixing-jk/all-api-hub/commit/d1fe5b6d2ce117c9f9c25f52ca9d47fd3c07b9eb))
+* **wong:** implement GET-based token secret resolution ([#715](https://github.com/qixing-jk/all-api-hub/issues/715)) ([184cb73](https://github.com/qixing-jk/all-api-hub/commit/184cb73d50786fc5ad2ddcdc6956f6440b518a9d))
+
+
+### Performance Improvements
+
+* **account-management:** improve large account list rendering and loading ([#751](https://github.com/qixing-jk/all-api-hub/issues/751)) ([013eb18](https://github.com/qixing-jk/all-api-hub/commit/013eb18e8a4d09516ee250fb897ebc0d122ef146))
+
 ## [3.33.0](https://github.com/qixing-jk/all-api-hub/compare/v3.32.0...v3.33.0) (2026-04-11)
 
 
