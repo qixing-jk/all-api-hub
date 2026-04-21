@@ -3,7 +3,7 @@ home: true
 title: "Homepage"
 heroImage: "/512.png"
 heroText: "All API Hub - AI Aggregation Relay Manager"
-tagline: "Open-source browser extension to unify the management of third-party AI aggregation relays and self-built New APIs: automatically identify accounts, view balances, synchronize models, manage keys, and support cross-platform and cloud backups."
+tagline: "Open-source browser extension to unify the management of third-party AI aggregation relays and self-built New APIs: automatically identify accounts, compare model prices, verify API/CLI compatibility, synchronize models and channels, and support cross-platform and encrypted WebDAV backups."
 actions:
   - text: "Get Started"
     link: "./get-started.html"
@@ -20,43 +20,47 @@ actions:
   - text: "FireFox Store"
     link: "https://addons.mozilla.org/firefox/addon/{bc73541a-133d-4b50-b261-36ea20df0d24}"
     type: "secondary"
-
+    
   - text: "Safari Install"
     link: "./safari-install.html"
     type: "secondary"
 
 features:
-  - title: "Intelligent Site Management"
-    details: "Automatically identify AI aggregation relay sites and create access tokens, intelligently obtain site names and recharge ratios, support duplicate detection and manual addition."
-  - title: "Multi-Account System"
-    details: "Supports adding multiple accounts for each site, account grouping and quick switching, real-time viewing of balances and detailed usage logs."
-  - title: "Token and Key Management"
-    details: "Conveniently manage all API Keys, supporting viewing, copying, refreshing, and batch operations."
-  - title: "Model Information View"
-    details: "Clearly displays the list of models supported by the site and pricing information."
-  - title: "Check-in Status Monitoring"
-    details: "Automatically detects which sites support check-ins and marks accounts that have not checked in for the day, allowing you to complete multi-site check-ins in order on one panel, reducing free quota wastage due to forgotten check-ins."
+  - title: "Intelligent Site Identification"
+    details: "Paste the site address after logging in to add an account, automatically identifying the site name, recharge ratio, and other information; manual entry is supported if identification fails, and duplicate additions will be prompted."
+  - title: "Multi-Account Overview"
+    details: "Consolidate multiple sites and accounts into a single panel for a clear overview of balances, usage, and health status, with support for automatic refreshing."
+  - title: "Independent API Credential Archive"
+    details: "Allows separate saving of baseUrl and API Key, independent of site accounts. Filter by tags and reuse for model viewing, API validation, and status statistics."
+  - title: "Model and Price Comparison"
+    details: "Not only view the model list but also filter by source, billing method, group, and account to compare prices, ratios, and actual costs, highlighting the lowest price or optimal group."
+  - title: "Model and API Validation"
+    details: "Supports model availability validation, batch validation, Token compatibility judgment, and CLI compatibility checks, suitable for troubleshooting 'site available but tool unavailable' issues."
+  - title: "Usage Analysis and Latency Troubleshooting"
+    details: "Filter and compare usage, costs, model distribution, and trends by site, account, Token, and date. Provides heatmap, latency, and slow request views to aid troubleshooting."
+  - title: "Automatic Check-in and Redemption Jump"
+    details: "Centrally identifies sites that support check-ins and manages their status, supporting automatic check-ins, custom check-in URLs, and redirection to recharge/redemption pages."
   - title: "Quick Export Integration"
-    details: "One-click export of configurations to CherryStudio, CC Switch, Kilo Code, CLIProxyAPI, Claude Code Router, and self-hosted sites."
+    details: "One-click export to CherryStudio, CC Switch, CLIProxyAPI, Claude Code Router, Kilo Code, and the currently selected self-hosted site."
   - title: "Self-built Site Backend Linkage"
-    details: "Supports backend linkage and channel-related operations for self-built New API, DoneHub, Veloera, and Octopus instances."
-  - title: "Data Backup and Restore"
-    details: "Supports JSON format import/export and WebDav cloud backup for cross-device data synchronization."
-  - title: "Full Platform Support"
-    details: "Compatible with browsers such as Chrome, Edge, Firefox, and also supports mobile/phone browsers like Mobile Edge, Firefox for Android, Kiwi, etc., with dark mode adaptation."
-  - title: "Privacy and Security"
-    details: "Completely offline operation, all data stored locally, all core functions available without internet access."
+    details: "Supports channel import, model synchronization, model redirection, and backend linkage for self-built New API, DoneHub, Veloera, and Octopus instances."
+  - title: "WebDAV Backup and Synchronization"
+    details: "Supports JSON import/export, automatic WebDAV synchronization, selective synchronization, and backup encryption for cross-device and multi-browser migration."
   - title: "Cloudflare Anti-Bot Assistant"
-    details: "Automatically prompts to bypass the 5-second bot check when encountered, ensuring sites can be identified and recorded."
+    details: "Automatically pops up an assistance window when encountering a Cloudflare challenge; continues with the original identification, refresh, or check-in process after verification."
+  - title: "Full Platform Support"
+    details: "Compatible with Chrome, Edge, Firefox, Safari, and mobile/phone browsers such as Mobile Edge, Firefox for Android, Kiwi, etc., with dark mode adaptation."
+  - title: "Privacy First"
+    details: "Defaults to local-first storage with no telemetry data collection; access to corresponding services only occurs when configuring WebDAV or external interfaces."
 
 footer: "AGPL-3.0 Licensed | Copyright 2025-present All API Hub"
 ---
 
 ## Introduction
 
-In the current AI ecosystem, there are an increasing number of aggregation relay sites and self-built panels based on the New API series. Managing balances, model lists, and API keys for various sites simultaneously is often scattered and time-consuming.
+In the current AI ecosystem, there are an increasing number of aggregation relay sites and self-built panels based on the New API series. Managing balances, usage, model prices, and API key availability for various sites simultaneously is often scattered and time-consuming.
 
-All API Hub, as a browser extension, can automatically identify accounts on these sites and provide one-click access to view balances, manage models, keys, and perform automatic check-ins. It also offers backend linkage and channel-related tools for self-built New API, DoneHub, Veloera, and Octopus. Currently, it supports accounts from relay sites based on the following projects:
+All API Hub, as a browser extension, can automatically identify accounts on these sites and provide one-click access to view balances, usage, model prices, manage models and keys, and perform automatic check-ins. It also offers independent API credential management and provides backend linkage and channel-related tools for self-built New API, DoneHub, Veloera, and Octopus. Currently, it supports accounts from relay sites based on the following projects:
 
 - [one-api](https://github.com/songquanpeng/one-api)
 - [new-api](https://github.com/QuantumNous/new-api)
