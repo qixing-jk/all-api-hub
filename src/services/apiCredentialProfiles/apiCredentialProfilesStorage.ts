@@ -1,5 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
+import { coerceApiCredentialTelemetryCustomEndpoint } from "~/services/apiCredentialProfiles/telemetryConfig"
 import {
   API_CREDENTIAL_PROFILES_STORAGE_KEYS,
   STORAGE_LOCKS,
@@ -19,8 +20,6 @@ import type {
   ApiCredentialTelemetryAttempt,
   ApiCredentialTelemetryCapabilityMode,
   ApiCredentialTelemetryConfig,
-  ApiCredentialTelemetryCustomEndpoint,
-  ApiCredentialTelemetryJsonPathMap,
   ApiCredentialTelemetrySnapshot,
 } from "~/types/apiCredentialProfiles"
 import {
@@ -123,61 +122,11 @@ function coerceFiniteNumber(raw: unknown): number | undefined {
 }
 
 /**
- * Normalizes configured JSON paths for a custom telemetry endpoint.
- */
-function coerceJsonPathMap(raw: unknown): ApiCredentialTelemetryJsonPathMap {
-  const obj =
-    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
-  const out: ApiCredentialTelemetryJsonPathMap = {}
-  const keys: Array<keyof ApiCredentialTelemetryJsonPathMap> = [
-    "balanceUsd",
-    "todayCostUsd",
-    "todayRequests",
-    "todayPromptTokens",
-    "todayCompletionTokens",
-    "todayTotalTokens",
-    "totalUsedUsd",
-    "totalGrantedUsd",
-    "totalAvailableUsd",
-    "expiresAt",
-  ]
-
-  for (const key of keys) {
-    const value = obj[key]
-    if (typeof value === "string" && value.trim()) {
-      out[key] = value.trim()
-    }
-  }
-
-  return out
-}
-
-/**
- * Coerces custom endpoint telemetry config into a usable persisted shape.
- */
-function coerceCustomEndpoint(
-  raw: unknown,
-): ApiCredentialTelemetryCustomEndpoint | undefined {
-  const obj =
-    raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
-  const endpoint =
-    typeof obj.endpoint === "string" && obj.endpoint.trim()
-      ? obj.endpoint.trim()
-      : ""
-  const jsonPaths = coerceJsonPathMap(obj.jsonPaths)
-
-  if (!endpoint || Object.keys(jsonPaths).length === 0) {
-    return undefined
-  }
-
-  return { endpoint, jsonPaths }
-}
-
-/**
  * Coerces profile telemetry config and falls back to automatic probing.
  */
 export function coerceApiCredentialTelemetryConfig(
   raw: unknown,
+  options?: { baseUrl?: string },
 ): ApiCredentialTelemetryConfig {
   const obj =
     raw && typeof raw === "object" ? (raw as Record<string, unknown>) : {}
@@ -187,7 +136,10 @@ export function coerceApiCredentialTelemetryConfig(
   )
     ? (rawMode as ApiCredentialTelemetryCapabilityMode)
     : DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode
-  const customEndpoint = coerceCustomEndpoint(obj.customEndpoint)
+  const customEndpoint = coerceApiCredentialTelemetryCustomEndpoint(
+    obj.customEndpoint,
+    options?.baseUrl,
+  )
 
   return {
     mode,
@@ -381,9 +333,14 @@ function mergeTelemetrySnapshot(
 function mergeTelemetryConfig(
   newer: ApiCredentialTelemetryConfig | undefined,
   older: ApiCredentialTelemetryConfig | undefined,
+  baseUrl?: string,
 ): ApiCredentialTelemetryConfig {
-  const normalizedNewer = coerceApiCredentialTelemetryConfig(newer)
-  const normalizedOlder = coerceApiCredentialTelemetryConfig(older)
+  const normalizedNewer = coerceApiCredentialTelemetryConfig(newer, {
+    baseUrl,
+  })
+  const normalizedOlder = coerceApiCredentialTelemetryConfig(older, {
+    baseUrl,
+  })
   if (normalizedNewer.mode !== DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode) {
     return normalizedNewer
   }
@@ -462,6 +419,7 @@ function dedupeProfiles(profiles: ApiCredentialProfile[]): {
       telemetryConfig: mergeTelemetryConfig(
         newer.telemetryConfig,
         older.telemetryConfig,
+        newer.baseUrl,
       ),
       telemetrySnapshot: mergeTelemetrySnapshot(
         newer.telemetrySnapshot,
@@ -535,6 +493,7 @@ export function coerceApiCredentialProfilesConfig(
       notes: notes.trim(),
       telemetryConfig: coerceApiCredentialTelemetryConfig(
         candidate.telemetryConfig,
+        { baseUrl },
       ),
       telemetrySnapshot: coerceTelemetrySnapshot(candidate.telemetrySnapshot),
       createdAt,
@@ -712,6 +671,7 @@ class ApiCredentialProfilesStorageService {
       notes: typeof input.notes === "string" ? input.notes.trim() : "",
       telemetryConfig: coerceApiCredentialTelemetryConfig(
         input.telemetryConfig,
+        { baseUrl: normalizedBaseUrl },
       ),
       createdAt: now,
       updatedAt: now,
@@ -804,7 +764,9 @@ class ApiCredentialProfilesStorageService {
             : current.notes,
         telemetryConfig:
           updates.telemetryConfig !== undefined
-            ? coerceApiCredentialTelemetryConfig(updates.telemetryConfig)
+            ? coerceApiCredentialTelemetryConfig(updates.telemetryConfig, {
+                baseUrl: nextBaseUrl,
+              })
             : current.telemetryConfig,
         telemetrySnapshot:
           nextApiType !== current.apiType ||

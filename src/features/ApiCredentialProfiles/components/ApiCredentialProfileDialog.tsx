@@ -22,6 +22,11 @@ import {
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import {
+  coerceApiCredentialTelemetryJsonPathMap,
+  isSupportedApiCredentialTelemetryEndpoint,
+  type ApiCredentialTelemetryJsonPathField,
+} from "~/services/apiCredentialProfiles/telemetryConfig"
+import {
   API_TYPES,
   type ApiVerificationApiType,
 } from "~/services/verification/aiApiVerification"
@@ -79,21 +84,6 @@ function normalizeBaseUrl(
     : normalizeOpenAiFamilyBaseUrl(baseUrl)
 }
 
-type TelemetryJsonPathField = keyof ApiCredentialTelemetryJsonPathMap
-
-const TELEMETRY_JSON_PATH_FIELDS: TelemetryJsonPathField[] = [
-  "balanceUsd",
-  "todayCostUsd",
-  "todayRequests",
-  "todayPromptTokens",
-  "todayCompletionTokens",
-  "todayTotalTokens",
-  "totalUsedUsd",
-  "totalGrantedUsd",
-  "totalAvailableUsd",
-  "expiresAt",
-]
-
 /**
  * Falls back to the default telemetry preset when the profile has no mode yet.
  */
@@ -101,74 +91,6 @@ function normalizeTelemetryMode(
   mode: ApiCredentialTelemetryConfig["mode"] | undefined,
 ): ApiCredentialTelemetryCapabilityMode {
   return mode ?? DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode
-}
-
-/**
- * Accepts the simple dot-path format supported by custom telemetry mapping.
- */
-function isSupportedJsonPath(path: string): boolean {
-  const segments = path.split(".").map((segment) => segment.trim())
-  return segments.length > 0 && segments.every(Boolean)
-}
-
-/**
- * Normalizes whitespace inside dot-separated JSON paths before persistence.
- */
-function normalizeJsonPath(path: string): string {
-  return path
-    .split(".")
-    .map((segment) => segment.trim())
-    .join(".")
-}
-
-/**
- * Accepts only root-relative paths or same-origin HTTP(S) telemetry URLs.
- */
-function isSupportedTelemetryEndpoint(
-  endpoint: string,
-  baseUrl: string,
-): boolean {
-  const trimmed = endpoint.trim()
-  if (!trimmed) return false
-
-  try {
-    const profileBaseUrl = new URL(baseUrl)
-
-    if (trimmed.startsWith("/")) {
-      const resolvedPathUrl = new URL(trimmed, profileBaseUrl.origin)
-      return (
-        resolvedPathUrl.origin === profileBaseUrl.origin &&
-        (resolvedPathUrl.protocol === "http:" ||
-          resolvedPathUrl.protocol === "https:")
-      )
-    }
-
-    const endpointUrl = new URL(trimmed)
-    return (
-      endpointUrl.origin === profileBaseUrl.origin &&
-      (endpointUrl.protocol === "http:" || endpointUrl.protocol === "https:")
-    )
-  } catch {
-    return false
-  }
-}
-
-/**
- * Trims and drops empty custom telemetry JSON path mappings before save.
- */
-function normalizeJsonPaths(
-  paths: ApiCredentialTelemetryJsonPathMap,
-): ApiCredentialTelemetryJsonPathMap {
-  const next: ApiCredentialTelemetryJsonPathMap = {}
-
-  for (const field of TELEMETRY_JSON_PATH_FIELDS) {
-    const value = paths[field]
-    if (typeof value === "string" && value.trim()) {
-      next[field] = normalizeJsonPath(value)
-    }
-  }
-
-  return next
 }
 
 /**
@@ -356,21 +278,25 @@ export function ApiCredentialProfileDialog({
         )
       } else if (
         normalizedBaseUrl &&
-        !isSupportedTelemetryEndpoint(trimmedEndpoint, normalizedBaseUrl)
+        !isSupportedApiCredentialTelemetryEndpoint(
+          normalizedBaseUrl,
+          trimmedEndpoint,
+        )
       ) {
         nextErrors.telemetryEndpoint = t(
           "apiCredentialProfiles:dialog.errors.telemetryEndpointInvalid",
         )
       }
 
-      const jsonPaths = normalizeJsonPaths(customJsonPaths)
-      if (Object.keys(jsonPaths).length === 0) {
+      const jsonPaths = coerceApiCredentialTelemetryJsonPathMap(customJsonPaths)
+      const rawJsonPathCount = Object.values(customJsonPaths).filter(
+        (value) => typeof value === "string" && value.trim(),
+      ).length
+      if (rawJsonPathCount === 0) {
         nextErrors.telemetryJsonPaths = t(
           "apiCredentialProfiles:dialog.errors.telemetryJsonPathRequired",
         )
-      } else if (
-        Object.values(jsonPaths).some((path) => !isSupportedJsonPath(path))
-      ) {
+      } else if (Object.keys(jsonPaths).length !== rawJsonPathCount) {
         nextErrors.telemetryJsonPaths = t(
           "apiCredentialProfiles:dialog.errors.telemetryJsonPathInvalid",
         )
@@ -390,13 +316,13 @@ export function ApiCredentialProfileDialog({
       mode: "customReadOnlyEndpoint",
       customEndpoint: {
         endpoint: customEndpoint.trim(),
-        jsonPaths: normalizeJsonPaths(customJsonPaths),
+        jsonPaths: coerceApiCredentialTelemetryJsonPathMap(customJsonPaths),
       },
     }
   }
 
   const handleJsonPathChange =
-    (field: TelemetryJsonPathField) =>
+    (field: ApiCredentialTelemetryJsonPathField) =>
     (event: ChangeEvent<HTMLInputElement>) => {
       setCustomJsonPaths((prev) => ({
         ...prev,

@@ -4,6 +4,7 @@ import {
   coerceApiCredentialTelemetryConfig,
 } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { fetchApiCredentialModelIds } from "~/services/apiCredentialProfiles/modelCatalog"
+import { resolveApiCredentialTelemetryEndpoint } from "~/services/apiCredentialProfiles/telemetryConfig"
 import { ApiError } from "~/services/apiService/common/errors"
 import { fetchApi } from "~/services/apiService/common/utils"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
@@ -452,25 +453,6 @@ async function querySub2ApiUsage(
 }
 
 /**
- * Resolves a custom endpoint while keeping it on the profile origin.
- */
-function resolveCustomEndpoint(
-  profile: ApiCredentialProfile,
-  endpoint: string,
-): string {
-  const trimmed = endpoint.trim()
-  if (!trimmed) throw new Error("Custom endpoint is empty")
-
-  const base = new URL(profile.baseUrl)
-  const resolved = new URL(trimmed, base.origin)
-  if (resolved.origin !== base.origin) {
-    throw new Error("Custom endpoint must stay on the profile base URL origin")
-  }
-
-  return `${resolved.pathname}${resolved.search}`
-}
-
-/**
  * Maps a custom telemetry JSON response through configured JSON paths.
  */
 function mapCustomJson(
@@ -541,8 +523,8 @@ async function queryCustomReadOnlyEndpoint(
     throw new Error("Custom endpoint is not configured")
   }
 
-  const endpoint = resolveCustomEndpoint(
-    profile,
+  const endpoint = resolveApiCredentialTelemetryEndpoint(
+    profile.baseUrl,
     config.customEndpoint.endpoint,
   )
   const result = await fetchJson({
@@ -657,7 +639,9 @@ export async function refreshApiCredentialProfileTelemetry(
     throw new Error("Profile not found.")
   }
 
-  const config = coerceApiCredentialTelemetryConfig(profile.telemetryConfig)
+  const config = coerceApiCredentialTelemetryConfig(profile.telemetryConfig, {
+    baseUrl: profile.baseUrl,
+  })
   const modes = resolveModes(config)
   const attempts: ApiCredentialTelemetryAttempt[] = []
   const now = Date.now()

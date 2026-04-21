@@ -448,7 +448,7 @@ describe("api credential profile telemetry", () => {
     expect(customAttempt?.endpoint).toContain("REDACTED")
   })
 
-  it("persists an error attempt when the custom endpoint string is malformed", async () => {
+  it("falls back to a configuration error when malformed custom endpoints are dropped during coercion", async () => {
     const profile = await apiCredentialProfilesStorage.createProfile({
       name: "Malformed Custom Endpoint",
       apiType: API_TYPES.OPENAI_COMPATIBLE,
@@ -479,8 +479,8 @@ describe("api credential profile telemetry", () => {
     expect(snapshot.attempts).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          endpoint: "http://%",
-          message: expect.stringContaining("Invalid URL"),
+          endpoint: "/custom",
+          message: "Custom endpoint is not configured",
           source: "customReadOnlyEndpoint",
           status: "error",
         }),

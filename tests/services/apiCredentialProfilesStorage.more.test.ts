@@ -313,6 +313,81 @@ describe("apiCredentialProfilesStorage additional flows", () => {
     )
   })
 
+  it("normalizes valid custom telemetry endpoint details with shared helpers", () => {
+    const coerced = coerceApiCredentialProfilesConfig(
+      {
+        profiles: [
+          {
+            id: "profile-custom-normalized",
+            name: "Normalized Custom",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com/v1/models",
+            apiKey: "sk-custom",
+            telemetryConfig: {
+              mode: "customReadOnlyEndpoint",
+              customEndpoint: {
+                endpoint: " https://example.com/usage?cursor=1 ",
+                jsonPaths: {
+                  balanceUsd: " data. balance ",
+                },
+              },
+            },
+          },
+        ],
+      },
+      { now: 12345 },
+    )
+
+    expect(coerced.profiles[0]).toEqual(
+      expect.objectContaining({
+        baseUrl: "https://example.com",
+        telemetryConfig: {
+          mode: "customReadOnlyEndpoint",
+          customEndpoint: {
+            endpoint: "https://example.com/usage?cursor=1",
+            jsonPaths: {
+              balanceUsd: "data.balance",
+            },
+          },
+        },
+      }),
+    )
+  })
+
+  it("drops cross-origin custom telemetry endpoint details while keeping the selected mode", () => {
+    const coerced = coerceApiCredentialProfilesConfig(
+      {
+        profiles: [
+          {
+            id: "profile-custom-cross-origin",
+            name: "Cross Origin Custom",
+            apiType: API_TYPES.OPENAI_COMPATIBLE,
+            baseUrl: "https://example.com",
+            apiKey: "sk-custom",
+            telemetryConfig: {
+              mode: "customReadOnlyEndpoint",
+              customEndpoint: {
+                endpoint: "https://evil.example.com/usage",
+                jsonPaths: {
+                  balanceUsd: "data.balance",
+                },
+              },
+            },
+          },
+        ],
+      },
+      { now: 12345 },
+    )
+
+    expect(coerced.profiles[0]).toEqual(
+      expect.objectContaining({
+        telemetryConfig: {
+          mode: "customReadOnlyEndpoint",
+        },
+      }),
+    )
+  })
+
   it("drops incomplete custom telemetry endpoint details while keeping the selected mode", () => {
     const coerced = coerceApiCredentialProfilesConfig(
       {
