@@ -8,6 +8,39 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 3.34.0
+- **New Features:**
+  - Model List: Added price comparison capabilities, allowing filtering by billing method, sorting by price, and in the "All Accounts" view, supporting "cheapest first for the same model" to find low-priced models more directly with multiple accounts.
+  - API Credentials: Configuration cards now include usage telemetry overview and manual refresh, allowing viewing of health status, balance, daily usage, request count, available models, etc. It also supports automatic recognition by site type or the use of custom read-only query endpoints.
+  - Model List: In the "All Accounts" view, added filtering by account, account group, and other dimensions, making it easier to narrow down the scope when there are many sources.
+  - Model Verification: Supports batch verification of the current filter results and can be used directly in the "All Accounts" view, making batch troubleshooting of model availability more convenient.
+  - Account Management: Added batch selection, batch disabling, and batch deletion for easier organization of large numbers of accounts.
+  - Account Management: Supports sorting by `Creation Time` and displays the creation time directly in the list.
+  - Automatic Check-in: Failed results now allow direct execution of `Disable Account` or `Delete Account`, enabling in-place handling of abnormal accounts on the results page after troubleshooting, without needing to switch back to account management.
+  - Hosted Sites: Even if the current site is not yet fully configured, entries like `Channel Management` and `Model Sync` will be retained, with direct prompts within the page indicating missing configurations and providing links to the setup entry.
+  - Account Management: When adding accounts, you can now choose to automatically fill in the current site URL, reducing operational steps.
+- **Experience Optimizations:**
+  - Account Management: Added a global refresh button at the top of the account management page for one-click refresh of all accounts.
+  - Account Management: Drag-and-drop sorting and filtering now have smoother animation experiences.
+  - Model List: The "All Accounts" view will more clearly distinguish between "Loading," "Load Failed," and "Format Incompatible" states. Expanded items will also be preserved as much as possible after refreshing, reducing repeated searches.
+  - Key Management: When adding keys in the current account or "All Accounts" filter view, the corresponding account will be automatically pre-selected, reducing duplicate selections.
+  - Refresh Experience: Multiple settings pages and history pages will try to retain current content when refreshing data, avoiding frequent clearing and reloading, making viewing less interrupted.
+- **Performance Optimizations:**
+  - Account Management: Optimized the loading performance of large lists, resulting in faster loading speeds when there are many accounts.
+- **Bug Fixes:**
+  - WebDAV: Compatible with backup download responses that return `206 Partial Content` from some services, reducing instances where downloads are mistakenly marked as failed.
+  - WONG Public Welfare Site: Fixed the real key reading method for masked `token`s, restoring normal parsing of related account or key information.
+  - Temporary Window Reminder Required: Only prompts for adjustments when account refresh has confirmed the need for temporary window fallback, but the relevant settings are currently disabled or permissions are missing, reducing unnecessary reminders in unrelated scenarios.
+
+**Location Hints:**
+- Model Price Comparison, Account Filtering, Batch Verification: In "Settings → Model List".
+- API Credentials Telemetry Overview and Configuration: In the cards and add/edit dialogs of "Settings → API Credentials".
+- Account Auto-fill on Addition, Batch Management, Creation Time Sorting: In "Settings → Account Management".
+- Automatic Check-in Failed Account Handling: In the results list of "Settings → Automatic Check-in".
+- Automatic Pre-selection of Account on Key Management Addition: In "Settings → Key Management".
+- Hosted Site Missing Configuration Prompt: On the relevant hosted site pages in "Settings → Self-Hosted Site Management".
+- WebDAV Backup Synchronization: In the relevant processes of `WebDAV Settings` within "Settings → Import/Export".
+
 ## 3.33.0
 - **New Features:**
   - Account Addition: When a hosted site configuration is incomplete, you will now be prompted to complete the settings before `Save and Auto-configure`. You can directly jump to the relevant configuration page, reducing the situation where you discover missing configurations only after clicking auto-configure.
@@ -299,7 +332,7 @@ This page records major updates for general users (feature changes / experience 
 
 **Location Hints:**
 - Balance History Currency Unit: In "Settings → Balance History", in the filter area, "Currency Unit".
-- Account Exchange Rate (Recharge Amount Ratio): In the "Settings → Account Management" add/edit account form, "Recharge Amount Ratio".
+- Account Exchange Rate (Recharge Amount Ratio): In "Settings → Account Management" add/edit account form, "Recharge Amount Ratio".
 
 ## 3.17.0
 - **New Features:**
