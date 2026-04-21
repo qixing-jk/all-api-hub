@@ -107,6 +107,7 @@ function buildProfile(): ApiCredentialProfile {
     apiKey: "sk-profile",
     tagIds: [],
     notes: "",
+    telemetryConfig: { mode: "auto" },
     createdAt: 1,
     updatedAt: 1,
   }

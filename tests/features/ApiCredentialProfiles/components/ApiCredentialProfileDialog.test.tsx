@@ -238,7 +238,7 @@ describe("ApiCredentialProfileDialog", () => {
         "apiCredentialProfiles:dialog.placeholders.telemetryEndpoint",
       ),
       {
-        target: { value: "/usage/read-only" },
+        target: { value: "https://evil.example.com/usage/read-only" },
       },
     )
     fireEvent.change(
@@ -246,7 +246,38 @@ describe("ApiCredentialProfileDialog", () => {
         "apiCredentialProfiles:dialog.placeholders.telemetryJsonPath",
       )[0]!,
       {
-        target: { value: "data.balance" },
+        target: { value: "data..balance" },
+      },
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
+
+    expect(onSave).not.toHaveBeenCalled()
+    expect(
+      screen.getByText(
+        "apiCredentialProfiles:dialog.errors.telemetryEndpointInvalid",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "apiCredentialProfiles:dialog.errors.telemetryJsonPathInvalid",
+      ),
+    ).toBeInTheDocument()
+
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.telemetryEndpoint",
+      ),
+      {
+        target: { value: "https://custom.example.com/usage/read-only" },
+      },
+    )
+    fireEvent.change(
+      screen.getAllByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.telemetryJsonPath",
+      )[0]!,
+      {
+        target: { value: "data. balance" },
       },
     )
 
@@ -258,7 +289,7 @@ describe("ApiCredentialProfileDialog", () => {
           telemetryConfig: {
             mode: "customReadOnlyEndpoint",
             customEndpoint: {
-              endpoint: "/usage/read-only",
+              endpoint: "https://custom.example.com/usage/read-only",
               jsonPaths: {
                 balanceUsd: "data.balance",
               },

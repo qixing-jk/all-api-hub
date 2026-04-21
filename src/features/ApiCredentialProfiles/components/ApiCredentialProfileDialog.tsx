@@ -112,6 +112,48 @@ function isSupportedJsonPath(path: string): boolean {
 }
 
 /**
+ * Normalizes whitespace inside dot-separated JSON paths before persistence.
+ */
+function normalizeJsonPath(path: string): string {
+  return path
+    .split(".")
+    .map((segment) => segment.trim())
+    .join(".")
+}
+
+/**
+ * Accepts only root-relative paths or same-origin HTTP(S) telemetry URLs.
+ */
+function isSupportedTelemetryEndpoint(
+  endpoint: string,
+  baseUrl: string,
+): boolean {
+  const trimmed = endpoint.trim()
+  if (!trimmed) return false
+
+  try {
+    const profileBaseUrl = new URL(baseUrl)
+
+    if (trimmed.startsWith("/")) {
+      const resolvedPathUrl = new URL(trimmed, profileBaseUrl.origin)
+      return (
+        resolvedPathUrl.origin === profileBaseUrl.origin &&
+        (resolvedPathUrl.protocol === "http:" ||
+          resolvedPathUrl.protocol === "https:")
+      )
+    }
+
+    const endpointUrl = new URL(trimmed)
+    return (
+      endpointUrl.origin === profileBaseUrl.origin &&
+      (endpointUrl.protocol === "http:" || endpointUrl.protocol === "https:")
+    )
+  } catch {
+    return false
+  }
+}
+
+/**
  * Trims and drops empty custom telemetry JSON path mappings before save.
  */
 function normalizeJsonPaths(
@@ -122,7 +164,7 @@ function normalizeJsonPaths(
   for (const field of TELEMETRY_JSON_PATH_FIELDS) {
     const value = paths[field]
     if (typeof value === "string" && value.trim()) {
-      next[field] = value.trim()
+      next[field] = normalizeJsonPath(value)
     }
   }
 
@@ -306,9 +348,18 @@ export function ApiCredentialProfileDialog({
     }
 
     if (telemetryMode === "customReadOnlyEndpoint") {
-      if (!customEndpoint.trim()) {
+      const trimmedEndpoint = customEndpoint.trim()
+
+      if (!trimmedEndpoint) {
         nextErrors.telemetryEndpoint = t(
           "apiCredentialProfiles:dialog.errors.telemetryEndpointRequired",
+        )
+      } else if (
+        normalizedBaseUrl &&
+        !isSupportedTelemetryEndpoint(trimmedEndpoint, normalizedBaseUrl)
+      ) {
+        nextErrors.telemetryEndpoint = t(
+          "apiCredentialProfiles:dialog.errors.telemetryEndpointInvalid",
         )
       }
 
