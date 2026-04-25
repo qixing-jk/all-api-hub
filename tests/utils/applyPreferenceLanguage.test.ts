@@ -1,5 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"
+
 const { i18nCoreMock } = vi.hoisted(() => ({
   i18nCoreMock: {
     resolvedLanguage: "en" as string | undefined,
@@ -11,8 +13,6 @@ const { i18nCoreMock } = vi.hoisted(() => ({
 vi.mock("~/utils/i18n/core", () => ({
   default: i18nCoreMock,
 }))
-
-import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"
 
 describe("applyPreferenceLanguage", () => {
   beforeEach(() => {

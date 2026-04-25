@@ -621,36 +621,36 @@ class UserPreferencesService {
     },
   ): Promise<UserPreferences | null> {
     const updatedPreferences = await this.withStorageWriteLock(async () => {
-        const currentPreferences = await this.getPreferences()
-        if (
-          typeof options?.expectedLastUpdated === "number" &&
-          Number.isFinite(options.expectedLastUpdated) &&
-          currentPreferences.lastUpdated !== options.expectedLastUpdated
-        ) {
-          return null
-        }
+      const currentPreferences = await this.getPreferences()
+      if (
+        typeof options?.expectedLastUpdated === "number" &&
+        Number.isFinite(options.expectedLastUpdated) &&
+        currentPreferences.lastUpdated !== options.expectedLastUpdated
+      ) {
+        return null
+      }
 
-        const timestamp = Date.now()
-        const sharedPreferencesLastUpdated = patchTouchesSharedPreferences(
-          preferences,
-        )
-          ? timestamp
-          : getSharedPreferencesLastUpdated(currentPreferences)
+      const timestamp = Date.now()
+      const sharedPreferencesLastUpdated = patchTouchesSharedPreferences(
+        preferences,
+      )
+        ? timestamp
+        : getSharedPreferencesLastUpdated(currentPreferences)
 
-        const nextPreferences = stampPreferencesMetadata(
-          deepOverride(currentPreferences, preferences),
-          {
-            lastUpdated: timestamp,
-            sharedPreferencesLastUpdated,
-          },
-        )
+      const nextPreferences = stampPreferencesMetadata(
+        deepOverride(currentPreferences, preferences),
+        {
+          lastUpdated: timestamp,
+          sharedPreferencesLastUpdated,
+        },
+      )
 
-        await this.storage.set(
-          USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
-          nextPreferences,
-        )
+      await this.storage.set(
+        USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+        nextPreferences,
+      )
 
-        return nextPreferences
+      return nextPreferences
     })
     if (!updatedPreferences) {
       logger.debug("跳过过期的偏好设置写入", {
