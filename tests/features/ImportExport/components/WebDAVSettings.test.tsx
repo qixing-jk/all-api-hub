@@ -18,6 +18,7 @@ import {
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const {
+  mockApplyPreferenceLanguage,
   mockUserPreferences,
   mockAccountStorage,
   mockTagStorage,
@@ -35,8 +36,10 @@ const {
   mockImportFromBackupObject,
   loggerMocks,
 } = vi.hoisted(() => ({
+  mockApplyPreferenceLanguage: vi.fn(),
   mockUserPreferences: {
     getPreferences: vi.fn(),
+    getLanguage: vi.fn(),
     savePreferences: vi.fn(),
     exportPreferences: vi.fn(),
   },
@@ -71,6 +74,11 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/utils/core/logger", () => ({
   createLogger: () => loggerMocks,
+}))
+
+vi.mock("~/utils/i18n/applyPreferenceLanguage", () => ({
+  applyPreferenceLanguage: (...args: unknown[]) =>
+    mockApplyPreferenceLanguage(...args),
 }))
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
@@ -175,6 +183,7 @@ describe("WebDAVSettings", () => {
     mockUserPreferences.getPreferences.mockResolvedValue(
       createPreferencesFixture(),
     )
+    mockUserPreferences.getLanguage.mockResolvedValue("ja")
     mockUserPreferences.savePreferences.mockResolvedValue(true)
     mockUserPreferences.exportPreferences.mockResolvedValue({
       themeMode: "dark",
@@ -192,6 +201,7 @@ describe("WebDAVSettings", () => {
       imported: true,
     })
     mockImportFromBackupObject.mockResolvedValue({ allImported: true })
+    mockApplyPreferenceLanguage.mockResolvedValue(true)
     mockDecryptWebdavBackupEnvelope.mockResolvedValue('{"version":2}')
     mockTestWebdavConnection.mockResolvedValue(undefined)
     mockUploadBackup.mockResolvedValue(undefined)
@@ -332,6 +342,8 @@ describe("WebDAVSettings", () => {
         { imported: true },
         { preserveWebdav: true },
       )
+      expect(mockUserPreferences.getLanguage).toHaveBeenCalledTimes(1)
+      expect(mockApplyPreferenceLanguage).toHaveBeenCalledWith("ja")
     })
     expect(mockUserPreferences.savePreferences).toHaveBeenNthCalledWith(
       2,
@@ -516,6 +528,8 @@ describe("WebDAVSettings", () => {
         { imported: true },
         { preserveWebdav: true },
       )
+      expect(mockUserPreferences.getLanguage).toHaveBeenCalledTimes(1)
+      expect(mockApplyPreferenceLanguage).toHaveBeenCalledWith("ja")
       expect(mockUserPreferences.getPreferences).toHaveBeenCalledTimes(2)
       expect(toast.success).toHaveBeenCalledWith(
         "importExport:import.importSuccess",

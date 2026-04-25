@@ -4,6 +4,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useImportExport } from "~/features/ImportExport/hooks/useImportExport"
 
 const {
+  applyPreferenceLanguageMock,
+  getLanguageMock,
   importFromBackupObjectMock,
   loggerErrorMock,
   parseBackupSummaryMock,
@@ -11,6 +13,8 @@ const {
   toastErrorMock,
   toastSuccessMock,
 } = vi.hoisted(() => ({
+  applyPreferenceLanguageMock: vi.fn(),
+  getLanguageMock: vi.fn(),
   importFromBackupObjectMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   parseBackupSummaryMock: vi.fn(),
@@ -50,6 +54,17 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   }),
 }))
 
+vi.mock("~/services/preferences/userPreferences", () => ({
+  userPreferences: {
+    getLanguage: getLanguageMock,
+  },
+}))
+
+vi.mock("~/utils/i18n/applyPreferenceLanguage", () => ({
+  applyPreferenceLanguage: (...args: unknown[]) =>
+    applyPreferenceLanguageMock(...args),
+}))
+
 vi.mock("~/features/ImportExport/utils", () => ({
   importFromBackupObject: (...args: unknown[]) =>
     importFromBackupObjectMock(...args),
@@ -72,6 +87,8 @@ describe("useImportExport", () => {
     vi.clearAllMocks()
     vi.stubGlobal("FileReader", MockFileReader as unknown as typeof FileReader)
     loadPreferencesMock.mockResolvedValue(undefined)
+    getLanguageMock.mockResolvedValue("ja")
+    applyPreferenceLanguageMock.mockResolvedValue(true)
   })
 
   it("loads selected backup file text into state and ignores empty file selections", async () => {
@@ -143,6 +160,8 @@ describe("useImportExport", () => {
       "importExport:import.importSuccess",
     )
     expect(loadPreferencesMock).toHaveBeenCalledTimes(1)
+    expect(getLanguageMock).toHaveBeenCalledTimes(1)
+    expect(applyPreferenceLanguageMock).toHaveBeenCalledWith("ja")
     expect(result.current.isImporting).toBe(false)
 
     importFromBackupObjectMock.mockResolvedValueOnce({ allImported: false })
@@ -153,6 +172,28 @@ describe("useImportExport", () => {
 
     expect(toastSuccessMock).toHaveBeenCalledTimes(1)
     expect(loadPreferencesMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("refreshes and reapplies the persisted language for preference-only imports", async () => {
+    importFromBackupObjectMock.mockResolvedValueOnce({
+      allImported: false,
+      sections: { preferences: true },
+    })
+
+    const { result } = renderHook(() => useImportExport())
+
+    act(() => {
+      result.current.setImportData('{"version":6}')
+    })
+
+    await act(async () => {
+      await result.current.handleImport()
+    })
+
+    expect(loadPreferencesMock).toHaveBeenCalledTimes(1)
+    expect(getLanguageMock).toHaveBeenCalledTimes(1)
+    expect(applyPreferenceLanguageMock).toHaveBeenCalledWith("ja")
+    expect(toastSuccessMock).not.toHaveBeenCalled()
   })
 
   it("surfaces format errors for malformed JSON and detailed fallback errors for import failures", async () => {

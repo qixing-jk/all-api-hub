@@ -3,8 +3,10 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
+import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"
 
 import { importFromBackupObject, parseBackupSummary } from "../utils"
 
@@ -47,6 +49,7 @@ export const useImportExport = () => {
       const result = await importFromBackupObject(data)
       if (result.allImported || result.sections?.preferences) {
         await loadPreferences()
+        await applyPreferenceLanguage(await userPreferences.getLanguage())
       }
       if (result.allImported) {
         toast.success(t("importExport:import.importSuccess"))

@@ -56,6 +56,7 @@ import {
   type WebDAVSyncDataKey,
 } from "~/types/webdav"
 import { createLogger } from "~/utils/core/logger"
+import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"
 
 import {
   BACKUP_VERSION,
@@ -380,6 +381,7 @@ export default function WebDAVSettings() {
       const result = await handleImportWithSelection(data)
       if (result.allImported || result.sections?.preferences) {
         await loadPreferences()
+        await applyPreferenceLanguage(await userPreferences.getLanguage())
       }
       if (result.allImported) {
         toast.success(t("importExport:import.importSuccess"))
@@ -437,6 +439,7 @@ export default function WebDAVSettings() {
 
       if (result.allImported || result.sections?.preferences) {
         await loadPreferences()
+        await applyPreferenceLanguage(await userPreferences.getLanguage())
       }
       if (result.allImported) {
         toast.success(t("importExport:import.importSuccess"))
