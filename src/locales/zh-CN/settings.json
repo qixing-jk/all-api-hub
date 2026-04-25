@@ -169,6 +169,7 @@
   },
   "messages": {
     "confirmReset": "确认重置",
+    "preferencesChangedExternally": "偏好设置已在其他位置发生变化，请刷新后重试。",
     "resetConfirmDesc": "确定要将{{name}}重置为默认设置吗？此操作无法撤销。",
     "resetFailed": "重置{{name}}失败",
     "resetSuccess": "{{name}}已重置为默认设置",

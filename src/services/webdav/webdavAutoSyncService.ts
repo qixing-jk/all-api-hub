@@ -66,6 +66,16 @@ import {
 
 const logger = createLogger("WebdavAutoSync")
 
+type UpdateWebdavAutoSyncSettingsResult =
+  | {
+      ok: true
+      savedPreferences: UserPreferences
+    }
+  | {
+      ok: false
+      reason: "conflict" | "error"
+    }
+
 /**
  * Convert the persisted WebDAV sync interval (seconds) to a safe alarms cadence (minutes).
  *
@@ -1369,29 +1379,38 @@ class WebdavAutoSyncService {
       syncStrategy?: WebDAVSettings["syncStrategy"]
     },
     options?: { expectedLastUpdated?: number },
-  ) {
+  ): Promise<UpdateWebdavAutoSyncSettingsResult> {
     try {
-      // Update the nested webdav object
-      const success =
+      const savedPreferences =
         typeof options?.expectedLastUpdated === "number"
-          ? await userPreferences.savePreferences(
+          ? await userPreferences.savePreferencesWithResult(
               {
                 webdav: settings,
               },
               options,
             )
-          : await userPreferences.savePreferences({
+          : await userPreferences.savePreferencesWithResult({
               webdav: settings,
             })
-      if (!success) {
-        return false
+      if (!savedPreferences) {
+        return {
+          ok: false,
+          reason: "conflict",
+        }
       }
+
       await this.setupAutoSync() // 重新设置调度（alarm）
       logger.info("设置已更新", settings)
-      return true
+      return {
+        ok: true,
+        savedPreferences,
+      }
     } catch (error) {
       logger.error("更新设置失败", error)
-      return false
+      return {
+        ok: false,
+        reason: "error",
+      }
     }
   }
 
@@ -1485,7 +1504,7 @@ export const handleWebdavAutoSyncMessage = async (
         break
 
       case RuntimeActionIds.WebdavAutoSyncUpdateSettings: {
-        const success = await webdavAutoSyncService.updateSettings(
+        const result = await webdavAutoSyncService.updateSettings(
           request.settings,
           typeof request.expectedLastUpdated === "number"
             ? {
@@ -1494,11 +1513,17 @@ export const handleWebdavAutoSyncMessage = async (
             : undefined,
         )
         sendResponse(
-          success
-            ? { success: true }
+          result.ok
+            ? {
+                success: true,
+                data: result.savedPreferences,
+              }
             : {
                 success: false,
-                error: "Preferences changed externally. Refresh and try again.",
+                error:
+                  result.reason === "conflict"
+                    ? t("settings:messages.preferencesChangedExternally")
+                    : t("settings:messages.saveSettingsFailed"),
               },
         )
         break

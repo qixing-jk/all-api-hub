@@ -15,6 +15,7 @@ import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
+import { deepOverride } from "~/utils"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const {
@@ -41,6 +42,7 @@ const {
     getPreferences: vi.fn(),
     getLanguage: vi.fn(),
     savePreferences: vi.fn(),
+    savePreferencesWithResult: vi.fn(),
     exportPreferences: vi.fn(),
   },
   mockAccountStorage: { exportData: vi.fn() },
@@ -169,6 +171,8 @@ const createPreferencesFixture = (): UserPreferences => ({
   },
 })
 
+let persistedPreferences = createPreferencesFixture()
+
 const ENCRYPTED_BACKUP_ENVELOPE = {
   version: 1,
   algorithm: "aes-gcm",
@@ -180,11 +184,25 @@ const ENCRYPTED_BACKUP_ENVELOPE = {
 describe("WebDAVSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUserPreferences.getPreferences.mockResolvedValue(
-      createPreferencesFixture(),
+    persistedPreferences = createPreferencesFixture()
+    mockUserPreferences.getPreferences.mockImplementation(async () =>
+      structuredClone(persistedPreferences),
+    )
+    mockUserPreferences.savePreferences.mockImplementation(async (updates) => {
+      persistedPreferences = deepOverride(persistedPreferences, updates)
+      persistedPreferences.lastUpdated += 1
+      return true
+    })
+    mockUserPreferences.savePreferencesWithResult.mockImplementation(
+      async (updates, options) => {
+        const success = await mockUserPreferences.savePreferences(
+          updates,
+          options,
+        )
+        return success ? structuredClone(persistedPreferences) : null
+      },
     )
     mockUserPreferences.getLanguage.mockResolvedValue("ja")
-    mockUserPreferences.savePreferences.mockResolvedValue(true)
     mockUserPreferences.exportPreferences.mockResolvedValue({
       themeMode: "dark",
     })

@@ -211,9 +211,12 @@ export default function WebDAVSettings() {
 
   const persistWebdavConfig = async (
     updates: Partial<WebDAVSettings> = webdavConfig,
+    options?: {
+      expectedLastUpdated?: number
+    },
   ) => {
     const success = await updateWebdavSettings(updates, {
-      expectedLastUpdated,
+      expectedLastUpdated: options?.expectedLastUpdated ?? expectedLastUpdated,
     })
     if (!success) {
       throw new PersistWebdavConfigError()
@@ -422,11 +425,27 @@ export default function WebDAVSettings() {
 
       const data = JSON.parse(content)
       const result = await handleImportWithSelection(data)
+      let importedPreferencesLastUpdated: number | null = null
+
+      if (result.allImported || result.sections?.preferences) {
+        const refreshedPreferences = await userPreferences.getPreferences()
+        importedPreferencesLastUpdated = refreshedPreferences.lastUpdated
+        await loadPreferences()
+        await applyPreferenceLanguage(await userPreferences.getLanguage())
+      }
+
       if (saveDecryptPassword) {
         try {
-          await persistWebdavConfig({
-            backupEncryptionPassword: pwd,
-          })
+          await persistWebdavConfig(
+            {
+              backupEncryptionPassword: pwd,
+            },
+            importedPreferencesLastUpdated === null
+              ? undefined
+              : {
+                  expectedLastUpdated: importedPreferencesLastUpdated,
+                },
+          )
           setLocalConfig((prev) => ({
             ...prev,
             backupEncryptionPassword: pwd,
@@ -437,10 +456,6 @@ export default function WebDAVSettings() {
         }
       }
 
-      if (result.allImported || result.sections?.preferences) {
-        await loadPreferences()
-        await applyPreferenceLanguage(await userPreferences.getLanguage())
-      }
       if (result.allImported) {
         toast.success(t("importExport:import.importSuccess"))
       }

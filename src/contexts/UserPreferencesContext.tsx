@@ -38,7 +38,6 @@ import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
 } from "~/types/dailyBalanceHistory"
-import { DEFAULT_DONE_HUB_CONFIG } from "~/types/doneHubConfig"
 import type { LogLevel } from "~/types/logging"
 import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
 import type { SortingPriorityConfig } from "~/types/sorting"
@@ -108,8 +107,19 @@ function savePreferencesWithOptions(
   options?: PreferenceSaveOptions,
 ) {
   return typeof options?.expectedLastUpdated === "number"
-    ? userPreferences.savePreferences(updates, options)
-    : userPreferences.savePreferences(updates)
+    ? userPreferences.savePreferencesWithResult(updates, options)
+    : userPreferences.savePreferencesWithResult(updates)
+}
+
+/**
+ * Narrow an unknown runtime response payload to a persisted preferences snapshot.
+ */
+function isUserPreferencesSnapshot(value: unknown): value is UserPreferences {
+  return (
+    Boolean(value) &&
+    typeof value === "object" &&
+    typeof (value as UserPreferences).lastUpdated === "number"
+  )
 }
 
 // 1. 定义 Context 的值类型
@@ -362,6 +372,24 @@ export const UserPreferencesProvider = ({
     void loadPreferences()
   }, [loadPreferences])
 
+  const persistPreferenceUpdates = useCallback(
+    async (
+      updates: Parameters<typeof userPreferences.savePreferences>[0],
+      options?: PreferenceSaveOptions,
+    ) => {
+      const savedPreferences = await savePreferencesWithOptions(
+        updates,
+        options,
+      )
+      if (savedPreferences) {
+        setPreferences(savedPreferences)
+        return true
+      }
+      return false
+    },
+    [],
+  )
+
   /**
    * Persist the currently visible balance tab and mirror it in React state.
    * @param activeTab - Consumption vs balance tab identifier.
@@ -474,18 +502,10 @@ export const UserPreferencesProvider = ({
   const resetClaudeCodeRouterConfig = useCallback(async () => {
     const success = await userPreferences.resetClaudeCodeRouterConfig()
     if (success) {
-      const defaults = DEFAULT_PREFERENCES.claudeCodeRouter
-      setPreferences((prev) =>
-        prev
-          ? deepOverride(prev, {
-              claudeCodeRouter: defaults,
-              lastUpdated: Date.now(),
-            })
-          : prev,
-      )
+      await loadPreferences()
     }
     return success
-  }, [])
+  }, [loadPreferences])
 
   /**
    * Update the CLI proxy base URL and merge it into the preference tree so
@@ -493,16 +513,14 @@ export const UserPreferencesProvider = ({
    */
   const updateCliProxyBaseUrl = useCallback(
     async (baseUrl: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        cliProxy: { baseUrl },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          cliProxy: { baseUrl },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   /**
@@ -511,44 +529,38 @@ export const UserPreferencesProvider = ({
    */
   const updateCliProxyManagementKey = useCallback(
     async (managementKey: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        cliProxy: { managementKey },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          cliProxy: { managementKey },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateClaudeCodeRouterBaseUrl = useCallback(
     async (baseUrl: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        claudeCodeRouter: { baseUrl },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          claudeCodeRouter: { baseUrl },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateClaudeCodeRouterApiKey = useCallback(
     async (apiKey: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        claudeCodeRouter: { apiKey },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          claudeCodeRouter: { apiKey },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateTempWindowFallbackReminder = useCallback(
@@ -734,212 +746,182 @@ export const UserPreferencesProvider = ({
 
   const updateNewApiBaseUrl = useCallback(
     async (baseUrl: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        newApi: { baseUrl },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          newApi: { baseUrl },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateNewApiAdminToken = useCallback(
     async (adminToken: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        newApi: { adminToken },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          newApi: { adminToken },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateNewApiUserId = useCallback(
     async (userId: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        newApi: { userId },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          newApi: { userId },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateNewApiUsername = useCallback(
     async (username: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        newApi: { username },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          newApi: { username },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateNewApiPassword = useCallback(
     async (password: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        newApi: { password },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          newApi: { password },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateNewApiTotpSecret = useCallback(
     async (totpSecret: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        newApi: { totpSecret },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          newApi: { totpSecret },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateDoneHubBaseUrl = useCallback(
     async (baseUrl: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        doneHub: { baseUrl },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          doneHub: { baseUrl },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateDoneHubAdminToken = useCallback(
     async (adminToken: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        doneHub: { adminToken },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          doneHub: { adminToken },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateDoneHubUserId = useCallback(
     async (userId: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        doneHub: { userId },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          doneHub: { userId },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateVeloeraBaseUrl = useCallback(
     async (baseUrl: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        veloera: { baseUrl },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          veloera: { baseUrl },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateVeloeraAdminToken = useCallback(
     async (adminToken: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        veloera: { adminToken },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          veloera: { adminToken },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateVeloeraUserId = useCallback(
     async (userId: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        veloera: { userId },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          veloera: { userId },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateOctopusBaseUrl = useCallback(
     async (baseUrl: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        octopus: { baseUrl },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          octopus: { baseUrl },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateOctopusUsername = useCallback(
     async (username: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        octopus: { username },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          octopus: { username },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateOctopusPassword = useCallback(
     async (password: string, options?: PreferenceSaveOptions) => {
-      const updates = {
-        octopus: { password },
-      }
-      const success = await savePreferencesWithOptions(updates, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          octopus: { password },
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateOctopusConfig = useCallback(
@@ -947,16 +929,14 @@ export const UserPreferencesProvider = ({
       updates: Partial<NonNullable<UserPreferences["octopus"]>>,
       options?: PreferenceSaveOptions,
     ) => {
-      const patch = {
-        octopus: updates,
-      }
-      const success = await savePreferencesWithOptions(patch, options)
-      if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, patch) : null))
-      }
-      return success
+      return persistPreferenceUpdates(
+        {
+          octopus: updates,
+        },
+        options,
+      )
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateManagedSiteType = useCallback(
@@ -1236,31 +1216,14 @@ export const UserPreferencesProvider = ({
       updates: Partial<WebDAVSettings>,
       options?: PreferenceSaveOptions,
     ) => {
-      const success = await savePreferencesWithOptions(
+      return persistPreferenceUpdates(
         {
           webdav: updates,
         },
         options,
       )
-
-      if (success) {
-        setPreferences((prev) => {
-          if (!prev) return null
-          const merged = deepOverride(
-            prev.webdav ?? DEFAULT_PREFERENCES.webdav,
-            updates,
-          )
-          return {
-            ...prev,
-            webdav: merged,
-            lastUpdated: Date.now(),
-          }
-        })
-      }
-
-      return success
     },
-    [],
+    [persistPreferenceUpdates],
   )
 
   const updateWebdavAutoSyncSettings = useCallback(
@@ -1286,7 +1249,9 @@ export const UserPreferencesProvider = ({
         ),
       )
 
-      if (response.success) {
+      if (response.success && isUserPreferencesSnapshot(response.data)) {
+        setPreferences(response.data)
+      } else if (response.success) {
         setPreferences((prev) => {
           if (!prev) return null
           const merged = deepOverride(
@@ -1296,7 +1261,6 @@ export const UserPreferencesProvider = ({
           return {
             ...prev,
             webdav: merged,
-            lastUpdated: Date.now(),
           }
         })
       }
@@ -1414,66 +1378,34 @@ export const UserPreferencesProvider = ({
   const resetNewApiConfig = useCallback(async () => {
     const success = await userPreferences.resetNewApiConfig()
     if (success) {
-      const defaults = DEFAULT_PREFERENCES.newApi
-      setPreferences((prev) =>
-        prev
-          ? deepOverride(prev, {
-              newApi: defaults,
-              lastUpdated: Date.now(),
-            })
-          : prev,
-      )
+      await loadPreferences()
     }
     return success
-  }, [])
+  }, [loadPreferences])
 
   const resetDoneHubConfig = useCallback(async () => {
     const success = await userPreferences.resetDoneHubConfig()
     if (success) {
-      const defaults = DEFAULT_DONE_HUB_CONFIG
-      setPreferences((prev) =>
-        prev
-          ? deepOverride(prev, {
-              doneHub: defaults,
-              lastUpdated: Date.now(),
-            })
-          : prev,
-      )
+      await loadPreferences()
     }
     return success
-  }, [])
+  }, [loadPreferences])
 
   const resetVeloeraConfig = useCallback(async () => {
     const success = await userPreferences.resetVeloeraConfig()
     if (success) {
-      const defaults = DEFAULT_PREFERENCES.veloera
-      setPreferences((prev) =>
-        prev
-          ? deepOverride(prev, {
-              veloera: defaults,
-              lastUpdated: Date.now(),
-            })
-          : prev,
-      )
+      await loadPreferences()
     }
     return success
-  }, [])
+  }, [loadPreferences])
 
   const resetOctopusConfig = useCallback(async () => {
     const success = await userPreferences.resetOctopusConfig()
     if (success) {
-      const defaults = DEFAULT_PREFERENCES.octopus
-      setPreferences((prev) =>
-        prev
-          ? deepOverride(prev, {
-              octopus: defaults,
-              lastUpdated: Date.now(),
-            })
-          : prev,
-      )
+      await loadPreferences()
     }
     return success
-  }, [])
+  }, [loadPreferences])
 
   const resetNewApiModelSyncConfig = useCallback(async () => {
     const success = await userPreferences.resetNewApiModelSyncConfig()
@@ -1500,18 +1432,10 @@ export const UserPreferencesProvider = ({
   const resetCliProxyConfig = useCallback(async () => {
     const success = await userPreferences.resetCliProxyConfig()
     if (success) {
-      const defaults = DEFAULT_PREFERENCES.cliProxy
-      setPreferences((prev) =>
-        prev
-          ? deepOverride(prev, {
-              cliProxy: defaults,
-              lastUpdated: Date.now(),
-            })
-          : prev,
-      )
+      await loadPreferences()
     }
     return success
-  }, [])
+  }, [loadPreferences])
 
   const resetAutoCheckinConfig = useCallback(async () => {
     const success = await userPreferences.resetAutoCheckinConfig()
@@ -1592,18 +1516,10 @@ export const UserPreferencesProvider = ({
   const resetWebdavConfig = useCallback(async () => {
     const success = await userPreferences.resetWebdavConfig()
     if (success) {
-      const defaults = DEFAULT_PREFERENCES.webdav
-      setPreferences((prev) =>
-        prev
-          ? deepOverride(prev, {
-              webdav: defaults,
-              lastUpdated: Date.now(),
-            })
-          : prev,
-      )
+      await loadPreferences()
     }
     return success
-  }, [])
+  }, [loadPreferences])
 
   const resetLoggingSettings = useCallback(async () => {
     const defaults = DEFAULT_PREFERENCES.logging

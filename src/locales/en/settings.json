@@ -169,6 +169,7 @@
   },
   "messages": {
     "confirmReset": "Confirm Reset",
+    "preferencesChangedExternally": "Preferences changed externally. Refresh and try again.",
     "resetConfirmDesc": "Are you sure you want to reset {{name}} to default settings? This operation cannot be undone.",
     "resetFailed": "Failed to reset {{name}}",
     "resetSuccess": "{{name}} has been reset to default settings",

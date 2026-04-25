@@ -169,6 +169,7 @@
   },
   "messages": {
     "confirmReset": "確認重置",
+    "preferencesChangedExternally": "偏好設定已在其他地方變更，請重新整理後再試。",
     "resetConfirmDesc": "確定要將{{name}}重置為預設設定嗎？此操作無法撤銷。",
     "resetFailed": "重置{{name}}失敗",
     "resetSuccess": "{{name}}已重置為預設設定",

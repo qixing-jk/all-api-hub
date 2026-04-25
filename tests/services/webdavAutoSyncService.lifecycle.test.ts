@@ -16,6 +16,7 @@ const mocks = vi.hoisted(() => ({
   isMessageReceiverUnavailableError: vi.fn(),
   getPreferences: vi.fn(),
   savePreferences: vi.fn(),
+  savePreferencesWithResult: vi.fn(),
 }))
 
 vi.mock("~/utils/core/error", () => ({
@@ -51,6 +52,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
       ...actual.userPreferences,
       getPreferences: mocks.getPreferences,
       savePreferences: mocks.savePreferences,
+      savePreferencesWithResult: mocks.savePreferencesWithResult,
     },
   }
 })
@@ -113,6 +115,22 @@ describe("webdavAutoSyncService lifecycle", () => {
     })
     mocks.sendRuntimeMessage.mockResolvedValue(undefined)
     mocks.isMessageReceiverUnavailableError.mockReturnValue(false)
+    mocks.savePreferences.mockResolvedValue(true)
+    mocks.savePreferencesWithResult.mockImplementation(
+      async (updates, options) => {
+        const success = await mocks.savePreferences(updates, options)
+        return success
+          ? {
+              lastUpdated: 1,
+              webdav: {
+                autoSync: false,
+                syncInterval: 3600,
+                syncStrategy: "merge",
+              },
+            }
+          : null
+      },
+    )
   })
 
   it("initializes once and only reacts to the WebDAV alarm", async () => {
@@ -297,7 +315,17 @@ describe("webdavAutoSyncService lifecycle", () => {
       .mockResolvedValue(undefined)
     const updateSpy = vi
       .spyOn(webdavAutoSyncService, "updateSettings")
-      .mockResolvedValue(true)
+      .mockResolvedValue({
+        ok: true,
+        savedPreferences: {
+          lastUpdated: 1,
+          webdav: {
+            autoSync: false,
+            syncInterval: 3600,
+            syncStrategy: "merge",
+          },
+        },
+      } as any)
     vi.spyOn(webdavAutoSyncService, "getStatus").mockReturnValue({
       isRunning: true,
       isInitialized: true,
@@ -325,7 +353,17 @@ describe("webdavAutoSyncService lifecycle", () => {
           action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
           settings: { autoSync: false },
         },
-        expected: { success: true },
+        expected: {
+          success: true,
+          data: {
+            lastUpdated: 1,
+            webdav: {
+              autoSync: false,
+              syncInterval: 3600,
+              syncStrategy: "merge",
+            },
+          },
+        },
       },
       {
         request: { action: RuntimeActionIds.WebdavAutoSyncGetStatus },
@@ -356,7 +394,7 @@ describe("webdavAutoSyncService lifecycle", () => {
     expect(setupSpy).toHaveBeenCalledTimes(1)
     expect(syncNowSpy).toHaveBeenCalledTimes(1)
     expect(stopSpy).toHaveBeenCalledTimes(1)
-    expect(updateSpy).toHaveBeenCalledWith({ autoSync: false })
+    expect(updateSpy).toHaveBeenCalledWith({ autoSync: false }, undefined)
 
     setupSpy.mockRejectedValueOnce(new Error("handler exploded"))
     const sendResponse = vi.fn()
@@ -382,13 +420,16 @@ describe("webdavAutoSyncService lifecycle", () => {
       syncStrategy: "merge",
     })
 
-    expect(mocks.savePreferences).toHaveBeenCalledWith({
-      webdav: {
-        autoSync: true,
-        syncInterval: 1800,
-        syncStrategy: "merge",
+    expect(mocks.savePreferences).toHaveBeenCalledWith(
+      {
+        webdav: {
+          autoSync: true,
+          syncInterval: 1800,
+          syncStrategy: "merge",
+        },
       },
-    })
+      undefined,
+    )
     expect(setupSpy).toHaveBeenCalledTimes(1)
   })
 
@@ -398,11 +439,16 @@ describe("webdavAutoSyncService lifecycle", () => {
       .spyOn(service, "setupAutoSync")
       .mockResolvedValue(undefined)
 
-    mocks.savePreferences.mockRejectedValueOnce(new Error("save failed"))
+    mocks.savePreferencesWithResult.mockRejectedValueOnce(
+      new Error("save failed"),
+    )
 
     await expect(
       service.updateSettings({ autoSync: false, syncInterval: 900 }),
-    ).resolves.toBeUndefined()
+    ).resolves.toEqual({
+      ok: false,
+      reason: "error",
+    })
 
     expect(setupSpy).not.toHaveBeenCalled()
   })

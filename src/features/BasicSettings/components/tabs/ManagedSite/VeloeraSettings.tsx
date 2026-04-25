@@ -58,16 +58,22 @@ export default function VeloeraSettings() {
   const localUserId = localConfig.userId
 
   const handleVeloeraBaseUrlChange = async (url: string) => {
-    if (url === veloeraBaseUrl) return
-    const success = await updateVeloeraBaseUrl(url, {
+    const trimmedUrl = url.trim()
+    setLocalConfig((prev) => ({ ...prev, baseUrl: trimmedUrl }))
+
+    if (trimmedUrl === veloeraBaseUrl.trim()) return
+    const success = await updateVeloeraBaseUrl(trimmedUrl, {
       expectedLastUpdated,
     })
     showUpdateToast(success, t("veloera.fields.baseUrlLabel"))
   }
 
   const handleVeloeraAdminTokenChange = async (token: string) => {
-    if (token === veloeraAdminToken) return
-    const success = await updateVeloeraAdminToken(token, {
+    const trimmedToken = token.trim()
+    setLocalConfig((prev) => ({ ...prev, adminToken: trimmedToken }))
+
+    if (trimmedToken === veloeraAdminToken.trim()) return
+    const success = await updateVeloeraAdminToken(trimmedToken, {
       expectedLastUpdated,
     })
     showUpdateToast(success, t("veloera.fields.adminTokenLabel"))

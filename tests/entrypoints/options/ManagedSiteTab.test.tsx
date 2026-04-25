@@ -35,6 +35,7 @@ vi.mock(
 )
 
 const createContextValue = (overrides: Record<string, unknown> = {}) => ({
+  preferences: { lastUpdated: 1 },
   managedSiteType: "new-api",
   updateManagedSiteType: vi.fn().mockResolvedValue(true),
   newApiBaseUrl: "https://managed.example",

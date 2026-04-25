@@ -20,6 +20,19 @@ describe("VeloeraSettings", () => {
     vi.clearAllMocks()
   })
 
+  const createContextValue = (overrides: Record<string, unknown> = {}) =>
+    ({
+      preferences: { lastUpdated: 1 },
+      veloeraBaseUrl: "https://veloera.example.com",
+      veloeraAdminToken: "stored-token",
+      veloeraUserId: "200",
+      updateVeloeraBaseUrl: vi.fn().mockResolvedValue(true),
+      updateVeloeraAdminToken: vi.fn().mockResolvedValue(true),
+      updateVeloeraUserId: vi.fn().mockResolvedValue(true),
+      resetVeloeraConfig: vi.fn().mockResolvedValue(true),
+      ...overrides,
+    }) as any
+
   const renderSubject = () =>
     render(
       <I18nextProvider i18n={testI18n}>
@@ -29,16 +42,12 @@ describe("VeloeraSettings", () => {
 
   it("shows an inline error and skips persisting when the admin user ID is not numeric", async () => {
     const updateVeloeraUserId = vi.fn().mockResolvedValue(true)
-    vi.mocked(useUserPreferencesContext).mockReturnValue({
-      preferences: { lastUpdated: 1 },
-      veloeraBaseUrl: "https://veloera.example.com",
-      veloeraAdminToken: "",
-      veloeraUserId: "200",
-      updateVeloeraBaseUrl: vi.fn().mockResolvedValue(true),
-      updateVeloeraAdminToken: vi.fn().mockResolvedValue(true),
-      updateVeloeraUserId,
-      resetVeloeraConfig: vi.fn().mockResolvedValue(true),
-    } as any)
+    vi.mocked(useUserPreferencesContext).mockReturnValue(
+      createContextValue({
+        veloeraAdminToken: "",
+        updateVeloeraUserId,
+      }),
+    )
 
     renderSubject()
 
@@ -54,5 +63,40 @@ describe("VeloeraSettings", () => {
       await screen.findByText("messages:errors.validation.userIdNumeric"),
     ).toBeInTheDocument()
     expect(vi.mocked(showUpdateToast)).not.toHaveBeenCalled()
+  })
+
+  it("trims the base URL and admin token before persisting", async () => {
+    const updateVeloeraBaseUrl = vi.fn().mockResolvedValue(true)
+    const updateVeloeraAdminToken = vi.fn().mockResolvedValue(true)
+    vi.mocked(useUserPreferencesContext).mockReturnValue(
+      createContextValue({
+        updateVeloeraBaseUrl,
+        updateVeloeraAdminToken,
+      }),
+    )
+
+    renderSubject()
+
+    const baseUrlInput = screen.getByDisplayValue("https://veloera.example.com")
+    fireEvent.change(baseUrlInput, {
+      target: { value: "  https://trimmed.veloera.example.com  " },
+    })
+    fireEvent.blur(baseUrlInput)
+
+    const adminTokenInput = screen.getByDisplayValue("stored-token")
+    fireEvent.change(adminTokenInput, {
+      target: { value: "  next-token  " },
+    })
+    fireEvent.blur(adminTokenInput)
+
+    expect(updateVeloeraBaseUrl).toHaveBeenCalledWith(
+      "https://trimmed.veloera.example.com",
+      {
+        expectedLastUpdated: 1,
+      },
+    )
+    expect(updateVeloeraAdminToken).toHaveBeenCalledWith("next-token", {
+      expectedLastUpdated: 1,
+    })
   })
 })

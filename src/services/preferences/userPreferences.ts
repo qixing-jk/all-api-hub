@@ -612,14 +612,14 @@ class UserPreferencesService {
   }
 
   /**
-   * Save partial user preferences (deep merge) and stamp timestamps/version.
+   * Save partial user preferences (deep merge) and return the stamped snapshot.
    */
-  async savePreferences(
+  async savePreferencesWithResult(
     preferences: DeepPartial<UserPreferences>,
     options?: {
       expectedLastUpdated?: number
     },
-  ): Promise<boolean> {
+  ): Promise<UserPreferences | null> {
     try {
       const updatedPreferences = await this.withStorageWriteLock(async () => {
         const currentPreferences = await this.getPreferences()
@@ -657,7 +657,7 @@ class UserPreferencesService {
         logger.debug("跳过过期的偏好设置写入", {
           expectedLastUpdated: options?.expectedLastUpdated,
         })
-        return false
+        return null
       }
 
       logger.debug("偏好设置保存成功", {
@@ -666,7 +666,28 @@ class UserPreferencesService {
           updatedPreferences.sharedPreferencesLastUpdated,
         preferencesVersion: updatedPreferences.preferencesVersion,
       })
-      return true
+      return updatedPreferences
+    } catch (error) {
+      logger.error("保存偏好设置失败", error)
+      return null
+    }
+  }
+
+  /**
+   * Save partial user preferences (deep merge) and stamp timestamps/version.
+   */
+  async savePreferences(
+    preferences: DeepPartial<UserPreferences>,
+    options?: {
+      expectedLastUpdated?: number
+    },
+  ): Promise<boolean> {
+    try {
+      const updatedPreferences = await this.savePreferencesWithResult(
+        preferences,
+        options,
+      )
+      return updatedPreferences !== null
     } catch (error) {
       logger.error("保存偏好设置失败", error)
       return false

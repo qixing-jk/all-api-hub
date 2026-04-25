@@ -28,6 +28,7 @@ import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory
 import { DEFAULT_DONE_HUB_CONFIG } from "~/types/doneHubConfig"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
 import { SortingCriteriaType } from "~/types/sorting"
+import { deepOverride } from "~/utils"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 
 const { loggerMocks } = vi.hoisted(() => ({
@@ -65,6 +66,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
       ...actual.userPreferences,
       getPreferences: vi.fn(),
       savePreferences: vi.fn(),
+      savePreferencesWithResult: vi.fn(),
       updateActiveTab: vi.fn(),
       updateCurrencyType: vi.fn(),
       updateSortConfig: vi.fn(),
@@ -108,6 +110,8 @@ let latestContext: ReturnType<typeof useUserPreferencesContext> | null = null
 const clonePreferences = (): UserPreferences =>
   JSON.parse(JSON.stringify(DEFAULT_PREFERENCES)) as UserPreferences
 
+let persistedPreferences = clonePreferences()
+
 const createDeferred = <T,>() => {
   let resolve!: (value: T | PromiseLike<T>) => void
   let reject!: (reason?: unknown) => void
@@ -138,7 +142,13 @@ const Probe = ({ children }: { children?: ReactNode }) => {
 const renderProvider = async (
   preferences: UserPreferences = clonePreferences(),
 ) => {
-  mockedUserPreferences.getPreferences.mockResolvedValue(preferences)
+  persistedPreferences = JSON.parse(
+    JSON.stringify(preferences),
+  ) as UserPreferences
+  mockedUserPreferences.getPreferences.mockImplementation(
+    async () =>
+      JSON.parse(JSON.stringify(persistedPreferences)) as UserPreferences,
+  )
 
   render(
     <UserPreferencesProvider>
@@ -158,39 +168,152 @@ describe("UserPreferencesContext", () => {
     latestContext = null
     vi.clearAllMocks()
 
-    mockedUserPreferences.getPreferences.mockResolvedValue(clonePreferences())
-    mockedUserPreferences.savePreferences.mockResolvedValue(true)
-    mockedUserPreferences.updateActiveTab.mockResolvedValue(true)
-    mockedUserPreferences.updateCurrencyType.mockResolvedValue(true)
-    mockedUserPreferences.updateSortConfig.mockResolvedValue(true)
-    mockedUserPreferences.setSortingPriorityConfig.mockResolvedValue(true)
-    mockedUserPreferences.updateOpenChangelogOnUpdate.mockResolvedValue(true)
-    mockedUserPreferences.updateAutoProvisionKeyOnAccountAdd.mockResolvedValue(
-      true,
+    persistedPreferences = clonePreferences()
+    mockedUserPreferences.getPreferences.mockImplementation(
+      async () =>
+        JSON.parse(JSON.stringify(persistedPreferences)) as UserPreferences,
     )
-    mockedUserPreferences.updateAutoFillCurrentSiteUrlOnAccountAdd.mockResolvedValue(
-      true,
+    mockedUserPreferences.savePreferences.mockImplementation(
+      async (updates) => {
+        persistedPreferences = deepOverride(persistedPreferences, updates)
+        persistedPreferences.lastUpdated += 1
+        return true
+      },
     )
-    mockedUserPreferences.updateWarnOnDuplicateAccountAdd.mockResolvedValue(
-      true,
+    mockedUserPreferences.savePreferencesWithResult.mockImplementation(
+      async (updates, options) => {
+        const success = await mockedUserPreferences.savePreferences(
+          updates,
+          options,
+        )
+        return success
+          ? (JSON.parse(
+              JSON.stringify(persistedPreferences),
+            ) as UserPreferences)
+          : null
+      },
     )
-    mockedUserPreferences.updateManagedSiteType.mockResolvedValue(true)
-    mockedUserPreferences.updateLoggingPreferences.mockResolvedValue(true)
+    const applyPersistedUpdate = (
+      updates: Partial<UserPreferences> | Record<string, unknown>,
+    ) => {
+      persistedPreferences = deepOverride(persistedPreferences, updates)
+      persistedPreferences.lastUpdated += 1
+      return true
+    }
+    mockedUserPreferences.updateActiveTab.mockImplementation(
+      async (activeTab) => applyPersistedUpdate({ activeTab }),
+    )
+    mockedUserPreferences.updateCurrencyType.mockImplementation(
+      async (currencyType) => applyPersistedUpdate({ currencyType }),
+    )
+    mockedUserPreferences.updateSortConfig.mockImplementation(
+      async (sortField, sortOrder) =>
+        applyPersistedUpdate({ sortField, sortOrder }),
+    )
+    mockedUserPreferences.setSortingPriorityConfig.mockImplementation(
+      async (sortingPriorityConfig) =>
+        applyPersistedUpdate({ sortingPriorityConfig }),
+    )
+    mockedUserPreferences.updateOpenChangelogOnUpdate.mockImplementation(
+      async (openChangelogOnUpdate) =>
+        applyPersistedUpdate({ openChangelogOnUpdate }),
+    )
+    mockedUserPreferences.updateAutoProvisionKeyOnAccountAdd.mockImplementation(
+      async (autoProvisionKeyOnAccountAdd) =>
+        applyPersistedUpdate({ autoProvisionKeyOnAccountAdd }),
+    )
+    mockedUserPreferences.updateAutoFillCurrentSiteUrlOnAccountAdd.mockImplementation(
+      async (autoFillCurrentSiteUrlOnAccountAdd) =>
+        applyPersistedUpdate({ autoFillCurrentSiteUrlOnAccountAdd }),
+    )
+    mockedUserPreferences.updateWarnOnDuplicateAccountAdd.mockImplementation(
+      async (warnOnDuplicateAccountAdd) =>
+        applyPersistedUpdate({ warnOnDuplicateAccountAdd }),
+    )
+    mockedUserPreferences.updateManagedSiteType.mockImplementation(
+      async (managedSiteType) => applyPersistedUpdate({ managedSiteType }),
+    )
+    mockedUserPreferences.updateLoggingPreferences.mockImplementation(
+      async (updates) => applyPersistedUpdate({ logging: updates }),
+    )
     mockedUserPreferences.resetToDefaults.mockResolvedValue(true)
-    mockedUserPreferences.resetDisplaySettings.mockResolvedValue(true)
-    mockedUserPreferences.resetAutoRefreshConfig.mockResolvedValue(true)
-    mockedUserPreferences.resetNewApiConfig.mockResolvedValue(true)
-    mockedUserPreferences.resetDoneHubConfig.mockResolvedValue(true)
-    mockedUserPreferences.resetVeloeraConfig.mockResolvedValue(true)
-    mockedUserPreferences.resetOctopusConfig.mockResolvedValue(true)
-    mockedUserPreferences.resetNewApiModelSyncConfig.mockResolvedValue(true)
-    mockedUserPreferences.resetCliProxyConfig.mockResolvedValue(true)
-    mockedUserPreferences.resetClaudeCodeRouterConfig.mockResolvedValue(true)
-    mockedUserPreferences.resetAutoCheckinConfig.mockResolvedValue(true)
-    mockedUserPreferences.resetRedemptionAssist.mockResolvedValue(true)
-    mockedUserPreferences.resetWebAiApiCheck.mockResolvedValue(true)
-    mockedUserPreferences.resetModelRedirectConfig.mockResolvedValue(true)
-    mockedUserPreferences.resetWebdavConfig.mockResolvedValue(true)
+    mockedUserPreferences.resetDisplaySettings.mockImplementation(async () =>
+      applyPersistedUpdate({
+        activeTab: DEFAULT_PREFERENCES.activeTab,
+        currencyType: DEFAULT_PREFERENCES.currencyType,
+        showTodayCashflow: DEFAULT_PREFERENCES.showTodayCashflow,
+        sortField: DEFAULT_PREFERENCES.sortField,
+        sortOrder: DEFAULT_PREFERENCES.sortOrder,
+      }),
+    )
+    mockedUserPreferences.resetAutoRefreshConfig.mockImplementation(async () =>
+      applyPersistedUpdate({
+        accountAutoRefresh: DEFAULT_PREFERENCES.accountAutoRefresh,
+      }),
+    )
+    mockedUserPreferences.resetNewApiConfig.mockImplementation(async () =>
+      applyPersistedUpdate({
+        newApi: DEFAULT_PREFERENCES.newApi,
+      }),
+    )
+    mockedUserPreferences.resetDoneHubConfig.mockImplementation(async () =>
+      applyPersistedUpdate({
+        doneHub: DEFAULT_DONE_HUB_CONFIG,
+      }),
+    )
+    mockedUserPreferences.resetVeloeraConfig.mockImplementation(async () =>
+      applyPersistedUpdate({
+        veloera: DEFAULT_PREFERENCES.veloera,
+      }),
+    )
+    mockedUserPreferences.resetOctopusConfig.mockImplementation(async () =>
+      applyPersistedUpdate({
+        octopus: DEFAULT_PREFERENCES.octopus,
+      }),
+    )
+    mockedUserPreferences.resetNewApiModelSyncConfig.mockImplementation(
+      async () =>
+        applyPersistedUpdate({
+          managedSiteModelSync: DEFAULT_PREFERENCES.managedSiteModelSync,
+        }),
+    )
+    mockedUserPreferences.resetCliProxyConfig.mockImplementation(async () =>
+      applyPersistedUpdate({
+        cliProxy: DEFAULT_PREFERENCES.cliProxy,
+      }),
+    )
+    mockedUserPreferences.resetClaudeCodeRouterConfig.mockImplementation(
+      async () =>
+        applyPersistedUpdate({
+          claudeCodeRouter: DEFAULT_PREFERENCES.claudeCodeRouter,
+        }),
+    )
+    mockedUserPreferences.resetAutoCheckinConfig.mockImplementation(async () =>
+      applyPersistedUpdate({
+        autoCheckin: DEFAULT_PREFERENCES.autoCheckin,
+      }),
+    )
+    mockedUserPreferences.resetRedemptionAssist.mockImplementation(async () =>
+      applyPersistedUpdate({
+        redemptionAssist: DEFAULT_PREFERENCES.redemptionAssist,
+      }),
+    )
+    mockedUserPreferences.resetWebAiApiCheck.mockImplementation(async () =>
+      applyPersistedUpdate({
+        webAiApiCheck: DEFAULT_PREFERENCES.webAiApiCheck,
+      }),
+    )
+    mockedUserPreferences.resetModelRedirectConfig.mockImplementation(
+      async () =>
+        applyPersistedUpdate({
+          modelRedirect: DEFAULT_PREFERENCES.modelRedirect,
+        }),
+    )
+    mockedUserPreferences.resetWebdavConfig.mockImplementation(async () =>
+      applyPersistedUpdate({
+        webdav: DEFAULT_PREFERENCES.webdav,
+      }),
+    )
     mockedUserPreferences.resetSortingPriorityConfig.mockResolvedValue(true)
     mockedSendRuntimeMessage.mockResolvedValue(undefined)
   })
@@ -342,9 +465,12 @@ describe("UserPreferencesContext", () => {
         level: "warn",
       },
     )
-    expect(mockedUserPreferences.savePreferences).toHaveBeenCalledWith({
-      newApi: { baseUrl: "https://new-api.example" },
-    })
+    expect(mockedUserPreferences.savePreferences).toHaveBeenCalledWith(
+      {
+        newApi: { baseUrl: "https://new-api.example" },
+      },
+      undefined,
+    )
     expect(mockedUserPreferences.savePreferences).toHaveBeenCalledWith({
       managedSiteModelSync: {
         enabled: false,

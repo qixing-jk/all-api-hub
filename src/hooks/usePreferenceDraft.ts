@@ -3,6 +3,11 @@ import { useEffect, useState } from "react"
 type UsePreferenceDraftOptions<T> = {
   savedValue: T
   savedVersion: number
+  /**
+   * Optional comparator for `usePreferenceDraft`. Keep this callback stable
+   * across renders, for example by defining it at module scope or memoizing it
+   * with `useCallback`, because it participates in the reconciliation effect.
+   */
   isEqual?: (left: T, right: T) => boolean
 }
 

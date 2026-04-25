@@ -169,6 +169,7 @@
   },
   "messages": {
     "confirmReset": "リセットの確認",
+    "preferencesChangedExternally": "設定が他の場所で変更されました。更新してからもう一度お試しください。",
     "resetConfirmDesc": "{{name}} を既定設定に戻しますか？ この操作は元に戻せません。",
     "resetFailed": "{{name}} のリセットに失敗しました",
     "resetSuccess": "{{name}} を既定設定にリセットしました",

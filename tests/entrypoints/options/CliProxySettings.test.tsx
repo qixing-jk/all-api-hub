@@ -196,12 +196,14 @@ describe("CliProxySettings", () => {
   })
 
   it("refreshes clean draft fields when the saved preferences snapshot changes", async () => {
+    const updateCliProxyBaseUrl = vi.fn().mockResolvedValue(true)
+    const updateCliProxyManagementKey = vi.fn().mockResolvedValue(true)
     let contextValue = {
       preferences: { lastUpdated: 1 },
       cliProxyBaseUrl: "http://localhost:8317/v0/management",
       cliProxyManagementKey: "secret-key",
-      updateCliProxyBaseUrl: vi.fn().mockResolvedValue(true),
-      updateCliProxyManagementKey: vi.fn().mockResolvedValue(true),
+      updateCliProxyBaseUrl,
+      updateCliProxyManagementKey,
       resetCliProxyConfig: vi.fn().mockResolvedValue(true),
     }
     vi.mocked(useUserPreferencesContext).mockImplementation(
@@ -228,6 +230,36 @@ describe("CliProxySettings", () => {
         screen.getByPlaceholderText("http://localhost:8317/v0/management"),
       ).toHaveValue("http://localhost:9000/v0/management")
       expect(screen.getByDisplayValue("next-secret-key")).toBeInTheDocument()
+    })
+
+    const baseUrlInput = screen.getByPlaceholderText(
+      "http://localhost:8317/v0/management",
+    )
+    const managementKeyInput = screen.getByDisplayValue("next-secret-key")
+
+    fireEvent.change(baseUrlInput, {
+      target: { value: "http://localhost:9010/v0/management" },
+    })
+    fireEvent.blur(baseUrlInput)
+
+    fireEvent.change(managementKeyInput, {
+      target: { value: "post-refresh-secret" },
+    })
+    fireEvent.blur(managementKeyInput)
+
+    await waitFor(() => {
+      expect(updateCliProxyBaseUrl).toHaveBeenLastCalledWith(
+        "http://localhost:9010/v0/management",
+        {
+          expectedLastUpdated: 2,
+        },
+      )
+      expect(updateCliProxyManagementKey).toHaveBeenLastCalledWith(
+        "post-refresh-secret",
+        {
+          expectedLastUpdated: 2,
+        },
+      )
     })
   })
 })
