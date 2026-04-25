@@ -73,6 +73,7 @@ describe("WebDAVAutoSyncSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockUserPreferences.getPreferences.mockResolvedValue({
+      lastUpdated: 1,
       webdav: {
         autoSync: true,
         syncInterval: 1800,
@@ -124,6 +125,7 @@ describe("WebDAVAutoSyncSettings", () => {
     await waitFor(() => {
       expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
         action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
+        expectedLastUpdated: 1,
         settings: {
           autoSync: false,
           syncInterval: 1800,
@@ -267,11 +269,11 @@ describe("WebDAVAutoSyncSettings", () => {
 
     render(<WebDAVAutoSyncSettings />)
 
-    expect(await screen.findByDisplayValue("1800")).toBeInTheDocument()
+    const syncIntervalInput = await screen.findByDisplayValue("1800")
+    expect(syncIntervalInput).toBeInTheDocument()
 
-    fireEvent.change(screen.getByDisplayValue("1800"), {
-      target: { value: "900" },
-    })
+    await user.clear(syncIntervalInput)
+    await user.type(syncIntervalInput, "900")
 
     await user.click(screen.getByRole("combobox"))
     await user.click(
@@ -280,7 +282,7 @@ describe("WebDAVAutoSyncSettings", () => {
       }),
     )
 
-    fireEvent.click(
+    await user.click(
       screen.getByRole("button", {
         name: "importExport:webdav.autoSync.saveSettings",
       }),
@@ -289,6 +291,7 @@ describe("WebDAVAutoSyncSettings", () => {
     await waitFor(() => {
       expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
         action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
+        expectedLastUpdated: 1,
         settings: {
           autoSync: true,
           syncInterval: 900,

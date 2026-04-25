@@ -448,19 +448,23 @@ describe("UserPreferencesContext", () => {
         level: "warn",
       },
     )
-    expect(mockedUserPreferences.savePreferences).toHaveBeenCalledWith(
+    expect(
+      mockedUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenCalledWith({
+      newApi: { baseUrl: "https://new-api.example" },
+    })
+    expect(
+      mockedUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenCalledWith(
       {
-        newApi: { baseUrl: "https://new-api.example" },
+        managedSiteModelSync: {
+          enabled: false,
+          allowedModels: ["gpt-4o"],
+          rateLimit: { requestsPerMinute: 15, burst: 3 },
+        },
       },
       undefined,
     )
-    expect(mockedUserPreferences.savePreferences).toHaveBeenCalledWith({
-      managedSiteModelSync: {
-        enabled: false,
-        allowedModels: ["gpt-4o"],
-        rateLimit: { requestsPerMinute: 15, burst: 3 },
-      },
-    })
 
     expect((latestContext as any)?.currencyType).toBe("CNY")
     expect((latestContext as any)?.sortField).toBe(DATA_TYPE_INCOME)
@@ -982,7 +986,7 @@ describe("UserPreferencesContext", () => {
     preferences.managedSiteType = VELOERA
 
     mockedUserPreferences.updateActiveTab.mockResolvedValue(false)
-    mockedUserPreferences.savePreferences.mockResolvedValue(false)
+    mockedUserPreferences.savePreferencesWithResult.mockResolvedValue(null)
     mockedUserPreferences.updateCurrencyType.mockResolvedValue(false)
     mockedUserPreferences.updateSortConfig.mockResolvedValue(false)
     mockedUserPreferences.setSortingPriorityConfig.mockResolvedValue(false)
@@ -1102,7 +1106,7 @@ describe("UserPreferencesContext", () => {
       password: "stored-octopus-password",
     }
 
-    mockedUserPreferences.savePreferences.mockResolvedValue(false)
+    mockedUserPreferences.savePreferencesWithResult.mockResolvedValue(null)
 
     const context = await renderProvider(preferences)
 

@@ -36,17 +36,18 @@ export function setupMockPreferencePersistence(
   }
 
   mocks.getPreferences.mockImplementation(async () => getPersistedPreferences())
-  mocks.savePreferences.mockImplementation(async (updates) => {
+  mocks.savePreferencesWithResult.mockImplementation(async (updates) => {
     persistedPreferences = deepOverride(persistedPreferences, updates)
     persistedPreferences.lastUpdated += 1
-    return true
+    return getPersistedPreferences()
   })
-  mocks.savePreferencesWithResult.mockImplementation(
-    async (updates, options) => {
-      const success = await mocks.savePreferences(updates, options)
-      return success ? getPersistedPreferences() : null
-    },
-  )
+  mocks.savePreferences.mockImplementation(async (updates, options) => {
+    const savedPreferences = await mocks.savePreferencesWithResult(
+      updates,
+      options,
+    )
+    return savedPreferences !== null
+  })
 
   return {
     getPersistedPreferences,

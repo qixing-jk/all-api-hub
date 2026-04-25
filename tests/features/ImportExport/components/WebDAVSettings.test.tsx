@@ -224,7 +224,9 @@ describe("WebDAVSettings", () => {
       screen.getByRole("button", { name: "importExport:webdav.saveConfig" }),
     )
     await waitFor(() => {
-      expect(mockUserPreferences.savePreferences).toHaveBeenCalledWith(
+      expect(
+        mockUserPreferences.savePreferencesWithResult,
+      ).toHaveBeenCalledWith(
         {
           webdav: {
             url: "https://dav.example.com/backup.json",
@@ -342,7 +344,9 @@ describe("WebDAVSettings", () => {
       expect(mockUserPreferences.getLanguage).toHaveBeenCalledTimes(1)
       expect(mockApplyPreferenceLanguage).toHaveBeenCalledWith("ja")
     })
-    expect(mockUserPreferences.savePreferences).toHaveBeenNthCalledWith(
+    expect(
+      mockUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenNthCalledWith(
       2,
       {
         webdav: {
@@ -359,7 +363,9 @@ describe("WebDAVSettings", () => {
     )
 
     await waitFor(() => {
-      expect(mockUserPreferences.savePreferences).toHaveBeenLastCalledWith(
+      expect(
+        mockUserPreferences.savePreferencesWithResult,
+      ).toHaveBeenLastCalledWith(
         {
           webdav: {
             url: "https://dav.example.com/backup.json",
@@ -386,7 +392,7 @@ describe("WebDAVSettings", () => {
   })
 
   it("surfaces the save failure message when saving the WebDAV config fails", async () => {
-    mockUserPreferences.savePreferences.mockResolvedValue(false)
+    mockUserPreferences.savePreferencesWithResult.mockResolvedValue(null)
 
     render(<WebDAVSettings />)
 
@@ -410,7 +416,7 @@ describe("WebDAVSettings", () => {
   })
 
   it("shows the action-specific connection failure message when persisting settings fails", async () => {
-    mockUserPreferences.savePreferences.mockResolvedValue(false)
+    mockUserPreferences.savePreferencesWithResult.mockResolvedValue(null)
 
     render(<WebDAVSettings />)
 
@@ -647,8 +653,12 @@ describe("WebDAVSettings", () => {
     mockTryParseEncryptedWebdavBackupEnvelope.mockReturnValue(
       ENCRYPTED_BACKUP_ENVELOPE,
     )
-    mockUserPreferences.savePreferences.mockResolvedValueOnce(true)
-    mockUserPreferences.savePreferences.mockResolvedValueOnce(false)
+    const defaultSavePreferencesWithResult =
+      mockUserPreferences.savePreferencesWithResult.getMockImplementation()
+    mockUserPreferences.savePreferencesWithResult.mockImplementationOnce(
+      defaultSavePreferencesWithResult!,
+    )
+    mockUserPreferences.savePreferencesWithResult.mockResolvedValueOnce(null)
 
     render(<WebDAVSettings />)
 
@@ -735,7 +745,9 @@ describe("WebDAVSettings", () => {
         { imported: true },
         { preserveWebdav: true },
       )
-      expect(mockUserPreferences.savePreferences).toHaveBeenNthCalledWith(
+      expect(
+        mockUserPreferences.savePreferencesWithResult,
+      ).toHaveBeenNthCalledWith(
         2,
         {
           webdav: {
