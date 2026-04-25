@@ -19,6 +19,7 @@ import { ClaudeCodeRouterIcon } from "~/components/icons/ClaudeCodeRouterIcon"
 import { CliProxyIcon } from "~/components/icons/CliProxyIcon"
 import { KiloCodeIcon } from "~/components/icons/KiloCodeIcon"
 import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
+import { CCHExportDialog } from "~/components/CCHExportDialog"
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import {
   getKeySignalLabel,
@@ -256,6 +257,7 @@ function TokenActionButtons({
   const [isClaudeCodeRouterOpen, setIsClaudeCodeRouterOpen] = useState(false)
   const [isCliProxyDialogOpen, setIsCliProxyDialogOpen] = useState(false)
   const [isKiloCodeDialogOpen, setIsKiloCodeDialogOpen] = useState(false)
+  const [isCCHDialogOpen, setIsCCHDialogOpen] = useState(false)
 
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
 
@@ -385,6 +387,12 @@ function TokenActionButtons({
         initialSelectedSiteIds={[account.id]}
         initialSelectedTokenIdsBySite={{ [account.id]: [`${token.id}`] }}
       />
+      <CCHExportDialog
+        isOpen={isCCHDialogOpen}
+        onClose={() => setIsCCHDialogOpen(false)}
+        initialSelectedSiteIds={[account.id]}
+        initialSelectedTokenIdsBySite={{ [account.id]: [`${token.id}`] }}
+      />
       <ClaudeCodeRouterImportDialog
         isOpen={isClaudeCodeRouterOpen}
         onClose={() => setIsClaudeCodeRouterOpen(false)}
@@ -440,6 +448,18 @@ function TokenActionButtons({
         onClick={() => setIsKiloCodeDialogOpen(true)}
       >
         <KiloCodeIcon className="dark:text-dark-text-tertiary text-gray-500" />
+      </IconButton>
+      <IconButton
+        aria-label={t("keyManagement:actions.exportToCCH")}
+        size="sm"
+        variant="ghost"
+        onClick={() => setIsCCHDialogOpen(true)}
+      >
+        <img
+          src="https://claude-code-hub.app/favicon-32x32.png"
+          alt="CCH"
+          className="h-5 w-5"
+        />
       </IconButton>
       <IconButton
         aria-label={t("actions.importToCliProxy")}

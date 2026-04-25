@@ -68,6 +68,49 @@
       },
       "title": "Claude Code Router にインポート"
     },
+    "cch": {
+      "actions": {
+        "export": "エクスポート",
+        "exporting": "{{completed}}/{{total}} エクスポート中",
+        "verifyConnection": "接続を検証"
+      },
+      "description": "選択したアカウントとトークンを Claude Code Hub にエクスポートします。",
+      "descriptions": {
+        "exportingDescription": "{{completed}}/{{total}} エクスポート中...",
+        "exportingTitle": "エクスポート中",
+        "selectedSites": "選択したサイト：{{sites}}、選択したキー：{{keys}}。"
+      },
+      "help": {
+        "prerequisitesDescription": "設定で CCH 認証情報を設定済みであり、CCH で管理者権限を持っていることを確認してください。",
+        "prerequisitesTitle": "前提条件"
+      },
+      "labels": {
+        "selectedSites": "選択したサイト",
+        "selectedTokens": "選択したトークン"
+      },
+      "messages": {
+        "connectionCheckFailed": "CCH 接続検証に失敗しました",
+        "connectionVerified": "CCH 接続が検証されました",
+        "exportFailed": "CCH へのエクスポートに失敗しました",
+        "exportPartialSuccess": "{{failed}} 件のエクスポートに失敗しました",
+        "exportSuccess": "{{success}}/{{total}} 件のエクスポートが完了しました（失敗：{{failed}}）",
+        "exportingDescription": "{{completed}}/{{total}} エクスポート中...",
+        "exportingTitle": "エクスポート中",
+        "loadTokensFailed": "トークン一覧の読み込みに失敗しました",
+        "loadingTokens": "トークン一覧を読み込み中…",
+        "noTokensDescription": "このサイトには利用可能なトークンがありません。",
+        "noTokensTitle": "利用可能なトークンがありません"
+      },
+      "placeholders": {
+        "selectSites": "サイトを選択",
+        "selectTokens": "トークンを選択"
+      },
+      "title": "Claude Code Hub にエクスポート",
+      "warning": {
+        "description": "CCH では Provider（サプライヤー）が作成されます。管理者権限が必要です。",
+        "title": "管理者権限が必要"
+      }
+    },
     "cliproxy": {
       "actions": {
         "addModel": "モデルを追加",

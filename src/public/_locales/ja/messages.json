@@ -8,7 +8,7 @@
   "manifest_commands_sidebar_action": {
     "message": "サイドバーで All API Hub を開く"
   },
-  "manifest_commands_browser_action": {
+  "manifest_commands_action": {
     "message": "ポップアップで All API Hub を開く"
   },
   "context_menu_redeem_selection": {
