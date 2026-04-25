@@ -11,12 +11,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
 import WebDAVSettings from "~/features/ImportExport/components/WebDAVSettings"
-import {
-  DEFAULT_PREFERENCES,
-  type UserPreferences,
-} from "~/services/preferences/userPreferences"
-import { deepOverride } from "~/utils"
 import { testI18n } from "~~/tests/test-utils/i18n"
+import {
+  createPersistedPreferencesFixture,
+  setupMockPreferencePersistence,
+} from "~~/tests/test-utils/mockPreferencePersistence"
 
 const {
   mockApplyPreferenceLanguage,
@@ -152,27 +151,6 @@ function render(ui: ReactNode) {
   )
 }
 
-const createPreferencesFixture = (): UserPreferences => ({
-  ...structuredClone(DEFAULT_PREFERENCES),
-  showTodayCashflow: true,
-  webdav: {
-    ...structuredClone(DEFAULT_PREFERENCES.webdav),
-    url: "https://dav.example.com/backup.json",
-    username: "alice",
-    password: "pw",
-    backupEncryptionEnabled: true,
-    backupEncryptionPassword: "stored-secret",
-    syncData: {
-      accounts: true,
-      bookmarks: true,
-      apiCredentialProfiles: true,
-      preferences: true,
-    },
-  },
-})
-
-let persistedPreferences = createPreferencesFixture()
-
 const ENCRYPTED_BACKUP_ENVELOPE = {
   version: 1,
   algorithm: "aes-gcm",
@@ -184,23 +162,24 @@ const ENCRYPTED_BACKUP_ENVELOPE = {
 describe("WebDAVSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    persistedPreferences = createPreferencesFixture()
-    mockUserPreferences.getPreferences.mockImplementation(async () =>
-      structuredClone(persistedPreferences),
-    )
-    mockUserPreferences.savePreferences.mockImplementation(async (updates) => {
-      persistedPreferences = deepOverride(persistedPreferences, updates)
-      persistedPreferences.lastUpdated += 1
-      return true
-    })
-    mockUserPreferences.savePreferencesWithResult.mockImplementation(
-      async (updates, options) => {
-        const success = await mockUserPreferences.savePreferences(
-          updates,
-          options,
-        )
-        return success ? structuredClone(persistedPreferences) : null
-      },
+    setupMockPreferencePersistence(
+      mockUserPreferences,
+      createPersistedPreferencesFixture({
+        showTodayCashflow: true,
+        webdav: {
+          url: "https://dav.example.com/backup.json",
+          username: "alice",
+          password: "pw",
+          backupEncryptionEnabled: true,
+          backupEncryptionPassword: "stored-secret",
+          syncData: {
+            accounts: true,
+            bookmarks: true,
+            apiCredentialProfiles: true,
+            preferences: true,
+          },
+        },
+      }),
     )
     mockUserPreferences.getLanguage.mockResolvedValue("ja")
     mockUserPreferences.exportPreferences.mockResolvedValue({

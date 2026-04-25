@@ -30,6 +30,10 @@ import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
 import { SortingCriteriaType } from "~/types/sorting"
 import { deepOverride } from "~/utils"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import {
+  createPersistedPreferencesFixture,
+  setupMockPreferencePersistence,
+} from "~~/tests/test-utils/mockPreferencePersistence"
 
 const { loggerMocks } = vi.hoisted(() => ({
   loggerMocks: {
@@ -108,9 +112,11 @@ const mockedSendRuntimeMessage = sendRuntimeMessage as unknown as ReturnType<
 let latestContext: ReturnType<typeof useUserPreferencesContext> | null = null
 
 const clonePreferences = (): UserPreferences =>
-  JSON.parse(JSON.stringify(DEFAULT_PREFERENCES)) as UserPreferences
+  createPersistedPreferencesFixture()
 
-let persistedPreferences = clonePreferences()
+let preferencePersistence = setupMockPreferencePersistence(
+  mockedUserPreferences as any,
+)
 
 const createDeferred = <T,>() => {
   let resolve!: (value: T | PromiseLike<T>) => void
@@ -142,13 +148,7 @@ const Probe = ({ children }: { children?: ReactNode }) => {
 const renderProvider = async (
   preferences: UserPreferences = clonePreferences(),
 ) => {
-  persistedPreferences = JSON.parse(
-    JSON.stringify(preferences),
-  ) as UserPreferences
-  mockedUserPreferences.getPreferences.mockImplementation(
-    async () =>
-      JSON.parse(JSON.stringify(persistedPreferences)) as UserPreferences,
-  )
+  preferencePersistence.setPersistedPreferences(preferences)
 
   render(
     <UserPreferencesProvider>
@@ -168,36 +168,19 @@ describe("UserPreferencesContext", () => {
     latestContext = null
     vi.clearAllMocks()
 
-    persistedPreferences = clonePreferences()
-    mockedUserPreferences.getPreferences.mockImplementation(
-      async () =>
-        JSON.parse(JSON.stringify(persistedPreferences)) as UserPreferences,
-    )
-    mockedUserPreferences.savePreferences.mockImplementation(
-      async (updates) => {
-        persistedPreferences = deepOverride(persistedPreferences, updates)
-        persistedPreferences.lastUpdated += 1
-        return true
-      },
-    )
-    mockedUserPreferences.savePreferencesWithResult.mockImplementation(
-      async (updates, options) => {
-        const success = await mockedUserPreferences.savePreferences(
-          updates,
-          options,
-        )
-        return success
-          ? (JSON.parse(
-              JSON.stringify(persistedPreferences),
-            ) as UserPreferences)
-          : null
-      },
+    preferencePersistence = setupMockPreferencePersistence(
+      mockedUserPreferences as any,
+      clonePreferences(),
     )
     const applyPersistedUpdate = (
       updates: Partial<UserPreferences> | Record<string, unknown>,
     ) => {
-      persistedPreferences = deepOverride(persistedPreferences, updates)
-      persistedPreferences.lastUpdated += 1
+      const nextPreferences = deepOverride(
+        preferencePersistence.getPersistedPreferences(),
+        updates,
+      )
+      nextPreferences.lastUpdated += 1
+      preferencePersistence.setPersistedPreferences(nextPreferences)
       return true
     }
     mockedUserPreferences.updateActiveTab.mockImplementation(
