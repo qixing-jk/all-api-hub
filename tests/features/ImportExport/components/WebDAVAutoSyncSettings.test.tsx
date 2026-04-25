@@ -10,13 +10,17 @@ import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
 import WebDAVAutoSyncSettings from "~/features/ImportExport/components/WebDAVAutoSyncSettings"
 import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
-const { mockGetPreferences, mockSendRuntimeMessage, loggerMocks } = vi.hoisted(
+const { mockUserPreferences, mockSendRuntimeMessage, loggerMocks } = vi.hoisted(
   () => ({
-    mockGetPreferences: vi.fn(),
+    mockUserPreferences: {
+      getPreferences: vi.fn(),
+      savePreferences: vi.fn(),
+    },
     mockSendRuntimeMessage: vi.fn(),
     loggerMocks: {
       error: vi.fn(),
@@ -38,24 +42,36 @@ vi.mock("~/utils/core/logger", () => ({
   createLogger: () => loggerMocks,
 }))
 
-vi.mock("~/services/preferences/userPreferences", () => ({
-  userPreferences: {
-    getPreferences: mockGetPreferences,
-  },
-}))
+vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/preferences/userPreferences")
+    >()
+  return {
+    ...actual,
+    userPreferences: {
+      ...actual.userPreferences,
+      ...mockUserPreferences,
+    },
+  }
+})
 
 vi.mock("~/utils/browser/browserApi", () => ({
   sendRuntimeMessage: mockSendRuntimeMessage,
 }))
 
 function render(ui: ReactNode) {
-  return rtlRender(<I18nextProvider i18n={testI18n}>{ui}</I18nextProvider>)
+  return rtlRender(
+    <I18nextProvider i18n={testI18n}>
+      <UserPreferencesProvider>{ui}</UserPreferencesProvider>
+    </I18nextProvider>,
+  )
 }
 
 describe("WebDAVAutoSyncSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockGetPreferences.mockResolvedValue({
+    mockUserPreferences.getPreferences.mockResolvedValue({
       webdav: {
         autoSync: true,
         syncInterval: 1800,
@@ -132,8 +148,7 @@ describe("WebDAVAutoSyncSettings", () => {
     expect(toast.success).toHaveBeenCalledWith("custom sync ok")
   })
 
-  it("surfaces load, save, and sync errors", async () => {
-    mockGetPreferences.mockRejectedValueOnce(new Error("prefs failed"))
+  it("surfaces status, save, and sync errors", async () => {
     mockSendRuntimeMessage.mockImplementation(async (message: any) => {
       switch (message.action) {
         case RuntimeActionIds.WebdavAutoSyncGetStatus:

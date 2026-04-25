@@ -9,6 +9,7 @@ import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
 import WebDAVSettings from "~/features/ImportExport/components/WebDAVSettings"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
@@ -32,7 +33,7 @@ const {
 } = vi.hoisted(() => ({
   mockUserPreferences: {
     getPreferences: vi.fn(),
-    updateWebdavSettings: vi.fn(),
+    savePreferences: vi.fn(),
     exportPreferences: vi.fn(),
   },
   mockAccountStorage: { exportData: vi.fn() },
@@ -68,9 +69,19 @@ vi.mock("~/utils/core/logger", () => ({
   createLogger: () => loggerMocks,
 }))
 
-vi.mock("~/services/preferences/userPreferences", () => ({
-  userPreferences: mockUserPreferences,
-}))
+vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/preferences/userPreferences")
+    >()
+  return {
+    ...actual,
+    userPreferences: {
+      ...actual.userPreferences,
+      ...mockUserPreferences,
+    },
+  }
+})
 
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: mockAccountStorage,
@@ -120,7 +131,11 @@ vi.mock("~/features/ImportExport/utils", async (importOriginal) => {
 })
 
 function render(ui: ReactNode) {
-  return rtlRender(<I18nextProvider i18n={testI18n}>{ui}</I18nextProvider>)
+  return rtlRender(
+    <I18nextProvider i18n={testI18n}>
+      <UserPreferencesProvider>{ui}</UserPreferencesProvider>
+    </I18nextProvider>,
+  )
 }
 
 describe("WebDAVSettings", () => {
@@ -141,7 +156,7 @@ describe("WebDAVSettings", () => {
         },
       },
     })
-    mockUserPreferences.updateWebdavSettings.mockResolvedValue(true)
+    mockUserPreferences.savePreferences.mockResolvedValue(true)
     mockUserPreferences.exportPreferences.mockResolvedValue({
       themeMode: "dark",
     })
@@ -183,7 +198,21 @@ describe("WebDAVSettings", () => {
       screen.getByRole("button", { name: "importExport:webdav.saveConfig" }),
     )
     await waitFor(() => {
-      expect(mockUserPreferences.updateWebdavSettings).toHaveBeenCalled()
+      expect(mockUserPreferences.savePreferences).toHaveBeenCalledWith({
+        webdav: {
+          url: "https://dav.example.com/backup.json",
+          username: "alice",
+          password: "pw",
+          backupEncryptionEnabled: true,
+          backupEncryptionPassword: "stored-secret",
+          syncData: {
+            accounts: true,
+            bookmarks: true,
+            apiCredentialProfiles: true,
+            preferences: true,
+          },
+        },
+      })
     })
     expect(toast.success).toHaveBeenCalledWith(
       "settings:messages.updateSuccess",
@@ -284,8 +313,10 @@ describe("WebDAVSettings", () => {
         { preserveWebdav: true },
       )
     })
-    expect(mockUserPreferences.updateWebdavSettings).toHaveBeenCalledWith({
-      backupEncryptionPassword: "manual-secret",
+    expect(mockUserPreferences.savePreferences).toHaveBeenCalledWith({
+      webdav: {
+        backupEncryptionPassword: "manual-secret",
+      },
     })
     expect(toast.success).toHaveBeenCalledWith(
       "importExport:import.importSuccess",

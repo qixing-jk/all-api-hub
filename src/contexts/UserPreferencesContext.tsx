@@ -43,6 +43,7 @@ import type { LogLevel } from "~/types/logging"
 import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import type { ThemeMode } from "~/types/theme"
+import type { WebDAVSettings } from "~/types/webdav"
 import { deepOverride } from "~/utils"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
@@ -52,6 +53,13 @@ const logger = createLogger("UserPreferencesContext")
 type UserManagedSiteModelSyncConfig = NonNullable<
   UserPreferences["managedSiteModelSync"]
 >
+
+type RuntimeMutationResponse = {
+  success: boolean
+  error?: string
+  message?: string
+  data?: unknown
+}
 
 // 1. 定义 Context 的值类型
 interface UserPreferencesContextType {
@@ -163,6 +171,13 @@ interface UserPreferencesContextType {
   updateWebAiApiCheck: (
     updates: Partial<WebAiApiCheckPreferences>,
   ) => Promise<boolean>
+  updateWebdavSettings: (updates: Partial<WebDAVSettings>) => Promise<boolean>
+  updateWebdavAutoSyncSettings: (
+    updates: Pick<
+      Partial<WebDAVSettings>,
+      "autoSync" | "syncInterval" | "syncStrategy"
+    >,
+  ) => Promise<RuntimeMutationResponse>
   updateTempWindowFallback: (
     updates: Partial<TempWindowFallbackPreferences>,
   ) => Promise<boolean>
@@ -1024,6 +1039,64 @@ export const UserPreferencesProvider = ({
     [],
   )
 
+  const updateWebdavSettings = useCallback(
+    async (updates: Partial<WebDAVSettings>) => {
+      const success = await userPreferences.savePreferences({
+        webdav: updates,
+      })
+
+      if (success) {
+        setPreferences((prev) => {
+          if (!prev) return null
+          const merged = deepOverride(
+            prev.webdav ?? DEFAULT_PREFERENCES.webdav,
+            updates,
+          )
+          return {
+            ...prev,
+            webdav: merged,
+            lastUpdated: Date.now(),
+          }
+        })
+      }
+
+      return success
+    },
+    [],
+  )
+
+  const updateWebdavAutoSyncSettings = useCallback(
+    async (
+      updates: Pick<
+        Partial<WebDAVSettings>,
+        "autoSync" | "syncInterval" | "syncStrategy"
+      >,
+    ) => {
+      const response = (await sendRuntimeMessage({
+        action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
+        settings: updates,
+      })) as RuntimeMutationResponse
+
+      if (response.success) {
+        setPreferences((prev) => {
+          if (!prev) return null
+          const merged = deepOverride(
+            prev.webdav ?? DEFAULT_PREFERENCES.webdav,
+            updates,
+          )
+          return {
+            ...prev,
+            webdav: merged,
+            lastUpdated: Date.now(),
+          }
+        })
+      }
+
+      return response
+    },
+    [],
+  )
+
   const updateTempWindowFallback = useCallback(
     async (updates: Partial<TempWindowFallbackPreferences>) => {
       const success = await userPreferences.savePreferences({
@@ -1497,6 +1570,8 @@ export const UserPreferencesProvider = ({
     updateModelRedirect,
     updateRedemptionAssist,
     updateWebAiApiCheck,
+    updateWebdavSettings,
+    updateWebdavAutoSyncSettings,
     updateTempWindowFallback,
     updateTempWindowFallbackReminder,
     resetToDefaults,

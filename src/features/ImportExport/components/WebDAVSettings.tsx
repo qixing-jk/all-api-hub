@@ -4,7 +4,7 @@ import {
   EyeSlashIcon,
 } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -25,6 +25,7 @@ import {
   Label,
   Switch,
 } from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
@@ -50,6 +51,7 @@ import {
   isWebdavSyncDataSelectionEmpty,
   resolveWebdavSyncDataSelection,
   WEBDAV_SYNC_DATA_KEYS,
+  type WebDAVSettings,
   type WebDAVSyncDataKey,
   type WebDAVSyncDataSelection,
 } from "~/types/webdav"
@@ -95,19 +97,30 @@ function getWebdavSyncDataLabel(t: TFunction, key: WebDAVSyncDataKey) {
  */
 export default function WebDAVSettings() {
   const { t } = useTranslation("importExport")
+  const { preferences, updateWebdavSettings } = useUserPreferencesContext()
+  const persistedWebdavSettings = preferences.webdav
+
   // 配置表单
-  const [webdavUrl, setWebdavUrl] = useState("")
-  const [webdavUsername, setWebdavUsername] = useState("")
-  const [webdavPassword, setWebdavPassword] = useState("")
+  const [webdavUrl, setWebdavUrl] = useState(persistedWebdavSettings.url ?? "")
+  const [webdavUsername, setWebdavUsername] = useState(
+    persistedWebdavSettings.username ?? "",
+  )
+  const [webdavPassword, setWebdavPassword] = useState(
+    persistedWebdavSettings.password ?? "",
+  )
   const [showPassword, setShowPassword] = useState(false)
 
   const [syncDataSelection, setSyncDataSelection] =
     useState<WebDAVSyncDataSelection>(() =>
-      resolveWebdavSyncDataSelection(null),
+      resolveWebdavSyncDataSelection(persistedWebdavSettings.syncData),
     )
 
-  const [backupEncryptionEnabled, setBackupEncryptionEnabled] = useState(false)
-  const [backupEncryptionPassword, setBackupEncryptionPassword] = useState("")
+  const [backupEncryptionEnabled, setBackupEncryptionEnabled] = useState(
+    Boolean(persistedWebdavSettings.backupEncryptionEnabled),
+  )
+  const [backupEncryptionPassword, setBackupEncryptionPassword] = useState(
+    persistedWebdavSettings.backupEncryptionPassword ?? "",
+  )
   const [showBackupEncryptionPassword, setShowBackupEncryptionPassword] =
     useState(false)
 
@@ -158,22 +171,6 @@ export default function WebDAVSettings() {
     return false
   }
 
-  // 初始加载
-  useEffect(() => {
-    ;(async () => {
-      const prefs = await userPreferences.getPreferences()
-      setWebdavUrl(prefs.webdav.url ?? "")
-      setWebdavUsername(prefs.webdav.username ?? "")
-      setWebdavPassword(prefs.webdav.password ?? "")
-
-      setBackupEncryptionEnabled(Boolean(prefs.webdav.backupEncryptionEnabled))
-      setBackupEncryptionPassword(prefs.webdav.backupEncryptionPassword ?? "")
-      setSyncDataSelection(
-        resolveWebdavSyncDataSelection(prefs.webdav.syncData),
-      )
-    })()
-  }, [])
-
   const webdavConfig = {
     url: webdavUrl,
     username: webdavUsername,
@@ -183,10 +180,19 @@ export default function WebDAVSettings() {
     syncData: syncDataSelection,
   }
 
+  const persistWebdavConfig = async (
+    updates: Partial<WebDAVSettings> = webdavConfig,
+  ) => {
+    const success = await updateWebdavSettings(updates)
+    if (!success) {
+      throw new Error(t("settings:messages.saveSettingsFailed"))
+    }
+  }
+
   const handleSaveConfig = async () => {
     setSaving(true)
     try {
-      await userPreferences.updateWebdavSettings(webdavConfig)
+      await persistWebdavConfig()
       toast.success(t("settings:messages.updateSuccess"))
     } catch (e) {
       logger.error("Failed to save WebDAV settings", e)
@@ -199,7 +205,7 @@ export default function WebDAVSettings() {
   const handleTestConnection = async () => {
     setTesting(true)
     try {
-      await userPreferences.updateWebdavSettings(webdavConfig)
+      await persistWebdavConfig()
       await testWebdavConnection(webdavConfig)
       toast.success(t("webdav.testSuccess"))
     } catch (e: any) {
@@ -225,7 +231,7 @@ export default function WebDAVSettings() {
         return
       }
 
-      await userPreferences.updateWebdavSettings(webdavConfig)
+      await persistWebdavConfig()
       const [
         accountData,
         tagStore,
@@ -303,7 +309,7 @@ export default function WebDAVSettings() {
         return
       }
 
-      await userPreferences.updateWebdavSettings(webdavConfig)
+      await persistWebdavConfig()
       const raw = await downloadBackupRaw(webdavConfig)
       const envelope = tryParseEncryptedWebdavBackupEnvelope(raw)
 
@@ -374,10 +380,9 @@ export default function WebDAVSettings() {
       }
 
       if (saveDecryptPassword) {
-        await userPreferences.updateWebdavSettings({
+        await persistWebdavConfig({
           backupEncryptionPassword: pwd,
         })
-        setBackupEncryptionPassword(pwd)
       }
 
       setDecryptDialogOpen(false)

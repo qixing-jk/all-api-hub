@@ -26,7 +26,7 @@ import {
   Switch,
 } from "~/components/ui"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { userPreferences } from "~/services/preferences/userPreferences"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { formatTimestamp } from "~/utils/core/formatters"
@@ -42,13 +42,20 @@ const logger = createLogger("WebDAVAutoSyncSettings")
  */
 export default function WebDAVAutoSyncSettings() {
   const { t } = useTranslation("importExport")
+  const { preferences, updateWebdavAutoSyncSettings } =
+    useUserPreferencesContext()
+  const persistedWebdavSettings = preferences.webdav
 
   // Auto-sync settings
-  const [autoSyncEnabled, setAutoSyncEnabled] = useState(false)
-  const [syncInterval, setSyncInterval] = useState(3600)
+  const [autoSyncEnabled, setAutoSyncEnabled] = useState(
+    persistedWebdavSettings.autoSync ?? false,
+  )
+  const [syncInterval, setSyncInterval] = useState(
+    persistedWebdavSettings.syncInterval ?? 3600,
+  )
   const [syncStrategy, setSyncStrategy] = useState<
     WebDAVSettings["syncStrategy"]
-  >(WEBDAV_SYNC_STRATEGIES.MERGE)
+  >(persistedWebdavSettings.syncStrategy ?? WEBDAV_SYNC_STRATEGIES.MERGE)
 
   // Status
   const [isSyncing, setIsSyncing] = useState(false)
@@ -62,22 +69,9 @@ export default function WebDAVAutoSyncSettings() {
   const [syncing, setSyncing] = useState(false)
   const [savingSettings, setSavingSettings] = useState(false)
 
-  // Load initial settings
   useEffect(() => {
-    loadSettings()
-    loadStatus()
+    void loadStatus()
   }, [])
-
-  const loadSettings = async () => {
-    try {
-      const prefs = await userPreferences.getPreferences()
-      setAutoSyncEnabled(prefs.webdav.autoSync ?? false)
-      setSyncInterval(prefs.webdav.syncInterval ?? 3600)
-      setSyncStrategy(prefs.webdav.syncStrategy ?? WEBDAV_SYNC_STRATEGIES.MERGE)
-    } catch (error) {
-      logger.error("Failed to load auto-sync settings", error)
-    }
-  }
 
   const loadStatus = async () => {
     try {
@@ -98,13 +92,10 @@ export default function WebDAVAutoSyncSettings() {
   const handleSaveSettings = async () => {
     setSavingSettings(true)
     try {
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
-        settings: {
-          autoSync: autoSyncEnabled,
-          syncInterval: syncInterval,
-          syncStrategy: syncStrategy,
-        },
+      const response = await updateWebdavAutoSyncSettings({
+        autoSync: autoSyncEnabled,
+        syncInterval,
+        syncStrategy,
       })
 
       if (response.success) {
