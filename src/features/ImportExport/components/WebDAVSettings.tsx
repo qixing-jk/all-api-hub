@@ -403,6 +403,7 @@ export default function WebDAVSettings() {
           await persistWebdavConfig({
             backupEncryptionPassword: pwd,
           })
+          setBackupEncryptionPassword(pwd)
         } catch (error) {
           logger.error("Failed to persist WebDAV decrypt password", error)
           toast.error(t("settings:messages.saveSettingsFailed"))

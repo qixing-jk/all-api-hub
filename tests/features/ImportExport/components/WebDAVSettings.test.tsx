@@ -329,6 +329,28 @@ describe("WebDAVSettings", () => {
         backupEncryptionPassword: "manual-secret",
       },
     })
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "importExport:webdav.saveConfig" }),
+    )
+
+    await waitFor(() => {
+      expect(mockUserPreferences.savePreferences).toHaveBeenLastCalledWith({
+        webdav: {
+          url: "https://dav.example.com/backup.json",
+          username: "alice",
+          password: "pw",
+          backupEncryptionEnabled: true,
+          backupEncryptionPassword: "manual-secret",
+          syncData: {
+            accounts: true,
+            bookmarks: true,
+            apiCredentialProfiles: true,
+            preferences: true,
+          },
+        },
+      })
+    })
     expect(toast.success).toHaveBeenCalledWith(
       "importExport:import.importSuccess",
     )
