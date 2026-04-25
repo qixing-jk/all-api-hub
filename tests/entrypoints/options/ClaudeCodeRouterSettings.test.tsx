@@ -16,7 +16,14 @@ vi.mock("~/utils/core/toastHelpers", () => ({
 }))
 
 describe("ClaudeCodeRouterSettings", () => {
-  const createContextValue = (overrides: Record<string, unknown> = {}) =>
+  type UserPreferencesContextValue = ReturnType<
+    typeof useUserPreferencesContext
+  >
+  type MockUserPreferencesContextValue = Partial<UserPreferencesContextValue>
+
+  const createContextValue = (
+    overrides: MockUserPreferencesContextValue = {},
+  ): UserPreferencesContextValue =>
     ({
       preferences: { lastUpdated: 1 },
       claudeCodeRouterBaseUrl: "http://router.local",
@@ -25,7 +32,7 @@ describe("ClaudeCodeRouterSettings", () => {
       updateClaudeCodeRouterApiKey: vi.fn().mockResolvedValue(true),
       resetClaudeCodeRouterConfig: vi.fn().mockResolvedValue(true),
       ...overrides,
-    }) as any
+    }) as unknown as UserPreferencesContextValue
 
   const renderSubject = () =>
     render(
@@ -36,7 +43,9 @@ describe("ClaudeCodeRouterSettings", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
-    vi.mocked(useUserPreferencesContext).mockReturnValue(createContextValue())
+    vi.mocked(useUserPreferencesContext).mockImplementation(() =>
+      createContextValue(),
+    )
   })
 
   it("persists base URL and API key updates with the current preferences version", async () => {
@@ -78,24 +87,28 @@ describe("ClaudeCodeRouterSettings", () => {
           expectedLastUpdated: 1,
         },
       )
+      expect(vi.mocked(showUpdateToast)).toHaveBeenCalledWith(
+        true,
+        "settings:claudeCodeRouter.baseUrlLabel",
+      )
+      expect(vi.mocked(showUpdateToast)).toHaveBeenCalledWith(
+        true,
+        "settings:claudeCodeRouter.apiKeyLabel",
+      )
     })
-
-    expect(vi.mocked(showUpdateToast)).toHaveBeenCalledWith(
-      true,
-      "settings:claudeCodeRouter.baseUrlLabel",
-    )
-    expect(vi.mocked(showUpdateToast)).toHaveBeenCalledWith(
-      true,
-      "settings:claudeCodeRouter.apiKeyLabel",
-    )
   })
 
-  it("toggles the API key visibility label", () => {
+  it("toggles the API key visibility label and input type", () => {
     renderSubject()
 
+    const apiKeyInput = screen.getByPlaceholderText(
+      "settings:claudeCodeRouter.apiKeyPlaceholder",
+    )
     const toggle = screen.getByRole("button", {
       name: "keyManagement:actions.showKey",
     })
+
+    expect(apiKeyInput).toHaveAttribute("type", "password")
     fireEvent.click(toggle)
 
     expect(
@@ -103,5 +116,6 @@ describe("ClaudeCodeRouterSettings", () => {
         name: "keyManagement:actions.hideKey",
       }),
     ).toBeInTheDocument()
+    expect(apiKeyInput).toHaveAttribute("type", "text")
   })
 })

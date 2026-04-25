@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { JAPANESE_LANG } from "~/constants/i18n"
 import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"
 
 const { i18nCoreMock } = vi.hoisted(() => ({
@@ -24,6 +25,9 @@ describe("applyPreferenceLanguage", () => {
   it("returns false for unsupported or empty persisted languages", async () => {
     await expect(applyPreferenceLanguage("fr-FR")).resolves.toBe(false)
     await expect(applyPreferenceLanguage("   ")).resolves.toBe(false)
+    await expect(applyPreferenceLanguage("")).resolves.toBe(false)
+    await expect(applyPreferenceLanguage(null)).resolves.toBe(false)
+    await expect(applyPreferenceLanguage(undefined)).resolves.toBe(false)
 
     expect(i18nCoreMock.changeLanguage).not.toHaveBeenCalled()
   })
@@ -40,6 +44,6 @@ describe("applyPreferenceLanguage", () => {
   it("changes language when the normalized persisted language differs from the runtime language", async () => {
     await expect(applyPreferenceLanguage("ja-JP")).resolves.toBe(true)
 
-    expect(i18nCoreMock.changeLanguage).toHaveBeenCalledWith("ja")
+    expect(i18nCoreMock.changeLanguage).toHaveBeenCalledWith(JAPANESE_LANG)
   })
 })
