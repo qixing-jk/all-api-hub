@@ -4,6 +4,7 @@ import {
   screen,
   waitFor,
 } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
@@ -215,6 +216,85 @@ describe("WebDAVAutoSyncSettings", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("settings:messages.updateFailed")
+    })
+  })
+
+  it("surfaces thrown save failures and unsuccessful sync responses", async () => {
+    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
+      switch (message.action) {
+        case RuntimeActionIds.WebdavAutoSyncGetStatus:
+          return { success: true, data: null }
+        case RuntimeActionIds.WebdavAutoSyncUpdateSettings:
+          throw new Error("save exploded")
+        case RuntimeActionIds.WebdavAutoSyncSyncNow:
+          return { success: false, message: "sync rejected" }
+        default:
+          return { success: true }
+      }
+    })
+
+    render(<WebDAVAutoSyncSettings />)
+
+    expect(
+      await screen.findByRole("button", {
+        name: "importExport:webdav.autoSync.saveSettings",
+      }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.autoSync.saveSettings",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("save exploded")
+    })
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.autoSync.syncNow",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("sync rejected")
+    })
+  })
+
+  it("saves edited interval and strategy values from the local draft", async () => {
+    const user = userEvent.setup()
+
+    render(<WebDAVAutoSyncSettings />)
+
+    expect(await screen.findByDisplayValue("1800")).toBeInTheDocument()
+
+    fireEvent.change(screen.getByDisplayValue("1800"), {
+      target: { value: "900" },
+    })
+
+    await user.click(screen.getByRole("combobox"))
+    await user.click(
+      screen.getByRole("option", {
+        name: "importExport:webdav.autoSync.strategyMerge",
+      }),
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.autoSync.saveSettings",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+        action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
+        settings: {
+          autoSync: true,
+          syncInterval: 900,
+          syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
+        },
+      })
     })
   })
 })

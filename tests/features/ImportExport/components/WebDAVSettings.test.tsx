@@ -710,6 +710,72 @@ describe("WebDAVSettings", () => {
     })
   })
 
+  it("persists the decrypt password with the current draft version when the imported backup excludes preferences", async () => {
+    mockDownloadBackupRaw.mockResolvedValueOnce("encrypted-payload")
+    mockTryParseEncryptedWebdavBackupEnvelope.mockReturnValue(
+      ENCRYPTED_BACKUP_ENVELOPE,
+    )
+    mockImportFromBackupObject.mockResolvedValueOnce({
+      allImported: false,
+      sections: {
+        accounts: true,
+      },
+    })
+
+    render(<WebDAVSettings />)
+
+    expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
+
+    fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
+      target: { value: "" },
+    })
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.downloadImport",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(document.getElementById("decryptPassword")).toBeTruthy()
+    })
+    fireEvent.change(
+      document.getElementById("decryptPassword") as HTMLInputElement,
+      {
+        target: { value: "manual-secret" },
+      },
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.encryption.decryptAction",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockImportFromBackupObject).toHaveBeenCalledWith(
+        { imported: true },
+        { preserveWebdav: true },
+      )
+      expect(mockUserPreferences.savePreferences).toHaveBeenNthCalledWith(
+        2,
+        {
+          webdav: {
+            backupEncryptionPassword: "manual-secret",
+          },
+        },
+        {
+          expectedLastUpdated: 1,
+        },
+      )
+    })
+
+    expect(mockUserPreferences.getLanguage).not.toHaveBeenCalled()
+    expect(mockApplyPreferenceLanguage).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalledWith(
+      "importExport:import.importSuccess",
+    )
+  })
+
   it("blocks manual decrypt/import when sync data becomes empty", async () => {
     mockDownloadBackupRaw.mockResolvedValueOnce("encrypted-payload")
     mockTryParseEncryptedWebdavBackupEnvelope.mockReturnValue(
@@ -802,6 +868,7 @@ describe("WebDAVSettings", () => {
     fireEvent.change(backupPasswordInput, {
       target: { value: "" },
     })
+    fireEvent.click(screen.getByRole("switch"))
     fireEvent.click(
       screen.getByRole("button", {
         name: "importExport:webdav.downloadImport",
@@ -823,5 +890,6 @@ describe("WebDAVSettings", () => {
     expect(
       document.getElementById("decryptPassword") as HTMLInputElement,
     ).toHaveAttribute("type", "text")
+    expect(screen.getByRole("switch")).toHaveAttribute("aria-checked", "false")
   })
 })

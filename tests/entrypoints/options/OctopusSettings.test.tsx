@@ -504,4 +504,72 @@ describe("OctopusSettings", () => {
       )
     })
   })
+
+  it("persists trimmed usernames and skips unchanged base URL and password values", async () => {
+    render(<OctopusSettings />)
+
+    const baseUrlInput = screen.getByLabelText(
+      "settings:octopus.fields.baseUrlPlaceholder",
+    )
+    const usernameInput = screen.getByLabelText(
+      "settings:octopus.fields.usernamePlaceholder",
+    )
+    const passwordInput = screen.getByLabelText(
+      "settings:octopus.fields.passwordPlaceholder",
+    )
+
+    fireEvent.change(baseUrlInput, {
+      target: { value: "  https://octopus.example.com  " },
+    })
+    fireEvent.blur(baseUrlInput)
+
+    fireEvent.change(usernameInput, {
+      target: { value: "  next-admin  " },
+    })
+    fireEvent.blur(usernameInput)
+
+    fireEvent.change(passwordInput, {
+      target: { value: "  secret  " },
+    })
+    fireEvent.blur(passwordInput)
+
+    await waitFor(() => {
+      expect(mockUpdateOctopusUsername).toHaveBeenCalledWith("next-admin", {
+        expectedLastUpdated: 1,
+      })
+    })
+
+    expect(mockUpdateOctopusBaseUrl).not.toHaveBeenCalled()
+    expect(mockUpdateOctopusPassword).not.toHaveBeenCalled()
+    expect(mockedShowUpdateToast).toHaveBeenCalledWith(
+      true,
+      "settings:octopus.fields.usernameLabel",
+    )
+  })
+
+  it("shows the generic update failure when validation passes but persistence is rejected", async () => {
+    mockUpdateOctopusConfig.mockResolvedValue(false)
+
+    render(<OctopusSettings />)
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:octopus.validation.validate",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockUpdateOctopusConfig).toHaveBeenCalledWith(
+        {
+          baseUrl: "https://octopus.example.com",
+          username: "admin",
+          password: "secret",
+        },
+        {
+          expectedLastUpdated: 1,
+        },
+      )
+      expect(toast.error).toHaveBeenCalledWith("settings:messages.updateFailed")
+    })
+  })
 })

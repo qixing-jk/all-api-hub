@@ -173,6 +173,119 @@ describe("BasicSettings tab layout", () => {
     )
   })
 
+  it("persists New API base URL, admin token, and numeric user ID changes with the current snapshot version", async () => {
+    const user = userEvent.setup()
+    const contextValue = createContextValue({
+      newApiUserId: "10",
+    })
+    mockedUseUserPreferencesContext.mockReturnValue(contextValue)
+
+    render(<NewApiSettings />)
+
+    const baseUrlInput = screen.getByPlaceholderText(
+      "settings:newApi.fields.baseUrlPlaceholder",
+    )
+    const adminTokenInput = screen.getByDisplayValue("managed-admin-token")
+    const userIdInput = screen.getByDisplayValue("10")
+
+    fireEvent.change(baseUrlInput, {
+      target: { value: "https://managed-next.example" },
+    })
+    fireEvent.blur(baseUrlInput)
+
+    fireEvent.change(adminTokenInput, {
+      target: { value: "next-admin-token" },
+    })
+    fireEvent.blur(adminTokenInput)
+
+    fireEvent.change(userIdInput, {
+      target: { value: " 42 " },
+    })
+    fireEvent.blur(userIdInput)
+
+    await waitFor(() => {
+      expect(contextValue.updateNewApiBaseUrl).toHaveBeenCalledWith(
+        "https://managed-next.example",
+        {
+          expectedLastUpdated: 1,
+        },
+      )
+      expect(contextValue.updateNewApiAdminToken).toHaveBeenCalledWith(
+        "next-admin-token",
+        {
+          expectedLastUpdated: 1,
+        },
+      )
+      expect(contextValue.updateNewApiUserId).toHaveBeenCalledWith("42", {
+        expectedLastUpdated: 1,
+      })
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings:newApi.fields.showToken",
+      }),
+    )
+
+    expect(adminTokenInput).toHaveAttribute("type", "text")
+    expect(showUpdateToastMock).toHaveBeenCalledWith(
+      true,
+      "settings:newApi.fields.baseUrlLabel",
+    )
+    expect(showUpdateToastMock).toHaveBeenCalledWith(
+      true,
+      "settings:newApi.fields.adminTokenLabel",
+    )
+    expect(showUpdateToastMock).toHaveBeenCalledWith(
+      true,
+      "settings:newApi.fields.userIdLabel",
+    )
+  })
+
+  it("skips persisting unchanged New API draft values after blur", () => {
+    const contextValue = createContextValue()
+    mockedUseUserPreferencesContext.mockReturnValue(contextValue)
+
+    render(<NewApiSettings />)
+
+    fireEvent.blur(
+      screen.getByPlaceholderText("settings:newApi.fields.baseUrlPlaceholder"),
+    )
+    fireEvent.blur(screen.getByDisplayValue("managed-admin-token"))
+
+    const userIdInput = screen.getByDisplayValue("1")
+    fireEvent.change(userIdInput, {
+      target: { value: " 1 " },
+    })
+    fireEvent.blur(userIdInput)
+
+    const usernameInput = screen.getByPlaceholderText(
+      "settings:newApi.fields.usernamePlaceholder",
+    )
+    fireEvent.change(usernameInput, {
+      target: { value: " admin " },
+    })
+    fireEvent.blur(usernameInput)
+
+    fireEvent.blur(screen.getByDisplayValue("secret-password"))
+
+    const totpInput = screen.getByPlaceholderText(
+      "settings:newApi.fields.totpSecretPlaceholder",
+    )
+    fireEvent.change(totpInput, {
+      target: { value: " JBSWY3DPEHPK3PXP " },
+    })
+    fireEvent.blur(totpInput)
+
+    expect(contextValue.updateNewApiBaseUrl).not.toHaveBeenCalled()
+    expect(contextValue.updateNewApiAdminToken).not.toHaveBeenCalled()
+    expect(contextValue.updateNewApiUserId).not.toHaveBeenCalled()
+    expect(contextValue.updateNewApiUsername).not.toHaveBeenCalled()
+    expect(contextValue.updateNewApiPassword).not.toHaveBeenCalled()
+    expect(contextValue.updateNewApiTotpSecret).not.toHaveBeenCalled()
+    expect(showUpdateToastMock).not.toHaveBeenCalled()
+  })
+
   it("resets the New API settings section through the shared SettingSection flow", async () => {
     const user = userEvent.setup()
     const contextValue = createContextValue()

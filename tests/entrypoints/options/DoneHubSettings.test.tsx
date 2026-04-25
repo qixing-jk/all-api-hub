@@ -117,4 +117,80 @@ describe("DoneHubSettings", () => {
     ).toBeInTheDocument()
     expect(vi.mocked(showUpdateToast)).not.toHaveBeenCalled()
   })
+
+  it("persists admin token and numeric user ID updates with the current preferences version", async () => {
+    const updateDoneHubAdminToken = vi.fn().mockResolvedValue(true)
+    const updateDoneHubUserId = vi.fn().mockResolvedValue(true)
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: { lastUpdated: 2 },
+      doneHubBaseUrl: "https://donehub.example.com",
+      doneHubAdminToken: "old-token",
+      doneHubUserId: "100",
+      updateDoneHubBaseUrl: vi.fn().mockResolvedValue(true),
+      updateDoneHubAdminToken,
+      updateDoneHubUserId,
+      resetDoneHubConfig: vi.fn().mockResolvedValue(true),
+    } as any)
+
+    renderSubject()
+
+    const adminTokenInput = screen.getByDisplayValue("old-token")
+    const userIdInput = screen.getByDisplayValue("100")
+
+    fireEvent.change(adminTokenInput, {
+      target: { value: "next-token" },
+    })
+    fireEvent.blur(adminTokenInput)
+
+    fireEvent.change(userIdInput, {
+      target: { value: " 200 " },
+    })
+    fireEvent.blur(userIdInput)
+
+    await waitFor(() => {
+      expect(updateDoneHubAdminToken).toHaveBeenCalledWith("next-token", {
+        expectedLastUpdated: 2,
+      })
+      expect(updateDoneHubUserId).toHaveBeenCalledWith("200", {
+        expectedLastUpdated: 2,
+      })
+    })
+
+    expect(vi.mocked(showUpdateToast)).toHaveBeenCalledWith(
+      true,
+      "settings:doneHub.fields.adminTokenLabel",
+    )
+    expect(vi.mocked(showUpdateToast)).toHaveBeenCalledWith(
+      true,
+      "settings:doneHub.fields.userIdLabel",
+    )
+  })
+
+  it("skips persisting unchanged admin token and trimmed user ID values", () => {
+    const contextValue = {
+      preferences: { lastUpdated: 2 },
+      doneHubBaseUrl: "https://donehub.example.com",
+      doneHubAdminToken: "same-token",
+      doneHubUserId: "100",
+      updateDoneHubBaseUrl: vi.fn().mockResolvedValue(true),
+      updateDoneHubAdminToken: vi.fn().mockResolvedValue(true),
+      updateDoneHubUserId: vi.fn().mockResolvedValue(true),
+      resetDoneHubConfig: vi.fn().mockResolvedValue(true),
+    } as any
+    vi.mocked(useUserPreferencesContext).mockReturnValue(contextValue)
+
+    renderSubject()
+
+    fireEvent.blur(screen.getByDisplayValue("same-token"))
+
+    const userIdInput = screen.getByDisplayValue("100")
+    fireEvent.change(userIdInput, {
+      target: { value: " 100 " },
+    })
+    fireEvent.blur(userIdInput)
+
+    expect(contextValue.updateDoneHubAdminToken).not.toHaveBeenCalled()
+    expect(contextValue.updateDoneHubUserId).not.toHaveBeenCalled()
+    expect(vi.mocked(showUpdateToast)).not.toHaveBeenCalled()
+  })
 })
