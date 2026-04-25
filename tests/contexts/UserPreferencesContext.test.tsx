@@ -1636,6 +1636,83 @@ describe("UserPreferencesContext", () => {
     expect((latestContext as any)?.preferences.webdav.autoSync).toBe(true)
   })
 
+  it("hydrates the provider from the saved WebDAV snapshot returned by background updates", async () => {
+    const preferences = clonePreferences()
+    preferences.webdav = {
+      ...preferences.webdav,
+      autoSync: true,
+      syncInterval: 300,
+    }
+    const savedPreferences = deepOverride(preferences, {
+      webdav: {
+        autoSync: false,
+        syncInterval: 900,
+        syncStrategy: "upload_only",
+      },
+      lastUpdated: preferences.lastUpdated + 5,
+    })
+    mockedSendRuntimeMessage.mockResolvedValue({
+      success: true,
+      data: savedPreferences,
+    })
+
+    const context = await renderProvider(preferences)
+
+    await act(async () => {
+      await context.updateWebdavAutoSyncSettings(
+        {
+          autoSync: false,
+          syncInterval: 900,
+          syncStrategy: "upload_only",
+        },
+        { expectedLastUpdated: preferences.lastUpdated },
+      )
+    })
+
+    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
+      action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
+      settings: {
+        autoSync: false,
+        syncInterval: 900,
+        syncStrategy: "upload_only",
+      },
+      expectedLastUpdated: preferences.lastUpdated,
+    })
+    expect((latestContext as any)?.preferences).toEqual(savedPreferences)
+  })
+
+  it("merges WebDAV auto-sync updates locally when background omits a saved snapshot", async () => {
+    const preferences = clonePreferences()
+    preferences.webdav = {
+      ...preferences.webdav,
+      autoSync: true,
+      syncInterval: 300,
+      syncStrategy: "merge",
+    }
+    mockedSendRuntimeMessage.mockResolvedValue({
+      success: true,
+    })
+
+    const context = await renderProvider(preferences)
+
+    await act(async () => {
+      await context.updateWebdavAutoSyncSettings({
+        autoSync: false,
+        syncInterval: 600,
+      })
+    })
+
+    expect((latestContext as any)?.preferences.webdav).toEqual({
+      ...preferences.webdav,
+      autoSync: false,
+      syncInterval: 600,
+      syncStrategy: "merge",
+    })
+    expect((latestContext as any)?.preferences.lastUpdated).toBe(
+      preferences.lastUpdated,
+    )
+  })
+
   it("refreshes context menus when feature enabled state changes and preserves existing nested settings", async () => {
     const preferences = clonePreferences()
     preferences.redemptionAssist = {

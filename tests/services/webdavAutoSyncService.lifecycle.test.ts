@@ -408,6 +408,21 @@ describe("webdavAutoSyncService lifecycle", () => {
     })
   })
 
+  it("stops auto-sync alarms and clears the scheduled flag when an alarm was active", async () => {
+    const service = createService()
+    ;(service as any).isScheduled = true
+    mocks.clearAlarm.mockResolvedValueOnce(true).mockResolvedValueOnce(true)
+
+    await expect(service.stopAutoSync()).resolves.toBeUndefined()
+
+    expect(mocks.clearAlarm).toHaveBeenNthCalledWith(1, "webdavAutoSync")
+    expect(mocks.clearAlarm).toHaveBeenNthCalledWith(
+      2,
+      "webdavAutoSyncBestEffortUpload",
+    )
+    expect(service.getStatus().isRunning).toBe(false)
+  })
+
   it("persists updated settings and re-runs scheduler setup", async () => {
     const service = createService()
     const setupSpy = vi
@@ -505,6 +520,48 @@ describe("webdavAutoSyncService lifecycle", () => {
     })
     expect(updateSpy).toHaveBeenNthCalledWith(1, { autoSync: false }, undefined)
     expect(updateSpy).toHaveBeenNthCalledWith(2, { autoSync: true }, undefined)
+  })
+
+  it("forwards optimistic concurrency hints through the WebDAV settings message handler", async () => {
+    const updateSpy = vi
+      .spyOn(webdavAutoSyncService, "updateSettings")
+      .mockResolvedValueOnce({
+        ok: true,
+        savedPreferences: {
+          lastUpdated: 9,
+          webdav: {
+            autoSync: false,
+            syncInterval: 900,
+            syncStrategy: "merge",
+          },
+        },
+      } as any)
+
+    const sendResponse = vi.fn()
+    await handleWebdavAutoSyncMessage(
+      {
+        action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
+        settings: { autoSync: false, syncInterval: 900 },
+        expectedLastUpdated: 7,
+      },
+      sendResponse,
+    )
+
+    expect(updateSpy).toHaveBeenCalledWith(
+      { autoSync: false, syncInterval: 900 },
+      { expectedLastUpdated: 7 },
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        lastUpdated: 9,
+        webdav: {
+          autoSync: false,
+          syncInterval: 900,
+          syncStrategy: "merge",
+        },
+      },
+    })
   })
 
   it("swallows settings persistence failures without re-running scheduler setup", async () => {
