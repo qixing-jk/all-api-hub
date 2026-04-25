@@ -433,6 +433,80 @@ describe("webdavAutoSyncService lifecycle", () => {
     expect(setupSpy).toHaveBeenCalledTimes(1)
   })
 
+  it("returns a conflict result when guarded settings persistence is rejected as stale", async () => {
+    const service = createService()
+    const setupSpy = vi
+      .spyOn(service, "setupAutoSync")
+      .mockResolvedValue(undefined)
+
+    mocks.savePreferencesWithResult.mockResolvedValueOnce(null)
+
+    await expect(
+      service.updateSettings(
+        { autoSync: false, syncInterval: 900 },
+        { expectedLastUpdated: 7 },
+      ),
+    ).resolves.toEqual({
+      ok: false,
+      reason: "conflict",
+    })
+
+    expect(setupSpy).not.toHaveBeenCalled()
+    expect(mocks.savePreferencesWithResult).toHaveBeenCalledWith(
+      {
+        webdav: {
+          autoSync: false,
+          syncInterval: 900,
+        },
+      },
+      {
+        expectedLastUpdated: 7,
+      },
+    )
+  })
+
+  it("maps update-settings conflict and generic failures to distinct response messages", async () => {
+    const updateSpy = vi
+      .spyOn(webdavAutoSyncService, "updateSettings")
+      .mockResolvedValueOnce({
+        ok: false,
+        reason: "conflict",
+      } as any)
+      .mockResolvedValueOnce({
+        ok: false,
+        reason: "error",
+      } as any)
+
+    const conflictResponse = vi.fn()
+    await handleWebdavAutoSyncMessage(
+      {
+        action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
+        settings: { autoSync: false },
+      },
+      conflictResponse,
+    )
+
+    const errorResponse = vi.fn()
+    await handleWebdavAutoSyncMessage(
+      {
+        action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
+        settings: { autoSync: true },
+      },
+      errorResponse,
+    )
+
+    expect(conflictResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "settings:messages.preferencesChangedExternally",
+    })
+    expect(errorResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "settings:messages.saveSettingsFailed",
+    })
+    expect(updateSpy).toHaveBeenNthCalledWith(1, { autoSync: false }, undefined)
+    expect(updateSpy).toHaveBeenNthCalledWith(2, { autoSync: true }, undefined)
+  })
+
   it("swallows settings persistence failures without re-running scheduler setup", async () => {
     const service = createService()
     const setupSpy = vi

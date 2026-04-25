@@ -1381,17 +1381,12 @@ class WebdavAutoSyncService {
     options?: { expectedLastUpdated?: number },
   ): Promise<UpdateWebdavAutoSyncSettingsResult> {
     try {
-      const savedPreferences =
-        typeof options?.expectedLastUpdated === "number"
-          ? await userPreferences.savePreferencesWithResult(
-              {
-                webdav: settings,
-              },
-              options,
-            )
-          : await userPreferences.savePreferencesWithResult({
-              webdav: settings,
-            })
+      const savedPreferences = await userPreferences.savePreferencesWithResult(
+        {
+          webdav: settings,
+        },
+        options,
+      )
       if (!savedPreferences) {
         return {
           ok: false,

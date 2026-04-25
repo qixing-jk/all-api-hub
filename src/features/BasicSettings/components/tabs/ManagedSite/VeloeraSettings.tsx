@@ -84,7 +84,7 @@ export default function VeloeraSettings() {
     if (!isManagedSiteAdminUserIdInputValid(trimmedId)) return
 
     setLocalConfig((prev) => ({ ...prev, userId: trimmedId }))
-    if (trimmedId === veloeraUserId) return
+    if (trimmedId === veloeraUserId.trim()) return
     const success = await updateVeloeraUserId(trimmedId, {
       expectedLastUpdated,
     })

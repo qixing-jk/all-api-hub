@@ -210,6 +210,41 @@ describe("userPreferences shared preference timestamps", () => {
     expect(storedAfter.activeTab).toBe(DATA_TYPE_CASHFLOW)
   })
 
+  it("rethrows storage failures from savePreferencesWithResult and keeps savePreferences as a safe boolean wrapper", async () => {
+    await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
+      ...DEFAULT_PREFERENCES,
+      themeMode: "system",
+      lastUpdated: 7100,
+      sharedPreferencesLastUpdated: 7100,
+    })
+
+    const storageSetSpy = vi
+      .spyOn((userPreferences as any).storage, "set")
+      .mockRejectedValue(new Error("save failed"))
+
+    try {
+      await expect(
+        userPreferences.savePreferencesWithResult({
+          themeMode: "dark",
+        }),
+      ).rejects.toThrow("save failed")
+
+      await expect(
+        userPreferences.savePreferences({
+          themeMode: "dark",
+        }),
+      ).resolves.toBe(false)
+
+      const storedAfter = (await storage.get(
+        USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+      )) as any
+      expect(storedAfter.themeMode).toBe("system")
+      expect(storedAfter.lastUpdated).toBe(7100)
+    } finally {
+      storageSetSpy.mockRestore()
+    }
+  })
+
   it("refreshes sharedPreferencesLastUpdated for manual imports", async () => {
     const backupTimestamp = 7000
     const importedAt = 8000

@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react"
+import { fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -97,6 +97,63 @@ describe("VeloeraSettings", () => {
     )
     expect(updateVeloeraAdminToken).toHaveBeenCalledWith("next-token", {
       expectedLastUpdated: 1,
+    })
+  })
+
+  it("skips persisting the admin user ID when only legacy whitespace differs", () => {
+    const updateVeloeraUserId = vi.fn().mockResolvedValue(true)
+    vi.mocked(useUserPreferencesContext).mockReturnValue(
+      createContextValue({
+        veloeraUserId: " 200 ",
+        updateVeloeraUserId,
+      }),
+    )
+
+    renderSubject()
+
+    const input = document.querySelectorAll("input")[2]
+    expect(input).toBeTruthy()
+    if (!input) {
+      throw new Error("Expected Veloera user ID input to be rendered")
+    }
+    fireEvent.change(input, {
+      target: { value: "200" },
+    })
+    fireEvent.blur(input)
+
+    expect(updateVeloeraUserId).not.toHaveBeenCalled()
+    expect(vi.mocked(showUpdateToast)).not.toHaveBeenCalled()
+  })
+
+  it("trims and persists a changed admin user ID", async () => {
+    const updateVeloeraUserId = vi.fn().mockResolvedValue(true)
+    vi.mocked(useUserPreferencesContext).mockReturnValue(
+      createContextValue({
+        updateVeloeraUserId,
+      }),
+    )
+
+    renderSubject()
+
+    const input = document.querySelectorAll("input")[2]
+    expect(input).toBeTruthy()
+    if (!input) {
+      throw new Error("Expected Veloera user ID input to be rendered")
+    }
+
+    fireEvent.change(input, {
+      target: { value: " 201 " },
+    })
+    fireEvent.blur(input)
+
+    await waitFor(() => {
+      expect(updateVeloeraUserId).toHaveBeenCalledWith("201", {
+        expectedLastUpdated: 1,
+      })
+      expect(vi.mocked(showUpdateToast)).toHaveBeenCalledWith(
+        true,
+        "settings:veloera.fields.userIdLabel",
+      )
     })
   })
 })

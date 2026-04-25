@@ -620,8 +620,7 @@ class UserPreferencesService {
       expectedLastUpdated?: number
     },
   ): Promise<UserPreferences | null> {
-    try {
-      const updatedPreferences = await this.withStorageWriteLock(async () => {
+    const updatedPreferences = await this.withStorageWriteLock(async () => {
         const currentPreferences = await this.getPreferences()
         if (
           typeof options?.expectedLastUpdated === "number" &&
@@ -652,25 +651,21 @@ class UserPreferencesService {
         )
 
         return nextPreferences
+    })
+    if (!updatedPreferences) {
+      logger.debug("跳过过期的偏好设置写入", {
+        expectedLastUpdated: options?.expectedLastUpdated,
       })
-      if (!updatedPreferences) {
-        logger.debug("跳过过期的偏好设置写入", {
-          expectedLastUpdated: options?.expectedLastUpdated,
-        })
-        return null
-      }
-
-      logger.debug("偏好设置保存成功", {
-        lastUpdated: updatedPreferences.lastUpdated,
-        sharedPreferencesLastUpdated:
-          updatedPreferences.sharedPreferencesLastUpdated,
-        preferencesVersion: updatedPreferences.preferencesVersion,
-      })
-      return updatedPreferences
-    } catch (error) {
-      logger.error("保存偏好设置失败", error)
       return null
     }
+
+    logger.debug("偏好设置保存成功", {
+      lastUpdated: updatedPreferences.lastUpdated,
+      sharedPreferencesLastUpdated:
+        updatedPreferences.sharedPreferencesLastUpdated,
+      preferencesVersion: updatedPreferences.preferencesVersion,
+    })
+    return updatedPreferences
   }
 
   /**
