@@ -11,6 +11,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
 import WebDAVSettings from "~/features/ImportExport/components/WebDAVSettings"
+import {
+  DEFAULT_PREFERENCES,
+  type UserPreferences,
+} from "~/services/preferences/userPreferences"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const {
@@ -138,24 +142,31 @@ function render(ui: ReactNode) {
   )
 }
 
+const createPreferencesFixture = (): UserPreferences => ({
+  ...structuredClone(DEFAULT_PREFERENCES),
+  showTodayCashflow: true,
+  webdav: {
+    ...structuredClone(DEFAULT_PREFERENCES.webdav),
+    url: "https://dav.example.com/backup.json",
+    username: "alice",
+    password: "pw",
+    backupEncryptionEnabled: true,
+    backupEncryptionPassword: "stored-secret",
+    syncData: {
+      accounts: true,
+      bookmarks: true,
+      apiCredentialProfiles: true,
+      preferences: true,
+    },
+  },
+})
+
 describe("WebDAVSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockUserPreferences.getPreferences.mockResolvedValue({
-      webdav: {
-        url: "https://dav.example.com/backup.json",
-        username: "alice",
-        password: "pw",
-        backupEncryptionEnabled: true,
-        backupEncryptionPassword: "stored-secret",
-        syncData: {
-          accounts: true,
-          bookmarks: true,
-          apiCredentialProfiles: true,
-          preferences: true,
-        },
-      },
-    })
+    mockUserPreferences.getPreferences.mockResolvedValue(
+      createPreferencesFixture(),
+    )
     mockUserPreferences.savePreferences.mockResolvedValue(true)
     mockUserPreferences.exportPreferences.mockResolvedValue({
       themeMode: "dark",
@@ -321,5 +332,24 @@ describe("WebDAVSettings", () => {
     expect(toast.success).toHaveBeenCalledWith(
       "importExport:import.importSuccess",
     )
+  })
+
+  it("shows the action-specific connection failure message when persisting settings fails", async () => {
+    mockUserPreferences.savePreferences.mockResolvedValue(false)
+
+    render(<WebDAVSettings />)
+
+    expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.testConnection",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("importExport:webdav.testFailed")
+    })
+    expect(mockTestWebdavConnection).not.toHaveBeenCalled()
   })
 })

@@ -61,6 +61,40 @@ type RuntimeMutationResponse = {
   data?: unknown
 }
 
+const INVALID_RUNTIME_MUTATION_RESPONSE: RuntimeMutationResponse = {
+  success: false,
+  error: "Invalid response from background",
+}
+
+/**
+ * Type guard to validate if an unknown value conforms to the RuntimeMutationResponse shape
+ */
+function isRuntimeMutationResponse(
+  value: unknown,
+): value is RuntimeMutationResponse {
+  if (!value || typeof value !== "object") {
+    return false
+  }
+
+  const candidate = value as Record<string, unknown>
+  return (
+    typeof candidate.success === "boolean" &&
+    (candidate.error === undefined || typeof candidate.error === "string") &&
+    (candidate.message === undefined || typeof candidate.message === "string")
+  )
+}
+
+/**
+ * Normalizes an unknown value into a RuntimeMutationResponse
+ */
+function normalizeRuntimeMutationResponse(
+  value: unknown,
+): RuntimeMutationResponse {
+  return isRuntimeMutationResponse(value)
+    ? value
+    : INVALID_RUNTIME_MUTATION_RESPONSE
+}
+
 // 1. 定义 Context 的值类型
 interface UserPreferencesContextType {
   preferences: UserPreferences
@@ -1072,10 +1106,12 @@ export const UserPreferencesProvider = ({
         "autoSync" | "syncInterval" | "syncStrategy"
       >,
     ) => {
-      const response = (await sendRuntimeMessage({
-        action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
-        settings: updates,
-      })) as RuntimeMutationResponse
+      const response = normalizeRuntimeMutationResponse(
+        await sendRuntimeMessage({
+          action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
+          settings: updates,
+        }),
+      )
 
       if (response.success) {
         setPreferences((prev) => {

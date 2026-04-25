@@ -4,7 +4,7 @@ import {
   ClockIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline"
-import { useEffect, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -69,11 +69,7 @@ export default function WebDAVAutoSyncSettings() {
   const [syncing, setSyncing] = useState(false)
   const [savingSettings, setSavingSettings] = useState(false)
 
-  useEffect(() => {
-    void loadStatus()
-  }, [])
-
-  const loadStatus = async () => {
+  const loadStatus = useCallback(async () => {
     try {
       const response = await sendRuntimeMessage({
         action: RuntimeActionIds.WebdavAutoSyncGetStatus,
@@ -87,7 +83,23 @@ export default function WebDAVAutoSyncSettings() {
     } catch (error) {
       logger.error("Failed to load sync status", error)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    setAutoSyncEnabled(persistedWebdavSettings.autoSync ?? false)
+    setSyncInterval(persistedWebdavSettings.syncInterval ?? 3600)
+    setSyncStrategy(
+      persistedWebdavSettings.syncStrategy ?? WEBDAV_SYNC_STRATEGIES.MERGE,
+    )
+  }, [
+    persistedWebdavSettings.autoSync,
+    persistedWebdavSettings.syncInterval,
+    persistedWebdavSettings.syncStrategy,
+  ])
+
+  useEffect(() => {
+    void loadStatus()
+  }, [loadStatus])
 
   const handleSaveSettings = async () => {
     setSavingSettings(true)

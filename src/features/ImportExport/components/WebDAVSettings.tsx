@@ -76,6 +76,13 @@ const WEBDAV_SYNC_DATA_INPUT_IDS: Record<WebDAVSyncDataKey, string> = {
   preferences: "webdavSyncDataPreferences",
 }
 
+class PersistWebdavConfigError extends Error {
+  constructor() {
+    super("Failed to persist WebDAV settings")
+    this.name = "PersistWebdavConfigError"
+  }
+}
+
 /**
  * Resolve the localized label for a selectable WebDAV sync data section.
  */
@@ -185,7 +192,7 @@ export default function WebDAVSettings() {
   ) => {
     const success = await updateWebdavSettings(updates)
     if (!success) {
-      throw new Error(t("settings:messages.saveSettingsFailed"))
+      throw new PersistWebdavConfigError()
     }
   }
 
@@ -210,7 +217,11 @@ export default function WebDAVSettings() {
       toast.success(t("webdav.testSuccess"))
     } catch (e: any) {
       logger.error("WebDAV connection test failed", e)
-      toast.error(e?.message || t("webdav.testFailed"))
+      toast.error(
+        e instanceof PersistWebdavConfigError
+          ? t("webdav.testFailed")
+          : e?.message || t("webdav.testFailed"),
+      )
     } finally {
       setTesting(false)
     }
@@ -278,7 +289,11 @@ export default function WebDAVSettings() {
       toast.success(t("export.dataExported"))
     } catch (e: any) {
       logger.error("Failed to upload backup to WebDAV", e)
-      toast.error(e?.message || t("export.exportFailed"))
+      toast.error(
+        e instanceof PersistWebdavConfigError
+          ? t("export.exportFailed")
+          : e?.message || t("export.exportFailed"),
+      )
     } finally {
       setUploading(false)
     }
@@ -345,7 +360,11 @@ export default function WebDAVSettings() {
       }
     } catch (e: any) {
       logger.error("Failed to download/import WebDAV backup", e)
-      toast.error(e?.message || t("importExport:import.downloadImportFailed"))
+      toast.error(
+        e instanceof PersistWebdavConfigError
+          ? t("importExport:import.downloadImportFailed")
+          : e?.message || t("importExport:import.downloadImportFailed"),
+      )
     } finally {
       setDownloading(false)
     }
@@ -380,9 +399,14 @@ export default function WebDAVSettings() {
       }
 
       if (saveDecryptPassword) {
-        await persistWebdavConfig({
-          backupEncryptionPassword: pwd,
-        })
+        try {
+          await persistWebdavConfig({
+            backupEncryptionPassword: pwd,
+          })
+        } catch (error) {
+          logger.error("Failed to persist WebDAV decrypt password", error)
+          toast.error(t("settings:messages.saveSettingsFailed"))
+        }
       }
 
       setDecryptDialogOpen(false)

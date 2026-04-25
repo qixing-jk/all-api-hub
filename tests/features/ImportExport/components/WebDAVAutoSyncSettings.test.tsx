@@ -186,4 +186,35 @@ describe("WebDAVAutoSyncSettings", () => {
       expect(toast.error).toHaveBeenCalledWith("sync failed")
     })
   })
+
+  it("falls back to the local update-failed copy when the runtime omits an error", async () => {
+    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
+      switch (message.action) {
+        case RuntimeActionIds.WebdavAutoSyncGetStatus:
+          return { success: true, data: null }
+        case RuntimeActionIds.WebdavAutoSyncUpdateSettings:
+          return { success: false }
+        default:
+          return { success: true }
+      }
+    })
+
+    render(<WebDAVAutoSyncSettings />)
+
+    expect(
+      await screen.findByRole("button", {
+        name: "importExport:webdav.autoSync.saveSettings",
+      }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.autoSync.saveSettings",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("settings:messages.updateFailed")
+    })
+  })
 })

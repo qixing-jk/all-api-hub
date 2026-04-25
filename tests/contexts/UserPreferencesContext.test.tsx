@@ -1495,6 +1495,34 @@ describe("UserPreferencesContext", () => {
     })
   })
 
+  it("returns a safe fallback when the WebDAV auto-sync runtime response is invalid", async () => {
+    const preferences = clonePreferences()
+    preferences.webdav = {
+      ...preferences.webdav,
+      autoSync: true,
+      syncInterval: 300,
+    }
+    mockedSendRuntimeMessage.mockResolvedValue(undefined)
+
+    const context = await renderProvider(preferences)
+
+    let response: Awaited<
+      ReturnType<typeof context.updateWebdavAutoSyncSettings>
+    >
+
+    await act(async () => {
+      response = await context.updateWebdavAutoSyncSettings({
+        autoSync: false,
+      })
+    })
+
+    expect(response!).toEqual({
+      success: false,
+      error: "Invalid response from background",
+    })
+    expect((latestContext as any)?.preferences.webdav.autoSync).toBe(true)
+  })
+
   it("refreshes context menus when feature enabled state changes and preserves existing nested settings", async () => {
     const preferences = clonePreferences()
     preferences.redemptionAssist = {
