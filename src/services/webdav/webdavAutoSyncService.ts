@@ -1362,20 +1362,36 @@ class WebdavAutoSyncService {
    *
    * Persists partial webdav settings and reconfigures scheduler.
    */
-  async updateSettings(settings: {
-    autoSync?: boolean
-    syncInterval?: number
-    syncStrategy?: WebDAVSettings["syncStrategy"]
-  }) {
+  async updateSettings(
+    settings: {
+      autoSync?: boolean
+      syncInterval?: number
+      syncStrategy?: WebDAVSettings["syncStrategy"]
+    },
+    options?: { expectedLastUpdated?: number },
+  ) {
     try {
       // Update the nested webdav object
-      await userPreferences.savePreferences({
-        webdav: settings,
-      })
+      const success =
+        typeof options?.expectedLastUpdated === "number"
+          ? await userPreferences.savePreferences(
+              {
+                webdav: settings,
+              },
+              options,
+            )
+          : await userPreferences.savePreferences({
+              webdav: settings,
+            })
+      if (!success) {
+        return false
+      }
       await this.setupAutoSync() // 重新设置调度（alarm）
       logger.info("设置已更新", settings)
+      return true
     } catch (error) {
       logger.error("更新设置失败", error)
+      return false
     }
   }
 
@@ -1469,8 +1485,22 @@ export const handleWebdavAutoSyncMessage = async (
         break
 
       case RuntimeActionIds.WebdavAutoSyncUpdateSettings: {
-        await webdavAutoSyncService.updateSettings(request.settings)
-        sendResponse({ success: true })
+        const success = await webdavAutoSyncService.updateSettings(
+          request.settings,
+          typeof request.expectedLastUpdated === "number"
+            ? {
+                expectedLastUpdated: request.expectedLastUpdated,
+              }
+            : undefined,
+        )
+        sendResponse(
+          success
+            ? { success: true }
+            : {
+                success: false,
+                error: "Preferences changed externally. Refresh and try again.",
+              },
+        )
         break
       }
 

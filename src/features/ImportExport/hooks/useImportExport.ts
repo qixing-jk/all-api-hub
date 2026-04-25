@@ -2,6 +2,7 @@ import { useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -14,6 +15,7 @@ const logger = createLogger("ImportExportHook")
 
 export const useImportExport = () => {
   const { t } = useTranslation()
+  const { loadPreferences } = useUserPreferencesContext()
   const [isExporting, setIsExporting] = useState(false)
   const [isImporting, setIsImporting] = useState(false)
   const [importData, setImportData] = useState("")
@@ -43,6 +45,9 @@ export const useImportExport = () => {
 
       const data = JSON.parse(importData)
       const result = await importFromBackupObject(data)
+      if (result.allImported || result.sections?.preferences) {
+        await loadPreferences()
+      }
       if (result.allImported) {
         toast.success(t("importExport:import.importSuccess"))
       }

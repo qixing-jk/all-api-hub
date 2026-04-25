@@ -297,7 +297,7 @@ describe("webdavAutoSyncService lifecycle", () => {
       .mockResolvedValue(undefined)
     const updateSpy = vi
       .spyOn(webdavAutoSyncService, "updateSettings")
-      .mockResolvedValue(undefined)
+      .mockResolvedValue(true)
     vi.spyOn(webdavAutoSyncService, "getStatus").mockReturnValue({
       isRunning: true,
       isInitialized: true,

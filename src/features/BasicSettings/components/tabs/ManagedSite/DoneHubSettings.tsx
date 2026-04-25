@@ -1,5 +1,5 @@
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -13,6 +13,7 @@ import {
 } from "~/components/ui"
 import { DONE_HUB, getSiteApiRouter } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { createTab } from "~/utils/browser/browserApi"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
@@ -25,6 +26,7 @@ import { joinUrl } from "~/utils/core/url"
 export default function DoneHubSettings() {
   const { t } = useTranslation("settings")
   const {
+    preferences,
     doneHubBaseUrl,
     doneHubAdminToken,
     doneHubUserId,
@@ -34,33 +36,41 @@ export default function DoneHubSettings() {
     resetDoneHubConfig,
   } = useUserPreferencesContext()
 
-  const [localBaseUrl, setLocalBaseUrl] = useState(doneHubBaseUrl)
-  const [localAdminToken, setLocalAdminToken] = useState(doneHubAdminToken)
+  const savedConfig = useMemo(
+    () => ({
+      baseUrl: doneHubBaseUrl,
+      adminToken: doneHubAdminToken,
+      userId: doneHubUserId,
+    }),
+    [doneHubAdminToken, doneHubBaseUrl, doneHubUserId],
+  )
+  const {
+    draft: localConfig,
+    setDraft: setLocalConfig,
+    expectedLastUpdated,
+  } = usePreferenceDraft({
+    savedValue: savedConfig,
+    savedVersion: preferences.lastUpdated,
+  })
   const [showAdminToken, setShowAdminToken] = useState(false)
-  const [localUserId, setLocalUserId] = useState(doneHubUserId)
-
-  useEffect(() => {
-    setLocalBaseUrl(doneHubBaseUrl)
-  }, [doneHubBaseUrl])
-
-  useEffect(() => {
-    setLocalAdminToken(doneHubAdminToken)
-  }, [doneHubAdminToken])
-
-  useEffect(() => {
-    setLocalUserId(doneHubUserId)
-  }, [doneHubUserId])
+  const localBaseUrl = localConfig.baseUrl
+  const localAdminToken = localConfig.adminToken
+  const localUserId = localConfig.userId
 
   const handleBaseUrlChange = async (url: string) => {
     const clean = url.trim()
     if (clean === doneHubBaseUrl) return
-    const success = await updateDoneHubBaseUrl(clean)
+    const success = await updateDoneHubBaseUrl(clean, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("doneHub.fields.baseUrlLabel"))
   }
 
   const handleAdminTokenChange = async (token: string) => {
     if (token === doneHubAdminToken) return
-    const success = await updateDoneHubAdminToken(token)
+    const success = await updateDoneHubAdminToken(token, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("doneHub.fields.adminTokenLabel"))
   }
 
@@ -68,9 +78,11 @@ export default function DoneHubSettings() {
     const trimmedId = id.trim()
     if (!isManagedSiteAdminUserIdInputValid(trimmedId)) return
 
-    setLocalUserId(trimmedId)
+    setLocalConfig((prev) => ({ ...prev, userId: trimmedId }))
     if (trimmedId === doneHubUserId) return
-    const success = await updateDoneHubUserId(trimmedId)
+    const success = await updateDoneHubUserId(trimmedId, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("doneHub.fields.userIdLabel"))
   }
 
@@ -110,7 +122,12 @@ export default function DoneHubSettings() {
               <Input
                 type="text"
                 value={localBaseUrl}
-                onChange={(e) => setLocalBaseUrl(e.target.value)}
+                onChange={(e) =>
+                  setLocalConfig((prev) => ({
+                    ...prev,
+                    baseUrl: e.target.value,
+                  }))
+                }
                 onBlur={(e) => handleBaseUrlChange(e.target.value)}
                 placeholder={t("doneHub.fields.baseUrlPlaceholder")}
               />
@@ -141,7 +158,12 @@ export default function DoneHubSettings() {
                 <Input
                   type={showAdminToken ? "text" : "password"}
                   value={localAdminToken}
-                  onChange={(e) => setLocalAdminToken(e.target.value)}
+                  onChange={(e) =>
+                    setLocalConfig((prev) => ({
+                      ...prev,
+                      adminToken: e.target.value,
+                    }))
+                  }
                   onBlur={(e) => handleAdminTokenChange(e.target.value)}
                   rightIcon={
                     <IconButton
@@ -175,7 +197,12 @@ export default function DoneHubSettings() {
                 inputMode="numeric"
                 pattern="[0-9]*"
                 value={localUserId}
-                onChange={(e) => setLocalUserId(e.target.value)}
+                onChange={(e) =>
+                  setLocalConfig((prev) => ({
+                    ...prev,
+                    userId: e.target.value,
+                  }))
+                }
                 onBlur={(e) => handleUserIdChange(e.target.value)}
                 error={userIdError}
                 aria-invalid={Boolean(userIdError)}

@@ -4,7 +4,7 @@ import {
   ClockIcon,
   XCircleIcon,
 } from "@heroicons/react/24/outline"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -27,6 +27,7 @@ import {
 } from "~/components/ui"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { formatTimestamp } from "~/utils/core/formatters"
@@ -46,16 +47,31 @@ export default function WebDAVAutoSyncSettings() {
     useUserPreferencesContext()
   const persistedWebdavSettings = preferences.webdav
 
-  // Auto-sync settings
-  const [autoSyncEnabled, setAutoSyncEnabled] = useState(
-    persistedWebdavSettings.autoSync ?? false,
+  const savedConfig = useMemo(
+    () => ({
+      autoSync: persistedWebdavSettings.autoSync ?? false,
+      syncInterval: persistedWebdavSettings.syncInterval ?? 3600,
+      syncStrategy:
+        persistedWebdavSettings.syncStrategy ?? WEBDAV_SYNC_STRATEGIES.MERGE,
+    }),
+    [
+      persistedWebdavSettings.autoSync,
+      persistedWebdavSettings.syncInterval,
+      persistedWebdavSettings.syncStrategy,
+    ],
   )
-  const [syncInterval, setSyncInterval] = useState(
-    persistedWebdavSettings.syncInterval ?? 3600,
-  )
-  const [syncStrategy, setSyncStrategy] = useState<
-    WebDAVSettings["syncStrategy"]
-  >(persistedWebdavSettings.syncStrategy ?? WEBDAV_SYNC_STRATEGIES.MERGE)
+  const {
+    draft: localConfig,
+    setDraft: setLocalConfig,
+    expectedLastUpdated,
+  } = usePreferenceDraft({
+    savedValue: savedConfig,
+    savedVersion: preferences.lastUpdated,
+  })
+  const autoSyncEnabled = localConfig.autoSync
+  const syncInterval = localConfig.syncInterval
+  const syncStrategy =
+    localConfig.syncStrategy as WebDAVSettings["syncStrategy"]
 
   // Status
   const [isSyncing, setIsSyncing] = useState(false)
@@ -86,29 +102,22 @@ export default function WebDAVAutoSyncSettings() {
   }, [])
 
   useEffect(() => {
-    setAutoSyncEnabled(persistedWebdavSettings.autoSync ?? false)
-    setSyncInterval(persistedWebdavSettings.syncInterval ?? 3600)
-    setSyncStrategy(
-      persistedWebdavSettings.syncStrategy ?? WEBDAV_SYNC_STRATEGIES.MERGE,
-    )
-  }, [
-    persistedWebdavSettings.autoSync,
-    persistedWebdavSettings.syncInterval,
-    persistedWebdavSettings.syncStrategy,
-  ])
-
-  useEffect(() => {
     void loadStatus()
   }, [loadStatus])
 
   const handleSaveSettings = async () => {
     setSavingSettings(true)
     try {
-      const response = await updateWebdavAutoSyncSettings({
-        autoSync: autoSyncEnabled,
-        syncInterval,
-        syncStrategy,
-      })
+      const response = await updateWebdavAutoSyncSettings(
+        {
+          autoSync: autoSyncEnabled,
+          syncInterval,
+          syncStrategy,
+        },
+        {
+          expectedLastUpdated,
+        },
+      )
 
       if (response.success) {
         toast.success(t("settings:messages.updateSuccess"))
@@ -201,7 +210,15 @@ export default function WebDAVAutoSyncSettings() {
           description={t("webdav.autoSync.enableDesc")}
         >
           <div className="flex items-center gap-2">
-            <Switch checked={autoSyncEnabled} onChange={setAutoSyncEnabled} />
+            <Switch
+              checked={autoSyncEnabled}
+              onChange={(checked) =>
+                setLocalConfig((prev) => ({
+                  ...prev,
+                  autoSync: checked,
+                }))
+              }
+            />
             <span className="text-sm text-gray-700 dark:text-gray-300">
               {autoSyncEnabled
                 ? t("common:status.enabled")
@@ -223,7 +240,12 @@ export default function WebDAVAutoSyncSettings() {
                 max={86400}
                 step={60}
                 value={syncInterval}
-                onChange={(e) => setSyncInterval(Number(e.target.value))}
+                onChange={(e) =>
+                  setLocalConfig((prev) => ({
+                    ...prev,
+                    syncInterval: Number(e.target.value),
+                  }))
+                }
                 placeholder="3600"
               />
               <p className="mt-1 text-xs text-gray-500">
@@ -241,7 +263,10 @@ export default function WebDAVAutoSyncSettings() {
               <Select
                 value={syncStrategy ?? ""}
                 onValueChange={(value) =>
-                  setSyncStrategy(value as WebDAVSettings["syncStrategy"])
+                  setLocalConfig((prev) => ({
+                    ...prev,
+                    syncStrategy: value as WebDAVSettings["syncStrategy"],
+                  }))
                 }
               >
                 <SelectTrigger>

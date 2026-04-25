@@ -10,12 +10,14 @@ import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 const {
   mockedUseUserPreferencesContext,
   mockUpdateOctopusBaseUrl,
+  mockUpdateOctopusConfig,
   mockUpdateOctopusUsername,
   mockUpdateOctopusPassword,
   mockResetOctopusConfig,
 } = vi.hoisted(() => ({
   mockedUseUserPreferencesContext: vi.fn(),
   mockUpdateOctopusBaseUrl: vi.fn(),
+  mockUpdateOctopusConfig: vi.fn(),
   mockUpdateOctopusUsername: vi.fn(),
   mockUpdateOctopusPassword: vi.fn(),
   mockResetOctopusConfig: vi.fn(),
@@ -153,10 +155,12 @@ const mockedValidateConfig = octopusAuthManager.validateConfig as ReturnType<
 const mockedShowUpdateToast = showUpdateToast as ReturnType<typeof vi.fn>
 
 const createContextValue = (overrides: Record<string, unknown> = {}) => ({
+  preferences: { lastUpdated: 1 },
   octopusBaseUrl: "https://octopus.example.com",
   octopusUsername: "admin",
   octopusPassword: "secret",
   updateOctopusBaseUrl: mockUpdateOctopusBaseUrl,
+  updateOctopusConfig: mockUpdateOctopusConfig,
   updateOctopusUsername: mockUpdateOctopusUsername,
   updateOctopusPassword: mockUpdateOctopusPassword,
   resetOctopusConfig: mockResetOctopusConfig,
@@ -179,6 +183,7 @@ describe("OctopusSettings", () => {
     vi.clearAllMocks()
 
     mockUpdateOctopusBaseUrl.mockResolvedValue(true)
+    mockUpdateOctopusConfig.mockResolvedValue(true)
     mockUpdateOctopusUsername.mockResolvedValue(true)
     mockUpdateOctopusPassword.mockResolvedValue(true)
     mockResetOctopusConfig.mockResolvedValue(true)
@@ -200,6 +205,9 @@ describe("OctopusSettings", () => {
     await waitFor(() => {
       expect(mockUpdateOctopusBaseUrl).toHaveBeenCalledWith(
         "https://new-octopus.example.com",
+        {
+          expectedLastUpdated: 1,
+        },
       )
     })
 
@@ -223,7 +231,9 @@ describe("OctopusSettings", () => {
     fireEvent.blur(passwordInput)
 
     await waitFor(() => {
-      expect(mockUpdateOctopusPassword).toHaveBeenCalledWith("next-secret")
+      expect(mockUpdateOctopusPassword).toHaveBeenCalledWith("next-secret", {
+        expectedLastUpdated: 1,
+      })
     })
 
     expect(mockedShowUpdateToast).toHaveBeenCalledWith(
@@ -240,7 +250,7 @@ describe("OctopusSettings", () => {
     })
   })
 
-  it("toggles password visibility and syncs local inputs when context values change", async () => {
+  it("toggles password visibility and refreshes clean local inputs when context values change", async () => {
     let contextValue = createContextValue()
     mockedUseUserPreferencesContext.mockImplementation(() => contextValue)
 
@@ -258,23 +268,8 @@ describe("OctopusSettings", () => {
     )
     expect(passwordInput).toHaveAttribute("type", "text")
 
-    fireEvent.change(
-      screen.getByLabelText("settings:octopus.fields.baseUrlPlaceholder"),
-      {
-        target: { value: "https://draft.example.com" },
-      },
-    )
-    fireEvent.change(
-      screen.getByLabelText("settings:octopus.fields.usernamePlaceholder"),
-      {
-        target: { value: "draft-user" },
-      },
-    )
-    fireEvent.change(passwordInput, {
-      target: { value: "draft-password" },
-    })
-
     contextValue = createContextValue({
+      preferences: { lastUpdated: 2 },
       octopusBaseUrl: "https://updated.example.com",
       octopusUsername: "updated-user",
       octopusPassword: "updated-password",
@@ -293,6 +288,56 @@ describe("OctopusSettings", () => {
         screen.getByLabelText("settings:octopus.fields.passwordPlaceholder"),
       ).toHaveValue("updated-password")
     })
+  })
+
+  it("keeps dirty local inputs during external refreshes and guards stale saves with the original snapshot version", async () => {
+    let contextValue = createContextValue({
+      preferences: { lastUpdated: 10 },
+    })
+    mockedUseUserPreferencesContext.mockImplementation(() => contextValue)
+    mockUpdateOctopusBaseUrl.mockResolvedValue(false)
+
+    const { rerender } = render(<OctopusSettings />)
+
+    const baseUrlInput = screen.getByLabelText(
+      "settings:octopus.fields.baseUrlPlaceholder",
+    )
+    fireEvent.change(baseUrlInput, {
+      target: { value: "https://draft.example.com" },
+    })
+
+    contextValue = createContextValue({
+      preferences: { lastUpdated: 11 },
+      octopusBaseUrl: "https://imported.example.com",
+      octopusUsername: "imported-user",
+      octopusPassword: "imported-password",
+    })
+
+    rerender(<OctopusSettings />)
+
+    expect(baseUrlInput).toHaveValue("https://draft.example.com")
+    expect(
+      screen.getByLabelText("settings:octopus.fields.usernamePlaceholder"),
+    ).toHaveValue("admin")
+    expect(
+      screen.getByLabelText("settings:octopus.fields.passwordPlaceholder"),
+    ).toHaveValue("secret")
+
+    fireEvent.blur(baseUrlInput)
+
+    await waitFor(() => {
+      expect(mockUpdateOctopusBaseUrl).toHaveBeenCalledWith(
+        "https://draft.example.com",
+        {
+          expectedLastUpdated: 10,
+        },
+      )
+    })
+
+    expect(mockedShowUpdateToast).toHaveBeenCalledWith(
+      false,
+      "settings:octopus.fields.baseUrlLabel",
+    )
   })
 
   it("shows a missing-fields error without validating when required values are blank", async () => {
@@ -317,8 +362,7 @@ describe("OctopusSettings", () => {
     )
     expect(mockedValidateConfig).not.toHaveBeenCalled()
     expect(mockUpdateOctopusBaseUrl).not.toHaveBeenCalled()
-    expect(mockUpdateOctopusUsername).not.toHaveBeenCalled()
-    expect(mockUpdateOctopusPassword).not.toHaveBeenCalled()
+    expect(mockUpdateOctopusConfig).not.toHaveBeenCalled()
   })
 
   it("validates trimmed config, disables the button in flight, and persists successful values", async () => {
@@ -378,12 +422,15 @@ describe("OctopusSettings", () => {
     deferredValidation.resolve({ success: true })
 
     await waitFor(() => {
-      expect(mockUpdateOctopusBaseUrl).toHaveBeenCalledWith(
-        "https://validated.example.com",
-      )
-      expect(mockUpdateOctopusUsername).toHaveBeenCalledWith("validated-user")
-      expect(mockUpdateOctopusPassword).toHaveBeenCalledWith(
-        "validated-password",
+      expect(mockUpdateOctopusConfig).toHaveBeenCalledWith(
+        {
+          baseUrl: "https://validated.example.com",
+          username: "validated-user",
+          password: "validated-password",
+        },
+        {
+          expectedLastUpdated: 1,
+        },
       )
       expect(toast.success).toHaveBeenCalledWith(
         "settings:octopus.validation.success",
@@ -419,9 +466,7 @@ describe("OctopusSettings", () => {
       )
     })
 
-    expect(mockUpdateOctopusBaseUrl).not.toHaveBeenCalled()
-    expect(mockUpdateOctopusUsername).not.toHaveBeenCalled()
-    expect(mockUpdateOctopusPassword).not.toHaveBeenCalled()
+    expect(mockUpdateOctopusConfig).not.toHaveBeenCalled()
     expect(toast.success).not.toHaveBeenCalled()
   })
 

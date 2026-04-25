@@ -30,6 +30,7 @@ describe("DoneHubSettings", () => {
   it("trims the base URL before persisting", async () => {
     const updateDoneHubBaseUrl = vi.fn().mockResolvedValue(true)
     vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: { lastUpdated: 1 },
       doneHubBaseUrl: "https://api.example.com",
       doneHubAdminToken: "",
       doneHubUserId: "",
@@ -53,6 +54,9 @@ describe("DoneHubSettings", () => {
     await waitFor(() => {
       expect(updateDoneHubBaseUrl).toHaveBeenCalledWith(
         "https://donehub.example.com",
+        {
+          expectedLastUpdated: 1,
+        },
       )
     })
   })
@@ -60,6 +64,7 @@ describe("DoneHubSettings", () => {
   it("skips persisting when the trimmed base URL is unchanged", () => {
     const updateDoneHubBaseUrl = vi.fn().mockResolvedValue(true)
     vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: { lastUpdated: 1 },
       doneHubBaseUrl: "https://donehub.example.com",
       doneHubAdminToken: "",
       doneHubUserId: "",
@@ -87,6 +92,7 @@ describe("DoneHubSettings", () => {
   it("shows an inline error and skips persisting when the admin user ID is not numeric", async () => {
     const updateDoneHubUserId = vi.fn().mockResolvedValue(true)
     vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: { lastUpdated: 1 },
       doneHubBaseUrl: "https://donehub.example.com",
       doneHubAdminToken: "",
       doneHubUserId: "100",

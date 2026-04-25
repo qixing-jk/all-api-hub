@@ -1,5 +1,5 @@
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -13,6 +13,7 @@ import {
   Input,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { octopusAuthManager } from "~/services/apiService/octopus/auth"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 
@@ -23,51 +24,63 @@ import { showUpdateToast } from "~/utils/core/toastHelpers"
 export default function OctopusSettings() {
   const { t } = useTranslation("settings")
   const {
+    preferences,
     octopusBaseUrl,
     octopusUsername,
     octopusPassword,
     updateOctopusBaseUrl,
+    updateOctopusConfig,
     updateOctopusUsername,
     updateOctopusPassword,
     resetOctopusConfig,
   } = useUserPreferencesContext()
 
-  const [localBaseUrl, setLocalBaseUrl] = useState(octopusBaseUrl)
-  const [localUsername, setLocalUsername] = useState(octopusUsername)
-  const [localPassword, setLocalPassword] = useState(octopusPassword)
+  const savedConfig = useMemo(
+    () => ({
+      baseUrl: octopusBaseUrl,
+      username: octopusUsername,
+      password: octopusPassword,
+    }),
+    [octopusBaseUrl, octopusPassword, octopusUsername],
+  )
+  const {
+    draft: localConfig,
+    setDraft: setLocalConfig,
+    expectedLastUpdated,
+  } = usePreferenceDraft({
+    savedValue: savedConfig,
+    savedVersion: preferences.lastUpdated,
+  })
   const [showPassword, setShowPassword] = useState(false)
   const [isValidating, setIsValidating] = useState(false)
-
-  useEffect(() => {
-    setLocalBaseUrl(octopusBaseUrl)
-  }, [octopusBaseUrl])
-
-  useEffect(() => {
-    setLocalUsername(octopusUsername)
-  }, [octopusUsername])
-
-  useEffect(() => {
-    setLocalPassword(octopusPassword)
-  }, [octopusPassword])
+  const localBaseUrl = localConfig.baseUrl
+  const localUsername = localConfig.username
+  const localPassword = localConfig.password
 
   const handleBaseUrlChange = async (url: string) => {
     url = url.trim()
     if (url === octopusBaseUrl) return
-    const success = await updateOctopusBaseUrl(url)
+    const success = await updateOctopusBaseUrl(url, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("octopus.fields.baseUrlLabel"))
   }
 
   const handleUsernameChange = async (username: string) => {
     username = username.trim()
     if (username === octopusUsername) return
-    const success = await updateOctopusUsername(username)
+    const success = await updateOctopusUsername(username, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("octopus.fields.usernameLabel"))
   }
 
   const handlePasswordChange = async (password: string) => {
     password = password.trim()
     if (password === octopusPassword) return
-    const success = await updateOctopusPassword(password)
+    const success = await updateOctopusPassword(password, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("octopus.fields.passwordLabel"))
   }
 
@@ -82,9 +95,12 @@ export default function OctopusSettings() {
     }
 
     // Persist trimmed values to ensure stored inputs match validated values
-    setLocalBaseUrl(trimmedUrl)
-    setLocalUsername(trimmedUsername)
-    setLocalPassword(trimmedPassword)
+    setLocalConfig((prev) => ({
+      ...prev,
+      baseUrl: trimmedUrl,
+      username: trimmedUsername,
+      password: trimmedPassword,
+    }))
 
     setIsValidating(true)
     try {
@@ -96,12 +112,22 @@ export default function OctopusSettings() {
 
       if (result.success) {
         // Persist validated config to storage
-        await Promise.all([
-          updateOctopusBaseUrl(trimmedUrl),
-          updateOctopusUsername(trimmedUsername),
-          updateOctopusPassword(trimmedPassword),
-        ])
-        toast.success(t("octopus.validation.success"))
+        const success = await updateOctopusConfig(
+          {
+            baseUrl: trimmedUrl,
+            username: trimmedUsername,
+            password: trimmedPassword,
+          },
+          {
+            expectedLastUpdated,
+          },
+        )
+
+        if (success) {
+          toast.success(t("octopus.validation.success"))
+        } else {
+          toast.error(t("settings:messages.updateFailed"))
+        }
       } else {
         toast.error(result.error || t("octopus.validation.failed"))
       }
@@ -128,7 +154,12 @@ export default function OctopusSettings() {
               <Input
                 type="text"
                 value={localBaseUrl}
-                onChange={(e) => setLocalBaseUrl(e.target.value)}
+                onChange={(e) =>
+                  setLocalConfig((prev) => ({
+                    ...prev,
+                    baseUrl: e.target.value,
+                  }))
+                }
                 onBlur={(e) => handleBaseUrlChange(e.target.value)}
                 placeholder={t("octopus.fields.baseUrlPlaceholder")}
               />
@@ -142,7 +173,12 @@ export default function OctopusSettings() {
               <Input
                 type="text"
                 value={localUsername}
-                onChange={(e) => setLocalUsername(e.target.value)}
+                onChange={(e) =>
+                  setLocalConfig((prev) => ({
+                    ...prev,
+                    username: e.target.value,
+                  }))
+                }
                 onBlur={(e) => handleUsernameChange(e.target.value)}
                 placeholder={t("octopus.fields.usernamePlaceholder")}
               />
@@ -157,7 +193,12 @@ export default function OctopusSettings() {
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={localPassword}
-                  onChange={(e) => setLocalPassword(e.target.value)}
+                  onChange={(e) =>
+                    setLocalConfig((prev) => ({
+                      ...prev,
+                      password: e.target.value,
+                    }))
+                  }
                   onBlur={(e) => handlePasswordChange(e.target.value)}
                   placeholder={t("octopus.fields.passwordPlaceholder")}
                   rightIcon={

@@ -30,6 +30,7 @@ describe("VeloeraSettings", () => {
   it("shows an inline error and skips persisting when the admin user ID is not numeric", async () => {
     const updateVeloeraUserId = vi.fn().mockResolvedValue(true)
     vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: { lastUpdated: 1 },
       veloeraBaseUrl: "https://veloera.example.com",
       veloeraAdminToken: "",
       veloeraUserId: "200",

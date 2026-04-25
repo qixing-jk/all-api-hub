@@ -58,6 +58,7 @@ vi.mock(
 )
 
 const createContextValue = (overrides: Record<string, unknown> = {}) => ({
+  preferences: { lastUpdated: 1 },
   newApiBaseUrl: "https://managed.example",
   newApiAdminToken: "managed-admin-token",
   newApiUserId: "1",
@@ -149,16 +150,25 @@ describe("BasicSettings tab layout", () => {
     await waitFor(() =>
       expect(contextValue.updateNewApiUsername).toHaveBeenCalledWith(
         "next-admin",
+        {
+          expectedLastUpdated: 1,
+        },
       ),
     )
     await waitFor(() =>
       expect(contextValue.updateNewApiPassword).toHaveBeenCalledWith(
         " next-password ",
+        {
+          expectedLastUpdated: 1,
+        },
       ),
     )
     await waitFor(() =>
       expect(contextValue.updateNewApiTotpSecret).toHaveBeenCalledWith(
         "JBSWY3DPEHPK3PXQ",
+        {
+          expectedLastUpdated: 1,
+        },
       ),
     )
   })

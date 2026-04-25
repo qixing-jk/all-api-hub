@@ -1,10 +1,11 @@
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
 import { Card, CardItem, CardList, IconButton, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 /**
@@ -14,6 +15,7 @@ import { showUpdateToast } from "~/utils/core/toastHelpers"
 export default function ClaudeCodeRouterSettings() {
   const { t } = useTranslation(["settings", "keyManagement"])
   const {
+    preferences,
     claudeCodeRouterBaseUrl,
     claudeCodeRouterApiKey,
     updateClaudeCodeRouterBaseUrl,
@@ -21,27 +23,38 @@ export default function ClaudeCodeRouterSettings() {
     resetClaudeCodeRouterConfig,
   } = useUserPreferencesContext()
 
-  const [localBaseUrl, setLocalBaseUrl] = useState(claudeCodeRouterBaseUrl)
-  const [localKey, setLocalKey] = useState(claudeCodeRouterApiKey)
+  const savedConfig = useMemo(
+    () => ({
+      baseUrl: claudeCodeRouterBaseUrl,
+      apiKey: claudeCodeRouterApiKey,
+    }),
+    [claudeCodeRouterApiKey, claudeCodeRouterBaseUrl],
+  )
+  const {
+    draft: localConfig,
+    setDraft: setLocalConfig,
+    expectedLastUpdated,
+  } = usePreferenceDraft({
+    savedValue: savedConfig,
+    savedVersion: preferences.lastUpdated,
+  })
   const [showKey, setShowKey] = useState(false)
-
-  useEffect(() => {
-    setLocalBaseUrl(claudeCodeRouterBaseUrl)
-  }, [claudeCodeRouterBaseUrl])
-
-  useEffect(() => {
-    setLocalKey(claudeCodeRouterApiKey)
-  }, [claudeCodeRouterApiKey])
+  const localBaseUrl = localConfig.baseUrl
+  const localKey = localConfig.apiKey
 
   const handleBaseUrlChange = async (url: string) => {
     if (url === claudeCodeRouterBaseUrl) return
-    const success = await updateClaudeCodeRouterBaseUrl(url)
+    const success = await updateClaudeCodeRouterBaseUrl(url, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("settings:claudeCodeRouter.baseUrlLabel"))
   }
 
   const handleKeyChange = async (key: string) => {
     if (key === claudeCodeRouterApiKey) return
-    const success = await updateClaudeCodeRouterApiKey(key)
+    const success = await updateClaudeCodeRouterApiKey(key, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("settings:claudeCodeRouter.apiKeyLabel"))
   }
 
@@ -61,7 +74,12 @@ export default function ClaudeCodeRouterSettings() {
               <Input
                 type="text"
                 value={localBaseUrl}
-                onChange={(e) => setLocalBaseUrl(e.target.value)}
+                onChange={(e) =>
+                  setLocalConfig((prev) => ({
+                    ...prev,
+                    baseUrl: e.target.value,
+                  }))
+                }
                 onBlur={(e) => handleBaseUrlChange(e.target.value)}
                 placeholder={t("settings:claudeCodeRouter.baseUrlPlaceholder")}
               />
@@ -76,7 +94,12 @@ export default function ClaudeCodeRouterSettings() {
                 <Input
                   type={showKey ? "text" : "password"}
                   value={localKey}
-                  onChange={(e) => setLocalKey(e.target.value)}
+                  onChange={(e) =>
+                    setLocalConfig((prev) => ({
+                      ...prev,
+                      apiKey: e.target.value,
+                    }))
+                  }
                   onBlur={(e) => handleKeyChange(e.target.value)}
                   placeholder={t("settings:claudeCodeRouter.apiKeyPlaceholder")}
                   rightIcon={

@@ -1,5 +1,5 @@
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -13,6 +13,7 @@ import {
   Link,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { verifyCliProxyManagementConnection } from "~/services/integrations/cliProxyService"
 import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
 
@@ -25,6 +26,7 @@ const CLI_PROXY_MANAGEMENT_DOC_URL = "https://help.router-for.me/management/api"
 export default function CliProxySettings() {
   const { t } = useTranslation("settings")
   const {
+    preferences,
     cliProxyBaseUrl,
     cliProxyManagementKey,
     updateCliProxyBaseUrl,
@@ -32,18 +34,25 @@ export default function CliProxySettings() {
     resetCliProxyConfig,
   } = useUserPreferencesContext()
 
-  const [localBaseUrl, setLocalBaseUrl] = useState(cliProxyBaseUrl)
-  const [localKey, setLocalKey] = useState(cliProxyManagementKey)
+  const savedConfig = useMemo(
+    () => ({
+      baseUrl: cliProxyBaseUrl,
+      managementKey: cliProxyManagementKey,
+    }),
+    [cliProxyBaseUrl, cliProxyManagementKey],
+  )
+  const {
+    draft: localConfig,
+    setDraft: setLocalConfig,
+    expectedLastUpdated,
+  } = usePreferenceDraft({
+    savedValue: savedConfig,
+    savedVersion: preferences.lastUpdated,
+  })
   const [showKey, setShowKey] = useState(false)
   const [isCheckingConnection, setIsCheckingConnection] = useState(false)
-
-  useEffect(() => {
-    setLocalBaseUrl(cliProxyBaseUrl)
-  }, [cliProxyBaseUrl])
-
-  useEffect(() => {
-    setLocalKey(cliProxyManagementKey)
-  }, [cliProxyManagementKey])
+  const localBaseUrl = localConfig.baseUrl
+  const localKey = localConfig.managementKey
 
   const runConnectionCheck = async (overrides?: {
     baseUrl?: string
@@ -75,10 +84,12 @@ export default function CliProxySettings() {
 
   const handleBaseUrlChange = async (url: string) => {
     const trimmedUrl = url.trim()
-    setLocalBaseUrl(trimmedUrl)
+    setLocalConfig((prev) => ({ ...prev, baseUrl: trimmedUrl }))
 
     if (trimmedUrl === cliProxyBaseUrl.trim()) return
-    const success = await updateCliProxyBaseUrl(trimmedUrl)
+    const success = await updateCliProxyBaseUrl(trimmedUrl, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("cliProxy.baseUrlLabel"))
 
     if (success && trimmedUrl && localKey.trim()) {
@@ -91,10 +102,12 @@ export default function CliProxySettings() {
 
   const handleKeyChange = async (key: string) => {
     const trimmedKey = key.trim()
-    setLocalKey(trimmedKey)
+    setLocalConfig((prev) => ({ ...prev, managementKey: trimmedKey }))
 
     if (trimmedKey === cliProxyManagementKey.trim()) return
-    const success = await updateCliProxyManagementKey(trimmedKey)
+    const success = await updateCliProxyManagementKey(trimmedKey, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("cliProxy.managementKeyLabel"))
 
     if (success && localBaseUrl.trim() && trimmedKey) {
@@ -121,7 +134,12 @@ export default function CliProxySettings() {
               <Input
                 type="text"
                 value={localBaseUrl}
-                onChange={(e) => setLocalBaseUrl(e.target.value)}
+                onChange={(e) =>
+                  setLocalConfig((prev) => ({
+                    ...prev,
+                    baseUrl: e.target.value,
+                  }))
+                }
                 onBlur={(e) => handleBaseUrlChange(e.target.value)}
                 placeholder="http://localhost:8317/v0/management"
               />
@@ -136,7 +154,12 @@ export default function CliProxySettings() {
                 <Input
                   type={showKey ? "text" : "password"}
                   value={localKey}
-                  onChange={(e) => setLocalKey(e.target.value)}
+                  onChange={(e) =>
+                    setLocalConfig((prev) => ({
+                      ...prev,
+                      managementKey: e.target.value,
+                    }))
+                  }
                   onBlur={(e) => handleKeyChange(e.target.value)}
                   rightIcon={
                     <IconButton

@@ -217,21 +217,26 @@ describe("WebDAVSettings", () => {
       screen.getByRole("button", { name: "importExport:webdav.saveConfig" }),
     )
     await waitFor(() => {
-      expect(mockUserPreferences.savePreferences).toHaveBeenCalledWith({
-        webdav: {
-          url: "https://dav.example.com/backup.json",
-          username: "alice",
-          password: "pw",
-          backupEncryptionEnabled: true,
-          backupEncryptionPassword: "stored-secret",
-          syncData: {
-            accounts: true,
-            bookmarks: true,
-            apiCredentialProfiles: true,
-            preferences: true,
+      expect(mockUserPreferences.savePreferences).toHaveBeenCalledWith(
+        {
+          webdav: {
+            url: "https://dav.example.com/backup.json",
+            username: "alice",
+            password: "pw",
+            backupEncryptionEnabled: true,
+            backupEncryptionPassword: "stored-secret",
+            syncData: {
+              accounts: true,
+              bookmarks: true,
+              apiCredentialProfiles: true,
+              preferences: true,
+            },
           },
         },
-      })
+        {
+          expectedLastUpdated: 0,
+        },
+      )
     })
     expect(toast.success).toHaveBeenCalledWith(
       "settings:messages.updateSuccess",
@@ -328,32 +333,43 @@ describe("WebDAVSettings", () => {
         { preserveWebdav: true },
       )
     })
-    expect(mockUserPreferences.savePreferences).toHaveBeenCalledWith({
-      webdav: {
-        backupEncryptionPassword: "manual-secret",
+    expect(mockUserPreferences.savePreferences).toHaveBeenNthCalledWith(
+      2,
+      {
+        webdav: {
+          backupEncryptionPassword: "manual-secret",
+        },
       },
-    })
+      {
+        expectedLastUpdated: expect.any(Number),
+      },
+    )
 
     fireEvent.click(
       screen.getByRole("button", { name: "importExport:webdav.saveConfig" }),
     )
 
     await waitFor(() => {
-      expect(mockUserPreferences.savePreferences).toHaveBeenLastCalledWith({
-        webdav: {
-          url: "https://dav.example.com/backup.json",
-          username: "alice",
-          password: "pw",
-          backupEncryptionEnabled: true,
-          backupEncryptionPassword: "manual-secret",
-          syncData: {
-            accounts: true,
-            bookmarks: true,
-            apiCredentialProfiles: true,
-            preferences: true,
+      expect(mockUserPreferences.savePreferences).toHaveBeenLastCalledWith(
+        {
+          webdav: {
+            url: "https://dav.example.com/backup.json",
+            username: "alice",
+            password: "pw",
+            backupEncryptionEnabled: true,
+            backupEncryptionPassword: "manual-secret",
+            syncData: {
+              accounts: true,
+              bookmarks: true,
+              apiCredentialProfiles: true,
+              preferences: true,
+            },
           },
         },
-      })
+        {
+          expectedLastUpdated: expect.any(Number),
+        },
+      )
     })
     expect(toast.success).toHaveBeenCalledWith(
       "importExport:import.importSuccess",
@@ -500,6 +516,7 @@ describe("WebDAVSettings", () => {
         { imported: true },
         { preserveWebdav: true },
       )
+      expect(mockUserPreferences.getPreferences).toHaveBeenCalledTimes(2)
       expect(toast.success).toHaveBeenCalledWith(
         "importExport:import.importSuccess",
       )

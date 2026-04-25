@@ -33,6 +33,7 @@ describe("CliProxySettings", () => {
     vi.clearAllMocks()
 
     vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: { lastUpdated: 1 },
       cliProxyBaseUrl: "http://localhost:8317/v0/management",
       cliProxyManagementKey: "secret-key",
       updateCliProxyBaseUrl: vi.fn().mockResolvedValue(true),
@@ -56,6 +57,7 @@ describe("CliProxySettings", () => {
   it("trims the base URL before persisting and re-checks the connection", async () => {
     const updateCliProxyBaseUrl = vi.fn().mockResolvedValue(true)
     vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: { lastUpdated: 1 },
       cliProxyBaseUrl: "http://localhost:8317/v0/management",
       cliProxyManagementKey: "secret-key",
       updateCliProxyBaseUrl,
@@ -77,6 +79,9 @@ describe("CliProxySettings", () => {
     await waitFor(() => {
       expect(updateCliProxyBaseUrl).toHaveBeenCalledWith(
         "http://localhost:9000/v0/management",
+        {
+          expectedLastUpdated: 1,
+        },
       )
     })
 
@@ -104,6 +109,7 @@ describe("CliProxySettings", () => {
       message: "messages:toast.error.operationFailedGeneric",
     })
     vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: { lastUpdated: 1 },
       cliProxyBaseUrl: "http://localhost:8317/v0/management",
       cliProxyManagementKey: "secret-key",
       updateCliProxyBaseUrl: vi.fn().mockResolvedValue(true),
@@ -123,6 +129,9 @@ describe("CliProxySettings", () => {
     await waitFor(() => {
       expect(updateCliProxyManagementKey).toHaveBeenCalledWith(
         "next-secret-key",
+        {
+          expectedLastUpdated: 1,
+        },
       )
     })
 
@@ -183,6 +192,42 @@ describe("CliProxySettings", () => {
     expect(verifyCliProxyManagementConnection).toHaveBeenCalledWith({
       baseUrl: "http://localhost:8317/v0/management",
       managementKey: "secret-key",
+    })
+  })
+
+  it("refreshes clean draft fields when the saved preferences snapshot changes", async () => {
+    let contextValue = {
+      preferences: { lastUpdated: 1 },
+      cliProxyBaseUrl: "http://localhost:8317/v0/management",
+      cliProxyManagementKey: "secret-key",
+      updateCliProxyBaseUrl: vi.fn().mockResolvedValue(true),
+      updateCliProxyManagementKey: vi.fn().mockResolvedValue(true),
+      resetCliProxyConfig: vi.fn().mockResolvedValue(true),
+    }
+    vi.mocked(useUserPreferencesContext).mockImplementation(
+      () => contextValue as any,
+    )
+
+    const { rerender } = renderSubject()
+
+    contextValue = {
+      ...contextValue,
+      preferences: { lastUpdated: 2 },
+      cliProxyBaseUrl: "http://localhost:9000/v0/management",
+      cliProxyManagementKey: "next-secret-key",
+    }
+
+    rerender(
+      <I18nextProvider i18n={testI18n}>
+        <CliProxySettings />
+      </I18nextProvider>,
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByPlaceholderText("http://localhost:8317/v0/management"),
+      ).toHaveValue("http://localhost:9000/v0/management")
+      expect(screen.getByDisplayValue("next-secret-key")).toBeInTheDocument()
     })
   })
 })

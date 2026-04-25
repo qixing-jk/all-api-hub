@@ -1,5 +1,5 @@
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -16,6 +16,7 @@ import { getSiteApiRouter, NEW_API } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
+import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { createTab } from "~/utils/browser/browserApi"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
@@ -28,6 +29,7 @@ import { joinUrl } from "~/utils/core/url"
 export default function NewApiSettings() {
   const { t } = useTranslation("settings")
   const {
+    preferences,
     newApiBaseUrl,
     newApiAdminToken,
     newApiUserId,
@@ -43,50 +45,56 @@ export default function NewApiSettings() {
     resetNewApiConfig,
   } = useUserPreferencesContext()
 
-  const [localBaseUrl, setLocalBaseUrl] = useState(newApiBaseUrl)
-  const [localAdminToken, setLocalAdminToken] = useState(newApiAdminToken)
+  const savedConfig = useMemo(
+    () => ({
+      baseUrl: newApiBaseUrl,
+      adminToken: newApiAdminToken,
+      userId: newApiUserId,
+      username: newApiUsername,
+      password: newApiPassword,
+      totpSecret: newApiTotpSecret,
+    }),
+    [
+      newApiAdminToken,
+      newApiBaseUrl,
+      newApiPassword,
+      newApiTotpSecret,
+      newApiUserId,
+      newApiUsername,
+    ],
+  )
+  const {
+    draft: localConfig,
+    setDraft: setLocalConfig,
+    expectedLastUpdated,
+  } = usePreferenceDraft({
+    savedValue: savedConfig,
+    savedVersion: preferences.lastUpdated,
+  })
   const [showAdminToken, setShowAdminToken] = useState(false)
-  const [localUserId, setLocalUserId] = useState(newApiUserId)
-  const [localUsername, setLocalUsername] = useState(newApiUsername)
-  const [localPassword, setLocalPassword] = useState(newApiPassword)
-  const [localTotpSecret, setLocalTotpSecret] = useState(newApiTotpSecret)
   const [showPassword, setShowPassword] = useState(false)
   const [showTotpSecret, setShowTotpSecret] = useState(false)
   const verification = useNewApiManagedVerification()
-
-  useEffect(() => {
-    setLocalBaseUrl(newApiBaseUrl)
-  }, [newApiBaseUrl])
-
-  useEffect(() => {
-    setLocalAdminToken(newApiAdminToken)
-  }, [newApiAdminToken])
-
-  useEffect(() => {
-    setLocalUserId(newApiUserId)
-  }, [newApiUserId])
-
-  useEffect(() => {
-    setLocalUsername(newApiUsername)
-  }, [newApiUsername])
-
-  useEffect(() => {
-    setLocalPassword(newApiPassword)
-  }, [newApiPassword])
-
-  useEffect(() => {
-    setLocalTotpSecret(newApiTotpSecret)
-  }, [newApiTotpSecret])
+  const localBaseUrl = localConfig.baseUrl
+  const localAdminToken = localConfig.adminToken
+  const localUserId = localConfig.userId
+  const localUsername = localConfig.username
+  const localPassword = localConfig.password
+  const localTotpSecret = localConfig.totpSecret
 
   const handleNewApiBaseUrlChange = async (url: string) => {
     if (url === newApiBaseUrl) return
-    const success = await updateNewApiBaseUrl(url)
+    const success = await updateNewApiBaseUrl(url, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("newApi.fields.baseUrlLabel"))
   }
 
   const handleNewApiAdminTokenChange = async (token: string) => {
     if (token === newApiAdminToken) return
-    const success = await updateNewApiAdminToken(token)
+    const success = await updateNewApiAdminToken(token, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("newApi.fields.adminTokenLabel"))
   }
 
@@ -94,31 +102,39 @@ export default function NewApiSettings() {
     const trimmedId = id.trim()
     if (!isManagedSiteAdminUserIdInputValid(trimmedId)) return
 
-    setLocalUserId(trimmedId)
+    setLocalConfig((prev) => ({ ...prev, userId: trimmedId }))
     if (trimmedId === newApiUserId) return
-    const success = await updateNewApiUserId(trimmedId)
+    const success = await updateNewApiUserId(trimmedId, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("newApi.fields.userIdLabel"))
   }
 
   const handleNewApiUsernameChange = async (username: string) => {
     const trimmedUsername = username.trim()
-    setLocalUsername(trimmedUsername)
+    setLocalConfig((prev) => ({ ...prev, username: trimmedUsername }))
     if (trimmedUsername === newApiUsername) return
-    const success = await updateNewApiUsername(trimmedUsername)
+    const success = await updateNewApiUsername(trimmedUsername, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("newApi.fields.usernameLabel"))
   }
 
   const handleNewApiPasswordChange = async (password: string) => {
     if (password === newApiPassword) return
-    const success = await updateNewApiPassword(password)
+    const success = await updateNewApiPassword(password, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("newApi.fields.passwordLabel"))
   }
 
   const handleNewApiTotpSecretChange = async (totpSecret: string) => {
     const trimmedTotpSecret = totpSecret.trim()
-    setLocalTotpSecret(trimmedTotpSecret)
+    setLocalConfig((prev) => ({ ...prev, totpSecret: trimmedTotpSecret }))
     if (trimmedTotpSecret === newApiTotpSecret) return
-    const success = await updateNewApiTotpSecret(trimmedTotpSecret)
+    const success = await updateNewApiTotpSecret(trimmedTotpSecret, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("newApi.fields.totpSecretLabel"))
   }
 
@@ -171,7 +187,12 @@ export default function NewApiSettings() {
               <Input
                 type="text"
                 value={localBaseUrl}
-                onChange={(e) => setLocalBaseUrl(e.target.value)}
+                onChange={(e) =>
+                  setLocalConfig((prev) => ({
+                    ...prev,
+                    baseUrl: e.target.value,
+                  }))
+                }
                 onBlur={(e) => handleNewApiBaseUrlChange(e.target.value)}
                 placeholder={t("newApi.fields.baseUrlPlaceholder")}
               />
@@ -202,7 +223,12 @@ export default function NewApiSettings() {
                 <Input
                   type={showAdminToken ? "text" : "password"}
                   value={localAdminToken}
-                  onChange={(e) => setLocalAdminToken(e.target.value)}
+                  onChange={(e) =>
+                    setLocalConfig((prev) => ({
+                      ...prev,
+                      adminToken: e.target.value,
+                    }))
+                  }
                   onBlur={(e) => handleNewApiAdminTokenChange(e.target.value)}
                   rightIcon={
                     <IconButton
@@ -236,7 +262,12 @@ export default function NewApiSettings() {
                 inputMode="numeric"
                 pattern="[0-9]*"
                 value={localUserId}
-                onChange={(e) => setLocalUserId(e.target.value)}
+                onChange={(e) =>
+                  setLocalConfig((prev) => ({
+                    ...prev,
+                    userId: e.target.value,
+                  }))
+                }
                 onBlur={(e) => handleNewApiUserIdChange(e.target.value)}
                 error={userIdError}
                 aria-invalid={Boolean(userIdError)}
@@ -251,7 +282,12 @@ export default function NewApiSettings() {
               <Input
                 type="text"
                 value={localUsername}
-                onChange={(e) => setLocalUsername(e.target.value)}
+                onChange={(e) =>
+                  setLocalConfig((prev) => ({
+                    ...prev,
+                    username: e.target.value,
+                  }))
+                }
                 onBlur={(e) => handleNewApiUsernameChange(e.target.value)}
                 placeholder={t("newApi.fields.usernamePlaceholder")}
               />
@@ -266,7 +302,12 @@ export default function NewApiSettings() {
                 <Input
                   type={showPassword ? "text" : "password"}
                   value={localPassword}
-                  onChange={(e) => setLocalPassword(e.target.value)}
+                  onChange={(e) =>
+                    setLocalConfig((prev) => ({
+                      ...prev,
+                      password: e.target.value,
+                    }))
+                  }
                   onBlur={(e) => handleNewApiPasswordChange(e.target.value)}
                   placeholder={t("newApi.fields.passwordPlaceholder")}
                   rightIcon={
@@ -300,7 +341,12 @@ export default function NewApiSettings() {
                 <Input
                   type={showTotpSecret ? "text" : "password"}
                   value={localTotpSecret}
-                  onChange={(e) => setLocalTotpSecret(e.target.value)}
+                  onChange={(e) =>
+                    setLocalConfig((prev) => ({
+                      ...prev,
+                      totpSecret: e.target.value,
+                    }))
+                  }
                   onBlur={(e) => handleNewApiTotpSecretChange(e.target.value)}
                   placeholder={t("newApi.fields.totpSecretPlaceholder")}
                   rightIcon={

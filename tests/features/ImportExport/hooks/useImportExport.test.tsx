@@ -7,12 +7,14 @@ const {
   importFromBackupObjectMock,
   loggerErrorMock,
   parseBackupSummaryMock,
+  loadPreferencesMock,
   toastErrorMock,
   toastSuccessMock,
 } = vi.hoisted(() => ({
   importFromBackupObjectMock: vi.fn(),
   loggerErrorMock: vi.fn(),
   parseBackupSummaryMock: vi.fn(),
+  loadPreferencesMock: vi.fn(),
   toastErrorMock: vi.fn(),
   toastSuccessMock: vi.fn(),
 }))
@@ -42,6 +44,12 @@ vi.mock("~/utils/core/logger", () => ({
   }),
 }))
 
+vi.mock("~/contexts/UserPreferencesContext", () => ({
+  useUserPreferencesContext: () => ({
+    loadPreferences: loadPreferencesMock,
+  }),
+}))
+
 vi.mock("~/features/ImportExport/utils", () => ({
   importFromBackupObject: (...args: unknown[]) =>
     importFromBackupObjectMock(...args),
@@ -63,6 +71,7 @@ describe("useImportExport", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.stubGlobal("FileReader", MockFileReader as unknown as typeof FileReader)
+    loadPreferencesMock.mockResolvedValue(undefined)
   })
 
   it("loads selected backup file text into state and ignores empty file selections", async () => {
@@ -133,6 +142,7 @@ describe("useImportExport", () => {
     expect(toastSuccessMock).toHaveBeenCalledWith(
       "importExport:import.importSuccess",
     )
+    expect(loadPreferencesMock).toHaveBeenCalledTimes(1)
     expect(result.current.isImporting).toBe(false)
 
     importFromBackupObjectMock.mockResolvedValueOnce({ allImported: false })
@@ -142,6 +152,7 @@ describe("useImportExport", () => {
     })
 
     expect(toastSuccessMock).toHaveBeenCalledTimes(1)
+    expect(loadPreferencesMock).toHaveBeenCalledTimes(1)
   })
 
   it("surfaces format errors for malformed JSON and detailed fallback errors for import failures", async () => {

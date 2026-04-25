@@ -1,5 +1,5 @@
 import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
-import { useEffect, useState } from "react"
+import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -13,6 +13,7 @@ import {
 } from "~/components/ui"
 import { getSiteApiRouter, VELOERA } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { createTab } from "~/utils/browser/browserApi"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
@@ -25,6 +26,7 @@ import { joinUrl } from "~/utils/core/url"
 export default function VeloeraSettings() {
   const { t } = useTranslation("settings")
   const {
+    preferences,
     veloeraBaseUrl,
     veloeraAdminToken,
     veloeraUserId,
@@ -34,32 +36,40 @@ export default function VeloeraSettings() {
     resetVeloeraConfig,
   } = useUserPreferencesContext()
 
-  const [localBaseUrl, setLocalBaseUrl] = useState(veloeraBaseUrl)
-  const [localAdminToken, setLocalAdminToken] = useState(veloeraAdminToken)
+  const savedConfig = useMemo(
+    () => ({
+      baseUrl: veloeraBaseUrl,
+      adminToken: veloeraAdminToken,
+      userId: veloeraUserId,
+    }),
+    [veloeraAdminToken, veloeraBaseUrl, veloeraUserId],
+  )
+  const {
+    draft: localConfig,
+    setDraft: setLocalConfig,
+    expectedLastUpdated,
+  } = usePreferenceDraft({
+    savedValue: savedConfig,
+    savedVersion: preferences.lastUpdated,
+  })
   const [showAdminToken, setShowAdminToken] = useState(false)
-  const [localUserId, setLocalUserId] = useState(veloeraUserId)
-
-  useEffect(() => {
-    setLocalBaseUrl(veloeraBaseUrl)
-  }, [veloeraBaseUrl])
-
-  useEffect(() => {
-    setLocalAdminToken(veloeraAdminToken)
-  }, [veloeraAdminToken])
-
-  useEffect(() => {
-    setLocalUserId(veloeraUserId)
-  }, [veloeraUserId])
+  const localBaseUrl = localConfig.baseUrl
+  const localAdminToken = localConfig.adminToken
+  const localUserId = localConfig.userId
 
   const handleVeloeraBaseUrlChange = async (url: string) => {
     if (url === veloeraBaseUrl) return
-    const success = await updateVeloeraBaseUrl(url)
+    const success = await updateVeloeraBaseUrl(url, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("veloera.fields.baseUrlLabel"))
   }
 
   const handleVeloeraAdminTokenChange = async (token: string) => {
     if (token === veloeraAdminToken) return
-    const success = await updateVeloeraAdminToken(token)
+    const success = await updateVeloeraAdminToken(token, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("veloera.fields.adminTokenLabel"))
   }
 
@@ -67,9 +77,11 @@ export default function VeloeraSettings() {
     const trimmedId = id.trim()
     if (!isManagedSiteAdminUserIdInputValid(trimmedId)) return
 
-    setLocalUserId(trimmedId)
+    setLocalConfig((prev) => ({ ...prev, userId: trimmedId }))
     if (trimmedId === veloeraUserId) return
-    const success = await updateVeloeraUserId(trimmedId)
+    const success = await updateVeloeraUserId(trimmedId, {
+      expectedLastUpdated,
+    })
     showUpdateToast(success, t("veloera.fields.userIdLabel"))
   }
 
@@ -109,7 +121,12 @@ export default function VeloeraSettings() {
               <Input
                 type="text"
                 value={localBaseUrl}
-                onChange={(e) => setLocalBaseUrl(e.target.value)}
+                onChange={(e) =>
+                  setLocalConfig((prev) => ({
+                    ...prev,
+                    baseUrl: e.target.value,
+                  }))
+                }
                 onBlur={(e) => handleVeloeraBaseUrlChange(e.target.value)}
                 placeholder={t("veloera.fields.baseUrlPlaceholder")}
               />
@@ -140,7 +157,12 @@ export default function VeloeraSettings() {
                 <Input
                   type={showAdminToken ? "text" : "password"}
                   value={localAdminToken}
-                  onChange={(e) => setLocalAdminToken(e.target.value)}
+                  onChange={(e) =>
+                    setLocalConfig((prev) => ({
+                      ...prev,
+                      adminToken: e.target.value,
+                    }))
+                  }
                   onBlur={(e) => handleVeloeraAdminTokenChange(e.target.value)}
                   rightIcon={
                     <IconButton
@@ -174,7 +196,12 @@ export default function VeloeraSettings() {
                 inputMode="numeric"
                 pattern="[0-9]*"
                 value={localUserId}
-                onChange={(e) => setLocalUserId(e.target.value)}
+                onChange={(e) =>
+                  setLocalConfig((prev) => ({
+                    ...prev,
+                    userId: e.target.value,
+                  }))
+                }
                 onBlur={(e) => handleVeloeraUserIdChange(e.target.value)}
                 error={userIdError}
                 aria-invalid={Boolean(userIdError)}
