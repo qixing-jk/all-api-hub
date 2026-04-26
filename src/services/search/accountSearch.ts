@@ -146,11 +146,13 @@ function scoreParsedUrlMatch(
   let score = 0
 
   // Domain matching
-  if (parsedUrl.domain === queryUrl.domain) {
+  if (queryUrl.domain && parsedUrl.domain === queryUrl.domain) {
     score += 6 // Exact domain match
   } else if (
-    parsedUrl.domain.includes(queryUrl.domain) ||
-    queryUrl.domain.includes(parsedUrl.domain)
+    queryUrl.domain &&
+    parsedUrl.domain &&
+    (parsedUrl.domain.includes(queryUrl.domain) ||
+      queryUrl.domain.includes(parsedUrl.domain))
   ) {
     score += 3 // Domain contains query
   }
@@ -165,13 +167,8 @@ function scoreParsedUrlMatch(
           ? [queryUrl.domain]
           : []
     for (const querySegment of queryPathSegments) {
-      if (!querySegment) continue
-      if (
-        pathSegments.some(
-          (segment) =>
-            segment.includes(querySegment) || querySegment.includes(segment),
-        )
-      ) {
+      if (!querySegment || querySegment.length < 2) continue
+      if (pathSegments.some((segment) => segment.includes(querySegment))) {
         score += 2 // Path segment contains query
         break
       }
@@ -220,15 +217,15 @@ function buildSearchTokens(query: string): SearchToken[] {
   return query
     .trim()
     .split(/\s+/)
-    .map((token) => ({
-      text: normalizeSearchText(token),
-      url: normalizeSearchUrl(token),
-      parsedUrl: null,
-    }))
-    .map((token) => ({
-      ...token,
-      parsedUrl: token.url ? parseUrl(token.url) : null,
-    }))
+    .map((token) => {
+      const url = normalizeSearchUrl(token)
+
+      return {
+        text: normalizeSearchText(token),
+        url,
+        parsedUrl: url ? parseUrl(url) : null,
+      }
+    })
     .filter((token) => token.text.length > 0 || token.url.length > 0)
 }
 
