@@ -143,6 +143,26 @@
     "toggleDesc": "有効にすると、同じサイト URL に別のアカウントを追加しようとしたときに確認ダイアログを表示します。",
     "toggleLabel": "重複追加前に警告する"
   },
+  "externalReadApi": {
+    "copyToken": "Copy",
+    "deleteToken": "Delete",
+    "description": "有効な access token を持つページやユーザースクリプトに、拡張機能の永続化データの読み取りを明示的に許可し、必要に応じて開いているページコンテキストへ軽量な変更通知を配信します。",
+    "emptyTokens": "利用可能な access token はまだありません。",
+    "enable": "外部の読み取り専用アクセスを有効化",
+    "enableDesc": "有効にすると、有効な token を持つ呼び出し元が All API Hub の永続化された主データ全体を問い合わせできます。",
+    "generateToken": "Generate Token",
+    "notifications": "変更通知を有効化",
+    "notificationsDesc": "有効にすると、開いているページが追跡対象データ変更後の fire-and-forget イベントを受け取れます。下流の配信保証や再試行は対象外です。",
+    "privacyWarning": "警告: 有効な token を持つ呼び出し元は、access_token、sessionCookie、refreshToken、apiKey などの機密フィールドを含む完全な永続化主データを読み取れます。token を削除または無効化すると、その外部アクセスは直ちに遮断されます。",
+    "regenerateToken": "Regenerate Token",
+    "title": "External Read API / Hook",
+    "tokenCopied": "Access token をコピーしました",
+    "tokenCopyFailed": "Access token のコピーに失敗しました",
+    "tokenCreatedAt": "作成日時: {{createdAt}}",
+    "tokenManagement": "Access tokens",
+    "tokenManagementDesc": "名前付き token 資格情報を作成します。下流はデータ読み取り時に各リクエストで token を渡すだけでよく、変更通知は上のトグルで別途制御します。",
+    "tokenNamePlaceholder": "例: metapi-sync"
+  },
   "logging": {
     "consoleEnabled": "コンソールログを有効化",
     "consoleEnabledDesc": "無効にすると、All API Hub はエラーを含むすべてのレベルでコンソール出力を行いません。",

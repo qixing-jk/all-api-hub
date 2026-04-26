@@ -143,6 +143,26 @@
     "toggleDesc": "開啟後，當你嘗試為同一站點 URL 再次新增帳號時，會彈出確認對話方塊。",
     "toggleLabel": "新增重複帳號前提醒"
   },
+  "externalReadApi": {
+    "copyToken": "複製",
+    "deleteToken": "刪除",
+    "description": "明確允許持有存取 token 的網頁或油猴腳本讀取擴充功能已持久化的資料，並可選地向已開啟的頁面內容廣播輕量變更通知。",
+    "emptyTokens": "目前沒有可用的存取 token。",
+    "enable": "啟用外部唯讀存取",
+    "enableDesc": "開啟後，持有有效 token 的外部呼叫方可以查詢 All API Hub 匯出的完整主存儲資料。",
+    "generateToken": "產生 Token",
+    "notifications": "啟用變更通知",
+    "notificationsDesc": "開啟後，已開啟的頁面會在資料變更後收到不等待回應的輕量通知；下游如何消費、重試不在此範圍內。",
+    "privacyWarning": "警告：啟用後，持有有效 token 的外部呼叫方可讀取完整主資料，其中可能包含 access_token、sessionCookie、refreshToken、apiKey 等敏感欄位。刪除或停用 token 後，對應外部存取會立即失效。",
+    "regenerateToken": "重設 Token",
+    "title": "外部讀取 API / Hook",
+    "tokenCopied": "存取 token 已複製",
+    "tokenCopyFailed": "複製存取 token 失敗",
+    "tokenCreatedAt": "建立時間：{{createdAt}}",
+    "tokenManagement": "存取權杖",
+    "tokenManagementDesc": "建立名稱 + token 憑證。下游後續呼叫時攜帶 token 即可讀取資料；變更通知由上方開關單獨控制。",
+    "tokenNamePlaceholder": "例如：metapi-sync"
+  },
   "logging": {
     "consoleEnabled": "啟用控制台日誌",
     "consoleEnabledDesc": "關閉後，All API Hub 不會在瀏覽器控制台輸出任何日誌（包括錯誤）。",

@@ -8,6 +8,7 @@ import ThemeToggle from "~/entrypoints/options/components/ThemeToggle"
 import ActionClickBehaviorSettings from "./ActionClickBehaviorSettings"
 import ChangelogOnUpdateSettings from "./ChangelogOnUpdateSettings"
 import DisplaySettings from "./DisplaySettings"
+import ExternalReadApiSettings from "./ExternalReadApiSettings"
 import LoggingSettings from "./LoggingSettings"
 import ResetSettingsSection from "./ResetSettingsSection"
 
@@ -23,6 +24,7 @@ export default function GeneralTab() {
       <ActionClickBehaviorSettings />
       <LoggingSettings />
       <ChangelogOnUpdateSettings />
+      <ExternalReadApiSettings />
 
       {/* Appearance & Language Section */}
       <section id="appearance" className="space-y-6">

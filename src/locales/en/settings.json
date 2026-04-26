@@ -143,6 +143,26 @@
     "toggleDesc": "When enabled, All API Hub shows a confirmation dialog if you try to add another account for the same site URL.",
     "toggleLabel": "Warn before adding duplicates"
   },
+  "externalReadApi": {
+    "copyToken": "Copy",
+    "deleteToken": "Delete",
+    "description": "Explicitly allow webpages or userscripts holding an access token to read persisted extension data, and optionally broadcast lightweight change notifications into open page contexts.",
+    "emptyTokens": "No access tokens configured yet.",
+    "enable": "Enable external readonly access",
+    "enableDesc": "When enabled, callers holding a valid token can query the full persisted main data exported by All API Hub.",
+    "generateToken": "Generate Token",
+    "notifications": "Enable change notifications",
+    "notificationsDesc": "When enabled, open pages can receive fire-and-forget change events after tracked data changes. Downstream delivery and retry are out of scope.",
+    "privacyWarning": "Warning: callers holding a valid token can read full persisted main data, including sensitive fields such as access_token, sessionCookie, refreshToken, and apiKey. Deleting or disabling a token immediately cuts off that external access.",
+    "regenerateToken": "Regenerate Token",
+    "title": "External Read API / Hook",
+    "tokenCopied": "Access token copied",
+    "tokenCopyFailed": "Failed to copy access token",
+    "tokenCreatedAt": "Created at: {{createdAt}}",
+    "tokenManagement": "Access tokens",
+    "tokenManagementDesc": "Create named token credentials. Downstream callers only need to carry the token on each request to read data. Change notifications are controlled separately by the toggle above.",
+    "tokenNamePlaceholder": "For example: metapi-sync"
+  },
   "logging": {
     "consoleEnabled": "Enable console logging",
     "consoleEnabledDesc": "When disabled, All API Hub will not emit any console output at any level (including errors).",

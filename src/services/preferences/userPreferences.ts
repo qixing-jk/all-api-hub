@@ -106,6 +106,20 @@ export interface TempWindowFallbackReminderPreferences {
   dismissed: boolean
 }
 
+export interface ExternalReadApiPreferences {
+  enabled: boolean
+  notificationsEnabled: boolean
+  tokens: ExternalReadApiAccessToken[]
+}
+
+export interface ExternalReadApiAccessToken {
+  id: string
+  name: string
+  token: string
+  createdAt: number
+  enabled: boolean
+}
+
 export interface RedemptionAssistUrlWhitelistPreferences {
   /**
    * When enabled, redemption assist will only run on URLs matching the whitelist.
@@ -357,6 +371,11 @@ export interface UserPreferences {
   tempWindowFallbackReminder?: TempWindowFallbackReminderPreferences
 
   /**
+   * External read-only integration settings for webpage/userscript consumers.
+   */
+  externalReadApi?: ExternalReadApiPreferences
+
+  /**
    * 最后更新时间
    */
   lastUpdated: number
@@ -527,6 +546,11 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   },
   tempWindowFallbackReminder: {
     dismissed: false,
+  },
+  externalReadApi: {
+    enabled: false,
+    notificationsEnabled: true,
+    tokens: [],
   },
 }
 
@@ -1121,6 +1145,15 @@ class UserPreferencesService {
   async resetWebAiApiCheck(): Promise<boolean> {
     return this.savePreferences({
       webAiApiCheck: DEFAULT_PREFERENCES.webAiApiCheck,
+    })
+  }
+
+  /**
+   * Reset external read API config.
+   */
+  async resetExternalReadApi(): Promise<boolean> {
+    return this.savePreferences({
+      externalReadApi: DEFAULT_PREFERENCES.externalReadApi,
     })
   }
 

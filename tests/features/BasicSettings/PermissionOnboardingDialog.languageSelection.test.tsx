@@ -86,6 +86,13 @@ vi.mock(
 )
 
 vi.mock(
+  "~/features/BasicSettings/components/tabs/General/ExternalReadApiSettings",
+  () => ({
+    default: () => <div data-testid="external-read-api-settings" />,
+  }),
+)
+
+vi.mock(
   "~/features/BasicSettings/components/tabs/General/LoggingSettings",
   () => ({
     default: () => <div data-testid="logging-settings" />,

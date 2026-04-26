@@ -1,5 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { coerceApiCredentialTelemetryCustomEndpoint } from "~/services/apiCredentialProfiles/telemetryConfig"
 import {
   API_CREDENTIAL_PROFILES_STORAGE_KEYS,
@@ -27,6 +28,8 @@ import {
   API_CREDENTIAL_TELEMETRY_CAPABILITY_MODES,
   DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG,
 } from "~/types/apiCredentialProfiles"
+import { sendMessageWithRetry } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 
@@ -34,6 +37,30 @@ import { createLogger } from "~/utils/core/logger"
  * Unified logger scoped to API credential profiles storage.
  */
 const logger = createLogger("ApiCredentialProfilesStorage")
+
+/**
+ *
+ */
+async function notifyExternalReadApiProfilesStorageChanged(
+  oldValue: ApiCredentialProfilesConfig,
+  newValue: ApiCredentialProfilesConfig,
+) {
+  try {
+    await sendMessageWithRetry({
+      action: RuntimeActionIds.ExternalReadApiStorageChanged,
+      storageKey: API_CREDENTIAL_PROFILES_STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+      oldValue,
+      newValue,
+    })
+  } catch (error) {
+    logger.warn(
+      "Failed to notify external read API about profile storage change",
+      {
+        error: getErrorMessage(error),
+      },
+    )
+  }
+}
 
 type ApiCredentialProfileCreateInput = {
   name: string
@@ -586,6 +613,7 @@ class ApiCredentialProfilesStorageService {
   async importConfig(raw: unknown): Promise<ApiCredentialProfilesConfig> {
     return this.withStorageWriteLock(async () => {
       const now = Date.now()
+      const previous = cloneConfig(await this.readConfig())
       const coerced = coerceApiCredentialProfilesConfig(raw, { now })
       const next: ApiCredentialProfilesConfig = {
         version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
@@ -593,6 +621,7 @@ class ApiCredentialProfilesStorageService {
         lastUpdated: now,
       }
       await this.saveConfig(next)
+      await notifyExternalReadApiProfilesStorageChanged(previous, next)
       return next
     })
   }
@@ -615,6 +644,7 @@ class ApiCredentialProfilesStorageService {
       })
 
       await this.saveConfig(merged)
+      await notifyExternalReadApiProfilesStorageChanged(local, merged)
       return merged
     })
   }
@@ -700,6 +730,7 @@ class ApiCredentialProfilesStorageService {
       }
 
       await this.saveConfig(nextConfig)
+      await notifyExternalReadApiProfilesStorageChanged(config, nextConfig)
       return nextProfile
     })
   }
@@ -796,6 +827,7 @@ class ApiCredentialProfilesStorageService {
       }
 
       await this.saveConfig(nextConfig)
+      await notifyExternalReadApiProfilesStorageChanged(config, nextConfig)
 
       const saved = dedupedProfiles.find((p) => p.id === id)
       if (saved) {
@@ -845,11 +877,14 @@ class ApiCredentialProfilesStorageService {
         profile.id === id ? nextProfile : profile,
       )
 
-      await this.saveConfig({
+      const nextConfig = {
         version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
         profiles: nextProfiles,
         lastUpdated: Date.now(),
-      })
+      }
+
+      await this.saveConfig(nextConfig)
+      await notifyExternalReadApiProfilesStorageChanged(config, nextConfig)
 
       return nextProfile
     })
@@ -897,11 +932,14 @@ class ApiCredentialProfilesStorageService {
 
       const { profiles: dedupedProfiles } = dedupeProfiles(nextProfiles)
 
-      await this.saveConfig({
+      const nextConfig = {
         version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
         profiles: dedupedProfiles,
         lastUpdated: now,
-      })
+      }
+
+      await this.saveConfig(nextConfig)
+      await notifyExternalReadApiProfilesStorageChanged(config, nextConfig)
 
       return { updatedProfiles }
     })
@@ -919,11 +957,13 @@ class ApiCredentialProfilesStorageService {
         return false
       }
 
-      await this.saveConfig({
+      const nextConfig = {
         version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
         profiles: filtered,
         lastUpdated: Date.now(),
-      })
+      }
+      await this.saveConfig(nextConfig)
+      await notifyExternalReadApiProfilesStorageChanged(config, nextConfig)
       return true
     })
   }

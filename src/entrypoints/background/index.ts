@@ -6,6 +6,7 @@ import {
 } from "~/entrypoints/background/tempWindowPool"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { migrateAccountsConfig } from "~/services/accounts/migrations/accountDataMigration"
+import { setupExternalReadApi } from "~/services/integrations/externalReadApi"
 import {
   hasNewOptionalPermissions,
   setLastSeenOptionalPermissions,
@@ -59,6 +60,7 @@ export default defineBackground(() => {
    * 设置各种事件监听器
    */
   setupRuntimeMessageListeners()
+  setupExternalReadApi()
   setupTempWindowListeners()
   setupCookieInterceptorListeners()
   setupContextMenus()
