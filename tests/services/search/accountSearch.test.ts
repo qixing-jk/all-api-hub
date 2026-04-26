@@ -192,6 +192,46 @@ describe("accountSearch", () => {
       expect(results).toHaveLength(1)
     })
 
+    it("matches an account by a full open-tab URL", () => {
+      const results = searchAccounts(
+        [
+          {
+            ...mockAccounts[0],
+            id: "tab-match",
+            baseUrl: "https://foo.example.com",
+          },
+        ],
+        "https://foo.example.com/dashboard",
+      )
+
+      expect(results).toHaveLength(1)
+      expect(results[0].account.id).toBe("tab-match")
+      expect(results[0].matchedFields).toContain("baseUrl")
+    })
+
+    it("does not match every account when the query contains only a path", () => {
+      const results = searchAccounts(mockAccounts, "/dashboard")
+
+      expect(results).toEqual([])
+    })
+
+    it("does not match shorter path segments against longer query segments", () => {
+      const results = searchAccounts(
+        [
+          {
+            ...mockAccounts[0],
+            id: "short-path-segment",
+            name: "Hidden",
+            username: "nobody",
+            baseUrl: "https://example.com/v",
+          },
+        ],
+        "v1",
+      )
+
+      expect(results).toEqual([])
+    })
+
     it("returns results with scores", () => {
       const results = searchAccounts(mockAccounts, "api")
       expect(results.length).toBeGreaterThan(0)

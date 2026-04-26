@@ -68,6 +68,7 @@ interface IndexedAccountSearchEntry {
 interface SearchToken {
   text: string
   url: string
+  parsedUrl: IndexedUrlField | null
 }
 
 /**
@@ -136,26 +137,38 @@ function scoreTagMatch(tags: string[] | undefined, query: string): number {
  */
 function scoreParsedUrlMatch(
   parsedUrl: IndexedUrlField,
-  normalizedQuery: string,
+  queryUrl: IndexedUrlField,
 ): number {
-  if (!normalizedQuery) {
+  if (!queryUrl.domain && !queryUrl.path) {
     return 0
   }
 
   let score = 0
 
   // Domain matching
-  if (parsedUrl.domain === normalizedQuery) {
+  if (queryUrl.domain && parsedUrl.domain === queryUrl.domain) {
     score += 6 // Exact domain match
-  } else if (parsedUrl.domain.includes(normalizedQuery)) {
+  } else if (
+    queryUrl.domain &&
+    parsedUrl.domain &&
+    (parsedUrl.domain.includes(queryUrl.domain) ||
+      queryUrl.domain.includes(parsedUrl.domain))
+  ) {
     score += 3 // Domain contains query
   }
 
   // Path matching
-  if (parsedUrl.path && normalizedQuery.length > 0) {
+  if (parsedUrl.path) {
     const pathSegments = parsedUrl.path.split("/").filter(Boolean)
-    for (const segment of pathSegments) {
-      if (segment.includes(normalizedQuery)) {
+    const queryPathSegments =
+      queryUrl.path.length > 0
+        ? queryUrl.path.split("/").filter(Boolean)
+        : queryUrl.domain
+          ? [queryUrl.domain]
+          : []
+    for (const querySegment of queryPathSegments) {
+      if (!querySegment || querySegment.length < 2) continue
+      if (pathSegments.some((segment) => segment.includes(querySegment))) {
         score += 2 // Path segment contains query
         break
       }
@@ -204,10 +217,15 @@ function buildSearchTokens(query: string): SearchToken[] {
   return query
     .trim()
     .split(/\s+/)
-    .map((token) => ({
-      text: normalizeSearchText(token),
-      url: normalizeSearchUrl(token),
-    }))
+    .map((token) => {
+      const url = normalizeSearchUrl(token)
+
+      return {
+        text: normalizeSearchText(token),
+        url,
+        parsedUrl: url ? parseUrl(url) : null,
+      }
+    })
     .filter((token) => token.text.length > 0 || token.url.length > 0)
 }
 
@@ -246,20 +264,21 @@ export function searchAccountSearchIndex(
         tokenMatchedFields.add("name")
       }
 
-      const baseUrlScore = scoreParsedUrlMatch(
-        indexedAccount.baseUrl,
-        token.url,
-      )
+      const baseUrlScore = token.parsedUrl
+        ? scoreParsedUrlMatch(indexedAccount.baseUrl, token.parsedUrl)
+        : 0
       if (baseUrlScore > 0) {
         tokenScore += baseUrlScore
         tokenMatchedFields.add("baseUrl")
       }
 
       if (indexedAccount.customCheckInUrl) {
-        const checkInScore = scoreParsedUrlMatch(
-          indexedAccount.customCheckInUrl,
-          token.url,
-        )
+        const checkInScore = token.parsedUrl
+          ? scoreParsedUrlMatch(
+              indexedAccount.customCheckInUrl,
+              token.parsedUrl,
+            )
+          : 0
         if (checkInScore > 0) {
           tokenScore += checkInScore
           tokenMatchedFields.add("customCheckInUrl")
@@ -267,10 +286,9 @@ export function searchAccountSearchIndex(
       }
 
       if (indexedAccount.customRedeemUrl) {
-        const redeemScore = scoreParsedUrlMatch(
-          indexedAccount.customRedeemUrl,
-          token.url,
-        )
+        const redeemScore = token.parsedUrl
+          ? scoreParsedUrlMatch(indexedAccount.customRedeemUrl, token.parsedUrl)
+          : 0
         if (redeemScore > 0) {
           tokenScore += redeemScore
           tokenMatchedFields.add("customRedeemUrl")
