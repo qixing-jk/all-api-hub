@@ -192,6 +192,23 @@ describe("accountSearch", () => {
       expect(results).toHaveLength(1)
     })
 
+    it("matches an account by a full open-tab URL", () => {
+      const results = searchAccounts(
+        [
+          {
+            ...mockAccounts[0],
+            id: "tab-match",
+            baseUrl: "https://foo.example.com",
+          },
+        ],
+        "https://foo.example.com/dashboard",
+      )
+
+      expect(results).toHaveLength(1)
+      expect(results[0].account.id).toBe("tab-match")
+      expect(results[0].matchedFields).toContain("baseUrl")
+    })
+
     it("returns results with scores", () => {
       const results = searchAccounts(mockAccounts, "api")
       expect(results.length).toBeGreaterThan(0)
