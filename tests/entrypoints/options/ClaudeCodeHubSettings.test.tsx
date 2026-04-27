@@ -112,6 +112,8 @@ describe("ClaudeCodeHubSettings", () => {
     })
     fireEvent.blur(input)
 
+    expect(updateClaudeCodeHubAdminToken).toHaveBeenCalledTimes(1)
+    expect(mockedShowUpdateToast).toHaveBeenCalledTimes(1)
     expect(mockedShowUpdateToast).toHaveBeenCalledWith(
       true,
       "settings:claudeCodeHub.fields.adminTokenLabel",

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  ClaudeCodeHubApiError,
   createProvider,
   deleteProvider,
   listProviders,
@@ -88,24 +89,39 @@ describe("Claude Code Hub action API adapter", () => {
     })
     await deleteProvider(config, 12)
 
-    expect(mockFetch).toHaveBeenNthCalledWith(
-      2,
+    const editCall = mockFetch.mock.calls[1]
+    expect(editCall[0]).toBe(
       "https://cch.example.com/api/actions/providers/editProvider",
-      expect.objectContaining({
-        body: JSON.stringify({
-          providerId: 12,
-          key: "sk-new-key",
-          group_tag: "default",
-        }),
-      }),
     )
-    expect(mockFetch).toHaveBeenNthCalledWith(
-      3,
+    expect(JSON.parse(editCall[1].body)).toEqual({
+      providerId: 12,
+      key: "sk-new-key",
+      group_tag: "default",
+    })
+
+    const deleteCall = mockFetch.mock.calls[2]
+    expect(deleteCall[0]).toBe(
       "https://cch.example.com/api/actions/providers/removeProvider",
-      expect.objectContaining({
-        body: JSON.stringify({ providerId: 12 }),
-      }),
     )
+    expect(JSON.parse(deleteCall[1].body)).toEqual({ providerId: 12 })
+  })
+
+  it("supports provider arrays wrapped in an inner data field", async () => {
+    mockFetch.mockResolvedValueOnce(
+      new Response(
+        JSON.stringify({
+          ok: true,
+          data: {
+            data: [{ id: 2, name: "Codex", url: "https://codex.example.com" }],
+          },
+        }),
+        { status: 200 },
+      ),
+    )
+
+    await expect(listProviders(config)).resolves.toEqual([
+      { id: 2, name: "Codex", url: "https://codex.example.com" },
+    ])
   })
 
   it("throws redacted errors for action failures and malformed responses", async () => {
@@ -144,23 +160,39 @@ describe("Claude Code Hub action API adapter", () => {
         "admin-secret",
       ]),
     ).toBe("Authorization Bearer [REDACTED]")
+    expect(redactClaudeCodeHubSecrets("adapter failure", ["ad"])).toBe(
+      "adapter failure",
+    )
   })
 
-  it("uses a caller-provided signal instead of the default timeout signal", async () => {
-    const signal = new AbortController().signal
+  it("combines a caller-provided signal with the timeout safety floor", async () => {
+    const controller = new AbortController()
     mockFetch.mockResolvedValueOnce(
       new Response(JSON.stringify({ ok: true, data: [] }), {
         status: 200,
       }),
     )
 
-    await listProviders(config, { signal })
+    await listProviders(config, { signal: controller.signal })
 
-    expect(mockFetch).toHaveBeenCalledWith(
-      "https://cch.example.com/api/actions/providers/getProviders",
+    const [, requestInit] = mockFetch.mock.calls[0] as [string, RequestInit]
+    expect(requestInit.signal).toBeInstanceOf(AbortSignal)
+    expect(requestInit.signal).not.toBe(controller.signal)
+    controller.abort()
+    expect(requestInit.signal?.aborted).toBe(true)
+  })
+
+  it("wraps fetch failures in a ClaudeCodeHubApiError with sanitized text", async () => {
+    mockFetch.mockRejectedValueOnce(new Error("Bearer admin-secret exploded"))
+
+    const requestPromise = listProviders(config)
+
+    await expect(requestPromise).rejects.toEqual(
       expect.objectContaining({
-        signal,
+        name: "ClaudeCodeHubApiError",
+        message: "Bearer [REDACTED] exploded",
       }),
     )
+    await expect(requestPromise).rejects.toBeInstanceOf(ClaudeCodeHubApiError)
   })
 })

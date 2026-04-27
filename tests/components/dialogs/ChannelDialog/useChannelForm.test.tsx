@@ -382,6 +382,56 @@ describe("useChannelForm", () => {
     )
   })
 
+  it("prefers the Claude Code Hub specific key toast in add mode", async () => {
+    vi.mocked(getManagedSiteService).mockResolvedValue({
+      siteType: CLAUDE_CODE_HUB,
+      messagesKey: "claudeCodeHub",
+      checkValidConfig: mockCheckValidConfig.mockResolvedValue(true),
+      getConfig: mockGetConfig,
+      buildChannelPayload: mockBuildChannelPayload,
+      createChannel: mockCreateChannel,
+      updateChannel: mockUpdateChannel,
+    } as any)
+
+    const preventDefault = vi.fn()
+
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.ADD,
+        channel: null,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.formData.type).toBe(
+        DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS.type,
+      )
+    })
+
+    await act(async () => {
+      result.current.updateField("name", "Claude Provider")
+      result.current.updateField("models", ["claude-sonnet"])
+      result.current.updateField("key", "   ")
+    })
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault,
+      } as unknown as FormEvent)
+    })
+
+    expect(preventDefault).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+      "messages:claudeCodeHub.realProviderKeyRequired",
+    )
+    expect(vi.mocked(toast.error)).not.toHaveBeenCalledWith(
+      "channelDialog:validation.keyRequired",
+    )
+    expect(mockCreateChannel).not.toHaveBeenCalled()
+  })
+
   it("applies Claude Code Hub add defaults from the open effect", async () => {
     vi.mocked(getManagedSiteService).mockResolvedValue({
       siteType: CLAUDE_CODE_HUB,

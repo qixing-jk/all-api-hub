@@ -18,7 +18,7 @@ type ClaudeCodeHubProviderAction =
   | "editProvider"
   | "removeProvider"
 
-class ClaudeCodeHubApiError extends Error {
+export class ClaudeCodeHubApiError extends Error {
   constructor(
     message: string,
     readonly status?: number,
@@ -45,7 +45,7 @@ export function redactClaudeCodeHubSecrets(
   let redacted = message.replace(/Bearer\s+\S+/gi, "Bearer [REDACTED]")
   for (const secret of secrets) {
     const trimmed = secret?.trim()
-    if (!trimmed) continue
+    if (!trimmed || trimmed.length < 4) continue
     redacted = redacted.split(trimmed).join("[REDACTED]")
   }
   return redacted
@@ -111,6 +111,16 @@ async function parseActionResponse<T>(
 /**
  * Calls a Claude Code Hub provider action endpoint and normalizes failures.
  */
+function buildActionSignal(options?: {
+  signal?: AbortSignal
+  timeoutMs?: number
+}) {
+  const timeoutSignal = AbortSignal.timeout(options?.timeoutMs ?? 30_000)
+  return options?.signal
+    ? AbortSignal.any([options.signal, timeoutSignal])
+    : timeoutSignal
+}
+
 async function callProviderAction<T>(
   config: ClaudeCodeHubConfig,
   action: ClaudeCodeHubProviderAction,
@@ -122,19 +132,18 @@ async function callProviderAction<T>(
   },
 ): Promise<T> {
   const baseUrl = normalizeClaudeCodeHubBaseUrl(config.baseUrl)
-  const signal =
-    options?.signal ?? AbortSignal.timeout(options?.timeoutMs ?? 30_000)
-  const response = await fetch(`${baseUrl}/api/actions/providers/${action}`, {
-    method: "POST",
-    signal,
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${config.adminToken}`,
-    },
-    body: JSON.stringify(payload),
-  })
+  let response: Response | undefined
 
   try {
+    response = await fetch(`${baseUrl}/api/actions/providers/${action}`, {
+      method: "POST",
+      signal: buildActionSignal(options),
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${config.adminToken}`,
+      },
+      body: JSON.stringify(payload),
+    })
     return await parseActionResponse<T>(
       response,
       config,
@@ -146,7 +155,7 @@ async function callProviderAction<T>(
     }
     throw new ClaudeCodeHubApiError(
       normalizeActionError(error, config, options?.secrets ?? []),
-      response.status,
+      response?.status,
     )
   }
 }
@@ -162,6 +171,8 @@ function extractProviderList(data: unknown): ClaudeCodeHubProviderDisplay[] {
     const candidates = [
       (data as { providers?: unknown }).providers,
       (data as { items?: unknown }).items,
+      // Some upstreams wrap the already-unwrapped provider payload in an inner
+      // `data` field, e.g. `{ data: [...] }`.
       (data as { data?: unknown }).data,
     ]
     const array = candidates.find(Array.isArray)

@@ -349,16 +349,16 @@ export function useChannelForm({
       return
     }
 
-    if (isKeyFieldRequired && !formData.key.trim()) {
-      toast.error(t("channelDialog:validation.keyRequired"))
-      return
-    }
-
     if (
       requiresRealClaudeCodeHubKey &&
       !hasUsableManagedSiteChannelKey(formData.key)
     ) {
       toast.error(t("messages:claudeCodeHub.realProviderKeyRequired"))
+      return
+    }
+
+    if (isKeyFieldRequired && !formData.key.trim()) {
+      toast.error(t("channelDialog:validation.keyRequired"))
       return
     }
 
