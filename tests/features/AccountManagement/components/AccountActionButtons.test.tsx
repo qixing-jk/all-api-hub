@@ -3,6 +3,7 @@ import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { CLAUDE_CODE_HUB, VELOERA } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
@@ -1405,7 +1406,7 @@ describe("AccountActionButtons", () => {
     [
       "Veloera",
       {
-        managedSiteType: "Veloera",
+        managedSiteType: VELOERA,
         veloera: {
           baseUrl: "https://veloera-admin.example",
           adminToken: "veloera-admin-token",
@@ -1417,7 +1418,7 @@ describe("AccountActionButtons", () => {
     [
       "Claude Code Hub",
       {
-        managedSiteType: "claude-code-hub",
+        managedSiteType: CLAUDE_CODE_HUB,
         claudeCodeHub: {
           baseUrl: "https://cch-admin.example",
           adminToken: "cch-admin-token",

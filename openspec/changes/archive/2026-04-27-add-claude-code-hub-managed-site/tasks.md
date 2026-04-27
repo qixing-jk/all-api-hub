@@ -38,7 +38,7 @@
 ## 6. Channel Dialog And Import Flow
 
 - [x] 6.1 Extend channel dialog type handling so Claude Code Hub provider type strings are preserved and are not coerced through New API numeric channel types.
-- [x] 6.2 Add Claude Code Hub provider type options for `openai-compatible`, `codex`, `claude`, `claude-auth`, `gemini`, and `gemini-cli`.
+- [x] 6.2 Add Claude Code Hub add-flow provider type options for `openai-compatible`, `codex`, `claude`, and `gemini`, while preserving backend-owned existing provider type strings such as `claude-auth` and `gemini-cli`.
 - [x] 6.3 Default account-token import into Claude Code Hub to `openai-compatible` while allowing the user to change the provider type before creation.
 - [x] 6.4 Reuse token-scoped model prefill for Claude Code Hub imports and keep the dialog available with manual model entry when model loading fails.
 - [x] 6.5 Require a usable real key for Claude Code Hub create/import flows and show localized guidance when the key is empty or masked.

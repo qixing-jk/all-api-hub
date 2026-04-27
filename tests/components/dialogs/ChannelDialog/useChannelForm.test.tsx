@@ -3,6 +3,7 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useChannelForm } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
+import { DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS } from "~/constants/claudeCodeHub"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { AXON_HUB, CLAUDE_CODE_HUB, NEW_API } from "~/constants/siteType"
@@ -369,9 +370,7 @@ describe("useChannelForm", () => {
     })
 
     expect(preventDefault).toHaveBeenCalledTimes(1)
-    expect(vi.mocked(toast.error)).not.toHaveBeenCalledWith(
-      "messages:claudeCodeHub.realProviderKeyRequired",
-    )
+    expect(vi.mocked(toast.error)).not.toHaveBeenCalled()
     expect(mockBuildChannelPayload).not.toHaveBeenCalled()
     expect(mockUpdateChannel).toHaveBeenCalled()
     expect(onClose).toHaveBeenCalledTimes(1)
@@ -380,6 +379,37 @@ describe("useChannelForm", () => {
         success: true,
         message: "success",
       }),
+    )
+  })
+
+  it("applies Claude Code Hub add defaults from the open effect", async () => {
+    vi.mocked(getManagedSiteService).mockResolvedValue({
+      siteType: CLAUDE_CODE_HUB,
+      messagesKey: "claudeCodeHub",
+      checkValidConfig: mockCheckValidConfig.mockResolvedValue(true),
+      getConfig: mockGetConfig,
+      buildChannelPayload: mockBuildChannelPayload,
+      createChannel: mockCreateChannel,
+      updateChannel: mockUpdateChannel,
+    } as any)
+
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.ADD,
+        channel: null,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.formData.type).toBe(
+        DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS.type,
+      )
+    })
+
+    expect(result.current.formData.weight).toBe(
+      DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS.weight,
     )
   })
 })

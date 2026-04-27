@@ -130,6 +130,22 @@ describe("Claude Code Hub managed-site provider", () => {
         models: ["gpt-4o"],
       }),
     ).toThrow("messages:claudeCodeHub.realProviderKeyRequired")
+
+    expect(
+      buildClaudeCodeHubCreatePayloadFromFormData({
+        name: "Weighted Provider",
+        type: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+        key: "sk-real-key",
+        base_url: "https://api.example.com",
+        models: ["gpt-4o"],
+        groups: ["paid"],
+        priority: 2,
+        weight: Number.NaN,
+        status: CHANNEL_STATUS.Enable,
+      }),
+    ).toMatchObject({
+      weight: 1,
+    })
   })
 
   it("omits masked keys on update and sends replacement keys only when usable", () => {

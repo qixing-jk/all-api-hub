@@ -169,7 +169,11 @@ function getProviderGroupTag(formData: Pick<ChannelFormData, "groups">) {
  * Clamps provider weights to Claude Code Hub's expected positive integer shape.
  */
 function toSafeWeight(weight?: number): number {
-  return Math.max(1, Math.trunc(weight ?? 1))
+  const numericWeight = Number(weight ?? 1)
+  if (!Number.isFinite(numericWeight)) {
+    return 1
+  }
+  return Math.max(1, Math.trunc(numericWeight))
 }
 
 /**

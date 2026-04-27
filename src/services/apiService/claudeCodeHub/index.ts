@@ -114,14 +114,19 @@ async function parseActionResponse<T>(
 async function callProviderAction<T>(
   config: ClaudeCodeHubConfig,
   action: ClaudeCodeHubProviderAction,
-  payload: Record<string, unknown> = {},
+  payload: object = {},
   options?: {
     secrets?: Array<string | undefined | null>
+    signal?: AbortSignal
+    timeoutMs?: number
   },
 ): Promise<T> {
   const baseUrl = normalizeClaudeCodeHubBaseUrl(config.baseUrl)
+  const signal =
+    options?.signal ?? AbortSignal.timeout(options?.timeoutMs ?? 30_000)
   const response = await fetch(`${baseUrl}/api/actions/providers/${action}`, {
     method: "POST",
+    signal,
     headers: {
       "Content-Type": "application/json",
       Authorization: `Bearer ${config.adminToken}`,
@@ -172,8 +177,17 @@ function extractProviderList(data: unknown): ClaudeCodeHubProviderDisplay[] {
  */
 export async function listProviders(
   config: ClaudeCodeHubConfig,
+  options?: {
+    signal?: AbortSignal
+    timeoutMs?: number
+  },
 ): Promise<ClaudeCodeHubProviderDisplay[]> {
-  const data = await callProviderAction<unknown>(config, "getProviders")
+  const data = await callProviderAction<unknown>(
+    config,
+    "getProviders",
+    {},
+    options,
+  )
   return extractProviderList(data)
 }
 
@@ -182,8 +196,12 @@ export async function listProviders(
  */
 export async function validateClaudeCodeHubConfig(
   config: ClaudeCodeHubConfig,
+  options?: {
+    signal?: AbortSignal
+    timeoutMs?: number
+  },
 ): Promise<boolean> {
-  await listProviders(config)
+  await listProviders(config, options)
   return true
 }
 
@@ -193,9 +211,15 @@ export async function validateClaudeCodeHubConfig(
 export async function createProvider(
   config: ClaudeCodeHubConfig,
   payload: ClaudeCodeHubProviderCreatePayload,
+  options?: {
+    signal?: AbortSignal
+    timeoutMs?: number
+  },
 ): Promise<unknown> {
   return await callProviderAction(config, "addProvider", payload, {
     secrets: [payload.key],
+    signal: options?.signal,
+    timeoutMs: options?.timeoutMs,
   })
 }
 
@@ -205,9 +229,15 @@ export async function createProvider(
 export async function updateProvider(
   config: ClaudeCodeHubConfig,
   payload: ClaudeCodeHubProviderUpdatePayload,
+  options?: {
+    signal?: AbortSignal
+    timeoutMs?: number
+  },
 ): Promise<unknown> {
   return await callProviderAction(config, "editProvider", payload, {
     secrets: [payload.key],
+    signal: options?.signal,
+    timeoutMs: options?.timeoutMs,
   })
 }
 
@@ -217,6 +247,15 @@ export async function updateProvider(
 export async function deleteProvider(
   config: ClaudeCodeHubConfig,
   providerId: number,
+  options?: {
+    signal?: AbortSignal
+    timeoutMs?: number
+  },
 ): Promise<unknown> {
-  return await callProviderAction(config, "removeProvider", { providerId })
+  return await callProviderAction(
+    config,
+    "removeProvider",
+    { providerId },
+    options,
+  )
 }

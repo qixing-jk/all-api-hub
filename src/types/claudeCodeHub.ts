@@ -18,7 +18,7 @@ export interface ClaudeCodeHubProviderDisplay {
   weight?: number
   priority?: number
   groupTag?: string | null
-  providerType?: ClaudeCodeHubProviderType | string
+  providerType?: ClaudeCodeHubProviderType | (string & {})
   allowedModels?: ClaudeCodeHubAllowedModel[]
   createdAt?: string
   updatedAt?: string
@@ -33,9 +33,8 @@ export interface ClaudeCodeHubProviderWritePayload {
   weight?: number
   priority?: number
   group_tag?: string | null
-  provider_type?: ClaudeCodeHubProviderType | string
+  provider_type?: ClaudeCodeHubProviderType | (string & {})
   allowed_models?: ClaudeCodeHubAllowedModel[]
-  [key: string]: unknown
 }
 
 export type ClaudeCodeHubProviderCreatePayload = Required<

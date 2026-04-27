@@ -88,7 +88,13 @@ The dialog MUST NOT coerce Claude Code Hub provider type values through New API 
 
 #### Scenario: Known Claude Code Hub provider types are offered
 - **WHEN** the user opens the channel dialog while `managedSiteType = claude-code-hub`
-- **THEN** the extension MUST offer Claude Code Hub provider type options for `openai-compatible`, `codex`, `claude`, `claude-auth`, `gemini`, and `gemini-cli`
+- **THEN** the extension MUST offer Claude Code Hub add-flow provider type options for `openai-compatible`, `codex`, `claude`, and `gemini`
+
+#### Scenario: Existing internal upstream provider types are preserved
+- **GIVEN** Claude Code Hub returns an existing provider with provider type `claude-auth` or `gemini-cli`
+- **WHEN** the user views or updates that provider through the managed-site dialog
+- **THEN** the extension MUST preserve the original provider type string
+- **AND** the extension MUST NOT silently replace it with one of the regular add-flow options
 
 #### Scenario: Unknown existing provider type is not silently corrupted
 - **GIVEN** Claude Code Hub returns an existing provider with a provider type the extension does not recognize

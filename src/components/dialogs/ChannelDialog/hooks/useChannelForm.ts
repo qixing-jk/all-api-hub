@@ -80,6 +80,25 @@ export function useChannelForm({
     return groups.length > 0 ? groups : [...DEFAULT_CHANNEL_FIELDS.groups]
   }
 
+  const applyManagedSiteDefaults = useCallback(
+    (data: ChannelFormData, siteType: string): ChannelFormData => {
+      if (
+        siteType === CLAUDE_CODE_HUB &&
+        mode === DIALOG_MODES.ADD &&
+        !initialValues?.type
+      ) {
+        return {
+          ...data,
+          type: DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS.type,
+          weight: DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS.weight,
+        }
+      }
+
+      return data
+    },
+    [initialValues?.type, mode],
+  )
+
   const buildInitialFormData = useCallback(
     (): ChannelFormData => ({
       name: initialValues?.name ?? "",
@@ -118,19 +137,8 @@ export function useChannelForm({
   const loadManagedSiteType = useCallback(async () => {
     const service = await getManagedSiteService()
     setManagedSiteType(service.siteType)
-    if (
-      service.siteType === CLAUDE_CODE_HUB &&
-      mode === DIALOG_MODES.ADD &&
-      !initialValues?.type
-    ) {
-      setFormData((prev) => ({
-        ...prev,
-        type: DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS.type,
-        weight: DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS.weight,
-      }))
-    }
     return service
-  }, [initialValues?.type, mode])
+  }, [])
 
   // Load groups and model suggestions on mount
   useEffect(() => {
@@ -150,6 +158,8 @@ export function useChannelForm({
       return
     }
 
+    let cancelled = false
+
     if ((mode === DIALOG_MODES.EDIT || mode === DIALOG_MODES.VIEW) && channel) {
       setFormData({
         name: channel.name,
@@ -163,9 +173,26 @@ export function useChannelForm({
         status: channel.status ?? DEFAULT_CHANNEL_FIELDS.status,
       })
     } else {
-      setFormData(buildInitialFormData())
+      void (async () => {
+        const service = await loadManagedSiteType()
+        if (cancelled) return
+        setFormData(
+          applyManagedSiteDefaults(buildInitialFormData(), service.siteType),
+        )
+      })()
     }
-  }, [isOpen, mode, channel, buildInitialFormData])
+
+    return () => {
+      cancelled = true
+    }
+  }, [
+    isOpen,
+    mode,
+    channel,
+    buildInitialFormData,
+    loadManagedSiteType,
+    applyManagedSiteDefaults,
+  ])
 
   const resetForm = useCallback(() => {
     setFormData(buildInitialFormData())

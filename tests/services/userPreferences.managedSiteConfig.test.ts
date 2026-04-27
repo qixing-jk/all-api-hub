@@ -4,6 +4,7 @@ import { Storage } from "@plasmohq/storage"
 
 import {
   AXON_HUB,
+  CLAUDE_CODE_HUB,
   DONE_HUB,
   NEW_API,
   OCTOPUS,
@@ -15,6 +16,7 @@ import {
   userPreferences,
 } from "~/services/preferences/userPreferences"
 import { DEFAULT_AXON_HUB_CONFIG } from "~/types/axonHubConfig"
+import { DEFAULT_CLAUDE_CODE_HUB_CONFIG } from "~/types/claudeCodeHubConfig"
 import { DEFAULT_DONE_HUB_CONFIG } from "~/types/doneHubConfig"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
 
@@ -105,6 +107,24 @@ describe("userPreferences managed-site helpers", () => {
       email: "admin@example.com",
       password: "secret",
     })
+
+    expect(await userPreferences.updateManagedSiteType(CLAUDE_CODE_HUB)).toBe(
+      true,
+    )
+    expect(
+      await userPreferences.updateClaudeCodeHubConfig({
+        baseUrl: "https://cch.example.com",
+        adminToken: "admin-token",
+      }),
+    ).toBe(true)
+
+    managedSite = await userPreferences.getManagedSiteConfig()
+    expect(managedSite.siteType).toBe(CLAUDE_CODE_HUB)
+    expect(managedSite.config).toEqual({
+      ...DEFAULT_PREFERENCES.claudeCodeHub,
+      baseUrl: "https://cch.example.com",
+      adminToken: "admin-token",
+    })
   })
 
   it("falls back to default configs when optional managed-site settings are missing", async () => {
@@ -166,6 +186,21 @@ describe("userPreferences managed-site helpers", () => {
     managedSite = await userPreferences.getManagedSiteConfig()
     expect(managedSite.siteType).toBe(AXON_HUB)
     expect(managedSite.config).toEqual(DEFAULT_AXON_HUB_CONFIG)
+
+    const missingClaudeCodeHub: any = {
+      ...structuredClone(DEFAULT_PREFERENCES),
+      managedSiteType: CLAUDE_CODE_HUB,
+    }
+    delete missingClaudeCodeHub.claudeCodeHub
+
+    await storage.set(
+      USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+      missingClaudeCodeHub,
+    )
+
+    managedSite = await userPreferences.getManagedSiteConfig()
+    expect(managedSite.siteType).toBe(CLAUDE_CODE_HUB)
+    expect(managedSite.config).toEqual(DEFAULT_CLAUDE_CODE_HUB_CONFIG)
   })
 
   it("restores managed-site configs to their defaults with dedicated reset helpers", async () => {
@@ -194,17 +229,24 @@ describe("userPreferences managed-site helpers", () => {
         email: "admin@example.com",
         password: "secret",
       },
+      claudeCodeHub: {
+        ...DEFAULT_PREFERENCES.claudeCodeHub,
+        baseUrl: "https://cch.example.com",
+        adminToken: "admin-token",
+      },
     })
 
     expect(await userPreferences.resetVeloeraConfig()).toBe(true)
     expect(await userPreferences.resetDoneHubConfig()).toBe(true)
     expect(await userPreferences.resetOctopusConfig()).toBe(true)
     expect(await userPreferences.resetAxonHubConfig()).toBe(true)
+    expect(await userPreferences.resetClaudeCodeHubConfig()).toBe(true)
 
     const preferences = await userPreferences.getPreferences()
     expect(preferences.veloera).toEqual(DEFAULT_PREFERENCES.veloera)
     expect(preferences.doneHub).toEqual(DEFAULT_PREFERENCES.doneHub)
     expect(preferences.octopus).toEqual(DEFAULT_PREFERENCES.octopus)
     expect(preferences.axonHub).toEqual(DEFAULT_PREFERENCES.axonHub)
+    expect(preferences.claudeCodeHub).toEqual(DEFAULT_PREFERENCES.claudeCodeHub)
   })
 })

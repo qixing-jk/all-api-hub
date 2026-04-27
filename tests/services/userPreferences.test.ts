@@ -72,6 +72,9 @@ describe("userPreferences", () => {
     it("has valid managedSite config", () => {
       expect(DEFAULT_PREFERENCES.newApi).toBeDefined()
       expect(DEFAULT_PREFERENCES.newApi.baseUrl).toBe("")
+      expect(DEFAULT_PREFERENCES.claudeCodeHub).toBeDefined()
+      expect(DEFAULT_PREFERENCES.claudeCodeHub!.baseUrl).toBe("")
+      expect(DEFAULT_PREFERENCES.claudeCodeHub!.adminToken).toBe("")
     })
 
     it("creates fresh timestamps for new default snapshots", () => {

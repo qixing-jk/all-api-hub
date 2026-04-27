@@ -61,8 +61,9 @@ export default function ClaudeCodeHubSettings() {
   }
 
   const handleTokenChange = async (token: string) => {
-    if (token === claudeCodeHubAdminToken) return
-    const success = await updateClaudeCodeHubAdminToken(token, {
+    const trimmedToken = token.trim()
+    if (trimmedToken === claudeCodeHubAdminToken) return
+    const success = await updateClaudeCodeHubAdminToken(trimmedToken, {
       expectedLastUpdated,
     })
     showUpdateToast(success, t("claudeCodeHub.fields.adminTokenLabel"))

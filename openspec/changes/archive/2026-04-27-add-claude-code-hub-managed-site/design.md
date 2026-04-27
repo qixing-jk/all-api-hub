@@ -100,9 +100,11 @@ When `managedSiteType = claude-code-hub`, the channel dialog should show Claude 
 - `openai-compatible`
 - `codex`
 - `claude`
-- `claude-auth`
 - `gemini`
-- `gemini-cli`
+
+Other upstream provider types such as `claude-auth` and `gemini-cli` are preserved when reading existing providers, but they are not part of Claude Code Hub's regular frontend-supported provider type set today. This add-flow follows the upstream frontend behavior and only exposes the four provider types that Claude Code Hub normally presents in its own UI.
+
+Upstream investigation confirms this is an intentional UI/runtime split rather than a missing enum entry. Claude Code Hub still defines `claude-auth` and `gemini-cli` in its runtime provider type union and continues to handle them in execution-specific logic, but its settings UI marks those two values as internal/non-user-facing and excludes them from the standard provider filter and create-form option lists. Matching that behavior lets All API Hub preserve existing upstream-owned provider records without inventing extra add-flow choices that Claude Code Hub itself does not present to regular users.
 
 For account-token import, default to `openai-compatible`, but allow users to change the type before creating the provider.
 

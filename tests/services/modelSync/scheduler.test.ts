@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { CLAUDE_CODE_HUB } from "~/constants/siteType"
 import {
   handleManagedSiteModelSyncMessage,
   modelSyncScheduler,
@@ -150,5 +151,22 @@ describe("handleManagedSiteModelSyncMessage", () => {
         periodInMinutes: 1,
       },
     })
+  })
+
+  it("rejects model sync for Claude Code Hub because the backend does not support it", async () => {
+    mockedUserPreferences.getPreferences.mockResolvedValueOnce({
+      managedSiteType: CLAUDE_CODE_HUB,
+      claudeCodeHub: {
+        baseUrl: "https://cch.example.com",
+        adminToken: "admin-token",
+      },
+      managedSiteModelSync: {
+        ...(DEFAULT_PREFERENCES as any).managedSiteModelSync,
+      },
+    })
+
+    await expect(modelSyncScheduler.executeSync()).rejects.toThrow(
+      "messages:claudeCodeHub.unsupportedModelSync",
+    )
   })
 })

@@ -1,4 +1,4 @@
-import type { ChannelDefaults } from "~/types/managedSite"
+import { CHANNEL_STATUS, type ChannelDefaults } from "~/types/managedSite"
 
 export const CLAUDE_CODE_HUB_PROVIDER_TYPE = {
   OPENAI_COMPATIBLE: "openai-compatible",
@@ -35,7 +35,7 @@ export const isClaudeCodeHubProviderType = (
 
 export const DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS = {
   mode: "single",
-  status: 1,
+  status: CHANNEL_STATUS.Enable,
   priority: 0,
   weight: 1,
   groups: ["default"],

@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   createProvider,
@@ -22,6 +22,10 @@ describe("Claude Code Hub action API adapter", () => {
     vi.stubGlobal("fetch", mockFetch)
   })
 
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it("normalizes base URLs and lists providers from action responses", async () => {
     mockFetch.mockResolvedValueOnce(
       new Response(
@@ -43,6 +47,7 @@ describe("Claude Code Hub action API adapter", () => {
       "https://cch.example.com/api/actions/providers/getProviders",
       expect.objectContaining({
         method: "POST",
+        signal: expect.any(AbortSignal),
         headers: expect.objectContaining({
           Authorization: "Bearer admin-secret",
         }),
@@ -139,5 +144,23 @@ describe("Claude Code Hub action API adapter", () => {
         "admin-secret",
       ]),
     ).toBe("Authorization Bearer [REDACTED]")
+  })
+
+  it("uses a caller-provided signal instead of the default timeout signal", async () => {
+    const signal = new AbortController().signal
+    mockFetch.mockResolvedValueOnce(
+      new Response(JSON.stringify({ ok: true, data: [] }), {
+        status: 200,
+      }),
+    )
+
+    await listProviders(config, { signal })
+
+    expect(mockFetch).toHaveBeenCalledWith(
+      "https://cch.example.com/api/actions/providers/getProviders",
+      expect.objectContaining({
+        signal,
+      }),
+    )
   })
 })

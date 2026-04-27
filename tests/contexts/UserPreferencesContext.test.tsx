@@ -90,6 +90,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
       resetVeloeraConfig: vi.fn(),
       resetOctopusConfig: vi.fn(),
       resetAxonHubConfig: vi.fn(),
+      resetClaudeCodeHubConfig: vi.fn(),
       resetNewApiModelSyncConfig: vi.fn(),
       resetCliProxyConfig: vi.fn(),
       resetClaudeCodeRouterConfig: vi.fn(),
@@ -261,6 +262,12 @@ describe("UserPreferencesContext", () => {
         axonHub: DEFAULT_AXON_HUB_CONFIG,
       }),
     )
+    mockedUserPreferences.resetClaudeCodeHubConfig.mockImplementation(
+      async () =>
+        applyPersistedUpdate({
+          claudeCodeHub: DEFAULT_PREFERENCES.claudeCodeHub,
+        }),
+    )
     mockedUserPreferences.resetNewApiModelSyncConfig.mockImplementation(
       async () =>
         applyPersistedUpdate({
@@ -400,6 +407,12 @@ describe("UserPreferencesContext", () => {
         email: "root@example.com",
         password: "final-password",
       })
+      await context.updateClaudeCodeHubBaseUrl("https://cch.example")
+      await context.updateClaudeCodeHubAdminToken("cch-token")
+      await context.updateClaudeCodeHubConfig({
+        baseUrl: "https://managed-cch.example",
+        adminToken: "managed-cch-token",
+      })
       await context.updateManagedSiteType(VELOERA)
       await context.updateThemeMode("dark")
       await context.updateLoggingConsoleEnabled(false)
@@ -494,6 +507,24 @@ describe("UserPreferencesContext", () => {
     })
     expect(
       mockedUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenCalledWith({
+      claudeCodeHub: { baseUrl: "https://cch.example" },
+    })
+    expect(
+      mockedUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenCalledWith({
+      claudeCodeHub: { adminToken: "cch-token" },
+    })
+    expect(
+      mockedUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenCalledWith({
+      claudeCodeHub: {
+        baseUrl: "https://managed-cch.example",
+        adminToken: "managed-cch-token",
+      },
+    })
+    expect(
+      mockedUserPreferences.savePreferencesWithResult,
     ).toHaveBeenCalledWith(
       {
         managedSiteModelSync: {
@@ -527,6 +558,10 @@ describe("UserPreferencesContext", () => {
       baseUrl: "https://final-axonhub.example",
       email: "root@example.com",
       password: "final-password",
+    })
+    expect((latestContext as any)?.preferences.claudeCodeHub).toEqual({
+      baseUrl: "https://managed-cch.example",
+      adminToken: "managed-cch-token",
     })
     expect((latestContext as any)?.preferences.cliProxy.baseUrl).toBe(
       "https://cli.example",
@@ -876,6 +911,7 @@ describe("UserPreferencesContext", () => {
       await context.resetVeloeraConfig()
       await context.resetOctopusConfig()
       await context.resetAxonHubConfig()
+      await context.resetClaudeCodeHubConfig()
       await context.resetNewApiModelSyncConfig()
       await context.resetCliProxyConfig()
       await context.resetClaudeCodeRouterConfig()
@@ -911,6 +947,9 @@ describe("UserPreferencesContext", () => {
     )
     expect((latestContext as any)?.preferences.axonHub).toEqual(
       DEFAULT_AXON_HUB_CONFIG,
+    )
+    expect((latestContext as any)?.preferences.claudeCodeHub).toEqual(
+      DEFAULT_PREFERENCES.claudeCodeHub,
     )
     expect((latestContext as any)?.preferences.cliProxy).toEqual(
       DEFAULT_PREFERENCES.cliProxy,
@@ -1269,6 +1308,7 @@ describe("UserPreferencesContext", () => {
     mockedUserPreferences.resetDoneHubConfig.mockResolvedValue(false)
     mockedUserPreferences.resetVeloeraConfig.mockResolvedValue(false)
     mockedUserPreferences.resetOctopusConfig.mockResolvedValue(false)
+    mockedUserPreferences.resetClaudeCodeHubConfig.mockResolvedValue(false)
     mockedUserPreferences.resetNewApiModelSyncConfig.mockResolvedValue(false)
     mockedUserPreferences.resetCliProxyConfig.mockResolvedValue(false)
     mockedUserPreferences.resetClaudeCodeRouterConfig.mockResolvedValue(false)
@@ -1290,6 +1330,7 @@ describe("UserPreferencesContext", () => {
       expect(await context.resetDoneHubConfig()).toBe(false)
       expect(await context.resetVeloeraConfig()).toBe(false)
       expect(await context.resetOctopusConfig()).toBe(false)
+      expect(await context.resetClaudeCodeHubConfig()).toBe(false)
       expect(await context.resetNewApiModelSyncConfig()).toBe(false)
       expect(await context.resetCliProxyConfig()).toBe(false)
       expect(await context.resetClaudeCodeRouterConfig()).toBe(false)
