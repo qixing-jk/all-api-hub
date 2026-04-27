@@ -1,5 +1,5 @@
 import { http, HttpResponse } from "msw"
-import { beforeEach, describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   ClaudeCodeHubApiError,
@@ -287,6 +287,49 @@ describe("Claude Code Hub action API adapter", () => {
     const requestSignal: AbortSignal = capturedSignal
     controller.abort()
     expect(requestSignal.aborted).toBe(true)
+  })
+
+  it("cleans up fallback abort listeners after a successful request", async () => {
+    const originalAny = Object.getOwnPropertyDescriptor(AbortSignal, "any")
+    const originalTimeout = Object.getOwnPropertyDescriptor(
+      AbortSignal,
+      "timeout",
+    )
+    const controller = new AbortController()
+    const removeEventListenerSpy = vi.spyOn(
+      controller.signal,
+      "removeEventListener",
+    )
+
+    Object.defineProperty(AbortSignal, "any", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    })
+    Object.defineProperty(AbortSignal, "timeout", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    })
+
+    server.use(
+      http.post(`${PROVIDER_ACTION_BASE}/getProviders`, () =>
+        HttpResponse.json({ ok: true, data: [] }),
+      ),
+    )
+
+    try {
+      await expect(
+        listProviders(config, {
+          signal: controller.signal,
+        }),
+      ).resolves.toEqual([])
+    } finally {
+      restoreAbortSignalStatic("any", originalAny)
+      restoreAbortSignalStatic("timeout", originalTimeout)
+    }
+
+    expect(removeEventListenerSpy).toHaveBeenCalled()
   })
 
   it("rejects already-aborted caller signals even without AbortSignal.any", async () => {

@@ -131,6 +131,28 @@ describe("managedSite utils", () => {
         OCTOPUS,
       ),
     ).toBeNull()
+    expect(
+      getManagedSiteAdminConfigForType(
+        {
+          claudeCodeHub: {
+            baseUrl: "",
+            adminToken: "admin-token",
+          },
+        } as any,
+        CLAUDE_CODE_HUB,
+      ),
+    ).toBeNull()
+    expect(
+      getManagedSiteAdminConfigForType(
+        {
+          claudeCodeHub: {
+            baseUrl: "https://cch.example.com",
+            adminToken: "",
+          },
+        } as any,
+        CLAUDE_CODE_HUB,
+      ),
+    ).toBeNull()
   })
 
   it("builds managed-site target options and respects exclusions", () => {

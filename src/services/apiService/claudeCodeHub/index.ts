@@ -12,6 +12,11 @@ interface ClaudeCodeHubActionResponse<T> {
   error?: unknown
 }
 
+interface ActionSignalHandle {
+  signal: AbortSignal
+  cleanup: () => void
+}
+
 type ClaudeCodeHubProviderAction =
   | "getProviders"
   | "addProvider"
@@ -112,33 +117,47 @@ async function parseActionResponse<T>(
 /**
  * Calls a Claude Code Hub provider action endpoint and normalizes failures.
  */
-function createTimeoutAbortSignal(timeoutMs: number): AbortSignal {
+function createTimeoutAbortSignal(timeoutMs: number): ActionSignalHandle {
   if (typeof AbortSignal.timeout === "function") {
-    return AbortSignal.timeout(timeoutMs)
+    return {
+      signal: AbortSignal.timeout(timeoutMs),
+      cleanup: () => {},
+    }
   }
 
   const controller = new AbortController()
+  const handleAbort = () => {
+    clearTimeout(timeoutId)
+  }
   const timeoutId = setTimeout(() => {
     controller.abort()
   }, timeoutMs)
 
-  controller.signal.addEventListener(
-    "abort",
-    () => {
-      clearTimeout(timeoutId)
-    },
-    { once: true },
-  )
+  controller.signal.addEventListener("abort", handleAbort, { once: true })
 
-  return controller.signal
+  return {
+    signal: controller.signal,
+    cleanup: () => {
+      clearTimeout(timeoutId)
+      controller.signal.removeEventListener("abort", handleAbort)
+    },
+  }
 }
 
 /**
  * Composes multiple abort signals while remaining compatible with older browsers.
  */
-function composeAbortSignals(signals: AbortSignal[]): AbortSignal {
+function composeAbortSignals(signals: AbortSignal[]): ActionSignalHandle {
+  const handle: ActionSignalHandle = {
+    signal: undefined as unknown as AbortSignal,
+    cleanup: () => {},
+  }
+
   if (typeof AbortSignal.any === "function") {
-    return AbortSignal.any(signals)
+    return {
+      signal: AbortSignal.any(signals),
+      cleanup: () => {},
+    }
   }
 
   const controller = new AbortController()
@@ -155,10 +174,13 @@ function composeAbortSignals(signals: AbortSignal[]): AbortSignal {
     }
   }
 
+  handle.signal = controller.signal
+  handle.cleanup = abortComposite
+
   for (const signal of signals) {
     if (signal.aborted) {
       abortComposite()
-      return controller.signal
+      return handle
     }
 
     const handleAbort = () => {
@@ -171,7 +193,7 @@ function composeAbortSignals(signals: AbortSignal[]): AbortSignal {
     })
   }
 
-  return controller.signal
+  return handle
 }
 
 /**
@@ -180,11 +202,20 @@ function composeAbortSignals(signals: AbortSignal[]): AbortSignal {
 function buildActionSignal(options?: {
   signal?: AbortSignal
   timeoutMs?: number
-}) {
+}): ActionSignalHandle {
   const timeoutSignal = createTimeoutAbortSignal(options?.timeoutMs ?? 30_000)
-  return options?.signal
-    ? composeAbortSignals([options.signal, timeoutSignal])
-    : timeoutSignal
+  if (!options?.signal) {
+    return timeoutSignal
+  }
+
+  const composed = composeAbortSignals([options.signal, timeoutSignal.signal])
+  return {
+    signal: composed.signal,
+    cleanup: () => {
+      composed.cleanup()
+      timeoutSignal.cleanup()
+    },
+  }
 }
 
 /**
@@ -202,11 +233,12 @@ async function callProviderAction<T>(
 ): Promise<T> {
   const baseUrl = normalizeClaudeCodeHubBaseUrl(config.baseUrl)
   let response: Response | undefined
+  const actionSignal = buildActionSignal(options)
 
   try {
     response = await fetch(`${baseUrl}/api/actions/providers/${action}`, {
       method: "POST",
-      signal: buildActionSignal(options),
+      signal: actionSignal.signal,
       headers: {
         "Content-Type": "application/json",
         Authorization: `Bearer ${config.adminToken}`,
@@ -226,6 +258,8 @@ async function callProviderAction<T>(
       normalizeActionError(error, config, options?.secrets ?? []),
       response?.status,
     )
+  } finally {
+    actionSignal.cleanup()
   }
 }
 

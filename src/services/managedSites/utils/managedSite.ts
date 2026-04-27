@@ -250,6 +250,8 @@ export function getManagedSiteAdminConfigForType(
     if (!claudeCodeHubConfig?.baseUrl || !claudeCodeHubConfig?.adminToken) {
       return null
     }
+    // Claude Code Hub authenticates with an admin token only and does not
+    // expose a meaningful per-user identifier through this shared contract.
     return {
       baseUrl: claudeCodeHubConfig.baseUrl,
       adminToken: claudeCodeHubConfig.adminToken,
