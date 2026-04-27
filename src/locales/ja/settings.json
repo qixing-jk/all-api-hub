@@ -94,6 +94,33 @@
     "toggleDesc": "有効にすると、更新後最初の UI 起動時に更新ログをインライン表示します（各バージョン 1 回のみ）。完全版の更新ログは手動でも開けます。",
     "toggleLabel": "更新後に What's New を表示"
   },
+  "claudeCodeHub": {
+    "description": "Claude Code Hub 管理サイトへの接続を設定します。",
+    "fields": {
+      "adminTokenDesc": "Claude Code Hub の action API が受け付ける管理者トークンまたは API キー",
+      "adminTokenLabel": "管理者トークン",
+      "adminTokenPlaceholder": "管理者トークンを入力",
+      "baseUrlDesc": "Claude Code Hub サイトの Base URL を設定します",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://claude-code-hub.example.com",
+      "hideAdminToken": "管理者トークンを隠す",
+      "showAdminToken": "管理者トークンを表示"
+    },
+    "title": "Claude Code Hub 統合設定",
+    "unsupported": {
+      "description": "このバージョンでは、Claude Code Hub のチャネル移行、モデル同期、モデルリダイレクト、完全なキー表示は利用できません。",
+      "title": "未対応のチャネル操作"
+    },
+    "validation": {
+      "description": "action API 経由で Claude Code Hub のプロバイダー一覧を読み取れるか確認します",
+      "failed": "Claude Code Hub 検証に失敗しました: {{error}}",
+      "missingFields": "必須項目をすべて入力してください",
+      "success": "Claude Code Hub 設定の検証に成功しました",
+      "title": "設定を検証",
+      "validate": "検証",
+      "validating": "検証中..."
+    }
+  },
   "claudeCodeRouter": {
     "apiKeyLabel": "API キー",
     "apiKeyPlaceholder": "sk-123456",
@@ -190,6 +217,7 @@
   },
   "managedSite": {
     "axonHub": "AxonHub",
+    "claudeCodeHub": "Claude Code Hub",
     "description": "管理したい API 中継プラットフォームを選択します。この設定により、チャネル管理やモデル同期で使われる構成が決まります。",
     "doneHub": "Done Hub",
     "newApi": "New API",

@@ -29,10 +29,19 @@ import {
   AxonHubChannelTypeOptions,
   isAxonHubChannelType,
 } from "~/constants/axonHub"
+import {
+  ClaudeCodeHubProviderTypeOptions,
+  isClaudeCodeHubProviderType,
+} from "~/constants/claudeCodeHub"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelType, ChannelTypeOptions } from "~/constants/managedSite"
 import { OctopusOutboundTypeOptions } from "~/constants/octopus"
-import { AXON_HUB, NEW_API, OCTOPUS } from "~/constants/siteType"
+import {
+  AXON_HUB,
+  CLAUDE_CODE_HUB,
+  NEW_API,
+  OCTOPUS,
+} from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
@@ -121,6 +130,7 @@ export function ChannelDialog({
   } = useUserPreferencesContext()
   const isOctopus = managedSiteType === OCTOPUS
   const isAxonHub = managedSiteType === AXON_HUB
+  const isClaudeCodeHub = managedSiteType === CLAUDE_CODE_HUB
   const canRunManagedVerification =
     managedSiteType === NEW_API && canRecoverManagedVerification
   const isAddMode = mode === DIALOG_MODES.ADD
@@ -150,16 +160,19 @@ export function ChannelDialog({
     initialGroups,
   })
 
-  const channelTypeOptions = isAxonHub
-    ? AxonHubChannelTypeOptions
-    : isOctopus
-      ? OctopusOutboundTypeOptions
-      : ChannelTypeOptions
-  const shouldShowUnknownAxonHubType =
-    isAxonHub &&
+  const channelTypeOptions = isClaudeCodeHub
+    ? ClaudeCodeHubProviderTypeOptions
+    : isAxonHub
+      ? AxonHubChannelTypeOptions
+      : isOctopus
+        ? OctopusOutboundTypeOptions
+        : ChannelTypeOptions
+  const shouldShowUnknownStringType =
+    (isAxonHub || isClaudeCodeHub) &&
     typeof formData.type === "string" &&
     formData.type.trim() &&
-    !isAxonHubChannelType(formData.type)
+    !isAxonHubChannelType(formData.type) &&
+    !isClaudeCodeHubProviderType(formData.type)
 
   const handleSelectAllModels = () => {
     updateField(
@@ -526,7 +539,9 @@ export function ChannelDialog({
             }
             onValueChange={(value) =>
               handleTypeChange(
-                isAxonHub
+                // AxonHub and Claude Code Hub use backend-owned string
+                // channel/provider types, so keep them out of numeric coercion.
+                isAxonHub || isClaudeCodeHub
                   ? value
                   : (Number(value) as ChannelType | OctopusOutboundType),
               )
@@ -540,7 +555,7 @@ export function ChannelDialog({
               />
             </SelectTrigger>
             <SelectContent>
-              {shouldShowUnknownAxonHubType ? (
+              {shouldShowUnknownStringType ? (
                 <SelectItem value={String(formData.type)}>
                   {String(formData.type)}
                 </SelectItem>

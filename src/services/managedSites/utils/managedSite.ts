@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 
 import {
   AXON_HUB,
+  CLAUDE_CODE_HUB,
   DONE_HUB,
   NEW_API,
   OCTOPUS,
@@ -14,6 +15,10 @@ import {
   DEFAULT_AXON_HUB_CONFIG,
   type AxonHubConfig,
 } from "~/types/axonHubConfig"
+import {
+  DEFAULT_CLAUDE_CODE_HUB_CONFIG,
+  type ClaudeCodeHubConfig,
+} from "~/types/claudeCodeHubConfig"
 import {
   DEFAULT_DONE_HUB_CONFIG,
   type DoneHubConfig,
@@ -28,6 +33,7 @@ export type ManagedSiteLabelKey =
   | "settings:managedSite.veloera"
   | "settings:managedSite.octopus"
   | "settings:managedSite.axonHub"
+  | "settings:managedSite.claudeCodeHub"
 
 /**
  * Managed site namespace key used under the `messages` i18n namespace.
@@ -38,6 +44,7 @@ export type ManagedSiteMessagesKey =
   | "veloera"
   | "octopus"
   | "axonhub"
+  | "claudeCodeHub"
 
 export interface ManagedSiteAdminConfig {
   baseUrl: string
@@ -58,6 +65,7 @@ type ManagedSiteConfig =
   | VeloeraConfig
   | OctopusConfig
   | AxonHubConfig
+  | ClaudeCodeHubConfig
 
 /**
  * Extracts the selected managed site type and its corresponding config from a
@@ -73,6 +81,8 @@ function getManagedSiteConfigFromPreferencesForType(
   let config: ManagedSiteConfig
   if (siteType === AXON_HUB) {
     config = preferences.axonHub || DEFAULT_AXON_HUB_CONFIG
+  } else if (siteType === CLAUDE_CODE_HUB) {
+    config = preferences.claudeCodeHub || DEFAULT_CLAUDE_CODE_HUB_CONFIG
   } else if (siteType === OCTOPUS) {
     config = preferences.octopus || { baseUrl: "", username: "", password: "" }
   } else if (siteType === DONE_HUB) {
@@ -121,6 +131,9 @@ export function getManagedSiteLabelKey(
   if (siteType === AXON_HUB) {
     return "settings:managedSite.axonHub"
   }
+  if (siteType === CLAUDE_CODE_HUB) {
+    return "settings:managedSite.claudeCodeHub"
+  }
   if (siteType === DONE_HUB) {
     return "settings:managedSite.doneHub"
   }
@@ -138,6 +151,8 @@ export function getManagedSiteLabel(t: TFunction, siteType: ManagedSiteType) {
       return t("settings:managedSite.octopus")
     case AXON_HUB:
       return t("settings:managedSite.axonHub")
+    case CLAUDE_CODE_HUB:
+      return t("settings:managedSite.claudeCodeHub")
     case DONE_HUB:
       return t("settings:managedSite.doneHub")
     case VELOERA:
@@ -159,6 +174,9 @@ export function getManagedSiteMessagesKeyFromSiteType(
   }
   if (siteType === AXON_HUB) {
     return "axonhub"
+  }
+  if (siteType === CLAUDE_CODE_HUB) {
+    return "claudeCodeHub"
   }
   if (siteType === DONE_HUB) {
     return "donehub"
@@ -224,6 +242,18 @@ export function getManagedSiteAdminConfigForType(
       baseUrl: axonHubConfig.baseUrl,
       adminToken: axonHubConfig.password,
       userId: axonHubConfig.email,
+    }
+  }
+
+  if (siteType === CLAUDE_CODE_HUB) {
+    const claudeCodeHubConfig = config as ClaudeCodeHubConfig
+    if (!claudeCodeHubConfig?.baseUrl || !claudeCodeHubConfig?.adminToken) {
+      return null
+    }
+    return {
+      baseUrl: claudeCodeHubConfig.baseUrl,
+      adminToken: claudeCodeHubConfig.adminToken,
+      userId: "admin",
     }
   }
 
@@ -296,9 +326,9 @@ export function getManagedSiteTargetOptions(
   },
 ): ManagedSiteTargetOption[] {
   const excluded = new Set(options?.excludeSiteTypes ?? [])
-  // AXON_HUB is intentionally excluded here. ManagedSiteChannels.tsx disables
-  // migration for AxonHub, and enabling it as a target also requires an
-  // explicit GraphQL-aware migration adapter in channelMigration.ts.
+  // AXON_HUB and CLAUDE_CODE_HUB are intentionally excluded here.
+  // ManagedSiteChannels.tsx disables migration for them, and enabling either
+  // as a target requires a backend-specific migration adapter.
   const siteTypes: ManagedSiteType[] = [NEW_API, VELOERA, DONE_HUB, OCTOPUS]
 
   return siteTypes
@@ -352,6 +382,8 @@ export function getManagedSiteConfigMissingMessage(
       return t("messages:octopus.configMissing")
     case "axonhub":
       return t("messages:axonhub.configMissing")
+    case "claudeCodeHub":
+      return t("messages:claudeCodeHub.configMissing")
     case "newapi":
     default:
       return t("messages:newapi.configMissing")
@@ -374,6 +406,8 @@ export function getManagedSiteNoChannelsToSyncMessage(
       return t("messages:octopus.noChannelsToSync")
     case "axonhub":
       return t("messages:axonhub.noChannelsToSync")
+    case "claudeCodeHub":
+      return t("messages:claudeCodeHub.noChannelsToSync")
     case "newapi":
     default:
       return t("messages:newapi.noChannelsToSync")

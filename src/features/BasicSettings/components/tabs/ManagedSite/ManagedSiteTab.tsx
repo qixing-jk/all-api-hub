@@ -1,5 +1,6 @@
 import {
   AXON_HUB,
+  CLAUDE_CODE_HUB,
   DONE_HUB,
   NEW_API,
   OCTOPUS,
@@ -8,6 +9,7 @@ import {
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 
 import AxonHubSettings from "./AxonHubSettings"
+import ClaudeCodeHubSettings from "./ClaudeCodeHubSettings"
 import DoneHubSettings from "./DoneHubSettings"
 import ManagedSiteModelSyncSettings from "./managedSiteModelSyncSettings"
 import ManagedSiteSelector from "./ManagedSiteSelector"
@@ -33,6 +35,8 @@ export default function ManagedSiteTab() {
         return <VeloeraSettings />
       case AXON_HUB:
         return <AxonHubSettings />
+      case CLAUDE_CODE_HUB:
+        return <ClaudeCodeHubSettings />
       case NEW_API:
       default:
         return <NewApiSettings />
@@ -45,9 +49,9 @@ export default function ManagedSiteTab() {
 
       {renderSiteSettings()}
 
-      {/* AxonHub channel management is GraphQL-only and does not expose the
-          New-API-style model sync or redirect controls. */}
-      {managedSiteType !== AXON_HUB && (
+      {/* AxonHub and Claude Code Hub do not expose New-API-style model sync or
+          redirect controls. */}
+      {managedSiteType !== AXON_HUB && managedSiteType !== CLAUDE_CODE_HUB && (
         <>
           <ManagedSiteModelSyncSettings />
           <ModelRedirectSettings />

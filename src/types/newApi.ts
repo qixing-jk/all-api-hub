@@ -1,5 +1,6 @@
 import { ChannelType } from "~/constants"
 import type { AxonHubChannelType } from "~/constants/axonHub"
+import type { ClaudeCodeHubProviderType } from "~/constants/claudeCodeHub"
 
 import type { OctopusOutboundType } from "./octopus"
 
@@ -55,7 +56,11 @@ export interface ChannelDefaults {
   weight: number
   groups: string[]
   models: string[]
-  type: ChannelType | OctopusOutboundType | AxonHubChannelType
+  type:
+    | ChannelType
+    | OctopusOutboundType
+    | AxonHubChannelType
+    | ClaudeCodeHubProviderType
 }
 
 /**

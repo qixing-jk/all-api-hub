@@ -94,6 +94,33 @@
     "toggleDesc": "开启后，插件更新完成后首次打开插件界面时，会在插件内弹出更新内容（每个版本仅一次），并可手动打开完整更新日志页面。",
     "toggleLabel": "更新后自动显示更新内容"
   },
+  "claudeCodeHub": {
+    "description": "配置 Claude Code Hub 管理站点的连接信息。",
+    "fields": {
+      "adminTokenDesc": "Claude Code Hub action API 接受的管理员令牌或 API Key",
+      "adminTokenLabel": "管理员令牌",
+      "adminTokenPlaceholder": "输入管理员令牌",
+      "baseUrlDesc": "设置 Claude Code Hub 站点的基础 URL",
+      "baseUrlLabel": "基础 URL",
+      "baseUrlPlaceholder": "https://claude-code-hub.example.com",
+      "hideAdminToken": "隐藏管理员令牌",
+      "showAdminToken": "显示管理员令牌"
+    },
+    "title": "Claude Code Hub 集成设置",
+    "unsupported": {
+      "description": "当前版本暂不支持 Claude Code Hub 的渠道迁移、模型同步、模型重定向和完整密钥查看。",
+      "title": "不支持的渠道操作"
+    },
+    "validation": {
+      "description": "测试该令牌是否可通过 action API 读取 Claude Code Hub 提供商列表",
+      "failed": "Claude Code Hub 配置验证失败：{{error}}",
+      "missingFields": "请填写所有必填字段",
+      "success": "Claude Code Hub 配置验证成功",
+      "title": "验证配置",
+      "validate": "验证配置",
+      "validating": "验证中..."
+    }
+  },
   "claudeCodeRouter": {
     "apiKeyLabel": "API Key",
     "apiKeyPlaceholder": "sk-123456",
@@ -190,6 +217,7 @@
   },
   "managedSite": {
     "axonHub": "AxonHub",
+    "claudeCodeHub": "Claude Code Hub",
     "description": "选择您要管理的 API 聚合平台站点。这将决定用于渠道管理和模型同步的配置。",
     "doneHub": "Done Hub",
     "newApi": "New API",

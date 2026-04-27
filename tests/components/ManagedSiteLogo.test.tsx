@@ -1,7 +1,12 @@
 import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import { AXON_HUB, NEW_API, VELOERA } from "~/constants/siteType"
+import {
+  AXON_HUB,
+  CLAUDE_CODE_HUB,
+  NEW_API,
+  VELOERA,
+} from "~/constants/siteType"
 import { TokenDetails } from "~/features/AccountManagement/components/CopyKeyDialog/TokenDetails"
 import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
@@ -139,6 +144,28 @@ describe("Managed site logo", () => {
     ).toBeInTheDocument()
   })
 
+  it("renders Claude Code Hub logo when managedSiteType is CLAUDE_CODE_HUB", async () => {
+    mockedUseUserPreferencesContext.mockReturnValue({
+      managedSiteType: CLAUDE_CODE_HUB,
+    })
+
+    render(
+      <TokenHeader
+        token={createTokenStub()}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={createAccountStub()}
+      />,
+    )
+
+    await screen.findByText("Token")
+
+    expect(
+      await screen.findByRole("img", { name: "Claude Code Hub logo" }),
+    ).toBeInTheDocument()
+  })
+
   it("renders Veloera logo in CopyKeyDialog token details when managedSiteType is VELOERA", async () => {
     mockedUseUserPreferencesContext.mockReturnValue({
       managedSiteType: VELOERA,
@@ -158,6 +185,28 @@ describe("Managed site logo", () => {
 
     expect(
       await screen.findByRole("img", { name: "Veloera logo" }),
+    ).toBeInTheDocument()
+  })
+
+  it("renders Claude Code Hub logo in CopyKeyDialog token details when managedSiteType is CLAUDE_CODE_HUB", async () => {
+    mockedUseUserPreferencesContext.mockReturnValue({
+      managedSiteType: CLAUDE_CODE_HUB,
+    })
+
+    render(
+      <TokenDetails
+        token={createTokenStub({
+          accountId: undefined,
+          accountName: undefined,
+        })}
+        copiedTokenId={null}
+        onCopyKey={vi.fn()}
+        account={createAccountStub()}
+      />,
+    )
+
+    expect(
+      await screen.findByRole("img", { name: "Claude Code Hub logo" }),
     ).toBeInTheDocument()
   })
 })

@@ -94,6 +94,33 @@
     "toggleDesc": "When enabled, the update log is shown inline on first UI open after an update (once per version). You can still open the full docs changelog manually.",
     "toggleLabel": "Show What's New after updates"
   },
+  "claudeCodeHub": {
+    "description": "Configure connection settings for a Claude Code Hub admin site.",
+    "fields": {
+      "adminTokenDesc": "Admin token or API key accepted by Claude Code Hub's action API",
+      "adminTokenLabel": "Admin token",
+      "adminTokenPlaceholder": "Enter admin token",
+      "baseUrlDesc": "Set the Claude Code Hub site base URL",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://claude-code-hub.example.com",
+      "hideAdminToken": "Hide admin token",
+      "showAdminToken": "Show admin token"
+    },
+    "title": "Claude Code Hub Integration Settings",
+    "unsupported": {
+      "description": "Channel migration, model sync, model redirect, and full key reveal are not available for Claude Code Hub in this version.",
+      "title": "Unsupported channel actions"
+    },
+    "validation": {
+      "description": "Test whether the token can read Claude Code Hub providers through the action API",
+      "failed": "Claude Code Hub validation failed: {{error}}",
+      "missingFields": "Please fill in all required fields",
+      "success": "Claude Code Hub configuration validated successfully",
+      "title": "Validate Configuration",
+      "validate": "Validate",
+      "validating": "Validating..."
+    }
+  },
   "claudeCodeRouter": {
     "apiKeyLabel": "API key",
     "apiKeyPlaceholder": "sk-123456",
@@ -190,6 +217,7 @@
   },
   "managedSite": {
     "axonHub": "AxonHub",
+    "claudeCodeHub": "Claude Code Hub",
     "description": "Select which API aggregator platform you want to manage. This determines which configuration will be used for channel management and model syncing.",
     "doneHub": "Done Hub",
     "newApi": "New API",

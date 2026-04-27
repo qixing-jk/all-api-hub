@@ -6,6 +6,7 @@
     "checkingApiKeys": "Checking API key...",
     "createTokenFailed": "Failed to create API token",
     "importingToAxonHub": "Importing to AxonHub...",
+    "importingToClaudeCodeHub": "Importing to Claude Code Hub...",
     "importingToDoneHub": "Importing to Done Hub...",
     "importingToNewApi": "Importing to New API...",
     "importingToOctopus": "Importing to Octopus...",
@@ -55,6 +56,18 @@
     "attemptingRedirect": "Attempting to redirect to Cherry Studio",
     "missingCredentials": "Missing required account or key information",
     "unableToOpen": "Unable to open, please ensure Cherry Studio is installed"
+  },
+  "claudeCodeHub": {
+    "channelExists": "Provider {{channelName}} already exists, no need to import again",
+    "configMissing": "Please configure Claude Code Hub address and admin token in basic settings first",
+    "deleteFailed": "Failed to delete Claude Code Hub provider",
+    "importFailed": "Import failed, an unknown error occurred",
+    "importSuccess": "Successfully imported new provider {{channelName}}",
+    "modelsMissing": "Please provide at least one model",
+    "noChannelsToSync": "No providers to sync",
+    "realProviderKeyRequired": "Claude Code Hub requires a real upstream provider key. Empty or masked keys cannot be used for provider creation.",
+    "unsupportedModelSync": "Claude Code Hub does not support managed-site model sync in this version",
+    "updateFailed": "Failed to update Claude Code Hub provider"
   },
   "claudeCodeRouter": {
     "configMissing": "Please configure Claude Code Router base URL in settings first",

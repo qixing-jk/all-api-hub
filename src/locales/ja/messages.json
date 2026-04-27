@@ -6,6 +6,7 @@
     "checkingApiKeys": "API キーを確認中...",
     "createTokenFailed": "API トークンの作成に失敗しました",
     "importingToAxonHub": "AxonHub にインポート中...",
+    "importingToClaudeCodeHub": "Claude Code Hub にインポート中...",
     "importingToDoneHub": "Done Hub にインポート中...",
     "importingToNewApi": "New API にインポート中...",
     "importingToOctopus": "Octopus にインポート中...",
@@ -55,6 +56,18 @@
     "attemptingRedirect": "Cherry Studio へリダイレクトを試行中",
     "missingCredentials": "必要なアカウント情報またはキー情報が不足しています",
     "unableToOpen": "開けません。Cherry Studio がインストールされているか確認してください"
+  },
+  "claudeCodeHub": {
+    "channelExists": "プロバイダー {{channelName}} は既に存在するため、再インポートは不要です",
+    "configMissing": "先に基本設定で Claude Code Hub のアドレスと管理者トークンを設定してください",
+    "deleteFailed": "Claude Code Hub プロバイダーの削除に失敗しました",
+    "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
+    "importSuccess": "新しいプロバイダー {{channelName}} をインポートしました",
+    "modelsMissing": "少なくとも 1 つのモデルを指定してください",
+    "noChannelsToSync": "同期できるプロバイダーがありません",
+    "realProviderKeyRequired": "Claude Code Hub でプロバイダーを作成するには実際の上流キーが必要です。空またはマスク済みのキーは作成に使用できません。",
+    "unsupportedModelSync": "このバージョンでは Claude Code Hub の管理サイトモデル同期はサポートされていません",
+    "updateFailed": "Claude Code Hub プロバイダーの更新に失敗しました"
   },
   "claudeCodeRouter": {
     "configMissing": "先に設定で Claude Code Router の Base URL を設定してください",

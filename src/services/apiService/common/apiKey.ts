@@ -28,7 +28,10 @@ export function normalizeApiTokenKeyValue(key: string): string {
  * the compatible masked-key contract.
  */
 export function isMaskedApiTokenKey(key: string): boolean {
-  return normalizeApiTokenKeyValue(key).includes("*")
+  return (
+    normalizeApiTokenKeyValue(key).includes("*") ||
+    normalizeApiTokenKeyValue(key).includes("•")
+  )
 }
 
 /**

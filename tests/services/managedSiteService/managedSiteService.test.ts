@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import {
   AXON_HUB,
+  CLAUDE_CODE_HUB,
   DONE_HUB,
   NEW_API,
   OCTOPUS,
@@ -114,6 +115,25 @@ vi.mock("~/services/managedSites/providers/axonHub", () => ({
   autoConfigToAxonHub: vi.fn(),
 }))
 
+vi.mock("~/services/managedSites/providers/claudeCodeHub", () => ({
+  checkValidClaudeCodeHubConfig: vi.fn(async () => true),
+  getClaudeCodeHubConfig: vi.fn(async () => ({
+    baseUrl: "c",
+    token: "t",
+    userId: "admin",
+  })),
+  searchChannel: vi.fn(),
+  createChannel: vi.fn(),
+  updateChannel: vi.fn(),
+  deleteChannel: vi.fn(),
+  fetchAvailableModels: vi.fn(),
+  buildChannelName: vi.fn(),
+  prepareChannelFormData: vi.fn(),
+  buildChannelPayload: vi.fn(),
+  findMatchingChannel: vi.fn(),
+  autoConfigToClaudeCodeHub: vi.fn(),
+}))
+
 describe("managedSiteService", () => {
   it("reports invalid managed-site config when preferences are missing", async () => {
     const { hasValidManagedSiteConfig } = await import(
@@ -165,6 +185,28 @@ describe("managedSiteService", () => {
       hasValidManagedSiteConfig({
         ...prefs,
         axonHub: { ...prefs.axonHub, password: "" },
+      } as any),
+    ).toBe(false)
+  })
+
+  it("validates Claude Code Hub config completeness by site type", async () => {
+    const { hasValidManagedSiteConfig } = await import(
+      "~/services/managedSites/managedSiteService"
+    )
+
+    const prefs = {
+      managedSiteType: CLAUDE_CODE_HUB,
+      claudeCodeHub: {
+        baseUrl: "https://cch.example.com",
+        adminToken: "admin-token",
+      },
+    }
+
+    expect(hasValidManagedSiteConfig(prefs as any)).toBe(true)
+    expect(
+      hasValidManagedSiteConfig({
+        ...prefs,
+        claudeCodeHub: { ...prefs.claudeCodeHub, adminToken: "" },
       } as any),
     ).toBe(false)
   })
@@ -239,6 +281,24 @@ describe("managedSiteService", () => {
       baseUrl: "a",
       token: "p",
       userId: "admin@example.com",
+    })
+  })
+
+  it("routes to Claude Code Hub service without key reveal support", async () => {
+    const { getManagedSiteServiceForType } = await import(
+      "~/services/managedSites/managedSiteService"
+    )
+
+    const service = getManagedSiteServiceForType(CLAUDE_CODE_HUB)
+    expect(service.siteType).toBe(CLAUDE_CODE_HUB)
+    expect(service.messagesKey).toBe("claudeCodeHub")
+    expect(service.fetchChannelSecretKey).toBeUndefined()
+
+    const config = await service.getConfig()
+    expect(config).toEqual({
+      baseUrl: "c",
+      token: "t",
+      userId: "admin",
     })
   })
 })

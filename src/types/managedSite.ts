@@ -3,6 +3,7 @@
  * 用于在通用渠道字段基础上附加站点原始数据，例如 _octopusData 或 _axonHubData。
  */
 import type { AxonHubChannel } from "./axonHub"
+import type { ClaudeCodeHubProviderDisplay } from "./claudeCodeHub"
 import type { NewApiChannel } from "./newApi"
 import type { OctopusChannel } from "./octopus"
 
@@ -33,4 +34,9 @@ export type OctopusChannelWithData = NewApiChannel & {
 export type AxonHubChannelWithData = NewApiChannel & {
   /** Raw AxonHub GraphQL channel data. */
   _axonHubData: AxonHubChannel
+}
+
+export type ClaudeCodeHubChannelWithData = NewApiChannel & {
+  /** Raw Claude Code Hub provider display data. */
+  _claudeCodeHubData: ClaudeCodeHubProviderDisplay
 }

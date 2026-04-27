@@ -6,6 +6,7 @@
     "checkingApiKeys": "正在檢查 API 金鑰...",
     "createTokenFailed": "建立 API 令牌失敗",
     "importingToAxonHub": "正在匯入到 AxonHub...",
+    "importingToClaudeCodeHub": "正在匯入到 Claude Code Hub...",
     "importingToDoneHub": "正在匯入到 Done Hub...",
     "importingToNewApi": "正在匯入到 New API...",
     "importingToOctopus": "正在匯入到 Octopus...",
@@ -55,6 +56,18 @@
     "attemptingRedirect": "正在嘗試跳轉到 Cherry Studio",
     "missingCredentials": "缺少必要的帳戶或金鑰資訊",
     "unableToOpen": "無法開啟，請確保已安裝 Cherry Studio。"
+  },
+  "claudeCodeHub": {
+    "channelExists": "提供商 {{channelName}} 已存在，無需再次匯入",
+    "configMissing": "請先在基礎設定中設定 Claude Code Hub 地址和管理員權杖",
+    "deleteFailed": "刪除 Claude Code Hub 提供商失敗",
+    "importFailed": "匯入失敗，發生未知錯誤",
+    "importSuccess": "成功匯入新提供商 {{channelName}}",
+    "modelsMissing": "請至少填寫一個模型",
+    "noChannelsToSync": "沒有可同步的提供商",
+    "realProviderKeyRequired": "Claude Code Hub 建立提供商需要真實上游金鑰，空金鑰或脫敏金鑰不能用於建立。",
+    "unsupportedModelSync": "目前版本不支援 Claude Code Hub 管理站點模型同步",
+    "updateFailed": "更新 Claude Code Hub 提供商失敗"
   },
   "claudeCodeRouter": {
     "configMissing": "請先在設定中配置 Claude Code Router 基礎 URL",

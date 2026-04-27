@@ -1,6 +1,7 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { OCTOPUS } from "~/constants/siteType"
+import { CLAUDE_CODE_HUB, OCTOPUS } from "~/constants/siteType"
 import * as octopusApi from "~/services/apiService/octopus"
+import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import {
   getManagedSiteAdminConfig,
   getManagedSiteConfig,
@@ -229,6 +230,23 @@ class ModelSyncScheduler {
       }
     }
 
+    if (siteType === CLAUDE_CODE_HUB) {
+      const managedConfig = getManagedSiteAdminConfig(userPrefs)
+      if (!managedConfig) {
+        throw new Error(getManagedSiteConfigMissingMessage(t, messagesKey))
+      }
+
+      const service = getManagedSiteServiceForType(siteType)
+      const channels = await service.searchChannel(
+        managedConfig.baseUrl,
+        managedConfig.adminToken,
+        managedConfig.userId,
+        "",
+      )
+
+      return channels ?? { items: [], total: 0, type_counts: {} }
+    }
+
     const service = await this.createService()
     return service.listChannels()
   }
@@ -260,6 +278,10 @@ class ModelSyncScheduler {
         concurrency,
         maxRetries,
       )
+    }
+
+    if (siteType === CLAUDE_CODE_HUB) {
+      throw new Error(t("messages:claudeCodeHub.unsupportedModelSync"))
     }
 
     // Initialize service (for non-Octopus sites)

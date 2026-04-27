@@ -5,7 +5,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useChannelForm } from "~/components/dialogs/ChannelDialog/hooks/useChannelForm"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
-import { AXON_HUB, NEW_API } from "~/constants/siteType"
+import { AXON_HUB, CLAUDE_CODE_HUB, NEW_API } from "~/constants/siteType"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import type {
   CreateChannelPayload,
@@ -317,5 +317,69 @@ describe("useChannelForm", () => {
       }),
     )
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not require a real provider key when editing a Claude Code Hub channel", async () => {
+    vi.mocked(getManagedSiteService).mockResolvedValue({
+      siteType: CLAUDE_CODE_HUB,
+      messagesKey: "claudeCodeHub",
+      checkValidConfig: mockCheckValidConfig.mockResolvedValue(true),
+      getConfig: mockGetConfig,
+      buildChannelPayload: mockBuildChannelPayload,
+      createChannel: mockCreateChannel,
+      updateChannel: mockUpdateChannel,
+    } as any)
+
+    mockGetConfig.mockResolvedValue({
+      baseUrl: "https://managed.example.com",
+      token: "admin-token",
+      userId: "1",
+    })
+    mockUpdateChannel.mockResolvedValue({ success: true, message: "success" })
+
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+    const preventDefault = vi.fn()
+    const channel = buildManagedSiteChannel({
+      type: "openai-compatible",
+      key: "sk-***",
+      group: "default",
+    })
+
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.EDIT,
+        channel,
+        isOpen: true,
+        onClose,
+        onSuccess,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.formData.key).toBe("sk-***")
+    })
+
+    expect(result.current.isFormValid).toBe(true)
+
+    await act(async () => {
+      await result.current.handleSubmit({
+        preventDefault,
+      } as unknown as FormEvent)
+    })
+
+    expect(preventDefault).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(toast.error)).not.toHaveBeenCalledWith(
+      "messages:claudeCodeHub.realProviderKeyRequired",
+    )
+    expect(mockBuildChannelPayload).not.toHaveBeenCalled()
+    expect(mockUpdateChannel).toHaveBeenCalled()
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(onSuccess).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        message: "success",
+      }),
+    )
   })
 })

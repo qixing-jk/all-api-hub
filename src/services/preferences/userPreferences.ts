@@ -3,6 +3,7 @@ import { Storage } from "@plasmohq/storage"
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import {
   AXON_HUB,
+  CLAUDE_CODE_HUB,
   DONE_HUB,
   NEW_API,
   OCTOPUS,
@@ -46,6 +47,10 @@ import {
   type AxonHubConfig,
 } from "~/types/axonHubConfig"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
+import {
+  DEFAULT_CLAUDE_CODE_HUB_CONFIG,
+  type ClaudeCodeHubConfig,
+} from "~/types/claudeCodeHubConfig"
 import {
   DEFAULT_CLAUDE_CODE_ROUTER_CONFIG,
   type ClaudeCodeRouterConfig,
@@ -305,7 +310,10 @@ export interface UserPreferences {
   // AxonHub 相关配置
   axonHub?: AxonHubConfig
 
-  // 管理站点类型 (用户可以选择管理 New API / Done Hub / Veloera / Octopus / AxonHub)
+  // Claude Code Hub 相关配置
+  claudeCodeHub?: ClaudeCodeHubConfig
+
+  // 管理站点类型 (用户可以选择管理 New API / Done Hub / Veloera / Octopus / AxonHub / Claude Code Hub)
   managedSiteType: ManagedSiteType
 
   // CLIProxyAPI 管理接口配置
@@ -488,6 +496,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   veloera: DEFAULT_VELOERA_CONFIG,
   octopus: DEFAULT_OCTOPUS_CONFIG,
   axonHub: DEFAULT_AXON_HUB_CONFIG,
+  claudeCodeHub: DEFAULT_CLAUDE_CODE_HUB_CONFIG,
   managedSiteType: NEW_API,
   cliProxy: DEFAULT_CLI_PROXY_CONFIG,
   claudeCodeRouter: DEFAULT_CLAUDE_CODE_ROUTER_CONFIG,
@@ -1042,6 +1051,17 @@ class UserPreferencesService {
   }
 
   /**
+   * Update Claude Code Hub config.
+   */
+  async updateClaudeCodeHubConfig(
+    config: Partial<ClaudeCodeHubConfig>,
+  ): Promise<boolean> {
+    return this.savePreferences({
+      claudeCodeHub: config,
+    })
+  }
+
+  /**
    * Reset Octopus config.
    */
   async resetOctopusConfig(): Promise<boolean> {
@@ -1056,6 +1076,15 @@ class UserPreferencesService {
   async resetAxonHubConfig(): Promise<boolean> {
     return this.savePreferences({
       axonHub: DEFAULT_PREFERENCES.axonHub,
+    })
+  }
+
+  /**
+   * Reset Claude Code Hub config.
+   */
+  async resetClaudeCodeHubConfig(): Promise<boolean> {
+    return this.savePreferences({
+      claudeCodeHub: DEFAULT_PREFERENCES.claudeCodeHub,
     })
   }
 
@@ -1079,6 +1108,7 @@ class UserPreferencesService {
       | VeloeraConfig
       | OctopusConfig
       | AxonHubConfig
+      | ClaudeCodeHubConfig
   }> {
     const prefs = await this.getPreferences()
     const siteType = prefs.managedSiteType || NEW_API
@@ -1088,8 +1118,11 @@ class UserPreferencesService {
       | VeloeraConfig
       | OctopusConfig
       | AxonHubConfig
+      | ClaudeCodeHubConfig
     if (siteType === AXON_HUB) {
       config = prefs.axonHub || DEFAULT_AXON_HUB_CONFIG
+    } else if (siteType === CLAUDE_CODE_HUB) {
+      config = prefs.claudeCodeHub || DEFAULT_CLAUDE_CODE_HUB_CONFIG
     } else if (siteType === OCTOPUS) {
       config = prefs.octopus || DEFAULT_OCTOPUS_CONFIG
     } else if (siteType === VELOERA) {

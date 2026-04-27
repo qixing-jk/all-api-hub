@@ -1,5 +1,6 @@
 import {
   AXON_HUB,
+  CLAUDE_CODE_HUB,
   DONE_HUB,
   NEW_API,
   OCTOPUS,
@@ -34,6 +35,7 @@ import {
   type UserPreferences,
 } from "../preferences/userPreferences"
 import * as axonHubService from "./providers/axonHub"
+import * as claudeCodeHubService from "./providers/claudeCodeHub"
 import * as doneHubService from "./providers/doneHubService"
 import * as newApiService from "./providers/newApi"
 import * as octopusService from "./providers/octopus"
@@ -197,6 +199,25 @@ export function getManagedSiteServiceForType(
       buildChannelPayload: axonHubService.buildChannelPayload,
       findMatchingChannel: axonHubService.findMatchingChannel,
       autoConfigToManagedSite: axonHubService.autoConfigToAxonHub,
+    }
+  }
+
+  if (siteType === CLAUDE_CODE_HUB) {
+    return {
+      siteType,
+      messagesKey,
+      searchChannel: claudeCodeHubService.searchChannel,
+      createChannel: claudeCodeHubService.createChannel,
+      updateChannel: claudeCodeHubService.updateChannel,
+      deleteChannel: claudeCodeHubService.deleteChannel,
+      checkValidConfig: claudeCodeHubService.checkValidClaudeCodeHubConfig,
+      getConfig: claudeCodeHubService.getClaudeCodeHubConfig,
+      fetchAvailableModels: claudeCodeHubService.fetchAvailableModels,
+      buildChannelName: claudeCodeHubService.buildChannelName,
+      prepareChannelFormData: claudeCodeHubService.prepareChannelFormData,
+      buildChannelPayload: claudeCodeHubService.buildChannelPayload,
+      findMatchingChannel: claudeCodeHubService.findMatchingChannel,
+      autoConfigToManagedSite: claudeCodeHubService.autoConfigToClaudeCodeHub,
     }
   }
 

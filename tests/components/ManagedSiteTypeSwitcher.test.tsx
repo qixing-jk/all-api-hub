@@ -3,7 +3,13 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
-import { AXON_HUB, DONE_HUB, NEW_API, VELOERA } from "~/constants/siteType"
+import {
+  AXON_HUB,
+  CLAUDE_CODE_HUB,
+  DONE_HUB,
+  NEW_API,
+  VELOERA,
+} from "~/constants/siteType"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const { mockedUseUserPreferencesContext, showUpdateToastMock } = vi.hoisted(
@@ -58,6 +64,10 @@ const createPreferences = (managedSiteType = NEW_API) => ({
     baseUrl: "",
     email: "",
     password: "",
+  },
+  claudeCodeHub: {
+    baseUrl: "",
+    adminToken: "",
   },
 })
 
@@ -118,7 +128,7 @@ describe("ManagedSiteTypeSwitcher", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("shows AxonHub as a selectable managed-site type in settings mode", async () => {
+  it("shows AxonHub and Claude Code Hub as selectable managed-site types in settings mode", async () => {
     const user = userEvent.setup()
 
     render(<ManagedSiteTypeSwitcher />)
@@ -132,6 +142,11 @@ describe("ManagedSiteTypeSwitcher", () => {
     expect(
       await screen.findByRole("option", {
         name: "settings:managedSite.axonHub",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByRole("option", {
+        name: "settings:managedSite.claudeCodeHub",
       }),
     ).toBeInTheDocument()
   })
@@ -166,5 +181,16 @@ describe("ManagedSiteTypeSwitcher", () => {
     await user.click(await screen.findByText("settings:managedSite.axonHub"))
 
     expect(updateManagedSiteType).toHaveBeenLastCalledWith(AXON_HUB)
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "settings:managedSite.siteTypeLabel",
+      }),
+    )
+    await user.click(
+      await screen.findByText("settings:managedSite.claudeCodeHub"),
+    )
+
+    expect(updateManagedSiteType).toHaveBeenLastCalledWith(CLAUDE_CODE_HUB)
   })
 })

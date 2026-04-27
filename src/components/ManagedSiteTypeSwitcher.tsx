@@ -11,6 +11,7 @@ import {
 } from "~/components/ui"
 import {
   AXON_HUB,
+  CLAUDE_CODE_HUB,
   DONE_HUB,
   NEW_API,
   OCTOPUS,
@@ -31,6 +32,7 @@ const MANAGED_SITE_TYPES: ManagedSiteType[] = [
   VELOERA,
   OCTOPUS,
   AXON_HUB,
+  CLAUDE_CODE_HUB,
 ]
 
 interface ManagedSiteTypeSwitcherProps {

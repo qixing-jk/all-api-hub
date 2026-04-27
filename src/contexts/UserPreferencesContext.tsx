@@ -39,6 +39,10 @@ import {
   type AxonHubConfig,
 } from "~/types/axonHubConfig"
 import {
+  DEFAULT_CLAUDE_CODE_HUB_CONFIG,
+  type ClaudeCodeHubConfig,
+} from "~/types/claudeCodeHubConfig"
+import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
 } from "~/types/dailyBalanceHistory"
@@ -163,6 +167,8 @@ interface UserPreferencesContextType {
   axonHubBaseUrl: string
   axonHubEmail: string
   axonHubPassword: string
+  claudeCodeHubBaseUrl: string
+  claudeCodeHubAdminToken: string
   managedSiteType: ManagedSiteType
   cliProxyBaseUrl: string
   cliProxyManagementKey: string
@@ -278,6 +284,18 @@ interface UserPreferencesContextType {
     updates: Partial<AxonHubConfig>,
     options?: PreferenceSaveOptions,
   ) => Promise<boolean>
+  updateClaudeCodeHubBaseUrl: (
+    url: string,
+    options?: PreferenceSaveOptions,
+  ) => Promise<boolean>
+  updateClaudeCodeHubAdminToken: (
+    token: string,
+    options?: PreferenceSaveOptions,
+  ) => Promise<boolean>
+  updateClaudeCodeHubConfig: (
+    updates: Partial<ClaudeCodeHubConfig>,
+    options?: PreferenceSaveOptions,
+  ) => Promise<boolean>
   updateManagedSiteType: (siteType: ManagedSiteType) => Promise<boolean>
   updateCliProxyBaseUrl: (
     url: string,
@@ -341,6 +359,7 @@ interface UserPreferencesContextType {
   resetVeloeraConfig: () => Promise<boolean>
   resetOctopusConfig: () => Promise<boolean>
   resetAxonHubConfig: () => Promise<boolean>
+  resetClaudeCodeHubConfig: () => Promise<boolean>
   resetNewApiModelSyncConfig: () => Promise<boolean>
   resetCliProxyConfig: () => Promise<boolean>
   resetClaudeCodeRouterConfig: () => Promise<boolean>
@@ -1014,6 +1033,45 @@ export const UserPreferencesProvider = ({
     [persistPreferenceUpdates],
   )
 
+  const updateClaudeCodeHubBaseUrl = useCallback(
+    async (baseUrl: string, options?: PreferenceSaveOptions) => {
+      return persistPreferenceUpdates(
+        {
+          claudeCodeHub: { baseUrl },
+        },
+        options,
+      )
+    },
+    [persistPreferenceUpdates],
+  )
+
+  const updateClaudeCodeHubAdminToken = useCallback(
+    async (adminToken: string, options?: PreferenceSaveOptions) => {
+      return persistPreferenceUpdates(
+        {
+          claudeCodeHub: { adminToken },
+        },
+        options,
+      )
+    },
+    [persistPreferenceUpdates],
+  )
+
+  const updateClaudeCodeHubConfig = useCallback(
+    async (
+      updates: Partial<ClaudeCodeHubConfig>,
+      options?: PreferenceSaveOptions,
+    ) => {
+      return persistPreferenceUpdates(
+        {
+          claudeCodeHub: updates,
+        },
+        options,
+      )
+    },
+    [persistPreferenceUpdates],
+  )
+
   const updateManagedSiteType = useCallback(
     async (siteType: ManagedSiteType) => {
       const success = await userPreferences.updateManagedSiteType(siteType)
@@ -1490,6 +1548,14 @@ export const UserPreferencesProvider = ({
     return success
   }, [loadPreferences])
 
+  const resetClaudeCodeHubConfig = useCallback(async () => {
+    const success = await userPreferences.resetClaudeCodeHubConfig()
+    if (success) {
+      await loadPreferences()
+    }
+    return success
+  }, [loadPreferences])
+
   const resetNewApiModelSyncConfig = useCallback(async () => {
     const success = await userPreferences.resetNewApiModelSyncConfig()
     if (success) {
@@ -1722,6 +1788,12 @@ export const UserPreferencesProvider = ({
     axonHubEmail: preferences?.axonHub?.email || DEFAULT_AXON_HUB_CONFIG.email,
     axonHubPassword:
       preferences?.axonHub?.password || DEFAULT_AXON_HUB_CONFIG.password,
+    claudeCodeHubBaseUrl:
+      preferences?.claudeCodeHub?.baseUrl ||
+      DEFAULT_CLAUDE_CODE_HUB_CONFIG.baseUrl,
+    claudeCodeHubAdminToken:
+      preferences?.claudeCodeHub?.adminToken ||
+      DEFAULT_CLAUDE_CODE_HUB_CONFIG.adminToken,
     managedSiteType: preferences?.managedSiteType || NEW_API,
     cliProxyBaseUrl: preferences?.cliProxy?.baseUrl || "",
     cliProxyManagementKey: preferences?.cliProxy?.managementKey || "",
@@ -1774,6 +1846,9 @@ export const UserPreferencesProvider = ({
     updateAxonHubEmail,
     updateAxonHubPassword,
     updateAxonHubConfig,
+    updateClaudeCodeHubBaseUrl,
+    updateClaudeCodeHubAdminToken,
+    updateClaudeCodeHubConfig,
     updateManagedSiteType,
     updateCliProxyBaseUrl,
     updateCliProxyManagementKey,
@@ -1800,6 +1875,7 @@ export const UserPreferencesProvider = ({
     resetVeloeraConfig,
     resetOctopusConfig,
     resetAxonHubConfig,
+    resetClaudeCodeHubConfig,
     resetNewApiModelSyncConfig,
     resetCliProxyConfig,
     resetClaudeCodeRouterConfig,

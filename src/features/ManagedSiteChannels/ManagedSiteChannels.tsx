@@ -86,6 +86,7 @@ import {
   TableRow,
 } from "~/components/ui/table"
 import { AxonHubChannelTypeNames } from "~/constants/axonHub"
+import { ClaudeCodeHubProviderTypeNames } from "~/constants/claudeCodeHub"
 import { Z_INDEX } from "~/constants/designTokens"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelTypeNames } from "~/constants/managedSite"
@@ -94,6 +95,7 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   AXON_HUB,
+  CLAUDE_CODE_HUB,
   DONE_HUB,
   NEW_API,
   OCTOPUS,
@@ -206,10 +208,11 @@ export default function ManagedSiteChannels({
   } = useUserPreferencesContext()
   const isOctopus = managedSiteType === OCTOPUS
   const isAxonHub = managedSiteType === AXON_HUB
-  // These capabilities both disable for AxonHub today, but they represent
+  const isClaudeCodeHub = managedSiteType === CLAUDE_CODE_HUB
+  // These capabilities share disabled backends today, but they represent
   // different backend contracts and may diverge for future managed-site types.
-  const supportsChannelMigration = !isAxonHub
-  const supportsNewApiOnlyChannelActions = !isAxonHub
+  const supportsChannelMigration = !isAxonHub && !isClaudeCodeHub
+  const supportsNewApiOnlyChannelActions = !isAxonHub && !isClaudeCodeHub
   const isNewApiManagedSite = managedSiteType === NEW_API
   const supportsDetailBackedRealKeyLoading =
     managedSiteType === DONE_HUB || managedSiteType === VELOERA
@@ -738,7 +741,9 @@ export default function ManagedSiteChannels({
               ? OctopusOutboundTypeNames
               : isAxonHub
                 ? AxonHubChannelTypeNames
-                : ChannelTypeNames
+                : isClaudeCodeHub
+                  ? ClaudeCodeHubProviderTypeNames
+                  : ChannelTypeNames
           ) as Record<string | number, string>
           const rawType = row.original.type
           return typeNames[rawType] ?? String(rawType ?? "Unknown")
@@ -838,6 +843,7 @@ export default function ManagedSiteChannels({
       handleSyncChannels,
       hasMigrationTargets,
       isAxonHub,
+      isClaudeCodeHub,
       isMigrationMode,
       isOctopus,
       rowActionLabels,

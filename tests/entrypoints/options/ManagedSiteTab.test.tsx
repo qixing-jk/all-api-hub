@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AXON_HUB } from "~/constants/siteType"
+import { AXON_HUB, CLAUDE_CODE_HUB } from "~/constants/siteType"
 import ManagedSiteTab from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteTab"
 import { render, screen } from "~~/tests/test-utils/render"
 
@@ -52,6 +52,12 @@ const createContextValue = (overrides: Record<string, unknown> = {}) => ({
   updateNewApiPassword: vi.fn().mockResolvedValue(true),
   updateNewApiTotpSecret: vi.fn().mockResolvedValue(true),
   resetNewApiConfig: vi.fn().mockResolvedValue(true),
+  claudeCodeHubBaseUrl: "https://cch.example",
+  claudeCodeHubAdminToken: "admin-token",
+  updateClaudeCodeHubBaseUrl: vi.fn().mockResolvedValue(true),
+  updateClaudeCodeHubAdminToken: vi.fn().mockResolvedValue(true),
+  updateClaudeCodeHubConfig: vi.fn().mockResolvedValue(true),
+  resetClaudeCodeHubConfig: vi.fn().mockResolvedValue(true),
   ...overrides,
 })
 
@@ -127,6 +133,33 @@ describe("ManagedSiteTab", () => {
 
     render(<ManagedSiteTab />)
 
+    expect(
+      screen.queryByTestId("managed-site-model-sync-settings"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("model-redirect-settings"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders Claude Code Hub settings and hides unsupported model controls", () => {
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createContextValue({
+        managedSiteType: CLAUDE_CODE_HUB,
+      }),
+    )
+
+    render(<ManagedSiteTab />)
+
+    expect(
+      screen.getByPlaceholderText(
+        "settings:claudeCodeHub.fields.baseUrlPlaceholder",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByPlaceholderText(
+        "settings:claudeCodeHub.fields.adminTokenPlaceholder",
+      ),
+    ).toBeInTheDocument()
     expect(
       screen.queryByTestId("managed-site-model-sync-settings"),
     ).not.toBeInTheDocument()

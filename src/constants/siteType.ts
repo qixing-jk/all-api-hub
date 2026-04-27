@@ -16,6 +16,7 @@ export const WONG_GONGYI = "wong-gongyi"
 export const SUB2API = "sub2api"
 export const OCTOPUS = "octopus"
 export const AXON_HUB = "axonhub"
+export const CLAUDE_CODE_HUB = "claude-code-hub"
 export const UNKNOWN_SITE = "unknown"
 
 export type ManagedSiteType =
@@ -24,6 +25,7 @@ export type ManagedSiteType =
   | typeof DONE_HUB
   | typeof OCTOPUS
   | typeof AXON_HUB
+  | typeof CLAUDE_CODE_HUB
 
 export type SiteType = (typeof SITE_TITLE_RULES)[number]["name"]
 
@@ -45,6 +47,7 @@ export const SITE_TITLE_RULES = [
   { name: WONG_GONGYI, regex: /wong\s*公益站/i },
   { name: SUB2API, regex: makeTitleRegex(SUB2API) },
   { name: AXON_HUB, regex: makeTitleRegex(AXON_HUB) },
+  { name: CLAUDE_CODE_HUB, regex: /\bclaude\s*code\s*hub\b/i },
   { name: UNKNOWN_SITE, regex: makeTitleRegex(UNKNOWN_SITE) },
 ]
 
