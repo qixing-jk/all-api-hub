@@ -251,6 +251,35 @@ describe("AxonHub managed-site provider", () => {
     )
   })
 
+  it("updates explicit status zero values and surfaces delete failures", async () => {
+    const provider = await import("~/services/managedSites/providers/axonHub")
+
+    mockDeleteAxonHubChannel.mockResolvedValueOnce(false)
+
+    await expect(
+      provider.updateChannel("", "", "", {
+        id: 7,
+        status: CHANNEL_STATUS.Unknown,
+      }),
+    ).resolves.toEqual({
+      success: true,
+      data: { id: "updated-channel-id", name: "Updated" },
+      message: "success",
+    })
+
+    expect(mockUpdateAxonHubChannelStatus).toHaveBeenCalledWith(
+      axonHubConfig,
+      "gid-7",
+      AXON_HUB_CHANNEL_STATUS.DISABLED,
+    )
+
+    await expect(provider.deleteChannel("", "", "", 7)).resolves.toEqual({
+      success: false,
+      data: false,
+      message: "messages:axonhub.deleteFailed",
+    })
+  })
+
   it("prefills imports from selected token credentials and requires final models", async () => {
     const provider = await import("~/services/managedSites/providers/axonHub")
     const account = buildDisplaySiteData({

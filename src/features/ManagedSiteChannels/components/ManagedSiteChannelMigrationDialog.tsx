@@ -23,6 +23,7 @@ import {
   executeManagedSiteChannelMigration,
   prepareManagedSiteChannelMigrationPreview,
 } from "~/services/managedSites/channelMigration"
+import { getNumericChannelType } from "~/services/managedSites/utils/channelType"
 import {
   getManagedSiteLabel,
   type ManagedSiteTargetOption,
@@ -179,10 +180,6 @@ const getChannelTypeText = (
     ? OctopusOutboundTypeNames[type] ?? String(type)
     : ChannelTypeNames[type as ChannelType] ?? String(type)
 }
-
-const getNumericChannelType = (
-  type: ChannelRow["type"] | ChannelType | undefined,
-) => (typeof type === "number" ? type : undefined)
 
 const formatDelimitedValues = (value: string | null | undefined) => {
   const items =

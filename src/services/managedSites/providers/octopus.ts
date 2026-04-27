@@ -12,6 +12,7 @@ import type { ApiResponse } from "~/services/apiService/common/type"
 import * as octopusApi from "~/services/apiService/octopus"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import { findManagedSiteChannelByComparableInputs } from "~/services/managedSites/utils/channelMatching"
+import { getNumericChannelType } from "~/services/managedSites/utils/channelType"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import {
@@ -185,10 +186,6 @@ async function getFullOctopusConfig(): Promise<OctopusConfig | null> {
   }
   return null
 }
-
-const getNumericChannelType = (
-  type: CreateChannelPayload["channel"]["type"] | UpdateChannelPayload["type"],
-) => (typeof type === "number" ? type : undefined)
 
 /**
  * 将 Octopus 渠道转换为通用 ManagedSiteChannel 格式

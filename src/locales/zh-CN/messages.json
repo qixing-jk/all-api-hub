@@ -28,6 +28,7 @@
   "axonhub": {
     "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
     "configMissing": "请先在基础设置中配置 AxonHub 地址、管理员邮箱和密码",
+    "deleteFailed": "删除 AxonHub 渠道失败",
     "importFailed": "导入失败，发生未知错误",
     "importSuccess": "成功导入新渠道 {{channelName}}",
     "modelsMissing": "请至少填写一个模型",

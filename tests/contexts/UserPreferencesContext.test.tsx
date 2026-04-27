@@ -24,6 +24,7 @@ import {
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
+import { DEFAULT_AXON_HUB_CONFIG } from "~/types/axonHubConfig"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import { DEFAULT_DONE_HUB_CONFIG } from "~/types/doneHubConfig"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
@@ -88,6 +89,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
       resetDoneHubConfig: vi.fn(),
       resetVeloeraConfig: vi.fn(),
       resetOctopusConfig: vi.fn(),
+      resetAxonHubConfig: vi.fn(),
       resetNewApiModelSyncConfig: vi.fn(),
       resetCliProxyConfig: vi.fn(),
       resetClaudeCodeRouterConfig: vi.fn(),
@@ -254,6 +256,11 @@ describe("UserPreferencesContext", () => {
         octopus: DEFAULT_PREFERENCES.octopus,
       }),
     )
+    mockedUserPreferences.resetAxonHubConfig.mockImplementation(async () =>
+      applyPersistedUpdate({
+        axonHub: DEFAULT_AXON_HUB_CONFIG,
+      }),
+    )
     mockedUserPreferences.resetNewApiModelSyncConfig.mockImplementation(
       async () =>
         applyPersistedUpdate({
@@ -385,6 +392,14 @@ describe("UserPreferencesContext", () => {
       await context.updateOctopusBaseUrl("https://octopus.example")
       await context.updateOctopusUsername("octopus-user")
       await context.updateOctopusPassword("octopus-pass")
+      await context.updateAxonHubBaseUrl("https://axonhub.example")
+      await context.updateAxonHubEmail("admin@example.com")
+      await context.updateAxonHubPassword("axonhub-pass")
+      await context.updateAxonHubConfig({
+        baseUrl: "https://final-axonhub.example",
+        email: "root@example.com",
+        password: "final-password",
+      })
       await context.updateManagedSiteType(VELOERA)
       await context.updateThemeMode("dark")
       await context.updateLoggingConsoleEnabled(false)
@@ -455,6 +470,30 @@ describe("UserPreferencesContext", () => {
     })
     expect(
       mockedUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenCalledWith({
+      axonHub: { baseUrl: "https://axonhub.example" },
+    })
+    expect(
+      mockedUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenCalledWith({
+      axonHub: { email: "admin@example.com" },
+    })
+    expect(
+      mockedUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenCalledWith({
+      axonHub: { password: "axonhub-pass" },
+    })
+    expect(
+      mockedUserPreferences.savePreferencesWithResult,
+    ).toHaveBeenCalledWith({
+      axonHub: {
+        baseUrl: "https://final-axonhub.example",
+        email: "root@example.com",
+        password: "final-password",
+      },
+    })
+    expect(
+      mockedUserPreferences.savePreferencesWithResult,
     ).toHaveBeenCalledWith(
       {
         managedSiteModelSync: {
@@ -484,6 +523,11 @@ describe("UserPreferencesContext", () => {
     expect((latestContext as any)?.preferences.octopus.username).toBe(
       "octopus-user",
     )
+    expect((latestContext as any)?.preferences.axonHub).toEqual({
+      baseUrl: "https://final-axonhub.example",
+      email: "root@example.com",
+      password: "final-password",
+    })
     expect((latestContext as any)?.preferences.cliProxy.baseUrl).toBe(
       "https://cli.example",
     )
@@ -773,6 +817,11 @@ describe("UserPreferencesContext", () => {
       username: "octopus-user",
       password: "octopus-pass",
     }
+    preferences.axonHub = {
+      baseUrl: "https://axonhub.example",
+      email: "admin@example.com",
+      password: "secret-password",
+    }
     preferences.cliProxy = {
       ...preferences.cliProxy,
       baseUrl: "https://cli.example",
@@ -826,6 +875,7 @@ describe("UserPreferencesContext", () => {
       await context.resetDoneHubConfig()
       await context.resetVeloeraConfig()
       await context.resetOctopusConfig()
+      await context.resetAxonHubConfig()
       await context.resetNewApiModelSyncConfig()
       await context.resetCliProxyConfig()
       await context.resetClaudeCodeRouterConfig()
@@ -858,6 +908,9 @@ describe("UserPreferencesContext", () => {
     )
     expect((latestContext as any)?.preferences.octopus).toEqual(
       DEFAULT_PREFERENCES.octopus,
+    )
+    expect((latestContext as any)?.preferences.axonHub).toEqual(
+      DEFAULT_AXON_HUB_CONFIG,
     )
     expect((latestContext as any)?.preferences.cliProxy).toEqual(
       DEFAULT_PREFERENCES.cliProxy,

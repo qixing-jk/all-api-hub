@@ -1,5 +1,11 @@
+import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
-import { NEW_API, OCTOPUS, type ManagedSiteType } from "~/constants/siteType"
+import {
+  AXON_HUB,
+  NEW_API,
+  OCTOPUS,
+  type ManagedSiteType,
+} from "~/constants/siteType"
 import {
   getManagedSiteServiceForType,
   type ManagedSiteService,
@@ -66,6 +72,27 @@ const hasMultiKeyState = (channel: ManagedSiteChannel) =>
 
 const PREVIEW_BUILD_CONCURRENCY = 5
 
+const AXON_HUB_TO_SHARED_CHANNEL_TYPE: Partial<Record<string, ChannelType>> = {
+  [AXON_HUB_CHANNEL_TYPE.OPENAI]: ChannelType.OpenAI,
+  [AXON_HUB_CHANNEL_TYPE.OPENAI_RESPONSES]: ChannelType.OpenAI,
+  [AXON_HUB_CHANNEL_TYPE.ANTHROPIC]: ChannelType.Anthropic,
+  [AXON_HUB_CHANNEL_TYPE.ANTHROPIC_AWS]: ChannelType.Anthropic,
+  [AXON_HUB_CHANNEL_TYPE.ANTHROPIC_GCP]: ChannelType.Anthropic,
+  [AXON_HUB_CHANNEL_TYPE.CLAUDECODE]: ChannelType.Anthropic,
+  [AXON_HUB_CHANNEL_TYPE.GEMINI_OPENAI]: ChannelType.Gemini,
+  [AXON_HUB_CHANNEL_TYPE.GEMINI]: ChannelType.Gemini,
+  [AXON_HUB_CHANNEL_TYPE.GEMINI_VERTEX]: ChannelType.Gemini,
+  [AXON_HUB_CHANNEL_TYPE.DEEPSEEK]: ChannelType.DeepSeek,
+  [AXON_HUB_CHANNEL_TYPE.DEEPSEEK_ANTHROPIC]: ChannelType.DeepSeek,
+  [AXON_HUB_CHANNEL_TYPE.OPENROUTER]: ChannelType.OpenRouter,
+  [AXON_HUB_CHANNEL_TYPE.XAI]: ChannelType.Xai,
+  [AXON_HUB_CHANNEL_TYPE.SILICONFLOW]: ChannelType.SiliconFlow,
+  [AXON_HUB_CHANNEL_TYPE.VOLCENGINE]: ChannelType.VolcEngine,
+  [AXON_HUB_CHANNEL_TYPE.OLLAMA]: ChannelType.Ollama,
+  [AXON_HUB_CHANNEL_TYPE.GITHUB_COPILOT]: ChannelType.OpenAI,
+  [AXON_HUB_CHANNEL_TYPE.NANOGPT]: ChannelType.OpenAI,
+}
+
 const mapWithConcurrency = async <TItem, TResult>(
   items: TItem[],
   concurrency: number,
@@ -103,8 +130,12 @@ const getSharedChannelType = (
   sourceSiteType: ManagedSiteType,
   channel: ManagedSiteChannel,
 ): ChannelType => {
-  const numericChannelType: number =
-    typeof channel.type === "number" ? channel.type : ChannelType.OpenAI
+  const numericChannelType =
+    typeof channel.type === "number"
+      ? channel.type
+      : sourceSiteType === AXON_HUB
+        ? AXON_HUB_TO_SHARED_CHANNEL_TYPE[channel.type] ?? ChannelType.OpenAI
+        : ChannelType.OpenAI
 
   if (sourceSiteType === OCTOPUS) {
     return mapOctopusOutboundTypeToChannelType(numericChannelType)
@@ -163,7 +194,11 @@ const collectItemWarningCodes = (params: {
   }
 
   if (sourceSiteType !== targetSiteType) {
-    if (sourceSiteType === OCTOPUS || targetSiteType === OCTOPUS) {
+    if (
+      sourceSiteType === OCTOPUS ||
+      targetSiteType === OCTOPUS ||
+      (sourceSiteType === AXON_HUB && typeof channel.type === "string")
+    ) {
       warnings.add(
         MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_REMAPS_CHANNEL_TYPE,
       )

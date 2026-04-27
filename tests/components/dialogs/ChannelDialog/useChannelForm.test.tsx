@@ -221,6 +221,7 @@ describe("useChannelForm", () => {
       expect(result.current.formData.type).toBe("anthropic_aws")
     })
 
+    expect(result.current.isBaseUrlRequired).toBe(true)
     expect(result.current.availableGroups).toEqual([])
     expect(mockCheckValidConfig).not.toHaveBeenCalled()
     expect(mockGetConfig).not.toHaveBeenCalled()
@@ -230,6 +231,28 @@ describe("useChannelForm", () => {
     })
 
     expect(result.current.formData.type).toBe("custom-provider")
+  })
+
+  it("does not require base_url for incidental string types outside AxonHub", async () => {
+    const { result } = renderHook(() =>
+      useChannelForm({
+        mode: DIALOG_MODES.ADD,
+        channel: null,
+        isOpen: true,
+        onClose: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.formData.name).toBe("")
+    })
+
+    await act(async () => {
+      result.current.handleTypeChange("custom-provider")
+    })
+
+    expect(result.current.formData.type).toBe("custom-provider")
+    expect(result.current.isBaseUrlRequired).toBe(false)
   })
 
   it("adds a fallback success message when channel creation succeeds with an empty message", async () => {

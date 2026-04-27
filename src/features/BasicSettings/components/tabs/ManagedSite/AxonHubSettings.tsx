@@ -120,7 +120,7 @@ export default function AxonHubSettings() {
       toast[success ? "success" : "error"](
         success
           ? t("axonHub.validation.success")
-          : t("settings:messages.updateFailed"),
+          : t("messages.updateFailed", { name: t("axonHub.title") }),
       )
     } catch (error) {
       const errorMessage = getErrorMessage(error)

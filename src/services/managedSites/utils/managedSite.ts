@@ -217,6 +217,9 @@ export function getManagedSiteAdminConfigForType(
     ) {
       return null
     }
+    // AxonHub authenticates with admin email + password and obtains a session
+    // token per request. Keep the shared shape uniform, but treat adminToken as
+    // a password slot here, not a Bearer token, and never log or forward it.
     return {
       baseUrl: axonHubConfig.baseUrl,
       adminToken: axonHubConfig.password,

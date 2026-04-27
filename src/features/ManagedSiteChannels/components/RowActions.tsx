@@ -76,9 +76,9 @@ export default function RowActions({
             <DropdownMenuItem onClick={() => onEdit(channel)}>
               {labels.edit}
             </DropdownMenuItem>
-            <DropdownMenuSeparator />
             {showNewApiOnlyActions ? (
               <>
+                <DropdownMenuSeparator />
                 <DropdownMenuItem onClick={() => onFilters(channel)}>
                   {labels.filters}
                 </DropdownMenuItem>
@@ -91,9 +91,9 @@ export default function RowActions({
                 >
                   {isSyncing ? labels.syncing : labels.sync}
                 </DropdownMenuItem>
-                <DropdownMenuSeparator />
               </>
             ) : null}
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
               onClick={() => onDelete([channel.id])}

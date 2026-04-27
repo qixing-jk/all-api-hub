@@ -28,6 +28,7 @@
   "axonhub": {
     "channelExists": "チャネル {{channelName}} はすでに存在するため、再インポートは不要です",
     "configMissing": "先に基本設定で AxonHub のアドレス、管理者メール、パスワードを設定してください",
+    "deleteFailed": "AxonHub チャネルの削除に失敗しました",
     "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
     "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
     "modelsMissing": "少なくとも 1 つのモデルを指定してください",

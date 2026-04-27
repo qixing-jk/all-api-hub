@@ -28,6 +28,7 @@
   "axonhub": {
     "channelExists": "Channel {{channelName}} already exists, no need to import again",
     "configMissing": "Please configure AxonHub address, admin email, and password in basic settings first",
+    "deleteFailed": "Failed to delete AxonHub channel",
     "importFailed": "Import failed, an unknown error occurred",
     "importSuccess": "Successfully imported new channel {{channelName}}",
     "modelsMissing": "Please provide at least one model",

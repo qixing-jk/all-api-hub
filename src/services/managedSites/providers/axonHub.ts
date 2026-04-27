@@ -267,7 +267,7 @@ export async function updateChannel(
       buildAxonHubUpdateInputFromPayload(channelData),
     )
 
-    if (channelData.status) {
+    if (channelData.status !== undefined) {
       await axonHubApi.updateAxonHubChannelStatus(
         config,
         graphqlId,
@@ -308,7 +308,11 @@ export async function deleteChannel(
       config,
       axonHubApi.resolveAxonHubGraphqlId(channelId),
     )
-    return { success: deleted, data: deleted, message: "success" }
+    return {
+      success: deleted,
+      data: deleted,
+      message: deleted ? "success" : t("messages:axonhub.deleteFailed"),
+    }
   } catch (error) {
     return {
       success: false,
@@ -381,7 +385,7 @@ export function buildChannelPayload(
     channel: {
       name: input.name,
       type: input.type,
-      key: input.credentials.apiKeys?.[0] ?? input.credentials.apiKey ?? "",
+      key: input.credentials.apiKeys?.[0] ?? "",
       base_url: input.baseURL,
       models: input.supportedModels.join(","),
       groups: [],

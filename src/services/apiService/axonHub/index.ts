@@ -166,12 +166,24 @@ interface QueryChannelsData {
 }
 
 const tokenCache = new Map<string, string>()
+const channelListCache = new Map<
+  string,
+  {
+    data: ManagedSiteChannelListData
+    expiresAt: number
+  }
+>()
 const numericIdToGraphqlId = new Map<number, string>()
+const CHANNEL_LIST_CACHE_TTL_MS = 15_000
 
 const normalizeBaseUrl = (baseUrl: string) => baseUrl.trim().replace(/\/+$/, "")
 
 const cacheKeyForConfig = (config: AxonHubConfig) =>
   `${normalizeBaseUrl(config.baseUrl)}|${config.email.trim().toLowerCase()}`
+
+const invalidateChannelListCache = (config: AxonHubConfig) => {
+  channelListCache.delete(cacheKeyForConfig(config))
+}
 
 const extractRequestConfig = (request: ApiServiceRequest): AxonHubConfig => ({
   baseUrl: request.baseUrl,
@@ -265,7 +277,7 @@ const isUnauthorized = (
   response.status === 403 ||
   Boolean(
     errors?.some((error) =>
-      /unauthorized|unauthenticated|jwt|token|expired/i.test(
+      /unauthorized|unauthenticated|jwt|jwt expired|jwt invalid|invalid token|expired token|session expired|access token|refresh token|malformed token|revoked token/i.test(
         error.message ?? "",
       ),
     ),
@@ -359,7 +371,9 @@ export function axonHubChannelToManagedSite(channel: AxonHubChannel) {
       : ""
   const credentials = channel.credentials ?? {}
   const apiKey =
-    credentials.apiKeys?.find((key) => key.trim()) ??
+    credentials.apiKeys
+      ?.map((key) => key.trim())
+      .find((key) => key.length > 0) ??
     credentials.apiKey?.trim() ??
     ""
 
@@ -381,7 +395,11 @@ export function axonHubChannelToManagedSite(channel: AxonHubChannel) {
     status_code_mapping: "",
     test_model: channel.defaultTestModel ?? null,
     auto_ban: 0,
-    created_time: channel.createdAt ? Date.parse(channel.createdAt) / 1000 : 0,
+    created_time: (() => {
+      if (!channel.createdAt) return 0
+      const parsed = Date.parse(channel.createdAt)
+      return Number.isFinite(parsed) ? Math.floor(parsed / 1000) : 0
+    })(),
     test_time: 0,
     response_time: 0,
     balance: 0,
@@ -413,6 +431,13 @@ export function axonHubChannelToManagedSite(channel: AxonHubChannel) {
 export async function listChannels(
   config: AxonHubConfig,
 ): Promise<ManagedSiteChannelListData> {
+  const cacheKey = cacheKeyForConfig(config)
+  const cachedChannels = channelListCache.get(cacheKey)
+  if (cachedChannels && cachedChannels.expiresAt > Date.now()) {
+    return cachedChannels.data
+  }
+
+  channelListCache.delete(cacheKey)
   const items: ReturnType<typeof axonHubChannelToManagedSite>[] = []
   let after: string | null | undefined
   let total = 0
@@ -440,7 +465,7 @@ export async function listChannels(
       : null
   } while (after)
 
-  return {
+  const result = {
     items,
     total: total || items.length,
     type_counts: items.reduce<Record<string, number>>((acc, channel) => {
@@ -449,6 +474,13 @@ export async function listChannels(
       return acc
     }, {}),
   }
+
+  channelListCache.set(cacheKey, {
+    data: result,
+    expiresAt: Date.now() + CHANNEL_LIST_CACHE_TTL_MS,
+  })
+
+  return result
 }
 
 /**
@@ -494,6 +526,7 @@ export async function createAxonHubChannel(
     CREATE_CHANNEL,
     { input },
   )
+  invalidateChannelListCache(config)
   return data.createChannel
 }
 
@@ -510,6 +543,7 @@ export async function updateAxonHubChannel(
     UPDATE_CHANNEL,
     { id, input },
   )
+  invalidateChannelListCache(config)
   return data.updateChannel
 }
 
@@ -526,6 +560,7 @@ export async function updateAxonHubChannelStatus(
     UPDATE_CHANNEL_STATUS,
     { id, status },
   )
+  invalidateChannelListCache(config)
   return data.updateChannelStatus
 }
 
@@ -538,6 +573,7 @@ export async function deleteAxonHubChannel(config: AxonHubConfig, id: string) {
     DELETE_CHANNEL,
     { id },
   )
+  invalidateChannelListCache(config)
   return data.deleteChannel
 }
 

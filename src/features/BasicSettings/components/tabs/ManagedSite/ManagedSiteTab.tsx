@@ -45,9 +45,14 @@ export default function ManagedSiteTab() {
 
       {renderSiteSettings()}
 
-      {managedSiteType === AXON_HUB ? null : <ManagedSiteModelSyncSettings />}
-
-      {managedSiteType === AXON_HUB ? null : <ModelRedirectSettings />}
+      {/* AxonHub channel management is GraphQL-only and does not expose the
+          New-API-style model sync or redirect controls. */}
+      {managedSiteType !== AXON_HUB && (
+        <>
+          <ManagedSiteModelSyncSettings />
+          <ModelRedirectSettings />
+        </>
+      )}
     </div>
   )
 }

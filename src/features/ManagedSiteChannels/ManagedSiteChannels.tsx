@@ -738,10 +738,8 @@ export default function ManagedSiteChannels({
                 ? AxonHubChannelTypeNames
                 : ChannelTypeNames
           ) as Record<string | number, string>
-          return (
-            typeNames[row.original.type] ??
-            String(row.original.type || "Unknown")
-          )
+          const rawType = row.original.type
+          return typeNames[rawType] ?? String(rawType ?? "Unknown")
         },
         size: 90,
       },

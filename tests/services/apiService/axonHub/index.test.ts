@@ -1,13 +1,20 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { http, HttpResponse } from "msw"
+import { beforeEach, describe, expect, it } from "vitest"
 
 import { AXON_HUB_CHANNEL_STATUS } from "~/constants/axonHub"
 import {
   axonHubChannelToManagedSite,
+  createAxonHubChannel,
+  deleteAxonHubChannel,
   graphqlRequest,
   listChannels,
+  searchChannels,
   signIn,
+  updateAxonHubChannel,
+  updateAxonHubChannelStatus,
 } from "~/services/apiService/axonHub"
 import { CHANNEL_STATUS } from "~/types/managedSite"
+import { server } from "~~/tests/msw/server"
 
 const config = {
   baseUrl: "https://axonhub.example.com/",
@@ -15,48 +22,43 @@ const config = {
   password: "secret",
 }
 
-const jsonResponse = (body: unknown, status = 200) =>
-  new Response(JSON.stringify(body), {
-    status,
-    headers: { "Content-Type": "application/json" },
-  })
+const AUTH_URL = "https://axonhub.example.com/admin/auth/signin"
+const GRAPHQL_URL = "https://axonhub.example.com/admin/graphql"
 
 describe("AxonHub API service", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    vi.unstubAllGlobals()
+    server.resetHandlers()
   })
 
   it("signs in against the normalized admin endpoint and returns the token", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ token: "admin-jwt" }))
-    vi.stubGlobal("fetch", fetchMock)
+    let capturedBody: unknown
+    let capturedContentType: string | null = null
+
+    server.use(
+      http.post(AUTH_URL, async ({ request }) => {
+        capturedBody = await request.json()
+        capturedContentType = request.headers.get("content-type")
+        return HttpResponse.json({ token: "admin-jwt" })
+      }),
+    )
 
     await expect(signIn(config)).resolves.toBe("admin-jwt")
 
-    expect(fetchMock).toHaveBeenCalledWith(
-      "https://axonhub.example.com/admin/auth/signin",
-      expect.objectContaining({
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: config.email,
-          password: config.password,
-        }),
-      }),
-    )
+    expect(capturedContentType).toBe("application/json")
+    expect(capturedBody).toEqual({
+      email: config.email,
+      password: config.password,
+    })
   })
 
   it("uses the upstream message when AxonHub rejects admin credentials", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi.fn().mockResolvedValueOnce(
-        jsonResponse(
+    server.use(
+      http.post(AUTH_URL, () =>
+        HttpResponse.json(
           {
             message: "Invalid email or password",
           },
-          401,
+          { status: 401 },
         ),
       ),
     )
@@ -67,7 +69,9 @@ describe("AxonHub API service", () => {
   })
 
   it("includes the HTTP status when AxonHub sign-in fails without a response message", async () => {
-    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(jsonResponse({}, 403)))
+    server.use(
+      http.post(AUTH_URL, () => HttpResponse.json({}, { status: 403 })),
+    )
 
     await expect(
       signIn({ ...config, email: "cors@example.com" }),
@@ -75,18 +79,15 @@ describe("AxonHub API service", () => {
   })
 
   it("redacts bearer tokens from GraphQL error messages", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(
-          jsonResponse({ token: "graphql-redaction-token" }),
-        )
-        .mockResolvedValueOnce(
-          jsonResponse({
-            errors: [{ message: "Bearer secret-token is expired" }],
-          }),
-        ),
+    server.use(
+      http.post(AUTH_URL, () =>
+        HttpResponse.json({ token: "graphql-redaction-token" }),
+      ),
+      http.post(GRAPHQL_URL, () =>
+        HttpResponse.json({
+          errors: [{ message: "Bearer secret-token is expired" }],
+        }),
+      ),
     )
 
     await expect(
@@ -99,16 +100,60 @@ describe("AxonHub API service", () => {
     ).rejects.toThrow("Bearer [redacted] is expired")
   })
 
+  it("does not retry for generic token validation errors", async () => {
+    let authHits = 0
+    let graphQlHits = 0
+
+    server.use(
+      http.post(AUTH_URL, () => {
+        authHits += 1
+        return HttpResponse.json({ token: "generic-token" })
+      }),
+      http.post(GRAPHQL_URL, () => {
+        graphQlHits += 1
+        return HttpResponse.json({
+          errors: [{ message: "Token field is required" }],
+        })
+      }),
+    )
+
+    await expect(
+      graphqlRequest(
+        { ...config, email: "generic-token@example.com" },
+        "query { viewer { id } }",
+      ),
+    ).rejects.toThrow("Token field is required")
+
+    expect(authHits).toBe(1)
+    expect(graphQlHits).toBe(1)
+  })
+
   it("retries a GraphQL request once with a fresh token when the cached token is unauthorized", async () => {
-    const fetchMock = vi
-      .fn()
-      .mockResolvedValueOnce(jsonResponse({ token: "old-token" }))
-      .mockResolvedValueOnce(
-        jsonResponse({ errors: [{ message: "expired" }] }, 401),
-      )
-      .mockResolvedValueOnce(jsonResponse({ token: "new-token" }))
-      .mockResolvedValueOnce(jsonResponse({ data: { ping: "pong" } }))
-    vi.stubGlobal("fetch", fetchMock)
+    let authHits = 0
+    let graphQlHits = 0
+    const authorizationHeaders: Array<string | null> = []
+
+    server.use(
+      http.post(AUTH_URL, () => {
+        authHits += 1
+        return HttpResponse.json({
+          token: authHits === 1 ? "old-token" : "new-token",
+        })
+      }),
+      http.post(GRAPHQL_URL, ({ request }) => {
+        graphQlHits += 1
+        authorizationHeaders.push(request.headers.get("authorization"))
+
+        if (graphQlHits === 1) {
+          return HttpResponse.json(
+            { errors: [{ message: "expired token" }] },
+            { status: 401 },
+          )
+        }
+
+        return HttpResponse.json({ data: { ping: "pong" } })
+      }),
+    )
 
     await expect(
       graphqlRequest<{ ping: string }>(
@@ -119,24 +164,11 @@ describe("AxonHub API service", () => {
       ping: "pong",
     })
 
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      2,
-      "https://axonhub.example.com/admin/graphql",
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: "Bearer old-token",
-        }),
-      }),
-    )
-    expect(fetchMock).toHaveBeenNthCalledWith(
-      4,
-      "https://axonhub.example.com/admin/graphql",
-      expect.objectContaining({
-        headers: expect.objectContaining({
-          Authorization: "Bearer new-token",
-        }),
-      }),
-    )
+    expect(authHits).toBe(2)
+    expect(authorizationHeaders).toEqual([
+      "Bearer old-token",
+      "Bearer new-token",
+    ])
   })
 
   it("normalizes AxonHub channel data into the managed-site channel shape", () => {
@@ -166,17 +198,45 @@ describe("AxonHub API service", () => {
     expect(result.key).toBe("")
     expect(result.models).toBe("gpt-4.1,gpt-4.1-mini")
     expect(result.model_mapping).toBe(JSON.stringify({ "gpt-4o": "gpt-4.1" }))
+    expect(result.created_time).toBe(1_775_001_600)
     expect(result._axonHubData.id).toBe("channel_opaque_id")
   })
 
-  it("lists paginated channels and aggregates string channel type counts", async () => {
-    vi.stubGlobal(
-      "fetch",
-      vi
-        .fn()
-        .mockResolvedValueOnce(jsonResponse({ token: "list-token" }))
-        .mockResolvedValueOnce(
-          jsonResponse({
+  it("falls back to zero when AxonHub timestamps are malformed", () => {
+    const result = axonHubChannelToManagedSite({
+      id: "bad-date-id",
+      createdAt: "not-a-date",
+      updatedAt: "2026-04-01T00:00:00.000Z",
+      type: "openai",
+      baseURL: "https://api.openai.com/v1",
+      name: "OpenAI",
+      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      credentials: null,
+      supportedModels: [],
+      manualModels: [],
+      defaultTestModel: null,
+      settings: {},
+      orderingWeight: 0,
+      remark: null,
+      errorMessage: null,
+    })
+
+    expect(result.created_time).toBe(0)
+  })
+
+  it("lists paginated channels and trims API key entries", async () => {
+    let page = 0
+
+    server.use(
+      http.post(AUTH_URL, () => HttpResponse.json({ token: "list-token" })),
+      http.post(GRAPHQL_URL, async ({ request }) => {
+        const body = (await request.json()) as {
+          variables?: { input?: { after?: string | null } }
+        }
+        page += 1
+
+        if (!body.variables?.input?.after) {
+          return HttpResponse.json({
             data: {
               queryChannels: {
                 edges: [
@@ -187,7 +247,7 @@ describe("AxonHub API service", () => {
                       baseURL: "https://one.example.com",
                       name: "one",
                       status: AXON_HUB_CHANNEL_STATUS.ENABLED,
-                      credentials: { apiKeys: ["sk-one"] },
+                      credentials: { apiKeys: ["  sk-one  ", ""] },
                       supportedModels: ["gpt-4.1"],
                       manualModels: [],
                     },
@@ -197,32 +257,32 @@ describe("AxonHub API service", () => {
                 totalCount: 2,
               },
             },
-          }),
-        )
-        .mockResolvedValueOnce(
-          jsonResponse({
-            data: {
-              queryChannels: {
-                edges: [
-                  {
-                    node: {
-                      id: "2",
-                      type: "anthropic",
-                      baseURL: "https://two.example.com",
-                      name: "two",
-                      status: AXON_HUB_CHANNEL_STATUS.DISABLED,
-                      credentials: { apiKey: "sk-two" },
-                      supportedModels: [],
-                      manualModels: ["claude-sonnet-4-5"],
-                    },
+          })
+        }
+
+        return HttpResponse.json({
+          data: {
+            queryChannels: {
+              edges: [
+                {
+                  node: {
+                    id: "2",
+                    type: "anthropic",
+                    baseURL: "https://two.example.com",
+                    name: "two",
+                    status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+                    credentials: { apiKey: "sk-two" },
+                    supportedModels: [],
+                    manualModels: ["claude-sonnet-4-5"],
                   },
-                ],
-                pageInfo: { hasNextPage: false, endCursor: null },
-                totalCount: 2,
-              },
+                },
+              ],
+              pageInfo: { hasNextPage: false, endCursor: null },
+              totalCount: 2,
             },
-          }),
-        ),
+          },
+        })
+      }),
     )
 
     const result = await listChannels({
@@ -230,6 +290,7 @@ describe("AxonHub API service", () => {
       email: "list@example.com",
     })
 
+    expect(page).toBe(2)
     expect(result.total).toBe(2)
     expect(result.items).toHaveLength(2)
     expect(result.items[0]).toEqual(
@@ -252,5 +313,181 @@ describe("AxonHub API service", () => {
       openai: 1,
       anthropic: 1,
     })
+  })
+
+  it("reuses cached channel lists for repeated searches and invalidates after mutations", async () => {
+    let authHits = 0
+    let listHits = 0
+    let createHits = 0
+    let updateHits = 0
+    let statusHits = 0
+    let deleteHits = 0
+
+    server.use(
+      http.post(AUTH_URL, () => {
+        authHits += 1
+        return HttpResponse.json({ token: "cache-token" })
+      }),
+      http.post(GRAPHQL_URL, async ({ request }) => {
+        const body = (await request.json()) as {
+          query?: string
+        }
+
+        if (body.query?.includes("query QueryChannels")) {
+          listHits += 1
+          return HttpResponse.json({
+            data: {
+              queryChannels: {
+                edges: [
+                  {
+                    node: {
+                      id: "1",
+                      type: "openai",
+                      baseURL: "https://alpha.example.com",
+                      name: "alpha",
+                      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+                      credentials: { apiKey: "sk-alpha" },
+                      supportedModels: ["gpt-4.1"],
+                      manualModels: [],
+                    },
+                  },
+                  {
+                    node: {
+                      id: "2",
+                      type: "openai",
+                      baseURL: "https://beta.example.com",
+                      name: "beta",
+                      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+                      credentials: { apiKey: "sk-beta" },
+                      supportedModels: ["gpt-4o"],
+                      manualModels: [],
+                    },
+                  },
+                ],
+                pageInfo: { hasNextPage: false, endCursor: null },
+                totalCount: 2,
+              },
+            },
+          })
+        }
+
+        if (body.query?.includes("mutation CreateChannel")) {
+          createHits += 1
+          return HttpResponse.json({
+            data: {
+              createChannel: {
+                id: "3",
+                type: "openai",
+                baseURL: "https://created.example.com",
+                name: "created",
+                status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+                credentials: { apiKeys: ["sk-created"] },
+                supportedModels: ["gpt-4.1"],
+                manualModels: ["gpt-4.1"],
+                defaultTestModel: "gpt-4.1",
+                settings: { modelMappings: [] },
+                orderingWeight: 0,
+                remark: null,
+              },
+            },
+          })
+        }
+
+        if (body.query?.includes("mutation UpdateChannel(")) {
+          updateHits += 1
+          return HttpResponse.json({
+            data: {
+              updateChannel: {
+                id: "1",
+                type: "openai",
+                baseURL: "https://alpha.example.com",
+                name: "updated",
+                status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+                credentials: { apiKeys: ["sk-alpha"] },
+                supportedModels: ["gpt-4.1"],
+                manualModels: ["gpt-4.1"],
+                defaultTestModel: "gpt-4.1",
+                settings: { modelMappings: [] },
+                orderingWeight: 0,
+                errorMessage: null,
+                remark: null,
+              },
+            },
+          })
+        }
+
+        if (body.query?.includes("mutation UpdateChannelStatus")) {
+          statusHits += 1
+          return HttpResponse.json({
+            data: {
+              updateChannelStatus: {
+                id: "1",
+                status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+              },
+            },
+          })
+        }
+
+        if (body.query?.includes("mutation DeleteChannel")) {
+          deleteHits += 1
+          return HttpResponse.json({
+            data: {
+              deleteChannel: true,
+            },
+          })
+        }
+
+        return HttpResponse.json(
+          { errors: [{ message: "Unexpected GraphQL operation" }] },
+          { status: 500 },
+        )
+      }),
+    )
+
+    const cacheConfig = { ...config, email: "cache@example.com" }
+
+    await expect(searchChannels(cacheConfig, "alpha")).resolves.toMatchObject({
+      total: 1,
+    })
+    await expect(searchChannels(cacheConfig, "beta")).resolves.toMatchObject({
+      total: 1,
+    })
+    expect(listHits).toBe(1)
+
+    await createAxonHubChannel(cacheConfig, {
+      type: "openai",
+      name: "created",
+      baseURL: "https://created.example.com",
+      credentials: { apiKeys: ["sk-created"] },
+      supportedModels: ["gpt-4.1"],
+      manualModels: ["gpt-4.1"],
+      defaultTestModel: "gpt-4.1",
+      settings: {},
+      orderingWeight: 0,
+    })
+    await searchChannels(cacheConfig, "alpha")
+    expect(listHits).toBe(2)
+
+    await updateAxonHubChannel(cacheConfig, "1", { name: "updated" })
+    await searchChannels(cacheConfig, "alpha")
+    expect(listHits).toBe(3)
+
+    await updateAxonHubChannelStatus(
+      cacheConfig,
+      "1",
+      AXON_HUB_CHANNEL_STATUS.DISABLED,
+    )
+    await searchChannels(cacheConfig, "alpha")
+    expect(listHits).toBe(4)
+
+    await deleteAxonHubChannel(cacheConfig, "1")
+    await searchChannels(cacheConfig, "alpha")
+    expect(listHits).toBe(5)
+
+    expect(authHits).toBe(1)
+    expect(createHits).toBe(1)
+    expect(updateHits).toBe(1)
+    expect(statusHits).toBe(1)
+    expect(deleteHits).toBe(1)
   })
 })

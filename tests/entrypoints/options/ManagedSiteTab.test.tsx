@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AXON_HUB } from "~/constants/siteType"
 import ManagedSiteTab from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteTab"
 import { render, screen } from "~~/tests/test-utils/render"
 
@@ -106,6 +107,31 @@ describe("ManagedSiteTab", () => {
       screen.queryByPlaceholderText(
         "settings:newApi.fields.totpSecretPlaceholder",
       ),
+    ).not.toBeInTheDocument()
+  })
+
+  it("hides model-sync and redirect settings for AxonHub", () => {
+    mockedUseUserPreferencesContext.mockReturnValue(
+      createContextValue({
+        managedSiteType: AXON_HUB,
+        axonHubBaseUrl: "https://axonhub.example",
+        axonHubEmail: "admin@example.com",
+        axonHubPassword: "secret-password",
+        updateAxonHubBaseUrl: vi.fn().mockResolvedValue(true),
+        updateAxonHubEmail: vi.fn().mockResolvedValue(true),
+        updateAxonHubPassword: vi.fn().mockResolvedValue(true),
+        updateAxonHubConfig: vi.fn().mockResolvedValue(true),
+        resetAxonHubConfig: vi.fn().mockResolvedValue(true),
+      }),
+    )
+
+    render(<ManagedSiteTab />)
+
+    expect(
+      screen.queryByTestId("managed-site-model-sync-settings"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByTestId("model-redirect-settings"),
     ).not.toBeInTheDocument()
   })
 })

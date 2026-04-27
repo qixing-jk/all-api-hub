@@ -64,7 +64,8 @@ export const AxonHubChannelTypeOptions = Object.entries(
 export const isAxonHubChannelType = (
   value: unknown,
 ): value is AxonHubChannelType =>
-  typeof value === "string" && value in AxonHubChannelTypeNames
+  typeof value === "string" &&
+  Object.prototype.hasOwnProperty.call(AxonHubChannelTypeNames, value)
 
 export const DEFAULT_AXON_HUB_CHANNEL_FIELDS = {
   mode: "single",
