@@ -148,6 +148,28 @@ describe("Claude Code Hub action API adapter", () => {
     ).rejects.toThrow("bad token [REDACTED] and key [REDACTED]")
 
     server.use(
+      http.post(`${PROVIDER_ACTION_BASE}/addProvider`, () =>
+        HttpResponse.json(
+          {
+            ok: false,
+            error: { detail: "bad token admin-secret and key sk-real-key" },
+          },
+          { status: 403 },
+        ),
+      ),
+    )
+
+    await expect(
+      createProvider(config, {
+        name: "Provider",
+        url: "https://api.example.com",
+        key: "sk-real-key",
+        provider_type: "openai-compatible",
+        allowed_models: [],
+      }),
+    ).rejects.toThrow('{"detail":"bad token [REDACTED] and key [REDACTED]"}')
+
+    server.use(
       http.post(`${PROVIDER_ACTION_BASE}/getProviders`, () =>
         HttpResponse.json({ success: true }),
       ),

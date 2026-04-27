@@ -9,7 +9,7 @@ import { getErrorMessage } from "~/utils/core/error"
 interface ClaudeCodeHubActionResponse<T> {
   ok: boolean
   data?: T
-  error?: string
+  error?: unknown
 }
 
 type ClaudeCodeHubProviderAction =
@@ -95,10 +95,11 @@ async function parseActionResponse<T>(
   }
 
   if (!response.ok || !parsed.ok) {
-    const message =
-      parsed.error ||
+    const fallbackMessage =
       response.statusText ||
       `Claude Code Hub request failed (${response.status})`
+    const message =
+      getErrorMessage(parsed.error, fallbackMessage) || fallbackMessage
     throw new ClaudeCodeHubApiError(
       redactClaudeCodeHubSecrets(message, [config.adminToken, ...extraSecrets]),
       response.status,
@@ -121,6 +122,9 @@ function buildActionSignal(options?: {
     : timeoutSignal
 }
 
+/**
+ * Calls a Claude Code Hub provider action endpoint and parses its typed response.
+ */
 async function callProviderAction<T>(
   config: ClaudeCodeHubConfig,
   action: ClaudeCodeHubProviderAction,
