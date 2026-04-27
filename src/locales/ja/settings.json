@@ -58,6 +58,10 @@
     "toggleLabel": "アカウント追加時に既定キーを自動作成"
   },
   "axonHub": {
+    "cors": {
+      "description": "新しい AxonHub インスタンスでは、ブラウザーベースのクライアントを使う前にサーバー環境変数 AXONHUB_SERVER_CORS_ALLOWED_ORIGINS を設定してください。\"*\" または信頼する origin を指定します。",
+      "title": "必須の CORS 設定"
+    },
     "description": "AxonHub 管理サイトへ接続するための統合設定を行います。",
     "fields": {
       "baseUrlDesc": "AxonHub サイトの Base URL を設定します",

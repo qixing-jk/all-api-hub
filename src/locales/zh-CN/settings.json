@@ -58,6 +58,10 @@
     "toggleLabel": "添加账号后自动创建默认密钥"
   },
   "axonHub": {
+    "cors": {
+      "description": "新的 AxonHub 实例需要先在服务端配置环境变量 AXONHUB_SERVER_CORS_ALLOWED_ORIGINS，浏览器客户端才能正常访问。可设置为 \"*\" 或你信任的具体来源。",
+      "title": "必需的 CORS 设置"
+    },
     "description": "配置用于连接 AxonHub 管理后台的集成设置。",
     "fields": {
       "baseUrlDesc": "设置 AxonHub 站点的基础 URL",

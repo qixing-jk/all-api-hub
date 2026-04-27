@@ -58,6 +58,10 @@
     "toggleLabel": "新增帳號後自動建立預設金鑰"
   },
   "axonHub": {
+    "cors": {
+      "description": "新的 AxonHub 實例需要先在服務端配置環境變數 AXONHUB_SERVER_CORS_ALLOWED_ORIGINS，瀏覽器用戶端才能正常存取。可設定為 \"*\" 或你信任的具體來源。",
+      "title": "必需的 CORS 設定"
+    },
     "description": "配置用於連接 AxonHub 管理後台的整合設定。",
     "fields": {
       "baseUrlDesc": "設定 AxonHub 站點的基礎 URL",

@@ -58,6 +58,10 @@
     "toggleLabel": "Auto-create a default key on account add"
   },
   "axonHub": {
+    "cors": {
+      "description": "For a new AxonHub instance, configure the server environment variable AXONHUB_SERVER_CORS_ALLOWED_ORIGINS before using browser-based clients. Use \"*\" or the exact origins you trust.",
+      "title": "Required CORS setup"
+    },
     "description": "Configure integration settings for connecting to an AxonHub admin site.",
     "fields": {
       "baseUrlDesc": "Set the AxonHub site base URL",

@@ -228,6 +228,12 @@ export default function AxonHubSettings() {
               </Button>
             }
           />
+
+          {/* https://github.com/looplj/axonhub/issues/741#issuecomment-3921706717 */}
+          <CardItem
+            title={t("axonHub.cors.title")}
+            description={t("axonHub.cors.description")}
+          />
         </CardList>
       </Card>
     </SettingSection>

@@ -190,6 +190,11 @@ describe("AxonHubSettings", () => {
   it("trims persisted field updates, skips unchanged values, and resets", async () => {
     render(<AxonHubSettings />)
 
+    expect(screen.getByText("settings:axonHub.cors.title")).toBeInTheDocument()
+    expect(
+      screen.getByText("settings:axonHub.cors.description"),
+    ).toBeInTheDocument()
+
     const baseUrlInput = screen.getByLabelText(
       "settings:axonHub.fields.baseUrlPlaceholder",
     )
