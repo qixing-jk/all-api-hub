@@ -321,6 +321,32 @@ describe("AxonHub managed-site provider", () => {
     })
   })
 
+  it("returns delete fallbacks when config is missing or deletion throws", async () => {
+    const provider = await import("~/services/managedSites/providers/axonHub")
+
+    mockGetPreferences.mockResolvedValueOnce(
+      buildUserPreferences({
+        axonHub: {
+          baseUrl: "",
+          email: "",
+          password: "",
+        },
+      }),
+    )
+    await expect(provider.deleteChannel("", "", "", 7)).resolves.toEqual({
+      success: false,
+      data: null,
+      message: "messages:axonhub.configMissing",
+    })
+
+    mockDeleteAxonHubChannel.mockRejectedValueOnce(new Error("delete exploded"))
+    await expect(provider.deleteChannel("", "", "", 8)).resolves.toEqual({
+      success: false,
+      data: null,
+      message: "delete exploded",
+    })
+  })
+
   it("prefills imports from selected token credentials and requires final models", async () => {
     const provider = await import("~/services/managedSites/providers/axonHub")
     const account = buildDisplaySiteData({
@@ -499,6 +525,23 @@ describe("AxonHub managed-site provider", () => {
         supportedModels: ["gpt-4o", "gpt-4.1"],
       }),
     )
+  })
+
+  it("returns null when matching-channel lookup cannot list AxonHub channels", async () => {
+    const provider = await import("~/services/managedSites/providers/axonHub")
+
+    mockListChannels.mockRejectedValueOnce(new Error("list exploded"))
+
+    await expect(
+      provider.findMatchingChannel(
+        "",
+        "",
+        "",
+        "https://source.example/v1",
+        ["gpt-4o"],
+        "test-source-key",
+      ),
+    ).resolves.toBeNull()
   })
 
   it("returns config-missing and import-failed messages for AxonHub import fallbacks", async () => {

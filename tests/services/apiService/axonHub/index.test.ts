@@ -6,6 +6,7 @@ import {
   __resetCachesForTesting,
   axonHubChannelToManagedSite,
   createAxonHubChannel,
+  createChannel as createChannelAdapter,
   deleteAxonHubChannel,
   deleteChannel as deleteChannelAdapter,
   fetchSiteUserGroups,
@@ -13,12 +14,14 @@ import {
   listAllChannels,
   listChannels,
   resolveAxonHubGraphqlId,
+  searchChannel as searchChannelAdapter,
   searchChannels,
   signIn,
   updateAxonHubChannel,
   updateAxonHubChannelStatus,
   updateChannel as updateChannelAdapter,
 } from "~/services/apiService/axonHub"
+import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import { AuthTypeEnum } from "~/types"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 import { server } from "~~/tests/msw/server"
@@ -32,7 +35,7 @@ const config = {
 const AUTH_URL = "https://axonhub.example.com/admin/auth/signin"
 const GRAPHQL_URL = "https://axonhub.example.com/admin/graphql"
 
-const buildRequest = () => ({
+const buildRequest = (): ApiServiceRequest => ({
   baseUrl: config.baseUrl,
   auth: {
     authType: AuthTypeEnum.AccessToken,
@@ -373,7 +376,7 @@ describe("AxonHub API service", () => {
       errorMessage: null,
     })
 
-    expect(first.id).not.toBe(second.id)
+    expect(second.id).toBe(first.id + 1)
     expect(resolveAxonHubGraphqlId(first.id)).toBe("5v-4p2p8")
     expect(resolveAxonHubGraphqlId(second.id)).toBe("vt1gjdhl")
   })
@@ -534,6 +537,186 @@ describe("AxonHub API service", () => {
     ).rejects.toThrow("AxonHub channel pagination cursor repeated")
   })
 
+  it("returns cached channels for blank searches and supports the search adapter wrapper", async () => {
+    let authHits = 0
+    let graphQlHits = 0
+
+    server.use(
+      http.post(AUTH_URL, () => {
+        authHits += 1
+        return HttpResponse.json({ token: "search-token" })
+      }),
+      http.post(GRAPHQL_URL, () => {
+        graphQlHits += 1
+        return HttpResponse.json({
+          data: {
+            queryChannels: {
+              edges: [
+                {
+                  node: {
+                    id: "1",
+                    type: "openai",
+                    baseURL: "https://alpha.example.com",
+                    name: "alpha",
+                    status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+                    credentials: { apiKey: "sk-alpha" },
+                    supportedModels: ["gpt-4.1"],
+                    manualModels: [],
+                  },
+                },
+                {
+                  node: {
+                    id: "2",
+                    type: "anthropic",
+                    baseURL: "https://beta.example.com",
+                    name: "beta",
+                    status: AXON_HUB_CHANNEL_STATUS.DISABLED,
+                    credentials: { apiKey: "sk-beta" },
+                    supportedModels: [],
+                    manualModels: ["claude-sonnet-4-5"],
+                  },
+                },
+              ],
+              pageInfo: { hasNextPage: false, endCursor: null },
+              totalCount: 2,
+            },
+          },
+        })
+      }),
+    )
+
+    const searchConfig = {
+      ...config,
+      email: "blank-search@example.com",
+    }
+
+    await expect(searchChannels(searchConfig, "   ")).resolves.toMatchObject({
+      total: 2,
+      items: [
+        expect.objectContaining({ name: "alpha" }),
+        expect.objectContaining({ name: "beta" }),
+      ],
+    })
+
+    await expect(
+      searchChannelAdapter(buildRequest(), "alpha"),
+    ).resolves.toMatchObject({
+      total: 1,
+      items: [expect.objectContaining({ name: "alpha" })],
+    })
+
+    expect(authHits).toBe(2)
+    expect(graphQlHits).toBe(2)
+  })
+
+  it("creates channels through the adapter wrapper and returns safe create errors", async () => {
+    let statusHits = 0
+
+    server.use(
+      http.post(AUTH_URL, () => HttpResponse.json({ token: "create-token" })),
+      http.post(GRAPHQL_URL, async ({ request }) => {
+        const body = (await request.json()) as { query?: string }
+
+        if (body.query?.includes("mutation CreateChannel")) {
+          return HttpResponse.json({
+            data: {
+              createChannel: {
+                id: "13",
+                type: "openai",
+                baseURL: "https://created.example.com/v1",
+                name: "Created Channel",
+                status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+                credentials: { apiKeys: ["sk-created"] },
+                supportedModels: ["gpt-4.1"],
+                manualModels: ["gpt-4.1"],
+                defaultTestModel: "gpt-4.1",
+                settings: { modelMappings: [] },
+                orderingWeight: 5,
+                remark: null,
+              },
+            },
+          })
+        }
+
+        if (body.query?.includes("mutation UpdateChannelStatus")) {
+          statusHits += 1
+          return HttpResponse.json({
+            data: {
+              updateChannelStatus: {
+                id: "13",
+                status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+              },
+            },
+          })
+        }
+
+        return HttpResponse.json(
+          { errors: [{ message: "Unexpected GraphQL operation" }] },
+          { status: 500 },
+        )
+      }),
+    )
+
+    await expect(
+      createChannelAdapter(buildRequest(), {
+        channel: {
+          type: "openai",
+          name: "Created Channel",
+          baseURL: "https://created.example.com/v1",
+          credentials: { apiKeys: ["sk-created"] },
+          supportedModels: ["gpt-4.1"],
+          manualModels: ["gpt-4.1"],
+          defaultTestModel: "gpt-4.1",
+          settings: {},
+          orderingWeight: 5,
+          status: CHANNEL_STATUS.Enable,
+        },
+      }),
+    ).resolves.toMatchObject({
+      success: true,
+      message: "success",
+    })
+    expect(statusHits).toBe(1)
+
+    server.use(
+      http.post(AUTH_URL, () => HttpResponse.json({ token: "create-error" })),
+      http.post(GRAPHQL_URL, async ({ request }) => {
+        const body = (await request.json()) as { query?: string }
+        if (body.query?.includes("mutation CreateChannel")) {
+          return HttpResponse.json(
+            { errors: [{ message: "create exploded" }] },
+            { status: 500 },
+          )
+        }
+
+        return HttpResponse.json(
+          { errors: [{ message: "Unexpected GraphQL operation" }] },
+          { status: 500 },
+        )
+      }),
+    )
+
+    await expect(
+      createChannelAdapter(buildRequest(), {
+        channel: {
+          type: "openai",
+          name: "Broken Channel",
+          baseURL: "https://broken.example.com/v1",
+          credentials: { apiKeys: ["sk-broken"] },
+          supportedModels: ["gpt-4.1"],
+          manualModels: ["gpt-4.1"],
+          defaultTestModel: "gpt-4.1",
+          settings: {},
+          orderingWeight: 0,
+        },
+      }),
+    ).resolves.toEqual({
+      success: false,
+      data: null,
+      message: "create exploded",
+    })
+  })
+
   it("updates status zero through the adapter wrapper and returns a failure message when delete returns false", async () => {
     let statusHits = 0
     let deleteHits = 0
@@ -594,7 +777,7 @@ describe("AxonHub API service", () => {
     )
 
     await expect(
-      updateChannelAdapter(buildRequest() as any, {
+      updateChannelAdapter(buildRequest(), {
         id: 7,
         name: "Adapter Channel",
         status: CHANNEL_STATUS.Unknown,
@@ -605,9 +788,7 @@ describe("AxonHub API service", () => {
     })
     expect(statusHits).toBe(1)
 
-    await expect(
-      deleteChannelAdapter(buildRequest() as any, 7),
-    ).resolves.toEqual({
+    await expect(deleteChannelAdapter(buildRequest(), 7)).resolves.toEqual({
       success: false,
       data: false,
       message: "Failed to delete AxonHub channel",
@@ -645,7 +826,7 @@ describe("AxonHub API service", () => {
     )
 
     await expect(
-      updateChannelAdapter(buildRequest() as any, {
+      updateChannelAdapter(buildRequest(), {
         id: 9,
         name: "Broken update",
       }),
@@ -655,9 +836,7 @@ describe("AxonHub API service", () => {
       message: "update exploded",
     })
 
-    await expect(
-      deleteChannelAdapter(buildRequest() as any, 9),
-    ).resolves.toEqual({
+    await expect(deleteChannelAdapter(buildRequest(), 9)).resolves.toEqual({
       success: false,
       data: null,
       message: "delete exploded",
@@ -695,12 +874,10 @@ describe("AxonHub API service", () => {
       ),
     )
 
-    await expect(listAllChannels(buildRequest() as any)).resolves.toMatchObject(
-      {
-        total: 1,
-        items: [expect.objectContaining({ id: 1, name: "alpha" })],
-      },
-    )
+    await expect(listAllChannels(buildRequest())).resolves.toMatchObject({
+      total: 1,
+      items: [expect.objectContaining({ id: 1, name: "alpha" })],
+    })
   })
 
   it("reuses cached channel lists for repeated searches and invalidates after mutations", async () => {

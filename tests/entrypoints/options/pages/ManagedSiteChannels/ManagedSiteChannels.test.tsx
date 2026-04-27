@@ -946,6 +946,9 @@ describe("ManagedSiteChannels", () => {
     render(<ManagedSiteChannels />)
 
     await waitForRowText("Alpha")
+    const row = screen.getByText("Alpha").closest("tr")
+
+    expect(row).toBeTruthy()
 
     expect(
       screen.queryByText("managedSiteChannels:table.columns.group"),
@@ -957,7 +960,7 @@ describe("ManagedSiteChannels", () => {
       screen.queryByText("managedSiteChannels:table.columns.weight"),
     ).not.toBeInTheDocument()
     expect(screen.getByText("OpenAI Response")).toBeInTheDocument()
-    expect(screen.getByText("2")).toBeInTheDocument()
+    expect(within(row!).getByText("2")).toBeInTheDocument()
   })
 
   it("uses AxonHub-specific columns, string type labels, row actions, and migration availability", async () => {
@@ -995,7 +998,6 @@ describe("ManagedSiteChannels", () => {
       screen.queryByText("managedSiteChannels:table.columns.weight"),
     ).not.toBeInTheDocument()
     expect(screen.getByText("Anthropic AWS")).toBeInTheDocument()
-    expect(screen.getByText("2")).toBeInTheDocument()
     expect(
       screen.queryByRole("button", {
         name: /managedSiteChannels:toolbar.enterMigrationMode/,
@@ -1004,6 +1006,7 @@ describe("ManagedSiteChannels", () => {
 
     const row = screen.getByText("Alpha").closest("tr")
     expect(row).toBeTruthy()
+    expect(within(row!).getByText("2")).toBeInTheDocument()
     await openRowActionsMenu(row!, user)
 
     expect(
@@ -1257,6 +1260,10 @@ describe("ManagedSiteChannels", () => {
     await waitFor(() => {
       expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
     })
+
+    expect(toast.success).toHaveBeenCalledWith(
+      "managedSiteChannels:toasts.channelDeleted",
+    )
   })
 
   it("removes successfully deleted channels and reports partial delete failures", async () => {
