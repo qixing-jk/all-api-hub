@@ -13,6 +13,7 @@ The following are the most common and suitable types of sites for unified manage
 | Veloera | This project has been discontinued. | [GitHub](https://github.com/Veloera/Veloera) |
 | one-hub | OpenAI interface management and distribution system, modified from songquanpeng/one-api, supports more models, adds a statistics page, and improves function calls for non-OpenAI models. | [Official Website](https://one-hub.xiao5.info/) / [GitHub](https://github.com/MartialBE/one-hub) |
 | done-hub | This project is a secondary development based on one-hub. | [GitHub](https://github.com/deanxv/done-hub) |
+| AxonHub | Open-source AI Gateway, callable via any SDK for 100+ LLMs, with built-in failover, load balancing, cost control, and full-link tracing. | [Official Website](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
 | AnyRouter | Claude Code intermediate station · Zero threshold · Free $50 | [Documentation](https://docs.anyrouter.top/) / [Official Website](https://anyrouter.top) |
 | WONG Public Welfare Site | No stable public official description available. | No stable public official link available |
 | Sub2API | Sub2API-CRS2 one-stop open-source intermediate service, allowing unified access to Claude, Openai, Gemini, Antigravity subscriptions, supporting carpooling and sharing, more efficient cost sharing, and seamless use of native tools. | [GitHub](https://github.com/Wei-Shaw/sub2api) |
@@ -38,6 +39,7 @@ If you are also building your own backend system, All API Hub supports importing
 | DoneHub | This project is a secondary development based on one-hub. | [GitHub](https://github.com/deanxv/done-hub) |
 | Veloera | This project has been discontinued. | [GitHub](https://github.com/Veloera/Veloera) |
 | Octopus | Personal LLM API aggregation service. | [GitHub](https://github.com/bestruirui/octopus) |
+| AxonHub | Open-source AI Gateway, callable via any SDK for 100+ LLMs, with built-in failover, load balancing, cost control, and full-link tracing. | [Official Website](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
 
 ## Related Documentation
 
@@ -45,4 +47,3 @@ If you are also building your own backend system, All API Hub supports importing
 - [Quick Export Site Configuration](./quick-export.md)
 - [New API Channel Management](./new-api-channel-management.md)
 - [Octopus Channel Management](./octopus-channel-management.md)
-```

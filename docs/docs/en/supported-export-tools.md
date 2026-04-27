@@ -23,6 +23,7 @@ If you have also set up an AI relay or aggregation backend, All API Hub can dire
 | DoneHub | This project is a secondary development based on one-hub. | [GitHub](https://github.com/deanxv/done-hub) |
 | Veloera | This project is no longer maintained. | [GitHub](https://github.com/Veloera/Veloera) |
 | Octopus | An LLM API aggregation service for individuals. | [GitHub](https://github.com/bestruirui/octopus) |
+| AxonHub | Open-source AI Gateway, callable via any SDK with 100+ LLMs, built-in failover, load balancing, cost control, and full-link tracing. | [Official Website](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
 
 ## Related Documentation
 

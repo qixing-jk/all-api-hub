@@ -13,6 +13,7 @@
 | Veloera | このプロジェクトはメンテナンスを停止しました。 | [GitHub](https://github.com/Veloera/Veloera) |
 | one-hub | OpenAI インターフェース管理および配布システム。songquanpeng/one-api から改変され、より多くのモデルをサポートし、統計ページを追加し、OpenAI 以外のモデルの関数呼び出しを改善しました。 | [公式サイト](https://one-hub.xiao5.info/) / [GitHub](https://github.com/MartialBE/one-hub) |
 | done-hub | このプロジェクトは one-hub をベースに二次開発されました。 | [GitHub](https://github.com/deanxv/done-hub) |
+| AxonHub | オープンソース AI Gateway。任意の SDK を通じて 100 以上の LLM を呼び出すことができ、フェイルオーバー、ロードバランシング、コスト管理、およびエンドツーエンドの追跡が組み込まれています。 | [公式サイト](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
 | AnyRouter | Claude Code プロキシ · ゼロしきい値 · 無料 $50 | [ドキュメント](https://docs.anyrouter.top/) / [公式サイト](https://anyrouter.top) |
 | WONG公益站 | 安定した公開された公式説明はありません。 | 安定した公開された公式リンクはありません |
 | Sub2API | Sub2API-CRS2 ワンストップオープンソースプロキシサービス。Claude、Openai、Gemini、Antigravity のサブスクリプションを統一的にアクセス可能にし、グループ共有をサポートし、コストをより効率的に分担し、ネイティブツールをシームレスに使用できます。 | [GitHub](https://github.com/Wei-Shaw/sub2api) |
@@ -38,6 +39,7 @@
 | DoneHub | このプロジェクトは one-hub をベースに二次開発されました。 | [GitHub](https://github.com/deanxv/done-hub) |
 | Veloera | このプロジェクトはメンテナンスを停止しました。 | [GitHub](https://github.com/Veloera/Veloera) |
 | Octopus | 個人向けの LLM API 集約サービス。 | [GitHub](https://github.com/bestruirui/octopus) |
+| AxonHub | オープンソース AI Gateway。任意の SDK を通じて 100 以上の LLM を呼び出すことができ、フェイルオーバー、ロードバランシング、コスト管理、およびエンドツーエンドの追跡が組み込まれています。 | [公式サイト](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
 
 ## 関連ドキュメント
 
@@ -45,4 +47,3 @@
 - [サイト構成のエクスポートを迅速に行う](./quick-export.md)
 - [New API チャネル管理](./new-api-channel-management.md)
 - [Octopus チャネル管理](./octopus-channel-management.md)
-```

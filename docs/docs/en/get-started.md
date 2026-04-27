@@ -72,6 +72,7 @@ Supports proxy stations deployed based on the following projects:
 - [Veloera](https://github.com/Veloera/Veloera)
 - [one-hub](https://github.com/MartialBE/one-hub)
 - [done-hub](https://github.com/deanxv/done-hub)
+- [AxonHub](https://github.com/looplj/axonhub)
 - WONG Public Welfare Station
 - [Sub2API](https://github.com/Wei-Shaw/sub2api)
 - [AnyRouter](https://anyrouter.top)
@@ -143,7 +144,7 @@ Before using the export/integration features, complete the corresponding configu
 - **CherryStudio / CC Switch**: Ensure the target client is available to facilitate importing via Deeplink.
 - **Kilo Code / Roo Code**: It is recommended to confirm the model ID corresponding to each key in advance.
 - **CLIProxyAPI / Claude Code Router**: Fill in the respective management addresses and credentials in the basic settings.
-- **Self-hosted Sites (New API / DoneHub / Veloera / Octopus)**: Complete the backend configuration in `Settings -> Basic Settings -> Self-hosted Site Management`.
+- **Self-hosted Sites (New API / DoneHub / Veloera / Octopus / AxonHub)**: Complete the backend configuration in `Settings -> Basic Settings -> Self-hosted Site Management`.
 
 ### 4.2 Export Process
 

@@ -23,6 +23,7 @@
 | DoneHub | このプロジェクトは one-hub をベースに二次開発されました。 | [GitHub](https://github.com/deanxv/done-hub) |
 | Veloera | このプロジェクトはメンテナンスを停止しました。 | [GitHub](https://github.com/Veloera/Veloera) |
 | Octopus | 個人向けの LLM API 集約サービス。 | [GitHub](https://github.com/bestruirui/octopus) |
+| AxonHub | オープンソース AI Gateway。任意の SDK を介して 100 以上の LLM を呼び出すことができ、フェイルオーバー、ロードバランシング、コスト管理、およびエンドツーエンドの追跡が組み込まれています。 | [公式サイト](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
 
 ## 関連ドキュメント
 
@@ -31,4 +32,3 @@
 - [CLIProxyAPI の統合](./cliproxyapi-integration.md)
 - [New API チャネル管理](./new-api-channel-management.md)
 - [Octopus チャネル管理](./octopus-channel-management.md)
-```

@@ -43,7 +43,7 @@ features:
   - title: "高速エクスポート・統合"
     details: "CherryStudio、CC Switch、CLIProxyAPI、Claude Code Router、Kilo Code、および現在選択されている自社構築ホスティングサイトにワンクリックでエクスポートします。"
   - title: "自社構築サイトバックエンド連携"
-    details: "自社構築のNew API、DoneHub、Veloera、Octopusインスタンスに対して、チャネルインポート、モデル同期、モデルリダイレクト、バックエンド連携をサポートします。"
+    details: "自社構築のNew API、DoneHub、Veloera、Octopus、およびAxonHubインスタンスに対してバックエンド連携とチャネル関連ツールを提供します。"
   - title: "WebDAVバックアップと同期"
     details: "JSONインポート・エクスポート、WebDAV自動同期、選択的同期、バックアップ暗号化をサポートし、クロスデバイスとマルチブラウザ移行を実現します。"
   - title: "Cloudflare盾越えアシスタント"
@@ -60,13 +60,14 @@ footer: "AGPL-3.0 Licensed | Copyright 2025-present All API Hub"
 
 現在、AIエコシステムにはNew APIシリーズに基づいた集約中継ステーションや自社構築パネルが増加しており、各サイトの残高、使用量、モデル価格、APIキーの可用性を同時に管理することは、分散的で時間がかかることがよくあります。
 
-All API Hubはブラウザ拡張機能として、これらのサイトのアカウントを自動認識し、ワンクリックで残高、使用量、モデル価格を確認、モデルとキーを管理、自動サインインを行います。また、独立したAPI認証情報管理をサポートし、自社構築のNew API、DoneHub、Veloera、Octopus向けのバックエンド連携やチャネル関連ツールを提供します。現在、以下のプロジェクトに基づく中継ステーションアカウントをサポートしています。
+All API Hubはブラウザ拡張機能として、これらのサイトのアカウントを自動認識し、ワンクリックで残高、使用量、モデル価格を確認、モデルとキーを管理、自動サインインを行います。また、独立したAPI認証情報管理をサポートし、自社構築のNew API、DoneHub、Veloera、Octopus、およびAxonHubインスタンスに対してバックエンド連携とチャネル関連ツールを提供します。現在、以下のプロジェクトに基づく中継ステーションアカウントをサポートしています。
 
 - [one-api](https://github.com/songquanpeng/one-api)
 - [new-api](https://github.com/QuantumNous/new-api)
 - [Veloera](https://github.com/Veloera/Veloera)
 - [one-hub](https://github.com/MartialBE/one-hub)
 - [done-hub](https://github.com/deanxv/done-hub)
+- [AxonHub](https://github.com/looplj/axonhub)
 - [Sub2API](https://github.com/Wei-Shaw/sub2api)
 - [AnyRouter](https://anyrouter.top)
 - WONG公益站
