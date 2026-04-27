@@ -9,6 +9,7 @@ import {
   normalizeClaudeCodeHubBaseUrl,
   redactClaudeCodeHubSecrets,
   updateProvider,
+  validateClaudeCodeHubConfig,
 } from "~/services/apiService/claudeCodeHub"
 import { server } from "~~/tests/msw/server"
 
@@ -18,6 +19,18 @@ const config = {
 }
 
 const PROVIDER_ACTION_BASE = "https://cch.example.com/api/actions/providers"
+
+function restoreAbortSignalStatic(
+  key: "any" | "timeout",
+  descriptor?: PropertyDescriptor,
+) {
+  if (descriptor) {
+    Object.defineProperty(AbortSignal, key, descriptor)
+    return
+  }
+
+  Reflect.deleteProperty(AbortSignal, key)
+}
 
 describe("Claude Code Hub action API adapter", () => {
   beforeEach(() => {
@@ -124,6 +137,19 @@ describe("Claude Code Hub action API adapter", () => {
     ])
   })
 
+  it("returns an empty provider list when the payload shape has no provider array", async () => {
+    server.use(
+      http.post(`${PROVIDER_ACTION_BASE}/getProviders`, () =>
+        HttpResponse.json({
+          ok: true,
+          data: { value: "unexpected" },
+        }),
+      ),
+    )
+
+    await expect(listProviders(config)).resolves.toEqual([])
+  })
+
   it("throws redacted errors for action failures and malformed responses", async () => {
     server.use(
       http.post(`${PROVIDER_ACTION_BASE}/addProvider`, () =>
@@ -212,6 +238,97 @@ describe("Claude Code Hub action API adapter", () => {
     const requestSignal: AbortSignal = capturedSignal
     controller.abort()
     expect(requestSignal.aborted).toBe(true)
+  })
+
+  it("falls back when AbortSignal timeout composition helpers are unavailable", async () => {
+    const originalAny = Object.getOwnPropertyDescriptor(AbortSignal, "any")
+    const originalTimeout = Object.getOwnPropertyDescriptor(
+      AbortSignal,
+      "timeout",
+    )
+    const controller = new AbortController()
+    let capturedSignal: AbortSignal | null = null
+
+    Object.defineProperty(AbortSignal, "any", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    })
+    Object.defineProperty(AbortSignal, "timeout", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    })
+
+    server.use(
+      http.post(`${PROVIDER_ACTION_BASE}/getProviders`, ({ request }) => {
+        capturedSignal = request.signal
+        return HttpResponse.json({ ok: true, data: [] })
+      }),
+    )
+
+    try {
+      await expect(
+        listProviders(config, {
+          signal: controller.signal,
+        }),
+      ).resolves.toEqual([])
+    } finally {
+      restoreAbortSignalStatic("any", originalAny)
+      restoreAbortSignalStatic("timeout", originalTimeout)
+    }
+
+    expect(capturedSignal).toBeInstanceOf(AbortSignal)
+    expect(capturedSignal).not.toBe(controller.signal)
+    if (!capturedSignal) {
+      throw new Error("Expected request signal to be captured")
+    }
+
+    const requestSignal: AbortSignal = capturedSignal
+    controller.abort()
+    expect(requestSignal.aborted).toBe(true)
+  })
+
+  it("rejects already-aborted caller signals even without AbortSignal.any", async () => {
+    const originalAny = Object.getOwnPropertyDescriptor(AbortSignal, "any")
+    const originalTimeout = Object.getOwnPropertyDescriptor(
+      AbortSignal,
+      "timeout",
+    )
+    const controller = new AbortController()
+    controller.abort()
+
+    Object.defineProperty(AbortSignal, "any", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    })
+    Object.defineProperty(AbortSignal, "timeout", {
+      value: undefined,
+      configurable: true,
+      writable: true,
+    })
+
+    try {
+      await expect(
+        listProviders(config, {
+          signal: controller.signal,
+        }),
+      ).rejects.toBeInstanceOf(ClaudeCodeHubApiError)
+    } finally {
+      restoreAbortSignalStatic("any", originalAny)
+      restoreAbortSignalStatic("timeout", originalTimeout)
+    }
+  })
+
+  it("validates config by delegating to provider listing", async () => {
+    server.use(
+      http.post(`${PROVIDER_ACTION_BASE}/getProviders`, () =>
+        HttpResponse.json({ ok: true, data: [] }),
+      ),
+    )
+
+    await expect(validateClaudeCodeHubConfig(config)).resolves.toBe(true)
   })
 
   it("wraps network failures in a ClaudeCodeHubApiError", async () => {

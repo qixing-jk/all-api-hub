@@ -112,13 +112,78 @@ async function parseActionResponse<T>(
 /**
  * Calls a Claude Code Hub provider action endpoint and normalizes failures.
  */
+function createTimeoutAbortSignal(timeoutMs: number): AbortSignal {
+  if (typeof AbortSignal.timeout === "function") {
+    return AbortSignal.timeout(timeoutMs)
+  }
+
+  const controller = new AbortController()
+  const timeoutId = setTimeout(() => {
+    controller.abort()
+  }, timeoutMs)
+
+  controller.signal.addEventListener(
+    "abort",
+    () => {
+      clearTimeout(timeoutId)
+    },
+    { once: true },
+  )
+
+  return controller.signal
+}
+
+/**
+ * Composes multiple abort signals while remaining compatible with older browsers.
+ */
+function composeAbortSignals(signals: AbortSignal[]): AbortSignal {
+  if (typeof AbortSignal.any === "function") {
+    return AbortSignal.any(signals)
+  }
+
+  const controller = new AbortController()
+  const cleanups: Array<() => void> = []
+
+  const abortComposite = () => {
+    for (const cleanup of cleanups) {
+      cleanup()
+    }
+    cleanups.length = 0
+
+    if (!controller.signal.aborted) {
+      controller.abort()
+    }
+  }
+
+  for (const signal of signals) {
+    if (signal.aborted) {
+      abortComposite()
+      return controller.signal
+    }
+
+    const handleAbort = () => {
+      abortComposite()
+    }
+
+    signal.addEventListener("abort", handleAbort, { once: true })
+    cleanups.push(() => {
+      signal.removeEventListener("abort", handleAbort)
+    })
+  }
+
+  return controller.signal
+}
+
+/**
+ * Builds the request abort signal with a default timeout safety floor.
+ */
 function buildActionSignal(options?: {
   signal?: AbortSignal
   timeoutMs?: number
 }) {
-  const timeoutSignal = AbortSignal.timeout(options?.timeoutMs ?? 30_000)
+  const timeoutSignal = createTimeoutAbortSignal(options?.timeoutMs ?? 30_000)
   return options?.signal
-    ? AbortSignal.any([options.signal, timeoutSignal])
+    ? composeAbortSignals([options.signal, timeoutSignal])
     : timeoutSignal
 }
 
