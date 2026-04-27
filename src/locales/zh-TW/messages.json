@@ -5,6 +5,7 @@
     "autoProvisionFailed": "帳號已儲存，但自動建立 API 金鑰失敗。你可以在金鑰管理中使用“{{actionLabel}}”重試。",
     "checkingApiKeys": "正在檢查 API 金鑰...",
     "createTokenFailed": "建立 API 令牌失敗",
+    "importingToAxonHub": "正在匯入到 AxonHub...",
     "importingToDoneHub": "正在匯入到 Done Hub...",
     "importingToNewApi": "正在匯入到 New API...",
     "importingToOctopus": "正在匯入到 Octopus...",
@@ -23,6 +24,14 @@
     "serverError": "伺服器錯誤，請稍後重試。",
     "timeout": "自動識別超時，請嘗試手動新增。",
     "unexpectedData": "自動識別失敗，站點返回的資料不符合預期。請手動輸入資訊，或確保已登入目標站點。"
+  },
+  "axonhub": {
+    "channelExists": "渠道 {{channelName}} 已存在，無需再次匯入",
+    "configMissing": "請先在基礎設定中配置 AxonHub 地址、管理員信箱和密碼",
+    "importFailed": "匯入失敗，發生未知錯誤",
+    "importSuccess": "成功匯入新渠道 {{channelName}}",
+    "modelsMissing": "請至少填寫一個模型",
+    "noChannelsToSync": "沒有可同步的渠道"
   },
   "background": {
     "cannotCreateWindow": "無法建立視窗",

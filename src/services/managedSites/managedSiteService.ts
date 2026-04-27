@@ -1,4 +1,5 @@
 import {
+  AXON_HUB,
   DONE_HUB,
   NEW_API,
   OCTOPUS,
@@ -32,6 +33,7 @@ import {
   userPreferences,
   type UserPreferences,
 } from "../preferences/userPreferences"
+import * as axonHubService from "./providers/axonHub"
 import * as doneHubService from "./providers/doneHubService"
 import * as newApiService from "./providers/newApi"
 import * as octopusService from "./providers/octopus"
@@ -176,6 +178,25 @@ export function getManagedSiteServiceForType(
       buildChannelPayload: octopusService.buildChannelPayload,
       findMatchingChannel: octopusService.findMatchingChannel,
       autoConfigToManagedSite: octopusService.autoConfigToOctopus,
+    }
+  }
+
+  if (siteType === AXON_HUB) {
+    return {
+      siteType,
+      messagesKey,
+      searchChannel: axonHubService.searchChannel,
+      createChannel: axonHubService.createChannel,
+      updateChannel: axonHubService.updateChannel,
+      deleteChannel: axonHubService.deleteChannel,
+      checkValidConfig: axonHubService.checkValidAxonHubConfig,
+      getConfig: axonHubService.getAxonHubConfig,
+      fetchAvailableModels: axonHubService.fetchAvailableModels,
+      buildChannelName: axonHubService.buildChannelName,
+      prepareChannelFormData: axonHubService.prepareChannelFormData,
+      buildChannelPayload: axonHubService.buildChannelPayload,
+      findMatchingChannel: axonHubService.findMatchingChannel,
+      autoConfigToManagedSite: axonHubService.autoConfigToAxonHub,
     }
   }
 

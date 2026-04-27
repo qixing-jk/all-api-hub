@@ -80,6 +80,7 @@ const config: KnipConfig = {
     // Site override modules are wired dynamically through getApiService(), so
     // many override exports appear unused to static analysis.
     "src/services/apiService/anyrouter/index.ts": ["exports"],
+    "src/services/apiService/axonHub/index.ts": ["exports"],
     "src/services/apiService/doneHub/index.ts": ["exports"],
     "src/services/apiService/octopus/index.ts": ["exports"],
     "src/services/apiService/sub2api/index.ts": ["exports"],

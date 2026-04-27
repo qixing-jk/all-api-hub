@@ -4,7 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelDialogContainer } from "~/components/dialogs/ChannelDialog"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { DONE_HUB, NEW_API, OCTOPUS, VELOERA } from "~/constants/siteType"
+import {
+  AXON_HUB,
+  DONE_HUB,
+  NEW_API,
+  OCTOPUS,
+  VELOERA,
+} from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ManagedSiteChannels from "~/entrypoints/options/pages/ManagedSiteChannels"
 import { fetchChannelFilters } from "~/features/ManagedSiteChannels/utils/channelFilters"
@@ -278,6 +284,18 @@ describe("ManagedSiteChannels", () => {
               username: "",
               password: "",
             },
+      axonHub:
+        managedSiteType === AXON_HUB
+          ? {
+              baseUrl: "https://axonhub.example",
+              email: "admin@example.com",
+              password: "axonhub-password",
+            }
+          : {
+              baseUrl: "",
+              email: "",
+              password: "",
+            },
     }
   }
 
@@ -297,7 +315,9 @@ describe("ManagedSiteChannels", () => {
         ? "donehub"
         : managedSiteType === VELOERA
           ? "veloera"
-          : "newapi")
+          : managedSiteType === AXON_HUB
+            ? "axonhub"
+            : "newapi")
     const preferences = buildPreferences({
       managedSiteType,
       withMigrationTarget: options?.withMigrationTarget,
@@ -933,6 +953,74 @@ describe("ManagedSiteChannels", () => {
     ).not.toBeInTheDocument()
     expect(screen.getByText("OpenAI Response")).toBeInTheDocument()
     expect(screen.getByText("2")).toBeInTheDocument()
+  })
+
+  it("uses AxonHub-specific columns, string type labels, row actions, and migration availability", async () => {
+    const user = userEvent.setup()
+
+    mockChannels(
+      [
+        {
+          id: 1,
+          name: "Alpha",
+          base_url: "https://axon-source.example",
+          type: "anthropic_aws",
+          models: "claude-3-5-sonnet,gpt-4o",
+          group: "default",
+          key: "test-key",
+          status: 1,
+          priority: 8,
+          weight: 5,
+        },
+      ],
+      { managedSiteType: AXON_HUB },
+    )
+
+    render(<ManagedSiteChannels />)
+
+    await waitForRowText("Alpha")
+
+    expect(
+      screen.queryByText("managedSiteChannels:table.columns.group"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("managedSiteChannels:table.columns.priority"),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText("managedSiteChannels:table.columns.weight"),
+    ).not.toBeInTheDocument()
+    expect(screen.getByText("Anthropic AWS")).toBeInTheDocument()
+    expect(screen.getByText("2")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: /managedSiteChannels:toolbar.enterMigrationMode/,
+      }),
+    ).not.toBeInTheDocument()
+
+    const row = screen.getByText("Alpha").closest("tr")
+    expect(row).toBeTruthy()
+    await openRowActionsMenu(row!, user)
+
+    expect(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.edit",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.filters",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.openSync",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.sync",
+      }),
+    ).not.toBeInTheDocument()
   })
 
   it("toggles hideable columns from the toolbar menu without closing the menu", async () => {

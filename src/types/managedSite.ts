@@ -4,6 +4,7 @@
  *
  * 注意：此类型扩展 ManagedSiteChannel 的所有字段，并添加必填的 _octopusData 字段
  */
+import type { AxonHubChannel } from "./axonHub"
 import type { NewApiChannel } from "./newApi"
 import type { OctopusChannel } from "./octopus"
 
@@ -29,4 +30,9 @@ export type {
 export type OctopusChannelWithData = NewApiChannel & {
   /** 原始 Octopus 渠道数据 (必填) */
   _octopusData: OctopusChannel
+}
+
+export type AxonHubChannelWithData = NewApiChannel & {
+  /** Raw AxonHub GraphQL channel data. */
+  _axonHubData: AxonHubChannel
 }

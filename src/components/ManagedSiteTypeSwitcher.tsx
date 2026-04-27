@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from "~/components/ui"
 import {
+  AXON_HUB,
   DONE_HUB,
   NEW_API,
   OCTOPUS,
@@ -29,6 +30,7 @@ const MANAGED_SITE_TYPES: ManagedSiteType[] = [
   DONE_HUB,
   VELOERA,
   OCTOPUS,
+  AXON_HUB,
 ]
 
 interface ManagedSiteTypeSwitcherProps {

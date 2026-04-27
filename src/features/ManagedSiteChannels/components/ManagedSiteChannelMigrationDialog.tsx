@@ -180,6 +180,10 @@ const getChannelTypeText = (
     : ChannelTypeNames[type as ChannelType] ?? String(type)
 }
 
+const getNumericChannelType = (
+  type: ChannelRow["type"] | ChannelType | undefined,
+) => (typeof type === "number" ? type : undefined)
+
 const formatDelimitedValues = (value: string | null | undefined) => {
   const items =
     value
@@ -709,13 +713,13 @@ export function ManagedSiteChannelMigrationDialog({
                             label={t("channelDialog:fields.type.label")}
                             sourceValue={getChannelTypeText(
                               sourceSiteType,
-                              item.sourceChannel.type,
+                              getNumericChannelType(item.sourceChannel.type),
                             )}
                             targetValue={
                               item.draft
                                 ? getChannelTypeText(
                                     preview.targetSiteType,
-                                    item.draft.type,
+                                    getNumericChannelType(item.draft.type),
                                   )
                                 : "—"
                             }

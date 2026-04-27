@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { DONE_HUB, NEW_API, OCTOPUS, VELOERA } from "~/constants/siteType"
+import {
+  AXON_HUB,
+  DONE_HUB,
+  NEW_API,
+  OCTOPUS,
+  VELOERA,
+} from "~/constants/siteType"
 import {
   getManagedSiteAdminConfigForType,
   getManagedSiteConfigFromPreferences,
@@ -39,6 +45,9 @@ describe("managedSite utils", () => {
 
   it("returns label and message keys for each managed-site type", () => {
     expect(getManagedSiteLabelKey(OCTOPUS)).toBe("settings:managedSite.octopus")
+    expect(getManagedSiteLabelKey(AXON_HUB)).toBe(
+      "settings:managedSite.axonHub",
+    )
     expect(getManagedSiteLabelKey(DONE_HUB)).toBe(
       "settings:managedSite.doneHub",
     )
@@ -46,6 +55,7 @@ describe("managedSite utils", () => {
     expect(getManagedSiteLabelKey(NEW_API)).toBe("settings:managedSite.newApi")
 
     expect(getManagedSiteMessagesKeyFromSiteType(OCTOPUS)).toBe("octopus")
+    expect(getManagedSiteMessagesKeyFromSiteType(AXON_HUB)).toBe("axonhub")
     expect(getManagedSiteMessagesKeyFromSiteType(DONE_HUB)).toBe("donehub")
     expect(getManagedSiteMessagesKeyFromSiteType(VELOERA)).toBe("veloera")
     expect(getManagedSiteMessagesKeyFromSiteType(NEW_API)).toBe("newapi")
@@ -68,6 +78,11 @@ describe("managedSite utils", () => {
         adminToken: "",
         userId: "",
       },
+      axonHub: {
+        baseUrl: "https://axonhub.example.com",
+        email: "admin@example.com",
+        password: "secret",
+      },
     }
 
     expect(getManagedSiteAdminConfigForType(prefs as any, OCTOPUS)).toEqual({
@@ -79,6 +94,11 @@ describe("managedSite utils", () => {
       baseUrl: "https://veloera.example.com",
       adminToken: "admin-token",
       userId: "42",
+    })
+    expect(getManagedSiteAdminConfigForType(prefs as any, AXON_HUB)).toEqual({
+      baseUrl: "https://axonhub.example.com",
+      adminToken: "secret",
+      userId: "admin@example.com",
     })
     expect(getManagedSiteAdminConfigForType(prefs as any, DONE_HUB)).toBeNull()
     expect(
@@ -117,6 +137,11 @@ describe("managedSite utils", () => {
         username: "admin",
         password: "secret",
       },
+      axonHub: {
+        baseUrl: "https://axonhub.example.com",
+        email: "admin@example.com",
+        password: "secret",
+      },
     }
 
     const options = getManagedSiteTargetOptions(prefs as any, {
@@ -124,6 +149,18 @@ describe("managedSite utils", () => {
     })
 
     expect(options.map((item) => item.siteType)).toEqual([NEW_API, OCTOPUS])
+  })
+
+  it("does not offer AxonHub as a managed-site migration target", () => {
+    const prefs = {
+      axonHub: {
+        baseUrl: "https://axonhub.example.com",
+        email: "admin@example.com",
+        password: "secret",
+      },
+    }
+
+    expect(getManagedSiteTargetOptions(prefs as any)).toEqual([])
   })
 
   it("detects when a managed-site key is directly usable", () => {
@@ -147,6 +184,9 @@ describe("managedSite utils", () => {
     expect(
       getManagedSiteConfigMissingMessage(translate as any, "octopus"),
     ).toBe("messages:octopus.configMissing")
+    expect(
+      getManagedSiteConfigMissingMessage(translate as any, "axonhub"),
+    ).toBe("messages:axonhub.configMissing")
     expect(getManagedSiteConfigMissingMessage(translate as any, "newapi")).toBe(
       "messages:newapi.configMissing",
     )
@@ -160,6 +200,9 @@ describe("managedSite utils", () => {
     expect(
       getManagedSiteNoChannelsToSyncMessage(translate as any, "octopus"),
     ).toBe("messages:octopus.noChannelsToSync")
+    expect(
+      getManagedSiteNoChannelsToSyncMessage(translate as any, "axonhub"),
+    ).toBe("messages:axonhub.noChannelsToSync")
     expect(
       getManagedSiteNoChannelsToSyncMessage(translate as any, "newapi"),
     ).toBe("messages:newapi.noChannelsToSync")

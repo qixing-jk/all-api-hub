@@ -149,6 +149,10 @@ export function useChannelForm({
     setIsLoadingGroups(true)
     try {
       const service = await getManagedSiteService()
+      if (service.messagesKey === "axonhub") {
+        setAvailableGroups([])
+        return
+      }
       const hasConfig = await service.checkValidConfig()
       const preselectedGroups = (
         initialValues?.groups ??
@@ -246,7 +250,9 @@ export function useChannelForm({
     setFormData((prev) => ({ ...prev, [field]: value }))
   }
 
-  const handleTypeChange = (newType: ChannelType | OctopusOutboundType) => {
+  const handleTypeChange = (
+    newType: ChannelType | OctopusOutboundType | string,
+  ) => {
     setFormData((prev) => ({
       ...prev,
       type: newType,
@@ -258,6 +264,7 @@ export function useChannelForm({
   const isKeyFieldRequired = mode === DIALOG_MODES.ADD
 
   const isBaseUrlRequired =
+    typeof formData.type === "string" ||
     formData.type === ChannelType.VolcEngine ||
     formData.type === ChannelType.SunoAPI
 

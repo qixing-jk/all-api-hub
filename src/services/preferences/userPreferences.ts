@@ -2,6 +2,7 @@ import { Storage } from "@plasmohq/storage"
 
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import {
+  AXON_HUB,
   DONE_HUB,
   NEW_API,
   OCTOPUS,
@@ -40,6 +41,10 @@ import {
   AUTO_CHECKIN_SCHEDULE_MODE,
   AutoCheckinPreferences,
 } from "~/types/autoCheckin"
+import {
+  DEFAULT_AXON_HUB_CONFIG,
+  type AxonHubConfig,
+} from "~/types/axonHubConfig"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {
   DEFAULT_CLAUDE_CODE_ROUTER_CONFIG,
@@ -297,7 +302,10 @@ export interface UserPreferences {
   // Octopus 相关配置
   octopus?: OctopusConfig
 
-  // 管理站点类型 (用户可以选择管理 New API / Done Hub / Veloera / Octopus)
+  // AxonHub 相关配置
+  axonHub?: AxonHubConfig
+
+  // 管理站点类型 (用户可以选择管理 New API / Done Hub / Veloera / Octopus / AxonHub)
   managedSiteType: ManagedSiteType
 
   // CLIProxyAPI 管理接口配置
@@ -479,6 +487,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   doneHub: DEFAULT_DONE_HUB_CONFIG,
   veloera: DEFAULT_VELOERA_CONFIG,
   octopus: DEFAULT_OCTOPUS_CONFIG,
+  axonHub: DEFAULT_AXON_HUB_CONFIG,
   managedSiteType: NEW_API,
   cliProxy: DEFAULT_CLI_PROXY_CONFIG,
   claudeCodeRouter: DEFAULT_CLAUDE_CODE_ROUTER_CONFIG,
@@ -1024,11 +1033,29 @@ class UserPreferencesService {
   }
 
   /**
+   * Update AxonHub config.
+   */
+  async updateAxonHubConfig(config: Partial<AxonHubConfig>): Promise<boolean> {
+    return this.savePreferences({
+      axonHub: config,
+    })
+  }
+
+  /**
    * Reset Octopus config.
    */
   async resetOctopusConfig(): Promise<boolean> {
     return this.savePreferences({
       octopus: DEFAULT_PREFERENCES.octopus,
+    })
+  }
+
+  /**
+   * Reset AxonHub config.
+   */
+  async resetAxonHubConfig(): Promise<boolean> {
+    return this.savePreferences({
+      axonHub: DEFAULT_PREFERENCES.axonHub,
     })
   }
 
@@ -1046,12 +1073,24 @@ class UserPreferencesService {
    */
   async getManagedSiteConfig(): Promise<{
     siteType: ManagedSiteType
-    config: NewApiConfig | DoneHubConfig | VeloeraConfig | OctopusConfig
+    config:
+      | NewApiConfig
+      | DoneHubConfig
+      | VeloeraConfig
+      | OctopusConfig
+      | AxonHubConfig
   }> {
     const prefs = await this.getPreferences()
     const siteType = prefs.managedSiteType || NEW_API
-    let config: NewApiConfig | DoneHubConfig | VeloeraConfig | OctopusConfig
-    if (siteType === OCTOPUS) {
+    let config:
+      | NewApiConfig
+      | DoneHubConfig
+      | VeloeraConfig
+      | OctopusConfig
+      | AxonHubConfig
+    if (siteType === AXON_HUB) {
+      config = prefs.axonHub || DEFAULT_AXON_HUB_CONFIG
+    } else if (siteType === OCTOPUS) {
       config = prefs.octopus || DEFAULT_OCTOPUS_CONFIG
     } else if (siteType === VELOERA) {
       config = prefs.veloera

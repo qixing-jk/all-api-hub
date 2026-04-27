@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { DONE_HUB, NEW_API, OCTOPUS, VELOERA } from "~/constants/siteType"
+import {
+  AXON_HUB,
+  DONE_HUB,
+  NEW_API,
+  OCTOPUS,
+  VELOERA,
+} from "~/constants/siteType"
 
 const mockGetPreferences = vi.fn()
 
@@ -89,6 +95,25 @@ vi.mock("~/services/managedSites/providers/octopus", () => ({
   autoConfigToOctopus: vi.fn(),
 }))
 
+vi.mock("~/services/managedSites/providers/axonHub", () => ({
+  checkValidAxonHubConfig: vi.fn(async () => true),
+  getAxonHubConfig: vi.fn(async () => ({
+    baseUrl: "a",
+    token: "p",
+    userId: "admin@example.com",
+  })),
+  searchChannel: vi.fn(),
+  createChannel: vi.fn(),
+  updateChannel: vi.fn(),
+  deleteChannel: vi.fn(),
+  fetchAvailableModels: vi.fn(),
+  buildChannelName: vi.fn(),
+  prepareChannelFormData: vi.fn(),
+  buildChannelPayload: vi.fn(),
+  findMatchingChannel: vi.fn(),
+  autoConfigToAxonHub: vi.fn(),
+}))
+
 describe("managedSiteService", () => {
   it("reports invalid managed-site config when preferences are missing", async () => {
     const { hasValidManagedSiteConfig } = await import(
@@ -119,6 +144,29 @@ describe("managedSiteService", () => {
 
     expect(hasValidManagedSiteConfig(prefs as any)).toBe(true)
     expect(hasValidManagedSiteConfig(prefs as any, OCTOPUS)).toBe(true)
+  })
+
+  it("validates AxonHub config completeness by site type", async () => {
+    const { hasValidManagedSiteConfig } = await import(
+      "~/services/managedSites/managedSiteService"
+    )
+
+    const prefs = {
+      managedSiteType: AXON_HUB,
+      axonHub: {
+        baseUrl: "https://axonhub.example.com",
+        email: "admin@example.com",
+        password: "secret",
+      },
+    }
+
+    expect(hasValidManagedSiteConfig(prefs as any)).toBe(true)
+    expect(
+      hasValidManagedSiteConfig({
+        ...prefs,
+        axonHub: { ...prefs.axonHub, password: "" },
+      } as any),
+    ).toBe(false)
   })
 
   it("routes to New API service by default", async () => {
@@ -175,5 +223,22 @@ describe("managedSiteService", () => {
 
     const config = await service.getConfig()
     expect(config?.baseUrl).toBe("o")
+  })
+
+  it("routes to AxonHub service when selected explicitly", async () => {
+    const { getManagedSiteServiceForType } = await import(
+      "~/services/managedSites/managedSiteService"
+    )
+
+    const service = getManagedSiteServiceForType(AXON_HUB)
+    expect(service.siteType).toBe(AXON_HUB)
+    expect(service.messagesKey).toBe("axonhub")
+
+    const config = await service.getConfig()
+    expect(config).toEqual({
+      baseUrl: "a",
+      token: "p",
+      userId: "admin@example.com",
+    })
   })
 })

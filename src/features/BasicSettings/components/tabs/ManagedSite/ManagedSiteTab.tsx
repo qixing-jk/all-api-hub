@@ -1,6 +1,13 @@
-import { DONE_HUB, NEW_API, OCTOPUS, VELOERA } from "~/constants/siteType"
+import {
+  AXON_HUB,
+  DONE_HUB,
+  NEW_API,
+  OCTOPUS,
+  VELOERA,
+} from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 
+import AxonHubSettings from "./AxonHubSettings"
 import DoneHubSettings from "./DoneHubSettings"
 import ManagedSiteModelSyncSettings from "./managedSiteModelSyncSettings"
 import ManagedSiteSelector from "./ManagedSiteSelector"
@@ -24,6 +31,8 @@ export default function ManagedSiteTab() {
         return <DoneHubSettings />
       case VELOERA:
         return <VeloeraSettings />
+      case AXON_HUB:
+        return <AxonHubSettings />
       case NEW_API:
       default:
         return <NewApiSettings />
@@ -36,9 +45,9 @@ export default function ManagedSiteTab() {
 
       {renderSiteSettings()}
 
-      <ManagedSiteModelSyncSettings />
+      {managedSiteType === AXON_HUB ? null : <ManagedSiteModelSyncSettings />}
 
-      <ModelRedirectSettings />
+      {managedSiteType === AXON_HUB ? null : <ModelRedirectSettings />}
     </div>
   )
 }

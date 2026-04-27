@@ -2,12 +2,19 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
-import { DONE_HUB, NEW_API, OCTOPUS, VELOERA } from "~/constants/siteType"
+import {
+  AXON_HUB,
+  DONE_HUB,
+  NEW_API,
+  OCTOPUS,
+  VELOERA,
+} from "~/constants/siteType"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
+import { DEFAULT_AXON_HUB_CONFIG } from "~/types/axonHubConfig"
 import { DEFAULT_DONE_HUB_CONFIG } from "~/types/doneHubConfig"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
 
@@ -80,6 +87,24 @@ describe("userPreferences managed-site helpers", () => {
       username: "octopus-user",
       password: "octopus-pass",
     })
+
+    expect(await userPreferences.updateManagedSiteType(AXON_HUB)).toBe(true)
+    expect(
+      await userPreferences.updateAxonHubConfig({
+        baseUrl: "https://axonhub.example.com",
+        email: "admin@example.com",
+        password: "secret",
+      }),
+    ).toBe(true)
+
+    managedSite = await userPreferences.getManagedSiteConfig()
+    expect(managedSite.siteType).toBe(AXON_HUB)
+    expect(managedSite.config).toEqual({
+      ...DEFAULT_PREFERENCES.axonHub,
+      baseUrl: "https://axonhub.example.com",
+      email: "admin@example.com",
+      password: "secret",
+    })
   })
 
   it("falls back to default configs when optional managed-site settings are missing", async () => {
@@ -126,6 +151,21 @@ describe("userPreferences managed-site helpers", () => {
     managedSite = await userPreferences.getManagedSiteConfig()
     expect(managedSite.siteType).toBe(OCTOPUS)
     expect(managedSite.config).toEqual(DEFAULT_OCTOPUS_CONFIG)
+
+    const missingAxonHub: any = {
+      ...structuredClone(DEFAULT_PREFERENCES),
+      managedSiteType: AXON_HUB,
+    }
+    delete missingAxonHub.axonHub
+
+    await storage.set(
+      USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+      missingAxonHub,
+    )
+
+    managedSite = await userPreferences.getManagedSiteConfig()
+    expect(managedSite.siteType).toBe(AXON_HUB)
+    expect(managedSite.config).toEqual(DEFAULT_AXON_HUB_CONFIG)
   })
 
   it("restores managed-site configs to their defaults with dedicated reset helpers", async () => {
@@ -148,15 +188,23 @@ describe("userPreferences managed-site helpers", () => {
         username: "octopus-user",
         password: "octopus-pass",
       },
+      axonHub: {
+        ...DEFAULT_PREFERENCES.axonHub,
+        baseUrl: "https://axonhub.example.com",
+        email: "admin@example.com",
+        password: "secret",
+      },
     })
 
     expect(await userPreferences.resetVeloeraConfig()).toBe(true)
     expect(await userPreferences.resetDoneHubConfig()).toBe(true)
     expect(await userPreferences.resetOctopusConfig()).toBe(true)
+    expect(await userPreferences.resetAxonHubConfig()).toBe(true)
 
     const preferences = await userPreferences.getPreferences()
     expect(preferences.veloera).toEqual(DEFAULT_PREFERENCES.veloera)
     expect(preferences.doneHub).toEqual(DEFAULT_PREFERENCES.doneHub)
     expect(preferences.octopus).toEqual(DEFAULT_PREFERENCES.octopus)
+    expect(preferences.axonHub).toEqual(DEFAULT_PREFERENCES.axonHub)
   })
 })

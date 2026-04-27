@@ -57,6 +57,32 @@
     "toggleDesc": "有効にすると、アカウント保存後にトークン一覧を確認し、存在しない場合は既定のトークンを自動作成します。",
     "toggleLabel": "アカウント追加時に既定キーを自動作成"
   },
+  "axonHub": {
+    "description": "AxonHub 管理サイトへ接続するための統合設定を行います。",
+    "fields": {
+      "baseUrlDesc": "AxonHub サイトの Base URL を設定します",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://axonhub.example.com",
+      "emailDesc": "/admin/auth/signin に使用する AxonHub 管理者メールアドレス",
+      "emailLabel": "管理者メール",
+      "emailPlaceholder": "admin@example.com",
+      "hidePassword": "パスワードを隠す",
+      "passwordDesc": "AxonHub 管理 GraphQL セッショントークンの取得に使用する管理者パスワード",
+      "passwordLabel": "管理者パスワード",
+      "passwordPlaceholder": "パスワードを入力",
+      "showPassword": "パスワードを表示"
+    },
+    "title": "AxonHub 統合設定",
+    "validation": {
+      "description": "メールアドレスとパスワードで AxonHub 管理 GraphQL にサインインできるかテストします",
+      "failed": "AxonHub 検証に失敗しました: {{error}}",
+      "missingFields": "必須項目をすべて入力してください",
+      "success": "AxonHub 設定の検証に成功しました",
+      "title": "設定を検証",
+      "validate": "検証",
+      "validating": "検証中..."
+    }
+  },
   "changelogOnUpdate": {
     "description": "更新後に拡張機能 UI を初めて開いた際、「What's New」ダイアログを表示するかどうかを制御します。",
     "title": "更新ログ",
@@ -158,6 +184,7 @@
     "title": "ログ"
   },
   "managedSite": {
+    "axonHub": "AxonHub",
     "description": "管理したい API 中継プラットフォームを選択します。この設定により、チャネル管理やモデル同期で使われる構成が決まります。",
     "doneHub": "Done Hub",
     "newApi": "New API",

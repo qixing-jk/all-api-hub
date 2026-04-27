@@ -57,6 +57,32 @@
     "toggleDesc": "开启后，账号保存完成会检查远端密钥列表；若没有密钥则自动创建一个默认密钥。",
     "toggleLabel": "添加账号后自动创建默认密钥"
   },
+  "axonHub": {
+    "description": "配置用于连接 AxonHub 管理后台的集成设置。",
+    "fields": {
+      "baseUrlDesc": "设置 AxonHub 站点的基础 URL",
+      "baseUrlLabel": "基础 URL",
+      "baseUrlPlaceholder": "https://axonhub.example.com",
+      "emailDesc": "用于 /admin/auth/signin 登录的 AxonHub 管理员邮箱",
+      "emailLabel": "管理员邮箱",
+      "emailPlaceholder": "admin@example.com",
+      "hidePassword": "隐藏密码",
+      "passwordDesc": "用于获取 AxonHub 管理端 GraphQL 会话令牌的管理员密码",
+      "passwordLabel": "管理员密码",
+      "passwordPlaceholder": "输入密码",
+      "showPassword": "显示密码"
+    },
+    "title": "AxonHub 集成设置",
+    "validation": {
+      "description": "测试邮箱和密码是否可以登录 AxonHub 管理端 GraphQL",
+      "failed": "AxonHub 配置验证失败：{{error}}",
+      "missingFields": "请填写所有必填字段",
+      "success": "AxonHub 配置验证成功",
+      "title": "验证配置",
+      "validate": "验证配置",
+      "validating": "验证中..."
+    }
+  },
   "changelogOnUpdate": {
     "description": "控制插件更新完成后，首次打开插件界面时是否在插件内显示更新内容。",
     "title": "更新日志",
@@ -158,6 +184,7 @@
     "title": "日志"
   },
   "managedSite": {
+    "axonHub": "AxonHub",
     "description": "选择您要管理的 API 聚合平台站点。这将决定用于渠道管理和模型同步的配置。",
     "doneHub": "Done Hub",
     "newApi": "New API",

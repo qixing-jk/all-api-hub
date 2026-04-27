@@ -186,6 +186,10 @@ async function getFullOctopusConfig(): Promise<OctopusConfig | null> {
   return null
 }
 
+const getNumericChannelType = (
+  type: CreateChannelPayload["channel"]["type"] | UpdateChannelPayload["type"],
+) => (typeof type === "number" ? type : undefined)
+
 /**
  * 将 Octopus 渠道转换为通用 ManagedSiteChannel 格式
  */
@@ -279,7 +283,10 @@ export async function createChannel(
     const request: OctopusCreateChannelRequest = {
       name: channel.name || "",
       // Octopus 表单使用 OctopusTypeSelector，type 已经是 OctopusOutboundType
-      type: mapChannelTypeToOctopusOutboundType(channel.type, true),
+      type: mapChannelTypeToOctopusOutboundType(
+        getNumericChannelType(channel.type),
+        true,
+      ),
       enabled: channel.status === 1,
       base_urls: [{ url: channel.base_url || "" }],
       keys: [{ enabled: true, channel_key: channel.key || "" }],
@@ -324,7 +331,10 @@ export async function updateChannel(
       // Octopus 表单使用 OctopusTypeSelector，type 已经是 OctopusOutboundType
       type:
         channelData.type !== undefined
-          ? mapChannelTypeToOctopusOutboundType(channelData.type, true)
+          ? mapChannelTypeToOctopusOutboundType(
+              getNumericChannelType(channelData.type),
+              true,
+            )
           : undefined,
       enabled: channelData.status === 1,
       base_urls: channelData.base_url

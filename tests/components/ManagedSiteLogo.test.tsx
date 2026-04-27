@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import { NEW_API, VELOERA } from "~/constants/siteType"
+import { AXON_HUB, NEW_API, VELOERA } from "~/constants/siteType"
 import { TokenDetails } from "~/features/AccountManagement/components/CopyKeyDialog/TokenDetails"
 import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
@@ -127,6 +127,44 @@ describe("Managed site logo", () => {
 
     expect(
       await screen.findByRole("img", { name: "Veloera logo" }),
+    ).toBeInTheDocument()
+  })
+
+  it("renders AxonHub logo when managedSiteType is AXON_HUB", async () => {
+    mockedUseUserPreferencesContext.mockReturnValue({
+      managedSiteType: AXON_HUB,
+    })
+
+    const token = {
+      id: 1,
+      user_id: 1,
+      key: "sk-test",
+      status: 1,
+      name: "Token",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: 0,
+      remain_quota: 0,
+      unlimited_quota: false,
+      used_quota: 0,
+      accountId: "account-1",
+      accountName: "Test Account",
+    }
+
+    render(
+      <TokenHeader
+        token={token}
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={createAccountStub()}
+      />,
+    )
+
+    await screen.findByText("Token")
+
+    expect(
+      await screen.findByRole("img", { name: "AxonHub logo" }),
     ).toBeInTheDocument()
   })
 

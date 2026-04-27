@@ -5,6 +5,7 @@
     "autoProvisionFailed": "账号已保存，但自动创建 API 密钥失败。你可以在密钥管理中使用“{{actionLabel}}”重试。",
     "checkingApiKeys": "正在检查 API 密钥...",
     "createTokenFailed": "创建 API 令牌失败",
+    "importingToAxonHub": "正在导入到 AxonHub...",
     "importingToDoneHub": "正在导入到 Done Hub...",
     "importingToNewApi": "正在导入到 New API...",
     "importingToOctopus": "正在导入到 Octopus...",
@@ -23,6 +24,14 @@
     "serverError": "服务器错误，请稍后重试。",
     "timeout": "自动识别超时，请尝试手动添加。",
     "unexpectedData": "自动识别失败，站点返回的数据不符合预期。请手动输入信息，或确保已登录目标站点。"
+  },
+  "axonhub": {
+    "channelExists": "渠道 {{channelName}} 已存在，无需再次导入",
+    "configMissing": "请先在基础设置中配置 AxonHub 地址、管理员邮箱和密码",
+    "importFailed": "导入失败，发生未知错误",
+    "importSuccess": "成功导入新渠道 {{channelName}}",
+    "modelsMissing": "请至少填写一个模型",
+    "noChannelsToSync": "没有可同步的渠道"
   },
   "background": {
     "cannotCreateWindow": "无法创建窗口",

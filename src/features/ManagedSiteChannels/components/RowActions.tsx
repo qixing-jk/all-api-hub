@@ -22,6 +22,7 @@ interface RowActionsProps {
   onFilters: (channel: ChannelRow) => void
   canMigrate: boolean
   showMigrationAction: boolean
+  showNewApiOnlyActions?: boolean
   isSyncing: boolean
   labels: RowActionsLabels
 }
@@ -40,6 +41,7 @@ export default function RowActions({
   onFilters,
   canMigrate,
   showMigrationAction,
+  showNewApiOnlyActions = true,
   isSyncing,
   labels,
 }: RowActionsProps) {
@@ -75,19 +77,23 @@ export default function RowActions({
               {labels.edit}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={() => onFilters(channel)}>
-              {labels.filters}
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => void onOpenSync(channel.id)}>
-              {labels.openSync}
-            </DropdownMenuItem>
-            <DropdownMenuItem
-              onClick={() => onSync([channel.id])}
-              disabled={isSyncing}
-            >
-              {isSyncing ? labels.syncing : labels.sync}
-            </DropdownMenuItem>
-            <DropdownMenuSeparator />
+            {showNewApiOnlyActions ? (
+              <>
+                <DropdownMenuItem onClick={() => onFilters(channel)}>
+                  {labels.filters}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => void onOpenSync(channel.id)}>
+                  {labels.openSync}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => onSync([channel.id])}
+                  disabled={isSyncing}
+                >
+                  {isSyncing ? labels.syncing : labels.sync}
+                </DropdownMenuItem>
+                <DropdownMenuSeparator />
+              </>
+            ) : null}
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
               onClick={() => onDelete([channel.id])}

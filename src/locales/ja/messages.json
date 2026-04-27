@@ -5,6 +5,7 @@
     "autoProvisionFailed": "アカウントは保存されましたが、API キーの自動作成に失敗しました。キー管理の「{{actionLabel}}」から再試行できます。",
     "checkingApiKeys": "API キーを確認中...",
     "createTokenFailed": "API トークンの作成に失敗しました",
+    "importingToAxonHub": "AxonHub にインポート中...",
     "importingToDoneHub": "Done Hub にインポート中...",
     "importingToNewApi": "New API にインポート中...",
     "importingToOctopus": "Octopus にインポート中...",
@@ -23,6 +24,14 @@
     "serverError": "サーバーエラーです。しばらくしてからもう一度お試しください",
     "timeout": "自動検出がタイムアウトしました。手動追加をお試しください",
     "unexpectedData": "自動検出に失敗しました。サイトが予期しないデータを返しました。情報を手動入力するか、対象サイトにログインしていることを確認してください"
+  },
+  "axonhub": {
+    "channelExists": "チャネル {{channelName}} はすでに存在するため、再インポートは不要です",
+    "configMissing": "先に基本設定で AxonHub のアドレス、管理者メール、パスワードを設定してください",
+    "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
+    "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
+    "modelsMissing": "少なくとも 1 つのモデルを指定してください",
+    "noChannelsToSync": "同期するチャネルがありません"
   },
   "background": {
     "cannotCreateWindow": "ウィンドウを作成できません",

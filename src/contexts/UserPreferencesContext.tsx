@@ -35,6 +35,10 @@ import type {
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 import type { AutoCheckinPreferences } from "~/types/autoCheckin"
 import {
+  DEFAULT_AXON_HUB_CONFIG,
+  type AxonHubConfig,
+} from "~/types/axonHubConfig"
+import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
 } from "~/types/dailyBalanceHistory"
@@ -156,6 +160,9 @@ interface UserPreferencesContextType {
   octopusBaseUrl: string
   octopusUsername: string
   octopusPassword: string
+  axonHubBaseUrl: string
+  axonHubEmail: string
+  axonHubPassword: string
   managedSiteType: ManagedSiteType
   cliProxyBaseUrl: string
   cliProxyManagementKey: string
@@ -255,6 +262,22 @@ interface UserPreferencesContextType {
     updates: Partial<NonNullable<UserPreferences["octopus"]>>,
     options?: PreferenceSaveOptions,
   ) => Promise<boolean>
+  updateAxonHubBaseUrl: (
+    url: string,
+    options?: PreferenceSaveOptions,
+  ) => Promise<boolean>
+  updateAxonHubEmail: (
+    email: string,
+    options?: PreferenceSaveOptions,
+  ) => Promise<boolean>
+  updateAxonHubPassword: (
+    password: string,
+    options?: PreferenceSaveOptions,
+  ) => Promise<boolean>
+  updateAxonHubConfig: (
+    updates: Partial<AxonHubConfig>,
+    options?: PreferenceSaveOptions,
+  ) => Promise<boolean>
   updateManagedSiteType: (siteType: ManagedSiteType) => Promise<boolean>
   updateCliProxyBaseUrl: (
     url: string,
@@ -317,6 +340,7 @@ interface UserPreferencesContextType {
   resetDoneHubConfig: () => Promise<boolean>
   resetVeloeraConfig: () => Promise<boolean>
   resetOctopusConfig: () => Promise<boolean>
+  resetAxonHubConfig: () => Promise<boolean>
   resetNewApiModelSyncConfig: () => Promise<boolean>
   resetCliProxyConfig: () => Promise<boolean>
   resetClaudeCodeRouterConfig: () => Promise<boolean>
@@ -939,6 +963,57 @@ export const UserPreferencesProvider = ({
     [persistPreferenceUpdates],
   )
 
+  const updateAxonHubBaseUrl = useCallback(
+    async (baseUrl: string, options?: PreferenceSaveOptions) => {
+      return persistPreferenceUpdates(
+        {
+          axonHub: { baseUrl },
+        },
+        options,
+      )
+    },
+    [persistPreferenceUpdates],
+  )
+
+  const updateAxonHubEmail = useCallback(
+    async (email: string, options?: PreferenceSaveOptions) => {
+      return persistPreferenceUpdates(
+        {
+          axonHub: { email },
+        },
+        options,
+      )
+    },
+    [persistPreferenceUpdates],
+  )
+
+  const updateAxonHubPassword = useCallback(
+    async (password: string, options?: PreferenceSaveOptions) => {
+      return persistPreferenceUpdates(
+        {
+          axonHub: { password },
+        },
+        options,
+      )
+    },
+    [persistPreferenceUpdates],
+  )
+
+  const updateAxonHubConfig = useCallback(
+    async (
+      updates: Partial<AxonHubConfig>,
+      options?: PreferenceSaveOptions,
+    ) => {
+      return persistPreferenceUpdates(
+        {
+          axonHub: updates,
+        },
+        options,
+      )
+    },
+    [persistPreferenceUpdates],
+  )
+
   const updateManagedSiteType = useCallback(
     async (siteType: ManagedSiteType) => {
       const success = await userPreferences.updateManagedSiteType(siteType)
@@ -1407,6 +1482,14 @@ export const UserPreferencesProvider = ({
     return success
   }, [loadPreferences])
 
+  const resetAxonHubConfig = useCallback(async () => {
+    const success = await userPreferences.resetAxonHubConfig()
+    if (success) {
+      await loadPreferences()
+    }
+    return success
+  }, [loadPreferences])
+
   const resetNewApiModelSyncConfig = useCallback(async () => {
     const success = await userPreferences.resetNewApiModelSyncConfig()
     if (success) {
@@ -1634,6 +1717,11 @@ export const UserPreferencesProvider = ({
     octopusBaseUrl: preferences?.octopus?.baseUrl || "",
     octopusUsername: preferences?.octopus?.username || "",
     octopusPassword: preferences?.octopus?.password || "",
+    axonHubBaseUrl:
+      preferences?.axonHub?.baseUrl || DEFAULT_AXON_HUB_CONFIG.baseUrl,
+    axonHubEmail: preferences?.axonHub?.email || DEFAULT_AXON_HUB_CONFIG.email,
+    axonHubPassword:
+      preferences?.axonHub?.password || DEFAULT_AXON_HUB_CONFIG.password,
     managedSiteType: preferences?.managedSiteType || NEW_API,
     cliProxyBaseUrl: preferences?.cliProxy?.baseUrl || "",
     cliProxyManagementKey: preferences?.cliProxy?.managementKey || "",
@@ -1682,6 +1770,10 @@ export const UserPreferencesProvider = ({
     updateOctopusUsername,
     updateOctopusPassword,
     updateOctopusConfig,
+    updateAxonHubBaseUrl,
+    updateAxonHubEmail,
+    updateAxonHubPassword,
+    updateAxonHubConfig,
     updateManagedSiteType,
     updateCliProxyBaseUrl,
     updateCliProxyManagementKey,
@@ -1707,6 +1799,7 @@ export const UserPreferencesProvider = ({
     resetDoneHubConfig,
     resetVeloeraConfig,
     resetOctopusConfig,
+    resetAxonHubConfig,
     resetNewApiModelSyncConfig,
     resetCliProxyConfig,
     resetClaudeCodeRouterConfig,

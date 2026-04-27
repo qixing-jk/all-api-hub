@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next"
 
 import {
+  AXON_HUB,
   DONE_HUB,
   NEW_API,
   OCTOPUS,
@@ -9,6 +10,10 @@ import {
 } from "~/constants/siteType"
 import { hasUsableApiTokenKey } from "~/services/apiService/common/apiKey"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
+import {
+  DEFAULT_AXON_HUB_CONFIG,
+  type AxonHubConfig,
+} from "~/types/axonHubConfig"
 import {
   DEFAULT_DONE_HUB_CONFIG,
   type DoneHubConfig,
@@ -22,6 +27,7 @@ export type ManagedSiteLabelKey =
   | "settings:managedSite.doneHub"
   | "settings:managedSite.veloera"
   | "settings:managedSite.octopus"
+  | "settings:managedSite.axonHub"
 
 /**
  * Managed site namespace key used under the `messages` i18n namespace.
@@ -31,6 +37,7 @@ export type ManagedSiteMessagesKey =
   | "donehub"
   | "veloera"
   | "octopus"
+  | "axonhub"
 
 export interface ManagedSiteAdminConfig {
   baseUrl: string
@@ -50,6 +57,7 @@ type ManagedSiteConfig =
   | DoneHubConfig
   | VeloeraConfig
   | OctopusConfig
+  | AxonHubConfig
 
 /**
  * Extracts the selected managed site type and its corresponding config from a
@@ -63,7 +71,9 @@ function getManagedSiteConfigFromPreferencesForType(
   config: ManagedSiteConfig
 } {
   let config: ManagedSiteConfig
-  if (siteType === OCTOPUS) {
+  if (siteType === AXON_HUB) {
+    config = preferences.axonHub || DEFAULT_AXON_HUB_CONFIG
+  } else if (siteType === OCTOPUS) {
     config = preferences.octopus || { baseUrl: "", username: "", password: "" }
   } else if (siteType === DONE_HUB) {
     config = preferences.doneHub ?? DEFAULT_DONE_HUB_CONFIG
@@ -108,6 +118,9 @@ export function getManagedSiteLabelKey(
   if (siteType === OCTOPUS) {
     return "settings:managedSite.octopus"
   }
+  if (siteType === AXON_HUB) {
+    return "settings:managedSite.axonHub"
+  }
   if (siteType === DONE_HUB) {
     return "settings:managedSite.doneHub"
   }
@@ -123,6 +136,8 @@ export function getManagedSiteLabel(t: TFunction, siteType: ManagedSiteType) {
   switch (siteType) {
     case OCTOPUS:
       return t("settings:managedSite.octopus")
+    case AXON_HUB:
+      return t("settings:managedSite.axonHub")
     case DONE_HUB:
       return t("settings:managedSite.doneHub")
     case VELOERA:
@@ -141,6 +156,9 @@ export function getManagedSiteMessagesKeyFromSiteType(
 ): ManagedSiteMessagesKey {
   if (siteType === OCTOPUS) {
     return "octopus"
+  }
+  if (siteType === AXON_HUB) {
+    return "axonhub"
   }
   if (siteType === DONE_HUB) {
     return "donehub"
@@ -187,6 +205,22 @@ export function getManagedSiteAdminConfigForType(
       baseUrl: octopusConfig.baseUrl,
       adminToken: "", // Octopus 使用 JWT，动态获取
       userId: octopusConfig.username,
+    }
+  }
+
+  if (siteType === AXON_HUB) {
+    const axonHubConfig = config as AxonHubConfig
+    if (
+      !axonHubConfig?.baseUrl ||
+      !axonHubConfig?.email ||
+      !axonHubConfig?.password
+    ) {
+      return null
+    }
+    return {
+      baseUrl: axonHubConfig.baseUrl,
+      adminToken: axonHubConfig.password,
+      userId: axonHubConfig.email,
     }
   }
 
@@ -310,6 +344,8 @@ export function getManagedSiteConfigMissingMessage(
       return t("messages:veloera.configMissing")
     case "octopus":
       return t("messages:octopus.configMissing")
+    case "axonhub":
+      return t("messages:axonhub.configMissing")
     case "newapi":
     default:
       return t("messages:newapi.configMissing")
@@ -330,6 +366,8 @@ export function getManagedSiteNoChannelsToSyncMessage(
       return t("messages:veloera.noChannelsToSync")
     case "octopus":
       return t("messages:octopus.noChannelsToSync")
+    case "axonhub":
+      return t("messages:axonhub.noChannelsToSync")
     case "newapi":
     default:
       return t("messages:newapi.noChannelsToSync")

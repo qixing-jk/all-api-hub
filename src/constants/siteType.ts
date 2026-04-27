@@ -15,6 +15,7 @@ export const NEO_API = "neo-Api"
 export const WONG_GONGYI = "wong-gongyi"
 export const SUB2API = "sub2api"
 export const OCTOPUS = "octopus"
+export const AXON_HUB = "axonhub"
 export const UNKNOWN_SITE = "unknown"
 
 export type ManagedSiteType =
@@ -22,6 +23,7 @@ export type ManagedSiteType =
   | typeof VELOERA
   | typeof DONE_HUB
   | typeof OCTOPUS
+  | typeof AXON_HUB
 
 export type SiteType = (typeof SITE_TITLE_RULES)[number]["name"]
 
@@ -42,6 +44,7 @@ export const SITE_TITLE_RULES = [
    */
   { name: WONG_GONGYI, regex: /wong\s*公益站/i },
   { name: SUB2API, regex: makeTitleRegex(SUB2API) },
+  { name: AXON_HUB, regex: makeTitleRegex(AXON_HUB) },
   { name: UNKNOWN_SITE, regex: makeTitleRegex(UNKNOWN_SITE) },
 ]
 

@@ -5,6 +5,7 @@
     "autoProvisionFailed": "Account saved, but failed to auto-create an API key. You can use “{{actionLabel}}” in Key Management to retry.",
     "checkingApiKeys": "Checking API key...",
     "createTokenFailed": "Failed to create API token",
+    "importingToAxonHub": "Importing to AxonHub...",
     "importingToDoneHub": "Importing to Done Hub...",
     "importingToNewApi": "Importing to New API...",
     "importingToOctopus": "Importing to Octopus...",
@@ -23,6 +24,14 @@
     "serverError": "Server error. Please try again later",
     "timeout": "Auto-detection timeout, please try adding manually",
     "unexpectedData": "Auto-detection failed, site returned unexpected data. Please enter information manually or ensure you are logged in to the target site"
+  },
+  "axonhub": {
+    "channelExists": "Channel {{channelName}} already exists, no need to import again",
+    "configMissing": "Please configure AxonHub address, admin email, and password in basic settings first",
+    "importFailed": "Import failed, an unknown error occurred",
+    "importSuccess": "Successfully imported new channel {{channelName}}",
+    "modelsMissing": "Please provide at least one model",
+    "noChannelsToSync": "No channels to sync"
   },
   "background": {
     "cannotCreateWindow": "Unable to create window",

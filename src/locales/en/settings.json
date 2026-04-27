@@ -57,6 +57,32 @@
     "toggleDesc": "When enabled, All API Hub checks your token inventory after saving an account and creates a default token if none exist.",
     "toggleLabel": "Auto-create a default key on account add"
   },
+  "axonHub": {
+    "description": "Configure integration settings for connecting to an AxonHub admin site.",
+    "fields": {
+      "baseUrlDesc": "Set the AxonHub site base URL",
+      "baseUrlLabel": "Base URL",
+      "baseUrlPlaceholder": "https://axonhub.example.com",
+      "emailDesc": "AxonHub admin email used for /admin/auth/signin",
+      "emailLabel": "Admin email",
+      "emailPlaceholder": "admin@example.com",
+      "hidePassword": "Hide password",
+      "passwordDesc": "AxonHub admin password used to obtain an admin GraphQL session token",
+      "passwordLabel": "Admin password",
+      "passwordPlaceholder": "Enter password",
+      "showPassword": "Show password"
+    },
+    "title": "AxonHub Integration Settings",
+    "validation": {
+      "description": "Test whether the email and password can sign in to AxonHub admin GraphQL",
+      "failed": "AxonHub validation failed: {{error}}",
+      "missingFields": "Please fill in all required fields",
+      "success": "AxonHub configuration validated successfully",
+      "title": "Validate Configuration",
+      "validate": "Validate",
+      "validating": "Validating..."
+    }
+  },
   "changelogOnUpdate": {
     "description": "Control whether All API Hub shows a What's New dialog the first time you open the extension UI after updates.",
     "title": "Changelog",
@@ -158,6 +184,7 @@
     "title": "Logging"
   },
   "managedSite": {
+    "axonHub": "AxonHub",
     "description": "Select which API aggregator platform you want to manage. This determines which configuration will be used for channel management and model syncing.",
     "doneHub": "Done Hub",
     "newApi": "New API",

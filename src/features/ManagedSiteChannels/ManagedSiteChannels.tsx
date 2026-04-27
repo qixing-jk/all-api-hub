@@ -85,13 +85,20 @@ import {
   TableHeader,
   TableRow,
 } from "~/components/ui/table"
+import { AxonHubChannelTypeNames } from "~/constants/axonHub"
 import { Z_INDEX } from "~/constants/designTokens"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelTypeNames } from "~/constants/managedSite"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { DONE_HUB, NEW_API, OCTOPUS, VELOERA } from "~/constants/siteType"
+import {
+  AXON_HUB,
+  DONE_HUB,
+  NEW_API,
+  OCTOPUS,
+  VELOERA,
+} from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
@@ -198,6 +205,9 @@ export default function ManagedSiteChannels({
     newApiTotpSecret,
   } = useUserPreferencesContext()
   const isOctopus = managedSiteType === OCTOPUS
+  const isAxonHub = managedSiteType === AXON_HUB
+  const supportsChannelMigration = !isAxonHub
+  const supportsNewApiOnlyChannelActions = !isAxonHub
   const isNewApiManagedSite = managedSiteType === NEW_API
   const supportsDetailBackedRealKeyLoading =
     managedSiteType === DONE_HUB || managedSiteType === VELOERA
@@ -212,9 +222,9 @@ export default function ManagedSiteChannels({
   const [columnFilters, setColumnFilters] = useState<ColumnFiltersState>([])
   const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({
     base_url: false,
-    group: !isOctopus, // Octopus 没有分组概念，隐藏分组列
-    priority: !isOctopus, // Octopus 没有优先级概念，隐藏优先级列
-    weight: !isOctopus, // Octopus 没有权重概念，隐藏权重列
+    group: !isOctopus && !isAxonHub,
+    priority: !isOctopus && !isAxonHub,
+    weight: !isOctopus && !isAxonHub,
   })
   const [pagination, setPagination] = useState<PaginationState>({
     pageIndex: 0,
@@ -240,10 +250,12 @@ export default function ManagedSiteChannels({
   const { openWithCustom } = useChannelDialog()
   const migrationTargets = useMemo(
     () =>
-      getManagedSiteTargetOptions(preferences, {
-        excludeSiteTypes: [managedSiteType],
-      }),
-    [managedSiteType, preferences],
+      supportsChannelMigration
+        ? getManagedSiteTargetOptions(preferences, {
+            excludeSiteTypes: [managedSiteType],
+          })
+        : [],
+    [managedSiteType, preferences, supportsChannelMigration],
   )
   const hasMigrationTargets = migrationTargets.length > 0
 
@@ -287,11 +299,11 @@ export default function ManagedSiteChannels({
   useEffect(() => {
     setColumnVisibility((prev) => ({
       ...prev,
-      group: !isOctopus,
-      priority: !isOctopus,
-      weight: !isOctopus,
+      group: !isOctopus && !isAxonHub,
+      priority: !isOctopus && !isAxonHub,
+      weight: !isOctopus && !isAxonHub,
     }))
-  }, [isOctopus])
+  }, [isAxonHub, isOctopus])
 
   useEffect(() => {
     setRowSelection({})
@@ -719,10 +731,17 @@ export default function ManagedSiteChannels({
         accessorKey: "type",
         header: t("table.columns.type"),
         cell: ({ row }: { row: Row<ChannelRow> }) => {
-          const typeNames = isOctopus
-            ? OctopusOutboundTypeNames
-            : ChannelTypeNames
-          return typeNames[row.original.type] ?? "Unknown"
+          const typeNames = (
+            isOctopus
+              ? OctopusOutboundTypeNames
+              : isAxonHub
+                ? AxonHubChannelTypeNames
+                : ChannelTypeNames
+          ) as Record<string | number, string>
+          return (
+            typeNames[row.original.type] ??
+            String(row.original.type || "Unknown")
+          )
         },
         size: 90,
       },
@@ -801,6 +820,7 @@ export default function ManagedSiteChannels({
             onFilters={handleOpenFilterDialog}
             canMigrate={hasMigrationTargets}
             showMigrationAction={isMigrationMode}
+            showNewApiOnlyActions={supportsNewApiOnlyChannelActions}
             isSyncing={syncingIds.has(row.original.id)}
             labels={rowActionLabels}
           />
@@ -817,10 +837,12 @@ export default function ManagedSiteChannels({
       handleOpenViewDialog,
       handleSyncChannels,
       hasMigrationTargets,
+      isAxonHub,
       isMigrationMode,
       isOctopus,
       rowActionLabels,
       scheduleDelete,
+      supportsNewApiOnlyChannelActions,
       syncingIds,
       t,
     ],
@@ -973,20 +995,22 @@ export default function ManagedSiteChannels({
                 >
                   {t("toolbar.refresh")}
                 </Button>
-                <Button
-                  variant={isMigrationMode ? "default" : "outline"}
-                  onClick={handleToggleMigrationMode}
-                  leftIcon={<ArrowRightLeft className="h-4 w-4" />}
-                >
-                  <span>
-                    {isMigrationMode
-                      ? t("toolbar.exitMigrationMode")
-                      : t("toolbar.enterMigrationMode")}
-                  </span>
-                  <Badge variant="warning" size="sm" className="shrink-0">
-                    {t("migration.betaBadge")}
-                  </Badge>
-                </Button>
+                {supportsChannelMigration ? (
+                  <Button
+                    variant={isMigrationMode ? "default" : "outline"}
+                    onClick={handleToggleMigrationMode}
+                    leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+                  >
+                    <span>
+                      {isMigrationMode
+                        ? t("toolbar.exitMigrationMode")
+                        : t("toolbar.enterMigrationMode")}
+                    </span>
+                    <Badge variant="warning" size="sm" className="shrink-0">
+                      {t("migration.betaBadge")}
+                    </Badge>
+                  </Button>
+                ) : null}
               </>
             )}
             <ManagedSiteTypeSwitcher
@@ -1164,7 +1188,7 @@ export default function ManagedSiteChannels({
                     {t("toolbar.deleteSelected")}
                   </Button>
                 )}
-                {!isMigrationMode && (
+                {!isMigrationMode && supportsNewApiOnlyChannelActions && (
                   <Button
                     variant="outline"
                     disabled={!selectedCount}

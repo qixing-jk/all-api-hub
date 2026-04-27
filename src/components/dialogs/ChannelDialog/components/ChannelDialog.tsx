@@ -25,10 +25,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import {
+  AxonHubChannelTypeOptions,
+  isAxonHubChannelType,
+} from "~/constants/axonHub"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelType, ChannelTypeOptions } from "~/constants/managedSite"
 import { OctopusOutboundTypeOptions } from "~/constants/octopus"
-import { NEW_API, OCTOPUS } from "~/constants/siteType"
+import { AXON_HUB, NEW_API, OCTOPUS } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
@@ -116,6 +120,7 @@ export function ChannelDialog({
     newApiTotpSecret,
   } = useUserPreferencesContext()
   const isOctopus = managedSiteType === OCTOPUS
+  const isAxonHub = managedSiteType === AXON_HUB
   const canRunManagedVerification =
     managedSiteType === NEW_API && canRecoverManagedVerification
   const isAddMode = mode === DIALOG_MODES.ADD
@@ -144,6 +149,17 @@ export function ChannelDialog({
     initialModels,
     initialGroups,
   })
+
+  const channelTypeOptions = isAxonHub
+    ? AxonHubChannelTypeOptions
+    : isOctopus
+      ? OctopusOutboundTypeOptions
+      : ChannelTypeOptions
+  const shouldShowUnknownAxonHubType =
+    isAxonHub &&
+    typeof formData.type === "string" &&
+    formData.type.trim() &&
+    !isAxonHubChannelType(formData.type)
 
   const handleSelectAllModels = () => {
     updateField(
@@ -510,7 +526,9 @@ export function ChannelDialog({
             }
             onValueChange={(value) =>
               handleTypeChange(
-                Number(value) as ChannelType | OctopusOutboundType,
+                isAxonHub
+                  ? value
+                  : (Number(value) as ChannelType | OctopusOutboundType),
               )
             }
             disabled={isSaving || !isAddMode}
@@ -522,17 +540,16 @@ export function ChannelDialog({
               />
             </SelectTrigger>
             <SelectContent>
-              {isOctopus
-                ? OctopusOutboundTypeOptions.map((option) => (
-                    <SelectItem key={option.value} value={String(option.value)}>
-                      {option.label}
-                    </SelectItem>
-                  ))
-                : ChannelTypeOptions.map((option) => (
-                    <SelectItem key={option.value} value={String(option.value)}>
-                      {option.label}
-                    </SelectItem>
-                  ))}
+              {shouldShowUnknownAxonHubType ? (
+                <SelectItem value={String(formData.type)}>
+                  {String(formData.type)}
+                </SelectItem>
+              ) : null}
+              {channelTypeOptions.map((option) => (
+                <SelectItem key={option.value} value={String(option.value)}>
+                  {option.label}
+                </SelectItem>
+              ))}
             </SelectContent>
           </Select>
           <p className="dark:text-dark-text-secondary mt-1 text-xs text-gray-500">
@@ -689,8 +706,8 @@ export function ChannelDialog({
           </p>
         </div>
 
-        {/* Groups - Octopus 没有分组概念，隐藏此字段 */}
-        {!isOctopus && (
+        {/* Groups - Octopus/AxonHub do not expose New API group semantics here. */}
+        {!isOctopus && !isAxonHub && (
           <div>
             <CompactMultiSelect
               label={t("channelDialog:fields.groups.label")}
@@ -717,8 +734,8 @@ export function ChannelDialog({
             {t("channelDialog:sections.advanced")}
           </summary>
           <div className="mt-3 space-y-4">
-            {/* Priority - Octopus 不支持优先级 */}
-            {!isOctopus && (
+            {/* Priority - Octopus/AxonHub do not expose New API priority semantics here. */}
+            {!isOctopus && !isAxonHub && (
               <div>
                 <Label htmlFor="channel-priority">
                   {t("channelDialog:fields.priority.label")}
@@ -741,8 +758,8 @@ export function ChannelDialog({
               </div>
             )}
 
-            {/* Weight - Octopus 不支持权重 */}
-            {!isOctopus && (
+            {/* Weight - Octopus/AxonHub do not expose New API weight semantics here. */}
+            {!isOctopus && !isAxonHub && (
               <div>
                 <Label htmlFor="channel-weight">
                   {t("channelDialog:fields.weight.label")}

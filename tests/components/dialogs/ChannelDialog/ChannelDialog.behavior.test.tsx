@@ -5,9 +5,10 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelDialog } from "~/components/dialogs/ChannelDialog"
+import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { ChannelType } from "~/constants/managedSite"
-import { NEW_API, OCTOPUS } from "~/constants/siteType"
+import { AXON_HUB, NEW_API, OCTOPUS } from "~/constants/siteType"
 import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
 
 const {
@@ -29,7 +30,7 @@ const {
       priority: 2,
       weight: 3,
       status: 1,
-    },
+    } as ChannelFormData,
     isFormValid: true,
     isSaving: false,
     isLoadingGroups: false,
@@ -145,11 +146,11 @@ vi.mock("~/components/dialogs/ChannelDialog/hooks/useChannelForm", async () => {
         }))
       }
 
-      const handleTypeChange = (value: number) => {
+      const handleTypeChange = (value: number | string) => {
         handleTypeChangeMock(value)
         setFormData((current) => ({
           ...current,
-          type: value as ChannelType,
+          type: value as ChannelFormData["type"],
         }))
       }
 
@@ -672,6 +673,26 @@ describe("ChannelDialog behavior", () => {
 
     render(<ChannelDialog isOpen={true} onClose={vi.fn()} />)
 
+    expect(screen.getByTestId("models-multi-select")).toBeInTheDocument()
+    expect(screen.queryByTestId("groups-multi-select")).toBeNull()
+    expect(screen.queryByText("channelDialog:fields.priority.label")).toBeNull()
+    expect(screen.queryByText("channelDialog:fields.weight.label")).toBeNull()
+  })
+
+  it("uses AxonHub string channel types and hides New API-only fields", () => {
+    mockUserPreferences.managedSiteType = AXON_HUB
+    channelFormScenario.formData = buildFormData({
+      type: "custom_axonhub_type",
+    })
+
+    render(<ChannelDialog isOpen={true} onClose={vi.fn()} />)
+
+    expect(
+      screen.getByTestId(`select-item-${AXON_HUB_CHANNEL_TYPE.OPENAI}`),
+    ).toHaveTextContent("OpenAI")
+    expect(
+      screen.getByTestId("select-item-custom_axonhub_type"),
+    ).toHaveTextContent("custom_axonhub_type")
     expect(screen.getByTestId("models-multi-select")).toBeInTheDocument()
     expect(screen.queryByTestId("groups-multi-select")).toBeNull()
     expect(screen.queryByText("channelDialog:fields.priority.label")).toBeNull()

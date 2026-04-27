@@ -3,7 +3,7 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
-import { DONE_HUB, NEW_API, VELOERA } from "~/constants/siteType"
+import { AXON_HUB, DONE_HUB, NEW_API, VELOERA } from "~/constants/siteType"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const { mockedUseUserPreferencesContext, showUpdateToastMock } = vi.hoisted(
@@ -52,6 +52,11 @@ const createPreferences = (managedSiteType = NEW_API) => ({
   octopus: {
     baseUrl: "",
     username: "",
+    password: "",
+  },
+  axonHub: {
+    baseUrl: "",
+    email: "",
     password: "",
   },
 })
@@ -108,6 +113,27 @@ describe("ManagedSiteTypeSwitcher", () => {
     expect(
       screen.queryByRole("option", { name: "settings:managedSite.octopus" }),
     ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("option", { name: "settings:managedSite.axonHub" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows AxonHub as a selectable managed-site type in settings mode", async () => {
+    const user = userEvent.setup()
+
+    render(<ManagedSiteTypeSwitcher />)
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "settings:managedSite.siteTypeLabel",
+      }),
+    )
+
+    expect(
+      await screen.findByRole("option", {
+        name: "settings:managedSite.axonHub",
+      }),
+    ).toBeInTheDocument()
   })
 
   it("updates the managed site type and shows the shared update toast", async () => {
@@ -131,5 +157,14 @@ describe("ManagedSiteTypeSwitcher", () => {
       true,
       "settings:managedSite.siteTypeLabel",
     )
+
+    await user.click(
+      await screen.findByRole("combobox", {
+        name: "settings:managedSite.siteTypeLabel",
+      }),
+    )
+    await user.click(await screen.findByText("settings:managedSite.axonHub"))
+
+    expect(updateManagedSiteType).toHaveBeenLastCalledWith(AXON_HUB)
   })
 })

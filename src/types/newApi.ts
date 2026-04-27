@@ -1,4 +1,5 @@
 import { ChannelType } from "~/constants"
+import type { AxonHubChannelType } from "~/constants/axonHub"
 
 import type { OctopusOutboundType } from "./octopus"
 
@@ -54,7 +55,7 @@ export interface ChannelDefaults {
   weight: number
   groups: string[]
   models: string[]
-  type: ChannelType
+  type: ChannelType | OctopusOutboundType | AxonHubChannelType
 }
 
 /**
@@ -62,7 +63,7 @@ export interface ChannelDefaults {
  */
 export interface ChannelFormData {
   name: string
-  type: ChannelType | OctopusOutboundType
+  type: ChannelType | OctopusOutboundType | AxonHubChannelType | string
   key: string
   base_url: string
   models: string[]
@@ -91,7 +92,7 @@ export interface UpdateChannelPayload {
    * 渠道ID
    */
   id: number
-  type?: ChannelType | OctopusOutboundType
+  type?: ChannelType | OctopusOutboundType | AxonHubChannelType | string
   max_input_tokens?: number
   other?: string
   models?: string
@@ -139,7 +140,7 @@ export interface ChannelInfo {
  */
 export interface NewApiChannel {
   id: number
-  type: ChannelType
+  type: ChannelType | AxonHubChannelType | string
   /**
    * 渠道key
    * 通常从接口获取时该字段为空字符串，拿到原始值需要管理员用户的两步验证。

@@ -102,12 +102,15 @@ const mapWithConcurrency = async <TItem, TResult>(
 const getSharedChannelType = (
   sourceSiteType: ManagedSiteType,
   channel: ManagedSiteChannel,
-) => {
+): ChannelType => {
+  const numericChannelType: number =
+    typeof channel.type === "number" ? channel.type : ChannelType.OpenAI
+
   if (sourceSiteType === OCTOPUS) {
-    return mapOctopusOutboundTypeToChannelType(channel.type)
+    return mapOctopusOutboundTypeToChannelType(numericChannelType)
   }
 
-  return (channel.type ?? DEFAULT_CHANNEL_FIELDS.type) as ChannelType
+  return numericChannelType as ChannelType
 }
 
 const getTargetChannelType = (

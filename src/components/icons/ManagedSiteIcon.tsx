@@ -1,10 +1,12 @@
 import { NewAPI } from "@lobehub/icons"
 
+import { AxonHubIcon } from "~/components/icons/AxonHubIcon"
 import { DoneHubIcon } from "~/components/icons/DoneHubIcon"
 import { ICON_SIZE_CLASSNAME, IconSize } from "~/components/icons/iconSizes"
 import { OctopusIcon } from "~/components/icons/OctopusIcon"
 import { VeloeraIcon } from "~/components/icons/VeloeraIcon"
 import {
+  AXON_HUB,
   DONE_HUB,
   ManagedSiteType,
   OCTOPUS,
@@ -34,6 +36,10 @@ export function ManagedSiteIcon({
 
   if (siteType === DONE_HUB) {
     return <DoneHubIcon size={size} />
+  }
+
+  if (siteType === AXON_HUB) {
+    return <AxonHubIcon size={size} />
   }
 
   return <NewAPI.Color className={cn(ICON_SIZE_CLASSNAME[size])} />

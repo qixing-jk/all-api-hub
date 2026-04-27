@@ -1,5 +1,6 @@
 import {
   ANYROUTER,
+  AXON_HUB,
   DONE_HUB,
   NEW_API,
   OCTOPUS,
@@ -11,6 +12,7 @@ import {
 } from "~/constants/siteType"
 
 import * as anyrouterAPI from "./anyrouter"
+import * as axonHubAPI from "./axonHub"
 import * as commonAPI from "./common"
 import * as doneHubAPI from "./doneHub"
 import * as octopusAPI from "./octopus"
@@ -31,6 +33,7 @@ const siteOverrideMap = {
   [WONG_GONGYI]: [wongAPI],
   [SUB2API]: [sub2apiAPI],
   [OCTOPUS]: [octopusAPI],
+  [AXON_HUB]: [axonHubAPI],
 } as const
 
 // 添加类型定义
