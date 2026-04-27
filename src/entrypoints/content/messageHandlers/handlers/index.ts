@@ -1,5 +1,6 @@
 export { handleCheckCapGuard } from "./capGuard"
 export { handleCheckCloudflareGuard } from "./cloudflareGuard"
+export { handleExternalReadApiNotify } from "./externalReadApi"
 export { handlePerformTempWindowFetch } from "./tempWindowFetch"
 export { handleWaitForTurnstileToken } from "./turnstileGuard"
 export { handleGetLocalStorage, handleGetUserFromLocalStorage } from "./storage"

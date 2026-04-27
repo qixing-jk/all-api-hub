@@ -39,9 +39,16 @@ const mocks = vi.hoisted(() => ({
   handleTempWindowGetRenderedTitle: vi.fn(),
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
-  onRuntimeMessage: mocks.onRuntimeMessage,
-}))
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+
+  return {
+    ...actual,
+    getManifest: vi.fn(() => ({ optional_permissions: [] })),
+    onRuntimeMessage: mocks.onRuntimeMessage,
+  }
+})
 
 vi.mock("~/entrypoints/background/actionClickBehavior", () => ({
   applyActionClickBehavior: mocks.applyActionClickBehavior,
@@ -142,6 +149,11 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     mocks.setupContextMenus.mockResolvedValue(undefined)
     mocks.trackCookieInterceptorUrl.mockResolvedValue(undefined)
     ;(globalThis as any).browser = {
+      runtime: {
+        getURL: vi.fn(
+          (path: string) => `chrome-extension://test-extension-id/${path}`,
+        ),
+      },
       permissions: {
         contains: vi.fn().mockResolvedValue(true),
       },

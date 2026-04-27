@@ -19,6 +19,7 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
+  type ExternalReadApiPreferences,
   type RedemptionAssistPreferences,
   type TempWindowFallbackPreferences,
   type TempWindowFallbackReminderPreferences,
@@ -316,6 +317,9 @@ interface UserPreferencesContextType {
   updateWebAiApiCheck: (
     updates: Partial<WebAiApiCheckPreferences>,
   ) => Promise<boolean>
+  updateExternalReadApi: (
+    updates: Partial<ExternalReadApiPreferences>,
+  ) => Promise<boolean>
   updateWebdavSettings: (
     updates: Partial<WebDAVSettings>,
     options?: PreferenceSaveOptions,
@@ -347,6 +351,7 @@ interface UserPreferencesContextType {
   resetAutoCheckinConfig: () => Promise<boolean>
   resetRedemptionAssistConfig: () => Promise<boolean>
   resetWebAiApiCheckConfig: () => Promise<boolean>
+  resetExternalReadApiConfig: () => Promise<boolean>
   resetModelRedirectConfig: () => Promise<boolean>
   resetWebdavConfig: () => Promise<boolean>
   resetLoggingSettings: () => Promise<boolean>
@@ -1286,6 +1291,34 @@ export const UserPreferencesProvider = ({
     [],
   )
 
+  const updateExternalReadApi = useCallback(
+    async (updates: Partial<ExternalReadApiPreferences>) => {
+      const success = await userPreferences.savePreferences({
+        externalReadApi: updates,
+      })
+
+      if (success) {
+        setPreferences((prev) => {
+          if (!prev) return null
+
+          const merged = deepOverride(
+            prev.externalReadApi ?? DEFAULT_PREFERENCES.externalReadApi!,
+            updates,
+          )
+
+          return {
+            ...prev,
+            externalReadApi: merged,
+            lastUpdated: Date.now(),
+          }
+        })
+      }
+
+      return success
+    },
+    [],
+  )
+
   const updateWebdavSettings = useCallback(
     async (
       updates: Partial<WebDAVSettings>,
@@ -1580,6 +1613,22 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  const resetExternalReadApiConfig = useCallback(async () => {
+    const success = await userPreferences.resetExternalReadApi()
+    if (success) {
+      const defaults = DEFAULT_PREFERENCES.externalReadApi
+      setPreferences((prev) =>
+        prev
+          ? deepOverride(prev, {
+              externalReadApi: defaults,
+              lastUpdated: Date.now(),
+            })
+          : prev,
+      )
+    }
+    return success
+  }, [])
+
   const resetModelRedirectConfig = useCallback(async () => {
     const success = await userPreferences.resetModelRedirectConfig()
     if (success) {
@@ -1788,6 +1837,7 @@ export const UserPreferencesProvider = ({
     updateModelRedirect,
     updateRedemptionAssist,
     updateWebAiApiCheck,
+    updateExternalReadApi,
     updateWebdavSettings,
     updateWebdavAutoSyncSettings,
     updateTempWindowFallback,
@@ -1806,6 +1856,7 @@ export const UserPreferencesProvider = ({
     resetAutoCheckinConfig,
     resetRedemptionAssistConfig,
     resetWebAiApiCheckConfig,
+    resetExternalReadApiConfig,
     resetModelRedirectConfig,
     resetWebdavConfig,
     resetLoggingSettings,
