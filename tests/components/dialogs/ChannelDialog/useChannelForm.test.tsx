@@ -323,7 +323,7 @@ describe("useChannelForm", () => {
   it("does not require a real provider key when editing a Claude Code Hub channel", async () => {
     vi.mocked(getManagedSiteService).mockResolvedValue({
       siteType: CLAUDE_CODE_HUB,
-      messagesKey: "claudeCodeHub",
+      messagesKey: "claudecodehub",
       checkValidConfig: mockCheckValidConfig.mockResolvedValue(true),
       getConfig: mockGetConfig,
       buildChannelPayload: mockBuildChannelPayload,
@@ -385,7 +385,7 @@ describe("useChannelForm", () => {
   it("prefers the Claude Code Hub specific key toast in add mode", async () => {
     vi.mocked(getManagedSiteService).mockResolvedValue({
       siteType: CLAUDE_CODE_HUB,
-      messagesKey: "claudeCodeHub",
+      messagesKey: "claudecodehub",
       checkValidConfig: mockCheckValidConfig.mockResolvedValue(true),
       getConfig: mockGetConfig,
       buildChannelPayload: mockBuildChannelPayload,
@@ -424,7 +424,7 @@ describe("useChannelForm", () => {
 
     expect(preventDefault).toHaveBeenCalledTimes(1)
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-      "messages:claudeCodeHub.realProviderKeyRequired",
+      "messages:claudecodehub.realProviderKeyRequired",
     )
     expect(vi.mocked(toast.error)).not.toHaveBeenCalledWith(
       "channelDialog:validation.keyRequired",
@@ -435,7 +435,7 @@ describe("useChannelForm", () => {
   it("applies Claude Code Hub add defaults from the open effect", async () => {
     vi.mocked(getManagedSiteService).mockResolvedValue({
       siteType: CLAUDE_CODE_HUB,
-      messagesKey: "claudeCodeHub",
+      messagesKey: "claudecodehub",
       checkValidConfig: mockCheckValidConfig.mockResolvedValue(true),
       getConfig: mockGetConfig,
       buildChannelPayload: mockBuildChannelPayload,

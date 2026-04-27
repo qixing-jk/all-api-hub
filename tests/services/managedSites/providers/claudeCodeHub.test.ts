@@ -209,7 +209,7 @@ describe("Claude Code Hub managed-site provider", () => {
         base_url: "https://api.example.com",
         models: ["gpt-4o"],
       }),
-    ).toThrow("messages:claudeCodeHub.realProviderKeyRequired")
+    ).toThrow("messages:claudecodehub.realProviderKeyRequired")
 
     expect(
       buildClaudeCodeHubCreatePayloadFromFormData({
@@ -420,7 +420,7 @@ describe("Claude Code Hub managed-site provider", () => {
     ).resolves.toEqual({
       success: false,
       data: null,
-      message: "messages:claudeCodeHub.configMissing",
+      message: "messages:claudecodehub.configMissing",
     })
 
     mockGetPreferences.mockResolvedValue({
@@ -587,14 +587,14 @@ describe("Claude Code Hub managed-site provider", () => {
       autoConfigToClaudeCodeHub({ id: "account-1" } as any, "toast-id"),
     ).resolves.toEqual({
       success: true,
-      message: "messages:claudeCodeHub.importSuccess",
+      message: "messages:claudecodehub.importSuccess",
     })
     expect(toastLoading).toHaveBeenCalledWith(
       "messages:accountOperations.importingToClaudeCodeHub",
       { id: "toast-id" },
     )
     expect(toastSuccess).toHaveBeenCalledWith(
-      "messages:claudeCodeHub.importSuccess",
+      "messages:claudecodehub.importSuccess",
       { id: "toast-id" },
     )
 
@@ -605,10 +605,10 @@ describe("Claude Code Hub managed-site provider", () => {
       autoConfigToClaudeCodeHub({ id: "account-1" } as any, "toast-id"),
     ).resolves.toEqual({
       success: false,
-      message: "messages:claudeCodeHub.channelExists",
+      message: "messages:claudecodehub.channelExists",
     })
     expect(toastError).toHaveBeenCalledWith(
-      "messages:claudeCodeHub.channelExists",
+      "messages:claudecodehub.channelExists",
       { id: "toast-id" },
     )
 

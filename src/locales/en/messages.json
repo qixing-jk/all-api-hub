@@ -57,7 +57,7 @@
     "missingCredentials": "Missing required account or key information",
     "unableToOpen": "Unable to open, please ensure Cherry Studio is installed"
   },
-  "claudeCodeHub": {
+  "claudecodehub": {
     "channelExists": "Provider {{channelName}} already exists, no need to import again",
     "configMissing": "Please configure Claude Code Hub address and admin token in basic settings first",
     "deleteFailed": "Failed to delete Claude Code Hub provider",

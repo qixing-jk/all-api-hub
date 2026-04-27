@@ -353,7 +353,7 @@ export function useChannelForm({
       requiresRealClaudeCodeHubKey &&
       !hasUsableManagedSiteChannelKey(formData.key)
     ) {
-      toast.error(t("messages:claudeCodeHub.realProviderKeyRequired"))
+      toast.error(t("messages:claudecodehub.realProviderKeyRequired"))
       return
     }
 

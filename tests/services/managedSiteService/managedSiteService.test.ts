@@ -291,7 +291,7 @@ describe("managedSiteService", () => {
 
     const service = getManagedSiteServiceForType(CLAUDE_CODE_HUB)
     expect(service.siteType).toBe(CLAUDE_CODE_HUB)
-    expect(service.messagesKey).toBe("claudeCodeHub")
+    expect(service.messagesKey).toBe("claudecodehub")
     expect(service.fetchChannelSecretKey).toBeUndefined()
 
     const config = await service.getConfig()

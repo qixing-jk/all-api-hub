@@ -166,7 +166,7 @@ describe("handleManagedSiteModelSyncMessage", () => {
     })
 
     await expect(modelSyncScheduler.executeSync()).rejects.toThrow(
-      "messages:claudeCodeHub.unsupportedModelSync",
+      "messages:claudecodehub.unsupportedModelSync",
     )
   })
 })

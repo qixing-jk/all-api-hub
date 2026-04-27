@@ -57,7 +57,7 @@
     "missingCredentials": "必要なアカウント情報またはキー情報が不足しています",
     "unableToOpen": "開けません。Cherry Studio がインストールされているか確認してください"
   },
-  "claudeCodeHub": {
+  "claudecodehub": {
     "channelExists": "プロバイダー {{channelName}} は既に存在するため、再インポートは不要です",
     "configMissing": "先に基本設定で Claude Code Hub のアドレスと管理者トークンを設定してください",
     "deleteFailed": "Claude Code Hub プロバイダーの削除に失敗しました",

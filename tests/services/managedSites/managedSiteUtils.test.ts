@@ -61,7 +61,7 @@ describe("managedSite utils", () => {
     expect(getManagedSiteMessagesKeyFromSiteType(OCTOPUS)).toBe("octopus")
     expect(getManagedSiteMessagesKeyFromSiteType(AXON_HUB)).toBe("axonhub")
     expect(getManagedSiteMessagesKeyFromSiteType(CLAUDE_CODE_HUB)).toBe(
-      "claudeCodeHub",
+      "claudecodehub",
     )
     expect(getManagedSiteMessagesKeyFromSiteType(DONE_HUB)).toBe("donehub")
     expect(getManagedSiteMessagesKeyFromSiteType(VELOERA)).toBe("veloera")
@@ -217,8 +217,8 @@ describe("managedSite utils", () => {
       getManagedSiteConfigMissingMessage(translate as any, "axonhub"),
     ).toBe("messages:axonhub.configMissing")
     expect(
-      getManagedSiteConfigMissingMessage(translate as any, "claudeCodeHub"),
-    ).toBe("messages:claudeCodeHub.configMissing")
+      getManagedSiteConfigMissingMessage(translate as any, "claudecodehub"),
+    ).toBe("messages:claudecodehub.configMissing")
     expect(getManagedSiteConfigMissingMessage(translate as any, "newapi")).toBe(
       "messages:newapi.configMissing",
     )
@@ -236,8 +236,8 @@ describe("managedSite utils", () => {
       getManagedSiteNoChannelsToSyncMessage(translate as any, "axonhub"),
     ).toBe("messages:axonhub.noChannelsToSync")
     expect(
-      getManagedSiteNoChannelsToSyncMessage(translate as any, "claudeCodeHub"),
-    ).toBe("messages:claudeCodeHub.noChannelsToSync")
+      getManagedSiteNoChannelsToSyncMessage(translate as any, "claudecodehub"),
+    ).toBe("messages:claudecodehub.noChannelsToSync")
     expect(
       getManagedSiteNoChannelsToSyncMessage(translate as any, "newapi"),
     ).toBe("messages:newapi.noChannelsToSync")

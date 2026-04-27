@@ -57,7 +57,7 @@
     "missingCredentials": "缺少必要的账户或密钥信息",
     "unableToOpen": "无法打开，请确保已安装 Cherry Studio。"
   },
-  "claudeCodeHub": {
+  "claudecodehub": {
     "channelExists": "提供商 {{channelName}} 已存在，无需再次导入",
     "configMissing": "请先在基础设置中配置 Claude Code Hub 地址和管理员令牌",
     "deleteFailed": "删除 Claude Code Hub 提供商失败",

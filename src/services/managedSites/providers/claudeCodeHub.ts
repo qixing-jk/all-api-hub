@@ -282,12 +282,12 @@ export function buildClaudeCodeHubCreatePayloadFromFormData(
 ): ClaudeCodeHubProviderCreatePayload {
   const models = normalizeList(formData.models ?? [])
   if (models.length === 0) {
-    throw new Error(t("messages:claudeCodeHub.modelsMissing"))
+    throw new Error(t("messages:claudecodehub.modelsMissing"))
   }
 
   const key = formData.key.trim()
   if (!hasUsableManagedSiteChannelKey(key)) {
-    throw new Error(t("messages:claudeCodeHub.realProviderKeyRequired"))
+    throw new Error(t("messages:claudecodehub.realProviderKeyRequired"))
   }
 
   return {
@@ -389,7 +389,7 @@ export async function createChannel(
       return {
         success: false,
         data: null,
-        message: t("messages:claudeCodeHub.configMissing"),
+        message: t("messages:claudecodehub.configMissing"),
       }
     }
 
@@ -418,7 +418,7 @@ export async function createChannel(
       success: false,
       data: null,
       message:
-        getErrorMessage(error) || t("messages:claudeCodeHub.importFailed"),
+        getErrorMessage(error) || t("messages:claudecodehub.importFailed"),
     }
   }
 }
@@ -438,7 +438,7 @@ export async function updateChannel(
       return {
         success: false,
         data: null,
-        message: t("messages:claudeCodeHub.configMissing"),
+        message: t("messages:claudecodehub.configMissing"),
       }
     }
 
@@ -453,7 +453,7 @@ export async function updateChannel(
       success: false,
       data: null,
       message:
-        getErrorMessage(error) || t("messages:claudeCodeHub.updateFailed"),
+        getErrorMessage(error) || t("messages:claudecodehub.updateFailed"),
     }
   }
 }
@@ -473,7 +473,7 @@ export async function deleteChannel(
       return {
         success: false,
         data: null,
-        message: t("messages:claudeCodeHub.configMissing"),
+        message: t("messages:claudecodehub.configMissing"),
       }
     }
 
@@ -484,7 +484,7 @@ export async function deleteChannel(
       success: false,
       data: null,
       message:
-        getErrorMessage(error) || t("messages:claudeCodeHub.deleteFailed"),
+        getErrorMessage(error) || t("messages:claudecodehub.deleteFailed"),
     }
   }
 }
@@ -607,7 +607,7 @@ async function importToClaudeCodeHub(
     if (!config) {
       return {
         success: false,
-        message: t("messages:claudeCodeHub.configMissing"),
+        message: t("messages:claudecodehub.configMissing"),
       }
     }
 
@@ -624,7 +624,7 @@ async function importToClaudeCodeHub(
     if (existingChannel) {
       return {
         success: false,
-        message: t("messages:claudeCodeHub.channelExists", {
+        message: t("messages:claudecodehub.channelExists", {
           channelName: existingChannel.name,
         }),
       }
@@ -640,7 +640,7 @@ async function importToClaudeCodeHub(
     return result.success
       ? {
           success: true,
-          message: t("messages:claudeCodeHub.importSuccess", {
+          message: t("messages:claudecodehub.importSuccess", {
             channelName: formData.name,
           }),
         }
@@ -649,7 +649,7 @@ async function importToClaudeCodeHub(
     return {
       success: false,
       message:
-        getErrorMessage(error) || t("messages:claudeCodeHub.importFailed"),
+        getErrorMessage(error) || t("messages:claudecodehub.importFailed"),
     }
   }
 }
@@ -666,7 +666,7 @@ export async function autoConfigToClaudeCodeHub(
     if (!config) {
       return {
         success: false,
-        message: t("messages:claudeCodeHub.configMissing"),
+        message: t("messages:claudecodehub.configMissing"),
       }
     }
 
@@ -690,7 +690,7 @@ export async function autoConfigToClaudeCodeHub(
     return result
   } catch (error) {
     const message =
-      getErrorMessage(error) || t("messages:claudeCodeHub.importFailed")
+      getErrorMessage(error) || t("messages:claudecodehub.importFailed")
     toast.error(message, { id: toastId })
     return { success: false, message }
   }

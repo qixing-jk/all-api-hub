@@ -44,7 +44,7 @@ export type ManagedSiteMessagesKey =
   | "veloera"
   | "octopus"
   | "axonhub"
-  | "claudeCodeHub"
+  | "claudecodehub"
 
 export interface ManagedSiteAdminConfig {
   baseUrl: string
@@ -176,7 +176,7 @@ export function getManagedSiteMessagesKeyFromSiteType(
     return "axonhub"
   }
   if (siteType === CLAUDE_CODE_HUB) {
-    return "claudeCodeHub"
+    return "claudecodehub"
   }
   if (siteType === DONE_HUB) {
     return "donehub"
@@ -382,8 +382,8 @@ export function getManagedSiteConfigMissingMessage(
       return t("messages:octopus.configMissing")
     case "axonhub":
       return t("messages:axonhub.configMissing")
-    case "claudeCodeHub":
-      return t("messages:claudeCodeHub.configMissing")
+    case "claudecodehub":
+      return t("messages:claudecodehub.configMissing")
     case "newapi":
     default:
       return t("messages:newapi.configMissing")
@@ -406,8 +406,8 @@ export function getManagedSiteNoChannelsToSyncMessage(
       return t("messages:octopus.noChannelsToSync")
     case "axonhub":
       return t("messages:axonhub.noChannelsToSync")
-    case "claudeCodeHub":
-      return t("messages:claudeCodeHub.noChannelsToSync")
+    case "claudecodehub":
+      return t("messages:claudecodehub.noChannelsToSync")
     case "newapi":
     default:
       return t("messages:newapi.noChannelsToSync")

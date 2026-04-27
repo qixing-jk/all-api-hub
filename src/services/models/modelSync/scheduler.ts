@@ -281,7 +281,7 @@ class ModelSyncScheduler {
     }
 
     if (siteType === CLAUDE_CODE_HUB) {
-      throw new Error(t("messages:claudeCodeHub.unsupportedModelSync"))
+      throw new Error(t("messages:claudecodehub.unsupportedModelSync"))
     }
 
     // Initialize service (for non-Octopus sites)
