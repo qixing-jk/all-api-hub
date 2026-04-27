@@ -1,3 +1,4 @@
+import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
@@ -156,6 +157,46 @@ describe("AxonHub managed-site provider", () => {
 
     expect(mockSignIn).toHaveBeenCalledWith(axonHubConfig)
     expect(mockSearchChannels).toHaveBeenCalledWith(axonHubConfig, "alpha")
+  })
+
+  it("returns missing-config fallbacks when saved AxonHub credentials are incomplete", async () => {
+    mockGetPreferences.mockResolvedValue(
+      buildUserPreferences({
+        axonHub: {
+          baseUrl: "",
+          email: "",
+          password: "",
+        },
+      }),
+    )
+
+    const provider = await import("~/services/managedSites/providers/axonHub")
+
+    await expect(provider.checkValidAxonHubConfig()).resolves.toBe(false)
+    await expect(provider.getAxonHubConfig()).resolves.toBeNull()
+    await expect(
+      provider.createChannel("", "", "", {
+        mode: "single",
+        channel: {
+          name: "Missing Config",
+          type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+          key: "sk-test",
+          base_url: "https://source.example/v1",
+          models: "gpt-4o",
+          groups: [],
+          priority: 0,
+          weight: 0,
+          status: CHANNEL_STATUS.Enable,
+        },
+      }),
+    ).resolves.toEqual({
+      success: false,
+      data: null,
+      message: "messages:axonhub.configMissing",
+    })
+
+    expect(mockSignIn).not.toHaveBeenCalled()
+    expect(mockCreateAxonHubChannel).not.toHaveBeenCalled()
   })
 
   it("creates an OpenAI-compatible channel and applies the requested enabled status", async () => {
@@ -460,6 +501,40 @@ describe("AxonHub managed-site provider", () => {
     )
   })
 
+  it("returns config-missing and import-failed messages for AxonHub import fallbacks", async () => {
+    const provider = await import("~/services/managedSites/providers/axonHub")
+    const account = buildDisplaySiteData({
+      name: "Broken Source",
+      baseUrl: "https://broken.example/v1",
+    })
+    const token = buildApiToken({
+      name: "Broken",
+      key: "broken-key",
+    })
+
+    mockGetPreferences.mockResolvedValueOnce(
+      buildUserPreferences({
+        axonHub: {
+          baseUrl: "",
+          email: "",
+          password: "",
+        },
+      }),
+    )
+    await expect(provider.importToAxonHub(account, token)).resolves.toEqual({
+      success: false,
+      message: "messages:axonhub.configMissing",
+    })
+
+    mockFetchTokenScopedModels.mockRejectedValueOnce(
+      new Error("prefill failed"),
+    )
+    await expect(provider.importToAxonHub(account, token)).resolves.toEqual({
+      success: false,
+      message: "prefill failed",
+    })
+  })
+
   it("fetches available models and auto-provisions account tokens before import", async () => {
     const provider = await import("~/services/managedSites/providers/axonHub")
     const account = buildDisplaySiteData({
@@ -502,5 +577,99 @@ describe("AxonHub managed-site provider", () => {
       account,
       "toast-1",
     )
+  })
+
+  it("shows an error toast when auto-config import returns a failure result", async () => {
+    const provider = await import("~/services/managedSites/providers/axonHub")
+    const account = buildDisplaySiteData({
+      name: "Duplicate Source",
+      baseUrl: "https://duplicate.example/v1",
+    })
+    const storedAccount = buildSiteAccount()
+    const token = buildApiToken({
+      name: "Duplicate",
+      key: "duplicate-key",
+    })
+    const existingChannel = buildManagedSiteChannel({
+      id: 9,
+      name: "Existing Duplicate",
+      key: "duplicate-key",
+      base_url: "https://duplicate.example",
+      models: "gpt-4o,gpt-4.1",
+    })
+
+    mockConvertToDisplayData.mockReturnValue(account)
+    mockEnsureAccountApiToken.mockResolvedValue(token)
+    mockListChannels.mockResolvedValueOnce({
+      items: [existingChannel],
+      total: 1,
+      page: 1,
+      pageSize: 100,
+    })
+
+    await expect(
+      provider.autoConfigToAxonHub(storedAccount, "toast-duplicate"),
+    ).resolves.toEqual({
+      success: false,
+      message:
+        'messages:axonhub.channelExists:{"channelName":"Existing Duplicate"}',
+    })
+
+    expect(toast.loading).toHaveBeenCalledWith(
+      "messages:accountOperations.importingToAxonHub",
+      { id: "toast-duplicate" },
+    )
+    expect(toast.error).toHaveBeenCalledWith(
+      'messages:axonhub.channelExists:{"channelName":"Existing Duplicate"}',
+      { id: "toast-duplicate" },
+    )
+  })
+
+  it("shows the thrown provisioning error when auto-config cannot create a token", async () => {
+    const provider = await import("~/services/managedSites/providers/axonHub")
+    const account = buildDisplaySiteData({
+      name: "Broken Source",
+      baseUrl: "https://broken.example/v1",
+    })
+    const storedAccount = buildSiteAccount()
+
+    mockConvertToDisplayData.mockReturnValue(account)
+    mockEnsureAccountApiToken.mockRejectedValueOnce(new Error("token missing"))
+
+    await expect(
+      provider.autoConfigToAxonHub(storedAccount, "toast-broken"),
+    ).resolves.toEqual({
+      success: false,
+      message: "token missing",
+    })
+
+    expect(toast.error).toHaveBeenCalledWith("token missing", {
+      id: "toast-broken",
+    })
+  })
+
+  it("returns config-missing before auto-config starts when saved AxonHub credentials are absent", async () => {
+    const provider = await import("~/services/managedSites/providers/axonHub")
+    const storedAccount = buildSiteAccount()
+
+    mockGetPreferences.mockResolvedValueOnce(
+      buildUserPreferences({
+        axonHub: {
+          baseUrl: "",
+          email: "",
+          password: "",
+        },
+      }),
+    )
+
+    await expect(
+      provider.autoConfigToAxonHub(storedAccount, "toast-missing"),
+    ).resolves.toEqual({
+      success: false,
+      message: "messages:axonhub.configMissing",
+    })
+
+    expect(mockConvertToDisplayData).not.toHaveBeenCalled()
+    expect(mockEnsureAccountApiToken).not.toHaveBeenCalled()
   })
 })

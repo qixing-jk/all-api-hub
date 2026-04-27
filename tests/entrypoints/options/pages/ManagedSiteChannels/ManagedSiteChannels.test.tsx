@@ -25,7 +25,11 @@ import {
   NEW_API_MANAGED_SESSION_STATUSES,
 } from "~/services/managedSites/providers/newApiSession"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
-import { navigateWithinOptionsPage, openSettingsTab } from "~/utils/navigation"
+import {
+  navigateWithinOptionsPage,
+  openManagedSiteModelSyncForChannel,
+  openSettingsTab,
+} from "~/utils/navigation"
 import {
   fireEvent,
   render,
@@ -71,6 +75,7 @@ vi.mock("~/utils/navigation", async (importActual) => {
   return {
     ...actual,
     navigateWithinOptionsPage: vi.fn(),
+    openManagedSiteModelSyncForChannel: vi.fn(),
     openSettingsTab: vi.fn(),
   }
 })
@@ -1141,6 +1146,30 @@ describe("ManagedSiteChannels", () => {
     )
   })
 
+  it("opens the per-channel model sync view from row actions", async () => {
+    const user = userEvent.setup()
+
+    mockChannels([
+      { id: 1, name: "Alpha", base_url: "https://alpha.example", key: "a" },
+    ])
+
+    render(<ManagedSiteChannels />)
+
+    await waitForRowText("Alpha")
+
+    const row = screen.getByText("Alpha").closest("tr")
+    expect(row).toBeTruthy()
+    await openRowActionsMenu(row!, user)
+
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.openSync",
+      }),
+    )
+
+    expect(openManagedSiteModelSyncForChannel).toHaveBeenCalledWith(1)
+  })
+
   it("opens the filter dialog from row actions and loads channel-specific filters", async () => {
     const user = userEvent.setup()
 
@@ -1169,6 +1198,64 @@ describe("ManagedSiteChannels", () => {
 
     await waitFor(() => {
       expect(fetchChannelFilters).toHaveBeenCalledWith(1)
+    })
+  })
+
+  it("opens the row-action delete flow for a single channel", async () => {
+    const user = userEvent.setup()
+    const deleteChannel = vi.fn().mockResolvedValue({ success: true })
+
+    mockChannels([
+      { id: 1, name: "Alpha", base_url: "https://alpha.example", key: "a" },
+    ])
+
+    vi.mocked(getManagedSiteService).mockResolvedValue({
+      siteType: NEW_API,
+      messagesKey: "newapi",
+      getConfig: vi.fn().mockResolvedValue({
+        baseUrl: "https://admin.example",
+        token: "t",
+        userId: "1",
+      }),
+      deleteChannel,
+    } as any)
+
+    render(<ManagedSiteChannels />)
+
+    await waitForRowText("Alpha")
+
+    const row = screen.getByText("Alpha").closest("tr")
+    expect(row).toBeTruthy()
+    await openRowActionsMenu(row!, user)
+
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.delete",
+      }),
+    )
+
+    const dialog = await screen.findByRole("dialog")
+    expect(
+      within(dialog).getByText("managedSiteChannels:dialog.deleteTitle"),
+    ).toBeInTheDocument()
+
+    await user.click(
+      within(dialog).getByRole("button", {
+        name: "managedSiteChannels:dialog.confirm",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(deleteChannel).toHaveBeenCalledWith(
+        "https://admin.example",
+        "t",
+        "1",
+        1,
+      )
+    })
+
+    await waitFor(() => {
+      expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
     })
   })
 

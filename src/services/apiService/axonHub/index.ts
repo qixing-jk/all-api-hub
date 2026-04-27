@@ -166,6 +166,7 @@ interface QueryChannelsData {
 }
 
 const tokenCache = new Map<string, string>()
+const inflightSignIns = new Map<string, Promise<string>>()
 const channelListCache = new Map<
   string,
   {
@@ -188,6 +189,7 @@ const invalidateChannelListCache = (config: AxonHubConfig) => {
 
 export const __resetCachesForTesting = () => {
   tokenCache.clear()
+  inflightSignIns.clear()
   channelListCache.clear()
   numericIdToGraphqlId.clear()
 }
@@ -198,30 +200,34 @@ const extractRequestConfig = (request: ApiServiceRequest): AxonHubConfig => ({
   password: request.auth.accessToken ?? "",
 })
 
+const reserveNumericIdSlot = (preferredNumericId: number, id: string) => {
+  let numericId = preferredNumericId
+
+  while (true) {
+    const existing = numericIdToGraphqlId.get(numericId)
+    if (!existing || existing === id) {
+      numericIdToGraphqlId.set(numericId, id)
+      return numericId
+    }
+    numericId = (numericId + 1) >>> 0 || 1
+  }
+}
+
 const numericIdFromGraphqlId = (id: string): number => {
   const parsed = Number(id)
   if (Number.isSafeInteger(parsed) && parsed > 0) {
-    numericIdToGraphqlId.set(parsed, id)
-    return parsed
+    return reserveNumericIdSlot(parsed, id)
   }
 
   let hash = 0
   for (const char of id) {
     hash = (hash * 31 + char.charCodeAt(0)) >>> 0
   }
-  let numericId = hash || 1
+  const numericId = hash || 1
   // GraphQL IDs can be opaque strings; keep a reversible session map for UI
   // mutations that only pass the New API-shaped numeric row id back down.
   // Probe forward on collision so distinct opaque ids never share a slot.
-  while (true) {
-    const existing = numericIdToGraphqlId.get(numericId)
-    if (!existing || existing === id) {
-      break
-    }
-    numericId = (numericId + 1) >>> 0 || 1
-  }
-  numericIdToGraphqlId.set(numericId, id)
-  return numericId
+  return reserveNumericIdSlot(numericId, id)
 }
 
 export const resolveAxonHubGraphqlId = (id: number) =>
@@ -278,10 +284,22 @@ const getSessionToken = async (config: AxonHubConfig, forceRefresh = false) => {
   if (!forceRefresh) {
     const cachedToken = tokenCache.get(key)
     if (cachedToken) return cachedToken
+
+    const inflightSignIn = inflightSignIns.get(key)
+    if (inflightSignIn) {
+      return inflightSignIn
+    }
   }
 
   tokenCache.delete(key)
-  return signIn(config)
+  inflightSignIns.delete(key)
+
+  const pendingSignIn = signIn(config).finally(() => {
+    inflightSignIns.delete(key)
+  })
+
+  inflightSignIns.set(key, pendingSignIn)
+  return pendingSignIn
 }
 
 const isUnauthorized = (
@@ -311,7 +329,10 @@ export async function graphqlRequest<T>(
   const retryAuth = options?.retryAuth ?? true
   const token = await getSessionToken(config)
 
-  const execute = async (sessionToken: string) => {
+  const execute = async (
+    sessionToken: string,
+    allowAuthRetry: boolean,
+  ): Promise<T | null> => {
     const response = await fetch(`${baseUrl}/admin/graphql`, {
       method: "POST",
       headers: {
@@ -325,7 +346,7 @@ export async function graphqlRequest<T>(
       .json()
       .catch(() => ({}))) as GraphQLResponse<T>
     if (!response.ok || payload.errors?.length) {
-      if (retryAuth && isUnauthorized(response, payload.errors)) {
+      if (allowAuthRetry && isUnauthorized(response, payload.errors)) {
         return null
       }
 
@@ -346,15 +367,15 @@ export async function graphqlRequest<T>(
   }
 
   try {
-    const firstAttempt = await execute(token)
+    const firstAttempt = await execute(token, retryAuth)
     if (firstAttempt) return firstAttempt
 
     // Cached admin JWTs are session-scoped and may expire while the extension
     // page remains open; retry once with fresh credentials before surfacing.
     const refreshedToken = await getSessionToken(config, true)
-    const secondAttempt = await execute(refreshedToken)
+    const secondAttempt = await execute(refreshedToken, false)
     if (!secondAttempt) {
-      throw new Error("AxonHub session is unauthorized")
+      throw new Error("AxonHub GraphQL request failed without data")
     }
     return secondAttempt
   } catch (error) {
@@ -370,20 +391,18 @@ export function axonHubChannelToManagedSite(channel: AxonHubChannel) {
     ...(channel.supportedModels ?? []),
     ...(channel.manualModels ?? []),
   ])
+  const mappingObject = (channel.settings?.modelMappings ?? []).reduce<
+    Record<string, string>
+  >((acc, mapping) => {
+    const from = mapping.from?.trim()
+    const to = mapping.to?.trim()
+    if (from && to) {
+      acc[from] = to
+    }
+    return acc
+  }, {})
   const modelMapping =
-    channel.settings?.modelMappings && channel.settings.modelMappings.length > 0
-      ? JSON.stringify(
-          channel.settings.modelMappings.reduce<Record<string, string>>(
-            (acc, mapping) => {
-              if (mapping.from?.trim() && mapping.to?.trim()) {
-                acc[mapping.from.trim()] = mapping.to.trim()
-              }
-              return acc
-            },
-            {},
-          ),
-        )
-      : ""
+    Object.keys(mappingObject).length > 0 ? JSON.stringify(mappingObject) : ""
   const credentials = channel.credentials ?? {}
   const apiKey =
     credentials.apiKeys

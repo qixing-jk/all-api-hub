@@ -284,6 +284,31 @@ describe("AxonHubSettings", () => {
     })
   })
 
+  it("persists a changed email value on blur", async () => {
+    render(<AxonHubSettings />)
+
+    const emailInput = screen.getByLabelText(
+      "settings:axonHub.fields.emailPlaceholder",
+    )
+    fireEvent.change(emailInput, {
+      target: { value: "  updated-admin@example.com  " },
+    })
+    fireEvent.blur(emailInput)
+
+    await waitFor(() => {
+      expect(mockUpdateAxonHubEmail).toHaveBeenCalledWith(
+        "updated-admin@example.com",
+        {
+          expectedLastUpdated: 1,
+        },
+      )
+    })
+    expect(mockedShowUpdateToast).toHaveBeenCalledWith(
+      true,
+      "settings:axonHub.fields.emailLabel",
+    )
+  })
+
   it("shows a missing-fields error without signing in", () => {
     mockedUseUserPreferencesContext.mockReturnValue(
       createContextValue({

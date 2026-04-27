@@ -28,7 +28,10 @@ interface RowActionsProps {
 }
 
 /**
- * Dropdown actions available for each channel row (edit, filters, sync, delete).
+ * Dropdown actions available for each channel row.
+ * - Migration mode renders view + migrate.
+ * - Standard mode renders edit + delete, with filters/sync controls gated by
+ *   `showNewApiOnlyActions`.
  */
 export default function RowActions({
   channel,
@@ -93,7 +96,7 @@ export default function RowActions({
                 </DropdownMenuItem>
               </>
             ) : null}
-            {showNewApiOnlyActions ? <DropdownMenuSeparator /> : null}
+            <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
               onClick={() => onDelete([channel.id])}

@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { ChannelType } from "~/constants/managedSite"
 import {
   AXON_HUB,
@@ -450,7 +451,7 @@ describe("channelMigration", () => {
       channels: [
         buildManagedSiteChannel({
           id: 22_4,
-          type: "anthropic",
+          type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
         }),
       ],
     })

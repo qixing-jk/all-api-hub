@@ -8,7 +8,9 @@ import {
   createAxonHubChannel,
   deleteAxonHubChannel,
   deleteChannel as deleteChannelAdapter,
+  fetchSiteUserGroups,
   graphqlRequest,
+  listAllChannels,
   listChannels,
   resolveAxonHubGraphqlId,
   searchChannels,
@@ -186,6 +188,78 @@ describe("AxonHub API service", () => {
     ])
   })
 
+  it("surfaces the refreshed-token failure instead of masking it as a generic auth error", async () => {
+    let authHits = 0
+    let graphQlHits = 0
+
+    server.use(
+      http.post(AUTH_URL, () => {
+        authHits += 1
+        return HttpResponse.json({
+          token: authHits === 1 ? "expired-token" : "refreshed-token",
+        })
+      }),
+      http.post(GRAPHQL_URL, () => {
+        graphQlHits += 1
+
+        if (graphQlHits === 1) {
+          return HttpResponse.json(
+            { errors: [{ message: "expired token" }] },
+            { status: 401 },
+          )
+        }
+
+        return HttpResponse.json(
+          { errors: [{ message: "invalid token format" }] },
+          { status: 401 },
+        )
+      }),
+    )
+
+    await expect(
+      graphqlRequest(
+        { ...config, email: "retry-failure@example.com" },
+        "query Ping",
+      ),
+    ).rejects.toThrow("invalid token format")
+
+    expect(authHits).toBe(2)
+  })
+
+  it("reuses a single in-flight sign-in across concurrent GraphQL requests", async () => {
+    let authHits = 0
+    let graphQlHits = 0
+    const deferredToken = Promise.resolve({ token: "shared-token" })
+
+    server.use(
+      http.post(AUTH_URL, async () => {
+        authHits += 1
+        return HttpResponse.json(await deferredToken)
+      }),
+      http.post(GRAPHQL_URL, async ({ request }) => {
+        graphQlHits += 1
+        expect(request.headers.get("authorization")).toBe("Bearer shared-token")
+        return HttpResponse.json({ data: { ping: "pong" } })
+      }),
+    )
+
+    await expect(
+      Promise.all([
+        graphqlRequest<{ ping: string }>(
+          { ...config, email: "parallel@example.com" },
+          "query PingOne",
+        ),
+        graphqlRequest<{ ping: string }>(
+          { ...config, email: "parallel@example.com" },
+          "query PingTwo",
+        ),
+      ]),
+    ).resolves.toEqual([{ ping: "pong" }, { ping: "pong" }])
+
+    expect(authHits).toBe(1)
+    expect(graphQlHits).toBe(2)
+  })
+
   it("normalizes AxonHub channel data into the managed-site channel shape", () => {
     const result = axonHubChannelToManagedSite({
       id: "channel_opaque_id",
@@ -239,6 +313,30 @@ describe("AxonHub API service", () => {
     expect(result.created_time).toBe(0)
   })
 
+  it("normalizes blank model mappings to an empty string", () => {
+    const result = axonHubChannelToManagedSite({
+      id: "blank-mapping-id",
+      createdAt: null,
+      updatedAt: null,
+      type: "openai",
+      baseURL: "https://api.openai.com/v1",
+      name: "Blank Mapping",
+      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      credentials: null,
+      supportedModels: [],
+      manualModels: [],
+      defaultTestModel: null,
+      settings: {
+        modelMappings: [{ from: "  ", to: " " }],
+      },
+      orderingWeight: 0,
+      remark: null,
+      errorMessage: null,
+    })
+
+    expect(result.model_mapping).toBe("")
+  })
+
   it("assigns distinct numeric ids for colliding opaque GraphQL ids", () => {
     const first = axonHubChannelToManagedSite({
       id: "5v-4p2p8",
@@ -278,6 +376,47 @@ describe("AxonHub API service", () => {
     expect(first.id).not.toBe(second.id)
     expect(resolveAxonHubGraphqlId(first.id)).toBe("5v-4p2p8")
     expect(resolveAxonHubGraphqlId(second.id)).toBe("vt1gjdhl")
+  })
+
+  it("probes forward when a numeric GraphQL id collides with an opaque-id slot", () => {
+    const opaque = axonHubChannelToManagedSite({
+      id: "opaque-collision-id",
+      createdAt: null,
+      updatedAt: null,
+      type: "openai",
+      baseURL: "https://api.openai.com/v1",
+      name: "Opaque Collision",
+      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      credentials: null,
+      supportedModels: [],
+      manualModels: [],
+      defaultTestModel: null,
+      settings: {},
+      orderingWeight: 0,
+      remark: null,
+      errorMessage: null,
+    })
+    const numeric = axonHubChannelToManagedSite({
+      id: String(opaque.id),
+      createdAt: null,
+      updatedAt: null,
+      type: "openai",
+      baseURL: "https://api.openai.com/v1",
+      name: "Numeric Collision",
+      status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+      credentials: null,
+      supportedModels: [],
+      manualModels: [],
+      defaultTestModel: null,
+      settings: {},
+      orderingWeight: 0,
+      remark: null,
+      errorMessage: null,
+    })
+
+    expect(numeric.id).toBe(opaque.id + 1)
+    expect(resolveAxonHubGraphqlId(opaque.id)).toBe("opaque-collision-id")
+    expect(resolveAxonHubGraphqlId(numeric.id)).toBe(String(opaque.id))
   })
 
   it("lists paginated channels and trims API key entries", async () => {
@@ -474,6 +613,94 @@ describe("AxonHub API service", () => {
       message: "Failed to delete AxonHub channel",
     })
     expect(deleteHits).toBe(1)
+  })
+
+  it("returns safe adapter errors for update/delete failures and exposes the groupless contract", async () => {
+    server.use(
+      http.post(AUTH_URL, () => HttpResponse.json({ token: "adapter-fail" })),
+      http.post(GRAPHQL_URL, async ({ request }) => {
+        const body = (await request.json()) as {
+          query?: string
+        }
+
+        if (body.query?.includes("mutation UpdateChannel(")) {
+          return HttpResponse.json(
+            { errors: [{ message: "update exploded" }] },
+            { status: 500 },
+          )
+        }
+
+        if (body.query?.includes("mutation DeleteChannel")) {
+          return HttpResponse.json(
+            { errors: [{ message: "delete exploded" }] },
+            { status: 500 },
+          )
+        }
+
+        return HttpResponse.json(
+          { errors: [{ message: "Unexpected GraphQL operation" }] },
+          { status: 500 },
+        )
+      }),
+    )
+
+    await expect(
+      updateChannelAdapter(buildRequest() as any, {
+        id: 9,
+        name: "Broken update",
+      }),
+    ).resolves.toEqual({
+      success: false,
+      data: null,
+      message: "update exploded",
+    })
+
+    await expect(
+      deleteChannelAdapter(buildRequest() as any, 9),
+    ).resolves.toEqual({
+      success: false,
+      data: null,
+      message: "delete exploded",
+    })
+
+    await expect(fetchSiteUserGroups()).resolves.toEqual([])
+  })
+
+  it("lists channels through the adapter wrapper", async () => {
+    server.use(
+      http.post(AUTH_URL, () => HttpResponse.json({ token: "adapter-list" })),
+      http.post(GRAPHQL_URL, () =>
+        HttpResponse.json({
+          data: {
+            queryChannels: {
+              edges: [
+                {
+                  node: {
+                    id: "1",
+                    type: "openai",
+                    baseURL: "https://alpha.example.com",
+                    name: "alpha",
+                    status: AXON_HUB_CHANNEL_STATUS.ENABLED,
+                    credentials: { apiKey: "sk-alpha" },
+                    supportedModels: ["gpt-4.1"],
+                    manualModels: [],
+                  },
+                },
+              ],
+              pageInfo: { hasNextPage: false, endCursor: null },
+              totalCount: 1,
+            },
+          },
+        }),
+      ),
+    )
+
+    await expect(listAllChannels(buildRequest() as any)).resolves.toMatchObject(
+      {
+        total: 1,
+        items: [expect.objectContaining({ id: 1, name: "alpha" })],
+      },
+    )
   })
 
   it("reuses cached channel lists for repeated searches and invalidates after mutations", async () => {
