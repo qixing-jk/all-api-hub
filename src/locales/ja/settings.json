@@ -59,7 +59,7 @@
   },
   "axonHub": {
     "cors": {
-      "description": "新しい AxonHub インスタンスでは、ブラウザーベースのクライアントを使う前にサーバー環境変数 AXONHUB_SERVER_CORS_ALLOWED_ORIGINS を設定してください。\"*\" または信頼する origin を指定します。",
+      "description": "新しい AxonHub インスタンスでは通常、サーバー側の CORS 設定を調整しないと All API Hub 拡張機能がブラウザーから AxonHub にアクセスできません。AXONHUB_SERVER_CORS_ALLOWED_ORIGINS を \"*\" に設定するか、信頼するブラウザー / 拡張機能の origin に制限してください。",
       "title": "必須の CORS 設定"
     },
     "description": "AxonHub 管理サイトへ接続するための統合設定を行います。",
@@ -78,6 +78,7 @@
     },
     "title": "AxonHub 統合設定",
     "validation": {
+      "corsFailed": "AxonHub 検証に失敗しました: {{error}}。通常、新しい AxonHub インスタンスで拡張機能のブラウザー origin が許可されていない場合に発生します。AxonHub サーバーの CORS 設定を調整し、AXONHUB_SERVER_CORS_ALLOWED_ORIGINS を \"*\" に設定するか、拡張機能 / ブラウザー origin を許可してから再試行してください。",
       "description": "メールアドレスとパスワードで AxonHub 管理 GraphQL にサインインできるかテストします",
       "failed": "AxonHub 検証に失敗しました: {{error}}",
       "missingFields": "必須項目をすべて入力してください",

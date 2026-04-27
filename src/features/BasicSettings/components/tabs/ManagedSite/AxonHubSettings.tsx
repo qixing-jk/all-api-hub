@@ -18,6 +18,9 @@ import { signIn } from "~/services/apiService/axonHub"
 import { getErrorMessage } from "~/utils/core/error"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 
+const isLikelyCorsSetupError = (message: string) =>
+  /cors|failed to fetch|network|http 403|forbidden/i.test(message)
+
 /**
  * Render AxonHub managed-site settings and connection validation controls.
  */
@@ -120,8 +123,11 @@ export default function AxonHubSettings() {
           : t("settings:messages.updateFailed"),
       )
     } catch (error) {
+      const errorMessage = getErrorMessage(error)
       toast.error(
-        t("axonHub.validation.failed", { error: getErrorMessage(error) }),
+        isLikelyCorsSetupError(errorMessage)
+          ? t("axonHub.validation.corsFailed", { error: errorMessage })
+          : t("axonHub.validation.failed", { error: errorMessage }),
       )
     } finally {
       setIsValidating(false)

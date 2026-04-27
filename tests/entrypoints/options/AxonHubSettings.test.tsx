@@ -389,4 +389,25 @@ describe("AxonHubSettings", () => {
     })
     expect(mockUpdateAxonHubConfig).not.toHaveBeenCalled()
   })
+
+  it("uses a CORS setup toast for browser-origin AxonHub validation failures", async () => {
+    mockedSignIn.mockRejectedValue(
+      new Error("AxonHub sign-in failed (HTTP 403)"),
+    )
+
+    render(<AxonHubSettings />)
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:axonHub.validation.validate",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "settings:axonHub.validation.corsFailed",
+      )
+    })
+    expect(mockUpdateAxonHubConfig).not.toHaveBeenCalled()
+  })
 })

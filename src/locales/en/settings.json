@@ -59,7 +59,7 @@
   },
   "axonHub": {
     "cors": {
-      "description": "For a new AxonHub instance, configure the server environment variable AXONHUB_SERVER_CORS_ALLOWED_ORIGINS before using browser-based clients. Use \"*\" or the exact origins you trust.",
+      "description": "New AxonHub instances usually need a server-side CORS update, or the All API Hub extension cannot access AxonHub from the browser. Set AXONHUB_SERVER_CORS_ALLOWED_ORIGINS to \"*\", or restrict it to trusted browser / extension origins.",
       "title": "Required CORS setup"
     },
     "description": "Configure integration settings for connecting to an AxonHub admin site.",
@@ -78,6 +78,7 @@
     },
     "title": "AxonHub Integration Settings",
     "validation": {
+      "corsFailed": "AxonHub validation failed: {{error}}. This usually means the new AxonHub instance has not allowed the extension's browser origin. Adjust AxonHub server CORS settings, set AXONHUB_SERVER_CORS_ALLOWED_ORIGINS to \"*\", or allow the extension / browser origin, then retry.",
       "description": "Test whether the email and password can sign in to AxonHub admin GraphQL",
       "failed": "AxonHub validation failed: {{error}}",
       "missingFields": "Please fill in all required fields",

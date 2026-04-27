@@ -231,10 +231,11 @@ export async function signIn(config: AxonHubConfig): Promise<string> {
     }
 
     if (!response.ok || !data.token) {
+      const fallbackMessage = `AxonHub sign-in failed (HTTP ${response.status})`
       const message =
         data.message ||
         (typeof data.error === "string" ? data.error : data.error?.message) ||
-        "AxonHub sign-in failed"
+        fallbackMessage
       throw new Error(message)
     }
 

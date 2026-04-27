@@ -59,7 +59,7 @@
   },
   "axonHub": {
     "cors": {
-      "description": "新的 AxonHub 实例需要先在服务端配置环境变量 AXONHUB_SERVER_CORS_ALLOWED_ORIGINS，浏览器客户端才能正常访问。可设置为 \"*\" 或你信任的具体来源。",
+      "description": "新的 AxonHub 实例通常需要调整服务端 CORS 配置，否则 All API Hub 扩展无法从浏览器访问 AxonHub。可将 AXONHUB_SERVER_CORS_ALLOWED_ORIGINS 设为 \"*\"，或限制为你信任的浏览器 / 扩展来源。",
       "title": "必需的 CORS 设置"
     },
     "description": "配置用于连接 AxonHub 管理后台的集成设置。",
@@ -78,6 +78,7 @@
     },
     "title": "AxonHub 集成设置",
     "validation": {
+      "corsFailed": "AxonHub 配置验证失败：{{error}}。这通常表示新的 AxonHub 实例还没有允许扩展的浏览器来源。请调整 AxonHub 服务端 CORS 配置，将 AXONHUB_SERVER_CORS_ALLOWED_ORIGINS 设为 \"*\"，或允许扩展 / 浏览器来源后重试。",
       "description": "测试邮箱和密码是否可以登录 AxonHub 管理端 GraphQL",
       "failed": "AxonHub 配置验证失败：{{error}}",
       "missingFields": "请填写所有必填字段",

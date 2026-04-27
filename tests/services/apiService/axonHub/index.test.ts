@@ -66,6 +66,14 @@ describe("AxonHub API service", () => {
     ).rejects.toThrow("Invalid email or password")
   })
 
+  it("includes the HTTP status when AxonHub sign-in fails without a response message", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(jsonResponse({}, 403)))
+
+    await expect(
+      signIn({ ...config, email: "cors@example.com" }),
+    ).rejects.toThrow("AxonHub sign-in failed (HTTP 403)")
+  })
+
   it("redacts bearer tokens from GraphQL error messages", async () => {
     vi.stubGlobal(
       "fetch",
