@@ -93,7 +93,7 @@ export default function RowActions({
                 </DropdownMenuItem>
               </>
             ) : null}
-            <DropdownMenuSeparator />
+            {showNewApiOnlyActions ? <DropdownMenuSeparator /> : null}
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
               onClick={() => onDelete([channel.id])}

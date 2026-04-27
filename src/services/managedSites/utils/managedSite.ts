@@ -296,6 +296,9 @@ export function getManagedSiteTargetOptions(
   },
 ): ManagedSiteTargetOption[] {
   const excluded = new Set(options?.excludeSiteTypes ?? [])
+  // AXON_HUB is intentionally excluded here. ManagedSiteChannels.tsx disables
+  // migration for AxonHub, and enabling it as a target also requires an
+  // explicit GraphQL-aware migration adapter in channelMigration.ts.
   const siteTypes: ManagedSiteType[] = [NEW_API, VELOERA, DONE_HUB, OCTOPUS]
 
   return siteTypes

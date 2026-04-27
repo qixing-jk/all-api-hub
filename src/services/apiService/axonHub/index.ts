@@ -175,6 +175,7 @@ const channelListCache = new Map<
 >()
 const numericIdToGraphqlId = new Map<number, string>()
 const CHANNEL_LIST_CACHE_TTL_MS = 15_000
+const MAX_LIST_CHANNEL_PAGES = 100
 
 const normalizeBaseUrl = (baseUrl: string) => baseUrl.trim().replace(/\/+$/, "")
 
@@ -183,6 +184,12 @@ const cacheKeyForConfig = (config: AxonHubConfig) =>
 
 const invalidateChannelListCache = (config: AxonHubConfig) => {
   channelListCache.delete(cacheKeyForConfig(config))
+}
+
+export const __resetCachesForTesting = () => {
+  tokenCache.clear()
+  channelListCache.clear()
+  numericIdToGraphqlId.clear()
 }
 
 const extractRequestConfig = (request: ApiServiceRequest): AxonHubConfig => ({
@@ -202,9 +209,17 @@ const numericIdFromGraphqlId = (id: string): number => {
   for (const char of id) {
     hash = (hash * 31 + char.charCodeAt(0)) >>> 0
   }
-  const numericId = hash || 1
+  let numericId = hash || 1
   // GraphQL IDs can be opaque strings; keep a reversible session map for UI
   // mutations that only pass the New API-shaped numeric row id back down.
+  // Probe forward on collision so distinct opaque ids never share a slot.
+  while (true) {
+    const existing = numericIdToGraphqlId.get(numericId)
+    if (!existing || existing === id) {
+      break
+    }
+    numericId = (numericId + 1) >>> 0 || 1
+  }
   numericIdToGraphqlId.set(numericId, id)
   return numericId
 }
@@ -277,7 +292,7 @@ const isUnauthorized = (
   response.status === 403 ||
   Boolean(
     errors?.some((error) =>
-      /unauthorized|unauthenticated|jwt|jwt expired|jwt invalid|invalid token|expired token|session expired|access token|refresh token|malformed token|revoked token/i.test(
+      /unauthorized|unauthenticated|jwt expired|jwt invalid|invalid jwt|invalid token|expired token|session expired|access token expired|access token invalid|refresh token expired|refresh token invalid|malformed token|revoked token/i.test(
         error.message ?? "",
       ),
     ),
@@ -441,8 +456,15 @@ export async function listChannels(
   const items: ReturnType<typeof axonHubChannelToManagedSite>[] = []
   let after: string | null | undefined
   let total = 0
+  let pageCount = 0
+  const seenCursors = new Set<string>()
 
   do {
+    if (pageCount >= MAX_LIST_CHANNEL_PAGES) {
+      throw new Error("AxonHub returned too many channel-list pages")
+    }
+    pageCount += 1
+
     const data = await graphqlRequest<QueryChannelsData>(
       config,
       QUERY_CHANNELS,
@@ -460,9 +482,16 @@ export async function listChannels(
         axonHubChannelToManagedSite(edge.node),
       ),
     )
-    after = data.queryChannels.pageInfo?.hasNextPage
+    const nextCursor = data.queryChannels.pageInfo?.hasNextPage
       ? data.queryChannels.pageInfo.endCursor
       : null
+    if (nextCursor) {
+      if (seenCursors.has(nextCursor)) {
+        throw new Error("AxonHub channel pagination cursor repeated")
+      }
+      seenCursors.add(nextCursor)
+    }
+    after = nextCursor
   } while (after)
 
   const result = {
@@ -641,7 +670,7 @@ export async function updateChannel(
     const graphqlId = resolveAxonHubGraphqlId(id)
     const updated = await updateAxonHubChannel(config, graphqlId, input)
 
-    if (status) {
+    if (status !== undefined) {
       await updateAxonHubChannelStatus(
         config,
         graphqlId,
@@ -675,7 +704,11 @@ export async function deleteChannel(
       resolveAxonHubGraphqlId(channelId),
     )
 
-    return { success: deleted, data: deleted, message: "success" }
+    return {
+      success: deleted,
+      data: deleted,
+      message: deleted ? "success" : "Failed to delete AxonHub channel",
+    }
   } catch (error) {
     logger.error("Failed to delete AxonHub channel", error)
     return {

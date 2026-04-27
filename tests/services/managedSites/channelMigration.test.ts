@@ -464,6 +464,32 @@ describe("channelMigration", () => {
     )
   })
 
+  it("falls back unknown AxonHub string channel types to OpenAI and warns about remapping", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences(),
+      sourceSiteType: AXON_HUB,
+      targetSiteType: DONE_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 22_5,
+          type: "future-provider",
+        }),
+      ],
+    })
+
+    expect(preview.readyCount).toBe(1)
+    expect(preview.items[0].draft?.type).toBe(ChannelType.OpenAI)
+    expect(preview.items[0].warningCodes).toEqual(
+      expect.arrayContaining([
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_REMAPS_CHANNEL_TYPE,
+      ]),
+    )
+  })
+
   it("limits concurrent preview key resolution while preserving channel order", async () => {
     const { prepareManagedSiteChannelMigrationPreview } = await import(
       "~/services/managedSites/channelMigration"

@@ -111,14 +111,23 @@ export function useChannelForm({
     CompactMultiSelectOption[]
   >([])
 
+  const loadManagedSiteType = useCallback(async () => {
+    const service = await getManagedSiteService()
+    setManagedSiteType(service.siteType)
+    return service
+  }, [])
+
   // Load groups and model suggestions on mount
   useEffect(() => {
     if (isOpen) {
-      loadGroups()
-      loadModels()
+      void (async () => {
+        const service = await loadManagedSiteType()
+        await loadGroups(service)
+        await loadModels()
+      })()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, initialValues, initialModels, initialGroups])
+  }, [isOpen, initialValues, initialModels, initialGroups, loadManagedSiteType])
 
   // Load form data when dialog opens
   useEffect(() => {
@@ -147,11 +156,12 @@ export function useChannelForm({
     setFormData(buildInitialFormData())
   }, [buildInitialFormData])
 
-  const loadGroups = async () => {
+  const loadGroups = async (
+    serviceOverride?: Awaited<ReturnType<typeof getManagedSiteService>>,
+  ) => {
     setIsLoadingGroups(true)
     try {
-      const service = await getManagedSiteService()
-      setManagedSiteType(service.siteType)
+      const service = serviceOverride ?? (await loadManagedSiteType())
       if (service.siteType === AXON_HUB) {
         setAvailableGroups([])
         return

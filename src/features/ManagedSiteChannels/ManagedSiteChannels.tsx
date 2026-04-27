@@ -206,6 +206,8 @@ export default function ManagedSiteChannels({
   } = useUserPreferencesContext()
   const isOctopus = managedSiteType === OCTOPUS
   const isAxonHub = managedSiteType === AXON_HUB
+  // These capabilities both disable for AxonHub today, but they represent
+  // different backend contracts and may diverge for future managed-site types.
   const supportsChannelMigration = !isAxonHub
   const supportsNewApiOnlyChannelActions = !isAxonHub
   const isNewApiManagedSite = managedSiteType === NEW_API
