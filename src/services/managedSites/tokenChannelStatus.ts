@@ -37,7 +37,7 @@ export const MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS = {
   CONFIG_MISSING: "config-missing",
   INPUT_PREPARATION_FAILED: "input-preparation-failed",
   EXACT_VERIFICATION_UNAVAILABLE: "exact-verification-unavailable",
-  VELOERA_BASE_URL_SEARCH_UNSUPPORTED: "veloera-base-url-search-unsupported",
+  BASE_URL_SEARCH_UNSUPPORTED: "base-url-search-unsupported",
   MATCH_REQUIRES_CONFIRMATION: "match-requires-confirmation",
   BACKEND_SEARCH_FAILED: "backend-search-failed",
 } as const
@@ -207,14 +207,13 @@ export async function getManagedSiteTokenChannelStatus(
   let resolvedToken = token
   let secretsToRedact = collectSecrets(token, managedConfig)
 
-  // This feature is not supported on Veloera because Veloera's
-  // `/api/channel/search` does not support reliable base URL lookup, so this
-  // verification flow cannot produce a trustworthy presence/absence result.
+  // This feature is not supported on managed-site backends whose channel
+  // search cannot provide a trustworthy base-URL lookup result.
   if (!supportsManagedSiteBaseUrlChannelLookup(service.siteType)) {
     return {
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
       reason:
-        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.VELOERA_BASE_URL_SEARCH_UNSUPPORTED,
+        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.BASE_URL_SEARCH_UNSUPPORTED,
     }
   }
 

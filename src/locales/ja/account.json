@@ -25,7 +25,7 @@
     "keyList": "キー一覧",
     "keyManagement": "キー管理",
     "locateManagedSiteChannel": "チャネルを特定",
-    "locateManagedSiteChannelUnsupported": "Veloera は現在 URL によるチャネル検索をサポートしていないため、この機能は利用できません。",
+    "locateManagedSiteChannelUnsupported": "現在の管理対象サイトが URL によるチャネル検索をサポートしていないため、この機能は利用できません。",
     "locateManagedSiteChannelUnsupportedHint": "未対応",
     "modelManagement": "モデル管理",
     "openAllExternalCheckIn": "すべての外部チェックインを開く",

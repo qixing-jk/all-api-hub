@@ -98,12 +98,12 @@
     },
     "descriptions": {
       "backendSearchFailed": "管理站點校驗暫時無法完成。",
+      "baseUrlSearchUnsupported": "該功能在目前的託管站點上不受支援，因為目前的託管站點不支援按基礎地址搜尋渠道。",
       "configMissing": "請先配置管理站點管理員憑據後再進行校驗。",
       "inputPreparationFailed": "無法準備可比對的渠道輸入，暫時無法完成校驗。",
-      "newApiRetrieveKeyHint": "對於 New API，完整的 key 比對依賴渠道 key，而檢視渠道 key 本身需要先完成 2FA 驗證，因此當前暫無法完成完整 key 比對。",
-      "veloeraBaseUrlSearchUnsupported": "該功能在 Veloera 上不受支援，因為 Veloera 不支援按基礎地址搜尋渠道。"
+      "newApiRetrieveKeyHint": "對於 New API，完整的 key 比對依賴渠道 key，而檢視渠道 key 本身需要先完成 2FA 驗證，因此當前暫無法完成完整 key 比對。"
     },
-    "pageUnsupported": "由於 Veloera 暫不支援使用 URL 搜尋渠道，暫不提供管理站點渠道檢查功能。",
+    "pageUnsupported": "由於目前的託管站點暫不支援使用 URL 搜尋渠道，暫不提供管理站點渠道檢查功能。",
     "recovery": {
       "configureLogin": "請先在設定中填寫 New API 登入與兩步驗證輔助資訊，否則當前無法讀取渠道 key，也無法完成完整的 key 比對。",
       "verificationRequired": "完整的 key 比對需要先完成一次短時有效的 New API 驗證，因為 New API 檢視渠道 key 本身就需要 2FA 驗證。"

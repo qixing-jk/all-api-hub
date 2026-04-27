@@ -243,6 +243,7 @@ describe("managedSite utils", () => {
     ).toBe("messages:newapi.noChannelsToSync")
 
     expect(supportsManagedSiteBaseUrlChannelLookup(VELOERA)).toBe(false)
+    expect(supportsManagedSiteBaseUrlChannelLookup(CLAUDE_CODE_HUB)).toBe(false)
     expect(supportsManagedSiteBaseUrlChannelLookup(NEW_API)).toBe(true)
   })
 })

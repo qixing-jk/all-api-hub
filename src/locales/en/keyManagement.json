@@ -103,12 +103,12 @@
     },
     "descriptions": {
       "backendSearchFailed": "Managed-site checks could not be completed.",
+      "baseUrlSearchUnsupported": "This feature is not supported on the current managed site because it does not support base URL search for channel lookup.",
       "configMissing": "Configure managed-site admin credentials before checks can run.",
       "inputPreparationFailed": "Verification could not prepare comparable channel inputs.",
-      "newApiRetrieveKeyHint": "For New API, full key comparison depends on the channel key, and viewing that channel key itself requires 2FA verification, so full key comparison is currently unavailable.",
-      "veloeraBaseUrlSearchUnsupported": "This feature is not supported on Veloera because Veloera does not support base URL search for channel lookup."
+      "newApiRetrieveKeyHint": "For New API, full key comparison depends on the channel key, and viewing that channel key itself requires 2FA verification, so full key comparison is currently unavailable."
     },
-    "pageUnsupported": "Managed-site channel checks are unavailable on this page because Veloera does not currently support searching channels by URL.",
+    "pageUnsupported": "Managed-site channel checks are unavailable on this page because the current managed site does not currently support searching channels by URL.",
     "recovery": {
       "configureLogin": "Add the New API login and 2FA-assist fields in Settings first. Until then, the channel key cannot be read and full key comparison cannot be completed.",
       "verificationRequired": "Full key comparison first needs a short-lived New API verification step, because viewing a New API channel key itself requires 2FA."

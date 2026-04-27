@@ -98,12 +98,12 @@
     },
     "descriptions": {
       "backendSearchFailed": "管理対象サイトの確認を完了できませんでした。",
+      "baseUrlSearchUnsupported": "現在の管理対象サイトはチャネル検索時の Base URL 検索をサポートしていないため、この機能は利用できません。",
       "configMissing": "確認を実行する前に、管理対象サイトの管理者認証情報を設定してください。",
       "inputPreparationFailed": "検証に必要な比較用チャネル入力を準備できませんでした。",
-      "newApiRetrieveKeyHint": "New API では完全なキー比較がチャネルキーに依存しますが、そのチャネルキー自体の表示に 2FA 認証が必要なため、現時点では完全なキー比較は利用できません。",
-      "veloeraBaseUrlSearchUnsupported": "Veloera はチャネル検索時の Base URL 検索をサポートしていないため、この機能は利用できません。"
+      "newApiRetrieveKeyHint": "New API では完全なキー比較がチャネルキーに依存しますが、そのチャネルキー自体の表示に 2FA 認証が必要なため、現時点では完全なキー比較は利用できません。"
     },
-    "pageUnsupported": "このページでは管理対象サイトのチャネル確認を利用できません。Veloera が現在 URL によるチャネル検索をサポートしていないためです。",
+    "pageUnsupported": "このページでは管理対象サイトのチャネル確認を利用できません。現在の管理対象サイトが URL によるチャネル検索をサポートしていないためです。",
     "recovery": {
       "configureLogin": "先に設定で New API のログイン情報と 2FA 補助項目を追加してください。それまではチャネルキーを読み取れず、完全なキー比較を完了できません。",
       "verificationRequired": "New API のチャネルキー表示自体に 2FA が必要なため、完全なキー比較には先に短時間の New API 認証手順が必要です。"

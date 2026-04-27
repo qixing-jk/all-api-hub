@@ -25,7 +25,7 @@
     "keyList": "金鑰列表",
     "keyManagement": "金鑰管理",
     "locateManagedSiteChannel": "定位對應渠道",
-    "locateManagedSiteChannelUnsupported": "因為 Veloera 暫不支援使用URL搜尋渠道，相關功能無法正常工作",
+    "locateManagedSiteChannelUnsupported": "因為目前的託管站點暫不支援使用URL搜尋渠道，相關功能無法正常運作",
     "locateManagedSiteChannelUnsupportedHint": "不支援",
     "modelManagement": "模型管理",
     "openAllExternalCheckIn": "一鍵開啟外部簽到",

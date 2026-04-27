@@ -25,7 +25,7 @@
     "keyList": "Key List",
     "keyManagement": "Key Management",
     "locateManagedSiteChannel": "Locate channel",
-    "locateManagedSiteChannelUnsupported": "These features are unavailable because Veloera does not currently support searching channels by URL.",
+    "locateManagedSiteChannelUnsupported": "These features are unavailable because the current managed site does not currently support searching channels by URL.",
     "locateManagedSiteChannelUnsupportedHint": "Unsupported",
     "modelManagement": "Model Management",
     "openAllExternalCheckIn": "Open all external check-ins",

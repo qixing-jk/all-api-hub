@@ -189,7 +189,7 @@ describe("KeyManagement managed-site status support", () => {
     ).toEqual(expect.any(Function))
   })
 
-  it("hides refresh controls, shows the unsupported hint, and omits the post-import refresh callback for Veloera", async () => {
+  it("hides refresh controls, shows the unsupported hint, and omits the post-import refresh callback when lookup is unsupported", async () => {
     sendRuntimeActionMessageMock.mockResolvedValue({ success: false })
     tokenListPropsSpy.mockReset()
     useKeyManagementMock.mockReturnValue({

@@ -629,7 +629,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
   })
 
-  it("returns unknown when the managed site is Veloera because base URL search is unsupported", async () => {
+  it("returns unknown when the managed site does not support base URL search", async () => {
     const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
     const token = buildApiToken({ key: "test-token-key" })
     const searchChannel = vi.fn()
@@ -652,7 +652,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     expect(result).toEqual({
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
       reason:
-        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.VELOERA_BASE_URL_SEARCH_UNSUPPORTED,
+        MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.BASE_URL_SEARCH_UNSUPPORTED,
     })
     expect(searchChannel).not.toHaveBeenCalled()
     expect(prepareChannelFormData).not.toHaveBeenCalled()

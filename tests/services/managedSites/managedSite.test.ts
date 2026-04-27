@@ -1,6 +1,12 @@
 import { describe, expect, it } from "vitest"
 
-import { DONE_HUB, NEW_API, OCTOPUS, VELOERA } from "~/constants/siteType"
+import {
+  CLAUDE_CODE_HUB,
+  DONE_HUB,
+  NEW_API,
+  OCTOPUS,
+  VELOERA,
+} from "~/constants/siteType"
 import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
 
 describe("supportsManagedSiteBaseUrlChannelLookup", () => {
@@ -10,7 +16,8 @@ describe("supportsManagedSiteBaseUrlChannelLookup", () => {
     expect(supportsManagedSiteBaseUrlChannelLookup(OCTOPUS)).toBe(true)
   })
 
-  it("returns false for Veloera", () => {
+  it("returns false for backends without reliable base-url lookup", () => {
     expect(supportsManagedSiteBaseUrlChannelLookup(VELOERA)).toBe(false)
+    expect(supportsManagedSiteBaseUrlChannelLookup(CLAUDE_CODE_HUB)).toBe(false)
   })
 })

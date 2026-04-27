@@ -208,9 +208,9 @@ const getManagedSiteStatusDescription = (
       return t(
         "keyManagement:managedSiteStatus.descriptions.inputPreparationFailed",
       )
-    case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.VELOERA_BASE_URL_SEARCH_UNSUPPORTED:
+    case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.BASE_URL_SEARCH_UNSUPPORTED:
       return t(
-        "keyManagement:managedSiteStatus.descriptions.veloeraBaseUrlSearchUnsupported",
+        "keyManagement:managedSiteStatus.descriptions.baseUrlSearchUnsupported",
       )
     case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.BACKEND_SEARCH_FAILED:
       return t(
