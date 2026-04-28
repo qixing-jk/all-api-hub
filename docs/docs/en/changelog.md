@@ -647,7 +647,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Performance Optimizations:**
   - Improved the performance of the sorting function.
 
-## 3.26.0
+## 2.26.0
 - **New Features:**
   - Added a model pricing cache service to speed up data loading.
   - Added an account overview bar at the top of the model list for quick viewing.
@@ -657,7 +657,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Bug Fixes:**
   - Added a customizable loading animation (spinner) property to the button component.
 
-## 3.25.0
+## 2.25.0
 - **New Features:**
   - Added a new user guide card when the account list is empty.
   - When the pin/manual sort feature is disabled, related UI elements will be automatically hidden.
@@ -665,7 +665,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Bug Fixes:**
   - Fixed an issue where the tag array could be empty when updating an account.
 
-## 3.24.0
+## 2.24.0
 - **New Features:**
   - Updated application description and about page content.
   - Extension name now includes a subtitle.
@@ -674,18 +674,18 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Bug Fixes:**
   - Removed extraneous periods from the end of JSON strings.
 
-## 3.23.0
+## 2.23.0
 - **New Features:**
   - Enhanced account tagging functionality.
   - Temporary window bypass feature now supports more intelligent judgment based on error codes.
 
-## 3.22.0
+## 2.22.0
 - **New Features:**
   - Account management now includes a tagging feature for classifying accounts.
   - The Redemption Assistant popup UI now supports lazy loading and fixes issues that could cause website style conflicts.
   - Added global channel filters and JSON editing mode.
 
-## 3.21.0
+## 2.21.0
 - **New Features:**
   - Integrated CLIProxyAPI and related settings.
 - **Bug Fixes:**
@@ -693,7 +693,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Simplified and fixed the temporary window capture logic.
   - Restored parsing of search parameters in URL query strings.
 
-## 3.20.0
+## 2.20.0
 - **New Features:**
   - Added permission guidance upon first installation for easier understanding of required permissions.
   - Cookie interceptor headers can now be controlled via optional permissions, improving cross-browser compatibility.
@@ -702,7 +702,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Redemption amount conversion coefficients now use constants for improved accuracy.
   - Limited the Cookie interceptor to use only in Firefox browsers.
 
-## 3.19.0
+## 2.19.0
 - **New Features:**
   - Added loading status and prompts during the redemption process.
   - Removed clipboard reading functionality from the Redemption Assistant.
@@ -712,7 +712,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Resolved intermittent "Unable to establish connection" errors.
   - Prevented race conditions during the destruction of temporary window pools.
 
-## 3.18.0
+## 2.18.0
 - **New Features:**
   - Added protection settings for the temporary window bypass feature.
   - Added documentation for the Redemption Assistant feature.
@@ -722,17 +722,17 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Bug Fixes:**
   - Fixed path issues with Tailwind CSS files.
 
-## 3.17.0
+## 2.17.0
 - **New Features:**
   - Added an automatic pop-up prompt for one-click redemption.
   - Unified the data format for import/export and WebDAV backups using a V2 versioning scheme for improved compatibility and stability.
 
-## 3.16.0
+## 2.16.0
 - **New Features:**
   - Added a warning prompt when creating accounts on Firefox desktop.
   - API model synchronization now supports a channel filtering system.
 
-## 3.15.0
+## 2.15.0
 - **New Features:**
   - The MultiSelect component now supports parsing comma-separated strings.
 - **Bug Fixes:**
@@ -740,7 +740,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Performance Optimizations:**
   - Optimized upstream model caching logic.
 
-## 3.14.0
+## 2.14.0
 - **New Features:**
   - Site metadata is now automatically detected during refresh.
   - When automatic check-in fails, retry and manual check-in options are now available.
@@ -749,7 +749,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Bug Fixes:**
   - Fixed the default behavior issue with the `autoCheckInEnabled` flag.
 
-## 3.13.0
+## 2.13.0
 - **New Features:**
   - Added "New API Channel Management" functionality.
   - Added a "Warning" button style.
@@ -757,57 +757,57 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Bug Fixes:**
   - Fixed incorrect display and sorting of model counts in the channel table.
 
-## 3.12.1
+## 2.12.1
 - **Bug Fixes:**
   - Fixed unnecessary reloading of channels when manually selecting tabs.
   - The "New API Model Sync" option is now hidden in the sidebar when the configuration is invalid.
 
-## 3.12.0
+## 2.12.0
 - **New Features:**
   - "New API Model Sync" now includes an allowlist filtering feature for models.
   - The sidebar now supports collapsing/expanding with smooth animations.
 
-## 3.11.0
+## 2.11.0
 - **New Features:**
   - Account management functionality has been enhanced with search and navigation optimizations.
   - Added CC Switch export functionality.
 - **Bug Fixes:**
   - Fixed logical errors in automatic check-in status.
 
-## 3.10.0
+## 2.10.0
 - **New Features:**
   - Browser messages now support exponential backoff retry mechanisms for improved communication stability.
   - Model synchronization now includes a manual execution tab and supports channel selection.
 - **Bug Fixes:**
   - Ensured that missing fields in user preferences are populated with default values.
 
-## 3.9.0
+## 2.9.0
 - **New Features:**
   - Added Cloudflare challenge detection and automatic temporary window bypass attempts when encountering protection.
   - Introduced a temporary context management system.
 
-## 3.8.1
+## 2.8.1
 - **Bug Fixes:**
   - Model names now support date suffix patterns like "month-day" and "month_day".
   - Optimized the positioning and accessibility of dropdown menus in multi-select components.
 
-## 3.8.0
+## 2.8.0
 - **New Features:**
   - Added fault tolerance mechanisms for partial account updates.
   - Account information can now be saved even if data retrieval fails during manual account addition.
   - The settings page now includes a "Settings Section" feature, allowing settings to be reset by section.
 
-## 3.7.1
+## 2.7.1
 - **Bug Fixes:**
   - Fixed an issue where redirected models were not appearing in the model list during API sync.
 
-## 3.7.0
+## 2.7.0
 - **New Features:**
   - The account dialog can now dynamically update site data for new accounts.
 - **Bug Fixes:**
   - Hidden the password visibility button in Edge/IE browsers.
 
-## 3.6.1
+## 2.6.1
 - **Important Update (Internal):**
   - User preferences like `newApiModelSync`, `autoCheckin`, and `modelRedirect` are now mandatory to ensure completeness of default configurations.
 - **Bug Fixes:**
@@ -816,7 +816,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Corrected the sorting logic for check-in requirements.
   - Prevented unnecessary WebDAV configuration resets during configuration migration.
 
-## 3.6.0
+## 2.6.0
 - **New Features:**
   - The user interface for "New API Channel Import" has been optimized, supporting key switching and batch model selection.
   - Model mapping now uses a multi-stage standardization process for improved accuracy.
@@ -824,18 +824,18 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Model name standardization is now consistent with the Veloera backend and preserves hyphens.
   - Resolved browser storage quota issues and improved model matching.
 
-## 3.5.0
+## 2.5.0
 - **New Features:**
   - Added support for the Neo-API site type.
 - **Bug Fixes:**
   - Fixed Base64 encoding issues when generating CherryStudio URLs.
   - Removed redundant account fetching and token verification from the channel dialog for improved efficiency.
 
-## 3.4.1
+## 2.4.1
 - **Bug Fixes:**
   - Ensured that the settings page always opens in a new tab.
 
-## 3.4.0
+## 2.4.0
 - **New Features:**
   - The auto-import feature now integrates the "New API Channel" dialog.
   - Added basic support for RIX_API.
@@ -844,20 +844,20 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Optimized the retry mechanism and added user feedback.
   - Optimized the performance of the multi-select component with a large number of selections.
 
-## 3.3.0
+## 2.3.0
 - **New Features:**
   - Added account pinning and unpinning functionality, with pinned accounts prioritized in sorting.
 - **Bug Fixes:**
   - Reduced the size of the pin icon and fixed configuration migration version issues.
   - Optimized sorting configuration by increasing the priority of the current site condition.
 
-## 3.2.1
+## 2.2.1
 - **Bug Fixes:**
   - Removed the `isDetected` check for the auto-configuration button.
   - Ensured that the account detection correctly refreshes when displayed data changes.
   - Fixed an issue where Access Tokens were no longer required for Cookie authentication types.
 
-## 3.2.0
+## 2.2.0
 - **New Features:**
   - The Automatic Check-in feature now includes a results/history interface and optimized default settings and user experience.
   - Implemented daily site automatic check-in, supporting time window settings and status display.
@@ -865,14 +865,14 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Fixed case sensitivity issues in automatic check-in status detection.
   - Handled edge cases in check-in time window calculations.
 
-## 3.1.0
+## 2.1.0
 - **New Features:**
   - The account list now includes username search and highlighting functionality.
 - **Bug Fixes:**
   - Added configuration validation warnings when API settings are missing.
   - "New API" functionality now includes configuration validation assistance and internationalized error messages.
 
-## 3.0.0
+## 2.0.0
 - **New Features:**
   - The "New API Model Sync" filter bar now includes execution statistics.
   - Each row in the results table now includes a sync operation button.
