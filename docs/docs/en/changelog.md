@@ -8,6 +8,24 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 3.35.0
+- **New Features:**
+  - Hosted Sites: Added `AxonHub` integration settings. You can configure `Base URL`, administrator email, and password within the extension. After verifying the connection, you can directly read, create, edit, and delete AxonHub channels, and import existing accounts/keys as AxonHub channels.
+  - Hosted Sites: Added `Claude Code Hub` integration settings. You can configure `Base URL` and administrator token to directly manage the `Provider` list. It also supports importing existing accounts/keys as Claude Code Hub providers, reducing duplicate entries across multiple backends.
+- **Bug Fixes:**
+  - Import/Export: After importing a backup containing preference settings, the settings state will now be immediately refreshed, and the interface language from the backup will be applied. This reduces instances where old settings or languages are still displayed after import, requiring a manual page reload.
+  - Account Management: The descriptions and actual behavior of the `Prioritize Current Login Account` and `Match Open Tabs` sorting/matching rules have been aligned. When you search for an account using a full URL, tab title, or current page related content, relevant accounts are more likely to be correctly identified and ranked higher.
+
+::: tip Scope of Use
+`Claude Code Hub` currently does not support `Channel Migration`, `Model Sync`, `Model Redirect`, or full key viewing. `AxonHub` currently only covers basic channel management and import processes, not migration or model synchronization capabilities.
+:::
+
+**Location Hints:**
+- `AxonHub` / `Claude Code Hub` Integration Settings and Verification: In "Settings → Basic Settings → Self-Hosted Site Management".
+- `AxonHub` Channel Management, `Claude Code Hub` Provider Management, and Import to Target Backend: In "Settings → Channel Management" and related import processes.
+- Preference Backup Import: In "Settings → Import/Export".
+- Account Sorting Priority and Account Search: In "Settings → Account Management".
+
 ## 3.34.0
 - **New Features:**
   - Model List: Added price comparison capabilities, allowing filtering by billing method, sorting by price, and in the "All Accounts" view, supporting "cheapest first for the same model" to find low-priced models more directly with multiple accounts.
@@ -582,26 +600,26 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Added validation information for refresh interval settings.
   - Fixed development dependency issues.
 
-## 3.32.0
+## 2.32.0
 - **New Features:**
   - Model redirects are now smarter, supporting version numbers represented by hyphens and dots.
   - Added the ability to redeem directly through the right-click menu after selecting text.
   - Automatic check-in is enabled by default, and the check-in time window has been extended.
 
-## 3.31.0
+## 2.31.0
 - **New Features:**
   - Enhanced Cookie isolation for temporary windows, improving security.
   - Check-in operations can now be quickly performed within the popup.
   - The Redemption Assistant now includes a URL whitelist feature, giving you better control over which websites can use it.
 
-## 3.30.0
+## 2.30.0
 - **New Features:**
   - Added check-in support for Wong sites.
   - Added check-in support for AnyRouter sites.
   - Optimized detection capabilities for Cloudflare challenge pages.
   - WebDAV backups now support encryption, and recovery includes a decryption retry popup. Your WebDAV configuration will be preserved.
 
-## 3.29.0
+## 2.29.0
 - **New Features:**
   - Integrated Claude Code Router.
 - **Bug Fixes:**
@@ -609,7 +627,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
   - Optimized the centering of blank status content in Firefox.
   - Migrated the Switch component to a custom implementation for improved compatibility and stability.
 
-## 3.28.0
+## 2.28.0
 - **New Features:**
   - Introduced the "Hosted Site" service, laying the groundwork for future site integrations.
   - Added support for Veloera sites.
@@ -617,7 +635,7 @@ v3.15.0 **has forcibly modified auto-refresh configurations**:
 - **Bug Fixes:**
   - Optimized translation text and removed redundant fallback strings.
 
-## 3.27.0
+## 2.27.0
 - **New Features:**
   - Account health status now includes more detailed codes to help you understand specific issues.
   - Temporary window bypass feature now includes a health status indicator.
