@@ -66,7 +66,12 @@ export default defineUserConfig({
               { text: 'CLIProxyAPI 集成', link: '/cliproxyapi-integration' },
               { text: '模型重定向', link: '/model-redirect' },
               { text: '排序优先级设置', link: '/sorting-priority' },
-              { text: '权限管理', link: '/permissions' }
+              { text: '权限管理', link: '/permissions' },
+              { text: '书签管理', link: '/site-bookmarks' },
+              { text: '使用分析', link: '/usage-analytics' },
+              { text: 'API 凭证档案', link: '/api-credential-profiles' },
+              { text: '分享快照', link: '/share-snapshots' },
+              { text: 'LDOH 站点查询', link: '/ldoh-site-lookup' }
             ]
           }
         ],
@@ -100,7 +105,12 @@ export default defineUserConfig({
               { text: 'CLIProxyAPI Integration', link: '/en/cliproxyapi-integration' },
               { text: 'Model Redirect', link: '/en/model-redirect' },
               { text: 'Sorting Priority', link: '/en/sorting-priority' },
-              { text: 'Permissions', link: '/en/permissions' }
+              { text: 'Permissions', link: '/en/permissions' },
+              { text: 'Site Bookmarks', link: '/en/site-bookmarks' },
+              { text: 'Usage Analytics', link: '/en/usage-analytics' },
+              { text: 'API Credential Profiles', link: '/en/api-credential-profiles' },
+              { text: 'Share Snapshots', link: '/en/share-snapshots' },
+              { text: 'LDOH Site Lookup', link: '/en/ldoh-site-lookup' }
             ]
           }
         ],
@@ -134,7 +144,12 @@ export default defineUserConfig({
               { text: 'CLIProxyAPI 連携', link: '/ja/cliproxyapi-integration' },
               { text: 'モデルリダイレクト', link: '/ja/model-redirect' },
               { text: '並び順優先度設定', link: '/ja/sorting-priority' },
-              { text: '権限管理', link: '/ja/permissions' }
+              { text: '権限管理', link: '/ja/permissions' },
+              { text: 'ブックマーク管理', link: '/ja/site-bookmarks' },
+              { text: '使用分析', link: '/ja/usage-analytics' },
+              { text: 'API 認証情報プロファイル', link: '/ja/api-credential-profiles' },
+              { text: 'スナップショット共有', link: '/ja/share-snapshots' },
+              { text: 'LDOH サイト検索', link: '/ja/ldoh-site-lookup' }
             ]
           }
         ],
