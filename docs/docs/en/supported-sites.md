@@ -40,6 +40,7 @@ If you are also building your own backend system, All API Hub supports importing
 | Veloera | This project has been discontinued. | [GitHub](https://github.com/Veloera/Veloera) |
 | Octopus | Personal LLM API aggregation service. | [GitHub](https://github.com/bestruirui/octopus) |
 | AxonHub | Open-source AI Gateway, callable via any SDK for 100+ LLMs, with built-in failover, load balancing, cost control, and full-link tracing. | [Official Website](https://axonhub.onrender.com/) / [GitHub](https://github.com/looplj/axonhub) |
+| Claude Code Hub | A multi-vendor AI API proxy and operating platform for teams, unifying access to Claude, OpenAI Compatible, Codex, and Gemini, with support for elastic scheduling, monitoring, and price management. | [GitHub](https://github.com/ding113/claude-code-hub) |
 
 ## Related Documentation
 

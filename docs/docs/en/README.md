@@ -43,7 +43,7 @@ features:
   - title: "Quick Export Integration"
     details: "One-click export to CherryStudio, CC Switch, CLIProxyAPI, Claude Code Router, Kilo Code, and the currently selected self-hosted site."
   - title: "Self-built Site Backend Linkage"
-    details: "Supports backend linkage for self-built New API, DoneHub, Veloera, Octopus, and AxonHub instances."
+    details: "Supports backend linkage for self-built New API, DoneHub, Veloera, Octopus, AxonHub, and Claude Code Hub instances."
   - title: "WebDAV Backup and Synchronization"
     details: "Supports JSON import/export, automatic WebDAV synchronization, selective synchronization, and backup encryption for cross-device and multi-browser migration."
   - title: "Cloudflare Anti-Bot Assistant"
@@ -60,7 +60,7 @@ footer: "AGPL-3.0 Licensed | Copyright 2025-present All API Hub"
 
 In the current AI ecosystem, there are an increasing number of aggregation relay sites and self-built panels based on the New API series. Managing balances, usage, model prices, and API key availability for various sites simultaneously is often scattered and time-consuming.
 
-All API Hub, as a browser extension, can automatically identify accounts on these sites and provide one-click access to view balances, usage, model prices, manage models and keys, and perform automatic check-ins. It also offers independent API credential management and provides backend linkage and channel-related tools for self-built New API, DoneHub, Veloera, Octopus, and AxonHub. Currently, it supports accounts from relay sites based on the following projects:
+All API Hub, as a browser extension, can automatically identify accounts on these sites and provide one-click access to view balances, usage, model prices, manage models and keys, and perform automatic check-ins. It also offers independent API credential management and provides backend linkage and channel-related tools for self-built New API, DoneHub, Veloera, Octopus, AxonHub, and Claude Code Hub. Currently, it supports accounts from relay sites based on the following projects:
 
 - [one-api](https://github.com/songquanpeng/one-api)
 - [new-api](https://github.com/QuantumNous/new-api)
