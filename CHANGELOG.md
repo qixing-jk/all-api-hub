@@ -1,5 +1,19 @@
 # Changelog
 
+## [3.35.0](https://github.com/qixing-jk/all-api-hub/compare/v3.34.0...v3.35.0) (2026-04-28)
+
+
+### Features
+
+* **managed-site:** add AxonHub managed-site support ([#762](https://github.com/qixing-jk/all-api-hub/issues/762)) ([bd1f124](https://github.com/qixing-jk/all-api-hub/commit/bd1f124dd05c96fd74dcdab171294eaca09efcd7))
+* **managed-site:** add Claude Code Hub managed-site support ([#764](https://github.com/qixing-jk/all-api-hub/issues/764)) ([660fbdf](https://github.com/qixing-jk/all-api-hub/commit/660fbdf72502a49fcfc025ccd8181411e805d36e))
+
+
+### Bug Fixes
+
+* **account:** clarify current-login sorting and improve open-tab account matching ([#760](https://github.com/qixing-jk/all-api-hub/issues/760)) ([57d278b](https://github.com/qixing-jk/all-api-hub/commit/57d278b6349dbbdaae0da6f3c57976428192701f))
+* refresh settings state and apply language after preferences import ([#758](https://github.com/qixing-jk/all-api-hub/issues/758)) ([46a25a9](https://github.com/qixing-jk/all-api-hub/commit/46a25a9b7c3ce7f46fc8d4afa34cf54a61279e2c))
+
 ## [3.34.0](https://github.com/qixing-jk/all-api-hub/compare/v3.33.0...v3.34.0) (2026-04-21)
 
 
