@@ -13,7 +13,13 @@ import {
   MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES,
   MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES,
 } from "~/types/managedSiteMigration"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 const { mockPreparePreview, mockExecuteMigration } = vi.hoisted(() => ({
   mockPreparePreview: vi.fn(),
@@ -326,6 +332,32 @@ describe("ManagedSiteChannelMigrationDialog", () => {
             type: "future-provider",
           },
         },
+        {
+          channelId: 3,
+          channelName: "Missing Type",
+          status: "ready",
+          blockingReasonCode: undefined,
+          blockingMessage: undefined,
+          warningCodes: [],
+          sourceChannel: {
+            base_url: "https://missing-type.example",
+            type: 1,
+            models: "gpt-4o",
+            group: "default",
+            priority: 0,
+            weight: 0,
+            status: 1,
+          },
+          draft: {
+            base_url: "https://missing-type.example/v1",
+            type: undefined,
+            models: ["gpt-4o"],
+            groups: ["default"],
+            priority: 0,
+            weight: 0,
+            status: 1,
+          },
+        },
       ],
     })
 
@@ -342,6 +374,12 @@ describe("ManagedSiteChannelMigrationDialog", () => {
 
     expect(await screen.findByText("Anthropic")).toBeInTheDocument()
     expect(screen.getByText("future-provider")).toBeInTheDocument()
+
+    const missingTypeSection = screen
+      .getByText("Missing Type")
+      .closest("section")
+    expect(missingTypeSection).toBeTruthy()
+    expect(within(missingTypeSection!).getByText("—")).toBeInTheDocument()
   })
 
   it("shows preview errors and allows refreshing the preview", async () => {

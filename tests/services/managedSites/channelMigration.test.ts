@@ -596,6 +596,10 @@ describe("channelMigration", () => {
           id: 22_62,
           group: "",
         }),
+        buildManagedSiteChannel({
+          id: 22_63,
+          group: " default ",
+        }),
       ],
     })
 
@@ -605,6 +609,10 @@ describe("channelMigration", () => {
     )
     expect(preview.items[1].draft?.groups).toEqual(["default"])
     expect(preview.items[1].warningCodes).toContain(
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
+    )
+    expect(preview.items[2].draft?.groups).toEqual(["default"])
+    expect(preview.items[2].warningCodes).not.toContain(
       MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
     )
   })
