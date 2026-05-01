@@ -572,6 +572,43 @@ describe("channelMigration", () => {
     )
   })
 
+  it("warns about AxonHub default group forcing only when the emitted group differs", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences({
+        axonHub: {
+          baseUrl: "https://axonhub.example.com",
+          email: "admin@example.com",
+          password: "secret",
+        },
+      }),
+      sourceSiteType: NEW_API,
+      targetSiteType: AXON_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 22_61,
+          group: "default",
+        }),
+        buildManagedSiteChannel({
+          id: 22_62,
+          group: "",
+        }),
+      ],
+    })
+
+    expect(preview.items[0].draft?.groups).toEqual(["default"])
+    expect(preview.items[0].warningCodes).not.toContain(
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
+    )
+    expect(preview.items[1].draft?.groups).toEqual(["default"])
+    expect(preview.items[1].warningCodes).toContain(
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
+    )
+  })
+
   it("falls back unmapped shared channel types to AxonHub OpenAI and warns", async () => {
     const { prepareManagedSiteChannelMigrationPreview } = await import(
       "~/services/managedSites/channelMigration"

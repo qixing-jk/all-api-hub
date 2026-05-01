@@ -1,7 +1,8 @@
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { NEW_API, OCTOPUS } from "~/constants/siteType"
+import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
+import { AXON_HUB, NEW_API, OCTOPUS } from "~/constants/siteType"
 import { ManagedSiteChannelMigrationDialog } from "~/features/ManagedSiteChannels/components/ManagedSiteChannelMigrationDialog"
 import {
   executeManagedSiteChannelMigration,
@@ -304,6 +305,43 @@ describe("ManagedSiteChannelMigrationDialog", () => {
     expect(screen.getAllByText("Need a source key").length).toBeGreaterThan(0)
     expect(screen.getByText("site:new-api")).toBeInTheDocument()
     expect(screen.getAllByText("site:done-hub").length).toBeGreaterThan(0)
+  })
+
+  it("renders AxonHub string channel type labels and unknown type fallbacks", async () => {
+    mockedPreparePreview.mockResolvedValueOnce({
+      ...previewPayload,
+      targetSiteType: AXON_HUB,
+      items: [
+        {
+          ...previewPayload.items[0],
+          draft: {
+            ...previewPayload.items[0].draft,
+            type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
+          },
+        },
+        {
+          ...previewPayload.items[1],
+          draft: {
+            ...previewPayload.items[1].draft,
+            type: "future-provider",
+          },
+        },
+      ],
+    })
+
+    render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={{} as any}
+        sourceSiteType={NEW_API}
+        availableTargets={[{ siteType: AXON_HUB, label: "AxonHub" }] as any}
+      />,
+    )
+
+    expect(await screen.findByText("Anthropic")).toBeInTheDocument()
+    expect(screen.getByText("future-provider")).toBeInTheDocument()
   })
 
   it("shows preview errors and allows refreshing the preview", async () => {

@@ -59,6 +59,10 @@ interface SourceKeyResolutionResult {
 const parseDelimitedValues = (value: string | null | undefined) =>
   normalizeList(value?.split(",") ?? [])
 
+const areStringArraysEqual = (left: string[], right: string[]): boolean =>
+  left.length === right.length &&
+  left.every((item, index) => item === right[index])
+
 const hasMeaningfulValue = (value: string | null | undefined) =>
   Boolean(value?.trim())
 
@@ -272,8 +276,9 @@ const collectItemWarningCodes = (params: {
   }
 
   if (targetSiteType === AXON_HUB) {
-    const groups = parseDelimitedValues(channel.group)
-    if (groups.length > 0) {
+    const sourceGroups = parseDelimitedValues(channel.group)
+    const emittedGroups = [...DEFAULT_CHANNEL_FIELDS.groups]
+    if (!areStringArraysEqual(sourceGroups, emittedGroups)) {
       warnings.add(
         MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
       )
