@@ -27,6 +27,9 @@ const mockDoneHubFetchChannelSecretKey = vi.fn()
 const mockDoneHubGetConfig = vi.fn()
 const mockVeloeraFetchChannelSecretKey = vi.fn()
 const mockVeloeraGetConfig = vi.fn()
+const mockAxonHubBuildChannelPayload = vi.fn()
+const mockAxonHubCreateChannel = vi.fn()
+const mockAxonHubGetConfig = vi.fn()
 
 vi.mock("~/services/managedSites/managedSiteService", () => ({
   getManagedSiteServiceForType: mockGetManagedSiteServiceForType,
@@ -114,6 +117,29 @@ describe("channelMigration", () => {
       userId: "8",
     })
     mockVeloeraFetchChannelSecretKey.mockResolvedValue("real-veloera-key")
+    mockAxonHubGetConfig.mockResolvedValue({
+      baseUrl: "https://axonhub.example.com",
+      token: "axonhub-password",
+      userId: "admin@example.com",
+    })
+    mockAxonHubBuildChannelPayload.mockImplementation((draft: any) => ({
+      mode: "single",
+      channel: {
+        name: draft.name,
+        type: draft.type,
+        key: draft.key,
+        base_url: draft.base_url,
+        models: draft.models.join(","),
+        groups: [],
+        priority: 0,
+        weight: draft.weight,
+        status: draft.status,
+      },
+    }))
+    mockAxonHubCreateChannel.mockResolvedValue({
+      success: true,
+      message: "ok",
+    })
     mockGetManagedSiteServiceForType.mockImplementation((siteType: string) => {
       if (siteType === DONE_HUB) {
         return {
@@ -139,6 +165,14 @@ describe("channelMigration", () => {
             message: "ok",
           }),
           fetchChannelSecretKey: mockVeloeraFetchChannelSecretKey,
+        }
+      }
+
+      if (siteType === AXON_HUB) {
+        return {
+          getConfig: mockAxonHubGetConfig,
+          buildChannelPayload: mockAxonHubBuildChannelPayload,
+          createChannel: mockAxonHubCreateChannel,
         }
       }
 
@@ -491,6 +525,134 @@ describe("channelMigration", () => {
     )
   })
 
+  it("maps New API source channels to AxonHub string channel types and target-safe fields", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences({
+        axonHub: {
+          baseUrl: "https://axonhub.example.com",
+          email: "admin@example.com",
+          password: "secret",
+        },
+      }),
+      sourceSiteType: NEW_API,
+      targetSiteType: AXON_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 22_6,
+          type: ChannelType.Gemini,
+          key: "  source-key  ",
+          group: "default,vip",
+          priority: 9,
+          weight: 4,
+          status: 3,
+        }),
+      ],
+    })
+
+    expect(preview.readyCount).toBe(1)
+    expect(preview.items[0].draft).toMatchObject({
+      type: AXON_HUB_CHANNEL_TYPE.GEMINI,
+      key: "source-key",
+      groups: ["default"],
+      priority: 0,
+      weight: 4,
+      status: 2,
+    })
+    expect(preview.items[0].warningCodes).toEqual(
+      expect.arrayContaining([
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_REMAPS_CHANNEL_TYPE,
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_PRIORITY,
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_SIMPLIFIES_STATUS,
+      ]),
+    )
+  })
+
+  it("falls back unmapped shared channel types to AxonHub OpenAI and warns", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences({
+        axonHub: {
+          baseUrl: "https://axonhub.example.com",
+          email: "admin@example.com",
+          password: "secret",
+        },
+      }),
+      sourceSiteType: NEW_API,
+      targetSiteType: AXON_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 22_7,
+          type: ChannelType.Midjourney,
+        }),
+      ],
+    })
+
+    expect(preview.readyCount).toBe(1)
+    expect(preview.items[0].draft?.type).toBe(AXON_HUB_CHANNEL_TYPE.OPENAI)
+    expect(preview.items[0].warningCodes).toEqual(
+      expect.arrayContaining([
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_REMAPS_CHANNEL_TYPE,
+      ]),
+    )
+  })
+
+  it("blocks only AxonHub source rows without usable key material", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences({
+        axonHub: {
+          baseUrl: "https://axonhub.example.com",
+          email: "admin@example.com",
+          password: "secret",
+        },
+      }),
+      sourceSiteType: AXON_HUB,
+      targetSiteType: DONE_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 22_8,
+          name: "Ready",
+          type: AXON_HUB_CHANNEL_TYPE.OPENROUTER,
+          key: "axonhub-real-key",
+        }),
+        buildManagedSiteChannel({
+          id: 22_9,
+          name: "Masked",
+          type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
+          key: "sk-********",
+        }),
+      ],
+    })
+
+    expect(preview.readyCount).toBe(1)
+    expect(preview.blockedCount).toBe(1)
+    expect(preview.items[0]).toMatchObject({
+      channelId: 22_8,
+      status: "ready",
+      draft: {
+        type: ChannelType.OpenRouter,
+        key: "axonhub-real-key",
+      },
+    })
+    expect(preview.items[1]).toMatchObject({
+      channelId: 22_9,
+      status: "blocked",
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+    })
+  })
+
   it("limits concurrent preview key resolution while preserving channel order", async () => {
     const { prepareManagedSiteChannelMigrationPreview } = await import(
       "~/services/managedSites/channelMigration"
@@ -659,6 +821,109 @@ describe("channelMigration", () => {
         error: "Missing key",
       },
     ])
+  })
+
+  it("creates AxonHub targets through the managed-site service and keeps failures per row", async () => {
+    const { executeManagedSiteChannelMigration } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    mockAxonHubCreateChannel
+      .mockResolvedValueOnce({
+        success: false,
+        message: "AxonHub rejected channel",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: "ok",
+      })
+
+    const result = await executeManagedSiteChannelMigration({
+      preview: {
+        sourceSiteType: NEW_API,
+        targetSiteType: AXON_HUB,
+        generalWarningCodes: [],
+        totalCount: 2,
+        readyCount: 2,
+        blockedCount: 0,
+        items: [
+          {
+            channelId: 61,
+            channelName: "Rejected",
+            sourceChannel: buildManagedSiteChannel({
+              id: 61,
+              name: "Rejected",
+            }),
+            draft: {
+              name: "Rejected",
+              type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
+              key: "rejected-key",
+              base_url: "https://source.example.com",
+              models: ["claude-3-5-sonnet"],
+              groups: ["default"],
+              priority: 0,
+              weight: 2,
+              status: 1,
+            },
+            status: "ready",
+            warningCodes: [],
+          },
+          {
+            channelId: 62,
+            channelName: "Ready",
+            sourceChannel: buildManagedSiteChannel({ id: 62, name: "Ready" }),
+            draft: {
+              name: "Ready",
+              type: AXON_HUB_CHANNEL_TYPE.OPENAI,
+              key: "ready-key",
+              base_url: "https://source.example.com",
+              models: ["gpt-4o"],
+              groups: ["default"],
+              priority: 0,
+              weight: 0,
+              status: 1,
+            },
+            status: "ready",
+            warningCodes: [],
+          },
+        ],
+      },
+    })
+
+    expect(mockAxonHubBuildChannelPayload).toHaveBeenCalledTimes(2)
+    expect(mockAxonHubCreateChannel).toHaveBeenCalledTimes(2)
+    expect(mockAxonHubCreateChannel).toHaveBeenNthCalledWith(
+      1,
+      "https://axonhub.example.com",
+      "axonhub-password",
+      "admin@example.com",
+      expect.objectContaining({
+        channel: expect.objectContaining({
+          type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
+          key: "rejected-key",
+          models: "claude-3-5-sonnet",
+        }),
+      }),
+    )
+    expect(result).toMatchObject({
+      attemptedCount: 2,
+      createdCount: 1,
+      failedCount: 1,
+      skippedCount: 0,
+      items: [
+        {
+          channelId: 61,
+          success: false,
+          skipped: false,
+          error: "AxonHub rejected channel",
+        },
+        {
+          channelId: 62,
+          success: true,
+          skipped: false,
+        },
+      ],
+    })
   })
 
   it("preserves blocker details when execution fails before creating target channels", async () => {

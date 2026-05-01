@@ -16,14 +16,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
+import { AxonHubChannelTypeNames } from "~/constants/axonHub"
 import { ChannelTypeNames, type ChannelType } from "~/constants/managedSite"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
-import { OCTOPUS } from "~/constants/siteType"
+import { AXON_HUB, OCTOPUS } from "~/constants/siteType"
 import {
   executeManagedSiteChannelMigration,
   prepareManagedSiteChannelMigrationPreview,
 } from "~/services/managedSites/channelMigration"
-import { getNumericChannelType } from "~/services/managedSites/utils/channelType"
 import {
   getManagedSiteLabel,
   type ManagedSiteTargetOption,
@@ -170,8 +170,15 @@ const getStatusText = (t: TFunction, status?: number) => {
 
 const getChannelTypeText = (
   siteType: ManagedSiteTargetOption["siteType"],
-  type?: number,
+  type?: number | string,
 ) => {
+  if (siteType === AXON_HUB && typeof type === "string") {
+    return (
+      AxonHubChannelTypeNames[type as keyof typeof AxonHubChannelTypeNames] ??
+      type
+    )
+  }
+
   if (typeof type !== "number") {
     return "—"
   }
@@ -710,13 +717,13 @@ export function ManagedSiteChannelMigrationDialog({
                             label={t("channelDialog:fields.type.label")}
                             sourceValue={getChannelTypeText(
                               sourceSiteType,
-                              getNumericChannelType(item.sourceChannel.type),
+                              item.sourceChannel.type,
                             )}
                             targetValue={
                               item.draft
                                 ? getChannelTypeText(
                                     preview.targetSiteType,
-                                    getNumericChannelType(item.draft.type),
+                                    item.draft.type,
                                   )
                                 : "—"
                             }

@@ -188,15 +188,47 @@ describe("managedSite utils", () => {
       excludeSiteTypes: [VELOERA],
     })
 
-    expect(options.map((item) => item.siteType)).toEqual([NEW_API, OCTOPUS])
+    expect(options.map((item) => item.siteType)).toEqual([
+      NEW_API,
+      OCTOPUS,
+      AXON_HUB,
+    ])
   })
 
-  it("does not offer AxonHub as a managed-site migration target", () => {
+  it("offers complete AxonHub config as a managed-site migration target and respects exclusions", () => {
     const prefs = {
       axonHub: {
         baseUrl: "https://axonhub.example.com",
         email: "admin@example.com",
         password: "secret",
+      },
+    }
+
+    expect(getManagedSiteTargetOptions(prefs as any)).toEqual([
+      expect.objectContaining({
+        siteType: AXON_HUB,
+        labelKey: "settings:managedSite.axonHub",
+        messagesKey: "axonhub",
+        config: {
+          baseUrl: "https://axonhub.example.com",
+          adminToken: "secret",
+          userId: "admin@example.com",
+        },
+      }),
+    ])
+    expect(
+      getManagedSiteTargetOptions(prefs as any, {
+        excludeSiteTypes: [AXON_HUB],
+      }),
+    ).toEqual([])
+  })
+
+  it("does not offer incomplete AxonHub config as a managed-site migration target", () => {
+    const prefs = {
+      axonHub: {
+        baseUrl: "https://axonhub.example.com",
+        email: "admin@example.com",
+        password: "",
       },
     }
 

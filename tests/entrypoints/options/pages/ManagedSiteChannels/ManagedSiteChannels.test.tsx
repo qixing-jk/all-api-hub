@@ -3,6 +3,7 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelDialogContainer } from "~/components/dialogs/ChannelDialog"
+import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   AXON_HUB,
@@ -999,15 +1000,19 @@ describe("ManagedSiteChannels", () => {
     ).not.toBeInTheDocument()
     expect(screen.getByText("Anthropic AWS")).toBeInTheDocument()
     expect(
-      screen.queryByRole("button", {
+      screen.getByRole("button", {
         name: /managedSiteChannels:toolbar.enterMigrationMode/,
       }),
-    ).not.toBeInTheDocument()
+    ).toBeInTheDocument()
 
     const row = screen.getByText("Alpha").closest("tr")
     expect(row).toBeTruthy()
     expect(within(row!).getByText("2")).toBeInTheDocument()
-    await openRowActionsMenu(row!, user)
+    await user.click(
+      within(row!).getByRole("button", {
+        name: "managedSiteChannels:table.columns.actions",
+      }),
+    )
 
     expect(
       await screen.findByRole("menuitem", {
@@ -1747,6 +1752,104 @@ describe("ManagedSiteChannels", () => {
     expect(toast.error).toHaveBeenCalledWith(
       "managedSiteChannels:migration.alerts.noTargets.description",
     )
+  })
+
+  it("offers AxonHub migration entry points while hiding New API-only actions", async () => {
+    const user = userEvent.setup()
+
+    mockChannels(
+      [
+        {
+          id: 1,
+          name: "Axon Alpha",
+          base_url: "https://axon-source.example",
+          key: "axon-key",
+          type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
+          models: "claude-3-5-sonnet",
+          status: 1,
+          weight: 0,
+        },
+      ],
+      {
+        managedSiteType: AXON_HUB,
+        messagesKey: "axonhub",
+        withMigrationTarget: true,
+      },
+    )
+
+    render(<ManagedSiteChannels />)
+
+    await waitForRowText("Axon Alpha")
+
+    expect(
+      screen.getByRole("button", {
+        name: /managedSiteChannels:toolbar.enterMigrationMode/,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "managedSiteChannels:toolbar.syncSelected",
+      }),
+    ).not.toBeInTheDocument()
+
+    const row = screen.getByText("Axon Alpha").closest("tr")
+    expect(row).toBeTruthy()
+    await user.click(
+      within(row!).getByRole("button", {
+        name: "managedSiteChannels:table.columns.actions",
+      }),
+    )
+
+    expect(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.edit",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.filters",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.openSync",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.sync",
+      }),
+    ).not.toBeInTheDocument()
+
+    await user.keyboard("{Escape}")
+    await user.click(
+      screen.getByRole("button", {
+        name: /managedSiteChannels:toolbar.enterMigrationMode/,
+      }),
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: /managedSiteChannels:toolbar.exitMigrationMode/,
+      }),
+    ).toBeInTheDocument()
+
+    await user.click(
+      within(row!).getByRole("checkbox", {
+        name: "managedSiteChannels:table.selectRow",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.migrateSelected",
+      }),
+    )
+
+    const dialog = await screen.findByRole("dialog")
+    expect(
+      within(dialog).getByText("managedSiteChannels:migration.title"),
+    ).toBeInTheDocument()
+    expect(within(dialog).getByText("Axon Alpha")).toBeInTheDocument()
   })
 
   it("keeps refresh and read-only channel viewing available in migration mode", async () => {

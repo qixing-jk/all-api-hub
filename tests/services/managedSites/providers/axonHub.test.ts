@@ -238,6 +238,61 @@ describe("AxonHub managed-site provider", () => {
     )
   })
 
+  it("builds and creates migrated AxonHub channels with string provider type and supported fields", async () => {
+    const provider = await import("~/services/managedSites/providers/axonHub")
+
+    const payload = provider.buildChannelPayload({
+      name: "Migrated Anthropic",
+      type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
+      key: "migrated-key",
+      base_url: "https://anthropic.example/v1",
+      models: ["claude-3-5-sonnet", "claude-3-haiku"],
+      groups: ["default", "vip"],
+      priority: 9,
+      weight: 5,
+      status: CHANNEL_STATUS.ManuallyDisabled,
+    })
+
+    expect(payload).toEqual({
+      mode: "single",
+      channel: {
+        name: "Migrated Anthropic",
+        type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
+        key: "migrated-key",
+        base_url: "https://anthropic.example/v1",
+        models: "claude-3-5-sonnet,claude-3-haiku",
+        groups: [],
+        priority: 0,
+        weight: 5,
+        status: CHANNEL_STATUS.ManuallyDisabled,
+      },
+    })
+
+    await expect(provider.createChannel("", "", "", payload)).resolves.toEqual({
+      success: true,
+      data: {
+        id: "created-channel-id",
+        name: "Created",
+      },
+      message: "success",
+    })
+
+    expect(mockCreateAxonHubChannel).toHaveBeenCalledWith(axonHubConfig, {
+      type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
+      name: "Migrated Anthropic",
+      baseURL: "https://anthropic.example/v1",
+      credentials: {
+        apiKeys: ["migrated-key"],
+      },
+      supportedModels: ["claude-3-5-sonnet", "claude-3-haiku"],
+      manualModels: ["claude-3-5-sonnet", "claude-3-haiku"],
+      defaultTestModel: "claude-3-5-sonnet",
+      settings: {},
+      orderingWeight: 5,
+    })
+    expect(mockUpdateAxonHubChannelStatus).not.toHaveBeenCalled()
+  })
+
   it("updates channel fields, status, and delete operations through GraphQL ids", async () => {
     const provider = await import("~/services/managedSites/providers/axonHub")
 

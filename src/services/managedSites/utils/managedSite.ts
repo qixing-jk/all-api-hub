@@ -328,10 +328,14 @@ export function getManagedSiteTargetOptions(
   },
 ): ManagedSiteTargetOption[] {
   const excluded = new Set(options?.excludeSiteTypes ?? [])
-  // AXON_HUB and CLAUDE_CODE_HUB are intentionally excluded here.
-  // ManagedSiteChannels.tsx disables migration for them, and enabling either
-  // as a target requires a backend-specific migration adapter.
-  const siteTypes: ManagedSiteType[] = [NEW_API, VELOERA, DONE_HUB, OCTOPUS]
+  // Claude Code Hub remains excluded until it has a migration adapter.
+  const siteTypes: ManagedSiteType[] = [
+    NEW_API,
+    VELOERA,
+    DONE_HUB,
+    OCTOPUS,
+    AXON_HUB,
+  ]
 
   return siteTypes
     .filter((siteType) => !excluded.has(siteType))

@@ -209,9 +209,9 @@ export default function ManagedSiteChannels({
   const isOctopus = managedSiteType === OCTOPUS
   const isAxonHub = managedSiteType === AXON_HUB
   const isClaudeCodeHub = managedSiteType === CLAUDE_CODE_HUB
-  // These capabilities share disabled backends today, but they represent
-  // different backend contracts and may diverge for future managed-site types.
-  const supportsChannelMigration = !isAxonHub && !isClaudeCodeHub
+  // Migration is create-only and now has AxonHub-specific mapping; New API-only
+  // channel controls stay gated separately below.
+  const supportsChannelMigration = !isClaudeCodeHub
   const supportsNewApiOnlyChannelActions = !isAxonHub && !isClaudeCodeHub
   const isNewApiManagedSite = managedSiteType === NEW_API
   const supportsDetailBackedRealKeyLoading =
