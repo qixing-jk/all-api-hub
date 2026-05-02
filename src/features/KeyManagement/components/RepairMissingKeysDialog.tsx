@@ -517,7 +517,7 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
             </CardContent>
 
             <CardContent padding="none" spacing="none">
-              <div className="max-h-72 overflow-y-auto">
+              <div className="max-h-[60vh] overflow-y-auto md:max-h-[min(70vh,48rem)]">
                 {filteredResults.length === 0 ? (
                   <EmptyState
                     icon={<MagnifyingGlassIcon className="h-12 w-12" />}

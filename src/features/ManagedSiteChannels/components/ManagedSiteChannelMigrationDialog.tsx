@@ -210,6 +210,9 @@ const formatDelimitedValues = (value: string | null | undefined) => {
 const formatArrayValues = (items: string[] | null | undefined) =>
   items && items.length > 0 ? items.join(", ") : "—"
 
+const SCROLLABLE_RESULT_LIST_CLASS =
+  "max-h-[60vh] space-y-3 overflow-y-auto rounded-md border p-3 md:max-h-[min(70vh,48rem)]"
+
 /**
  * Render a single source-to-target field comparison row in the migration preview.
  */
@@ -608,7 +611,7 @@ export function ManagedSiteChannelMigrationDialog({
                 </div>
               </div>
 
-              <div className="max-h-96 space-y-3 overflow-y-auto rounded-md border p-3">
+              <div className={SCROLLABLE_RESULT_LIST_CLASS}>
                 {preview.items.map((item) => (
                   <div
                     key={item.channelId}
@@ -835,7 +838,7 @@ export function ManagedSiteChannelMigrationDialog({
                 </div>
               </div>
 
-              <div className="max-h-96 space-y-3 overflow-y-auto rounded-md border p-3">
+              <div className={SCROLLABLE_RESULT_LIST_CLASS}>
                 {executionResult.items.map((item) => {
                   const badge = getExecutionBadge(t, item)
                   return (

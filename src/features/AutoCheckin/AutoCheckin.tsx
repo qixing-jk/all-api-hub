@@ -877,7 +877,7 @@ export default function AutoCheckin(props: {
           <p className="dark:text-dark-text-secondary text-sm text-gray-600">
             {t("execution.debug.uiOpenPretriggerDiagnosticsDesc")}
           </p>
-          <pre className="dark:bg-dark-bg-tertiary max-h-96 overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-800 dark:border-gray-700 dark:text-gray-200">
+          <pre className="dark:bg-dark-bg-tertiary max-h-[60vh] overflow-auto rounded-lg border border-gray-200 bg-gray-50 p-3 text-xs text-gray-800 md:max-h-[min(70vh,48rem)] dark:border-gray-700 dark:text-gray-200">
             {uiOpenPretriggerDiagnostics.payload
               ? JSON.stringify(uiOpenPretriggerDiagnostics.payload, null, 2)
               : ""}

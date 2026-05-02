@@ -39,7 +39,7 @@ export function DedupeAccountsConfirmDetails({
         </div>
       )}
 
-      <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary max-h-[280px] space-y-2 overflow-auto rounded-md border border-gray-200 bg-white p-3">
+      <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary max-h-[55vh] space-y-2 overflow-auto rounded-md border border-gray-200 bg-white p-3 md:max-h-[min(65vh,40rem)]">
         {groups.map((group) => {
           const keep = group.accounts.find(
             (account) => account.id === group.keepAccountId,

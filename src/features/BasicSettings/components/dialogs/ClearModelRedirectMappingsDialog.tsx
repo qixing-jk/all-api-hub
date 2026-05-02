@@ -375,7 +375,7 @@ export function ClearModelRedirectMappingsDialog({
           )}
 
           {!isLoading && !loadError && (
-            <div className="max-h-80 space-y-2 overflow-y-auto rounded-md border border-gray-200 p-3 dark:border-gray-700">
+            <div className="max-h-[60vh] space-y-2 overflow-y-auto rounded-md border border-gray-200 p-3 md:max-h-[min(70vh,48rem)] dark:border-gray-700">
               {channels.length === 0 ? (
                 <div className="dark:text-dark-text-secondary text-sm text-gray-500">
                   {t("bulkClear.status.noChannels")}
@@ -446,7 +446,7 @@ export function ClearModelRedirectMappingsDialog({
                                 {t("bulkClear.preview.mappingInvalid")}
                               </div>
                             )}
-                            <pre className="dark:text-dark-text-secondary max-h-[200px] overflow-auto text-xs wrap-break-word whitespace-pre-wrap text-gray-700">
+                            <pre className="dark:text-dark-text-secondary max-h-[40vh] overflow-auto text-xs wrap-break-word whitespace-pre-wrap text-gray-700 md:max-h-[min(50vh,32rem)]">
                               {meta.previewText}
                             </pre>
                           </>
