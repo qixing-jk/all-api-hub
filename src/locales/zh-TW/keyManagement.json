@@ -59,7 +59,8 @@
     "loadingDescription": "正在為 {{selectedCount}} 個已選金鑰準備預覽。",
     "messages": {
       "completed": "批次匯入完成：成功 {{created}} 個，失敗 {{failed}} 個，跳過 {{skipped}} 個。",
-      "duplicate": "已存在精確符合渠道：{{channel}}"
+      "duplicate": "已存在精確符合渠道：{{channel}}",
+      "executionFailed": "執行批次匯入失敗：{{error}}"
     },
     "preview": {
       "loadFailed": "載入預覽失敗：{{error}}",

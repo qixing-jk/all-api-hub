@@ -62,7 +62,8 @@
     "loadingDescription": "Preparing preview for {{selectedCount}} selected keys.",
     "messages": {
       "completed": "Batch import completed: {{created}} created, {{failed}} failed, {{skipped}} skipped.",
-      "duplicate": "Exact match already exists: {{channel}}"
+      "duplicate": "Exact match already exists: {{channel}}",
+      "executionFailed": "Failed to run batch import: {{error}}"
     },
     "preview": {
       "loadFailed": "Failed to load preview: {{error}}",

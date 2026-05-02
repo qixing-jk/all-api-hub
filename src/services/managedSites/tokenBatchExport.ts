@@ -35,6 +35,7 @@ import { createLogger } from "~/utils/core/logger"
 const logger = createLogger("ManagedSiteTokenBatchExport")
 
 const TOKEN_BATCH_EXPORT_CONCURRENCY = 4
+const FALLBACK_BLOCKING_MESSAGE = "Failed to prepare this key for batch import"
 
 const mapWithConcurrency = async <TItem, TResult>(
   items: TItem[],
@@ -192,7 +193,7 @@ const preparePreviewItem = async (params: {
     return buildBlockedPreviewItem(
       input,
       MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.SECRET_RESOLUTION_FAILED,
-      diagnostic || getErrorMessage(error),
+      diagnostic || FALLBACK_BLOCKING_MESSAGE,
     )
   }
 
@@ -301,7 +302,7 @@ const preparePreviewItem = async (params: {
     return buildBlockedPreviewItem(
       input,
       MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED,
-      diagnostic || getErrorMessage(error),
+      diagnostic || FALLBACK_BLOCKING_MESSAGE,
     )
   }
 }

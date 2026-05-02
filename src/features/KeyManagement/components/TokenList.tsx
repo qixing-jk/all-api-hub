@@ -19,7 +19,10 @@ import { cn } from "~/lib/utils"
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import type { AccountToken, DisplaySiteData } from "~/types"
-import type { ManagedSiteTokenBatchExportExecutionResult } from "~/types/managedSiteTokenBatchExport"
+import type {
+  ManagedSiteTokenBatchExportExecutionResult,
+  ManagedSiteTokenBatchExportItemInput,
+} from "~/types/managedSiteTokenBatchExport"
 import { createTab } from "~/utils/browser/browserApi"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
@@ -274,6 +277,9 @@ export function TokenList(props: TokenListProps) {
     account: DisplaySiteData
   } | null>(null)
   const [batchExportOpen, setBatchExportOpen] = useState(false)
+  const [batchExportItems, setBatchExportItems] = useState<
+    ManagedSiteTokenBatchExportItemInput[]
+  >([])
   const [selectedTokenIds, setSelectedTokenIds] = useState<Set<string>>(
     () => new Set(),
   )
@@ -460,13 +466,23 @@ export function TokenList(props: TokenListProps) {
     setSelectedTokenIds(new Set())
   }
 
+  const openBatchExportDialog = () => {
+    setBatchExportItems(selectedBatchItems)
+    setBatchExportOpen(true)
+  }
+
+  const closeBatchExportDialog = () => {
+    setBatchExportOpen(false)
+    setBatchExportItems([])
+  }
+
   const handleBatchExportCompleted = (
     result: ManagedSiteTokenBatchExportExecutionResult,
   ) => {
     if (!onManagedSiteImportSuccess) return
 
     const selectedTokenByIdentity = new Map(
-      selectedBatchItems.map(({ token }) => [
+      batchExportItems.map(({ token }) => [
         buildTokenIdentityKey(token.accountId, token.id),
         token,
       ]),
@@ -538,7 +554,7 @@ export function TokenList(props: TokenListProps) {
             size="sm"
             type="button"
             disabled={selectedBatchItems.length === 0}
-            onClick={() => setBatchExportOpen(true)}
+            onClick={openBatchExportDialog}
             leftIcon={<SendToBack className="h-4 w-4" />}
           >
             <span className="inline-flex items-center gap-1">
@@ -733,8 +749,8 @@ export function TokenList(props: TokenListProps) {
 
       <ManagedSiteTokenBatchExportDialog
         isOpen={batchExportOpen}
-        onClose={() => setBatchExportOpen(false)}
-        items={selectedBatchItems}
+        onClose={closeBatchExportDialog}
+        items={batchExportItems}
         onCompleted={handleBatchExportCompleted}
       />
     </>

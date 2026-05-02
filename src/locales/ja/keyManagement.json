@@ -59,7 +59,8 @@
     "loadingDescription": "選択済み {{selectedCount}} 件のキーのプレビューを準備しています。",
     "messages": {
       "completed": "一括インポート完了: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件。",
-      "duplicate": "完全一致するチャネルが既に存在します: {{channel}}"
+      "duplicate": "完全一致するチャネルが既に存在します: {{channel}}",
+      "executionFailed": "一括インポートの実行に失敗しました: {{error}}"
     },
     "preview": {
       "loadFailed": "プレビューの読み込みに失敗しました: {{error}}",

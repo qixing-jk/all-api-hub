@@ -164,6 +164,49 @@ describe("managed-site token batch export", () => {
     expect(service.createChannel).toHaveBeenCalledTimes(1)
   })
 
+  it("reports channel creation failures without marking the item created", async () => {
+    const service = buildService({
+      createChannel: vi.fn().mockResolvedValue({
+        success: false,
+        message: "channel rejected",
+      }),
+    })
+    mockGetManagedSiteService.mockResolvedValue(service)
+    mockGetManagedSiteServiceForType.mockReturnValue(service)
+
+    const {
+      prepareManagedSiteTokenBatchExportPreview,
+      executeManagedSiteTokenBatchExport,
+    } = await import("~/services/managedSites/tokenBatchExport")
+
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [
+        {
+          account: buildDisplaySiteData(),
+          token: buildAccountToken(),
+        },
+      ],
+    })
+
+    const result = await executeManagedSiteTokenBatchExport({
+      preview,
+      selectedItemIds: [preview.items[0].id],
+    })
+
+    expect(service.createChannel).toHaveBeenCalledTimes(1)
+    expect(result).toMatchObject({
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 1,
+    })
+    expect(result.items[0]).toMatchObject({
+      id: preview.items[0].id,
+      success: false,
+      skipped: false,
+      error: "channel rejected",
+    })
+  })
+
   it("skips tokens that exactly match an existing managed-site channel", async () => {
     const existingChannel = {
       id: 99,

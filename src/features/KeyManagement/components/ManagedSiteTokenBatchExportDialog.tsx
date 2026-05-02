@@ -154,6 +154,7 @@ export function ManagedSiteTokenBatchExportDialog({
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [isLoadingPreview, setIsLoadingPreview] = useState(false)
   const [previewError, setPreviewError] = useState<string | null>(null)
+  const [executionError, setExecutionError] = useState<string | null>(null)
   const [isConfirmOpen, setIsConfirmOpen] = useState(false)
   const [isRunning, setIsRunning] = useState(false)
   const [executionResult, setExecutionResult] =
@@ -166,6 +167,7 @@ export function ManagedSiteTokenBatchExportDialog({
       setSelectedIds(new Set())
       setIsLoadingPreview(false)
       setPreviewError(null)
+      setExecutionError(null)
       setIsConfirmOpen(false)
       setIsRunning(false)
       setExecutionResult(null)
@@ -177,6 +179,7 @@ export function ManagedSiteTokenBatchExportDialog({
     setPreview(null)
     setSelectedIds(new Set())
     setPreviewError(null)
+    setExecutionError(null)
     setExecutionResult(null)
     setIsLoadingPreview(true)
 
@@ -232,6 +235,7 @@ export function ManagedSiteTokenBatchExportDialog({
 
   const handleRefreshPreview = () => {
     if (isLoadingPreview || isRunning) return
+    setExecutionError(null)
     setRefreshKey((value) => value + 1)
   }
 
@@ -262,6 +266,7 @@ export function ManagedSiteTokenBatchExportDialog({
 
     setIsConfirmOpen(false)
     setIsRunning(true)
+    setExecutionError(null)
     try {
       const result = await executeManagedSiteTokenBatchExport({
         preview,
@@ -277,7 +282,7 @@ export function ManagedSiteTokenBatchExportDialog({
         }),
       )
     } catch (error) {
-      setPreviewError(getErrorMessage(error))
+      setExecutionError(getErrorMessage(error))
     } finally {
       setIsRunning(false)
     }
@@ -377,10 +382,37 @@ export function ManagedSiteTokenBatchExportDialog({
       >
         <div className="space-y-4">
           {previewError ? (
+            <div className="space-y-2 rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
+              <div>
+                {t("keyManagement:batchManagedSiteExport.preview.loadFailed", {
+                  error: previewError,
+                })}
+              </div>
+              {!preview ? (
+                <Button
+                  type="button"
+                  size="sm"
+                  variant="outline"
+                  leftIcon={<RefreshCcw className="h-4 w-4" />}
+                  disabled={isLoadingPreview || isRunning}
+                  onClick={handleRefreshPreview}
+                >
+                  {t(
+                    "keyManagement:batchManagedSiteExport.actions.refreshPreview",
+                  )}
+                </Button>
+              ) : null}
+            </div>
+          ) : null}
+
+          {executionError ? (
             <div className="rounded-md border border-red-200 bg-red-50 p-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-950/30 dark:text-red-300">
-              {t("keyManagement:batchManagedSiteExport.preview.loadFailed", {
-                error: previewError,
-              })}
+              {t(
+                "keyManagement:batchManagedSiteExport.messages.executionFailed",
+                {
+                  error: executionError,
+                },
+              )}
             </div>
           ) : null}
 
