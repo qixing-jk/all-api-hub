@@ -11,7 +11,7 @@ interface AccountSummaryItem {
 
 interface AccountSummaryBarProps {
   items: AccountSummaryItem[]
-  activeAccountId?: string | null
+  activeAccountIds?: string[]
   onAccountClick?: (accountId: string) => void
 }
 
@@ -20,10 +20,11 @@ interface AccountSummaryBarProps {
  */
 export function AccountSummaryBar({
   items,
-  activeAccountId,
+  activeAccountIds = [],
   onAccountClick,
 }: AccountSummaryBarProps) {
   const { t } = useTranslation("keyManagement")
+  const activeAccountIdSet = new Set(activeAccountIds)
 
   if (!items || items.length === 0) {
     return null
@@ -41,9 +42,7 @@ export function AccountSummaryBar({
               <Badge
                 key={item.accountId}
                 variant={
-                  activeAccountId && activeAccountId === item.accountId
-                    ? "info"
-                    : "secondary"
+                  activeAccountIdSet.has(item.accountId) ? "info" : "secondary"
                 }
                 size="default"
                 {...(onAccountClick

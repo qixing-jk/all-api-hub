@@ -121,8 +121,8 @@ export default function KeyManagement(props: {
     managedSiteTokenStatuses,
     isManagedSiteChannelStatusSupported,
     isManagedSiteStatusRefreshing,
-    allAccountsFilterAccountId,
-    setAllAccountsFilterAccountId,
+    allAccountsFilterAccountIds,
+    setAllAccountsFilterAccountIds,
     loadTokens,
     filteredTokens,
     getVisibleTokenKey,
@@ -183,11 +183,11 @@ export default function KeyManagement(props: {
   }
 
   const handleAccountSummaryClick = (accountId: string) => {
-    if (allAccountsFilterAccountId === accountId) {
-      setAllAccountsFilterAccountId(null)
-    } else {
-      setAllAccountsFilterAccountId(accountId)
-    }
+    setAllAccountsFilterAccountIds((currentAccountIds) =>
+      currentAccountIds.includes(accountId)
+        ? currentAccountIds.filter((id) => id !== accountId)
+        : [...currentAccountIds, accountId],
+    )
   }
 
   const handleOpenAccountManagement = useCallback(() => {
@@ -277,8 +277,11 @@ export default function KeyManagement(props: {
 
   const addTokenPreSelectedAccountId =
     selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
-      ? displayData.some((account) => account.id === allAccountsFilterAccountId)
-        ? allAccountsFilterAccountId
+      ? allAccountsFilterAccountIds.length === 1 &&
+        displayData.some(
+          (account) => account.id === allAccountsFilterAccountIds[0],
+        )
+        ? allAccountsFilterAccountIds[0]
         : null
       : selectedAccount || null
 
@@ -326,7 +329,7 @@ export default function KeyManagement(props: {
         accountSummaryItems.length > 0 && (
           <AccountSummaryBar
             items={accountSummaryItems}
-            activeAccountId={allAccountsFilterAccountId}
+            activeAccountIds={allAccountsFilterAccountIds}
             onAccountClick={handleAccountSummaryClick}
           />
         )}
@@ -369,7 +372,7 @@ export default function KeyManagement(props: {
             ? handleManagedSiteVerificationRetry
             : undefined
         }
-        allAccountsFilterAccountId={allAccountsFilterAccountId}
+        allAccountsFilterAccountIds={allAccountsFilterAccountIds}
       />
 
       <Footer />

@@ -127,8 +127,8 @@ const baseHookResult = {
   accountSummaryItems: [],
   managedSiteTokenStatuses: {},
   isManagedSiteStatusRefreshing: false,
-  allAccountsFilterAccountId: null,
-  setAllAccountsFilterAccountId: vi.fn(),
+  allAccountsFilterAccountIds: [],
+  setAllAccountsFilterAccountIds: vi.fn(),
   loadTokens: vi.fn(),
   filteredTokens: [
     { id: 1, name: "Token 1", accountId: "acc-1", accountName: "Account 1" },

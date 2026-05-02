@@ -150,7 +150,7 @@ describe("TokenList grouped all-accounts UX", () => {
     expect(await screen.findByText("Token B1")).toBeInTheDocument()
   })
 
-  it("forces the filtered account group expanded", async () => {
+  it("forces filtered account groups expanded", async () => {
     const accountA = createAccount({ id: "acc-a", name: "Account A" })
     const accountB = createAccount({ id: "acc-b", name: "Account B" })
 
@@ -161,12 +161,19 @@ describe("TokenList grouped all-accounts UX", () => {
       accountId: accountA.id,
       accountName: accountA.name,
     })
+    const tokenB1 = createToken({
+      id: 1,
+      name: "Token B1",
+      key: "sk-b1",
+      accountId: accountB.id,
+      accountName: accountB.name,
+    })
 
     render(
       <TokenList
         isLoading={false}
-        tokens={[tokenA1] as any}
-        filteredTokens={[tokenA1] as any}
+        tokens={[tokenA1, tokenB1] as any}
+        filteredTokens={[tokenA1, tokenB1] as any}
         visibleKeys={new Set()}
         resolvingVisibleKeys={new Set()}
         getVisibleTokenKey={getVisibleTokenKey as any}
@@ -177,7 +184,7 @@ describe("TokenList grouped all-accounts UX", () => {
         handleAddToken={vi.fn()}
         selectedAccount={KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE}
         displayData={[accountA, accountB] as any}
-        allAccountsFilterAccountId={accountA.id}
+        allAccountsFilterAccountIds={[accountA.id, accountB.id]}
       />,
     )
 
@@ -185,5 +192,6 @@ describe("TokenList grouped all-accounts UX", () => {
       await screen.findByRole("button", { name: /account a/i }),
     ).toBeInTheDocument()
     expect(await screen.findByText("Token A1")).toBeInTheDocument()
+    expect(await screen.findByText("Token B1")).toBeInTheDocument()
   })
 })

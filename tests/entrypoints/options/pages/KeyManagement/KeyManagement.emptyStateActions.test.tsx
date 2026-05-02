@@ -161,8 +161,8 @@ const createHookResult = (
   managedSiteTokenStatuses: {},
   isManagedSiteChannelStatusSupported: true,
   isManagedSiteStatusRefreshing: false,
-  allAccountsFilterAccountId: null,
-  setAllAccountsFilterAccountId: vi.fn(),
+  allAccountsFilterAccountIds: [],
+  setAllAccountsFilterAccountIds: vi.fn(),
   loadTokens: vi.fn(),
   filteredTokens: [],
   getVisibleTokenKey: vi.fn(),
@@ -252,7 +252,7 @@ describe("KeyManagement empty-state actions", () => {
       createHookResult({
         displayData: [account],
         selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
-        allAccountsFilterAccountId: account.id,
+        allAccountsFilterAccountIds: [account.id],
         isAddTokenOpen: true,
       }),
     )
@@ -264,6 +264,35 @@ describe("KeyManagement empty-state actions", () => {
     expect(addTokenDialogPropsSpy.mock.lastCall?.[0]).toMatchObject({
       isOpen: true,
       preSelectedAccountId: account.id,
+    })
+  })
+
+  it("does not preselect an account in the add-token dialog when multiple accounts are filtered", async () => {
+    const accountA = createAccount({
+      id: "acc-1",
+      name: "Account 1",
+    })
+    const accountB = createAccount({
+      id: "acc-2",
+      name: "Account 2",
+    })
+
+    useKeyManagementMock.mockReturnValue(
+      createHookResult({
+        displayData: [accountA, accountB],
+        selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+        allAccountsFilterAccountIds: [accountA.id, accountB.id],
+        isAddTokenOpen: true,
+      }),
+    )
+
+    render(<KeyManagement />)
+
+    await waitFor(() => expect(addTokenDialogPropsSpy).toHaveBeenCalled())
+
+    expect(addTokenDialogPropsSpy.mock.lastCall?.[0]).toMatchObject({
+      isOpen: true,
+      preSelectedAccountId: null,
     })
   })
 })

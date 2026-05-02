@@ -117,9 +117,8 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   } = useUserPreferencesContext()
   const [selectedAccount, setSelectedAccount] = useState<string>("")
   const [searchTerm, setSearchTerm] = useState("")
-  const [allAccountsFilterAccountId, setAllAccountsFilterAccountId] = useState<
-    string | null
-  >(null)
+  const [allAccountsFilterAccountIds, setAllAccountsFilterAccountIds] =
+    useState<string[]>([])
   const [tokenInventories, setTokenInventories] = useState<
     Record<string, TokenInventoryState>
   >({})
@@ -677,19 +676,19 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
   useEffect(() => {
     if (selectedAccount !== KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE) {
-      if (allAccountsFilterAccountId !== null) {
-        setAllAccountsFilterAccountId(null)
+      if (allAccountsFilterAccountIds.length > 0) {
+        setAllAccountsFilterAccountIds([])
       }
       return
     }
 
-    if (
-      allAccountsFilterAccountId &&
-      !accountById.get(allAccountsFilterAccountId)
-    ) {
-      setAllAccountsFilterAccountId(null)
+    const nextAccountIds = allAccountsFilterAccountIds.filter((accountId) =>
+      accountById.get(accountId),
+    )
+    if (nextAccountIds.length !== allAccountsFilterAccountIds.length) {
+      setAllAccountsFilterAccountIds(nextAccountIds)
     }
-  }, [accountById, allAccountsFilterAccountId, selectedAccount])
+  }, [accountById, allAccountsFilterAccountIds, selectedAccount])
 
   useEffect(() => {
     if (routeParams?.accountId && enabledDisplayData.length > 0) {
@@ -723,17 +722,20 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     if (!selectedAccount) return []
 
     if (isAllAccountsMode) {
-      const scopedTokens = allAccountsFilterAccountId
-        ? allTokens.filter(
-            (token) => token.accountId === allAccountsFilterAccountId,
-          )
-        : allTokens
+      if (allAccountsFilterAccountIds.length === 0) {
+        return allTokens
+      }
+
+      const selectedAccountIds = new Set(allAccountsFilterAccountIds)
+      const scopedTokens = allTokens.filter((token) =>
+        selectedAccountIds.has(token.accountId),
+      )
       return scopedTokens
     }
 
     return tokenInventories[selectedAccount]?.tokens ?? []
   }, [
-    allAccountsFilterAccountId,
+    allAccountsFilterAccountIds,
     allTokens,
     isAllAccountsMode,
     selectedAccount,
@@ -1128,8 +1130,8 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     managedSiteTokenStatuses,
     isManagedSiteChannelStatusSupported,
     isManagedSiteStatusRefreshing,
-    allAccountsFilterAccountId,
-    setAllAccountsFilterAccountId,
+    allAccountsFilterAccountIds,
+    setAllAccountsFilterAccountIds,
     loadTokens,
     filteredTokens,
     getVisibleTokenKey,

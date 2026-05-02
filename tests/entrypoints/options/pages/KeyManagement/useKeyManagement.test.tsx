@@ -526,11 +526,21 @@ describe("useKeyManagement enabled account filtering", () => {
     ])
 
     act(() => {
-      result.current.setAllAccountsFilterAccountId(accountA.id)
+      result.current.setAllAccountsFilterAccountIds([accountA.id])
     })
 
     await waitFor(() => expect(result.current.tokens).toHaveLength(1))
     expect(result.current.tokens[0]?.accountId).toBe(accountA.id)
+
+    act(() => {
+      result.current.setAllAccountsFilterAccountIds([accountA.id, accountB.id])
+    })
+
+    await waitFor(() => expect(result.current.tokens).toHaveLength(2))
+    expect(result.current.tokens.map((token) => token.accountId)).toEqual([
+      accountA.id,
+      accountB.id,
+    ])
 
     expect(result.current.accountSummaryItems).toEqual([
       {
@@ -1537,11 +1547,11 @@ describe("useKeyManagement enabled account filtering", () => {
     await waitFor(() => expect(result.current.tokens).toHaveLength(1))
 
     act(() => {
-      result.current.setAllAccountsFilterAccountId(account.id)
+      result.current.setAllAccountsFilterAccountIds([account.id])
     })
 
     await waitFor(() =>
-      expect(result.current.allAccountsFilterAccountId).toBe(account.id),
+      expect(result.current.allAccountsFilterAccountIds).toEqual([account.id]),
     )
 
     act(() => {
@@ -1549,7 +1559,7 @@ describe("useKeyManagement enabled account filtering", () => {
     })
 
     await waitFor(() =>
-      expect(result.current.allAccountsFilterAccountId).toBeNull(),
+      expect(result.current.allAccountsFilterAccountIds).toEqual([]),
     )
   })
 
@@ -1586,11 +1596,14 @@ describe("useKeyManagement enabled account filtering", () => {
     )
 
     act(() => {
-      result.current.setAllAccountsFilterAccountId(accountA.id)
+      result.current.setAllAccountsFilterAccountIds([accountA.id, accountB.id])
     })
 
     await waitFor(() =>
-      expect(result.current.allAccountsFilterAccountId).toBe(accountA.id),
+      expect(result.current.allAccountsFilterAccountIds).toEqual([
+        accountA.id,
+        accountB.id,
+      ]),
     )
 
     mockedUseAccountData.mockReturnValue({
@@ -1599,7 +1612,7 @@ describe("useKeyManagement enabled account filtering", () => {
     rerender()
 
     await waitFor(() =>
-      expect(result.current.allAccountsFilterAccountId).toBeNull(),
+      expect(result.current.allAccountsFilterAccountIds).toEqual([accountB.id]),
     )
     expect(result.current.selectedAccount).toBe(
       KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,

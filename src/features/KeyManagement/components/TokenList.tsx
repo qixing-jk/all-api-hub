@@ -63,7 +63,7 @@ interface TokenListProps {
     token: AccountToken,
     managedSiteStatus: ManagedSiteTokenChannelStatus,
   ) => void | Promise<void>
-  allAccountsFilterAccountId?: string | null
+  allAccountsFilterAccountIds?: string[]
 }
 
 /**
@@ -244,7 +244,7 @@ function TokenEmptyState({
  * @param props.managedSiteTokenStatuses Optional managed-site channel status by token identity.
  * @param props.onManagedSiteImportSuccess Optional callback after a managed-site token import succeeds.
  * @param props.onManagedSiteVerificationRetry Optional callback to retry managed-site token verification.
- * @param props.allAccountsFilterAccountId Optional account ID filter applied in all-accounts mode.
+ * @param props.allAccountsFilterAccountIds Optional account ID filters applied in all-accounts mode.
  */
 export function TokenList(props: TokenListProps) {
   const {
@@ -268,7 +268,7 @@ export function TokenList(props: TokenListProps) {
     managedSiteTokenStatuses,
     onManagedSiteImportSuccess,
     onManagedSiteVerificationRetry,
-    allAccountsFilterAccountId,
+    allAccountsFilterAccountIds = [],
   } = props
   const { t } = useTranslation(["keyManagement", "settings"])
   const { managedSiteType } = useUserPreferencesContext()
@@ -313,17 +313,24 @@ export function TokenList(props: TokenListProps) {
 
   useEffect(() => {
     if (!isAllAccountsMode) return
-    if (!allAccountsFilterAccountId) return
+    if (allAccountsFilterAccountIds.length === 0) return
 
-    // When the user filters to a single account via AccountSummaryBar, ensure the
-    // corresponding group is expanded so the tokens are immediately visible.
+    // When the user filters via AccountSummaryBar, ensure matching groups are
+    // expanded so the tokens are immediately visible.
     setCollapsedAccountIds((prev) => {
-      if (!prev.has(allAccountsFilterAccountId)) return prev
       const next = new Set(prev)
-      next.delete(allAccountsFilterAccountId)
+      let didChange = false
+
+      for (const accountId of allAccountsFilterAccountIds) {
+        if (!next.has(accountId)) continue
+        next.delete(accountId)
+        didChange = true
+      }
+
+      if (!didChange) return prev
       return next
     })
-  }, [allAccountsFilterAccountId, isAllAccountsMode])
+  }, [allAccountsFilterAccountIds, isAllAccountsMode])
 
   const groupedTokens = useMemo(() => {
     if (!isAllAccountsMode) return null
