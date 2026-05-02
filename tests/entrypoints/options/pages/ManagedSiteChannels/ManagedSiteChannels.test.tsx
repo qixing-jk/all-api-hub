@@ -4,9 +4,11 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelDialogContainer } from "~/components/dialogs/ChannelDialog"
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
+import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   AXON_HUB,
+  CLAUDE_CODE_HUB,
   DONE_HUB,
   NEW_API,
   OCTOPUS,
@@ -302,6 +304,16 @@ describe("ManagedSiteChannels", () => {
               email: "",
               password: "",
             },
+      claudeCodeHub:
+        managedSiteType === CLAUDE_CODE_HUB
+          ? {
+              baseUrl: "https://cch.example",
+              adminToken: "cch-token",
+            }
+          : {
+              baseUrl: "",
+              adminToken: "",
+            },
     }
   }
 
@@ -323,7 +335,9 @@ describe("ManagedSiteChannels", () => {
           ? "veloera"
           : managedSiteType === AXON_HUB
             ? "axonhub"
-            : "newapi")
+            : managedSiteType === CLAUDE_CODE_HUB
+              ? "claudecodehub"
+              : "newapi")
     const preferences = buildPreferences({
       managedSiteType,
       withMigrationTarget: options?.withMigrationTarget,
@@ -1850,6 +1864,124 @@ describe("ManagedSiteChannels", () => {
       within(dialog).getByText("managedSiteChannels:migration.title"),
     ).toBeInTheDocument()
     expect(within(dialog).getByText("Axon Alpha")).toBeInTheDocument()
+  })
+
+  it("offers Claude Code Hub migration entry points while hiding unsupported managed-site actions", async () => {
+    const user = userEvent.setup()
+
+    mockChannels(
+      [
+        {
+          id: 101,
+          name: "Claude Provider",
+          base_url: "https://cch-source.example",
+          key: "sk-********",
+          type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+          models: "claude-3-5-sonnet",
+          status: 1,
+          weight: 1,
+        },
+      ],
+      {
+        managedSiteType: CLAUDE_CODE_HUB,
+        messagesKey: "claudecodehub",
+        withMigrationTarget: true,
+      },
+    )
+
+    render(
+      <>
+        <ManagedSiteChannels />
+        <ChannelDialogContainer />
+      </>,
+    )
+
+    await waitForRowText("Claude Provider")
+
+    expect(
+      screen.getByText("Claude (Anthropic Messages API)"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: /managedSiteChannels:toolbar.enterMigrationMode/,
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "managedSiteChannels:toolbar.syncSelected",
+      }),
+    ).not.toBeInTheDocument()
+
+    const row = screen.getByText("Claude Provider").closest("tr")
+    expect(row).toBeTruthy()
+    await openRowActionsMenu(row!, user)
+
+    expect(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.edit",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.filters",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.openSync",
+      }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.sync",
+      }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.edit",
+      }),
+    )
+    const editDialog = await screen.findByRole("dialog")
+    expect(
+      within(editDialog).queryByRole("button", {
+        name: "channelDialog:actions.loadRealKey",
+      }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      within(editDialog).getByText("common:actions.cancel", {
+        selector: "button",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+    })
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /managedSiteChannels:toolbar.enterMigrationMode/,
+      }),
+    )
+    await user.click(
+      within(row!).getByRole("checkbox", {
+        name: "managedSiteChannels:table.selectRow",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.migrateSelected",
+      }),
+    )
+
+    const migrationDialog = await screen.findByRole("dialog")
+    expect(
+      within(migrationDialog).getByText("managedSiteChannels:migration.title"),
+    ).toBeInTheDocument()
+    expect(
+      within(migrationDialog).getByText("Claude Provider"),
+    ).toBeInTheDocument()
   })
 
   it("keeps refresh and read-only channel viewing available in migration mode", async () => {

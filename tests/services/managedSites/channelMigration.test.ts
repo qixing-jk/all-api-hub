@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
+import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { ChannelType } from "~/constants/managedSite"
 import {
   AXON_HUB,
+  CLAUDE_CODE_HUB,
   DONE_HUB,
   NEW_API,
   OCTOPUS,
@@ -30,6 +32,9 @@ const mockVeloeraGetConfig = vi.fn()
 const mockAxonHubBuildChannelPayload = vi.fn()
 const mockAxonHubCreateChannel = vi.fn()
 const mockAxonHubGetConfig = vi.fn()
+const mockClaudeCodeHubBuildChannelPayload = vi.fn()
+const mockClaudeCodeHubCreateChannel = vi.fn()
+const mockClaudeCodeHubGetConfig = vi.fn()
 
 vi.mock("~/services/managedSites/managedSiteService", () => ({
   getManagedSiteServiceForType: mockGetManagedSiteServiceForType,
@@ -140,6 +145,30 @@ describe("channelMigration", () => {
       success: true,
       message: "ok",
     })
+    mockClaudeCodeHubGetConfig.mockResolvedValue({
+      baseUrl: "https://cch.example.com",
+      token: "cch-token",
+      userId: "admin",
+    })
+    mockClaudeCodeHubBuildChannelPayload.mockImplementation((draft: any) => ({
+      mode: "single",
+      channel: {
+        name: draft.name,
+        type: draft.type,
+        key: draft.key,
+        base_url: draft.base_url,
+        models: draft.models.join(","),
+        groups: draft.groups,
+        group: draft.groups[0],
+        priority: draft.priority,
+        weight: draft.weight,
+        status: draft.status,
+      },
+    }))
+    mockClaudeCodeHubCreateChannel.mockResolvedValue({
+      success: true,
+      message: "ok",
+    })
     mockGetManagedSiteServiceForType.mockImplementation((siteType: string) => {
       if (siteType === DONE_HUB) {
         return {
@@ -173,6 +202,14 @@ describe("channelMigration", () => {
           getConfig: mockAxonHubGetConfig,
           buildChannelPayload: mockAxonHubBuildChannelPayload,
           createChannel: mockAxonHubCreateChannel,
+        }
+      }
+
+      if (siteType === CLAUDE_CODE_HUB) {
+        return {
+          getConfig: mockClaudeCodeHubGetConfig,
+          buildChannelPayload: mockClaudeCodeHubBuildChannelPayload,
+          createChannel: mockClaudeCodeHubCreateChannel,
         }
       }
 
@@ -525,6 +562,59 @@ describe("channelMigration", () => {
     )
   })
 
+  it("maps Claude Code Hub source providers to shared channel types when real key material is available", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences({
+        claudeCodeHub: {
+          baseUrl: "https://cch.example.com",
+          adminToken: "cch-token",
+        },
+      }),
+      sourceSiteType: CLAUDE_CODE_HUB,
+      targetSiteType: DONE_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 22_51,
+          name: "Codex Provider",
+          type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX,
+          key: "sk-********",
+          base_url: " https://cch-upstream.example.com/v1 ",
+          models: "gpt-4o,gpt-4.1",
+          group: "paid",
+          priority: 7,
+          weight: 3,
+          status: 1,
+          _claudeCodeHubData: {
+            key: "  cch-real-key  ",
+          },
+        } as Partial<ManagedSiteChannel>),
+      ],
+    })
+
+    expect(preview.readyCount).toBe(1)
+    expect(preview.items[0]).toMatchObject({
+      status: "ready",
+      draft: {
+        name: "Codex Provider",
+        type: ChannelType.OpenAI,
+        key: "cch-real-key",
+        base_url: "https://cch-upstream.example.com/v1",
+        models: ["gpt-4o", "gpt-4.1"],
+        groups: ["paid"],
+        priority: 7,
+        weight: 3,
+        status: 1,
+      },
+    })
+    expect(preview.items[0].warningCodes).toContain(
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_REMAPS_CHANNEL_TYPE,
+    )
+  })
+
   it("maps New API source channels to AxonHub string channel types and target-safe fields", async () => {
     const { prepareManagedSiteChannelMigrationPreview } = await import(
       "~/services/managedSites/channelMigration"
@@ -649,6 +739,93 @@ describe("channelMigration", () => {
     )
   })
 
+  it("maps New API source channels to Claude Code Hub provider types and provider-safe fields", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences({
+        claudeCodeHub: {
+          baseUrl: "https://cch.example.com",
+          adminToken: "cch-token",
+        },
+      }),
+      sourceSiteType: NEW_API,
+      targetSiteType: CLAUDE_CODE_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 22_71,
+          type: ChannelType.Anthropic,
+          key: "  source-key  ",
+          base_url: " https://source.example.com/v1 ",
+          models: "claude-3-5-sonnet",
+          group: "default,vip",
+          priority: 9,
+          weight: 4,
+          status: 3,
+        }),
+      ],
+    })
+
+    expect(preview.readyCount).toBe(1)
+    expect(preview.items[0].draft).toMatchObject({
+      type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+      key: "source-key",
+      base_url: "https://source.example.com/v1",
+      models: ["claude-3-5-sonnet"],
+      groups: ["default"],
+      priority: 9,
+      weight: 4,
+      status: 2,
+    })
+    expect(preview.items[0].warningCodes).toEqual(
+      expect.arrayContaining([
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_REMAPS_CHANNEL_TYPE,
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_SIMPLIFIES_STATUS,
+      ]),
+    )
+  })
+
+  it("falls back unmapped shared channel types to Claude Code Hub OpenAI-compatible and warns", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences({
+        claudeCodeHub: {
+          baseUrl: "https://cch.example.com",
+          adminToken: "cch-token",
+        },
+      }),
+      sourceSiteType: NEW_API,
+      targetSiteType: CLAUDE_CODE_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 22_72,
+          type: ChannelType.Midjourney,
+          key: "source-key",
+          weight: 0,
+        }),
+      ],
+    })
+
+    expect(preview.readyCount).toBe(1)
+    expect(preview.items[0].draft).toMatchObject({
+      type: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+      groups: ["default"],
+      weight: 1,
+    })
+    expect(preview.items[0].warningCodes).toEqual(
+      expect.arrayContaining([
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_REMAPS_CHANNEL_TYPE,
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_WEIGHT,
+      ]),
+    )
+  })
+
   it("blocks only AxonHub source rows without usable key material", async () => {
     const { prepareManagedSiteChannelMigrationPreview } = await import(
       "~/services/managedSites/channelMigration"
@@ -692,6 +869,60 @@ describe("channelMigration", () => {
     })
     expect(preview.items[1]).toMatchObject({
       channelId: 22_9,
+      status: "blocked",
+      blockingReasonCode:
+        MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
+    })
+  })
+
+  it("blocks only Claude Code Hub source providers without usable key material", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences({
+        claudeCodeHub: {
+          baseUrl: "https://cch.example.com",
+          adminToken: "cch-token",
+        },
+      }),
+      sourceSiteType: CLAUDE_CODE_HUB,
+      targetSiteType: DONE_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 22_91,
+          name: "Ready",
+          type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+          key: "",
+          _claudeCodeHubData: {
+            key: "cch-real-key",
+          },
+        } as Partial<ManagedSiteChannel>),
+        buildManagedSiteChannel({
+          id: 22_92,
+          name: "Masked",
+          type: CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI,
+          key: "sk-********",
+          _claudeCodeHubData: {
+            maskedKey: "sk-********",
+          },
+        } as Partial<ManagedSiteChannel>),
+      ],
+    })
+
+    expect(preview.readyCount).toBe(1)
+    expect(preview.blockedCount).toBe(1)
+    expect(preview.items[0]).toMatchObject({
+      channelId: 22_91,
+      status: "ready",
+      draft: {
+        type: ChannelType.Anthropic,
+        key: "cch-real-key",
+      },
+    })
+    expect(preview.items[1]).toMatchObject({
+      channelId: 22_92,
       status: "blocked",
       blockingReasonCode:
         MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES.SOURCE_KEY_MISSING,
@@ -964,6 +1195,109 @@ describe("channelMigration", () => {
         },
         {
           channelId: 62,
+          success: true,
+          skipped: false,
+        },
+      ],
+    })
+  })
+
+  it("creates Claude Code Hub targets through the managed-site service and keeps failures per row", async () => {
+    const { executeManagedSiteChannelMigration } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    mockClaudeCodeHubCreateChannel
+      .mockResolvedValueOnce({
+        success: false,
+        message: "Claude Code Hub rejected provider",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        message: "ok",
+      })
+
+    const result = await executeManagedSiteChannelMigration({
+      preview: {
+        sourceSiteType: NEW_API,
+        targetSiteType: CLAUDE_CODE_HUB,
+        generalWarningCodes: [],
+        totalCount: 2,
+        readyCount: 2,
+        blockedCount: 0,
+        items: [
+          {
+            channelId: 71,
+            channelName: "Rejected",
+            sourceChannel: buildManagedSiteChannel({
+              id: 71,
+              name: "Rejected",
+            }),
+            draft: {
+              name: "Rejected",
+              type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+              key: "rejected-key",
+              base_url: "https://source.example.com",
+              models: ["claude-3-5-sonnet"],
+              groups: ["default"],
+              priority: 1,
+              weight: 2,
+              status: 1,
+            },
+            status: "ready",
+            warningCodes: [],
+          },
+          {
+            channelId: 72,
+            channelName: "Ready",
+            sourceChannel: buildManagedSiteChannel({ id: 72, name: "Ready" }),
+            draft: {
+              name: "Ready",
+              type: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+              key: "ready-key",
+              base_url: "https://source.example.com",
+              models: ["gpt-4o"],
+              groups: ["default"],
+              priority: 0,
+              weight: 1,
+              status: 1,
+            },
+            status: "ready",
+            warningCodes: [],
+          },
+        ],
+      },
+    })
+
+    expect(mockClaudeCodeHubBuildChannelPayload).toHaveBeenCalledTimes(2)
+    expect(mockClaudeCodeHubCreateChannel).toHaveBeenCalledTimes(2)
+    expect(mockClaudeCodeHubCreateChannel).toHaveBeenNthCalledWith(
+      1,
+      "https://cch.example.com",
+      "cch-token",
+      "admin",
+      expect.objectContaining({
+        channel: expect.objectContaining({
+          type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+          key: "rejected-key",
+          models: "claude-3-5-sonnet",
+        }),
+      }),
+    )
+    expect(result).toMatchObject({
+      attemptedCount: 2,
+      createdCount: 1,
+      failedCount: 1,
+      skippedCount: 0,
+      items: [
+        {
+          channelId: 71,
+          success: false,
+          skipped: false,
+          error: "Claude Code Hub rejected provider",
+        },
+        {
+          channelId: 72,
           success: true,
           skipped: false,
         },

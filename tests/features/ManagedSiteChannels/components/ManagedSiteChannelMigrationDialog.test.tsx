@@ -2,7 +2,13 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
-import { AXON_HUB, NEW_API, OCTOPUS } from "~/constants/siteType"
+import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
+import {
+  AXON_HUB,
+  CLAUDE_CODE_HUB,
+  NEW_API,
+  OCTOPUS,
+} from "~/constants/siteType"
 import { ManagedSiteChannelMigrationDialog } from "~/features/ManagedSiteChannels/components/ManagedSiteChannelMigrationDialog"
 import {
   executeManagedSiteChannelMigration,
@@ -380,6 +386,47 @@ describe("ManagedSiteChannelMigrationDialog", () => {
       .closest("section")
     expect(missingTypeSection).toBeTruthy()
     expect(within(missingTypeSection!).getByText("—")).toBeInTheDocument()
+  })
+
+  it("renders Claude Code Hub string provider type labels and unknown type fallbacks", async () => {
+    mockedPreparePreview.mockResolvedValueOnce({
+      ...previewPayload,
+      targetSiteType: CLAUDE_CODE_HUB,
+      items: [
+        {
+          ...previewPayload.items[0],
+          draft: {
+            ...previewPayload.items[0].draft,
+            type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+          },
+        },
+        {
+          ...previewPayload.items[1],
+          draft: {
+            ...previewPayload.items[1].draft,
+            type: "future-provider",
+          },
+        },
+      ],
+    })
+
+    render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={{} as any}
+        sourceSiteType={NEW_API}
+        availableTargets={
+          [{ siteType: CLAUDE_CODE_HUB, label: "Claude Code Hub" }] as any
+        }
+      />,
+    )
+
+    expect(
+      await screen.findByText("Claude (Anthropic Messages API)"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("future-provider")).toBeInTheDocument()
   })
 
   it("shows preview errors and allows refreshing the preview", async () => {

@@ -328,13 +328,13 @@ export function getManagedSiteTargetOptions(
   },
 ): ManagedSiteTargetOption[] {
   const excluded = new Set(options?.excludeSiteTypes ?? [])
-  // Claude Code Hub remains excluded until it has a migration adapter.
   const siteTypes: ManagedSiteType[] = [
     NEW_API,
     VELOERA,
     DONE_HUB,
     OCTOPUS,
     AXON_HUB,
+    CLAUDE_CODE_HUB,
   ]
 
   return siteTypes

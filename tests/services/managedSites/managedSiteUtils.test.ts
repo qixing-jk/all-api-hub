@@ -182,6 +182,10 @@ describe("managedSite utils", () => {
         email: "admin@example.com",
         password: "secret",
       },
+      claudeCodeHub: {
+        baseUrl: "https://cch.example.com",
+        adminToken: "cch-token",
+      },
     }
 
     const options = getManagedSiteTargetOptions(prefs as any, {
@@ -192,6 +196,7 @@ describe("managedSite utils", () => {
       NEW_API,
       OCTOPUS,
       AXON_HUB,
+      CLAUDE_CODE_HUB,
     ])
   })
 
@@ -235,11 +240,38 @@ describe("managedSite utils", () => {
     expect(getManagedSiteTargetOptions(prefs as any)).toEqual([])
   })
 
-  it("does not offer Claude Code Hub as a managed-site migration target", () => {
+  it("offers complete Claude Code Hub config as a managed-site migration target and respects exclusions", () => {
     const prefs = {
       claudeCodeHub: {
         baseUrl: "https://cch.example.com",
         adminToken: "admin-token",
+      },
+    }
+
+    expect(getManagedSiteTargetOptions(prefs as any)).toEqual([
+      expect.objectContaining({
+        siteType: CLAUDE_CODE_HUB,
+        labelKey: "settings:managedSite.claudeCodeHub",
+        messagesKey: "claudecodehub",
+        config: {
+          baseUrl: "https://cch.example.com",
+          adminToken: "admin-token",
+          userId: "admin",
+        },
+      }),
+    ])
+    expect(
+      getManagedSiteTargetOptions(prefs as any, {
+        excludeSiteTypes: [CLAUDE_CODE_HUB],
+      }),
+    ).toEqual([])
+  })
+
+  it("does not offer incomplete Claude Code Hub config as a managed-site migration target", () => {
+    const prefs = {
+      claudeCodeHub: {
+        baseUrl: "https://cch.example.com",
+        adminToken: "",
       },
     }
 

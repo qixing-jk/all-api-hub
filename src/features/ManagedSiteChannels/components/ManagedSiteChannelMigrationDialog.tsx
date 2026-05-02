@@ -17,9 +17,10 @@ import {
   SelectValue,
 } from "~/components/ui"
 import { AxonHubChannelTypeNames } from "~/constants/axonHub"
+import { ClaudeCodeHubProviderTypeNames } from "~/constants/claudeCodeHub"
 import { ChannelTypeNames, type ChannelType } from "~/constants/managedSite"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
-import { AXON_HUB, OCTOPUS } from "~/constants/siteType"
+import { AXON_HUB, CLAUDE_CODE_HUB, OCTOPUS } from "~/constants/siteType"
 import {
   executeManagedSiteChannelMigration,
   prepareManagedSiteChannelMigrationPreview,
@@ -176,6 +177,14 @@ const getChannelTypeText = (
     return (
       AxonHubChannelTypeNames[type as keyof typeof AxonHubChannelTypeNames] ??
       type
+    )
+  }
+
+  if (siteType === CLAUDE_CODE_HUB && typeof type === "string") {
+    return (
+      ClaudeCodeHubProviderTypeNames[
+        type as keyof typeof ClaudeCodeHubProviderTypeNames
+      ] ?? type
     )
   }
 

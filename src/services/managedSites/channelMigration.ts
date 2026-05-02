@@ -1,7 +1,9 @@
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
+import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import {
   AXON_HUB,
+  CLAUDE_CODE_HUB,
   NEW_API,
   OCTOPUS,
   type ManagedSiteType,
@@ -119,6 +121,48 @@ const SHARED_TO_AXON_HUB_CHANNEL_TYPE: Partial<Record<ChannelType, string>> = {
   [ChannelType.Ollama]: AXON_HUB_CHANNEL_TYPE.OLLAMA,
 }
 
+const CLAUDE_CODE_HUB_TO_SHARED_CHANNEL_TYPE: Partial<
+  Record<string, ChannelType>
+> = {
+  [CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE]: ChannelType.OpenAI,
+  [CLAUDE_CODE_HUB_PROVIDER_TYPE.CODEX]: ChannelType.OpenAI,
+  [CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE]: ChannelType.Anthropic,
+  [CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI]: ChannelType.Gemini,
+}
+
+const SHARED_TO_CLAUDE_CODE_HUB_PROVIDER_TYPE: Partial<
+  Record<ChannelType, string>
+> = {
+  [ChannelType.Unknown]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+  [ChannelType.OpenAI]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+  [ChannelType.Azure]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+  [ChannelType.OpenAIMax]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+  [ChannelType.OhMyGPT]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+  [ChannelType.Custom]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+  [ChannelType.AILS]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+  [ChannelType.AIProxy]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+  [ChannelType.API2GPT]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+  [ChannelType.AIGC2D]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+  [ChannelType.Anthropic]: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,
+  [ChannelType.OpenRouter]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+  [ChannelType.Gemini]: CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI,
+  [ChannelType.VertexAi]: CLAUDE_CODE_HUB_PROVIDER_TYPE.GEMINI,
+  [ChannelType.SiliconFlow]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+  [ChannelType.DeepSeek]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+  [ChannelType.VolcEngine]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+  [ChannelType.Xai]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+  [ChannelType.Ollama]: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
+}
+
+const getSafeClaudeCodeHubWeight = (weight?: number) => {
+  const numericWeight = Number(weight ?? 1)
+  if (!Number.isFinite(numericWeight)) {
+    return 1
+  }
+
+  return Math.max(1, Math.trunc(numericWeight))
+}
+
 const mapWithConcurrency = async <TItem, TResult>(
   items: TItem[],
   concurrency: number,
@@ -161,7 +205,10 @@ const getSharedChannelType = (
       ? channel.type
       : sourceSiteType === AXON_HUB
         ? AXON_HUB_TO_SHARED_CHANNEL_TYPE[channel.type] ?? ChannelType.OpenAI
-        : ChannelType.OpenAI
+        : sourceSiteType === CLAUDE_CODE_HUB
+          ? CLAUDE_CODE_HUB_TO_SHARED_CHANNEL_TYPE[channel.type] ??
+            ChannelType.OpenAI
+          : ChannelType.OpenAI
 
   if (sourceSiteType === OCTOPUS) {
     return mapOctopusOutboundTypeToChannelType(numericChannelType)
@@ -187,6 +234,16 @@ const getTargetChannelType = (
     return (
       SHARED_TO_AXON_HUB_CHANNEL_TYPE[sharedType] ??
       AXON_HUB_CHANNEL_TYPE.OPENAI
+    )
+  }
+
+  if (targetSiteType === CLAUDE_CODE_HUB) {
+    // Claude Code Hub uses string provider types. Source types that cannot be
+    // represented exactly fall back to OpenAI-compatible and receive a preview
+    // remap warning before the create payload is built.
+    return (
+      SHARED_TO_CLAUDE_CODE_HUB_PROVIDER_TYPE[sharedType] ??
+      CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE
     )
   }
 
@@ -233,7 +290,9 @@ const collectItemWarningCodes = (params: {
       sourceSiteType === OCTOPUS ||
       targetSiteType === OCTOPUS ||
       targetSiteType === AXON_HUB ||
-      (sourceSiteType === AXON_HUB && typeof channel.type === "string")
+      targetSiteType === CLAUDE_CODE_HUB ||
+      ((sourceSiteType === AXON_HUB || sourceSiteType === CLAUDE_CODE_HUB) &&
+        typeof channel.type === "string")
     ) {
       warnings.add(
         MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_REMAPS_CHANNEL_TYPE,
@@ -297,6 +356,30 @@ const collectItemWarningCodes = (params: {
     }
   }
 
+  if (targetSiteType === CLAUDE_CODE_HUB) {
+    const sourceGroups = parseDelimitedValues(channel.group)
+    const emittedGroups =
+      sourceGroups.length > 0 ? [sourceGroups[0]] : ["default"]
+    if (!areStringArraysEqual(sourceGroups, emittedGroups)) {
+      warnings.add(
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
+      )
+    }
+
+    const sourceWeight = channel.weight ?? DEFAULT_CHANNEL_FIELDS.weight
+    if (getSafeClaudeCodeHubWeight(sourceWeight) !== sourceWeight) {
+      warnings.add(
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_WEIGHT,
+      )
+    }
+
+    if (![1, 2].includes(channel.status ?? DEFAULT_CHANNEL_FIELDS.status)) {
+      warnings.add(
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_SIMPLIFIES_STATUS,
+      )
+    }
+  }
+
   return Array.from(warnings)
 }
 
@@ -310,7 +393,9 @@ const buildDraftFromSourceChannel = (params: {
   const groups = parseDelimitedValues(channel.group)
   const models = parseDelimitedValues(channel.models)
   const targetStatus =
-    targetSiteType === OCTOPUS || targetSiteType === AXON_HUB
+    targetSiteType === OCTOPUS ||
+    targetSiteType === AXON_HUB ||
+    targetSiteType === CLAUDE_CODE_HUB
       ? channel.status === 1
         ? 1
         : 2
@@ -328,9 +413,11 @@ const buildDraftFromSourceChannel = (params: {
     groups:
       targetSiteType === OCTOPUS || targetSiteType === AXON_HUB
         ? [...DEFAULT_CHANNEL_FIELDS.groups]
-        : groups.length > 0
-          ? groups
-          : [...DEFAULT_CHANNEL_FIELDS.groups],
+        : targetSiteType === CLAUDE_CODE_HUB
+          ? [groups[0] ?? "default"]
+          : groups.length > 0
+            ? groups
+            : [...DEFAULT_CHANNEL_FIELDS.groups],
     priority:
       targetSiteType === OCTOPUS || targetSiteType === AXON_HUB
         ? DEFAULT_CHANNEL_FIELDS.priority
@@ -338,7 +425,9 @@ const buildDraftFromSourceChannel = (params: {
     weight:
       targetSiteType === OCTOPUS
         ? DEFAULT_CHANNEL_FIELDS.weight
-        : channel.weight ?? DEFAULT_CHANNEL_FIELDS.weight,
+        : targetSiteType === CLAUDE_CODE_HUB
+          ? getSafeClaudeCodeHubWeight(channel.weight)
+          : channel.weight ?? DEFAULT_CHANNEL_FIELDS.weight,
     status: targetStatus,
   }
 }
@@ -354,6 +443,24 @@ const resolveSourceChannelKey = async (params: {
   const existingKey = channel.key?.trim() ?? ""
   if (!needsManagedSiteChannelKeyResolution(existingKey)) {
     return { key: existingKey }
+  }
+
+  if (sourceSiteType === CLAUDE_CODE_HUB) {
+    const rawProviderKey = (
+      channel as ManagedSiteChannel & {
+        _claudeCodeHubData?: { key?: string | null }
+      }
+    )._claudeCodeHubData?.key?.trim()
+
+    // Claude Code Hub list data may include only masked display keys. A raw
+    // provider key is safe to reuse only when upstream returned real key
+    // material on the authenticated provider object.
+    if (
+      rawProviderKey &&
+      !needsManagedSiteChannelKeyResolution(rawProviderKey)
+    ) {
+      return { key: rawProviderKey }
+    }
   }
 
   if (sourceSiteType === NEW_API) {
