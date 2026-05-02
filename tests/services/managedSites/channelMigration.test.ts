@@ -807,6 +807,7 @@ describe("channelMigration", () => {
           id: 22_72,
           type: ChannelType.Midjourney,
           key: "source-key",
+          group: "",
           weight: 0,
         }),
       ],
@@ -821,6 +822,7 @@ describe("channelMigration", () => {
     expect(preview.items[0].warningCodes).toEqual(
       expect.arrayContaining([
         MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_REMAPS_CHANNEL_TYPE,
+        MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
         MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_IGNORES_WEIGHT,
       ]),
     )

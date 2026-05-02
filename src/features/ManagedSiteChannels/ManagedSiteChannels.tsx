@@ -1001,7 +1001,7 @@ export default function ManagedSiteChannels({
                 >
                   {t("toolbar.refresh")}
                 </Button>
-                {supportsChannelMigration ? (
+                {supportsChannelMigration && hasMigrationTargets ? (
                   <Button
                     variant={isMigrationMode ? "default" : "outline"}
                     onClick={handleToggleMigrationMode}

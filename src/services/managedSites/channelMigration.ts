@@ -359,7 +359,9 @@ const collectItemWarningCodes = (params: {
   if (targetSiteType === CLAUDE_CODE_HUB) {
     const sourceGroups = parseDelimitedValues(channel.group)
     const emittedGroups =
-      sourceGroups.length > 0 ? [sourceGroups[0]] : ["default"]
+      sourceGroups.length > 0
+        ? [sourceGroups[0]]
+        : [DEFAULT_CHANNEL_FIELDS.groups[0]]
     if (!areStringArraysEqual(sourceGroups, emittedGroups)) {
       warnings.add(
         MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_FORCES_DEFAULT_GROUP,
@@ -414,7 +416,7 @@ const buildDraftFromSourceChannel = (params: {
       targetSiteType === OCTOPUS || targetSiteType === AXON_HUB
         ? [...DEFAULT_CHANNEL_FIELDS.groups]
         : targetSiteType === CLAUDE_CODE_HUB
-          ? [groups[0] ?? "default"]
+          ? [groups[0] ?? DEFAULT_CHANNEL_FIELDS.groups[0]]
           : groups.length > 0
             ? groups
             : [...DEFAULT_CHANNEL_FIELDS.groups],

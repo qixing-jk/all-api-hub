@@ -1742,11 +1742,30 @@ describe("ManagedSiteChannels", () => {
     },
   )
 
-  it("shows the migration entry and explains when no target is configured", async () => {
-    const user = userEvent.setup()
+  it("hides the migration entry when no target is configured", async () => {
     mockChannels(
       [{ id: 1, name: "Alpha", base_url: "https://example.com", key: "k" }],
       { withMigrationTarget: false },
+    )
+
+    render(<ManagedSiteChannels />)
+
+    await waitForRowText("Alpha")
+
+    expect(
+      screen.queryByRole("button", {
+        name: /managedSiteChannels:toolbar.enterMigrationMode/,
+      }),
+    ).not.toBeInTheDocument()
+    expect(toast.error).not.toHaveBeenCalledWith(
+      "managedSiteChannels:migration.alerts.noTargets.description",
+    )
+  })
+
+  it("shows the migration entry when a target is configured", async () => {
+    mockChannels(
+      [{ id: 1, name: "Alpha", base_url: "https://example.com", key: "k" }],
+      { withMigrationTarget: true },
     )
 
     render(<ManagedSiteChannels />)
@@ -1760,12 +1779,6 @@ describe("ManagedSiteChannels", () => {
     expect(
       within(entry).getByText("managedSiteChannels:migration.betaBadge"),
     ).toBeInTheDocument()
-
-    await user.click(entry)
-
-    expect(toast.error).toHaveBeenCalledWith(
-      "managedSiteChannels:migration.alerts.noTargets.description",
-    )
   })
 
   it("offers AxonHub migration entry points while hiding New API-only actions", async () => {
