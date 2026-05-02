@@ -255,8 +255,15 @@ describe("ManagedSiteModelSync components", () => {
       />,
     )
 
-    fireEvent.click(screen.getAllByRole("checkbox")[0])
-    fireEvent.click(screen.getAllByRole("checkbox")[1])
+    const [selectAllCheckbox, firstRowCheckbox] = screen.getAllByRole(
+      "checkbox",
+    ) as HTMLInputElement[]
+
+    expect(selectAllCheckbox).not.toBeChecked()
+    expect(selectAllCheckbox.indeterminate).toBe(true)
+
+    fireEvent.click(selectAllCheckbox)
+    fireEvent.click(firstRowCheckbox)
     fireEvent.click(
       screen.getAllByTitle(
         "managedSiteModelSync:execution.table.syncChannel",

@@ -239,6 +239,12 @@ export function ManagedSiteTokenBatchExportDialog({
   const allExecutableSelected =
     executableItems.length > 0 &&
     selectedExecutableCount === executableItems.length
+  const executableSelectionChecked =
+    selectedExecutableCount === 0
+      ? false
+      : selectedExecutableCount === executableItems.length
+        ? true
+        : "indeterminate"
 
   const selectedExecutionIds = useMemo(
     () => Array.from(selectedIds),
@@ -444,7 +450,7 @@ export function ManagedSiteTokenBatchExportDialog({
             <div className="flex flex-wrap items-center justify-between gap-2 rounded-md border p-3">
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
-                  checked={allExecutableSelected}
+                  checked={executableSelectionChecked}
                   disabled={executableItems.length === 0}
                   aria-label={t(
                     "keyManagement:batchManagedSiteExport.actions.selectAll",

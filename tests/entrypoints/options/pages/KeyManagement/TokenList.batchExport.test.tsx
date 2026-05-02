@@ -249,6 +249,19 @@ describe("TokenList batch export selection", () => {
     ).toBeDisabled()
   })
 
+  it("shows the visible-selection checkbox as mixed when only part of the filtered list is selected", async () => {
+    const user = userEvent.setup()
+    renderTokenList()
+
+    const visibleSelection = await screen.findByRole("checkbox", {
+      name: "keyManagement:batchManagedSiteExport.selection.visible",
+    })
+
+    await user.click(await screen.findByRole("checkbox", { name: "Token 1" }))
+
+    expect(visibleSelection).toHaveAttribute("aria-checked", "mixed")
+  })
+
   it("uses the frozen open-time selection for completion mapping", async () => {
     const user = userEvent.setup()
     const onManagedSiteImportSuccess = vi.fn()

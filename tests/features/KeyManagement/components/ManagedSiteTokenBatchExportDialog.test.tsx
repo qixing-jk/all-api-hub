@@ -61,7 +61,7 @@ vi.mock("~/components/ui", async (importOriginal) => {
       "aria-label": ariaLabel,
       onCheckedChange,
     }: {
-      checked?: boolean
+      checked?: boolean | "indeterminate"
       disabled?: boolean
       "aria-label"?: string
       onCheckedChange?: (checked: boolean) => void
@@ -69,10 +69,10 @@ vi.mock("~/components/ui", async (importOriginal) => {
       <button
         type="button"
         role="checkbox"
-        aria-checked={checked === true}
+        aria-checked={checked === "indeterminate" ? "mixed" : checked === true}
         aria-label={ariaLabel}
         disabled={disabled}
-        onClick={() => onCheckedChange?.(!checked)}
+        onClick={() => onCheckedChange?.(checked !== true)}
       />
     ),
     DestructiveConfirmDialog: ({
@@ -392,6 +392,11 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         name: "Account 1 / Token 2",
       }),
     )
+    expect(
+      screen.getByRole("checkbox", {
+        name: "keyManagement:batchManagedSiteExport.actions.selectAll",
+      }),
+    ).toHaveAttribute("aria-checked", "mixed")
     await user.click(
       screen.getByRole("checkbox", {
         name: "keyManagement:batchManagedSiteExport.actions.selectAll",

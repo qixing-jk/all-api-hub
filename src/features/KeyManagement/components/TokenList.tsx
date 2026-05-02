@@ -383,6 +383,12 @@ export function TokenList(props: TokenListProps) {
   )
   const allFilteredSelected =
     filteredTokens.length > 0 && selectedVisibleCount === filteredTokens.length
+  const visibleSelectionChecked =
+    selectedVisibleCount === 0
+      ? false
+      : selectedVisibleCount === filteredTokens.length
+        ? true
+        : "indeterminate"
   const selectedBatchItems = useMemo(
     () =>
       tokens
@@ -562,7 +568,7 @@ export function TokenList(props: TokenListProps) {
       <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border p-3">
         <label className="flex items-center gap-2 text-sm">
           <Checkbox
-            checked={allFilteredSelected}
+            checked={visibleSelectionChecked}
             disabled={filteredTokens.length === 0}
             onCheckedChange={toggleFilteredSelection}
           />

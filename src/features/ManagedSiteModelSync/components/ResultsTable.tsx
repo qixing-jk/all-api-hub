@@ -4,6 +4,7 @@ import {
   ExclamationCircleIcon,
 } from "@heroicons/react/24/outline"
 import dayjs from "dayjs"
+import { useEffect, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
 import ManagedSiteChannelLinkButton from "~/components/ManagedSiteChannelLinkButton"
@@ -52,12 +53,21 @@ export default function ResultsTable({
   const { t } = useTranslation("managedSiteModelSync")
 
   const allSelected = items.length > 0 && selectedIds.size === items.length
+  const someSelected = selectedIds.size > 0 && !allSelected
+  const selectAllRef = useRef<HTMLInputElement | null>(null)
   const columns = {
     status: visibleColumns?.status ?? true,
     message: visibleColumns?.message ?? true,
     attempts: visibleColumns?.attempts ?? true,
     finishedAt: visibleColumns?.finishedAt ?? true,
   }
+
+  useEffect(() => {
+    const element = selectAllRef.current
+    if (!element) return
+
+    element.indeterminate = someSelected
+  }, [someSelected])
 
   return (
     <Card padding="none">
@@ -67,6 +77,7 @@ export default function ResultsTable({
             <tr>
               <th className="px-4 py-3 text-left">
                 <input
+                  ref={selectAllRef}
                   type="checkbox"
                   checked={allSelected}
                   onChange={(e) => onSelectAll(e.target.checked)}

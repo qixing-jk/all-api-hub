@@ -58,4 +58,29 @@ describe("Checkbox", () => {
       container.querySelector('[data-slot="checkbox-indeterminate-icon"]'),
     ).toBeNull()
   })
+
+  it("updates the icon when an uncontrolled indeterminate checkbox is clicked", async () => {
+    const user = userEvent.setup()
+    const { container } = render(
+      <Checkbox defaultChecked="indeterminate" aria-label="partial default" />,
+    )
+
+    expect(screen.getByRole("checkbox")).toHaveAttribute(
+      "aria-checked",
+      "mixed",
+    )
+    expect(
+      container.querySelector('[data-slot="checkbox-indeterminate-icon"]'),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole("checkbox"))
+
+    expect(screen.getByRole("checkbox")).toBeChecked()
+    expect(
+      container.querySelector('[data-slot="checkbox-checked-icon"]'),
+    ).toBeInTheDocument()
+    expect(
+      container.querySelector('[data-slot="checkbox-indeterminate-icon"]'),
+    ).toBeNull()
+  })
 })
