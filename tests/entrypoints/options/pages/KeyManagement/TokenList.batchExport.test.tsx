@@ -350,6 +350,38 @@ describe("TokenList batch export selection", () => {
     expect(screen.queryByTestId("cc-switch-export-dialog")).toBeNull()
   })
 
+  it("shows grouped filtered counts when a group is partially visible", async () => {
+    const user = userEvent.setup()
+    renderTokenList({
+      selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      displayData: [account] as any,
+      filteredTokens: [token1] as any,
+    })
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.expandAll",
+      }),
+    )
+
+    expect(screen.getByText("keyManagement:showingCount")).toBeInTheDocument()
+  })
+
+  it("opens the CC Switch dialog from the flat token list", async () => {
+    const user = userEvent.setup()
+    renderTokenList()
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "Open CC Switch for Token 1",
+      }),
+    )
+
+    expect(screen.getByTestId("cc-switch-export-dialog")).toHaveTextContent(
+      "CC Switch export for Account 1",
+    )
+  })
+
   it("skips rendering flat-list tokens whose account metadata is missing", async () => {
     const orphanToken = createToken({
       id: 9,

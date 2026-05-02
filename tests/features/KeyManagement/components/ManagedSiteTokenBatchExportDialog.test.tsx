@@ -660,6 +660,89 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     expect(screen.queryByText("config-missing")).toBeNull()
   })
 
+  it("falls back to generic localized text for unknown errors and blocked reasons", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview
+      .mockResolvedValueOnce({
+        ...preview,
+        totalCount: 1,
+        readyCount: 0,
+        blockedCount: 1,
+        items: [
+          {
+            id: "account-1:5",
+            accountId: "account-1",
+            accountName: "Account 1",
+            tokenId: 5,
+            tokenName: "Token 5",
+            status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+            warningCodes: [],
+            blockingReasonCode: "unknown-reason" as any,
+            blockingMessage: "custom detail",
+            draft: null,
+          },
+        ],
+      })
+      .mockResolvedValueOnce(preview)
+    mockExecuteBatchExport.mockResolvedValue({
+      totalSelected: 1,
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 1,
+      skippedCount: 1,
+      items: [
+        {
+          id: "account-1:1",
+          accountName: "Account 1",
+          tokenName: "Token 1",
+          success: false,
+          skipped: false,
+          error: "   ",
+        },
+        {
+          id: "account-1:2",
+          accountName: "Account 1",
+          tokenName: "Token 2",
+          success: false,
+          skipped: true,
+        },
+      ],
+    })
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 5")).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.blockedReasons.inputPreparationFailed: custom detail",
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.refreshPreview",
+      }),
+    )
+
+    await screen.findByText("Account 1 / Token 1")
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      })[1],
+    )
+
+    expect(
+      await screen.findByText(
+        "keyManagement:batchManagedSiteExport.results.channelCreationFailed",
+      ),
+    ).toBeInTheDocument()
+  })
+
   it("renders localized text for every blocked reason code", async () => {
     mockPreparePreview.mockResolvedValue({
       siteType: NEW_API,

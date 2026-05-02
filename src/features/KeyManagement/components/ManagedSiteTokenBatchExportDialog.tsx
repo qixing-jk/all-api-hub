@@ -405,20 +405,18 @@ export function ManagedSiteTokenBatchExportDialog({
                   error: previewError,
                 })}
               </div>
-              {!preview ? (
-                <Button
-                  type="button"
-                  size="sm"
-                  variant="outline"
-                  leftIcon={<RefreshCcw className="h-4 w-4" />}
-                  disabled={isLoadingPreview || isRunning}
-                  onClick={handleRefreshPreview}
-                >
-                  {t(
-                    "keyManagement:batchManagedSiteExport.actions.refreshPreview",
-                  )}
-                </Button>
-              ) : null}
+              <Button
+                type="button"
+                size="sm"
+                variant="outline"
+                leftIcon={<RefreshCcw className="h-4 w-4" />}
+                disabled={isLoadingPreview || isRunning}
+                onClick={handleRefreshPreview}
+              >
+                {t(
+                  "keyManagement:batchManagedSiteExport.actions.refreshPreview",
+                )}
+              </Button>
             </div>
           ) : null}
 
