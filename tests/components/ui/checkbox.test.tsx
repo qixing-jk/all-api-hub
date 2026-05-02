@@ -1,4 +1,5 @@
 import { render, screen } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { describe, expect, it } from "vitest"
 
 import { Checkbox } from "~/components/ui/checkbox"
@@ -30,6 +31,31 @@ describe("Checkbox", () => {
     ).toBeInTheDocument()
     expect(
       container.querySelector('[data-slot="checkbox-checked-icon"]'),
+    ).toBeNull()
+  })
+
+  it("uses defaultChecked and toggles off on click", async () => {
+    const user = userEvent.setup()
+    const { container } = render(
+      <Checkbox defaultChecked aria-label="default item" />,
+    )
+
+    expect(screen.getByRole("checkbox")).toBeChecked()
+    expect(
+      container.querySelector('[data-slot="checkbox-checked-icon"]'),
+    ).toBeInTheDocument()
+    expect(
+      container.querySelector('[data-slot="checkbox-indeterminate-icon"]'),
+    ).toBeNull()
+
+    await user.click(screen.getByRole("checkbox"))
+
+    expect(screen.getByRole("checkbox")).not.toBeChecked()
+    expect(
+      container.querySelector('[data-slot="checkbox-checked-icon"]'),
+    ).toBeNull()
+    expect(
+      container.querySelector('[data-slot="checkbox-indeterminate-icon"]'),
     ).toBeNull()
   })
 })
