@@ -310,27 +310,41 @@ const preparePreviewItem = async (params: {
 const buildPreview = (
   siteType: ManagedSiteService["siteType"],
   items: ManagedSiteTokenBatchExportPreviewItem[],
-): ManagedSiteTokenBatchExportPreview => ({
-  siteType,
-  items,
-  totalCount: items.length,
-  readyCount: items.filter(
-    (item) =>
-      item.status === MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY,
-  ).length,
-  warningCount: items.filter(
-    (item) =>
-      item.status === MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
-  ).length,
-  skippedCount: items.filter(
-    (item) =>
-      item.status === MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
-  ).length,
-  blockedCount: items.filter(
-    (item) =>
-      item.status === MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
-  ).length,
-})
+): ManagedSiteTokenBatchExportPreview => {
+  const counts = items.reduce(
+    (accumulator, item) => {
+      switch (item.status) {
+        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY:
+          accumulator.readyCount += 1
+          break
+        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING:
+          accumulator.warningCount += 1
+          break
+        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED:
+          accumulator.skippedCount += 1
+          break
+        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED:
+          accumulator.blockedCount += 1
+          break
+      }
+
+      return accumulator
+    },
+    {
+      readyCount: 0,
+      warningCount: 0,
+      skippedCount: 0,
+      blockedCount: 0,
+    },
+  )
+
+  return {
+    siteType,
+    items,
+    totalCount: items.length,
+    ...counts,
+  }
+}
 
 /**
  * Builds a non-mutating preview for creating selected account tokens as

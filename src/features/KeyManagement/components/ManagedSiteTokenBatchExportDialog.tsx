@@ -72,7 +72,10 @@ const getWarningText = (t: TFunction, code: string) => {
   }
 }
 
-const getBlockedReasonText = (t: TFunction, code?: string) => {
+const getBlockedReasonText = (
+  t: TFunction,
+  code?: string | null | undefined,
+) => {
   switch (code) {
     case MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.CONFIG_MISSING:
       return t(
@@ -103,11 +106,25 @@ const getBlockedReasonText = (t: TFunction, code?: string) => {
         "keyManagement:batchManagedSiteExport.blockedReasons.modelsRequired",
       )
     case MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED:
-    default:
       return t(
         "keyManagement:batchManagedSiteExport.blockedReasons.inputPreparationFailed",
       )
+    default:
+      return null
   }
+}
+
+const getExecutionErrorText = (t: TFunction, error?: string | null) => {
+  const blockedReasonText = getBlockedReasonText(t, error)
+  if (blockedReasonText) {
+    return blockedReasonText
+  }
+
+  const trimmedError = error?.trim()
+  return (
+    trimmedError ||
+    t("keyManagement:batchManagedSiteExport.results.channelCreationFailed")
+  )
 }
 
 const getStatusBadge = (
@@ -579,7 +596,10 @@ export function ManagedSiteTokenBatchExportDialog({
 
                     {item.blockingReasonCode ? (
                       <div className="rounded-md bg-red-50 p-2 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-300">
-                        {getBlockedReasonText(t, item.blockingReasonCode)}
+                        {getBlockedReasonText(t, item.blockingReasonCode) ??
+                          t(
+                            "keyManagement:batchManagedSiteExport.blockedReasons.inputPreparationFailed",
+                          )}
                         {item.blockingMessage
                           ? `: ${item.blockingMessage}`
                           : ""}
@@ -588,7 +608,7 @@ export function ManagedSiteTokenBatchExportDialog({
 
                     {result?.error ? (
                       <div className="rounded-md bg-red-50 p-2 text-xs text-red-700 dark:bg-red-950/30 dark:text-red-300">
-                        {result.error}
+                        {getExecutionErrorText(t, result.error)}
                       </div>
                     ) : null}
                   </div>

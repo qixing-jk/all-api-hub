@@ -540,4 +540,55 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       }),
     ).toBeEnabled()
   })
+
+  it("maps known execution error codes to user-facing text", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview.mockResolvedValue(preview)
+    mockExecuteBatchExport.mockResolvedValue({
+      totalSelected: 1,
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 1,
+      skippedCount: 1,
+      items: [
+        {
+          id: "account-1:1",
+          accountName: "Account 1",
+          tokenName: "Token 1",
+          success: false,
+          skipped: false,
+          error:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.CONFIG_MISSING,
+        },
+        {
+          id: "account-1:2",
+          accountName: "Account 1",
+          tokenName: "Token 2",
+          success: false,
+          skipped: true,
+        },
+      ],
+    })
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      })[1],
+    )
+
+    expect(
+      await screen.findByText(
+        "keyManagement:batchManagedSiteExport.blockedReasons.configMissing",
+      ),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("config-missing")).toBeNull()
+  })
 })

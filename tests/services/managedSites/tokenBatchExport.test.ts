@@ -450,6 +450,26 @@ describe("managed-site token batch export", () => {
         MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.BACKEND_SEARCH_FAILED,
     },
     {
+      label: "model prefill fetch failed",
+      resolution: buildMatchInspection(),
+      serviceOverrides: {
+        prepareChannelFormData: vi.fn(async (account, token) => ({
+          name: `${account.name} - ${token.name}`,
+          type: 1,
+          key: token.key,
+          base_url: account.baseUrl,
+          models: ["gpt-4o"],
+          groups: ["default"],
+          priority: 0,
+          weight: 0,
+          status: 1,
+          modelPrefillFetchFailed: true,
+        })),
+      },
+      expectedWarning:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.MODEL_PREFILL_FAILED,
+    },
+    {
       label: "exact verification is unavailable",
       resolution: buildMatchInspection({
         url: {
@@ -482,8 +502,10 @@ describe("managed-site token batch export", () => {
     },
   ])(
     "keeps preview items executable with warnings when $label",
-    async ({ resolution, expectedWarning }) => {
-      const service = buildService()
+    async ({ resolution, serviceOverrides, expectedWarning }) => {
+      const service = buildService(
+        serviceOverrides as Partial<ManagedSiteService>,
+      )
       mockGetManagedSiteService.mockResolvedValue(service)
       mockResolveManagedSiteChannelMatch.mockResolvedValue(resolution)
 

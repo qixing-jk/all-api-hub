@@ -69,6 +69,7 @@
       "summary": "預覽：可建立 {{ready}} 個，警告 {{warning}} 個，跳過 {{skipped}} 個，阻擋 {{blocked}} 個，共 {{total}} 個。"
     },
     "results": {
+      "channelCreationFailed": "建立渠道失敗。",
       "status": {
         "failed": "失敗",
         "skipped": "已跳過",

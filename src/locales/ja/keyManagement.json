@@ -69,6 +69,7 @@
       "summary": "プレビュー: 作成可能 {{ready}} 件、警告 {{warning}} 件、スキップ {{skipped}} 件、ブロック {{blocked}} 件、合計 {{total}} 件。"
     },
     "results": {
+      "channelCreationFailed": "チャネルの作成に失敗しました。",
       "status": {
         "failed": "失敗",
         "skipped": "スキップ",

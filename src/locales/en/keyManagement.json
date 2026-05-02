@@ -72,6 +72,7 @@
       "summary": "Preview: {{ready}} ready, {{warning}} warnings, {{skipped}} skipped, {{blocked}} blocked, {{total}} total."
     },
     "results": {
+      "channelCreationFailed": "Channel creation failed.",
       "status": {
         "failed": "Failed",
         "skipped": "Skipped",
