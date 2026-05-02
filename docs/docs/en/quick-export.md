@@ -20,12 +20,12 @@
 
 ## Operating Steps
 
-1.  Open the plugin → **API Key Management**, click the **"Export"** button in any site card.
-2.  Select the target platform: `CherryStudio` / `CC Switch` / `Current Self-hosted Site`.
+1.  Open the plugin → **API Key Management**, click the corresponding export button in any site card; if you need to process multiple API keys at once, you can select items in the API key list first.
+2.  Select the target platform: `CherryStudio` / `CC Switch` / `Current Self-hosted Site`. When multiple API keys are selected, you can use **"Batch Import to Current Self-managed Site"** to enter the preview.
 3.  Complete authorization as prompted:
     -   CherryStudio: The browser will prompt whether to open the desktop client, and will complete automatically after confirmation.
     -   CC Switch: Generates JSON and copies it to the clipboard, simply switch to CC Switch and paste.
-    -   Self-hosted Sites: Calls the corresponding management interface in the backend to import the current site configuration as Provider / Channel.
+    -   Self-hosted Sites: Calls the corresponding management interface in the backend to import the current site configuration as Provider / Channel. When batch importing, the target channel preview for each API key will be displayed first, and channels that already exist precisely will be skipped by default.
 4.  Verify if the channel/provider appears in the target system and test the call.
 
 ## Exported Content
