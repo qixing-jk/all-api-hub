@@ -53,6 +53,7 @@
     "description": "建立到 {{site}} 前，先檢查 {{selectedCount}} 個已選金鑰。",
     "fields": {
       "baseUrl": "Base URL",
+      "editModelsLabel": "編輯 {{name}} 的模型列表",
       "groups": "分組",
       "models": "模型"
     },

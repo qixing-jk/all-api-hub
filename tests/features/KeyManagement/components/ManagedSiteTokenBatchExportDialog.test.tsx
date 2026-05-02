@@ -75,6 +75,28 @@ vi.mock("~/components/ui", async (importOriginal) => {
         onClick={() => onCheckedChange?.(checked !== true)}
       />
     ),
+    CompactMultiSelect: ({
+      selected,
+      onChange,
+      "aria-label": ariaLabel,
+    }: {
+      selected: string[]
+      onChange: (values: string[]) => void
+      "aria-label"?: string
+    }) => (
+      <div>
+        <div data-testid={ariaLabel}>{selected.join(",")}</div>
+        <button
+          type="button"
+          onClick={() => onChange(["gpt-4o-mini", "custom-model"])}
+        >
+          Set editable models
+        </button>
+        <button type="button" onClick={() => onChange([])}>
+          Clear editable models
+        </button>
+      </div>
+    ),
     DestructiveConfirmDialog: ({
       isOpen,
       onClose,
@@ -445,6 +467,146 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         "keyManagement:batchManagedSiteExport.results.summary",
       ),
     ).toBeInTheDocument()
+  })
+
+  it("passes edited models to batch execution", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview.mockResolvedValue(preview)
+    mockExecuteBatchExport.mockResolvedValue({
+      totalSelected: 2,
+      attemptedCount: 2,
+      createdCount: 2,
+      failedCount: 0,
+      skippedCount: 0,
+      items: [
+        {
+          id: "account-1:1",
+          accountName: "Account 1",
+          tokenName: "Token 1",
+          success: true,
+          skipped: false,
+        },
+        {
+          id: "account-1:2",
+          accountName: "Account 1",
+          tokenName: "Token 2",
+          success: true,
+          skipped: false,
+        },
+      ],
+    })
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(screen.getAllByText("Set editable models")[0])
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      })[1],
+    )
+
+    await waitFor(() => {
+      expect(mockExecuteBatchExport).toHaveBeenCalledTimes(1)
+    })
+    const call = mockExecuteBatchExport.mock.calls[0][0]
+    expect(call.preview.items[0].draft.models).toEqual([
+      "gpt-4o-mini",
+      "custom-model",
+    ])
+    expect(call.selectedItemIds).toEqual(["account-1:1", "account-1:2"])
+  })
+
+  it("lets users unblock rows that only lack models", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview.mockResolvedValue({
+      siteType: NEW_API,
+      totalCount: 1,
+      readyCount: 0,
+      warningCount: 0,
+      skippedCount: 0,
+      blockedCount: 1,
+      items: [
+        {
+          id: "account-1:9",
+          accountId: "account-1",
+          accountName: "Account 1",
+          tokenId: 9,
+          tokenName: "Token 9",
+          status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+          warningCodes: [],
+          blockingReasonCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,
+          draft: {
+            name: "Account 1 - Token 9",
+            type: 1,
+            key: "test-key-9",
+            base_url: "https://example.com",
+            models: [],
+            groups: ["default"],
+            priority: 0,
+            weight: 0,
+            status: 1,
+          },
+        },
+      ],
+    })
+    mockExecuteBatchExport.mockResolvedValue({
+      totalSelected: 1,
+      attemptedCount: 1,
+      createdCount: 1,
+      failedCount: 0,
+      skippedCount: 0,
+      items: [
+        {
+          id: "account-1:9",
+          accountName: "Account 1",
+          tokenName: "Token 9",
+          success: true,
+          skipped: false,
+        },
+      ],
+    })
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 9")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    ).toBeDisabled()
+
+    await user.click(screen.getByText("Set editable models"))
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      })[1],
+    )
+
+    await waitFor(() => {
+      expect(mockExecuteBatchExport).toHaveBeenCalledTimes(1)
+    })
+    const call = mockExecuteBatchExport.mock.calls[0][0]
+    expect(call.preview.items[0]).toMatchObject({
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
+      blockingReasonCode: undefined,
+    })
+    expect(call.preview.items[0].draft.models).toEqual([
+      "gpt-4o-mini",
+      "custom-model",
+    ])
+    expect(call.selectedItemIds).toEqual(["account-1:9"])
   })
 
   it("renders warning, skipped, blocked, and execution result details", async () => {

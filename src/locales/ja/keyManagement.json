@@ -53,6 +53,7 @@
     "description": "{{site}} に作成する前に、選択済み {{selectedCount}} 件のキーを確認します。",
     "fields": {
       "baseUrl": "Base URL",
+      "editModelsLabel": "{{name}} のモデル一覧を編集",
       "groups": "グループ",
       "models": "モデル"
     },

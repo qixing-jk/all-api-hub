@@ -8,6 +8,7 @@ import {
   Badge,
   Button,
   Checkbox,
+  CompactMultiSelect,
   DestructiveConfirmDialog,
   Modal,
 } from "~/components/ui"
@@ -43,8 +44,49 @@ const isExecutablePreviewItem = (
   (item.status === MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY ||
     item.status === MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING)
 
+const canEditItemModels = (item: ManagedSiteTokenBatchExportPreviewItem) =>
+  isExecutablePreviewItem(item) ||
+  (Boolean(item.draft) &&
+    item.status === MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED &&
+    item.blockingReasonCode ===
+      MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED)
+
 const formatValues = (items: string[] | undefined) =>
   items && items.length > 0 ? items.join(", ") : "-"
+
+const toModelOptions = (models: string[]) =>
+  models.map((model) => ({ label: model, value: model }))
+
+const normalizeModels = (models: string[]) =>
+  Array.from(new Set(models.map((model) => model.trim()).filter(Boolean)))
+
+const countPreviewItems = (items: ManagedSiteTokenBatchExportPreviewItem[]) =>
+  items.reduce(
+    (accumulator, item) => {
+      switch (item.status) {
+        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.READY:
+          accumulator.readyCount += 1
+          break
+        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING:
+          accumulator.warningCount += 1
+          break
+        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED:
+          accumulator.skippedCount += 1
+          break
+        case MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED:
+          accumulator.blockedCount += 1
+          break
+      }
+
+      return accumulator
+    },
+    {
+      readyCount: 0,
+      warningCount: 0,
+      skippedCount: 0,
+      blockedCount: 0,
+    },
+  )
 
 const getWarningText = (t: TFunction, code: string) => {
   switch (code) {
@@ -165,7 +207,12 @@ export function ManagedSiteTokenBatchExportDialog({
   items,
   onCompleted,
 }: ManagedSiteTokenBatchExportDialogProps) {
-  const { t } = useTranslation(["keyManagement", "settings", "common"])
+  const { t } = useTranslation([
+    "keyManagement",
+    "settings",
+    "common",
+    "channelDialog",
+  ])
   const [preview, setPreview] =
     useState<ManagedSiteTokenBatchExportPreview | null>(null)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
@@ -250,6 +297,15 @@ export function ManagedSiteTokenBatchExportDialog({
     () => Array.from(selectedIds),
     [selectedIds],
   )
+  const modelOptions = useMemo(
+    () =>
+      toModelOptions(
+        normalizeModels(
+          preview?.items.flatMap((item) => item.draft?.models ?? []) ?? [],
+        ),
+      ),
+    [preview],
+  )
 
   const handleClose = () => {
     if (isRunning) return
@@ -281,6 +337,83 @@ export function ManagedSiteTokenBatchExportDialog({
         next.add(item.id)
       }
       return next
+    })
+  }
+
+  const handleItemModelsChange = (
+    item: ManagedSiteTokenBatchExportPreviewItem,
+    models: string[],
+  ) => {
+    if (!item.draft || executionResult || isRunning) return
+
+    const normalizedModels = normalizeModels(models)
+
+    setPreview((currentPreview) => {
+      if (!currentPreview) return currentPreview
+
+      const nextItems = currentPreview.items.map((previewItem) => {
+        if (previewItem.id !== item.id || !previewItem.draft) {
+          return previewItem
+        }
+
+        if (normalizedModels.length === 0) {
+          return {
+            ...previewItem,
+            draft: {
+              ...previewItem.draft,
+              models: [],
+            },
+            status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+            blockingReasonCode:
+              MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,
+          }
+        }
+
+        if (
+          canEditItemModels(previewItem) &&
+          !isExecutablePreviewItem(previewItem)
+        ) {
+          return {
+            ...previewItem,
+            draft: {
+              ...previewItem.draft,
+              models: normalizedModels,
+            },
+            status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
+            blockingReasonCode: undefined,
+            blockingMessage: undefined,
+          }
+        }
+
+        return {
+          ...previewItem,
+          draft: {
+            ...previewItem.draft,
+            models: normalizedModels,
+          },
+        }
+      })
+
+      return {
+        ...currentPreview,
+        items: nextItems,
+        ...countPreviewItems(nextItems),
+      }
+    })
+
+    setSelectedIds((currentSelectedIds) => {
+      const nextSelectedIds = new Set(currentSelectedIds)
+      if (normalizedModels.length === 0) {
+        nextSelectedIds.delete(item.id)
+      } else if (
+        item.status ===
+          MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED &&
+        item.blockingReasonCode ===
+          MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED
+      ) {
+        nextSelectedIds.add(item.id)
+      }
+      return nextSelectedIds
     })
   }
 
@@ -573,9 +706,34 @@ export function ManagedSiteTokenBatchExportDialog({
                             "keyManagement:batchManagedSiteExport.fields.models",
                           )}
                         </span>
-                        <span className="ml-2 break-words">
-                          {formatValues(item.draft?.models)}
-                        </span>
+                        {item.draft &&
+                        !executionResult &&
+                        canEditItemModels(item) ? (
+                          <div className="mt-1">
+                            <CompactMultiSelect
+                              options={modelOptions}
+                              selected={item.draft.models}
+                              onChange={(models) =>
+                                handleItemModelsChange(item, models)
+                              }
+                              placeholder={t(
+                                "channelDialog:fields.models.placeholder",
+                              )}
+                              aria-label={t(
+                                "keyManagement:batchManagedSiteExport.fields.editModelsLabel",
+                                {
+                                  name: `${item.accountName} / ${item.tokenName}`,
+                                },
+                              )}
+                              allowCustom
+                              disabled={isRunning}
+                            />
+                          </div>
+                        ) : (
+                          <span className="ml-2 break-words">
+                            {formatValues(item.draft?.models)}
+                          </span>
+                        )}
                       </div>
                     </div>
 

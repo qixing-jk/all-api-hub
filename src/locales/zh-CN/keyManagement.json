@@ -53,6 +53,7 @@
     "description": "创建到 {{site}} 前，先检查 {{selectedCount}} 个已选择密钥。",
     "fields": {
       "baseUrl": "Base URL",
+      "editModelsLabel": "编辑 {{name}} 的模型列表",
       "groups": "分组",
       "models": "模型"
     },

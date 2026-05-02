@@ -56,6 +56,7 @@
     "description": "Review {{selectedCount}} selected keys before creating channels in {{site}}.",
     "fields": {
       "baseUrl": "Base URL",
+      "editModelsLabel": "Edit models for {{name}}",
       "groups": "Groups",
       "models": "Models"
     },
