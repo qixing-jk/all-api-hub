@@ -27,6 +27,73 @@
   "allAccountsFailed_other": "{{count}} 件失敗",
   "allAccountsLoading_other": "{{count}} 件読み込み中",
   "allAccountsProgress": "{{loaded}}/{{total}} アカウントを読み込み済み",
+  "batchManagedSiteExport": {
+    "actions": {
+      "clearSelection": "選択をクリア",
+      "open": "{{site}} に一括インポート（{{selectedCount}}）",
+      "refreshPreview": "プレビューを更新",
+      "running": "インポート中...",
+      "selectAll": "{{selected}}/{{total}} 選択中",
+      "start": "インポート開始"
+    },
+    "blockedReasons": {
+      "baseUrlRequired": "対象の管理対象サイトでは Base URL が必要です。",
+      "configMissing": "管理対象サイトの管理者設定がありません。",
+      "inputPreparationFailed": "このキーのチャネルデータを準備できませんでした。",
+      "keyRequired": "生成されたチャネル Key が空です。",
+      "modelsRequired": "利用可能なモデルを解決できませんでした。",
+      "nameRequired": "生成されたチャネル名が空です。",
+      "realKeyRequired": "対象の管理対象サイトでは実際のプロバイダー Key が必要です。",
+      "secretResolutionFailed": "実際のトークンシークレットを解決できませんでした。"
+    },
+    "confirm": {
+      "description": "{{selectedCount}} 件の選択済みキーに対してチャネルを作成します。完全一致済みまたはブロックされた行は作成されません。",
+      "title": "選択済みキーをインポート"
+    },
+    "description": "{{site}} に作成する前に、選択済み {{selectedCount}} 件のキーを確認します。",
+    "fields": {
+      "baseUrl": "Base URL",
+      "groups": "グループ",
+      "models": "モデル"
+    },
+    "loadingDescription": "選択済み {{selectedCount}} 件のキーのプレビューを準備しています。",
+    "messages": {
+      "completed": "一括インポート完了: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件。",
+      "duplicate": "完全一致するチャネルが既に存在します: {{channel}}"
+    },
+    "preview": {
+      "loadFailed": "プレビューの読み込みに失敗しました: {{error}}",
+      "loading": "チャネルプレビューを準備中...",
+      "selected": "{{selectedCount}} 件のキーを選択中",
+      "summary": "プレビュー: 作成可能 {{ready}} 件、警告 {{warning}} 件、スキップ {{skipped}} 件、ブロック {{blocked}} 件、合計 {{total}} 件。"
+    },
+    "results": {
+      "status": {
+        "failed": "失敗",
+        "skipped": "スキップ",
+        "success": "作成済み"
+      },
+      "summary": "結果: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件、合計 {{total}} 件。"
+    },
+    "selection": {
+      "rowLabel": "一括インポート用に {{name}} を選択",
+      "visible": "表示中の選択: {{selected}}/{{total}}"
+    },
+    "status": {
+      "blocked": "ブロック",
+      "ready": "準備完了",
+      "skipped": "スキップ",
+      "warning": "警告"
+    },
+    "title": "管理対象サイトへ一括インポート",
+    "warnings": {
+      "backendSearchFailed": "対象バックエンドで重複チェックを完了できませんでした。",
+      "dedupeUnsupported": "現在の管理対象サイトでは Base URL による重複チェックを信頼できません。",
+      "exactVerificationUnavailable": "一致するチャネルが存在する可能性がありますが、正確な Key 検証は利用できません。",
+      "matchRequiresConfirmation": "類似チャネルがあります。作成前に確認してください。",
+      "modelPrefillFailed": "モデルの事前入力に失敗しました。利用可能なモデルリストを使用します。"
+    }
+  },
   "createFirstKey": "最初のキーを作成",
   "description": "このページでは、すべてのアカウントの API キー情報（利用状況や有効期限を含む）を表示します。右上の「キーを追加」ボタン、または各キー項目の横にある「+」ボタンから、特定アカウント用の新しいキーを作成できます。API キーは安全に保管し、第三者へ漏洩しないようにしてください。",
   "dialog": {

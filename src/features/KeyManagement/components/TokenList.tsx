@@ -7,18 +7,24 @@ import {
   KeyIcon,
   PlusIcon,
 } from "@heroicons/react/24/outline"
+import { SendToBack } from "lucide-react"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
-import { Badge, Button, Card, EmptyState } from "~/components/ui"
+import { ManagedSiteIcon } from "~/components/icons/ManagedSiteIcon"
+import { Badge, Button, Card, Checkbox, EmptyState } from "~/components/ui"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { cn } from "~/lib/utils"
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
+import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import type { AccountToken, DisplaySiteData } from "~/types"
+import type { ManagedSiteTokenBatchExportExecutionResult } from "~/types/managedSiteTokenBatchExport"
 import { createTab } from "~/utils/browser/browserApi"
 
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "../constants"
 import { buildTokenIdentityKey } from "../utils"
+import { ManagedSiteTokenBatchExportDialog } from "./ManagedSiteTokenBatchExportDialog"
 import { TokenListItem } from "./TokenListItem"
 
 interface TokenListProps {
@@ -261,15 +267,21 @@ export function TokenList(props: TokenListProps) {
     onManagedSiteVerificationRetry,
     allAccountsFilterAccountId,
   } = props
-  const { t } = useTranslation("keyManagement")
+  const { t } = useTranslation(["keyManagement", "settings"])
+  const { managedSiteType } = useUserPreferencesContext()
   const [ccSwitchContext, setCCSwitchContext] = useState<{
     token: AccountToken
     account: DisplaySiteData
   } | null>(null)
+  const [batchExportOpen, setBatchExportOpen] = useState(false)
+  const [selectedTokenIds, setSelectedTokenIds] = useState<Set<string>>(
+    () => new Set(),
+  )
 
   const accountById = useMemo(() => {
     return new Map(displayData.map((account) => [account.id, account]))
   }, [displayData])
+  const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
 
   const isAllAccountsMode =
     selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE
@@ -340,6 +352,55 @@ export function TokenList(props: TokenListProps) {
       })
   }, [displayData, filteredTokens, isAllAccountsMode, tokens])
 
+  const filteredTokenIds = useMemo(
+    () =>
+      new Set(
+        filteredTokens.map((token) =>
+          buildTokenIdentityKey(token.accountId, token.id),
+        ),
+      ),
+    [filteredTokens],
+  )
+  const selectedVisibleCount = useMemo(
+    () =>
+      Array.from(selectedTokenIds).filter((tokenId) =>
+        filteredTokenIds.has(tokenId),
+      ).length,
+    [filteredTokenIds, selectedTokenIds],
+  )
+  const allFilteredSelected =
+    filteredTokens.length > 0 && selectedVisibleCount === filteredTokens.length
+  const selectedBatchItems = useMemo(
+    () =>
+      tokens
+        .filter((token) =>
+          selectedTokenIds.has(
+            buildTokenIdentityKey(token.accountId, token.id),
+          ),
+        )
+        .map((token) => {
+          const account = accountById.get(token.accountId)
+          return account ? { account, token } : null
+        })
+        .filter(
+          (item): item is { account: DisplaySiteData; token: AccountToken } =>
+            item !== null,
+        ),
+    [accountById, selectedTokenIds, tokens],
+  )
+
+  useEffect(() => {
+    const availableIds = new Set(
+      tokens.map((token) => buildTokenIdentityKey(token.accountId, token.id)),
+    )
+    setSelectedTokenIds((prev) => {
+      const next = new Set(
+        Array.from(prev).filter((tokenId) => availableIds.has(tokenId)),
+      )
+      return next.size === prev.size ? prev : next
+    })
+  }, [tokens])
+
   const collapseAll = useCallback(() => {
     if (!groupedTokens) return
     setCollapsedAccountIds(
@@ -362,6 +423,61 @@ export function TokenList(props: TokenListProps) {
       }
       return next
     })
+  }
+
+  const toggleTokenSelection = (token: AccountToken, checked: boolean) => {
+    const tokenIdentityKey = buildTokenIdentityKey(token.accountId, token.id)
+    setSelectedTokenIds((prev) => {
+      const next = new Set(prev)
+      if (checked) {
+        next.add(tokenIdentityKey)
+      } else {
+        next.delete(tokenIdentityKey)
+      }
+      return next
+    })
+  }
+
+  const toggleFilteredSelection = () => {
+    setSelectedTokenIds((prev) => {
+      const next = new Set(prev)
+      for (const token of filteredTokens) {
+        const tokenIdentityKey = buildTokenIdentityKey(
+          token.accountId,
+          token.id,
+        )
+        if (allFilteredSelected) {
+          next.delete(tokenIdentityKey)
+        } else {
+          next.add(tokenIdentityKey)
+        }
+      }
+      return next
+    })
+  }
+
+  const clearSelection = () => {
+    setSelectedTokenIds(new Set())
+  }
+
+  const handleBatchExportCompleted = (
+    result: ManagedSiteTokenBatchExportExecutionResult,
+  ) => {
+    if (!onManagedSiteImportSuccess) return
+
+    const selectedTokenByIdentity = new Map(
+      selectedBatchItems.map(({ token }) => [
+        buildTokenIdentityKey(token.accountId, token.id),
+        token,
+      ]),
+    )
+
+    for (const item of result.items) {
+      if (!item.success) continue
+      const token = selectedTokenByIdentity.get(item.id)
+      if (!token) continue
+      void Promise.resolve(onManagedSiteImportSuccess(token))
+    }
   }
 
   const handleOpenCCSwitchDialog = (
@@ -396,6 +512,46 @@ export function TokenList(props: TokenListProps) {
 
   return (
     <>
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-2 rounded-md border p-3">
+        <label className="flex items-center gap-2 text-sm">
+          <Checkbox
+            checked={allFilteredSelected}
+            disabled={filteredTokens.length === 0}
+            onCheckedChange={toggleFilteredSelection}
+          />
+          {t("batchManagedSiteExport.selection.visible", {
+            selected: selectedVisibleCount,
+            total: filteredTokens.length,
+          })}
+        </label>
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            size="sm"
+            variant="outline"
+            type="button"
+            disabled={selectedTokenIds.size === 0}
+            onClick={clearSelection}
+          >
+            {t("batchManagedSiteExport.actions.clearSelection")}
+          </Button>
+          <Button
+            size="sm"
+            type="button"
+            disabled={selectedBatchItems.length === 0}
+            onClick={() => setBatchExportOpen(true)}
+            leftIcon={<SendToBack className="h-4 w-4" />}
+          >
+            <span className="inline-flex items-center gap-1">
+              <ManagedSiteIcon siteType={managedSiteType} size="sm" />
+              {t("batchManagedSiteExport.actions.open", {
+                site: managedSiteLabel,
+                selectedCount: selectedBatchItems.length,
+              })}
+            </span>
+          </Button>
+        </div>
+      </div>
+
       {isAllAccountsMode && groupedTokens && groupedTokens.length > 0 ? (
         <>
           <div className="mb-4 flex flex-wrap items-center justify-end gap-2">
@@ -501,6 +657,10 @@ export function TokenList(props: TokenListProps) {
                             onManagedSiteVerificationRetry={
                               onManagedSiteVerificationRetry
                             }
+                            isSelected={selectedTokenIds.has(tokenIdentityKey)}
+                            onSelectionChange={(checked) =>
+                              toggleTokenSelection(token, checked)
+                            }
                             onOpenCCSwitchDialog={() =>
                               handleOpenCCSwitchDialog(token, account)
                             }
@@ -549,6 +709,10 @@ export function TokenList(props: TokenListProps) {
                 }
                 onManagedSiteImportSuccess={onManagedSiteImportSuccess}
                 onManagedSiteVerificationRetry={onManagedSiteVerificationRetry}
+                isSelected={selectedTokenIds.has(tokenIdentityKey)}
+                onSelectionChange={(checked) =>
+                  toggleTokenSelection(token, checked)
+                }
                 onOpenCCSwitchDialog={() =>
                   handleOpenCCSwitchDialog(token, account)
                 }
@@ -566,6 +730,13 @@ export function TokenList(props: TokenListProps) {
           token={ccSwitchContext.token}
         />
       )}
+
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={batchExportOpen}
+        onClose={() => setBatchExportOpen(false)}
+        items={selectedBatchItems}
+        onCompleted={handleBatchExportCompleted}
+      />
     </>
   )
 }

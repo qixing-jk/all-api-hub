@@ -27,6 +27,73 @@
   "allAccountsFailed_other": "{{count}} 個失敗",
   "allAccountsLoading_other": "{{count}} 個載入中",
   "allAccountsProgress": "已載入 {{loaded}}/{{total}} 個帳號",
+  "batchManagedSiteExport": {
+    "actions": {
+      "clearSelection": "清除選取",
+      "open": "批次匯入到 {{site}}（{{selectedCount}}）",
+      "refreshPreview": "重新整理預覽",
+      "running": "正在匯入...",
+      "selectAll": "已選 {{selected}}/{{total}}",
+      "start": "開始匯入"
+    },
+    "blockedReasons": {
+      "baseUrlRequired": "目標自管理站點需要 Base URL。",
+      "configMissing": "缺少自管理站點管理員設定。",
+      "inputPreparationFailed": "無法為此金鑰準備渠道資料。",
+      "keyRequired": "產生的渠道 Key 為空。",
+      "modelsRequired": "未解析到可用模型。",
+      "nameRequired": "產生的渠道名稱為空。",
+      "realKeyRequired": "目標自管理站點需要真實供應商 Key。",
+      "secretResolutionFailed": "無法解析真實金鑰。"
+    },
+    "confirm": {
+      "description": "將為 {{selectedCount}} 個已選金鑰建立渠道。已精確存在與被阻擋的項目不會建立。",
+      "title": "匯入已選金鑰"
+    },
+    "description": "建立到 {{site}} 前，先檢查 {{selectedCount}} 個已選金鑰。",
+    "fields": {
+      "baseUrl": "Base URL",
+      "groups": "分組",
+      "models": "模型"
+    },
+    "loadingDescription": "正在為 {{selectedCount}} 個已選金鑰準備預覽。",
+    "messages": {
+      "completed": "批次匯入完成：成功 {{created}} 個，失敗 {{failed}} 個，跳過 {{skipped}} 個。",
+      "duplicate": "已存在精確符合渠道：{{channel}}"
+    },
+    "preview": {
+      "loadFailed": "載入預覽失敗：{{error}}",
+      "loading": "正在準備渠道預覽...",
+      "selected": "已選擇 {{selectedCount}} 個金鑰",
+      "summary": "預覽：可建立 {{ready}} 個，警告 {{warning}} 個，跳過 {{skipped}} 個，阻擋 {{blocked}} 個，共 {{total}} 個。"
+    },
+    "results": {
+      "status": {
+        "failed": "失敗",
+        "skipped": "已跳過",
+        "success": "已建立"
+      },
+      "summary": "結果：成功 {{created}} 個，失敗 {{failed}} 個，跳過 {{skipped}} 個，共 {{total}} 個。"
+    },
+    "selection": {
+      "rowLabel": "選擇 {{name}} 用於批次匯入",
+      "visible": "目前可見已選 {{selected}}/{{total}}"
+    },
+    "status": {
+      "blocked": "已阻擋",
+      "ready": "可建立",
+      "skipped": "已跳過",
+      "warning": "需確認"
+    },
+    "title": "批次匯入到自管理站點",
+    "warnings": {
+      "backendSearchFailed": "重複檢查暫時無法連線目標後台。",
+      "dedupeUnsupported": "目前自管理站點無法可靠依 Base URL 檢查重複渠道。",
+      "exactVerificationUnavailable": "可能已有符合渠道，但目前無法完成精確 Key 驗證。",
+      "matchRequiresConfirmation": "發現相似渠道，請確認後再建立。",
+      "modelPrefillFailed": "模型預填失敗，將使用目前可用的模型列表。"
+    }
+  },
   "createFirstKey": "建立第一個金鑰",
   "description": "此頁面顯示所有帳號的 API 金鑰資訊，包括使用情況和過期時間。可以透過右上角的\"新增金鑰\"按鈕或點擊各金鑰專案旁的\"+\"按鈕為指定帳號建立新金鑰。請妥善保管您的 API 金鑰，避免洩露給他人",
   "dialog": {

@@ -27,6 +27,73 @@
   "allAccountsFailed": "{{count}} 个失败",
   "allAccountsLoading": "{{count}} 个加载中",
   "allAccountsProgress": "已加载 {{loaded}}/{{total}} 个账号",
+  "batchManagedSiteExport": {
+    "actions": {
+      "clearSelection": "清空选择",
+      "open": "批量导入到 {{site}}（{{selectedCount}}）",
+      "refreshPreview": "刷新预览",
+      "running": "正在导入...",
+      "selectAll": "已选 {{selected}}/{{total}}",
+      "start": "开始导入"
+    },
+    "blockedReasons": {
+      "baseUrlRequired": "目标自管理站点要求填写 Base URL。",
+      "configMissing": "缺少自管理站点管理员配置。",
+      "inputPreparationFailed": "无法为该密钥准备渠道数据。",
+      "keyRequired": "生成的渠道 Key 为空。",
+      "modelsRequired": "未能解析出可用模型。",
+      "nameRequired": "生成的渠道名称为空。",
+      "realKeyRequired": "目标自管理站点要求真实供应商 Key。",
+      "secretResolutionFailed": "无法解析真实密钥。"
+    },
+    "confirm": {
+      "description": "将为 {{selectedCount}} 个已选择密钥创建渠道。已精确存在和被阻塞的项目不会创建。",
+      "title": "导入已选择密钥"
+    },
+    "description": "创建到 {{site}} 前，先检查 {{selectedCount}} 个已选择密钥。",
+    "fields": {
+      "baseUrl": "Base URL",
+      "groups": "分组",
+      "models": "模型"
+    },
+    "loadingDescription": "正在为 {{selectedCount}} 个已选择密钥准备预览。",
+    "messages": {
+      "completed": "批量导入完成：成功 {{created}} 个，失败 {{failed}} 个，跳过 {{skipped}} 个。",
+      "duplicate": "已存在精确匹配渠道：{{channel}}"
+    },
+    "preview": {
+      "loadFailed": "加载预览失败：{{error}}",
+      "loading": "正在准备渠道预览...",
+      "selected": "已选择 {{selectedCount}} 个密钥",
+      "summary": "预览：可创建 {{ready}} 个，警告 {{warning}} 个，跳过 {{skipped}} 个，阻塞 {{blocked}} 个，共 {{total}} 个。"
+    },
+    "results": {
+      "status": {
+        "failed": "失败",
+        "skipped": "已跳过",
+        "success": "已创建"
+      },
+      "summary": "结果：成功 {{created}} 个，失败 {{failed}} 个，跳过 {{skipped}} 个，共 {{total}} 个。"
+    },
+    "selection": {
+      "rowLabel": "选择 {{name}} 用于批量导入",
+      "visible": "当前可见已选 {{selected}}/{{total}}"
+    },
+    "status": {
+      "blocked": "已阻塞",
+      "ready": "可创建",
+      "skipped": "已跳过",
+      "warning": "需确认"
+    },
+    "title": "批量导入到自管理站点",
+    "warnings": {
+      "backendSearchFailed": "重复检查暂时无法连接目标后台。",
+      "dedupeUnsupported": "当前自管理站点无法可靠按 Base URL 检查重复渠道。",
+      "exactVerificationUnavailable": "可能已有匹配渠道，但当前无法完成精确 Key 验证。",
+      "matchRequiresConfirmation": "发现相似渠道，请确认后再创建。",
+      "modelPrefillFailed": "模型预填失败，将使用当前可用的模型列表。"
+    }
+  },
   "createFirstKey": "创建第一个密钥",
   "description": "此页面显示所有账号的 API 密钥信息，包括使用情况和过期时间。可以通过右上角的\"添加密钥\"按钮或点击各密钥项目旁的\"+\"按钮为指定账号创建新密钥。请妥善保管您的 API 密钥，避免泄露给他人",
   "dialog": {

@@ -30,6 +30,73 @@
   "allAccountsLoading_one": "{{count}} loading",
   "allAccountsLoading_other": "{{count}} loading",
   "allAccountsProgress": "{{loaded}}/{{total}} accounts loaded",
+  "batchManagedSiteExport": {
+    "actions": {
+      "clearSelection": "Clear selection",
+      "open": "Batch import to {{site}} ({{selectedCount}})",
+      "refreshPreview": "Refresh preview",
+      "running": "Importing...",
+      "selectAll": "{{selected}}/{{total}} selected",
+      "start": "Start import"
+    },
+    "blockedReasons": {
+      "baseUrlRequired": "Base URL is required by the target managed site.",
+      "configMissing": "Managed-site admin configuration is missing.",
+      "inputPreparationFailed": "Could not prepare channel data for this key.",
+      "keyRequired": "The generated channel key is empty.",
+      "modelsRequired": "No models were resolved for this key.",
+      "nameRequired": "The generated channel name is empty.",
+      "realKeyRequired": "The target managed site requires a real provider key.",
+      "secretResolutionFailed": "Could not resolve the real token secret."
+    },
+    "confirm": {
+      "description": "This will create channels for {{selectedCount}} selected keys. Existing exact matches and blocked rows will not be created.",
+      "title": "Import selected keys"
+    },
+    "description": "Review {{selectedCount}} selected keys before creating channels in {{site}}.",
+    "fields": {
+      "baseUrl": "Base URL",
+      "groups": "Groups",
+      "models": "Models"
+    },
+    "loadingDescription": "Preparing preview for {{selectedCount}} selected keys.",
+    "messages": {
+      "completed": "Batch import completed: {{created}} created, {{failed}} failed, {{skipped}} skipped.",
+      "duplicate": "Exact match already exists: {{channel}}"
+    },
+    "preview": {
+      "loadFailed": "Failed to load preview: {{error}}",
+      "loading": "Preparing channel preview...",
+      "selected": "{{selectedCount}} keys selected",
+      "summary": "Preview: {{ready}} ready, {{warning}} warnings, {{skipped}} skipped, {{blocked}} blocked, {{total}} total."
+    },
+    "results": {
+      "status": {
+        "failed": "Failed",
+        "skipped": "Skipped",
+        "success": "Created"
+      },
+      "summary": "Result: {{created}} created, {{failed}} failed, {{skipped}} skipped, {{total}} total."
+    },
+    "selection": {
+      "rowLabel": "Select {{name}} for batch import",
+      "visible": "{{selected}}/{{total}} visible selected"
+    },
+    "status": {
+      "blocked": "Blocked",
+      "ready": "Ready",
+      "skipped": "Skipped",
+      "warning": "Warning"
+    },
+    "title": "Batch import to managed site",
+    "warnings": {
+      "backendSearchFailed": "Duplicate check could not reach the target backend.",
+      "dedupeUnsupported": "The current managed site cannot reliably check duplicates by Base URL.",
+      "exactVerificationUnavailable": "An existing channel may match, but exact key verification is unavailable.",
+      "matchRequiresConfirmation": "A similar channel exists; review before creating.",
+      "modelPrefillFailed": "Model prefill failed; using the best available model list."
+    }
+  },
   "createFirstKey": "Create first key",
   "description": "This page displays API key information for all accounts, including usage and expiration time. You can create new keys for specific accounts by clicking the 'Add Key' button in the upper right corner or the '+' button next to each key item. Please keep your API keys safe and avoid leaking them to others",
   "dialog": {

@@ -1,6 +1,6 @@
 import { useTranslation } from "react-i18next"
 
-import { Card, CardContent } from "~/components/ui"
+import { Card, CardContent, Checkbox } from "~/components/ui"
 import type { ManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import type { AccountToken, DisplaySiteData } from "~/types"
 
@@ -72,6 +72,14 @@ interface TokenListItemProps {
     token: AccountToken,
     managedSiteStatus: ManagedSiteTokenChannelStatus,
   ) => void | Promise<void>
+  /**
+   * Whether this token is selected for batch actions.
+   */
+  isSelected?: boolean
+  /**
+   * Toggles batch selection for this token.
+   */
+  onSelectionChange?: (checked: boolean) => void
 }
 
 /**
@@ -94,6 +102,8 @@ export function TokenListItem(props: TokenListItemProps) {
     isManagedSiteStatusChecking,
     onManagedSiteImportSuccess,
     onManagedSiteVerificationRetry,
+    isSelected = false,
+    onSelectionChange,
   } = props
   const { t } = useTranslation("keyManagement")
   const tokenIdentityKey = buildTokenIdentityKey(token.accountId, token.id)
@@ -101,41 +111,57 @@ export function TokenListItem(props: TokenListItemProps) {
   return (
     <Card variant="interactive">
       <CardContent padding="default">
-        <div className="flex flex-col gap-2 sm:gap-3">
-          <TokenHeader
-            token={token}
-            copyKey={copyKey}
-            handleEditToken={handleEditToken}
-            handleDeleteToken={handleDeleteToken}
-            account={account}
-            managedSiteStatus={managedSiteStatus}
-            isManagedSiteStatusChecking={isManagedSiteStatusChecking}
-            onManagedSiteImportSuccess={onManagedSiteImportSuccess}
-            onManagedSiteVerificationRetry={onManagedSiteVerificationRetry}
-            onOpenCCSwitchDialog={() => onOpenCCSwitchDialog(token, account)}
-          />
+        <div className="flex gap-3">
+          {onSelectionChange ? (
+            <Checkbox
+              className="mt-1"
+              checked={isSelected}
+              aria-label={t("batchManagedSiteExport.selection.rowLabel", {
+                name: token.name,
+              })}
+              onCheckedChange={(checked) => onSelectionChange(checked === true)}
+            />
+          ) : null}
           <div className="min-w-0 flex-1">
-            <div className="dark:text-dark-text-secondary space-y-2 text-xs text-gray-600 sm:text-sm">
-              <KeyDisplay
-                tokenKey={displayTokenKey}
-                tokenIdentityKey={tokenIdentityKey}
-                visibleKeys={visibleKeys}
-                isKeyVisibilityLoading={isKeyVisibilityLoading}
-                toggleKeyVisibility={() =>
-                  void toggleKeyVisibility(account, token)
+            <div className="flex flex-col gap-2 sm:gap-3">
+              <TokenHeader
+                token={token}
+                copyKey={copyKey}
+                handleEditToken={handleEditToken}
+                handleDeleteToken={handleDeleteToken}
+                account={account}
+                managedSiteStatus={managedSiteStatus}
+                isManagedSiteStatusChecking={isManagedSiteStatusChecking}
+                onManagedSiteImportSuccess={onManagedSiteImportSuccess}
+                onManagedSiteVerificationRetry={onManagedSiteVerificationRetry}
+                onOpenCCSwitchDialog={() =>
+                  onOpenCCSwitchDialog(token, account)
                 }
               />
-              <TokenDetails token={token} />
-              {token.group && (
-                <div>
-                  <span className="dark:text-dark-text-tertiary text-gray-500">
-                    {t("keyDetails.group")}
-                  </span>
-                  <span className="dark:text-dark-text-primary ml-2 font-medium text-gray-900">
-                    {token.group}
-                  </span>
+              <div className="min-w-0 flex-1">
+                <div className="dark:text-dark-text-secondary space-y-2 text-xs text-gray-600 sm:text-sm">
+                  <KeyDisplay
+                    tokenKey={displayTokenKey}
+                    tokenIdentityKey={tokenIdentityKey}
+                    visibleKeys={visibleKeys}
+                    isKeyVisibilityLoading={isKeyVisibilityLoading}
+                    toggleKeyVisibility={() =>
+                      void toggleKeyVisibility(account, token)
+                    }
+                  />
+                  <TokenDetails token={token} />
+                  {token.group && (
+                    <div>
+                      <span className="dark:text-dark-text-tertiary text-gray-500">
+                        {t("keyDetails.group")}
+                      </span>
+                      <span className="dark:text-dark-text-primary ml-2 font-medium text-gray-900">
+                        {token.group}
+                      </span>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
