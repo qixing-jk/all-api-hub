@@ -269,6 +269,76 @@ const richPreview: ManagedSiteTokenBatchExportPreview = {
   ],
 }
 
+const modelsRequiredPreview: ManagedSiteTokenBatchExportPreview = {
+  siteType: NEW_API,
+  totalCount: 3,
+  readyCount: 0,
+  warningCount: 0,
+  skippedCount: 1,
+  blockedCount: 2,
+  items: [
+    {
+      id: "account-1:9",
+      accountId: "account-1",
+      accountName: "Account 1",
+      tokenId: 9,
+      tokenName: "Token 9",
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+      warningCodes: [],
+      blockingReasonCode:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,
+      draft: {
+        name: "Account 1 - Token 9",
+        type: 1,
+        key: "test-key-9",
+        base_url: "https://example.com",
+        models: [],
+        groups: ["default"],
+        priority: 0,
+        weight: 0,
+        status: 1,
+      },
+    },
+    {
+      id: "account-1:3",
+      accountId: "account-1",
+      accountName: "Account 1",
+      tokenId: 3,
+      tokenName: "Token 3",
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
+      warningCodes: [],
+      draft: {
+        name: "Account 1 - Token 3",
+        type: 1,
+        key: "test-key-3",
+        base_url: "https://example.com",
+        models: ["gpt-4o-mini"],
+        groups: ["default"],
+        priority: 0,
+        weight: 0,
+        status: 1,
+      },
+      matchedChannel: {
+        id: 8,
+        name: "Existing channel",
+      },
+    },
+    {
+      id: "account-1:4",
+      accountId: "account-1",
+      accountName: "Account 1",
+      tokenId: 4,
+      tokenName: "Token 4",
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+      warningCodes: [],
+      blockingReasonCode:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.BASE_URL_REQUIRED,
+      blockingMessage: "missing base URL",
+      draft: null,
+    },
+  ],
+}
+
 const renderDialog = (props?: {
   onClose?: () => void
   onCompleted?: (result: unknown) => void
@@ -524,38 +594,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
 
   it("lets users unblock rows that only lack models", async () => {
     const user = userEvent.setup()
-    mockPreparePreview.mockResolvedValue({
-      siteType: NEW_API,
-      totalCount: 1,
-      readyCount: 0,
-      warningCount: 0,
-      skippedCount: 0,
-      blockedCount: 1,
-      items: [
-        {
-          id: "account-1:9",
-          accountId: "account-1",
-          accountName: "Account 1",
-          tokenId: 9,
-          tokenName: "Token 9",
-          status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
-          warningCodes: [],
-          blockingReasonCode:
-            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,
-          draft: {
-            name: "Account 1 - Token 9",
-            type: 1,
-            key: "test-key-9",
-            base_url: "https://example.com",
-            models: [],
-            groups: ["default"],
-            priority: 0,
-            weight: 0,
-            status: 1,
-          },
-        },
-      ],
-    })
+    mockPreparePreview.mockResolvedValue(modelsRequiredPreview)
     mockExecuteBatchExport.mockResolvedValue({
       totalSelected: 1,
       attemptedCount: 1,
@@ -607,6 +646,28 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       "custom-model",
     ])
     expect(call.selectedItemIds).toEqual(["account-1:9"])
+  })
+
+  it("re-blocks edited rows when models are cleared", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview.mockResolvedValue(modelsRequiredPreview)
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 9")).toBeInTheDocument()
+
+    await user.click(screen.getByText("Set editable models"))
+    await user.click(screen.getByText("Clear editable models"))
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "keyManagement:batchManagedSiteExport.actions.start",
+        }),
+      ).toBeDisabled()
+    })
+
+    expect(mockExecuteBatchExport).not.toHaveBeenCalled()
   })
 
   it("renders warning, skipped, blocked, and execution result details", async () => {

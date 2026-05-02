@@ -373,6 +373,8 @@ export function ManagedSiteTokenBatchExportDialog({
           canEditItemModels(previewItem) &&
           !isExecutablePreviewItem(previewItem)
         ) {
+          // Manually supplied models make a models-required blocked row executable,
+          // but keep it as WARNING after clearing the blocking fields for confirmation.
           return {
             ...previewItem,
             draft: {
