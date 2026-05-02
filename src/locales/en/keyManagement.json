@@ -81,6 +81,7 @@
       "summary": "Result: {{created}} created, {{failed}} failed, {{skipped}} skipped, {{total}} total."
     },
     "selection": {
+      "accountGroup": "Select visible keys for account {{name}}",
       "rowLabel": "Select {{name}} for batch import",
       "visible": "{{selected}}/{{total}} visible selected"
     },

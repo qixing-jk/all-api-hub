@@ -78,6 +78,7 @@
       "summary": "結果: 作成 {{created}} 件、失敗 {{failed}} 件、スキップ {{skipped}} 件、合計 {{total}} 件。"
     },
     "selection": {
+      "accountGroup": "アカウント {{name}} の表示中のキーを選択",
       "rowLabel": "一括インポート用に {{name}} を選択",
       "visible": "表示中の選択: {{selected}}/{{total}}"
     },

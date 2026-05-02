@@ -78,6 +78,7 @@
       "summary": "結果：成功 {{created}} 個，失敗 {{failed}} 個，跳過 {{skipped}} 個，共 {{total}} 個。"
     },
     "selection": {
+      "accountGroup": "選擇帳號 {{name}} 目前可見密鑰",
       "rowLabel": "選擇 {{name}} 用於批次匯入",
       "visible": "目前可見已選 {{selected}}/{{total}}"
     },

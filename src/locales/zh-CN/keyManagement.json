@@ -78,6 +78,7 @@
       "summary": "结果：成功 {{created}} 个，失败 {{failed}} 个，跳过 {{skipped}} 个，共 {{total}} 个。"
     },
     "selection": {
+      "accountGroup": "选择账号 {{name}} 当前可见密钥",
       "rowLabel": "选择 {{name}} 用于批量导入",
       "visible": "当前可见已选 {{selected}}/{{total}}"
     },

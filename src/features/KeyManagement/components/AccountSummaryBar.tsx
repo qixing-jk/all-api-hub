@@ -38,31 +38,33 @@ export function AccountSummaryBar({
             {t("accountSummary.title")}
           </div>
           <div className="flex flex-wrap gap-2">
-            {items.map((item) => (
-              <Badge
-                key={item.accountId}
-                variant={
-                  activeAccountIdSet.has(item.accountId) ? "info" : "secondary"
-                }
-                size="default"
-                {...(onAccountClick
-                  ? {
-                      className: "cursor-pointer",
-                      onClick: () => onAccountClick(item.accountId),
-                    }
-                  : {})}
-              >
-                <span className="truncate font-medium">{item.name}</span>
-                <span className="dark:text-dark-text-tertiary ml-2 text-gray-500">
-                  {t("accountSummary.keys", { count: item.count })}
-                </span>
-                {item.errorType && (
-                  <span className="ml-2 text-xs text-red-500 dark:text-red-400">
-                    {t("accountSummary.loadFailed")}
+            {items.map((item) => {
+              const isActive = activeAccountIdSet.has(item.accountId)
+
+              return (
+                <Badge
+                  key={item.accountId}
+                  variant={isActive ? "info" : "secondary"}
+                  size="default"
+                  {...(onAccountClick
+                    ? {
+                        className: "cursor-pointer",
+                        onClick: () => onAccountClick(item.accountId),
+                      }
+                    : {})}
+                >
+                  <span className="truncate font-medium">{item.name}</span>
+                  <span className="dark:text-dark-text-tertiary ml-2 text-gray-500">
+                    {t("accountSummary.keys", { count: item.count })}
                   </span>
-                )}
-              </Badge>
-            ))}
+                  {item.errorType && (
+                    <span className="ml-2 text-xs text-red-500 dark:text-red-400">
+                      {t("accountSummary.loadFailed")}
+                    </span>
+                  )}
+                </Badge>
+              )
+            })}
           </div>
         </div>
       </CardContent>

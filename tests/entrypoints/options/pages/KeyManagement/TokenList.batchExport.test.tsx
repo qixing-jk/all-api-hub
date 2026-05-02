@@ -118,6 +118,13 @@ const token2 = createToken({
   accountId: account.id,
   accountName: account.name,
 })
+const accountB = createAccount({ id: "acc-2", name: "Account 2" })
+const tokenB = createToken({
+  id: 1,
+  name: "Token B",
+  accountId: accountB.id,
+  accountName: accountB.name,
+})
 
 const defaultProps = {
   isLoading: false,
@@ -348,6 +355,36 @@ describe("TokenList batch export selection", () => {
       screen.getByRole("button", { name: "Close CC Switch export" }),
     )
     expect(screen.queryByTestId("cc-switch-export-dialog")).toBeNull()
+  })
+
+  it("toggles all visible tokens in an account group from the group header", async () => {
+    const user = userEvent.setup()
+    renderTokenList({
+      selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      displayData: [account, accountB] as any,
+      tokens: [token1, token2, tokenB] as any,
+      filteredTokens: [token1, token2, tokenB] as any,
+    })
+
+    const groupSelections = await screen.findAllByRole("checkbox", {
+      name: "keyManagement:batchManagedSiteExport.selection.accountGroup",
+    })
+
+    await user.click(groupSelections[0])
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.expandAll",
+      }),
+    )
+
+    expect(screen.getByRole("checkbox", { name: "Token 1" })).toBeChecked()
+    expect(screen.getByRole("checkbox", { name: "Token 2" })).toBeChecked()
+    expect(screen.getByRole("checkbox", { name: "Token B" })).not.toBeChecked()
+
+    await user.click(groupSelections[0])
+
+    expect(screen.getByRole("checkbox", { name: "Token 1" })).not.toBeChecked()
+    expect(screen.getByRole("checkbox", { name: "Token 2" })).not.toBeChecked()
   })
 
   it("shows grouped filtered counts when a group is partially visible", async () => {
