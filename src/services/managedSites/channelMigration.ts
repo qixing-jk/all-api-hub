@@ -394,14 +394,15 @@ const buildDraftFromSourceChannel = (params: {
   const { sourceSiteType, targetSiteType, channel, key } = params
   const groups = parseDelimitedValues(channel.group)
   const models = parseDelimitedValues(channel.models)
+  const sourceStatus = channel.status ?? DEFAULT_CHANNEL_FIELDS.status
   const targetStatus =
     targetSiteType === OCTOPUS ||
     targetSiteType === AXON_HUB ||
     targetSiteType === CLAUDE_CODE_HUB
-      ? channel.status === 1
+      ? sourceStatus === 1
         ? 1
         : 2
-      : channel.status ?? DEFAULT_CHANNEL_FIELDS.status
+      : sourceStatus
 
   return {
     name: channel.name?.trim() || `Channel #${channel.id}`,

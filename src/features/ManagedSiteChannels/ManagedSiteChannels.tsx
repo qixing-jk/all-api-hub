@@ -606,7 +606,7 @@ export default function ManagedSiteChannels({
   )
 
   const handleToggleMigrationMode = useCallback(() => {
-    if (!hasMigrationTargets) {
+    if (!hasMigrationTargets && !isMigrationMode) {
       toast.error(
         t("managedSiteChannels:migration.alerts.noTargets.description"),
       )
@@ -614,7 +614,7 @@ export default function ManagedSiteChannels({
     }
 
     setIsMigrationMode((prev) => !prev)
-  }, [hasMigrationTargets, t])
+  }, [hasMigrationTargets, isMigrationMode, t])
 
   const handleCloseMigrationDialog = useCallback(() => {
     setIsMigrationDialogOpen(false)
@@ -1001,7 +1001,8 @@ export default function ManagedSiteChannels({
                 >
                   {t("toolbar.refresh")}
                 </Button>
-                {supportsChannelMigration && hasMigrationTargets ? (
+                {supportsChannelMigration &&
+                (hasMigrationTargets || isMigrationMode) ? (
                   <Button
                     variant={isMigrationMode ? "default" : "outline"}
                     onClick={handleToggleMigrationMode}

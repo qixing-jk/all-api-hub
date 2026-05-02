@@ -1762,6 +1762,76 @@ describe("ManagedSiteChannels", () => {
     )
   })
 
+  it("keeps the migration exit action available when targets disappear", async () => {
+    const user = userEvent.setup()
+    let currentPreferences = buildPreferences({
+      managedSiteType: NEW_API,
+      withMigrationTarget: true,
+    })
+
+    vi.mocked(useUserPreferencesContext).mockImplementation(
+      () =>
+        ({
+          preferences: currentPreferences,
+          managedSiteType: NEW_API,
+          newApiBaseUrl: currentPreferences.newApi.baseUrl,
+          newApiUserId: currentPreferences.newApi.userId,
+          newApiUsername: currentPreferences.newApi.username,
+          newApiPassword: currentPreferences.newApi.password,
+          newApiTotpSecret: currentPreferences.newApi.totpSecret,
+        }) as any,
+    )
+    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+      success: true,
+      data: {
+        items: [
+          {
+            id: 1,
+            name: "Alpha",
+            base_url: "https://example.com",
+            key: "k",
+          },
+        ],
+      },
+    } as any)
+
+    const { rerender } = render(<ManagedSiteChannels />)
+
+    await waitForRowText("Alpha")
+    await user.click(
+      screen.getByRole("button", {
+        name: /managedSiteChannels:toolbar.enterMigrationMode/,
+      }),
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: /managedSiteChannels:toolbar.exitMigrationMode/,
+      }),
+    ).toBeInTheDocument()
+
+    currentPreferences = buildPreferences({
+      managedSiteType: NEW_API,
+      withMigrationTarget: false,
+    })
+    rerender(<ManagedSiteChannels />)
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /managedSiteChannels:toolbar.exitMigrationMode/,
+      }),
+    )
+
+    expect(
+      screen.queryByRole("button", {
+        name: /managedSiteChannels:toolbar.exitMigrationMode/,
+      }),
+    ).not.toBeInTheDocument()
+    expect(toast.error).not.toHaveBeenCalledWith(
+      "managedSiteChannels:migration.alerts.noTargets.description",
+    )
+  })
+
   it("shows the migration entry when a target is configured", async () => {
     mockChannels(
       [{ id: 1, name: "Alpha", base_url: "https://example.com", key: "k" }],

@@ -828,6 +828,37 @@ describe("channelMigration", () => {
     )
   })
 
+  it("defaults missing source status before simplifying Claude Code Hub target status", async () => {
+    const { prepareManagedSiteChannelMigrationPreview } = await import(
+      "~/services/managedSites/channelMigration"
+    )
+
+    const preview = await prepareManagedSiteChannelMigrationPreview({
+      preferences: buildPreferences({
+        claudeCodeHub: {
+          baseUrl: "https://cch.example.com",
+          adminToken: "cch-token",
+        },
+      }),
+      sourceSiteType: NEW_API,
+      targetSiteType: CLAUDE_CODE_HUB,
+      channels: [
+        buildManagedSiteChannel({
+          id: 22_73,
+          type: ChannelType.OpenAI,
+          key: "source-key",
+          status: undefined,
+        }),
+      ],
+    })
+
+    expect(preview.readyCount).toBe(1)
+    expect(preview.items[0].draft?.status).toBe(1)
+    expect(preview.items[0].warningCodes).not.toContain(
+      MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES.TARGET_SIMPLIFIES_STATUS,
+    )
+  })
+
   it("blocks only AxonHub source rows without usable key material", async () => {
     const { prepareManagedSiteChannelMigrationPreview } = await import(
       "~/services/managedSites/channelMigration"
