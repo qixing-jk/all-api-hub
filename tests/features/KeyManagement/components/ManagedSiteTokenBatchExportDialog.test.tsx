@@ -291,6 +291,72 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
   })
 
+  it("resets transient state when the dialog closes and lets the confirm dialog cancel cleanly", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview
+      .mockRejectedValueOnce(new Error("preview failed"))
+      .mockResolvedValueOnce(preview)
+
+    const { rerender } = render(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        items={[{ account, token }]}
+      />,
+    )
+
+    expect(
+      await screen.findByText(
+        "keyManagement:batchManagedSiteExport.preview.loadFailed",
+      ),
+    ).toBeInTheDocument()
+
+    rerender(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={false}
+        onClose={vi.fn()}
+        items={[{ account, token }]}
+      />,
+    )
+
+    expect(screen.queryByRole("dialog")).toBeNull()
+
+    rerender(
+      <ManagedSiteTokenBatchExportDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        items={[{ account, token }]}
+      />,
+    )
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        "keyManagement:batchManagedSiteExport.preview.loadFailed",
+      ),
+    ).toBeNull()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    expect(
+      screen.getByRole("dialog", {
+        name: "keyManagement:batchManagedSiteExport.confirm.title",
+      }),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getAllByRole("button", { name: "common:actions.cancel" })[1],
+    )
+    expect(
+      screen.queryByRole("dialog", {
+        name: "keyManagement:batchManagedSiteExport.confirm.title",
+      }),
+    ).toBeNull()
+  })
+
   it("executes selected preview rows and reports success", async () => {
     const user = userEvent.setup()
     mockPreparePreview.mockResolvedValue(preview)
@@ -479,7 +545,9 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       })[1],
     )
 
-    expect(onCompleted).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(onCompleted).toHaveBeenCalledTimes(1)
+    })
     expect(
       await screen.findByText(
         "keyManagement:batchManagedSiteExport.results.status.success",
@@ -590,5 +658,125 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
       ),
     ).toBeInTheDocument()
     expect(screen.queryByText("config-missing")).toBeNull()
+  })
+
+  it("renders localized text for every blocked reason code", async () => {
+    mockPreparePreview.mockResolvedValue({
+      siteType: NEW_API,
+      totalCount: 6,
+      readyCount: 0,
+      warningCount: 0,
+      skippedCount: 0,
+      blockedCount: 6,
+      items: [
+        {
+          id: "account-1:11",
+          accountId: "account-1",
+          accountName: "Account 1",
+          tokenId: 11,
+          tokenName: "Token 11",
+          status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+          warningCodes: [],
+          blockingReasonCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.SECRET_RESOLUTION_FAILED,
+          blockingMessage: "secret issue",
+          draft: null,
+        },
+        {
+          id: "account-1:12",
+          accountId: "account-1",
+          accountName: "Account 1",
+          tokenId: 12,
+          tokenName: "Token 12",
+          status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+          warningCodes: [],
+          blockingReasonCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.NAME_REQUIRED,
+          draft: null,
+        },
+        {
+          id: "account-1:13",
+          accountId: "account-1",
+          accountName: "Account 1",
+          tokenId: 13,
+          tokenName: "Token 13",
+          status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+          warningCodes: [],
+          blockingReasonCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.KEY_REQUIRED,
+          draft: null,
+        },
+        {
+          id: "account-1:14",
+          accountId: "account-1",
+          accountName: "Account 1",
+          tokenId: 14,
+          tokenName: "Token 14",
+          status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+          warningCodes: [],
+          blockingReasonCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.REAL_KEY_REQUIRED,
+          draft: null,
+        },
+        {
+          id: "account-1:15",
+          accountId: "account-1",
+          accountName: "Account 1",
+          tokenId: 15,
+          tokenName: "Token 15",
+          status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+          warningCodes: [],
+          blockingReasonCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,
+          draft: null,
+        },
+        {
+          id: "account-1:16",
+          accountId: "account-1",
+          accountName: "Account 1",
+          tokenId: 16,
+          tokenName: "Token 16",
+          status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+          warningCodes: [],
+          blockingReasonCode:
+            MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED,
+          draft: null,
+        },
+      ],
+    })
+
+    renderDialog()
+
+    expect(
+      await screen.findByText(
+        /keyManagement:batchManagedSiteExport\.blockedReasons\.secretResolutionFailed/,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.blockedReasons.nameRequired",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.blockedReasons.keyRequired",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.blockedReasons.realKeyRequired",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.blockedReasons.modelsRequired",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.blockedReasons.inputPreparationFailed",
+      ),
+    ).toBeInTheDocument()
+    expect(screen.getByText(/secret issue/)).toBeInTheDocument()
   })
 })

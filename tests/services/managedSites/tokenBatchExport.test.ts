@@ -122,11 +122,33 @@ const buildService = (
 
 describe("managed-site token batch export", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
     mockResolveDisplayAccountTokenForSecret.mockImplementation(
       async (_account, token) => token,
     )
     mockResolveManagedSiteChannelMatch.mockResolvedValue(buildMatchInspection())
+  })
+
+  it("returns an empty preview when there are no selected tokens", async () => {
+    const service = buildService()
+    mockGetManagedSiteService.mockResolvedValue(service)
+
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchExport"
+    )
+
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [],
+    })
+
+    expect(preview).toMatchObject({
+      totalCount: 0,
+      readyCount: 0,
+      warningCount: 0,
+      skippedCount: 0,
+      blockedCount: 0,
+      items: [],
+    })
   })
 
   it("previews ready tokens and creates selected channels", async () => {
@@ -209,6 +231,46 @@ describe("managed-site token batch export", () => {
       success: false,
       skipped: false,
       error: "channel rejected",
+    })
+  })
+
+  it("marks execution as failed when createChannel throws", async () => {
+    const service = buildService({
+      createChannel: vi.fn().mockRejectedValue(new Error("transport error")),
+    })
+    mockGetManagedSiteService.mockResolvedValue(service)
+    mockGetManagedSiteServiceForType.mockReturnValue(service)
+
+    const {
+      prepareManagedSiteTokenBatchExportPreview,
+      executeManagedSiteTokenBatchExport,
+    } = await import("~/services/managedSites/tokenBatchExport")
+
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [
+        {
+          account: buildDisplaySiteData(),
+          token: buildAccountToken(),
+        },
+      ],
+    })
+
+    const result = await executeManagedSiteTokenBatchExport({
+      preview,
+      selectedItemIds: [preview.items[0].id],
+    })
+
+    expect(service.createChannel).toHaveBeenCalledTimes(1)
+    expect(result).toMatchObject({
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 1,
+    })
+    expect(result.items[0]).toMatchObject({
+      id: preview.items[0].id,
+      success: false,
+      skipped: false,
+      error: "transport error",
     })
   })
 
@@ -555,6 +617,33 @@ describe("managed-site token batch export", () => {
         MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.SECRET_RESOLUTION_FAILED,
     })
     expect(preview.items[0].blockingMessage).toBeTruthy()
+  })
+
+  it("blocks preview items when draft preparation throws", async () => {
+    const service = buildService({
+      prepareChannelFormData: vi.fn().mockRejectedValue(new Error("boom")),
+    })
+    mockGetManagedSiteService.mockResolvedValue(service)
+
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchExport"
+    )
+
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [
+        {
+          account: buildDisplaySiteData(),
+          token: buildAccountToken(),
+        },
+      ],
+    })
+
+    expect(preview.items[0]).toMatchObject({
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+      blockingReasonCode:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.INPUT_PREPARATION_FAILED,
+    })
+    expect(preview.items[0].blockingMessage).toContain("boom")
   })
 
   it("returns failed execution items when the managed-site config disappears before execution", async () => {

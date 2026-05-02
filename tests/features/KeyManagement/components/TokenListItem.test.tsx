@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TokenListItem } from "~/features/KeyManagement/components/TokenListItem"
+import type { AccountToken, DisplaySiteData } from "~/types"
 import { render, screen } from "~~/tests/test-utils/render"
 import {
   createAccount,
@@ -46,7 +47,18 @@ vi.mock("~/components/ui", async (importOriginal) => {
 })
 
 vi.mock("~/features/KeyManagement/components/TokenListItem/KeyDisplay", () => ({
-  KeyDisplay: () => <div>Key display</div>,
+  KeyDisplay: ({
+    toggleKeyVisibility,
+  }: {
+    toggleKeyVisibility?: () => void
+  }) => (
+    <div>
+      <div>Key display</div>
+      <button type="button" onClick={toggleKeyVisibility}>
+        Toggle key visibility
+      </button>
+    </div>
+  ),
 }))
 
 vi.mock(
@@ -59,8 +71,19 @@ vi.mock(
 vi.mock(
   "~/features/KeyManagement/components/TokenListItem/TokenHeader",
   () => ({
-    TokenHeader: ({ token }: { token: { name: string } }) => (
-      <div>{token.name}</div>
+    TokenHeader: ({
+      token,
+      onOpenCCSwitchDialog,
+    }: {
+      token: { name: string }
+      onOpenCCSwitchDialog?: () => void
+    }) => (
+      <div>
+        <div>{token.name}</div>
+        <button type="button" onClick={onOpenCCSwitchDialog}>
+          Open CC Switch
+        </button>
+      </div>
     ),
   }),
 )
@@ -69,6 +92,11 @@ const renderTokenListItem = (props?: {
   isSelected?: boolean
   onSelectionChange?: (checked: boolean) => void
   tokenGroup?: string
+  toggleKeyVisibility?: (
+    account: DisplaySiteData,
+    token: AccountToken,
+  ) => Promise<void>
+  onOpenCCSwitchDialog?: (token: AccountToken, account: DisplaySiteData) => void
 }) => {
   const account = createAccount({ id: "acc-1", name: "Account 1" })
   const token = createToken({
@@ -85,12 +113,12 @@ const renderTokenListItem = (props?: {
       displayTokenKey={token.key}
       visibleKeys={new Set()}
       isKeyVisibilityLoading={false}
-      toggleKeyVisibility={vi.fn()}
+      toggleKeyVisibility={props?.toggleKeyVisibility ?? (async () => {})}
       copyKey={vi.fn()}
       handleEditToken={vi.fn()}
       handleDeleteToken={vi.fn()}
       account={account as any}
-      onOpenCCSwitchDialog={vi.fn()}
+      onOpenCCSwitchDialog={props?.onOpenCCSwitchDialog ?? (() => {})}
       isSelected={props?.isSelected}
       onSelectionChange={props?.onSelectionChange}
     />,
@@ -171,6 +199,30 @@ describe("TokenListItem batch selection", () => {
     )
 
     expect(onSelectionChange).toHaveBeenCalledWith(false)
+  })
+
+  it("passes wrapped header and key-display callbacks through to child components", async () => {
+    const user = userEvent.setup()
+    const onOpenCCSwitchDialog = vi.fn()
+    const toggleKeyVisibility = vi.fn()
+
+    renderTokenListItem({
+      onOpenCCSwitchDialog,
+      onSelectionChange: vi.fn(),
+      toggleKeyVisibility,
+    })
+
+    expect(await screen.findByText("Token 1")).toBeInTheDocument()
+    await user.click(screen.getByRole("button", { name: "Open CC Switch" }))
+    expect(onOpenCCSwitchDialog).toHaveBeenCalledTimes(1)
+
+    await user.click(
+      screen.getByRole("button", { name: "Toggle key visibility" }),
+    )
+    expect(toggleKeyVisibility).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "acc-1" }),
+      expect.objectContaining({ id: 1 }),
+    )
   })
 
   it("omits the selection checkbox when batch selection is unavailable", async () => {

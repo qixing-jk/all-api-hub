@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TokenList } from "~/features/KeyManagement/components/TokenList"
+import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 import {
   createAccount,
@@ -17,20 +18,47 @@ vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
     token,
     isSelected,
     onSelectionChange,
+    onOpenCCSwitchDialog,
   }: {
     token: { name: string }
     isSelected?: boolean
     onSelectionChange?: (checked: boolean) => void
+    onOpenCCSwitchDialog?: () => void
   }) => (
-    <label>
-      <input
-        type="checkbox"
-        checked={isSelected === true}
-        onChange={(event) => onSelectionChange?.(event.currentTarget.checked)}
-      />
-      {token.name}
-    </label>
+    <div>
+      <label>
+        <input
+          type="checkbox"
+          checked={isSelected === true}
+          onChange={(event) => onSelectionChange?.(event.currentTarget.checked)}
+        />
+        {token.name}
+      </label>
+      <button type="button" onClick={onOpenCCSwitchDialog}>
+        Open CC Switch for {token.name}
+      </button>
+    </div>
   ),
+}))
+
+vi.mock("~/components/CCSwitchExportDialog", () => ({
+  CCSwitchExportDialog: ({
+    isOpen,
+    account,
+    onClose,
+  }: {
+    isOpen: boolean
+    account: { name: string }
+    onClose: () => void
+  }) =>
+    isOpen ? (
+      <div data-testid="cc-switch-export-dialog">
+        <span>CC Switch export for {account.name}</span>
+        <button type="button" onClick={onClose}>
+          Close CC Switch export
+        </button>
+      </div>
+    ) : null,
 }))
 
 vi.mock(
@@ -273,5 +301,77 @@ describe("TokenList batch export selection", () => {
         accountId: account.id,
       }),
     )
+  })
+
+  it("closes the batch export dialog without mutating the frozen selection", async () => {
+    const user = userEvent.setup()
+    renderTokenList()
+
+    await user.click(await screen.findByRole("checkbox", { name: "Token 1" }))
+    await user.click(
+      screen.getByRole("button", {
+        name: /keyManagement:batchManagedSiteExport.actions.open/,
+      }),
+    )
+
+    expect(screen.getByTestId("batch-export-dialog")).toBeInTheDocument()
+    expect(screen.getByTestId("batch-export-item-count")).toHaveTextContent("1")
+
+    await user.click(screen.getByRole("button", { name: "Close batch export" }))
+    expect(screen.queryByTestId("batch-export-dialog")).toBeNull()
+    expect(screen.getByRole("checkbox", { name: "Token 1" })).toBeChecked()
+  })
+
+  it("supports grouped selection and CC Switch actions", async () => {
+    const user = userEvent.setup()
+    renderTokenList({
+      selectedAccount: KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE,
+      displayData: [account] as any,
+    })
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:actions.expandAll",
+      }),
+    )
+    await user.click(await screen.findByRole("checkbox", { name: "Token 1" }))
+    expect(screen.getByRole("checkbox", { name: "Token 1" })).toBeChecked()
+
+    await user.click(
+      screen.getByRole("button", { name: "Open CC Switch for Token 1" }),
+    )
+    expect(screen.getByTestId("cc-switch-export-dialog")).toHaveTextContent(
+      "CC Switch export for Account 1",
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "Close CC Switch export" }),
+    )
+    expect(screen.queryByTestId("cc-switch-export-dialog")).toBeNull()
+  })
+
+  it("skips rendering flat-list tokens whose account metadata is missing", async () => {
+    const orphanToken = createToken({
+      id: 9,
+      name: "Orphan Token",
+      accountId: "missing-account",
+      accountName: "Missing Account",
+    })
+
+    renderTokenList({
+      tokens: [orphanToken] as any,
+      filteredTokens: [orphanToken] as any,
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("checkbox", { name: "Orphan Token" }),
+      ).toBeNull()
+      expect(
+        screen.queryByRole("button", {
+          name: "Open CC Switch for Orphan Token",
+        }),
+      ).toBeNull()
+    })
   })
 })
