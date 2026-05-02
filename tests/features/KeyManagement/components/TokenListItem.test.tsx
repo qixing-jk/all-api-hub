@@ -1,6 +1,6 @@
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TokenListItem } from "~/features/KeyManagement/components/TokenListItem"
 import { render, screen } from "~~/tests/test-utils/render"
@@ -68,6 +68,7 @@ vi.mock(
 const renderTokenListItem = (props?: {
   isSelected?: boolean
   onSelectionChange?: (checked: boolean) => void
+  tokenGroup?: string
 }) => {
   const account = createAccount({ id: "acc-1", name: "Account 1" })
   const token = createToken({
@@ -75,6 +76,7 @@ const renderTokenListItem = (props?: {
     name: "Token 1",
     accountId: account.id,
     accountName: account.name,
+    group: props?.tokenGroup,
   })
 
   return render(
@@ -96,6 +98,10 @@ const renderTokenListItem = (props?: {
 }
 
 describe("TokenListItem batch selection", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it("reflects the selected state and emits boolean checkbox changes", async () => {
     const user = userEvent.setup()
     const onSelectionChange = vi.fn()
@@ -165,5 +171,18 @@ describe("TokenListItem batch selection", () => {
     )
 
     expect(onSelectionChange).toHaveBeenCalledWith(false)
+  })
+
+  it("omits the selection checkbox when batch selection is unavailable", async () => {
+    renderTokenListItem({
+      tokenGroup: "managed-sites",
+    })
+
+    expect(await screen.findByText("Token 1")).toBeInTheDocument()
+    expect(
+      screen.queryByRole("checkbox", {
+        name: "keyManagement:batchManagedSiteExport.selection.rowLabel",
+      }),
+    ).toBeNull()
   })
 })

@@ -431,6 +431,13 @@ export function ManagedSiteTokenBatchExportDialog({
                 <Checkbox
                   checked={allExecutableSelected}
                   disabled={executableItems.length === 0}
+                  aria-label={t(
+                    "keyManagement:batchManagedSiteExport.actions.selectAll",
+                    {
+                      selected: selectedExecutableCount,
+                      total: executableItems.length,
+                    },
+                  )}
                   onCheckedChange={handleToggleAll}
                 />
                 {t("keyManagement:batchManagedSiteExport.actions.selectAll", {
@@ -471,6 +478,7 @@ export function ManagedSiteTokenBatchExportDialog({
                         <Checkbox
                           className="mt-0.5"
                           checked={selectedIds.has(item.id)}
+                          aria-label={`${item.accountName} / ${item.tokenName}`}
                           disabled={
                             !isExecutablePreviewItem(item) || !!executionResult
                           }

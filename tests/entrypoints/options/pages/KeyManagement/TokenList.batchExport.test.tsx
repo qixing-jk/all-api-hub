@@ -8,6 +8,10 @@ import {
   createToken,
 } from "~~/tests/utils/keyManagementFactories"
 
+const { mockBuildBatchExportResult } = vi.hoisted(() => ({
+  mockBuildBatchExportResult: vi.fn(),
+}))
+
 vi.mock("~/features/KeyManagement/components/TokenListItem", () => ({
   TokenListItem: ({
     token,
@@ -61,22 +65,7 @@ vi.mock(
           <div data-testid="batch-export-item-count">{items.length}</div>
           <button
             type="button"
-            onClick={() =>
-              onCompleted?.({
-                totalSelected: items.length,
-                attemptedCount: items.length,
-                createdCount: items.length,
-                failedCount: 0,
-                skippedCount: 0,
-                items: items.map(({ token }) => ({
-                  id: `${token.accountId}:${token.id}`,
-                  accountName: token.accountId,
-                  tokenName: String(token.id),
-                  success: true,
-                  skipped: false,
-                })),
-              })
-            }
+            onClick={() => onCompleted?.(mockBuildBatchExportResult(items))}
           >
             Complete batch export
           </button>
@@ -129,6 +118,22 @@ const renderTokenList = (props?: Partial<Parameters<typeof TokenList>[0]>) =>
 describe("TokenList batch export selection", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockBuildBatchExportResult.mockImplementation((items) => ({
+      totalSelected: items.length,
+      attemptedCount: items.length,
+      createdCount: items.length,
+      failedCount: 0,
+      skippedCount: 0,
+      items: items.map(
+        ({ token }: { token: { accountId: string; id: number } }) => ({
+          id: `${token.accountId}:${token.id}`,
+          accountName: token.accountId,
+          tokenName: String(token.id),
+          success: true,
+          skipped: false,
+        }),
+      ),
+    }))
   })
 
   it("toggles visible token selection from the toolbar", async () => {
@@ -185,19 +190,67 @@ describe("TokenList batch export selection", () => {
     })
   })
 
+  it("clears the current selection from the toolbar", async () => {
+    const user = userEvent.setup()
+    renderTokenList()
+
+    await user.click(await screen.findByRole("checkbox", { name: "Token 1" }))
+    await user.click(await screen.findByRole("checkbox", { name: "Token 2" }))
+    expect(screen.getByRole("checkbox", { name: "Token 1" })).toBeChecked()
+    expect(screen.getByRole("checkbox", { name: "Token 2" })).toBeChecked()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.clearSelection",
+      }),
+    )
+
+    expect(screen.getByRole("checkbox", { name: "Token 1" })).not.toBeChecked()
+    expect(screen.getByRole("checkbox", { name: "Token 2" })).not.toBeChecked()
+    expect(
+      screen.getByRole("button", {
+        name: /keyManagement:batchManagedSiteExport.actions.open/,
+      }),
+    ).toBeDisabled()
+  })
+
   it("uses the frozen open-time selection for completion mapping", async () => {
     const user = userEvent.setup()
     const onManagedSiteImportSuccess = vi.fn()
     const { rerender } = renderTokenList({ onManagedSiteImportSuccess })
+    mockBuildBatchExportResult.mockImplementation(() => ({
+      totalSelected: 2,
+      attemptedCount: 2,
+      createdCount: 1,
+      failedCount: 1,
+      skippedCount: 0,
+      items: [
+        {
+          id: `${token1.accountId}:${token1.id}`,
+          accountName: token1.accountId,
+          tokenName: String(token1.id),
+          success: true,
+          skipped: false,
+        },
+        {
+          id: `${token2.accountId}:${token2.id}`,
+          accountName: token2.accountId,
+          tokenName: String(token2.id),
+          success: false,
+          skipped: false,
+        },
+      ],
+    }))
 
     await user.click(await screen.findByRole("checkbox", { name: "Token 1" }))
+    await user.click(await screen.findByRole("checkbox", { name: "Token 2" }))
     await user.click(
       screen.getByRole("button", {
         name: /keyManagement:batchManagedSiteExport.actions.open/,
       }),
     )
 
-    expect(screen.getByTestId("batch-export-item-count")).toHaveTextContent("1")
+    expect(screen.getByTestId("batch-export-item-count")).toHaveTextContent("2")
 
     rerender(
       <TokenList
@@ -208,7 +261,7 @@ describe("TokenList batch export selection", () => {
       />,
     )
 
-    expect(screen.getByTestId("batch-export-item-count")).toHaveTextContent("1")
+    expect(screen.getByTestId("batch-export-item-count")).toHaveTextContent("2")
     await user.click(
       screen.getByRole("button", { name: "Complete batch export" }),
     )

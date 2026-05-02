@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { NEW_API, VELOERA } from "~/constants/siteType"
+import {
+  AXON_HUB,
+  CLAUDE_CODE_HUB,
+  NEW_API,
+  VELOERA,
+} from "~/constants/siteType"
 import type { ManagedSiteService } from "~/services/managedSites/managedSiteService"
 import type { AccountToken } from "~/types"
 import {
@@ -310,5 +315,278 @@ describe("managed-site token batch export", () => {
       ],
     })
     expect(mockResolveManagedSiteChannelMatch).not.toHaveBeenCalled()
+  })
+
+  it.each([
+    {
+      label: "empty name",
+      serviceOverrides: {
+        prepareChannelFormData: vi.fn(async () => ({
+          name: "   ",
+          type: 1,
+          key: "sk-live-token",
+          base_url: "https://example.com",
+          models: ["gpt-4o"],
+          groups: ["default"],
+          priority: 0,
+          weight: 0,
+          status: 1,
+        })),
+      },
+      expectedReason:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.NAME_REQUIRED,
+    },
+    {
+      label: "masked Claude Code Hub key",
+      serviceOverrides: {
+        siteType: CLAUDE_CODE_HUB,
+        messagesKey: "claudeCodeHub",
+        prepareChannelFormData: vi.fn(async () => ({
+          name: "Masked key",
+          type: 1,
+          key: "sk-****",
+          base_url: "https://example.com",
+          models: ["gpt-4o"],
+          groups: ["default"],
+          priority: 0,
+          weight: 0,
+          status: 1,
+        })),
+      },
+      expectedReason:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.REAL_KEY_REQUIRED,
+    },
+    {
+      label: "missing key",
+      serviceOverrides: {
+        prepareChannelFormData: vi.fn(async () => ({
+          name: "Missing key",
+          type: 1,
+          key: " ",
+          base_url: "https://example.com",
+          models: ["gpt-4o"],
+          groups: ["default"],
+          priority: 0,
+          weight: 0,
+          status: 1,
+        })),
+      },
+      expectedReason:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.KEY_REQUIRED,
+    },
+    {
+      label: "missing base URL",
+      serviceOverrides: {
+        siteType: AXON_HUB,
+        messagesKey: "axonhub",
+        prepareChannelFormData: vi.fn(async () => ({
+          name: "Missing base URL",
+          type: 1,
+          key: "sk-live-token",
+          base_url: " ",
+          models: ["gpt-4o"],
+          groups: ["default"],
+          priority: 0,
+          weight: 0,
+          status: 1,
+        })),
+      },
+      expectedReason:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.BASE_URL_REQUIRED,
+    },
+    {
+      label: "missing models",
+      serviceOverrides: {
+        prepareChannelFormData: vi.fn(async () => ({
+          name: "Missing models",
+          type: 1,
+          key: "sk-live-token",
+          base_url: "https://example.com",
+          models: [],
+          groups: ["default"],
+          priority: 0,
+          weight: 0,
+          status: 1,
+        })),
+      },
+      expectedReason:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.MODELS_REQUIRED,
+    },
+  ])(
+    "blocks preview items for invalid draft inputs: $label",
+    async ({ serviceOverrides, expectedReason }) => {
+      const service = buildService(
+        serviceOverrides as Partial<ManagedSiteService>,
+      )
+      mockGetManagedSiteService.mockResolvedValue(service)
+
+      const { prepareManagedSiteTokenBatchExportPreview } = await import(
+        "~/services/managedSites/tokenBatchExport"
+      )
+
+      const preview = await prepareManagedSiteTokenBatchExportPreview({
+        items: [
+          {
+            account: buildDisplaySiteData(),
+            token: buildAccountToken(),
+          },
+        ],
+      })
+
+      expect(preview.items[0]).toMatchObject({
+        status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+        blockingReasonCode: expectedReason,
+      })
+    },
+  )
+
+  it.each([
+    {
+      label: "backend search fails",
+      resolution: buildMatchInspection({
+        searchCompleted: false,
+      }),
+      expectedWarning:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.BACKEND_SEARCH_FAILED,
+    },
+    {
+      label: "exact verification is unavailable",
+      resolution: buildMatchInspection({
+        url: {
+          matched: true,
+          channel: { id: 7, name: "Similar" },
+          candidateCount: 1,
+        },
+        key: {
+          comparable: false,
+          matched: false,
+          reason: "masked",
+          channel: null,
+        },
+      }),
+      expectedWarning:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.EXACT_VERIFICATION_UNAVAILABLE,
+    },
+    {
+      label: "partial match requires confirmation",
+      resolution: buildMatchInspection({
+        models: {
+          comparable: true,
+          matched: true,
+          reason: "partial",
+          channel: { id: 12, name: "Candidate" },
+        },
+      }),
+      expectedWarning:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.MATCH_REQUIRES_CONFIRMATION,
+    },
+  ])(
+    "keeps preview items executable with warnings when $label",
+    async ({ resolution, expectedWarning }) => {
+      const service = buildService()
+      mockGetManagedSiteService.mockResolvedValue(service)
+      mockResolveManagedSiteChannelMatch.mockResolvedValue(resolution)
+
+      const { prepareManagedSiteTokenBatchExportPreview } = await import(
+        "~/services/managedSites/tokenBatchExport"
+      )
+
+      const preview = await prepareManagedSiteTokenBatchExportPreview({
+        items: [
+          {
+            account: buildDisplaySiteData(),
+            token: buildAccountToken(),
+          },
+        ],
+      })
+
+      expect(preview.items[0]).toMatchObject({
+        status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
+      })
+      expect(preview.items[0].warningCodes).toContain(expectedWarning)
+    },
+  )
+
+  it("blocks the preview when secret resolution fails", async () => {
+    const service = buildService()
+    mockGetManagedSiteService.mockResolvedValue(service)
+    mockResolveDisplayAccountTokenForSecret.mockRejectedValue(
+      new Error("secret lookup failed"),
+    )
+
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchExport"
+    )
+
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [
+        {
+          account: buildDisplaySiteData(),
+          token: buildAccountToken(),
+        },
+      ],
+    })
+
+    expect(preview.items[0]).toMatchObject({
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+      blockingReasonCode:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.SECRET_RESOLUTION_FAILED,
+    })
+    expect(preview.items[0].blockingMessage).toBeTruthy()
+  })
+
+  it("returns failed execution items when the managed-site config disappears before execution", async () => {
+    const service = buildService()
+    mockGetManagedSiteService.mockResolvedValue(service)
+    mockGetManagedSiteServiceForType.mockReturnValue(service)
+
+    const {
+      prepareManagedSiteTokenBatchExportPreview,
+      executeManagedSiteTokenBatchExport,
+    } = await import("~/services/managedSites/tokenBatchExport")
+
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [
+        {
+          account: buildDisplaySiteData(),
+          token: buildAccountToken(),
+        },
+        {
+          account: buildDisplaySiteData({ id: "account-2", name: "Account 2" }),
+          token: buildAccountToken({
+            id: 12,
+            accountId: "account-2",
+            accountName: "Account 2",
+            name: "Token 12",
+          }),
+        },
+      ],
+    })
+
+    vi.mocked(service.getConfig).mockResolvedValue(null)
+    const result = await executeManagedSiteTokenBatchExport({
+      preview,
+      selectedItemIds: [preview.items[0].id],
+    })
+
+    expect(result).toMatchObject({
+      totalSelected: 1,
+      attemptedCount: 1,
+      createdCount: 0,
+      failedCount: 1,
+      skippedCount: 1,
+    })
+    expect(result.items[0]).toMatchObject({
+      id: preview.items[0].id,
+      success: false,
+      skipped: false,
+      error:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.CONFIG_MISSING,
+    })
+    expect(result.items[1]).toMatchObject({
+      id: preview.items[1].id,
+      success: false,
+      skipped: true,
+    })
   })
 })

@@ -5,7 +5,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { NEW_API } from "~/constants/siteType"
 import { ManagedSiteTokenBatchExportDialog } from "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog"
 import {
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
+  MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
   type ManagedSiteTokenBatchExportPreview,
 } from "~/types/managedSiteTokenBatchExport"
 import {
@@ -56,16 +58,19 @@ vi.mock("~/components/ui", async (importOriginal) => {
     Checkbox: ({
       checked,
       disabled,
+      "aria-label": ariaLabel,
       onCheckedChange,
     }: {
       checked?: boolean
       disabled?: boolean
+      "aria-label"?: string
       onCheckedChange?: (checked: boolean) => void
     }) => (
       <button
         type="button"
         role="checkbox"
         aria-checked={checked === true}
+        aria-label={ariaLabel}
         disabled={disabled}
         onClick={() => onCheckedChange?.(!checked)}
       />
@@ -182,12 +187,76 @@ const preview: ManagedSiteTokenBatchExportPreview = {
   ],
 }
 
-const renderDialog = () =>
+const richPreview: ManagedSiteTokenBatchExportPreview = {
+  siteType: NEW_API,
+  totalCount: 4,
+  readyCount: 1,
+  warningCount: 1,
+  skippedCount: 1,
+  blockedCount: 1,
+  items: [
+    preview.items[0],
+    {
+      ...preview.items[1],
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
+      warningCodes: [
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.MODEL_PREFILL_FAILED,
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.MATCH_REQUIRES_CONFIRMATION,
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.EXACT_VERIFICATION_UNAVAILABLE,
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.BACKEND_SEARCH_FAILED,
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.DEDUPE_UNSUPPORTED,
+      ],
+    },
+    {
+      id: "account-1:3",
+      accountId: "account-1",
+      accountName: "Account 1",
+      tokenId: 3,
+      tokenName: "Token 3",
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.SKIPPED,
+      warningCodes: [],
+      draft: {
+        name: "Account 1 - Token 3",
+        type: 1,
+        key: "test-key-3",
+        base_url: "https://example.com",
+        models: ["gpt-4o-mini"],
+        groups: ["default"],
+        priority: 0,
+        weight: 0,
+        status: 1,
+      },
+      matchedChannel: {
+        id: 8,
+        name: "Existing channel",
+      },
+    },
+    {
+      id: "account-1:4",
+      accountId: "account-1",
+      accountName: "Account 1",
+      tokenId: 4,
+      tokenName: "Token 4",
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.BLOCKED,
+      warningCodes: [],
+      blockingReasonCode:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.BASE_URL_REQUIRED,
+      blockingMessage: "missing base URL",
+      draft: null,
+    },
+  ],
+}
+
+const renderDialog = (props?: {
+  onClose?: () => void
+  onCompleted?: (result: unknown) => void
+}) =>
   render(
     <ManagedSiteTokenBatchExportDialog
       isOpen={true}
-      onClose={vi.fn()}
+      onClose={props?.onClose ?? vi.fn()}
       items={[{ account, token }]}
+      onCompleted={props?.onCompleted as any}
     />,
   )
 
@@ -252,8 +321,33 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
     renderDialog()
 
     expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
-    const rowCheckboxes = screen.getAllByRole("checkbox")
-    await user.click(rowCheckboxes[2])
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "Account 1 / Token 2",
+      }),
+    )
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "keyManagement:batchManagedSiteExport.actions.selectAll",
+      }),
+    )
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "keyManagement:batchManagedSiteExport.actions.selectAll",
+      }),
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    ).toBeDisabled()
+
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "Account 1 / Token 1",
+      }),
+    )
 
     await user.click(
       screen.getByRole("button", {
@@ -280,6 +374,135 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         "keyManagement:batchManagedSiteExport.results.summary",
       ),
     ).toBeInTheDocument()
+  })
+
+  it("renders warning, skipped, blocked, and execution result details", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    const onCompleted = vi.fn()
+    mockPreparePreview.mockResolvedValue(richPreview)
+    mockExecuteBatchExport.mockResolvedValue({
+      totalSelected: 2,
+      attemptedCount: 2,
+      createdCount: 1,
+      failedCount: 1,
+      skippedCount: 2,
+      items: [
+        {
+          id: "account-1:1",
+          accountName: "Account 1",
+          tokenName: "Token 1",
+          success: true,
+          skipped: false,
+        },
+        {
+          id: "account-1:2",
+          accountName: "Account 1",
+          tokenName: "Token 2",
+          success: false,
+          skipped: false,
+          error: "warning item failed",
+        },
+        {
+          id: "account-1:3",
+          accountName: "Account 1",
+          tokenName: "Token 3",
+          success: false,
+          skipped: true,
+        },
+        {
+          id: "account-1:4",
+          accountName: "Account 1",
+          tokenName: "Token 4",
+          success: false,
+          skipped: true,
+        },
+      ],
+    })
+
+    renderDialog({ onClose, onCompleted })
+
+    expect(await screen.findByText("Account 1 / Token 4")).toBeInTheDocument()
+    expect(
+      screen.getByText("keyManagement:batchManagedSiteExport.status.warning"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("keyManagement:batchManagedSiteExport.status.skipped"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("keyManagement:batchManagedSiteExport.status.blocked"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.warnings.modelPrefillFailed",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.warnings.matchRequiresConfirmation",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.warnings.exactVerificationUnavailable",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.warnings.backendSearchFailed",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.warnings.dedupeUnsupported",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.messages.duplicate",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        /keyManagement:batchManagedSiteExport.blockedReasons.baseUrlRequired/,
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      })[1],
+    )
+
+    expect(onCompleted).toHaveBeenCalledTimes(1)
+    expect(
+      await screen.findByText(
+        "keyManagement:batchManagedSiteExport.results.status.success",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "keyManagement:batchManagedSiteExport.results.status.failed",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getAllByText(
+        "keyManagement:batchManagedSiteExport.results.status.skipped",
+      ),
+    ).toHaveLength(2)
+    expect(screen.getByText("warning item failed")).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "common:actions.close",
+      }),
+    )
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it("shows execution errors without replacing the preview error state", async () => {
