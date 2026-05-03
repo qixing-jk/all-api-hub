@@ -188,16 +188,40 @@ Through these integration capabilities, you can synchronize the same upstream si
 - In the **Settings → Data and Backup** section, under "Import and Export," you can export all current account configurations to JSON with one click.
 - Supports importing data exported from previous versions or other devices for quick migration or restoration.
 
-### 5.6 New API Model List Synchronization
+### 5.6 API Credential Profiles
+
+- In **Settings → API Credential Profiles**, you can separately save `Base URL`, API Key, tags, and notes, suitable for scenarios where you "don't have a site account but only interface configurations."
+- Supports viewing balance and daily usage overview, verifying interface/CLI compatibility, and directly opening the current credential in the model list.
+- You can also export directly from an individual credential to CherryStudio, CC Switch, Kilo Code, CLIProxyAPI, Claude Code Router, or the current self-hosted site.
+
+### 5.7 Bookmark Management
+
+- In **Settings → Bookmarks**, you can save shortcuts to consoles, documentation, top-up pages, redemption pages, etc.
+- Supports searching, tag filtering, pinning, and drag-and-drop sorting; you can also quickly switch to the `Bookmarks` view at the top of the popup.
+- Suitable for scenarios where you don't want to create a full account yet but want to centralize frequently used entry points.
+
+### 5.8 Balance History
+
+- After enabling in **Settings → Basic Settings → Balance History**, you can record daily snapshots of balance, income, and expenses.
+- View the overview, trend charts, account distribution, and summary tables on the **Settings → Balance History** page.
+- Suitable for long-term tracking of balance changes, top-up consumption patterns, or simple reconciliation.
+
+### 5.9 Usage Analysis
+
+- First, enable usage history synchronization in **Settings → Basic Settings → Account Usage**, then go to **Settings → Usage Analysis** to view charts.
+- Supports filtering by site, account, Token, and date to view request volume, Token consumption, model distribution, expenses, and latency trends.
+- Suitable for answering questions like "Where have I used the most recently, spent the most, or which link is the slowest?"
+
+### 5.10 New API Model List Synchronization
 
 For detailed documentation on the New API model list synchronization feature, please refer to [New API Model List Synchronization](./new-api-model-sync.md).
 
-### 5.7 New API Channel Management (Beta)
+### 5.11 New API Channel Management (Beta)
 
 Create/edit/delete channels directly within the extension. Combined with model whitelisting and single-channel synchronization debugging, this can significantly reduce the frequency of back-and-forth operations with the New API backend. Refer to [New API Channel Management](./new-api-channel-management.md) for detailed operations and precautions.
 
 <a id="cloudflare-window-downgrade"></a>
-### 5.8 Cloudflare Protection and Temporary Window Downgrade
+### 5.12 Cloudflare Protection and Temporary Window Downgrade
 
 - When Cloudflare intercepts requests (common status codes 401/403/429), the extension will automatically switch to a temporary window for retries, preserving the target domain's cookies. Generally, no manual operation is required; see [Cloudflare Bypass Assistant](./cloudflare-helper.md) for the underlying principles.
 - If a scenario requiring human-machine verification occurs, please complete the challenge in the pop-up assistance window. If failures are frequent, try changing networks or reducing request frequency.
@@ -208,18 +232,22 @@ Create/edit/delete channels directly within the extension. Combined with model w
 - [Supported Sites and System Types](./supported-sites.md)
 - [Safari Installation Guide](./safari-install.md)
 - [QQ / 360 and Other Browser Installation Guide](./other-browser-install.md)
+- [Bookmark Management](./bookmark-management.md)
+- [API Credential Profiles](./api-credential-profiles.md)
+- [Balance History](./balance-history.md)
+- [Usage Analysis](./usage-analytics.md)
 - [Cloudflare Bypass Assistant](./cloudflare-helper.md)
 - [Quick Export Site Configurations](./quick-export.md)
 - [Automatic Refresh and Real-time Data](./auto-refresh.md)
 - [Automatic Check-in and Check-in Monitoring](./auto-checkin.md)
 - [WebDAV Backup and Automatic Synchronization](./webdav-sync.md)
-- [Data Import and Export](./data-management.md)
 - [New API Model List Synchronization](./new-api-model-sync.md)
 - [New API Channel Management](./new-api-channel-management.md)
 - [CLIProxyAPI Integration](./cliproxyapi-integration.md)
 - [Model Redirection](./model-redirect.md)
 - [Sorting Priority Settings](./sorting-priority.md)
 - [Permissions Management (Optional Permissions)](./permissions.md)
+- [Data Import and Export](./data-management.md)
 
 ## 7. FAQ and Support
 
