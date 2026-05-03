@@ -201,6 +201,26 @@
     "toggleDesc": "开启后，当你尝试为同一站点 URL 再次添加账号时，会弹出确认对话框。",
     "toggleLabel": "添加重复账号前提醒"
   },
+  "externalReadApi": {
+    "copyToken": "复制",
+    "deleteToken": "删除",
+    "description": "显式允许持有访问 token 的网页或油猴脚本读取扩展已持久化的数据，并可选地向已打开的页面上下文广播轻量变更通知。",
+    "emptyTokens": "暂无可用访问 token。",
+    "enable": "启用外部只读访问",
+    "enableDesc": "开启后，持有有效 token 的外部调用方可以查询 All API Hub 导出的完整主存储数据。",
+    "generateToken": "生成 Token",
+    "notifications": "启用变更通知",
+    "notificationsDesc": "开启后，已打开的页面会在数据变化后收到不等待响应的轻量通知；下游如何消费、重试不在此范围内。",
+    "privacyWarning": "警告：启用后，持有有效 token 的外部调用方可读取完整主数据，其中可能包含 access_token、sessionCookie、refreshToken、apiKey 等敏感字段。删除或停用 token 后，对应外部访问会立即失效。",
+    "regenerateToken": "重置 Token",
+    "title": "外部读取 API / Hook",
+    "tokenCopied": "访问 token 已复制",
+    "tokenCopyFailed": "复制访问 token 失败",
+    "tokenCreatedAt": "创建时间：{{createdAt}}",
+    "tokenManagement": "访问令牌",
+    "tokenManagementDesc": "创建名称 + token 凭证。下游后续调用时携带 token 即可读取数据；变更通知由上方开关单独控制。",
+    "tokenNamePlaceholder": "例如：metapi-sync"
+  },
   "logging": {
     "consoleEnabled": "启用控制台日志",
     "consoleEnabledDesc": "关闭后，All API Hub 不会在浏览器控制台输出任何日志（包括错误）。",

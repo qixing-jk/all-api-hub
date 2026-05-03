@@ -77,6 +77,14 @@ describe("userPreferences", () => {
       expect(DEFAULT_PREFERENCES.claudeCodeHub!.adminToken).toBe("")
     })
 
+    it("has external read API disabled by default", () => {
+      expect(DEFAULT_PREFERENCES.externalReadApi).toEqual({
+        enabled: false,
+        notificationsEnabled: true,
+        tokens: [],
+      })
+    })
+
     it("creates fresh timestamps for new default snapshots", () => {
       vi.useFakeTimers()
 

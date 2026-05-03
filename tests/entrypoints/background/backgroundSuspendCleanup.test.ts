@@ -14,6 +14,9 @@ describe("background onSuspend temp-context cleanup", () => {
     ;(globalThis as any).browser = {
       runtime: {
         id: "test-extension-id",
+        getURL: vi.fn(
+          (path: string) => `chrome-extension://test-extension-id/${path}`,
+        ),
       },
     }
     ;(globalThis as any).defineBackground = (factory: () => unknown) =>

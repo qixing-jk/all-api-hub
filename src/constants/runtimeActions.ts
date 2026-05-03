@@ -17,6 +17,7 @@ export const RuntimeActionPrefixes = {
   BalanceHistory: "balanceHistory:",
   ChannelConfig: "channelConfig:",
   CookieInterceptor: "cookieInterceptor:",
+  ExternalReadApi: "externalReadApi:",
   ExternalCheckIn: "externalCheckIn:",
   LdohSiteLookup: "ldohSiteLookup:",
   ModelSync: "modelSync:",
@@ -328,6 +329,15 @@ export const RuntimeActionIds = {
   WebdavAutoSyncGetStatus: composeRuntimeAction(
     RuntimeActionPrefixes.WebdavAutoSync,
     "getStatus",
+  ),
+
+  ExternalReadApiNotifyContent: composeRuntimeAction(
+    RuntimeActionPrefixes.ExternalReadApi,
+    "notifyContent",
+  ),
+  ExternalReadApiStorageChanged: composeRuntimeAction(
+    RuntimeActionPrefixes.ExternalReadApi,
+    "storageChanged",
   ),
 
   ContentGetLocalStorage: "getLocalStorage",

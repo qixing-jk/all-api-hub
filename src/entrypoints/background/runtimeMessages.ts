@@ -12,6 +12,7 @@ import { handleAutoCheckinMessage } from "~/services/checkin/autoCheckin/schedul
 import { handleExternalCheckInMessage } from "~/services/checkin/externalCheckInService"
 import { handleDailyBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/scheduler"
 import { handleUsageHistoryMessage } from "~/services/history/usageHistory/scheduler"
+import { handleExternalReadApiStorageChangedMessage } from "~/services/integrations/externalReadApi"
 import { handleLdohSiteLookupMessage } from "~/services/integrations/ldohSiteLookup/background"
 import { handleChannelConfigMessage } from "~/services/managedSites/channelConfigStorage"
 import { handleManagedSiteModelSyncMessage } from "~/services/models/modelSync"
@@ -131,6 +132,11 @@ export function setupRuntimeMessageListeners() {
           .catch((error) => {
             sendResponse({ success: false, error: getErrorMessage(error) })
           })
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.ExternalReadApiStorageChanged) {
+        void handleExternalReadApiStorageChangedMessage(request, sendResponse)
         return true
       }
 

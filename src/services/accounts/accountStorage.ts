@@ -1,5 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
@@ -25,6 +26,7 @@ import {
 import type { DailyBalanceHistoryCaptureSource } from "~/types/dailyBalanceHistory"
 import { DeepPartial } from "~/types/utils"
 import { deepOverride } from "~/utils"
+import { sendMessageWithRetry } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
@@ -51,6 +53,30 @@ import {
 export { ACCOUNT_STORAGE_KEYS }
 
 const logger = createLogger("AccountStorage")
+
+/**
+ *
+ */
+async function notifyExternalReadApiAccountStorageChanged(
+  oldValue: AccountStorageConfig,
+  newValue: AccountStorageConfig,
+) {
+  try {
+    await sendMessageWithRetry({
+      action: RuntimeActionIds.ExternalReadApiStorageChanged,
+      storageKey: ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+      oldValue,
+      newValue,
+    })
+  } catch (error) {
+    logger.warn(
+      "Failed to notify external read API about account storage change",
+      {
+        error: getErrorMessage(error),
+      },
+    )
+  }
+}
 
 class AccountStorageService {
   private storage: Storage
@@ -109,7 +135,8 @@ class AccountStorageService {
     mutation: (config: AccountStorageConfig) => { result: T; changed: boolean },
   ): Promise<T> {
     return this.withStorageWriteLock(async () => {
-      const current = this.cloneConfig(await this.getStorageConfig())
+      const previous = this.cloneConfig(await this.getStorageConfig())
+      const current = this.cloneConfig(previous)
       const { result, changed } = mutation(current)
       if (!changed) {
         return result
@@ -117,6 +144,7 @@ class AccountStorageService {
 
       const next = normalizeAccountStorageConfigForWrite(current)
       await this.storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, next)
+      await notifyExternalReadApiAccountStorageChanged(previous, next)
       return result
     })
   }
@@ -1414,6 +1442,10 @@ class AccountStorageService {
         })
 
         await this.storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, nextConfig)
+        await notifyExternalReadApiAccountStorageChanged(
+          backupConfig,
+          nextConfig,
+        )
 
         if (data.pinnedAccountIds) {
           logger.info("Imported pinned entry id(s)", {

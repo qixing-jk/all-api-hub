@@ -2,6 +2,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   handleCheckCapGuard,
   handleCheckCloudflareGuard,
+  handleExternalReadApiNotify,
   handleGetLocalStorage,
   handleGetRenderedTitle,
   handleGetUserFromLocalStorage,
@@ -52,6 +53,10 @@ export function setupContentMessageHandlers() {
 
     if (request.action === RuntimeActionIds.ContentShowShieldBypassUi) {
       return handleShowShieldBypassUi(request, sendResponse)
+    }
+
+    if (request.action === RuntimeActionIds.ExternalReadApiNotifyContent) {
+      return handleExternalReadApiNotify(request, sendResponse)
     }
   })
 }
