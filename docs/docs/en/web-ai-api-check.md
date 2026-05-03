@@ -1,4 +1,4 @@
-# Web AI API Sniffing and Verification (Web AI API Check)
+# Web AI API Sniffing and Verification
 
 > Sniff `Base URL` and `API Key` on webpages and verify them instantly. Supports right-click menu quick check and automatic detection for specific sites.
 

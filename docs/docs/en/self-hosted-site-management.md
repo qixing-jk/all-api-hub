@@ -1,4 +1,4 @@
-# Self-Hosted Site Management (New API / AxonHub / Claude Code Hub, etc.)
+# Self-Hosted Site Management
 
 > 🧪 This feature aims to condense the most common channel operation actions (site building, parameter adjustment, synchronization) into the extension, so you don't have to frequently go back and forth between different system backends.
 
@@ -33,7 +33,7 @@ Open the extension settings page, go to **"Basic Settings"** in the left menu, a
 | Option | Description |
 |------|------|
 | **Base URL** | Your self-hosted system's backend address (usually the web access address). |
-| **Authentication Credentials** | **New API Series**: Requires Admin Token and User ID.<br>**AxonHub**: Admin email and password.<br>**Claude Code Hub**: Admin email and password.<br>**Octopus**: Username and password. |
+| **Authentication Credentials** | **New API Series**: Requires `Admin Token` and User ID.<br>**AxonHub**: Admin email and password.<br>**Claude Code Hub**: Admin email and password.<br>**Octopus**: Username and password. |
 
 ### 3. Verify Connection
 Click **"Verify Configuration"**. After successful verification, the management entrance for the corresponding system will be automatically unlocked.
@@ -51,13 +51,13 @@ Select **"Self-Hosted Site Management"** at the top of the settings page (or cli
 1. Click **"Add Channel"** at the top right.
 2. The form will automatically adjust according to the current system type:
    - **New API**: Provides rich channel types and group configurations.
-   - **Claude Code Hub**: Requires selecting a Provider type (OpenAI Compatible, Claude, Gemini, etc.).
+   - **Claude Code Hub**: Requires selecting a provider type (OpenAI Compatible, Claude, Gemini, etc.).
    - **AxonHub**: Supports rapid configuration of model lists.
 3. After saving, the system will directly call the backend API to complete synchronization.
 
 ### 3. Security Verification (2FA / OTP)
 When performing sensitive operations (e.g., viewing a channel's real key), if the system has secondary verification enabled, the extension will pop up a verification window.
-- For details, see: [New API Security Verification (2FA / OTP)](./new-api-security-verification.md)
+- For details, see: [New API Security Verification](./new-api-security-verification.md)
 
 ### 4. Channel Migration (Beta)
 This is an advanced feature that allows you to quickly convert existing accounts from **"Account Management"** into channels for your self-hosted site.

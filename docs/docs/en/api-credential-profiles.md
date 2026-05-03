@@ -65,12 +65,12 @@ Each credential card can display a lightweight telemetry overview, with common m
 
 You can choose the balance/usage query method for each credential:
 
-- **Auto (Auto-detect)**: Attempts compatible methods in a built-in order.
+- **Auto-detect**: Attempts compatible methods in a built-in order.
 - **NewAPI Token**: Suitable for querying token usage compatible with New API.
 - **OpenAI Billing**: Suitable for standard OpenAI Billing queries.
 - **Sub2API**: Suitable for Sub2API-style interfaces.
 - **Custom Read-only Endpoint**: Suitable for sites with custom read-only query endpoints.
-- **Disabled**: Does not query balance and usage, only retains the credential itself.
+- `Disabled`: Does not query balance and usage, only retains the credential itself.
 
 ### Detailed Telemetry Metrics
 
@@ -80,7 +80,7 @@ After enabling telemetry, the extension will attempt to retrieve the following m
 - **Today Requests**
 - **Today Prompt/Completion Tokens**
 - **Total Used/Total Granted/Total Available Quota**
-- **Expiration Time** (Expires At)
+- **Expiration Time**
 
 ### Custom Read-only Query
 

@@ -14,7 +14,7 @@ Enable usage history synchronization and perform an initial data synchronization
 
 ## Feature Overview
 
-- **Multi-dimensional Filtering**: Filter by site, account, Token, and date range.
+- **Multi-dimensional Filtering**: Filter by site, account, Token, date range.
 - **Overview Metrics**: View request count, input/output Tokens, total Tokens, and costs.
 - **Model Analysis**: View model distribution, model cost distribution, and model heatmap.
 - **Time Period Analysis**: View usage time hotspots to determine when requests are concentrated by day of the week/hour.
@@ -45,7 +45,7 @@ Navigate to **`Settings → Basic Settings → Account Usage`**. You will see tw
 
 If the browser does not support the `Alarms API`, the plugin will automatically degrade and will not force the use of unavailable scheduling methods.
 
-### Sync Status Management (Sync Status)
+### Sync Status Management
 
 In **`Settings → Basic Settings → Account Usage → Sync Status`**, you can manage usage synchronization much like "download tasks":
 

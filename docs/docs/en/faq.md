@@ -42,7 +42,7 @@ AnyRouter is a modified proxy site and does not support the standard Access Toke
 Because AnyRouter has modified the API, some features may not work correctly. If you encounter problems, it is recommended to contact the site administrator.
 :::
 
-### How to add Sub2API (JWT sites)?
+### How to add Sub2API sites?
 
 Common characteristics of Sub2API sites: the console interface is at `/api/v1/*`, and uses **short-term JWT** (`auth_token`) + **refresh token (rotates)** for login status. The console writes login information to localStorage:
 
@@ -298,9 +298,9 @@ If you are using QQ Browser, 360 Series Browsers, Cheetah Browser, or other desk
 
 ## 🛠️ Advanced & Developer Tools
 
-### What is the Mesh Gradient Lab?
+### What is the Mesh Gradient Debugging Tool?
 
-The **Mesh Gradient Lab** is a built-in developer tool primarily used for debugging and previewing the dynamic backgrounds used in the [Share Snapshot](./share-snapshot.md) feature.
+The **Mesh Gradient Debugging Tool** is a built-in developer tool primarily used for debugging and previewing the dynamic backgrounds used in the [Share Snapshot](./share-snapshot.md) feature.
 
 - **Functionality**: You can manually adjust the Seed, Palette Index, and Layout Index to preview visual effects under different combinations in real-time.
 - **How to Access**: Enter the extension's options page URL in the browser address bar and append the `#mesh-gradient-lab` anchor (e.g., `chrome-extension://<id>/options.html#mesh-gradient-lab`).

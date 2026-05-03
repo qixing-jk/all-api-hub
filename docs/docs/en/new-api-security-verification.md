@@ -1,4 +1,4 @@
-# New API Security Verification (2FA / OTP)
+# New API Security Verification
 
 > For site owners or administrators of systems based on the New API series (New API, DoneHub, Veloera, etc.). When you perform sensitive operations in the extension (e.g., viewing hidden channel keys, modifying critical settings, batch synchronization, etc.), you may need to complete a security verification.
 
@@ -8,17 +8,17 @@ To ensure account security, New API systems usually audit administrator operatio
 
 1. **Two-Factor Authentication (2FA/OTP)**: Requires a 6-digit verification code at login.
 2. **Secure Verification**: Requires identity re-confirmation when reading channel keys or making sensitive API calls.
-3. **Passkey / Manual Login**: In some environments where sessions cannot be obtained automatically via the interface, you will be guided to the web interface to complete the login.
+3. **Passkey or Manual Login**: In some environments where login sessions cannot be obtained automatically via the interface, you will be guided to the web interface to complete the login.
 
 ## Common Verification Flows
 
-### 1. Login Verification Code (Login 2FA)
+### 1. Login Verification Code
 When you first connect to a self-hosted site, or when your login status expires, the extension will pop up a verification window:
-- Please open your 2FA App (e.g., Google Authenticator, Bitwarden, etc.).
+- Please open your authenticator app (e.g., Google Authenticator, Bitwarden, etc.).
 - Enter the 6-digit verification code and submit.
-- Once verified, the extension will automatically save the session, and subsequent operations will not prompt for verification during the validity period.
+- Once verified, the extension will automatically save the login session, and subsequent operations will not prompt for verification during the validity period.
 
-### 2. Secondary Verification for Sensitive Operations (Secure Verification)
+### 2. Secondary Verification for Sensitive Operations
 In **"Self-hosted Site Management"**, if you attempt to:
 - Click **"Show Key"** to view the real key of a channel.
 - Perform **"Channel Migration"** which requires extracting private information from the source site.
@@ -36,7 +36,7 @@ If your site is configured with Passkey (WebAuthn) or other verification methods
 | Issue | Solution |
 |------|----------|
 | **Verification Code Error** | 1. Check if your phone time is synchronized with the server.<br>2. Ensure you are entering the 2FA code for the correct site. |
-| **Verification Box Won't Pop Up** | Ensure your Admin Token and User ID are correctly configured and that you have sufficient administrative permissions. |
+| **Verification Box Won't Pop Up** | Ensure your `Admin Token` and User ID are correctly configured and that you have sufficient administrative permissions. |
 | **Frequent Session Expiration** | Some systems have very short session validity or have IP binding enabled. We recommend checking the backend security settings. |
 | **Can't Find 2FA Settings** | Please enable two-factor authentication on the **"Personal Settings"** page of your self-hosted site. |
 

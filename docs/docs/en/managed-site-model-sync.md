@@ -2,7 +2,7 @@
 
 > An automation tool for administrators of self-hosted management panels (New API, AxonHub, Octopus, etc.). Automatically pulls the latest model list from upstream providers and updates your channel configurations, ensuring worry-free synchronization.
 
-![Model List Sync Interface](../static/image/new-api-channel-sync.png)
+![Model List Sync Interface](../static/image/en/new-api-channel-sync.png)
 
 ## Feature Overview
 
@@ -16,8 +16,8 @@
 
 | System Type | Sync Logic |
 |----------|----------|
-| **New API / DoneHub / Veloera** | Calls `/api/channel/fetch_models` (GET) to fetch upstream models, then updates channel configuration. |
-| **Octopus** | Calls `/api/v1/channel/fetch-model` (POST) to fetch upstream models. |
+| **New API / DoneHub / Veloera** | Calls `GET /api/channel/fetch_models` to fetch upstream models, then updates channel configuration. |
+| **Octopus** | Calls `POST /api/v1/channel/fetch-model` to fetch upstream models. |
 | **AxonHub** | Automatically reads and syncs the model list associated with the channel through the AxonHub management interface. |
 
 ## Prerequisites
