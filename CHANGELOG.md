@@ -1,5 +1,29 @@
 # Changelog
 
+## [3.36.0](https://github.com/qixing-jk/all-api-hub/compare/v3.35.0...v3.36.0) (2026-05-04)
+
+
+### Features
+
+* **account:** add one-click refresh for disabled accounts ([#784](https://github.com/qixing-jk/all-api-hub/issues/784)) ([0ab5bff](https://github.com/qixing-jk/all-api-hub/commit/0ab5bffa7e0f63a9591c27b4869797cca12e5607))
+* add batch export from keys to managed-site channels ([#775](https://github.com/qixing-jk/all-api-hub/issues/775)) ([6917657](https://github.com/qixing-jk/all-api-hub/commit/69176573ff65417d49c439daae4826aca87dc525))
+* **channel-migration:** Support AxonHub for channel migration ([#771](https://github.com/qixing-jk/all-api-hub/issues/771)) ([c780b3a](https://github.com/qixing-jk/all-api-hub/commit/c780b3ac1ccfc9d70d6620e7fe75d4dea222b1b2))
+* **docs:** add link validation script and update workflow ([c109a96](https://github.com/qixing-jk/all-api-hub/commit/c109a961afbe309126ff44c3ecd9f317e91a5732))
+* **key-management:** allow editing managed-site batch export models ([#780](https://github.com/qixing-jk/all-api-hub/issues/780)) ([d28a1ae](https://github.com/qixing-jk/all-api-hub/commit/d28a1ae61f94ca904c2371afde25c8c8d5904f53))
+* **key-management:** support multi-account key filtering and grouped selection ([#778](https://github.com/qixing-jk/all-api-hub/issues/778)) ([18164ab](https://github.com/qixing-jk/all-api-hub/commit/18164abb4415e8a8aec1ff67e799631dcc0128d0))
+* **managed-sites:** support claude code hub migration ([#774](https://github.com/qixing-jk/all-api-hub/issues/774)) ([09e0b2a](https://github.com/qixing-jk/all-api-hub/commit/09e0b2a03d1adfceb11b719fe218d44730c9d400))
+* **options:** add feedback shortcuts to the options header ([1349a89](https://github.com/qixing-jk/all-api-hub/commit/1349a89a449032bf54671042ae44e12ac97dbe30))
+* **react-devtools:** add enabled flag for conditional plugin control ([a413a4b](https://github.com/qixing-jk/all-api-hub/commit/a413a4b8b62fe433ac0d4ad7010ae0036022e452))
+
+
+### Bug Fixes
+
+* **docs:** sync translated docs on source moves ([0c947bc](https://github.com/qixing-jk/all-api-hub/commit/0c947bc4f8a2a3007c7ab2b01ecc1da9663933eb))
+* **i18n:** localize remaining locale labels ([c7d3c5e](https://github.com/qixing-jk/all-api-hub/commit/c7d3c5e80330df6f64ad04f5453c2ef9a32202bb))
+* **i18n:** localize telemetry mode labels ([9cb7682](https://github.com/qixing-jk/all-api-hub/commit/9cb76822cdeeceafc0ba42076a81eda9785101fa))
+* increase max heights for dialog result and preview lists ([#777](https://github.com/qixing-jk/all-api-hub/issues/777)) ([9f397c9](https://github.com/qixing-jk/all-api-hub/commit/9f397c95c211632429a4c8da2de9f051bc178f23))
+* **selection:** preserve checkbox indeterminate state ([#779](https://github.com/qixing-jk/all-api-hub/issues/779)) ([cf57ee5](https://github.com/qixing-jk/all-api-hub/commit/cf57ee511f817f6232adb3a9f31b7d0ee087f6d3))
+
 ## [3.35.0](https://github.com/qixing-jk/all-api-hub/compare/v3.34.0...v3.35.0) (2026-04-28)
 
 
