@@ -44,6 +44,10 @@ export const CHANNEL_MODEL_FILTER_PROBE_IDS = [
   "web-search",
 ] as const satisfies ApiVerificationProbeId[]
 
+export const DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS = [
+  CHANNEL_MODEL_FILTER_PROBE_IDS[0],
+] as const satisfies ApiVerificationProbeId[]
+
 /**
  * Returns true when a channel model filter rule is backed by API verification probes.
  */

@@ -9,7 +9,10 @@ import { Button } from "~/components/ui/button"
 import { normalizeChannelFilters } from "~/services/managedSites/channelModelFilterRules"
 import { resolveApiVerificationTypeForChannelType } from "~/services/models/modelSync/channelModelFilterEvaluator"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
-import { isProbeChannelModelFilterRule } from "~/types/channelModelFilters"
+import {
+  DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS,
+  isProbeChannelModelFilterRule,
+} from "~/types/channelModelFilters"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 
@@ -104,7 +107,7 @@ export default function ChannelFilterDialog({
               name: filter.name,
               description: filter.description,
               kind: "probe",
-              probeIds: ["text-generation"],
+              probeIds: [...DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS],
               match: "all",
               action: filter.action,
               enabled: filter.enabled,
@@ -154,7 +157,7 @@ export default function ChannelFilterDialog({
         ? {
             ...base,
             kind: "probe",
-            probeIds: ["text-generation"],
+            probeIds: [...DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS],
             match: "all",
           }
         : {

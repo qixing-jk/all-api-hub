@@ -773,6 +773,10 @@ describe("ManagedSiteModelSyncSettings", () => {
         ],
       })
     })
+
+    expect(toast.success).toHaveBeenCalledWith(
+      "managedSiteChannels:filters.messages.saved",
+    )
   })
 
   it("keeps the global filters dialog open when saving preferences fails", async () => {

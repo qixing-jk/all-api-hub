@@ -154,19 +154,20 @@ function normalizeProbeFilter(
   payload: IncomingChannelFilter,
   options: Required<NormalizeChannelFiltersOptions>,
 ): ChannelModelProbeFilterRule {
-  const probeIds = normalizeProbeIds(payload.probeIds)
+  const sanitizedPayload = stripCredentialFields(
+    payload as Record<string, unknown>,
+  ) as IncomingChannelFilter
+  const probeIds = normalizeProbeIds(sanitizedPayload.probeIds)
   if (probeIds.length === 0) {
     throw new Error("At least one probe is required")
   }
 
-  const normalized = {
-    ...normalizeCommonFields(payload, options),
+  return {
+    ...normalizeCommonFields(sanitizedPayload, options),
     kind: "probe" as const,
     probeIds,
-    match: normalizeMatchMode(payload.match),
+    match: normalizeMatchMode(sanitizedPayload.match),
   }
-
-  return stripCredentialFields(normalized) as ChannelModelProbeFilterRule
 }
 
 /**

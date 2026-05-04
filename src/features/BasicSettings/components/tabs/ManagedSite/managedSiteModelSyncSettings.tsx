@@ -26,7 +26,10 @@ import { modelMetadataService } from "~/services/models/modelMetadata"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
-import { isProbeChannelModelFilterRule } from "~/types/channelModelFilters"
+import {
+  DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS,
+  isProbeChannelModelFilterRule,
+} from "~/types/channelModelFilters"
 import type { ManagedSiteModelSyncPreferences } from "~/types/managedSiteModelSync"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
@@ -250,7 +253,7 @@ export default function ManagedSiteModelSyncSettings() {
               name: filter.name,
               description: filter.description,
               kind: "probe",
-              probeIds: ["text-generation"],
+              probeIds: [...DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS],
               match: "all",
               action: filter.action,
               enabled: filter.enabled,
@@ -298,7 +301,7 @@ export default function ManagedSiteModelSyncSettings() {
         ? {
             ...base,
             kind: "probe",
-            probeIds: ["text-generation"],
+            probeIds: [...DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS],
             match: "all",
           }
         : {

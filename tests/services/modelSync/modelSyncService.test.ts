@@ -550,6 +550,117 @@ describe("ModelSyncService - probe-backed filters", () => {
     expect(runApiVerificationProbeMock).toHaveBeenCalledTimes(2)
   })
 
+  it("includes a model when any selected probe passes under match:any", async () => {
+    fetchChannelModelsMock.mockResolvedValueOnce(["model-a"])
+    runApiVerificationProbeMock.mockImplementation(
+      async ({ probeId }: { probeId: string }) => ({
+        id: probeId,
+        status: probeId === "text-generation" ? "pass" : "fail",
+        latencyMs: 1,
+        summary: "ok",
+      }),
+    )
+
+    const service = new ModelSyncService(
+      "https://managed.example.com",
+      "admin-token",
+      "1",
+      undefined,
+      undefined,
+      undefined,
+      [
+        makeProbeRule({
+          probeIds: ["text-generation", "tool-calling"],
+          match: "any",
+        }),
+      ],
+    )
+    const channel = {
+      id: 99,
+      name: "Any Mode",
+      type: ChannelType.OpenAI,
+      base_url: "https://channel.example.com",
+      key: "sk-key",
+      models: "",
+    } as any
+
+    const result = await service.runForChannel(channel, 0)
+
+    expect(result).toMatchObject({
+      ok: true,
+      newModels: ["model-a"],
+    })
+    expect(updateChannelModelsMock).toHaveBeenCalledWith(
+      expect.anything(),
+      99,
+      "model-a",
+    )
+  })
+
+  it("marks a model as unmatched when probe execution throws", async () => {
+    const context = {
+      channel: {
+        id: 92,
+        type: ChannelType.OpenAI,
+        base_url: "https://channel.example.com",
+        key: "sk-channel-key",
+      },
+      siteType: VELOERA,
+      managedSiteBaseUrl: "https://managed.example.com",
+      adminToken: "admin-token",
+      cache: new Map<string, boolean>(),
+    } as any
+    runApiVerificationProbeMock.mockRejectedValueOnce(
+      new Error("probe failed with sk-channel-key"),
+    )
+
+    await expect(
+      matchesProbeFilterRule(makeProbeRule(), "model-a", context),
+    ).resolves.toBe(false)
+
+    expect(context.cache.size).toBe(1)
+  })
+
+  it("rejects probe filtering when the channel base URL is missing", async () => {
+    const context = {
+      channel: {
+        id: 93,
+        type: ChannelType.OpenAI,
+        base_url: "   ",
+        key: "sk-channel-key",
+      },
+      siteType: VELOERA,
+      managedSiteBaseUrl: "https://managed.example.com",
+      adminToken: "admin-token",
+      cache: new Map<string, boolean>(),
+    } as any
+
+    await expect(
+      matchesProbeFilterRule(makeProbeRule(), "model-a", context),
+    ).rejects.toMatchObject({
+      reason: "base-url-missing",
+      message:
+        "Probe filtering could not run because the channel base URL is missing.",
+    })
+  })
+
+  it("maps supported string and numeric channel types to verification api types", async () => {
+    const { resolveApiVerificationTypeForChannelType } = await import(
+      "~/services/models/modelSync/channelModelFilterEvaluator"
+    )
+
+    expect(
+      resolveApiVerificationTypeForChannelType(String(ChannelType.Anthropic)),
+    ).toBe("anthropic")
+    expect(resolveApiVerificationTypeForChannelType(ChannelType.PaLM)).toBe(
+      "google",
+    )
+    expect(resolveApiVerificationTypeForChannelType("anthropic")).toBe(
+      "anthropic",
+    )
+    expect(resolveApiVerificationTypeForChannelType("gemini")).toBe("google")
+  })
+
   it("does not update models when probe filtering cannot resolve a hidden key", async () => {
     fetchChannelModelsMock.mockResolvedValueOnce(["model-a"])
     getManagedSiteServiceForTypeMock.mockReturnValue({})
