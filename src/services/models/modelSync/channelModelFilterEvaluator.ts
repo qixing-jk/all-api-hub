@@ -46,6 +46,8 @@ export interface ProbeFilterContext {
   adminToken: string
   userId?: string
   cache: Map<string, boolean>
+  resolvedKey?: string
+  abortSignal?: AbortSignal
 }
 
 interface ProbeExecutionInput {
@@ -184,8 +186,13 @@ function hashSecret(value: string): string {
  * Resolve the usable channel key from the channel row or provider capability.
  */
 async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
+  if (context.resolvedKey !== undefined) {
+    return context.resolvedKey
+  }
+
   const directKey = context.channel.key?.trim() ?? ""
   if (hasUsableManagedSiteChannelKey(directKey)) {
+    context.resolvedKey = directKey
     return directKey
   }
 
@@ -207,7 +214,8 @@ async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
     if (!hasUsableManagedSiteChannelKey(key)) {
       throw new Error("channel_key_unavailable")
     }
-    return key.trim()
+    context.resolvedKey = key.trim()
+    return context.resolvedKey
   } catch (error) {
     const diagnostic = toSanitizedErrorSummary(error, [
       context.adminToken,
@@ -262,6 +270,10 @@ export async function matchesProbeFilterRule(
   modelId: string,
   context: ProbeFilterContext,
 ): Promise<boolean> {
+  if (rule.probeIds.length === 0) {
+    return false
+  }
+
   const executionInput = await getProbeExecutionInput(context)
   const keyHash = hashSecret(executionInput.apiKey)
 
@@ -284,6 +296,7 @@ export async function matchesProbeFilterRule(
           ...executionInput,
           modelId,
           probeId,
+          abortSignal: context.abortSignal,
         })
         const matched = result.status === "pass"
         context.cache.set(cacheKey, matched)
@@ -303,6 +316,10 @@ export async function matchesProbeFilterRule(
       }
     }),
   )
+
+  if (probeMatches.length === 0) {
+    return false
+  }
 
   return rule.match === "any"
     ? probeMatches.some(Boolean)

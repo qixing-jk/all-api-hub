@@ -23,6 +23,7 @@ const mocks = vi.hoisted(() => ({
   getChannelUpstreamModelOptions: vi.fn(),
   saveChannelUpstreamModelOptions: vi.fn(),
   collectModelsFromExecution: vi.fn(),
+  modelSyncServiceCtor: vi.fn(),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -65,6 +66,10 @@ vi.mock("~/services/managedSites/channelConfigStorage", () => ({
 
 vi.mock("~/services/models/modelSync/modelSyncService", () => {
   class ModelSyncServiceMock {
+    constructor(...args: unknown[]) {
+      mocks.modelSyncServiceCtor(...args)
+    }
+
     listChannels = mocks.listChannels
     runBatch = mocks.runBatch
   }
@@ -166,6 +171,54 @@ describe("modelSyncScheduler additional scheduler flows", () => {
     await modelSyncScheduler.initialize()
 
     expect(mocks.onAlarm).toHaveBeenCalledTimes(1)
+  })
+
+  it("sanitizes stored global channel filters before constructing the service", async () => {
+    mocks.getPreferences.mockResolvedValue({
+      managedSiteType: "new-api",
+      newApi: {
+        baseUrl: "https://example.com",
+        adminToken: "token",
+        userId: "1",
+      },
+      managedSiteModelSync: {
+        ...(DEFAULT_PREFERENCES as any).managedSiteModelSync,
+        globalChannelModelFilters: [
+          {
+            kind: "probe",
+            name: " Needs trim ",
+            probeIds: ["text-generation", "unknown-probe"],
+            apiKey: "sk-should-not-persist",
+          },
+        ],
+      },
+    })
+
+    const { modelSyncScheduler } = await import(
+      "~/services/models/modelSync/scheduler"
+    )
+
+    await modelSyncScheduler.listChannels()
+
+    expect(mocks.modelSyncServiceCtor).toHaveBeenCalledWith(
+      "https://example.com",
+      "token",
+      "1",
+      {
+        requestsPerMinute: 10,
+        burst: 2,
+      },
+      [],
+      {},
+      [
+        expect.objectContaining({
+          kind: "probe",
+          name: "Needs trim",
+          probeIds: ["text-generation"],
+        }),
+      ],
+      "new-api",
+    )
   })
 })
 

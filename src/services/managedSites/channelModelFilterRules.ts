@@ -199,12 +199,16 @@ export function normalizeChannelFilters(
   }
 
   const now = options.now ?? Date.now()
-  return filters.map((filter) =>
-    normalizeChannelFilter(filter, {
+  return filters.map((filter, index) => {
+    if (!filter || typeof filter !== "object") {
+      throw new Error(`Filter at index ${index} must be a non-null object`)
+    }
+
+    return normalizeChannelFilter(filter, {
       ...options,
       now,
-    }),
-  )
+    })
+  })
 }
 
 /**

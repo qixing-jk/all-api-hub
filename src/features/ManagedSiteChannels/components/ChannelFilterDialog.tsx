@@ -249,15 +249,20 @@ export default function ChannelFilterDialog({
     }
     setIsSaving(true)
     try {
-      const payload = rulesToSave.map((filter) => ({
-        ...filter,
-        name: filter.name.trim(),
-        description: filter.description?.trim() || undefined,
-      }))
+      const payload = normalizeChannelFilters(
+        rulesToSave.map((filter) => ({
+          ...filter,
+          name: filter.name.trim(),
+          description: filter.description?.trim() || undefined,
+        })),
+        {
+          idPrefix: "channel-filter",
+        },
+      )
       await saveChannelFilters(channel.id, payload)
-      setFilters(rulesToSave)
+      setFilters(payload)
       try {
-        setJsonText(JSON.stringify(rulesToSave, null, 2))
+        setJsonText(JSON.stringify(payload, null, 2))
       } catch {
         // ignore serialization errors
       }

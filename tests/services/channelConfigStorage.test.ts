@@ -165,6 +165,35 @@ describe("channelConfigStorage", () => {
     ])
   })
 
+  it("drops non-object imported filter entries instead of crashing import", async () => {
+    const count = await channelConfigStorage.importConfigs({
+      12: {
+        modelFilterSettings: {
+          rules: [
+            {
+              name: "Keep GPT",
+              pattern: "gpt",
+              isRegex: false,
+              action: "include",
+              enabled: true,
+            },
+            42 as any,
+          ],
+        },
+      },
+    })
+
+    expect(count).toBe(1)
+
+    const imported = await channelConfigStorage.getAllConfigs()
+    expect(imported[12].modelFilterSettings.rules).toEqual([
+      expect.objectContaining({
+        name: "Keep GPT",
+        kind: "pattern",
+      }),
+    ])
+  })
+
   it("upserts filters while preserving existing createdAt", async () => {
     storageData.set("channel_configs", {
       9: {

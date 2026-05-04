@@ -379,11 +379,16 @@ export default function ManagedSiteModelSyncSettings() {
     setIsSavingGlobalChannelModelFilters(true)
 
     try {
-      const payload = rulesToSave.map((filter) => ({
-        ...filter,
-        name: filter.name.trim(),
-        description: filter.description?.trim() || undefined,
-      }))
+      const payload = normalizeChannelFilters(
+        rulesToSave.map((filter) => ({
+          ...filter,
+          name: filter.name.trim(),
+          description: filter.description?.trim() || undefined,
+        })),
+        {
+          idPrefix: "global-channel-filter",
+        },
+      )
 
       const success = await savePreferences({
         globalChannelModelFilters: payload,
@@ -391,7 +396,7 @@ export default function ManagedSiteModelSyncSettings() {
       if (!success) {
         return
       }
-      setGlobalChannelModelFiltersDraft(rulesToSave)
+      setGlobalChannelModelFiltersDraft(payload)
       toast.success(t("managedSiteChannels:filters.messages.saved"))
       setIsGlobalChannelModelFiltersDialogOpen(false)
     } catch (error) {

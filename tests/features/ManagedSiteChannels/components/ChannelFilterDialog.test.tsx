@@ -73,6 +73,7 @@ vi.mock("~/components/ChannelFiltersEditor", () => ({
     viewMode,
     jsonText,
     isLoading,
+    probeRulesSupported,
     onAddFilter,
     onRemoveFilter,
     onFieldChange,
@@ -85,7 +86,11 @@ vi.mock("~/components/ChannelFiltersEditor", () => ({
       <div data-testid="loading-state">{String(Boolean(isLoading))}</div>
       <div data-testid="filter-count">{filters.length}</div>
       <div data-testid="first-filter-name">{filters[0]?.name ?? ""}</div>
+      <div data-testid="probe-rules-supported">
+        {String(Boolean(probeRulesSupported))}
+      </div>
       <button onClick={onAddFilter}>add-filter</button>
+      <button onClick={() => onAddFilter("probe")}>add-probe-filter</button>
       <button onClick={() => filters[0] && onRemoveFilter(filters[0].id)}>
         remove-filter
       </button>
@@ -160,6 +165,7 @@ const mockedSaveChannelFilters = saveChannelFilters as unknown as ReturnType<
 const sampleChannel = {
   id: 42,
   name: "Alpha",
+  type: "midjourney",
 } as any
 
 describe("ChannelFilterDialog", () => {
@@ -219,6 +225,9 @@ describe("ChannelFilterDialog", () => {
         null,
         2,
       ),
+    )
+    expect(screen.getByTestId("probe-rules-supported")).toHaveTextContent(
+      "false",
     )
   })
 
@@ -326,6 +335,48 @@ describe("ChannelFilterDialog", () => {
           createdAt: 1_700_000_000_000,
           updatedAt: 1_700_000_000_000,
         },
+      ])
+    })
+
+    expect(toast.success).toHaveBeenCalledWith(
+      "managedSiteChannels:filters.messages.saved",
+    )
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("normalizes visual-mode probe filters before saving", async () => {
+    const onClose = vi.fn()
+
+    render(
+      <ChannelFilterDialog
+        channel={{
+          ...sampleChannel,
+          type: "openai",
+        }}
+        open={true}
+        onClose={onClose}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("loading-state")).toHaveTextContent("false")
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "add-probe-filter" }))
+    fireEvent.click(screen.getByRole("button", { name: "set-first-name" }))
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:filters.actions.save",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockedSaveChannelFilters).toHaveBeenCalledWith(42, [
+        expect.objectContaining({
+          kind: "probe",
+          name: "Rule",
+          probeIds: ["text-generation"],
+        }),
       ])
     })
 

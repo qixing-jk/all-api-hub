@@ -28,6 +28,8 @@ import {
 } from "./channelModelFilterEvaluator"
 import { RateLimiter } from "./rateLimiter"
 
+const PROBE_FILTER_TIMEOUT_MS = 30_000
+
 /**
  * Unified logger scoped to managed-site model synchronization.
  */
@@ -106,6 +108,30 @@ export class ModelSyncService {
   private async throttle() {
     if (this.rateLimiter) {
       await this.rateLimiter.acquire()
+    }
+  }
+
+  private createProbeFilterAbortSignal(): {
+    signal: AbortSignal
+    cleanup: () => void
+  } {
+    if (typeof AbortSignal.timeout === "function") {
+      return {
+        signal: AbortSignal.timeout(PROBE_FILTER_TIMEOUT_MS),
+        cleanup: () => {},
+      }
+    }
+
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => {
+      controller.abort()
+    }, PROBE_FILTER_TIMEOUT_MS)
+
+    return {
+      signal: controller.signal,
+      cleanup: () => {
+        clearTimeout(timeoutId)
+      },
     }
   }
 
@@ -260,6 +286,7 @@ export class ModelSyncService {
         const fetchedModels = await this.fetchChannelModels(channel.id)
         const allowListedModels = this.filterAllowedModels(fetchedModels)
         const probeFilterCache = new Map<string, boolean>()
+        const probeFilterAbort = this.createProbeFilterAbortSignal()
         const probeContext: ProbeFilterContext = {
           channel,
           siteType: this.siteType,
@@ -267,33 +294,38 @@ export class ModelSyncService {
           adminToken: this.token,
           userId: this.userId,
           cache: probeFilterCache,
+          abortSignal: probeFilterAbort.signal,
         }
-        const globallyScopedModels = await this.applyFilters(
-          this.globalChannelModelFilters,
-          allowListedModels,
-          probeContext,
-        )
-        const channelScopedModels = await this.applyChannelFilters(
-          channel.id,
-          globallyScopedModels,
-          probeContext,
-        )
+        try {
+          const globallyScopedModels = await this.applyFilters(
+            this.globalChannelModelFilters,
+            allowListedModels,
+            probeContext,
+          )
+          const channelScopedModels = await this.applyChannelFilters(
+            channel.id,
+            globallyScopedModels,
+            probeContext,
+          )
 
-        if (this.haveModelsChanged(oldModels, channelScopedModels)) {
-          // Only push an update when model sets differ to avoid unnecessary writes
-          await this.updateChannelModels(channel, channelScopedModels)
-          channel.models = channelScopedModels.join(",")
-        }
+          if (this.haveModelsChanged(oldModels, channelScopedModels)) {
+            // Only push an update when model sets differ to avoid unnecessary writes
+            await this.updateChannelModels(channel, channelScopedModels)
+            channel.models = channelScopedModels.join(",")
+          }
 
-        return {
-          channelId: channel.id,
-          channelName: channel.name,
-          ok: true,
-          attempts,
-          finishedAt: Date.now(),
-          oldModels,
-          newModels: channelScopedModels,
-          message: "Success",
+          return {
+            channelId: channel.id,
+            channelName: channel.name,
+            ok: true,
+            attempts,
+            finishedAt: Date.now(),
+            oldModels,
+            newModels: channelScopedModels,
+            message: "Success",
+          }
+        } finally {
+          probeFilterAbort.cleanup()
         }
       } catch (error: any) {
         if (error instanceof ProbeFilterUnavailableError) {

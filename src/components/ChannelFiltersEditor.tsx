@@ -196,7 +196,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                   </div>
                 </div>
 
-                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.45fr)]">
+                <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.45fr)_minmax(180px,0.4fr)]">
                   <div className="space-y-2">
                     <Label>{t("filters.labels.ruleType")}</Label>
                     <Select
@@ -220,9 +220,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                         </SelectItem>
                       </SelectContent>
                     </Select>
-                    {!probeRulesSupported &&
-                    (filter.kind ?? "pattern") !== "probe" &&
-                    probeRulesUnsupportedMessage ? (
+                    {!probeRulesSupported && probeRulesUnsupportedMessage ? (
                       <p className="text-muted-foreground text-xs">
                         {probeRulesUnsupportedMessage}
                       </p>
@@ -235,6 +233,7 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
                         <CompactMultiSelect
                           options={probeOptions}
                           selected={filter.probeIds}
+                          disabled={!probeRulesSupported}
                           onChange={(value) =>
                             onFieldChange(filter.id, "probeIds", value)
                           }

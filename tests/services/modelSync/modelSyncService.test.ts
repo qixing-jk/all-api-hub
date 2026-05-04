@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ChannelType } from "~/constants/newApi"
 import { VELOERA } from "~/constants/siteType"
 import { getApiService } from "~/services/apiService"
+import { matchesProbeFilterRule } from "~/services/models/modelSync/channelModelFilterEvaluator"
 import { ModelSyncService } from "~/services/models/modelSync/modelSyncService"
 import type {
   ChannelModelFilterRule,
@@ -455,6 +456,7 @@ describe("ModelSyncService - probe-backed filters", () => {
       apiType: "openai-compatible",
       modelId: "model-a",
       probeId: "text-generation",
+      abortSignal: expect.any(AbortSignal),
     })
     expect(runApiVerificationProbeMock).toHaveBeenCalledWith({
       baseUrl: "https://channel.example.com",
@@ -462,6 +464,7 @@ describe("ModelSyncService - probe-backed filters", () => {
       apiType: "openai-compatible",
       modelId: "model-b",
       probeId: "text-generation",
+      abortSignal: expect.any(AbortSignal),
     })
     expect(updateChannelModelsMock).toHaveBeenCalledWith(
       expect.anything(),
@@ -507,6 +510,7 @@ describe("ModelSyncService - probe-backed filters", () => {
       expect.objectContaining({
         apiKey: "sk-resolved-channel-key",
         modelId: "model-a",
+        abortSignal: expect.any(AbortSignal),
       }),
     )
   })
@@ -639,6 +643,56 @@ describe("ModelSyncService - probe-backed filters", () => {
     expect(result.message).not.toContain("sk-hidden-channel-key")
     expect(result.message).not.toContain("123456")
     expect(updateChannelModelsMock).not.toHaveBeenCalled()
+  })
+
+  it("resolves a hidden key only once across repeated probe evaluations", async () => {
+    const context = {
+      channel: {
+        id: 90,
+        type: ChannelType.OpenAI,
+        base_url: "https://channel.example.com",
+        key: "",
+      },
+      siteType: VELOERA,
+      managedSiteBaseUrl: "https://managed.example.com",
+      adminToken: "admin-token",
+      userId: "1",
+      cache: new Map<string, boolean>(),
+    } as any
+
+    await matchesProbeFilterRule(makeProbeRule(), "model-a", context)
+    await matchesProbeFilterRule(
+      makeProbeRule({ id: "other-rule" }),
+      "model-b",
+      context,
+    )
+
+    expect(fetchChannelSecretKeyMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("treats empty probe rules as non-matches", async () => {
+    const context = {
+      channel: {
+        id: 91,
+        type: ChannelType.OpenAI,
+        base_url: "https://channel.example.com",
+        key: "sk-channel-key",
+      },
+      siteType: VELOERA,
+      managedSiteBaseUrl: "https://managed.example.com",
+      adminToken: "admin-token",
+      cache: new Map<string, boolean>(),
+    } as any
+
+    await expect(
+      matchesProbeFilterRule(
+        makeProbeRule({ probeIds: [] }),
+        "model-a",
+        context,
+      ),
+    ).resolves.toBe(false)
+
+    expect(runApiVerificationProbeMock).not.toHaveBeenCalled()
   })
 })
 

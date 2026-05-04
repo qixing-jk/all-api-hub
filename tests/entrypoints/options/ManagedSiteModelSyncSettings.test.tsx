@@ -95,6 +95,7 @@ vi.mock("~/components/ChannelFiltersEditor", () => ({
     filters,
     viewMode,
     jsonText,
+    probeRulesSupported,
     onAddFilter,
     onRemoveFilter,
     onFieldChange,
@@ -105,7 +106,11 @@ vi.mock("~/components/ChannelFiltersEditor", () => ({
     <div>
       <div data-testid="filter-view-mode">{viewMode}</div>
       <div data-testid="filter-count">{filters.length}</div>
+      <div data-testid="probe-rules-supported">
+        {String(Boolean(probeRulesSupported))}
+      </div>
       <button onClick={onAddFilter}>add-filter</button>
+      <button onClick={() => onAddFilter("probe")}>add-probe-filter</button>
       <button onClick={() => filters[0] && onRemoveFilter(filters[0].id)}>
         remove-filter
       </button>
@@ -736,6 +741,38 @@ describe("ManagedSiteModelSyncSettings", () => {
     expect(toast.success).toHaveBeenCalledWith(
       "managedSiteChannels:filters.messages.saved",
     )
+  })
+
+  it("normalizes visual global probe filters before saving", async () => {
+    render(<ManagedSiteModelSyncSettings />)
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:settings.globalChannelModelFiltersButton",
+      }),
+    )
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "add-probe-filter" }))
+    fireEvent.click(screen.getByRole("button", { name: "set-first-name" }))
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:filters.actions.save",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({
+        globalChannelModelFilters: [
+          expect.objectContaining({
+            kind: "probe",
+            name: "Rule",
+            probeIds: ["text-generation"],
+          }),
+        ],
+      })
+    })
   })
 
   it("keeps the global filters dialog open when saving preferences fails", async () => {

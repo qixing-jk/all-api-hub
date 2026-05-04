@@ -78,14 +78,17 @@ vi.mock("~/components/ui", async (importOriginal) => {
       selected,
       onChange,
       placeholder,
+      disabled,
     }: {
       selected: string[]
       onChange: (values: string[]) => void
       placeholder?: string
+      disabled?: boolean
     }) => (
       <button
         type="button"
         aria-label={placeholder}
+        disabled={disabled}
         onClick={() => onChange([...selected, "tool-calling"])}
       >
         {selected.join(",")}
@@ -260,6 +263,20 @@ describe("ChannelFiltersEditor", () => {
     expect(props.onAddFilter).toHaveBeenCalledWith("pattern")
   })
 
+  it("shows unsupported probe messaging in the empty state and disables probe creation", () => {
+    renderEditor({
+      probeRulesSupported: false,
+      probeRulesUnsupportedMessage: "Probe rules are unsupported here.",
+    })
+
+    expect(
+      screen.getByText("Probe rules are unsupported here."),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "filters.addProbeRule" }),
+    ).toBeDisabled()
+  })
+
   it("edits and removes a populated visual rule with substring matching", async () => {
     const user = userEvent.setup()
     const { props } = renderEditor({
@@ -385,6 +402,27 @@ describe("ChannelFiltersEditor", () => {
       "text-generation",
       "tool-calling",
     ])
+  })
+
+  it("shows unsupported probe messaging for saved probe rules and disables the probe picker", () => {
+    renderEditor({
+      probeRulesSupported: false,
+      probeRulesUnsupportedMessage: "Probe rules are unsupported here.",
+      filters: [
+        buildFilter({
+          kind: "probe",
+          probeIds: ["text-generation"],
+          match: "all",
+        }),
+      ],
+    })
+
+    expect(
+      screen.getAllByText("Probe rules are unsupported here.").length,
+    ).toBeGreaterThan(0)
+    expect(
+      screen.getByRole("button", { name: "filters.placeholders.probes" }),
+    ).toBeDisabled()
   })
 
   it("clears a populated visual rule description", async () => {

@@ -1,7 +1,7 @@
 # managed-site-channel-probe-filters Specification
 
 ## Purpose
-TBD - created by archiving change add-probe-based-model-filter-rules. Update Purpose after archive.
+This spec defines the purpose, scope, and expected behavior of managed-site channel probe filter rules, the probe-backed model filters introduced by `add-probe-based-model-filter-rules`. It documents how managed-site channel sync uses reusable API verification probes to keep or exclude models based on live capability checks, so maintainers and contributors can understand which behaviors are enforced, when probe filtering is supported, and why the feature exists alongside existing pattern-based rules.
 
 ## Requirements
 ### Requirement: Channel filters support probe-backed rules
