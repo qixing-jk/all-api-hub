@@ -24,9 +24,16 @@ const logger = createLogger("AccountManagementPage")
 function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
   const { t } = useTranslation(["account", "common"])
   const { openAddAccount } = useDialogStateContext()
-  const { displayData, handleRefresh, isRefreshing } = useAccountDataContext()
+  const {
+    displayData,
+    handleRefresh,
+    handleRefreshDisabledAccounts,
+    isRefreshing,
+    isRefreshingDisabledAccounts,
+  } = useAccountDataContext()
   const { handleOpenExternalCheckIns } = useAccountActionsContext()
   const [isDedupeDialogOpen, setIsDedupeDialogOpen] = useState(false)
+  const disabledAccounts = displayData.filter((account) => account.disabled)
 
   const externalCheckInAccounts = displayData.filter((account) => {
     const customUrl = account.checkIn?.customCheckIn?.url
@@ -34,6 +41,8 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
   })
 
   const canOpenExternalCheckIns = externalCheckInAccounts.length > 0
+  const canRefreshDisabledAccounts = disabledAccounts.length > 0
+  const isAnyRefreshRunning = isRefreshing || isRefreshingDisabledAccounts
 
   // Open all configured external check-in sites and sync the checked-in status.
   const handleOpenExternalCheckInsClick = async (
@@ -80,6 +89,31 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
     }
   }, [handleRefresh, t])
 
+  const handleDisabledRefresh = useCallback(async () => {
+    try {
+      await toast.promise(handleRefreshDisabledAccounts(true), {
+        loading: t("account:refresh.refreshingDisabled"),
+        success: (result) =>
+          t(
+            result.failedCount > 0
+              ? "account:refresh.refreshDisabledCompleteWithFailures"
+              : "account:refresh.refreshDisabledComplete",
+            {
+              restored: result.reEnabledCount,
+              stillDisabled: Math.max(
+                result.processedCount - result.reEnabledCount,
+                0,
+              ),
+              failed: result.failedCount,
+            },
+          ),
+        error: t("account:refresh.refreshDisabledFailed"),
+      })
+    } catch (error) {
+      logger.error("Error during disabled account refresh", error)
+    }
+  }, [handleRefreshDisabledAccounts, t])
+
   return (
     <div className="dark:bg-dark-bg-secondary flex flex-col bg-white p-6">
       <PageHeader
@@ -93,10 +127,21 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
               variant="secondary"
               leftIcon={<ArrowPathIcon className="h-4 w-4" />}
               loading={isRefreshing}
-              disabled={isRefreshing}
+              disabled={isAnyRefreshRunning}
             >
               {t("common:actions.refresh")}
             </Button>
+            {canRefreshDisabledAccounts && (
+              <Button
+                onClick={() => void handleDisabledRefresh()}
+                variant="secondary"
+                leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+                loading={isRefreshingDisabledAccounts}
+                disabled={isAnyRefreshRunning}
+              >
+                {t("account:actions.refreshDisabledAccounts")}
+              </Button>
+            )}
             {canOpenExternalCheckIns && (
               <Button
                 onClick={handleOpenExternalCheckInsClick}

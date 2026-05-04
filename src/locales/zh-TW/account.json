@@ -35,6 +35,7 @@
     "quickCheckin": "快速簽到",
     "redeemPage": "充值頁面",
     "refresh": "重新整理",
+    "refreshDisabledAccounts": "重新整理已停用帳號",
     "scanDuplicates": "掃描重複帳號",
     "scanDuplicatesHint": "按 URL 源站 + 使用者 ID 掃描重複帳號並安全清理。",
     "unpin": "取消置頂",
@@ -155,8 +156,12 @@
   },
   "refresh": {
     "refreshComplete": "重新整理完成: {{success}} 成功, {{failed}} 失敗",
+    "refreshDisabledComplete": "已停用帳號探測完成：恢復 {{restored}} 個，仍停用 {{stillDisabled}} 個",
+    "refreshDisabledCompleteWithFailures": "已停用帳號探測完成：恢復 {{restored}} 個，仍停用 {{stillDisabled}} 個，失敗 {{failed}} 個",
+    "refreshDisabledFailed": "重新整理已停用帳號失敗，請稍後重試",
     "refreshFailed": "重新整理失敗，請稍後重試",
     "refreshingAll": "正在重新整理所有帳號...",
+    "refreshingDisabled": "正在重新整理已停用帳號...",
     "refreshPartialSkipped": "重新整理完成: {{success}} 成功, {{skipped}} 跳過",
     "refreshSuccess": "所有帳號重新整理成功！"
   },

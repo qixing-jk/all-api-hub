@@ -53,6 +53,7 @@ const {
   mockPinAccount,
   mockUnpinAccount,
   mockRefreshAllAccounts,
+  mockRefreshDisabledAccounts,
   mockToastPromise,
   mockGetActiveTabs,
   mockGetAllTabs,
@@ -89,6 +90,7 @@ const {
   mockPinAccount: vi.fn(),
   mockUnpinAccount: vi.fn(),
   mockRefreshAllAccounts: vi.fn(),
+  mockRefreshDisabledAccounts: vi.fn(),
   mockToastPromise: vi.fn(),
   mockGetActiveTabs: vi.fn<() => Promise<browser.tabs.Tab[]>>(async () => []),
   mockGetAllTabs: vi.fn<() => Promise<browser.tabs.Tab[]>>(async () => []),
@@ -179,6 +181,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
     pinAccount: mockPinAccount,
     unpinAccount: mockUnpinAccount,
     refreshAllAccounts: mockRefreshAllAccounts,
+    refreshDisabledAccounts: mockRefreshDisabledAccounts,
     checkUrlExists: vi.fn(async () => null),
   },
 }))
@@ -264,6 +267,12 @@ beforeEach(() => {
     success: 0,
     failed: 0,
     refreshedCount: 0,
+    latestSyncTime: 0,
+  })
+  mockRefreshDisabledAccounts.mockResolvedValue({
+    processedCount: 0,
+    failedCount: 0,
+    reEnabledCount: 0,
     latestSyncTime: 0,
   })
   mockToastPromise.mockImplementation((promise: Promise<any>) => promise)
@@ -1524,6 +1533,40 @@ describe("AccountDataContext refresh orchestration", () => {
     })
 
     expect(mockRefreshAllAccounts).toHaveBeenCalledWith(true)
+  })
+
+  it("refreshes disabled accounts on demand and stores the returned sync time", async () => {
+    let resolveRefresh!: (value: any) => void
+    const refreshPromise = new Promise((resolve) => {
+      resolveRefresh = resolve
+    })
+
+    mockGetAllAccounts.mockResolvedValue([{ id: "disabled-1", disabled: true }])
+    mockRefreshDisabledAccounts.mockReturnValueOnce(refreshPromise)
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await act(async () => {
+      void getLatestCtx().handleRefreshDisabledAccounts(true)
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().isRefreshingDisabledAccounts).toBe(true)
+    })
+
+    resolveRefresh({
+      processedCount: 2,
+      failedCount: 0,
+      reEnabledCount: 1,
+      latestSyncTime: 1_720_123_456_789,
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().isRefreshingDisabledAccounts).toBe(false)
+      expect(getLatestCtx().lastUpdateTime?.getTime()).toBe(1_720_123_456_789)
+    })
+
+    expect(mockRefreshDisabledAccounts).toHaveBeenCalledWith(true)
   })
 
   it("reloads account data after refresh failures and clears the refreshing state", async () => {

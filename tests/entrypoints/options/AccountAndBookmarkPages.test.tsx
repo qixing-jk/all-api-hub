@@ -7,6 +7,14 @@ import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 const openAddAccountMock = vi.fn()
 const handleRefreshMock = vi.fn()
+const handleRefreshDisabledAccountsMock = vi.fn()
+const accountDataContextState = vi.hoisted(() => ({
+  current: {
+    displayData: [] as any[],
+    isRefreshing: false,
+    isRefreshingDisabledAccounts: false,
+  },
+}))
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -31,9 +39,9 @@ vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
     <>{children}</>
   ),
   useAccountDataContext: () => ({
-    displayData: [],
-    isRefreshing: false,
+    ...accountDataContextState.current,
     handleRefresh: handleRefreshMock,
+    handleRefreshDisabledAccounts: handleRefreshDisabledAccountsMock,
   }),
 }))
 
@@ -59,11 +67,23 @@ vi.mock("~/features/SiteBookmarks/components/BookmarkDialog", () => ({
 beforeEach(() => {
   openAddAccountMock.mockReset()
   handleRefreshMock.mockReset()
+  handleRefreshDisabledAccountsMock.mockReset()
+  accountDataContextState.current = {
+    displayData: [],
+    isRefreshing: false,
+    isRefreshingDisabledAccounts: false,
+  }
   handleRefreshMock.mockResolvedValue({
     success: 0,
     failed: 0,
     latestSyncTime: 0,
     refreshedCount: 0,
+  })
+  handleRefreshDisabledAccountsMock.mockResolvedValue({
+    processedCount: 0,
+    failedCount: 0,
+    reEnabledCount: 0,
+    latestSyncTime: 0,
   })
 })
 
@@ -92,6 +112,34 @@ describe("options AccountManagement page", () => {
 
     expect(handleRefreshMock).toHaveBeenCalledTimes(1)
     expect(handleRefreshMock).toHaveBeenCalledWith(true)
+  })
+
+  it("does not render the disabled-account refresh action when no disabled accounts exist", () => {
+    render(<AccountManagement />)
+
+    expect(
+      screen.queryByRole("button", {
+        name: "account:actions.refreshDisabledAccounts",
+      }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders the disabled-account refresh action and triggers a forced probe", async () => {
+    accountDataContextState.current = {
+      ...accountDataContextState.current,
+      displayData: [{ id: "disabled-1", disabled: true }],
+    }
+
+    render(<AccountManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "account:actions.refreshDisabledAccounts",
+      }),
+    )
+
+    expect(handleRefreshDisabledAccountsMock).toHaveBeenCalledTimes(1)
+    expect(handleRefreshDisabledAccountsMock).toHaveBeenCalledWith(true)
   })
 })
 

@@ -35,6 +35,7 @@
     "quickCheckin": "快速签到",
     "redeemPage": "充值页面",
     "refresh": "刷新",
+    "refreshDisabledAccounts": "刷新已禁用账号",
     "scanDuplicates": "扫描重复账号",
     "scanDuplicatesHint": "按 URL 源站 + 用户 ID 扫描重复账号并安全清理。",
     "unpin": "取消置顶",
@@ -155,8 +156,12 @@
   },
   "refresh": {
     "refreshComplete": "刷新完成: {{success}} 成功, {{failed}} 失败",
+    "refreshDisabledComplete": "已禁用账号探测完成：恢复 {{restored}} 个，仍禁用 {{stillDisabled}} 个",
+    "refreshDisabledCompleteWithFailures": "已禁用账号探测完成：恢复 {{restored}} 个，仍禁用 {{stillDisabled}} 个，失败 {{failed}} 个",
+    "refreshDisabledFailed": "刷新已禁用账号失败，请稍后重试",
     "refreshFailed": "刷新失败，请稍后重试",
     "refreshingAll": "正在刷新所有账号...",
+    "refreshingDisabled": "正在刷新已禁用账号...",
     "refreshPartialSkipped": "刷新完成: {{success}} 成功, {{skipped}} 跳过",
     "refreshSuccess": "所有账号刷新成功！"
   },

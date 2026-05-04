@@ -129,6 +129,7 @@ interface AccountDataContextType {
   lastUpdateTime: Date | undefined
   isInitialLoad: boolean
   isRefreshing: boolean
+  isRefreshingDisabledAccounts: boolean
   prevTotalConsumption: CurrencyAmount
   prevBalances: CurrencyAmountMap
   /**
@@ -163,6 +164,12 @@ interface AccountDataContextType {
     failed: number
     latestSyncTime?: number
     refreshedCount: number
+  }>
+  handleRefreshDisabledAccounts: (force?: boolean) => Promise<{
+    processedCount: number
+    failedCount: number
+    reEnabledCount: number
+    latestSyncTime?: number
   }>
   handleSort: (field: SortField) => void
   sortField: SortField
@@ -213,6 +220,8 @@ export const AccountDataProvider = ({
   const [hasResolvedInitialOpenTabs, setHasResolvedInitialOpenTabs] =
     useState(false)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [isRefreshingDisabledAccounts, setIsRefreshingDisabledAccounts] =
+    useState(false)
   const [prevTotalConsumption, setPrevTotalConsumption] =
     useState<CurrencyAmount>({ USD: 0, CNY: 0 })
   const [prevBalances, setPrevBalances] = useState<CurrencyAmountMap>({})
@@ -578,6 +587,27 @@ export const AccountDataProvider = ({
         throw error
       } finally {
         setIsRefreshing(false)
+      }
+    },
+    [loadAccountData],
+  )
+
+  const handleRefreshDisabledAccounts = useCallback(
+    async (force: boolean = false) => {
+      setIsRefreshingDisabledAccounts(true)
+      try {
+        const refreshResult = await accountStorage.refreshDisabledAccounts(force)
+        await loadAccountData()
+        if (refreshResult.latestSyncTime > 0) {
+          setLastUpdateTime(new Date(refreshResult.latestSyncTime))
+        }
+        return refreshResult
+      } catch (error) {
+        logger.error("Failed to refresh disabled accounts", error)
+        await loadAccountData()
+        throw error
+      } finally {
+        setIsRefreshingDisabledAccounts(false)
       }
     },
     [loadAccountData],
@@ -1115,6 +1145,7 @@ export const AccountDataProvider = ({
       lastUpdateTime,
       isInitialLoad,
       isRefreshing,
+      isRefreshingDisabledAccounts,
       prevTotalConsumption,
       prevBalances,
       detectedSiteAccounts,
@@ -1135,6 +1166,7 @@ export const AccountDataProvider = ({
       togglePinAccount,
       loadAccountData,
       handleRefresh,
+      handleRefreshDisabledAccounts,
       handleSort,
       sortField,
       sortOrder,
@@ -1151,6 +1183,7 @@ export const AccountDataProvider = ({
       lastUpdateTime,
       isInitialLoad,
       isRefreshing,
+      isRefreshingDisabledAccounts,
       prevTotalConsumption,
       prevBalances,
       detectedSiteAccounts,
@@ -1171,6 +1204,7 @@ export const AccountDataProvider = ({
       togglePinAccount,
       loadAccountData,
       handleRefresh,
+      handleRefreshDisabledAccounts,
       handleSort,
       sortField,
       sortOrder,

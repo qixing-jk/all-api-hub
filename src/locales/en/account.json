@@ -35,6 +35,7 @@
     "quickCheckin": "Quick check-in",
     "redeemPage": "Redeem/Top-up",
     "refresh": "Refresh",
+    "refreshDisabledAccounts": "Refresh disabled accounts",
     "scanDuplicates": "Scan duplicates",
     "scanDuplicatesHint": "Scan accounts for duplicates (origin + upstream user id) and clean them up safely.",
     "unpin": "Unpin account",
@@ -164,8 +165,12 @@
   },
   "refresh": {
     "refreshComplete": "Refresh complete: {{success}} success, {{failed}} failed",
+    "refreshDisabledComplete": "Disabled account probe complete: {{restored}} restored, {{stillDisabled}} still disabled",
+    "refreshDisabledCompleteWithFailures": "Disabled account probe complete: {{restored}} restored, {{stillDisabled}} still disabled, {{failed}} failed",
+    "refreshDisabledFailed": "Failed to refresh disabled accounts. Please try again later.",
     "refreshFailed": "Refresh failed, please try again later",
     "refreshingAll": "Refreshing all accounts...",
+    "refreshingDisabled": "Refreshing disabled accounts...",
     "refreshPartialSkipped": "Refresh complete: {{success}} success, {{skipped}} skipped",
     "refreshSuccess": "All accounts refreshed successfully!"
   },

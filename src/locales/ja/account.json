@@ -35,6 +35,7 @@
     "quickCheckin": "クイックチェックイン",
     "redeemPage": "引き換え / チャージ",
     "refresh": "更新",
+    "refreshDisabledAccounts": "無効なアカウントを更新",
     "scanDuplicates": "重複をスキャン",
     "scanDuplicatesHint": "重複アカウント（origin + 上流 user id）をスキャンし、安全に整理します。",
     "unpin": "アカウントのピン留め解除",
@@ -155,8 +156,12 @@
   },
   "refresh": {
     "refreshComplete": "更新完了: 成功 {{success}} 件、失敗 {{failed}} 件",
+    "refreshDisabledComplete": "無効アカウントの再検出が完了しました: {{restored}} 件を復旧、{{stillDisabled}} 件は無効のまま",
+    "refreshDisabledCompleteWithFailures": "無効アカウントの再検出が完了しました: {{restored}} 件を復旧、{{stillDisabled}} 件は無効のまま、{{failed}} 件失敗",
+    "refreshDisabledFailed": "無効アカウントの更新に失敗しました。後でもう一度お試しください。",
     "refreshFailed": "更新に失敗しました。しばらくしてからもう一度お試しください",
     "refreshingAll": "すべてのアカウントを更新中...",
+    "refreshingDisabled": "無効アカウントを更新中...",
     "refreshPartialSkipped": "更新完了: 成功 {{success}} 件、スキップ {{skipped}} 件",
     "refreshSuccess": "すべてのアカウントを正常に更新しました"
   },

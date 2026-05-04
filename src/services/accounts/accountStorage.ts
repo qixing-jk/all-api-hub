@@ -52,6 +52,13 @@ export { ACCOUNT_STORAGE_KEYS }
 
 const logger = createLogger("AccountStorage")
 
+type RefreshAccountOptions = {
+  includeTodayCashflow?: boolean
+  balanceHistoryCaptureSource?: DailyBalanceHistoryCaptureSource
+  allowDisabled?: boolean
+  reEnableOnSuccess?: boolean
+}
+
 class AccountStorageService {
   private storage: Storage
 
@@ -888,10 +895,7 @@ class AccountStorageService {
   async refreshAccount(
     id: string,
     force: boolean = false,
-    options?: {
-      includeTodayCashflow?: boolean
-      balanceHistoryCaptureSource?: DailyBalanceHistoryCaptureSource
-    },
+    options?: RefreshAccountOptions,
   ) {
     const runRefresh = async () => {
       let account = await this.getAccountById(id)
@@ -900,7 +904,10 @@ class AccountStorageService {
         throw new Error(t("messages:storage.accountNotFound", { id }))
       }
 
-      if (AccountStorageService.isAccountDisabled(account)) {
+      if (
+        AccountStorageService.isAccountDisabled(account) &&
+        options?.allowDisabled !== true
+      ) {
         logger.debug("账号已禁用，跳过刷新", {
           accountId: account.id,
           siteName: account.site_name,
@@ -975,6 +982,10 @@ class AccountStorageService {
       }
 
       // 如果成功获取数据，更新账号信息
+      const shouldReEnable = Boolean(
+        options?.reEnableOnSuccess === true && result.success && result.data,
+      )
+
       if (result.success && result.data) {
         const manualBalanceUsd = account.manualBalanceUsd?.trim()
         const manualQuota =
@@ -1014,6 +1025,10 @@ class AccountStorageService {
           today_quota_consumption: result.data.today_quota_consumption,
           today_requests_count: result.data.today_requests_count,
           today_income: result.data.today_income,
+        }
+
+        if (shouldReEnable) {
+          updateData.disabled = false
         }
 
         // Persist any refreshed credentials/identity discovered during refresh.
@@ -1085,7 +1100,11 @@ class AccountStorageService {
         })
       }
 
-      return { account: updatedAccount, refreshed: true }
+      return {
+        account: updatedAccount,
+        refreshed: true,
+        reEnabled: shouldReEnable,
+      }
     }
 
     try {
@@ -1166,6 +1185,59 @@ class AccountStorageService {
       failed: failedCount,
       latestSyncTime,
       refreshedCount,
+    }
+  }
+
+  /**
+   * Re-probe disabled accounts and automatically re-enable the ones whose
+   * account data can be refreshed successfully.
+   */
+  async refreshDisabledAccounts(force: boolean = false) {
+    const accounts = (await this.getAllAccounts()).filter((account) =>
+      AccountStorageService.isAccountDisabled(account),
+    )
+    const includeTodayCashflow =
+      (await userPreferences.getPreferences()).showTodayCashflow ?? true
+    let processedCount = 0
+    let failedCount = 0
+    let reEnabledCount = 0
+    let latestSyncTime = 0
+
+    const results = await Promise.allSettled(
+      accounts.map((account) =>
+        this.refreshAccount(account.id, force, {
+          includeTodayCashflow,
+          allowDisabled: true,
+          reEnableOnSuccess: true,
+        }),
+      ),
+    )
+
+    results.forEach((result, index) => {
+      if (result.status === "fulfilled" && result.value) {
+        processedCount++
+        latestSyncTime = Math.max(
+          result.value.account?.last_sync_time || 0,
+          latestSyncTime,
+        )
+        if (result.value.reEnabled) {
+          reEnabledCount++
+        }
+      } else {
+        failedCount++
+        logger.error("刷新已禁用账号失败", {
+          accountId: accounts[index]?.id,
+          siteName: accounts[index]?.site_name,
+          reason: result.status === "rejected" ? result.reason : "未知错误",
+        })
+      }
+    })
+
+    return {
+      processedCount,
+      failedCount,
+      reEnabledCount,
+      latestSyncTime,
     }
   }
 
