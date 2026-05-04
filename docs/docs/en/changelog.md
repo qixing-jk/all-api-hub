@@ -8,6 +8,24 @@ This page records major updates for general users (feature changes / experience 
 - **Troubleshooting**: You can enable console logs in "Settings → General → Logs" and report reproduction steps to [Issues](https://github.com/qixing-jk/all-api-hub/issues).
 :::
 
+## 3.36.0
+- **New Features:**
+  - Account Management: Added a "One-Click Refresh" function for disabled accounts, making it easier to quickly check if accounts have become available again.
+  - Key Management: Supports filtering and group selection for multiple accounts, organizing keys more efficiently.
+  - Key Management: When batch exporting keys to hosted site channels, you can now directly edit the model list, reducing the need for manual modifications after export.
+  - Channel Migration: Added migration support for `AxonHub` and `Claude Code Hub` sites, simplifying cross-site synchronization.
+  - UI Optimization: Added a quick feedback entry in the header of the options page, allowing you to quickly go to GitHub to submit an Issue.
+- **Experience Optimizations:**
+  - Internationalization: Improved localized translations for details such as region tags and telemetry mode tags.
+  - UI Display: Increased the maximum display height for dialog result lists and preview lists, providing clearer viewing of long lists.
+- **Bug Fixes:**
+  - UI Interaction: Fixed an issue where the indeterminate (uncertain) state of checkboxes was not correctly preserved during batch selection.
+
+**Location Hints:**
+- Disabled Account Refresh: In "Settings → Account Management", for disabled account entries.
+- Key Batch Export and Filtering: In "Settings → Key Management".
+- Feedback Entry: In the Header area at the top of the options page.
+
 ## 3.35.0
 - **New Features:**
   - Hosted Sites: Added `AxonHub` integration settings. You can configure `Base URL`, administrator email, and password within the extension. After verifying the connection, you can directly read, create, edit, and delete AxonHub channels, and import existing accounts/keys as AxonHub channels, and use them as sources or targets in channel migration.
