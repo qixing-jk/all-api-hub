@@ -317,10 +317,6 @@ export async function matchesProbeFilterRule(
     }),
   )
 
-  if (probeMatches.length === 0) {
-    return false
-  }
-
   return rule.match === "any"
     ? probeMatches.some(Boolean)
     : probeMatches.every(Boolean)

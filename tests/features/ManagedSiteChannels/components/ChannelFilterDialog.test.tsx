@@ -386,6 +386,42 @@ describe("ChannelFilterDialog", () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it("validates missing names for visual-mode probe filters before saving", async () => {
+    const onClose = vi.fn()
+
+    render(
+      <ChannelFilterDialog
+        channel={{
+          ...sampleChannel,
+          type: "openai",
+        }}
+        open={true}
+        onClose={onClose}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(screen.getByTestId("loading-state")).toHaveTextContent("false")
+    })
+
+    fireEvent.click(screen.getByRole("button", { name: "add-probe-filter" }))
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:filters.actions.save",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "managedSiteChannels:filters.messages.validationName",
+      )
+    })
+
+    expect(mockedSaveChannelFilters).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
   it("shows a save error without closing when persistence fails", async () => {
     const onClose = vi.fn()
     mockedSaveChannelFilters.mockRejectedValue(new Error("persist failed"))

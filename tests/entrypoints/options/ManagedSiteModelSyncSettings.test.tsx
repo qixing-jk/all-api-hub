@@ -779,6 +779,35 @@ describe("ManagedSiteModelSyncSettings", () => {
     )
   })
 
+  it("validates missing name for visual probe filters before saving", async () => {
+    render(<ManagedSiteModelSyncSettings />)
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:settings.globalChannelModelFiltersButton",
+      }),
+    )
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument()
+
+    fireEvent.click(screen.getByRole("button", { name: "add-probe-filter" }))
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:filters.actions.save",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "managedSiteChannels:filters.messages.validationName",
+      )
+    })
+
+    expect(mockUpdateNewApiModelSync).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+    expect(screen.getByRole("dialog")).toBeInTheDocument()
+  })
+
   it("keeps the global filters dialog open when saving preferences fails", async () => {
     mockUpdateNewApiModelSync.mockResolvedValue(false)
 
