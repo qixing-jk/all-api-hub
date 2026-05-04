@@ -1,5 +1,13 @@
 # Changelog
 
+## [3.37.0](https://github.com/qixing-jk/all-api-hub/compare/v3.36.0...v3.37.0) (2026-05-04)
+
+
+### Features
+
+* **CompactMultiSelect:** add chip text copy functionality ([3bf76a4](https://github.com/qixing-jk/all-api-hub/commit/3bf76a4c3f103de435e90ed9673e85123b58e7f5))
+* **model-sync:** add probe-backed channel filters ([#787](https://github.com/qixing-jk/all-api-hub/issues/787)) ([58ef832](https://github.com/qixing-jk/all-api-hub/commit/58ef8323cd3829c6a5b6c692a231ab375bbecf0a))
+
 ## [3.36.0](https://github.com/qixing-jk/all-api-hub/compare/v3.35.0...v3.36.0) (2026-05-04)
 
 
