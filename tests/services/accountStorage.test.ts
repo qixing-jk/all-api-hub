@@ -804,6 +804,51 @@ describe("accountStorage core behaviors", () => {
     }
   })
 
+  it("refreshDisabledAccounts defaults cashflow inclusion and ignores skipped probes", async () => {
+    seedStorage([
+      createAccount({ id: "disabled-a", disabled: true }),
+      createAccount({ id: "enabled-b", disabled: false }),
+      createAccount({ id: "disabled-c", disabled: true }),
+    ])
+
+    const refreshAccountSpy = vi
+      .spyOn(accountStorage, "refreshAccount")
+      .mockResolvedValueOnce({
+        refreshed: false,
+        reEnabled: false,
+        account: { last_sync_time: 999 },
+      } as any)
+      .mockResolvedValueOnce({
+        refreshed: true,
+        reEnabled: true,
+        account: { last_sync_time: 222 },
+      } as any)
+
+    try {
+      const result = await accountStorage.refreshDisabledAccounts()
+
+      expect(refreshAccountSpy).toHaveBeenCalledTimes(2)
+      expect(refreshAccountSpy).toHaveBeenNthCalledWith(1, "disabled-a", false, {
+        includeTodayCashflow: true,
+        allowDisabled: true,
+        reEnableOnSuccess: true,
+      })
+      expect(refreshAccountSpy).toHaveBeenNthCalledWith(2, "disabled-c", false, {
+        includeTodayCashflow: true,
+        allowDisabled: true,
+        reEnableOnSuccess: true,
+      })
+      expect(result).toEqual({
+        processedCount: 1,
+        failedCount: 0,
+        reEnabledCount: 1,
+        latestSyncTime: 222,
+      })
+    } finally {
+      refreshAccountSpy.mockRestore()
+    }
+  })
+
   it("getAccountStats should aggregate numeric fields across accounts", async () => {
     const accountA = createAccount({
       id: "stats-a",

@@ -1218,7 +1218,7 @@ class AccountStorageService {
     )
 
     results.forEach((result, index) => {
-      if (result.status === "fulfilled" && result.value) {
+      if (result.status === "fulfilled" && result.value?.refreshed) {
         processedCount++
         latestSyncTime = Math.max(
           result.value.account?.last_sync_time || 0,
@@ -1227,6 +1227,8 @@ class AccountStorageService {
         if (result.value.reEnabled) {
           reEnabledCount++
         }
+      } else if (result.status === "fulfilled" && result.value) {
+        return
       } else {
         failedCount++
         logger.error("刷新已禁用账号失败", {
