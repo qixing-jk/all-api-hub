@@ -1569,6 +1569,39 @@ describe("AccountDataContext refresh orchestration", () => {
     expect(mockRefreshDisabledAccounts).toHaveBeenCalledWith(true)
   })
 
+  it("reloads account data after disabled-account refresh failures and clears the refreshing state", async () => {
+    const refreshError = new Error("disabled refresh failed")
+    mockGetAllAccounts.mockResolvedValue([{ id: "disabled-1", disabled: true }])
+    mockRefreshDisabledAccounts.mockRejectedValueOnce(refreshError)
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().isInitialLoad).toBe(false)
+    })
+
+    const initialLoadCalls = mockGetAllAccounts.mock.calls.length
+    mockLogger.error.mockClear()
+
+    await act(async () => {
+      await expect(
+        getLatestCtx().handleRefreshDisabledAccounts(true),
+      ).rejects.toThrow("disabled refresh failed")
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().isRefreshingDisabledAccounts).toBe(false)
+      expect(mockGetAllAccounts.mock.calls.length).toBeGreaterThan(
+        initialLoadCalls,
+      )
+    })
+
+    expect(mockLogger.error).toHaveBeenCalledWith(
+      "Failed to refresh disabled accounts",
+      refreshError,
+    )
+  })
+
   it("reloads account data after refresh failures and clears the refreshing state", async () => {
     mockGetAllAccounts.mockResolvedValue([{ id: "acc-1" }])
     mockRefreshAllAccounts.mockRejectedValueOnce(new Error("refresh failed"))

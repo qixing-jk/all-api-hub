@@ -1086,8 +1086,12 @@ class AccountStorageService {
       }
 
       // 更新账号信息
-      await this.updateAccount(id, updateData)
-      const updatedAccount = await this.getAccountById(id)
+      const didPersist = await this.updateAccount(id, updateData)
+      const updatedAccount = didPersist
+        ? await this.getAccountById(id)
+        : account
+      const reEnabled =
+        didPersist && shouldReEnable && updatedAccount?.disabled === false
 
       // 记录健康状态变化
       if (account.health?.status !== result.healthStatus.status) {
@@ -1103,7 +1107,7 @@ class AccountStorageService {
       return {
         account: updatedAccount,
         refreshed: true,
-        reEnabled: shouldReEnable,
+        reEnabled,
       }
     }
 

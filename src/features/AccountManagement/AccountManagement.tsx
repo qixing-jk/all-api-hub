@@ -101,7 +101,9 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
             {
               restored: result.reEnabledCount,
               stillDisabled: Math.max(
-                result.processedCount - result.reEnabledCount,
+                result.processedCount -
+                  result.reEnabledCount -
+                  result.failedCount,
                 0,
               ),
               failed: result.failedCount,
