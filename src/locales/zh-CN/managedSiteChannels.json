@@ -25,17 +25,20 @@
       "cancel": "取消",
       "save": "保存规则"
     },
-    "addRule": "新增规则",
+    "addPatternRule": "新增模式规则",
+    "addProbeRule": "新增探测规则",
     "empty": {
       "description": "新增包含或排除规则（可选正则）以控制同步到该渠道的模型。",
       "title": "尚未添加规则"
     },
     "hints": {
+      "probesAllPass": "只有所有已选探测都通过时，模型才会匹配该规则。探测会使用该渠道的基础 URL 和解析出的渠道 key。",
       "regex": "正则模式使用 JavaScript 语法，可实现更灵活的匹配。",
-      "substring": "普通模式将执行区分大小写的子串匹配。"
+      "substring": "普通模式将执行区分大小写的子串匹配。",
+      "unsupportedChannelType": "该渠道类型无法映射到受支持的验证 API，暂不能使用探测规则。"
     },
     "jsonEditor": {
-      "hint": "JSON 必须是一个对象数组，至少包含 name 和 pattern 字段。可选字段包括：id、description、isRegex、action（include | exclude）、enabled、createdAt、updatedAt。",
+      "hint": "JSON 必须是模式规则或探测规则对象数组。模式规则使用 kind: 'pattern'、name 和 pattern；探测规则使用 kind: 'probe'、name 和 probeIds。apiKey、key、baseUrl 等凭据字段会被忽略。",
       "label": "高级 JSON 编辑器",
       "placeholder": "在此粘贴或编辑过滤规则对象数组，以便在多个渠道之间快速复用同一套配置。"
     },
@@ -46,26 +49,42 @@
       "enabled": "启用",
       "name": "规则名称",
       "pattern": "匹配模式",
-      "regex": "使用正则"
+      "probes": "验证探测",
+      "regex": "使用正则",
+      "ruleType": "规则类型"
     },
     "loading": "正在加载渠道过滤规则…",
     "messages": {
       "jsonArrayRequired": "JSON 必须是过滤规则数组。",
       "jsonInvalid": "无效的过滤规则 JSON：{{error}}",
       "jsonItemNotObject": "索引 {{index}} 处的过滤规则必须是对象。",
-      "jsonMissingName": "索引 {{index}} 处的过滤规则缺少 name。",
-      "jsonMissingPattern": "索引 {{index}} 处的过滤规则缺少 pattern。",
       "loadFailed": "过滤规则加载失败：{{error}}",
       "saved": "过滤规则已保存",
       "saveFailed": "保存过滤规则失败：{{error}}",
       "validationName": "请为每个规则填写名称。",
       "validationPattern": "匹配模式不能为空。",
+      "validationProbeIds": "请为每个探测规则至少选择一个验证探测。",
       "validationRegex": "无效的正则表达式：{{error}}"
     },
     "placeholders": {
       "description": "可选备注",
       "name": "如：仅允许 GPT-4",
-      "pattern": "精确字符串或正则表达式"
+      "pattern": "精确字符串或正则表达式",
+      "probes": "选择探测",
+      "probeSearch": "搜索探测"
+    },
+    "probes": {
+      "empty": "未找到探测",
+      "options": {
+        "structured-output": "结构化输出",
+        "text-generation": "文本生成",
+        "tool-calling": "工具调用",
+        "web-search": "联网搜索"
+      }
+    },
+    "ruleTypeOptions": {
+      "pattern": "模式",
+      "probe": "探测"
     },
     "subtitle": "为 {{channel}} 配置包含/排除规则",
     "title": "渠道过滤规则",

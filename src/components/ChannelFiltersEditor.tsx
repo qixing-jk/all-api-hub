@@ -1,7 +1,7 @@
 import { Loader2, Plus, Settings2, Trash2 } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
-import { Input, Textarea } from "~/components/ui"
+import { CompactMultiSelect, Input, Textarea } from "~/components/ui"
 import { Button } from "~/components/ui/button"
 import { Label } from "~/components/ui/label"
 import {
@@ -12,18 +12,32 @@ import {
   SelectValue,
 } from "~/components/ui/select"
 import { Switch } from "~/components/ui/Switch"
-import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
+import type {
+  ChannelModelFilterRule,
+  ChannelModelFilterRuleKind,
+  ChannelModelPatternFilterRule,
+  ChannelModelProbeFilterRule,
+} from "~/types/channelModelFilters"
+import {
+  CHANNEL_MODEL_FILTER_PROBE_IDS,
+  isProbeChannelModelFilterRule,
+} from "~/types/channelModelFilters"
 
 export type EditableFilter = ChannelModelFilterRule
+export type EditableFilterField =
+  | keyof ChannelModelPatternFilterRule
+  | keyof ChannelModelProbeFilterRule
 
 interface ChannelFiltersEditorProps {
   filters: EditableFilter[]
   viewMode: "visual" | "json"
   jsonText: string
   isLoading?: boolean
-  onAddFilter: () => void
+  probeRulesSupported?: boolean
+  probeRulesUnsupportedMessage?: string
+  onAddFilter: (kind?: ChannelModelFilterRuleKind) => void
   onRemoveFilter: (id: string) => void
-  onFieldChange: (id: string, field: keyof EditableFilter, value: any) => void
+  onFieldChange: (id: string, field: EditableFilterField, value: any) => void
   onClickViewVisual: () => void
   onClickViewJson: () => void
   onChangeJsonText: (value: string) => void
@@ -51,6 +65,8 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
     viewMode,
     jsonText,
     isLoading,
+    probeRulesSupported = true,
+    probeRulesUnsupportedMessage,
     onAddFilter,
     onRemoveFilter,
     onFieldChange,
@@ -59,6 +75,10 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
     onChangeJsonText,
   } = props
   const { t } = useTranslation("managedSiteChannels")
+  const probeOptions = CHANNEL_MODEL_FILTER_PROBE_IDS.map((probeId) => ({
+    value: probeId,
+    label: t(`filters.probes.options.${probeId}`),
+  }))
 
   if (isLoading) {
     return (
@@ -107,7 +127,23 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
             <p className="text-muted-foreground mb-6 text-sm">
               {t("filters.empty.description")}
             </p>
-            <Button onClick={onAddFilter}>{t("filters.addRule")}</Button>
+            <div className="flex flex-wrap justify-center gap-2">
+              <Button onClick={() => onAddFilter("pattern")}>
+                {t("filters.addPatternRule")}
+              </Button>
+              <Button
+                variant="outline"
+                onClick={() => onAddFilter("probe")}
+                disabled={!probeRulesSupported}
+              >
+                {t("filters.addProbeRule")}
+              </Button>
+            </div>
+            {!probeRulesSupported && probeRulesUnsupportedMessage ? (
+              <p className="text-muted-foreground mt-3 text-xs">
+                {probeRulesUnsupportedMessage}
+              </p>
+            ) : null}
           </div>
         ) : (
           <>
@@ -162,34 +198,94 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
 
                 <div className="grid gap-4 md:grid-cols-[minmax(0,1fr)_minmax(220px,0.45fr)]">
                   <div className="space-y-2">
-                    <div className="flex flex-wrap items-center justify-between gap-3">
-                      <Label>{t("filters.labels.pattern")}</Label>
-                      <div className="text-muted-foreground flex items-center gap-2 text-sm">
-                        <span>{t("filters.labels.regex")}</span>
-                        <Switch
-                          size={"sm"}
-                          id={`filter-regex-${filter.id}`}
-                          checked={filter.isRegex}
-                          onChange={(value: boolean) =>
-                            onFieldChange(filter.id, "isRegex", value)
-                          }
-                        />
-                      </div>
-                    </div>
-                    <Input
-                      value={filter.pattern}
-                      onChange={(event) =>
-                        onFieldChange(filter.id, "pattern", event.target.value)
+                    <Label>{t("filters.labels.ruleType")}</Label>
+                    <Select
+                      value={filter.kind ?? "pattern"}
+                      onValueChange={(value: ChannelModelFilterRuleKind) =>
+                        onFieldChange(filter.id, "kind", value)
                       }
-                      placeholder={t("filters.placeholders.pattern")}
-                      onClear={() => onFieldChange(filter.id, "pattern", "")}
-                      clearButtonLabel={t("common:actions.clear")}
-                    />
-                    <p className="text-muted-foreground text-xs">
-                      {filter.isRegex
-                        ? t("filters.hints.regex")
-                        : t("filters.hints.substring")}
-                    </p>
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pattern">
+                          {t("filters.ruleTypeOptions.pattern")}
+                        </SelectItem>
+                        <SelectItem
+                          value="probe"
+                          disabled={!probeRulesSupported}
+                        >
+                          {t("filters.ruleTypeOptions.probe")}
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    {!probeRulesSupported &&
+                    (filter.kind ?? "pattern") !== "probe" &&
+                    probeRulesUnsupportedMessage ? (
+                      <p className="text-muted-foreground text-xs">
+                        {probeRulesUnsupportedMessage}
+                      </p>
+                    ) : null}
+                  </div>
+                  <div className="space-y-2">
+                    {isProbeChannelModelFilterRule(filter) ? (
+                      <>
+                        <Label>{t("filters.labels.probes")}</Label>
+                        <CompactMultiSelect
+                          options={probeOptions}
+                          selected={filter.probeIds}
+                          onChange={(value) =>
+                            onFieldChange(filter.id, "probeIds", value)
+                          }
+                          placeholder={t("filters.placeholders.probes")}
+                          searchPlaceholder={t(
+                            "filters.placeholders.probeSearch",
+                          )}
+                          emptyMessage={t("filters.probes.empty")}
+                        />
+                        <p className="text-muted-foreground text-xs">
+                          {t("filters.hints.probesAllPass")}
+                        </p>
+                      </>
+                    ) : (
+                      <>
+                        <div className="flex flex-wrap items-center justify-between gap-3">
+                          <Label>{t("filters.labels.pattern")}</Label>
+                          <div className="text-muted-foreground flex items-center gap-2 text-sm">
+                            <span>{t("filters.labels.regex")}</span>
+                            <Switch
+                              size={"sm"}
+                              id={`filter-regex-${filter.id}`}
+                              checked={filter.isRegex}
+                              onChange={(value: boolean) =>
+                                onFieldChange(filter.id, "isRegex", value)
+                              }
+                            />
+                          </div>
+                        </div>
+                        <Input
+                          value={filter.pattern}
+                          onChange={(event) =>
+                            onFieldChange(
+                              filter.id,
+                              "pattern",
+                              event.target.value,
+                            )
+                          }
+                          placeholder={t("filters.placeholders.pattern")}
+                          onClear={() =>
+                            onFieldChange(filter.id, "pattern", "")
+                          }
+                          clearButtonLabel={t("common:actions.clear")}
+                        />
+                        <p className="text-muted-foreground text-xs">
+                          {filter.isRegex
+                            ? t("filters.hints.regex")
+                            : t("filters.hints.substring")}
+                        </p>
+                      </>
+                    )}
                   </div>
                   <div className="space-y-2">
                     <Label>{t("filters.labels.action")}</Label>
@@ -234,14 +330,29 @@ export default function ChannelFiltersEditor(props: ChannelFiltersEditorProps) {
               </div>
             ))}
 
-            <Button
-              type="button"
-              variant="outline"
-              onClick={onAddFilter}
-              leftIcon={<Plus className="h-4 w-4" />}
-            >
-              {t("filters.addRule")}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onAddFilter("pattern")}
+                leftIcon={<Plus className="h-4 w-4" />}
+              >
+                {t("filters.addPatternRule")}
+              </Button>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => onAddFilter("probe")}
+                disabled={!probeRulesSupported}
+              >
+                {t("filters.addProbeRule")}
+              </Button>
+            </div>
+            {!probeRulesSupported && probeRulesUnsupportedMessage ? (
+              <p className="text-muted-foreground text-xs">
+                {probeRulesUnsupportedMessage}
+              </p>
+            ) : null}
           </>
         )
       ) : (

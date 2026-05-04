@@ -18,7 +18,10 @@ import {
   ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,
   DEFAULT_ACCOUNT_AUTO_REFRESH,
 } from "~/types/accountAutoRefresh"
-import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
+import type {
+  ChannelModelFilterRule,
+  ChannelModelPatternFilterRule,
+} from "~/types/channelModelFilters"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
 import { SortingCriteriaType } from "~/types/sorting"
@@ -34,9 +37,10 @@ const buildModelRedirectFixture = () => ({
 })
 
 const buildChannelModelFilterRule = (
-  overrides: Partial<ChannelModelFilterRule> = {},
+  overrides: Partial<ChannelModelPatternFilterRule> = {},
 ): ChannelModelFilterRule => ({
   id: "rule-1",
+  kind: "pattern",
   name: "OpenAI include",
   pattern: "openai/*",
   isRegex: false,

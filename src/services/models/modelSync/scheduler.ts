@@ -38,6 +38,7 @@ import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 import { channelConfigStorage } from "../../managedSites/channelConfigStorage"
+import { sanitizeChannelFiltersForStorage } from "../../managedSites/channelModelFilterRules"
 import { octopusChannelToManagedSite } from "../../managedSites/providers/octopus"
 import {
   DEFAULT_PREFERENCES,
@@ -91,7 +92,9 @@ class ModelSyncScheduler {
       config.rateLimit,
       config.allowedModels,
       channelConfigs,
-      config.globalChannelModelFilters,
+      sanitizeChannelFiltersForStorage(config.globalChannelModelFilters, {
+        idPrefix: "global-channel-filter",
+      }),
       siteType,
     )
   }
@@ -646,8 +649,18 @@ class ModelSyncScheduler {
           : current.allowedModels,
       globalChannelModelFilters:
         settings.globalChannelModelFilters !== undefined
-          ? settings.globalChannelModelFilters
-          : current.globalChannelModelFilters,
+          ? sanitizeChannelFiltersForStorage(
+              settings.globalChannelModelFilters,
+              {
+                idPrefix: "global-channel-filter",
+              },
+            )
+          : sanitizeChannelFiltersForStorage(
+              current.globalChannelModelFilters,
+              {
+                idPrefix: "global-channel-filter",
+              },
+            ),
     }
 
     await userPreferences.savePreferences({ managedSiteModelSync: updated })

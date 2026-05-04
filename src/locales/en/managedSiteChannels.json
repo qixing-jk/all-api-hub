@@ -25,17 +25,20 @@
       "cancel": "Cancel",
       "save": "Save filters"
     },
-    "addRule": "Add filter rule",
+    "addPatternRule": "Add pattern rule",
+    "addProbeRule": "Add probe rule",
     "empty": {
       "description": "Add include/exclude rules with optional regex to control synced models.",
       "title": "No filters yet"
     },
     "hints": {
+      "probesAllPass": "A model matches this rule only when every selected probe passes. Probes use the channel base URL and resolved channel key.",
       "regex": "Regex rules support advanced matching using JavaScript syntax.",
-      "substring": "Plain rules match case-sensitive substrings inside model names."
+      "substring": "Plain rules match case-sensitive substrings inside model names.",
+      "unsupportedChannelType": "Probe rules are unavailable for this channel type because it cannot be mapped to a supported verification API."
     },
     "jsonEditor": {
-      "hint": "The JSON must be an array of objects with at least 'name' and 'pattern'. Optional fields: id, description, isRegex, action ('include' | 'exclude'), enabled, createdAt, updatedAt.",
+      "hint": "The JSON must be an array of pattern or probe rule objects. Pattern rules use kind: 'pattern', name, and pattern. Probe rules use kind: 'probe', name, and probeIds. Credential fields such as apiKey, key, and baseUrl are ignored.",
       "label": "Advanced JSON editor",
       "placeholder": "Paste or edit an array of filter rule objects here to quickly reuse the same configuration across channels."
     },
@@ -46,26 +49,42 @@
       "enabled": "Enabled",
       "name": "Filter name",
       "pattern": "Match pattern",
-      "regex": "Regex mode"
+      "probes": "Verification probes",
+      "regex": "Regex mode",
+      "ruleType": "Rule type"
     },
     "loading": "Loading channel filters...",
     "messages": {
       "jsonArrayRequired": "JSON must be an array of filter rules.",
       "jsonInvalid": "Invalid filter JSON: {{error}}",
       "jsonItemNotObject": "Filter at index {{index}} must be an object.",
-      "jsonMissingName": "Filter at index {{index}} is missing a name.",
-      "jsonMissingPattern": "Filter at index {{index}} is missing a pattern.",
       "loadFailed": "Failed to load filters: {{error}}",
       "saved": "Filters saved",
       "saveFailed": "Failed to save filters: {{error}}",
       "validationName": "Please provide a name for each filter.",
       "validationPattern": "Filter pattern cannot be empty.",
+      "validationProbeIds": "Select at least one verification probe for each probe rule.",
       "validationRegex": "Invalid regex pattern: {{error}}"
     },
     "placeholders": {
       "description": "Optional notes about this rule",
       "name": "e.g. Allow GPT-4",
-      "pattern": "Exact string or regex pattern"
+      "pattern": "Exact string or regex pattern",
+      "probes": "Select probes",
+      "probeSearch": "Search probes"
+    },
+    "probes": {
+      "empty": "No probes found",
+      "options": {
+        "structured-output": "Structured output",
+        "text-generation": "Text generation",
+        "tool-calling": "Tool calling",
+        "web-search": "Web search"
+      }
+    },
+    "ruleTypeOptions": {
+      "pattern": "Pattern",
+      "probe": "Probe"
     },
     "subtitle": "Customize filtering rules for {{channel}}",
     "title": "Channel filters",

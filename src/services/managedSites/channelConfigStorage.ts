@@ -7,13 +7,15 @@ import {
   type ChannelConfigMap,
   type ChannelModelFilterSettings,
 } from "~/types/channelConfig"
-import type {
-  ChannelModelFilterInput,
-  ChannelModelFilterRule,
-} from "~/types/channelModelFilters"
+import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import { getErrorMessage } from "~/utils/core/error"
-import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
+
+import {
+  normalizeChannelFilters,
+  sanitizeChannelFilter,
+  type IncomingChannelFilter,
+} from "./channelModelFilterRules"
 
 const logger = createLogger("ChannelConfigStorage")
 
@@ -103,12 +105,6 @@ class ChannelConfigStorage {
 
 export const channelConfigStorage = new ChannelConfigStorage()
 
-type IncomingChannelFilter = ChannelModelFilterInput & {
-  id?: string
-  createdAt?: number
-  updatedAt?: number
-}
-
 /**
  * Normalize inbound filter payloads and ensure required fields are present.
  * Validates names/patterns and fills defaults for IDs and timestamps.
@@ -119,48 +115,8 @@ type IncomingChannelFilter = ChannelModelFilterInput & {
 function normalizeFilters(
   filters: IncomingChannelFilter[],
 ): ChannelModelFilterRule[] {
-  if (!Array.isArray(filters)) {
-    throw new Error("Filters must be an array")
-  }
-
-  const now = Date.now()
-
-  return filters.map((filter) => {
-    const name = (filter.name ?? "").trim()
-    if (!name) {
-      throw new Error("Filter name is required")
-    }
-
-    const pattern = (filter.pattern ?? "").trim()
-    if (!pattern) {
-      throw new Error("Filter pattern is required")
-    }
-
-    if (filter.isRegex) {
-      try {
-        new RegExp(pattern)
-      } catch (error) {
-        throw new Error(`Invalid regex pattern: ${(error as Error).message}`)
-      }
-    }
-
-    const description = filter.description?.trim()
-    const createdAt =
-      typeof filter.createdAt === "number" && filter.createdAt > 0
-        ? filter.createdAt
-        : now
-
-    return {
-      id: (filter.id ?? "").trim() || safeRandomUUID("channel-filter"),
-      name,
-      description: description || undefined,
-      pattern,
-      isRegex: Boolean(filter.isRegex),
-      action: filter.action === "exclude" ? "exclude" : "include",
-      enabled: filter.enabled !== false,
-      createdAt,
-      updatedAt: now,
-    }
+  return normalizeChannelFilters(filters, {
+    idPrefix: "channel-filter",
   })
 }
 
@@ -335,42 +291,8 @@ function sanitizeFilter(
   filter: unknown,
   fallbackTimestamp: number,
 ): ChannelModelFilterRule | null {
-  if (!filter || typeof filter !== "object") {
-    return null
-  }
-
-  const payload = filter as Partial<ChannelModelFilterRule>
-  const name = typeof payload.name === "string" ? payload.name.trim() : ""
-  const pattern =
-    typeof payload.pattern === "string" ? payload.pattern.trim() : ""
-
-  if (!name || !pattern) {
-    return null
-  }
-
-  const description =
-    typeof payload.description === "string" && payload.description.trim()
-      ? payload.description.trim()
-      : undefined
-
-  return {
-    id:
-      typeof payload.id === "string" && payload.id.trim()
-        ? payload.id.trim()
-        : safeRandomUUID("channel-filter"),
-    name,
-    description,
-    pattern,
-    isRegex: Boolean(payload.isRegex),
-    action: payload.action === "exclude" ? "exclude" : "include",
-    enabled: payload.enabled !== false,
-    createdAt:
-      typeof payload.createdAt === "number" && payload.createdAt > 0
-        ? payload.createdAt
-        : fallbackTimestamp,
-    updatedAt:
-      typeof payload.updatedAt === "number" && payload.updatedAt > 0
-        ? payload.updatedAt
-        : fallbackTimestamp,
-  }
+  return sanitizeChannelFilter(filter, {
+    fallbackTimestamp,
+    idPrefix: "channel-filter",
+  })
 }

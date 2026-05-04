@@ -1,7 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { managedSiteModelSyncStorage } from "~/services/models/modelSync/storage"
-import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
+import type {
+  ChannelModelFilterRule,
+  ChannelModelPatternFilterRule,
+} from "~/types/channelModelFilters"
 
 const { mockUserPreferences, storageMocks, defaultManagedSiteModelSync } =
   vi.hoisted(() => ({
@@ -53,9 +56,10 @@ vi.mock("~/services/preferences/userPreferences", () => ({
  * Creates a persisted channel model filter rule fixture.
  */
 const buildFilterRule = (
-  overrides: Partial<ChannelModelFilterRule> = {},
+  overrides: Partial<ChannelModelPatternFilterRule> = {},
 ): ChannelModelFilterRule => ({
   id: "rule-1",
+  kind: "pattern",
   name: "Exclude legacy model",
   pattern: "legacy-model",
   isRegex: false,

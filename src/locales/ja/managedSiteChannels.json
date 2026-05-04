@@ -25,17 +25,20 @@
       "cancel": "キャンセル",
       "save": "フィルターを保存"
     },
-    "addRule": "フィルタールールを追加",
+    "addPatternRule": "パターンルールを追加",
+    "addProbeRule": "プローブルールを追加",
     "empty": {
       "description": "必要に応じて正規表現を使った include / exclude ルールを追加し、同期モデルを制御します。",
       "title": "まだフィルターがありません"
     },
     "hints": {
+      "probesAllPass": "選択したすべてのプローブに合格した場合だけ、このルールに一致します。プローブはチャネルのベース URL と解決済みチャネルキーを使用します。",
       "regex": "正規表現ルールでは JavaScript 構文による高度な一致指定が可能です。",
-      "substring": "通常ルールではモデル名内の大文字小文字を区別する部分文字列に一致します。"
+      "substring": "通常ルールではモデル名内の大文字小文字を区別する部分文字列に一致します。",
+      "unsupportedChannelType": "このチャネル種別は対応する検証 API にマッピングできないため、プローブルールを使用できません。"
     },
     "jsonEditor": {
-      "hint": "JSON は少なくとも 'name' と 'pattern' を持つオブジェクト配列である必要があります。任意フィールド: id, description, isRegex, action ('include' | 'exclude'), enabled, createdAt, updatedAt。",
+      "hint": "JSON はパターンルールまたはプローブルールのオブジェクト配列である必要があります。パターンルールは kind: 'pattern'、name、pattern を使います。プローブルールは kind: 'probe'、name、probeIds を使います。apiKey、key、baseUrl などの認証情報フィールドは無視されます。",
       "label": "高度な JSON エディター",
       "placeholder": "ここにフィルタールールオブジェクト配列を貼り付けるか編集して、同じ設定を複数チャネルで素早く再利用できます。"
     },
@@ -46,26 +49,42 @@
       "enabled": "有効",
       "name": "フィルター名",
       "pattern": "一致パターン",
-      "regex": "正規表現モード"
+      "probes": "検証プローブ",
+      "regex": "正規表現モード",
+      "ruleType": "ルール種別"
     },
     "loading": "チャネルフィルターを読み込み中...",
     "messages": {
       "jsonArrayRequired": "JSON はフィルタールールの配列である必要があります。",
       "jsonInvalid": "無効なフィルター JSON です: {{error}}",
       "jsonItemNotObject": "インデックス {{index}} のフィルターはオブジェクトである必要があります。",
-      "jsonMissingName": "インデックス {{index}} のフィルターに name がありません。",
-      "jsonMissingPattern": "インデックス {{index}} のフィルターに pattern がありません。",
       "loadFailed": "フィルターの読み込みに失敗しました: {{error}}",
       "saved": "フィルターを保存しました",
       "saveFailed": "フィルターの保存に失敗しました: {{error}}",
       "validationName": "各フィルターに名前を入力してください。",
       "validationPattern": "フィルターパターンは空にできません。",
+      "validationProbeIds": "各プローブルールで少なくとも 1 つの検証プローブを選択してください。",
       "validationRegex": "無効な正規表現パターンです: {{error}}"
     },
     "placeholders": {
       "description": "このルールに関する任意メモ",
       "name": "例: GPT-4 を許可",
-      "pattern": "完全一致文字列または正規表現パターン"
+      "pattern": "完全一致文字列または正規表現パターン",
+      "probes": "プローブを選択",
+      "probeSearch": "プローブを検索"
+    },
+    "probes": {
+      "empty": "プローブが見つかりません",
+      "options": {
+        "structured-output": "構造化出力",
+        "text-generation": "テキスト生成",
+        "tool-calling": "ツール呼び出し",
+        "web-search": "Web 検索"
+      }
+    },
+    "ruleTypeOptions": {
+      "pattern": "パターン",
+      "probe": "プローブ"
     },
     "subtitle": "{{channel}} のフィルタールールをカスタマイズ",
     "title": "チャネルフィルター",

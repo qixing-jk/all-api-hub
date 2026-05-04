@@ -154,6 +154,7 @@ describe("channelConfigStorage", () => {
         id: "explicit-id",
         name: "Block Legacy",
         description: "trimmed description",
+        kind: "pattern",
         pattern: "^claude",
         isRegex: true,
         action: "exclude",
@@ -358,6 +359,7 @@ describe("channelConfigStorage", () => {
             id: "kept-id",
             name: "Keep GPT",
             description: undefined,
+            kind: "pattern",
             pattern: "gpt",
             isRegex: false,
             action: "include",
@@ -413,6 +415,54 @@ describe("channelConfigStorage", () => {
       success: false,
       error: "Unknown action",
     })
+  })
+
+  it("normalizes probe rules and drops imported credential fields", async () => {
+    const count = await channelConfigStorage.importConfigs({
+      3: {
+        modelFilterSettings: {
+          rules: [
+            {
+              id: "probe-id",
+              kind: "probe",
+              name: "Text capable",
+              description: "  requires chat  ",
+              action: "include",
+              enabled: true,
+              probeIds: ["text-generation", "text-generation", "unknown-probe"],
+              match: "all",
+              apiKey: "sk-should-not-persist",
+              key: "sk-channel",
+              baseUrl: "https://manual.example.com",
+              createdAt: 10,
+              updatedAt: 20,
+            },
+            {
+              kind: "probe",
+              name: "Invalid",
+              probeIds: [],
+            },
+          ],
+        },
+      },
+    })
+
+    expect(count).toBe(1)
+    const imported = await channelConfigStorage.getAllConfigs()
+    expect(imported[3].modelFilterSettings.rules).toEqual([
+      {
+        id: "probe-id",
+        kind: "probe",
+        name: "Text capable",
+        description: "requires chat",
+        action: "include",
+        enabled: true,
+        probeIds: ["text-generation"],
+        match: "all",
+        createdAt: 10,
+        updatedAt: 20,
+      },
+    ])
   })
 
   it("surfaces non-array and missing-field filter validation errors through the message handler", async () => {

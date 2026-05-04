@@ -25,17 +25,20 @@
       "cancel": "取消",
       "save": "儲存規則"
     },
-    "addRule": "新增規則",
+    "addPatternRule": "新增模式規則",
+    "addProbeRule": "新增探測規則",
     "empty": {
       "description": "新增包含或排除規則（可選正則）以控制同步到該渠道的模型。",
       "title": "尚未新增規則"
     },
     "hints": {
+      "probesAllPass": "只有所有已選探測都通過時，模型才會符合此規則。探測會使用該渠道的基礎 URL 和解析出的渠道 key。",
       "regex": "正則模式使用 JavaScript 語法，可實現更靈活的匹配。",
-      "substring": "普通模式將執行區分大小寫的子串匹配。"
+      "substring": "普通模式將執行區分大小寫的子串匹配。",
+      "unsupportedChannelType": "此渠道類型無法映射到支援的驗證 API，因此暫不能使用探測規則。"
     },
     "jsonEditor": {
-      "hint": "JSON 必須是一個物件陣列，至少包含 name 和 pattern 欄位。可選欄位包括：id、description、isRegex、action（include | exclude）、enabled、createdAt、updatedAt。",
+      "hint": "JSON 必須是模式規則或探測規則物件陣列。模式規則使用 kind: 'pattern'、name 和 pattern；探測規則使用 kind: 'probe'、name 和 probeIds。apiKey、key、baseUrl 等憑證欄位會被忽略。",
       "label": "高階 JSON 編輯器",
       "placeholder": "在此貼上或編輯過濾規則物件陣列，以便在多個渠道之間快速複用同一套配置。"
     },
@@ -46,26 +49,42 @@
       "enabled": "啟用",
       "name": "規則名稱",
       "pattern": "匹配模式",
-      "regex": "使用正則"
+      "probes": "驗證探測",
+      "regex": "使用正則",
+      "ruleType": "規則類型"
     },
     "loading": "正在載入渠道過濾規則…",
     "messages": {
       "jsonArrayRequired": "JSON 必須是過濾規則陣列。",
       "jsonInvalid": "無效的過濾規則 JSON：{{error}}",
       "jsonItemNotObject": "索引 {{index}} 處的過濾規則必須是物件。",
-      "jsonMissingName": "索引 {{index}} 處的過濾規則缺少 name。",
-      "jsonMissingPattern": "索引 {{index}} 處的過濾規則缺少 pattern。",
       "loadFailed": "過濾規則載入失敗：{{error}}",
       "saved": "過濾規則已儲存",
       "saveFailed": "儲存過濾規則失敗：{{error}}",
       "validationName": "請為每個規則填寫名稱。",
       "validationPattern": "匹配模式不能為空。",
+      "validationProbeIds": "請為每個探測規則至少選擇一個驗證探測。",
       "validationRegex": "無效的正規表示式：{{error}}"
     },
     "placeholders": {
       "description": "可選備註",
       "name": "如：僅允許 GPT-4",
-      "pattern": "精確字串或正規表示式"
+      "pattern": "精確字串或正規表示式",
+      "probes": "選擇探測",
+      "probeSearch": "搜尋探測"
+    },
+    "probes": {
+      "empty": "找不到探測",
+      "options": {
+        "structured-output": "結構化輸出",
+        "text-generation": "文字生成",
+        "tool-calling": "工具呼叫",
+        "web-search": "網路搜尋"
+      }
+    },
+    "ruleTypeOptions": {
+      "pattern": "模式",
+      "probe": "探測"
     },
     "subtitle": "為 {{channel}} 配置包含/排除規則",
     "title": "渠道過濾規則",

@@ -342,7 +342,9 @@ describe("ManagedSiteModelSync.updateSettings and setupAlarm", () => {
         globalChannelModelFilters: [
           {
             id: "filter-1",
+            kind: "pattern",
             name: "Include GPT",
+            description: undefined,
             pattern: "^gpt",
             isRegex: true,
             action: "include",

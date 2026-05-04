@@ -6,6 +6,10 @@ import { AuthTypeEnum } from "~/types"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {
+  isPatternChannelModelFilterRule,
+  isProbeChannelModelFilterRule,
+} from "~/types/channelModelFilters"
+import {
   type ManagedSiteChannel,
   type ManagedSiteChannelListData,
 } from "~/types/managedSite"
@@ -17,6 +21,11 @@ import {
 } from "~/types/managedSiteModelSync"
 import { createLogger } from "~/utils/core/logger"
 
+import {
+  matchesProbeFilterRule,
+  ProbeFilterUnavailableError,
+  type ProbeFilterContext,
+} from "./channelModelFilterEvaluator"
 import { RateLimiter } from "./rateLimiter"
 
 /**
@@ -250,13 +259,24 @@ export class ModelSyncService {
       try {
         const fetchedModels = await this.fetchChannelModels(channel.id)
         const allowListedModels = this.filterAllowedModels(fetchedModels)
-        const globallyScopedModels = this.applyFilters(
+        const probeFilterCache = new Map<string, boolean>()
+        const probeContext: ProbeFilterContext = {
+          channel,
+          siteType: this.siteType,
+          managedSiteBaseUrl: this.baseUrl,
+          adminToken: this.token,
+          userId: this.userId,
+          cache: probeFilterCache,
+        }
+        const globallyScopedModels = await this.applyFilters(
           this.globalChannelModelFilters,
           allowListedModels,
+          probeContext,
         )
-        const channelScopedModels = this.applyChannelFilters(
+        const channelScopedModels = await this.applyChannelFilters(
           channel.id,
           globallyScopedModels,
+          probeContext,
         )
 
         if (this.haveModelsChanged(oldModels, channelScopedModels)) {
@@ -276,6 +296,22 @@ export class ModelSyncService {
           message: "Success",
         }
       } catch (error: any) {
+        if (error instanceof ProbeFilterUnavailableError) {
+          logger.warn("Probe-backed channel filter skipped model update", {
+            channelId: channel.id,
+            reason: error.reason,
+          })
+          return {
+            channelId: channel.id,
+            channelName: channel.name,
+            ok: false,
+            attempts: attempts + 1,
+            finishedAt: Date.now(),
+            oldModels,
+            message: error.message,
+          }
+        }
+
         lastError = error
         logger.error("Unexpected error for channel", {
           channelId: channel.id,
@@ -437,10 +473,11 @@ export class ModelSyncService {
    *    include rules are present; otherwise the model is dropped.
    * 4. Apply exclude rules (OR logic). Any match removes the model.
    */
-  private applyFilters(
+  private async applyFilters(
     rules: ChannelModelFilterRule[] | null | undefined,
     models: string[],
-  ): string[] {
+    probeContext?: ProbeFilterContext,
+  ): Promise<string[]> {
     const normalized = Array.from(
       new Set(models.map((model) => model.trim()).filter(Boolean)),
     )
@@ -459,8 +496,11 @@ export class ModelSyncService {
     let result = normalized
 
     if (includeRules.length > 0) {
-      result = result.filter((model) =>
-        includeRules.some((rule) => this.matchesFilter(rule, model)),
+      result = await this.filterByRuleMatches(
+        result,
+        includeRules,
+        true,
+        probeContext,
       )
     }
 
@@ -469,9 +509,11 @@ export class ModelSyncService {
     }
 
     if (excludeRules.length > 0) {
-      result = result.filter(
-        (model) =>
-          !excludeRules.some((rule) => this.matchesFilter(rule, model)),
+      result = await this.filterByRuleMatches(
+        result,
+        excludeRules,
+        false,
+        probeContext,
       )
     }
 
@@ -484,10 +526,46 @@ export class ModelSyncService {
    * @param channelId Channel id for looking up config rules.
    * @param models Models after global filtering.
    */
-  private applyChannelFilters(channelId: number, models: string[]): string[] {
+  private applyChannelFilters(
+    channelId: number,
+    models: string[],
+    probeContext: ProbeFilterContext,
+  ): Promise<string[]> {
     const rules =
       this.channelConfigs?.[channelId]?.modelFilterSettings?.rules ?? []
-    return this.applyFilters(rules, models)
+    return this.applyFilters(rules, models, probeContext)
+  }
+
+  private async filterByRuleMatches(
+    models: string[],
+    rules: ChannelModelFilterRule[],
+    keepMatchingModels: boolean,
+    probeContext?: ProbeFilterContext,
+  ): Promise<string[]> {
+    const result: string[] = []
+
+    for (const model of models) {
+      const matched = await this.anyRuleMatches(rules, model, probeContext)
+      if (matched === keepMatchingModels) {
+        result.push(model)
+      }
+    }
+
+    return result
+  }
+
+  private async anyRuleMatches(
+    rules: ChannelModelFilterRule[],
+    model: string,
+    probeContext?: ProbeFilterContext,
+  ): Promise<boolean> {
+    for (const rule of rules) {
+      if (await this.matchesFilter(rule, model, probeContext)) {
+        return true
+      }
+    }
+
+    return false
   }
 
   /**
@@ -498,7 +576,25 @@ export class ModelSyncService {
    * @param model Model name to test.
    * @returns Whether the model matches the rule.
    */
-  private matchesFilter(rule: ChannelModelFilterRule, model: string): boolean {
+  private async matchesFilter(
+    rule: ChannelModelFilterRule,
+    model: string,
+    probeContext?: ProbeFilterContext,
+  ): Promise<boolean> {
+    if (isProbeChannelModelFilterRule(rule)) {
+      if (!probeContext) {
+        throw new ProbeFilterUnavailableError(
+          "provider-unsupported",
+          "Probe filtering cannot run without a managed-site channel context.",
+        )
+      }
+      return matchesProbeFilterRule(rule, model, probeContext)
+    }
+
+    if (!isPatternChannelModelFilterRule(rule)) {
+      return false
+    }
+
     const pattern = rule.pattern?.trim()
     if (!pattern) return false
 

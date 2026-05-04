@@ -6,6 +6,7 @@ import type {
 } from "~/types/managedSiteModelSync"
 import { createLogger } from "~/utils/core/logger"
 
+import { sanitizeChannelFiltersForStorage } from "../../managedSites/channelModelFilterRules"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -93,9 +94,10 @@ class ManagedSiteModelSyncStorage {
         maxRetries: config.maxRetries,
         rateLimit: { ...config.rateLimit },
         allowedModels: [...(config.allowedModels ?? [])],
-        globalChannelModelFilters: [
-          ...(config.globalChannelModelFilters ?? []),
-        ],
+        globalChannelModelFilters: sanitizeChannelFiltersForStorage(
+          config.globalChannelModelFilters,
+          { idPrefix: "global-channel-filter" },
+        ),
       }
     } catch (error) {
       logger.error("Failed to get preferences", error)
@@ -140,8 +142,14 @@ class ManagedSiteModelSyncStorage {
             : [...(current.allowedModels ?? [])],
         globalChannelModelFilters:
           preferences.globalChannelModelFilters !== undefined
-            ? [...preferences.globalChannelModelFilters]
-            : [...(current.globalChannelModelFilters ?? [])],
+            ? sanitizeChannelFiltersForStorage(
+                preferences.globalChannelModelFilters,
+                { idPrefix: "global-channel-filter" },
+              )
+            : sanitizeChannelFiltersForStorage(
+                current.globalChannelModelFilters,
+                { idPrefix: "global-channel-filter" },
+              ),
       }
 
       await userPreferences.savePreferences({ managedSiteModelSync: updated })
@@ -267,9 +275,10 @@ class ManagedSiteModelSyncStorage {
       maxRetries: defaultConfig.maxRetries,
       rateLimit: { ...defaultConfig.rateLimit },
       allowedModels: [...(defaultConfig.allowedModels ?? [])],
-      globalChannelModelFilters: [
-        ...(defaultConfig.globalChannelModelFilters ?? []),
-      ],
+      globalChannelModelFilters: sanitizeChannelFiltersForStorage(
+        defaultConfig.globalChannelModelFilters,
+        { idPrefix: "global-channel-filter" },
+      ),
     }
   }
 }

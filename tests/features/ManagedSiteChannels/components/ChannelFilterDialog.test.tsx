@@ -318,6 +318,7 @@ describe("ChannelFilterDialog", () => {
           id: "generated-filter-id",
           name: "Allow GPT",
           description: "keep chat models",
+          kind: "pattern",
           pattern: "^gpt",
           isRegex: true,
           action: "exclude",

@@ -4,6 +4,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import ChannelFiltersEditor from "~/components/ChannelFiltersEditor"
+import type { EditableFilterField } from "~/components/ChannelFiltersEditor"
 import { SettingSection } from "~/components/SettingSection"
 import {
   Button,
@@ -20,10 +21,12 @@ import {
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { normalizeChannelFilters } from "~/services/managedSites/channelModelFilterRules"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
+import { isProbeChannelModelFilterRule } from "~/types/channelModelFilters"
 import type { ManagedSiteModelSyncPreferences } from "~/types/managedSiteModelSync"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
@@ -231,35 +234,79 @@ export default function ManagedSiteModelSyncSettings() {
 
   const handleGlobalFilterFieldChange = (
     id: string,
-    field: keyof EditableFilter,
+    field: EditableFilterField,
     value: any,
   ) => {
     setGlobalChannelModelFiltersDraft((prev) =>
-      prev.map((filter) =>
-        filter.id === id
-          ? {
-              ...filter,
-              [field]: value,
+      prev.map((filter) => {
+        if (filter.id !== id) {
+          return filter
+        }
+
+        if (field === "kind") {
+          if (value === "probe") {
+            return {
+              id: filter.id,
+              name: filter.name,
+              description: filter.description,
+              kind: "probe",
+              probeIds: ["text-generation"],
+              match: "all",
+              action: filter.action,
+              enabled: filter.enabled,
+              createdAt: filter.createdAt,
               updatedAt: Date.now(),
             }
-          : filter,
-      ),
+          }
+
+          return {
+            id: filter.id,
+            name: filter.name,
+            description: filter.description,
+            kind: "pattern",
+            pattern: "",
+            isRegex: false,
+            action: filter.action,
+            enabled: filter.enabled,
+            createdAt: filter.createdAt,
+            updatedAt: Date.now(),
+          }
+        }
+
+        return {
+          ...filter,
+          [field]: value,
+          updatedAt: Date.now(),
+        }
+      }),
     )
   }
 
-  const handleAddGlobalFilter = () => {
+  const handleAddGlobalFilter = (kind: "pattern" | "probe" = "pattern") => {
     const now = Date.now()
-    const newFilter: EditableFilter = {
+    const base = {
       id: safeRandomUUID("global-channel-filter"),
       name: "",
-      pattern: "",
-      isRegex: false,
-      action: "include",
+      action: "include" as const,
       enabled: true,
       createdAt: now,
       updatedAt: now,
       description: "",
     }
+    const newFilter: EditableFilter =
+      kind === "probe"
+        ? {
+            ...base,
+            kind: "probe",
+            probeIds: ["text-generation"],
+            match: "all",
+          }
+        : {
+            ...base,
+            kind: "pattern",
+            pattern: "",
+            isRegex: false,
+          }
     setGlobalChannelModelFiltersDraft((prev) => [...prev, newFilter])
   }
 
@@ -274,12 +321,19 @@ export default function ManagedSiteModelSyncSettings() {
   ): string | undefined => {
     for (const filter of rules) {
       const name = filter.name.trim()
-      const pattern = filter.pattern.trim()
 
       if (!name) {
         return t("managedSiteChannels:filters.messages.validationName")
       }
 
+      if (isProbeChannelModelFilterRule(filter)) {
+        if (filter.probeIds.length === 0) {
+          return t("managedSiteChannels:filters.messages.validationProbeIds")
+        }
+        continue
+      }
+
+      const pattern = filter.pattern.trim()
       if (!pattern) {
         return t("managedSiteChannels:filters.messages.validationPattern")
       }
@@ -328,7 +382,6 @@ export default function ManagedSiteModelSyncSettings() {
       const payload = rulesToSave.map((filter) => ({
         ...filter,
         name: filter.name.trim(),
-        pattern: filter.pattern.trim(),
         description: filter.description?.trim() || undefined,
       }))
 
@@ -708,55 +761,16 @@ function parseJsonGlobalChannelModelFilters(
     throw new Error(t("managedSiteChannels:filters.messages.jsonArrayRequired"))
   }
 
-  const now = Date.now()
-
-  return parsed.map((item, index) => {
+  parsed.forEach((item, index) => {
     if (!item || typeof item !== "object") {
       throw new Error(
         t("managedSiteChannels:filters.messages.jsonItemNotObject", { index }),
       )
     }
+  })
 
-    const anyItem = item as any
-    const name = typeof anyItem.name === "string" ? anyItem.name.trim() : ""
-    const pattern =
-      typeof anyItem.pattern === "string" ? anyItem.pattern.trim() : ""
-
-    if (!name) {
-      throw new Error(
-        t("managedSiteChannels:filters.messages.jsonMissingName", { index }),
-      )
-    }
-
-    if (!pattern) {
-      throw new Error(
-        t("managedSiteChannels:filters.messages.jsonMissingPattern", { index }),
-      )
-    }
-
-    return {
-      id:
-        typeof anyItem.id === "string" && anyItem.id.trim()
-          ? anyItem.id.trim()
-          : safeRandomUUID("global-channel-filter"),
-      name,
-      description:
-        typeof anyItem.description === "string"
-          ? anyItem.description
-          : anyItem.description ?? "",
-      pattern,
-      isRegex: Boolean(anyItem.isRegex),
-      action: anyItem.action === "exclude" ? "exclude" : "include",
-      enabled: anyItem.enabled !== false,
-      createdAt:
-        typeof anyItem.createdAt === "number" && anyItem.createdAt > 0
-          ? anyItem.createdAt
-          : now,
-      updatedAt:
-        typeof anyItem.updatedAt === "number" && anyItem.updatedAt > 0
-          ? anyItem.updatedAt
-          : now,
-    }
+  return normalizeChannelFilters(parsed as any[], {
+    idPrefix: "global-channel-filter",
   })
 }
 
