@@ -230,7 +230,9 @@ describe("OptionsSearchDialog", () => {
     await screen.findByRole("dialog")
     const input = screen.getByRole("combobox")
     await user.type(input, "webdav")
-    await user.click(screen.getByRole("button", { name: "common:actions.clear" }))
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.clear" }),
+    )
 
     expect(input).toHaveValue("")
   })
@@ -279,6 +281,19 @@ describe("OptionsSearchDialog", () => {
     )
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument()
+  })
+
+  it("unmounts cleanly while closed", () => {
+    const { unmount } = render(
+      <OptionsSearchDialog
+        open={false}
+        onOpenChange={vi.fn()}
+        onPageNavigate={vi.fn()}
+        context={baseContext}
+      />,
+    )
+
+    unmount()
   })
 
   it("lets the user open a recent item after reopening the dialog", async () => {

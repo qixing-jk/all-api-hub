@@ -58,12 +58,12 @@ import {
 import { createLogger } from "~/utils/core/logger"
 import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"
 
+import { WEBDAV_TARGET_IDS } from "../searchTargets"
 import {
   BACKUP_VERSION,
   importFromBackupObject,
   type BackupFullV2,
 } from "../utils"
-import { WEBDAV_TARGET_IDS } from "../searchTargets"
 import { WebDAVDecryptPasswordModal } from "./WebDAVDecryptPasswordModal"
 
 /**
@@ -72,10 +72,10 @@ import { WebDAVDecryptPasswordModal } from "./WebDAVDecryptPasswordModal"
 const logger = createLogger("WebDAVSettings")
 
 const WEBDAV_SYNC_DATA_INPUT_IDS: Record<WebDAVSyncDataKey, string> = {
-  accounts: "webdavSyncDataAccounts",
-  bookmarks: "webdavSyncDataBookmarks",
-  apiCredentialProfiles: "webdavSyncDataApiCredentialProfiles",
-  preferences: "webdavSyncDataPreferences",
+  accounts: WEBDAV_TARGET_IDS.syncDataAccounts,
+  bookmarks: WEBDAV_TARGET_IDS.syncDataBookmarks,
+  apiCredentialProfiles: WEBDAV_TARGET_IDS.syncDataApiCredentialProfiles,
+  preferences: WEBDAV_TARGET_IDS.syncDataPreferences,
 }
 
 class PersistWebdavConfigError extends Error {

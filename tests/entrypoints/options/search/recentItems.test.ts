@@ -1,7 +1,8 @@
 // @vitest-environment jsdom
 
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
 import { Storage } from "@plasmohq/storage"
-import { beforeEach, describe, expect, it } from "vitest"
 
 import {
   loadRecentSearchItemIds,
@@ -9,6 +10,28 @@ import {
   saveRecentSearchItemSelection,
 } from "~/entrypoints/options/search/recentItems"
 import { OPTIONS_SEARCH_STORAGE_KEYS } from "~/services/core/storageKeys"
+
+async function importRecentItemsWithStorageMock(storageOverrides: {
+  get?: () => Promise<unknown>
+  set?: () => Promise<unknown>
+}) {
+  vi.resetModules()
+  vi.doMock("@plasmohq/storage", () => ({
+    Storage: class {
+      get = storageOverrides.get ?? vi.fn().mockResolvedValue(undefined)
+      set = storageOverrides.set ?? vi.fn().mockResolvedValue(undefined)
+      remove = vi.fn().mockResolvedValue(undefined)
+    },
+  }))
+
+  const recentItemsModule = await import(
+    "~/entrypoints/options/search/recentItems"
+  )
+
+  vi.doUnmock("@plasmohq/storage")
+
+  return recentItemsModule
+}
 
 describe("options search recent items", () => {
   const storage = new Storage({ area: "local" })
@@ -45,6 +68,24 @@ describe("options search recent items", () => {
     await expect(loadRecentSearchItemIds()).resolves.toEqual([])
   })
 
+  it("drops malformed legacy localStorage payloads during migration", async () => {
+    window.localStorage.setItem("options-search-recent-item-ids", "{not json")
+
+    await expect(loadRecentSearchItemIds()).resolves.toEqual([])
+    expect(
+      window.localStorage.getItem("options-search-recent-item-ids"),
+    ).toBeNull()
+  })
+
+  it("falls back to an empty list when storage read fails", async () => {
+    const { loadRecentSearchItemIds: loadWithFailingStorage } =
+      await importRecentItemsWithStorageMock({
+        get: vi.fn().mockRejectedValue(new Error("storage unavailable")),
+      })
+
+    await expect(loadWithFailingStorage()).resolves.toEqual([])
+  })
+
   it("deduplicates and prepends saved recent ids", async () => {
     await storage.set(OPTIONS_SEARCH_STORAGE_KEYS.RECENT_ITEM_IDS, [
       "beta",
@@ -54,6 +95,16 @@ describe("options search recent items", () => {
     await expect(
       saveRecentSearchItemSelection({ id: "alpha" }),
     ).resolves.toEqual(["alpha", "beta"])
+  })
+
+  it("returns an empty list when saving the recent selection fails", async () => {
+    const { saveRecentSearchItemSelection: saveWithFailingStorage } =
+      await importRecentItemsWithStorageMock({
+        get: vi.fn().mockResolvedValue([]),
+        set: vi.fn().mockRejectedValue(new Error("write failed")),
+      })
+
+    await expect(saveWithFailingStorage({ id: "alpha" })).resolves.toEqual([])
   })
 
   it("resolves only recent ids that still exist in the localized item list", () => {

@@ -29,6 +29,27 @@ describe("useSearchHotkeys", () => {
     expect(event.defaultPrevented).toBe(true)
   })
 
+  it("opens the dialog for Meta+K when the event target is not an element", () => {
+    const onOpen = vi.fn()
+
+    renderHook(() => useSearchHotkeys({ onOpen }), {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+
+    const event = new KeyboardEvent("keydown", {
+      key: "k",
+      metaKey: true,
+      bubbles: true,
+      cancelable: true,
+    })
+    window.dispatchEvent(event)
+
+    expect(onOpen).toHaveBeenCalledTimes(1)
+    expect(event.defaultPrevented).toBe(true)
+  })
+
   it("ignores the shortcut inside editable elements", () => {
     const onOpen = vi.fn()
     const input = document.createElement("input")

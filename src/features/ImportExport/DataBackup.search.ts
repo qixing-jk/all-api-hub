@@ -57,7 +57,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-username",
     "dataBackup",
-    "webdav-username",
+    WEBDAV_TARGET_IDS.username,
     "importExport:webdav.username",
     721,
     {
@@ -73,7 +73,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-password",
     "dataBackup",
-    "webdav-password",
+    WEBDAV_TARGET_IDS.password,
     "importExport:webdav.password",
     722,
     {
@@ -89,7 +89,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-auto-sync-enable",
     "dataBackup",
-    "webdav-auto-sync-enable",
+    WEBDAV_AUTO_SYNC_TARGET_IDS.enable,
     "importExport:webdav.autoSync.enable",
     723,
     {
@@ -105,7 +105,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-restore-policy-data-backup",
     "dataBackup",
-    "webdav-restore-policy",
+    WEBDAV_TARGET_IDS.restorePolicy,
     "importExport:webdav.restorePolicy.title",
     724,
     {
@@ -121,7 +121,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-sync-data-data-backup",
     "dataBackup",
-    "webdav-sync-data",
+    WEBDAV_TARGET_IDS.syncData,
     "importExport:webdav.syncData.title",
     725,
     {
@@ -137,7 +137,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-sync-data-accounts-data-backup",
     "dataBackup",
-    "webdavSyncDataAccounts",
+    WEBDAV_TARGET_IDS.syncDataAccounts,
     "importExport:webdav.syncData.accounts",
     725.1,
     {
@@ -154,7 +154,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-sync-data-bookmarks-data-backup",
     "dataBackup",
-    "webdavSyncDataBookmarks",
+    WEBDAV_TARGET_IDS.syncDataBookmarks,
     "importExport:webdav.syncData.bookmarks",
     725.2,
     {
@@ -171,7 +171,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-sync-data-api-credential-profiles-data-backup",
     "dataBackup",
-    "webdavSyncDataApiCredentialProfiles",
+    WEBDAV_TARGET_IDS.syncDataApiCredentialProfiles,
     "importExport:webdav.syncData.apiCredentialProfiles",
     725.3,
     {
@@ -193,7 +193,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-sync-data-preferences-data-backup",
     "dataBackup",
-    "webdavSyncDataPreferences",
+    WEBDAV_TARGET_IDS.syncDataPreferences,
     "importExport:webdav.syncData.preferences",
     725.4,
     {
@@ -210,7 +210,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-encryption-enable-data-backup",
     "dataBackup",
-    "webdav-encryption-enable",
+    WEBDAV_TARGET_IDS.encryptionEnable,
     "importExport:webdav.encryption.title",
     726,
     {
@@ -226,7 +226,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-encryption-password-data-backup",
     "dataBackup",
-    "webdav-encryption-password",
+    WEBDAV_TARGET_IDS.encryptionPassword,
     "importExport:webdav.encryption.password",
     727,
     {
@@ -242,7 +242,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-save-config-data-backup",
     "dataBackup",
-    "webdav-save-config",
+    WEBDAV_TARGET_IDS.saveConfig,
     "importExport:webdav.saveConfig",
     728,
     {
@@ -258,7 +258,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-test-connection-data-backup",
     "dataBackup",
-    "webdav-test-connection",
+    WEBDAV_TARGET_IDS.testConnection,
     "importExport:webdav.testConnection",
     729,
     {
@@ -274,7 +274,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-upload-backup-data-backup",
     "dataBackup",
-    "webdav-upload-backup",
+    WEBDAV_TARGET_IDS.uploadBackup,
     "importExport:webdav.uploadBackup",
     730,
     {
@@ -290,7 +290,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-download-import-data-backup",
     "dataBackup",
-    "webdav-download-import",
+    WEBDAV_TARGET_IDS.downloadImport,
     "importExport:webdav.downloadImport",
     731,
     {

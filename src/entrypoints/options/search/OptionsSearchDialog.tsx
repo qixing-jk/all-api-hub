@@ -164,6 +164,7 @@ export function OptionsSearchDialog({
   return (
     <CommandDialog
       open={open}
+      shouldFilter={false}
       onOpenChange={(nextOpen) => {
         if (!nextOpen) {
           setQuery("")

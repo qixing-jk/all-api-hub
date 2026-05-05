@@ -39,7 +39,14 @@ async function migrateLegacyRecentItemIds() {
     return undefined
   }
 
-  const migratedIds = sanitizeRecentItemIds(JSON.parse(raw))
+  let migratedIds: string[]
+  try {
+    migratedIds = sanitizeRecentItemIds(JSON.parse(raw))
+  } catch {
+    window.localStorage.removeItem(LEGACY_OPTIONS_SEARCH_RECENT_IDS_KEY)
+    return undefined
+  }
+
   await storage.set(OPTIONS_SEARCH_STORAGE_KEYS.RECENT_ITEM_IDS, migratedIds)
   window.localStorage.removeItem(LEGACY_OPTIONS_SEARCH_RECENT_IDS_KEY)
 
@@ -51,7 +58,9 @@ async function migrateLegacyRecentItemIds() {
  */
 export async function loadRecentSearchItemIds() {
   try {
-    const stored = await storage.get(OPTIONS_SEARCH_STORAGE_KEYS.RECENT_ITEM_IDS)
+    const stored = await storage.get(
+      OPTIONS_SEARCH_STORAGE_KEYS.RECENT_ITEM_IDS,
+    )
     if (stored !== undefined) {
       return sanitizeRecentItemIds(stored)
     }

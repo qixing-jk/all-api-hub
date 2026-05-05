@@ -27,6 +27,12 @@ describe("options search navigation helpers", () => {
     expect(window.location.search).toBe("")
   })
 
+  it("removes the highlight search param when it is present", () => {
+    clearHighlightSearchParam()
+
+    expect(window.location.search).not.toContain(OPTIONS_SEARCH_HIGHLIGHT_PARAM)
+  })
+
   it("returns false when the highlight target does not exist", () => {
     expect(highlightSearchTarget("missing-target")).toBe(false)
   })

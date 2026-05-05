@@ -5,7 +5,7 @@ import {
 } from "~/entrypoints/options/search/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
 
-import { WEBDAV_AUTO_SYNC_TARGET_IDS } from "./searchTargets"
+import { WEBDAV_AUTO_SYNC_TARGET_IDS, WEBDAV_TARGET_IDS } from "./searchTargets"
 
 export const importExportPageSearchSections: OptionsSearchItemDefinition[] = [
   buildPageSectionDefinition(
@@ -113,7 +113,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-restore-policy",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    "webdav-restore-policy",
+    WEBDAV_TARGET_IDS.restorePolicy,
     "importExport:webdav.restorePolicy.title",
     745,
     {
@@ -124,7 +124,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-sync-data",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    "webdav-sync-data",
+    WEBDAV_TARGET_IDS.syncData,
     "importExport:webdav.syncData.title",
     746,
     {
@@ -135,7 +135,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-sync-data-accounts",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    "webdavSyncDataAccounts",
+    WEBDAV_TARGET_IDS.syncDataAccounts,
     "importExport:webdav.syncData.accounts",
     746.1,
     {
@@ -146,7 +146,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-sync-data-bookmarks",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    "webdavSyncDataBookmarks",
+    WEBDAV_TARGET_IDS.syncDataBookmarks,
     "importExport:webdav.syncData.bookmarks",
     746.2,
     {
@@ -157,7 +157,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-sync-data-api-credential-profiles",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    "webdavSyncDataApiCredentialProfiles",
+    WEBDAV_TARGET_IDS.syncDataApiCredentialProfiles,
     "importExport:webdav.syncData.apiCredentialProfiles",
     746.3,
     {
@@ -173,7 +173,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-sync-data-preferences",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    "webdavSyncDataPreferences",
+    WEBDAV_TARGET_IDS.syncDataPreferences,
     "importExport:webdav.syncData.preferences",
     746.4,
     {
@@ -184,7 +184,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-encryption-enable",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    "webdav-encryption-enable",
+    WEBDAV_TARGET_IDS.encryptionEnable,
     "importExport:webdav.encryption.title",
     746.5,
     {
@@ -195,7 +195,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-encryption-password",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    "webdav-encryption-password",
+    WEBDAV_TARGET_IDS.encryptionPassword,
     "importExport:webdav.encryption.password",
     747,
     {
@@ -206,7 +206,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-save-config",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    "webdav-save-config",
+    WEBDAV_TARGET_IDS.saveConfig,
     "importExport:webdav.saveConfig",
     748,
     {
@@ -217,7 +217,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-test-connection",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    "webdav-test-connection",
+    WEBDAV_TARGET_IDS.testConnection,
     "importExport:webdav.testConnection",
     749,
     {
@@ -228,7 +228,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-upload-backup",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    "webdav-upload-backup",
+    WEBDAV_TARGET_IDS.uploadBackup,
     "importExport:webdav.uploadBackup",
     750,
     {
@@ -239,7 +239,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-download-import",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    "webdav-download-import",
+    WEBDAV_TARGET_IDS.downloadImport,
     "importExport:webdav.downloadImport",
     751,
     {

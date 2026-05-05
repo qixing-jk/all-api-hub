@@ -1,5 +1,5 @@
-import { useMemo } from "react"
 import type { TFunction } from "i18next"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { getSidePanelSupport } from "~/utils/browser/browserApi"
@@ -29,10 +29,6 @@ function normalize(text: string) {
  * Scores how strongly a localized search item matches the current query.
  */
 function scoreMatch(query: string, item: OptionsSearchItem) {
-  if (!query) {
-    return 0
-  }
-
   const normalizedTitle = normalize(item.title)
   const normalizedDescription = normalize(item.description ?? "")
   const normalizedBreadcrumbs = item.breadcrumbs.map(normalize)
