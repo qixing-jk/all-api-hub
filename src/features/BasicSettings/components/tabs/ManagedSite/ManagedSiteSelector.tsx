@@ -20,6 +20,7 @@ export default function ManagedSiteSelector() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="managed-site-type"
             title={t("managedSite.siteTypeLabel")}
             description={t("managedSite.siteTypeDesc")}
             rightContent={

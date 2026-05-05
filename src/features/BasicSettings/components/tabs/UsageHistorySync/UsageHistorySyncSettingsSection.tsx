@@ -63,7 +63,7 @@ export default function UsageHistorySyncSettingsSection({
       <Card>
         <CardContent className="space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <div>
+            <div id="usage-history-sync-enabled">
               <Label className="text-sm font-medium">
                 {t("settings.enabled")}
               </Label>
@@ -74,7 +74,10 @@ export default function UsageHistorySyncSettingsSection({
             <Switch checked={enabled} onChange={onEnabledChange} />
           </div>
 
-          <div className="grid grid-cols-1 gap-2">
+          <div
+            id="usage-history-sync-retention-days"
+            className="grid grid-cols-1 gap-2"
+          >
             <Label className="text-sm font-medium">
               {t("settings.retentionDays")}
             </Label>
@@ -89,12 +92,18 @@ export default function UsageHistorySyncSettingsSection({
             />
           </div>
 
-          <div className="grid grid-cols-1 gap-2">
-            <Label className="text-sm font-medium">
+          <div
+            id="usage-history-sync-interval-hours"
+            className="grid grid-cols-1 gap-2"
+          >
+            <Label
+              htmlFor="usage-history-sync-schedule-mode"
+              className="text-sm font-medium"
+            >
               {t("settings.scheduleMode")}
             </Label>
             <Select value={scheduleMode} onValueChange={onScheduleModeChange}>
-              <SelectTrigger>
+              <SelectTrigger id="usage-history-sync-schedule-mode">
                 <SelectValue
                   placeholder={t("settings.scheduleModePlaceholder")}
                 />
@@ -139,6 +148,7 @@ export default function UsageHistorySyncSettingsSection({
 
           <div className="flex flex-wrap gap-2">
             <Button
+              id="usage-history-sync-apply-settings"
               variant="default"
               size="sm"
               onClick={() => void onApplySettings()}
@@ -146,6 +156,7 @@ export default function UsageHistorySyncSettingsSection({
               {t("actions.applySettings")}
             </Button>
             <Button
+              id="usage-history-sync-sync-now"
               variant="secondary"
               size="sm"
               onClick={() => void onSyncNow()}
@@ -154,6 +165,7 @@ export default function UsageHistorySyncSettingsSection({
               {t("actions.syncNow")}
             </Button>
             <Button
+              id="usage-history-sync-refresh-status"
               variant="outline"
               size="sm"
               onClick={() => void onRefreshStatus()}

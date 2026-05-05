@@ -98,6 +98,7 @@ export default function RefreshSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="refresh-auto-refresh-enabled"
             title={t("refresh.autoRefresh")}
             description={t("refresh.autoRefreshDesc")}
             rightContent={
@@ -110,6 +111,7 @@ export default function RefreshSettings() {
 
           {autoRefresh && (
             <CardItem
+              id="refresh-interval"
               title={t("refresh.refreshInterval")}
               description={t("refresh.refreshIntervalDesc", {
                 defaultInterval: DEFAULT_ACCOUNT_AUTO_REFRESH.interval,
@@ -139,6 +141,7 @@ export default function RefreshSettings() {
           )}
 
           <CardItem
+            id="refresh-on-open"
             title={t("refresh.refreshOnOpen")}
             description={t("refresh.refreshOnOpenDesc")}
             rightContent={
@@ -150,6 +153,7 @@ export default function RefreshSettings() {
           />
 
           <CardItem
+            id="min-refresh-interval"
             title={t("refresh.minRefreshInterval")}
             description={t("refresh.minRefreshIntervalDesc", {
               minSeconds: ACCOUNT_AUTO_REFRESH_MIN_INTERVAL_MIN_SECONDS,

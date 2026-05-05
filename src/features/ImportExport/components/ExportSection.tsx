@@ -41,6 +41,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
         <CardList className="flex flex-1 flex-col">
           {/* 导出所有数据 */}
           <CardItem
+            id="export-full-backup"
             title={t("export.fullBackup")}
             description={t("export.fullBackupDescription")}
             rightContent={
@@ -60,6 +61,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
 
           {/* 导出账号数据 */}
           <CardItem
+            id="export-account-data"
             title={t("export.accountData")}
             description={t("export.accountDataDescription")}
             rightContent={
@@ -79,6 +81,7 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
 
           {/* 导出用户设置 */}
           <CardItem
+            id="export-user-settings"
             title={t("export.userSettings")}
             description={t("export.userSettingsDescription")}
             rightContent={

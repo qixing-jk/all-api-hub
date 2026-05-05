@@ -62,6 +62,7 @@ export default function ResetSettingsSection() {
               </AlertDescription>
             </div>
             <Button
+              id="danger-reset-settings"
               onClick={handleOpenConfirmDialog}
               disabled={isResetting}
               variant="destructive"

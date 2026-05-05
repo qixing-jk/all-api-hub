@@ -43,6 +43,7 @@ export function PermissionList({ items }: PermissionListProps) {
       {items.map((item) => (
         <CardItem
           key={item.id}
+          id={item.id}
           icon={permissionIconMap[item.id]}
           title={item.title}
           description={item.description}

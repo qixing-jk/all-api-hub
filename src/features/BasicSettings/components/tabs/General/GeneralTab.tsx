@@ -35,6 +35,7 @@ export default function GeneralTab() {
           <CardList>
             <ThemeToggle />
             <CardItem
+              id="appearance-language"
               icon={
                 <LanguageIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
               }

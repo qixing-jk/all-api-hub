@@ -4,12 +4,17 @@ import { useTranslation } from "react-i18next"
 import { AppLayout } from "~/components/AppLayout"
 import { Spinner } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 
 import Header from "./components/Header"
 import Sidebar from "./components/Sidebar"
 import { menuItems } from "./constants"
 import { useHashNavigation } from "./hooks/useHashNavigation"
 import BasicSettings from "./pages/BasicSettings"
+import { hasOptionalPermissions } from "./search/basicSettingsMeta"
+import { OptionsSearchDialog } from "./search/OptionsSearchDialog"
+import { useOptionsSearchContext } from "./search/useOptionsSearch"
+import { useSearchHotkeys } from "./search/useSearchHotkeys"
 
 /**
  * Main Options page shell: renders header, sidebar, and routed content panes.
@@ -34,13 +39,27 @@ function OptionsPageContentFallback() {
 function OptionsPage() {
   const { activeMenuItem, routeParams, handleMenuItemChange, refreshKey } =
     useHashNavigation()
+  const { managedSiteType, preferences, showTodayCashflow } =
+    useUserPreferencesContext()
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
+  const [isSearchOpen, setIsSearchOpen] = useState(false)
 
   // 获取当前活动的组件
   const ActiveComponent =
     menuItems.find((item) => item.id === activeMenuItem)?.component ||
     BasicSettings
+
+  const searchContext = useOptionsSearchContext({
+    autoCheckinEnabled: Boolean(preferences?.autoCheckin?.globalEnabled),
+    hasOptionalPermissions,
+    managedSiteType,
+    showTodayCashflow,
+  })
+
+  useSearchHotkeys({
+    onOpen: () => setIsSearchOpen(true),
+  })
 
   const handleTitleClick = () => {
     handleMenuItemChange(MENU_ITEM_IDS.BASIC)
@@ -57,6 +76,7 @@ function OptionsPage() {
       data-testid="options-app"
     >
       <Header
+        onSearchOpen={() => setIsSearchOpen(true)}
         onTitleClick={handleTitleClick}
         onMenuToggle={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
         isMobileSidebarOpen={isMobileSidebarOpen}
@@ -86,6 +106,16 @@ function OptionsPage() {
           </div>
         </main>
       </div>
+
+      <OptionsSearchDialog
+        open={isSearchOpen}
+        onOpenChange={setIsSearchOpen}
+        onPageNavigate={(pageId, params) => {
+          handleMenuItemChange(pageId, params)
+          setIsMobileSidebarOpen(false)
+        }}
+        context={searchContext}
+      />
     </div>
   )
 }

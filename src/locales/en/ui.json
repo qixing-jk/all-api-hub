@@ -380,6 +380,22 @@
     "toggleMenu": "Toggle menu",
     "usageAnalytics": "Usage Analytics"
   },
+  "optionsSearch": {
+    "dialogDescription": "Search pages, settings tabs, and settings items",
+    "dialogTitle": "Search settings",
+    "emptyDescription": "Try another title, keyword, or technical alias.",
+    "emptyTitle": "No matching settings",
+    "groups": {
+      "control": "Settings Items",
+      "page": "Pages",
+      "recent": "Recent",
+      "tab": "Settings Tabs"
+    },
+    "idleDescription": "Type a setting name, keyword, or technical alias to start searching.",
+    "idleTitle": "Search across settings",
+    "open": "Open settings search",
+    "placeholder": "Search settings..."
+  },
   "pageTitle": {
     "app": "All API Hub",
     "options": "Settings",

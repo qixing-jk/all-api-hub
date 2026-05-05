@@ -375,6 +375,22 @@
     "toggleMenu": "切换菜单",
     "usageAnalytics": "用量分析"
   },
+  "optionsSearch": {
+    "dialogDescription": "搜索页面、设置标签和设置项",
+    "dialogTitle": "搜索设置",
+    "emptyDescription": "试试别的标题、关键词或技术别名。",
+    "emptyTitle": "未找到匹配设置",
+    "groups": {
+      "control": "设置项",
+      "page": "页面",
+      "recent": "最近访问",
+      "tab": "设置标签"
+    },
+    "idleDescription": "输入设置名称、关键词或技术别名后开始搜索。",
+    "idleTitle": "搜索所有设置",
+    "open": "打开设置搜索",
+    "placeholder": "搜索设置..."
+  },
   "pageTitle": {
     "app": "All API Hub",
     "options": "设置",

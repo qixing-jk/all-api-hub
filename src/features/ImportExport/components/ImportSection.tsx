@@ -54,9 +54,13 @@ const ImportSection = ({
 
         <CardContent padding="md" className="space-y-4">
           {/* 文件选择 */}
-          <FormField label={t("import.selectBackupFile")}>
+          <FormField
+            label={t("import.selectBackupFile")}
+            htmlFor="import-backup-file"
+          >
             <div className="flex items-center space-x-3">
               <input
+                id="import-backup-file"
                 type="file"
                 accept=".json"
                 onChange={handleFileImport}
@@ -67,8 +71,12 @@ const ImportSection = ({
           </FormField>
 
           {/* 数据预览 */}
-          <FormField label={t("import.dataPreview")}>
+          <FormField
+            label={t("import.dataPreview")}
+            htmlFor="import-data-preview"
+          >
             <Textarea
+              id="import-data-preview"
               value={importData}
               onChange={(e) => setImportData(e.target.value)}
               placeholder={t("import.pasteJsonData")}

@@ -98,7 +98,10 @@ export default function BalanceHistorySettings() {
     >
       <Card>
         <CardContent className="space-y-4">
-          <div className="flex items-center justify-between gap-3">
+          <div
+            id="balance-history-enabled"
+            className="flex items-center justify-between gap-3"
+          >
             <div>
               <Label className="text-sm font-medium">
                 {t("settings.enabled")}
@@ -110,7 +113,10 @@ export default function BalanceHistorySettings() {
             <Switch checked={enabled} onChange={setEnabled} />
           </div>
 
-          <div className="flex items-center justify-between gap-3">
+          <div
+            id="balance-history-end-of-day-capture"
+            className="flex items-center justify-between gap-3"
+          >
             <div>
               <Label className="text-sm font-medium">
                 {t("settings.endOfDayCapture")}
@@ -132,7 +138,10 @@ export default function BalanceHistorySettings() {
             </div>
           )}
 
-          <div className="grid grid-cols-1 gap-2">
+          <div
+            id="balance-history-retention-days"
+            className="grid grid-cols-1 gap-2"
+          >
             <Label className="text-sm font-medium">
               {t("settings.retentionDays")}
             </Label>
@@ -148,6 +157,7 @@ export default function BalanceHistorySettings() {
 
           <div className="flex flex-wrap gap-2">
             <Button
+              id="balance-history-apply-settings"
               variant="default"
               size="sm"
               onClick={() => void handleApplySettings()}

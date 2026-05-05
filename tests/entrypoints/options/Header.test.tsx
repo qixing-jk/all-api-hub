@@ -60,6 +60,7 @@ describe("options Header", () => {
 
     render(
       <Header
+        onSearchOpen={vi.fn()}
         onTitleClick={vi.fn()}
         onMenuToggle={vi.fn()}
         isMobileSidebarOpen={false}

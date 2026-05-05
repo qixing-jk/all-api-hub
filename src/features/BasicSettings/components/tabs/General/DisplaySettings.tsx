@@ -56,6 +56,7 @@ export default function DisplaySettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="display-currency-unit"
             icon={
               <GlobeAltIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
             }
@@ -86,6 +87,7 @@ export default function DisplaySettings() {
           />
 
           <CardItem
+            id="display-today-cashflow-enabled"
             icon={
               <CalendarDaysIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             }
@@ -100,6 +102,7 @@ export default function DisplaySettings() {
           />
 
           <CardItem
+            id="display-default-tab"
             icon={
               <EyeIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             }

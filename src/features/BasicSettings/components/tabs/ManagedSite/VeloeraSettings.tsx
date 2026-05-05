@@ -121,6 +121,7 @@ export default function VeloeraSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="veloera-base-url"
             title={t("veloera.fields.baseUrlLabel")}
             description={t("veloera.urlDesc")}
             rightContent={
@@ -141,6 +142,7 @@ export default function VeloeraSettings() {
 
           {shouldShowAdminCredentialsLink && (
             <CardItem
+              id="veloera-admin-credentials-link"
               title={t("veloera.adminCredentialsLink.title")}
               description={t("veloera.adminCredentialsLink.description")}
               rightContent={
@@ -156,6 +158,7 @@ export default function VeloeraSettings() {
           )}
 
           <CardItem
+            id="veloera-admin-token"
             title={t("veloera.fields.adminTokenLabel")}
             description={t("veloera.tokenDesc")}
             rightContent={
@@ -194,6 +197,7 @@ export default function VeloeraSettings() {
           />
 
           <CardItem
+            id="veloera-user-id"
             title={t("veloera.fields.userIdLabel")}
             description={t("veloera.userIdDesc")}
             rightContent={

@@ -25,6 +25,11 @@ import {
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import {
+  clearHighlightSearchParam,
+  highlightSearchTarget,
+  OPTIONS_SEARCH_HIGHLIGHT_PARAM,
+} from "~/entrypoints/options/search/navigation"
 import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
 import { setLastSeenOptionalPermissions } from "~/services/permissions/optionalPermissionState"
 import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
@@ -358,6 +363,7 @@ export default function BasicSettings() {
   const applyUrlState = useCallback(() => {
     const searchParams = new URLSearchParams(window.location.search)
     const pendingAnchor = searchParams.get("anchor")
+    const pendingHighlight = searchParams.get(OPTIONS_SEARCH_HIGHLIGHT_PARAM)
     const { anchor, isHeadingAnchor } = parseTabFromUrl({
       ignoreAnchors: [MENU_ITEM_IDS.BASIC],
       defaultHashPage: MENU_ITEM_IDS.BASIC,
@@ -375,13 +381,23 @@ export default function BasicSettings() {
         window.setTimeout(() => {
           navigateToAnchor(pendingAnchor)
         }, 150)
-        return
       }
 
-      if (isHeadingAnchor && anchor) {
+      if (!pendingAnchor && isHeadingAnchor && anchor) {
         window.setTimeout(() => {
           navigateToAnchor(anchor)
         }, 150)
+      }
+
+      if (pendingHighlight) {
+        window.setTimeout(() => {
+          if (!highlightSearchTarget(pendingHighlight)) {
+            clearHighlightSearchParam()
+            return
+          }
+
+          clearHighlightSearchParam()
+        }, 220)
       }
     }
   }, [])

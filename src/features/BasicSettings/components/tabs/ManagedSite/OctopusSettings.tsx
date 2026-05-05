@@ -148,6 +148,7 @@ export default function OctopusSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="octopus-base-url"
             title={t("octopus.fields.baseUrlLabel")}
             description={t("octopus.fields.baseUrlDesc")}
             rightContent={
@@ -167,6 +168,7 @@ export default function OctopusSettings() {
           />
 
           <CardItem
+            id="octopus-username"
             title={t("octopus.fields.usernameLabel")}
             description={t("octopus.fields.usernameDesc")}
             rightContent={
@@ -186,6 +188,7 @@ export default function OctopusSettings() {
           />
 
           <CardItem
+            id="octopus-password"
             title={t("octopus.fields.passwordLabel")}
             description={t("octopus.fields.passwordDesc")}
             rightContent={
@@ -225,6 +228,7 @@ export default function OctopusSettings() {
           />
 
           <CardItem
+            id="octopus-validate-config"
             title={t("octopus.validation.title")}
             description={t("octopus.validation.description")}
             rightContent={

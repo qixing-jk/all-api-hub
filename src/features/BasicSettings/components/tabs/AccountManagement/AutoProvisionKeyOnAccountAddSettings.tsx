@@ -29,6 +29,7 @@ export default function AutoProvisionKeyOnAccountAddSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="auto-provision-key-toggle"
             icon={
               <KeyIcon className="h-5 w-5 text-amber-600 dark:text-amber-400" />
             }

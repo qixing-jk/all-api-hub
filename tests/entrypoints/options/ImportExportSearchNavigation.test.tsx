@@ -1,0 +1,79 @@
+import type { ReactNode } from "react"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import ImportExport from "~/features/ImportExport/ImportExport"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
+
+const { mockedUseImportExport } = vi.hoisted(() => ({
+  mockedUseImportExport: vi.fn(),
+}))
+
+vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
+  const actual =
+    (await importOriginal()) as typeof import("~/contexts/UserPreferencesContext")
+
+  return {
+    ...actual,
+    UserPreferencesProvider: ({ children }: { children: ReactNode }) =>
+      children,
+  }
+})
+
+vi.mock("~/components/PageHeader", () => ({
+  PageHeader: ({ title }: { title: string }) => <div>{title}</div>,
+}))
+
+vi.mock("~/features/ImportExport/hooks/useImportExport", () => ({
+  useImportExport: () => mockedUseImportExport(),
+}))
+
+vi.mock("~/features/ImportExport/components/ExportSection", () => ({
+  default: () => <section id="export-section">export section</section>,
+}))
+
+vi.mock("~/features/ImportExport/components/ImportSection", () => ({
+  default: () => <section id="import-section">import section</section>,
+}))
+
+vi.mock("~/features/ImportExport/components/WebDAVSettings", () => ({
+  default: () => <section id="webdav-url">webdav section</section>,
+}))
+
+vi.mock("~/features/ImportExport/components/WebDAVAutoSyncSettings", () => ({
+  default: () => <section id="webdav-auto-sync">webdav auto sync</section>,
+}))
+
+describe("ImportExport search navigation", () => {
+  beforeEach(() => {
+    mockedUseImportExport.mockReset()
+    mockedUseImportExport.mockReturnValue({
+      isExporting: false,
+      setIsExporting: vi.fn(),
+      isImporting: false,
+      importData: "",
+      setImportData: vi.fn(),
+      handleFileImport: vi.fn(),
+      handleImport: vi.fn(),
+      validateImportData: () => null,
+    })
+
+    window.history.replaceState(
+      null,
+      "",
+      "/options.html?anchor=webdav-url&highlight=webdav-url#importExport",
+    )
+  })
+
+  it("consumes the one-shot highlight param after scrolling to the target", async () => {
+    render(<ImportExport />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await waitFor(() => {
+      expect(window.location.search).not.toContain("highlight=")
+    })
+
+    expect(screen.getByText("webdav section")).toBeInTheDocument()
+  })
+})

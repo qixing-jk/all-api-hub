@@ -68,6 +68,7 @@ export default function ClaudeCodeRouterSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="claude-code-router-base-url"
             title={t("settings:claudeCodeRouter.baseUrlLabel")}
             description={t("settings:claudeCodeRouter.urlDesc")}
             rightContent={
@@ -87,6 +88,7 @@ export default function ClaudeCodeRouterSettings() {
           />
 
           <CardItem
+            id="claude-code-router-api-key"
             title={t("settings:claudeCodeRouter.apiKeyLabel")}
             description={t("settings:claudeCodeRouter.keyDesc")}
             rightContent={

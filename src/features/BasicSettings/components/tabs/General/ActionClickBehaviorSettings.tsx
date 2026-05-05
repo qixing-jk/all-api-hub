@@ -44,6 +44,7 @@ export default function ActionClickBehaviorSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="action-click-behavior"
             icon={
               <CursorArrowRaysIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             }

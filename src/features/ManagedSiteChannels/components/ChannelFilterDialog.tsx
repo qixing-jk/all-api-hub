@@ -31,7 +31,7 @@ interface ChannelFilterDialogProps {
 type EditableFilter = ChannelModelFilterRule
 
 /**
- *
+ * Moves a filter one position up or down within the editable filter list.
  */
 function moveFilterById(
   filters: EditableFilter[],

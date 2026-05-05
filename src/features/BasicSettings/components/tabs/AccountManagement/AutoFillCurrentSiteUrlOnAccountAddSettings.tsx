@@ -34,6 +34,7 @@ export default function AutoFillCurrentSiteUrlOnAccountAddSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="auto-fill-current-site-url-toggle"
             icon={
               <GlobeAltIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
             }

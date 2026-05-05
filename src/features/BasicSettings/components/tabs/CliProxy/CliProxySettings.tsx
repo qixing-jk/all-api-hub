@@ -128,6 +128,7 @@ export default function CliProxySettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="cli-proxy-base-url"
             title={t("cliProxy.baseUrlLabel")}
             description={t("cliProxy.urlDesc")}
             rightContent={
@@ -147,6 +148,7 @@ export default function CliProxySettings() {
           />
 
           <CardItem
+            id="cli-proxy-management-key"
             title={t("cliProxy.managementKeyLabel")}
             description={t("cliProxy.keyDesc")}
             rightContent={
@@ -183,6 +185,7 @@ export default function CliProxySettings() {
           />
 
           <CardItem
+            id="cli-proxy-check-connection"
             title={t("cliProxy.checkConnectionLabel")}
             description={t("cliProxy.checkConnectionDesc")}
             rightContent={

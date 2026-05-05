@@ -375,6 +375,22 @@
     "toggleMenu": "切換選單",
     "usageAnalytics": "用量分析"
   },
+  "optionsSearch": {
+    "dialogDescription": "搜尋頁面、設定標籤和設定項目",
+    "dialogTitle": "搜尋設定",
+    "emptyDescription": "試試其他標題、關鍵字或技術別名。",
+    "emptyTitle": "找不到相符的設定",
+    "groups": {
+      "control": "設定項目",
+      "page": "頁面",
+      "recent": "最近使用",
+      "tab": "設定標籤"
+    },
+    "idleDescription": "輸入設定名稱、關鍵字或技術別名後開始搜尋。",
+    "idleTitle": "搜尋所有設定",
+    "open": "開啟設定搜尋",
+    "placeholder": "搜尋設定..."
+  },
   "pageTitle": {
     "app": "All API Hub",
     "options": "設定",

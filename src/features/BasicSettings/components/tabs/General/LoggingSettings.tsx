@@ -72,6 +72,7 @@ export default function LoggingSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="logging-console-enabled"
             icon={
               <CommandLineIcon className="h-5 w-5 text-slate-600 dark:text-slate-300" />
             }
@@ -86,6 +87,7 @@ export default function LoggingSettings() {
           />
 
           <CardItem
+            id="logging-min-level"
             icon={
               <AdjustmentsHorizontalIcon className="h-5 w-5 text-slate-600 dark:text-slate-300" />
             }

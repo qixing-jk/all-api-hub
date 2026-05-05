@@ -1,8 +1,16 @@
 import { ArrowLeftRight } from "lucide-react"
+import { useEffect } from "react"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/components/PageHeader"
 import { Alert } from "~/components/ui"
+import {
+  clearHighlightSearchParam,
+  highlightSearchTarget,
+  OPTIONS_SEARCH_ANCHOR_PARAM,
+  OPTIONS_SEARCH_HIGHLIGHT_PARAM,
+} from "~/entrypoints/options/search/navigation"
+import { navigateToAnchor } from "~/utils/core/url"
 
 import ExportSection from "./components/ExportSection"
 import ImportSection from "./components/ImportSection"
@@ -27,6 +35,29 @@ export default function ImportExport() {
   } = useImportExport()
 
   const validation = validateImportData()
+
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search)
+    const pendingAnchor = searchParams.get(OPTIONS_SEARCH_ANCHOR_PARAM)
+    const pendingHighlight = searchParams.get(OPTIONS_SEARCH_HIGHLIGHT_PARAM)
+
+    if (pendingAnchor) {
+      window.setTimeout(() => {
+        navigateToAnchor(pendingAnchor)
+      }, 120)
+    }
+
+    if (pendingHighlight) {
+      window.setTimeout(() => {
+        if (!highlightSearchTarget(pendingHighlight)) {
+          clearHighlightSearchParam()
+          return
+        }
+
+        clearHighlightSearchParam()
+      }, 220)
+    }
+  }, [])
 
   return (
     <div className="space-y-6 p-6">

@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 
 import { Badge, Card, CardContent, Switch } from "~/components/ui"
 
+import { getSortingCriteriaTargetId } from "./search"
 import type { AugmentedSortingFieldConfig } from "./SortingPriorityDragList"
 
 interface SortingCriteriaItemProps {
@@ -37,6 +38,7 @@ export function SortingCriteriaItem({
 
   return (
     <Card
+      id={getSortingCriteriaTargetId(item.id)}
       ref={setNodeRef}
       style={style}
       variant="default"

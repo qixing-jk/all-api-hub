@@ -44,7 +44,7 @@ type UserManagedSiteModelSyncConfig = NonNullable<
 type EditableFilter = ChannelModelFilterRule
 
 /**
- *
+ * Moves a filter one position up or down within the editable filter list.
  */
 function moveFilterById(
   filters: EditableFilter[],
@@ -464,6 +464,7 @@ export default function ManagedSiteModelSyncSettings() {
         <CardList>
           {/* Enable Auto-Sync */}
           <CardItem
+            id="managed-site-model-sync-enable"
             title={t("managedSiteModelSync:settings.enable")}
             description={t("managedSiteModelSync:settings.enableDesc")}
             rightContent={
@@ -479,6 +480,7 @@ export default function ManagedSiteModelSyncSettings() {
 
           {/* Sync Interval */}
           <CardItem
+            id="managed-site-model-sync-interval"
             title={t("managedSiteModelSync:settings.interval")}
             description={t("managedSiteModelSync:settings.intervalDesc")}
             rightContent={
@@ -508,6 +510,7 @@ export default function ManagedSiteModelSyncSettings() {
 
           {/* Concurrency */}
           <CardItem
+            id="managed-site-model-sync-concurrency"
             title={t("managedSiteModelSync:settings.concurrency")}
             description={t("managedSiteModelSync:settings.concurrencyDesc")}
             rightContent={
@@ -534,6 +537,7 @@ export default function ManagedSiteModelSyncSettings() {
 
           {/* Max Retries */}
           <CardItem
+            id="managed-site-model-sync-max-retries"
             title={t("managedSiteModelSync:settings.maxRetries")}
             description={t("managedSiteModelSync:settings.maxRetriesDesc")}
             rightContent={
@@ -560,6 +564,7 @@ export default function ManagedSiteModelSyncSettings() {
 
           {/* Rate Limit - Requests per Minute */}
           <CardItem
+            id="managed-site-model-sync-requests-per-minute"
             title={t("managedSiteModelSync:settings.requestsPerMinute")}
             description={t(
               "managedSiteModelSync:settings.requestsPerMinuteDesc",
@@ -589,6 +594,7 @@ export default function ManagedSiteModelSyncSettings() {
 
           {/* Rate Limit - Burst */}
           <CardItem
+            id="managed-site-model-sync-burst"
             title={t("managedSiteModelSync:settings.burst")}
             description={t("managedSiteModelSync:settings.burstDesc")}
             rightContent={
@@ -616,6 +622,7 @@ export default function ManagedSiteModelSyncSettings() {
 
           {/* Allowed Models */}
           <CardItem
+            id="managed-site-model-sync-allowed-models"
             title={t("managedSiteModelSync:settings.allowedModels")}
             description={t("managedSiteModelSync:settings.allowedModelsDesc")}
           >
@@ -652,6 +659,7 @@ export default function ManagedSiteModelSyncSettings() {
 
           {/* Global Filters */}
           <CardItem
+            id="managed-site-model-sync-global-channel-model-filters"
             title={t("managedSiteModelSync:settings.globalChannelModelFilters")}
             description={t(
               "managedSiteModelSync:settings.globalChannelModelFiltersDesc",
@@ -672,6 +680,7 @@ export default function ManagedSiteModelSyncSettings() {
 
           {/* View Execution Button */}
           <CardItem
+            id="managed-site-model-sync-view-execution"
             title={t("managedSiteModelSync:settings.viewExecution")}
             description={t("managedSiteModelSync:settings.viewExecutionDesc")}
             rightContent={

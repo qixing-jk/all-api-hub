@@ -29,6 +29,7 @@ export default function DuplicateAccountWarningOnAddSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="duplicate-account-warning-toggle"
             icon={
               <ExclamationTriangleIcon className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
             }

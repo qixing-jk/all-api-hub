@@ -127,6 +127,7 @@ export default function ClaudeCodeHubSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="claude-code-hub-base-url"
             title={t("claudeCodeHub.fields.baseUrlLabel")}
             description={t("claudeCodeHub.fields.baseUrlDesc")}
             rightContent={
@@ -146,6 +147,7 @@ export default function ClaudeCodeHubSettings() {
           />
 
           <CardItem
+            id="claude-code-hub-admin-token"
             title={t("claudeCodeHub.fields.adminTokenLabel")}
             description={t("claudeCodeHub.fields.adminTokenDesc")}
             rightContent={
@@ -183,6 +185,7 @@ export default function ClaudeCodeHubSettings() {
           />
 
           <CardItem
+            id="claude-code-hub-validate-config"
             title={t("claudeCodeHub.validation.title")}
             description={t("claudeCodeHub.validation.description")}
             rightContent={
@@ -200,6 +203,7 @@ export default function ClaudeCodeHubSettings() {
           />
 
           <CardItem
+            id="claude-code-hub-unsupported-note"
             title={t("claudeCodeHub.unsupported.title")}
             description={t("claudeCodeHub.unsupported.description")}
           />

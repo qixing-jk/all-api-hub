@@ -45,6 +45,7 @@ const ThemeToggle = () => {
 
   return (
     <CardItem
+      id="appearance-theme-mode"
       icon={<SunIcon className="h-5 w-5 text-amber-500 dark:text-amber-400" />}
       title={t("theme.appearance")}
       description={t("theme.selectTheme")}

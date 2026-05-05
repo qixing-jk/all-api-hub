@@ -29,6 +29,7 @@ export default function ChangelogOnUpdateSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="changelog-on-update-toggle"
             icon={
               <DocumentTextIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
             }

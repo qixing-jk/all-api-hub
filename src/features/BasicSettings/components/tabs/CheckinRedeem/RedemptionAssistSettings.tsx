@@ -92,6 +92,7 @@ export default function RedemptionAssistSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="redemption-assist-enable"
             title={t("redemptionAssist:settings.enable")}
             description={t("redemptionAssist:settings.enableDesc")}
             rightContent={
@@ -106,6 +107,7 @@ export default function RedemptionAssistSettings() {
           />
 
           <CardItem
+            id="redemption-assist-context-menu-enable"
             title={t("redemptionAssist:settings.contextMenu.enable")}
             description={t("redemptionAssist:settings.contextMenu.enableDesc")}
             rightContent={
@@ -125,6 +127,7 @@ export default function RedemptionAssistSettings() {
           />
 
           <CardItem
+            id="redemption-assist-relaxed-code-validation"
             title={t("redemptionAssist:settings.relaxedCodeValidation")}
             description={t(
               "redemptionAssist:settings.relaxedCodeValidationDesc",
@@ -141,6 +144,7 @@ export default function RedemptionAssistSettings() {
           />
 
           <CardItem
+            id="redemption-assist-url-whitelist-enable"
             title={t("redemptionAssist:settings.urlWhitelist.enable")}
             description={t("redemptionAssist:settings.urlWhitelist.enableDesc")}
             rightContent={
@@ -160,6 +164,7 @@ export default function RedemptionAssistSettings() {
           />
 
           <CardItem
+            id="redemption-assist-include-account-site-urls"
             title={t(
               "redemptionAssist:settings.urlWhitelist.includeAccountSiteUrls",
             )}
@@ -183,6 +188,7 @@ export default function RedemptionAssistSettings() {
           />
 
           <CardItem
+            id="redemption-assist-include-checkin-redeem-urls"
             title={t(
               "redemptionAssist:settings.urlWhitelist.includeCheckInAndRedeemUrls",
             )}
@@ -207,6 +213,7 @@ export default function RedemptionAssistSettings() {
         </CardList>
 
         <CardContent
+          id="redemption-assist-url-whitelist-patterns"
           className="border-border dark:border-dark-bg-tertiary border-t"
           spacing="sm"
         >

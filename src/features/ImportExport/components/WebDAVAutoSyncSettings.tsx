@@ -191,7 +191,7 @@ export default function WebDAVAutoSyncSettings() {
   }
 
   return (
-    <Card padding="none">
+    <Card id="webdav-auto-sync" padding="none">
       <CardHeader>
         <div className="mb-1 flex items-center justify-between">
           <div className="flex items-center space-x-2">
@@ -209,7 +209,7 @@ export default function WebDAVAutoSyncSettings() {
           label={t("webdav.autoSync.enable")}
           description={t("webdav.autoSync.enableDesc")}
         >
-          <div className="flex items-center gap-2">
+          <div id="webdav-auto-sync-enable" className="flex items-center gap-2">
             <Switch
               checked={autoSyncEnabled}
               onChange={(checked) =>
@@ -235,6 +235,7 @@ export default function WebDAVAutoSyncSettings() {
               description={t("webdav.autoSync.intervalDesc")}
             >
               <Input
+                id="webdav-auto-sync-interval"
                 type="number"
                 min={60}
                 max={86400}
@@ -269,7 +270,7 @@ export default function WebDAVAutoSyncSettings() {
                   }))
                 }
               >
-                <SelectTrigger>
+                <SelectTrigger id="webdav-auto-sync-strategy">
                   <SelectValue placeholder={t("webdav.autoSync.strategy")} />
                 </SelectTrigger>
                 <SelectContent>
@@ -311,6 +312,7 @@ export default function WebDAVAutoSyncSettings() {
         {/* Actions */}
         <div className="flex gap-3">
           <Button
+            id="webdav-auto-sync-save-settings"
             onClick={handleSaveSettings}
             disabled={savingSettings}
             loading={savingSettings}
@@ -324,6 +326,7 @@ export default function WebDAVAutoSyncSettings() {
           </Button>
 
           <Button
+            id="webdav-auto-sync-sync-now"
             onClick={handleSyncNow}
             disabled={syncing || isSyncing}
             loading={syncing || isSyncing}

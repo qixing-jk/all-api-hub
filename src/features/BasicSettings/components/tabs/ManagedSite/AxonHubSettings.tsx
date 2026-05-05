@@ -144,6 +144,7 @@ export default function AxonHubSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="axonhub-base-url"
             title={t("axonHub.fields.baseUrlLabel")}
             description={t("axonHub.fields.baseUrlDesc")}
             rightContent={
@@ -163,6 +164,7 @@ export default function AxonHubSettings() {
           />
 
           <CardItem
+            id="axonhub-email"
             title={t("axonHub.fields.emailLabel")}
             description={t("axonHub.fields.emailDesc")}
             rightContent={
@@ -182,6 +184,7 @@ export default function AxonHubSettings() {
           />
 
           <CardItem
+            id="axonhub-password"
             title={t("axonHub.fields.passwordLabel")}
             description={t("axonHub.fields.passwordDesc")}
             rightContent={
@@ -219,6 +222,7 @@ export default function AxonHubSettings() {
           />
 
           <CardItem
+            id="axonhub-validate-config"
             title={t("axonHub.validation.title")}
             description={t("axonHub.validation.description")}
             rightContent={
@@ -237,6 +241,7 @@ export default function AxonHubSettings() {
 
           {/* https://github.com/looplj/axonhub/issues/741#issuecomment-3921706717 */}
           <CardItem
+            id="axonhub-cors-note"
             title={t("axonHub.cors.title")}
             description={t("axonHub.cors.description")}
           />

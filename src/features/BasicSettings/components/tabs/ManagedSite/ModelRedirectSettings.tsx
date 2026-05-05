@@ -122,7 +122,10 @@ export default function ModelRedirectSettings() {
     >
       <Card>
         <CardContent>
-          <div className="flex items-start justify-between">
+          <div
+            id="managed-site-model-redirect-enable"
+            className="flex items-start justify-between"
+          >
             <div className="flex-1">
               <p className="dark:text-dark-text-primary text-sm font-medium text-gray-700">
                 {t("enable")}
@@ -142,7 +145,7 @@ export default function ModelRedirectSettings() {
 
           {modelRedirect?.enabled && (
             <>
-              <div>
+              <div id="managed-site-model-redirect-standard-models">
                 <CompactMultiSelect
                   label={t("standardModels")}
                   options={modelList.map((model) => ({
@@ -162,7 +165,10 @@ export default function ModelRedirectSettings() {
                 </p>
               </div>
 
-              <div className="mt-4 flex items-start justify-between">
+              <div
+                id="managed-site-model-redirect-prune-missing-targets"
+                className="mt-4 flex items-start justify-between"
+              >
                 <div className="flex-1">
                   <p className="dark:text-dark-text-primary text-sm font-medium text-gray-700">
                     {t("pruneMissingTargetsOnModelSync")}
@@ -191,6 +197,7 @@ export default function ModelRedirectSettings() {
 
               <div>
                 <Button
+                  id="managed-site-model-redirect-regenerate"
                   type="button"
                   disabled={isRegenerating}
                   loading={isRegenerating}
@@ -205,6 +212,7 @@ export default function ModelRedirectSettings() {
 
           <div className="pt-2">
             <Button
+              id="managed-site-model-redirect-bulk-clear"
               type="button"
               variant="destructive"
               disabled={!canUseManagedSiteAdmin}

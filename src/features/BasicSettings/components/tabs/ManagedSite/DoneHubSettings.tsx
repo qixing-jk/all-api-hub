@@ -116,6 +116,7 @@ export default function DoneHubSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="done-hub-base-url"
             title={t("doneHub.fields.baseUrlLabel")}
             description={t("doneHub.urlDesc")}
             rightContent={
@@ -136,6 +137,7 @@ export default function DoneHubSettings() {
 
           {shouldShowAdminCredentialsLink && (
             <CardItem
+              id="done-hub-admin-credentials-link"
               title={t("doneHub.adminCredentialsLink.title")}
               description={t("doneHub.adminCredentialsLink.description")}
               rightContent={
@@ -151,6 +153,7 @@ export default function DoneHubSettings() {
           )}
 
           <CardItem
+            id="done-hub-admin-token"
             title={t("doneHub.fields.adminTokenLabel")}
             description={t("doneHub.tokenDesc")}
             rightContent={
@@ -189,6 +192,7 @@ export default function DoneHubSettings() {
           />
 
           <CardItem
+            id="done-hub-user-id"
             title={t("doneHub.fields.userIdLabel")}
             description={t("doneHub.userIdDesc")}
             rightContent={

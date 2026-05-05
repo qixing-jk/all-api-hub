@@ -120,6 +120,7 @@ export default function WebAiApiCheckSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="web-ai-api-check-context-menu"
             title={t("webAiApiCheck:settings.contextMenu.enable")}
             description={t("webAiApiCheck:settings.contextMenu.enableDesc")}
             rightContent={
@@ -138,6 +139,7 @@ export default function WebAiApiCheckSettings() {
             }
           />
           <CardItem
+            id="web-ai-api-check-auto-detect"
             title={t("webAiApiCheck:settings.autoDetect.enable")}
             description={t("webAiApiCheck:settings.autoDetect.enableDesc")}
             rightContent={
@@ -170,6 +172,7 @@ export default function WebAiApiCheckSettings() {
             </div>
 
             <Textarea
+              id="web-ai-api-check-whitelist-patterns"
               value={patternsDraft}
               onChange={(event) => setPatternsDraft(event.target.value)}
               placeholder={t(
@@ -205,6 +208,7 @@ export default function WebAiApiCheckSettings() {
 
             <div className="flex justify-end">
               <Button
+                id="web-ai-api-check-save-patterns"
                 type="button"
                 variant="outline"
                 disabled={isSaving}

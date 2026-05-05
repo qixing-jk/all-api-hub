@@ -114,6 +114,7 @@ export default function ShieldSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="shield-enabled"
             title={t("refresh.shieldEnabled")}
             description={shieldEnabledDescription}
             rightContent={
@@ -128,6 +129,7 @@ export default function ShieldSettings() {
           />
 
           <CardItem
+            id="shield-method"
             title={t("refresh.shieldMethodTitle")}
             description={t("refresh.shieldMethodDesc")}
             rightContent={
@@ -189,12 +191,16 @@ export default function ShieldSettings() {
           />
 
           <CardItem
+            id="shield-contexts"
             title={t("refresh.shieldContextsTitle")}
             description={t("refresh.shieldContextsDesc")}
             rightContent={
               <div className="flex flex-col space-y-2 text-left">
                 <div className="grid grid-cols-1 gap-2 md:grid-cols-2">
-                  <label className="flex items-center space-x-2">
+                  <label
+                    id="shield-popup"
+                    className="flex items-center space-x-2"
+                  >
                     <Checkbox
                       checked={shieldPopup}
                       disabled={
@@ -211,7 +217,10 @@ export default function ShieldSettings() {
                     </BodySmall>
                   </label>
 
-                  <label className="flex items-center space-x-2">
+                  <label
+                    id="shield-sidepanel"
+                    className="flex items-center space-x-2"
+                  >
                     <Checkbox
                       checked={shieldSidepanel}
                       disabled={disableShieldUI || !shieldEnabled}
@@ -226,7 +235,10 @@ export default function ShieldSettings() {
                     </BodySmall>
                   </label>
 
-                  <label className="flex items-center space-x-2">
+                  <label
+                    id="shield-options"
+                    className="flex items-center space-x-2"
+                  >
                     <Checkbox
                       checked={shieldOptions}
                       disabled={disableShieldUI || !shieldEnabled}
@@ -241,7 +253,10 @@ export default function ShieldSettings() {
                     </BodySmall>
                   </label>
 
-                  <label className="flex items-center space-x-2">
+                  <label
+                    id="shield-auto-refresh"
+                    className="flex items-center space-x-2"
+                  >
                     <Checkbox
                       checked={shieldAutoRefresh}
                       disabled={disableShieldUI || !shieldEnabled}
@@ -256,7 +271,10 @@ export default function ShieldSettings() {
                     </BodySmall>
                   </label>
 
-                  <label className="flex items-center space-x-2">
+                  <label
+                    id="shield-manual-refresh"
+                    className="flex items-center space-x-2"
+                  >
                     <Checkbox
                       checked={shieldManualRefresh}
                       disabled={disableShieldUI || !shieldEnabled}

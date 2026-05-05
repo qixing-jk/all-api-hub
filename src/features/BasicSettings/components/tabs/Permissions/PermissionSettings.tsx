@@ -217,6 +217,7 @@ export default function PermissionSettings() {
           {t("permissions.statusCaption")}
         </BodySmall>
         <Button
+          id="permissions-refresh-status"
           variant="outline"
           size="sm"
           onClick={() => void loadStatuses()}

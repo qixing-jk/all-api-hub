@@ -40,9 +40,14 @@ function parseHash() {
  * @param page Menu id to navigate to.
  * @param params Optional query parameters.
  */
-function updateHash(page: string, params?: Record<string, string>) {
+function updateHash(page: string, params?: Record<string, string | undefined>) {
   const hash = `#${page}`
-  pushWithinOptionsPage(hash, params ?? {})
+  const normalizedParams = Object.fromEntries(
+    Object.entries(params ?? {}).filter(
+      (entry): entry is [string, string] => entry[1] !== undefined,
+    ),
+  )
+  pushWithinOptionsPage(hash, normalizedParams)
 }
 
 /**
@@ -84,10 +89,16 @@ export function useHashNavigation() {
   // 切换菜单项
   const handleMenuItemChange = (
     itemId: string,
-    params?: Record<string, string>,
+    params?: Record<string, string | undefined>,
   ) => {
     setActiveMenuItem(itemId)
-    setRouteParams(params || {})
+    setRouteParams(
+      Object.fromEntries(
+        Object.entries(params ?? {}).filter(
+          (entry): entry is [string, string] => entry[1] !== undefined,
+        ),
+      ),
+    )
     updateHash(itemId, params)
   }
 

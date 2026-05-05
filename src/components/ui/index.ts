@@ -68,6 +68,17 @@ export { Modal } from "./Dialog/Modal"
 export { DestructiveConfirmDialog } from "./Dialog/DestructiveConfirmDialog"
 export { Separator } from "./Separator"
 export { Checkbox } from "./checkbox"
+export {
+  Command,
+  CommandDialog,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+  CommandShortcut,
+} from "./command"
 export { RepeatableInput, type RepeatableInputItem } from "./RepeatableInput"
 export { ModelListInput, type ModelListItem } from "./ModelListInput"
 export {

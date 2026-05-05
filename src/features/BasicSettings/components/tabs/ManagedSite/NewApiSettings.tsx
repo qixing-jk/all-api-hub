@@ -181,6 +181,7 @@ export default function NewApiSettings() {
       <Card padding="none">
         <CardList>
           <CardItem
+            id="new-api-base-url"
             title={t("newApi.fields.baseUrlLabel")}
             description={t("newApi.urlDesc")}
             rightContent={
@@ -201,6 +202,7 @@ export default function NewApiSettings() {
 
           {shouldShowAdminCredentialsLink && (
             <CardItem
+              id="new-api-admin-credentials-link"
               title={t("newApi.adminCredentialsLink.title")}
               description={t("newApi.adminCredentialsLink.description")}
               rightContent={
@@ -216,6 +218,7 @@ export default function NewApiSettings() {
           )}
 
           <CardItem
+            id="new-api-admin-token"
             title={t("newApi.fields.adminTokenLabel")}
             description={t("newApi.tokenDesc")}
             rightContent={
@@ -254,6 +257,7 @@ export default function NewApiSettings() {
           />
 
           <CardItem
+            id="new-api-user-id"
             title={t("newApi.fields.userIdLabel")}
             description={t("newApi.userIdDesc")}
             rightContent={
@@ -276,6 +280,7 @@ export default function NewApiSettings() {
           />
 
           <CardItem
+            id="new-api-username"
             title={t("newApi.fields.usernameLabel")}
             description={t("newApi.fields.usernameDesc")}
             rightContent={
@@ -295,6 +300,7 @@ export default function NewApiSettings() {
           />
 
           <CardItem
+            id="new-api-password"
             title={t("newApi.fields.passwordLabel")}
             description={t("newApi.fields.passwordDesc")}
             rightContent={
@@ -334,6 +340,7 @@ export default function NewApiSettings() {
           />
 
           <CardItem
+            id="new-api-totp-secret"
             title={t("newApi.fields.totpSecretLabel")}
             description={t("newApi.fields.totpSecretDesc")}
             rightContent={
@@ -373,6 +380,7 @@ export default function NewApiSettings() {
           />
 
           <CardItem
+            id="new-api-session-test"
             title={t("newApi.sessionTest.title")}
             description={t("newApi.sessionTest.description")}
             rightContent={

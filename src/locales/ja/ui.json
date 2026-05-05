@@ -375,6 +375,22 @@
     "toggleMenu": "メニューを切り替え",
     "usageAnalytics": "利用分析"
   },
+  "optionsSearch": {
+    "dialogDescription": "ページ、設定タブ、設定項目を検索します",
+    "dialogTitle": "設定を検索",
+    "emptyDescription": "別のタイトル、キーワード、または技術エイリアスを試してください。",
+    "emptyTitle": "一致する設定が見つかりません",
+    "groups": {
+      "control": "設定項目",
+      "page": "ページ",
+      "recent": "最近使った項目",
+      "tab": "設定タブ"
+    },
+    "idleDescription": "設定名、キーワード、または技術エイリアスを入力して検索を開始してください。",
+    "idleTitle": "設定を横断検索",
+    "open": "設定検索を開く",
+    "placeholder": "設定を検索..."
+  },
   "pageTitle": {
     "app": "All API Hub",
     "options": "設定",
