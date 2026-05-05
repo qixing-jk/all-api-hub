@@ -116,6 +116,7 @@ import {
   getManagedSiteTargetOptions,
   needsManagedSiteChannelKeyResolution,
 } from "~/services/managedSites/utils/managedSite"
+import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import {
@@ -555,6 +556,30 @@ export default function ManagedSiteChannels({
             total: channelIds.length,
           }),
         )
+        const successfulItems = (response.data?.items ?? []).filter(
+          (item: ExecutionItemResult) => item.ok,
+        )
+        if (successfulItems.length > 0) {
+          const modelsByChannelId = new Map<number, string>(
+            successfulItems
+              .filter((item: ExecutionItemResult) => item.newModels)
+              .map((item: ExecutionItemResult) => [
+                item.channelId,
+                item.newModels!.join(","),
+              ]),
+          )
+
+          if (modelsByChannelId.size > 0) {
+            setChannels((prev) =>
+              prev.map((channel) => {
+                const nextModels = modelsByChannelId.get(channel.id)
+                return nextModels == null
+                  ? channel
+                  : { ...channel, models: nextModels }
+              }),
+            )
+          }
+        }
       } catch (err) {
         toast.error(t("toasts.syncFailed", { error: getErrorMessage(err) }))
       } finally {

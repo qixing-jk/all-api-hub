@@ -1377,17 +1377,23 @@ describe("ManagedSiteChannels", () => {
 
   it("syncs the selected rows from the toolbar", async () => {
     const user = userEvent.setup()
-    const channels = [
-      { id: 1, name: "Alpha", base_url: "https://alpha.example", key: "a" },
+    const initialChannels = [
+      {
+        id: 1,
+        name: "Alpha",
+        base_url: "https://alpha.example",
+        key: "a",
+        models: "gpt-3.5",
+      },
       { id: 2, name: "Beta", base_url: "https://beta.example", key: "b" },
     ]
 
-    mockChannels(channels)
+    mockChannels(initialChannels)
     vi.mocked(sendRuntimeMessage).mockImplementation(async (payload: any) => {
       if (payload.action === RuntimeActionIds.ModelSyncListChannels) {
         return {
           success: true,
-          data: { items: channels },
+          data: { items: initialChannels },
         } as any
       }
 
@@ -1395,6 +1401,26 @@ describe("ManagedSiteChannels", () => {
         return {
           success: true,
           data: {
+            items: [
+              {
+                channelId: 1,
+                channelName: "Alpha",
+                ok: true,
+                attempts: 1,
+                finishedAt: 1_700_000_001_000,
+                oldModels: ["gpt-3.5"],
+                newModels: ["gpt-4o", "gpt-4.1"],
+              },
+              {
+                channelId: 2,
+                channelName: "Beta",
+                ok: false,
+                attempts: 1,
+                finishedAt: 1_700_000_001_500,
+                oldModels: [],
+                message: "sync failed",
+              },
+            ],
             statistics: {
               successCount: 1,
             },
@@ -1442,6 +1468,15 @@ describe("ManagedSiteChannels", () => {
     expect(toast.success).toHaveBeenCalledWith(
       "managedSiteChannels:toasts.syncCompleted",
     )
+    expect(screen.getByText("Beta")).toBeInTheDocument()
+    await waitFor(() => {
+      const currentAlphaRow = screen.getByText("Alpha").closest("tr")
+      const currentBetaRow = screen.getByText("Beta").closest("tr")
+      expect(currentAlphaRow).toBeTruthy()
+      expect(currentBetaRow).toBeTruthy()
+      expect(within(currentAlphaRow!).getByText("2")).toBeInTheDocument()
+      expect(within(currentBetaRow!).getByText("0")).toBeInTheDocument()
+    })
   })
 
   it("uses the select-all checkbox to open a migration preview for the whole page", async () => {
