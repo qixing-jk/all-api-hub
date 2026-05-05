@@ -56,6 +56,38 @@ function getIconForItem(item: OptionsSearchItem) {
 }
 
 /**
+ * Renders the shared search result row used by both recent items and query results.
+ */
+function SearchResultItem({
+  item,
+  onSelect,
+}: {
+  item: OptionsSearchItem
+  onSelect: () => void
+}) {
+  return (
+    <CommandItem
+      value={`${item.title} ${item.description ?? ""} ${item.breadcrumbs.join(" ")} ${item.keywords.join(" ")}`}
+      onSelect={onSelect}
+      className="items-start gap-3"
+    >
+      <div className="pt-0.5 text-gray-500">{getIconForItem(item)}</div>
+      <div className="min-w-0 flex-1">
+        <div className="truncate text-sm font-medium">{item.title}</div>
+        {item.description ? (
+          <div className="truncate text-xs text-gray-500">
+            {item.description}
+          </div>
+        ) : null}
+        <div className="truncate text-xs text-gray-400">
+          {item.breadcrumbs.join(" / ")}
+        </div>
+      </div>
+    </CommandItem>
+  )
+}
+
+/**
  * Renders the options search dialog with grouped results and recent items.
  */
 export function OptionsSearchDialog({
@@ -75,11 +107,23 @@ export function OptionsSearchDialog({
   )
 
   useEffect(() => {
+    let cancelled = false
+
     if (!open) {
-      return
+      return () => {
+        cancelled = true
+      }
     }
 
-    setRecentItemIds(loadRecentSearchItemIds())
+    void loadRecentSearchItemIds().then((ids) => {
+      if (!cancelled) {
+        setRecentItemIds(ids)
+      }
+    })
+
+    return () => {
+      cancelled = true
+    }
   }, [open])
 
   const groups = useMemo(() => {
@@ -109,8 +153,9 @@ export function OptionsSearchDialog({
   }, [results])
 
   const handleSelect = (item: OptionsSearchItem) => {
-    saveRecentSearchItemSelection(item)
-    setRecentItemIds(loadRecentSearchItemIds())
+    void saveRecentSearchItemSelection(item).then((ids) => {
+      setRecentItemIds(ids)
+    })
     navigateFromSearchItem(item, onPageNavigate)
     setQuery("")
     onOpenChange(false)
@@ -142,29 +187,11 @@ export function OptionsSearchDialog({
           recentItems.length > 0 ? (
             <CommandGroup heading={t("optionsSearch.groups.recent")}>
               {recentItems.map((item) => (
-                <CommandItem
+                <SearchResultItem
                   key={item.id}
-                  value={`${item.title} ${item.description ?? ""} ${item.breadcrumbs.join(" ")} ${item.keywords.join(" ")}`}
+                  item={item}
                   onSelect={() => handleSelect(item)}
-                  className="items-start gap-3"
-                >
-                  <div className="pt-0.5 text-gray-500">
-                    {getIconForItem(item)}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="truncate text-sm font-medium">
-                      {item.title}
-                    </div>
-                    {item.description ? (
-                      <div className="truncate text-xs text-gray-500">
-                        {item.description}
-                      </div>
-                    ) : null}
-                    <div className="truncate text-xs text-gray-400">
-                      {item.breadcrumbs.join(" / ")}
-                    </div>
-                  </div>
-                </CommandItem>
+                />
               ))}
             </CommandGroup>
           ) : (
@@ -201,29 +228,11 @@ export function OptionsSearchDialog({
                 heading={t(`optionsSearch.groups.${groupKey}`)}
               >
                 {items.map((item) => (
-                  <CommandItem
+                  <SearchResultItem
                     key={item.id}
-                    value={`${item.title} ${item.description ?? ""} ${item.breadcrumbs.join(" ")} ${item.keywords.join(" ")}`}
+                    item={item}
                     onSelect={() => handleSelect(item)}
-                    className="items-start gap-3"
-                  >
-                    <div className="pt-0.5 text-gray-500">
-                      {getIconForItem(item)}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium">
-                        {item.title}
-                      </div>
-                      {item.description ? (
-                        <div className="truncate text-xs text-gray-500">
-                          {item.description}
-                        </div>
-                      ) : null}
-                      <div className="truncate text-xs text-gray-400">
-                        {item.breadcrumbs.join(" / ")}
-                      </div>
-                    </div>
-                  </CommandItem>
+                  />
                 ))}
               </CommandGroup>
             )

@@ -1,3 +1,6 @@
+import type { TFunction } from "i18next"
+
+import { type OptionsPageMenuItemId } from "~/constants/optionsMenuIds"
 import {
   accountManagementSearchControls,
   accountManagementSearchSections,
@@ -84,12 +87,12 @@ export const OPTIONS_SEARCH_REGISTRY = [
  */
 export function resolveSyntheticPageTitle(
   titleKey: string,
-  t: (key: string) => string,
+  t: TFunction,
 ) {
   if (!titleKey.startsWith("__page:")) {
     return t(titleKey)
   }
 
   const pageId = titleKey.slice("__page:".length)
-  return getMenuItemLabel(t as any, pageId as any)
+  return getMenuItemLabel(t, pageId as OptionsPageMenuItemId)
 }

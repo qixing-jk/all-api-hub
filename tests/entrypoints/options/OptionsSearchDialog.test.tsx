@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { OptionsSearchDialog } from "~/entrypoints/options/search/OptionsSearchDialog"
 import type { OptionsSearchContext } from "~/entrypoints/options/search/types"
-import { render, screen } from "~~/tests/test-utils/render"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const baseContext: OptionsSearchContext = {
   autoCheckinEnabled: true,
@@ -68,9 +68,11 @@ describe("OptionsSearchDialog", () => {
 
     await screen.findByRole("dialog")
 
-    expect(
-      screen.getByRole("group", { name: "ui:optionsSearch.groups.recent" }),
-    ).toBeInTheDocument()
+    await waitFor(() => {
+      expect(
+        screen.getByRole("group", { name: "ui:optionsSearch.groups.recent" }),
+      ).toBeInTheDocument()
+    })
     expect(
       screen.getByText("settings:permissions.items.clipboardRead.title"),
     ).toBeInTheDocument()
@@ -211,6 +213,117 @@ describe("OptionsSearchDialog", () => {
 
     expect(onPageNavigate).toHaveBeenCalledWith("bookmark")
     expect(onOpenChange).toHaveBeenCalledWith(false)
+  })
+
+  it("clears the query when the clear button is used", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <OptionsSearchDialog
+        open
+        onOpenChange={vi.fn()}
+        onPageNavigate={vi.fn()}
+        context={baseContext}
+      />,
+    )
+
+    await screen.findByRole("dialog")
+    const input = screen.getByRole("combobox")
+    await user.type(input, "webdav")
+    await user.click(screen.getByRole("button", { name: "common:actions.clear" }))
+
+    expect(input).toHaveValue("")
+  })
+
+  it("closes through dialog dismissal and resets the query", async () => {
+    const user = userEvent.setup()
+    const onOpenChange = vi.fn()
+
+    render(
+      <OptionsSearchDialog
+        open
+        onOpenChange={onOpenChange}
+        onPageNavigate={vi.fn()}
+        context={baseContext}
+      />,
+    )
+
+    await screen.findByRole("dialog")
+    const input = screen.getByRole("combobox")
+    await user.type(input, "webdav")
+    await user.keyboard("{Escape}")
+
+    expect(onOpenChange).toHaveBeenCalledWith(false)
+    expect(input).toHaveValue("")
+  })
+
+  it("renders nothing when closed until reopened", async () => {
+    const { rerender } = render(
+      <OptionsSearchDialog
+        open={false}
+        onOpenChange={vi.fn()}
+        onPageNavigate={vi.fn()}
+        context={baseContext}
+      />,
+    )
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument()
+
+    rerender(
+      <OptionsSearchDialog
+        open
+        onOpenChange={vi.fn()}
+        onPageNavigate={vi.fn()}
+        context={baseContext}
+      />,
+    )
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument()
+  })
+
+  it("lets the user open a recent item after reopening the dialog", async () => {
+    const user = userEvent.setup()
+    const onPageNavigate = vi.fn()
+
+    const { rerender } = render(
+      <OptionsSearchDialog
+        open
+        onOpenChange={vi.fn()}
+        onPageNavigate={onPageNavigate}
+        context={baseContext}
+      />,
+    )
+
+    await screen.findByRole("dialog")
+    await user.type(screen.getByRole("combobox"), "clipboard")
+    await user.click(
+      screen.getByText("settings:permissions.items.clipboardRead.title"),
+    )
+
+    rerender(
+      <OptionsSearchDialog
+        open
+        onOpenChange={vi.fn()}
+        onPageNavigate={onPageNavigate}
+        context={baseContext}
+      />,
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("group", { name: "ui:optionsSearch.groups.recent" }),
+      ).toBeInTheDocument()
+    })
+
+    await user.click(
+      screen.getByText("settings:permissions.items.clipboardRead.title"),
+    )
+
+    expect(onPageNavigate).toHaveBeenLastCalledWith("basic", {
+      anchor: "clipboardRead",
+      highlight: "clipboardRead",
+      tab: "permissions",
+    })
   })
 
   it("shows an empty state when nothing matches", async () => {

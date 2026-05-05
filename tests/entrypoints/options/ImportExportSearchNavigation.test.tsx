@@ -1,7 +1,12 @@
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import {
+  OPTIONS_SEARCH_ANCHOR_PARAM,
+  OPTIONS_SEARCH_HIGHLIGHT_PARAM,
+} from "~/entrypoints/options/search/navigation"
 import ImportExport from "~/features/ImportExport/ImportExport"
+import { WEBDAV_TARGET_IDS } from "~/features/ImportExport/searchTargets"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const { mockedUseImportExport } = vi.hoisted(() => ({
@@ -21,6 +26,10 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
 
 vi.mock("~/components/PageHeader", () => ({
   PageHeader: ({ title }: { title: string }) => <div>{title}</div>,
+}))
+
+vi.mock("~/utils/core/url", () => ({
+  navigateToAnchor: vi.fn(),
 }))
 
 vi.mock("~/features/ImportExport/hooks/useImportExport", () => ({
@@ -60,11 +69,30 @@ describe("ImportExport search navigation", () => {
     window.history.replaceState(
       null,
       "",
-      "/options.html?anchor=webdav-url&highlight=webdav-url#importExport",
+      `/options.html?${OPTIONS_SEARCH_ANCHOR_PARAM}=${WEBDAV_TARGET_IDS.url}&${OPTIONS_SEARCH_HIGHLIGHT_PARAM}=${WEBDAV_TARGET_IDS.url}#importExport`,
     )
   })
 
   it("consumes the one-shot highlight param after scrolling to the target", async () => {
+    render(<ImportExport />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await waitFor(() => {
+      expect(window.location.search).not.toContain("highlight=")
+    })
+
+    expect(screen.getByText("webdav section")).toBeInTheDocument()
+  })
+
+  it("clears the highlight param when the target element is missing", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      `/options.html?${OPTIONS_SEARCH_ANCHOR_PARAM}=${WEBDAV_TARGET_IDS.url}&${OPTIONS_SEARCH_HIGHLIGHT_PARAM}=missing-target#importExport`,
+    )
+
     render(<ImportExport />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,

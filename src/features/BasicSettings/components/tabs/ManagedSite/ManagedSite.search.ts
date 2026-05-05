@@ -40,8 +40,8 @@ export const managedSiteSearchSections = [
 export const managedSiteSearchControls = [
   ...managedSiteCoreSearchControls,
   ...managedSiteNewApiSearchControls,
-  ...managedSiteVeloeraSearchControls,
   ...managedSiteDoneHubSearchControls,
+  ...managedSiteVeloeraSearchControls,
   ...managedSiteOctopusSearchControls,
   ...managedSiteAxonHubSearchControls,
   ...managedSiteClaudeCodeHubSearchControls,

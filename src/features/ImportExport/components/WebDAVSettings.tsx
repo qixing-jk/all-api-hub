@@ -63,6 +63,7 @@ import {
   importFromBackupObject,
   type BackupFullV2,
 } from "../utils"
+import { WEBDAV_TARGET_IDS } from "../searchTargets"
 import { WebDAVDecryptPasswordModal } from "./WebDAVDecryptPasswordModal"
 
 /**
@@ -472,7 +473,7 @@ export default function WebDAVSettings() {
 
   return (
     <>
-      <Card id="webdav" padding="none">
+      <Card id={WEBDAV_TARGET_IDS.root} padding="none">
         <CardHeader>
           <div className="mb-1 flex items-center space-x-2">
             <ArrowPathIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
@@ -483,7 +484,7 @@ export default function WebDAVSettings() {
 
         <CardContent padding="md" className="space-y-4">
           <Alert
-            id="webdav-restore-policy"
+            id={WEBDAV_TARGET_IDS.restorePolicy}
             variant="info"
             title={t("webdav.restorePolicy.title")}
             description={t("webdav.restorePolicy.description")}
@@ -494,7 +495,7 @@ export default function WebDAVSettings() {
             <div className="md:col-span-2">
               <FormField label={t("webdav.webdavUrl")}>
                 <Input
-                  id="webdav-url"
+                  id={WEBDAV_TARGET_IDS.url}
                   title={t("webdav.webdavUrl")}
                   type="url"
                   placeholder={t("webdav.webdavUrlExample")}
@@ -511,7 +512,7 @@ export default function WebDAVSettings() {
 
             <FormField label={t("webdav.username")}>
               <Input
-                id="webdav-username"
+                id={WEBDAV_TARGET_IDS.username}
                 title={t("webdav.username")}
                 type="text"
                 placeholder={t("webdav.username")}
@@ -528,7 +529,7 @@ export default function WebDAVSettings() {
             <FormField label={t("webdav.password")}>
               <div className="relative">
                 <Input
-                  id="webdav-password"
+                  id={WEBDAV_TARGET_IDS.password}
                   title={t("webdav.password")}
                   type={showPassword ? "text" : "password"}
                   placeholder={t("webdav.password")}
@@ -563,7 +564,7 @@ export default function WebDAVSettings() {
           </div>
 
           <div
-            id="webdav-sync-data"
+            id={WEBDAV_TARGET_IDS.syncData}
             className="rounded-md bg-gray-50 p-3 dark:bg-gray-800"
           >
             <div className="space-y-1">
@@ -596,11 +597,14 @@ export default function WebDAVSettings() {
           </div>
 
           <div
-            id="webdav-encryption"
+            id={WEBDAV_TARGET_IDS.encryption}
             className="rounded-md bg-gray-50 p-3 dark:bg-gray-800"
           >
             <div className="flex items-start justify-between gap-3">
-              <div id="webdav-encryption-enable" className="space-y-1">
+              <div
+                id={WEBDAV_TARGET_IDS.encryptionEnable}
+                className="space-y-1"
+              >
                 <Heading4 className="m-0">
                   {t("webdav.encryption.title")}
                 </Heading4>
@@ -625,7 +629,7 @@ export default function WebDAVSettings() {
                 description={t("webdav.encryption.passwordDesc")}
               >
                 <Input
-                  id="webdav-encryption-password"
+                  id={WEBDAV_TARGET_IDS.encryptionPassword}
                   title={t("webdav.encryption.password")}
                   type={showBackupEncryptionPassword ? "text" : "password"}
                   placeholder={t("webdav.encryption.passwordPlaceholder")}
@@ -666,7 +670,7 @@ export default function WebDAVSettings() {
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
             {/* 保存配置 */}
             <Button
-              id="webdav-save-config"
+              id={WEBDAV_TARGET_IDS.saveConfig}
               onClick={handleSaveConfig}
               disabled={saving}
               loading={saving}
@@ -679,7 +683,7 @@ export default function WebDAVSettings() {
 
             {/* 测试连接 */}
             <Button
-              id="webdav-test-connection"
+              id={WEBDAV_TARGET_IDS.testConnection}
               onClick={handleTestConnection}
               disabled={testing || !webdavConfigFilled}
               loading={testing}
@@ -694,7 +698,7 @@ export default function WebDAVSettings() {
 
             {/* 上传备份 */}
             <Button
-              id="webdav-upload-backup"
+              id={WEBDAV_TARGET_IDS.uploadBackup}
               onClick={handleUploadBackup}
               disabled={uploading || !webdavConfigFilled}
               loading={uploading}
@@ -709,7 +713,7 @@ export default function WebDAVSettings() {
 
             {/* 下载并导入 */}
             <Button
-              id="webdav-download-import"
+              id={WEBDAV_TARGET_IDS.downloadImport}
               onClick={handleDownloadAndImport}
               disabled={downloading || !webdavConfigFilled}
               loading={downloading}

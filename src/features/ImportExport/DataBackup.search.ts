@@ -5,6 +5,8 @@ import {
 } from "~/entrypoints/options/search/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
 
+import { WEBDAV_AUTO_SYNC_TARGET_IDS, WEBDAV_TARGET_IDS } from "./searchTargets"
+
 export const dataBackupSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:import-export-entry",
@@ -39,7 +41,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-url",
     "dataBackup",
-    "webdav-url",
+    WEBDAV_TARGET_IDS.url,
     "importExport:webdav.webdavUrl",
     720,
     {
@@ -304,7 +306,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-auto-sync-interval-data-backup",
     "dataBackup",
-    "webdav-auto-sync-interval",
+    WEBDAV_AUTO_SYNC_TARGET_IDS.interval,
     "importExport:webdav.autoSync.interval",
     732,
     {
@@ -320,7 +322,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-auto-sync-strategy-data-backup",
     "dataBackup",
-    "webdav-auto-sync-strategy",
+    WEBDAV_AUTO_SYNC_TARGET_IDS.strategy,
     "importExport:webdav.autoSync.strategy",
     733,
     {
@@ -336,7 +338,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-auto-sync-save-settings-data-backup",
     "dataBackup",
-    "webdav-auto-sync-save-settings",
+    WEBDAV_AUTO_SYNC_TARGET_IDS.saveSettings,
     "importExport:webdav.autoSync.saveSettings",
     734,
     {
@@ -352,7 +354,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:webdav-auto-sync-sync-now-data-backup",
     "dataBackup",
-    "webdav-auto-sync-sync-now",
+    WEBDAV_AUTO_SYNC_TARGET_IDS.syncNow,
     "importExport:webdav.autoSync.syncNow",
     735,
     {

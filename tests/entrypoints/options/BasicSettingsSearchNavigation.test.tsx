@@ -149,4 +149,20 @@ describe("BasicSettings search navigation", () => {
 
     expect(screen.getByText("general content")).toBeInTheDocument()
   })
+
+  it("clears the highlight param when the target element is missing", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/options.html?tab=general&anchor=display-currency-unit&highlight=missing-target#basic",
+    )
+
+    render(<BasicSettings />)
+
+    await waitFor(() => {
+      expect(window.location.search).not.toContain("highlight=")
+    })
+
+    expect(screen.getByText("general content")).toBeInTheDocument()
+  })
 })

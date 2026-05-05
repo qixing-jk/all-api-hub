@@ -5,6 +5,8 @@ import {
 } from "~/entrypoints/options/search/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
 
+import { WEBDAV_AUTO_SYNC_TARGET_IDS } from "./searchTargets"
+
 export const importExportPageSearchSections: OptionsSearchItemDefinition[] = [
   buildPageSectionDefinition(
     "section:import-export-export",
@@ -248,7 +250,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-auto-sync-interval",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    "webdav-auto-sync-interval",
+    WEBDAV_AUTO_SYNC_TARGET_IDS.interval,
     "importExport:webdav.autoSync.interval",
     752,
     {
@@ -259,7 +261,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-auto-sync-strategy",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    "webdav-auto-sync-strategy",
+    WEBDAV_AUTO_SYNC_TARGET_IDS.strategy,
     "importExport:webdav.autoSync.strategy",
     753,
     {
@@ -270,7 +272,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-auto-sync-save-settings",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    "webdav-auto-sync-save-settings",
+    WEBDAV_AUTO_SYNC_TARGET_IDS.saveSettings,
     "importExport:webdav.autoSync.saveSettings",
     754,
     {
@@ -281,7 +283,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
   buildPageControlDefinition(
     "control:webdav-auto-sync-sync-now",
     MENU_ITEM_IDS.IMPORT_EXPORT,
-    "webdav-auto-sync-sync-now",
+    WEBDAV_AUTO_SYNC_TARGET_IDS.syncNow,
     "importExport:webdav.autoSync.syncNow",
     755,
     {

@@ -5,6 +5,8 @@ import {
 } from "~/entrypoints/options/search/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
 
+import { WEB_AI_API_CHECK_TARGET_IDS } from "./searchTargets"
+
 export const webAiApiCheckSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:web-ai-api-check",
@@ -19,7 +21,7 @@ export const webAiApiCheckSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:web-ai-api-check-context-menu",
     "webAiApiCheck",
-    "web-ai-api-check-context-menu",
+    WEB_AI_API_CHECK_TARGET_IDS.contextMenu,
     "webAiApiCheck:settings.contextMenu.enable",
     620,
     {
@@ -35,7 +37,7 @@ export const webAiApiCheckSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:web-ai-api-check-auto-detect",
     "webAiApiCheck",
-    "web-ai-api-check-auto-detect",
+    WEB_AI_API_CHECK_TARGET_IDS.autoDetect,
     "webAiApiCheck:settings.autoDetect.enable",
     621,
     {
@@ -51,7 +53,7 @@ export const webAiApiCheckSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:web-ai-api-check-whitelist-patterns",
     "webAiApiCheck",
-    "web-ai-api-check-whitelist-patterns",
+    WEB_AI_API_CHECK_TARGET_IDS.whitelistPatterns,
     "webAiApiCheck:settings.autoDetect.whitelist.patterns",
     622,
     {

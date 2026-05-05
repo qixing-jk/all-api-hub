@@ -1,46 +1,67 @@
+import { Storage } from "@plasmohq/storage"
+
+import { OPTIONS_SEARCH_STORAGE_KEYS } from "~/services/core/storageKeys"
+
 import type { OptionsSearchItem } from "./types"
 
-const OPTIONS_SEARCH_RECENT_IDS_KEY = "options-search-recent-item-ids"
 const MAX_RECENT_ITEM_IDS = 8
-
-/**
- * Returns whether recent-search persistence can use browser localStorage.
- */
-function canUseLocalStorage() {
-  return (
-    typeof window !== "undefined" && typeof window.localStorage !== "undefined"
-  )
-}
+const LEGACY_OPTIONS_SEARCH_RECENT_IDS_KEY = "options-search-recent-item-ids"
+const storage = new Storage({ area: "local" })
 
 /**
  * Normalizes stored recent item ids by removing empty values and enforcing the size limit.
  */
-function sanitizeRecentItemIds(ids: string[]) {
-  return ids.filter(Boolean).slice(0, MAX_RECENT_ITEM_IDS)
-}
-
-/**
- * Loads the recent search item id list from localStorage.
- */
-export function loadRecentSearchItemIds() {
-  if (!canUseLocalStorage()) {
+function sanitizeRecentItemIds(ids: unknown) {
+  if (!Array.isArray(ids)) {
     return []
   }
 
-  try {
-    const raw = window.localStorage.getItem(OPTIONS_SEARCH_RECENT_IDS_KEY)
-    if (!raw) {
-      return []
-    }
-
-    const parsed = JSON.parse(raw)
-    if (!Array.isArray(parsed)) {
-      return []
-    }
-
-    return sanitizeRecentItemIds(
-      parsed.filter((item): item is string => typeof item === "string"),
+  return ids
+    .filter(
+      (item): item is string => typeof item === "string" && item.length > 0,
     )
+    .slice(0, MAX_RECENT_ITEM_IDS)
+}
+
+/**
+ * Attempts a one-time migration from the legacy localStorage key into extension storage.
+ */
+async function migrateLegacyRecentItemIds() {
+  if (
+    typeof window === "undefined" ||
+    typeof window.localStorage === "undefined"
+  ) {
+    return undefined
+  }
+
+  const raw = window.localStorage.getItem(LEGACY_OPTIONS_SEARCH_RECENT_IDS_KEY)
+  if (!raw) {
+    return undefined
+  }
+
+  const migratedIds = sanitizeRecentItemIds(JSON.parse(raw))
+  await storage.set(OPTIONS_SEARCH_STORAGE_KEYS.RECENT_ITEM_IDS, migratedIds)
+  window.localStorage.removeItem(LEGACY_OPTIONS_SEARCH_RECENT_IDS_KEY)
+
+  return migratedIds
+}
+
+/**
+ * Loads the recent search item id list from extension storage.
+ */
+export async function loadRecentSearchItemIds() {
+  try {
+    const stored = await storage.get(OPTIONS_SEARCH_STORAGE_KEYS.RECENT_ITEM_IDS)
+    if (stored !== undefined) {
+      return sanitizeRecentItemIds(stored)
+    }
+
+    const migratedIds = await migrateLegacyRecentItemIds()
+    if (migratedIds) {
+      return migratedIds
+    }
+
+    return []
   } catch {
     return []
   }
@@ -49,27 +70,21 @@ export function loadRecentSearchItemIds() {
 /**
  * Saves the selected search item id to the front of the recent items list.
  */
-export function saveRecentSearchItemSelection(
+export async function saveRecentSearchItemSelection(
   item: Pick<OptionsSearchItem, "id">,
 ) {
-  if (!canUseLocalStorage()) {
-    return
-  }
-
   try {
+    const currentIds = await loadRecentSearchItemIds()
     const nextIds = sanitizeRecentItemIds([
       item.id,
-      ...loadRecentSearchItemIds().filter(
-        (existingId) => existingId !== item.id,
-      ),
+      ...currentIds.filter((existingId) => existingId !== item.id),
     ])
 
-    window.localStorage.setItem(
-      OPTIONS_SEARCH_RECENT_IDS_KEY,
-      JSON.stringify(nextIds),
-    )
+    await storage.set(OPTIONS_SEARCH_STORAGE_KEYS.RECENT_ITEM_IDS, nextIds)
+    return nextIds
   } catch {
     // Ignore storage failures; recent items are a non-critical enhancement.
+    return []
   }
 }
 
@@ -78,7 +93,7 @@ export function saveRecentSearchItemSelection(
  */
 export function resolveRecentSearchItems(
   allItems: OptionsSearchItem[],
-  recentIds = loadRecentSearchItemIds(),
+  recentIds: string[] = [],
 ) {
   if (recentIds.length === 0) {
     return []

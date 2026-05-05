@@ -40,15 +40,17 @@ export default function ImportExport() {
     const searchParams = new URLSearchParams(window.location.search)
     const pendingAnchor = searchParams.get(OPTIONS_SEARCH_ANCHOR_PARAM)
     const pendingHighlight = searchParams.get(OPTIONS_SEARCH_HIGHLIGHT_PARAM)
+    let anchorTimer: number | undefined
+    let highlightTimer: number | undefined
 
     if (pendingAnchor) {
-      window.setTimeout(() => {
+      anchorTimer = window.setTimeout(() => {
         navigateToAnchor(pendingAnchor)
       }, 120)
     }
 
     if (pendingHighlight) {
-      window.setTimeout(() => {
+      highlightTimer = window.setTimeout(() => {
         if (!highlightSearchTarget(pendingHighlight)) {
           clearHighlightSearchParam()
           return
@@ -56,6 +58,15 @@ export default function ImportExport() {
 
         clearHighlightSearchParam()
       }, 220)
+    }
+
+    return () => {
+      if (anchorTimer !== undefined) {
+        window.clearTimeout(anchorTimer)
+      }
+      if (highlightTimer !== undefined) {
+        window.clearTimeout(highlightTimer)
+      }
     }
   }, [])
 

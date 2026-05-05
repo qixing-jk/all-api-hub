@@ -1,4 +1,5 @@
 import { useMemo } from "react"
+import type { TFunction } from "i18next"
 import { useTranslation } from "react-i18next"
 
 import { getSidePanelSupport } from "~/utils/browser/browserApi"
@@ -69,7 +70,7 @@ function scoreMatch(query: string, item: OptionsSearchItem) {
  */
 function localizeSearchItem(
   item: OptionsSearchItemDefinition,
-  t: (key: string) => string,
+  t: TFunction,
 ): OptionsSearchItem {
   return {
     ...item,
