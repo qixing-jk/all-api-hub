@@ -177,6 +177,28 @@ describe("AccountDialog AccountForm", () => {
     expect(props.onAuthTypeChange).toHaveBeenCalledWith(AuthTypeEnum.Cookie)
   })
 
+  it("disables auth type changes when the account data is detected", async () => {
+    const user = userEvent.setup()
+    const props = createProps()
+    props.isDetected = true
+
+    render(<AccountForm {...props} />)
+
+    const authTypeTrigger = await screen.findByTestId(
+      "account-management-auth-type-trigger",
+    )
+    expect(authTypeTrigger).toBeDisabled()
+
+    await user.click(authTypeTrigger)
+
+    expect(
+      screen.queryByRole("option", {
+        name: "accountDialog:siteInfo.authType.cookieAuth",
+      }),
+    ).not.toBeInTheDocument()
+    expect(props.onAuthTypeChange).not.toHaveBeenCalled()
+  })
+
   it("uses a consistent section subtree on mobile and honors the default-open layout", async () => {
     mediaQueryState.isSmallScreen = true
     const user = userEvent.setup()
