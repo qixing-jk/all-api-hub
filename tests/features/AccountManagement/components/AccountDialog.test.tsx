@@ -1,7 +1,13 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import AccountDialog from "~/features/AccountManagement/components/AccountDialog"
+import {
+  ACCOUNT_DIALOG_FORM_SOURCES,
+  ACCOUNT_DIALOG_PHASES,
+  createEmptyAccountDialogDraft,
+} from "~/features/AccountManagement/components/AccountDialog/models"
+import { AuthTypeEnum } from "~/types"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const {
@@ -129,6 +135,53 @@ const {
   mockOpenEditAccount: vi.fn(),
 }))
 
+function resetMockState() {
+  const emptyDraft = createEmptyAccountDialogDraft()
+
+  Object.assign(mockState, {
+    url: "https://api.example.com",
+    phase: ACCOUNT_DIALOG_PHASES.SITE_INPUT,
+    formSource: ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
+    isDetecting: false,
+    isDetectingSlow: false,
+    isSaving: false,
+    isFormValid: true,
+    isAutoConfiguring: false,
+    detectionError: null,
+    isDetected: false,
+    siteType: emptyDraft.siteType,
+    authType: AuthTypeEnum.AccessToken,
+    currentTabUrl: null,
+    draft: {
+      ...emptyDraft,
+      siteName: "Example Site",
+      username: "alice",
+      accessToken: "secret-token",
+      userId: "12",
+      exchangeRate: "7.2",
+      notes: "existing note",
+    },
+    checkIn: emptyDraft.checkIn,
+    isImportingSub2apiSession: false,
+    isManualBalanceUsdInvalid: false,
+    showAccessToken: false,
+    isImportingCookies: false,
+    showCookiePermissionWarning: false,
+    duplicateAccountWarning: {
+      isOpen: false,
+      siteUrl: "",
+      existingAccountsCount: 0,
+      existingUsername: "",
+      existingUserId: "",
+    },
+    managedSiteConfigPrompt: {
+      isOpen: false,
+      managedSiteLabel: "",
+      missingMessage: "",
+    },
+  })
+}
+
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     displayData: [],
@@ -160,9 +213,13 @@ vi.mock(
 )
 
 describe("AccountDialog", () => {
+  beforeEach(() => {
+    resetMockState()
+  })
+
   it("hides the form before the dialog reaches the account-form phase", () => {
-    mockState.phase = "site-input"
-    mockState.formSource = "manual"
+    mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
 
     render(
       <AccountDialog
@@ -180,8 +237,8 @@ describe("AccountDialog", () => {
   })
 
   it("renders the account form after entering the account-form phase", async () => {
-    mockState.phase = "account-form"
-    mockState.formSource = "detected"
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
 
     render(
       <AccountDialog

@@ -6,7 +6,7 @@ import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { SUB2API } from "~/constants/siteType"
+import { SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   autoDetectAccount,
@@ -468,6 +468,9 @@ export function useAccountDialog({
         if (siteAccount) {
           setUrl(siteAccount.site_url)
           const refreshToken = siteAccount.sub2apiAuth?.refreshToken ?? ""
+          const normalizedSiteType =
+            siteAccount.site_type ||
+            (siteAccount.sub2apiAuth ? SUB2API : UNKNOWN_SITE)
           setDraft({
             siteName: siteAccount.site_name,
             username: siteAccount.account_info.username,
@@ -503,14 +506,18 @@ export function useAccountDialog({
                   siteAccount.checkIn?.customCheckIn?.lastCheckInDate,
               },
             },
-            siteType: siteAccount.site_type || "",
+            siteType: normalizedSiteType,
             authType: siteAccount.authType || AuthTypeEnum.AccessToken,
             cookieAuthSessionCookie:
               siteAccount.cookieAuth?.sessionCookie || "",
-            sub2apiUseRefreshToken: Boolean(refreshToken.trim()),
-            sub2apiRefreshToken: refreshToken,
+            sub2apiUseRefreshToken:
+              normalizedSiteType === SUB2API && Boolean(refreshToken.trim()),
+            sub2apiRefreshToken:
+              normalizedSiteType === SUB2API ? refreshToken : "",
             sub2apiTokenExpiresAt:
-              siteAccount.sub2apiAuth?.tokenExpiresAt ?? null,
+              normalizedSiteType === SUB2API
+                ? siteAccount.sub2apiAuth?.tokenExpiresAt ?? null
+                : null,
           })
           enterForm(ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT)
         }

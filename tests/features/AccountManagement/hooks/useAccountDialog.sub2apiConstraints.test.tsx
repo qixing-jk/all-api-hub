@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { SUB2API } from "~/constants/siteType"
+import { SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { AuthTypeEnum } from "~/types"
@@ -463,6 +463,148 @@ describe("useAccountDialog Sub2API constraints", () => {
     expect(result.current.state.userId).toBe("99")
     expect(result.current.state.username).toBe("existing-user")
     expect(mockToastSuccess).toHaveBeenCalled()
+  })
+
+  it("normalizes missing stored site types when loading edit-mode accounts with Sub2API auth", async () => {
+    const getAccountByIdSpy = vi
+      .spyOn(accountStorage, "getAccountById")
+      .mockResolvedValueOnce({
+        id: "legacy-sub2api-account",
+        site_name: "Stored Sub2API Account",
+        site_url: "https://sub2.example.com",
+        site_type: "",
+        exchange_rate: 7,
+        notes: "",
+        tagIds: [],
+        disabled: false,
+        excludeFromTotalBalance: false,
+        checkIn: {
+          enableDetection: false,
+          autoCheckInEnabled: true,
+          siteStatus: { isCheckedInToday: false },
+          customCheckIn: {
+            url: "",
+            redeemUrl: "",
+            openRedeemWithCheckIn: true,
+            isCheckedInToday: false,
+          },
+        },
+        health: { status: "healthy" },
+        authType: AuthTypeEnum.AccessToken,
+        sub2apiAuth: {
+          refreshToken: "stored-refresh-token",
+          tokenExpiresAt: 654321,
+        },
+        account_info: {
+          id: 88,
+          access_token: "stored-jwt",
+          username: "stored-user",
+          quota: 0,
+          today_prompt_tokens: 0,
+          today_completion_tokens: 0,
+          today_quota_consumption: 0,
+          today_requests_count: 0,
+          today_income: 0,
+        },
+        last_sync_time: 0,
+        created_at: 0,
+        updated_at: 0,
+      } as any)
+    const account = { id: "legacy-sub2api-account" } as any
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.EDIT,
+        account,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("https://sub2.example.com")
+    })
+
+    expect(result.current.state.phase).toBe("account-form")
+    expect(result.current.state.formSource).toBe("existing-account")
+    expect(result.current.state.siteType).toBe(SUB2API)
+    expect(result.current.state.sub2apiUseRefreshToken).toBe(true)
+    expect(result.current.state.sub2apiRefreshToken).toBe(
+      "stored-refresh-token",
+    )
+    expect(result.current.state.sub2apiTokenExpiresAt).toBe(654321)
+    expect(result.current.state.authType).toBe(AuthTypeEnum.AccessToken)
+    getAccountByIdSpy.mockRestore()
+  })
+
+  it("falls back to the canonical unknown site when stored site type metadata is missing", async () => {
+    const getAccountByIdSpy = vi
+      .spyOn(accountStorage, "getAccountById")
+      .mockResolvedValueOnce({
+        id: "legacy-unknown-account",
+        site_name: "Stored Unknown Account",
+        site_url: "https://unknown.example.com",
+        site_type: "",
+        exchange_rate: 7,
+        notes: "",
+        tagIds: [],
+        disabled: false,
+        excludeFromTotalBalance: false,
+        checkIn: {
+          enableDetection: false,
+          autoCheckInEnabled: true,
+          siteStatus: { isCheckedInToday: false },
+          customCheckIn: {
+            url: "",
+            redeemUrl: "",
+            openRedeemWithCheckIn: true,
+            isCheckedInToday: false,
+          },
+        },
+        health: { status: "healthy" },
+        authType: AuthTypeEnum.Cookie,
+        cookieAuth: {
+          sessionCookie: "session=stored",
+        },
+        account_info: {
+          id: 89,
+          access_token: "",
+          username: "stored-cookie-user",
+          quota: 0,
+          today_prompt_tokens: 0,
+          today_completion_tokens: 0,
+          today_quota_consumption: 0,
+          today_requests_count: 0,
+          today_income: 0,
+        },
+        last_sync_time: 0,
+        created_at: 0,
+        updated_at: 0,
+      } as any)
+    const account = { id: "legacy-unknown-account" } as any
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.EDIT,
+        account,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("https://unknown.example.com")
+    })
+
+    expect(result.current.state.siteType).toBe(UNKNOWN_SITE)
+    expect(result.current.state.sub2apiUseRefreshToken).toBe(false)
+    expect(result.current.state.sub2apiRefreshToken).toBe("")
+    expect(result.current.state.sub2apiTokenExpiresAt).toBeNull()
+    expect(result.current.state.authType).toBe(AuthTypeEnum.Cookie)
+    expect(result.current.state.cookieAuthSessionCookie).toBe("session=stored")
+    getAccountByIdSpy.mockRestore()
   })
 
   it("falls back to background auto-detect when enumerating tabs fails entirely", async () => {
