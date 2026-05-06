@@ -232,6 +232,37 @@ describe("autoDetectSmart", () => {
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
   })
 
+  it("falls back to direct detection when background auto-detect returns an unsuccessful result", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 31,
+        active: true,
+        url: "https://different.example.com/home",
+      },
+    ])
+    mockFetchUserInfo.mockResolvedValueOnce(null).mockResolvedValueOnce({
+      id: 22,
+      username: "direct-after-background-failure",
+    })
+
+    const result = await autoDetectSmart("https://example.com/console")
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        userId: 22,
+        user: {
+          id: 22,
+          username: "direct-after-background-failure",
+        },
+        siteType: "new-api",
+        accessToken: undefined,
+        sub2apiAuth: undefined,
+      },
+    })
+    expect(mockFetchUserInfo).toHaveBeenCalledTimes(2)
+  })
+
   it("falls back to direct detection when browser tab and runtime capabilities are unavailable", async () => {
     browserAny.tabs = null
     browserAny.runtime = null

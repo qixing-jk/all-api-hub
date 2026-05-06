@@ -120,6 +120,17 @@ describe("detectSiteType temp-context fallbacks", () => {
     await expect(getSiteType("https://example.com")).resolves.toBe("unknown")
   })
 
+  it("returns UNKNOWN when the API error message is empty", async () => {
+    mocks.fetchApi.mockResolvedValue(
+      "<html><title>Mystery Control Panel</title></html>",
+    )
+    mocks.fetchApiData.mockRejectedValue(
+      new ApiError("", 401, "/api/user/self"),
+    )
+
+    await expect(getSiteType("https://example.com")).resolves.toBe("unknown")
+  })
+
   it("rethrows unexpected non-ApiError failures from the API fallback probe", async () => {
     mocks.fetchApi.mockResolvedValue(
       "<html><title>Mystery Control Panel</title></html>",

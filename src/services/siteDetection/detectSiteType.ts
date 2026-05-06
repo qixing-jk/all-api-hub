@@ -124,7 +124,7 @@ async function getSiteUserIdType(url: string): Promise<string> {
       },
     )
   } catch (error) {
-    if (error instanceof ApiError && error.message) {
+    if (error instanceof ApiError) {
       return detectSiteTypeFromApiErrorMessage(error.message)
     }
     throw error
