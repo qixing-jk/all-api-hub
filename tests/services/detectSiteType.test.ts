@@ -271,6 +271,98 @@ describe("detectSiteType", () => {
         expect(siteType).toBe(NEW_API)
       })
 
+      it("should detect site type from any token in the API error message", async () => {
+        const mockHTML = "<html><title>No Match</title></html>"
+        const mockApiResponse = {
+          success: false,
+          message: "new-api invalid user identifier changed",
+        }
+
+        server.use(
+          http.get("https://example.com", () => {
+            return new HttpResponse(mockHTML, {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+          http.get("https://example.com/api/user/self", () => {
+            return HttpResponse.json(mockApiResponse, { status: 400 })
+          }),
+        )
+
+        const siteType = await getSiteType("https://example.com")
+
+        expect(siteType).toBe(NEW_API)
+      })
+
+      it("should detect NEW_API from the upstream English New-Api-User header error", async () => {
+        const mockHTML = "<html><title>No Match</title></html>"
+        const mockApiResponse = {
+          success: false,
+          message: "Unauthorized, New-Api-User header not provided",
+        }
+
+        server.use(
+          http.get("https://example.com", () => {
+            return new HttpResponse(mockHTML, {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+          http.get("https://example.com/api/user/self", () => {
+            return HttpResponse.json(mockApiResponse, { status: 401 })
+          }),
+        )
+
+        const siteType = await getSiteType("https://example.com")
+
+        expect(siteType).toBe(NEW_API)
+      })
+
+      it("should detect NEW_API from the localized Chinese New-Api-User header error", async () => {
+        const mockHTML = "<html><title>No Match</title></html>"
+        const mockApiResponse = {
+          success: false,
+          message: "无权进行此操作，未提供 New-Api-User",
+        }
+
+        server.use(
+          http.get("https://example.com", () => {
+            return new HttpResponse(mockHTML, {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+          http.get("https://example.com/api/user/self", () => {
+            return HttpResponse.json(mockApiResponse, { status: 401 })
+          }),
+        )
+
+        const siteType = await getSiteType("https://example.com")
+
+        expect(siteType).toBe(NEW_API)
+      })
+
+      it("should not infer a site type from the generic User-id header error alone", async () => {
+        const mockHTML = "<html><title>No Match</title></html>"
+        const mockApiResponse = {
+          success: false,
+          message: "Unauthorized, User-id header not provided",
+        }
+
+        server.use(
+          http.get("https://example.com", () => {
+            return new HttpResponse(mockHTML, {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+          http.get("https://example.com/api/user/self", () => {
+            return HttpResponse.json(mockApiResponse, { status: 401 })
+          }),
+        )
+
+        const siteType = await getSiteType("https://example.com")
+
+        expect(siteType).toBe(UNKNOWN_SITE)
+      })
+
       it("should handle API response without message", async () => {
         const mockHTML = "<html><title>No Match</title></html>"
         const mockApiResponse = { success: true }

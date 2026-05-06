@@ -1,4 +1,5 @@
 import { SITE_TITLE_RULES, UNKNOWN_SITE } from "~/constants/siteType"
+import { COMPAT_USER_ID_ERROR_HEADER_TO_SITE_TYPE } from "~/services/apiService/common/compatHeaders"
 import { ApiError } from "~/services/apiService/common/errors"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
 import { AuthTypeEnum } from "~/types"
@@ -10,6 +11,15 @@ import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("DetectSiteType")
+const COMPAT_USER_ID_HEADER_MESSAGE_RULES = Object.entries(
+  COMPAT_USER_ID_ERROR_HEADER_TO_SITE_TYPE,
+).map(([headerName, siteType]) => ({
+  siteType,
+  regex: new RegExp(
+    headerName.replace(/[.*+?^${}()|[\]\\]/g, "\\$&").replace(/-/g, "[-_ ]?"),
+    "i",
+  ),
+}))
 
 /**
  * Fetch the raw HTML title from the site root.
@@ -70,10 +80,36 @@ export const fetchSiteOriginalTitle = async (url: string) => {
 }
 
 /**
- * Probes the /api/user/self endpoint using cookie auth and extracts any
- * user-id-like suffix from an error message to help infer site type.
+ * Runs ordered matching against an API error message:
+ * 1. Known site-specific compat user-id header markers from upstream auth errors
+ * 2. Whole-message matching against existing site detection rules
  */
-async function getSiteUserIdType(url: string) {
+function detectSiteTypeFromApiErrorMessage(message: string): string {
+  const normalizedMessage = message.trim()
+  if (!normalizedMessage) {
+    return UNKNOWN_SITE
+  }
+
+  for (const knownRule of COMPAT_USER_ID_HEADER_MESSAGE_RULES) {
+    if (knownRule.regex.test(normalizedMessage)) {
+      return knownRule.siteType
+    }
+  }
+
+  for (const rule of SITE_TITLE_RULES) {
+    if (rule.regex.test(normalizedMessage)) {
+      return rule.name
+    }
+  }
+
+  return UNKNOWN_SITE
+}
+
+/**
+ * Probes the /api/user/self endpoint using cookie auth and infers the site
+ * type from upstream auth error messages when title detection fails.
+ */
+async function getSiteUserIdType(url: string): Promise<string> {
   try {
     await fetchApiData<unknown>(
       {
@@ -89,12 +125,11 @@ async function getSiteUserIdType(url: string) {
     )
   } catch (error) {
     if (error instanceof ApiError && error.message) {
-      const parts = error.message.split(" ")
-      return parts.length > 0 ? parts[parts.length - 1] : ""
+      return detectSiteTypeFromApiErrorMessage(error.message)
     }
     throw error
   }
-  return ""
+  return UNKNOWN_SITE
 }
 
 export const getSiteType = async (url: string) => {
@@ -108,12 +143,10 @@ export const getSiteType = async (url: string) => {
   }
 
   if (detected === UNKNOWN_SITE) {
-    const userIdString = await getSiteUserIdType(url)
-    for (const rule of SITE_TITLE_RULES) {
-      if (rule.regex.test(userIdString)) {
-        detected = rule.name
-        return detected
-      }
+    const detectedFromApiError = await getSiteUserIdType(url)
+    if (detectedFromApiError !== UNKNOWN_SITE) {
+      detected = detectedFromApiError
+      return detected
     }
   }
   return detected
