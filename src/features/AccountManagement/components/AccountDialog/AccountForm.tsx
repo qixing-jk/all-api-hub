@@ -28,15 +28,14 @@ import {
   Textarea,
 } from "~/components/ui"
 import { SITE_TITLE_RULES, SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
+import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/AccountFormSection"
+import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/accountFormSections"
+import type { AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { isValidExchangeRate } from "~/services/accounts/accountOperations"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
-
-import { AccountFormSection } from "./AccountFormSection"
-import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "./accountFormSections"
-import type { AccountDialogDraft } from "./models"
 
 interface AccountFormProps {
   draft: AccountDialogDraft
@@ -422,6 +421,7 @@ export default function AccountForm({
                 }
                 placeholder={t("form.cookieAuthSessionCookiePlaceholder")}
                 rows={2}
+                required
               />
             </div>
           </FormField>
@@ -488,7 +488,8 @@ export default function AccountForm({
                 ...checkIn,
                 enableDetection,
                 // When detection turns on, default auto check-in to true unless
-                // the user has explicitly disabled it with false.
+                // the user has explicitly disabled it with false; turning
+                // detection off leaves the last preference untouched.
                 autoCheckInEnabled:
                   enableDetection && checkIn.autoCheckInEnabled !== false
                     ? checkIn.autoCheckInEnabled ?? true

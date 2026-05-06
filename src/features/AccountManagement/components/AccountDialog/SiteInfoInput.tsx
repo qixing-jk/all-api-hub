@@ -22,15 +22,12 @@ import { SUB2API } from "~/constants/siteType"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
 
-interface SiteInfoInputProps {
+interface SiteInfoInputBaseProps {
   url: string
   onUrlChange: (url: string) => void
   isDetected: boolean
   onClearUrl: () => void
   siteType?: string
-  authType?: AuthTypeEnum
-  onAuthTypeChange?: (value: AuthTypeEnum) => void
-  showAuthTypeSelector?: boolean
   // Props for "add" mode
   currentTabUrl?: string | null
   isCurrentSiteAdded?: boolean
@@ -38,6 +35,20 @@ interface SiteInfoInputProps {
   onUseCurrentTab?: () => void
   onEditAccount?: (account: DisplaySiteData) => void
 }
+
+type SiteInfoInputWithAuthSelectorProps = SiteInfoInputBaseProps & {
+  showAuthTypeSelector: true
+  authType: AuthTypeEnum
+  onAuthTypeChange: (value: AuthTypeEnum) => void
+}
+
+type SiteInfoInputWithoutAuthSelectorProps = SiteInfoInputBaseProps & {
+  showAuthTypeSelector?: false
+}
+
+type SiteInfoInputProps =
+  | SiteInfoInputWithAuthSelectorProps
+  | SiteInfoInputWithoutAuthSelectorProps
 
 /**
  * Site information section displaying the URL input with contextual helpers
@@ -48,34 +59,29 @@ interface SiteInfoInputProps {
  * @param props.isDetected Whether the site info was auto-detected (locks inputs when true).
  * @param props.onClearUrl Clears the URL field.
  * @param props.siteType Detected or selected site type, used for contextual hints.
- * @param props.authType Selected authentication method for the add-mode entry flow.
- * @param props.onAuthTypeChange Handler updating the selected authentication method.
  * @param props.showAuthTypeSelector Whether to show the auth selector in the add-mode entry flow.
+ * When true, authType and onAuthTypeChange are required.
  * @param props.currentTabUrl URL detected from the active browser tab.
  * @param props.isCurrentSiteAdded Indicates if the current site already exists.
  * @param props.detectedAccount Account info detected from the site.
  * @param props.onUseCurrentTab Handler to reuse the current tab URL.
  * @param props.onEditAccount Handler to edit the detected account entry.
  */
-export default function SiteInfoInput({
-  url,
-  onUrlChange,
-  isDetected,
-  onClearUrl,
-  siteType,
-  authType,
-  onAuthTypeChange,
-  showAuthTypeSelector = false,
-  currentTabUrl,
-  isCurrentSiteAdded,
-  detectedAccount,
-  onUseCurrentTab,
-  onEditAccount,
-}: SiteInfoInputProps) {
+export default function SiteInfoInput(props: SiteInfoInputProps) {
+  const {
+    url,
+    onUrlChange,
+    isDetected,
+    onClearUrl,
+    siteType,
+    currentTabUrl,
+    isCurrentSiteAdded,
+    detectedAccount,
+    onUseCurrentTab,
+    onEditAccount,
+  } = props
   const { t } = useTranslation(["accountDialog", "common"])
   const isSub2Api = siteType === SUB2API
-  const shouldShowEntryAuthSelector =
-    !isDetected && showAuthTypeSelector && authType && onAuthTypeChange
 
   const handleEditClick = () => {
     if (detectedAccount && onEditAccount) {
@@ -85,7 +91,7 @@ export default function SiteInfoInput({
 
   return (
     <div className="space-y-2">
-      {shouldShowEntryAuthSelector ? (
+      {!isDetected && props.showAuthTypeSelector === true ? (
         <>
           <div className="flex justify-between gap-2">
             <label
@@ -120,9 +126,9 @@ export default function SiteInfoInput({
               }
             >
               <Select
-                value={authType}
+                value={props.authType}
                 onValueChange={(value) =>
-                  onAuthTypeChange(value as AuthTypeEnum)
+                  props.onAuthTypeChange(value as AuthTypeEnum)
                 }
                 disabled={isSub2Api}
               >
@@ -130,7 +136,7 @@ export default function SiteInfoInput({
                   className="w-full"
                   aria-label={t("siteInfo.authMethod")}
                   data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.authTypeTrigger}
-                  data-auth-type={authType}
+                  data-auth-type={props.authType}
                 >
                   <SelectValue
                     placeholder={t("siteInfo.authMethodPlaceholder")}

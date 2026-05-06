@@ -342,6 +342,18 @@ describe("AccountDialog AccountForm", () => {
     )
   })
 
+  it("renders the access token as visible text when showAccessToken is enabled", async () => {
+    const props = createProps()
+    props.showAccessToken = true
+
+    render(<AccountForm {...props} />)
+
+    expect(await screen.findByDisplayValue("secret-token")).toHaveAttribute(
+      "type",
+      "text",
+    )
+  })
+
   it("shows cookie-auth import fallback UI and permission guidance when cookie auth is selected", async () => {
     const user = userEvent.setup()
     const props = createProps()
@@ -376,6 +388,24 @@ describe("AccountDialog AccountForm", () => {
     expect(props.onCookieAuthSessionCookieChange).toHaveBeenLastCalledWith(
       "session=abc; Path=/",
     )
+  })
+
+  it("marks the cookie-auth textarea as required and shows the idle import CTA", async () => {
+    const props = createProps()
+    props.draft.authType = AuthTypeEnum.Cookie
+
+    render(<AccountForm {...props} />)
+
+    expect(
+      await screen.findByRole("button", {
+        name: "accountDialog:form.importCookieAuthSessionCookie",
+      }),
+    ).toBeEnabled()
+    expect(
+      await screen.findByPlaceholderText(
+        "accountDialog:form.cookieAuthSessionCookiePlaceholder",
+      ),
+    ).toBeRequired()
   })
 
   it("renders Sub2API refresh-token controls, visibility toggles, and expiry metadata", async () => {
