@@ -116,15 +116,10 @@ export function useAccountDialog({
   const [draft, setDraft] = useState<AccountDialogDraft>(
     createEmptyAccountDialogDraft,
   )
-  const [phase, setPhase] = useState<AccountDialogPhase>(
-    mode === DIALOG_MODES.EDIT
-      ? ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
-      : ACCOUNT_DIALOG_PHASES.SITE_INPUT,
-  )
+  const initialFlowState = getInitialFlowState(mode)
+  const [phase, setPhase] = useState<AccountDialogPhase>(initialFlowState.phase)
   const [formSource, setFormSource] = useState<AccountDialogFormSource>(
-    mode === DIALOG_MODES.EDIT
-      ? ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT
-      : ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
+    initialFlowState.formSource,
   )
   const [isSaving, setIsSaving] = useState(false)
   const [showAccessToken, setShowAccessToken] = useState(false)
@@ -296,6 +291,10 @@ export function useAccountDialog({
     },
     [updateDraft],
   )
+  const enterForm = useCallback((source: AccountDialogFormSource) => {
+    setPhase(ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM)
+    setFormSource(source)
+  }, [])
 
   const cancelPendingDuplicateAccountWarning = useCallback(() => {
     duplicateAccountWarningResolverRef.current?.(false)
@@ -424,54 +423,14 @@ export function useAccountDialog({
   useEffect(() => {
     if (siteType !== SUB2API) return
 
-    if (authType !== AuthTypeEnum.AccessToken) {
-      setAuthType(AuthTypeEnum.AccessToken)
-    }
-
-    if (cookieAuthSessionCookie.trim()) {
-      setCookieAuthSessionCookie("")
-    }
-
-    updateDraft((prev) => ({
-      ...prev,
-      checkIn: {
-        ...prev.checkIn,
-        enableDetection: false,
-        autoCheckInEnabled: false,
-      },
-    }))
-  }, [
-    authType,
-    cookieAuthSessionCookie,
-    siteType,
-    setAuthType,
-    setCookieAuthSessionCookie,
-    updateDraft,
-  ])
+    updateDraft((prev) => applySub2ApiDraftConstraints(prev))
+  }, [siteType, updateDraft])
 
   useEffect(() => {
     if (siteType === SUB2API) return
 
-    if (sub2apiUseRefreshToken) {
-      setSub2apiUseRefreshToken(false)
-    }
-
-    if (sub2apiRefreshToken) {
-      setSub2apiRefreshToken("")
-    }
-
-    if (sub2apiTokenExpiresAt !== null) {
-      setSub2apiTokenExpiresAt(null)
-    }
-  }, [
-    siteType,
-    sub2apiRefreshToken,
-    sub2apiTokenExpiresAt,
-    sub2apiUseRefreshToken,
-    setSub2apiRefreshToken,
-    setSub2apiTokenExpiresAt,
-    setSub2apiUseRefreshToken,
-  ])
+    updateDraft((prev) => clearSub2ApiRefreshTokenState(prev))
+  }, [siteType, updateDraft])
 
   // useRef 保存跨渲染引用
   const newAccountRef = useRef<any>(null)
@@ -488,16 +447,9 @@ export function useAccountDialog({
     hasConsumedAutoFillCurrentSiteUrlRef.current = false
     setUrl("")
     setDraft(createEmptyAccountDialogDraft())
-    setPhase(
-      mode === DIALOG_MODES.EDIT
-        ? ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
-        : ACCOUNT_DIALOG_PHASES.SITE_INPUT,
-    )
-    setFormSource(
-      mode === DIALOG_MODES.EDIT
-        ? ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT
-        : ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
-    )
+    const nextFlowState = getInitialFlowState(mode)
+    setPhase(nextFlowState.phase)
+    setFormSource(nextFlowState.formSource)
     setShowAccessToken(false)
     setDetectionError(null)
     setCurrentTabUrl(null)
@@ -559,15 +511,14 @@ export function useAccountDialog({
             sub2apiTokenExpiresAt:
               siteAccount.sub2apiAuth?.tokenExpiresAt ?? null,
           })
-          setPhase(ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM)
-          setFormSource(ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT)
+          enterForm(ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT)
         }
       } catch (error) {
         logger.error("Failed to load account data", { error, accountId })
         toast.error(t("messages.loadFailed"))
       }
     },
-    [t],
+    [enterForm, t],
   )
 
   const checkCurrentTab = useCallback(async () => {
@@ -961,8 +912,7 @@ export function useAccountDialog({
 
       if (!result.success) {
         setDetectionError(result.detailedError || null)
-        setPhase(ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM)
-        setFormSource(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
+        enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
         return
       }
 
@@ -1002,34 +952,16 @@ export function useAccountDialog({
               }
             : detectedCheckIn
 
-        setDraft((prev) => ({
-          ...prev,
-          username: resultData.username,
-          accessToken: resultData.accessToken,
-          userId: resultData.userId,
-          siteName: resultData.siteName,
-          exchangeRate: resultData.exchangeRate
-            ? resultData.exchangeRate.toString()
-            : mode === DIALOG_MODES.ADD
-              ? ""
-              : prev.exchangeRate,
-          siteType: nextSiteType,
-          authType:
-            nextSiteType === SUB2API ? AuthTypeEnum.AccessToken : prev.authType,
-          cookieAuthSessionCookie:
-            nextSiteType === SUB2API ? "" : prev.cookieAuthSessionCookie,
-          checkIn: preserveExistingCheckIn
-            ? deepOverride(nextCheckIn, prev.checkIn)
-            : nextCheckIn,
-          sub2apiRefreshToken:
-            resultData.siteType === SUB2API && resultData.sub2apiAuth
-              ? resultData.sub2apiAuth.refreshToken
-              : prev.sub2apiRefreshToken,
-          sub2apiTokenExpiresAt:
-            resultData.siteType === SUB2API && resultData.sub2apiAuth
-              ? resultData.sub2apiAuth.tokenExpiresAt ?? null
-              : prev.sub2apiTokenExpiresAt,
-        }))
+        setDraft((prev) =>
+          buildDraftFromAutoDetectResult({
+            draft: prev,
+            resultData,
+            nextSiteType,
+            nextCheckIn,
+            preserveExistingCheckIn,
+            mode,
+          }),
+        )
 
         // Attempt to auto-import session cookies after detection for cookie-auth accounts.
         if (
@@ -1070,8 +1002,7 @@ export function useAccountDialog({
           }
         }
 
-        setPhase(ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM)
-        setFormSource(ACCOUNT_DIALOG_FORM_SOURCES.DETECTED)
+        enterForm(ACCOUNT_DIALOG_FORM_SOURCES.DETECTED)
         if (mode === DIALOG_MODES.EDIT) {
           toast.success(t("messages.autoDetectSuccess"))
         }
@@ -1079,8 +1010,7 @@ export function useAccountDialog({
     } catch (error) {
       logger.error("Auto-detect failed", { error, url: url.trim(), authType })
       setDetectionError(analyzeAutoDetectError(error))
-      setPhase(ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM)
-      setFormSource(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
+      enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
     } finally {
       setIsDetecting(false)
     }
@@ -1092,8 +1022,7 @@ export function useAccountDialog({
       if (!shouldContinue) {
         return
       }
-      setPhase(ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM)
-      setFormSource(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
+      enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
     } catch (error) {
       toast.error(
         t("messages.operationFailed", {
@@ -1498,4 +1427,136 @@ export function useAccountDialog({
  */
 function normalizeSiteUrlForDuplicateCheck(value: string): string {
   return normalizeUrlForOriginKey(value, { lowerCase: true })
+}
+
+/**
+ * Resolves the initial flow state for add and edit dialog modes.
+ */
+function getInitialFlowState(mode: DialogMode): {
+  phase: AccountDialogPhase
+  formSource: AccountDialogFormSource
+} {
+  return mode === DIALOG_MODES.EDIT
+    ? {
+        phase: ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM,
+        formSource: ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT,
+      }
+    : {
+        phase: ACCOUNT_DIALOG_PHASES.SITE_INPUT,
+        formSource: ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
+      }
+}
+
+/**
+ * Enforces the runtime constraints required by Sub2API-backed accounts.
+ */
+function applySub2ApiDraftConstraints(
+  draft: AccountDialogDraft,
+): AccountDialogDraft {
+  const nextDraft: AccountDialogDraft = {
+    ...draft,
+    authType: AuthTypeEnum.AccessToken,
+    cookieAuthSessionCookie: "",
+    checkIn: {
+      ...draft.checkIn,
+      enableDetection: false,
+      autoCheckInEnabled: false,
+    },
+  }
+
+  return areDraftsEquivalent(draft, nextDraft) ? draft : nextDraft
+}
+
+/**
+ * Clears refresh-token-only fields when the selected site type is no longer Sub2API.
+ */
+function clearSub2ApiRefreshTokenState(
+  draft: AccountDialogDraft,
+): AccountDialogDraft {
+  if (
+    !draft.sub2apiUseRefreshToken &&
+    !draft.sub2apiRefreshToken &&
+    draft.sub2apiTokenExpiresAt === null
+  ) {
+    return draft
+  }
+
+  return {
+    ...draft,
+    sub2apiUseRefreshToken: false,
+    sub2apiRefreshToken: "",
+    sub2apiTokenExpiresAt: null,
+  }
+}
+
+/**
+ * Merges auto-detected account data into the current draft while preserving user-owned fields when requested.
+ */
+function buildDraftFromAutoDetectResult(params: {
+  draft: AccountDialogDraft
+  resultData: NonNullable<Awaited<ReturnType<typeof autoDetectAccount>>["data"]>
+  nextSiteType: string
+  nextCheckIn: CheckInConfig
+  preserveExistingCheckIn: boolean
+  mode: DialogMode
+}): AccountDialogDraft {
+  const {
+    draft,
+    resultData,
+    nextSiteType,
+    nextCheckIn,
+    preserveExistingCheckIn,
+    mode,
+  } = params
+
+  const nextDraft: AccountDialogDraft = {
+    ...draft,
+    username: resultData.username,
+    accessToken: resultData.accessToken,
+    userId: resultData.userId,
+    siteName: resultData.siteName,
+    exchangeRate: resultData.exchangeRate
+      ? resultData.exchangeRate.toString()
+      : mode === DIALOG_MODES.ADD
+        ? ""
+        : draft.exchangeRate,
+    siteType: nextSiteType,
+    authType:
+      nextSiteType === SUB2API ? AuthTypeEnum.AccessToken : draft.authType,
+    cookieAuthSessionCookie:
+      nextSiteType === SUB2API ? "" : draft.cookieAuthSessionCookie,
+    checkIn: preserveExistingCheckIn
+      ? deepOverride(nextCheckIn, draft.checkIn)
+      : nextCheckIn,
+    sub2apiRefreshToken:
+      resultData.siteType === SUB2API && resultData.sub2apiAuth
+        ? resultData.sub2apiAuth.refreshToken
+        : draft.sub2apiRefreshToken,
+    sub2apiTokenExpiresAt:
+      resultData.siteType === SUB2API && resultData.sub2apiAuth
+        ? resultData.sub2apiAuth.tokenExpiresAt ?? null
+        : draft.sub2apiTokenExpiresAt,
+  }
+
+  return nextSiteType === SUB2API
+    ? applySub2ApiDraftConstraints(nextDraft)
+    : nextDraft
+}
+
+/**
+ * Avoids unnecessary draft updates when Sub2API normalization would not change the effective values.
+ */
+function areDraftsEquivalent(
+  left: AccountDialogDraft,
+  right: AccountDialogDraft,
+): boolean {
+  return (
+    left.authType === right.authType &&
+    left.cookieAuthSessionCookie === right.cookieAuthSessionCookie &&
+    left.checkIn.enableDetection === right.checkIn.enableDetection &&
+    left.checkIn.autoCheckInEnabled === right.checkIn.autoCheckInEnabled &&
+    left.sub2apiUseRefreshToken === right.sub2apiUseRefreshToken &&
+    left.sub2apiRefreshToken === right.sub2apiRefreshToken &&
+    left.sub2apiTokenExpiresAt === right.sub2apiTokenExpiresAt
+  )
 }
