@@ -49,6 +49,13 @@ import {
 } from "~/utils/core/urlParsing"
 import { openSettingsTab } from "~/utils/navigation"
 
+import {
+  createEmptyAccountDialogDraft,
+  type AccountDialogDraft,
+  type AccountDialogFormSource,
+  type AccountDialogPhase,
+} from "../models"
+
 const AUTO_DETECT_SLOW_HINT_DELAY_MS = 10_000
 
 /**
@@ -104,52 +111,27 @@ export function useAccountDialog({
   const [url, setUrl] = useState("")
   const [isDetecting, setIsDetecting] = useState(false)
   const [isDetectingSlow, setIsDetectingSlow] = useState(false)
-  const [siteName, setSiteName] = useState("")
-  const [username, setUsername] = useState("")
-  const [accessToken, setAccessToken] = useState("")
-  const [userId, setUserId] = useState("")
-  const [isDetected, setIsDetected] = useState(false)
+  const [draft, setDraft] = useState<AccountDialogDraft>(
+    createEmptyAccountDialogDraft,
+  )
+  const [phase, setPhase] = useState<AccountDialogPhase>(
+    mode === DIALOG_MODES.EDIT ? "account-form" : "site-input",
+  )
+  const [formSource, setFormSource] = useState<AccountDialogFormSource>(
+    mode === DIALOG_MODES.EDIT ? "existing-account" : "manual",
+  )
   const [isSaving, setIsSaving] = useState(false)
   const [showAccessToken, setShowAccessToken] = useState(false)
   const [detectionError, setDetectionError] = useState<AutoDetectError | null>(
     null,
   )
-  const [showManualForm, setShowManualForm] = useState(
-    mode === DIALOG_MODES.EDIT,
-  )
-  const [exchangeRate, setExchangeRate] = useState("")
-  const [manualBalanceUsd, setManualBalanceUsd] = useState("")
   const [currentTabUrl, setCurrentTabUrl] = useState<string | null>(null)
-  const [notes, setNotes] = useState("")
-  const [tagIds, setTagIds] = useState<string[]>([])
-  const [excludeFromTotalBalance, setExcludeFromTotalBalance] = useState(false)
-  const [checkIn, setCheckIn] = useState<CheckInConfig>({
-    enableDetection: false,
-    autoCheckInEnabled: true,
-    siteStatus: {
-      isCheckedInToday: false,
-    },
-    customCheckIn: {
-      url: "",
-      redeemUrl: "",
-      openRedeemWithCheckIn: true,
-      isCheckedInToday: false,
-    },
-  })
-  const [siteType, setSiteType] = useState("unknown")
-  const [authType, setAuthType] = useState(AuthTypeEnum.AccessToken)
   const [isAutoConfiguring, setIsAutoConfiguring] = useState(false)
-  const [cookieAuthSessionCookie, setCookieAuthSessionCookie] = useState("")
   const [isImportingCookies, setIsImportingCookies] = useState(false)
   const [showCookiePermissionWarning, setShowCookiePermissionWarning] =
     useState(false)
   const [isImportingSub2apiSession, setIsImportingSub2apiSession] =
     useState(false)
-  const [sub2apiUseRefreshToken, setSub2apiUseRefreshToken] = useState(false)
-  const [sub2apiRefreshToken, setSub2apiRefreshToken] = useState("")
-  const [sub2apiTokenExpiresAt, setSub2apiTokenExpiresAt] = useState<
-    number | null
-  >(null)
 
   const [duplicateAccountWarning, setDuplicateAccountWarning] = useState<{
     isOpen: boolean
@@ -177,6 +159,133 @@ export function useAccountDialog({
     null,
   )
   const hasConsumedAutoFillCurrentSiteUrlRef = useRef(false)
+  const siteName = draft.siteName
+  const username = draft.username
+  const accessToken = draft.accessToken
+  const userId = draft.userId
+  const exchangeRate = draft.exchangeRate
+  const manualBalanceUsd = draft.manualBalanceUsd
+  const notes = draft.notes
+  const tagIds = draft.tagIds
+  const excludeFromTotalBalance = draft.excludeFromTotalBalance
+  const checkIn = draft.checkIn
+  const siteType = draft.siteType
+  const authType = draft.authType
+  const cookieAuthSessionCookie = draft.cookieAuthSessionCookie
+  const sub2apiUseRefreshToken = draft.sub2apiUseRefreshToken
+  const sub2apiRefreshToken = draft.sub2apiRefreshToken
+  const sub2apiTokenExpiresAt = draft.sub2apiTokenExpiresAt
+  const isDetected = phase === "account-form" && formSource === "detected"
+  const showManualForm = phase === "account-form" && formSource !== "detected"
+
+  const updateDraft = useCallback(
+    (updater: (prev: AccountDialogDraft) => AccountDialogDraft) => {
+      setDraft((prev) => updater(prev))
+    },
+    [],
+  )
+  const setSiteName = useCallback(
+    (value: string) => {
+      updateDraft((prev) => ({ ...prev, siteName: value }))
+    },
+    [updateDraft],
+  )
+  const setUsername = useCallback(
+    (value: string) => {
+      updateDraft((prev) => ({ ...prev, username: value }))
+    },
+    [updateDraft],
+  )
+  const setAccessToken = useCallback(
+    (value: string) => {
+      updateDraft((prev) => ({ ...prev, accessToken: value }))
+    },
+    [updateDraft],
+  )
+  const setUserId = useCallback(
+    (value: string) => {
+      updateDraft((prev) => ({ ...prev, userId: value }))
+    },
+    [updateDraft],
+  )
+  const setExchangeRate = useCallback(
+    (value: string) => {
+      updateDraft((prev) => ({ ...prev, exchangeRate: value }))
+    },
+    [updateDraft],
+  )
+  const setManualBalanceUsd = useCallback(
+    (value: string) => {
+      updateDraft((prev) => ({ ...prev, manualBalanceUsd: value }))
+    },
+    [updateDraft],
+  )
+  const setNotes = useCallback(
+    (value: string) => {
+      updateDraft((prev) => ({ ...prev, notes: value }))
+    },
+    [updateDraft],
+  )
+  const setTagIds = useCallback(
+    (value: string[]) => {
+      updateDraft((prev) => ({ ...prev, tagIds: value }))
+    },
+    [updateDraft],
+  )
+  const setExcludeFromTotalBalance = useCallback(
+    (value: boolean) => {
+      updateDraft((prev) => ({ ...prev, excludeFromTotalBalance: value }))
+    },
+    [updateDraft],
+  )
+  const setCheckIn = useCallback(
+    (value: CheckInConfig) => {
+      updateDraft((prev) => ({ ...prev, checkIn: value }))
+    },
+    [updateDraft],
+  )
+  const setSiteType = useCallback(
+    (value: string) => {
+      updateDraft((prev) => ({ ...prev, siteType: value }))
+    },
+    [updateDraft],
+  )
+  const setAuthType = useCallback(
+    (value: AuthTypeEnum) => {
+      updateDraft((prev) => ({ ...prev, authType: value }))
+    },
+    [updateDraft],
+  )
+  const setCookieAuthSessionCookie = useCallback(
+    (value: string) => {
+      updateDraft((prev) => ({ ...prev, cookieAuthSessionCookie: value }))
+    },
+    [updateDraft],
+  )
+  const setSub2apiUseRefreshToken = useCallback(
+    (value: boolean) => {
+      updateDraft((prev) => ({ ...prev, sub2apiUseRefreshToken: value }))
+    },
+    [updateDraft],
+  )
+  const setSub2apiRefreshToken = useCallback(
+    (value: string) => {
+      updateDraft((prev) => ({ ...prev, sub2apiRefreshToken: value }))
+    },
+    [updateDraft],
+  )
+  const setSub2apiTokenExpiresAt = useCallback(
+    (value: number | null) => {
+      updateDraft((prev) => ({ ...prev, sub2apiTokenExpiresAt: value }))
+    },
+    [updateDraft],
+  )
+  const setDraftPartial = useCallback(
+    (value: Partial<AccountDialogDraft>) => {
+      updateDraft((prev) => ({ ...prev, ...value }))
+    },
+    [updateDraft],
+  )
 
   const cancelPendingDuplicateAccountWarning = useCallback(() => {
     duplicateAccountWarningResolverRef.current?.(false)
@@ -313,12 +422,22 @@ export function useAccountDialog({
       setCookieAuthSessionCookie("")
     }
 
-    setCheckIn((prev) => ({
+    updateDraft((prev) => ({
       ...prev,
-      enableDetection: false,
-      autoCheckInEnabled: false,
+      checkIn: {
+        ...prev.checkIn,
+        enableDetection: false,
+        autoCheckInEnabled: false,
+      },
     }))
-  }, [authType, cookieAuthSessionCookie, siteType])
+  }, [
+    authType,
+    cookieAuthSessionCookie,
+    siteType,
+    setAuthType,
+    setCookieAuthSessionCookie,
+    updateDraft,
+  ])
 
   useEffect(() => {
     if (siteType === SUB2API) return
@@ -339,6 +458,9 @@ export function useAccountDialog({
     sub2apiRefreshToken,
     sub2apiTokenExpiresAt,
     sub2apiUseRefreshToken,
+    setSub2apiRefreshToken,
+    setSub2apiTokenExpiresAt,
+    setSub2apiUseRefreshToken,
   ])
 
   // useRef 保存跨渲染引用
@@ -355,42 +477,16 @@ export function useAccountDialog({
     duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
     hasConsumedAutoFillCurrentSiteUrlRef.current = false
     setUrl("")
-    setIsDetected(false)
-    setSiteName("")
-    setUsername("")
-    setAccessToken("")
-    setUserId("")
+    setDraft(createEmptyAccountDialogDraft())
+    setPhase(mode === DIALOG_MODES.EDIT ? "account-form" : "site-input")
+    setFormSource(mode === DIALOG_MODES.EDIT ? "existing-account" : "manual")
     setShowAccessToken(false)
     setDetectionError(null)
-    setShowManualForm(mode === DIALOG_MODES.EDIT)
-    setExchangeRate("")
-    setManualBalanceUsd("")
     setCurrentTabUrl(null)
-    setNotes("")
-    setTagIds([])
-    setExcludeFromTotalBalance(false)
-    setCheckIn({
-      enableDetection: false,
-      autoCheckInEnabled: true,
-      siteStatus: {
-        isCheckedInToday: false,
-      },
-      customCheckIn: {
-        url: "",
-        redeemUrl: "",
-        openRedeemWithCheckIn: true,
-        isCheckedInToday: false,
-      },
-    })
-    setSiteType("unknown")
-    setAuthType(AuthTypeEnum.AccessToken)
     setIsAutoConfiguring(false)
-    setCookieAuthSessionCookie("")
     setIsImportingCookies(false)
     setShowCookiePermissionWarning(false)
-    setSub2apiUseRefreshToken(false)
-    setSub2apiRefreshToken("")
-    setSub2apiTokenExpiresAt(null)
+    setIsImportingSub2apiSession(false)
     targetAccountRef.current = null
   }, [mode])
 
@@ -400,50 +496,53 @@ export function useAccountDialog({
         const siteAccount = await accountStorage.getAccountById(accountId)
         if (siteAccount) {
           setUrl(siteAccount.site_url)
-          setSiteName(siteAccount.site_name)
-          setUsername(siteAccount.account_info.username)
-          setAccessToken(siteAccount.account_info.access_token)
-          setUserId(siteAccount.account_info.id.toString())
-          setExchangeRate(siteAccount.exchange_rate.toString())
-          setManualBalanceUsd(siteAccount.manualBalanceUsd ?? "")
-          setNotes(siteAccount.notes || "")
-          setTagIds(siteAccount.tagIds || [])
-          setExcludeFromTotalBalance(
-            siteAccount.excludeFromTotalBalance === true,
-          )
-          setCheckIn({
-            enableDetection: siteAccount.checkIn?.enableDetection ?? false,
-            autoCheckInEnabled: siteAccount.checkIn?.autoCheckInEnabled ?? true,
-            siteStatus: {
-              isCheckedInToday:
-                siteAccount.checkIn?.siteStatus?.isCheckedInToday ?? false,
-              lastCheckInDate: siteAccount.checkIn?.siteStatus?.lastCheckInDate,
-            },
-            customCheckIn: {
-              url: siteAccount.checkIn?.customCheckIn?.url ?? "",
-              turnstilePreTrigger:
-                siteAccount.checkIn?.customCheckIn?.turnstilePreTrigger,
-              redeemUrl: siteAccount.checkIn?.customCheckIn?.redeemUrl ?? "",
-              openRedeemWithCheckIn:
-                siteAccount.checkIn?.customCheckIn?.openRedeemWithCheckIn ??
-                true,
-              isCheckedInToday:
-                siteAccount.checkIn?.customCheckIn?.isCheckedInToday ?? false,
-              lastCheckInDate:
-                siteAccount.checkIn?.customCheckIn?.lastCheckInDate,
-            },
-          })
-          setSiteType(siteAccount.site_type || "")
-          setAuthType(siteAccount.authType || AuthTypeEnum.AccessToken)
-          setCookieAuthSessionCookie(
-            siteAccount.cookieAuth?.sessionCookie || "",
-          )
           const refreshToken = siteAccount.sub2apiAuth?.refreshToken ?? ""
-          setSub2apiRefreshToken(refreshToken)
-          setSub2apiTokenExpiresAt(
-            siteAccount.sub2apiAuth?.tokenExpiresAt ?? null,
-          )
-          setSub2apiUseRefreshToken(Boolean(refreshToken.trim()))
+          setDraft({
+            siteName: siteAccount.site_name,
+            username: siteAccount.account_info.username,
+            accessToken: siteAccount.account_info.access_token,
+            userId: siteAccount.account_info.id.toString(),
+            exchangeRate: siteAccount.exchange_rate.toString(),
+            manualBalanceUsd: siteAccount.manualBalanceUsd ?? "",
+            notes: siteAccount.notes || "",
+            tagIds: siteAccount.tagIds || [],
+            excludeFromTotalBalance:
+              siteAccount.excludeFromTotalBalance === true,
+            checkIn: {
+              enableDetection: siteAccount.checkIn?.enableDetection ?? false,
+              autoCheckInEnabled:
+                siteAccount.checkIn?.autoCheckInEnabled ?? true,
+              siteStatus: {
+                isCheckedInToday:
+                  siteAccount.checkIn?.siteStatus?.isCheckedInToday ?? false,
+                lastCheckInDate:
+                  siteAccount.checkIn?.siteStatus?.lastCheckInDate,
+              },
+              customCheckIn: {
+                url: siteAccount.checkIn?.customCheckIn?.url ?? "",
+                turnstilePreTrigger:
+                  siteAccount.checkIn?.customCheckIn?.turnstilePreTrigger,
+                redeemUrl: siteAccount.checkIn?.customCheckIn?.redeemUrl ?? "",
+                openRedeemWithCheckIn:
+                  siteAccount.checkIn?.customCheckIn?.openRedeemWithCheckIn ??
+                  true,
+                isCheckedInToday:
+                  siteAccount.checkIn?.customCheckIn?.isCheckedInToday ?? false,
+                lastCheckInDate:
+                  siteAccount.checkIn?.customCheckIn?.lastCheckInDate,
+              },
+            },
+            siteType: siteAccount.site_type || "",
+            authType: siteAccount.authType || AuthTypeEnum.AccessToken,
+            cookieAuthSessionCookie:
+              siteAccount.cookieAuth?.sessionCookie || "",
+            sub2apiUseRefreshToken: Boolean(refreshToken.trim()),
+            sub2apiRefreshToken: refreshToken,
+            sub2apiTokenExpiresAt:
+              siteAccount.sub2apiAuth?.tokenExpiresAt ?? null,
+          })
+          setPhase("account-form")
+          setFormSource("existing-account")
         }
       } catch (error) {
         logger.error("Failed to load account data", { error, accountId })
@@ -501,7 +600,7 @@ export function useAccountDialog({
         })
       }
     }
-  }, [account, mode])
+  }, [account, mode, setSiteName])
 
   useEffect(() => {
     if (isOpen) {
@@ -779,36 +878,33 @@ export function useAccountDialog({
         return
       }
 
-      setSub2apiRefreshToken(refreshToken)
       const tokenExpiresAtRaw = imported?.sub2apiAuth?.tokenExpiresAt
-      setSub2apiTokenExpiresAt(
-        typeof tokenExpiresAtRaw === "number" &&
-          Number.isFinite(tokenExpiresAtRaw)
-          ? tokenExpiresAtRaw
-          : null,
-      )
-
       const importedAccessToken =
         typeof imported?.accessToken === "string"
           ? imported.accessToken.trim()
           : ""
-      if (importedAccessToken) {
-        setAccessToken(importedAccessToken)
-      }
-
       const importedUserId =
         typeof imported?.userId === "number" && Number.isFinite(imported.userId)
           ? imported.userId
           : null
-      if (typeof importedUserId === "number") {
-        setUserId(String(importedUserId))
-      }
-
       const importedUsername =
         typeof imported?.user?.username === "string"
           ? imported.user.username.trim()
           : ""
-      setUsername(importedUsername)
+      updateDraft((prev) => ({
+        ...prev,
+        sub2apiRefreshToken: refreshToken,
+        sub2apiTokenExpiresAt:
+          typeof tokenExpiresAtRaw === "number" &&
+          Number.isFinite(tokenExpiresAtRaw)
+            ? tokenExpiresAtRaw
+            : null,
+        ...(importedAccessToken ? { accessToken: importedAccessToken } : {}),
+        ...(typeof importedUserId === "number"
+          ? { userId: String(importedUserId) }
+          : {}),
+        username: importedUsername,
+      }))
 
       toast.success(t("messages.importSub2apiSessionSuccess"))
     } catch (error) {
@@ -847,23 +943,13 @@ export function useAccountDialog({
 
       if (!result.success) {
         setDetectionError(result.detailedError || null)
-        setShowManualForm(true)
+        setPhase("account-form")
+        setFormSource("manual")
         return
       }
 
       const resultData = result.data
       if (resultData) {
-        setUsername(resultData.username)
-        setAccessToken(resultData.accessToken)
-        setUserId(resultData.userId)
-
-        if (resultData.siteType === SUB2API && resultData.sub2apiAuth) {
-          setSub2apiRefreshToken(resultData.sub2apiAuth.refreshToken)
-          setSub2apiTokenExpiresAt(
-            resultData.sub2apiAuth.tokenExpiresAt ?? null,
-          )
-        }
-
         const detectedCheckIn: CheckInConfig = {
           ...(resultData.checkIn ?? {}),
           enableDetection: resultData.checkIn?.enableDetection ?? false,
@@ -885,32 +971,46 @@ export function useAccountDialog({
         }
 
         const preserveExistingCheckIn =
-          mode === DIALOG_MODES.EDIT || showManualForm
+          mode === DIALOG_MODES.EDIT || formSource !== "detected"
 
-        setCheckIn((prev) =>
-          preserveExistingCheckIn
-            ? deepOverride(detectedCheckIn, prev)
-            : detectedCheckIn,
-        )
+        const nextSiteType = resultData.siteType || siteType
+        const nextCheckIn =
+          nextSiteType === SUB2API
+            ? {
+                ...detectedCheckIn,
+                enableDetection: false,
+                autoCheckInEnabled: false,
+              }
+            : detectedCheckIn
 
-        if (resultData.exchangeRate) {
-          setExchangeRate(resultData.exchangeRate.toString())
-        } else if (mode === DIALOG_MODES.ADD) {
-          setExchangeRate("")
-        }
-
-        if (resultData.siteType) {
-          setSiteType(resultData.siteType)
-          if (resultData.siteType === SUB2API) {
-            setAuthType(AuthTypeEnum.AccessToken)
-            setCookieAuthSessionCookie("")
-            setCheckIn((prev) => ({
-              ...prev,
-              enableDetection: false,
-              autoCheckInEnabled: false,
-            }))
-          }
-        }
+        setDraft((prev) => ({
+          ...prev,
+          username: resultData.username,
+          accessToken: resultData.accessToken,
+          userId: resultData.userId,
+          siteName: resultData.siteName,
+          exchangeRate: resultData.exchangeRate
+            ? resultData.exchangeRate.toString()
+            : mode === DIALOG_MODES.ADD
+              ? ""
+              : prev.exchangeRate,
+          siteType: nextSiteType,
+          authType:
+            nextSiteType === SUB2API ? AuthTypeEnum.AccessToken : prev.authType,
+          cookieAuthSessionCookie:
+            nextSiteType === SUB2API ? "" : prev.cookieAuthSessionCookie,
+          checkIn: preserveExistingCheckIn
+            ? deepOverride(nextCheckIn, prev.checkIn)
+            : nextCheckIn,
+          sub2apiRefreshToken:
+            resultData.siteType === SUB2API && resultData.sub2apiAuth
+              ? resultData.sub2apiAuth.refreshToken
+              : prev.sub2apiRefreshToken,
+          sub2apiTokenExpiresAt:
+            resultData.siteType === SUB2API && resultData.sub2apiAuth
+              ? resultData.sub2apiAuth.tokenExpiresAt ?? null
+              : prev.sub2apiTokenExpiresAt,
+        }))
 
         // Attempt to auto-import session cookies after detection for cookie-auth accounts.
         if (
@@ -951,8 +1051,8 @@ export function useAccountDialog({
           }
         }
 
-        setIsDetected(true)
-        setSiteName(resultData.siteName)
+        setPhase("account-form")
+        setFormSource("detected")
         if (mode === DIALOG_MODES.EDIT) {
           toast.success(t("messages.autoDetectSuccess"))
         }
@@ -960,7 +1060,8 @@ export function useAccountDialog({
     } catch (error) {
       logger.error("Auto-detect failed", { error, url: url.trim(), authType })
       setDetectionError(analyzeAutoDetectError(error))
-      setShowManualForm(true)
+      setPhase("account-form")
+      setFormSource("manual")
     } finally {
       setIsDetecting(false)
     }
@@ -972,7 +1073,8 @@ export function useAccountDialog({
       if (!shouldContinue) {
         return
       }
-      setShowManualForm(true)
+      setPhase("account-form")
+      setFormSource("manual")
     } catch (error) {
       toast.error(
         t("messages.operationFailed", {
@@ -1282,6 +1384,9 @@ export function useAccountDialog({
   return {
     state: {
       url,
+      phase,
+      formSource,
+      draft,
       isDetecting,
       isDetectingSlow,
       siteName,
@@ -1317,12 +1422,19 @@ export function useAccountDialog({
     },
     setters: {
       setUrl,
+      setPhase,
+      setFormSource,
+      setDraft,
+      setDraftPartial,
       setSiteName,
       setUsername,
       setAccessToken,
       setUserId,
       setShowAccessToken,
-      setShowManualForm,
+      setShowManualForm: (visible: boolean) => {
+        setPhase(visible ? "account-form" : "site-input")
+        setFormSource("manual")
+      },
       setExchangeRate,
       setManualBalanceUsd,
       setNotes,
@@ -1332,6 +1444,7 @@ export function useAccountDialog({
       setSiteType,
       setAuthType,
       setCookieAuthSessionCookie,
+      setSub2apiUseRefreshToken,
       setSub2apiRefreshToken,
       setSub2apiTokenExpiresAt,
     },

@@ -6,27 +6,27 @@ import { Button } from "~/components/ui"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { LDOH_ORIGIN } from "~/services/integrations/ldohSiteLookup/constants"
 
+import type { AccountDialogFormSource, AccountDialogPhase } from "./models"
+
 interface InfoPanelProps {
   mode: DialogMode
-  isDetected?: boolean
-  showManualForm?: boolean
+  phase: AccountDialogPhase
+  formSource: AccountDialogFormSource
 }
 
 /**
  * Side panel describing automatic detection status and next steps per mode.
  * @param props Component props indicating mode and detection state.
  * @param props.mode Dialog mode used to determine copy and icon visuals.
- * @param props.isDetected Whether auto-detection succeeded.
- * @param props.showManualForm Whether manual form is currently shown.
+ * @param props.phase Current dialog phase determining whether the form is shown.
+ * @param props.formSource Source that led the dialog into form mode.
  */
-export default function InfoPanel({
-  mode,
-  isDetected,
-  showManualForm,
-}: InfoPanelProps) {
+export default function InfoPanel({ mode, phase, formSource }: InfoPanelProps) {
   const { t } = useTranslation("accountDialog")
   const isAddMode = mode === DIALOG_MODES.ADD
-  const showLdohSiteListLink = isAddMode && !isDetected
+  const isDetected = formSource === "detected"
+  const isManualForm = phase === "account-form" && formSource !== "detected"
+  const showLdohSiteListLink = isAddMode && phase === "site-input"
 
   const handleOpenLdohSiteList = () => {
     browser.tabs.create({ url: LDOH_ORIGIN, active: true })
@@ -35,7 +35,7 @@ export default function InfoPanel({
   const getTitle = () => {
     if (isAddMode) {
       if (isDetected) return t("infoPanel.confirmation")
-      if (showManualForm) return t("infoPanel.manualAdd")
+      if (isManualForm) return t("infoPanel.manualAdd")
       return t("infoPanel.autoDetect")
     }
     return t("infoPanel.editInfo")
@@ -44,7 +44,7 @@ export default function InfoPanel({
   const getDescription = () => {
     if (isAddMode) {
       if (isDetected) return t("infoPanel.confirmAddInfo")
-      if (showManualForm) return t("infoPanel.manualInfo")
+      if (isManualForm) return t("infoPanel.manualInfo")
       return t("infoPanel.autoDetectInfo")
     }
     return (

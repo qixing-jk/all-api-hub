@@ -14,8 +14,8 @@ describe("AccountDialog InfoPanel", () => {
     render(
       <InfoPanel
         mode={DIALOG_MODES.ADD}
-        isDetected={false}
-        showManualForm={false}
+        phase="site-input"
+        formSource="manual"
       />,
     )
 
@@ -34,7 +34,11 @@ describe("AccountDialog InfoPanel", () => {
 
   it("hides LDOH site list link when detection succeeds", () => {
     render(
-      <InfoPanel mode={DIALOG_MODES.ADD} isDetected={true} showManualForm />,
+      <InfoPanel
+        mode={DIALOG_MODES.ADD}
+        phase="account-form"
+        formSource="detected"
+      />,
     )
 
     expect(

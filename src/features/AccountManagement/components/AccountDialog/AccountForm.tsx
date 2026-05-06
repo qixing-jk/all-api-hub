@@ -33,25 +33,14 @@ import { isValidExchangeRate } from "~/services/accounts/accountOperations"
 import { AuthTypeEnum, type CheckInConfig, type Tag } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 
+import type { AccountDialogDraft } from "./models"
+
 interface AccountFormProps {
-  authType: AuthTypeEnum
-  siteName: string
-  username: string
-  userId: string
-  accessToken: string
-  exchangeRate: string
-  manualBalanceUsd: string
+  draft: AccountDialogDraft
   isManualBalanceUsdInvalid: boolean
   showAccessToken: boolean
-  notes: string
-  selectedTagIds: string[]
-  excludeFromTotalBalance: boolean
-  cookieAuthSessionCookie: string
   isImportingCookies: boolean
   showCookiePermissionWarning: boolean
-  sub2apiUseRefreshToken: boolean
-  sub2apiRefreshToken: string
-  sub2apiTokenExpiresAt: number | null
   isImportingSub2apiSession: boolean
   onSiteNameChange: (value: string) => void
   onUsernameChange: (value: string) => void
@@ -74,7 +63,6 @@ interface AccountFormProps {
   createTag: (name: string) => Promise<Tag>
   renameTag: (tagId: string, name: string) => Promise<Tag>
   deleteTag: (tagId: string) => Promise<{ updatedAccounts: number }>
-  siteType: string
   onSiteTypeChange: (value: string) => void
   checkIn: CheckInConfig
   onCheckInChange: (value: CheckInConfig) => void
@@ -84,24 +72,11 @@ interface AccountFormProps {
  * Account form body used inside the account dialog for creating/editing accounts.
  */
 export default function AccountForm({
-  authType,
-  siteName,
-  username,
-  userId,
-  accessToken,
-  exchangeRate,
-  manualBalanceUsd,
+  draft,
   isManualBalanceUsdInvalid,
   showAccessToken,
-  notes,
-  selectedTagIds,
-  excludeFromTotalBalance,
-  cookieAuthSessionCookie,
   isImportingCookies,
   showCookiePermissionWarning,
-  sub2apiUseRefreshToken,
-  sub2apiRefreshToken,
-  sub2apiTokenExpiresAt,
   isImportingSub2apiSession,
   onSiteNameChange,
   onUsernameChange,
@@ -124,12 +99,28 @@ export default function AccountForm({
   createTag,
   renameTag,
   deleteTag,
-  siteType,
   onSiteTypeChange,
   checkIn,
   onCheckInChange,
 }: AccountFormProps) {
   const { t } = useTranslation("accountDialog")
+  const {
+    authType,
+    siteName,
+    username,
+    userId,
+    accessToken,
+    exchangeRate,
+    manualBalanceUsd,
+    notes,
+    tagIds,
+    excludeFromTotalBalance,
+    cookieAuthSessionCookie,
+    sub2apiUseRefreshToken,
+    sub2apiRefreshToken,
+    sub2apiTokenExpiresAt,
+    siteType,
+  } = draft
   const isSub2Api = siteType === SUB2API
   const [showSub2apiRefreshToken, setShowSub2apiRefreshToken] = useState(false)
 
@@ -610,7 +601,7 @@ export default function AccountForm({
         <TagPicker
           tags={tags}
           tagCountsById={tagCountsById}
-          selectedTagIds={selectedTagIds}
+          selectedTagIds={tagIds}
           onSelectedTagIdsChange={onSelectedTagIdsChange}
           onCreateTag={createTag}
           onRenameTag={renameTag}

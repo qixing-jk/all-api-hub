@@ -10,10 +10,11 @@ describe("AccountDialog ActionButtons", () => {
   const createProps = (): ComponentProps<typeof ActionButtons> => ({
     mode: DIALOG_MODES.ADD,
     url: "https://api.example.com",
+    phase: "account-form",
+    formSource: "manual",
     isDetecting: false,
     isSaving: false,
     isFormValid: true,
-    isDetected: false,
     onAutoDetect: vi.fn(),
     onShowManualForm: vi.fn(),
     onClose: vi.fn(),
@@ -26,7 +27,7 @@ describe("AccountDialog ActionButtons", () => {
     const user = userEvent.setup()
     const props = createProps()
     props.url = "   "
-    props.isFormValid = false
+    props.phase = "site-input"
 
     render(<ActionButtons {...props} />)
 
@@ -53,8 +54,8 @@ describe("AccountDialog ActionButtons", () => {
   it("keeps the manual add action available while auto-detect is already running", async () => {
     const user = userEvent.setup()
     const props = createProps()
-    props.isFormValid = false
     props.isDetecting = true
+    props.phase = "site-input"
 
     render(<ActionButtons {...props} />)
 
@@ -117,6 +118,7 @@ describe("AccountDialog ActionButtons", () => {
   it("shows add-mode auto-config and save actions, and wires the auto-config handler", async () => {
     const user = userEvent.setup()
     const props = createProps()
+    props.formSource = "manual"
 
     render(<ActionButtons {...props} />)
 
@@ -145,7 +147,7 @@ describe("AccountDialog ActionButtons", () => {
   it("disables auto-config and shows the blocking reason when the visible form becomes invalid", async () => {
     const user = userEvent.setup()
     const props = createProps()
-    props.isDetected = true
+    props.formSource = "detected"
     props.isFormValid = false
 
     render(<ActionButtons {...props} />)
@@ -167,7 +169,7 @@ describe("AccountDialog ActionButtons", () => {
 
   it("switches submit labels for detected and saving states and disables submission while busy", async () => {
     const props = createProps()
-    props.isDetected = true
+    props.formSource = "detected"
 
     const { rerender } = render(<ActionButtons {...props} />)
 
@@ -182,7 +184,7 @@ describe("AccountDialog ActionButtons", () => {
         {...props}
         isSaving={true}
         isAutoConfiguring={true}
-        isDetected={false}
+        formSource="manual"
       />,
     )
 

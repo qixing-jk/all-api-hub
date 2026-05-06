@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
 import AccountForm from "~/features/AccountManagement/components/AccountDialog/AccountForm"
+import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
@@ -42,24 +43,29 @@ describe("AccountDialog AccountForm", () => {
     }) as CheckInConfig
 
   const createProps = (): ComponentProps<typeof AccountForm> => ({
-    authType: AuthTypeEnum.AccessToken,
-    siteName: "Example Site",
-    username: "alice",
-    userId: "12",
-    accessToken: "secret-token",
-    exchangeRate: "7.2",
-    manualBalanceUsd: "",
+    draft: {
+      ...createEmptyAccountDialogDraft(),
+      authType: AuthTypeEnum.AccessToken,
+      siteName: "Example Site",
+      username: "alice",
+      userId: "12",
+      accessToken: "secret-token",
+      exchangeRate: "7.2",
+      manualBalanceUsd: "",
+      notes: "existing note",
+      tagIds: [],
+      excludeFromTotalBalance: false,
+      cookieAuthSessionCookie: "",
+      sub2apiUseRefreshToken: false,
+      sub2apiRefreshToken: "",
+      sub2apiTokenExpiresAt: null,
+      siteType: UNKNOWN_SITE,
+      checkIn: createCheckIn(),
+    },
     isManualBalanceUsdInvalid: false,
     showAccessToken: false,
-    notes: "existing note",
-    selectedTagIds: [],
-    excludeFromTotalBalance: false,
-    cookieAuthSessionCookie: "",
     isImportingCookies: false,
     showCookiePermissionWarning: false,
-    sub2apiUseRefreshToken: false,
-    sub2apiRefreshToken: "",
-    sub2apiTokenExpiresAt: null,
     isImportingSub2apiSession: false,
     onSiteNameChange: vi.fn(),
     onUsernameChange: vi.fn(),
@@ -82,7 +88,6 @@ describe("AccountDialog AccountForm", () => {
     createTag: vi.fn(),
     renameTag: vi.fn(),
     deleteTag: vi.fn(),
-    siteType: UNKNOWN_SITE,
     onSiteTypeChange: vi.fn(),
     checkIn: createCheckIn(),
     onCheckInChange: vi.fn(),
@@ -91,8 +96,8 @@ describe("AccountDialog AccountForm", () => {
   it("propagates core field edits, exposes access-token controls, and surfaces validation states", async () => {
     const user = userEvent.setup()
     const props = createProps()
-    props.exchangeRate = "0"
-    props.manualBalanceUsd = "-1"
+    props.draft.exchangeRate = "0"
+    props.draft.manualBalanceUsd = "-1"
     props.isManualBalanceUsdInvalid = true
 
     render(<AccountForm {...props} />)
@@ -174,8 +179,8 @@ describe("AccountDialog AccountForm", () => {
   it("shows cookie-auth import fallback UI and permission guidance when cookie auth is selected", async () => {
     const user = userEvent.setup()
     const props = createProps()
-    props.authType = AuthTypeEnum.Cookie
-    props.cookieAuthSessionCookie = "session=abc"
+    props.draft.authType = AuthTypeEnum.Cookie
+    props.draft.cookieAuthSessionCookie = "session=abc"
     props.isImportingCookies = true
     props.showCookiePermissionWarning = true
 
@@ -210,10 +215,10 @@ describe("AccountDialog AccountForm", () => {
   it("renders Sub2API refresh-token controls, visibility toggles, and expiry metadata", async () => {
     const user = userEvent.setup()
     const props = createProps()
-    props.siteType = SUB2API
-    props.sub2apiUseRefreshToken = true
-    props.sub2apiRefreshToken = "refresh-secret"
-    props.sub2apiTokenExpiresAt = 1700000000000
+    props.draft.siteType = SUB2API
+    props.draft.sub2apiUseRefreshToken = true
+    props.draft.sub2apiRefreshToken = "refresh-secret"
+    props.draft.sub2apiTokenExpiresAt = 1700000000000
     props.isImportingSub2apiSession = true
 
     render(<AccountForm {...props} />)
