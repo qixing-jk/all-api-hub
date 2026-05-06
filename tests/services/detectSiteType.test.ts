@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SITE_TITLE_RULES, UNKNOWN_SITE } from "~/constants/siteType"
+import { NEW_API, SITE_TITLE_RULES, UNKNOWN_SITE } from "~/constants/siteType"
 import {
   fetchSiteOriginalTitle,
   getSiteType,
@@ -268,8 +268,7 @@ describe("detectSiteType", () => {
 
         const siteType = await getSiteType("https://example.com")
 
-        // Result depends on whether "new-api" matches any SITE_TITLE_RULES
-        expect(typeof siteType).toBe("string")
+        expect(siteType).toBe(NEW_API)
       })
 
       it("should handle API response without message", async () => {

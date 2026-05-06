@@ -296,6 +296,7 @@ const apiRequest = async <T>(
 
   if (!response.ok) {
     let errorCode: ApiErrorCode = API_ERROR_CODES.HTTP_OTHER
+    let errorMessage = `请求失败: ${response.status}`
 
     if (response.status === 401) {
       errorCode = API_ERROR_CODES.HTTP_401
@@ -325,12 +326,28 @@ const apiRequest = async <T>(
       }
     }
 
-    throw new ApiError(
-      `请求失败: ${response.status}`,
-      response.status,
-      endpoint,
-      errorCode,
-    )
+    if (
+      responseType === "json" &&
+      errorCode !== API_ERROR_CODES.CONTENT_TYPE_MISMATCH
+    ) {
+      try {
+        const responseBody = (await response.clone().json()) as Partial<
+          ApiResponse<unknown>
+        >
+        if (
+          responseBody &&
+          typeof responseBody === "object" &&
+          typeof responseBody.message === "string" &&
+          responseBody.message.trim()
+        ) {
+          errorMessage = responseBody.message
+        }
+      } catch {
+        // Keep the generic HTTP status message when the error body is not parseable JSON.
+      }
+    }
+
+    throw new ApiError(errorMessage, response.status, endpoint, errorCode)
   }
   if (responseType === "json") {
     const contentType = response.headers.get("content-type") || ""

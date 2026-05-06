@@ -415,6 +415,34 @@ describe("apiService common fetchApi helpers", () => {
     ).rejects.toBeInstanceOf(ApiError)
   })
 
+  it("preserves backend JSON error messages for non-2xx responses", async () => {
+    server.use(
+      http.get(API_URL, () => {
+        return HttpResponse.json(
+          {
+            success: false,
+            message: "error: invalid user new-api",
+          },
+          { status: 400 },
+        )
+      }),
+    )
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.Cookie },
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 400,
+      message: "error: invalid user new-api",
+      code: ApiErrorCodes.HTTP_OTHER,
+    })
+  })
+
   it("classifies 401 HTML responses as CONTENT_TYPE_MISMATCH for JSON requests", async () => {
     server.use(
       http.get(API_URL, () => {
