@@ -1,8 +1,21 @@
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 
-export type AccountDialogPhase = "site-input" | "account-form"
+export const ACCOUNT_DIALOG_PHASES = {
+  SITE_INPUT: "site-input",
+  ACCOUNT_FORM: "account-form",
+} as const
 
-export type AccountDialogFormSource = "manual" | "detected" | "existing-account"
+export type AccountDialogPhase =
+  (typeof ACCOUNT_DIALOG_PHASES)[keyof typeof ACCOUNT_DIALOG_PHASES]
+
+export const ACCOUNT_DIALOG_FORM_SOURCES = {
+  MANUAL: "manual",
+  DETECTED: "detected",
+  EXISTING_ACCOUNT: "existing-account",
+} as const
+
+export type AccountDialogFormSource =
+  (typeof ACCOUNT_DIALOG_FORM_SOURCES)[keyof typeof ACCOUNT_DIALOG_FORM_SOURCES]
 
 export interface AccountDialogDraft {
   siteName: string

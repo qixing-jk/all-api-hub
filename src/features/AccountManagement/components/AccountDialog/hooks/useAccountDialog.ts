@@ -50,6 +50,8 @@ import {
 import { openSettingsTab } from "~/utils/navigation"
 
 import {
+  ACCOUNT_DIALOG_FORM_SOURCES,
+  ACCOUNT_DIALOG_PHASES,
   createEmptyAccountDialogDraft,
   type AccountDialogDraft,
   type AccountDialogFormSource,
@@ -115,10 +117,14 @@ export function useAccountDialog({
     createEmptyAccountDialogDraft,
   )
   const [phase, setPhase] = useState<AccountDialogPhase>(
-    mode === DIALOG_MODES.EDIT ? "account-form" : "site-input",
+    mode === DIALOG_MODES.EDIT
+      ? ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+      : ACCOUNT_DIALOG_PHASES.SITE_INPUT,
   )
   const [formSource, setFormSource] = useState<AccountDialogFormSource>(
-    mode === DIALOG_MODES.EDIT ? "existing-account" : "manual",
+    mode === DIALOG_MODES.EDIT
+      ? ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT
+      : ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
   )
   const [isSaving, setIsSaving] = useState(false)
   const [showAccessToken, setShowAccessToken] = useState(false)
@@ -175,8 +181,12 @@ export function useAccountDialog({
   const sub2apiUseRefreshToken = draft.sub2apiUseRefreshToken
   const sub2apiRefreshToken = draft.sub2apiRefreshToken
   const sub2apiTokenExpiresAt = draft.sub2apiTokenExpiresAt
-  const isDetected = phase === "account-form" && formSource === "detected"
-  const showManualForm = phase === "account-form" && formSource !== "detected"
+  const isDetected =
+    phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM &&
+    formSource === ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
+  const showManualForm =
+    phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM &&
+    formSource !== ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
 
   const updateDraft = useCallback(
     (updater: (prev: AccountDialogDraft) => AccountDialogDraft) => {
@@ -478,8 +488,16 @@ export function useAccountDialog({
     hasConsumedAutoFillCurrentSiteUrlRef.current = false
     setUrl("")
     setDraft(createEmptyAccountDialogDraft())
-    setPhase(mode === DIALOG_MODES.EDIT ? "account-form" : "site-input")
-    setFormSource(mode === DIALOG_MODES.EDIT ? "existing-account" : "manual")
+    setPhase(
+      mode === DIALOG_MODES.EDIT
+        ? ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+        : ACCOUNT_DIALOG_PHASES.SITE_INPUT,
+    )
+    setFormSource(
+      mode === DIALOG_MODES.EDIT
+        ? ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT
+        : ACCOUNT_DIALOG_FORM_SOURCES.MANUAL,
+    )
     setShowAccessToken(false)
     setDetectionError(null)
     setCurrentTabUrl(null)
@@ -541,8 +559,8 @@ export function useAccountDialog({
             sub2apiTokenExpiresAt:
               siteAccount.sub2apiAuth?.tokenExpiresAt ?? null,
           })
-          setPhase("account-form")
-          setFormSource("existing-account")
+          setPhase(ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM)
+          setFormSource(ACCOUNT_DIALOG_FORM_SOURCES.EXISTING_ACCOUNT)
         }
       } catch (error) {
         logger.error("Failed to load account data", { error, accountId })
@@ -943,8 +961,8 @@ export function useAccountDialog({
 
       if (!result.success) {
         setDetectionError(result.detailedError || null)
-        setPhase("account-form")
-        setFormSource("manual")
+        setPhase(ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM)
+        setFormSource(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
         return
       }
 
@@ -971,7 +989,8 @@ export function useAccountDialog({
         }
 
         const preserveExistingCheckIn =
-          mode === DIALOG_MODES.EDIT || formSource !== "detected"
+          mode === DIALOG_MODES.EDIT ||
+          formSource !== ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
 
         const nextSiteType = resultData.siteType || siteType
         const nextCheckIn =
@@ -1051,8 +1070,8 @@ export function useAccountDialog({
           }
         }
 
-        setPhase("account-form")
-        setFormSource("detected")
+        setPhase(ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM)
+        setFormSource(ACCOUNT_DIALOG_FORM_SOURCES.DETECTED)
         if (mode === DIALOG_MODES.EDIT) {
           toast.success(t("messages.autoDetectSuccess"))
         }
@@ -1060,8 +1079,8 @@ export function useAccountDialog({
     } catch (error) {
       logger.error("Auto-detect failed", { error, url: url.trim(), authType })
       setDetectionError(analyzeAutoDetectError(error))
-      setPhase("account-form")
-      setFormSource("manual")
+      setPhase(ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM)
+      setFormSource(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
     } finally {
       setIsDetecting(false)
     }
@@ -1073,8 +1092,8 @@ export function useAccountDialog({
       if (!shouldContinue) {
         return
       }
-      setPhase("account-form")
-      setFormSource("manual")
+      setPhase(ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM)
+      setFormSource(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
     } catch (error) {
       toast.error(
         t("messages.operationFailed", {
@@ -1432,8 +1451,12 @@ export function useAccountDialog({
       setUserId,
       setShowAccessToken,
       setShowManualForm: (visible: boolean) => {
-        setPhase(visible ? "account-form" : "site-input")
-        setFormSource("manual")
+        setPhase(
+          visible
+            ? ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+            : ACCOUNT_DIALOG_PHASES.SITE_INPUT,
+        )
+        setFormSource(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
       },
       setExchangeRate,
       setManualBalanceUsd,

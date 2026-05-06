@@ -15,6 +15,7 @@ import { DuplicateAccountWarningDialog } from "./DuplicateAccountWarningDialog"
 import { useAccountDialog } from "./hooks/useAccountDialog"
 import InfoPanel from "./InfoPanel"
 import { ManagedSiteConfigPromptDialog } from "./ManagedSiteConfigPromptDialog"
+import { ACCOUNT_DIALOG_PHASES } from "./models"
 import SiteInfoInput from "./SiteInfoInput"
 
 interface AccountDialogProps {
@@ -146,7 +147,7 @@ export default function AccountDialog({
               })}
             />
 
-            {state.phase === "account-form" && (
+            {state.phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM && (
               <AccountForm
                 draft={state.draft}
                 isImportingSub2apiSession={state.isImportingSub2apiSession}

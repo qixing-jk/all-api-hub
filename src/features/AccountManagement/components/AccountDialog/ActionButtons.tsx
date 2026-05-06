@@ -12,7 +12,12 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 
-import type { AccountDialogFormSource, AccountDialogPhase } from "./models"
+import {
+  ACCOUNT_DIALOG_FORM_SOURCES,
+  ACCOUNT_DIALOG_PHASES,
+  type AccountDialogFormSource,
+  type AccountDialogPhase,
+} from "./models"
 
 interface ActionButtonsProps {
   mode: DialogMode
@@ -52,8 +57,8 @@ export default function ActionButtons({
   const { t } = useTranslation(["accountDialog", "common", "settings"])
   const { managedSiteType } = useUserPreferencesContext()
   const isAddMode = mode === DIALOG_MODES.ADD
-  const isPreForm = isAddMode && phase === "site-input"
-  const isDetected = formSource === "detected"
+  const isPreForm = isAddMode && phase === ACCOUNT_DIALOG_PHASES.SITE_INPUT
+  const isDetected = formSource === ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
   const autoConfigTitle = isFormValid
     ? t("accountDialog:actions.autoConfigTitle", {

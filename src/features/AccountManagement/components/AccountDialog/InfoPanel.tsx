@@ -6,7 +6,12 @@ import { Button } from "~/components/ui"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { LDOH_ORIGIN } from "~/services/integrations/ldohSiteLookup/constants"
 
-import type { AccountDialogFormSource, AccountDialogPhase } from "./models"
+import {
+  ACCOUNT_DIALOG_FORM_SOURCES,
+  ACCOUNT_DIALOG_PHASES,
+  type AccountDialogFormSource,
+  type AccountDialogPhase,
+} from "./models"
 
 interface InfoPanelProps {
   mode: DialogMode
@@ -24,9 +29,12 @@ interface InfoPanelProps {
 export default function InfoPanel({ mode, phase, formSource }: InfoPanelProps) {
   const { t } = useTranslation("accountDialog")
   const isAddMode = mode === DIALOG_MODES.ADD
-  const isDetected = formSource === "detected"
-  const isManualForm = phase === "account-form" && formSource !== "detected"
-  const showLdohSiteListLink = isAddMode && phase === "site-input"
+  const isDetected = formSource === ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
+  const isManualForm =
+    phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM &&
+    formSource !== ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
+  const showLdohSiteListLink =
+    isAddMode && phase === ACCOUNT_DIALOG_PHASES.SITE_INPUT
 
   const handleOpenLdohSiteList = () => {
     browser.tabs.create({ url: LDOH_ORIGIN, active: true })
