@@ -15,7 +15,6 @@ import { useTranslation } from "react-i18next"
 import {
   Alert,
   Button,
-  CardDescription,
   FormField,
   IconButton,
   Input,
@@ -184,7 +183,11 @@ export default function AccountForm({
       >
         <FormField
           label={t("siteInfo.authMethod")}
-          description={isSub2Api ? t("siteInfo.sub2apiAuthOnly") : undefined}
+          description={
+            isSub2Api
+              ? t("siteInfo.sub2apiAuthOnly")
+              : t("siteInfo.cookieWarning")
+          }
         >
           <Select
             value={authType}
@@ -215,11 +218,6 @@ export default function AccountForm({
               )}
             </SelectContent>
           </Select>
-          {!isSub2Api && (
-            <CardDescription className="mt-2">
-              {t("siteInfo.cookieWarning")}
-            </CardDescription>
-          )}
         </FormField>
 
         <FormField label={t("form.username")} required>
@@ -487,6 +485,8 @@ export default function AccountForm({
               onCheckInChange({
                 ...checkIn,
                 enableDetection,
+                // When detection turns on, default auto check-in to true unless
+                // the user has explicitly disabled it with false.
                 autoCheckInEnabled:
                   enableDetection && checkIn.autoCheckInEnabled !== false
                     ? checkIn.autoCheckInEnabled ?? true

@@ -34,7 +34,7 @@ export function AccountFormSection({
   if (isSmallScreen) {
     return (
       <div
-        data-testid={`${testId}-container`}
+        data-testid={testId}
         data-default-open={defaultOpen ? "true" : "false"}
         data-layout="mobile-collapsible"
       >
@@ -56,9 +56,7 @@ export function AccountFormSection({
           buttonClassName="rounded-md px-0 py-0 text-left hover:bg-transparent dark:hover:bg-transparent"
           panelClassName="mt-3 border-0 bg-transparent p-0"
         >
-          <div className="space-y-4" data-testid={testId}>
-            {children}
-          </div>
+          <div className="space-y-4">{children}</div>
         </CollapsibleSection>
       </div>
     )
@@ -66,7 +64,7 @@ export function AccountFormSection({
 
   return (
     <div
-      data-testid={`${testId}-container`}
+      data-testid={testId}
       data-default-open={defaultOpen ? "true" : "false"}
       data-layout="desktop-card"
     >
@@ -74,7 +72,6 @@ export function AccountFormSection({
         variant="default"
         padding="none"
         className="overflow-hidden shadow-sm"
-        data-testid={testId}
       >
         <CardHeader padding="sm">
           <CardTitle className="text-sm font-medium">{title}</CardTitle>

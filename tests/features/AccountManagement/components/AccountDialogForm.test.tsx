@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
 import AccountForm from "~/features/AccountManagement/components/AccountDialog/AccountForm"
+import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/accountFormSections"
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
@@ -155,6 +156,84 @@ describe("AccountDialog AccountForm", () => {
     ).toBeInTheDocument()
     expect(
       within(authSection).getByDisplayValue("secret-token"),
+    ).toBeInTheDocument()
+  })
+
+  it("propagates auth type changes from the grouped auth section", async () => {
+    const user = userEvent.setup()
+    const props = createProps()
+
+    render(<AccountForm {...props} />)
+
+    await user.click(
+      await screen.findByTestId("account-management-auth-type-trigger"),
+    )
+    await user.click(
+      await screen.findByRole("option", {
+        name: "accountDialog:siteInfo.authType.cookieAuth",
+      }),
+    )
+
+    expect(props.onAuthTypeChange).toHaveBeenCalledWith(AuthTypeEnum.Cookie)
+  })
+
+  it("uses a consistent section subtree on mobile and honors the default-open layout", async () => {
+    mediaQueryState.isSmallScreen = true
+    const user = userEvent.setup()
+    const props = createProps()
+
+    render(<AccountForm {...props} />)
+
+    const siteInfoSection = await screen.findByTestId(
+      "account-management-account-form-section-site-info",
+    )
+    const authSection = screen.getByTestId(
+      "account-management-account-form-section-auth",
+    )
+    const balanceSection = screen.getByTestId(
+      "account-management-account-form-section-balance",
+    )
+
+    expect(siteInfoSection).toHaveAttribute("data-layout", "mobile-collapsible")
+    expect(siteInfoSection).toHaveAttribute(
+      "data-default-open",
+      String(ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["site-info"]),
+    )
+    expect(authSection).toHaveAttribute(
+      "data-default-open",
+      String(ACCOUNT_FORM_MOBILE_DEFAULT_OPEN["account-auth"]),
+    )
+    expect(balanceSection).toHaveAttribute(
+      "data-default-open",
+      String(ACCOUNT_FORM_MOBILE_DEFAULT_OPEN.balance),
+    )
+
+    expect(
+      within(siteInfoSection).getByText(
+        "accountDialog:sections.siteInfo.title",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(authSection).getByRole("combobox", {
+        name: "accountDialog:siteInfo.authMethod",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      within(balanceSection).queryByPlaceholderText(
+        "accountDialog:form.exchangeRatePlaceholder",
+      ),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      within(balanceSection).getByRole("button", {
+        name: /accountDialog:sections\.balanceAndStats\.title/i,
+      }),
+    )
+
+    expect(
+      within(balanceSection).getByPlaceholderText(
+        "accountDialog:form.exchangeRatePlaceholder",
+      ),
     ).toBeInTheDocument()
   })
 
@@ -340,6 +419,7 @@ describe("AccountDialog AccountForm", () => {
   it("updates check-in toggles and custom check-in config with the expected fallback defaults", async () => {
     const user = userEvent.setup()
     const props = createProps()
+    const onCheckInChange = vi.mocked(props.onCheckInChange)
 
     const { rerender } = render(<AccountForm {...props} />)
 
@@ -348,16 +428,37 @@ describe("AccountDialog AccountForm", () => {
         name: "accountDialog:form.checkInStatus",
       }),
     )
-    expect(props.onCheckInChange).toHaveBeenCalledWith({
+    expect(onCheckInChange).toHaveBeenCalledWith({
       ...props.draft.checkIn,
       enableDetection: true,
       autoCheckInEnabled: true,
     })
 
+    onCheckInChange.mockClear()
+    const explicitFalseCheckIn = createCheckIn({
+      enableDetection: false,
+      autoCheckInEnabled: false,
+    })
+    props.draft.checkIn = explicitFalseCheckIn
+
+    rerender(<AccountForm {...props} />)
+
+    await user.click(
+      screen.getByRole("switch", {
+        name: "accountDialog:form.checkInStatus",
+      }),
+    )
+    expect(onCheckInChange).toHaveBeenCalledWith({
+      ...explicitFalseCheckIn,
+      enableDetection: true,
+      autoCheckInEnabled: false,
+    })
+
+    onCheckInChange.mockClear()
     fireEvent.change(screen.getByPlaceholderText("https://cdk.example.com/"), {
       target: { value: "https://check.example.com/" },
     })
-    expect(props.onCheckInChange).toHaveBeenLastCalledWith({
+    expect(onCheckInChange).toHaveBeenLastCalledWith({
       ...props.draft.checkIn,
       customCheckIn: {
         openRedeemWithCheckIn: true,
@@ -383,7 +484,7 @@ describe("AccountDialog AccountForm", () => {
         name: "accountDialog:form.autoCheckInEnabled",
       }),
     )
-    expect(props.onCheckInChange).toHaveBeenCalledWith({
+    expect(onCheckInChange).toHaveBeenCalledWith({
       ...nextCheckIn,
       autoCheckInEnabled: true,
     })
@@ -393,7 +494,7 @@ describe("AccountDialog AccountForm", () => {
         name: "accountDialog:form.openRedeemWithCheckIn",
       }),
     )
-    expect(props.onCheckInChange).toHaveBeenCalledWith({
+    expect(onCheckInChange).toHaveBeenCalledWith({
       ...nextCheckIn,
       customCheckIn: {
         ...nextCheckIn.customCheckIn,
@@ -405,11 +506,35 @@ describe("AccountDialog AccountForm", () => {
       screen.getByPlaceholderText("https://example.com/console/topup"),
       { target: { value: "https://redeem.example.com/" } },
     )
-    expect(props.onCheckInChange).toHaveBeenLastCalledWith({
+    expect(onCheckInChange).toHaveBeenLastCalledWith({
       ...nextCheckIn,
       customCheckIn: {
         ...nextCheckIn.customCheckIn,
         redeemUrl: "https://redeem.example.com/",
+      },
+    })
+
+    onCheckInChange.mockClear()
+    const missingRedeemToggleCheckIn = createCheckIn({
+      enableDetection: true,
+      customCheckIn: {
+        url: "https://check.example.com/",
+      },
+    })
+    props.draft.checkIn = missingRedeemToggleCheckIn
+
+    rerender(<AccountForm {...props} />)
+
+    await user.click(
+      screen.getByRole("switch", {
+        name: "accountDialog:form.openRedeemWithCheckIn",
+      }),
+    )
+    expect(onCheckInChange).toHaveBeenCalledWith({
+      ...missingRedeemToggleCheckIn,
+      customCheckIn: {
+        ...missingRedeemToggleCheckIn.customCheckIn,
+        openRedeemWithCheckIn: false,
       },
     })
   })

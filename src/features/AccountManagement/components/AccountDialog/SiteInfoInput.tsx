@@ -27,15 +27,14 @@ interface SiteInfoInputProps {
 }
 
 /**
- * Site information section displaying URL input and auth selector with contextual helpers.
+ * Site information section displaying the URL input with contextual helpers
+ * such as current-tab reuse, already-added warnings, and the sub2api hint.
  * @param props Component props defining field values, detection state, and callbacks.
  * @param props.url Current site URL value.
  * @param props.onUrlChange Handler updating the site URL.
  * @param props.isDetected Whether the site info was auto-detected (locks inputs when true).
  * @param props.onClearUrl Clears the URL field.
  * @param props.siteType Detected or selected site type, used for contextual hints.
- * @param props.authType Selected authentication method.
- * @param props.onAuthTypeChange Handler updating the authentication method.
  * @param props.currentTabUrl URL detected from the active browser tab.
  * @param props.isCurrentSiteAdded Indicates if the current site already exists.
  * @param props.detectedAccount Account info detected from the site.
