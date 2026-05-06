@@ -1003,4 +1003,146 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(onSuccess).toHaveBeenCalledWith("saved-account-id")
     expect(result.current.state.isAutoConfiguring).toBe(false)
   })
+
+  it("does not reuse a previously auto-configured saved id after the dialog closes and reopens", async () => {
+    const firstSavedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "First Example",
+      site_url: "https://first.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: "new-api",
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: 18,
+        username: "first-user",
+        access_token: "first-token",
+      },
+    }) as SiteAccount
+    const secondSavedSiteAccount = buildSiteAccount({
+      id: "second-account-id",
+      site_name: "Second Example",
+      site_url: "https://second.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: "new-api",
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: 19,
+        username: "second-user",
+        access_token: "second-token",
+      },
+    }) as SiteAccount
+
+    const getAccountByIdSpy = vi
+      .spyOn(accountStorage, "getAccountById")
+      .mockImplementation(async (accountId) => {
+        if (accountId === "saved-account-id") return firstSavedSiteAccount
+        if (accountId === "second-account-id") return secondSavedSiteAccount
+        return null
+      })
+    const getDisplayDataByIdSpy = vi
+      .spyOn(accountStorage, "getDisplayDataById")
+      .mockImplementation(async (accountId) => {
+        if (accountId === "saved-account-id") {
+          return accountStorage.convertToDisplayData(firstSavedSiteAccount)
+        }
+        if (accountId === "second-account-id") {
+          return accountStorage.convertToDisplayData(secondSavedSiteAccount)
+        }
+        return null
+      })
+
+    mockValidateAndSaveAccount
+      .mockResolvedValueOnce({
+        success: true,
+        accountId: "saved-account-id",
+        message: "Saved successfully",
+        feedbackLevel: "success",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        accountId: "second-account-id",
+        message: "Saved successfully",
+        feedbackLevel: "success",
+      })
+    mockOpenWithAccount.mockImplementation(
+      async (_displaySiteData: any, _channelId: any, onCompleted?: () => void) => {
+        onCompleted?.()
+      },
+    )
+
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ isOpen }: { isOpen: boolean }) =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen,
+          onClose,
+          onSuccess,
+        }),
+      {
+        initialProps: { isOpen: true },
+      },
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://first.example.com")
+      result.current.setters.setSiteName("First Example")
+      result.current.setters.setUsername("first-user")
+      result.current.setters.setAccessToken("first-token")
+      result.current.setters.setUserId("18")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("new-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledTimes(1)
+    expect(getAccountByIdSpy).toHaveBeenCalledWith("saved-account-id")
+    expect(getDisplayDataByIdSpy).toHaveBeenCalledWith("saved-account-id")
+
+    await act(async () => {
+      result.current.handlers.handleClose()
+    })
+
+    rerender({ isOpen: false })
+    rerender({ isOpen: true })
+
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("")
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://second.example.com")
+      result.current.setters.setSiteName("Second Example")
+      result.current.setters.setUsername("second-user")
+      result.current.setters.setAccessToken("second-token")
+      result.current.setters.setUserId("19")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("new-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledTimes(2)
+    expect(getAccountByIdSpy).toHaveBeenCalledWith("second-account-id")
+    expect(getDisplayDataByIdSpy).toHaveBeenCalledWith("second-account-id")
+    expect(mockOpenWithAccount).toHaveBeenLastCalledWith(
+      accountStorage.convertToDisplayData(secondSavedSiteAccount),
+      null,
+      expect.any(Function),
+    )
+  })
 })

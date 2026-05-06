@@ -443,6 +443,7 @@ export function useAccountDialog({
     useChannelDialog()
 
   const resetForm = useCallback(() => {
+    newAccountRef.current = null
     duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
     hasConsumedAutoFillCurrentSiteUrlRef.current = false
     setUrl("")
@@ -872,7 +873,7 @@ export function useAccountDialog({
         ...(typeof importedUserId === "number"
           ? { userId: String(importedUserId) }
           : {}),
-        username: importedUsername,
+        ...(importedUsername ? { username: importedUsername } : {}),
       }))
 
       toast.success(t("messages.importSub2apiSessionSuccess"))

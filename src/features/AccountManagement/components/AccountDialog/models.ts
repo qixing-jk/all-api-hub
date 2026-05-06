@@ -1,3 +1,4 @@
+import { UNKNOWN_SITE } from "~/constants/siteType"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 
 export const ACCOUNT_DIALOG_PHASES = {
@@ -63,7 +64,7 @@ export function createEmptyAccountDialogDraft(): AccountDialogDraft {
         isCheckedInToday: false,
       },
     },
-    siteType: "unknown",
+    siteType: UNKNOWN_SITE,
     authType: AuthTypeEnum.AccessToken,
     cookieAuthSessionCookie: "",
     sub2apiUseRefreshToken: false,

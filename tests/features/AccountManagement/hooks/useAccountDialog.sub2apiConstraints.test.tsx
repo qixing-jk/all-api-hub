@@ -461,7 +461,7 @@ describe("useAccountDialog Sub2API constraints", () => {
     expect(result.current.state.sub2apiTokenExpiresAt).toBeNull()
     expect(result.current.state.accessToken).toBe("existing-jwt")
     expect(result.current.state.userId).toBe("99")
-    expect(result.current.state.username).toBe("")
+    expect(result.current.state.username).toBe("existing-user")
     expect(mockToastSuccess).toHaveBeenCalled()
   })
 

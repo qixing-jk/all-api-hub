@@ -64,7 +64,6 @@ interface AccountFormProps {
   renameTag: (tagId: string, name: string) => Promise<Tag>
   deleteTag: (tagId: string) => Promise<{ updatedAccounts: number }>
   onSiteTypeChange: (value: string) => void
-  checkIn: CheckInConfig
   onCheckInChange: (value: CheckInConfig) => void
 }
 
@@ -100,7 +99,6 @@ export default function AccountForm({
   renameTag,
   deleteTag,
   onSiteTypeChange,
-  checkIn,
   onCheckInChange,
 }: AccountFormProps) {
   const { t } = useTranslation("accountDialog")
@@ -119,6 +117,7 @@ export default function AccountForm({
     sub2apiUseRefreshToken,
     sub2apiRefreshToken,
     sub2apiTokenExpiresAt,
+    checkIn,
     siteType,
   } = draft
   const isSub2Api = siteType === SUB2API

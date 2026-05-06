@@ -177,7 +177,6 @@ export default function AccountDialog({
                 createTag={createTag}
                 renameTag={renameTag}
                 deleteTag={deleteTag}
-                checkIn={state.checkIn}
                 onCheckInChange={setters.setCheckIn}
                 onSiteTypeChange={setters.setSiteType}
                 isImportingCookies={state.isImportingCookies}

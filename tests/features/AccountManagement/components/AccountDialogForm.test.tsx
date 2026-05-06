@@ -89,7 +89,6 @@ describe("AccountDialog AccountForm", () => {
     renameTag: vi.fn(),
     deleteTag: vi.fn(),
     onSiteTypeChange: vi.fn(),
-    checkIn: createCheckIn(),
     onCheckInChange: vi.fn(),
   })
 
@@ -284,7 +283,7 @@ describe("AccountDialog AccountForm", () => {
       }),
     )
     expect(props.onCheckInChange).toHaveBeenCalledWith({
-      ...props.checkIn,
+      ...props.draft.checkIn,
       enableDetection: true,
       autoCheckInEnabled: true,
     })
@@ -293,7 +292,7 @@ describe("AccountDialog AccountForm", () => {
       target: { value: "https://check.example.com/" },
     })
     expect(props.onCheckInChange).toHaveBeenLastCalledWith({
-      ...props.checkIn,
+      ...props.draft.checkIn,
       customCheckIn: {
         openRedeemWithCheckIn: true,
         url: "https://check.example.com/",
@@ -309,8 +308,9 @@ describe("AccountDialog AccountForm", () => {
         redeemUrl: "",
       },
     })
+    props.draft.checkIn = nextCheckIn
 
-    rerender(<AccountForm {...props} checkIn={nextCheckIn} />)
+    rerender(<AccountForm {...props} />)
 
     await user.click(
       screen.getByRole("switch", {
