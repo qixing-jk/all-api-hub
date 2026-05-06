@@ -9,6 +9,7 @@ import {
   TicketIcon,
   UserIcon,
 } from "@heroicons/react/24/outline"
+import { Cookie } from "lucide-react"
 import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
@@ -200,20 +201,21 @@ export default function AccountForm({
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.authTypeTrigger}
               data-auth-type={authType}
             >
-              <div className="flex items-center gap-2">
-                <KeyIcon className="text-muted-foreground h-5 w-5" />
-                <SelectValue
-                  placeholder={t("siteInfo.authMethodPlaceholder")}
-                />
-              </div>
+              <SelectValue placeholder={t("siteInfo.authMethodPlaceholder")} />
             </SelectTrigger>
             <SelectContent align="end" className="min-w-48">
               <SelectItem value={AuthTypeEnum.AccessToken}>
-                {t("siteInfo.authType.accessToken")}
+                <div className="flex items-center gap-2">
+                  <KeyIcon className="h-4 w-4" />
+                  <span>{t("siteInfo.authType.accessToken")}</span>
+                </div>
               </SelectItem>
               {!isSub2Api && (
                 <SelectItem value={AuthTypeEnum.Cookie}>
-                  {t("siteInfo.authType.cookieAuth")}
+                  <div className="flex items-center gap-2">
+                    <Cookie className="h-4 w-4" />
+                    <span>{t("siteInfo.authType.cookieAuth")}</span>
+                  </div>
                 </SelectItem>
               )}
             </SelectContent>

@@ -217,7 +217,7 @@ describe("AccountDialog", () => {
     resetMockState()
   })
 
-  it("hides the form before the dialog reaches the account-form phase", () => {
+  it("hides the form before the dialog reaches the account-form phase", async () => {
     mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
     mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
 
@@ -231,9 +231,13 @@ describe("AccountDialog", () => {
       />,
     )
 
+    await screen.findByLabelText("accountDialog:siteInfo.siteUrl")
     expect(
       screen.queryByTestId("account-management-site-name-input"),
     ).not.toBeInTheDocument()
+    expect(
+      await screen.findByTestId("account-management-auth-type-trigger"),
+    ).toBeInTheDocument()
   })
 
   it("renders the account form after entering the account-form phase", async () => {
@@ -253,5 +257,25 @@ describe("AccountDialog", () => {
     expect(
       await screen.findByTestId("account-management-site-name-input"),
     ).toBeInTheDocument()
+  })
+
+  it("does not show the entry auth selector in edit mode", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.EDIT}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    await screen.findByLabelText("accountDialog:siteInfo.siteUrl")
+    expect(
+      screen.queryByTestId("account-management-auth-type-trigger"),
+    ).not.toBeInTheDocument()
   })
 })

@@ -136,6 +136,12 @@ export default function AccountDialog({
               isDetected={state.isDetected}
               onClearUrl={handlers.handleClearUrl}
               siteType={state.siteType}
+              authType={state.authType}
+              onAuthTypeChange={setters.setAuthType}
+              showAuthTypeSelector={
+                mode === DIALOG_MODES.ADD &&
+                state.phase === ACCOUNT_DIALOG_PHASES.SITE_INPUT
+              }
               {...(mode === DIALOG_MODES.ADD && {
                 currentTabUrl: state.currentTabUrl,
                 isCurrentSiteAdded: detectedSiteAccounts.length > 0,
