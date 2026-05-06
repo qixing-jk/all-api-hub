@@ -134,20 +134,11 @@ async function getSiteUserIdType(url: string): Promise<string> {
 
 export const getSiteType = async (url: string) => {
   const title = await fetchSiteOriginalTitle(url)
-  let detected = UNKNOWN_SITE
   for (const rule of SITE_TITLE_RULES) {
     if (rule.regex.test(title)) {
-      detected = rule.name
-      return detected
+      return rule.name
     }
   }
 
-  if (detected === UNKNOWN_SITE) {
-    const detectedFromApiError = await getSiteUserIdType(url)
-    if (detectedFromApiError !== UNKNOWN_SITE) {
-      detected = detectedFromApiError
-      return detected
-    }
-  }
-  return detected
+  return await getSiteUserIdType(url)
 }

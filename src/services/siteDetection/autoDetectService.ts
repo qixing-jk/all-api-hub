@@ -397,11 +397,18 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
   if (capabilities.hasBackgroundMessaging) {
     // Background path uses a temporary browser context, which may be backed by
     // a window or a tab depending on the current temp-context mode and browser capabilities.
-    const result = await autoDetectViaBackground(url)
-    if (result.success) {
-      return result
+    try {
+      const result = await autoDetectViaBackground(url)
+      if (result.success) {
+        return result
+      }
+      logger.debug("Background 方式失败，降级到直接方式", { url })
+    } catch (error) {
+      logger.warn("Background 方式抛出异常，降级到直接方式", {
+        url,
+        error: getErrorMessage(error),
+      })
     }
-    logger.debug("Background 方式失败，降级到直接方式", { url })
   }
 
   // 3. Fallback: 使用直接方式（手机 或其他方式失败）

@@ -198,6 +198,40 @@ describe("autoDetectSmart", () => {
     })
   })
 
+  it("falls back to direct detection when background site-type detection throws", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 30,
+        active: true,
+        url: "https://different.example.com/home",
+      },
+    ])
+    mockGetSiteType
+      .mockRejectedValueOnce(new Error("background detect failed"))
+      .mockResolvedValueOnce("new-api")
+    mockFetchUserInfo.mockResolvedValue({
+      id: 21,
+      username: "direct-user",
+    })
+
+    const result = await autoDetectSmart("https://example.com/console")
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        userId: 21,
+        user: {
+          id: 21,
+          username: "direct-user",
+        },
+        siteType: "new-api",
+        accessToken: undefined,
+        sub2apiAuth: undefined,
+      },
+    })
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
   it("falls back to direct detection when browser tab and runtime capabilities are unavailable", async () => {
     browserAny.tabs = null
     browserAny.runtime = null
