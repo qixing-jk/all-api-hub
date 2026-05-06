@@ -112,6 +112,24 @@
     "manualAdd": "Manual Add",
     "reDetect": "Re-detect"
   },
+  "sections": {
+    "accountAuth": {
+      "title": "Account Authentication"
+    },
+    "balanceAndStats": {
+      "title": "Balance & Stats"
+    },
+    "checkInConfig": {
+      "title": "Check-in Settings"
+    },
+    "siteInfo": {
+      "title": "Site Information"
+    },
+    "tagsAndNotes": {
+      "description": "Tags help organize, filter, and quickly identify accounts, while notes add supporting context.",
+      "title": "Tags & Notes"
+    }
+  },
   "siteInfo": {
     "alreadyAdded": "Account(s) already exist for this site",
     "authMethod": "Authentication Method",

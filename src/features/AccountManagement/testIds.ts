@@ -12,6 +12,13 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   usernameInput: "account-management-username-input",
   userIdInput: "account-management-user-id-input",
   accessTokenInput: "account-management-access-token-input",
+  accountFormSectionSiteInfo:
+    "account-management-account-form-section-site-info",
+  accountFormSectionAuth: "account-management-account-form-section-auth",
+  accountFormSectionTagsNotes:
+    "account-management-account-form-section-tags-notes",
+  accountFormSectionCheckIn: "account-management-account-form-section-check-in",
+  accountFormSectionBalance: "account-management-account-form-section-balance",
   sub2apiRefreshTokenSwitch: "account-management-sub2api-refresh-token-switch",
   sub2apiImportSessionButton:
     "account-management-sub2api-import-session-button",

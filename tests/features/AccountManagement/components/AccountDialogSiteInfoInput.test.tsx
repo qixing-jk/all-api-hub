@@ -4,7 +4,6 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SUB2API } from "~/constants/siteType"
 import SiteInfoInput from "~/features/AccountManagement/components/AccountDialog/SiteInfoInput"
-import { AuthTypeEnum } from "~/types"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 describe("AccountDialog SiteInfoInput", () => {
@@ -14,8 +13,6 @@ describe("AccountDialog SiteInfoInput", () => {
     isDetected: false,
     onClearUrl: vi.fn(),
     siteType: "new-api",
-    authType: AuthTypeEnum.AccessToken,
-    onAuthTypeChange: vi.fn(),
     currentTabUrl: "https://current.example.com",
     isCurrentSiteAdded: false,
     detectedAccount: null,
@@ -23,7 +20,7 @@ describe("AccountDialog SiteInfoInput", () => {
     onEditAccount: vi.fn(),
   })
 
-  it("propagates URL edits, clears the field, changes auth type, and reuses the current tab URL", async () => {
+  it("propagates URL edits, clears the field, and reuses the current tab URL", async () => {
     const user = userEvent.setup()
     const props = createProps()
 
@@ -46,18 +43,6 @@ describe("AccountDialog SiteInfoInput", () => {
       screen.getByRole("button", { name: "common:actions.clear" }),
     )
     expect(props.onClearUrl).toHaveBeenCalledTimes(1)
-
-    await user.click(
-      screen.getByRole("combobox", {
-        name: "accountDialog:siteInfo.authMethod",
-      }),
-    )
-    await user.click(
-      await screen.findByRole("option", {
-        name: "accountDialog:siteInfo.authType.cookieAuth",
-      }),
-    )
-    expect(props.onAuthTypeChange).toHaveBeenCalledWith(AuthTypeEnum.Cookie)
 
     const useCurrentButton = screen.getByRole("button", {
       name: "accountDialog:siteInfo.useCurrent",
@@ -105,11 +90,6 @@ describe("AccountDialog SiteInfoInput", () => {
     ).toBeInTheDocument()
     expect(
       screen.getByLabelText("accountDialog:siteInfo.siteUrl"),
-    ).toBeDisabled()
-    expect(
-      screen.getByRole("combobox", {
-        name: "accountDialog:siteInfo.authMethod",
-      }),
     ).toBeDisabled()
     expect(
       screen.queryByRole("button", { name: "common:actions.clear" }),

@@ -7,18 +7,10 @@ import {
 import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
-import {
-  Button,
-  Input,
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "~/components/ui"
+import { Button, Input } from "~/components/ui"
 import { SUB2API } from "~/constants/siteType"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import { AuthTypeEnum, type DisplaySiteData } from "~/types"
+import type { DisplaySiteData } from "~/types"
 
 interface SiteInfoInputProps {
   url: string
@@ -26,8 +18,6 @@ interface SiteInfoInputProps {
   isDetected: boolean
   onClearUrl: () => void
   siteType?: string
-  authType: AuthTypeEnum
-  onAuthTypeChange: (authType: AuthTypeEnum) => void
   // Props for "add" mode
   currentTabUrl?: string | null
   isCurrentSiteAdded?: boolean
@@ -58,8 +48,6 @@ export default function SiteInfoInput({
   isDetected,
   onClearUrl,
   siteType,
-  authType,
-  onAuthTypeChange,
   currentTabUrl,
   isCurrentSiteAdded,
   detectedAccount,
@@ -77,66 +65,24 @@ export default function SiteInfoInput({
 
   return (
     <div className="space-y-2">
-      <div className="flex justify-between">
-        <label
-          htmlFor="site-url"
-          className="dark:text-dark-text-secondary block text-sm font-medium text-gray-700"
-        >
-          {t("siteInfo.siteUrl")}
-        </label>
-        <label
-          htmlFor="auth-type"
-          className="dark:text-dark-text-secondary block text-sm font-medium text-gray-700"
-        >
-          {t("siteInfo.authMethod")}
-        </label>
-      </div>
-      <div className="flex items-center gap-2">
-        <div className="relative grow">
-          <Input
-            id="site-url"
-            type="text"
-            value={url}
-            onChange={(e) => onUrlChange(e.target.value)}
-            placeholder="https://example.com"
-            disabled={isDetected}
-            data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput}
-            onClear={onClearUrl}
-            clearButtonLabel={t("common:actions.clear")}
-          />
-        </div>
-        <Tooltip
-          content={
-            isSub2Api
-              ? t("siteInfo.sub2apiAuthOnly")
-              : t("siteInfo.cookieWarning")
-          }
-        >
-          <Select
-            value={authType}
-            onValueChange={(value) => onAuthTypeChange(value as AuthTypeEnum)}
-            disabled={isDetected || isSub2Api}
-          >
-            <SelectTrigger
-              id="auth-type"
-              className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary dark:text-dark-text-primary w-full"
-              data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.authTypeTrigger}
-              data-auth-type={authType}
-            >
-              <SelectValue placeholder={t("siteInfo.authMethodPlaceholder")} />
-            </SelectTrigger>
-            <SelectContent align="end" className="min-w-48">
-              <SelectItem value={AuthTypeEnum.AccessToken}>
-                {t("siteInfo.authType.accessToken")}
-              </SelectItem>
-              {!isSub2Api && (
-                <SelectItem value={AuthTypeEnum.Cookie}>
-                  {t("siteInfo.authType.cookieAuth")}
-                </SelectItem>
-              )}
-            </SelectContent>
-          </Select>
-        </Tooltip>
+      <label
+        htmlFor="site-url"
+        className="dark:text-dark-text-secondary block text-sm font-medium text-gray-700"
+      >
+        {t("siteInfo.siteUrl")}
+      </label>
+      <div className="relative grow">
+        <Input
+          id="site-url"
+          type="text"
+          value={url}
+          onChange={(e) => onUrlChange(e.target.value)}
+          placeholder="https://example.com"
+          disabled={isDetected}
+          data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteUrlInput}
+          onClear={onClearUrl}
+          clearButtonLabel={t("common:actions.clear")}
+        />
       </div>
       <div className="flex flex-col justify-between gap-y-2 text-xs">
         {isSub2Api && (

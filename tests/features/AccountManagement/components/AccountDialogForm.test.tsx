@@ -1,12 +1,20 @@
 import userEvent from "@testing-library/user-event"
 import type { ComponentProps } from "react"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
 import AccountForm from "~/features/AccountManagement/components/AccountDialog/AccountForm"
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
-import { fireEvent, render, screen } from "~~/tests/test-utils/render"
+import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
+
+const mediaQueryState = {
+  isSmallScreen: false,
+}
+
+vi.mock("~/hooks/useMediaQuery", () => ({
+  useIsSmallScreen: () => mediaQueryState.isSmallScreen,
+}))
 
 vi.mock("~/features/AccountManagement/components/TagPicker", () => ({
   TagPicker: ({
@@ -32,6 +40,10 @@ vi.mock("~/utils/core/formatters", () => ({
 }))
 
 describe("AccountDialog AccountForm", () => {
+  beforeEach(() => {
+    mediaQueryState.isSmallScreen = false
+  })
+
   const createCheckIn = (
     overrides: Partial<CheckInConfig> = {},
   ): CheckInConfig =>
@@ -62,6 +74,7 @@ describe("AccountDialog AccountForm", () => {
       siteType: UNKNOWN_SITE,
       checkIn: createCheckIn(),
     },
+    isDetected: false,
     isManualBalanceUsdInvalid: false,
     showAccessToken: false,
     isImportingCookies: false,
@@ -89,7 +102,60 @@ describe("AccountDialog AccountForm", () => {
     renameTag: vi.fn(),
     deleteTag: vi.fn(),
     onSiteTypeChange: vi.fn(),
+    onAuthTypeChange: vi.fn(),
     onCheckInChange: vi.fn(),
+  })
+
+  it("renders the desktop sections in the expected order and groups auth fields together", async () => {
+    const props = createProps()
+
+    render(<AccountForm {...props} />)
+
+    const sections = await screen.findAllByTestId(
+      /^account-management-account-form-section-(site-info|auth|tags-notes|check-in|balance)$/,
+    )
+    expect(sections).toHaveLength(5)
+    expect(sections.map((section) => section.dataset.testid)).toEqual([
+      "account-management-account-form-section-site-info",
+      "account-management-account-form-section-auth",
+      "account-management-account-form-section-tags-notes",
+      "account-management-account-form-section-check-in",
+      "account-management-account-form-section-balance",
+    ])
+
+    expect(
+      screen.getByText("accountDialog:sections.siteInfo.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("accountDialog:sections.accountAuth.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("accountDialog:sections.tagsAndNotes.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("accountDialog:sections.checkInConfig.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("accountDialog:sections.balanceAndStats.title"),
+    ).toBeInTheDocument()
+
+    const authSection = screen.getByTestId(
+      "account-management-account-form-section-auth",
+    )
+    expect(
+      within(authSection).getByRole("combobox", {
+        name: "accountDialog:siteInfo.authMethod",
+      }),
+    ).toBeInTheDocument()
+    expect(within(authSection).getByDisplayValue("alice")).toBeInTheDocument()
+    expect(
+      within(authSection).getByPlaceholderText(
+        "accountDialog:form.userIdNumber",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      within(authSection).getByDisplayValue("secret-token"),
+    ).toBeInTheDocument()
   })
 
   it("propagates core field edits, exposes access-token controls, and surfaces validation states", async () => {

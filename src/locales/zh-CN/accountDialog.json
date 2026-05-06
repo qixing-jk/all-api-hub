@@ -111,6 +111,24 @@
     "manualAdd": "手动添加",
     "reDetect": "重新识别"
   },
+  "sections": {
+    "accountAuth": {
+      "title": "账号认证"
+    },
+    "balanceAndStats": {
+      "title": "余额与统计"
+    },
+    "checkInConfig": {
+      "title": "签到配置"
+    },
+    "siteInfo": {
+      "title": "站点信息"
+    },
+    "tagsAndNotes": {
+      "description": "标签用于组织、筛选和快速识别账号，备注用于补充上下文。",
+      "title": "标签与备注"
+    }
+  },
   "siteInfo": {
     "alreadyAdded": "该站点已存在账号",
     "authMethod": "认证方式",

@@ -111,6 +111,24 @@
     "manualAdd": "手動追加",
     "reDetect": "再検出"
   },
+  "sections": {
+    "accountAuth": {
+      "title": "アカウント認証"
+    },
+    "balanceAndStats": {
+      "title": "残高と統計"
+    },
+    "checkInConfig": {
+      "title": "チェックイン設定"
+    },
+    "siteInfo": {
+      "title": "サイト情報"
+    },
+    "tagsAndNotes": {
+      "description": "タグはアカウントの整理、絞り込み、素早い識別に役立ち、メモは補足情報を残します。",
+      "title": "タグとメモ"
+    }
+  },
   "siteInfo": {
     "alreadyAdded": "このサイトにはすでにアカウントがあります",
     "authMethod": "認証方式",

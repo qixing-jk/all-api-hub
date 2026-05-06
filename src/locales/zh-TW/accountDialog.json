@@ -111,6 +111,24 @@
     "manualAdd": "手動新增",
     "reDetect": "重新識別"
   },
+  "sections": {
+    "accountAuth": {
+      "title": "帳號認證"
+    },
+    "balanceAndStats": {
+      "title": "餘額與統計"
+    },
+    "checkInConfig": {
+      "title": "簽到設定"
+    },
+    "siteInfo": {
+      "title": "站點資訊"
+    },
+    "tagsAndNotes": {
+      "description": "標籤用於組織、篩選與快速識別帳號，備註則補充上下文。",
+      "title": "標籤與備註"
+    }
+  },
   "siteInfo": {
     "alreadyAdded": "該站點已存在帳號",
     "authMethod": "認證方式",

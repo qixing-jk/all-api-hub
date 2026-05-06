@@ -539,7 +539,7 @@ export default function SiteInfo({
           </div>
         </div>
 
-        <div className="flex min-w-0 items-start gap-1">
+        <div className="mt-0.5 flex min-w-0 items-start gap-1">
           <UserIcon className="dark:text-dark-text-tertiary mt-0.5 h-3 w-3 shrink-0 text-gray-400" />
           <Caption className="truncate" title={site.username}>
             {highlights?.username && site.username
