@@ -1,4 +1,4 @@
-import { fireEvent } from "@testing-library/react"
+import { act, fireEvent } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -98,6 +98,34 @@ describe("TaskNotificationSettings", () => {
       "settings:taskNotifications.permission.requestSuccess",
       "settings:taskNotifications.permission.requestFailed",
     )
+  })
+
+  it("refreshes permission status when optional permissions change", async () => {
+    let permissionsChangedHandler: (() => void | Promise<void>) | undefined
+    hasPermissionMock.mockResolvedValueOnce(false).mockResolvedValueOnce(true)
+    onOptionalPermissionsChangedMock.mockImplementation((handler) => {
+      permissionsChangedHandler = handler
+      return () => {}
+    })
+
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(
+      await screen.findByText("settings:taskNotifications.permission.request"),
+    ).toBeInTheDocument()
+
+    await act(async () => {
+      await permissionsChangedHandler?.()
+    })
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("settings:taskNotifications.permission.request"),
+      ).not.toBeInTheDocument()
+    })
   })
 
   it("sends a test notification and reports runtime failures", async () => {

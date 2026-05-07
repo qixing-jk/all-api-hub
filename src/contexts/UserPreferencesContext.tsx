@@ -1452,7 +1452,11 @@ export const UserPreferencesProvider = ({
         setPreferences((prev) =>
           prev
             ? deepOverride(prev, {
-                taskNotifications: updates,
+                taskNotifications: deepOverride(
+                  prev.taskNotifications ??
+                    DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+                  updates,
+                ),
                 lastUpdated: Date.now(),
               })
             : prev,

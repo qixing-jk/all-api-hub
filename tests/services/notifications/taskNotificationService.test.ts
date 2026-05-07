@@ -63,8 +63,14 @@ vi.mock("~/utils/navigation", () => ({
   openOrFocusOptionsMenuItem: openOrFocusOptionsMenuItemMock,
 }))
 
+const translationCalls: Array<{
+  key: string
+  options?: Record<string, unknown>
+}> = []
+
 vi.mock("~/utils/i18n/core", () => ({
   t: vi.fn((key: string, options?: Record<string, unknown>) => {
+    translationCalls.push({ key, options })
     if (key.endsWith(".counts")) {
       return `total ${options?.total} success ${options?.success} failed ${options?.failed} skipped ${options?.skipped}`
     }
@@ -80,6 +86,7 @@ vi.mock("~/utils/i18n/core", () => ({
 describe("taskNotificationService", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    translationCalls.length = 0
     __resetTaskNotificationServiceForTesting()
     getPreferencesMock.mockResolvedValue({
       taskNotifications: DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -199,6 +206,32 @@ describe("taskNotificationService", () => {
     )
   })
 
+  it("omits counts text when no finite counts are provided", async () => {
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+        counts: {
+          total: Number.NaN,
+          success: Number.POSITIVE_INFINITY,
+        },
+      }),
+    ).resolves.toBe(true)
+
+    expect(
+      translationCalls.some(
+        ({ key }) => key === "settings:taskNotifications.notification.counts",
+      ),
+    ).toBe(false)
+    expect(createNotificationMock).toHaveBeenCalledWith(
+      getTaskNotificationId(TASK_NOTIFICATION_TASKS.AutoCheckin),
+      expect.objectContaining({
+        message:
+          "settings:taskNotifications.notification.body.success:settings:taskNotifications.tasks.autoCheckin",
+      }),
+    )
+  })
+
   it("falls back to the localized body when the custom message is blank", async () => {
     await expect(
       notifyTaskResult({
@@ -215,6 +248,19 @@ describe("taskNotificationService", () => {
           "settings:taskNotifications.notification.body.success:settings:taskNotifications.tasks.autoCheckin",
       }),
     )
+  })
+
+  it("returns false when loading preferences throws", async () => {
+    getPreferencesMock.mockRejectedValueOnce(new Error("prefs failed"))
+
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+      }),
+    ).resolves.toBe(false)
+
+    expect(createNotificationMock).not.toHaveBeenCalled()
   })
 
   it("opens the mapped settings page when a task notification is clicked", async () => {
@@ -269,6 +315,7 @@ describe("taskNotificationService", () => {
   })
 
   it("ignores invalid notification ids when handling clicks", async () => {
+    onNotificationClickedMock.mockReturnValueOnce(undefined)
     initializeTaskNotificationService()
     const handler = onNotificationClickedMock.mock.calls[0]?.[0] as
       | ((notificationId: string) => void | Promise<void>)
@@ -302,6 +349,13 @@ describe("taskNotificationService", () => {
     await Promise.resolve()
 
     expect(clearNotificationMock).not.toHaveBeenCalled()
+  })
+
+  it("does not register the click listener twice", () => {
+    initializeTaskNotificationService()
+    initializeTaskNotificationService()
+
+    expect(onNotificationClickedMock).toHaveBeenCalledTimes(1)
   })
 
   it("parses only valid notification ids and derives failure status", () => {

@@ -290,6 +290,17 @@ describe("dailyBalanceHistoryScheduler", () => {
     })
   })
 
+  it("swallows notification delivery failures for alarm-triggered capture errors", async () => {
+    mockGetPreferences.mockRejectedValueOnce(new Error("prefs failed"))
+    mockNotifyTaskResult.mockRejectedValueOnce(new Error("notify failed"))
+
+    await expect(
+      dailyBalanceHistoryScheduler.runEndOfDayCapture({
+        trigger: "alarm",
+      }),
+    ).resolves.toBeNull()
+  })
+
   it("routes runtime messages to the correct handlers", async () => {
     const updateResponse = vi.fn()
     await handleDailyBalanceHistoryMessage(

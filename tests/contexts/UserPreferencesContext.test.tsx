@@ -398,6 +398,30 @@ describe("UserPreferencesContext", () => {
     ).toBeUndefined()
   })
 
+  it("hydrates missing task notification preferences before applying local updates", async () => {
+    const preferences = clonePreferences()
+    delete (preferences as Partial<UserPreferences>).taskNotifications
+
+    const context = await renderProvider(preferences)
+
+    await act(async () => {
+      await context.updateTaskNotifications({
+        tasks: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+          autoCheckin: false,
+        },
+      })
+    })
+
+    expect((latestContext as any)?.preferences.taskNotifications).toEqual({
+      ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      tasks: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+        autoCheckin: false,
+      },
+    })
+  })
+
   it("updates scalar, nested, and runtime-backed preferences through the provider", async () => {
     const context = await renderProvider()
 
@@ -1773,6 +1797,82 @@ describe("UserPreferencesContext", () => {
       error: "Invalid response from background",
     })
     expect((latestContext as any)?.preferences.webdav.autoSync).toBe(true)
+  })
+
+  it("keeps the visible task notification state stable while an update succeeds during a deferred reload", async () => {
+    const initialPreferences = clonePreferences()
+    initialPreferences.taskNotifications = {
+      ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      enabled: true,
+    }
+    const deferredPreferences = createDeferred<UserPreferences>()
+    mockedUserPreferences.getPreferences
+      .mockResolvedValueOnce(initialPreferences)
+      .mockReturnValueOnce(deferredPreferences.promise)
+    mockedUserPreferences.updateTaskNotifications.mockResolvedValueOnce(true)
+
+    const context = await renderProvider(initialPreferences)
+
+    await act(async () => {
+      void context.loadPreferences()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId("loading-state")).toHaveTextContent("true")
+    })
+
+    await act(async () => {
+      expect(
+        await context.updateTaskNotifications({
+          enabled: false,
+        }),
+      ).toBe(true)
+    })
+
+    expect((latestContext as any)?.preferences.taskNotifications.enabled).toBe(
+      false,
+    )
+
+    await act(async () => {
+      deferredPreferences.resolve(initialPreferences)
+      await deferredPreferences.promise
+    })
+  })
+
+  it("keeps the visible task notification state stable while a reset succeeds during a deferred reload", async () => {
+    const initialPreferences = clonePreferences()
+    initialPreferences.taskNotifications = {
+      ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      enabled: false,
+    }
+    const deferredPreferences = createDeferred<UserPreferences>()
+    mockedUserPreferences.getPreferences
+      .mockResolvedValueOnce(initialPreferences)
+      .mockReturnValueOnce(deferredPreferences.promise)
+    mockedUserPreferences.resetTaskNotifications.mockResolvedValueOnce(true)
+
+    const context = await renderProvider(initialPreferences)
+
+    await act(async () => {
+      void context.loadPreferences()
+    })
+
+    await waitFor(() => {
+      expect(screen.getByTestId("loading-state")).toHaveTextContent("true")
+    })
+
+    await act(async () => {
+      expect(await context.resetTaskNotifications()).toBe(true)
+    })
+
+    expect((latestContext as any)?.preferences.taskNotifications).toEqual(
+      DEFAULT_PREFERENCES.taskNotifications,
+    )
+
+    await act(async () => {
+      deferredPreferences.resolve(initialPreferences)
+      await deferredPreferences.promise
+    })
   })
 
   it("hydrates the provider from the saved WebDAV snapshot returned by background updates", async () => {

@@ -27,6 +27,7 @@ import { dailyBalanceHistoryStorage } from "./storage"
 import { clampBalanceHistoryRetentionDays } from "./utils"
 
 const logger = createLogger("DailyBalanceHistoryScheduler")
+const BALANCE_HISTORY_ALARM_TRIGGER: DailyBalanceHistoryCaptureSource = "alarm"
 
 const END_OF_DAY_CAPTURE_TIME = {
   hour: 23,
@@ -73,7 +74,9 @@ class DailyBalanceHistoryScheduler {
       }
 
       // Await to keep the MV3 service worker alive for the duration of the capture run.
-      const result = await this.runEndOfDayCapture({ trigger: "alarm" })
+      const result = await this.runEndOfDayCapture({
+        trigger: BALANCE_HISTORY_ALARM_TRIGGER,
+      })
       if (!result?.started || !result.totals) {
         return
       }
@@ -277,12 +280,16 @@ class DailyBalanceHistoryScheduler {
       }
     } catch (error) {
       logger.error("End-of-day capture run failed", error)
-      if (params.trigger === "alarm") {
-        await notifyTaskResult({
-          task: TASK_NOTIFICATION_TASKS.BalanceHistoryCapture,
-          status: TASK_NOTIFICATION_STATUSES.Failure,
-          message: getErrorMessage(error),
-        })
+      if (params.trigger === BALANCE_HISTORY_ALARM_TRIGGER) {
+        try {
+          await notifyTaskResult({
+            task: TASK_NOTIFICATION_TASKS.BalanceHistoryCapture,
+            status: TASK_NOTIFICATION_STATUSES.Failure,
+            message: getErrorMessage(error),
+          })
+        } catch (notifyError) {
+          logger.error("Failed to send task notification", notifyError)
+        }
       }
       return null
     } finally {
