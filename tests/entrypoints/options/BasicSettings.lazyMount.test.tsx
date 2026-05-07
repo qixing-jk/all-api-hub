@@ -1,9 +1,9 @@
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import BasicSettings from "~/features/BasicSettings/BasicSettings"
-import { render, screen } from "~~/tests/test-utils/render"
+import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const { mockedUseUserPreferencesContext } = vi.hoisted(() => ({
   mockedUseUserPreferencesContext: vi.fn(),
@@ -34,17 +34,6 @@ vi.mock("~/components/PageHeader", () => ({
       <p>{description}</p>
     </div>
   ),
-}))
-
-vi.mock("~/hooks/useHorizontalScrollControls", () => ({
-  useHorizontalScrollControls: () => ({
-    scrollRef: { current: null },
-    canScrollLeft: false,
-    canScrollRight: false,
-    scrollLeft: vi.fn(),
-    scrollRight: vi.fn(),
-    scrollChildIntoCenter: vi.fn(),
-  }),
 }))
 
 vi.mock("~/features/BasicSettings/components/shared/LoadingSkeleton", () => ({
@@ -141,6 +130,98 @@ vi.mock(
   }),
 )
 
+const TAB_LABEL_WIDTHS: Record<string, number> = {
+  "settings:tabs.general": 80,
+  "settings:tabs.accountManagement": 80,
+  "settings:tabs.refresh": 80,
+  "settings:tabs.checkinRedeem": 80,
+  "settings:tabs.balanceHistory": 80,
+  "settings:tabs.accountUsage": 80,
+  "settings:tabs.webAiApiCheck": 80,
+  "settings:tabs.managedSite": 220,
+  "settings:tabs.cliProxy": 80,
+  "settings:tabs.claudeCodeRouter": 80,
+  "settings:tabs.permissions": 80,
+  "settings:tabs.dataBackup": 80,
+  "common:actions.more": 90,
+}
+
+class MockResizeObserver {
+  static instances: MockResizeObserver[] = []
+
+  callback: ResizeObserverCallback
+
+  constructor(callback: ResizeObserverCallback) {
+    this.callback = callback
+    MockResizeObserver.instances.push(this)
+  }
+
+  observe = vi.fn()
+  disconnect = vi.fn()
+  unobserve = vi.fn()
+
+  trigger() {
+    this.callback([], this as unknown as ResizeObserver)
+  }
+
+  static reset() {
+    MockResizeObserver.instances = []
+  }
+}
+
+function createRect(width: number): DOMRect {
+  return {
+    width,
+    height: 32,
+    top: 0,
+    right: width,
+    bottom: 32,
+    left: 0,
+    x: 0,
+    y: 0,
+    toJSON: () => ({}),
+  } as DOMRect
+}
+
+function stubDesktopTabMeasurements() {
+  return vi
+    .spyOn(HTMLElement.prototype, "getBoundingClientRect")
+    .mockImplementation(function (this: HTMLElement) {
+      if (this.tagName !== "BUTTON") {
+        return createRect(0)
+      }
+
+      const label = this.textContent?.replace(/\s+/g, " ").trim() ?? ""
+      return createRect(TAB_LABEL_WIDTHS[label] ?? 80)
+    })
+}
+
+function configureDesktopTabOverflow(
+  container: HTMLElement,
+  clientWidth = 360,
+) {
+  const desktopTabsContainer = Array.from(
+    container.querySelectorAll("div"),
+  ).find(
+    (element) =>
+      typeof element.className === "string" &&
+      element.className.includes("relative -mb-px hidden items-center"),
+  )
+
+  expect(desktopTabsContainer).toBeTruthy()
+
+  Object.defineProperty(desktopTabsContainer!, "clientWidth", {
+    configurable: true,
+    value: clientWidth,
+  })
+
+  act(() => {
+    for (const observer of MockResizeObserver.instances) {
+      observer.trigger()
+    }
+  })
+}
+
 describe("BasicSettings tab mounting", () => {
   beforeEach(() => {
     mockedUseUserPreferencesContext.mockReset()
@@ -148,12 +229,20 @@ describe("BasicSettings tab mounting", () => {
       isLoading: false,
     })
     window.history.replaceState(null, "", "/")
+    MockResizeObserver.reset()
+    vi.stubGlobal("ResizeObserver", MockResizeObserver)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllGlobals()
+    MockResizeObserver.reset()
   })
 
   it("mounts only the active tab until a tab is visited", async () => {
     const user = userEvent.setup()
 
-    render(<BasicSettings />)
+    render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
 
     expect(screen.getByTestId("general-tab-content")).toBeInTheDocument()
     expect(
@@ -186,7 +275,7 @@ describe("BasicSettings tab mounting", () => {
   it("seeds the selected and mounted tab from the URL tab parameter", async () => {
     window.history.replaceState(null, "", "/?tab=managedSite#basic")
 
-    render(<BasicSettings />)
+    render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
 
     expect(
       await screen.findByTestId("managed-site-tab-content"),
@@ -195,7 +284,9 @@ describe("BasicSettings tab mounting", () => {
   })
 
   it("keeps the current page visible during subsequent preference reloads", async () => {
-    const { rerender } = render(<BasicSettings />)
+    const { rerender } = render(<BasicSettings />, {
+      withReleaseUpdateStatusProvider: false,
+    })
 
     expect(screen.getByTestId("page-header")).toBeInTheDocument()
     expect(screen.getByTestId("general-tab-content")).toBeInTheDocument()
@@ -209,5 +300,60 @@ describe("BasicSettings tab mounting", () => {
     expect(screen.getByTestId("page-header")).toBeInTheDocument()
     expect(screen.getByTestId("general-tab-content")).toBeInTheDocument()
     expect(screen.queryByTestId("loading-skeleton")).not.toBeInTheDocument()
+  })
+
+  it("keeps the selected desktop tab visible when it is wider than the last fitted tab", async () => {
+    stubDesktopTabMeasurements()
+    window.history.replaceState(null, "", "/?tab=managedSite#basic")
+
+    const { container } = render(<BasicSettings />, {
+      withReleaseUpdateStatusProvider: false,
+    })
+    configureDesktopTabOverflow(container)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "settings:tabs.managedSite" }),
+      ).toHaveAttribute("aria-pressed", "true")
+    })
+
+    expect(
+      screen.queryByRole("button", { name: "settings:tabs.general" }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    ).toBeInTheDocument()
+  })
+
+  it("moves overflowed tabs into the desktop more menu and selects them from there", async () => {
+    stubDesktopTabMeasurements()
+    const user = userEvent.setup()
+
+    const { container } = render(<BasicSettings />, {
+      withReleaseUpdateStatusProvider: false,
+    })
+    configureDesktopTabOverflow(container)
+
+    expect(
+      screen.queryByRole("button", { name: "settings:tabs.managedSite" }),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "settings:tabs.managedSite",
+      }),
+    )
+
+    expect(
+      await screen.findByTestId("managed-site-tab-content"),
+    ).toBeInTheDocument()
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", { name: "settings:tabs.managedSite" }),
+      ).toHaveAttribute("aria-pressed", "true")
+    })
   })
 })

@@ -180,6 +180,21 @@ function getTabButtonClass(selected: boolean) {
 }
 
 /**
+ * Compute the total desktop row width for the provided tab ids.
+ */
+function getDesktopTabRowWidth(
+  tabIds: TabId[],
+  tabWidthsById: Readonly<Partial<Record<TabId, number>>>,
+) {
+  if (tabIds.length <= 0) return 0
+
+  return tabIds.reduce((sum, tabId, index) => {
+    const width = tabWidthsById[tabId] ?? 0
+    return sum + width + (index > 0 ? DESKTOP_TAB_GAP_PX : 0)
+  }, 0)
+}
+
+/**
  * Resolve the currently requested Basic Settings tab from the URL state.
  */
 function resolveSelectedTabIndexFromUrl(): number {
@@ -297,6 +312,10 @@ function DesktopTabs({
       return
     }
 
+    const tabWidthsById = Object.fromEntries(
+      orderedTabIds.map((tabId, index) => [tabId, tabWidths[index] ?? 0]),
+    ) as Record<TabId, number>
+
     const getTotalWidth = (count: number) => {
       if (count <= 0) return 0
       const contentWidth = tabWidths
@@ -330,10 +349,14 @@ function DesktopTabs({
     let nextVisibleTabIds = orderedTabIds.slice(0, visibleCount)
 
     if (!nextVisibleTabIds.includes(selectedTabId)) {
-      if (nextVisibleTabIds.length > 0) {
-        nextVisibleTabIds = [...nextVisibleTabIds.slice(0, -1), selectedTabId]
-      } else {
-        nextVisibleTabIds = [selectedTabId]
+      nextVisibleTabIds = [...nextVisibleTabIds, selectedTabId]
+
+      while (
+        nextVisibleTabIds.length > 1 &&
+        getDesktopTabRowWidth(nextVisibleTabIds, tabWidthsById) >
+          maxVisibleWidth
+      ) {
+        nextVisibleTabIds.splice(nextVisibleTabIds.length - 2, 1)
       }
     }
 

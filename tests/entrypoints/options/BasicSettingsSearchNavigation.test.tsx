@@ -24,17 +24,6 @@ vi.mock("~/components/PageHeader", () => ({
   PageHeader: ({ title }: { title: string }) => <div>{title}</div>,
 }))
 
-vi.mock("~/hooks/useHorizontalScrollControls", () => ({
-  useHorizontalScrollControls: () => ({
-    scrollRef: { current: null },
-    canScrollLeft: false,
-    canScrollRight: false,
-    scrollLeft: vi.fn(),
-    scrollRight: vi.fn(),
-    scrollChildIntoCenter: vi.fn(),
-  }),
-}))
-
 vi.mock("~/features/BasicSettings/components/shared/LoadingSkeleton", () => ({
   default: () => <div data-testid="loading-skeleton" />,
 }))
@@ -141,7 +130,7 @@ describe("BasicSettings search navigation", () => {
   })
 
   it("consumes the one-shot highlight param after scrolling to the target", async () => {
-    render(<BasicSettings />)
+    render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
 
     await waitFor(() => {
       expect(window.location.search).not.toContain("highlight=")
@@ -157,7 +146,7 @@ describe("BasicSettings search navigation", () => {
       "/options.html?tab=general&anchor=display-currency-unit&highlight=missing-target#basic",
     )
 
-    render(<BasicSettings />)
+    render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
 
     await waitFor(() => {
       expect(window.location.search).not.toContain("highlight=")
