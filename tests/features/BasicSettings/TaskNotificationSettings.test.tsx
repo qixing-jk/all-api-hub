@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import TaskNotificationSettings from "~/features/BasicSettings/components/tabs/General/TaskNotificationSettings"
+import { OPTIONAL_PERMISSION_IDS } from "~/services/permissions/permissionManager"
 import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,
   TASK_NOTIFICATION_TASKS,
@@ -90,7 +91,9 @@ describe("TaskNotificationSettings", () => {
     )
 
     await waitFor(() => {
-      expect(requestPermissionMock).toHaveBeenCalledWith("notifications")
+      expect(requestPermissionMock).toHaveBeenCalledWith(
+        OPTIONAL_PERMISSION_IDS.Notifications,
+      )
     })
 
     expect(showResultToastMock).toHaveBeenCalledWith(
@@ -177,10 +180,24 @@ describe("TaskNotificationSettings", () => {
       withThemeProvider: false,
     })
 
-    const switches = await screen.findAllByRole("switch")
+    const globalTaskNotifications = (
+      await screen.findByText("settings:taskNotifications.enable")
+    ).closest('[id="task-notifications-enabled"]')
+    const globalSwitch = globalTaskNotifications?.querySelector(
+      '[role="switch"]',
+    ) as HTMLElement | null
+    const autoCheckinTask = screen
+      .getByText("settings:taskNotifications.tasks.autoCheckin")
+      .closest('[id="task-notifications-autoCheckin"]')
+    const autoCheckinSwitch = autoCheckinTask?.querySelector(
+      '[role="switch"]',
+    ) as HTMLElement | null
 
-    fireEvent.click(switches[0]!)
-    fireEvent.click(switches[1]!)
+    expect(globalSwitch).not.toBeNull()
+    expect(autoCheckinSwitch).not.toBeNull()
+
+    fireEvent.click(globalSwitch!)
+    fireEvent.click(autoCheckinSwitch!)
 
     await waitFor(() => {
       expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
