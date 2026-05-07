@@ -28,7 +28,7 @@ export interface TaskNotificationPreferences {
   tasks: TaskNotificationTaskPreferences
 }
 
-export const TASK_NOTIFICATION_TASK_ORDER = [
+const TASK_NOTIFICATION_TASK_ORDER = [
   TASK_NOTIFICATION_TASKS.AutoCheckin,
   TASK_NOTIFICATION_TASKS.WebdavAutoSync,
   TASK_NOTIFICATION_TASKS.ManagedSiteModelSync,
@@ -36,9 +36,9 @@ export const TASK_NOTIFICATION_TASK_ORDER = [
   TASK_NOTIFICATION_TASKS.BalanceHistoryCapture,
 ] as const satisfies readonly TaskNotificationTask[]
 
-export const TASK_NOTIFICATION_ID_PREFIX = "all-api-hub:task:" as const
+const TASK_NOTIFICATION_ID_PREFIX = "all-api-hub:task:" as const
 
-export const DEFAULT_TASK_NOTIFICATION_TASK_PREFERENCES: TaskNotificationTaskPreferences =
+const DEFAULT_TASK_NOTIFICATION_TASK_PREFERENCES: TaskNotificationTaskPreferences =
   Object.fromEntries(
     TASK_NOTIFICATION_TASK_ORDER.map((task) => [task, true]),
   ) as TaskNotificationTaskPreferences

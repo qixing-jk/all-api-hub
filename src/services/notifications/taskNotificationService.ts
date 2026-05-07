@@ -28,14 +28,14 @@ import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
 const logger = createLogger("TaskNotificationService")
 
-export interface TaskNotificationCounts {
+interface TaskNotificationCounts {
   total?: number
   success?: number
   failed?: number
   skipped?: number
 }
 
-export interface TaskNotificationPayload {
+interface TaskNotificationPayload {
   task: TaskNotificationTask
   status: TaskNotificationStatus
   counts?: TaskNotificationCounts
