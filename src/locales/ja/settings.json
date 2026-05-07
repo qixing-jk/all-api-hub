@@ -489,8 +489,6 @@
     "managedSite": "管理対象サイト",
     "permissions": "権限",
     "refresh": "データ更新",
-    "scrollLeft": "タブを左へスクロール",
-    "scrollRight": "タブを右へスクロール",
     "select": "タブを選択",
     "webAiApiCheck": "AI API テスト"
   },

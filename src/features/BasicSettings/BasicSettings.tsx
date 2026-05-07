@@ -1,13 +1,14 @@
 import { Tab } from "@headlessui/react"
 import type { TFunction } from "i18next"
-import { ChevronLeft, ChevronRight, Settings } from "lucide-react"
+import { ChevronDown, Settings } from "lucide-react"
 import {
-  Fragment,
   lazy,
   Suspense,
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type ComponentType,
 } from "react"
@@ -15,7 +16,6 @@ import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/components/PageHeader"
 import {
-  Button,
   Select,
   SelectContent,
   SelectItem,
@@ -23,6 +23,12 @@ import {
   SelectValue,
   Spinner,
 } from "~/components/ui"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "~/components/ui/dropdown-menu"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
@@ -30,7 +36,6 @@ import {
   highlightSearchTarget,
   OPTIONS_SEARCH_HIGHLIGHT_PARAM,
 } from "~/entrypoints/options/search/navigation"
-import { useHorizontalScrollControls } from "~/hooks/useHorizontalScrollControls"
 import { setLastSeenOptionalPermissions } from "~/services/permissions/optionalPermissionState"
 import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
 import { assertNever } from "~/utils/core/assert"
@@ -161,6 +166,19 @@ interface SettingsTabItem {
   label: string
 }
 
+const DESKTOP_TAB_GAP_PX = 8
+
+/**
+ * Returns the shared desktop tab button classes for selected and idle states.
+ */
+function getTabButtonClass(selected: boolean) {
+  return `border-b-2 px-3 py-3 text-sm font-medium whitespace-nowrap transition-colors focus:outline-none ${
+    selected
+      ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400"
+      : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
+  }`
+}
+
 /**
  * Resolve the currently requested Basic Settings tab from the URL state.
  */
@@ -234,76 +252,208 @@ function getSettingsTabLabel(t: TFunction, tabId: TabId): string {
  */
 function DesktopTabs({
   tabs,
-  selectedIndex,
+  selectedTabId,
+  onTabSelect,
 }: {
   tabs: SettingsTabItem[]
-  selectedIndex: number
+  selectedTabId: TabId
+  onTabSelect: (tabId: TabId) => void
 }) {
-  const { t } = useTranslation("settings")
-  const {
-    scrollRef: tabListRef,
-    canScrollLeft,
-    canScrollRight,
-    scrollLeft,
-    scrollRight,
-    scrollChildIntoCenter,
-  } = useHorizontalScrollControls<HTMLDivElement>({
-    enableWheelScroll: true,
-  })
+  const { t } = useTranslation(["settings", "common"])
+  const containerRef = useRef<HTMLDivElement | null>(null)
+  const moreMeasureRef = useRef<HTMLButtonElement | null>(null)
+  const tabMeasureRefs = useRef<
+    Partial<Record<TabId, HTMLButtonElement | null>>
+  >({})
+  const [visibleTabIds, setVisibleTabIds] = useState<TabId[]>(() =>
+    tabs.map((tab) => tab.id),
+  )
+  const [overflowTabIds, setOverflowTabIds] = useState<TabId[]>([])
 
-  useEffect(() => {
-    const rafId = window.requestAnimationFrame(() => {
-      scrollChildIntoCenter(selectedIndex)
+  const tabsById = useMemo(
+    () =>
+      Object.fromEntries(tabs.map((tab) => [tab.id, tab])) as Record<
+        TabId,
+        SettingsTabItem
+      >,
+    [tabs],
+  )
+  const orderedTabIds = useMemo(() => tabs.map((tab) => tab.id), [tabs])
+
+  const recalculateVisibleTabs = useCallback(() => {
+    const container = containerRef.current
+    if (!container) return
+
+    const availableWidth = container.clientWidth
+    if (availableWidth <= 0) return
+
+    const tabWidths = orderedTabIds.map(
+      (tabId) =>
+        tabMeasureRefs.current[tabId]?.getBoundingClientRect().width ?? 0,
+    )
+    const moreWidth = moreMeasureRef.current?.getBoundingClientRect().width ?? 0
+
+    if (tabWidths.some((width) => width <= 0)) {
+      return
+    }
+
+    const getTotalWidth = (count: number) => {
+      if (count <= 0) return 0
+      const contentWidth = tabWidths
+        .slice(0, count)
+        .reduce((sum, width) => sum + width, 0)
+      return contentWidth + DESKTOP_TAB_GAP_PX * (count - 1)
+    }
+
+    if (getTotalWidth(orderedTabIds.length) <= availableWidth) {
+      setVisibleTabIds(orderedTabIds)
+      setOverflowTabIds([])
+      return
+    }
+
+    const reservedWidth = moreWidth + DESKTOP_TAB_GAP_PX
+    const maxVisibleWidth = Math.max(availableWidth - reservedWidth, 0)
+
+    let usedWidth = 0
+    let visibleCount = 0
+
+    for (const width of tabWidths) {
+      const nextWidth =
+        visibleCount === 0 ? width : usedWidth + DESKTOP_TAB_GAP_PX + width
+      if (nextWidth > maxVisibleWidth) {
+        break
+      }
+      usedWidth = nextWidth
+      visibleCount += 1
+    }
+
+    let nextVisibleTabIds = orderedTabIds.slice(0, visibleCount)
+
+    if (!nextVisibleTabIds.includes(selectedTabId)) {
+      if (nextVisibleTabIds.length > 0) {
+        nextVisibleTabIds = [...nextVisibleTabIds.slice(0, -1), selectedTabId]
+      } else {
+        nextVisibleTabIds = [selectedTabId]
+      }
+    }
+
+    nextVisibleTabIds = orderedTabIds.filter((tabId) =>
+      nextVisibleTabIds.includes(tabId),
+    )
+
+    const nextOverflowTabIds = orderedTabIds.filter(
+      (tabId) => !nextVisibleTabIds.includes(tabId),
+    )
+
+    setVisibleTabIds(nextVisibleTabIds)
+    setOverflowTabIds(nextOverflowTabIds)
+  }, [orderedTabIds, selectedTabId])
+
+  useLayoutEffect(() => {
+    recalculateVisibleTabs()
+
+    const container = containerRef.current
+    if (!container || typeof ResizeObserver === "undefined") {
+      return
+    }
+
+    const resizeObserver = new ResizeObserver(() => {
+      recalculateVisibleTabs()
     })
-    return () => window.cancelAnimationFrame(rafId)
-  }, [selectedIndex, tabs.length, scrollChildIntoCenter])
+
+    resizeObserver.observe(container)
+    return () => {
+      resizeObserver.disconnect()
+    }
+  }, [recalculateVisibleTabs])
 
   return (
-    <div className="dark:border-dark-bg-tertiary -mb-px hidden items-center gap-1 border-b border-gray-200 md:flex">
-      <Button
-        type="button"
-        size="icon-sm"
-        variant="ghost"
-        aria-label={t("tabs.scrollLeft")}
-        disabled={!canScrollLeft}
-        onClick={scrollLeft}
-        className="shrink-0"
-      >
-        <ChevronLeft className="h-4 w-4" />
-      </Button>
-
-      <Tab.List
-        ref={tabListRef}
-        className="scrollbar-hide flex min-w-0 flex-1 touch-pan-x items-center gap-2 overflow-x-auto"
+    <div
+      ref={containerRef}
+      className="dark:border-dark-bg-tertiary relative -mb-px hidden items-center gap-2 border-b border-gray-200 md:flex"
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute top-0 left-0 -z-10 flex gap-2 opacity-0"
       >
         {tabs.map((tab) => (
-          <Tab key={tab.id} as={Fragment}>
-            {({ selected }) => (
-              <button
-                className={`border-b-2 px-3 py-3 text-sm font-medium whitespace-nowrap transition-colors focus:outline-none ${
-                  selected
-                    ? "border-blue-600 text-blue-600 dark:border-blue-500 dark:text-blue-400"
-                    : "border-transparent text-gray-600 hover:border-gray-300 hover:text-gray-900 dark:text-gray-400 dark:hover:text-gray-200"
-                }`}
-              >
-                {tab.label}
-              </button>
-            )}
-          </Tab>
+          <button
+            key={tab.id}
+            ref={(node) => {
+              tabMeasureRefs.current[tab.id] = node
+            }}
+            type="button"
+            className={getTabButtonClass(false)}
+            tabIndex={-1}
+          >
+            {tab.label}
+          </button>
         ))}
+        <button
+          ref={moreMeasureRef}
+          type="button"
+          className={getTabButtonClass(false)}
+          tabIndex={-1}
+        >
+          <span className="inline-flex items-center gap-1.5">
+            {t("common:actions.more")}
+            <ChevronDown className="h-4 w-4" />
+          </span>
+        </button>
+      </div>
+
+      <Tab.List className="flex min-w-0 flex-1 items-center gap-2 overflow-hidden">
+        {visibleTabIds.map((tabId) => {
+          const tab = tabsById[tabId]
+          const isSelected = selectedTabId === tab.id
+
+          return (
+            <button
+              key={tab.id}
+              type="button"
+              className={getTabButtonClass(isSelected)}
+              aria-pressed={isSelected}
+              onClick={() => onTabSelect(tab.id)}
+            >
+              {tab.label}
+            </button>
+          )
+        })}
       </Tab.List>
 
-      <Button
-        type="button"
-        size="icon-sm"
-        variant="ghost"
-        aria-label={t("tabs.scrollRight")}
-        disabled={!canScrollRight}
-        onClick={scrollRight}
-        className="shrink-0"
-      >
-        <ChevronRight className="h-4 w-4" />
-      </Button>
+      {overflowTabIds.length > 0 ? (
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <button
+              type="button"
+              className={getTabButtonClass(false)}
+              aria-label={t("common:actions.more")}
+            >
+              <span className="inline-flex items-center gap-1.5">
+                {t("common:actions.more")}
+                <ChevronDown className="h-4 w-4" />
+              </span>
+            </button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            {overflowTabIds.map((tabId) => {
+              const tab = tabsById[tabId]
+
+              return (
+                <DropdownMenuItem
+                  key={tab.id}
+                  onClick={() => onTabSelect(tab.id)}
+                  className={
+                    selectedTabId === tab.id ? "font-medium" : undefined
+                  }
+                >
+                  {tab.label}
+                </DropdownMenuItem>
+              )
+            })}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      ) : null}
     </div>
   )
 }
@@ -457,6 +607,12 @@ export default function BasicSettings() {
       />
 
       <Tab.Group selectedIndex={selectedTabIndex} onChange={handleTabChange}>
+        <Tab.List className="sr-only">
+          {tabs.map((tab) => (
+            <Tab key={tab.id}>{tab.label}</Tab>
+          ))}
+        </Tab.List>
+
         <div className="mb-6">
           <div className="mb-4 md:hidden">
             <label className="sr-only" htmlFor="settings-tab-select">
@@ -482,7 +638,14 @@ export default function BasicSettings() {
             </Select>
           </div>
 
-          <DesktopTabs tabs={tabs} selectedIndex={selectedTabIndex} />
+          <DesktopTabs
+            tabs={tabs}
+            selectedTabId={selectedTabId}
+            onTabSelect={(tabId) => {
+              const index = getTabIndexFromId(tabId)
+              handleTabChange(index)
+            }}
+          />
         </div>
 
         <Tab.Panels>

@@ -489,8 +489,6 @@
     "managedSite": "Managed site",
     "permissions": "Permissions",
     "refresh": "Data Refresh",
-    "scrollLeft": "Scroll tabs left",
-    "scrollRight": "Scroll tabs right",
     "select": "Select a tab",
     "webAiApiCheck": "AI API Test"
   },

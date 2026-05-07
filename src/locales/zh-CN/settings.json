@@ -489,8 +489,6 @@
     "managedSite": "自建站点管理",
     "permissions": "权限管理",
     "refresh": "数据刷新",
-    "scrollLeft": "向左滚动标签",
-    "scrollRight": "向右滚动标签",
     "select": "选择一个分组",
     "webAiApiCheck": "AI API 测试"
   },
