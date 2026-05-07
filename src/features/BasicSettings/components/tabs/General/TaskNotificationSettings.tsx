@@ -34,25 +34,15 @@ const logger = createLogger("TaskNotificationSettings")
 const TASK_NOTIFICATION_ITEMS: Array<{
   task: TaskNotificationTask
 }> = [
-  {
-    task: TASK_NOTIFICATION_TASKS.AutoCheckin,
-  },
-  {
-    task: TASK_NOTIFICATION_TASKS.WebdavAutoSync,
-  },
-  {
-    task: TASK_NOTIFICATION_TASKS.ManagedSiteModelSync,
-  },
-  {
-    task: TASK_NOTIFICATION_TASKS.UsageHistorySync,
-  },
-  {
-    task: TASK_NOTIFICATION_TASKS.BalanceHistoryCapture,
-  },
+  { task: TASK_NOTIFICATION_TASKS.AutoCheckin },
+  { task: TASK_NOTIFICATION_TASKS.WebdavAutoSync },
+  { task: TASK_NOTIFICATION_TASKS.ManagedSiteModelSync },
+  { task: TASK_NOTIFICATION_TASKS.UsageHistorySync },
+  { task: TASK_NOTIFICATION_TASKS.BalanceHistoryCapture },
 ]
 
 /**
- *
+ * Resolves the localized label for a task notification option.
  */
 function getTaskLabel(t: TFunction<"settings">, task: TaskNotificationTask) {
   switch (task) {
@@ -70,7 +60,7 @@ function getTaskLabel(t: TFunction<"settings">, task: TaskNotificationTask) {
 }
 
 /**
- *
+ * Resolves the localized description for a task notification option.
  */
 function getTaskDescription(
   t: TFunction<"settings">,

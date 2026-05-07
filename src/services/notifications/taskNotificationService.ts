@@ -8,6 +8,9 @@ import {
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+  getTaskNotificationId,
+  parseTaskNotificationId,
+  TASK_NOTIFICATION_STATUSES,
   TASK_NOTIFICATION_TASKS,
   type TaskNotificationStatus,
   type TaskNotificationTask,
@@ -38,8 +41,6 @@ export interface TaskNotificationPayload {
   counts?: TaskNotificationCounts
   message?: string
 }
-
-const TASK_NOTIFICATION_ID_PREFIX = "all-api-hub:task:"
 
 const TASK_LABEL_KEYS: Record<TaskNotificationTask, string> = {
   autoCheckin: "settings:taskNotifications.tasks.autoCheckin",
@@ -94,41 +95,7 @@ const TASK_NAVIGATION_TARGETS: Record<
 let unsubscribeNotificationClicked: (() => void) | null = null
 
 /**
- *
- */
-function getNotificationId(task: TaskNotificationTask): string {
-  return `${TASK_NOTIFICATION_ID_PREFIX}${task}`
-}
-
-/**
- *
- */
-function isTaskNotificationId(
-  notificationId: string,
-): notificationId is `${typeof TASK_NOTIFICATION_ID_PREFIX}${TaskNotificationTask}` {
-  return notificationId.startsWith(TASK_NOTIFICATION_ID_PREFIX)
-}
-
-/**
- *
- */
-function getTaskFromNotificationId(
-  notificationId: string,
-): TaskNotificationTask | null {
-  if (!isTaskNotificationId(notificationId)) {
-    return null
-  }
-
-  const task = notificationId.slice(TASK_NOTIFICATION_ID_PREFIX.length)
-  return Object.values(TASK_NOTIFICATION_TASKS).includes(
-    task as TaskNotificationTask,
-  )
-    ? (task as TaskNotificationTask)
-    : null
-}
-
-/**
- *
+ * Formats task execution counts for inclusion in notification copy.
  */
 function formatCounts(counts: TaskNotificationCounts | undefined) {
   if (!counts) {
@@ -152,7 +119,7 @@ function formatCounts(counts: TaskNotificationCounts | undefined) {
 }
 
 /**
- *
+ * Builds the localized title and message for a task notification payload.
  */
 function buildNotificationContent(payload: TaskNotificationPayload) {
   const taskName = t(TASK_LABEL_KEYS[payload.task])
@@ -170,7 +137,7 @@ function buildNotificationContent(payload: TaskNotificationPayload) {
 }
 
 /**
- *
+ * Checks user preferences and browser capabilities before sending a notification.
  */
 async function shouldNotify(
   payload: TaskNotificationPayload,
@@ -219,7 +186,7 @@ export async function notifyTaskResult(
 
     const content = buildNotificationContent(payload)
     const createdId = await createNotification(
-      getNotificationId(payload.task),
+      getTaskNotificationId(payload.task),
       {
         type: "basic",
         iconUrl,
@@ -241,10 +208,10 @@ export async function notifyTaskResult(
 }
 
 /**
- *
+ * Handles task-notification clicks by opening the related settings destination.
  */
 async function handleNotificationClick(notificationId: string): Promise<void> {
-  const task = getTaskFromNotificationId(notificationId)
+  const task = parseTaskNotificationId(notificationId)
   if (!task) {
     return
   }
@@ -274,7 +241,7 @@ export function initializeTaskNotificationService(): void {
 }
 
 /**
- *
+ * Handles runtime requests that trigger a test task notification.
  */
 export async function handleTaskNotificationMessage(
   request: any,
@@ -287,7 +254,7 @@ export async function handleTaskNotificationMessage(
 
   const success = await notifyTaskResult({
     task: TASK_NOTIFICATION_TASKS.AutoCheckin,
-    status: "success",
+    status: TASK_NOTIFICATION_STATUSES.Success,
     message: t("settings:taskNotifications.test.message"),
   })
 

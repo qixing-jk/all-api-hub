@@ -25,7 +25,10 @@ import {
   type ApiCredentialProfilesConfig,
 } from "~/types/apiCredentialProfiles"
 import type { ChannelConfigMap } from "~/types/channelConfig"
-import { TASK_NOTIFICATION_TASKS } from "~/types/taskNotifications"
+import {
+  TASK_NOTIFICATION_STATUSES,
+  TASK_NOTIFICATION_TASKS,
+} from "~/types/taskNotifications"
 import {
   isWebdavSyncDataSelectionEmpty,
   resolveWebdavSyncDataSelection,
@@ -289,7 +292,7 @@ class WebdavAutoSyncService {
       })
       await notifyTaskResult({
         task: TASK_NOTIFICATION_TASKS.WebdavAutoSync,
-        status: "success",
+        status: TASK_NOTIFICATION_STATUSES.Success,
       })
     } catch (error) {
       logger.error("后台同步失败", error)
@@ -298,7 +301,7 @@ class WebdavAutoSyncService {
       this.notifyFrontend("sync_error", { error: getErrorMessage(error) })
       await notifyTaskResult({
         task: TASK_NOTIFICATION_TASKS.WebdavAutoSync,
-        status: "failure",
+        status: TASK_NOTIFICATION_STATUSES.Failure,
         message: getErrorMessage(error),
       })
     } finally {

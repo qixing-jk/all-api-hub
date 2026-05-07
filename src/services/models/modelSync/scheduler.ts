@@ -26,7 +26,11 @@ import {
   ExecutionResult,
 } from "~/types/managedSiteModelSync"
 import type { OctopusConfig } from "~/types/octopusConfig"
-import { TASK_NOTIFICATION_TASKS } from "~/types/taskNotifications"
+import {
+  getTaskNotificationStatusFromCounts,
+  TASK_NOTIFICATION_STATUSES,
+  TASK_NOTIFICATION_TASKS,
+} from "~/types/taskNotifications"
 import {
   clearAlarm,
   createAlarm,
@@ -121,13 +125,10 @@ class ModelSyncScheduler {
               const result = await this.executeSync()
               await notifyTaskResult({
                 task: TASK_NOTIFICATION_TASKS.ManagedSiteModelSync,
-                status:
-                  result.statistics.failureCount > 0 &&
-                  result.statistics.successCount > 0
-                    ? "partial_success"
-                    : result.statistics.failureCount > 0
-                      ? "failure"
-                      : "success",
+                status: getTaskNotificationStatusFromCounts({
+                  successCount: result.statistics.successCount,
+                  failedCount: result.statistics.failureCount,
+                }),
                 counts: {
                   total: result.statistics.total,
                   success: result.statistics.successCount,
@@ -138,7 +139,7 @@ class ModelSyncScheduler {
               logger.error("Scheduled execution failed", error)
               await notifyTaskResult({
                 task: TASK_NOTIFICATION_TASKS.ManagedSiteModelSync,
-                status: "failure",
+                status: TASK_NOTIFICATION_STATUSES.Failure,
                 message: getErrorMessage(error),
               })
             }

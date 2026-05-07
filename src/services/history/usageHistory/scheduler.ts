@@ -2,7 +2,11 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import { TASK_NOTIFICATION_TASKS } from "~/types/taskNotifications"
+import {
+  getTaskNotificationStatusFromCounts,
+  TASK_NOTIFICATION_STATUSES,
+  TASK_NOTIFICATION_TASKS,
+} from "~/types/taskNotifications"
 import type { UsageHistoryPreferences } from "~/types/usageHistory"
 import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,
@@ -255,7 +259,7 @@ class UsageHistoryScheduler {
       if (params.trigger === "alarm") {
         await notifyTaskResult({
           task: TASK_NOTIFICATION_TASKS.UsageHistorySync,
-          status: "failure",
+          status: TASK_NOTIFICATION_STATUSES.Failure,
           message: getErrorMessage(error),
         })
       }
@@ -275,12 +279,10 @@ class UsageHistoryScheduler {
 
     await notifyTaskResult({
       task: TASK_NOTIFICATION_TASKS.UsageHistorySync,
-      status:
-        result.totals.error > 0 && result.totals.success > 0
-          ? "partial_success"
-          : result.totals.error > 0
-            ? "failure"
-            : "success",
+      status: getTaskNotificationStatusFromCounts({
+        successCount: result.totals.success,
+        failedCount: result.totals.error,
+      }),
       counts: {
         total: result.perAccount.length,
         success: result.totals.success,

@@ -28,7 +28,11 @@ import {
   type CheckinAccountResult,
   type CheckinResultStatus,
 } from "~/types/autoCheckin"
-import { TASK_NOTIFICATION_TASKS } from "~/types/taskNotifications"
+import {
+  getTaskNotificationStatusFromCounts,
+  TASK_NOTIFICATION_STATUSES,
+  TASK_NOTIFICATION_TASKS,
+} from "~/types/taskNotifications"
 import {
   clearAlarm,
   createAlarm,
@@ -251,13 +255,10 @@ class AutoCheckinScheduler {
   }
 
   private getTaskNotificationStatus(successCount: number, failedCount: number) {
-    if (failedCount > 0 && successCount > 0) {
-      return "partial_success" as const
-    }
-    if (failedCount > 0) {
-      return "failure" as const
-    }
-    return "success" as const
+    return getTaskNotificationStatusFromCounts({
+      successCount,
+      failedCount,
+    })
   }
 
   private async notifyScheduledRunResult(params: {
@@ -2060,7 +2061,7 @@ class AutoCheckinScheduler {
       if (isDailyRun) {
         await notifyTaskResult({
           task: TASK_NOTIFICATION_TASKS.AutoCheckin,
-          status: "failure",
+          status: TASK_NOTIFICATION_STATUSES.Failure,
         })
       }
     }

@@ -5,6 +5,56 @@ import {
 } from "~/entrypoints/options/search/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
 
+const TASK_NOTIFICATION_BREADCRUMBS = [
+  ...DEFAULT_BREADCRUMBS,
+  "settings:tabs.general",
+  "settings:taskNotifications.title",
+]
+
+const TASK_NOTIFICATION_CONTROL_ORDER_START = 513
+
+const TASK_NOTIFICATION_SEARCH_CONTROLS = [
+  {
+    searchId: "control:task-notifications-auto-checkin",
+    targetId: "task-notifications-autoCheckin",
+    labelKey: "settings:taskNotifications.tasks.autoCheckin",
+    descriptionKey: "settings:taskNotifications.taskDescriptions.autoCheckin",
+    keywords: ["notification", "auto checkin", "check-in"],
+  },
+  {
+    searchId: "control:task-notifications-webdav-auto-sync",
+    targetId: "task-notifications-webdavAutoSync",
+    labelKey: "settings:taskNotifications.tasks.webdavAutoSync",
+    descriptionKey:
+      "settings:taskNotifications.taskDescriptions.webdavAutoSync",
+    keywords: ["notification", "webdav", "auto sync"],
+  },
+  {
+    searchId: "control:task-notifications-managed-site-model-sync",
+    targetId: "task-notifications-managedSiteModelSync",
+    labelKey: "settings:taskNotifications.tasks.managedSiteModelSync",
+    descriptionKey:
+      "settings:taskNotifications.taskDescriptions.managedSiteModelSync",
+    keywords: ["notification", "model sync", "managed site"],
+  },
+  {
+    searchId: "control:task-notifications-usage-history-sync",
+    targetId: "task-notifications-usageHistorySync",
+    labelKey: "settings:taskNotifications.tasks.usageHistorySync",
+    descriptionKey:
+      "settings:taskNotifications.taskDescriptions.usageHistorySync",
+    keywords: ["notification", "usage history", "sync"],
+  },
+  {
+    searchId: "control:task-notifications-balance-history-capture",
+    targetId: "task-notifications-balanceHistoryCapture",
+    labelKey: "settings:taskNotifications.tasks.balanceHistoryCapture",
+    descriptionKey:
+      "settings:taskNotifications.taskDescriptions.balanceHistoryCapture",
+    keywords: ["notification", "balance history", "capture"],
+  },
+] as const
+
 export const generalSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:display",
@@ -251,11 +301,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     511,
     {
       descriptionKey: "settings:taskNotifications.enableDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.general",
-        "settings:taskNotifications.title",
-      ],
+      breadcrumbsKeys: TASK_NOTIFICATION_BREADCRUMBS,
       keywords: ["notification", "scheduled task", "background task"],
     },
   ),
@@ -267,96 +313,22 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     512,
     {
       descriptionKey: "settings:taskNotifications.permission.description",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.general",
-        "settings:taskNotifications.title",
-      ],
+      breadcrumbsKeys: TASK_NOTIFICATION_BREADCRUMBS,
       keywords: ["notification", "permission", "system notification"],
     },
   ),
-  buildControlDefinition(
-    "control:task-notifications-auto-checkin",
-    "general",
-    "task-notifications-autoCheckin",
-    "settings:taskNotifications.tasks.autoCheckin",
-    513,
-    {
-      descriptionKey: "settings:taskNotifications.taskDescriptions.autoCheckin",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.general",
-        "settings:taskNotifications.title",
-      ],
-      keywords: ["notification", "auto checkin", "check-in"],
-    },
-  ),
-  buildControlDefinition(
-    "control:task-notifications-webdav-auto-sync",
-    "general",
-    "task-notifications-webdavAutoSync",
-    "settings:taskNotifications.tasks.webdavAutoSync",
-    514,
-    {
-      descriptionKey:
-        "settings:taskNotifications.taskDescriptions.webdavAutoSync",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.general",
-        "settings:taskNotifications.title",
-      ],
-      keywords: ["notification", "webdav", "auto sync"],
-    },
-  ),
-  buildControlDefinition(
-    "control:task-notifications-managed-site-model-sync",
-    "general",
-    "task-notifications-managedSiteModelSync",
-    "settings:taskNotifications.tasks.managedSiteModelSync",
-    515,
-    {
-      descriptionKey:
-        "settings:taskNotifications.taskDescriptions.managedSiteModelSync",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.general",
-        "settings:taskNotifications.title",
-      ],
-      keywords: ["notification", "model sync", "managed site"],
-    },
-  ),
-  buildControlDefinition(
-    "control:task-notifications-usage-history-sync",
-    "general",
-    "task-notifications-usageHistorySync",
-    "settings:taskNotifications.tasks.usageHistorySync",
-    516,
-    {
-      descriptionKey:
-        "settings:taskNotifications.taskDescriptions.usageHistorySync",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.general",
-        "settings:taskNotifications.title",
-      ],
-      keywords: ["notification", "usage history", "sync"],
-    },
-  ),
-  buildControlDefinition(
-    "control:task-notifications-balance-history-capture",
-    "general",
-    "task-notifications-balanceHistoryCapture",
-    "settings:taskNotifications.tasks.balanceHistoryCapture",
-    517,
-    {
-      descriptionKey:
-        "settings:taskNotifications.taskDescriptions.balanceHistoryCapture",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.general",
-        "settings:taskNotifications.title",
-      ],
-      keywords: ["notification", "balance history", "capture"],
-    },
+  ...TASK_NOTIFICATION_SEARCH_CONTROLS.map((definition, index) =>
+    buildControlDefinition(
+      definition.searchId,
+      "general",
+      definition.targetId,
+      definition.labelKey,
+      TASK_NOTIFICATION_CONTROL_ORDER_START + index,
+      {
+        descriptionKey: definition.descriptionKey,
+        breadcrumbsKeys: TASK_NOTIFICATION_BREADCRUMBS,
+        keywords: [...definition.keywords],
+      },
+    ),
   ),
 ]

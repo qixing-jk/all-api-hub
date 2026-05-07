@@ -7,7 +7,11 @@ import {
   type BalanceHistoryPreferences,
   type DailyBalanceHistoryCaptureSource,
 } from "~/types/dailyBalanceHistory"
-import { TASK_NOTIFICATION_TASKS } from "~/types/taskNotifications"
+import {
+  getTaskNotificationStatusFromCounts,
+  TASK_NOTIFICATION_STATUSES,
+  TASK_NOTIFICATION_TASKS,
+} from "~/types/taskNotifications"
 import {
   clearAlarm,
   createAlarm,
@@ -81,12 +85,10 @@ class DailyBalanceHistoryScheduler {
 
       await notifyTaskResult({
         task: TASK_NOTIFICATION_TASKS.BalanceHistoryCapture,
-        status:
-          totals.failed > 0 && totals.success > 0
-            ? "partial_success"
-            : totals.failed > 0
-              ? "failure"
-              : "success",
+        status: getTaskNotificationStatusFromCounts({
+          successCount: totals.success,
+          failedCount: totals.failed,
+        }),
         counts: {
           total: totals.success + totals.failed,
           success: totals.success,
@@ -277,7 +279,7 @@ class DailyBalanceHistoryScheduler {
       if (params.trigger === "alarm") {
         await notifyTaskResult({
           task: TASK_NOTIFICATION_TASKS.BalanceHistoryCapture,
-          status: "failure",
+          status: TASK_NOTIFICATION_STATUSES.Failure,
           message: getErrorMessage(error),
         })
       }

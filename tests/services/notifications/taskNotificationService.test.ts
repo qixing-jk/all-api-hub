@@ -9,6 +9,8 @@ import {
 } from "~/services/notifications/taskNotificationService"
 import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+  getTaskNotificationId,
+  TASK_NOTIFICATION_STATUSES,
   TASK_NOTIFICATION_TASKS,
 } from "~/types/taskNotifications"
 
@@ -80,7 +82,9 @@ describe("taskNotificationService", () => {
     })
     hasNotificationsAPIMock.mockReturnValue(true)
     hasPermissionMock.mockResolvedValue(true)
-    createNotificationMock.mockResolvedValue("all-api-hub:task:autoCheckin")
+    createNotificationMock.mockResolvedValue(
+      getTaskNotificationId(TASK_NOTIFICATION_TASKS.AutoCheckin),
+    )
     clearNotificationMock.mockResolvedValue(true)
     onNotificationClickedMock.mockReturnValue(vi.fn())
     openOrFocusOptionsMenuItemMock.mockResolvedValue(undefined)
@@ -97,7 +101,7 @@ describe("taskNotificationService", () => {
     await expect(
       notifyTaskResult({
         task: TASK_NOTIFICATION_TASKS.AutoCheckin,
-        status: "success",
+        status: TASK_NOTIFICATION_STATUSES.Success,
       }),
     ).resolves.toBe(false)
 
@@ -118,7 +122,7 @@ describe("taskNotificationService", () => {
     await expect(
       notifyTaskResult({
         task: TASK_NOTIFICATION_TASKS.WebdavAutoSync,
-        status: "failure",
+        status: TASK_NOTIFICATION_STATUSES.Failure,
       }),
     ).resolves.toBe(false)
 
@@ -131,7 +135,7 @@ describe("taskNotificationService", () => {
     await expect(
       notifyTaskResult({
         task: TASK_NOTIFICATION_TASKS.AutoCheckin,
-        status: "success",
+        status: TASK_NOTIFICATION_STATUSES.Success,
       }),
     ).resolves.toBe(false)
 
@@ -145,7 +149,7 @@ describe("taskNotificationService", () => {
     await expect(
       notifyTaskResult({
         task: TASK_NOTIFICATION_TASKS.AutoCheckin,
-        status: "success",
+        status: TASK_NOTIFICATION_STATUSES.Success,
       }),
     ).resolves.toBe(false)
 
@@ -159,7 +163,7 @@ describe("taskNotificationService", () => {
     await expect(
       notifyTaskResult({
         task: TASK_NOTIFICATION_TASKS.AutoCheckin,
-        status: "failure",
+        status: TASK_NOTIFICATION_STATUSES.Failure,
       }),
     ).resolves.toBe(false)
   })
@@ -168,7 +172,7 @@ describe("taskNotificationService", () => {
     await expect(
       notifyTaskResult({
         task: TASK_NOTIFICATION_TASKS.AutoCheckin,
-        status: "partial_success",
+        status: TASK_NOTIFICATION_STATUSES.PartialSuccess,
         counts: {
           total: 3,
           success: 2,
@@ -178,7 +182,7 @@ describe("taskNotificationService", () => {
     ).resolves.toBe(true)
 
     expect(createNotificationMock).toHaveBeenCalledWith(
-      "all-api-hub:task:autoCheckin",
+      getTaskNotificationId(TASK_NOTIFICATION_TASKS.AutoCheckin),
       expect.objectContaining({
         type: "basic",
         iconUrl: "icon.png",
@@ -202,14 +206,14 @@ describe("taskNotificationService", () => {
       throw new Error("Expected notification click handler to be registered")
     }
 
-    await handler("all-api-hub:task:webdavAutoSync")
+    await handler(getTaskNotificationId(TASK_NOTIFICATION_TASKS.WebdavAutoSync))
 
     expect(openOrFocusOptionsMenuItemMock).toHaveBeenCalledWith(
       MENU_ITEM_IDS.BASIC,
       { tab: "dataBackup", anchor: "webdav-auto-sync" },
     )
     expect(clearNotificationMock).toHaveBeenCalledWith(
-      "all-api-hub:task:webdavAutoSync",
+      getTaskNotificationId(TASK_NOTIFICATION_TASKS.WebdavAutoSync),
     )
   })
 
