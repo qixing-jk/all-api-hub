@@ -2,6 +2,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
+import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -27,6 +28,7 @@ import {
   type CheckinAccountResult,
   type CheckinResultStatus,
 } from "~/types/autoCheckin"
+import { TASK_NOTIFICATION_TASKS } from "~/types/taskNotifications"
 import {
   clearAlarm,
   createAlarm,
@@ -246,6 +248,37 @@ class AutoCheckinScheduler {
         error: errorMessage,
       })
     }
+  }
+
+  private getTaskNotificationStatus(successCount: number, failedCount: number) {
+    if (failedCount > 0 && successCount > 0) {
+      return "partial_success" as const
+    }
+    if (failedCount > 0) {
+      return "failure" as const
+    }
+    return "success" as const
+  }
+
+  private async notifyScheduledRunResult(params: {
+    successCount: number
+    failedCount: number
+    skippedCount: number
+    total: number
+  }) {
+    await notifyTaskResult({
+      task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+      status: this.getTaskNotificationStatus(
+        params.successCount,
+        params.failedCount,
+      ),
+      counts: {
+        success: params.successCount,
+        failed: params.failedCount,
+        skipped: params.skippedCount,
+        total: params.total,
+      },
+    })
   }
 
   /**
@@ -1974,6 +2007,15 @@ class AutoCheckinScheduler {
         })
       }
 
+      if (isDailyRun) {
+        await this.notifyScheduledRunResult({
+          successCount,
+          failedCount,
+          skippedCount,
+          total: runnableAccounts.length + skippedCount,
+        })
+      }
+
       const duration = Date.now() - startTime
       logger.info("Execution completed", {
         durationMs: duration,
@@ -2012,6 +2054,13 @@ class AutoCheckinScheduler {
         await this.notifyUiRunCompleted({
           runKind: runType,
           updatedAccountIds: [],
+        })
+      }
+
+      if (isDailyRun) {
+        await notifyTaskResult({
+          task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+          status: "failure",
         })
       }
     }
@@ -2191,6 +2240,28 @@ class AutoCheckinScheduler {
         runKind: "retry",
         updatedAccountIds,
         summary,
+      })
+    }
+
+    const retryResults = Object.values(updates)
+    const retrySuccessCount = retryResults.filter(
+      (result) =>
+        result.status === CHECKIN_RESULT_STATUS.SUCCESS ||
+        result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+    ).length
+    const retryFailedCount = retryResults.filter(
+      (result) => result.status === CHECKIN_RESULT_STATUS.FAILED,
+    ).length
+    const retrySkippedCount = retryResults.filter(
+      (result) => result.status === CHECKIN_RESULT_STATUS.SKIPPED,
+    ).length
+
+    if (retryResults.length > 0) {
+      await this.notifyScheduledRunResult({
+        successCount: retrySuccessCount,
+        failedCount: retryFailedCount,
+        skippedCount: retrySkippedCount,
+        total: retryResults.length,
       })
     }
   }

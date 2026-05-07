@@ -1,6 +1,8 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { TASK_NOTIFICATION_TASKS } from "~/types/taskNotifications"
 import type { UsageHistoryPreferences } from "~/types/usageHistory"
 import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,
@@ -69,9 +71,14 @@ class UsageHistoryScheduler {
       }
 
       // Await to keep the MV3 service worker alive while the sync runs.
-      await this.runSync({
+      const result = await this.runSync({
         trigger: "alarm",
       })
+      if (!result) {
+        return
+      }
+
+      await this.notifyAlarmResult(result)
     })
 
     await this.applyScheduleFromPreferences()
@@ -245,10 +252,42 @@ class UsageHistoryScheduler {
       return { totals, perAccount }
     } catch (error) {
       logger.error("Sync run failed", error)
+      if (params.trigger === "alarm") {
+        await notifyTaskResult({
+          task: TASK_NOTIFICATION_TASKS.UsageHistorySync,
+          status: "failure",
+          message: getErrorMessage(error),
+        })
+      }
       return null
     } finally {
       this.isRunning = false
     }
+  }
+
+  private async notifyAlarmResult(
+    result: UsageHistoryBatchSyncResult,
+  ): Promise<void> {
+    const processedCount = result.totals.success + result.totals.error
+    if (processedCount === 0) {
+      return
+    }
+
+    await notifyTaskResult({
+      task: TASK_NOTIFICATION_TASKS.UsageHistorySync,
+      status:
+        result.totals.error > 0 && result.totals.success > 0
+          ? "partial_success"
+          : result.totals.error > 0
+            ? "failure"
+            : "success",
+      counts: {
+        total: result.perAccount.length,
+        success: result.totals.success,
+        failed: result.totals.error,
+        skipped: result.totals.skipped + result.totals.unsupported,
+      },
+    })
   }
 }
 

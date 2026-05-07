@@ -10,6 +10,7 @@ import ChangelogOnUpdateSettings from "./ChangelogOnUpdateSettings"
 import DisplaySettings from "./DisplaySettings"
 import LoggingSettings from "./LoggingSettings"
 import ResetSettingsSection from "./ResetSettingsSection"
+import TaskNotificationSettings from "./TaskNotificationSettings"
 
 /**
  * General Basic Settings tab for display preferences, theme/language, and dangerous zone.
@@ -23,6 +24,7 @@ export default function GeneralTab() {
       <ActionClickBehaviorSettings />
       <LoggingSettings />
       <ChangelogOnUpdateSettings />
+      <TaskNotificationSettings />
 
       {/* Appearance & Language Section */}
       <section id="appearance" className="space-y-6">

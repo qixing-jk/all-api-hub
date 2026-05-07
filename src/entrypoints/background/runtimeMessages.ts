@@ -15,6 +15,7 @@ import { handleUsageHistoryMessage } from "~/services/history/usageHistory/sched
 import { handleLdohSiteLookupMessage } from "~/services/integrations/ldohSiteLookup/background"
 import { handleChannelConfigMessage } from "~/services/managedSites/channelConfigStorage"
 import { handleManagedSiteModelSyncMessage } from "~/services/models/modelSync"
+import { handleTaskNotificationMessage } from "~/services/notifications/taskNotificationService"
 import { handleRedemptionAssistMessage } from "~/services/redemption/redemptionAssist"
 import { handleReleaseUpdateMessage } from "~/services/updates/releaseUpdateService"
 import { handleWebAiApiCheckMessage } from "~/services/verification/webAiApiCheck/background"
@@ -318,6 +319,16 @@ export function setupRuntimeMessageListeners() {
         )
       ) {
         void handleRedemptionAssistMessage(request, sender, sendResponse)
+        return true
+      }
+
+      if (
+        hasRuntimeActionPrefix(
+          request.action,
+          RuntimeActionPrefixes.TaskNotifications,
+        )
+      ) {
+        void handleTaskNotificationMessage(request, sendResponse)
         return true
       }
 

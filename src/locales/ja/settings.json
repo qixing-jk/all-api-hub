@@ -324,6 +324,10 @@
         "description": "一時ウィンドウでの保護回避中に Tab キーでリクエストヘッダールールを適用し、アカウントごとに正しい Cookie を付与して複数アカウント時のデータ異常を防ぎます。",
         "title": "宣言的ネットワークリクエスト"
       },
+      "notifications": {
+        "description": "バックグラウンドのスケジュールタスク完了後にシステム通知を送信できるようにします。",
+        "title": "システム通知"
+      },
       "webRequest": {
         "description": "一時ウィンドウによる回避や自動更新で必要なヘッダーを追加する必要がある場合にのみ、拡張機能が送信リクエストを監視できるようにします。",
         "title": "Web リクエスト"
@@ -489,6 +493,53 @@
     "scrollRight": "タブを右へスクロール",
     "select": "タブを選択",
     "webAiApiCheck": "AI API テスト"
+  },
+  "taskNotifications": {
+    "description": "バックグラウンドのスケジュールタスク完了後にシステム通知を送るかどうかを制御します。通知権限が未許可でもタスクは通常どおり実行されます。",
+    "enable": "タスク通知を有効化",
+    "enableDesc": "有効にすると、選択したタスクがスケジュール実行を終えた後に成功、部分成功、失敗の通知を送ります。",
+    "notification": {
+      "body": {
+        "failure": "{{task}} が失敗しました。",
+        "partialSuccess": "{{task}} が一部完了しました。",
+        "success": "{{task}} が正常に完了しました。"
+      },
+      "counts": "合計 {{total}}、成功 {{success}}、失敗 {{failed}}、スキップ {{skipped}}。",
+      "title": {
+        "failure": "{{task}} が失敗しました",
+        "partialSuccess": "{{task}} が一部成功しました",
+        "success": "{{task}} が完了しました"
+      }
+    },
+    "permission": {
+      "description": "システム通知にはブラウザの任意 notifications 権限が必要です。権限ページから取り消すこともできます。",
+      "request": "通知権限を許可",
+      "requestFailed": "通知権限は許可されませんでした",
+      "requestSuccess": "通知権限を許可しました",
+      "title": "通知権限"
+    },
+    "taskDescriptions": {
+      "autoCheckin": "毎日の自動チェックインと自動リトライの完了後に通知します。",
+      "balanceHistoryCapture": "日末の残高履歴自動キャプチャ完了後に通知します。",
+      "managedSiteModelSync": "管理サイトのモデル定期同期完了後に通知します。",
+      "usageHistorySync": "利用履歴の定期同期完了後に通知します。",
+      "webdavAutoSync": "WebDAV の定期自動同期完了後に通知します。"
+    },
+    "tasks": {
+      "autoCheckin": "自動チェックイン",
+      "balanceHistoryCapture": "日末残高キャプチャ",
+      "managedSiteModelSync": "モデル同期",
+      "usageHistorySync": "利用履歴同期",
+      "webdavAutoSync": "WebDAV 自動同期"
+    },
+    "tasksLabel": "タスク通知",
+    "test": {
+      "action": "テスト通知を送信",
+      "failed": "テスト通知を送信できませんでした。通知権限を確認してください。",
+      "message": "これは All API Hub のタスク通知テストです。",
+      "sent": "テスト通知を送信しました"
+    },
+    "title": "通知"
   },
   "theme": {
     "appearance": "外観",

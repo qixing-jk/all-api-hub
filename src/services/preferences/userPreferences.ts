@@ -78,6 +78,10 @@ import {
 import { DEFAULT_NEW_API_CONFIG, NewApiConfig } from "~/types/newApiConfig"
 import { DEFAULT_OCTOPUS_CONFIG, OctopusConfig } from "~/types/octopusConfig"
 import type { SortingPriorityConfig } from "~/types/sorting"
+import {
+  DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+  type TaskNotificationPreferences,
+} from "~/types/taskNotifications"
 import type { ThemeMode } from "~/types/theme"
 import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,
@@ -373,6 +377,12 @@ export interface UserPreferences {
   tempWindowFallbackReminder?: TempWindowFallbackReminderPreferences
 
   /**
+   * Controls best-effort system notifications emitted by background scheduled
+   * jobs. Browser notification permission is still requested separately.
+   */
+  taskNotifications?: TaskNotificationPreferences
+
+  /**
    * 最后更新时间
    */
   lastUpdated: number
@@ -546,6 +556,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   tempWindowFallbackReminder: {
     dismissed: false,
   },
+  taskNotifications: DEFAULT_TASK_NOTIFICATION_PREFERENCES,
 }
 
 /**
@@ -1202,6 +1213,20 @@ class UserPreferencesService {
   async resetWebdavConfig(): Promise<boolean> {
     return this.savePreferences({
       webdav: DEFAULT_PREFERENCES.webdav,
+    })
+  }
+
+  async updateTaskNotifications(
+    updates: Partial<TaskNotificationPreferences>,
+  ): Promise<boolean> {
+    return this.savePreferences({
+      taskNotifications: updates,
+    })
+  }
+
+  async resetTaskNotifications(): Promise<boolean> {
+    return this.savePreferences({
+      taskNotifications: DEFAULT_PREFERENCES.taskNotifications,
     })
   }
 }

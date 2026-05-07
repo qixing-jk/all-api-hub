@@ -25,6 +25,7 @@ const mocks = vi.hoisted(() => ({
   handleUsageHistoryMessage: vi.fn(),
   handleWebdavAutoSyncMessage: vi.fn(),
   handleDailyBalanceHistoryMessage: vi.fn(),
+  handleTaskNotificationMessage: vi.fn(),
   handleLdohSiteLookupMessage: vi.fn(),
   handleWebAiApiCheckMessage: vi.fn(),
   handleAccountKeyRepairMessage: vi.fn(),
@@ -111,6 +112,10 @@ vi.mock("~/services/history/dailyBalanceHistory/scheduler", () => ({
 
 vi.mock("~/services/webdav/webdavAutoSyncService", () => ({
   handleWebdavAutoSyncMessage: mocks.handleWebdavAutoSyncMessage,
+}))
+
+vi.mock("~/services/notifications/taskNotificationService", () => ({
+  handleTaskNotificationMessage: mocks.handleTaskNotificationMessage,
 }))
 
 vi.mock("~/services/integrations/ldohSiteLookup/background", () => ({
@@ -362,6 +367,10 @@ describe("setupRuntimeMessageListeners additional routing", () => {
       {
         request: { action: RuntimeActionIds.LdohSiteLookupRefreshSites },
         expected: mocks.handleLdohSiteLookupMessage,
+      },
+      {
+        request: { action: RuntimeActionIds.TaskNotificationsTest },
+        expected: mocks.handleTaskNotificationMessage,
       },
     ]
 

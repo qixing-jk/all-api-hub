@@ -99,6 +99,13 @@ vi.mock(
   }),
 )
 
+vi.mock(
+  "~/features/BasicSettings/components/tabs/General/TaskNotificationSettings",
+  () => ({
+    default: () => <div data-testid="task-notification-settings" />,
+  }),
+)
+
 vi.mock("~/entrypoints/options/components/ThemeToggle", () => ({
   default: () => <div data-testid="theme-toggle" />,
 }))

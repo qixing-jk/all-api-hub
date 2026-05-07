@@ -25,6 +25,7 @@ import type {
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
 import { SortingCriteriaType } from "~/types/sorting"
+import { DEFAULT_TASK_NOTIFICATION_PREFERENCES } from "~/types/taskNotifications"
 import { DEFAULT_VELOERA_CONFIG } from "~/types/veloeraConfig"
 import { DEFAULT_WEBDAV_SETTINGS, WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 import { buildUserPreferences } from "~~/tests/test-utils/factories"
@@ -944,6 +945,66 @@ describe("preferencesMigration", () => {
       expect(ids?.indexOf(SortingCriteriaType.HEALTH_STATUS)).toBe(7)
       expect(ids?.indexOf(SortingCriteriaType.CUSTOM_CHECK_IN_URL)).toBe(8)
       expect(ids?.indexOf(SortingCriteriaType.CUSTOM_REDEEM_URL)).toBe(9)
+    })
+
+    it("initializes task notification preferences during v18 to v19 migration", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 18,
+      })
+      delete (prefs as any).taskNotifications
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.taskNotifications).toEqual(
+        DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      )
+    })
+
+    it("preserves existing task notification preferences during v18 to v19 migration", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 18,
+        taskNotifications: {
+          enabled: false,
+          tasks: {
+            ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+            webdavAutoSync: false,
+          },
+        },
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.taskNotifications).toEqual({
+        enabled: false,
+        tasks: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+          webdavAutoSync: false,
+        },
+      })
+    })
+
+    it("backfills missing task notification task switches during v18 to v19 migration", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 18,
+        taskNotifications: {
+          enabled: true,
+          tasks: {
+            autoCheckin: false,
+          } as any,
+        },
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.taskNotifications).toEqual({
+        enabled: true,
+        tasks: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+          autoCheckin: false,
+        },
+      })
     })
 
     it("removes all deprecated fields after full migration", () => {

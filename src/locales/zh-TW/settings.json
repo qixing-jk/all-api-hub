@@ -324,6 +324,10 @@
         "description": "允許在臨時視窗過盾期間按 Tab 應用請求頭規則，為不同帳號附加正確的 Cookie，避免多帳號下的資料異常問題。",
         "title": "宣告式網路請求"
       },
+      "notifications": {
+        "description": "允許後臺定時任務完成後傳送系統通知。",
+        "title": "系統通知"
+      },
       "webRequest": {
         "description": "僅在臨時視窗過盾或自動重新整理需要時，監聽請求並追加必要的請求頭。",
         "title": "網路請求"
@@ -489,6 +493,53 @@
     "scrollRight": "向右滾動標籤",
     "select": "選擇一個分組",
     "webAiApiCheck": "AI API 測試"
+  },
+  "taskNotifications": {
+    "description": "控制後臺定時任務完成後是否傳送系統通知。通知權限未授予時，任務仍會照常執行。",
+    "enable": "啟用任務通知",
+    "enableDesc": "開啟後，已勾選任務在定時執行完成時會傳送成功、部分成功或失敗通知。",
+    "notification": {
+      "body": {
+        "failure": "{{task}}執行失敗。",
+        "partialSuccess": "{{task}}部分完成。",
+        "success": "{{task}}已成功完成。"
+      },
+      "counts": "總計 {{total}}，成功 {{success}}，失敗 {{failed}}，跳過 {{skipped}}。",
+      "title": {
+        "failure": "{{task}}失敗",
+        "partialSuccess": "{{task}}部分成功",
+        "success": "{{task}}完成"
+      }
+    },
+    "permission": {
+      "description": "系統通知需要瀏覽器授予 notifications 可選權限。你也可以在權限管理頁撤銷。",
+      "request": "授權通知權限",
+      "requestFailed": "未能授予通知權限",
+      "requestSuccess": "通知權限已授予",
+      "title": "通知權限"
+    },
+    "taskDescriptions": {
+      "autoCheckin": "每日自動簽到和自動重試完成後通知。",
+      "balanceHistoryCapture": "餘額歷史日終自動捕獲完成後通知。",
+      "managedSiteModelSync": "自建站點模型定時同步完成後通知。",
+      "usageHistorySync": "用量歷史定時同步完成後通知。",
+      "webdavAutoSync": "WebDAV 定時自動同步完成後通知。"
+    },
+    "tasks": {
+      "autoCheckin": "自動簽到",
+      "balanceHistoryCapture": "餘額歷史日終捕獲",
+      "managedSiteModelSync": "模型同步",
+      "usageHistorySync": "用量歷史同步",
+      "webdavAutoSync": "WebDAV 自動同步"
+    },
+    "tasksLabel": "任務通知",
+    "test": {
+      "action": "傳送測試通知",
+      "failed": "測試通知傳送失敗，請確認已授予通知權限。",
+      "message": "這是一條 All API Hub 任務通知測試。",
+      "sent": "測試通知已傳送"
+    },
+    "title": "通知"
   },
   "theme": {
     "appearance": "外觀",

@@ -25,6 +25,7 @@ export const RuntimeActionPrefixes = {
   Preferences: "preferences:",
   ReleaseUpdate: "releaseUpdate:",
   RedemptionAssist: "redemptionAssist:",
+  TaskNotifications: "taskNotifications:",
   UsageHistory: "usageHistory:",
   WebdavAutoSync: "webdavAutoSync:",
 } as const
@@ -281,6 +282,11 @@ export const RuntimeActionIds = {
   RedemptionAssistContextMenuTrigger: composeRuntimeAction(
     RuntimeActionPrefixes.RedemptionAssist,
     "contextMenuTrigger",
+  ),
+
+  TaskNotificationsTest: composeRuntimeAction(
+    RuntimeActionPrefixes.TaskNotifications,
+    "test",
   ),
 
   UsageHistoryUpdateSettings: composeRuntimeAction(

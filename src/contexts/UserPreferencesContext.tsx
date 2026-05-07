@@ -49,6 +49,10 @@ import {
 import type { LogLevel } from "~/types/logging"
 import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
 import type { SortingPriorityConfig } from "~/types/sorting"
+import {
+  DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+  type TaskNotificationPreferences,
+} from "~/types/taskNotifications"
 import type { ThemeMode } from "~/types/theme"
 import type { WebDAVSettings } from "~/types/webdav"
 import { deepOverride } from "~/utils"
@@ -179,6 +183,7 @@ interface UserPreferencesContextType {
   loggingLevel: LogLevel
   tempWindowFallback: TempWindowFallbackPreferences
   tempWindowFallbackReminder: TempWindowFallbackReminderPreferences
+  taskNotifications: TaskNotificationPreferences
 
   updateActiveTab: (activeTab: DashboardTabType) => Promise<boolean>
   updateDefaultTab: (activeTab: DashboardTabType) => Promise<boolean>
@@ -351,6 +356,9 @@ interface UserPreferencesContextType {
   updateTempWindowFallbackReminder: (
     updates: Partial<TempWindowFallbackReminderPreferences>,
   ) => Promise<boolean>
+  updateTaskNotifications: (
+    updates: Partial<TaskNotificationPreferences>,
+  ) => Promise<boolean>
   resetToDefaults: () => Promise<boolean>
   resetDisplaySettings: () => Promise<boolean>
   resetAutoRefreshConfig: () => Promise<boolean>
@@ -370,6 +378,7 @@ interface UserPreferencesContextType {
   resetWebdavConfig: () => Promise<boolean>
   resetLoggingSettings: () => Promise<boolean>
   resetSortingPriorityConfig: () => Promise<boolean>
+  resetTaskNotifications: () => Promise<boolean>
   loadPreferences: () => Promise<void>
 }
 
@@ -1436,6 +1445,24 @@ export const UserPreferencesProvider = ({
     [],
   )
 
+  const updateTaskNotifications = useCallback(
+    async (updates: Partial<TaskNotificationPreferences>) => {
+      const success = await userPreferences.updateTaskNotifications(updates)
+      if (success) {
+        setPreferences((prev) =>
+          prev
+            ? deepOverride(prev, {
+                taskNotifications: updates,
+                lastUpdated: Date.now(),
+              })
+            : prev,
+        )
+      }
+      return success
+    },
+    [],
+  )
+
   const resetToDefaults = useCallback(async () => {
     const success = await userPreferences.resetToDefaults()
     if (success) {
@@ -1699,6 +1726,21 @@ export const UserPreferencesProvider = ({
     return success
   }, [])
 
+  const resetTaskNotifications = useCallback(async () => {
+    const success = await userPreferences.resetTaskNotifications()
+    if (success) {
+      setPreferences((prev) =>
+        prev
+          ? deepOverride(prev, {
+              taskNotifications: DEFAULT_PREFERENCES.taskNotifications,
+              lastUpdated: Date.now(),
+            })
+          : prev,
+      )
+    }
+    return success
+  }, [])
+
   useEffect(() => {
     if (!preferences) return
 
@@ -1811,6 +1853,8 @@ export const UserPreferencesProvider = ({
     tempWindowFallbackReminder:
       preferences.tempWindowFallbackReminder ??
       (DEFAULT_PREFERENCES.tempWindowFallbackReminder as TempWindowFallbackReminderPreferences),
+    taskNotifications:
+      preferences.taskNotifications ?? DEFAULT_TASK_NOTIFICATION_PREFERENCES,
     updateActiveTab,
     updateDefaultTab,
     updateCurrencyType,
@@ -1867,6 +1911,7 @@ export const UserPreferencesProvider = ({
     updateWebdavAutoSyncSettings,
     updateTempWindowFallback,
     updateTempWindowFallbackReminder,
+    updateTaskNotifications,
     resetToDefaults,
     resetDisplaySettings,
     resetAutoRefreshConfig,
@@ -1886,6 +1931,7 @@ export const UserPreferencesProvider = ({
     resetWebdavConfig,
     resetLoggingSettings,
     resetSortingPriorityConfig,
+    resetTaskNotifications,
     loadPreferences,
   }
 

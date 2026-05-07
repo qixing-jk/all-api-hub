@@ -1,11 +1,13 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
   type DailyBalanceHistoryCaptureSource,
 } from "~/types/dailyBalanceHistory"
+import { TASK_NOTIFICATION_TASKS } from "~/types/taskNotifications"
 import {
   clearAlarm,
   createAlarm,
@@ -67,7 +69,30 @@ class DailyBalanceHistoryScheduler {
       }
 
       // Await to keep the MV3 service worker alive for the duration of the capture run.
-      await this.runEndOfDayCapture({ trigger: "alarm" })
+      const result = await this.runEndOfDayCapture({ trigger: "alarm" })
+      if (!result?.started || !result.totals) {
+        return
+      }
+
+      const totals = result.totals
+      if (totals.success + totals.failed === 0) {
+        return
+      }
+
+      await notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.BalanceHistoryCapture,
+        status:
+          totals.failed > 0 && totals.success > 0
+            ? "partial_success"
+            : totals.failed > 0
+              ? "failure"
+              : "success",
+        counts: {
+          total: totals.success + totals.failed,
+          success: totals.success,
+          failed: totals.failed,
+        },
+      })
     })
 
     await this.applyScheduleFromPreferences({ preserveExisting: true })
@@ -249,6 +274,13 @@ class DailyBalanceHistoryScheduler {
       }
     } catch (error) {
       logger.error("End-of-day capture run failed", error)
+      if (params.trigger === "alarm") {
+        await notifyTaskResult({
+          task: TASK_NOTIFICATION_TASKS.BalanceHistoryCapture,
+          status: "failure",
+          message: getErrorMessage(error),
+        })
+      }
       return null
     } finally {
       this.isRunning = false

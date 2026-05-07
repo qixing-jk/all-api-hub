@@ -123,4 +123,21 @@ export const permissionsSearchControls: OptionsSearchItemDefinition[] = [
       isVisible: (context) => context.hasOptionalPermissions,
     },
   ),
+  buildControlDefinition(
+    "control:permissions-notifications",
+    "permissions",
+    "notifications",
+    "settings:permissions.items.notifications.title",
+    706,
+    {
+      descriptionKey: "settings:permissions.items.notifications.description",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.permissions",
+        "settings:permissions.title",
+      ],
+      keywords: ["permission", "notification", "system notification"],
+      isVisible: (context) => context.hasOptionalPermissions,
+    },
+  ),
 ]

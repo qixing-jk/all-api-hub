@@ -1,4 +1,5 @@
 import {
+  Bell,
   ClipboardCheck,
   Cookie,
   Network,
@@ -21,6 +22,7 @@ export const permissionIconMap: Partial<
   webRequest: <Network className="h-5 w-5 text-blue-500" />,
   webRequestBlocking: <ShieldAlert className="h-5 w-5 text-purple-500" />,
   clipboardRead: <ClipboardCheck className="h-5 w-5 text-indigo-500" />,
+  notifications: <Bell className="h-5 w-5 text-teal-500" />,
 }
 
 export interface PermissionListItem {

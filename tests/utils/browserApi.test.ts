@@ -6,8 +6,10 @@ import {
   checkPermissionViaMessage,
   classifyRecoverableWindowCreationFailure,
   clearAlarm,
+  clearNotification,
   containsPermissions,
   createAlarm,
+  createNotification,
   createWindow,
   focusTab,
   getActionApi,
@@ -21,10 +23,12 @@ import {
   getManifest,
   getManifestVersion,
   hasAlarmsAPI,
+  hasNotificationsAPI,
   isAllowedIncognitoAccess,
   isMessageReceiverUnavailableError,
   onAlarm,
   onInstalled,
+  onNotificationClicked,
   onPermissionsAdded,
   onPermissionsRemoved,
   onRuntimeMessage,
@@ -195,6 +199,95 @@ describe("browserApi alarms helpers", () => {
   afterAll(() => {
     ;(globalThis as any).browser = originalBrowser
     ;(globalThis as any).chrome = originalChrome
+  })
+})
+
+describe("browserApi notification helpers", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    ;(globalThis as any).browser = undefined
+  })
+
+  afterAll(() => {
+    ;(globalThis as any).browser = originalBrowser
+    ;(globalThis as any).chrome = originalChrome
+  })
+
+  it("reports notification API support from browser.notifications", () => {
+    ;(globalThis as any).browser = {}
+    expect(hasNotificationsAPI()).toBe(false)
+    ;(globalThis as any).browser = { notifications: {} }
+    expect(hasNotificationsAPI()).toBe(true)
+  })
+
+  it("returns null or false when notifications are unavailable", async () => {
+    ;(globalThis as any).browser = {}
+
+    await expect(
+      createNotification("test", {
+        type: "basic",
+        title: "Title",
+        message: "Message",
+        iconUrl: "icon.png",
+      }),
+    ).resolves.toBeNull()
+    await expect(clearNotification("test")).resolves.toBe(false)
+  })
+
+  it("creates, clears, and subscribes to notification clicks when supported", async () => {
+    const addListener = vi.fn()
+    const removeListener = vi.fn()
+    ;(globalThis as any).browser = {
+      notifications: {
+        create: vi.fn().mockResolvedValue("test"),
+        clear: vi.fn().mockResolvedValue(true),
+        onClicked: {
+          addListener,
+          removeListener,
+        },
+      },
+    }
+
+    const options = {
+      type: "basic" as const,
+      title: "Title",
+      message: "Message",
+      iconUrl: "icon.png",
+    }
+    const callback = vi.fn()
+    const cleanup = onNotificationClicked(callback)
+
+    await expect(createNotification("test", options)).resolves.toBe("test")
+    await expect(clearNotification("test")).resolves.toBe(true)
+    expect(
+      (globalThis as any).browser.notifications.create,
+    ).toHaveBeenCalledWith("test", options)
+    expect(
+      (globalThis as any).browser.notifications.clear,
+    ).toHaveBeenCalledWith("test")
+    expect(addListener).toHaveBeenCalledWith(callback)
+
+    cleanup()
+    expect(removeListener).toHaveBeenCalledWith(callback)
+  })
+
+  it("swallows notification create and clear failures", async () => {
+    ;(globalThis as any).browser = {
+      notifications: {
+        create: vi.fn().mockRejectedValue(new Error("create failed")),
+        clear: vi.fn().mockRejectedValue(new Error("clear failed")),
+      },
+    }
+
+    await expect(
+      createNotification("test", {
+        type: "basic",
+        title: "Title",
+        message: "Message",
+        iconUrl: "icon.png",
+      }),
+    ).resolves.toBeNull()
+    await expect(clearNotification("test")).resolves.toBe(false)
   })
 })
 

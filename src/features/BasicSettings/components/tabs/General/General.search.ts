@@ -45,11 +45,22 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
     },
   ),
   buildSectionDefinition(
+    "section:task-notifications",
+    "general",
+    "task-notifications",
+    "settings:taskNotifications.title",
+    205,
+    {
+      descriptionKey: "settings:taskNotifications.description",
+      keywords: ["notification", "scheduled task", "alarm"],
+    },
+  ),
+  buildSectionDefinition(
     "section:danger",
     "general",
     "dangerous-zone",
     "settings:danger.title",
-    205,
+    206,
   ),
 ]
 
@@ -230,6 +241,122 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
         "settings:danger.title",
       ],
       keywords: ["danger", "reset", "reset settings", "defaults"],
+    },
+  ),
+  buildControlDefinition(
+    "control:task-notifications-enabled",
+    "general",
+    "task-notifications-enabled",
+    "settings:taskNotifications.enable",
+    511,
+    {
+      descriptionKey: "settings:taskNotifications.enableDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.general",
+        "settings:taskNotifications.title",
+      ],
+      keywords: ["notification", "scheduled task", "background task"],
+    },
+  ),
+  buildControlDefinition(
+    "control:task-notifications-permission",
+    "general",
+    "task-notifications-permission",
+    "settings:taskNotifications.permission.title",
+    512,
+    {
+      descriptionKey: "settings:taskNotifications.permission.description",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.general",
+        "settings:taskNotifications.title",
+      ],
+      keywords: ["notification", "permission", "system notification"],
+    },
+  ),
+  buildControlDefinition(
+    "control:task-notifications-auto-checkin",
+    "general",
+    "task-notifications-autoCheckin",
+    "settings:taskNotifications.tasks.autoCheckin",
+    513,
+    {
+      descriptionKey: "settings:taskNotifications.taskDescriptions.autoCheckin",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.general",
+        "settings:taskNotifications.title",
+      ],
+      keywords: ["notification", "auto checkin", "check-in"],
+    },
+  ),
+  buildControlDefinition(
+    "control:task-notifications-webdav-auto-sync",
+    "general",
+    "task-notifications-webdavAutoSync",
+    "settings:taskNotifications.tasks.webdavAutoSync",
+    514,
+    {
+      descriptionKey:
+        "settings:taskNotifications.taskDescriptions.webdavAutoSync",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.general",
+        "settings:taskNotifications.title",
+      ],
+      keywords: ["notification", "webdav", "auto sync"],
+    },
+  ),
+  buildControlDefinition(
+    "control:task-notifications-managed-site-model-sync",
+    "general",
+    "task-notifications-managedSiteModelSync",
+    "settings:taskNotifications.tasks.managedSiteModelSync",
+    515,
+    {
+      descriptionKey:
+        "settings:taskNotifications.taskDescriptions.managedSiteModelSync",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.general",
+        "settings:taskNotifications.title",
+      ],
+      keywords: ["notification", "model sync", "managed site"],
+    },
+  ),
+  buildControlDefinition(
+    "control:task-notifications-usage-history-sync",
+    "general",
+    "task-notifications-usageHistorySync",
+    "settings:taskNotifications.tasks.usageHistorySync",
+    516,
+    {
+      descriptionKey:
+        "settings:taskNotifications.taskDescriptions.usageHistorySync",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.general",
+        "settings:taskNotifications.title",
+      ],
+      keywords: ["notification", "usage history", "sync"],
+    },
+  ),
+  buildControlDefinition(
+    "control:task-notifications-balance-history-capture",
+    "general",
+    "task-notifications-balanceHistoryCapture",
+    "settings:taskNotifications.tasks.balanceHistoryCapture",
+    517,
+    {
+      descriptionKey:
+        "settings:taskNotifications.taskDescriptions.balanceHistoryCapture",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.general",
+        "settings:taskNotifications.title",
+      ],
+      keywords: ["notification", "balance history", "capture"],
     },
   ),
 ]

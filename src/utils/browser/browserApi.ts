@@ -815,6 +815,77 @@ export function onAlarm(
 }
 
 /**
+ * Check whether the notifications API is available in this runtime.
+ */
+export function hasNotificationsAPI(): boolean {
+  return !!browser.notifications
+}
+
+/**
+ * Creates or replaces a browser notification. Returns the created id, or null
+ * when notifications are unavailable or creation fails.
+ */
+export async function createNotification(
+  notificationId: string,
+  options: browser.notifications.CreateNotificationOptions,
+): Promise<string | null> {
+  if (!hasNotificationsAPI()) {
+    logger.warn("Notifications API not supported")
+    return null
+  }
+
+  try {
+    return await browser.notifications.create(notificationId, options)
+  } catch (error) {
+    logger.warn("notifications.create failed", {
+      notificationId,
+      error: getErrorMessage(error),
+    })
+    return null
+  }
+}
+
+/**
+ * Clears a browser notification. Returns false when unsupported or clearing
+ * fails.
+ */
+export async function clearNotification(
+  notificationId: string,
+): Promise<boolean> {
+  if (!hasNotificationsAPI()) {
+    logger.warn("Notifications API not supported")
+    return false
+  }
+
+  try {
+    return (await browser.notifications.clear(notificationId)) || false
+  } catch (error) {
+    logger.warn("notifications.clear failed", {
+      notificationId,
+      error: getErrorMessage(error),
+    })
+    return false
+  }
+}
+
+/**
+ * Subscribes to notification click events and returns an unsubscribe callback.
+ */
+export function onNotificationClicked(
+  callback: (notificationId: string) => void | Promise<void>,
+): () => void {
+  if (!hasNotificationsAPI()) {
+    logger.warn("Notifications API not supported")
+    return () => {}
+  }
+
+  browser.notifications.onClicked.addListener(callback)
+  return () => {
+    browser.notifications.onClicked.removeListener(callback)
+  }
+}
+
+/**
  * 获取当前扩展的 manifest 版本
  */
 export function getManifest(): browser._manifest.WebExtensionManifest {

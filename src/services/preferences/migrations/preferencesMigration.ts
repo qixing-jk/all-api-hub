@@ -18,6 +18,7 @@ import {
   type BalanceHistoryPreferences,
 } from "~/types/dailyBalanceHistory"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
+import { DEFAULT_TASK_NOTIFICATION_PREFERENCES } from "~/types/taskNotifications"
 import {
   DEFAULT_WEBDAV_SETTINGS,
   resolveWebdavSyncDataSelection,
@@ -32,7 +33,7 @@ import { migrateSortingConfig } from "./sortingConfigMigration"
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 18
+export const CURRENT_PREFERENCES_VERSION = 19
 
 /**
  * Migration function type
@@ -404,6 +405,30 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
       ...prefs,
       sortingPriorityConfig: migratedSortingConfig,
       preferencesVersion: 18,
+    }
+  },
+
+  // Version 18 -> 19: Introduce scheduled task notification preferences
+  19: (prefs: UserPreferences): UserPreferences => {
+    logger.debug("Migrating preferences from v18 to v19 (task notifications)")
+
+    const stored = (prefs as any).taskNotifications
+    const storedTasks =
+      stored && typeof stored === "object" ? stored.tasks : undefined
+
+    return {
+      ...prefs,
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        ...(stored && typeof stored === "object" ? stored : {}),
+        tasks: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+          ...(storedTasks && typeof storedTasks === "object"
+            ? storedTasks
+            : {}),
+        },
+      },
+      preferencesVersion: 19,
     }
   },
 }

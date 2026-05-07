@@ -42,6 +42,7 @@ export default defineConfig({
               "webRequest",
               "webRequestBlocking",
               "clipboardRead",
+              "notifications",
             ],
           }
         : {
@@ -49,6 +50,7 @@ export default defineConfig({
               "cookies",
               "declarativeNetRequestWithHostAccess",
               "clipboardRead",
+              "notifications",
             ],
           }),
       // ensure can get site cookies, please refer to https://stackoverflow.com/a/70070106/22460724

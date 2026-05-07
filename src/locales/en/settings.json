@@ -324,6 +324,10 @@
         "description": "Allow applying request header rules by pressing Tab during the temporary window shield, attaching the correct cookies for different accounts, and avoiding data anomalies under multiple accounts.",
         "title": "Declarative Net Request"
       },
+      "notifications": {
+        "description": "Allow background scheduled tasks to send system notifications after they finish.",
+        "title": "System Notifications"
+      },
       "webRequest": {
         "description": "Lets the extension observe outgoing requests only when temp-window bypass or auto-refresh needs to add required headers.",
         "title": "Web Request"
@@ -489,6 +493,53 @@
     "scrollRight": "Scroll tabs right",
     "select": "Select a tab",
     "webAiApiCheck": "AI API Test"
+  },
+  "taskNotifications": {
+    "description": "Control whether background scheduled tasks send system notifications after they finish. Tasks continue running normally when notification permission is not granted.",
+    "enable": "Enable task notifications",
+    "enableDesc": "When enabled, selected tasks send success, partial success, or failure notifications after scheduled runs finish.",
+    "notification": {
+      "body": {
+        "failure": "{{task}} failed.",
+        "partialSuccess": "{{task}} partially completed.",
+        "success": "{{task}} completed successfully."
+      },
+      "counts": "Total {{total}}, success {{success}}, failed {{failed}}, skipped {{skipped}}.",
+      "title": {
+        "failure": "{{task}} failed",
+        "partialSuccess": "{{task}} partially succeeded",
+        "success": "{{task}} completed"
+      }
+    },
+    "permission": {
+      "description": "System notifications require the browser's optional notifications permission. You can also revoke it from Permissions.",
+      "request": "Grant notification permission",
+      "requestFailed": "Notification permission was not granted",
+      "requestSuccess": "Notification permission granted",
+      "title": "Notification permission"
+    },
+    "taskDescriptions": {
+      "autoCheckin": "Notify after daily automatic check-in and automatic retry runs finish.",
+      "balanceHistoryCapture": "Notify after the end-of-day balance history capture finishes.",
+      "managedSiteModelSync": "Notify after scheduled managed-site model sync finishes.",
+      "usageHistorySync": "Notify after scheduled usage history sync finishes.",
+      "webdavAutoSync": "Notify after scheduled WebDAV automatic sync finishes."
+    },
+    "tasks": {
+      "autoCheckin": "Auto check-in",
+      "balanceHistoryCapture": "End-of-day balance capture",
+      "managedSiteModelSync": "Model sync",
+      "usageHistorySync": "Usage history sync",
+      "webdavAutoSync": "WebDAV auto sync"
+    },
+    "tasksLabel": "Task notifications",
+    "test": {
+      "action": "Send test notification",
+      "failed": "Failed to send the test notification. Check notification permission.",
+      "message": "This is an All API Hub task notification test.",
+      "sent": "Test notification sent"
+    },
+    "title": "Notifications"
   },
   "theme": {
     "appearance": "Appearance",

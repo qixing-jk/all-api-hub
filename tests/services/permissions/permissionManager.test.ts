@@ -34,7 +34,12 @@ const {
 vi.mock("~/utils/browser/browserApi", () => ({
   containsPermissions: containsPermissionsMock,
   getManifest: vi.fn(() => ({
-    optional_permissions: ["cookies", "webRequest", "clipboardRead"],
+    optional_permissions: [
+      "cookies",
+      "webRequest",
+      "clipboardRead",
+      "notifications",
+    ],
   })),
   onPermissionsAdded: vi.fn((callback: (permissions: any) => void) => {
     permissionsAddedCallbacks.push(callback)
@@ -60,6 +65,7 @@ describe("permissionManager", () => {
       "cookies",
       "webRequest",
       "clipboardRead",
+      "notifications",
     ])
     expect(COOKIE_INTERCEPTOR_PERMISSIONS).toEqual([
       OPTIONAL_PERMISSION_IDS.Cookies,

@@ -4,6 +4,7 @@ import { dailyBalanceHistoryScheduler } from "~/services/history/dailyBalanceHis
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { modelSyncScheduler } from "~/services/models/modelSync"
+import { initializeTaskNotificationService } from "~/services/notifications/taskNotificationService"
 import { redemptionAssistService } from "~/services/redemption/redemptionAssist"
 import { releaseUpdateService } from "~/services/updates/releaseUpdateService"
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
@@ -57,6 +58,7 @@ export async function initializeServices() {
         dailyBalanceHistoryScheduler.initialize(),
         releaseUpdateService.initialize(),
       ])
+      initializeTaskNotificationService()
 
       await initBackgroundI18n().catch((error) => {
         logger.warn("Background i18n initialization failed", error)

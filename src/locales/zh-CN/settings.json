@@ -324,6 +324,10 @@
         "description": "允许在临时窗口过盾期间按 Tab 应用请求头规则，为不同账号附加正确的 Cookie，避免多账号下的数据异常问题。",
         "title": "声明式网络请求"
       },
+      "notifications": {
+        "description": "允许后台定时任务完成后发送系统通知。",
+        "title": "系统通知"
+      },
       "webRequest": {
         "description": "仅在临时窗口过盾或自动刷新需要时，监听请求并追加必要的请求头。",
         "title": "网络请求"
@@ -489,6 +493,53 @@
     "scrollRight": "向右滚动标签",
     "select": "选择一个分组",
     "webAiApiCheck": "AI API 测试"
+  },
+  "taskNotifications": {
+    "description": "控制后台定时任务完成后是否发送系统通知。通知权限未授予时，任务仍会照常运行。",
+    "enable": "启用任务通知",
+    "enableDesc": "开启后，已勾选任务在定时运行完成时会发送成功、部分成功或失败通知。",
+    "notification": {
+      "body": {
+        "failure": "{{task}}运行失败。",
+        "partialSuccess": "{{task}}部分完成。",
+        "success": "{{task}}已成功完成。"
+      },
+      "counts": "总计 {{total}}，成功 {{success}}，失败 {{failed}}，跳过 {{skipped}}。",
+      "title": {
+        "failure": "{{task}}失败",
+        "partialSuccess": "{{task}}部分成功",
+        "success": "{{task}}完成"
+      }
+    },
+    "permission": {
+      "description": "系统通知需要浏览器授予 notifications 可选权限。你也可以在权限管理页撤销。",
+      "request": "授权通知权限",
+      "requestFailed": "未能授予通知权限",
+      "requestSuccess": "通知权限已授予",
+      "title": "通知权限"
+    },
+    "taskDescriptions": {
+      "autoCheckin": "每日自动签到和自动重试完成后通知。",
+      "balanceHistoryCapture": "余额历史日终自动捕获完成后通知。",
+      "managedSiteModelSync": "自建站点模型定时同步完成后通知。",
+      "usageHistorySync": "用量历史定时同步完成后通知。",
+      "webdavAutoSync": "WebDAV 定时自动同步完成后通知。"
+    },
+    "tasks": {
+      "autoCheckin": "自动签到",
+      "balanceHistoryCapture": "余额历史日终捕获",
+      "managedSiteModelSync": "模型同步",
+      "usageHistorySync": "用量历史同步",
+      "webdavAutoSync": "WebDAV 自动同步"
+    },
+    "tasksLabel": "任务通知",
+    "test": {
+      "action": "发送测试通知",
+      "failed": "测试通知发送失败，请确认已授予通知权限。",
+      "message": "这是一条 All API Hub 任务通知测试。",
+      "sent": "测试通知已发送"
+    },
+    "title": "通知"
   },
   "theme": {
     "appearance": "外观",

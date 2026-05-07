@@ -50,6 +50,8 @@ function getPermissionTitle(t: TFunction, id: ManifestOptionalPermissions) {
       return t("settings:permissions.items.webRequestBlocking.title")
     case "clipboardRead":
       return t("settings:permissions.items.clipboardRead.title")
+    case "notifications":
+      return t("settings:permissions.items.notifications.title")
   }
 }
 
@@ -73,6 +75,8 @@ function getPermissionDescription(
       return t("settings:permissions.items.webRequestBlocking.description")
     case "clipboardRead":
       return t("settings:permissions.items.clipboardRead.description")
+    case "notifications":
+      return t("settings:permissions.items.notifications.description")
   }
 }
 
