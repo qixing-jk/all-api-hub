@@ -1,11 +1,5 @@
-import { LanguageIcon } from "@heroicons/react/24/outline"
-import { useTranslation } from "react-i18next"
-
-import { LanguageSwitcher } from "~/components/LanguageSwitcher"
-import { BodySmall, Card, CardItem, CardList, Heading3 } from "~/components/ui"
-import ThemeToggle from "~/entrypoints/options/components/ThemeToggle"
-
 import ActionClickBehaviorSettings from "./ActionClickBehaviorSettings"
+import AppearanceSettings from "./AppearanceSettings"
 import ChangelogOnUpdateSettings from "./ChangelogOnUpdateSettings"
 import DisplaySettings from "./DisplaySettings"
 import LoggingSettings from "./LoggingSettings"
@@ -13,42 +7,18 @@ import ResetSettingsSection from "./ResetSettingsSection"
 import TaskNotificationSettings from "./TaskNotificationSettings"
 
 /**
- * General Basic Settings tab for display preferences, theme/language, and dangerous zone.
+ * General Basic Settings tab for everyday UI preferences, behavior, notifications,
+ * maintenance preferences, diagnostics, and reset actions.
  */
 export default function GeneralTab() {
-  const { t } = useTranslation("settings")
-
   return (
     <div className="space-y-6">
       <DisplaySettings />
+      <AppearanceSettings />
       <ActionClickBehaviorSettings />
-      <LoggingSettings />
-      <ChangelogOnUpdateSettings />
       <TaskNotificationSettings />
-
-      {/* Appearance & Language Section */}
-      <section id="appearance" className="space-y-6">
-        <div className="space-y-1.5">
-          <Heading3>{t("theme.appearance")}</Heading3>
-          <BodySmall>{t("display.description")}</BodySmall>
-        </div>
-
-        <Card padding="none">
-          <CardList>
-            <ThemeToggle />
-            <CardItem
-              id="appearance-language"
-              icon={
-                <LanguageIcon className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-              }
-              title={t("appearanceLanguage.language")}
-              description={t("appearanceLanguage.languageDesc")}
-              rightContent={<LanguageSwitcher />}
-            />
-          </CardList>
-        </Card>
-      </section>
-
+      <ChangelogOnUpdateSettings />
+      <LoggingSettings />
       <section id="dangerous-zone">
         <ResetSettingsSection />
       </section>

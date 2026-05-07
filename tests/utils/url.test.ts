@@ -449,6 +449,7 @@ describe("navigateToAnchor", () => {
   })
 
   afterEach(() => {
+    vi.unstubAllGlobals()
     vi.useRealTimers()
   })
 
@@ -531,6 +532,19 @@ describe("navigateToAnchor", () => {
     }).not.toThrow()
 
     await vi.runAllTimersAsync()
+  })
+
+  it("should stop retrying if the document is no longer available", async () => {
+    ;(document.getElementById as any).mockReturnValue(null)
+
+    navigateToAnchor("non-existent")
+    await vi.advanceTimersByTimeAsync(100)
+
+    vi.stubGlobal("document", undefined)
+
+    await vi.runAllTimersAsync()
+
+    expect(vi.getTimerCount()).toBe(0)
   })
 
   it("should not update tab if tab parameter is undefined", async () => {

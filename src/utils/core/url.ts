@@ -41,6 +41,10 @@ function scrollToAnchorWhenAvailable(
   } = options
 
   const tryScroll = (remainingWaitMs: number) => {
+    if (typeof document === "undefined" || typeof window === "undefined") {
+      return
+    }
+
     const element = document.getElementById(anchor)
     if (element) {
       element.scrollIntoView({ behavior: "smooth", block: "start" })

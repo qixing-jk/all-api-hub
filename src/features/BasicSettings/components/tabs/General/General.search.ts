@@ -11,7 +11,7 @@ const TASK_NOTIFICATION_BREADCRUMBS = [
   "settings:taskNotifications.title",
 ]
 
-const TASK_NOTIFICATION_CONTROL_ORDER_START = 513
+const TASK_NOTIFICATION_CONTROL_ORDER_START = 509
 
 const TASK_NOTIFICATION_SEARCH_CONTROLS = [
   {
@@ -64,46 +64,46 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
     200,
   ),
   buildSectionDefinition(
-    "section:action-click",
-    "general",
-    "action-click",
-    "settings:actionClick.title",
-    201,
-  ),
-  buildSectionDefinition(
-    "section:logging",
-    "general",
-    "logging",
-    "settings:logging.title",
-    202,
-  ),
-  buildSectionDefinition(
-    "section:changelog",
-    "general",
-    "changelog-on-update",
-    "settings:changelogOnUpdate.title",
-    203,
-  ),
-  buildSectionDefinition(
     "section:appearance",
     "general",
     "appearance",
     "settings:theme.appearance",
-    204,
+    201,
     {
       descriptionKey: "settings:display.description",
     },
+  ),
+  buildSectionDefinition(
+    "section:action-click",
+    "general",
+    "action-click",
+    "settings:actionClick.title",
+    202,
   ),
   buildSectionDefinition(
     "section:task-notifications",
     "general",
     "task-notifications",
     "settings:taskNotifications.title",
-    205,
+    203,
     {
       descriptionKey: "settings:taskNotifications.description",
       keywords: ["notification", "scheduled task", "alarm"],
     },
+  ),
+  buildSectionDefinition(
+    "section:changelog",
+    "general",
+    "changelog-on-update",
+    "settings:changelogOnUpdate.title",
+    204,
+  ),
+  buildSectionDefinition(
+    "section:logging",
+    "general",
+    "logging",
+    "settings:logging.title",
+    205,
   ),
   buildSectionDefinition(
     "section:danger",
@@ -230,75 +230,11 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
-    "control:logging-enabled",
-    "general",
-    "logging-console-enabled",
-    "settings:logging.consoleEnabled",
-    507,
-    {
-      descriptionKey: "settings:logging.consoleEnabledDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.general",
-        "settings:logging.title",
-      ],
-      keywords: ["log", "console", "debug"],
-    },
-  ),
-  buildControlDefinition(
-    "control:logging-min-level",
-    "general",
-    "logging-min-level",
-    "settings:logging.minLevel",
-    508,
-    {
-      descriptionKey: "settings:logging.minLevelDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.general",
-        "settings:logging.title",
-      ],
-      keywords: ["log", "debug", "warn", "error", "info"],
-    },
-  ),
-  buildControlDefinition(
-    "control:changelog-on-update",
-    "general",
-    "changelog-on-update-toggle",
-    "settings:changelogOnUpdate.toggleLabel",
-    509,
-    {
-      descriptionKey: "settings:changelogOnUpdate.toggleDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.general",
-        "settings:changelogOnUpdate.title",
-      ],
-      keywords: ["changelog", "what's new", "update log"],
-    },
-  ),
-  buildControlDefinition(
-    "control:danger-reset-settings",
-    "general",
-    "danger-reset-settings",
-    "settings:danger.resetSettings",
-    510,
-    {
-      descriptionKey: "settings:danger.resetDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.general",
-        "settings:danger.title",
-      ],
-      keywords: ["danger", "reset", "reset settings", "defaults"],
-    },
-  ),
-  buildControlDefinition(
     "control:task-notifications-enabled",
     "general",
     "task-notifications-enabled",
     "settings:taskNotifications.enable",
-    511,
+    507,
     {
       descriptionKey: "settings:taskNotifications.enableDesc",
       breadcrumbsKeys: TASK_NOTIFICATION_BREADCRUMBS,
@@ -310,7 +246,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "task-notifications-permission",
     "settings:taskNotifications.permission.title",
-    512,
+    508,
     {
       descriptionKey: "settings:taskNotifications.permission.description",
       breadcrumbsKeys: TASK_NOTIFICATION_BREADCRUMBS,
@@ -330,5 +266,69 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
         keywords: [...definition.keywords],
       },
     ),
+  ),
+  buildControlDefinition(
+    "control:changelog-on-update",
+    "general",
+    "changelog-on-update-toggle",
+    "settings:changelogOnUpdate.toggleLabel",
+    514,
+    {
+      descriptionKey: "settings:changelogOnUpdate.toggleDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.general",
+        "settings:changelogOnUpdate.title",
+      ],
+      keywords: ["changelog", "what's new", "update log"],
+    },
+  ),
+  buildControlDefinition(
+    "control:logging-enabled",
+    "general",
+    "logging-console-enabled",
+    "settings:logging.consoleEnabled",
+    515,
+    {
+      descriptionKey: "settings:logging.consoleEnabledDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.general",
+        "settings:logging.title",
+      ],
+      keywords: ["log", "console", "debug"],
+    },
+  ),
+  buildControlDefinition(
+    "control:logging-min-level",
+    "general",
+    "logging-min-level",
+    "settings:logging.minLevel",
+    516,
+    {
+      descriptionKey: "settings:logging.minLevelDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.general",
+        "settings:logging.title",
+      ],
+      keywords: ["log", "debug", "warn", "error", "info"],
+    },
+  ),
+  buildControlDefinition(
+    "control:danger-reset-settings",
+    "general",
+    "danger-reset-settings",
+    "settings:danger.resetSettings",
+    517,
+    {
+      descriptionKey: "settings:danger.resetDesc",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.general",
+        "settings:danger.title",
+      ],
+      keywords: ["danger", "reset", "reset settings", "defaults"],
+    },
   ),
 ]
