@@ -42,27 +42,26 @@ interface TaskNotificationPayload {
   message?: string
 }
 
+interface TaskNotificationMessageRequest {
+  action: string
+}
+
+interface TaskNotificationMessageResponse {
+  success: boolean
+  error?: string
+}
+
 const TASK_LABEL_KEYS: Record<TaskNotificationTask, string> = {
-  autoCheckin: "settings:taskNotifications.tasks.autoCheckin",
-  webdavAutoSync: "settings:taskNotifications.tasks.webdavAutoSync",
-  managedSiteModelSync: "settings:taskNotifications.tasks.managedSiteModelSync",
-  usageHistorySync: "settings:taskNotifications.tasks.usageHistorySync",
-  balanceHistoryCapture:
+  [TASK_NOTIFICATION_TASKS.AutoCheckin]:
+    "settings:taskNotifications.tasks.autoCheckin",
+  [TASK_NOTIFICATION_TASKS.WebdavAutoSync]:
+    "settings:taskNotifications.tasks.webdavAutoSync",
+  [TASK_NOTIFICATION_TASKS.ManagedSiteModelSync]:
+    "settings:taskNotifications.tasks.managedSiteModelSync",
+  [TASK_NOTIFICATION_TASKS.UsageHistorySync]:
+    "settings:taskNotifications.tasks.usageHistorySync",
+  [TASK_NOTIFICATION_TASKS.BalanceHistoryCapture]:
     "settings:taskNotifications.tasks.balanceHistoryCapture",
-}
-
-const STATUS_TITLE_KEYS: Record<TaskNotificationStatus, string> = {
-  success: "settings:taskNotifications.notification.title.success",
-  partial_success:
-    "settings:taskNotifications.notification.title.partialSuccess",
-  failure: "settings:taskNotifications.notification.title.failure",
-}
-
-const STATUS_BODY_KEYS: Record<TaskNotificationStatus, string> = {
-  success: "settings:taskNotifications.notification.body.success",
-  partial_success:
-    "settings:taskNotifications.notification.body.partialSuccess",
-  failure: "settings:taskNotifications.notification.body.failure",
 }
 
 const TASK_NAVIGATION_TARGETS: Record<
@@ -72,21 +71,21 @@ const TASK_NAVIGATION_TARGETS: Record<
     searchParams?: Record<string, string | undefined>
   }
 > = {
-  autoCheckin: {
+  [TASK_NOTIFICATION_TASKS.AutoCheckin]: {
     menuItemId: MENU_ITEM_IDS.AUTO_CHECKIN,
   },
-  webdavAutoSync: {
+  [TASK_NOTIFICATION_TASKS.WebdavAutoSync]: {
     menuItemId: MENU_ITEM_IDS.BASIC,
     searchParams: { tab: "dataBackup", anchor: "webdav-auto-sync" },
   },
-  managedSiteModelSync: {
+  [TASK_NOTIFICATION_TASKS.ManagedSiteModelSync]: {
     menuItemId: MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC,
   },
-  usageHistorySync: {
+  [TASK_NOTIFICATION_TASKS.UsageHistorySync]: {
     menuItemId: MENU_ITEM_IDS.BASIC,
     searchParams: { tab: "accountUsage" },
   },
-  balanceHistoryCapture: {
+  [TASK_NOTIFICATION_TASKS.BalanceHistoryCapture]: {
     menuItemId: MENU_ITEM_IDS.BASIC,
     searchParams: { tab: "balanceHistory" },
   },
@@ -119,15 +118,66 @@ function formatCounts(counts: TaskNotificationCounts | undefined) {
 }
 
 /**
+ * Resolves the localized task label used inside notification copy.
+ */
+function getTaskLabel(task: TaskNotificationTask): string {
+  return t(TASK_LABEL_KEYS[task])
+}
+
+/**
+ * Resolves the localized notification title for the given status.
+ */
+function getNotificationTitle(
+  status: TaskNotificationStatus,
+  taskName: string,
+): string {
+  switch (status) {
+    case TASK_NOTIFICATION_STATUSES.Success:
+      return t("settings:taskNotifications.notification.title.success", {
+        task: taskName,
+      })
+    case TASK_NOTIFICATION_STATUSES.PartialSuccess:
+      return t("settings:taskNotifications.notification.title.partialSuccess", {
+        task: taskName,
+      })
+    case TASK_NOTIFICATION_STATUSES.Failure:
+      return t("settings:taskNotifications.notification.title.failure", {
+        task: taskName,
+      })
+  }
+}
+
+/**
+ * Resolves the localized fallback body for the given status.
+ */
+function getNotificationBody(
+  status: TaskNotificationStatus,
+  taskName: string,
+): string {
+  switch (status) {
+    case TASK_NOTIFICATION_STATUSES.Success:
+      return t("settings:taskNotifications.notification.body.success", {
+        task: taskName,
+      })
+    case TASK_NOTIFICATION_STATUSES.PartialSuccess:
+      return t("settings:taskNotifications.notification.body.partialSuccess", {
+        task: taskName,
+      })
+    case TASK_NOTIFICATION_STATUSES.Failure:
+      return t("settings:taskNotifications.notification.body.failure", {
+        task: taskName,
+      })
+  }
+}
+
+/**
  * Builds the localized title and message for a task notification payload.
  */
 function buildNotificationContent(payload: TaskNotificationPayload) {
-  const taskName = t(TASK_LABEL_KEYS[payload.task])
-  const title = t(STATUS_TITLE_KEYS[payload.status], { task: taskName })
+  const taskName = getTaskLabel(payload.task)
+  const title = getNotificationTitle(payload.status, taskName)
   const counts = formatCounts(payload.counts)
-  const fallbackMessage = t(STATUS_BODY_KEYS[payload.status], {
-    task: taskName,
-  })
+  const fallbackMessage = getNotificationBody(payload.status, taskName)
   const message = payload.message?.trim() || fallbackMessage
 
   return {
@@ -241,11 +291,18 @@ export function initializeTaskNotificationService(): void {
 }
 
 /**
+ * Test-only reset for the module-scoped click subscription guard.
+ */
+export function __resetTaskNotificationServiceForTesting(): void {
+  unsubscribeNotificationClicked = null
+}
+
+/**
  * Handles runtime requests that trigger a test task notification.
  */
 export async function handleTaskNotificationMessage(
-  request: any,
-  sendResponse: (response: any) => void,
+  request: TaskNotificationMessageRequest,
+  sendResponse: (response: TaskNotificationMessageResponse) => void,
 ): Promise<void> {
   if (request.action !== RuntimeActionIds.TaskNotificationsTest) {
     sendResponse({ success: false, error: "Unknown action" })

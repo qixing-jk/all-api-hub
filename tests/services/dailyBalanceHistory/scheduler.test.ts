@@ -359,6 +359,7 @@ describe("dailyBalanceHistoryScheduler", () => {
         total: 1,
         success: 1,
         failed: 0,
+        skipped: 0,
       },
     })
   })
@@ -374,5 +375,28 @@ describe("dailyBalanceHistoryScheduler", () => {
     await alarmHandler?.({ name: DAILY_BALANCE_HISTORY_ALARM_NAME })
 
     expect(mockNotifyTaskResult).not.toHaveBeenCalled()
+  })
+
+  it("notifies alarm failures when the capture run throws", async () => {
+    let alarmHandler: ((alarm: { name: string }) => Promise<void>) | undefined
+    mockOnAlarm.mockImplementation((handler) => {
+      alarmHandler = handler
+    })
+    mockGetEnabledAccounts.mockResolvedValue([{ id: "a" }])
+    mockRefreshAccount.mockRejectedValue(new Error("refresh failed"))
+
+    await dailyBalanceHistoryScheduler.initialize()
+    await alarmHandler?.({ name: DAILY_BALANCE_HISTORY_ALARM_NAME })
+
+    expect(mockNotifyTaskResult).toHaveBeenCalledWith({
+      task: TASK_NOTIFICATION_TASKS.BalanceHistoryCapture,
+      status: TASK_NOTIFICATION_STATUSES.Failure,
+      counts: {
+        total: 1,
+        success: 0,
+        failed: 1,
+        skipped: 0,
+      },
+    })
   })
 })

@@ -93,6 +93,7 @@ class DailyBalanceHistoryScheduler {
           total: totals.success + totals.failed,
           success: totals.success,
           failed: totals.failed,
+          skipped: 0,
         },
       })
     })

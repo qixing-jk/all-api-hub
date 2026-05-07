@@ -27,6 +27,7 @@ const mocks = vi.hoisted(() => ({
   generateModelMappingForChannel: vi.fn(),
   applyModelMappingToChannel: vi.fn(),
   octopusChannelToManagedSite: vi.fn(),
+  notifyTaskResult: vi.fn(),
 }))
 
 vi.mock("~/utils/core/error", () => ({
@@ -104,6 +105,10 @@ vi.mock("~/services/models/modelRedirect", () => ({
   },
 }))
 
+vi.mock("~/services/notifications/taskNotificationService", () => ({
+  notifyTaskResult: mocks.notifyTaskResult,
+}))
+
 vi.mock("~/services/apiService/octopus", () => ({
   listChannels: mocks.octopusListChannels,
 }))
@@ -140,6 +145,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
       name: `mapped-${channel.name}`,
     }))
     mocks.sendRuntimeMessage.mockResolvedValue(undefined)
+    mocks.notifyTaskResult.mockResolvedValue(true)
 
     mocks.getPreferences.mockResolvedValue({
       managedSiteType: NEW_API,
@@ -183,6 +189,41 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
 
     await alarmHandler?.({ name: "managedSiteModelSync" })
     expect(executeSpy).toHaveBeenCalledTimes(1)
+    expect(mocks.notifyTaskResult).toHaveBeenCalledWith({
+      task: "managedSiteModelSync",
+      status: "failure",
+      message: "scheduled sync failed",
+    })
+  })
+
+  it("notifies scheduled sync success counts after the alarm handler runs", async () => {
+    let alarmHandler: ((alarm: { name: string }) => Promise<void>) | undefined
+    mocks.onAlarm.mockImplementation((handler) => {
+      alarmHandler = handler
+    })
+
+    vi.spyOn(modelSyncScheduler, "setupAlarm").mockResolvedValue(undefined)
+    vi.spyOn(modelSyncScheduler, "executeSync").mockResolvedValue({
+      items: [],
+      statistics: {
+        total: 3,
+        successCount: 2,
+        failureCount: 1,
+      },
+    } as any)
+
+    await modelSyncScheduler.initialize()
+    await alarmHandler?.({ name: "managedSiteModelSync" })
+
+    expect(mocks.notifyTaskResult).toHaveBeenCalledWith({
+      task: "managedSiteModelSync",
+      status: "partial_success",
+      counts: {
+        total: 3,
+        success: 2,
+        failed: 1,
+      },
+    })
   })
 
   it("lists Octopus channels through the Octopus adapter and validates config", async () => {

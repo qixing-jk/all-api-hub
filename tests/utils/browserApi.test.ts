@@ -234,6 +234,15 @@ describe("browserApi notification helpers", () => {
     await expect(clearNotification("test")).resolves.toBe(false)
   })
 
+  it("returns a safe no-op cleanup when notification click events are unavailable", () => {
+    ;(globalThis as any).browser = {}
+
+    const cleanup = onNotificationClicked(vi.fn())
+
+    expect(typeof cleanup).toBe("function")
+    cleanup()
+  })
+
   it("creates, clears, and subscribes to notification clicks when supported", async () => {
     const addListener = vi.fn()
     const removeListener = vi.fn()

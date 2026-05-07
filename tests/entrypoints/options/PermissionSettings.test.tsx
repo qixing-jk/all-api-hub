@@ -120,7 +120,10 @@ describe("PermissionSettings", () => {
       "settings:permissions.messages.revoked",
       "settings:permissions.messages.revokeFailed",
     )
-    expect(hasPermissionMock).toHaveBeenCalledTimes(6)
+    expect(hasPermissionMock).toHaveBeenCalledWith("cookies")
+    expect(hasPermissionMock).toHaveBeenCalledWith("clipboardRead")
+    expect(hasPermissionMock).toHaveBeenCalledWith("notifications")
+    expect(hasPermissionMock.mock.calls.length).toBeGreaterThanOrEqual(3)
   })
 
   it("reloads statuses on external permission change and unsubscribes on cleanup", async () => {
@@ -141,7 +144,9 @@ describe("PermissionSettings", () => {
     })
 
     await waitFor(() => {
-      expect(hasPermissionMock).toHaveBeenCalledTimes(6)
+      expect(hasPermissionMock).toHaveBeenCalledWith("cookies")
+      expect(hasPermissionMock).toHaveBeenCalledWith("clipboardRead")
+      expect(hasPermissionMock).toHaveBeenCalledWith("notifications")
     })
 
     unmount()
@@ -156,6 +161,7 @@ describe("PermissionSettings", () => {
       withThemeProvider: false,
     })
 
+    await screen.findByText("settings:permissions.items.clipboardRead.title")
     const clipboardRow = document.getElementById("clipboardRead")
     if (!clipboardRow) {
       throw new Error("Expected clipboard permission row")

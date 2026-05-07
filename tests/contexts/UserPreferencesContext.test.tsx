@@ -384,6 +384,20 @@ describe("UserPreferencesContext", () => {
     expect((latestContext as any)?.showTodayCashflow).toBe(false)
   })
 
+  it("falls back to default task notification preferences when they are missing", async () => {
+    const preferences = clonePreferences()
+    delete (preferences as Partial<UserPreferences>).taskNotifications
+
+    const context = await renderProvider(preferences)
+
+    expect(context.taskNotifications).toEqual(
+      DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+    )
+    expect(
+      (latestContext as any)?.preferences.taskNotifications,
+    ).toBeUndefined()
+  })
+
   it("updates scalar, nested, and runtime-backed preferences through the provider", async () => {
     const context = await renderProvider()
 

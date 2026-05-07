@@ -1216,6 +1216,9 @@ class UserPreferencesService {
     })
   }
 
+  /**
+   * Update task-notification preferences.
+   */
   async updateTaskNotifications(
     updates: Partial<TaskNotificationPreferences>,
   ): Promise<boolean> {
@@ -1224,6 +1227,9 @@ class UserPreferencesService {
     })
   }
 
+  /**
+   * Reset task-notification preferences.
+   */
   async resetTaskNotifications(): Promise<boolean> {
     return this.savePreferences({
       taskNotifications: DEFAULT_PREFERENCES.taskNotifications,

@@ -1,8 +1,12 @@
 import { fireEvent } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import TaskNotificationSettings from "~/features/BasicSettings/components/tabs/General/TaskNotificationSettings"
-import { DEFAULT_TASK_NOTIFICATION_PREFERENCES } from "~/types/taskNotifications"
+import {
+  DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+  TASK_NOTIFICATION_TASKS,
+} from "~/types/taskNotifications"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -115,7 +119,7 @@ describe("TaskNotificationSettings", () => {
 
     await waitFor(() => {
       expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
-        action: "taskNotifications:test",
+        action: RuntimeActionIds.TaskNotificationsTest,
       })
     })
 
@@ -135,5 +139,40 @@ describe("TaskNotificationSettings", () => {
         errorFallback: "settings:taskNotifications.test.failed",
       })
     })
+  })
+
+  it("updates the global switch and per-task switch through the preferences context", async () => {
+    hasPermissionMock.mockResolvedValue(true)
+
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const switches = await screen.findAllByRole("switch")
+
+    fireEvent.click(switches[0]!)
+    fireEvent.click(switches[1]!)
+
+    await waitFor(() => {
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        enabled: false,
+      })
+    })
+
+    expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+      tasks: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+        [TASK_NOTIFICATION_TASKS.AutoCheckin]: false,
+      },
+    })
+    expect(showUpdateToastMock).toHaveBeenCalledWith(
+      true,
+      "settings:taskNotifications.enable",
+    )
+    expect(showUpdateToastMock).toHaveBeenCalledWith(
+      true,
+      "settings:taskNotifications.tasksLabel",
+    )
   })
 })

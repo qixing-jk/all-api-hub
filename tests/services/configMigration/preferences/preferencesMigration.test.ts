@@ -1007,6 +1007,20 @@ describe("preferencesMigration", () => {
       })
     })
 
+    it("falls back to defaults when stored taskNotifications is a non-object during v18 to v19 migration", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 18,
+        taskNotifications: "invalid" as any,
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.taskNotifications).toEqual(
+        DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      )
+    })
+
     it("removes all deprecated fields after full migration", () => {
       const prefs = createV0Preferences({
         // All deprecated fields

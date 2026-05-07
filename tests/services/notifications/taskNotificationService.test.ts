@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
+  __resetTaskNotificationServiceForTesting,
   handleTaskNotificationMessage,
   initializeTaskNotificationService,
   notifyTaskResult,
@@ -79,6 +80,7 @@ vi.mock("~/utils/i18n/core", () => ({
 describe("taskNotificationService", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    __resetTaskNotificationServiceForTesting()
     getPreferencesMock.mockResolvedValue({
       taskNotifications: DEFAULT_TASK_NOTIFICATION_PREFERENCES,
     })
@@ -264,6 +266,42 @@ describe("taskNotificationService", () => {
       success: false,
       error: "Unknown action",
     })
+  })
+
+  it("ignores invalid notification ids when handling clicks", async () => {
+    initializeTaskNotificationService()
+    const handler = onNotificationClickedMock.mock.calls[0]?.[0] as
+      | ((notificationId: string) => void | Promise<void>)
+      | undefined
+
+    if (!handler) {
+      throw new Error("Expected notification click handler to be registered")
+    }
+
+    await handler("all-api-hub:task:unknown")
+
+    expect(openOrFocusOptionsMenuItemMock).not.toHaveBeenCalled()
+    expect(clearNotificationMock).not.toHaveBeenCalled()
+  })
+
+  it("swallows notification click handler failures", async () => {
+    openOrFocusOptionsMenuItemMock.mockRejectedValueOnce(
+      new Error("open failed"),
+    )
+
+    initializeTaskNotificationService()
+    const handler = onNotificationClickedMock.mock.calls[0]?.[0] as
+      | ((notificationId: string) => void | Promise<void>)
+      | undefined
+
+    if (!handler) {
+      throw new Error("Expected notification click handler to be registered")
+    }
+
+    await handler(getTaskNotificationId(TASK_NOTIFICATION_TASKS.AutoCheckin))
+    await Promise.resolve()
+
+    expect(clearNotificationMock).not.toHaveBeenCalled()
   })
 
   it("parses only valid notification ids and derives failure status", () => {
