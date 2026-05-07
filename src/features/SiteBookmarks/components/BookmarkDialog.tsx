@@ -1,3 +1,7 @@
+import {
+  GlobeAltIcon,
+  InformationCircleIcon,
+} from "@heroicons/react/24/outline"
 import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -5,9 +9,12 @@ import { useTranslation } from "react-i18next"
 import { Button, FormField, Input, Modal, Textarea } from "~/components/ui"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { getSiteName } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import type { SiteBookmark } from "~/types"
+import { getActiveTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 
 export type BookmarkDialogMode = "add" | "edit"
 
@@ -17,6 +24,8 @@ interface BookmarkDialogProps {
   bookmark: SiteBookmark | null
   onClose: () => void
 }
+
+const logger = createLogger("BookmarkDialog")
 
 /**
  * BookmarkDialog provides Add/Edit UI for SiteBookmark entries.
@@ -47,6 +56,11 @@ export default function BookmarkDialog({
   const [tagIds, setTagIds] = useState<string[]>(initial.tagIds)
   const [errors, setErrors] = useState<{ name?: string; url?: string }>({})
   const [isWorking, setIsWorking] = useState(false)
+  const [currentPage, setCurrentPage] = useState<{
+    title: string
+    url: string
+  } | null>(null)
+  const [isCurrentPageLoading, setIsCurrentPageLoading] = useState(false)
 
   useEffect(() => {
     if (!isOpen) return
@@ -58,10 +72,82 @@ export default function BookmarkDialog({
     setIsWorking(false)
   }, [initial, isOpen])
 
+  useEffect(() => {
+    if (!isOpen || mode !== "add") {
+      setCurrentPage(null)
+      setIsCurrentPageLoading(false)
+      return
+    }
+
+    let cancelled = false
+
+    const loadCurrentPage = async () => {
+      setIsCurrentPageLoading(true)
+
+      try {
+        const tab = await getActiveTab()
+        const rawUrl = typeof tab?.url === "string" ? tab.url.trim() : ""
+        if (!rawUrl) {
+          if (!cancelled) {
+            setCurrentPage(null)
+          }
+          return
+        }
+
+        const parsedUrl = new URL(rawUrl)
+        if (parsedUrl.protocol !== "http:" && parsedUrl.protocol !== "https:") {
+          if (!cancelled) {
+            setCurrentPage(null)
+          }
+          return
+        }
+
+        const resolvedTitle = tab ? await getSiteName(tab) : ""
+        if (cancelled) {
+          return
+        }
+
+        setCurrentPage({
+          title: resolvedTitle.trim() || parsedUrl.hostname,
+          url: parsedUrl.toString(),
+        })
+      } catch (error) {
+        if (!cancelled) {
+          setCurrentPage(null)
+        }
+        logger.warn("Failed to resolve current page for bookmark autofill", {
+          error: getErrorMessage(error),
+        })
+      } finally {
+        if (!cancelled) {
+          setIsCurrentPageLoading(false)
+        }
+      }
+    }
+
+    void loadCurrentPage()
+
+    return () => {
+      cancelled = true
+    }
+  }, [isOpen, mode])
+
   const title =
     mode === "add"
       ? t("bookmark:dialog.titleAdd")
       : t("bookmark:dialog.titleEdit")
+
+  const handleUseCurrentPage = () => {
+    if (!currentPage) return
+
+    setName(currentPage.title)
+    setUrl(currentPage.url)
+    setErrors((prev) => ({
+      ...prev,
+      name: undefined,
+      url: undefined,
+    }))
+  }
 
   const validate = () => {
     const nextErrors: { name?: string; url?: string } = {}
@@ -153,6 +239,38 @@ export default function BookmarkDialog({
         </div>
       }
     >
+      {mode === "add" && (
+        <div className="rounded-md bg-blue-50 p-3 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-1 font-medium">
+                <InformationCircleIcon className="h-4 w-4 shrink-0" />
+                <span>{t("bookmark:dialog.currentPageLabel")}</span>
+              </div>
+              <div className="mt-1 truncate font-medium">
+                {currentPage?.title ||
+                  t("bookmark:dialog.currentPageUnavailable")}
+              </div>
+              <div className="truncate opacity-80">
+                {currentPage?.url ||
+                  t("bookmark:dialog.currentPageUnavailable")}
+              </div>
+            </div>
+            <Button
+              type="button"
+              variant="link"
+              size="sm"
+              leftIcon={<GlobeAltIcon className="h-4 w-4" />}
+              onClick={handleUseCurrentPage}
+              loading={isCurrentPageLoading}
+              disabled={!currentPage || isWorking || isCurrentPageLoading}
+            >
+              {t("bookmark:dialog.useCurrentPage")}
+            </Button>
+          </div>
+        </div>
+      )}
+
       <FormField
         label={t("bookmark:form.nameLabel")}
         required={true}

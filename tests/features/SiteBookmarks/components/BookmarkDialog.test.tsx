@@ -8,11 +8,15 @@ const loadAccountDataMock = vi.fn()
 
 const {
   addBookmarkMock,
+  getActiveTabMock,
+  getSiteNameMock,
   updateBookmarkMock,
   toastSuccessMock,
   toastErrorMock,
 } = vi.hoisted(() => ({
   addBookmarkMock: vi.fn().mockResolvedValue("bookmark-1"),
+  getActiveTabMock: vi.fn(),
+  getSiteNameMock: vi.fn(),
   updateBookmarkMock: vi.fn().mockResolvedValue(true),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
@@ -32,6 +36,19 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+  return {
+    ...actual,
+    getActiveTab: getActiveTabMock,
+  }
+})
+
+vi.mock("~/services/accounts/accountOperations", () => ({
+  getSiteName: getSiteNameMock,
+}))
+
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
     tags: [],
@@ -49,6 +66,13 @@ vi.mock("~/features/AccountManagement/components/TagPicker", () => ({
 beforeEach(() => {
   vi.useRealTimers()
   addBookmarkMock.mockClear()
+  getActiveTabMock.mockReset()
+  getActiveTabMock.mockResolvedValue({
+    title: "Current Admin",
+    url: "https://example.com/console",
+  })
+  getSiteNameMock.mockReset()
+  getSiteNameMock.mockResolvedValue("Current Admin")
   updateBookmarkMock.mockClear()
   toastSuccessMock.mockClear()
   toastErrorMock.mockClear()
@@ -124,6 +148,61 @@ describe("BookmarkDialog", () => {
       "messages:toast.success.bookmarkAdded",
     )
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
+  it("fills name and url from the current page helper in add mode", async () => {
+    render(
+      <BookmarkDialog
+        isOpen={true}
+        mode="add"
+        bookmark={null}
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "bookmark:dialog.useCurrentPage",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(
+        screen.getByDisplayValue("https://example.com/console"),
+      ).toBeInTheDocument()
+    })
+
+    expect(screen.getByDisplayValue("Current Admin")).toBeInTheDocument()
+    expect(getActiveTabMock).toHaveBeenCalledTimes(1)
+    expect(getSiteNameMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not show current page helper in edit mode", async () => {
+    const bookmark: SiteBookmark = {
+      id: "b1",
+      name: "Existing",
+      url: "https://example.com/existing",
+      tagIds: [],
+      notes: "",
+      created_at: 0,
+      updated_at: 0,
+    }
+
+    render(
+      <BookmarkDialog
+        isOpen={true}
+        mode="edit"
+        bookmark={bookmark}
+        onClose={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.queryByRole("button", {
+        name: "bookmark:dialog.useCurrentPage",
+      }),
+    ).not.toBeInTheDocument()
+    expect(getActiveTabMock).not.toHaveBeenCalled()
   })
 
   it("updates a bookmark in edit mode", async () => {

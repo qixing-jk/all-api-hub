@@ -13,9 +13,12 @@
   },
   "description": "保存站点控制台/文档/管理页等快捷链接，无需创建完整账号。",
   "dialog": {
+    "currentPageLabel": "当前页面",
+    "currentPageUnavailable": "暂时无法读取当前页面",
     "description": "书签可以是任何链接，例如站点控制台、文档、管理页等。适用于无法创建完整账号的情况。",
     "titleAdd": "添加书签",
-    "titleEdit": "编辑书签"
+    "titleEdit": "编辑书签",
+    "useCurrentPage": "填充当前页面"
   },
   "emptyState": "暂无书签",
   "filter": {

@@ -13,9 +13,12 @@
   },
   "description": "完全なアカウントを作成しなくても、よく使うリンク（コンソール / ドキュメント / 管理ページ）を保存できます。",
   "dialog": {
+    "currentPageLabel": "現在のページ",
+    "currentPageUnavailable": "現在のページを取得できません",
     "description": "ブックマークには、サイトのコンソール、ドキュメント、管理ページなど、任意のリンクを登録できます。完全なアカウントを作成できない場面で便利です。",
     "titleAdd": "ブックマークを追加",
-    "titleEdit": "ブックマークを編集"
+    "titleEdit": "ブックマークを編集",
+    "useCurrentPage": "現在のページを使う"
   },
   "emptyState": "まだブックマークがありません",
   "filter": {

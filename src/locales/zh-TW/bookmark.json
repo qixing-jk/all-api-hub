@@ -13,9 +13,12 @@
   },
   "description": "儲存站點控制台/文件/管理頁等快捷連結，無需建立完整帳號。",
   "dialog": {
+    "currentPageLabel": "目前頁面",
+    "currentPageUnavailable": "暫時無法讀取目前頁面",
     "description": "書籤可以是任何連結，例如站點控制台、文件、管理頁等。適用於無法建立完整帳號的情況。",
     "titleAdd": "新增書籤",
-    "titleEdit": "編輯書籤"
+    "titleEdit": "編輯書籤",
+    "useCurrentPage": "填入目前頁面"
   },
   "emptyState": "暫無書籤",
   "filter": {

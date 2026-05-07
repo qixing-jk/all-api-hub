@@ -13,9 +13,12 @@
   },
   "description": "Save quick links (console/docs/admin pages) without creating full accounts.",
   "dialog": {
+    "currentPageLabel": "Current page",
+    "currentPageUnavailable": "Current page unavailable",
     "description": "Bookmarks can be any link, such as to a site console, documentation, or an administration page. This is useful for situations where a full account cannot be created.",
     "titleAdd": "Add Bookmark",
-    "titleEdit": "Edit Bookmark"
+    "titleEdit": "Edit Bookmark",
+    "useCurrentPage": "Use current page"
   },
   "emptyState": "No bookmarks yet",
   "filter": {
