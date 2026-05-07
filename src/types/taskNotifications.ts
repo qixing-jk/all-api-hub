@@ -4,6 +4,7 @@ export const TASK_NOTIFICATION_TASKS = {
   ManagedSiteModelSync: "managedSiteModelSync",
   UsageHistorySync: "usageHistorySync",
   BalanceHistoryCapture: "balanceHistoryCapture",
+  SiteAnnouncements: "siteAnnouncements",
 } as const
 
 export type TaskNotificationTask =
@@ -34,6 +35,7 @@ const TASK_NOTIFICATION_TASK_ORDER = [
   TASK_NOTIFICATION_TASKS.ManagedSiteModelSync,
   TASK_NOTIFICATION_TASKS.UsageHistorySync,
   TASK_NOTIFICATION_TASKS.BalanceHistoryCapture,
+  TASK_NOTIFICATION_TASKS.SiteAnnouncements,
 ] as const satisfies readonly TaskNotificationTask[]
 
 const TASK_NOTIFICATION_ID_PREFIX = "all-api-hub:task:" as const

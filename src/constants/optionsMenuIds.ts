@@ -13,6 +13,7 @@ export const MENU_ITEM_IDS = {
   AUTO_CHECKIN: "autoCheckin",
   USAGE_ANALYTICS: "usageAnalytics",
   BALANCE_HISTORY: "balanceHistory",
+  SITE_ANNOUNCEMENTS: "siteAnnouncements",
   MODELS: "models",
   KEYS: "keys",
   API_CREDENTIAL_PROFILES: "apiCredentialProfiles",

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import TaskNotificationSettings from "~/features/BasicSettings/components/tabs/General/TaskNotificationSettings"
 import { OPTIONAL_PERMISSION_IDS } from "~/services/permissions/permissionManager"
+import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
 import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,
   TASK_NOTIFICATION_TASKS,
@@ -17,6 +18,7 @@ const {
   sendRuntimeMessageMock,
   showResultToastMock,
   showUpdateToastMock,
+  updateSiteAnnouncementNotificationsMock,
   updateTaskNotificationsMock,
 } = vi.hoisted(() => ({
   hasPermissionMock: vi.fn(),
@@ -25,12 +27,16 @@ const {
   sendRuntimeMessageMock: vi.fn(),
   showResultToastMock: vi.fn(),
   showUpdateToastMock: vi.fn(),
+  updateSiteAnnouncementNotificationsMock: vi.fn(),
   updateTaskNotificationsMock: vi.fn(),
 }))
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => ({
+    siteAnnouncementNotifications: DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
     taskNotifications: DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+    updateSiteAnnouncementNotifications:
+      updateSiteAnnouncementNotificationsMock,
     updateTaskNotifications: updateTaskNotificationsMock,
   }),
 }))
@@ -66,6 +72,7 @@ describe("TaskNotificationSettings", () => {
     onOptionalPermissionsChangedMock.mockReturnValue(() => {})
     requestPermissionMock.mockResolvedValue(true)
     sendRuntimeMessageMock.mockResolvedValue({ success: true })
+    updateSiteAnnouncementNotificationsMock.mockResolvedValue(true)
     updateTaskNotificationsMock.mockResolvedValue(true)
   })
 
@@ -172,7 +179,7 @@ describe("TaskNotificationSettings", () => {
     })
   })
 
-  it("updates the global switch and per-task switch through the preferences context", async () => {
+  it("updates the global switch, announcement switch, and per-task switch through the preferences context", async () => {
     hasPermissionMock.mockResolvedValue(true)
 
     render(<TaskNotificationSettings />, {
@@ -192,12 +199,20 @@ describe("TaskNotificationSettings", () => {
     const autoCheckinSwitch = autoCheckinTask?.querySelector(
       '[role="switch"]',
     ) as HTMLElement | null
+    const siteAnnouncementNotifications = screen
+      .getByText("settings:taskNotifications.siteAnnouncements.enable")
+      .closest('[id="task-notifications-site-announcements"]')
+    const siteAnnouncementSwitch = siteAnnouncementNotifications?.querySelector(
+      '[role="switch"]',
+    ) as HTMLElement | null
 
     expect(globalSwitch).not.toBeNull()
     expect(autoCheckinSwitch).not.toBeNull()
+    expect(siteAnnouncementSwitch).not.toBeNull()
 
     fireEvent.click(globalSwitch!)
     fireEvent.click(autoCheckinSwitch!)
+    fireEvent.click(siteAnnouncementSwitch!)
 
     await waitFor(() => {
       expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
@@ -211,6 +226,9 @@ describe("TaskNotificationSettings", () => {
         [TASK_NOTIFICATION_TASKS.AutoCheckin]: false,
       },
     })
+    expect(updateSiteAnnouncementNotificationsMock).toHaveBeenCalledWith({
+      notificationEnabled: false,
+    })
     expect(showUpdateToastMock).toHaveBeenCalledWith(
       true,
       "settings:taskNotifications.enable",
@@ -218,6 +236,10 @@ describe("TaskNotificationSettings", () => {
     expect(showUpdateToastMock).toHaveBeenCalledWith(
       true,
       "settings:taskNotifications.tasksLabel",
+    )
+    expect(showUpdateToastMock).toHaveBeenCalledWith(
+      true,
+      "settings:taskNotifications.siteAnnouncements.enable",
     )
   })
 })

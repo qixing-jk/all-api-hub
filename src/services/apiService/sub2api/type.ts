@@ -7,6 +7,7 @@
 
 export const SUB2API_AUTH_ME_ENDPOINT = "/api/v1/auth/me"
 export const SUB2API_KEYS_ENDPOINT = "/api/v1/keys"
+export const SUB2API_ANNOUNCEMENTS_ENDPOINT = "/api/v1/announcements"
 export const SUB2API_AVAILABLE_GROUPS_ENDPOINT = "/api/v1/groups/available"
 export const SUB2API_GROUP_RATES_ENDPOINT = "/api/v1/groups/rates"
 
@@ -79,6 +80,21 @@ export type Sub2ApiKeyData = {
 export type Sub2ApiKeyListData =
   | Sub2ApiPaginatedData<Sub2ApiKeyData>
   | Sub2ApiKeyData[]
+
+export type Sub2ApiAnnouncementData = {
+  id?: IntLike | null
+  title?: string | null
+  content?: string | null
+  message?: string | null
+  body?: string | null
+  created_at?: string | number | null
+  updated_at?: string | number | null
+  read_at?: string | number | null
+}
+
+export type Sub2ApiAnnouncementListData =
+  | Sub2ApiPaginatedData<Sub2ApiAnnouncementData>
+  | Sub2ApiAnnouncementData[]
 
 export type Sub2ApiKeyWritePayloadBase = {
   name: string

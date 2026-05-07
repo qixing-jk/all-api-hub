@@ -27,6 +27,8 @@ export function getMenuItemLabel(
       return t("ui:navigation.usageAnalytics")
     case MENU_ITEM_IDS.BALANCE_HISTORY:
       return t("ui:navigation.balanceHistory")
+    case MENU_ITEM_IDS.SITE_ANNOUNCEMENTS:
+      return t("ui:navigation.siteAnnouncements")
     case MENU_ITEM_IDS.MODELS:
       return t("ui:navigation.models")
     case MENU_ITEM_IDS.KEYS:

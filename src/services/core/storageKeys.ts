@@ -57,6 +57,11 @@ export const STORAGE_LOCKS = {
    * lookup cache.
    */
   LDOH_SITE_LOOKUP: "all-api-hub:ldoh-site-lookup",
+  /**
+   * Exclusive lock used for read-modify-write sequences touching the local site
+   * announcement cache.
+   */
+  SITE_ANNOUNCEMENTS: "all-api-hub:site-announcements",
 } as const
 
 export const ACCOUNT_STORAGE_KEYS = {
@@ -103,6 +108,10 @@ const RELEASE_UPDATE_STORAGE_KEYS = {
   STATUS: "releaseUpdate_status",
 } as const
 
+const SITE_ANNOUNCEMENTS_STORAGE_KEYS = {
+  STORE: "siteAnnouncements_store",
+} as const
+
 /**
  * Centralized storage keys registry.
  *
@@ -122,4 +131,5 @@ export const STORAGE_KEYS = {
     CHANGELOG_ON_UPDATE_STORAGE_KEYS.PENDING_VERSION,
   RELEASE_UPDATE_STATUS: RELEASE_UPDATE_STORAGE_KEYS.STATUS,
   DAILY_BALANCE_HISTORY_STORE: DAILY_BALANCE_HISTORY_STORAGE_KEYS.STORE,
+  SITE_ANNOUNCEMENTS_STORE: SITE_ANNOUNCEMENTS_STORAGE_KEYS.STORE,
 } as const

@@ -451,6 +451,19 @@
       "updateAvailableAriaLabel": "バージョン {{version}} に更新があります"
     }
   },
+  "siteAnnouncementNotifications": {
+    "description": "有効なアカウントのサイト公告をバックグラウンドで定期取得するかどうかを制御します。",
+    "page": {
+      "description": "既定では {{intervalMinutes}} 分ごとにバックグラウンドで確認します。手動確認もできます。",
+      "open": "公告を表示",
+      "title": "公告ページ"
+    },
+    "polling": {
+      "enable": "サイト公告の取得を有効化",
+      "enableDesc": "無効にするとバックグラウンドの定期取得を停止します。保存済みのローカル公告記録は残り、公告ページから手動確認できます。"
+    },
+    "title": "サイト公告"
+  },
   "sorting": {
     "checkInDesc": "チェックインが必要なサイトを先頭に表示します",
     "checkInRequirement": "チェックイン要件",
@@ -515,6 +528,10 @@
       "requestFailed": "通知権限は許可されませんでした",
       "requestSuccess": "通知権限を許可しました",
       "title": "通知権限"
+    },
+    "siteAnnouncements": {
+      "enable": "サイト公告通知",
+      "enableDesc": "有効にすると、サイト公告の取得で新しい公告が見つかったときにシステム通知を送信します。無効でもローカル公告記録は保存されます。"
     },
     "taskDescriptions": {
       "autoCheckin": "毎日の自動チェックインと自動リトライの完了後に通知します。",

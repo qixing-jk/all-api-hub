@@ -32,6 +32,13 @@ vi.mock(
 )
 
 vi.mock(
+  "~/features/BasicSettings/components/tabs/General/SiteAnnouncementNotificationSettings",
+  () => ({
+    default: () => <section data-testid="site-announcement-settings" />,
+  }),
+)
+
+vi.mock(
   "~/features/BasicSettings/components/tabs/General/ChangelogOnUpdateSettings",
   () => ({
     default: () => <section data-testid="changelog-settings" />,
@@ -61,6 +68,7 @@ describe("GeneralTab", () => {
       "appearance-settings",
       "action-click-settings",
       "task-notification-settings",
+      "site-announcement-settings",
       "changelog-settings",
       "logging-settings",
       "reset-settings",

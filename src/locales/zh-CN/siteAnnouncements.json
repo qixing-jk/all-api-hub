@@ -1,0 +1,53 @@
+{
+  "actions": {
+    "checkNow": "立即检查",
+    "collapse": "收起",
+    "expand": "展开",
+    "markAllRead": "全部已读",
+    "markRead": "标记已读"
+  },
+  "badges": {
+    "notified": "已通知",
+    "unread": "未读"
+  },
+  "description": "查看后台拉取到的网站公告记录，处理未读状态，并手动触发一次检查。",
+  "empty": {
+    "description": "后台检查到新公告后会显示在这里。",
+    "filtered": "当前筛选条件下没有公告",
+    "title": "暂无公告记录"
+  },
+  "filters": {
+    "allReadStates": "全部状态",
+    "allSites": "全部站点",
+    "allSiteTypes": "全部类型",
+    "read": "已读",
+    "readState": "阅读状态",
+    "site": "站点",
+    "siteType": "站点类型",
+    "unread": "未读"
+  },
+  "loading": "正在加载公告...",
+  "messages": {
+    "checkFailed": "公告检查失败",
+    "checkStarted": "公告检查已完成"
+  },
+  "notification": {
+    "multipleUnread": "{{title}}，还有 {{count}} 条未读公告",
+    "title": "{{site}} 有新公告"
+  },
+  "status": {
+    "failed": "该站点最近一次公告检查失败：{{error}}",
+    "failedTitle": "检查失败",
+    "lastChecked": "最近检查：{{time}}",
+    "unsupported": "该站点最近一次检查未发现可用公告接口。",
+    "unsupportedTitle": "暂不支持公告接口"
+  },
+  "summary": {
+    "filtered": "当前显示 {{count}} / {{total}} 条公告",
+    "notified": "{{count}} 条已发送系统通知",
+    "sites": "涉及站点",
+    "total": "公告总数",
+    "unread": "未读公告"
+  },
+  "title": "网站公告"
+}

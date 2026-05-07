@@ -1,0 +1,56 @@
+{
+  "actions": {
+    "checkNow": "Check now",
+    "collapse": "Collapse",
+    "expand": "Expand",
+    "markAllRead": "Mark all read",
+    "markRead": "Mark read"
+  },
+  "badges": {
+    "notified": "Notified",
+    "unread": "Unread"
+  },
+  "description": "Review announcements fetched in the background, manage unread state, and trigger a manual check.",
+  "empty": {
+    "description": "New announcements discovered by background checks will appear here.",
+    "filtered": "No announcements match the current filters",
+    "title": "No announcement records"
+  },
+  "filters": {
+    "allReadStates": "All states",
+    "allSites": "All sites",
+    "allSiteTypes": "All types",
+    "read": "Read",
+    "readState": "Read state",
+    "site": "Site",
+    "siteType": "Site type",
+    "unread": "Unread"
+  },
+  "loading": "Loading announcements...",
+  "messages": {
+    "checkFailed": "Announcement check failed",
+    "checkStarted": "Announcement check completed"
+  },
+  "notification": {
+    "multipleUnread_one": "{{title}}, plus {{count}} unread announcement",
+    "multipleUnread_other": "{{title}}, plus {{count}} unread announcements",
+    "title": "{{site}} has new announcements"
+  },
+  "status": {
+    "failed": "The latest announcement check failed: {{error}}",
+    "failedTitle": "Check failed",
+    "lastChecked": "Last checked: {{time}}",
+    "unsupported": "The latest check did not find a usable announcement endpoint for this site.",
+    "unsupportedTitle": "Announcement endpoint unsupported"
+  },
+  "summary": {
+    "filtered_one": "Showing {{count}} of {{total}} announcement",
+    "filtered_other": "Showing {{count}} of {{total}} announcements",
+    "notified_one": "{{count}} system notification sent",
+    "notified_other": "{{count}} system notifications sent",
+    "sites": "Sites",
+    "total": "Total",
+    "unread": "Unread"
+  },
+  "title": "Site Announcements"
+}

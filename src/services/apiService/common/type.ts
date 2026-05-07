@@ -89,6 +89,12 @@ export interface SiteStatusInfo {
   checkin_enabled?: boolean
 }
 
+export interface SiteNoticeResponse {
+  success: boolean
+  data?: string | null
+  message?: string
+}
+
 // 模型列表响应类型
 export interface ModelsResponse {
   data: string[]

@@ -48,6 +48,11 @@ import {
 } from "~/types/dailyBalanceHistory"
 import type { LogLevel } from "~/types/logging"
 import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
+import {
+  DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
+  normalizeSiteAnnouncementPreferences,
+  type SiteAnnouncementPreferences,
+} from "~/types/siteAnnouncements"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -184,6 +189,7 @@ interface UserPreferencesContextType {
   tempWindowFallback: TempWindowFallbackPreferences
   tempWindowFallbackReminder: TempWindowFallbackReminderPreferences
   taskNotifications: TaskNotificationPreferences
+  siteAnnouncementNotifications: SiteAnnouncementPreferences
 
   updateActiveTab: (activeTab: DashboardTabType) => Promise<boolean>
   updateDefaultTab: (activeTab: DashboardTabType) => Promise<boolean>
@@ -358,6 +364,9 @@ interface UserPreferencesContextType {
   ) => Promise<boolean>
   updateTaskNotifications: (
     updates: Partial<TaskNotificationPreferences>,
+  ) => Promise<boolean>
+  updateSiteAnnouncementNotifications: (
+    updates: Partial<SiteAnnouncementPreferences>,
   ) => Promise<boolean>
   resetToDefaults: () => Promise<boolean>
   resetDisplaySettings: () => Promise<boolean>
@@ -1467,6 +1476,39 @@ export const UserPreferencesProvider = ({
     [],
   )
 
+  const updateSiteAnnouncementNotifications = useCallback(
+    async (updates: Partial<SiteAnnouncementPreferences>) => {
+      const response = normalizeRuntimeMutationResponse(
+        await sendRuntimeMessage({
+          action: RuntimeActionIds.SiteAnnouncementsUpdatePreferences,
+          settings: updates,
+        }),
+      )
+
+      if (response.success) {
+        setPreferences((prev) =>
+          prev
+            ? {
+                ...prev,
+                siteAnnouncementNotifications:
+                  normalizeSiteAnnouncementPreferences({
+                    ...normalizeSiteAnnouncementPreferences(
+                      prev.siteAnnouncementNotifications ??
+                        DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
+                    ),
+                    ...updates,
+                  }),
+                lastUpdated: Date.now(),
+              }
+            : prev,
+        )
+      }
+
+      return response.success
+    },
+    [],
+  )
+
   const resetToDefaults = useCallback(async () => {
     const success = await userPreferences.resetToDefaults()
     if (success) {
@@ -1859,6 +1901,10 @@ export const UserPreferencesProvider = ({
       (DEFAULT_PREFERENCES.tempWindowFallbackReminder as TempWindowFallbackReminderPreferences),
     taskNotifications:
       preferences.taskNotifications ?? DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+    siteAnnouncementNotifications: normalizeSiteAnnouncementPreferences(
+      preferences.siteAnnouncementNotifications ??
+        DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
+    ),
     updateActiveTab,
     updateDefaultTab,
     updateCurrencyType,
@@ -1916,6 +1962,7 @@ export const UserPreferencesProvider = ({
     updateTempWindowFallback,
     updateTempWindowFallbackReminder,
     updateTaskNotifications,
+    updateSiteAnnouncementNotifications,
     resetToDefaults,
     resetDisplaySettings,
     resetAutoRefreshConfig,

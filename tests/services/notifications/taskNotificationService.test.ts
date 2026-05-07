@@ -250,6 +250,53 @@ describe("taskNotificationService", () => {
     )
   })
 
+  it("uses a custom localized title when provided", async () => {
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.SiteAnnouncements,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+        title: "Example has new announcements",
+        message: "Hello",
+      }),
+    ).resolves.toBe(true)
+
+    expect(createNotificationMock).toHaveBeenCalledWith(
+      getTaskNotificationId(TASK_NOTIFICATION_TASKS.SiteAnnouncements),
+      expect.objectContaining({
+        title: "Example has new announcements",
+        message: "Hello",
+      }),
+    )
+  })
+
+  it("uses default task switch values when stored preferences predate newer task keys", async () => {
+    const { siteAnnouncements: _siteAnnouncements, ...legacyTasks } =
+      DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks
+
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        enabled: true,
+        tasks: legacyTasks,
+      },
+    })
+
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.SiteAnnouncements,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+        title: "Example has new announcements",
+        message: "Hello",
+      }),
+    ).resolves.toBe(true)
+
+    expect(createNotificationMock).toHaveBeenCalledWith(
+      getTaskNotificationId(TASK_NOTIFICATION_TASKS.SiteAnnouncements),
+      expect.objectContaining({
+        title: "Example has new announcements",
+      }),
+    )
+  })
+
   it("returns false when loading preferences throws", async () => {
     getPreferencesMock.mockRejectedValueOnce(new Error("prefs failed"))
 
@@ -282,6 +329,28 @@ describe("taskNotificationService", () => {
     )
     expect(clearNotificationMock).toHaveBeenCalledWith(
       getTaskNotificationId(TASK_NOTIFICATION_TASKS.WebdavAutoSync),
+    )
+  })
+
+  it("opens the site announcements page when a site announcement task notification is clicked", async () => {
+    initializeTaskNotificationService()
+    const handler = onNotificationClickedMock.mock.calls[0]?.[0] as
+      | ((notificationId: string) => void | Promise<void>)
+      | undefined
+    if (!handler) {
+      throw new Error("Expected notification click handler to be registered")
+    }
+
+    await handler(
+      getTaskNotificationId(TASK_NOTIFICATION_TASKS.SiteAnnouncements),
+    )
+
+    expect(openOrFocusOptionsMenuItemMock).toHaveBeenCalledWith(
+      MENU_ITEM_IDS.SITE_ANNOUNCEMENTS,
+      undefined,
+    )
+    expect(clearNotificationMock).toHaveBeenCalledWith(
+      getTaskNotificationId(TASK_NOTIFICATION_TASKS.SiteAnnouncements),
     )
   })
 

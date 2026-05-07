@@ -17,6 +17,7 @@ import { handleChannelConfigMessage } from "~/services/managedSites/channelConfi
 import { handleManagedSiteModelSyncMessage } from "~/services/models/modelSync"
 import { handleTaskNotificationMessage } from "~/services/notifications/taskNotificationService"
 import { handleRedemptionAssistMessage } from "~/services/redemption/redemptionAssist"
+import { handleSiteAnnouncementMessage } from "~/services/siteAnnouncements/scheduler"
 import { handleReleaseUpdateMessage } from "~/services/updates/releaseUpdateService"
 import { handleWebAiApiCheckMessage } from "~/services/verification/webAiApiCheck/background"
 import { handleWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncService"
@@ -329,6 +330,16 @@ export function setupRuntimeMessageListeners() {
         )
       ) {
         void handleTaskNotificationMessage(request, sendResponse)
+        return true
+      }
+
+      if (
+        hasRuntimeActionPrefix(
+          request.action,
+          RuntimeActionPrefixes.SiteAnnouncements,
+        )
+      ) {
+        void handleSiteAnnouncementMessage(request, sendResponse)
         return true
       }
 

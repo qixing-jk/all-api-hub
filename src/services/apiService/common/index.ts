@@ -39,6 +39,7 @@ import {
   fetchApiData,
   getTodayTimestampRange,
 } from "~/services/apiService/common/utils"
+import type { Sub2ApiAnnouncementData } from "~/services/apiService/sub2api/type"
 import {
   AuthTypeEnum,
   CheckInConfig,
@@ -421,6 +422,56 @@ export async function fetchSiteStatus(
     logger.warn("获取站点状态信息失败", error)
     return null
   }
+}
+
+/**
+ * Fetch the compatible site notice endpoint used by One-API/New-API family
+ * deployments. Callers treat empty, failed, missing, and malformed responses as
+ * no available notice.
+ */
+export async function fetchSiteNotice(
+  request: ApiServiceRequest,
+): Promise<string | null> {
+  const response = await fetchApi<string | null>(
+    {
+      ...request,
+      auth: {
+        ...request.auth,
+        authType: AuthTypeEnum.None,
+      },
+    },
+    { endpoint: "/api/notice" },
+    false,
+  )
+
+  if (!response || typeof response !== "object" || response.success === false) {
+    return null
+  }
+
+  const data = response.data
+  return typeof data === "string" && data.trim() ? data : null
+}
+
+/**
+ * Placeholder for site-specific Sub2API override. Common-compatible sites do
+ * not expose this endpoint.
+ */
+export async function fetchSub2ApiAnnouncements(
+  _request: ApiServiceRequest,
+  _options?: { unreadOnly?: boolean },
+): Promise<Sub2ApiAnnouncementData[]> {
+  return []
+}
+
+/**
+ * Placeholder for site-specific Sub2API override. Common-compatible sites do
+ * not expose this endpoint.
+ */
+export async function markSub2ApiAnnouncementRead(
+  _request: ApiServiceRequest,
+  _id: string | number,
+): Promise<boolean> {
+  return false
 }
 
 /**

@@ -44,10 +44,13 @@ import {
 } from "./tokenRefresh"
 import { resyncSub2ApiAuthToken } from "./tokenResync"
 import {
+  SUB2API_ANNOUNCEMENTS_ENDPOINT,
   SUB2API_AUTH_ME_ENDPOINT,
   SUB2API_AVAILABLE_GROUPS_ENDPOINT,
   SUB2API_GROUP_RATES_ENDPOINT,
   SUB2API_KEYS_ENDPOINT,
+  type Sub2ApiAnnouncementData,
+  type Sub2ApiAnnouncementListData,
   type Sub2ApiAuthMeData,
   type Sub2ApiAuthMeResponse,
   type Sub2ApiKeyData,
@@ -618,6 +621,20 @@ const createSub2ApiKeysEndpoint = (page: number, size: number): string => {
   return `${SUB2API_KEYS_ENDPOINT}?${searchParams.toString()}`
 }
 
+const extractSub2ApiAnnouncementItems = (
+  data: Sub2ApiAnnouncementListData,
+): Sub2ApiAnnouncementData[] => {
+  if (Array.isArray(data)) {
+    return data
+  }
+
+  if (Array.isArray(data?.items)) {
+    return data.items
+  }
+
+  return []
+}
+
 const resolveSelectedGroupId = async (
   request: ApiServiceRequest,
   groupName: string,
@@ -997,6 +1014,75 @@ export async function fetchAccountTokens(
       error: getSafeErrorMessage(error),
     })
     throw error
+  }
+}
+
+/**
+ * Fetch unread Sub2API announcements for the authenticated account.
+ */
+export async function fetchSub2ApiAnnouncements(
+  request: ApiServiceRequest,
+  options?: { unreadOnly?: boolean },
+): Promise<Sub2ApiAnnouncementData[]> {
+  const searchParams = new URLSearchParams()
+  if (options?.unreadOnly) {
+    searchParams.set("unread_only", "1")
+  }
+
+  const endpoint = searchParams.toString()
+    ? `${SUB2API_ANNOUNCEMENTS_ENDPOINT}?${searchParams.toString()}`
+    : SUB2API_ANNOUNCEMENTS_ENDPOINT
+
+  try {
+    const data = await fetchSub2ApiData<Sub2ApiAnnouncementListData>(
+      request,
+      endpoint,
+      {
+        method: "GET",
+        cache: "no-store",
+      },
+    )
+
+    return extractSub2ApiAnnouncementItems(data)
+  } catch (error) {
+    logger.error("Failed to fetch Sub2API announcements", {
+      accountId: request.accountId,
+      endpoint,
+      error: getSafeErrorMessage(error),
+    })
+    throw error
+  }
+}
+
+/**
+ * Mark a Sub2API announcement as read after it has been delivered locally.
+ */
+export async function markSub2ApiAnnouncementRead(
+  request: ApiServiceRequest,
+  id: string | number,
+): Promise<boolean> {
+  const endpoint = `${SUB2API_ANNOUNCEMENTS_ENDPOINT}/${encodeURIComponent(
+    String(id),
+  )}/read`
+
+  try {
+    await fetchSub2ApiData<void>(
+      request,
+      endpoint,
+      {
+        method: "POST",
+      },
+      { allowMissingData: true },
+    )
+
+    return true
+  } catch (error) {
+    logger.warn("Failed to mark Sub2API announcement as read", {
+      accountId: request.accountId,
+      endpoint,
+      error: getSafeErrorMessage(error),
+    })
+    return false
   }
 }
 

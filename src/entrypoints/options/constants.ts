@@ -8,6 +8,7 @@ import {
   KeyRound,
   Layers,
   LineChart,
+  Megaphone,
   Palette,
   RefreshCcw,
   Settings,
@@ -43,6 +44,9 @@ const ApiCredentialProfiles = createLazyMenuComponent(
 const AutoCheckin = createLazyMenuComponent(() => import("./pages/AutoCheckin"))
 const BalanceHistory = createLazyMenuComponent(
   () => import("./pages/BalanceHistory"),
+)
+const SiteAnnouncements = createLazyMenuComponent(
+  () => import("./pages/SiteAnnouncements"),
 )
 const BookmarkManagement = createLazyMenuComponent(
   () => import("./pages/BookmarkManagement"),
@@ -121,6 +125,12 @@ const BASE_MENU_ITEMS: MenuItem[] = [
     name: "余额历史",
     icon: LineChart,
     component: BalanceHistory,
+  },
+  {
+    id: MENU_ITEM_IDS.SITE_ANNOUNCEMENTS,
+    name: "网站公告",
+    icon: Megaphone,
+    component: SiteAnnouncements,
   },
   {
     id: MENU_ITEM_IDS.USAGE_ANALYTICS,

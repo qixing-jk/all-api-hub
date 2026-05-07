@@ -1,0 +1,53 @@
+{
+  "actions": {
+    "checkNow": "立即檢查",
+    "collapse": "收合",
+    "expand": "展開",
+    "markAllRead": "全部已讀",
+    "markRead": "標記已讀"
+  },
+  "badges": {
+    "notified": "已通知",
+    "unread": "未讀"
+  },
+  "description": "查看背景拉取到的網站公告記錄，處理未讀狀態，並手動觸發一次檢查。",
+  "empty": {
+    "description": "背景檢查到新公告後會顯示在這裡。",
+    "filtered": "目前篩選條件下沒有公告",
+    "title": "暫無公告記錄"
+  },
+  "filters": {
+    "allReadStates": "全部狀態",
+    "allSites": "全部站點",
+    "allSiteTypes": "全部類型",
+    "read": "已讀",
+    "readState": "閱讀狀態",
+    "site": "站點",
+    "siteType": "站點類型",
+    "unread": "未讀"
+  },
+  "loading": "正在載入公告...",
+  "messages": {
+    "checkFailed": "公告檢查失敗",
+    "checkStarted": "公告檢查已完成"
+  },
+  "notification": {
+    "multipleUnread_other": "{{title}}，還有 {{count}} 則未讀公告",
+    "title": "{{site}} 有新公告"
+  },
+  "status": {
+    "failed": "該站點最近一次公告檢查失敗：{{error}}",
+    "failedTitle": "檢查失敗",
+    "lastChecked": "最近檢查：{{time}}",
+    "unsupported": "該站點最近一次檢查未發現可用公告介面。",
+    "unsupportedTitle": "暫不支援公告介面"
+  },
+  "summary": {
+    "filtered_other": "目前顯示 {{count}} / {{total}} 則公告",
+    "notified_other": "{{count}} 則已發送系統通知",
+    "sites": "涉及站點",
+    "total": "公告總數",
+    "unread": "未讀公告"
+  },
+  "title": "網站公告"
+}

@@ -85,8 +85,12 @@ function getTaskDescription(
  */
 export default function TaskNotificationSettings() {
   const { t } = useTranslation("settings")
-  const { taskNotifications, updateTaskNotifications } =
-    useUserPreferencesContext()
+  const {
+    siteAnnouncementNotifications,
+    taskNotifications,
+    updateSiteAnnouncementNotifications,
+    updateTaskNotifications,
+  } = useUserPreferencesContext()
   const [permissionGranted, setPermissionGranted] = useState<boolean | null>(
     null,
   )
@@ -122,6 +126,13 @@ export default function TaskNotificationSettings() {
       },
     })
     showUpdateToast(success, t("taskNotifications.tasksLabel"))
+  }
+
+  const handleSiteAnnouncementToggle = async (enabled: boolean) => {
+    const success = await updateSiteAnnouncementNotifications({
+      notificationEnabled: enabled,
+    })
+    showUpdateToast(success, t("taskNotifications.siteAnnouncements.enable"))
   }
 
   const handleRequestPermission = async () => {
@@ -246,6 +257,18 @@ export default function TaskNotificationSettings() {
               }
             />
           ))}
+
+          <CardItem
+            id="task-notifications-site-announcements"
+            title={t("taskNotifications.siteAnnouncements.enable")}
+            description={t("taskNotifications.siteAnnouncements.enableDesc")}
+            rightContent={
+              <Switch
+                checked={siteAnnouncementNotifications.notificationEnabled}
+                onChange={handleSiteAnnouncementToggle}
+              />
+            }
+          />
         </CardList>
       </Card>
     </SettingSection>

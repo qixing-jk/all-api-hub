@@ -77,6 +77,10 @@ import {
 } from "~/types/managedSiteModelRedirect"
 import { DEFAULT_NEW_API_CONFIG, NewApiConfig } from "~/types/newApiConfig"
 import { DEFAULT_OCTOPUS_CONFIG, OctopusConfig } from "~/types/octopusConfig"
+import {
+  DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
+  type SiteAnnouncementPreferences,
+} from "~/types/siteAnnouncements"
 import type { SortingPriorityConfig } from "~/types/sorting"
 import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -383,6 +387,13 @@ export interface UserPreferences {
   taskNotifications?: TaskNotificationPreferences
 
   /**
+   * Controls background polling and system notifications for provider-site
+   * announcements. Records are still stored when browser notification
+   * permission is missing.
+   */
+  siteAnnouncementNotifications?: SiteAnnouncementPreferences
+
+  /**
    * 最后更新时间
    */
   lastUpdated: number
@@ -557,6 +568,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
     dismissed: false,
   },
   taskNotifications: DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+  siteAnnouncementNotifications: DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
 }
 
 /**
@@ -1233,6 +1245,17 @@ class UserPreferencesService {
   async resetTaskNotifications(): Promise<boolean> {
     return this.savePreferences({
       taskNotifications: DEFAULT_PREFERENCES.taskNotifications,
+    })
+  }
+
+  /**
+   * Update site-announcement notification preferences.
+   */
+  async updateSiteAnnouncementNotifications(
+    updates: Partial<SiteAnnouncementPreferences>,
+  ): Promise<boolean> {
+    return this.savePreferences({
+      siteAnnouncementNotifications: updates,
     })
   }
 }

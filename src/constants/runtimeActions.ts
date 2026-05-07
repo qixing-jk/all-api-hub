@@ -25,6 +25,7 @@ export const RuntimeActionPrefixes = {
   Preferences: "preferences:",
   ReleaseUpdate: "releaseUpdate:",
   RedemptionAssist: "redemptionAssist:",
+  SiteAnnouncements: "siteAnnouncements:",
   TaskNotifications: "taskNotifications:",
   UsageHistory: "usageHistory:",
   WebdavAutoSync: "webdavAutoSync:",
@@ -282,6 +283,31 @@ export const RuntimeActionIds = {
   RedemptionAssistContextMenuTrigger: composeRuntimeAction(
     RuntimeActionPrefixes.RedemptionAssist,
     "contextMenuTrigger",
+  ),
+
+  SiteAnnouncementsGetStatus: composeRuntimeAction(
+    RuntimeActionPrefixes.SiteAnnouncements,
+    "getStatus",
+  ),
+  SiteAnnouncementsListRecords: composeRuntimeAction(
+    RuntimeActionPrefixes.SiteAnnouncements,
+    "listRecords",
+  ),
+  SiteAnnouncementsCheckNow: composeRuntimeAction(
+    RuntimeActionPrefixes.SiteAnnouncements,
+    "checkNow",
+  ),
+  SiteAnnouncementsMarkRead: composeRuntimeAction(
+    RuntimeActionPrefixes.SiteAnnouncements,
+    "markRead",
+  ),
+  SiteAnnouncementsMarkAllRead: composeRuntimeAction(
+    RuntimeActionPrefixes.SiteAnnouncements,
+    "markAllRead",
+  ),
+  SiteAnnouncementsUpdatePreferences: composeRuntimeAction(
+    RuntimeActionPrefixes.SiteAnnouncements,
+    "updatePreferences",
   ),
 
   TaskNotificationsTest: composeRuntimeAction(

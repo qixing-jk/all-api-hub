@@ -451,6 +451,19 @@
       "updateAvailableAriaLabel": "版本 {{version}} 有可用更新"
     }
   },
+  "siteAnnouncementNotifications": {
+    "description": "控制是否在后台定时抓取已启用账号所属站点的网站公告。",
+    "page": {
+      "description": "默认每 {{intervalMinutes}} 分钟后台检查一次，也可以手动立即检查。",
+      "open": "查看公告",
+      "title": "公告页面"
+    },
+    "polling": {
+      "enable": "启用网站公告抓取",
+      "enableDesc": "关闭后会停止后台定时抓取，已保存的本地公告记录仍会保留，公告页面仍可手动检查。"
+    },
+    "title": "网站公告"
+  },
   "sorting": {
     "checkInDesc": "将需要签到的站点排在前面",
     "checkInRequirement": "签到需求",
@@ -515,6 +528,10 @@
       "requestFailed": "未能授予通知权限",
       "requestSuccess": "通知权限已授予",
       "title": "通知权限"
+    },
+    "siteAnnouncements": {
+      "enable": "网站公告通知",
+      "enableDesc": "开启后，网站公告抓取到新公告时会发送系统通知；关闭后仍会保存本地公告记录。"
     },
     "taskDescriptions": {
       "autoCheckin": "每日自动签到和自动重试完成后通知。",

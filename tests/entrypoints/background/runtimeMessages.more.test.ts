@@ -26,6 +26,7 @@ const mocks = vi.hoisted(() => ({
   handleWebdavAutoSyncMessage: vi.fn(),
   handleDailyBalanceHistoryMessage: vi.fn(),
   handleTaskNotificationMessage: vi.fn(),
+  handleSiteAnnouncementMessage: vi.fn(),
   handleLdohSiteLookupMessage: vi.fn(),
   handleWebAiApiCheckMessage: vi.fn(),
   handleAccountKeyRepairMessage: vi.fn(),
@@ -116,6 +117,10 @@ vi.mock("~/services/webdav/webdavAutoSyncService", () => ({
 
 vi.mock("~/services/notifications/taskNotificationService", () => ({
   handleTaskNotificationMessage: mocks.handleTaskNotificationMessage,
+}))
+
+vi.mock("~/services/siteAnnouncements/scheduler", () => ({
+  handleSiteAnnouncementMessage: mocks.handleSiteAnnouncementMessage,
 }))
 
 vi.mock("~/services/integrations/ldohSiteLookup/background", () => ({

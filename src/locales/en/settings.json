@@ -451,6 +451,19 @@
       "updateAvailableAriaLabel": "Version {{version}} update available"
     }
   },
+  "siteAnnouncementNotifications": {
+    "description": "Controls whether enabled account sites are checked for site announcements in the background.",
+    "page": {
+      "description": "Checks in the background every {{intervalMinutes}} minutes by default. You can also run a manual check.",
+      "open": "View announcements",
+      "title": "Announcement page"
+    },
+    "polling": {
+      "enable": "Enable site announcement polling",
+      "enableDesc": "When disabled, scheduled background polling stops. Existing local records are kept, and the announcement page can still run a manual check."
+    },
+    "title": "Site announcements"
+  },
   "sorting": {
     "checkInDesc": "Place sites that need check-in at the front",
     "checkInRequirement": "Check-in Requirement",
@@ -515,6 +528,10 @@
       "requestFailed": "Notification permission was not granted",
       "requestSuccess": "Notification permission granted",
       "title": "Notification permission"
+    },
+    "siteAnnouncements": {
+      "enable": "Site announcement notifications",
+      "enableDesc": "When enabled, newly fetched site announcements send system notifications. Local announcement records are still saved when disabled."
     },
     "taskDescriptions": {
       "autoCheckin": "Notify after daily automatic check-in and automatic retry runs finish.",

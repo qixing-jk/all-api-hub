@@ -12,6 +12,7 @@ describe("general settings search definitions", () => {
       "section:appearance",
       "section:action-click",
       "section:task-notifications",
+      "section:site-announcements",
       "section:changelog",
       "section:logging",
       "section:danger",

@@ -39,6 +39,7 @@ interface TaskNotificationPayload {
   task: TaskNotificationTask
   status: TaskNotificationStatus
   counts?: TaskNotificationCounts
+  title?: string
   message?: string
 }
 
@@ -62,6 +63,8 @@ const TASK_LABEL_KEYS: Record<TaskNotificationTask, string> = {
     "settings:taskNotifications.tasks.usageHistorySync",
   [TASK_NOTIFICATION_TASKS.BalanceHistoryCapture]:
     "settings:taskNotifications.tasks.balanceHistoryCapture",
+  [TASK_NOTIFICATION_TASKS.SiteAnnouncements]:
+    "settings:taskNotifications.siteAnnouncements.enable",
 }
 
 const TASK_NAVIGATION_TARGETS: Record<
@@ -88,6 +91,9 @@ const TASK_NAVIGATION_TARGETS: Record<
   [TASK_NOTIFICATION_TASKS.BalanceHistoryCapture]: {
     menuItemId: MENU_ITEM_IDS.BASIC,
     searchParams: { tab: "balanceHistory" },
+  },
+  [TASK_NOTIFICATION_TASKS.SiteAnnouncements]: {
+    menuItemId: MENU_ITEM_IDS.SITE_ANNOUNCEMENTS,
   },
 }
 
@@ -175,7 +181,8 @@ function getNotificationBody(
  */
 function buildNotificationContent(payload: TaskNotificationPayload) {
   const taskName = getTaskLabel(payload.task)
-  const title = getNotificationTitle(payload.status, taskName)
+  const title =
+    payload.title?.trim() || getNotificationTitle(payload.status, taskName)
   const counts = formatCounts(payload.counts)
   const fallbackMessage = getNotificationBody(payload.status, taskName)
   const message = payload.message?.trim() || fallbackMessage
@@ -196,7 +203,11 @@ async function shouldNotify(
   const taskNotifications =
     prefs.taskNotifications ?? DEFAULT_TASK_NOTIFICATION_PREFERENCES
 
-  if (!taskNotifications.enabled || !taskNotifications.tasks[payload.task]) {
+  const taskEnabled =
+    taskNotifications.tasks[payload.task] ??
+    DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks[payload.task]
+
+  if (!taskNotifications.enabled || !taskEnabled) {
     return false
   }
 

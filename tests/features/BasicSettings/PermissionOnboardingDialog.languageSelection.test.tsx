@@ -107,6 +107,13 @@ vi.mock(
   }),
 )
 
+vi.mock(
+  "~/features/BasicSettings/components/tabs/General/SiteAnnouncementNotificationSettings",
+  () => ({
+    default: () => <div data-testid="site-announcement-settings" />,
+  }),
+)
+
 vi.mock("~/entrypoints/options/components/ThemeToggle", () => ({
   default: () => <div data-testid="theme-toggle" />,
 }))

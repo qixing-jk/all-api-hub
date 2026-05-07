@@ -6,6 +6,7 @@ import { modelMetadataService } from "~/services/models/modelMetadata"
 import { modelSyncScheduler } from "~/services/models/modelSync"
 import { initializeTaskNotificationService } from "~/services/notifications/taskNotificationService"
 import { redemptionAssistService } from "~/services/redemption/redemptionAssist"
+import { siteAnnouncementScheduler } from "~/services/siteAnnouncements/scheduler"
 import { releaseUpdateService } from "~/services/updates/releaseUpdateService"
 import { webdavAutoSyncService } from "~/services/webdav/webdavAutoSyncService"
 import { createLogger } from "~/utils/core/logger"
@@ -56,6 +57,7 @@ export async function initializeServices() {
         modelSyncScheduler.initialize(),
         autoCheckinScheduler.initialize(),
         dailyBalanceHistoryScheduler.initialize(),
+        siteAnnouncementScheduler.initialize(),
         releaseUpdateService.initialize(),
       ])
       initializeTaskNotificationService()

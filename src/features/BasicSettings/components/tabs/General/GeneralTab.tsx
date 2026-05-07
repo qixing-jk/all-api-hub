@@ -4,6 +4,7 @@ import ChangelogOnUpdateSettings from "./ChangelogOnUpdateSettings"
 import DisplaySettings from "./DisplaySettings"
 import LoggingSettings from "./LoggingSettings"
 import ResetSettingsSection from "./ResetSettingsSection"
+import SiteAnnouncementNotificationSettings from "./SiteAnnouncementNotificationSettings"
 import TaskNotificationSettings from "./TaskNotificationSettings"
 
 /**
@@ -17,6 +18,7 @@ export default function GeneralTab() {
       <AppearanceSettings />
       <ActionClickBehaviorSettings />
       <TaskNotificationSettings />
+      <SiteAnnouncementNotificationSettings />
       <ChangelogOnUpdateSettings />
       <LoggingSettings />
       <section id="dangerous-zone">

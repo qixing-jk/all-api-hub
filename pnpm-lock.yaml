@@ -95,6 +95,9 @@ importers:
       dayjs:
         specifier: ^1.11.13
         version: 1.11.13
+      dompurify:
+        specifier: 3.2.6
+        version: 3.2.6
       echarts:
         specifier: ^6.0.0
         version: 6.0.0
@@ -116,6 +119,9 @@ importers:
       lucide-react:
         specifier: ^0.564.0
         version: 0.564.0(react@19.2.0)
+      marked:
+        specifier: 16.4.0
+        version: 16.4.0
       otpauth:
         specifier: ^9.5.0
         version: 9.5.0

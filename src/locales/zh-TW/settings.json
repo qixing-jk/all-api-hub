@@ -451,6 +451,19 @@
       "updateAvailableAriaLabel": "版本 {{version}} 有可用更新"
     }
   },
+  "siteAnnouncementNotifications": {
+    "description": "控制是否在背景定時抓取已啟用帳號所屬站點的網站公告。",
+    "page": {
+      "description": "預設每 {{intervalMinutes}} 分鐘於背景檢查一次，也可以手動立即檢查。",
+      "open": "查看公告",
+      "title": "公告頁面"
+    },
+    "polling": {
+      "enable": "啟用網站公告抓取",
+      "enableDesc": "關閉後會停止背景定時抓取，已儲存的本機公告記錄仍會保留，公告頁面仍可手動檢查。"
+    },
+    "title": "網站公告"
+  },
   "sorting": {
     "checkInDesc": "將需要簽到的站點排在前面",
     "checkInRequirement": "簽到需求",
@@ -515,6 +528,10 @@
       "requestFailed": "未能授予通知權限",
       "requestSuccess": "通知權限已授予",
       "title": "通知權限"
+    },
+    "siteAnnouncements": {
+      "enable": "網站公告通知",
+      "enableDesc": "開啟後，網站公告抓取到新公告時會傳送系統通知；關閉後仍會儲存本機公告記錄。"
     },
     "taskDescriptions": {
       "autoCheckin": "每日自動簽到和自動重試完成後通知。",

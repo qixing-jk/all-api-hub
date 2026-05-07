@@ -1,0 +1,187 @@
+import userEvent from "@testing-library/user-event"
+import { beforeEach, describe, expect, it, vi } from "vitest"
+
+import { RuntimeActionIds } from "~/constants/runtimeActions"
+import SiteAnnouncementsPage from "~/entrypoints/options/pages/SiteAnnouncements"
+import type {
+  SiteAnnouncementRecord,
+  SiteAnnouncementSiteState,
+} from "~/types/siteAnnouncements"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
+
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+  return {
+    ...actual,
+    sendRuntimeMessage: vi.fn(),
+  }
+})
+
+const records: SiteAnnouncementRecord[] = [
+  {
+    id: "announcement-1",
+    siteKey: "site-1",
+    siteName: "Alpha API",
+    siteType: "new-api",
+    baseUrl: "https://alpha.example.com",
+    accountId: "account-1",
+    providerId: "common",
+    title: "",
+    content: "## Full maintenance window\n\n- Second line",
+    fingerprint: "fp-1",
+    firstSeenAt: 1735689600000,
+    lastSeenAt: 1735689600000,
+    notifiedAt: 1735689700000,
+    read: false,
+  },
+  {
+    id: "announcement-2",
+    siteKey: "site-2",
+    siteName: "Beta API",
+    siteType: "sub2api",
+    baseUrl: "https://beta.example.com",
+    accountId: "account-2",
+    providerId: "sub2api",
+    title: "Beta update",
+    content: "**Beta full content**",
+    fingerprint: "fp-2",
+    firstSeenAt: 1735776000000,
+    lastSeenAt: 1735776000000,
+    createdAt: 1735775900000,
+    read: true,
+  },
+]
+
+const status: SiteAnnouncementSiteState[] = [
+  {
+    siteKey: "site-1",
+    siteName: "Alpha API",
+    siteType: "new-api",
+    baseUrl: "https://alpha.example.com",
+    accountId: "account-1",
+    providerId: "common",
+    status: "error",
+    lastCheckedAt: 1735690000000,
+    lastError: "timeout",
+    records: [records[0]!],
+  },
+  {
+    siteKey: "site-2",
+    siteName: "Beta API",
+    siteType: "sub2api",
+    baseUrl: "https://beta.example.com",
+    accountId: "account-2",
+    providerId: "sub2api",
+    status: "success",
+    lastCheckedAt: 1735776200000,
+    records: [records[1]!],
+  },
+]
+
+describe("SiteAnnouncementsPage", () => {
+  beforeEach(() => {
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      switch (message.action) {
+        case RuntimeActionIds.SiteAnnouncementsListRecords:
+          return { success: true, data: records }
+        case RuntimeActionIds.SiteAnnouncementsGetStatus:
+          return { success: true, data: status }
+        default:
+          return { success: true }
+      }
+    })
+  })
+
+  it("renders overview, notification summary, and expandable announcement details", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <SiteAnnouncementsPage routeParams={{ recordId: "announcement-1" }} />,
+    )
+
+    expect(
+      await screen.findByText("siteAnnouncements:title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("siteAnnouncements:summary.total"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("siteAnnouncements:summary.unread"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("siteAnnouncements:summary.sites"),
+    ).toBeInTheDocument()
+    expect(
+      await screen.findByText("siteAnnouncements:summary.filtered"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("siteAnnouncements:summary.notified"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", {
+        level: 3,
+        name: "Full maintenance window",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("heading", {
+        level: 2,
+        name: "Full maintenance window",
+      }),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Second line")).toBeInTheDocument()
+    expect(screen.getByText("Beta full content")).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: /siteAnnouncements:actions\.collapse/,
+      }),
+    )
+    await waitFor(() => {
+      expect(
+        screen.queryByRole("heading", {
+          level: 2,
+          name: "Second line",
+        }),
+      ).not.toBeInTheDocument()
+    })
+  })
+
+  it("marks unread Sub2API announcements as read when opening details", async () => {
+    const user = userEvent.setup()
+    const unreadSub2ApiRecord = {
+      ...records[1]!,
+      id: "announcement-3",
+      read: false,
+    }
+
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      switch (message.action) {
+        case RuntimeActionIds.SiteAnnouncementsListRecords:
+          return { success: true, data: [unreadSub2ApiRecord] }
+        case RuntimeActionIds.SiteAnnouncementsGetStatus:
+          return { success: true, data: [] }
+        default:
+          return { success: true }
+      }
+    })
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("Beta update")
+    await user.click(
+      screen.getByRole("button", {
+        name: /siteAnnouncements:actions\.expand/,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeMessage).toHaveBeenCalledWith({
+        action: RuntimeActionIds.SiteAnnouncementsMarkRead,
+        recordId: "announcement-3",
+      })
+    })
+  })
+})
