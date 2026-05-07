@@ -1,5 +1,28 @@
 # Changelog
 
+## [3.37.0](https://github.com/qixing-jk/all-api-hub/compare/v3.36.0...v3.37.0) (2026-05-07)
+
+
+### Features
+
+* **account-management:** implement section-based account form layout ([#793](https://github.com/qixing-jk/all-api-hub/issues/793)) ([25a324e](https://github.com/qixing-jk/all-api-hub/commit/25a324ee4e3dac5fb64a2602b981cd29dc8b8850))
+* Add scheduled task notification system ([#795](https://github.com/qixing-jk/all-api-hub/issues/795)) ([76189ed](https://github.com/qixing-jk/all-api-hub/commit/76189ed2bd463e0919a5e03a80336f64b0c33e5d))
+* **bookmark:** Add current page autofill to bookmark dialog ([#796](https://github.com/qixing-jk/all-api-hub/issues/796)) ([f9dff57](https://github.com/qixing-jk/all-api-hub/commit/f9dff576955983859210a1a57e09d330a530b21e))
+* **CompactMultiSelect:** add chip text copy functionality ([3bf76a4](https://github.com/qixing-jk/all-api-hub/commit/3bf76a4c3f103de435e90ed9673e85123b58e7f5))
+* **headers:** Refine UI and adjust dimensions ([5a6c4fe](https://github.com/qixing-jk/all-api-hub/commit/5a6c4fe424cf4b4727487966c85ca9c712fb2ebe))
+* **model-sync:** add probe-backed channel filters ([#787](https://github.com/qixing-jk/all-api-hub/issues/787)) ([58ef832](https://github.com/qixing-jk/all-api-hub/commit/58ef8323cd3829c6a5b6c692a231ab375bbecf0a))
+* **model-sync:** add reordering support for channel filters ([0ba83ed](https://github.com/qixing-jk/all-api-hub/commit/0ba83eddc40c6081ab6201da42843ce1f5901a9a))
+* **options:** implement global settings search ([#788](https://github.com/qixing-jk/all-api-hub/issues/788)) ([4d61cd5](https://github.com/qixing-jk/all-api-hub/commit/4d61cd5dca77e1a33bda873b2aa3e2f81dbc9a5f))
+* **options:** Implement scroll-aware search on mobile header ([#798](https://github.com/qixing-jk/all-api-hub/issues/798)) ([715dacf](https://github.com/qixing-jk/all-api-hub/commit/715dacfb113d65773b08338121dd1edcc36f9e85))
+* **settings:** improve desktop tab overflow navigation ([#797](https://github.com/qixing-jk/all-api-hub/issues/797)) ([57cd158](https://github.com/qixing-jk/all-api-hub/commit/57cd15837469559875ef223e15c6c72db04e978b))
+* **ui:** add bulk action threshold for CompactMultiSelect ([5e6d14c](https://github.com/qixing-jk/all-api-hub/commit/5e6d14cea5e272cd8ac0e3300d99765914d1a7d7))
+
+
+### Bug Fixes
+
+* **managed-site-channels:** update affected channel rows after model sync ([#789](https://github.com/qixing-jk/all-api-hub/issues/789)) ([414e0e0](https://github.com/qixing-jk/all-api-hub/commit/414e0e0a4a6b27bf7412160d12b5effbb671cc11))
+* stabilize detectSiteType fallback for auth error messages ([#790](https://github.com/qixing-jk/all-api-hub/issues/790)) ([6a96eed](https://github.com/qixing-jk/all-api-hub/commit/6a96eed23fd56947b1c6c36ade784d9ee39a82a3))
+
 ## [3.36.0](https://github.com/qixing-jk/all-api-hub/compare/v3.35.0...v3.36.0) (2026-05-04)
 
 
