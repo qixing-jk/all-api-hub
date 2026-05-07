@@ -249,11 +249,13 @@ export default function BookmarkDialog({
               </div>
               <div className="mt-1 truncate font-medium">
                 {currentPage?.title ||
-                  t("bookmark:dialog.currentPageUnavailable")}
+                  (!isCurrentPageLoading &&
+                    t("bookmark:dialog.currentPageUnavailable"))}
               </div>
               <div className="truncate opacity-80">
                 {currentPage?.url ||
-                  t("bookmark:dialog.currentPageUnavailable")}
+                  (!isCurrentPageLoading &&
+                    t("bookmark:dialog.currentPageUnavailable"))}
               </div>
             </div>
             <Button

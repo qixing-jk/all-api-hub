@@ -79,6 +79,16 @@ beforeEach(() => {
   loadAccountDataMock.mockReset()
 })
 
+const renderAddDialog = () =>
+  render(
+    <BookmarkDialog
+      isOpen={true}
+      mode="add"
+      bookmark={null}
+      onClose={vi.fn()}
+    />,
+  )
+
 describe("BookmarkDialog", () => {
   it("validates required fields before submitting", async () => {
     const onClose = vi.fn()
@@ -151,14 +161,7 @@ describe("BookmarkDialog", () => {
   })
 
   it("fills name and url from the current page helper in add mode", async () => {
-    render(
-      <BookmarkDialog
-        isOpen={true}
-        mode="add"
-        bookmark={null}
-        onClose={vi.fn()}
-      />,
-    )
+    renderAddDialog()
 
     fireEvent.click(
       await screen.findByRole("button", {
@@ -175,6 +178,140 @@ describe("BookmarkDialog", () => {
     expect(screen.getByDisplayValue("Current Admin")).toBeInTheDocument()
     expect(getActiveTabMock).toHaveBeenCalledTimes(1)
     expect(getSiteNameMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not show unavailable text while current page data is still loading", async () => {
+    let resolveTab:
+      | ((value: { title: string; url: string }) => void)
+      | undefined
+
+    getActiveTabMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveTab = resolve
+      }),
+    )
+
+    renderAddDialog()
+
+    await waitFor(() => {
+      expect(getActiveTabMock).toHaveBeenCalledTimes(1)
+    })
+    expect(
+      screen.queryByText("bookmark:dialog.currentPageUnavailable"),
+    ).not.toBeInTheDocument()
+
+    resolveTab?.({
+      title: "Current Admin",
+      url: "https://example.com/console",
+    })
+
+    await waitFor(() => {
+      const useCurrentPageButton = screen.getByRole("button", {
+        name: "bookmark:dialog.useCurrentPage",
+      })
+      expect(useCurrentPageButton).not.toBeDisabled()
+    })
+  })
+
+  it("disables current page helper when no active tab url is available", async () => {
+    getActiveTabMock.mockResolvedValue(null)
+
+    renderAddDialog()
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "bookmark:dialog.useCurrentPage",
+        }),
+      ).toBeDisabled()
+    })
+
+    expect(getSiteNameMock).not.toHaveBeenCalled()
+    expect(
+      screen.getAllByText("bookmark:dialog.currentPageUnavailable"),
+    ).toHaveLength(2)
+  })
+
+  it("disables current page helper for non-http urls", async () => {
+    getActiveTabMock.mockResolvedValue({
+      title: "Extension Page",
+      url: "chrome-extension://abc/options.html",
+    })
+
+    renderAddDialog()
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "bookmark:dialog.useCurrentPage",
+        }),
+      ).toBeDisabled()
+    })
+
+    expect(getSiteNameMock).not.toHaveBeenCalled()
+    expect(
+      screen.getAllByText("bookmark:dialog.currentPageUnavailable"),
+    ).toHaveLength(2)
+  })
+
+  it("keeps the dialog usable when current page lookup fails", async () => {
+    getActiveTabMock.mockRejectedValue(new Error("permission denied"))
+
+    renderAddDialog()
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "bookmark:dialog.useCurrentPage",
+        }),
+      ).toBeDisabled()
+    })
+
+    fireEvent.change(
+      await screen.findByPlaceholderText("bookmark:form.namePlaceholder"),
+      { target: { value: "Docs" } },
+    )
+    fireEvent.change(
+      await screen.findByPlaceholderText("bookmark:form.urlPlaceholder"),
+      { target: { value: "https://example.com/docs" } },
+    )
+    fireEvent.click(
+      await screen.findByRole("button", { name: "bookmark:actions.add" }),
+    )
+
+    await waitFor(() => {
+      expect(addBookmarkMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          name: "Docs",
+          url: "https://example.com/docs",
+        }),
+      )
+    })
+
+    expect(getSiteNameMock).not.toHaveBeenCalled()
+    expect(
+      screen.queryByText("bookmark:validation.nameRequired"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("disables current page helper when site name resolution fails", async () => {
+    getSiteNameMock.mockRejectedValue(new Error("tab title blocked"))
+
+    renderAddDialog()
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "bookmark:dialog.useCurrentPage",
+        }),
+      ).toBeDisabled()
+    })
+
+    expect(getActiveTabMock).toHaveBeenCalledTimes(1)
+    expect(getSiteNameMock).toHaveBeenCalledTimes(1)
+    expect(
+      screen.getAllByText("bookmark:dialog.currentPageUnavailable"),
+    ).toHaveLength(2)
   })
 
   it("does not show current page helper in edit mode", async () => {
