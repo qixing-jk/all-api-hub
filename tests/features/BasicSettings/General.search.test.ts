@@ -20,15 +20,24 @@ describe("general settings search definitions", () => {
 
   it("keeps task notification controls before lower-frequency maintenance controls", () => {
     const orderedControlIds = generalSearchControls.map((control) => control.id)
-
-    expect(
-      orderedControlIds.indexOf("control:task-notifications-enabled"),
-    ).toBeLessThan(orderedControlIds.indexOf("control:changelog-on-update"))
-    expect(
-      orderedControlIds.indexOf("control:changelog-on-update"),
-    ).toBeLessThan(orderedControlIds.indexOf("control:logging-enabled"))
-    expect(orderedControlIds.indexOf("control:logging-enabled")).toBeLessThan(
-      orderedControlIds.indexOf("control:danger-reset-settings"),
+    const taskNotificationsIndex = orderedControlIds.indexOf(
+      "control:task-notifications-enabled",
     )
+    const changelogIndex = orderedControlIds.indexOf(
+      "control:changelog-on-update",
+    )
+    const loggingIndex = orderedControlIds.indexOf("control:logging-enabled")
+    const dangerResetIndex = orderedControlIds.indexOf(
+      "control:danger-reset-settings",
+    )
+
+    expect(taskNotificationsIndex).toBeGreaterThanOrEqual(0)
+    expect(changelogIndex).toBeGreaterThanOrEqual(0)
+    expect(loggingIndex).toBeGreaterThanOrEqual(0)
+    expect(dangerResetIndex).toBeGreaterThanOrEqual(0)
+
+    expect(taskNotificationsIndex).toBeLessThan(changelogIndex)
+    expect(changelogIndex).toBeLessThan(loggingIndex)
+    expect(loggingIndex).toBeLessThan(dangerResetIndex)
   })
 })

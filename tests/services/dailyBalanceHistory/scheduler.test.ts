@@ -7,6 +7,10 @@ import {
   handleDailyBalanceHistoryMessage,
 } from "~/services/history/dailyBalanceHistory/scheduler"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
+import {
+  TASK_NOTIFICATION_STATUSES,
+  TASK_NOTIFICATION_TASKS,
+} from "~/types/taskNotifications"
 
 const {
   mockGetPreferences,
@@ -20,6 +24,7 @@ const {
   mockGetAlarm,
   mockHasAlarmsAPI,
   mockOnAlarm,
+  mockNotifyTaskResult,
 } = vi.hoisted(() => ({
   mockGetPreferences: vi.fn(),
   mockSavePreferences: vi.fn(),
@@ -32,6 +37,7 @@ const {
   mockGetAlarm: vi.fn(),
   mockHasAlarmsAPI: vi.fn(),
   mockOnAlarm: vi.fn(),
+  mockNotifyTaskResult: vi.fn(),
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
@@ -68,6 +74,10 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
+vi.mock("~/services/notifications/taskNotificationService", () => ({
+  notifyTaskResult: mockNotifyTaskResult,
+}))
+
 describe("dailyBalanceHistoryScheduler", () => {
   const getExpectedEndOfDayCaptureTime = () => {
     const expected = new Date()
@@ -103,6 +113,7 @@ describe("dailyBalanceHistoryScheduler", () => {
     mockGetAlarm.mockResolvedValue(undefined)
     mockCreateAlarm.mockResolvedValue(undefined)
     mockClearAlarm.mockResolvedValue(true)
+    mockNotifyTaskResult.mockResolvedValue(true)
   })
 
   it("initializes once, registers the alarm listener, and schedules the next capture", async () => {
@@ -328,5 +339,40 @@ describe("dailyBalanceHistoryScheduler", () => {
       success: false,
       error: "Unknown action",
     })
+  })
+
+  it("notifies successful alarm captures when at least one account was processed", async () => {
+    let alarmHandler: ((alarm: { name: string }) => Promise<void>) | undefined
+    mockOnAlarm.mockImplementation((handler) => {
+      alarmHandler = handler
+    })
+    mockGetEnabledAccounts.mockResolvedValue([{ id: "a" }])
+    mockRefreshAccount.mockResolvedValue({ refreshed: true })
+
+    await dailyBalanceHistoryScheduler.initialize()
+    await alarmHandler?.({ name: DAILY_BALANCE_HISTORY_ALARM_NAME })
+
+    expect(mockNotifyTaskResult).toHaveBeenCalledWith({
+      task: TASK_NOTIFICATION_TASKS.BalanceHistoryCapture,
+      status: TASK_NOTIFICATION_STATUSES.Success,
+      counts: {
+        total: 1,
+        success: 1,
+        failed: 0,
+      },
+    })
+  })
+
+  it("skips alarm notifications when the capture did not process any accounts", async () => {
+    let alarmHandler: ((alarm: { name: string }) => Promise<void>) | undefined
+    mockOnAlarm.mockImplementation((handler) => {
+      alarmHandler = handler
+    })
+    mockGetEnabledAccounts.mockResolvedValue([])
+
+    await dailyBalanceHistoryScheduler.initialize()
+    await alarmHandler?.({ name: DAILY_BALANCE_HISTORY_ALARM_NAME })
+
+    expect(mockNotifyTaskResult).not.toHaveBeenCalled()
   })
 })

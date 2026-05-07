@@ -9,6 +9,7 @@ import {
   userPreferences,
 } from "~/services/preferences/userPreferences"
 import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
+import { DEFAULT_TASK_NOTIFICATION_PREFERENCES } from "~/types/taskNotifications"
 import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 
 describe("userPreferences settings helpers", () => {
@@ -90,6 +91,39 @@ describe("userPreferences settings helpers", () => {
     )) as any
     expect(storedAfter.language).toBe("ja")
     expect(storedAfter.webdav).toEqual(preferences.webdav)
+  })
+
+  it("persists and resets task notification preferences", async () => {
+    await storage.set(
+      USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES,
+      structuredClone(DEFAULT_PREFERENCES),
+    )
+
+    expect(
+      await userPreferences.updateTaskNotifications({
+        enabled: false,
+        tasks: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+          usageHistorySync: false,
+        },
+      }),
+    ).toBe(true)
+
+    let preferences = await userPreferences.getPreferences()
+    expect(preferences.taskNotifications).toEqual({
+      enabled: false,
+      tasks: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+        usageHistorySync: false,
+      },
+    })
+
+    expect(await userPreferences.resetTaskNotifications()).toBe(true)
+
+    preferences = await userPreferences.getPreferences()
+    expect(preferences.taskNotifications).toEqual(
+      DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+    )
   })
 
   it("restores grouped reset helpers back to their default snapshots", async () => {

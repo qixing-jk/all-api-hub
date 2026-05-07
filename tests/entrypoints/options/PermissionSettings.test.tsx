@@ -2,7 +2,7 @@ import { act, cleanup, fireEvent } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import PermissionSettings from "~/features/BasicSettings/components/tabs/Permissions/PermissionSettings"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const {
   changedListenerRef,
@@ -25,8 +25,12 @@ const {
 }))
 
 vi.mock("~/services/permissions/permissionManager", () => ({
-  OPTIONAL_PERMISSIONS: ["cookies", "clipboardRead"],
-  OPTIONAL_PERMISSION_DEFINITIONS: [{ id: "cookies" }, { id: "clipboardRead" }],
+  OPTIONAL_PERMISSIONS: ["cookies", "clipboardRead", "notifications"],
+  OPTIONAL_PERMISSION_DEFINITIONS: [
+    { id: "cookies" },
+    { id: "clipboardRead" },
+    { id: "notifications" },
+  ],
   hasPermission: (id: string) => hasPermissionMock(id),
   onOptionalPermissionsChanged: (listener: () => void) =>
     onOptionalPermissionsChangedMock(listener),
@@ -41,7 +45,9 @@ vi.mock("~/utils/core/toastHelpers", () => ({
 describe("PermissionSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    hasPermissionMock.mockImplementation(async (id: string) => id === "cookies")
+    hasPermissionMock.mockImplementation(
+      async (id: string) => id === "cookies" || id === "notifications",
+    )
     requestPermissionMock.mockResolvedValue(true)
     removePermissionMock.mockResolvedValue(false)
     onOptionalPermissionsChangedMock.mockImplementation((listener) => {
@@ -61,18 +67,38 @@ describe("PermissionSettings", () => {
     })
 
     expect(
-      await screen.findByText("settings:permissions.status.granted"),
-    ).toBeInTheDocument()
+      await screen.findAllByText("settings:permissions.status.granted"),
+    ).toHaveLength(2)
     expect(
-      screen.getByText("settings:permissions.status.denied"),
+      screen.getAllByText("settings:permissions.status.denied"),
+    ).toHaveLength(1)
+    expect(
+      screen.getByText("settings:permissions.items.notifications.title"),
     ).toBeInTheDocument()
 
-    const actionButtons = await screen.findAllByRole("button", {
-      name: /settings:permissions\.actions\.(allow|remove)/,
-    })
+    const cookiesRow = document.getElementById("cookies")
+    const clipboardRow = document.getElementById("clipboardRead")
+    const notificationsRow = document.getElementById("notifications")
 
-    fireEvent.click(actionButtons[0])
-    fireEvent.click(actionButtons[1])
+    if (!cookiesRow || !clipboardRow || !notificationsRow) {
+      throw new Error("Expected permission rows to be rendered")
+    }
+
+    fireEvent.click(
+      within(cookiesRow).getByRole("button", {
+        name: "settings:permissions.actions.remove",
+      }),
+    )
+    fireEvent.click(
+      within(clipboardRow).getByRole("button", {
+        name: "settings:permissions.actions.allow",
+      }),
+    )
+    fireEvent.click(
+      within(notificationsRow).getByRole("button", {
+        name: "settings:permissions.actions.remove",
+      }),
+    )
     fireEvent.click(
       screen.getByRole("button", {
         name: "settings:permissions.actions.refresh",
@@ -83,6 +109,7 @@ describe("PermissionSettings", () => {
       expect(removePermissionMock).toHaveBeenCalledWith("cookies")
     })
     expect(requestPermissionMock).toHaveBeenCalledWith("clipboardRead")
+    expect(removePermissionMock).toHaveBeenCalledWith("notifications")
     expect(showResultToastMock).toHaveBeenCalledWith(
       true,
       "settings:permissions.messages.granted",
@@ -93,7 +120,7 @@ describe("PermissionSettings", () => {
       "settings:permissions.messages.revoked",
       "settings:permissions.messages.revokeFailed",
     )
-    expect(hasPermissionMock).toHaveBeenCalledTimes(4)
+    expect(hasPermissionMock).toHaveBeenCalledTimes(6)
   })
 
   it("reloads statuses on external permission change and unsubscribes on cleanup", async () => {
@@ -102,7 +129,7 @@ describe("PermissionSettings", () => {
       withThemeProvider: false,
     })
 
-    await screen.findByText("settings:permissions.status.granted")
+    await screen.findAllByText("settings:permissions.status.granted")
 
     hasPermissionMock.mockResolvedValue(false)
     const listener = changedListenerRef.current
@@ -114,10 +141,46 @@ describe("PermissionSettings", () => {
     })
 
     await waitFor(() => {
-      expect(hasPermissionMock).toHaveBeenCalledTimes(4)
+      expect(hasPermissionMock).toHaveBeenCalledTimes(6)
     })
 
     unmount()
     expect(unsubscribeMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("shows an error toast when requesting a permission throws", async () => {
+    requestPermissionMock.mockRejectedValueOnce(new Error("request failed"))
+
+    render(<PermissionSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const clipboardRow = document.getElementById("clipboardRead")
+    if (!clipboardRow) {
+      throw new Error("Expected clipboard permission row")
+    }
+
+    const allowButton = await within(clipboardRow).findByRole("button", {
+      name: "settings:permissions.actions.allow",
+    })
+
+    await waitFor(() => {
+      expect(allowButton).toBeEnabled()
+    })
+
+    fireEvent.click(
+      within(clipboardRow).getByRole("button", {
+        name: "settings:permissions.actions.allow",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToastMock).toHaveBeenCalledWith(
+        false,
+        "settings:permissions.messages.granted",
+        "settings:permissions.messages.grantFailed",
+      )
+    })
   })
 })

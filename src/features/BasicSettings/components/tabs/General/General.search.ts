@@ -69,9 +69,6 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
     "appearance",
     "settings:theme.appearance",
     201,
-    {
-      descriptionKey: "settings:display.description",
-    },
   ),
   buildSectionDefinition(
     "section:action-click",

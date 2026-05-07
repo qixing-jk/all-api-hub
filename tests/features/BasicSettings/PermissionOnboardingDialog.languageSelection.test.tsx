@@ -34,6 +34,7 @@ vi.mock("~/services/permissions/permissionManager", () => {
     "webRequest",
     "webRequestBlocking",
     "clipboardRead",
+    "notifications",
   ] as const
 
   return {
@@ -367,6 +368,7 @@ describe("PermissionOnboardingDialog language selection", () => {
       webRequest: false,
       webRequestBlocking: false,
       clipboardRead: false,
+      notifications: false,
     }
 
     permissionMocks.hasPermission.mockImplementation(
@@ -387,22 +389,23 @@ describe("PermissionOnboardingDialog language selection", () => {
       ).toHaveLength(1)
       expect(
         screen.getAllByText(i18n.t("permissions.status.denied")),
-      ).toHaveLength(4)
+      ).toHaveLength(5)
     })
 
     permissionStates.cookies = false
     permissionStates.declarativeNetRequestWithHostAccess = true
     permissionStates.clipboardRead = true
+    permissionStates.notifications = true
 
     await act(async () => {
       permissionChangeHandler?.()
     })
 
     await waitFor(() => {
-      expect(permissionMocks.hasPermission).toHaveBeenCalledTimes(10)
+      expect(permissionMocks.hasPermission).toHaveBeenCalledTimes(12)
       expect(
         screen.getAllByText(i18n.t("permissions.status.granted")),
-      ).toHaveLength(2)
+      ).toHaveLength(3)
       expect(
         screen.getAllByText(i18n.t("permissions.status.denied")),
       ).toHaveLength(3)
@@ -429,6 +432,7 @@ describe("PermissionOnboardingDialog language selection", () => {
         "webRequest",
         "webRequestBlocking",
         "clipboardRead",
+        "notifications",
       ])
     })
 
@@ -542,5 +546,18 @@ describe("PermissionOnboardingDialog language selection", () => {
     )
 
     openSpy.mockRestore()
+  })
+
+  it("renders the notifications permission item in the onboarding list", async () => {
+    const i18n = await createSettingsI18n("en")
+
+    renderWithI18n(<PermissionOnboardingDialog open onClose={vi.fn()} />, i18n)
+
+    expect(
+      await screen.findByText(i18n.t("permissions.items.notifications.title")),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(i18n.t("permissions.items.notifications.description")),
+    ).toBeInTheDocument()
   })
 })

@@ -10,6 +10,8 @@ import {
 import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,
   getTaskNotificationId,
+  getTaskNotificationStatusFromCounts,
+  parseTaskNotificationId,
   TASK_NOTIFICATION_STATUSES,
   TASK_NOTIFICATION_TASKS,
 } from "~/types/taskNotifications"
@@ -195,6 +197,24 @@ describe("taskNotificationService", () => {
     )
   })
 
+  it("falls back to the localized body when the custom message is blank", async () => {
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+        message: "   ",
+      }),
+    ).resolves.toBe(true)
+
+    expect(createNotificationMock).toHaveBeenCalledWith(
+      getTaskNotificationId(TASK_NOTIFICATION_TASKS.AutoCheckin),
+      expect.objectContaining({
+        message:
+          "settings:taskNotifications.notification.body.success:settings:taskNotifications.tasks.autoCheckin",
+      }),
+    )
+  })
+
   it("opens the mapped settings page when a task notification is clicked", async () => {
     onNotificationClickedMock.mockReturnValueOnce(vi.fn())
 
@@ -230,5 +250,30 @@ describe("taskNotificationService", () => {
       success: true,
       error: undefined,
     })
+  })
+
+  it("rejects unknown runtime actions", async () => {
+    const sendResponse = vi.fn()
+
+    await handleTaskNotificationMessage(
+      { action: "taskNotifications:unknown" },
+      sendResponse,
+    )
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "Unknown action",
+    })
+  })
+
+  it("parses only valid notification ids and derives failure status", () => {
+    expect(parseTaskNotificationId("all-api-hub:task:unknown")).toBeNull()
+    expect(parseTaskNotificationId("wrong-prefix:autoCheckin")).toBeNull()
+    expect(
+      getTaskNotificationStatusFromCounts({
+        successCount: 0,
+        failedCount: 2,
+      }),
+    ).toBe(TASK_NOTIFICATION_STATUSES.Failure)
   })
 })

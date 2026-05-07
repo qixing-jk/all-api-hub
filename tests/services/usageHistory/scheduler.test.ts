@@ -13,6 +13,10 @@ import {
   userPreferences,
 } from "~/services/preferences/userPreferences"
 import {
+  TASK_NOTIFICATION_STATUSES,
+  TASK_NOTIFICATION_TASKS,
+} from "~/types/taskNotifications"
+import {
   DEFAULT_USAGE_HISTORY_PREFERENCES,
   USAGE_HISTORY_SCHEDULE_MODE,
 } from "~/types/usageHistory"
@@ -26,6 +30,7 @@ import {
 const registeredAlarmListeners: Array<
   (alarm: { name: string }) => Promise<void> | void
 > = []
+const notifyTaskResultMock = vi.fn()
 
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
@@ -74,6 +79,10 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
+vi.mock("~/services/notifications/taskNotificationService", () => ({
+  notifyTaskResult: (...args: unknown[]) => notifyTaskResultMock(...args),
+}))
+
 const createUsageHistoryConfig = (overrides = {}) => ({
   ...DEFAULT_USAGE_HISTORY_PREFERENCES,
   enabled: true,
@@ -112,6 +121,8 @@ describe("usageHistoryScheduler", () => {
       } as any
     })
     vi.mocked(usageHistoryStorage.pruneAllAccounts).mockResolvedValue(true)
+    notifyTaskResultMock.mockReset()
+    notifyTaskResultMock.mockResolvedValue(true)
   })
 
   it("initializes once, schedules the alarm, and only syncs for the matching alarm name", async () => {
@@ -274,6 +285,21 @@ describe("usageHistoryScheduler", () => {
     await registeredAlarmListeners[0]?.({ name: "usageHistorySync" })
 
     expect(syncUsageHistoryForAccount).not.toHaveBeenCalled()
+  })
+
+  it("notifies failures from alarm-triggered sync exceptions", async () => {
+    vi.mocked(syncUsageHistoryForAccount).mockRejectedValueOnce(
+      new Error("sync failed"),
+    )
+
+    await usageHistoryScheduler.initialize()
+    await registeredAlarmListeners[0]?.({ name: "usageHistorySync" })
+
+    expect(notifyTaskResultMock).toHaveBeenCalledWith({
+      task: TASK_NOTIFICATION_TASKS.UsageHistorySync,
+      status: TASK_NOTIFICATION_STATUSES.Failure,
+      message: "sync failed",
+    })
   })
 
   it("runs manual sync for explicit account ids, filtering missing and disabled accounts", async () => {

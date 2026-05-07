@@ -29,6 +29,7 @@ import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory
 import { DEFAULT_DONE_HUB_CONFIG } from "~/types/doneHubConfig"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
 import { SortingCriteriaType } from "~/types/sorting"
+import { DEFAULT_TASK_NOTIFICATION_PREFERENCES } from "~/types/taskNotifications"
 import { deepOverride } from "~/utils"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import {
@@ -82,6 +83,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
       updateWarnOnDuplicateAccountAdd: vi.fn(),
       updateManagedSiteType: vi.fn(),
       updateLoggingPreferences: vi.fn(),
+      updateTaskNotifications: vi.fn(),
       resetToDefaults: vi.fn(),
       resetDisplaySettings: vi.fn(),
       resetAutoRefreshConfig: vi.fn(),
@@ -100,6 +102,7 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
       resetModelRedirectConfig: vi.fn(),
       resetWebdavConfig: vi.fn(),
       resetSortingPriorityConfig: vi.fn(),
+      resetTaskNotifications: vi.fn(),
     },
   }
 })
@@ -222,6 +225,9 @@ describe("UserPreferencesContext", () => {
     mockedUserPreferences.updateLoggingPreferences.mockImplementation(
       async (updates) => applyPersistedUpdate({ logging: updates }),
     )
+    mockedUserPreferences.updateTaskNotifications.mockImplementation(
+      async (updates) => applyPersistedUpdate({ taskNotifications: updates }),
+    )
     mockedUserPreferences.resetToDefaults.mockResolvedValue(true)
     mockedUserPreferences.resetDisplaySettings.mockImplementation(async () =>
       applyPersistedUpdate({
@@ -312,6 +318,11 @@ describe("UserPreferencesContext", () => {
       }),
     )
     mockedUserPreferences.resetSortingPriorityConfig.mockResolvedValue(true)
+    mockedUserPreferences.resetTaskNotifications.mockImplementation(async () =>
+      applyPersistedUpdate({
+        taskNotifications: DEFAULT_PREFERENCES.taskNotifications,
+      }),
+    )
     mockedSendRuntimeMessage.mockResolvedValue(undefined)
   })
 
@@ -457,6 +468,13 @@ describe("UserPreferencesContext", () => {
       await context.updateTempWindowFallbackReminder({
         dismissed: true,
       })
+      await context.updateTaskNotifications({
+        enabled: false,
+        tasks: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+          autoCheckin: false,
+        },
+      })
       await context.updateCliProxyBaseUrl("https://cli.example")
       await context.updateCliProxyManagementKey("cli-key")
       await context.updateClaudeCodeRouterBaseUrl("https://ccr.example")
@@ -594,6 +612,13 @@ describe("UserPreferencesContext", () => {
     expect(
       (latestContext as any)?.preferences.tempWindowFallbackReminder.dismissed,
     ).toBe(true)
+    expect((latestContext as any)?.preferences.taskNotifications).toEqual({
+      enabled: false,
+      tasks: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+        autoCheckin: false,
+      },
+    })
 
     expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
       action: RuntimeActionIds.PreferencesUpdateActionClickBehavior,
@@ -922,6 +947,7 @@ describe("UserPreferencesContext", () => {
       await context.resetWebdavConfig()
       await context.resetLoggingSettings()
       await context.resetSortingPriorityConfig()
+      await context.resetTaskNotifications()
     })
 
     expect((latestContext as any)?.preferences.currencyType).toBe(
@@ -974,6 +1000,9 @@ describe("UserPreferencesContext", () => {
     )
     expect((latestContext as any)?.preferences.sortingPriorityConfig).toBe(
       undefined,
+    )
+    expect((latestContext as any)?.preferences.taskNotifications).toEqual(
+      DEFAULT_PREFERENCES.taskNotifications,
     )
 
     expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
@@ -1319,6 +1348,7 @@ describe("UserPreferencesContext", () => {
     mockedUserPreferences.resetWebdavConfig.mockResolvedValue(false)
     mockedUserPreferences.updateLoggingPreferences.mockResolvedValue(false)
     mockedUserPreferences.resetSortingPriorityConfig.mockResolvedValue(false)
+    mockedUserPreferences.resetTaskNotifications.mockResolvedValue(false)
 
     const context = await renderProvider(preferences)
 
@@ -1341,6 +1371,7 @@ describe("UserPreferencesContext", () => {
       expect(await context.resetWebdavConfig()).toBe(false)
       expect(await context.resetLoggingSettings()).toBe(false)
       expect(await context.resetSortingPriorityConfig()).toBe(false)
+      expect(await context.resetTaskNotifications()).toBe(false)
     })
 
     expect((latestContext as any)?.preferences).toEqual(preferences)
