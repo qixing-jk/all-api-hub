@@ -3,6 +3,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ChevronUp,
+  ExternalLink,
   Inbox,
 } from "lucide-react"
 import { type MouseEvent } from "react"
@@ -17,6 +18,7 @@ import { AnnouncementMarkdown } from "../AnnouncementMarkdown"
 import {
   formatAnnouncementTimestamp,
   formatSub2ApiRelativeTimestamp,
+  getAnnouncementSourceUrl,
   isSub2ApiAnnouncement,
 } from "../utils"
 
@@ -41,6 +43,7 @@ export function SiteAnnouncementCard({
   const display = buildAnnouncementDisplayText(record, {
     previewLength: 120,
   })
+  const sourceUrl = getAnnouncementSourceUrl(record)
 
   const handleToggle = () => {
     onToggleExpanded(record)
@@ -98,6 +101,23 @@ export function SiteAnnouncementCard({
               </div>
 
               <div className="hidden shrink-0 lg:flex lg:items-center lg:gap-2">
+                <Button
+                  asChild
+                  size="icon-sm"
+                  variant="ghost"
+                  className="h-8 w-8 text-gray-400 hover:bg-blue-50 hover:text-blue-600 dark:hover:bg-blue-400/10 dark:hover:text-blue-400"
+                  title={t("actions.viewSource")}
+                >
+                  <a
+                    href={sourceUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label={t("actions.viewSource")}
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <ExternalLink className="h-5 w-5" />
+                  </a>
+                </Button>
                 {!expanded && !record.read && (
                   <Button
                     type="button"
@@ -160,6 +180,21 @@ export function SiteAnnouncementCard({
             </div>
 
             <div className="mt-4 flex flex-wrap items-center justify-end gap-2">
+              <Button
+                asChild
+                size="sm"
+                variant="outline"
+                leftIcon={<ExternalLink className="h-4 w-4" />}
+              >
+                <a
+                  href={sourceUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(event) => event.stopPropagation()}
+                >
+                  {t("actions.viewSource")}
+                </a>
+              </Button>
               {!record.read && (
                 <Button
                   type="button"
@@ -188,7 +223,23 @@ export function SiteAnnouncementCard({
         )}
 
         {!expanded && !record.read && (
-          <div className="flex justify-end px-4 pb-3 lg:hidden">
+          <div className="flex justify-end gap-2 px-4 pb-3 lg:hidden">
+            <Button
+              asChild
+              size="sm"
+              variant="ghost"
+              className="h-7 text-xs text-blue-600 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-400/10"
+              leftIcon={<ExternalLink className="h-3.5 w-3.5" />}
+            >
+              <a
+                href={sourceUrl}
+                target="_blank"
+                rel="noopener noreferrer"
+                onClick={(event) => event.stopPropagation()}
+              >
+                {t("actions.viewSource")}
+              </a>
+            </Button>
             <Button
               type="button"
               size="sm"

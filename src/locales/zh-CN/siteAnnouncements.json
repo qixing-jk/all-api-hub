@@ -4,7 +4,8 @@
     "collapse": "收起",
     "expand": "展开",
     "markAllRead": "全部已读",
-    "markRead": "标记已读"
+    "markRead": "标记已读",
+    "viewSource": "查看站点公告"
   },
   "badges": {
     "notified": "已通知",

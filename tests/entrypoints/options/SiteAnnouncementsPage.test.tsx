@@ -133,6 +133,11 @@ describe("SiteAnnouncementsPage", () => {
     ).toBeInTheDocument()
     expect(screen.getByText("Second line")).toBeInTheDocument()
     expect(screen.getByText("Beta full content")).toBeInTheDocument()
+    expect(
+      screen.getAllByRole("link", {
+        name: /siteAnnouncements:actions\.viewSource/,
+      })[0],
+    ).toHaveAttribute("href", "https://alpha.example.com/")
 
     await user.click(
       screen.getByRole("button", {

@@ -66,6 +66,7 @@ const DEFAULT_USAGE_PATH = "/console/log"
 const DEFAULT_CHECKIN_PATH = "/console/personal"
 const DEFAULT_REDEEM_PATH = "/console/topup"
 const DEFAULT_ADMIN_CREDENTIALS_PATH = DEFAULT_CHECKIN_PATH
+const DEFAULT_SITE_ANNOUNCEMENTS_PATH = "/"
 
 // 定义各站点对应的 API 路径
 const SITE_API_ROUTER: Record<string, any> = {
@@ -98,12 +99,14 @@ const SITE_API_ROUTER: Record<string, any> = {
   [SUB2API]: {
     usagePath: "/usage",
     redeemPath: "/redeem",
+    siteAnnouncementsPath: "/dashboard",
   },
   Default: {
     usagePath: DEFAULT_USAGE_PATH,
     checkInPath: DEFAULT_CHECKIN_PATH,
     adminCredentialsPath: DEFAULT_ADMIN_CREDENTIALS_PATH,
     redeemPath: DEFAULT_REDEEM_PATH,
+    siteAnnouncementsPath: DEFAULT_SITE_ANNOUNCEMENTS_PATH,
   },
 }
 

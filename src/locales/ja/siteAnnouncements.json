@@ -4,7 +4,8 @@
     "collapse": "折りたたむ",
     "expand": "展開",
     "markAllRead": "すべて既読",
-    "markRead": "既読にする"
+    "markRead": "既読にする",
+    "viewSource": "サイト公告を表示"
   },
   "badges": {
     "notified": "通知済み",

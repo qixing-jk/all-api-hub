@@ -4,7 +4,8 @@
     "collapse": "Collapse",
     "expand": "Expand",
     "markAllRead": "Mark all read",
-    "markRead": "Mark read"
+    "markRead": "Mark read",
+    "viewSource": "View site announcement"
   },
   "badges": {
     "notified": "Notified",
