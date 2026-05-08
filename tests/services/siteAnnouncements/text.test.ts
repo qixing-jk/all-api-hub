@@ -118,6 +118,45 @@ describe("site announcement text helpers", () => {
     )
   })
 
+  it("decodes supported html entities and truncates long plain-text summaries", () => {
+    expect(summarizeAnnouncement("&amp; &lt; &gt; &quot;", 80)).toBe('& < > "')
+    expect(summarizeAnnouncement("A".repeat(10), 5)).toBe("AAAA…")
+  })
+
+  it("does not split inferred titles on time or url colons before a real delimiter", () => {
+    expect(
+      buildAnnouncementDisplayText({
+        content: "Maintenance starts at 01:00: API unavailable afterwards.",
+      }).title,
+    ).toBe("Maintenance starts at 01:00")
+    expect(
+      buildAnnouncementDisplayText({
+        content: "Read https://example.com:8443: maintenance tonight.",
+      }).title,
+    ).toBe("Read https://example.com")
+  })
+
+  it("falls back cleanly when content only contains formatting and explicit titles have no body", () => {
+    expect(
+      buildAnnouncementDisplayText({
+        title: "Title only",
+      }),
+    ).toEqual({
+      title: "Title only",
+      body: "Title only",
+      preview: "",
+    })
+    expect(
+      buildAnnouncementDisplayText({
+        content: "\n\n***\n&nbsp;",
+      }),
+    ).toEqual({
+      title: "siteAnnouncements:title",
+      body: "***\n&nbsp;",
+      preview: "",
+    })
+  })
+
   it("uses length-prefixed fingerprint parts to avoid delimiter collisions", () => {
     expect(fingerprintAnnouncement(["alpha|beta", "gamma"])).not.toBe(
       fingerprintAnnouncement(["alpha", "beta|gamma"]),

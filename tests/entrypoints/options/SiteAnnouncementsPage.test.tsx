@@ -220,4 +220,147 @@ describe("SiteAnnouncementsPage", () => {
       })
     })
   })
+
+  it("shows success feedback and reloads after a manual check", async () => {
+    const user = userEvent.setup()
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:title")
+    await user.click(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.checkNow",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToast).toHaveBeenCalledWith({
+        success: true,
+        successFallback: "siteAnnouncements:messages.checkCompleted",
+        errorFallback: "siteAnnouncements:messages.checkFailed",
+      })
+    })
+    expect(
+      vi
+        .mocked(sendRuntimeMessage)
+        .mock.calls.filter(
+          (call) =>
+            (call[0] as { action?: string }).action ===
+            RuntimeActionIds.SiteAnnouncementsListRecords,
+        ),
+    ).toHaveLength(2)
+  })
+
+  it("shows failure feedback when the manual check throws", async () => {
+    const user = userEvent.setup()
+
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      switch (message.action) {
+        case RuntimeActionIds.SiteAnnouncementsListRecords:
+          return { success: true, data: records }
+        case RuntimeActionIds.SiteAnnouncementsGetStatus:
+          return { success: true, data: status }
+        case RuntimeActionIds.SiteAnnouncementsCheckNow:
+          throw new Error("check failed")
+        default:
+          return { success: true }
+      }
+    })
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:title")
+    await user.click(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.checkNow",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToast).toHaveBeenCalledWith({
+        success: false,
+        message: "check failed",
+        errorFallback: "siteAnnouncements:messages.checkFailed",
+      })
+    })
+  })
+
+  it("marks all records read for the current filter scope", async () => {
+    const user = userEvent.setup()
+    let currentRecords = records
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      switch (message.action) {
+        case RuntimeActionIds.SiteAnnouncementsListRecords:
+          return { success: true, data: currentRecords }
+        case RuntimeActionIds.SiteAnnouncementsGetStatus:
+          return { success: true, data: status }
+        case RuntimeActionIds.SiteAnnouncementsMarkAllRead:
+          currentRecords = currentRecords.map((record) => ({
+            ...record,
+            read: true,
+          }))
+          return { success: true, data: 1 }
+        default:
+          return { success: true }
+      }
+    })
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:title")
+    await user.click(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.markAllRead",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeMessage).toHaveBeenCalledWith({
+        action: RuntimeActionIds.SiteAnnouncementsMarkAllRead,
+        siteKey: undefined,
+      })
+    })
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "siteAnnouncements:actions.markAllRead",
+        }),
+      ).toBeDisabled()
+    })
+  })
+
+  it("renders the empty announcement state when no records are available", async () => {
+    const user = userEvent.setup()
+
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      switch (message.action) {
+        case RuntimeActionIds.SiteAnnouncementsListRecords:
+          return { success: true, data: [] }
+        case RuntimeActionIds.SiteAnnouncementsGetStatus:
+          return { success: true, data: [] }
+        default:
+          return { success: true }
+      }
+    })
+
+    render(<SiteAnnouncementsPage />)
+
+    expect(
+      await screen.findByText("siteAnnouncements:empty.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("siteAnnouncements:empty.description"),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "siteAnnouncements:actions.checkNow",
+      })[1]!,
+    )
+    await waitFor(() => {
+      expect(sendRuntimeMessage).toHaveBeenCalledWith({
+        action: RuntimeActionIds.SiteAnnouncementsCheckNow,
+      })
+    })
+  })
 })

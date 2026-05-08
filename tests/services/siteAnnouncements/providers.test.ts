@@ -4,6 +4,7 @@ import {
   commonSiteAnnouncementProvider,
   createCommonSiteAnnouncementKey,
   createSub2ApiSiteAnnouncementKey,
+  getSiteAnnouncementProvider,
   sub2ApiSiteAnnouncementProvider,
 } from "~/services/siteAnnouncements/providers"
 import { AuthTypeEnum } from "~/types"
@@ -65,6 +66,33 @@ describe("site announcement providers", () => {
     ])
   })
 
+  it("returns an empty common announcement list for blank notice bodies", async () => {
+    getApiServiceMock.mockReturnValueOnce({
+      fetchSiteNotice: vi.fn().mockResolvedValue("   "),
+    })
+
+    const result = await commonSiteAnnouncementProvider.fetch(baseRequest)
+
+    expect(result).toMatchObject({
+      status: SITE_ANNOUNCEMENT_STATUS.Success,
+      announcements: [],
+    })
+  })
+
+  it("marks common provider failures as unsupported with the upstream error text", async () => {
+    getApiServiceMock.mockReturnValueOnce({
+      fetchSiteNotice: vi.fn().mockRejectedValue(new Error("not supported")),
+    })
+
+    const result = await commonSiteAnnouncementProvider.fetch(baseRequest)
+
+    expect(result).toMatchObject({
+      status: SITE_ANNOUNCEMENT_STATUS.Unsupported,
+      announcements: [],
+      error: "not supported",
+    })
+  })
+
   it("normalizes Sub2API unread announcement lists and marks ids as read", async () => {
     const markRead = vi.fn().mockResolvedValue(true)
     getApiServiceMock.mockReturnValue({
@@ -103,6 +131,80 @@ describe("site announcement providers", () => {
     )
 
     expect(markRead).toHaveBeenCalledWith(request.apiRequest, "12")
+  })
+
+  it("normalizes Sub2API announcements from body/message fallbacks and mixed timestamp formats", async () => {
+    getApiServiceMock.mockReturnValue({
+      fetchSub2ApiAnnouncements: vi.fn().mockResolvedValue([
+        {
+          id: null,
+          title: "  ",
+          message: " Message fallback ",
+          created_at: 1_715_000_000,
+          updated_at: "2026-05-07T00:00:00Z",
+          read_at: "invalid",
+        },
+        {
+          id: 99,
+          title: "Body fallback",
+          body: " From body ",
+          created_at: "1715000000",
+          updated_at: "1715003600000",
+        },
+        {
+          id: 100,
+          title: "   ",
+          content: "   ",
+          message: "",
+          body: "",
+        },
+      ]),
+    })
+
+    const request = {
+      ...baseRequest,
+      siteType: "sub2api",
+      providerId: "sub2api" as const,
+    }
+    const result = await sub2ApiSiteAnnouncementProvider.fetch(request)
+
+    expect(result.status).toBe(SITE_ANNOUNCEMENT_STATUS.Success)
+    expect(result.announcements).toHaveLength(2)
+    expect(result.announcements[0]).toMatchObject({
+      id: undefined,
+      title: "",
+      content: "Message fallback",
+      createdAt: 1_715_000_000_000,
+      updatedAt: Date.parse("2026-05-07T00:00:00Z"),
+      readAt: undefined,
+    })
+    expect(result.announcements[1]).toMatchObject({
+      id: "99",
+      title: "Body fallback",
+      content: "From body",
+      createdAt: 1_715_000_000_000,
+      updatedAt: 1_715_003_600_000,
+      fingerprint: "99",
+    })
+  })
+
+  it("returns an error result when Sub2API announcement fetch fails", async () => {
+    getApiServiceMock.mockReturnValue({
+      fetchSub2ApiAnnouncements: vi.fn().mockRejectedValue(new Error("denied")),
+    })
+
+    const request = {
+      ...baseRequest,
+      siteType: "sub2api",
+      providerId: "sub2api" as const,
+    }
+    const result = await sub2ApiSiteAnnouncementProvider.fetch(request)
+
+    expect(result).toMatchObject({
+      status: SITE_ANNOUNCEMENT_STATUS.Error,
+      announcements: [],
+      error: "denied",
+    })
   })
 
   it("logs partial Sub2API mark-read failures without failing the whole batch", async () => {
@@ -145,6 +247,41 @@ describe("site announcement providers", () => {
     ).rejects.toThrow("all failed")
   })
 
+  it("skips mark-read requests when no upstream ids are available", async () => {
+    const markRead = vi.fn()
+    getApiServiceMock.mockReturnValue({
+      markSub2ApiAnnouncementRead: markRead,
+    })
+
+    const request = {
+      ...baseRequest,
+      siteType: "sub2api",
+      providerId: "sub2api" as const,
+    }
+
+    await expect(
+      sub2ApiSiteAnnouncementProvider.markRead?.(request, [{ title: "No id" }]),
+    ).resolves.toBeUndefined()
+    expect(markRead).not.toHaveBeenCalled()
+  })
+
+  it("wraps non-error full-batch mark-read failures with a safe error instance", async () => {
+    const markRead = vi.fn().mockRejectedValue("bad gateway")
+    getApiServiceMock.mockReturnValue({
+      markSub2ApiAnnouncementRead: markRead,
+    })
+
+    const request = {
+      ...baseRequest,
+      siteType: "sub2api",
+      providerId: "sub2api" as const,
+    }
+
+    await expect(
+      sub2ApiSiteAnnouncementProvider.markRead?.(request, [{ id: "1" }]),
+    ).rejects.toThrow("bad gateway")
+  })
+
   it("keeps Sub2API title-only announcements title-only", async () => {
     getApiServiceMock.mockReturnValue({
       fetchSub2ApiAnnouncements: vi.fn().mockResolvedValue([
@@ -169,5 +306,14 @@ describe("site announcement providers", () => {
       content: "",
       fingerprint: "13",
     })
+  })
+
+  it("selects the provider implementation from the site type", () => {
+    expect(getSiteAnnouncementProvider("sub2api")).toBe(
+      sub2ApiSiteAnnouncementProvider,
+    )
+    expect(getSiteAnnouncementProvider("new-api")).toBe(
+      commonSiteAnnouncementProvider,
+    )
   })
 })

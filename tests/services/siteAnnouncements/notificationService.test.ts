@@ -131,4 +131,45 @@ describe("siteAnnouncementNotificationService", () => {
       options: { title: "Notice", count: 1 },
     })
   })
+
+  it("returns false immediately when there are no records to notify", async () => {
+    await expect(notifySiteAnnouncements([])).resolves.toEqual({
+      success: false,
+    })
+
+    expect(getPreferencesMock).not.toHaveBeenCalled()
+    expect(notifyTaskResultMock).not.toHaveBeenCalled()
+  })
+
+  it("falls back to the announcement title when preview text is empty", async () => {
+    await expect(
+      notifySiteAnnouncements([
+        {
+          ...record,
+          title: "Title only",
+          content: "",
+        },
+      ]),
+    ).resolves.toEqual({
+      success: true,
+    })
+
+    expect(notifyTaskResultMock).toHaveBeenCalledWith({
+      task: TASK_NOTIFICATION_TASKS.SiteAnnouncements,
+      status: TASK_NOTIFICATION_STATUSES.Success,
+      title: "siteAnnouncements:notification.title:Example",
+      message: "Title only",
+    })
+  })
+
+  it("surfaces notification delivery errors from the shared task notification service", async () => {
+    notifyTaskResultMock.mockRejectedValueOnce(
+      new Error("notifications blocked"),
+    )
+
+    await expect(notifySiteAnnouncements([record])).resolves.toEqual({
+      success: false,
+      error: "notifications blocked",
+    })
+  })
 })
