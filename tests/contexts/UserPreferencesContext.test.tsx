@@ -2032,8 +2032,9 @@ describe("UserPreferencesContext", () => {
 
   it("keeps site announcement preferences unchanged when the background update fails", async () => {
     const preferences = clonePreferences()
-    const originalSiteAnnouncementNotifications =
-      preferences.siteAnnouncementNotifications
+    const originalSiteAnnouncementNotifications = structuredClone(
+      preferences.siteAnnouncementNotifications,
+    )
     mockedSendRuntimeMessage.mockResolvedValue({
       success: false,
     })

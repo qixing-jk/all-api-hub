@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   buildSiteOptions,
@@ -53,6 +53,10 @@ const record: SiteAnnouncementRecord = {
 }
 
 describe("SiteAnnouncements utils", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it("formats timestamps and falls back when the value is missing", () => {
     expect(formatDateTime()).toBe("-")
     expect(formatAnnouncementTimestamp(record)).not.toBe("-")
@@ -63,18 +67,14 @@ describe("SiteAnnouncements utils", () => {
       .mockReturnValueOnce("2 hours ago")
       .mockReturnValueOnce("")
 
-    expect(
-      formatSub2ApiRelativeTimestamp({
-        ...record,
-        siteType: "sub2api",
-      }),
-    ).toBe("2 hours ago")
-    expect(
-      formatSub2ApiRelativeTimestamp({
-        ...record,
-        siteType: "sub2api",
-      }),
-    ).toBe(formatAnnouncementTimestamp(record))
+    const sub2Record: SiteAnnouncementRecord = {
+      ...record,
+      siteType: "sub2api",
+    }
+    expect(formatSub2ApiRelativeTimestamp(sub2Record)).toBe("2 hours ago")
+    expect(formatSub2ApiRelativeTimestamp(sub2Record)).toBe(
+      formatAnnouncementTimestamp(sub2Record),
+    )
   })
 
   it("detects Sub2API announcements from site type or provider id", () => {
@@ -144,6 +144,20 @@ describe("SiteAnnouncements utils", () => {
 
     expect(
       filterSiteAnnouncements([record, secondRecord], {
+        siteKey: "all",
+        siteType: "all",
+        unreadFilter: "all",
+      }),
+    ).toEqual([record, secondRecord])
+    expect(
+      filterSiteAnnouncements([record, secondRecord], {
+        siteKey: "site-1",
+        siteType: "new-api",
+        unreadFilter: "unread",
+      }),
+    ).toEqual([record])
+    expect(
+      filterSiteAnnouncements([record, secondRecord], {
         siteKey: "site-1",
         siteType: "all",
         unreadFilter: "all",
@@ -176,5 +190,8 @@ describe("SiteAnnouncements utils", () => {
     expect(getMetricToneClasses("blue")).toContain("bg-blue-50")
     expect(getMetricToneClasses("amber")).toContain("bg-amber-50")
     expect(getMetricToneClasses("emerald")).toContain("bg-emerald-50")
+    expect(getMetricToneClasses("unknown" as any)).toEqual(
+      getMetricToneClasses(undefined as any),
+    )
   })
 })

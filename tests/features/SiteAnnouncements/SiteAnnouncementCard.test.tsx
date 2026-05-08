@@ -54,16 +54,23 @@ describe("SiteAnnouncementCard", () => {
     fireEvent.keyDown(headerButton!, { key: " " })
     expect(onToggleExpanded).toHaveBeenCalledTimes(2)
 
+    fireEvent.click(headerButton!)
+    expect(onToggleExpanded).toHaveBeenCalledTimes(3)
+
     for (const sourceLink of screen.getAllByRole("link", {
       name: "siteAnnouncements:actions.viewSource",
     })) {
       fireEvent.click(sourceLink)
     }
-    expect(onToggleExpanded).toHaveBeenCalledTimes(2)
+    expect(onToggleExpanded).toHaveBeenCalledTimes(3)
 
-    fireEvent.click(screen.getAllByRole("button", { name: /markRead/i })[0]!)
+    const markReadButtons = screen.getAllByRole("button", {
+      name: /markRead/i,
+    })
+    expect(markReadButtons.length).toBeGreaterThan(0)
+    fireEvent.click(markReadButtons[0]!)
     expect(onMarkRead).toHaveBeenCalledWith("record-1")
-    expect(onToggleExpanded).toHaveBeenCalledTimes(2)
+    expect(onToggleExpanded).toHaveBeenCalledTimes(3)
   })
 
   it("renders expanded actions and source links without toggling the card", () => {

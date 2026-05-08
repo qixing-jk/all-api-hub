@@ -279,10 +279,9 @@ describe("siteAnnouncementStorage", () => {
   })
 
   it("returns empty state when persisted storage cannot be read", async () => {
-    vi.spyOn(
-      (siteAnnouncementStorage as any).storage,
-      "get",
-    ).mockRejectedValueOnce(new Error("read failed"))
+    vi.spyOn((siteAnnouncementStorage as any).storage, "get").mockRejectedValue(
+      new Error("read failed"),
+    )
 
     await expect(siteAnnouncementStorage.listRecords()).resolves.toEqual([])
     await expect(siteAnnouncementStorage.getStatus()).resolves.toEqual([])
