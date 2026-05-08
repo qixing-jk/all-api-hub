@@ -134,6 +134,40 @@ describe("Input", () => {
     expect(onClear).toHaveBeenCalledTimes(1)
   })
 
+  it("reserves enough padding when right icon, reveal, and clear controls are all present", async () => {
+    render(
+      <Input
+        aria-label="compound-token"
+        type="password"
+        value="saved token"
+        onChange={vi.fn()}
+        onClear={vi.fn()}
+        clearButtonLabel="Clear token"
+        rightIcon={<span data-testid="right-icon" />}
+        revealable
+        revealLabels={{ show: "Show token", hide: "Hide token" }}
+      />,
+    )
+
+    expect(await screen.findByLabelText("compound-token")).toHaveClass("pr-24")
+    expect(screen.getByTestId("right-icon")).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Show token" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", { name: "Clear token" }),
+    ).toBeInTheDocument()
+  })
+
+  it("renders success feedback with success styling", async () => {
+    render(<Input aria-label="api-key" success="Saved" />)
+
+    expect(await screen.findByText("Saved")).toHaveClass(
+      "text-green-600",
+      "dark:text-green-400",
+    )
+  })
+
   it("focuses the input immediately after clearing when animation frames are unavailable", async () => {
     const onClear = vi.fn()
     vi.stubGlobal("requestAnimationFrame", undefined)

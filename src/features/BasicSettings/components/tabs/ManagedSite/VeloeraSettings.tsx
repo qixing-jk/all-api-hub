@@ -159,24 +159,22 @@ export default function VeloeraSettings() {
             title={t("veloera.fields.adminTokenLabel")}
             description={t("veloera.tokenDesc")}
             rightContent={
-              <div className="relative">
-                <Input
-                  type="password"
-                  revealable
-                  revealLabels={{
-                    show: t("veloera.fields.showToken"),
-                    hide: t("veloera.fields.hideToken"),
-                  }}
-                  value={localAdminToken}
-                  onChange={(e) =>
-                    setLocalConfig((prev) => ({
-                      ...prev,
-                      adminToken: e.target.value,
-                    }))
-                  }
-                  onBlur={(e) => handleVeloeraAdminTokenChange(e.target.value)}
-                />
-              </div>
+              <Input
+                type="password"
+                revealable
+                revealLabels={{
+                  show: t("veloera.fields.showToken"),
+                  hide: t("veloera.fields.hideToken"),
+                }}
+                value={localAdminToken}
+                onChange={(e) =>
+                  setLocalConfig((prev) => ({
+                    ...prev,
+                    adminToken: e.target.value,
+                  }))
+                }
+                onBlur={(e) => handleVeloeraAdminTokenChange(e.target.value)}
+              />
             }
           />
 

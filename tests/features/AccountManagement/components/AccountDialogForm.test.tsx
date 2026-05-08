@@ -87,7 +87,7 @@ describe("AccountDialog AccountForm", () => {
     onAccessTokenChange: vi.fn(),
     onExchangeRateChange: vi.fn(),
     onManualBalanceUsdChange: vi.fn(),
-    onToggleShowAccessToken: vi.fn(),
+    onShowAccessTokenChange: vi.fn(),
     onNotesChange: vi.fn(),
     onSelectedTagIdsChange: vi.fn(),
     onExcludeFromTotalBalanceChange: vi.fn(),
@@ -294,7 +294,7 @@ describe("AccountDialog AccountForm", () => {
     })
     await user.click(
       screen.getByRole("button", {
-        name: "accountDialog:form.toggleAccessTokenVisibility",
+        name: "accountDialog:form.showAccessToken",
       }),
     )
     fireEvent.change(
@@ -332,7 +332,7 @@ describe("AccountDialog AccountForm", () => {
     expect(props.onAccessTokenChange).toHaveBeenLastCalledWith(
       "secret-token next",
     )
-    expect(props.onToggleShowAccessToken).toHaveBeenCalledTimes(1)
+    expect(props.onShowAccessTokenChange).toHaveBeenCalledWith(true)
     expect(props.onExchangeRateChange).toHaveBeenLastCalledWith("8.8")
     expect(props.onManualBalanceUsdChange).toHaveBeenLastCalledWith("12.5")
     expect(props.onExcludeFromTotalBalanceChange).toHaveBeenCalledWith(true)
@@ -439,7 +439,7 @@ describe("AccountDialog AccountForm", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: "accountDialog:form.toggleRefreshTokenVisibility",
+        name: "accountDialog:form.showRefreshToken",
       }),
     )
     expect(screen.getByDisplayValue("refresh-secret")).toHaveAttribute(

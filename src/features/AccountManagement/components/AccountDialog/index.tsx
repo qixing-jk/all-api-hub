@@ -186,9 +186,7 @@ export default function AccountDialog({
                 onImportSub2apiSession={handlers.handleImportSub2apiSession}
                 onExchangeRateChange={setters.setExchangeRate}
                 onManualBalanceUsdChange={setters.setManualBalanceUsd}
-                onToggleShowAccessToken={() =>
-                  setters.setShowAccessToken(!state.showAccessToken)
-                }
+                onShowAccessTokenChange={setters.setShowAccessToken}
                 onNotesChange={setters.setNotes}
                 onSelectedTagIdsChange={setters.setTagIds}
                 onExcludeFromTotalBalanceChange={

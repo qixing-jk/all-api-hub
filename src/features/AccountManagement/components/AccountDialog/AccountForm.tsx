@@ -47,7 +47,7 @@ interface AccountFormProps {
   onAccessTokenChange: (value: string) => void
   onExchangeRateChange: (value: string) => void
   onManualBalanceUsdChange: (value: string) => void
-  onToggleShowAccessToken: () => void
+  onShowAccessTokenChange: (value: boolean) => void
   onNotesChange: (value: string) => void
   onSelectedTagIdsChange: (value: string[]) => void
   onExcludeFromTotalBalanceChange: (value: boolean) => void
@@ -84,7 +84,7 @@ export default function AccountForm({
   onAccessTokenChange,
   onExchangeRateChange,
   onManualBalanceUsdChange,
-  onToggleShowAccessToken,
+  onShowAccessTokenChange,
   onNotesChange,
   onSelectedTagIdsChange,
   onExcludeFromTotalBalanceChange,
@@ -246,10 +246,10 @@ export default function AccountForm({
               type="password"
               revealable
               revealed={showAccessToken}
-              onRevealedChange={onToggleShowAccessToken}
+              onRevealedChange={onShowAccessTokenChange}
               revealLabels={{
-                show: t("form.toggleAccessTokenVisibility"),
-                hide: t("form.toggleAccessTokenVisibility"),
+                show: t("form.showAccessToken"),
+                hide: t("form.hideAccessToken"),
               }}
               value={accessToken}
               onChange={(e) => onAccessTokenChange(e.target.value)}
@@ -317,8 +317,8 @@ export default function AccountForm({
                       type="password"
                       revealable
                       revealLabels={{
-                        show: t("form.toggleRefreshTokenVisibility"),
-                        hide: t("form.toggleRefreshTokenVisibility"),
+                        show: t("form.showRefreshToken"),
+                        hide: t("form.hideRefreshToken"),
                       }}
                       value={sub2apiRefreshToken}
                       onChange={(e) =>
