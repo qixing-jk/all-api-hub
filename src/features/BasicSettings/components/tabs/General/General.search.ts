@@ -5,68 +5,11 @@ import {
 } from "~/entrypoints/options/search/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
 
-const TASK_NOTIFICATION_BREADCRUMBS = [
-  ...DEFAULT_BREADCRUMBS,
-  "settings:tabs.general",
-  "settings:taskNotifications.title",
-]
-
 const SITE_ANNOUNCEMENT_BREADCRUMBS = [
   ...DEFAULT_BREADCRUMBS,
   "settings:tabs.general",
   "settings:siteAnnouncementNotifications.title",
 ]
-
-const TASK_NOTIFICATION_CONTROL_ORDER_START = 509
-
-const TASK_NOTIFICATION_SEARCH_CONTROLS = [
-  {
-    searchId: "control:task-notifications-auto-checkin",
-    targetId: "task-notifications-autoCheckin",
-    labelKey: "settings:taskNotifications.tasks.autoCheckin",
-    descriptionKey: "settings:taskNotifications.taskDescriptions.autoCheckin",
-    keywords: ["notification", "auto checkin", "check-in"],
-  },
-  {
-    searchId: "control:task-notifications-webdav-auto-sync",
-    targetId: "task-notifications-webdavAutoSync",
-    labelKey: "settings:taskNotifications.tasks.webdavAutoSync",
-    descriptionKey:
-      "settings:taskNotifications.taskDescriptions.webdavAutoSync",
-    keywords: ["notification", "webdav", "auto sync"],
-  },
-  {
-    searchId: "control:task-notifications-managed-site-model-sync",
-    targetId: "task-notifications-managedSiteModelSync",
-    labelKey: "settings:taskNotifications.tasks.managedSiteModelSync",
-    descriptionKey:
-      "settings:taskNotifications.taskDescriptions.managedSiteModelSync",
-    keywords: ["notification", "model sync", "managed site"],
-  },
-  {
-    searchId: "control:task-notifications-usage-history-sync",
-    targetId: "task-notifications-usageHistorySync",
-    labelKey: "settings:taskNotifications.tasks.usageHistorySync",
-    descriptionKey:
-      "settings:taskNotifications.taskDescriptions.usageHistorySync",
-    keywords: ["notification", "usage history", "sync"],
-  },
-  {
-    searchId: "control:task-notifications-balance-history-capture",
-    targetId: "task-notifications-balanceHistoryCapture",
-    labelKey: "settings:taskNotifications.tasks.balanceHistoryCapture",
-    descriptionKey:
-      "settings:taskNotifications.taskDescriptions.balanceHistoryCapture",
-    keywords: ["notification", "balance history", "capture"],
-  },
-  {
-    searchId: "control:task-notifications-site-announcements",
-    targetId: "task-notifications-site-announcements",
-    labelKey: "settings:taskNotifications.siteAnnouncements.enable",
-    descriptionKey: "settings:taskNotifications.siteAnnouncements.enableDesc",
-    keywords: ["notification", "site announcement", "notice"],
-  },
-] as const
 
 export const generalSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
@@ -91,22 +34,11 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
     202,
   ),
   buildSectionDefinition(
-    "section:task-notifications",
-    "general",
-    "task-notifications",
-    "settings:taskNotifications.title",
-    203,
-    {
-      descriptionKey: "settings:taskNotifications.description",
-      keywords: ["notification", "scheduled task", "alarm"],
-    },
-  ),
-  buildSectionDefinition(
     "section:site-announcements",
     "general",
     "site-announcement-notifications",
     "settings:siteAnnouncementNotifications.title",
-    204,
+    203,
     {
       descriptionKey: "settings:siteAnnouncementNotifications.description",
       keywords: ["announcement", "notice", "polling"],
@@ -117,21 +49,21 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
     "general",
     "changelog-on-update",
     "settings:changelogOnUpdate.title",
-    205,
+    204,
   ),
   buildSectionDefinition(
     "section:logging",
     "general",
     "logging",
     "settings:logging.title",
-    206,
+    205,
   ),
   buildSectionDefinition(
     "section:danger",
     "general",
     "dangerous-zone",
     "settings:danger.title",
-    207,
+    206,
   ),
 ]
 
@@ -251,49 +183,11 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
-    "control:task-notifications-enabled",
-    "general",
-    "task-notifications-enabled",
-    "settings:taskNotifications.enable",
-    507,
-    {
-      descriptionKey: "settings:taskNotifications.enableDesc",
-      breadcrumbsKeys: TASK_NOTIFICATION_BREADCRUMBS,
-      keywords: ["notification", "scheduled task", "background task"],
-    },
-  ),
-  buildControlDefinition(
-    "control:task-notifications-permission",
-    "general",
-    "task-notifications-permission",
-    "settings:taskNotifications.permission.title",
-    508,
-    {
-      descriptionKey: "settings:taskNotifications.permission.description",
-      breadcrumbsKeys: TASK_NOTIFICATION_BREADCRUMBS,
-      keywords: ["notification", "permission", "system notification"],
-    },
-  ),
-  ...TASK_NOTIFICATION_SEARCH_CONTROLS.map((definition, index) =>
-    buildControlDefinition(
-      definition.searchId,
-      "general",
-      definition.targetId,
-      definition.labelKey,
-      TASK_NOTIFICATION_CONTROL_ORDER_START + index,
-      {
-        descriptionKey: definition.descriptionKey,
-        breadcrumbsKeys: TASK_NOTIFICATION_BREADCRUMBS,
-        keywords: [...definition.keywords],
-      },
-    ),
-  ),
-  buildControlDefinition(
     "control:site-announcements-polling",
     "general",
     "site-announcement-notifications-enabled",
     "settings:siteAnnouncementNotifications.polling.enable",
-    515,
+    507,
     {
       descriptionKey:
         "settings:siteAnnouncementNotifications.polling.enableDesc",
@@ -306,7 +200,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "site-announcement-notifications-page",
     "settings:siteAnnouncementNotifications.page.title",
-    516,
+    508,
     {
       descriptionKey: "settings:siteAnnouncementNotifications.page.description",
       breadcrumbsKeys: SITE_ANNOUNCEMENT_BREADCRUMBS,
@@ -318,7 +212,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "changelog-on-update-toggle",
     "settings:changelogOnUpdate.toggleLabel",
-    517,
+    509,
     {
       descriptionKey: "settings:changelogOnUpdate.toggleDesc",
       breadcrumbsKeys: [
@@ -334,7 +228,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "logging-console-enabled",
     "settings:logging.consoleEnabled",
-    518,
+    510,
     {
       descriptionKey: "settings:logging.consoleEnabledDesc",
       breadcrumbsKeys: [
@@ -350,7 +244,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "logging-min-level",
     "settings:logging.minLevel",
-    519,
+    511,
     {
       descriptionKey: "settings:logging.minLevelDesc",
       breadcrumbsKeys: [
@@ -366,7 +260,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "danger-reset-settings",
     "settings:danger.resetSettings",
-    520,
+    512,
     {
       descriptionKey: "settings:danger.resetDesc",
       breadcrumbsKeys: [

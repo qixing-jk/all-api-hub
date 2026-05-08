@@ -11,7 +11,6 @@ describe("general settings search definitions", () => {
       "section:display",
       "section:appearance",
       "section:action-click",
-      "section:task-notifications",
       "section:site-announcements",
       "section:changelog",
       "section:logging",
@@ -19,10 +18,10 @@ describe("general settings search definitions", () => {
     ])
   })
 
-  it("keeps task notification controls before lower-frequency maintenance controls", () => {
+  it("keeps maintenance controls before diagnostics and reset actions", () => {
     const orderedControlIds = generalSearchControls.map((control) => control.id)
-    const taskNotificationsIndex = orderedControlIds.indexOf(
-      "control:task-notifications-enabled",
+    const siteAnnouncementsIndex = orderedControlIds.indexOf(
+      "control:site-announcements-polling",
     )
     const changelogIndex = orderedControlIds.indexOf(
       "control:changelog-on-update",
@@ -32,12 +31,12 @@ describe("general settings search definitions", () => {
       "control:danger-reset-settings",
     )
 
-    expect(taskNotificationsIndex).toBeGreaterThanOrEqual(0)
+    expect(siteAnnouncementsIndex).toBeGreaterThanOrEqual(0)
     expect(changelogIndex).toBeGreaterThanOrEqual(0)
     expect(loggingIndex).toBeGreaterThanOrEqual(0)
     expect(dangerResetIndex).toBeGreaterThanOrEqual(0)
 
-    expect(taskNotificationsIndex).toBeLessThan(changelogIndex)
+    expect(siteAnnouncementsIndex).toBeLessThan(changelogIndex)
     expect(changelogIndex).toBeLessThan(loggingIndex)
     expect(loggingIndex).toBeLessThan(dangerResetIndex)
   })

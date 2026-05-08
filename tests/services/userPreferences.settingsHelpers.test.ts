@@ -116,6 +116,7 @@ describe("userPreferences settings helpers", () => {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
         usageHistorySync: false,
       },
+      channels: DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
     })
 
     expect(await userPreferences.resetTaskNotifications()).toBe(true)

@@ -54,6 +54,13 @@ vi.mock("~/features/BasicSettings/components/tabs/General/GeneralTab", () => ({
 }))
 
 vi.mock(
+  "~/features/BasicSettings/components/tabs/Notifications/NotificationsTab",
+  () => ({
+    default: () => <div data-testid="notifications-tab-content" />,
+  }),
+)
+
+vi.mock(
   "~/features/BasicSettings/components/tabs/AccountManagement/AccountManagementTab",
   () => ({
     default: () => <div data-testid="account-management-tab-content" />,
@@ -132,6 +139,7 @@ vi.mock(
 
 const TAB_LABEL_WIDTHS: Record<string, number> = {
   "settings:tabs.general": 80,
+  "settings:tabs.notifications": 80,
   "settings:tabs.accountManagement": 80,
   "settings:tabs.refresh": 80,
   "settings:tabs.checkinRedeem": 80,
@@ -249,6 +257,9 @@ describe("BasicSettings tab mounting", () => {
       screen.queryByTestId("managed-site-tab-content"),
     ).not.toBeInTheDocument()
     expect(
+      screen.queryByTestId("notifications-tab-content"),
+    ).not.toBeInTheDocument()
+    expect(
       screen.queryByTestId("data-backup-tab-content"),
     ).not.toBeInTheDocument()
 
@@ -268,7 +279,43 @@ describe("BasicSettings tab mounting", () => {
     expect(screen.getByTestId("general-tab-content")).toBeInTheDocument()
     expect(screen.getByTestId("managed-site-tab-content")).toBeInTheDocument()
     expect(
+      screen.queryByTestId("notifications-tab-content"),
+    ).not.toBeInTheDocument()
+    expect(
       screen.queryByTestId("data-backup-tab-content"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("seeds the selected and mounted notifications tab from the URL tab parameter", async () => {
+    window.history.replaceState(null, "", "/?tab=notifications#basic")
+
+    render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
+
+    expect(
+      await screen.findByTestId("notifications-tab-content"),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId("general-tab-content")).not.toBeInTheDocument()
+  })
+
+  it("maps notification anchors to the notifications tab", async () => {
+    window.history.replaceState(null, "", "/#task-notifications")
+
+    render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
+
+    expect(
+      await screen.findByTestId("notifications-tab-content"),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId("general-tab-content")).not.toBeInTheDocument()
+  })
+
+  it("keeps site announcement anchors on the general tab", async () => {
+    window.history.replaceState(null, "", "/#site-announcement-notifications")
+
+    render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
+
+    expect(await screen.findByTestId("general-tab-content")).toBeInTheDocument()
+    expect(
+      screen.queryByTestId("notifications-tab-content"),
     ).not.toBeInTheDocument()
   })
 

@@ -381,8 +381,9 @@ export interface UserPreferences {
   tempWindowFallbackReminder?: TempWindowFallbackReminderPreferences
 
   /**
-   * Controls best-effort system notifications emitted by background scheduled
-   * jobs. Browser notification permission is still requested separately.
+   * Controls best-effort notifications emitted by background scheduled jobs.
+   * Browser notification permission is still requested separately for the
+   * browser channel.
    */
   taskNotifications?: TaskNotificationPreferences
 

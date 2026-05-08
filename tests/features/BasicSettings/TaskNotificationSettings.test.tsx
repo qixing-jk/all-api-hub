@@ -1,13 +1,15 @@
-import { act, fireEvent } from "@testing-library/react"
+import { act, fireEvent, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import TaskNotificationSettings from "~/features/BasicSettings/components/tabs/General/TaskNotificationSettings"
+import TaskNotificationSettings from "~/features/BasicSettings/components/tabs/Notifications/TaskNotificationSettings"
 import { OPTIONAL_PERMISSION_IDS } from "~/services/permissions/permissionManager"
 import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
 import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+  TASK_NOTIFICATION_CHANNELS,
   TASK_NOTIFICATION_TASKS,
+  type TaskNotificationPreferences,
 } from "~/types/taskNotifications"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -17,6 +19,7 @@ const {
   requestPermissionMock,
   sendRuntimeMessageMock,
   showResultToastMock,
+  taskNotificationsMock,
   showUpdateToastMock,
   updateSiteAnnouncementNotificationsMock,
   updateTaskNotificationsMock,
@@ -26,6 +29,9 @@ const {
   requestPermissionMock: vi.fn(),
   sendRuntimeMessageMock: vi.fn(),
   showResultToastMock: vi.fn(),
+  taskNotificationsMock: {
+    current: undefined as TaskNotificationPreferences | undefined,
+  },
   showUpdateToastMock: vi.fn(),
   updateSiteAnnouncementNotificationsMock: vi.fn(),
   updateTaskNotificationsMock: vi.fn(),
@@ -34,7 +40,8 @@ const {
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => ({
     siteAnnouncementNotifications: DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
-    taskNotifications: DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+    taskNotifications:
+      taskNotificationsMock.current ?? DEFAULT_TASK_NOTIFICATION_PREFERENCES,
     updateSiteAnnouncementNotifications:
       updateSiteAnnouncementNotificationsMock,
     updateTaskNotifications: updateTaskNotificationsMock,
@@ -72,6 +79,9 @@ describe("TaskNotificationSettings", () => {
     onOptionalPermissionsChangedMock.mockReturnValue(() => {})
     requestPermissionMock.mockResolvedValue(true)
     sendRuntimeMessageMock.mockResolvedValue({ success: true })
+    taskNotificationsMock.current = structuredClone(
+      DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+    )
     updateSiteAnnouncementNotificationsMock.mockResolvedValue(true)
     updateTaskNotificationsMock.mockResolvedValue(true)
   })
@@ -85,11 +95,11 @@ describe("TaskNotificationSettings", () => {
     expect(
       await screen.findByText("settings:taskNotifications.permission.request"),
     ).toBeInTheDocument()
-    expect(
-      screen.getByRole("button", {
+    screen
+      .getAllByRole("button", {
         name: "settings:taskNotifications.test.action",
-      }),
-    ).toBeDisabled()
+      })
+      .forEach((button) => expect(button).toBeDisabled())
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -138,7 +148,7 @@ describe("TaskNotificationSettings", () => {
     })
   })
 
-  it("sends a test notification and reports runtime failures", async () => {
+  it("sends a browser test notification and reports runtime failures", async () => {
     hasPermissionMock.mockResolvedValue(true)
     sendRuntimeMessageMock
       .mockResolvedValueOnce({ success: true })
@@ -149,7 +159,14 @@ describe("TaskNotificationSettings", () => {
       withThemeProvider: false,
     })
 
-    const testButton = await screen.findByRole("button", {
+    await screen.findByText("settings:taskNotifications.channels.browser.title")
+    const browserChannel = document.getElementById(
+      "task-notifications-channel-browser",
+    )
+    if (!browserChannel) {
+      throw new Error("Expected browser channel settings row")
+    }
+    const testButton = within(browserChannel).getByRole("button", {
       name: "settings:taskNotifications.test.action",
     })
 
@@ -158,6 +175,7 @@ describe("TaskNotificationSettings", () => {
     await waitFor(() => {
       expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
         action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Browser,
       })
     })
 
@@ -175,6 +193,81 @@ describe("TaskNotificationSettings", () => {
         success: false,
         message: "runtime failed",
         errorFallback: "settings:taskNotifications.test.failed",
+      })
+    })
+  })
+
+  it("sends Telegram and webhook test notifications through their own channels", async () => {
+    hasPermissionMock.mockResolvedValue(false)
+    taskNotificationsMock.current = {
+      ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      channels: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+        [TASK_NOTIFICATION_CHANNELS.Telegram]: {
+          enabled: true,
+          botToken: "telegram-token",
+          chatId: "-1001234567890",
+        },
+        [TASK_NOTIFICATION_CHANNELS.Webhook]: {
+          enabled: true,
+          url: "https://hooks.example.com/all-api-hub",
+        },
+      },
+    }
+
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await screen.findByText(
+      "settings:taskNotifications.channels.telegram.title",
+    )
+    const telegramChannel = document.getElementById(
+      "task-notifications-channel-telegram",
+    )
+    const webhookChannel = document.getElementById(
+      "task-notifications-channel-webhook",
+    )
+    if (!telegramChannel || !webhookChannel) {
+      throw new Error("Expected third-party channel settings rows")
+    }
+
+    const botTokenInput = within(telegramChannel).getByLabelText(
+      "settings:taskNotifications.channels.telegram.botToken",
+    )
+    expect(botTokenInput).toHaveAttribute("type", "password")
+
+    fireEvent.click(
+      within(telegramChannel).getByRole("button", {
+        name: "keyManagement:actions.showKey",
+      }),
+    )
+    expect(botTokenInput).toHaveAttribute("type", "text")
+
+    fireEvent.click(
+      within(telegramChannel).getByRole("button", {
+        name: "settings:taskNotifications.test.action",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Telegram,
+      })
+    })
+
+    fireEvent.click(
+      within(webhookChannel).getByRole("button", {
+        name: "settings:taskNotifications.test.action",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Webhook,
       })
     })
   })

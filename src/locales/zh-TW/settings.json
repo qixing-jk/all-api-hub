@@ -500,15 +500,49 @@
     "dataBackup": "資料與備份",
     "general": "通用",
     "managedSite": "自建站點管理",
+    "notifications": "通知",
     "permissions": "權限管理",
     "refresh": "資料重新整理",
     "select": "選擇一個分組",
     "webAiApiCheck": "AI API 測試"
   },
   "taskNotifications": {
-    "description": "控制後臺定時任務完成後是否傳送系統通知。通知權限未授予時，任務仍會照常執行。",
+    "channels": {
+      "browser": {
+        "description": "透過瀏覽器系統通知傳送，需要授予 notifications 權限。",
+        "title": "瀏覽器系統通知"
+      },
+      "telegram": {
+        "botToken": "Bot Token",
+        "botTokenPlaceholder": "123456:ABC-DEF...",
+        "chatId": "Chat ID",
+        "chatIdPlaceholder": "123456789 或 -1001234567890",
+        "description": "透過 Telegram Bot 傳送任務通知。",
+        "title": "Telegram Bot"
+      },
+      "webhook": {
+        "description": "向自訂 HTTP(S) Webhook 傳送 JSON 通知，可用於自建服務或相容的第三方平台。",
+        "title": "通用 Webhook",
+        "url": "Webhook URL",
+        "urlPlaceholder": "https://example.com/webhook"
+      }
+    },
     "enable": "啟用任務通知",
     "enableDesc": "開啟後，已勾選任務在定時執行完成時會傳送成功、部分成功或失敗通知。",
+    "groups": {
+      "channels": {
+        "description": "選擇通知透過哪些渠道送達。瀏覽器通知需要授權，Telegram 和 Webhook 可分別配置並傳送測試。",
+        "title": "通知渠道"
+      },
+      "setup": {
+        "description": "先開啟或關閉定時任務通知，再選擇通知渠道和需要提醒的事件。",
+        "title": "基礎設定"
+      },
+      "tasks": {
+        "description": "選擇哪些後臺定時任務完成或網站公告更新時需要傳送通知。",
+        "title": "通知事件"
+      }
+    },
     "notification": {
       "body": {
         "failure": "{{task}}執行失敗。",
@@ -531,7 +565,7 @@
     },
     "siteAnnouncements": {
       "enable": "網站公告通知",
-      "enableDesc": "開啟後，網站公告抓取到新公告時會傳送系統通知；關閉後仍會儲存本機公告記錄。"
+      "enableDesc": "開啟後，網站公告抓取到新公告時會傳送任務通知；關閉後仍會儲存本機公告記錄。"
     },
     "taskDescriptions": {
       "autoCheckin": "每日自動簽到和自動重試完成後通知。",
@@ -550,11 +584,16 @@
     "tasksLabel": "任務通知",
     "test": {
       "action": "傳送測試通知",
-      "failed": "測試通知傳送失敗，請確認已授予通知權限。",
+      "browserFailed": "瀏覽器通知測試失敗，請確認已啟用瀏覽器通知渠道並授予通知權限。",
+      "channelDisabled": "測試通知傳送失敗，請先啟用並設定此通知渠道。",
+      "failed": "測試通知傳送失敗，請檢查此通知渠道設定。",
       "message": "這是一條 All API Hub 任務通知測試。",
-      "sent": "測試通知已傳送"
-    },
-    "title": "通知"
+      "sent": "測試通知已傳送",
+      "telegramMissingConfig": "Telegram Bot Token 或 Chat ID 未設定。",
+      "title": "All API Hub 測試通知",
+      "webhookInvalidUrl": "Webhook URL 必須使用 http:// 或 https://。",
+      "webhookMissingConfig": "Webhook URL 未設定。"
+    }
   },
   "theme": {
     "appearance": "外觀",

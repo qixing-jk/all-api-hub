@@ -25,7 +25,10 @@ import type {
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import { DEFAULT_NEW_API_CONFIG } from "~/types/newApiConfig"
 import { SortingCriteriaType } from "~/types/sorting"
-import { DEFAULT_TASK_NOTIFICATION_PREFERENCES } from "~/types/taskNotifications"
+import {
+  DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+  TASK_NOTIFICATION_CHANNELS,
+} from "~/types/taskNotifications"
 import { DEFAULT_VELOERA_CONFIG } from "~/types/veloeraConfig"
 import { DEFAULT_WEBDAV_SETTINGS, WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 import { buildUserPreferences } from "~~/tests/test-utils/factories"
@@ -970,7 +973,7 @@ describe("preferencesMigration", () => {
             ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
             webdavAutoSync: false,
           },
-        },
+        } as any,
       })
 
       const result = migratePreferences(prefs)
@@ -982,6 +985,7 @@ describe("preferencesMigration", () => {
           ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
           webdavAutoSync: false,
         },
+        channels: DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
       })
     })
 
@@ -993,7 +997,7 @@ describe("preferencesMigration", () => {
           tasks: {
             autoCheckin: false,
           } as any,
-        },
+        } as any,
       })
 
       const result = migratePreferences(prefs)
@@ -1003,6 +1007,40 @@ describe("preferencesMigration", () => {
         tasks: {
           ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
           autoCheckin: false,
+        },
+        channels: DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+      })
+    })
+
+    it("preserves configured third-party notification channels during v19 to v20 migration", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 19,
+        taskNotifications: {
+          enabled: true,
+          tasks: DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+          channels: {
+            ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+            [TASK_NOTIFICATION_CHANNELS.Telegram]: {
+              enabled: true,
+              botToken: "telegram-token",
+              chatId: "-1001234567890",
+            },
+          },
+        },
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.taskNotifications).toEqual({
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Telegram]: {
+            enabled: true,
+            botToken: "telegram-token",
+            chatId: "-1001234567890",
+          },
         },
       })
     })

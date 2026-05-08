@@ -56,6 +56,7 @@ import {
 import type { SortingPriorityConfig } from "~/types/sorting"
 import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+  normalizeTaskNotificationPreferences,
   type TaskNotificationPreferences,
 } from "~/types/taskNotifications"
 import type { ThemeMode } from "~/types/theme"
@@ -1905,8 +1906,9 @@ export const UserPreferencesProvider = ({
     tempWindowFallbackReminder:
       preferences.tempWindowFallbackReminder ??
       (DEFAULT_PREFERENCES.tempWindowFallbackReminder as TempWindowFallbackReminderPreferences),
-    taskNotifications:
-      preferences.taskNotifications ?? DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+    taskNotifications: normalizeTaskNotificationPreferences(
+      preferences.taskNotifications,
+    ),
     siteAnnouncementNotifications: normalizeSiteAnnouncementPreferences(
       preferences.siteAnnouncementNotifications,
     ),

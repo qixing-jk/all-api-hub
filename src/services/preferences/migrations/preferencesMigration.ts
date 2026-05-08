@@ -18,7 +18,10 @@ import {
   type BalanceHistoryPreferences,
 } from "~/types/dailyBalanceHistory"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
-import { DEFAULT_TASK_NOTIFICATION_PREFERENCES } from "~/types/taskNotifications"
+import {
+  DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+  normalizeTaskNotificationPreferences,
+} from "~/types/taskNotifications"
 import {
   DEFAULT_WEBDAV_SETTINGS,
   resolveWebdavSyncDataSelection,
@@ -33,7 +36,7 @@ import { migrateSortingConfig } from "./sortingConfigMigration"
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 19
+export const CURRENT_PREFERENCES_VERSION = 20
 
 /**
  * Migration function type
@@ -413,22 +416,32 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
     logger.debug("Migrating preferences from v18 to v19 (task notifications)")
 
     const stored = (prefs as any).taskNotifications
-    const storedTasks =
-      stored && typeof stored === "object" ? stored.tasks : undefined
 
     return {
       ...prefs,
-      taskNotifications: {
-        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
-        ...(stored && typeof stored === "object" ? stored : {}),
-        tasks: {
-          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
-          ...(storedTasks && typeof storedTasks === "object"
-            ? storedTasks
-            : {}),
-        },
-      },
+      taskNotifications:
+        stored && typeof stored === "object"
+          ? normalizeTaskNotificationPreferences(stored)
+          : DEFAULT_TASK_NOTIFICATION_PREFERENCES,
       preferencesVersion: 19,
+    }
+  },
+
+  // Version 19 -> 20: Add browser, Telegram, and generic webhook notification channels
+  20: (prefs: UserPreferences): UserPreferences => {
+    logger.debug(
+      "Migrating preferences from v19 to v20 (task notification channels)",
+    )
+
+    const stored = (prefs as any).taskNotifications
+
+    return {
+      ...prefs,
+      taskNotifications:
+        stored && typeof stored === "object"
+          ? normalizeTaskNotificationPreferences(stored)
+          : DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      preferencesVersion: 20,
     }
   },
 }

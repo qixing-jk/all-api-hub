@@ -6,6 +6,7 @@ export const hasOptionalPermissions = OPTIONAL_PERMISSIONS.length > 0
 
 export const BASIC_SETTINGS_TAB_ORDER: BasicSettingsTabId[] = [
   "general",
+  "notifications",
   "accountManagement",
   "refresh",
   "checkinRedeem",

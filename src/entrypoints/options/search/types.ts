@@ -4,6 +4,7 @@ export type OptionsSearchItemKind = "page" | "tab" | "section" | "control"
 
 export type BasicSettingsTabId =
   | "general"
+  | "notifications"
   | "balanceHistory"
   | "accountManagement"
   | "refresh"

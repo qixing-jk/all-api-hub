@@ -51,6 +51,7 @@ import GeneralTab from "./components/tabs/General/GeneralTab"
 
 type TabId =
   | "general"
+  | "notifications"
   | "balanceHistory"
   | "accountManagement"
   | "refresh"
@@ -100,6 +101,9 @@ const DataBackupTab = createLazyTabComponent(
 const ManagedSiteTab = createLazyTabComponent(
   () => import("./components/tabs/ManagedSite/ManagedSiteTab"),
 )
+const NotificationsTab = createLazyTabComponent(
+  () => import("./components/tabs/Notifications/NotificationsTab"),
+)
 const PermissionsTab = createLazyTabComponent(
   () => import("./components/tabs/Permissions/PermissionsTab"),
 )
@@ -120,6 +124,7 @@ const PERMISSIONS_TAB_CONFIG: TabConfig = {
 
 const TAB_CONFIGS = [
   { id: "general", component: GeneralTab },
+  { id: "notifications", component: NotificationsTab },
   { id: "accountManagement", component: AccountManagementTab },
   { id: "refresh", component: AutoRefreshTab },
   { id: "checkinRedeem", component: CheckinRedeemTab },
@@ -138,6 +143,18 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   display: "general",
   appearance: "general",
   theme: "general",
+  "task-notifications": "notifications",
+  "task-notifications-enabled": "notifications",
+  "task-notifications-permission": "notifications",
+  "task-notifications-autoCheckin": "notifications",
+  "task-notifications-webdavAutoSync": "notifications",
+  "task-notifications-managedSiteModelSync": "notifications",
+  "task-notifications-usageHistorySync": "notifications",
+  "task-notifications-balanceHistoryCapture": "notifications",
+  "task-notifications-site-announcements": "notifications",
+  "site-announcement-notifications": "general",
+  "site-announcement-notifications-enabled": "general",
+  "site-announcement-notifications-page": "general",
   "balance-history": "balanceHistory",
   "account-management": "accountManagement",
   "auto-provision-key-on-account-add": "accountManagement",
@@ -235,6 +252,8 @@ function getSettingsTabLabel(t: TFunction, tabId: TabId): string {
   switch (tabId) {
     case "general":
       return t("settings:tabs.general")
+    case "notifications":
+      return t("settings:tabs.notifications")
     case "balanceHistory":
       return t("settings:tabs.balanceHistory")
     case "accountManagement":

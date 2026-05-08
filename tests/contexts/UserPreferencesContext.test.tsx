@@ -657,6 +657,7 @@ describe("UserPreferencesContext", () => {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
         autoCheckin: false,
       },
+      channels: DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
     })
 
     expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({

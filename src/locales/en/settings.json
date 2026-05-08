@@ -500,15 +500,49 @@
     "dataBackup": "Data & Backup",
     "general": "General",
     "managedSite": "Managed site",
+    "notifications": "Notifications",
     "permissions": "Permissions",
     "refresh": "Data Refresh",
     "select": "Select a tab",
     "webAiApiCheck": "AI API Test"
   },
   "taskNotifications": {
-    "description": "Control whether background scheduled tasks send system notifications after they finish. Tasks continue running normally when notification permission is not granted.",
+    "channels": {
+      "browser": {
+        "description": "Send through browser system notifications. Requires the notifications permission.",
+        "title": "Browser system notifications"
+      },
+      "telegram": {
+        "botToken": "Bot token",
+        "botTokenPlaceholder": "123456:ABC-DEF...",
+        "chatId": "Chat ID",
+        "chatIdPlaceholder": "123456789 or -1001234567890",
+        "description": "Send task notifications through a Telegram Bot.",
+        "title": "Telegram Bot"
+      },
+      "webhook": {
+        "description": "Send JSON notifications to a custom HTTP(S) webhook for self-hosted services or compatible third-party platforms.",
+        "title": "Generic webhook",
+        "url": "Webhook URL",
+        "urlPlaceholder": "https://example.com/webhook"
+      }
+    },
     "enable": "Enable task notifications",
     "enableDesc": "When enabled, selected tasks send success, partial success, or failure notifications after scheduled runs finish.",
+    "groups": {
+      "channels": {
+        "description": "Choose where notifications are delivered. Browser notifications need permission, while Telegram and webhook channels can be configured and tested separately.",
+        "title": "Notification channels"
+      },
+      "setup": {
+        "description": "Turn scheduled task notifications on or off before choosing channels and event types.",
+        "title": "Basic settings"
+      },
+      "tasks": {
+        "description": "Select which scheduled task completions or site announcement updates should notify you.",
+        "title": "Notification events"
+      }
+    },
     "notification": {
       "body": {
         "failure": "{{task}} failed.",
@@ -531,7 +565,7 @@
     },
     "siteAnnouncements": {
       "enable": "Site announcement notifications",
-      "enableDesc": "When enabled, newly fetched site announcements send system notifications. Local announcement records are still saved when disabled."
+      "enableDesc": "When enabled, newly fetched site announcements send task notifications. Local announcement records are still saved when disabled."
     },
     "taskDescriptions": {
       "autoCheckin": "Notify after daily automatic check-in and automatic retry runs finish.",
@@ -550,11 +584,16 @@
     "tasksLabel": "Task notifications",
     "test": {
       "action": "Send test notification",
-      "failed": "Failed to send the test notification. Check notification permission.",
+      "browserFailed": "Browser notification test failed. Make sure the browser notification channel is enabled and notification permission is granted.",
+      "channelDisabled": "Failed to send the test notification. Enable and configure this notification channel first.",
+      "failed": "Failed to send the test notification. Check this notification channel configuration.",
       "message": "This is an All API Hub task notification test.",
-      "sent": "Test notification sent"
-    },
-    "title": "Notifications"
+      "sent": "Test notification sent",
+      "telegramMissingConfig": "Telegram Bot token or Chat ID is not configured.",
+      "title": "All API Hub test notification",
+      "webhookInvalidUrl": "Webhook URL must use http:// or https://.",
+      "webhookMissingConfig": "Webhook URL is not configured."
+    }
   },
   "theme": {
     "appearance": "Appearance",

@@ -30,6 +30,10 @@ import {
   managedSiteSearchSections,
 } from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSite.search"
 import {
+  notificationsSearchControls,
+  notificationsSearchSections,
+} from "~/features/BasicSettings/components/tabs/Notifications/Notifications.search"
+import {
   permissionsSearchControls,
   permissionsSearchSections,
 } from "~/features/BasicSettings/components/tabs/Permissions/Permissions.search"
@@ -57,6 +61,7 @@ export const OPTIONS_SEARCH_REGISTRY = [
   ...PAGE_DEFINITIONS,
   ...TAB_DEFINITIONS,
   ...generalSearchSections,
+  ...notificationsSearchSections,
   ...accountManagementSearchSections,
   ...refreshSearchSections,
   ...checkinRedeemSearchSections,
@@ -69,6 +74,7 @@ export const OPTIONS_SEARCH_REGISTRY = [
   ...permissionsSearchSections,
   ...importExportSearchSections,
   ...generalSearchControls,
+  ...notificationsSearchControls,
   ...accountManagementSearchControls,
   ...refreshSearchControls,
   ...checkinRedeemSearchControls,

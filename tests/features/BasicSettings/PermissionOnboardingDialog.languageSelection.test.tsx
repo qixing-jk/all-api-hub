@@ -101,7 +101,7 @@ vi.mock(
 )
 
 vi.mock(
-  "~/features/BasicSettings/components/tabs/General/TaskNotificationSettings",
+  "~/features/BasicSettings/components/tabs/Notifications/TaskNotificationSettings",
   () => ({
     default: () => <div data-testid="task-notification-settings" />,
   }),

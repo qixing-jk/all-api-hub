@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -13,6 +13,7 @@ import {
   getTaskNotificationId,
   getTaskNotificationStatusFromCounts,
   parseTaskNotificationId,
+  TASK_NOTIFICATION_CHANNELS,
   TASK_NOTIFICATION_STATUSES,
   TASK_NOTIFICATION_TASKS,
 } from "~/types/taskNotifications"
@@ -20,6 +21,7 @@ import {
 const {
   clearNotificationMock,
   createNotificationMock,
+  fetchMock,
   getPreferencesMock,
   hasNotificationsAPIMock,
   hasPermissionMock,
@@ -28,6 +30,7 @@ const {
 } = vi.hoisted(() => ({
   clearNotificationMock: vi.fn(),
   createNotificationMock: vi.fn(),
+  fetchMock: vi.fn(),
   getPreferencesMock: vi.fn(),
   hasNotificationsAPIMock: vi.fn(),
   hasPermissionMock: vi.fn(),
@@ -87,6 +90,7 @@ describe("taskNotificationService", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     translationCalls.length = 0
+    vi.stubGlobal("fetch", fetchMock)
     __resetTaskNotificationServiceForTesting()
     getPreferencesMock.mockResolvedValue({
       taskNotifications: DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -99,6 +103,14 @@ describe("taskNotificationService", () => {
     clearNotificationMock.mockResolvedValue(true)
     onNotificationClickedMock.mockReturnValue(vi.fn())
     openOrFocusOptionsMenuItemMock.mockResolvedValue(undefined)
+    fetchMock.mockResolvedValue({
+      ok: true,
+      status: 200,
+    })
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
   })
 
   it("skips notifications when the global switch is disabled", async () => {
@@ -297,6 +309,81 @@ describe("taskNotificationService", () => {
     )
   })
 
+  it("sends Telegram notifications when browser notification permission is missing", async () => {
+    hasPermissionMock.mockResolvedValueOnce(false)
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Telegram]: {
+            enabled: true,
+            botToken: "123456:telegram-token",
+            chatId: "-1001234567890",
+          },
+        },
+      },
+    })
+
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+      }),
+    ).resolves.toBe(true)
+
+    expect(createNotificationMock).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.telegram.org/bot123456%3Atelegram-token/sendMessage",
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining("-1001234567890"),
+      }),
+    )
+  })
+
+  it("posts generic webhook notifications with task metadata", async () => {
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Browser]: {
+            enabled: false,
+          },
+          [TASK_NOTIFICATION_CHANNELS.Webhook]: {
+            enabled: true,
+            url: "https://hooks.example.com/all-api-hub",
+          },
+        },
+      },
+    })
+
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.WebdavAutoSync,
+        status: TASK_NOTIFICATION_STATUSES.Failure,
+        counts: {
+          total: 2,
+          success: 1,
+          failed: 1,
+        },
+      }),
+    ).resolves.toBe(true)
+
+    expect(createNotificationMock).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://hooks.example.com/all-api-hub",
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: expect.stringContaining('"task":"webdavAutoSync"'),
+      }),
+    )
+  })
+
   it("returns false when loading preferences throws", async () => {
     getPreferencesMock.mockRejectedValueOnce(new Error("prefs failed"))
 
@@ -362,10 +449,121 @@ describe("taskNotificationService", () => {
       sendResponse,
     )
 
+    expect(createNotificationMock).toHaveBeenCalledWith(
+      getTaskNotificationId(TASK_NOTIFICATION_TASKS.AutoCheckin),
+      expect.objectContaining({
+        title: "settings:taskNotifications.test.title",
+        message: "settings:taskNotifications.test.message",
+      }),
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      error: undefined,
+    })
+  })
+
+  it("does not require the auto-check-in task switch for test notification runtime messages", async () => {
+    const sendResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        tasks: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks,
+          [TASK_NOTIFICATION_TASKS.AutoCheckin]: false,
+        },
+      },
+    })
+
+    await handleTaskNotificationMessage(
+      { action: RuntimeActionIds.TaskNotificationsTest },
+      sendResponse,
+    )
+
     expect(createNotificationMock).toHaveBeenCalled()
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
       error: undefined,
+    })
+  })
+
+  it("handles channel-specific test notification runtime messages", async () => {
+    const sendResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Telegram]: {
+            enabled: true,
+            botToken: "telegram-token",
+            chatId: "123456789",
+          },
+        },
+      },
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Telegram,
+      },
+      sendResponse,
+    )
+
+    expect(createNotificationMock).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.telegram.org/bottelegram-token/sendMessage",
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining("123456789"),
+      }),
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      error: undefined,
+    })
+  })
+
+  it("returns Telegram API response descriptions for channel-specific tests", async () => {
+    const sendResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Telegram]: {
+            enabled: true,
+            botToken: "telegram-token",
+            chatId: "telegram-bot",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 403,
+      headers: {
+        get: () => "application/json",
+      },
+      json: async () => ({
+        ok: false,
+        error_code: 403,
+        description: "Forbidden: the bot can't send messages to the bot",
+      }),
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Telegram,
+      },
+      sendResponse,
+    )
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error:
+        "Telegram API returned HTTP 403: Forbidden: the bot can't send messages to the bot",
     })
   })
 

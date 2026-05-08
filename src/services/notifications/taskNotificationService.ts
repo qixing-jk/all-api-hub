@@ -9,9 +9,13 @@ import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,
   getTaskNotificationId,
+  normalizeTaskNotificationPreferences,
   parseTaskNotificationId,
+  TASK_NOTIFICATION_CHANNELS,
   TASK_NOTIFICATION_STATUSES,
   TASK_NOTIFICATION_TASKS,
+  type TaskNotificationChannel,
+  type TaskNotificationPreferences,
   type TaskNotificationStatus,
   type TaskNotificationTask,
 } from "~/types/taskNotifications"
@@ -45,11 +49,23 @@ interface TaskNotificationPayload {
 
 interface TaskNotificationMessageRequest {
   action: string
+  channel?: TaskNotificationChannel
 }
 
 interface TaskNotificationMessageResponse {
   success: boolean
   error?: string
+}
+
+interface TaskNotificationContent {
+  title: string
+  message: string
+}
+
+interface TaskNotificationDeliveryOptions {
+  channels?: readonly TaskNotificationChannel[]
+  ignoreTaskPreference?: boolean
+  surfaceErrors?: boolean
 }
 
 const TASK_LABEL_KEYS: Record<TaskNotificationTask, string> = {
@@ -194,23 +210,79 @@ function buildNotificationContent(payload: TaskNotificationPayload) {
 }
 
 /**
- * Checks user preferences and browser capabilities before sending a notification.
+ * Checks user preferences before sending through any configured channel.
  */
-async function shouldNotify(
+function isTaskNotificationEnabled(
   payload: TaskNotificationPayload,
-): Promise<boolean> {
-  const prefs = await userPreferences.getPreferences()
-  const taskNotifications =
-    prefs.taskNotifications ?? DEFAULT_TASK_NOTIFICATION_PREFERENCES
+  taskNotifications: TaskNotificationPreferences,
+  options: Pick<TaskNotificationDeliveryOptions, "ignoreTaskPreference"> = {},
+): boolean {
+  if (!taskNotifications.enabled) {
+    return false
+  }
+
+  if (options.ignoreTaskPreference) {
+    return true
+  }
 
   const taskEnabled =
     taskNotifications.tasks[payload.task] ??
     DEFAULT_TASK_NOTIFICATION_PREFERENCES.tasks[payload.task]
 
-  if (!taskNotifications.enabled || !taskEnabled) {
+  if (!taskEnabled) {
     return false
   }
 
+  return true
+}
+
+/**
+ * Extracts a concise error detail from third-party notification responses.
+ */
+async function getNotificationResponseErrorDetail(
+  response: Response,
+): Promise<string | null> {
+  try {
+    const contentType = response.headers.get("content-type") ?? ""
+    if (contentType.includes("application/json")) {
+      const body = (await response.json()) as {
+        description?: unknown
+        message?: unknown
+        error?: unknown
+      }
+      const message = body.description ?? body.message ?? body.error
+      return typeof message === "string" && message.trim()
+        ? message.trim()
+        : null
+    }
+
+    const text = await response.text()
+    return text.trim() ? text.trim().slice(0, 300) : null
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Builds a user-facing HTTP failure message from a third-party response.
+ */
+async function getNotificationHttpErrorMessage(
+  label: string,
+  response: Response,
+): Promise<string> {
+  const detail = await getNotificationResponseErrorDetail(response)
+  return detail
+    ? `${label} returned HTTP ${response.status}: ${detail}`
+    : `${label} returned HTTP ${response.status}`
+}
+
+/**
+ * Sends a browser system notification when that channel is enabled and allowed.
+ */
+async function sendBrowserNotification(
+  payload: TaskNotificationPayload,
+  content: TaskNotificationContent,
+): Promise<boolean> {
   if (!hasNotificationsAPI()) {
     logger.warn("Task notification skipped: notifications API unavailable", {
       task: payload.task,
@@ -228,42 +300,219 @@ async function shouldNotify(
     return false
   }
 
+  const createdId = await createNotification(
+    getTaskNotificationId(payload.task),
+    {
+      type: "basic",
+      iconUrl,
+      title: content.title,
+      message: content.message,
+      isClickable: true,
+    },
+  )
+
+  return createdId !== null
+}
+
+/**
+ * Sends a plain-text Telegram Bot message.
+ */
+async function sendTelegramNotification(
+  content: TaskNotificationContent,
+  config: TaskNotificationPreferences["channels"][typeof TASK_NOTIFICATION_CHANNELS.Telegram],
+): Promise<boolean> {
+  const botToken = config.botToken.trim()
+  const chatId = config.chatId.trim()
+  if (!botToken || !chatId) {
+    throw new Error(t("settings:taskNotifications.test.telegramMissingConfig"))
+  }
+
+  const response = await fetch(
+    `https://api.telegram.org/bot${encodeURIComponent(botToken)}/sendMessage`,
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        chat_id: chatId,
+        text: `${content.title}\n${content.message}`.slice(0, 4096),
+        disable_web_page_preview: true,
+      }),
+    },
+  )
+
+  if (!response.ok) {
+    throw new Error(
+      await getNotificationHttpErrorMessage("Telegram API", response),
+    )
+  }
+
   return true
 }
 
 /**
- * Sends a best-effort system notification for a scheduled task result.
+ * Sends a JSON payload to a user-provided webhook endpoint.
+ */
+async function sendWebhookNotification(
+  payload: TaskNotificationPayload,
+  content: TaskNotificationContent,
+  config: TaskNotificationPreferences["channels"][typeof TASK_NOTIFICATION_CHANNELS.Webhook],
+): Promise<boolean> {
+  const url = config.url.trim()
+  if (!url) {
+    throw new Error(t("settings:taskNotifications.test.webhookMissingConfig"))
+  }
+
+  const parsedUrl = new URL(url)
+  if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
+    logger.warn("Webhook task notification skipped: unsupported URL protocol", {
+      task: payload.task,
+      status: payload.status,
+      protocol: parsedUrl.protocol,
+    })
+    throw new Error(t("settings:taskNotifications.test.webhookInvalidUrl"))
+  }
+
+  const response = await fetch(parsedUrl.toString(), {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      source: "all-api-hub",
+      title: content.title,
+      message: content.message,
+      task: payload.task,
+      status: payload.status,
+      counts: payload.counts ?? null,
+    }),
+  })
+
+  if (!response.ok) {
+    throw new Error(await getNotificationHttpErrorMessage("Webhook", response))
+  }
+
+  return true
+}
+
+/**
+ * Sends the prepared notification content through all enabled channels.
+ */
+async function sendConfiguredChannels(
+  payload: TaskNotificationPayload,
+  content: TaskNotificationContent,
+  taskNotifications: TaskNotificationPreferences,
+  options: TaskNotificationDeliveryOptions = {},
+): Promise<boolean> {
+  const deliveryResults: boolean[] = []
+  const channels = taskNotifications.channels
+  const requestedChannels = options.channels
+  const isSingleChannelTest = options.surfaceErrors && requestedChannels
+  const shouldSendChannel = (channel: TaskNotificationChannel) =>
+    !requestedChannels || requestedChannels.includes(channel)
+  const handleChannelFailure = (
+    channel: TaskNotificationChannel,
+    error: unknown,
+  ) => {
+    logger.warn(`${channel} task notification failed`, {
+      task: payload.task,
+      status: payload.status,
+      error: getErrorMessage(error),
+    })
+    if (options.surfaceErrors) {
+      throw error
+    }
+    deliveryResults.push(false)
+  }
+
+  if (
+    shouldSendChannel(TASK_NOTIFICATION_CHANNELS.Browser) &&
+    channels[TASK_NOTIFICATION_CHANNELS.Browser].enabled
+  ) {
+    const delivered = await sendBrowserNotification(payload, content)
+    if (!delivered && options.surfaceErrors) {
+      throw new Error(t("settings:taskNotifications.test.browserFailed"))
+    }
+    deliveryResults.push(delivered)
+  }
+
+  if (
+    shouldSendChannel(TASK_NOTIFICATION_CHANNELS.Telegram) &&
+    channels[TASK_NOTIFICATION_CHANNELS.Telegram].enabled
+  ) {
+    try {
+      deliveryResults.push(
+        await sendTelegramNotification(
+          content,
+          channels[TASK_NOTIFICATION_CHANNELS.Telegram],
+        ),
+      )
+    } catch (error) {
+      handleChannelFailure(TASK_NOTIFICATION_CHANNELS.Telegram, error)
+    }
+  }
+
+  if (
+    shouldSendChannel(TASK_NOTIFICATION_CHANNELS.Webhook) &&
+    channels[TASK_NOTIFICATION_CHANNELS.Webhook].enabled
+  ) {
+    try {
+      deliveryResults.push(
+        await sendWebhookNotification(
+          payload,
+          content,
+          channels[TASK_NOTIFICATION_CHANNELS.Webhook],
+        ),
+      )
+    } catch (error) {
+      handleChannelFailure(TASK_NOTIFICATION_CHANNELS.Webhook, error)
+    }
+  }
+
+  if (isSingleChannelTest && deliveryResults.length === 0) {
+    throw new Error(t("settings:taskNotifications.test.channelDisabled"))
+  }
+
+  return deliveryResults.some(Boolean)
+}
+
+/**
+ * Sends a best-effort notification for a scheduled task result.
  *
  * Notification failures are deliberately swallowed so the background task result
  * remains independent from user-facing delivery.
  */
 export async function notifyTaskResult(
   payload: TaskNotificationPayload,
+  options?: TaskNotificationDeliveryOptions,
 ): Promise<boolean> {
   try {
-    if (!(await shouldNotify(payload))) {
+    const prefs = await userPreferences.getPreferences()
+    const taskNotifications = normalizeTaskNotificationPreferences(
+      prefs.taskNotifications,
+    )
+
+    if (!isTaskNotificationEnabled(payload, taskNotifications, options)) {
       return false
     }
 
     const content = buildNotificationContent(payload)
-    const createdId = await createNotification(
-      getTaskNotificationId(payload.task),
-      {
-        type: "basic",
-        iconUrl,
-        title: content.title,
-        message: content.message,
-        isClickable: true,
-      },
+    return await sendConfiguredChannels(
+      payload,
+      content,
+      taskNotifications,
+      options,
     )
-
-    return createdId !== null
   } catch (error) {
     logger.warn("Task notification failed", {
       task: payload.task,
       status: payload.status,
       error: getErrorMessage(error),
     })
+    if (options?.surfaceErrors) {
+      throw error
+    }
     return false
   }
 }
@@ -320,14 +569,31 @@ export async function handleTaskNotificationMessage(
     return
   }
 
-  const success = await notifyTaskResult({
-    task: TASK_NOTIFICATION_TASKS.AutoCheckin,
-    status: TASK_NOTIFICATION_STATUSES.Success,
-    message: t("settings:taskNotifications.test.message"),
-  })
+  try {
+    const success = await notifyTaskResult(
+      {
+        task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+        title: t("settings:taskNotifications.test.title"),
+        message: t("settings:taskNotifications.test.message"),
+      },
+      request.channel
+        ? {
+            channels: [request.channel],
+            ignoreTaskPreference: true,
+            surfaceErrors: true,
+          }
+        : { ignoreTaskPreference: true },
+    )
 
-  sendResponse({
-    success,
-    error: success ? undefined : t("settings:taskNotifications.test.failed"),
-  })
+    sendResponse({
+      success,
+      error: success ? undefined : t("settings:taskNotifications.test.failed"),
+    })
+  } catch (error) {
+    sendResponse({
+      success: false,
+      error: getErrorMessage(error),
+    })
+  }
 }

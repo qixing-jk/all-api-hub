@@ -5,11 +5,10 @@ import DisplaySettings from "./DisplaySettings"
 import LoggingSettings from "./LoggingSettings"
 import ResetSettingsSection from "./ResetSettingsSection"
 import SiteAnnouncementNotificationSettings from "./SiteAnnouncementNotificationSettings"
-import TaskNotificationSettings from "./TaskNotificationSettings"
 
 /**
- * General Basic Settings tab for everyday UI preferences, behavior, notifications,
- * maintenance preferences, diagnostics, and reset actions.
+ * General Basic Settings tab for everyday UI preferences, behavior,
+ * site announcement polling, maintenance preferences, diagnostics, and reset actions.
  */
 export default function GeneralTab() {
   return (
@@ -17,7 +16,6 @@ export default function GeneralTab() {
       <DisplaySettings />
       <AppearanceSettings />
       <ActionClickBehaviorSettings />
-      <TaskNotificationSettings />
       <SiteAnnouncementNotificationSettings />
       <ChangelogOnUpdateSettings />
       <LoggingSettings />
