@@ -15,6 +15,22 @@ marked.setOptions({
 })
 
 /**
+ * Normalizes announcement links after sanitization so Markdown and raw HTML
+ * links share the same external navigation behavior.
+ */
+function forceLinksToOpenInNewTab(html: string) {
+  const template = document.createElement("template")
+  template.innerHTML = html
+
+  template.content.querySelectorAll("a").forEach((link) => {
+    link.setAttribute("target", "_blank")
+    link.setAttribute("rel", "noopener noreferrer")
+  })
+
+  return template.innerHTML
+}
+
+/**
  * Renders site-provided announcement Markdown while keeping raw HTML sanitized.
  */
 export function AnnouncementMarkdown({
@@ -26,7 +42,9 @@ export function AnnouncementMarkdown({
       return ""
     }
 
-    return DOMPurify.sanitize(marked.parse(content) as string)
+    return forceLinksToOpenInNewTab(
+      DOMPurify.sanitize(marked.parse(content) as string),
+    )
   }, [content])
 
   if (!html) {
