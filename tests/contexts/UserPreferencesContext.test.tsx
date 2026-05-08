@@ -1958,8 +1958,6 @@ describe("UserPreferencesContext", () => {
     const savedPreferences = deepOverride(preferences, {
       siteAnnouncementNotifications: {
         enabled: false,
-        notificationEnabled: false,
-        intervalMinutes: 120,
       },
       lastUpdated: preferences.lastUpdated + 10,
     })
@@ -1986,15 +1984,22 @@ describe("UserPreferencesContext", () => {
         intervalMinutes: 120,
       },
     })
-    expect((latestContext as any)?.preferences).toEqual(savedPreferences)
+    expect((latestContext as any)?.preferences).toEqual({
+      ...savedPreferences,
+      siteAnnouncementNotifications: {
+        enabled: false,
+        notificationEnabled:
+          DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.notificationEnabled,
+        intervalMinutes: DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES.intervalMinutes,
+      },
+    })
   })
 
   it("merges site announcement preference updates locally when background omits a saved snapshot", async () => {
     const preferences = clonePreferences()
     preferences.siteAnnouncementNotifications = {
-      ...DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
-      intervalMinutes: 360,
-    }
+      enabled: true,
+    } as typeof preferences.siteAnnouncementNotifications
     mockedSendRuntimeMessage.mockResolvedValue({
       success: true,
     })
@@ -2023,6 +2028,41 @@ describe("UserPreferencesContext", () => {
       notificationEnabled: false,
       intervalMinutes: 120,
     })
+  })
+
+  it("keeps site announcement preferences unchanged when the background update fails", async () => {
+    const preferences = clonePreferences()
+    const originalSiteAnnouncementNotifications =
+      preferences.siteAnnouncementNotifications
+    mockedSendRuntimeMessage.mockResolvedValue({
+      success: false,
+    })
+
+    const context = await renderProvider(preferences)
+
+    let success = true
+    await act(async () => {
+      success = await context.updateSiteAnnouncementNotifications({
+        enabled: false,
+      })
+    })
+
+    expect(success).toBe(false)
+    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
+      action: RuntimeActionIds.SiteAnnouncementsUpdatePreferences,
+      settings: {
+        enabled: false,
+      },
+    })
+    expect(
+      (latestContext as any)?.preferences.siteAnnouncementNotifications,
+    ).toEqual(originalSiteAnnouncementNotifications)
+    expect((latestContext as any)?.siteAnnouncementNotifications).toEqual(
+      originalSiteAnnouncementNotifications,
+    )
+    expect((latestContext as any)?.preferences.lastUpdated).toBe(
+      preferences.lastUpdated,
+    )
   })
 
   it("refreshes context menus when feature enabled state changes and preserves existing nested settings", async () => {

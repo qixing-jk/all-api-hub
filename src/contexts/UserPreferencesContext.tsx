@@ -1486,17 +1486,25 @@ export const UserPreferencesProvider = ({
       )
 
       if (response.success && isUserPreferencesSnapshot(response.data)) {
-        setPreferences(response.data)
+        setPreferences({
+          ...response.data,
+          siteAnnouncementNotifications: normalizeSiteAnnouncementPreferences(
+            response.data.siteAnnouncementNotifications,
+          ),
+        })
       } else if (response.success) {
         setPreferences((prev) =>
           prev
             ? {
                 ...prev,
-                siteAnnouncementNotifications: deepOverride(
-                  prev.siteAnnouncementNotifications ??
-                    DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
-                  updates,
-                ),
+                siteAnnouncementNotifications:
+                  normalizeSiteAnnouncementPreferences(
+                    deepOverride(
+                      prev.siteAnnouncementNotifications ??
+                        DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
+                      updates,
+                    ),
+                  ),
                 lastUpdated: Date.now(),
               }
             : prev,
@@ -1507,7 +1515,6 @@ export const UserPreferencesProvider = ({
     },
     [],
   )
-
   const resetToDefaults = useCallback(async () => {
     const success = await userPreferences.resetToDefaults()
     if (success) {

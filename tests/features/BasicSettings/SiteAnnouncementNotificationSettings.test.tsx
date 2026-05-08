@@ -73,6 +73,41 @@ describe("SiteAnnouncementNotificationSettings", () => {
     )
   })
 
+  it("shows failure feedback when the polling preference update fails", async () => {
+    updateSiteAnnouncementNotificationsMock.mockResolvedValue(false)
+
+    render(<SiteAnnouncementNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const pollingItem = (
+      await screen.findByText(
+        "settings:siteAnnouncementNotifications.polling.enable",
+      )
+    ).closest('[id="site-announcement-notifications-enabled"]')
+    const pollingSwitch = pollingItem?.querySelector(
+      '[role="switch"]',
+    ) as HTMLElement | null
+
+    expect(pollingSwitch).not.toBeNull()
+    expect(pollingSwitch).toHaveAttribute("aria-checked", "true")
+
+    fireEvent.click(pollingSwitch!)
+
+    await waitFor(() => {
+      expect(updateSiteAnnouncementNotificationsMock).toHaveBeenCalledWith({
+        enabled: false,
+      })
+    })
+
+    expect(showUpdateToastMock).toHaveBeenCalledWith(
+      false,
+      "settings:siteAnnouncementNotifications.polling.enable",
+    )
+    expect(pollingSwitch).toHaveAttribute("aria-checked", "true")
+  })
+
   it("opens the site announcements page from the quick link action", async () => {
     render(<SiteAnnouncementNotificationSettings />, {
       withUserPreferencesProvider: false,
