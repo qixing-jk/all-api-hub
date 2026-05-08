@@ -1,3 +1,4 @@
+import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { cva, type VariantProps } from "class-variance-authority"
 import React from "react"
 
@@ -5,6 +6,7 @@ import {
   ClearableFieldButton,
   getClearableFieldValue,
 } from "~/components/ui/clearableField"
+import { IconButton } from "~/components/ui/IconButton"
 import { cn } from "~/lib/utils"
 
 const inputVariants = cva(
@@ -57,6 +59,14 @@ export interface InputProps
   containerClassName?: string
   leftIcon?: React.ReactNode
   rightIcon?: React.ReactNode
+  revealable?: boolean
+  revealed?: boolean
+  defaultRevealed?: boolean
+  onRevealedChange?: (revealed: boolean) => void
+  revealLabels?: {
+    show: string
+    hide: string
+  }
   onClear?: () => void
   clearButtonLabel?: string
   error?: string
@@ -72,6 +82,14 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
       size,
       leftIcon,
       rightIcon,
+      revealable = false,
+      revealed,
+      defaultRevealed = false,
+      onRevealedChange,
+      revealLabels = {
+        show: "Show password",
+        hide: "Hide password",
+      },
       onClear,
       clearButtonLabel = "Clear",
       error,
@@ -81,17 +99,41 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
     ref,
   ) => {
     const inputRef = React.useRef<HTMLInputElement | null>(null)
+    const [internalRevealed, setInternalRevealed] =
+      React.useState(defaultRevealed)
     const inputVariant = error ? "error" : success ? "success" : variant
     const variantSize = typeof size === "string" ? size : undefined
     const nativeSize = typeof size === "number" ? size : undefined
+    const showRevealButton = revealable && props.type === "password"
+    const isRevealed = revealed ?? internalRevealed
     const showClearButton =
       Boolean(onClear) &&
       getClearableFieldValue(props.value).length > 0 &&
       !props.disabled &&
       !props.readOnly
-    const showRightContent = Boolean(rightIcon) || showClearButton
+    const showRightContent =
+      Boolean(rightIcon) || showRevealButton || showClearButton
+    const rightContentCount =
+      Number(Boolean(rightIcon)) +
+      Number(showRevealButton) +
+      Number(showClearButton)
     const rightPaddingClass =
-      rightIcon && showClearButton ? "pr-16" : showRightContent ? "pr-10" : ""
+      rightContentCount >= 3
+        ? "pr-24"
+        : rightContentCount === 2
+          ? "pr-16"
+          : rightContentCount === 1
+            ? "pr-10"
+            : ""
+    const inputType = showRevealButton && isRevealed ? "text" : props.type
+
+    const handleRevealToggle = () => {
+      const nextRevealed = !isRevealed
+      if (revealed === undefined) {
+        setInternalRevealed(nextRevealed)
+      }
+      onRevealedChange?.(nextRevealed)
+    }
 
     const setInputRef = React.useCallback(
       (node: HTMLInputElement | null) => {
@@ -137,12 +179,34 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
           size={nativeSize}
           ref={setInputRef}
           {...props}
+          type={inputType}
         />
         {showRightContent && (
           <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center gap-1 pr-2">
             {rightIcon && (
               <span className="pointer-events-auto text-gray-400 dark:text-gray-500">
                 {rightIcon}
+              </span>
+            )}
+            {showRevealButton && (
+              <span className="pointer-events-auto text-gray-400 dark:text-gray-500">
+                <IconButton
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={handleRevealToggle}
+                  disabled={props.disabled}
+                  aria-label={
+                    isRevealed ? revealLabels.hide : revealLabels.show
+                  }
+                >
+                  {isRevealed ? (
+                    <EyeSlashIcon className="h-4 w-4" />
+                  ) : (
+                    <EyeIcon className="h-4 w-4" />
+                  )}
+                </IconButton>
               </span>
             )}
             {showClearButton && (

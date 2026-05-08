@@ -267,6 +267,10 @@ vi.mock("~/components/ui", async () => {
       onChange,
       placeholder,
       readOnly,
+      revealable,
+      revealed,
+      revealLabels,
+      onRevealedChange,
       required,
       rightIcon,
       type = "text",
@@ -278,28 +282,45 @@ vi.mock("~/components/ui", async () => {
       onChange?: (event: { target: { value: string } }) => void
       placeholder?: string
       readOnly?: boolean
+      revealable?: boolean
+      revealed?: boolean
+      revealLabels?: { show: string; hide: string }
+      onRevealedChange?: (revealed: boolean) => void
       required?: boolean
       rightIcon?: ReactNode
       type?: string
       value?: number | string
-    }) => (
-      <div>
-        <input
-          disabled={disabled}
-          id={id}
-          min={min}
-          onChange={(event) =>
-            onChange?.({ target: { value: event.currentTarget.value } })
-          }
-          placeholder={placeholder}
-          readOnly={readOnly}
-          required={required}
-          type={type}
-          value={String(value)}
-        />
-        {rightIcon}
-      </div>
-    ),
+    }) => {
+      const inputType =
+        revealable && type === "password" && revealed ? "text" : type
+
+      return (
+        <div>
+          <input
+            disabled={disabled}
+            id={id}
+            min={min}
+            onChange={(event) =>
+              onChange?.({ target: { value: event.currentTarget.value } })
+            }
+            placeholder={placeholder}
+            readOnly={readOnly}
+            required={required}
+            type={inputType}
+            value={String(value)}
+          />
+          {revealable && type === "password" ? (
+            <button
+              aria-label={revealed ? revealLabels?.hide : revealLabels?.show}
+              disabled={disabled}
+              onClick={() => onRevealedChange?.(!revealed)}
+              type="button"
+            />
+          ) : null}
+          {rightIcon}
+        </div>
+      )
+    },
     Label: ({
       children,
       htmlFor,

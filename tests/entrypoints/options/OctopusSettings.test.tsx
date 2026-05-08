@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -124,6 +124,8 @@ vi.mock("~/components/ui", () => ({
     onChange,
     onBlur,
     rightIcon,
+    revealable,
+    revealLabels,
   }: {
     value?: string
     placeholder?: string
@@ -131,22 +133,37 @@ vi.mock("~/components/ui", () => ({
     onChange?: (event: { target: { value: string } }) => void
     onBlur?: (event: { target: { value: string } }) => void
     rightIcon?: ReactNode
-  }) => (
-    <div>
-      <input
-        aria-label={placeholder ?? type ?? "input"}
-        type={type}
-        value={value}
-        onChange={(event) =>
-          onChange?.({ target: { value: event.currentTarget.value } })
-        }
-        onBlur={(event) =>
-          onBlur?.({ target: { value: event.currentTarget.value } })
-        }
-      />
-      {rightIcon}
-    </div>
-  ),
+    revealable?: boolean
+    revealLabels?: { show: string; hide: string }
+  }) => {
+    const [isRevealed, setIsRevealed] = useState(false)
+    const inputType =
+      revealable && type === "password" && isRevealed ? "text" : type
+
+    return (
+      <div>
+        <input
+          aria-label={placeholder ?? type ?? "input"}
+          type={inputType}
+          value={value}
+          onChange={(event) =>
+            onChange?.({ target: { value: event.currentTarget.value } })
+          }
+          onBlur={(event) =>
+            onBlur?.({ target: { value: event.currentTarget.value } })
+          }
+        />
+        {revealable && type === "password" ? (
+          <button
+            type="button"
+            aria-label={isRevealed ? revealLabels?.hide : revealLabels?.show}
+            onClick={() => setIsRevealed((current) => !current)}
+          />
+        ) : null}
+        {rightIcon}
+      </div>
+    )
+  },
 }))
 
 const mockedValidateConfig = octopusAuthManager.validateConfig as ReturnType<

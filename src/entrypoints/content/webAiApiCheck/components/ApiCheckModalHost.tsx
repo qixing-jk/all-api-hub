@@ -1,4 +1,4 @@
-import { EyeIcon, EyeSlashIcon, XMarkIcon } from "@heroicons/react/24/outline"
+import { XMarkIcon } from "@heroicons/react/24/outline"
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast/headless"
 import { useTranslation } from "react-i18next"
@@ -567,28 +567,17 @@ export function ApiCheckModalHost() {
                     {t("webAiApiCheck:modal.fields.apiKey")}
                   </div>
                   <Input
-                    type={apiKeyVisible ? "text" : "password"}
+                    type="password"
+                    revealable
+                    revealed={apiKeyVisible}
+                    onRevealedChange={setApiKeyVisible}
+                    revealLabels={{
+                      show: t("webAiApiCheck:modal.actions.showKey"),
+                      hide: t("webAiApiCheck:modal.actions.hideKey"),
+                    }}
                     value={apiKey}
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder="sk-..."
-                    rightIcon={
-                      <IconButton
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => setApiKeyVisible((prev) => !prev)}
-                        aria-label={
-                          apiKeyVisible
-                            ? t("webAiApiCheck:modal.actions.hideKey")
-                            : t("webAiApiCheck:modal.actions.showKey")
-                        }
-                      >
-                        {apiKeyVisible ? (
-                          <EyeSlashIcon className="h-4 w-4" />
-                        ) : (
-                          <EyeIcon className="h-4 w-4" />
-                        )}
-                      </IconButton>
-                    }
                   />
                 </div>
 

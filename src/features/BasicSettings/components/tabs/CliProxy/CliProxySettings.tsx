@@ -1,17 +1,8 @@
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
-import {
-  Button,
-  Card,
-  CardItem,
-  CardList,
-  IconButton,
-  Input,
-  Link,
-} from "~/components/ui"
+import { Button, Card, CardItem, CardList, Input, Link } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { verifyCliProxyManagementConnection } from "~/services/integrations/cliProxyService"
@@ -49,7 +40,6 @@ export default function CliProxySettings() {
     savedValue: savedConfig,
     savedVersion: preferences.lastUpdated,
   })
-  const [showKey, setShowKey] = useState(false)
   const [isCheckingConnection, setIsCheckingConnection] = useState(false)
   const localBaseUrl = localConfig.baseUrl
   const localKey = localConfig.managementKey
@@ -154,7 +144,12 @@ export default function CliProxySettings() {
             rightContent={
               <div className="relative">
                 <Input
-                  type={showKey ? "text" : "password"}
+                  type="password"
+                  revealable
+                  revealLabels={{
+                    show: t("cliProxy.showKey"),
+                    hide: t("cliProxy.hideKey"),
+                  }}
                   value={localKey}
                   onChange={(e) =>
                     setLocalConfig((prev) => ({
@@ -163,22 +158,6 @@ export default function CliProxySettings() {
                     }))
                   }
                   onBlur={(e) => handleKeyChange(e.target.value)}
-                  rightIcon={
-                    <IconButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowKey(!showKey)}
-                      aria-label={
-                        showKey ? t("cliProxy.hideKey") : t("cliProxy.showKey")
-                      }
-                    >
-                      {showKey ? (
-                        <EyeSlashIcon className="h-4 w-4" />
-                      ) : (
-                        <EyeIcon className="h-4 w-4" />
-                      )}
-                    </IconButton>
-                  }
                 />
               </div>
             }

@@ -1,17 +1,9 @@
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
-import {
-  Button,
-  Card,
-  CardItem,
-  CardList,
-  IconButton,
-  Input,
-} from "~/components/ui"
+import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { octopusAuthManager } from "~/services/apiService/octopus/auth"
@@ -51,7 +43,6 @@ export default function OctopusSettings() {
     savedValue: savedConfig,
     savedVersion: preferences.lastUpdated,
   })
-  const [showPassword, setShowPassword] = useState(false)
   const [isValidating, setIsValidating] = useState(false)
   const localBaseUrl = localConfig.baseUrl
   const localUsername = localConfig.username
@@ -194,7 +185,12 @@ export default function OctopusSettings() {
             rightContent={
               <div className="relative">
                 <Input
-                  type={showPassword ? "text" : "password"}
+                  type="password"
+                  revealable
+                  revealLabels={{
+                    show: t("octopus.fields.showPassword"),
+                    hide: t("octopus.fields.hidePassword"),
+                  }}
                   value={localPassword}
                   onChange={(e) =>
                     setLocalConfig((prev) => ({
@@ -204,24 +200,6 @@ export default function OctopusSettings() {
                   }
                   onBlur={(e) => handlePasswordChange(e.target.value)}
                   placeholder={t("octopus.fields.passwordPlaceholder")}
-                  rightIcon={
-                    <IconButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowPassword(!showPassword)}
-                      aria-label={
-                        showPassword
-                          ? t("octopus.fields.hidePassword")
-                          : t("octopus.fields.showPassword")
-                      }
-                    >
-                      {showPassword ? (
-                        <EyeSlashIcon className="h-4 w-4" />
-                      ) : (
-                        <EyeIcon className="h-4 w-4" />
-                      )}
-                    </IconButton>
-                  }
                 />
               </div>
             }

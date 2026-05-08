@@ -361,6 +361,11 @@ export function NewApiManagedVerificationDialog(
                       <Input
                         id="new-api-quick-password"
                         type="password"
+                        revealable
+                        revealLabels={{
+                          show: t("settings:newApi.fields.showPassword"),
+                          hide: t("settings:newApi.fields.hidePassword"),
+                        }}
                         value={quickPassword}
                         onChange={(event) =>
                           setQuickPassword(event.target.value)

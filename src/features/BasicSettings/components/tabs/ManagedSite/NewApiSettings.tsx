@@ -1,5 +1,4 @@
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -8,7 +7,6 @@ import {
   Card,
   CardItem,
   CardList,
-  IconButton,
   Input,
   WorkflowTransitionButton,
 } from "~/components/ui"
@@ -71,9 +69,6 @@ export default function NewApiSettings() {
     savedValue: savedConfig,
     savedVersion: preferences.lastUpdated,
   })
-  const [showAdminToken, setShowAdminToken] = useState(false)
-  const [showPassword, setShowPassword] = useState(false)
-  const [showTotpSecret, setShowTotpSecret] = useState(false)
   const verification = useNewApiManagedVerification()
   const localBaseUrl = localConfig.baseUrl
   const localAdminToken = localConfig.adminToken
@@ -224,7 +219,12 @@ export default function NewApiSettings() {
             rightContent={
               <div className="relative">
                 <Input
-                  type={showAdminToken ? "text" : "password"}
+                  type="password"
+                  revealable
+                  revealLabels={{
+                    show: t("newApi.fields.showToken"),
+                    hide: t("newApi.fields.hideToken"),
+                  }}
                   value={localAdminToken}
                   onChange={(e) =>
                     setLocalConfig((prev) => ({
@@ -233,24 +233,6 @@ export default function NewApiSettings() {
                     }))
                   }
                   onBlur={(e) => handleNewApiAdminTokenChange(e.target.value)}
-                  rightIcon={
-                    <IconButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowAdminToken(!showAdminToken)}
-                      aria-label={
-                        showAdminToken
-                          ? t("newApi.fields.hideToken")
-                          : t("newApi.fields.showToken")
-                      }
-                    >
-                      {showAdminToken ? (
-                        <EyeSlashIcon className="h-4 w-4" />
-                      ) : (
-                        <EyeIcon className="h-4 w-4" />
-                      )}
-                    </IconButton>
-                  }
                 />
               </div>
             }
@@ -306,7 +288,12 @@ export default function NewApiSettings() {
             rightContent={
               <div className="relative">
                 <Input
-                  type={showPassword ? "text" : "password"}
+                  type="password"
+                  revealable
+                  revealLabels={{
+                    show: t("newApi.fields.showPassword"),
+                    hide: t("newApi.fields.hidePassword"),
+                  }}
                   value={localPassword}
                   onChange={(e) =>
                     setLocalConfig((prev) => ({
@@ -316,24 +303,6 @@ export default function NewApiSettings() {
                   }
                   onBlur={(e) => handleNewApiPasswordChange(e.target.value)}
                   placeholder={t("newApi.fields.passwordPlaceholder")}
-                  rightIcon={
-                    <IconButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowPassword(!showPassword)}
-                      aria-label={
-                        showPassword
-                          ? t("newApi.fields.hidePassword")
-                          : t("newApi.fields.showPassword")
-                      }
-                    >
-                      {showPassword ? (
-                        <EyeSlashIcon className="h-4 w-4" />
-                      ) : (
-                        <EyeIcon className="h-4 w-4" />
-                      )}
-                    </IconButton>
-                  }
                 />
               </div>
             }
@@ -346,7 +315,12 @@ export default function NewApiSettings() {
             rightContent={
               <div className="relative">
                 <Input
-                  type={showTotpSecret ? "text" : "password"}
+                  type="password"
+                  revealable
+                  revealLabels={{
+                    show: t("newApi.fields.showTotpSecret"),
+                    hide: t("newApi.fields.hideTotpSecret"),
+                  }}
                   value={localTotpSecret}
                   onChange={(e) =>
                     setLocalConfig((prev) => ({
@@ -356,24 +330,6 @@ export default function NewApiSettings() {
                   }
                   onBlur={(e) => handleNewApiTotpSecretChange(e.target.value)}
                   placeholder={t("newApi.fields.totpSecretPlaceholder")}
-                  rightIcon={
-                    <IconButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowTotpSecret(!showTotpSecret)}
-                      aria-label={
-                        showTotpSecret
-                          ? t("newApi.fields.hideTotpSecret")
-                          : t("newApi.fields.showTotpSecret")
-                      }
-                    >
-                      {showTotpSecret ? (
-                        <EyeSlashIcon className="h-4 w-4" />
-                      ) : (
-                        <EyeIcon className="h-4 w-4" />
-                      )}
-                    </IconButton>
-                  }
                 />
               </div>
             }

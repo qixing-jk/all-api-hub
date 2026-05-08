@@ -1,17 +1,9 @@
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
-import {
-  Button,
-  Card,
-  CardItem,
-  CardList,
-  IconButton,
-  Input,
-} from "~/components/ui"
+import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { validateClaudeCodeHubConfig } from "~/services/apiService/claudeCodeHub"
@@ -48,7 +40,6 @@ export default function ClaudeCodeHubSettings() {
     savedValue: savedConfig,
     savedVersion: preferences.lastUpdated,
   })
-  const [showToken, setShowToken] = useState(false)
   const [isValidating, setIsValidating] = useState(false)
 
   const handleBaseUrlChange = async (url: string) => {
@@ -152,7 +143,12 @@ export default function ClaudeCodeHubSettings() {
             description={t("claudeCodeHub.fields.adminTokenDesc")}
             rightContent={
               <Input
-                type={showToken ? "text" : "password"}
+                type="password"
+                revealable
+                revealLabels={{
+                  show: t("claudeCodeHub.fields.showAdminToken"),
+                  hide: t("claudeCodeHub.fields.hideAdminToken"),
+                }}
                 value={localConfig.adminToken}
                 onChange={(event) =>
                   setLocalConfig((prev) => ({
@@ -162,24 +158,6 @@ export default function ClaudeCodeHubSettings() {
                 }
                 onBlur={(event) => handleTokenChange(event.target.value)}
                 placeholder={t("claudeCodeHub.fields.adminTokenPlaceholder")}
-                rightIcon={
-                  <IconButton
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowToken(!showToken)}
-                    aria-label={
-                      showToken
-                        ? t("claudeCodeHub.fields.hideAdminToken")
-                        : t("claudeCodeHub.fields.showAdminToken")
-                    }
-                  >
-                    {showToken ? (
-                      <EyeSlashIcon className="h-4 w-4" />
-                    ) : (
-                      <EyeIcon className="h-4 w-4" />
-                    )}
-                  </IconButton>
-                }
               />
             }
           />

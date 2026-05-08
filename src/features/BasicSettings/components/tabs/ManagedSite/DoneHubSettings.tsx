@@ -1,5 +1,4 @@
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
@@ -7,7 +6,6 @@ import {
   Card,
   CardItem,
   CardList,
-  IconButton,
   Input,
   WorkflowTransitionButton,
 } from "~/components/ui"
@@ -52,7 +50,6 @@ export default function DoneHubSettings() {
     savedValue: savedConfig,
     savedVersion: preferences.lastUpdated,
   })
-  const [showAdminToken, setShowAdminToken] = useState(false)
   const localBaseUrl = localConfig.baseUrl
   const localAdminToken = localConfig.adminToken
   const localUserId = localConfig.userId
@@ -159,7 +156,12 @@ export default function DoneHubSettings() {
             rightContent={
               <div className="relative">
                 <Input
-                  type={showAdminToken ? "text" : "password"}
+                  type="password"
+                  revealable
+                  revealLabels={{
+                    show: t("doneHub.fields.showToken"),
+                    hide: t("doneHub.fields.hideToken"),
+                  }}
                   value={localAdminToken}
                   onChange={(e) =>
                     setLocalConfig((prev) => ({
@@ -168,24 +170,6 @@ export default function DoneHubSettings() {
                     }))
                   }
                   onBlur={(e) => handleAdminTokenChange(e.target.value)}
-                  rightIcon={
-                    <IconButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowAdminToken(!showAdminToken)}
-                      aria-label={
-                        showAdminToken
-                          ? t("doneHub.fields.hideToken")
-                          : t("doneHub.fields.showToken")
-                      }
-                    >
-                      {showAdminToken ? (
-                        <EyeSlashIcon className="h-4 w-4" />
-                      ) : (
-                        <EyeIcon className="h-4 w-4" />
-                      )}
-                    </IconButton>
-                  }
                 />
               </div>
             }

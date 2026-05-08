@@ -1,8 +1,4 @@
-import {
-  ArrowPathIcon,
-  EyeIcon,
-  EyeSlashIcon,
-} from "@heroicons/react/24/outline"
+import { ArrowPathIcon } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
 import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
@@ -20,7 +16,6 @@ import {
   Checkbox,
   FormField,
   Heading4,
-  IconButton,
   Input,
   Label,
   Switch,
@@ -147,9 +142,6 @@ export default function WebDAVSettings() {
   const syncDataSelection = localConfig.syncData
   const backupEncryptionEnabled = localConfig.backupEncryptionEnabled
   const backupEncryptionPassword = localConfig.backupEncryptionPassword
-  const [showPassword, setShowPassword] = useState(false)
-  const [showBackupEncryptionPassword, setShowBackupEncryptionPassword] =
-    useState(false)
 
   const [decryptDialogOpen, setDecryptDialogOpen] = useState(false)
   const [decrypting, setDecrypting] = useState(false)
@@ -531,7 +523,12 @@ export default function WebDAVSettings() {
                 <Input
                   id={WEBDAV_TARGET_IDS.password}
                   title={t("webdav.password")}
-                  type={showPassword ? "text" : "password"}
+                  type="password"
+                  revealable
+                  revealLabels={{
+                    show: t("webdav.showPassword"),
+                    hide: t("webdav.hidePassword"),
+                  }}
                   placeholder={t("webdav.password")}
                   value={webdavPassword}
                   onChange={(e) =>
@@ -539,24 +536,6 @@ export default function WebDAVSettings() {
                       ...prev,
                       password: e.target.value,
                     }))
-                  }
-                  rightIcon={
-                    <IconButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowPassword(!showPassword)}
-                      aria-label={
-                        showPassword
-                          ? t("webdav.hidePassword")
-                          : t("webdav.showPassword")
-                      }
-                    >
-                      {showPassword ? (
-                        <EyeSlashIcon className="h-4 w-4" />
-                      ) : (
-                        <EyeIcon className="h-4 w-4" />
-                      )}
-                    </IconButton>
                   }
                 />
               </div>
@@ -631,7 +610,12 @@ export default function WebDAVSettings() {
                 <Input
                   id={WEBDAV_TARGET_IDS.encryptionPassword}
                   title={t("webdav.encryption.password")}
-                  type={showBackupEncryptionPassword ? "text" : "password"}
+                  type="password"
+                  revealable
+                  revealLabels={{
+                    show: t("webdav.showPassword"),
+                    hide: t("webdav.hidePassword"),
+                  }}
                   placeholder={t("webdav.encryption.passwordPlaceholder")}
                   value={backupEncryptionPassword}
                   onChange={(e) =>
@@ -639,28 +623,6 @@ export default function WebDAVSettings() {
                       ...prev,
                       backupEncryptionPassword: e.target.value,
                     }))
-                  }
-                  rightIcon={
-                    <IconButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() =>
-                        setShowBackupEncryptionPassword(
-                          !showBackupEncryptionPassword,
-                        )
-                      }
-                      aria-label={
-                        showBackupEncryptionPassword
-                          ? t("webdav.hidePassword")
-                          : t("webdav.showPassword")
-                      }
-                    >
-                      {showBackupEncryptionPassword ? (
-                        <EyeSlashIcon className="h-4 w-4" />
-                      ) : (
-                        <EyeIcon className="h-4 w-4" />
-                      )}
-                    </IconButton>
                   }
                 />
               </FormField>

@@ -1,11 +1,5 @@
 import { DialogTitle } from "@headlessui/react"
-import {
-  EyeIcon,
-  EyeSlashIcon,
-  KeyIcon,
-  PencilIcon,
-  PlusIcon,
-} from "@heroicons/react/24/outline"
+import { KeyIcon, PencilIcon, PlusIcon } from "@heroicons/react/24/outline"
 import type { ChangeEvent } from "react"
 import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
@@ -14,7 +8,6 @@ import { useTranslation } from "react-i18next"
 import {
   Button,
   FormField,
-  IconButton,
   Input,
   SearchableSelect,
   Textarea,
@@ -131,7 +124,6 @@ export function ApiCredentialProfileDialog({
   const [customJsonPaths, setCustomJsonPaths] =
     useState<ApiCredentialTelemetryJsonPathMap>({})
 
-  const [showKey, setShowKey] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
   const [errors, setErrors] = useState<{
@@ -154,7 +146,6 @@ export function ApiCredentialProfileDialog({
     if (!isOpen) return
 
     setErrors({})
-    setShowKey(false)
 
     if (profile) {
       setName(profile.name ?? "")
@@ -475,30 +466,17 @@ export function ApiCredentialProfileDialog({
         >
           <Input
             id={apiKeyInputId}
-            type={showKey ? "text" : "password"}
+            type="password"
+            revealable
+            revealLabels={{
+              show: t("keyManagement:actions.showKey"),
+              hide: t("keyManagement:actions.hideKey"),
+            }}
             value={apiKey}
             onChange={(e) => setApiKey(e.target.value)}
             placeholder={t("apiCredentialProfiles:dialog.placeholders.apiKey")}
             disabled={isSaving}
             leftIcon={<KeyIcon className="h-5 w-5" />}
-            rightIcon={
-              <IconButton
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowKey(!showKey)}
-                aria-label={
-                  showKey
-                    ? t("keyManagement:actions.hideKey")
-                    : t("keyManagement:actions.showKey")
-                }
-              >
-                {showKey ? (
-                  <EyeSlashIcon className="h-4 w-4" />
-                ) : (
-                  <EyeIcon className="h-4 w-4" />
-                )}
-              </IconButton>
-            }
           />
         </FormField>
 

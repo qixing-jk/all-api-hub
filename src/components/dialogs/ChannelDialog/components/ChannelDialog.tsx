@@ -1,4 +1,3 @@
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { useEffect, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
@@ -15,7 +14,6 @@ import {
   Alert,
   Button,
   CompactMultiSelect,
-  IconButton,
   Input,
   Label,
   Modal,
@@ -582,33 +580,20 @@ export function ChannelDialog({
           </Label>
           <Input
             id="channel-key"
-            type={showKey ? "text" : "password"}
+            type="password"
+            revealable
+            revealed={showKey}
+            onRevealedChange={setShowKey}
+            revealLabels={{
+              show: t("channelDialog:actions.showKey"),
+              hide: t("channelDialog:actions.hideKey"),
+            }}
             value={formData.key}
             onChange={(e) => updateField("key", e.target.value)}
             placeholder={t("channelDialog:fields.key.placeholder")}
             disabled={isSaving}
             readOnly={isViewMode}
             required={!isViewMode && isKeyFieldRequired}
-            rightIcon={
-              <IconButton
-                variant="ghost"
-                size="xs"
-                onClick={() => setShowKey(!showKey)}
-                aria-label={
-                  showKey
-                    ? t("channelDialog:actions.hideKey")
-                    : t("channelDialog:actions.showKey")
-                }
-                type="button"
-                disabled={isSaving}
-              >
-                {showKey ? (
-                  <EyeSlashIcon className="h-4 w-4" />
-                ) : (
-                  <EyeIcon className="h-4 w-4" />
-                )}
-              </IconButton>
-            }
           />
           {!isAddMode && !isViewMode && onRequestRealKey ? (
             <div className="mt-2 flex items-center justify-between gap-2">

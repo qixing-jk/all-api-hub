@@ -2,22 +2,18 @@ import {
   ArrowDownTrayIcon,
   CalendarDaysIcon,
   CurrencyDollarIcon,
-  EyeIcon,
-  EyeSlashIcon,
   GlobeAltIcon,
   KeyIcon,
   TicketIcon,
   UserIcon,
 } from "@heroicons/react/24/outline"
 import { Cookie } from "lucide-react"
-import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
   Alert,
   Button,
   FormField,
-  IconButton,
   Input,
   Select,
   SelectContent,
@@ -127,7 +123,6 @@ export default function AccountForm({
     siteType,
   } = draft
   const isSub2Api = siteType === SUB2API
-  const [showSub2apiRefreshToken, setShowSub2apiRefreshToken] = useState(false)
 
   return (
     <div className="space-y-3">
@@ -248,27 +243,19 @@ export default function AccountForm({
         {authType === AuthTypeEnum.AccessToken && (
           <FormField label={t("form.accessToken")} required>
             <Input
-              type={showAccessToken ? "text" : "password"}
+              type="password"
+              revealable
+              revealed={showAccessToken}
+              onRevealedChange={onToggleShowAccessToken}
+              revealLabels={{
+                show: t("form.toggleAccessTokenVisibility"),
+                hide: t("form.toggleAccessTokenVisibility"),
+              }}
               value={accessToken}
               onChange={(e) => onAccessTokenChange(e.target.value)}
               placeholder={t("form.accessToken")}
               leftIcon={<KeyIcon className="h-5 w-5" />}
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.accessTokenInput}
-              rightIcon={
-                <IconButton
-                  type="button"
-                  onClick={onToggleShowAccessToken}
-                  variant="ghost"
-                  size="sm"
-                  aria-label={t("form.toggleAccessTokenVisibility")}
-                >
-                  {showAccessToken ? (
-                    <EyeSlashIcon className="h-4 w-4" />
-                  ) : (
-                    <EyeIcon className="h-4 w-4" />
-                  )}
-                </IconButton>
-              }
               required
             />
           </FormField>
@@ -327,7 +314,12 @@ export default function AccountForm({
                       {t("form.sub2apiImportRefreshToken")}
                     </Button>
                     <Input
-                      type={showSub2apiRefreshToken ? "text" : "password"}
+                      type="password"
+                      revealable
+                      revealLabels={{
+                        show: t("form.toggleRefreshTokenVisibility"),
+                        hide: t("form.toggleRefreshTokenVisibility"),
+                      }}
                       value={sub2apiRefreshToken}
                       onChange={(e) =>
                         onSub2apiRefreshTokenChange(e.target.value)
@@ -336,23 +328,6 @@ export default function AccountForm({
                       leftIcon={<KeyIcon className="h-5 w-5" />}
                       data-testid={
                         ACCOUNT_MANAGEMENT_TEST_IDS.sub2apiRefreshTokenInput
-                      }
-                      rightIcon={
-                        <IconButton
-                          type="button"
-                          onClick={() =>
-                            setShowSub2apiRefreshToken(!showSub2apiRefreshToken)
-                          }
-                          variant="ghost"
-                          size="sm"
-                          aria-label={t("form.toggleRefreshTokenVisibility")}
-                        >
-                          {showSub2apiRefreshToken ? (
-                            <EyeSlashIcon className="h-4 w-4" />
-                          ) : (
-                            <EyeIcon className="h-4 w-4" />
-                          )}
-                        </IconButton>
                       }
                       required
                     />

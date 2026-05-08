@@ -1,5 +1,3 @@
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
-import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -8,7 +6,6 @@ import {
   Checkbox,
   FormField,
   Heading4,
-  IconButton,
   Input,
   Modal,
 } from "~/components/ui"
@@ -56,7 +53,6 @@ export function WebDAVDecryptPasswordModal({
   onDecryptAndImport,
 }: WebDAVDecryptPasswordModalProps) {
   const { t } = useTranslation("importExport")
-  const [showPassword, setShowPassword] = useState(false)
 
   return (
     <Modal
@@ -103,28 +99,15 @@ export function WebDAVDecryptPasswordModal({
           <Input
             id="decryptPassword"
             title={t("webdav.encryption.decryptPassword")}
-            type={showPassword ? "text" : "password"}
+            type="password"
+            revealable
+            revealLabels={{
+              show: t("webdav.showPassword"),
+              hide: t("webdav.hidePassword"),
+            }}
             placeholder={t("webdav.encryption.passwordPlaceholder")}
             value={password}
             onChange={(e) => onPasswordChange(e.target.value)}
-            rightIcon={
-              <IconButton
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowPassword(!showPassword)}
-                aria-label={
-                  showPassword
-                    ? t("webdav.hidePassword")
-                    : t("webdav.showPassword")
-                }
-              >
-                {showPassword ? (
-                  <EyeSlashIcon className="h-4 w-4" />
-                ) : (
-                  <EyeIcon className="h-4 w-4" />
-                )}
-              </IconButton>
-            }
           />
         </FormField>
 

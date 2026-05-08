@@ -1,17 +1,9 @@
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
 import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
-import {
-  Button,
-  Card,
-  CardItem,
-  CardList,
-  IconButton,
-  Input,
-} from "~/components/ui"
+import { Button, Card, CardItem, CardList, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { signIn } from "~/services/apiService/axonHub"
@@ -54,7 +46,6 @@ export default function AxonHubSettings() {
     savedValue: savedConfig,
     savedVersion: preferences.lastUpdated,
   })
-  const [showPassword, setShowPassword] = useState(false)
   const [isValidating, setIsValidating] = useState(false)
 
   const handleBaseUrlChange = async (url: string) => {
@@ -189,7 +180,12 @@ export default function AxonHubSettings() {
             description={t("axonHub.fields.passwordDesc")}
             rightContent={
               <Input
-                type={showPassword ? "text" : "password"}
+                type="password"
+                revealable
+                revealLabels={{
+                  show: t("axonHub.fields.showPassword"),
+                  hide: t("axonHub.fields.hidePassword"),
+                }}
                 value={localConfig.password}
                 onChange={(event) =>
                   setLocalConfig((prev) => ({
@@ -199,24 +195,6 @@ export default function AxonHubSettings() {
                 }
                 onBlur={(event) => handlePasswordChange(event.target.value)}
                 placeholder={t("axonHub.fields.passwordPlaceholder")}
-                rightIcon={
-                  <IconButton
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowPassword(!showPassword)}
-                    aria-label={
-                      showPassword
-                        ? t("axonHub.fields.hidePassword")
-                        : t("axonHub.fields.showPassword")
-                    }
-                  >
-                    {showPassword ? (
-                      <EyeSlashIcon className="h-4 w-4" />
-                    ) : (
-                      <EyeIcon className="h-4 w-4" />
-                    )}
-                  </IconButton>
-                }
               />
             }
           />

@@ -1,4 +1,4 @@
-import type { ReactNode } from "react"
+import { useState, type ReactNode } from "react"
 import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -120,6 +120,8 @@ vi.mock("~/components/ui", () => ({
     onChange,
     placeholder,
     rightIcon,
+    revealable,
+    revealLabels,
     type,
     value,
   }: {
@@ -127,24 +129,39 @@ vi.mock("~/components/ui", () => ({
     onChange?: (event: { target: { value: string } }) => void
     placeholder?: string
     rightIcon?: ReactNode
+    revealable?: boolean
+    revealLabels?: { show: string; hide: string }
     type?: string
     value?: string
-  }) => (
-    <div>
-      <input
-        aria-label={placeholder ?? type ?? "input"}
-        type={type}
-        value={value}
-        onBlur={(event) =>
-          onBlur?.({ target: { value: event.currentTarget.value } })
-        }
-        onChange={(event) =>
-          onChange?.({ target: { value: event.currentTarget.value } })
-        }
-      />
-      {rightIcon}
-    </div>
-  ),
+  }) => {
+    const [isRevealed, setIsRevealed] = useState(false)
+    const inputType =
+      revealable && type === "password" && isRevealed ? "text" : type
+
+    return (
+      <div>
+        <input
+          aria-label={placeholder ?? type ?? "input"}
+          type={inputType}
+          value={value}
+          onBlur={(event) =>
+            onBlur?.({ target: { value: event.currentTarget.value } })
+          }
+          onChange={(event) =>
+            onChange?.({ target: { value: event.currentTarget.value } })
+          }
+        />
+        {revealable && type === "password" ? (
+          <button
+            type="button"
+            aria-label={isRevealed ? revealLabels?.hide : revealLabels?.show}
+            onClick={() => setIsRevealed((current) => !current)}
+          />
+        ) : null}
+        {rightIcon}
+      </div>
+    )
+  },
 }))
 
 const mockedSignIn = signIn as ReturnType<typeof vi.fn>

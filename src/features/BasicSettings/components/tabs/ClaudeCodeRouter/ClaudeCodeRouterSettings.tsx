@@ -1,9 +1,8 @@
-import { EyeIcon, EyeSlashIcon } from "@heroicons/react/24/outline"
-import { useMemo, useState } from "react"
+import { useMemo } from "react"
 import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
-import { Card, CardItem, CardList, IconButton, Input } from "~/components/ui"
+import { Card, CardItem, CardList, Input } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
@@ -38,7 +37,6 @@ export default function ClaudeCodeRouterSettings() {
     savedValue: savedConfig,
     savedVersion: preferences.lastUpdated,
   })
-  const [showKey, setShowKey] = useState(false)
   const localBaseUrl = localConfig.baseUrl
   const localKey = localConfig.apiKey
 
@@ -94,7 +92,12 @@ export default function ClaudeCodeRouterSettings() {
             rightContent={
               <div className="relative">
                 <Input
-                  type={showKey ? "text" : "password"}
+                  type="password"
+                  revealable
+                  revealLabels={{
+                    show: t("keyManagement:actions.showKey"),
+                    hide: t("keyManagement:actions.hideKey"),
+                  }}
                   value={localKey}
                   onChange={(e) =>
                     setLocalConfig((prev) => ({
@@ -104,24 +107,6 @@ export default function ClaudeCodeRouterSettings() {
                   }
                   onBlur={(e) => handleKeyChange(e.target.value)}
                   placeholder={t("settings:claudeCodeRouter.apiKeyPlaceholder")}
-                  rightIcon={
-                    <IconButton
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowKey(!showKey)}
-                      aria-label={
-                        showKey
-                          ? t("keyManagement:actions.hideKey")
-                          : t("keyManagement:actions.showKey")
-                      }
-                    >
-                      {showKey ? (
-                        <EyeSlashIcon className="h-4 w-4" />
-                      ) : (
-                        <EyeIcon className="h-4 w-4" />
-                      )}
-                    </IconButton>
-                  }
                 />
               </div>
             }

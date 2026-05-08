@@ -66,6 +66,74 @@ describe("Input", () => {
     expect(onClear).toHaveBeenCalledTimes(1)
   })
 
+  it("toggles revealable password inputs between hidden and visible text", async () => {
+    render(
+      <Input
+        aria-label="api-key"
+        type="password"
+        value="secret"
+        onChange={vi.fn()}
+        revealable
+        revealLabels={{ show: "Show key", hide: "Hide key" }}
+      />,
+    )
+
+    const input = await screen.findByLabelText("api-key")
+    expect(input).toHaveAttribute("type", "password")
+
+    fireEvent.click(await screen.findByRole("button", { name: "Show key" }))
+    expect(input).toHaveAttribute("type", "text")
+
+    fireEvent.click(await screen.findByRole("button", { name: "Hide key" }))
+    expect(input).toHaveAttribute("type", "password")
+  })
+
+  it("supports controlled reveal state and keeps the clear action available", async () => {
+    const onClear = vi.fn()
+    const onRevealedChange = vi.fn()
+
+    const { rerender } = render(
+      <Input
+        aria-label="token"
+        type="password"
+        value="saved token"
+        onChange={vi.fn()}
+        onClear={onClear}
+        clearButtonLabel="Clear token"
+        revealable
+        revealed={false}
+        onRevealedChange={onRevealedChange}
+        revealLabels={{ show: "Show token", hide: "Hide token" }}
+      />,
+    )
+
+    const input = await screen.findByLabelText("token")
+    fireEvent.click(await screen.findByRole("button", { name: "Show token" }))
+
+    expect(onRevealedChange).toHaveBeenCalledWith(true)
+    expect(input).toHaveAttribute("type", "password")
+
+    rerender(
+      <Input
+        aria-label="token"
+        type="password"
+        value="saved token"
+        onChange={vi.fn()}
+        onClear={onClear}
+        clearButtonLabel="Clear token"
+        revealable
+        revealed={true}
+        onRevealedChange={onRevealedChange}
+        revealLabels={{ show: "Show token", hide: "Hide token" }}
+      />,
+    )
+
+    expect(input).toHaveAttribute("type", "text")
+
+    fireEvent.click(await screen.findByRole("button", { name: "Clear token" }))
+    expect(onClear).toHaveBeenCalledTimes(1)
+  })
+
   it("focuses the input immediately after clearing when animation frames are unavailable", async () => {
     const onClear = vi.fn()
     vi.stubGlobal("requestAnimationFrame", undefined)
