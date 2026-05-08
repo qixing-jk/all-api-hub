@@ -1045,6 +1045,20 @@ describe("preferencesMigration", () => {
       })
     })
 
+    it("backfills default notification channels when v19 task notifications are missing", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 19,
+        taskNotifications: undefined as any,
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.taskNotifications).toEqual(
+        DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      )
+    })
+
     it("falls back to defaults when stored taskNotifications is a non-object during v18 to v19 migration", () => {
       const prefs = createV0Preferences({
         preferencesVersion: 18,

@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next"
 import { SettingSection } from "~/components/SettingSection"
 import { Button, Card, CardItem, CardList, Switch } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
@@ -26,14 +27,14 @@ export default function SiteAnnouncementNotificationSettings() {
 
   return (
     <SettingSection
-      id="site-announcement-notifications"
+      id={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS}
       title={t("siteAnnouncementNotifications.title")}
       description={t("siteAnnouncementNotifications.description")}
     >
       <Card padding="none">
         <CardList>
           <CardItem
-            id="site-announcement-notifications-enabled"
+            id={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED}
             icon={
               <MegaphoneIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
             }
@@ -47,7 +48,7 @@ export default function SiteAnnouncementNotificationSettings() {
             }
           />
           <CardItem
-            id="site-announcement-notifications-page"
+            id={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE}
             icon={
               <ArrowTopRightOnSquareIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
             }

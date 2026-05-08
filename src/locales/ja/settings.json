@@ -587,6 +587,8 @@
       "browserFailed": "ブラウザ通知のテストに失敗しました。ブラウザ通知チャネルが有効で、通知権限が許可されていることを確認してください。",
       "channelDisabled": "テスト通知を送信できませんでした。この通知チャネルを有効化して設定してください。",
       "failed": "テスト通知を送信できませんでした。この通知チャネル設定を確認してください。",
+      "httpError": "{{label}} が HTTP {{status}} を返しました。",
+      "httpErrorWithDetail": "{{label}} が HTTP {{status}} を返しました: {{detail}}",
       "message": "これは All API Hub のタスク通知テストです。",
       "sent": "テスト通知を送信しました",
       "telegramMissingConfig": "Telegram Bot Token または Chat ID が設定されていません。",

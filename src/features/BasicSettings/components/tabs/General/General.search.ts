@@ -1,3 +1,4 @@
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   buildControlDefinition,
   buildSectionDefinition,
@@ -36,7 +37,7 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:site-announcements",
     "general",
-    "site-announcement-notifications",
+    SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS,
     "settings:siteAnnouncementNotifications.title",
     203,
     {
@@ -185,7 +186,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:site-announcements-polling",
     "general",
-    "site-announcement-notifications-enabled",
+    SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
     "settings:siteAnnouncementNotifications.polling.enable",
     507,
     {
@@ -198,7 +199,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:site-announcements-page",
     "general",
-    "site-announcement-notifications-page",
+    SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE,
     "settings:siteAnnouncementNotifications.page.title",
     508,
     {

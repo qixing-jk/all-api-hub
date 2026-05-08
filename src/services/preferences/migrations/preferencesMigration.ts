@@ -427,7 +427,9 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
     }
   },
 
-  // Version 19 -> 20: Add browser, Telegram, and generic webhook notification channels
+  // Version 19 -> 20: re-run the idempotent notification preference
+  // normalization so users already on v19 get the new browser, Telegram, and
+  // webhook channel defaults backfilled without losing existing task settings.
   20: (prefs: UserPreferences): UserPreferences => {
     logger.debug(
       "Migrating preferences from v19 to v20 (task notification channels)",

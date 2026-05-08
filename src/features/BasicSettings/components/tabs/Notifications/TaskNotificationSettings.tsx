@@ -18,6 +18,7 @@ import {
   Switch,
 } from "~/components/ui"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   hasPermission,
@@ -26,7 +27,6 @@ import {
   requestPermission,
 } from "~/services/permissions/permissionManager"
 import {
-  normalizeTaskNotificationChannels,
   TASK_NOTIFICATION_CHANNELS,
   TASK_NOTIFICATION_TASKS,
   type TaskNotificationChannel,
@@ -195,7 +195,7 @@ export default function TaskNotificationSettings() {
   const [isRequestingPermission, setIsRequestingPermission] = useState(false)
   const [testingChannel, setTestingChannel] =
     useState<TaskNotificationChannel | null>(null)
-  const channels = normalizeTaskNotificationChannels(taskNotifications.channels)
+  const channels = taskNotifications.channels
   const [telegramDraft, setTelegramDraft] = useState(
     channels[TASK_NOTIFICATION_CHANNELS.Telegram],
   )
@@ -209,11 +209,12 @@ export default function TaskNotificationSettings() {
   }, [])
 
   useEffect(() => {
-    const nextChannels = normalizeTaskNotificationChannels(
-      taskNotifications.channels,
+    setTelegramDraft(
+      taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Telegram],
     )
-    setTelegramDraft(nextChannels[TASK_NOTIFICATION_CHANNELS.Telegram])
-    setWebhookDraft(nextChannels[TASK_NOTIFICATION_CHANNELS.Webhook])
+    setWebhookDraft(
+      taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Webhook],
+    )
   }, [taskNotifications.channels])
 
   useEffect(() => {
@@ -291,16 +292,13 @@ export default function TaskNotificationSettings() {
       return
     }
 
-    const success = await handleChannelUpdate(
+    await handleChannelUpdate(
       {
         ...channels,
         [TASK_NOTIFICATION_CHANNELS.Telegram]: nextTelegram,
       },
       t("taskNotifications.channels.telegram.title"),
     )
-    if (success) {
-      setTelegramDraft(nextTelegram)
-    }
   }
 
   const handleWebhookConfigSave = async () => {
@@ -312,16 +310,13 @@ export default function TaskNotificationSettings() {
       return
     }
 
-    const success = await handleChannelUpdate(
+    await handleChannelUpdate(
       {
         ...channels,
         [TASK_NOTIFICATION_CHANNELS.Webhook]: nextWebhook,
       },
       t("taskNotifications.channels.webhook.title"),
     )
-    if (success) {
-      setWebhookDraft(nextWebhook)
-    }
   }
 
   const handleTaskToggle = async (
@@ -413,14 +408,14 @@ export default function TaskNotificationSettings() {
   return (
     <div className="space-y-6">
       <SettingSection
-        id="task-notifications"
+        id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS}
         title={t("taskNotifications.groups.setup.title")}
         description={t("taskNotifications.groups.setup.description")}
       >
         <Card padding="none">
           <CardList>
             <CardItem
-              id="task-notifications-enabled"
+              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_ENABLED}
               icon={
                 <BellIcon className="h-5 w-5 text-teal-600 dark:text-teal-400" />
               }
@@ -438,14 +433,14 @@ export default function TaskNotificationSettings() {
       </SettingSection>
 
       <SettingSection
-        id="task-notification-channels"
+        id={SETTINGS_ANCHORS.TASK_NOTIFICATION_CHANNELS}
         title={t("taskNotifications.groups.channels.title")}
         description={t("taskNotifications.groups.channels.description")}
       >
         <Card padding="none">
           <CardList>
             <NotificationSettingItem
-              id="task-notifications-permission"
+              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_PERMISSION}
               title={t("taskNotifications.permission.title")}
               description={t("taskNotifications.permission.description")}
               actions={
@@ -479,7 +474,7 @@ export default function TaskNotificationSettings() {
             />
 
             <NotificationSettingItem
-              id="task-notifications-channel-browser"
+              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_BROWSER}
               title={t("taskNotifications.channels.browser.title")}
               description={t("taskNotifications.channels.browser.description")}
               actions={
@@ -502,7 +497,7 @@ export default function TaskNotificationSettings() {
             />
 
             <NotificationSettingItem
-              id="task-notifications-channel-telegram"
+              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_TELEGRAM}
               title={t("taskNotifications.channels.telegram.title")}
               description={t("taskNotifications.channels.telegram.description")}
               actions={
@@ -528,10 +523,12 @@ export default function TaskNotificationSettings() {
               <div className="grid gap-3 sm:grid-cols-2">
                 <FormField
                   label={t("taskNotifications.channels.telegram.botToken")}
-                  htmlFor="task-notifications-telegram-bot-token"
+                  htmlFor={
+                    SETTINGS_ANCHORS.TASK_NOTIFICATIONS_TELEGRAM_BOT_TOKEN
+                  }
                 >
                   <Input
-                    id="task-notifications-telegram-bot-token"
+                    id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_TELEGRAM_BOT_TOKEN}
                     type="password"
                     revealable
                     revealLabels={{
@@ -557,10 +554,10 @@ export default function TaskNotificationSettings() {
                 </FormField>
                 <FormField
                   label={t("taskNotifications.channels.telegram.chatId")}
-                  htmlFor="task-notifications-telegram-chat-id"
+                  htmlFor={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_TELEGRAM_CHAT_ID}
                 >
                   <Input
-                    id="task-notifications-telegram-chat-id"
+                    id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_TELEGRAM_CHAT_ID}
                     value={telegramDraft.chatId}
                     disabled={
                       !taskNotifications.enabled ||
@@ -582,7 +579,7 @@ export default function TaskNotificationSettings() {
             </NotificationSettingItem>
 
             <NotificationSettingItem
-              id="task-notifications-channel-webhook"
+              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK}
               title={t("taskNotifications.channels.webhook.title")}
               description={t("taskNotifications.channels.webhook.description")}
               actions={
@@ -605,10 +602,10 @@ export default function TaskNotificationSettings() {
             >
               <FormField
                 label={t("taskNotifications.channels.webhook.url")}
-                htmlFor="task-notifications-webhook-url"
+                htmlFor={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_WEBHOOK_URL}
               >
                 <Input
-                  id="task-notifications-webhook-url"
+                  id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_WEBHOOK_URL}
                   value={webhookDraft.url}
                   disabled={
                     !taskNotifications.enabled ||
@@ -632,7 +629,7 @@ export default function TaskNotificationSettings() {
       </SettingSection>
 
       <SettingSection
-        id="task-notification-events"
+        id={SETTINGS_ANCHORS.TASK_NOTIFICATION_EVENTS}
         title={t("taskNotifications.groups.tasks.title")}
         description={t("taskNotifications.groups.tasks.description")}
       >
@@ -656,7 +653,7 @@ export default function TaskNotificationSettings() {
               />
             ))}
             <NotificationSettingItem
-              id="task-notifications-site-announcements"
+              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_SITE_ANNOUNCEMENTS}
               title={t("taskNotifications.siteAnnouncements.enable")}
               description={t("taskNotifications.siteAnnouncements.enableDesc")}
               actions={

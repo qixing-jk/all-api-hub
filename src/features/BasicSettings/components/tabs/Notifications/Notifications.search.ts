@@ -1,3 +1,4 @@
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   buildControlDefinition,
   buildSectionDefinition,
@@ -7,39 +8,39 @@ import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/t
 
 const NOTIFICATIONS_TAB_ID = "notifications"
 
-const NOTIFICATION_TAB_BREADCRUMBS = [
+const NOTIFICATIONS_TAB_BREADCRUMBS = [
   ...DEFAULT_BREADCRUMBS,
   "settings:tabs.notifications",
 ]
 
 const TASK_NOTIFICATION_SETUP_BREADCRUMBS = [
-  ...NOTIFICATION_TAB_BREADCRUMBS,
+  ...NOTIFICATIONS_TAB_BREADCRUMBS,
   "settings:taskNotifications.groups.setup.title",
 ]
 
 const TASK_NOTIFICATION_CHANNEL_BREADCRUMBS = [
-  ...NOTIFICATION_TAB_BREADCRUMBS,
+  ...NOTIFICATIONS_TAB_BREADCRUMBS,
   "settings:taskNotifications.groups.channels.title",
 ]
 
 const TASK_NOTIFICATION_TASK_BREADCRUMBS = [
-  ...NOTIFICATION_TAB_BREADCRUMBS,
+  ...NOTIFICATIONS_TAB_BREADCRUMBS,
   "settings:taskNotifications.groups.tasks.title",
 ]
 
-const TASK_NOTIFICATION_TASK_CONTROL_ORDER_START = 512
+const TASK_NOTIFICATION_TASK_CONTROL_ORDER_START = 612
 
 const TASK_NOTIFICATION_TASK_SEARCH_CONTROLS = [
   {
     searchId: "control:task-notifications-auto-checkin",
-    targetId: "task-notifications-autoCheckin",
+    targetId: SETTINGS_ANCHORS.TASK_NOTIFICATIONS_AUTO_CHECKIN,
     labelKey: "settings:taskNotifications.tasks.autoCheckin",
     descriptionKey: "settings:taskNotifications.taskDescriptions.autoCheckin",
     keywords: ["notification", "auto checkin", "check-in"],
   },
   {
     searchId: "control:task-notifications-webdav-auto-sync",
-    targetId: "task-notifications-webdavAutoSync",
+    targetId: SETTINGS_ANCHORS.TASK_NOTIFICATIONS_WEBDAV_AUTO_SYNC,
     labelKey: "settings:taskNotifications.tasks.webdavAutoSync",
     descriptionKey:
       "settings:taskNotifications.taskDescriptions.webdavAutoSync",
@@ -47,7 +48,7 @@ const TASK_NOTIFICATION_TASK_SEARCH_CONTROLS = [
   },
   {
     searchId: "control:task-notifications-managed-site-model-sync",
-    targetId: "task-notifications-managedSiteModelSync",
+    targetId: SETTINGS_ANCHORS.TASK_NOTIFICATIONS_MANAGED_SITE_MODEL_SYNC,
     labelKey: "settings:taskNotifications.tasks.managedSiteModelSync",
     descriptionKey:
       "settings:taskNotifications.taskDescriptions.managedSiteModelSync",
@@ -55,7 +56,7 @@ const TASK_NOTIFICATION_TASK_SEARCH_CONTROLS = [
   },
   {
     searchId: "control:task-notifications-usage-history-sync",
-    targetId: "task-notifications-usageHistorySync",
+    targetId: SETTINGS_ANCHORS.TASK_NOTIFICATIONS_USAGE_HISTORY_SYNC,
     labelKey: "settings:taskNotifications.tasks.usageHistorySync",
     descriptionKey:
       "settings:taskNotifications.taskDescriptions.usageHistorySync",
@@ -63,7 +64,7 @@ const TASK_NOTIFICATION_TASK_SEARCH_CONTROLS = [
   },
   {
     searchId: "control:task-notifications-balance-history-capture",
-    targetId: "task-notifications-balanceHistoryCapture",
+    targetId: SETTINGS_ANCHORS.TASK_NOTIFICATIONS_BALANCE_HISTORY_CAPTURE,
     labelKey: "settings:taskNotifications.tasks.balanceHistoryCapture",
     descriptionKey:
       "settings:taskNotifications.taskDescriptions.balanceHistoryCapture",
@@ -71,7 +72,7 @@ const TASK_NOTIFICATION_TASK_SEARCH_CONTROLS = [
   },
   {
     searchId: "control:task-notifications-site-announcements",
-    targetId: "task-notifications-site-announcements",
+    targetId: SETTINGS_ANCHORS.TASK_NOTIFICATIONS_SITE_ANNOUNCEMENTS,
     labelKey: "settings:taskNotifications.siteAnnouncements.enable",
     descriptionKey: "settings:taskNotifications.siteAnnouncements.enableDesc",
     keywords: ["notification", "site announcement", "notice"],
@@ -82,9 +83,9 @@ export const notificationsSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:task-notifications",
     NOTIFICATIONS_TAB_ID,
-    "task-notifications",
+    SETTINGS_ANCHORS.TASK_NOTIFICATIONS,
     "settings:taskNotifications.groups.setup.title",
-    203,
+    303,
     {
       descriptionKey: "settings:taskNotifications.groups.setup.description",
       keywords: ["notification", "scheduled task", "alarm"],
@@ -93,9 +94,9 @@ export const notificationsSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:task-notification-channels",
     NOTIFICATIONS_TAB_ID,
-    "task-notification-channels",
+    SETTINGS_ANCHORS.TASK_NOTIFICATION_CHANNELS,
     "settings:taskNotifications.groups.channels.title",
-    204,
+    304,
     {
       descriptionKey: "settings:taskNotifications.groups.channels.description",
       keywords: ["notification", "channel", "delivery", "telegram", "webhook"],
@@ -104,9 +105,9 @@ export const notificationsSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:task-notification-events",
     NOTIFICATIONS_TAB_ID,
-    "task-notification-events",
+    SETTINGS_ANCHORS.TASK_NOTIFICATION_EVENTS,
     "settings:taskNotifications.groups.tasks.title",
-    205,
+    305,
     {
       descriptionKey: "settings:taskNotifications.groups.tasks.description",
       keywords: ["notification", "task", "scheduled task", "event"],
@@ -118,9 +119,9 @@ export const notificationsSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:task-notifications-enabled",
     NOTIFICATIONS_TAB_ID,
-    "task-notifications-enabled",
+    SETTINGS_ANCHORS.TASK_NOTIFICATIONS_ENABLED,
     "settings:taskNotifications.enable",
-    507,
+    607,
     {
       descriptionKey: "settings:taskNotifications.enableDesc",
       breadcrumbsKeys: TASK_NOTIFICATION_SETUP_BREADCRUMBS,
@@ -130,9 +131,9 @@ export const notificationsSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:task-notifications-channel-browser",
     NOTIFICATIONS_TAB_ID,
-    "task-notifications-channel-browser",
+    SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_BROWSER,
     "settings:taskNotifications.channels.browser.title",
-    508,
+    608,
     {
       descriptionKey: "settings:taskNotifications.channels.browser.description",
       breadcrumbsKeys: TASK_NOTIFICATION_CHANNEL_BREADCRUMBS,
@@ -142,9 +143,9 @@ export const notificationsSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:task-notifications-permission",
     NOTIFICATIONS_TAB_ID,
-    "task-notifications-permission",
+    SETTINGS_ANCHORS.TASK_NOTIFICATIONS_PERMISSION,
     "settings:taskNotifications.permission.title",
-    509,
+    609,
     {
       descriptionKey: "settings:taskNotifications.permission.description",
       breadcrumbsKeys: TASK_NOTIFICATION_CHANNEL_BREADCRUMBS,
@@ -154,9 +155,9 @@ export const notificationsSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:task-notifications-channel-telegram",
     NOTIFICATIONS_TAB_ID,
-    "task-notifications-channel-telegram",
+    SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_TELEGRAM,
     "settings:taskNotifications.channels.telegram.title",
-    510,
+    610,
     {
       descriptionKey:
         "settings:taskNotifications.channels.telegram.description",
@@ -167,9 +168,9 @@ export const notificationsSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:task-notifications-channel-webhook",
     NOTIFICATIONS_TAB_ID,
-    "task-notifications-channel-webhook",
+    SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
     "settings:taskNotifications.channels.webhook.title",
-    511,
+    611,
     {
       descriptionKey: "settings:taskNotifications.channels.webhook.description",
       breadcrumbsKeys: TASK_NOTIFICATION_CHANNEL_BREADCRUMBS,

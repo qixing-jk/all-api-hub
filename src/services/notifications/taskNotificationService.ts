@@ -267,13 +267,21 @@ async function getNotificationResponseErrorDetail(
  * Builds a user-facing HTTP failure message from a third-party response.
  */
 async function getNotificationHttpErrorMessage(
-  label: string,
+  labelKey: string,
   response: Response,
 ): Promise<string> {
   const detail = await getNotificationResponseErrorDetail(response)
+  const label = t(labelKey)
   return detail
-    ? `${label} returned HTTP ${response.status}: ${detail}`
-    : `${label} returned HTTP ${response.status}`
+    ? t("settings:taskNotifications.test.httpErrorWithDetail", {
+        label,
+        status: response.status,
+        detail,
+      })
+    : t("settings:taskNotifications.test.httpError", {
+        label,
+        status: response.status,
+      })
 }
 
 /**
@@ -344,7 +352,10 @@ async function sendTelegramNotification(
 
   if (!response.ok) {
     throw new Error(
-      await getNotificationHttpErrorMessage("Telegram API", response),
+      await getNotificationHttpErrorMessage(
+        "settings:taskNotifications.channels.telegram.title",
+        response,
+      ),
     )
   }
 
@@ -390,7 +401,12 @@ async function sendWebhookNotification(
   })
 
   if (!response.ok) {
-    throw new Error(await getNotificationHttpErrorMessage("Webhook", response))
+    throw new Error(
+      await getNotificationHttpErrorMessage(
+        "settings:taskNotifications.channels.webhook.title",
+        response,
+      ),
+    )
   }
 
   return true

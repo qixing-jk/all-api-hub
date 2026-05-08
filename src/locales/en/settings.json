@@ -587,6 +587,8 @@
       "browserFailed": "Browser notification test failed. Make sure the browser notification channel is enabled and notification permission is granted.",
       "channelDisabled": "Failed to send the test notification. Enable and configure this notification channel first.",
       "failed": "Failed to send the test notification. Check this notification channel configuration.",
+      "httpError": "{{label}} returned HTTP {{status}}.",
+      "httpErrorWithDetail": "{{label}} returned HTTP {{status}}: {{detail}}",
       "message": "This is an All API Hub task notification test.",
       "sent": "Test notification sent",
       "telegramMissingConfig": "Telegram Bot token or Chat ID is not configured.",

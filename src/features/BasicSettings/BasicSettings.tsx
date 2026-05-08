@@ -30,6 +30,7 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   clearHighlightSearchParam,
@@ -143,18 +144,20 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   display: "general",
   appearance: "general",
   theme: "general",
-  "task-notifications": "notifications",
-  "task-notifications-enabled": "notifications",
-  "task-notifications-permission": "notifications",
-  "task-notifications-autoCheckin": "notifications",
-  "task-notifications-webdavAutoSync": "notifications",
-  "task-notifications-managedSiteModelSync": "notifications",
-  "task-notifications-usageHistorySync": "notifications",
-  "task-notifications-balanceHistoryCapture": "notifications",
-  "task-notifications-site-announcements": "notifications",
-  "site-announcement-notifications": "general",
-  "site-announcement-notifications-enabled": "general",
-  "site-announcement-notifications-page": "general",
+  [SETTINGS_ANCHORS.TASK_NOTIFICATIONS]: "notifications",
+  [SETTINGS_ANCHORS.TASK_NOTIFICATIONS_ENABLED]: "notifications",
+  [SETTINGS_ANCHORS.TASK_NOTIFICATIONS_PERMISSION]: "notifications",
+  [SETTINGS_ANCHORS.TASK_NOTIFICATIONS_AUTO_CHECKIN]: "notifications",
+  [SETTINGS_ANCHORS.TASK_NOTIFICATIONS_WEBDAV_AUTO_SYNC]: "notifications",
+  [SETTINGS_ANCHORS.TASK_NOTIFICATIONS_MANAGED_SITE_MODEL_SYNC]:
+    "notifications",
+  [SETTINGS_ANCHORS.TASK_NOTIFICATIONS_USAGE_HISTORY_SYNC]: "notifications",
+  [SETTINGS_ANCHORS.TASK_NOTIFICATIONS_BALANCE_HISTORY_CAPTURE]:
+    "notifications",
+  [SETTINGS_ANCHORS.TASK_NOTIFICATIONS_SITE_ANNOUNCEMENTS]: "notifications",
+  [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS]: "general",
+  [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED]: "general",
+  [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE]: "general",
   "balance-history": "balanceHistory",
   "account-management": "accountManagement",
   "auto-provision-key-on-account-add": "accountManagement",

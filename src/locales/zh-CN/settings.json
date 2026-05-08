@@ -587,6 +587,8 @@
       "browserFailed": "浏览器通知测试失败，请确认已启用浏览器通知渠道并授予通知权限。",
       "channelDisabled": "测试通知发送失败，请先启用并配置该通知渠道。",
       "failed": "测试通知发送失败，请检查该通知渠道配置。",
+      "httpError": "{{label}} 返回了 HTTP {{status}}。",
+      "httpErrorWithDetail": "{{label}} 返回了 HTTP {{status}}：{{detail}}",
       "message": "这是一条 All API Hub 任务通知测试。",
       "sent": "测试通知已发送",
       "telegramMissingConfig": "Telegram Bot Token 或 Chat ID 未配置。",

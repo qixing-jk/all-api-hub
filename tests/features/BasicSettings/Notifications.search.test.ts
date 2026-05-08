@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   notificationsSearchControls,
   notificationsSearchSections,
@@ -14,6 +15,9 @@ describe("notifications settings search definitions", () => {
       ["section:task-notification-channels", "notifications"],
       ["section:task-notification-events", "notifications"],
     ])
+    expect(notificationsSearchSections.map((section) => section.order)).toEqual(
+      [303, 304, 305],
+    )
   })
 
   it("registers notification controls on the notifications tab", () => {
@@ -25,17 +29,20 @@ describe("notifications settings search definitions", () => {
     expect(
       notificationsSearchControls.map((control) => control.targetId),
     ).toEqual([
-      "task-notifications-enabled",
-      "task-notifications-channel-browser",
-      "task-notifications-permission",
-      "task-notifications-channel-telegram",
-      "task-notifications-channel-webhook",
-      "task-notifications-autoCheckin",
-      "task-notifications-webdavAutoSync",
-      "task-notifications-managedSiteModelSync",
-      "task-notifications-usageHistorySync",
-      "task-notifications-balanceHistoryCapture",
-      "task-notifications-site-announcements",
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_ENABLED,
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_BROWSER,
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_PERMISSION,
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_TELEGRAM,
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_AUTO_CHECKIN,
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_WEBDAV_AUTO_SYNC,
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_MANAGED_SITE_MODEL_SYNC,
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_USAGE_HISTORY_SYNC,
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_BALANCE_HISTORY_CAPTURE,
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_SITE_ANNOUNCEMENTS,
     ])
+    expect(notificationsSearchControls.map((control) => control.order)).toEqual(
+      [607, 608, 609, 610, 611, 612, 613, 614, 615, 616, 617],
+    )
   })
 })

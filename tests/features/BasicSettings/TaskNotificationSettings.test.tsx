@@ -2,6 +2,7 @@ import { act, fireEvent, within } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import TaskNotificationSettings from "~/features/BasicSettings/components/tabs/Notifications/TaskNotificationSettings"
 import { OPTIONAL_PERMISSION_IDS } from "~/services/permissions/permissionManager"
 import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
@@ -161,7 +162,7 @@ describe("TaskNotificationSettings", () => {
 
     await screen.findByText("settings:taskNotifications.channels.browser.title")
     const browserChannel = document.getElementById(
-      "task-notifications-channel-browser",
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_BROWSER,
     )
     if (!browserChannel) {
       throw new Error("Expected browser channel settings row")
@@ -224,10 +225,10 @@ describe("TaskNotificationSettings", () => {
       "settings:taskNotifications.channels.telegram.title",
     )
     const telegramChannel = document.getElementById(
-      "task-notifications-channel-telegram",
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_TELEGRAM,
     )
     const webhookChannel = document.getElementById(
-      "task-notifications-channel-webhook",
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
     )
     if (!telegramChannel || !webhookChannel) {
       throw new Error("Expected third-party channel settings rows")
@@ -272,6 +273,186 @@ describe("TaskNotificationSettings", () => {
     })
   })
 
+  it("updates channel switches and saves trimmed third-party channel drafts", async () => {
+    hasPermissionMock.mockResolvedValue(true)
+    taskNotificationsMock.current = {
+      ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      channels: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+        [TASK_NOTIFICATION_CHANNELS.Telegram]: {
+          enabled: true,
+          botToken: "telegram-token",
+          chatId: "-1001234567890",
+        },
+        [TASK_NOTIFICATION_CHANNELS.Webhook]: {
+          enabled: true,
+          url: "https://hooks.example.com/all-api-hub",
+        },
+      },
+    }
+
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await screen.findByText("settings:taskNotifications.channels.browser.title")
+    const browserChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_BROWSER,
+    )
+    const telegramChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_TELEGRAM,
+    )
+    const webhookChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
+    )
+    if (!browserChannel || !telegramChannel || !webhookChannel) {
+      throw new Error("Expected channel settings rows")
+    }
+
+    fireEvent.click(within(browserChannel).getByRole("switch"))
+    fireEvent.click(within(telegramChannel).getByRole("switch"))
+    fireEvent.click(within(webhookChannel).getByRole("switch"))
+
+    await waitFor(() => {
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Browser]: expect.objectContaining({
+            enabled: false,
+          }),
+        }),
+      })
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Telegram]: expect.objectContaining({
+            enabled: false,
+          }),
+        }),
+      })
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Webhook]: expect.objectContaining({
+            enabled: false,
+          }),
+        }),
+      })
+    })
+
+    updateTaskNotificationsMock.mockClear()
+    const botTokenInput = within(telegramChannel).getByLabelText(
+      "settings:taskNotifications.channels.telegram.botToken",
+    )
+    const chatIdInput = within(telegramChannel).getByLabelText(
+      "settings:taskNotifications.channels.telegram.chatId",
+    )
+    const webhookUrlInput = within(webhookChannel).getByLabelText(
+      "settings:taskNotifications.channels.webhook.url",
+    )
+
+    fireEvent.change(botTokenInput, {
+      target: { value: "  next-telegram-token  " },
+    })
+    fireEvent.blur(botTokenInput)
+
+    await waitFor(() => {
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Telegram]: expect.objectContaining({
+            botToken: "next-telegram-token",
+            chatId: "-1001234567890",
+          }),
+        }),
+      })
+    })
+
+    fireEvent.change(chatIdInput, {
+      target: { value: "  -1009876543210  " },
+    })
+    fireEvent.blur(chatIdInput)
+
+    await waitFor(() => {
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Telegram]: expect.objectContaining({
+            botToken: "next-telegram-token",
+            chatId: "-1009876543210",
+          }),
+        }),
+      })
+    })
+
+    fireEvent.change(webhookUrlInput, {
+      target: { value: "  https://hooks.example.com/next  " },
+    })
+    fireEvent.blur(webhookUrlInput)
+
+    await waitFor(() => {
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Webhook]: expect.objectContaining({
+            url: "https://hooks.example.com/next",
+          }),
+        }),
+      })
+    })
+  })
+
+  it("does not save unchanged third-party channel drafts", async () => {
+    taskNotificationsMock.current = {
+      ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      channels: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+        [TASK_NOTIFICATION_CHANNELS.Telegram]: {
+          enabled: true,
+          botToken: "telegram-token",
+          chatId: "-1001234567890",
+        },
+        [TASK_NOTIFICATION_CHANNELS.Webhook]: {
+          enabled: true,
+          url: "https://hooks.example.com/all-api-hub",
+        },
+      },
+    }
+
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await screen.findByText(
+      "settings:taskNotifications.channels.telegram.title",
+    )
+    const telegramChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_TELEGRAM,
+    )
+    const webhookChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
+    )
+    if (!telegramChannel || !webhookChannel) {
+      throw new Error("Expected third-party channel settings rows")
+    }
+
+    await act(async () => {
+      fireEvent.blur(
+        within(telegramChannel).getByLabelText(
+          "settings:taskNotifications.channels.telegram.botToken",
+        ),
+      )
+      fireEvent.blur(
+        within(telegramChannel).getByLabelText(
+          "settings:taskNotifications.channels.telegram.chatId",
+        ),
+      )
+      fireEvent.blur(
+        within(webhookChannel).getByLabelText(
+          "settings:taskNotifications.channels.webhook.url",
+        ),
+      )
+    })
+
+    expect(updateTaskNotificationsMock).not.toHaveBeenCalled()
+  })
+
   it("updates the global switch, announcement switch, and per-task switch through the preferences context", async () => {
     hasPermissionMock.mockResolvedValue(true)
 
@@ -282,19 +463,21 @@ describe("TaskNotificationSettings", () => {
 
     const globalTaskNotifications = (
       await screen.findByText("settings:taskNotifications.enable")
-    ).closest('[id="task-notifications-enabled"]')
+    ).closest(`[id="${SETTINGS_ANCHORS.TASK_NOTIFICATIONS_ENABLED}"]`)
     const globalSwitch = globalTaskNotifications?.querySelector(
       '[role="switch"]',
     ) as HTMLElement | null
     const autoCheckinTask = screen
       .getByText("settings:taskNotifications.tasks.autoCheckin")
-      .closest('[id="task-notifications-autoCheckin"]')
+      .closest(`[id="${SETTINGS_ANCHORS.TASK_NOTIFICATIONS_AUTO_CHECKIN}"]`)
     const autoCheckinSwitch = autoCheckinTask?.querySelector(
       '[role="switch"]',
     ) as HTMLElement | null
     const siteAnnouncementNotifications = screen
       .getByText("settings:taskNotifications.siteAnnouncements.enable")
-      .closest('[id="task-notifications-site-announcements"]')
+      .closest(
+        `[id="${SETTINGS_ANCHORS.TASK_NOTIFICATIONS_SITE_ANNOUNCEMENTS}"]`,
+      )
     const siteAnnouncementSwitch = siteAnnouncementNotifications?.querySelector(
       '[role="switch"]',
     ) as HTMLElement | null
