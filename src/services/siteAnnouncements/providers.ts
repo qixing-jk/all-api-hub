@@ -53,6 +53,7 @@ export function createSub2ApiSiteAnnouncementKey(input: {
  * Parses upstream timestamp values into milliseconds since epoch.
  */
 function parseTimestamp(value: unknown): number | undefined {
+  // Values below 1e10 are treated as Unix seconds; larger values are already ms.
   if (typeof value === "number" && Number.isFinite(value)) {
     return value > 10_000_000_000 ? value : value * 1000
   }

@@ -28,6 +28,7 @@ import { DEFAULT_AXON_HUB_CONFIG } from "~/types/axonHubConfig"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import { DEFAULT_DONE_HUB_CONFIG } from "~/types/doneHubConfig"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
+import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
 import { SortingCriteriaType } from "~/types/sorting"
 import { DEFAULT_TASK_NOTIFICATION_PREFERENCES } from "~/types/taskNotifications"
 import { deepOverride } from "~/utils"
@@ -1950,6 +1951,78 @@ describe("UserPreferencesContext", () => {
     expect((latestContext as any)?.preferences.lastUpdated).toBe(
       preferences.lastUpdated,
     )
+  })
+
+  it("hydrates site announcement preferences from the saved snapshot returned by background updates", async () => {
+    const preferences = clonePreferences()
+    const savedPreferences = deepOverride(preferences, {
+      siteAnnouncementNotifications: {
+        enabled: false,
+        notificationEnabled: false,
+        intervalMinutes: 120,
+      },
+      lastUpdated: preferences.lastUpdated + 10,
+    })
+    mockedSendRuntimeMessage.mockResolvedValue({
+      success: true,
+      data: savedPreferences,
+    })
+
+    const context = await renderProvider(preferences)
+
+    await act(async () => {
+      await context.updateSiteAnnouncementNotifications({
+        enabled: false,
+        notificationEnabled: false,
+        intervalMinutes: 120,
+      })
+    })
+
+    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
+      action: RuntimeActionIds.SiteAnnouncementsUpdatePreferences,
+      settings: {
+        enabled: false,
+        notificationEnabled: false,
+        intervalMinutes: 120,
+      },
+    })
+    expect((latestContext as any)?.preferences).toEqual(savedPreferences)
+  })
+
+  it("merges site announcement preference updates locally when background omits a saved snapshot", async () => {
+    const preferences = clonePreferences()
+    preferences.siteAnnouncementNotifications = {
+      ...DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
+      intervalMinutes: 360,
+    }
+    mockedSendRuntimeMessage.mockResolvedValue({
+      success: true,
+    })
+
+    const context = await renderProvider(preferences)
+
+    await act(async () => {
+      await context.updateSiteAnnouncementNotifications({
+        notificationEnabled: false,
+        intervalMinutes: 120,
+      })
+    })
+
+    expect(
+      (latestContext as any)?.preferences.siteAnnouncementNotifications,
+    ).toEqual({
+      enabled: true,
+      notificationEnabled: false,
+      intervalMinutes: 120,
+    })
+    expect((latestContext as any)?.preferences.lastUpdated).toBeGreaterThan(
+      preferences.lastUpdated,
+    )
+    expect((latestContext as any)?.siteAnnouncementNotifications).toEqual({
+      enabled: true,
+      notificationEnabled: false,
+      intervalMinutes: 120,
+    })
   })
 
   it("refreshes context menus when feature enabled state changes and preserves existing nested settings", async () => {

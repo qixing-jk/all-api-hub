@@ -1485,19 +1485,18 @@ export const UserPreferencesProvider = ({
         }),
       )
 
-      if (response.success) {
+      if (response.success && isUserPreferencesSnapshot(response.data)) {
+        setPreferences(response.data)
+      } else if (response.success) {
         setPreferences((prev) =>
           prev
             ? {
                 ...prev,
-                siteAnnouncementNotifications:
-                  normalizeSiteAnnouncementPreferences(
-                    deepOverride(
-                      prev.siteAnnouncementNotifications ??
-                        DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
-                      updates,
-                    ),
-                  ),
+                siteAnnouncementNotifications: deepOverride(
+                  prev.siteAnnouncementNotifications ??
+                    DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
+                  updates,
+                ),
                 lastUpdated: Date.now(),
               }
             : prev,

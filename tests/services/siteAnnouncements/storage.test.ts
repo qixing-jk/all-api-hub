@@ -168,4 +168,40 @@ describe("siteAnnouncementStorage", () => {
       readAt: 1234,
     })
   })
+
+  it("surfaces persistence failures instead of returning a successful in-memory update", async () => {
+    vi.spyOn(
+      (siteAnnouncementStorage as any).storage,
+      "set",
+    ).mockRejectedValueOnce(new Error("disk full"))
+
+    await expect(
+      siteAnnouncementStorage.upsertDiscoveredRecords({
+        site: {
+          siteKey: "notice:new-api:https://example.com",
+          siteName: "Example",
+          siteType: "new-api",
+          baseUrl: "https://example.com",
+          accountId: "account-1",
+          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          status: SITE_ANNOUNCEMENT_STATUS.Success,
+        },
+        records: [
+          {
+            siteKey: "notice:new-api:https://example.com",
+            siteName: "Example",
+            siteType: "new-api",
+            baseUrl: "https://example.com",
+            accountId: "account-1",
+            providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+            title: "Notice",
+            content: "Hello",
+            fingerprint: "persist-failure",
+          },
+        ],
+      }),
+    ).rejects.toThrow("Failed to persist site announcement store")
+
+    await expect(siteAnnouncementStorage.listRecords()).resolves.toEqual([])
+  })
 })

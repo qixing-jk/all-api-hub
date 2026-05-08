@@ -3,12 +3,19 @@ import { describe, expect, it, vi } from "vitest"
 import { fetchSiteNotice } from "~/services/apiService/common"
 import { AuthTypeEnum } from "~/types"
 
-const { fetchApiMock } = vi.hoisted(() => ({
+const { fetchApiMock, loggerWarnMock } = vi.hoisted(() => ({
   fetchApiMock: vi.fn(),
+  loggerWarnMock: vi.fn(),
 }))
 
 vi.mock("~/services/apiService/common/utils", () => ({
   fetchApi: fetchApiMock,
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    warn: loggerWarnMock,
+  }),
 }))
 
 const request = {
@@ -49,5 +56,9 @@ describe("apiService common fetchSiteNotice", () => {
     fetchApiMock.mockRejectedValueOnce(new TypeError("network failed"))
 
     await expect(fetchSiteNotice(request)).resolves.toBeNull()
+    expect(loggerWarnMock).toHaveBeenCalledWith(
+      "获取站点公告信息失败",
+      expect.any(TypeError),
+    )
   })
 })

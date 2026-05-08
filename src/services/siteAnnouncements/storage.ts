@@ -26,7 +26,7 @@ import {
 const logger = createLogger("SiteAnnouncementStorage")
 
 /**
- *
+ * Coerces unknown persisted provider ids to the supported announcement providers.
  */
 function normalizeProviderId(value: unknown): SiteAnnouncementProviderId {
   return value === SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api
@@ -214,7 +214,9 @@ class SiteAnnouncementStorage {
     return this.withStorageWriteLock(async () => {
       const current = await this.getStore()
       const updated = updater(current) ?? current
-      await this.setStore(updated)
+      if (!(await this.setStore(updated))) {
+        throw new Error("Failed to persist site announcement store")
+      }
       return updated
     })
   }

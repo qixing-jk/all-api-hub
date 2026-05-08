@@ -5,6 +5,7 @@ import {
   handleSiteAnnouncementMessage,
   siteAnnouncementScheduler,
 } from "~/services/siteAnnouncements/scheduler"
+import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { SITE_ANNOUNCEMENT_PROVIDER_IDS } from "~/types/siteAnnouncements"
 
@@ -108,6 +109,8 @@ function createAccount(overrides: Partial<any> = {}) {
 describe("siteAnnouncementScheduler", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    ;(siteAnnouncementScheduler as any).isInitialized = false
+    ;(siteAnnouncementScheduler as any).isRunning = false
     getPreferencesMock.mockResolvedValue({
       siteAnnouncementNotifications: {
         enabled: true,
@@ -149,6 +152,26 @@ describe("siteAnnouncementScheduler", () => {
 
     expect(clearAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck")
     expect(createAlarmMock).not.toHaveBeenCalled()
+  })
+
+  it("skips alarm-triggered checks when automatic polling is disabled", async () => {
+    await siteAnnouncementScheduler.initialize()
+
+    getPreferencesMock.mockResolvedValue({
+      siteAnnouncementNotifications: {
+        enabled: false,
+        notificationEnabled: true,
+        intervalMinutes: 360,
+      },
+    })
+
+    const alarmHandler = onAlarmMock.mock.calls[0]?.[0]
+    expect(alarmHandler).toBeTypeOf("function")
+
+    await alarmHandler?.({ name: "siteAnnouncementsCheck" })
+
+    expect(getEnabledAccountsMock).not.toHaveBeenCalled()
+    expect(providerFetchMock).not.toHaveBeenCalled()
   })
 
   it("dedupes common site checks but keeps Sub2API account-scoped checks", async () => {
@@ -256,5 +279,38 @@ describe("siteAnnouncementScheduler", () => {
       [{ id: "42" }],
     )
     expect(readResponse).toHaveBeenCalledWith({ success: true })
+  })
+
+  it("stores notification errors without acknowledging upstream announcements when delivery fails", async () => {
+    providerFetchMock.mockResolvedValue({
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      siteKey: "notice:new-api:https://example.com",
+      status: "success",
+      announcements: [{ content: "Only body text" }],
+    })
+    notifySiteAnnouncementsMock.mockResolvedValue({
+      success: false,
+      error: "notifications blocked",
+    })
+    getEnabledAccountsMock.mockResolvedValue([createAccount()])
+
+    const response = vi.fn()
+    await handleSiteAnnouncementMessage(
+      { action: RuntimeActionIds.SiteAnnouncementsCheckNow },
+      response,
+    )
+
+    expect(response.mock.calls[0][0].data).toMatchObject({
+      created: 1,
+      notified: 0,
+    })
+    await expect(siteAnnouncementStorage.listRecords()).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          notificationError: "notifications blocked",
+        }),
+      ]),
+    )
+    expect(providerMarkReadMock).not.toHaveBeenCalled()
   })
 })

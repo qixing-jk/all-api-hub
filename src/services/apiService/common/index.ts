@@ -455,7 +455,8 @@ export async function fetchSiteNotice(
 
     const data = response.data
     return typeof data === "string" && data.trim() ? data : null
-  } catch {
+  } catch (error) {
+    logger.warn("获取站点公告信息失败", error)
     return null
   }
 }

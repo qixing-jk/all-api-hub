@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { SiteAnnouncementsStatusAlert } from "~/features/SiteAnnouncements/components/SiteAnnouncementsStatusAlert"
+import { testI18n } from "~~/tests/test-utils/i18n"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const baseStatus = {
@@ -14,6 +15,13 @@ const baseStatus = {
 }
 
 describe("SiteAnnouncementsStatusAlert", () => {
+  testI18n.addResource(
+    "en",
+    "siteAnnouncements",
+    "status.failed",
+    "Failure: {{error}}",
+  )
+
   it("renders nothing for successful checks", () => {
     const { container } = render(
       <SiteAnnouncementsStatusAlert
@@ -54,11 +62,26 @@ describe("SiteAnnouncementsStatusAlert", () => {
     expect(
       await screen.findByText(/siteAnnouncements:status\.failedTitle/),
     ).toBeInTheDocument()
-    expect(
-      screen.getByText("siteAnnouncements:status.failed"),
-    ).toBeInTheDocument()
+    expect(screen.getByText("Failure: timeout")).toBeInTheDocument()
     expect(
       screen.getByText(/siteAnnouncements:status\.lastChecked/),
     ).toBeInTheDocument()
+  })
+
+  it("falls back to a placeholder error detail when the failure reason is missing", async () => {
+    render(
+      <SiteAnnouncementsStatusAlert
+        status={{
+          ...baseStatus,
+          status: "error",
+          lastCheckedAt: Date.UTC(2026, 4, 8, 0, 0, 0),
+        }}
+      />,
+    )
+
+    expect(
+      await screen.findByText(/siteAnnouncements:status\.failedTitle/),
+    ).toBeInTheDocument()
+    expect(screen.getByText("Failure: -")).toBeInTheDocument()
   })
 })
