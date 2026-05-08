@@ -432,24 +432,32 @@ export async function fetchSiteStatus(
 export async function fetchSiteNotice(
   request: ApiServiceRequest,
 ): Promise<string | null> {
-  const response = await fetchApi<string | null>(
-    {
-      ...request,
-      auth: {
-        ...request.auth,
-        authType: AuthTypeEnum.None,
+  try {
+    const response = await fetchApi<string | null>(
+      {
+        ...request,
+        auth: {
+          ...request.auth,
+          authType: AuthTypeEnum.None,
+        },
       },
-    },
-    { endpoint: "/api/notice" },
-    false,
-  )
+      { endpoint: "/api/notice" },
+      false,
+    )
 
-  if (!response || typeof response !== "object" || response.success === false) {
+    if (
+      !response ||
+      typeof response !== "object" ||
+      response.success === false
+    ) {
+      return null
+    }
+
+    const data = response.data
+    return typeof data === "string" && data.trim() ? data : null
+  } catch {
     return null
   }
-
-  const data = response.data
-  return typeof data === "string" && data.trim() ? data : null
 }
 
 /**

@@ -6,7 +6,7 @@ import {
   ExternalLink,
   Inbox,
 } from "lucide-react"
-import { type MouseEvent } from "react"
+import { type KeyboardEvent, type MouseEvent } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Badge, Button, Card } from "~/components/ui"
@@ -44,9 +44,17 @@ export function SiteAnnouncementCard({
     previewLength: 120,
   })
   const sourceUrl = getAnnouncementSourceUrl(record)
+  const detailsRegionId = `site-announcement-content-${record.id}`
 
   const handleToggle = () => {
     onToggleExpanded(record)
+  }
+
+  const handleHeaderKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+    if (event.key === "Enter" || event.key === " ") {
+      event.preventDefault()
+      handleToggle()
+    }
   }
 
   const handleMarkRead = (event: MouseEvent) => {
@@ -65,6 +73,11 @@ export function SiteAnnouncementCard({
         <div
           className="flex cursor-pointer items-start gap-4 p-4 transition-colors hover:bg-gray-50/50 dark:hover:bg-white/5"
           onClick={handleToggle}
+          onKeyDown={handleHeaderKeyDown}
+          role="button"
+          tabIndex={0}
+          aria-expanded={expanded}
+          aria-controls={detailsRegionId}
         >
           <div className="min-w-0 flex-1">
             <div className="flex items-start justify-between gap-4">
@@ -173,7 +186,10 @@ export function SiteAnnouncementCard({
         </div>
 
         {expanded && (
-          <div className="animate-in fade-in slide-in-from-top-2 px-4 pb-4 duration-200">
+          <div
+            id={detailsRegionId}
+            className="animate-in fade-in slide-in-from-top-2 px-4 pb-4 duration-200"
+          >
             <div className="mb-4 h-px bg-gray-100 dark:bg-white/5" />
             <div className="dark:bg-dark-bg-tertiary max-h-96 overflow-auto rounded-md bg-gray-50 p-4 shadow-inner">
               <AnnouncementMarkdown content={display.body} />

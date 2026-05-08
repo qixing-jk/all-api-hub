@@ -4,6 +4,7 @@ import {
   buildAnnouncementDisplayText,
   buildAnnouncementShortTitle,
   buildAnnouncementTitle,
+  fingerprintAnnouncement,
   getAnnouncementPreviewText,
   summarizeAnnouncement,
 } from "~/services/siteAnnouncements/text"
@@ -114,6 +115,12 @@ describe("site announcement text helpers", () => {
     ).toBe("Release ready")
     expect(getAnnouncementPreviewText("<b>Hello&nbsp;world</b>", 80)).toBe(
       "Hello world",
+    )
+  })
+
+  it("uses length-prefixed fingerprint parts to avoid delimiter collisions", () => {
+    expect(fingerprintAnnouncement(["alpha|beta", "gamma"])).not.toBe(
+      fingerprintAnnouncement(["alpha", "beta|gamma"]),
     )
   })
 })

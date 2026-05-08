@@ -38,7 +38,7 @@ export function SiteAnnouncementsSummaryMetrics({
                   getMetricToneClasses(metric.tone),
                 )}
               >
-                <Icon className="h-5 w-5" />
+                <Icon className="h-5 w-5" aria-hidden="true" />
               </div>
             </div>
           </div>

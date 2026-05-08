@@ -3,12 +3,16 @@ import { Storage } from "@plasmohq/storage"
 import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import type {
+  SiteAnnouncementProviderId,
   SiteAnnouncementRecord,
   SiteAnnouncementSiteState,
   SiteAnnouncementStatus,
   SiteAnnouncementStoreState,
 } from "~/types/siteAnnouncements"
-import { SITE_ANNOUNCEMENT_STATUS } from "~/types/siteAnnouncements"
+import {
+  SITE_ANNOUNCEMENT_PROVIDER_IDS,
+  SITE_ANNOUNCEMENT_STATUS,
+} from "~/types/siteAnnouncements"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
@@ -20,6 +24,15 @@ import {
 } from "./constants"
 
 const logger = createLogger("SiteAnnouncementStorage")
+
+/**
+ *
+ */
+function normalizeProviderId(value: unknown): SiteAnnouncementProviderId {
+  return value === SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api
+    ? SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api
+    : SITE_ANNOUNCEMENT_PROVIDER_IDS.Common
+}
 
 /**
  * Creates an empty persisted announcement store with the current schema version.
@@ -67,7 +80,7 @@ function sanitizeRecord(value: unknown): SiteAnnouncementRecord | null {
     siteType: typeof value.siteType === "string" ? value.siteType : "unknown",
     baseUrl: typeof value.baseUrl === "string" ? value.baseUrl : "",
     accountId: typeof value.accountId === "string" ? value.accountId : "",
-    providerId: value.providerId === "sub2api" ? "sub2api" : "common",
+    providerId: normalizeProviderId(value.providerId),
     upstreamId:
       typeof value.upstreamId === "string" ? value.upstreamId : undefined,
     title: typeof value.title === "string" ? value.title : "",
@@ -120,7 +133,7 @@ function sanitizeSiteState(
     siteType: typeof value.siteType === "string" ? value.siteType : "unknown",
     baseUrl: typeof value.baseUrl === "string" ? value.baseUrl : "",
     accountId: typeof value.accountId === "string" ? value.accountId : "",
-    providerId: value.providerId === "sub2api" ? "sub2api" : "common",
+    providerId: normalizeProviderId(value.providerId),
     status: sanitizeStatus(value.status),
     lastCheckedAt:
       typeof value.lastCheckedAt === "number" ? value.lastCheckedAt : undefined,
@@ -266,7 +279,7 @@ class SiteAnnouncementStorage {
           id: safeRandomUUID("site-announcement"),
           firstSeenAt: now,
           lastSeenAt: now,
-          read: false,
+          read: typeof input.readAt === "number",
         }
         records.unshift(record)
         createdRecords.push(record)
@@ -363,7 +376,7 @@ class SiteAnnouncementStorage {
     siteType: string
     baseUrl: string
     accountId: string
-    providerId: "common" | "sub2api"
+    providerId: SiteAnnouncementProviderId
     status: SiteAnnouncementStatus
     error?: string
     now?: number

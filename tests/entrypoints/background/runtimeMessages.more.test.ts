@@ -377,6 +377,10 @@ describe("setupRuntimeMessageListeners additional routing", () => {
         request: { action: RuntimeActionIds.TaskNotificationsTest },
         expected: mocks.handleTaskNotificationMessage,
       },
+      {
+        request: { action: RuntimeActionIds.SiteAnnouncementsGetStatus },
+        expected: mocks.handleSiteAnnouncementMessage,
+      },
     ]
 
     for (const { request, expected } of cases) {

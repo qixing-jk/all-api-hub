@@ -11,6 +11,12 @@ const TASK_NOTIFICATION_BREADCRUMBS = [
   "settings:taskNotifications.title",
 ]
 
+const SITE_ANNOUNCEMENT_BREADCRUMBS = [
+  ...DEFAULT_BREADCRUMBS,
+  "settings:tabs.general",
+  "settings:siteAnnouncementNotifications.title",
+]
+
 const TASK_NOTIFICATION_CONTROL_ORDER_START = 509
 
 const TASK_NOTIFICATION_SEARCH_CONTROLS = [
@@ -291,11 +297,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     {
       descriptionKey:
         "settings:siteAnnouncementNotifications.polling.enableDesc",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.general",
-        "settings:siteAnnouncementNotifications.title",
-      ],
+      breadcrumbsKeys: SITE_ANNOUNCEMENT_BREADCRUMBS,
       keywords: ["announcement", "notice", "polling", "background check"],
     },
   ),
@@ -307,11 +309,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     516,
     {
       descriptionKey: "settings:siteAnnouncementNotifications.page.description",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.general",
-        "settings:siteAnnouncementNotifications.title",
-      ],
+      breadcrumbsKeys: SITE_ANNOUNCEMENT_BREADCRUMBS,
       keywords: ["announcement", "notice", "records", "page"],
     },
   ),

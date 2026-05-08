@@ -12,9 +12,12 @@ import {
   SITE_ANNOUNCEMENT_STATUS,
 } from "~/types/siteAnnouncements"
 import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import { fingerprintAnnouncement, normalizeAnnouncementText } from "./text"
+
+const logger = createLogger("SiteAnnouncementProviders")
 
 /**
  * Normalizes a site URL into the stable key segment used for announcement state.
@@ -174,14 +177,40 @@ export const sub2ApiSiteAnnouncementProvider: SiteAnnouncementProvider = {
   },
   async markRead(request, announcements) {
     const service = getApiService(SUB2API)
-    await Promise.allSettled(
-      announcements
-        .map((announcement) => announcement.id)
-        .filter((id): id is string => Boolean(id))
-        .map((id) =>
-          service.markSub2ApiAnnouncementRead(request.apiRequest, id),
-        ),
+    const ids = announcements
+      .map((announcement) => announcement.id)
+      .filter((id): id is string => Boolean(id))
+
+    const results = await Promise.allSettled(
+      ids.map((id) =>
+        service.markSub2ApiAnnouncementRead(request.apiRequest, id),
+      ),
     )
+
+    const failures = results.flatMap((result, index) =>
+      result.status === "rejected"
+        ? [{ announcementId: ids[index]!, reason: result.reason }]
+        : [],
+    )
+
+    if (failures.length === 0) {
+      return
+    }
+
+    for (const failure of failures) {
+      logger.warn("Failed to mark Sub2API announcement as read", {
+        accountId: request.accountId,
+        announcementId: failure.announcementId,
+        error: getErrorMessage(failure.reason),
+      })
+    }
+
+    if (failures.length === ids.length) {
+      const [firstFailure] = failures
+      throw firstFailure?.reason instanceof Error
+        ? firstFailure.reason
+        : new Error(getErrorMessage(firstFailure?.reason))
+    }
   },
 }
 

@@ -272,5 +272,6 @@ export function fingerprintAnnouncement(parts: unknown[]): string {
         .trim()
         .replace(WHITESPACE_PATTERN, " "),
     )
+    .map((part) => `${part.length}:${part}`)
     .join("|")
 }

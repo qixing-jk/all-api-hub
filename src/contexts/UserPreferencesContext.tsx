@@ -1491,13 +1491,13 @@ export const UserPreferencesProvider = ({
             ? {
                 ...prev,
                 siteAnnouncementNotifications:
-                  normalizeSiteAnnouncementPreferences({
-                    ...normalizeSiteAnnouncementPreferences(
+                  normalizeSiteAnnouncementPreferences(
+                    deepOverride(
                       prev.siteAnnouncementNotifications ??
                         DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
+                      updates,
                     ),
-                    ...updates,
-                  }),
+                  ),
                 lastUpdated: Date.now(),
               }
             : prev,
@@ -1902,8 +1902,7 @@ export const UserPreferencesProvider = ({
     taskNotifications:
       preferences.taskNotifications ?? DEFAULT_TASK_NOTIFICATION_PREFERENCES,
     siteAnnouncementNotifications: normalizeSiteAnnouncementPreferences(
-      preferences.siteAnnouncementNotifications ??
-        DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
+      preferences.siteAnnouncementNotifications,
     ),
     updateActiveTab,
     updateDefaultTab,

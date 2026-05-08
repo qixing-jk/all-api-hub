@@ -13,7 +13,9 @@ import {
   fetchAccountTokens,
   fetchCurrentUser,
   fetchSiteStatus,
+  fetchSub2ApiAnnouncements,
   fetchUserGroups,
+  markSub2ApiAnnouncementRead,
   refreshAccountData,
   updateApiToken,
 } from "~/services/apiService/sub2api"
@@ -30,6 +32,10 @@ import {
   translateSub2ApiUpdateTokenRequest,
 } from "~/services/apiService/sub2api/parsing"
 import { resyncSub2ApiAuthToken } from "~/services/apiService/sub2api/tokenResync"
+import type {
+  Sub2ApiAnnouncementListData,
+  Sub2ApiEnvelope,
+} from "~/services/apiService/sub2api/type"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 const { mockGetAccountById, mockUpdateAccount } = vi.hoisted(() => ({
@@ -200,6 +206,73 @@ describe("apiService sub2api parsing", () => {
         balance: 0,
       }),
     ).toThrow("messages:errors.api.invalidResponseFormat")
+  })
+
+  it("fetchSub2ApiAnnouncements requests unread-only notices when asked", async () => {
+    const announcementsResponse: Sub2ApiEnvelope<Sub2ApiAnnouncementListData> =
+      {
+        code: 0,
+        message: "ok",
+        data: [
+          {
+            id: 1,
+            title: "Notice",
+            content: "Body",
+          },
+        ],
+      }
+
+    vi.mocked(fetchApi).mockResolvedValueOnce(announcementsResponse as any)
+
+    await expect(
+      fetchSub2ApiAnnouncements(
+        {
+          baseUrl: "https://example.com",
+          accountId: "account-1",
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: "token",
+          },
+        },
+        { unreadOnly: true },
+      ),
+    ).resolves.toMatchObject([
+      {
+        id: 1,
+        title: "Notice",
+        content: "Body",
+      },
+    ])
+
+    expect(fetchApi).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        endpoint: expect.stringContaining("unread_only=1"),
+        options: expect.objectContaining({
+          method: "GET",
+          cache: "no-store",
+        }),
+      }),
+      true,
+    )
+  })
+
+  it("markSub2ApiAnnouncementRead returns false when the upstream call fails", async () => {
+    vi.mocked(fetchApi).mockRejectedValueOnce(new Error("read failed"))
+
+    await expect(
+      markSub2ApiAnnouncementRead(
+        {
+          baseUrl: "https://example.com",
+          accountId: "account-1",
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: "token",
+          },
+        },
+        "announcement-1",
+      ),
+    ).resolves.toBe(false)
   })
 
   it("parseSub2ApiKey normalizes quota, dates, group aliases, and fallback user ids", () => {

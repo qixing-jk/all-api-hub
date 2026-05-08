@@ -29,8 +29,9 @@
   },
   "loading": "正在加载公告...",
   "messages": {
+    "checkCompleted": "公告检查已完成",
     "checkFailed": "公告检查失败",
-    "checkStarted": "公告检查已完成"
+    "loadFailed": "加载公告失败"
   },
   "notification": {
     "multipleUnread": "{{title}}，还有 {{count}} 条未读公告",

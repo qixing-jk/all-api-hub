@@ -1,3 +1,5 @@
+import type { ApiServiceRequest } from "~/services/apiService/common/type"
+
 export const SITE_ANNOUNCEMENT_PROVIDER_IDS = {
   Common: "common",
   Sub2Api: "sub2api",
@@ -70,7 +72,7 @@ export interface SiteAnnouncementProviderRequest {
   siteType: string
   baseUrl: string
   providerId: SiteAnnouncementProviderId
-  apiRequest: import("~/services/apiService/common/type").ApiServiceRequest
+  apiRequest: ApiServiceRequest
 }
 
 export interface SiteAnnouncementProviderResult {

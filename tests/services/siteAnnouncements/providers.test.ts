@@ -60,7 +60,7 @@ describe("site announcement providers", () => {
     expect(result.announcements).toEqual([
       {
         content: "**Hello** <b>world</b>",
-        fingerprint: "**Hello** <b>world</b>",
+        fingerprint: "22:**Hello** <b>world</b>",
       },
     ])
   })
@@ -103,6 +103,46 @@ describe("site announcement providers", () => {
     )
 
     expect(markRead).toHaveBeenCalledWith(request.apiRequest, "12")
+  })
+
+  it("logs partial Sub2API mark-read failures without failing the whole batch", async () => {
+    const markRead = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("first failed"))
+      .mockResolvedValueOnce(true)
+    getApiServiceMock.mockReturnValue({
+      markSub2ApiAnnouncementRead: markRead,
+    })
+
+    const request = {
+      ...baseRequest,
+      siteType: "sub2api",
+      providerId: "sub2api" as const,
+    }
+
+    await expect(
+      sub2ApiSiteAnnouncementProvider.markRead?.(request, [
+        { id: "1" },
+        { id: "2" },
+      ]),
+    ).resolves.toBeUndefined()
+  })
+
+  it("throws when every Sub2API mark-read request fails", async () => {
+    const markRead = vi.fn().mockRejectedValue(new Error("all failed"))
+    getApiServiceMock.mockReturnValue({
+      markSub2ApiAnnouncementRead: markRead,
+    })
+
+    const request = {
+      ...baseRequest,
+      siteType: "sub2api",
+      providerId: "sub2api" as const,
+    }
+
+    await expect(
+      sub2ApiSiteAnnouncementProvider.markRead?.(request, [{ id: "1" }]),
+    ).rejects.toThrow("all failed")
   })
 
   it("keeps Sub2API title-only announcements title-only", async () => {

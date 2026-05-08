@@ -64,10 +64,16 @@ export default function SiteAnnouncementsPage({
 
       setRecords(recordsResponse?.data ?? [])
       setStatus(statusResponse?.data ?? [])
+    } catch (error) {
+      showResultToast({
+        success: false,
+        message: getErrorMessage(error),
+        errorFallback: t("messages.loadFailed"),
+      })
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [t])
 
   useEffect(() => {
     void loadData()
@@ -135,7 +141,7 @@ export default function SiteAnnouncementsPage({
       const success = response?.success === true
       showResultToast({
         success,
-        successFallback: t("messages.checkStarted"),
+        successFallback: t("messages.checkCompleted"),
         errorFallback: response?.error ?? t("messages.checkFailed"),
       })
       await loadData()
@@ -171,17 +177,19 @@ export default function SiteAnnouncementsPage({
   }
 
   const toggleExpanded = (record: SiteAnnouncementRecord) => {
+    let isExpanding = false
     setExpandedIds((prev) => {
       const next = new Set(prev)
-      if (next.has(record.id)) {
-        next.delete(record.id)
-      } else {
+      isExpanding = !next.has(record.id)
+      if (isExpanding) {
         next.add(record.id)
+      } else {
+        next.delete(record.id)
       }
       return next
     })
 
-    if (isSub2ApiAnnouncement(record) && !record.read) {
+    if (isExpanding && isSub2ApiAnnouncement(record) && !record.read) {
       void handleMarkRead(record.id)
     }
   }

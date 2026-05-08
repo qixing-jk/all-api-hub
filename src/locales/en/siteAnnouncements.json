@@ -29,8 +29,9 @@
   },
   "loading": "Loading announcements...",
   "messages": {
+    "checkCompleted": "Announcement check completed",
     "checkFailed": "Announcement check failed",
-    "checkStarted": "Announcement check completed"
+    "loadFailed": "Failed to load announcements"
   },
   "notification": {
     "multipleUnread_one": "{{title}}, plus {{count}} unread announcement",

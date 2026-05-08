@@ -9,11 +9,6 @@ interface AnnouncementMarkdownProps {
   className?: string
 }
 
-marked.setOptions({
-  breaks: true,
-  gfm: true,
-})
-
 /**
  * Normalizes announcement links after sanitization so Markdown and raw HTML
  * links share the same external navigation behavior.
@@ -42,9 +37,17 @@ export function AnnouncementMarkdown({
       return ""
     }
 
-    return forceLinksToOpenInNewTab(
-      DOMPurify.sanitize(marked.parse(content) as string),
-    )
+    const parsed = marked.parse(content, {
+      breaks: true,
+      gfm: true,
+      async: false,
+    })
+
+    if (typeof parsed !== "string") {
+      return ""
+    }
+
+    return forceLinksToOpenInNewTab(DOMPurify.sanitize(parsed))
   }, [content])
 
   if (!html) {

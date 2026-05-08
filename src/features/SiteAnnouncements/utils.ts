@@ -1,5 +1,8 @@
 import { getSiteApiRouter, SUB2API } from "~/constants/siteType"
-import type { SiteAnnouncementRecord } from "~/types/siteAnnouncements"
+import {
+  SITE_ANNOUNCEMENT_PROVIDER_IDS,
+  type SiteAnnouncementRecord,
+} from "~/types/siteAnnouncements"
 import { formatRelativeTime } from "~/utils/core/formatters"
 import { joinUrl } from "~/utils/core/url"
 
@@ -40,7 +43,10 @@ export function formatSub2ApiRelativeTimestamp(record: SiteAnnouncementRecord) {
  * Checks whether a cached announcement came from the Sub2API provider.
  */
 export function isSub2ApiAnnouncement(record: SiteAnnouncementRecord) {
-  return record.siteType === SUB2API || record.providerId === "sub2api"
+  return (
+    record.siteType === SUB2API ||
+    record.providerId === SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api
+  )
 }
 
 /**

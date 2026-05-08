@@ -1,10 +1,7 @@
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import type { SiteAnnouncementRecord } from "~/types/siteAnnouncements"
-import {
-  DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
-  normalizeSiteAnnouncementPreferences,
-} from "~/types/siteAnnouncements"
+import { normalizeSiteAnnouncementPreferences } from "~/types/siteAnnouncements"
 import {
   TASK_NOTIFICATION_STATUSES,
   TASK_NOTIFICATION_TASKS,
@@ -28,8 +25,7 @@ const logger = createLogger("SiteAnnouncementNotificationService")
 async function shouldNotifySiteAnnouncements(): Promise<boolean> {
   const prefs = await userPreferences.getPreferences()
   const siteAnnouncements = normalizeSiteAnnouncementPreferences(
-    prefs.siteAnnouncementNotifications ??
-      DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
+    prefs.siteAnnouncementNotifications,
   )
 
   return siteAnnouncements.notificationEnabled

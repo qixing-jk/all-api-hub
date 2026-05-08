@@ -16,6 +16,7 @@ import type {
 import {
   DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
   normalizeSiteAnnouncementPreferences,
+  SITE_ANNOUNCEMENT_PROVIDER_IDS,
   SITE_ANNOUNCEMENT_STATUS,
 } from "~/types/siteAnnouncements"
 import {
@@ -114,7 +115,6 @@ function createRecordInput(params: {
     content,
     createdAt: params.announcement.createdAt,
     updatedAt: params.announcement.updatedAt,
-    readAt: params.announcement.readAt,
     fingerprint,
   }
 }
@@ -183,8 +183,7 @@ function dedupeCommonAccounts(accounts: SiteAccount[]): SiteAccount[] {
 async function isAutomaticPollingEnabled(): Promise<boolean> {
   const prefs = await userPreferences.getPreferences()
   return normalizeSiteAnnouncementPreferences(
-    prefs.siteAnnouncementNotifications ??
-      DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
+    prefs.siteAnnouncementNotifications,
   ).enabled
 }
 
@@ -231,10 +230,7 @@ class SiteAnnouncementScheduler {
   private async applyScheduleFromPreferences(): Promise<void> {
     const prefs = await userPreferences.getPreferences()
     await this.applySchedule(
-      normalizeSiteAnnouncementPreferences(
-        prefs.siteAnnouncementNotifications ??
-          DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
-      ),
+      normalizeSiteAnnouncementPreferences(prefs.siteAnnouncementNotifications),
     )
   }
 
@@ -243,8 +239,7 @@ class SiteAnnouncementScheduler {
   ): Promise<SiteAnnouncementPreferences> {
     const prefs = await userPreferences.getPreferences()
     const current = normalizeSiteAnnouncementPreferences(
-      prefs.siteAnnouncementNotifications ??
-        DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
+      prefs.siteAnnouncementNotifications,
     )
     const next: SiteAnnouncementPreferences = {
       ...current,
@@ -262,13 +257,12 @@ class SiteAnnouncementScheduler {
   }
 
   async runManualCheck(accountIds?: string[]) {
-    return await this.runCheck({ trigger: "manual", accountIds, force: true })
+    return await this.runCheck({ trigger: "manual", accountIds })
   }
 
   private async runCheck(params: {
     trigger: "alarm" | "manual"
     accountIds?: string[]
-    force?: boolean
   }): Promise<SiteAnnouncementCheckResult | null> {
     if (this.isRunning) {
       return null
@@ -357,6 +351,8 @@ class SiteAnnouncementScheduler {
 
             if (notification.success) {
               result.notified += createdRecords.length
+              // Ack every item in checkResult.announcements, not just createdRecords,
+              // so provider.markRead can stop returning already-seen unread payloads.
               await provider.markRead?.(request, checkResult.announcements)
             }
           }
@@ -398,7 +394,7 @@ async function syncSub2ApiAnnouncementRead(recordId: string): Promise<void> {
   if (
     !record ||
     record.siteType !== SUB2API ||
-    record.providerId !== "sub2api" ||
+    record.providerId !== SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api ||
     !record.upstreamId
   ) {
     return

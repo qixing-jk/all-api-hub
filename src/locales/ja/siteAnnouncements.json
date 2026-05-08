@@ -29,8 +29,9 @@
   },
   "loading": "公告を読み込み中...",
   "messages": {
+    "checkCompleted": "公告確認が完了しました",
     "checkFailed": "公告確認に失敗しました",
-    "checkStarted": "公告確認が完了しました"
+    "loadFailed": "公告の読み込みに失敗しました"
   },
   "notification": {
     "multipleUnread_other": "{{title}}、ほかに {{count}} 件の未読公告があります",

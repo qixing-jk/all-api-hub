@@ -135,4 +135,37 @@ describe("siteAnnouncementStorage", () => {
     const afterRead = await siteAnnouncementStorage.listRecords()
     expect(afterRead.every((record) => record.read)).toBe(true)
   })
+
+  it("preserves the read invariant when imported records already include readAt", async () => {
+    const [created] = await siteAnnouncementStorage.upsertDiscoveredRecords({
+      site: {
+        siteKey: "notice:new-api:https://example.com",
+        siteName: "Example",
+        siteType: "new-api",
+        baseUrl: "https://example.com",
+        accountId: "account-1",
+        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        status: SITE_ANNOUNCEMENT_STATUS.Success,
+      },
+      records: [
+        {
+          siteKey: "notice:new-api:https://example.com",
+          siteName: "Example",
+          siteType: "new-api",
+          baseUrl: "https://example.com",
+          accountId: "account-1",
+          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          title: "Imported",
+          content: "Body",
+          fingerprint: "imported-read-at",
+          readAt: 1234,
+        },
+      ],
+    })
+
+    expect(created).toMatchObject({
+      read: true,
+      readAt: 1234,
+    })
+  })
 })

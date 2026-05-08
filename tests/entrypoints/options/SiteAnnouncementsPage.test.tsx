@@ -8,6 +8,7 @@ import type {
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { showResultToast } from "~/utils/core/toastHelpers"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -18,6 +19,10 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
     sendRuntimeMessage: vi.fn(),
   }
 })
+
+vi.mock("~/utils/core/toastHelpers", () => ({
+  showResultToast: vi.fn(),
+}))
 
 const records: SiteAnnouncementRecord[] = [
   {
@@ -82,6 +87,7 @@ const status: SiteAnnouncementSiteState[] = [
 
 describe("SiteAnnouncementsPage", () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
       switch (message.action) {
         case RuntimeActionIds.SiteAnnouncementsListRecords:
@@ -145,16 +151,11 @@ describe("SiteAnnouncementsPage", () => {
       }),
     )
     await waitFor(() => {
-      expect(
-        screen.queryByRole("heading", {
-          level: 2,
-          name: "Second line",
-        }),
-      ).not.toBeInTheDocument()
+      expect(screen.queryByText("Second line")).not.toBeInTheDocument()
     })
   })
 
-  it("marks unread Sub2API announcements as read when opening details", async () => {
+  it("marks unread Sub2API announcements as read only when expanding details", async () => {
     const user = userEvent.setup()
     const unreadSub2ApiRecord = {
       ...records[1]!,
@@ -181,11 +182,41 @@ describe("SiteAnnouncementsPage", () => {
         name: /siteAnnouncements:actions\.expand/,
       }),
     )
+    await user.click(
+      screen.getByRole("button", {
+        name: /siteAnnouncements:actions\.collapse/,
+      }),
+    )
 
     await waitFor(() => {
       expect(sendRuntimeMessage).toHaveBeenCalledWith({
         action: RuntimeActionIds.SiteAnnouncementsMarkRead,
         recordId: "announcement-3",
+      })
+      expect(
+        vi
+          .mocked(sendRuntimeMessage)
+          .mock.calls.filter(
+            (call) =>
+              (call[0] as { action?: string }).action ===
+              RuntimeActionIds.SiteAnnouncementsMarkRead,
+          ),
+      ).toHaveLength(1)
+    })
+  })
+
+  it("shows a toast when the initial announcement load fails", async () => {
+    vi.mocked(sendRuntimeMessage).mockRejectedValueOnce(
+      new Error("network down"),
+    )
+
+    render(<SiteAnnouncementsPage />)
+
+    await waitFor(() => {
+      expect(showResultToast).toHaveBeenCalledWith({
+        success: false,
+        message: "network down",
+        errorFallback: "siteAnnouncements:messages.loadFailed",
       })
     })
   })
