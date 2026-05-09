@@ -3,7 +3,11 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
-import type { ChannelFormData, CreateChannelPayload } from "~/types/newApi"
+import type {
+  ChannelFormData,
+  CreateChannelPayload,
+  UpdateChannelPayload,
+} from "~/types/newApi"
 
 // ============================================================================
 // MOCKS
@@ -1194,7 +1198,22 @@ describe("newApiService", () => {
       const baseUrl = "https://new-api.example.com"
       const adminToken = "admin-token"
       const userId = 1
-      const channelData = { name: "Test Channel" } as CreateChannelPayload
+      const createChannelData: CreateChannelPayload = {
+        mode: "single",
+        channel: {
+          name: "Test Channel",
+          type: 1,
+          key: "sk-test",
+          base_url: "https://api.example.com",
+          models: "gpt-4",
+          groups: ["default"],
+          status: 1,
+        },
+      }
+      const updateChannelData: UpdateChannelPayload = {
+        id: 7,
+        name: "Updated Channel",
+      }
 
       mockSearchChannel.mockResolvedValueOnce({ items: [] })
       mockCreateChannel.mockResolvedValueOnce({ success: true })
@@ -1202,8 +1221,8 @@ describe("newApiService", () => {
       mockDeleteChannel.mockResolvedValueOnce({ success: true })
 
       await searchChannel(baseUrl, adminToken, userId, "test")
-      await createChannel(baseUrl, adminToken, userId, channelData)
-      await updateChannel(baseUrl, adminToken, userId, channelData)
+      await createChannel(baseUrl, adminToken, userId, createChannelData)
+      await updateChannel(baseUrl, adminToken, userId, updateChannelData)
       await deleteChannel(baseUrl, adminToken, userId, 7)
 
       expect(mockSearchChannel).toHaveBeenCalledWith(
@@ -1212,11 +1231,11 @@ describe("newApiService", () => {
       )
       expect(mockCreateChannel).toHaveBeenCalledWith(
         expect.objectContaining({ baseUrl }),
-        channelData,
+        createChannelData,
       )
       expect(mockUpdateChannel).toHaveBeenCalledWith(
         expect.objectContaining({ baseUrl }),
-        channelData,
+        updateChannelData,
       )
       expect(mockDeleteChannel).toHaveBeenCalledWith(
         expect.objectContaining({ baseUrl }),
