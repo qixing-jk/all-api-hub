@@ -7,7 +7,7 @@ import {
   openCommunityPage,
   openFeatureRequestPage,
 } from "~/utils/navigation"
-import { render, screen } from "~~/tests/test-utils/render"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/contexts/ReleaseUpdateStatusContext", async (importOriginal) => {
   const actual =
@@ -149,12 +149,14 @@ describe("options Header", () => {
     expect(
       await screen.findByText("ui:optionsSearch.placeholder"),
     ).toBeInTheDocument()
-    expect(
-      container.textContent?.match(/ui:optionsSearch\.placeholder/g)?.length ??
-        0,
-    ).toBe(2)
-    expect(
-      screen.queryByRole("link", { name: "ui:app.name" }),
-    ).not.toBeInTheDocument()
+    await waitFor(() => {
+      expect(
+        container.textContent?.match(/ui:optionsSearch\.placeholder/g)
+          ?.length ?? 0,
+      ).toBe(2)
+      expect(
+        screen.queryByRole("link", { name: "ui:app.name" }),
+      ).not.toBeInTheDocument()
+    })
   })
 })
