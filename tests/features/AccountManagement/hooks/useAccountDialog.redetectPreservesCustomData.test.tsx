@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { DIALOG_MODES } from "~/constants/dialogModes"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
@@ -334,6 +335,53 @@ describe("useAccountDialog re-detect preservation", () => {
       expect(result.current.state.sub2apiRefreshToken).toBe("refresh-token")
       expect(result.current.state.sub2apiTokenExpiresAt).toBe(123456789)
     })
+  })
+
+  it("keeps the current site type when auto-detect returns an invalid site type", async () => {
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: true,
+      message: "ok",
+      data: {
+        username: "detected-user",
+        accessToken: "detected-token",
+        userId: "4",
+        exchangeRate: 7,
+        siteName: "Detected Site",
+        siteType: "legacy-invalid-site",
+        checkIn: {
+          enableDetection: true,
+          autoCheckInEnabled: true,
+          siteStatus: { isCheckedInToday: false },
+        },
+      },
+    })
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://legacy.example.com")
+      result.current.setters.setSiteType(SITE_TYPES.VELOERA)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(result.current.state.siteType).toBe(SITE_TYPES.VELOERA)
+    expect(result.current.state.username).toBe("detected-user")
+    expect(result.current.state.accessToken).toBe("detected-token")
+    expect(result.current.state.isDetected).toBe(true)
   })
 
   it("stops auto-detect when the duplicate-account warning is canceled", async () => {
