@@ -452,6 +452,80 @@ describe("taskNotificationService", () => {
     )
   })
 
+  it("renders generic webhook URL templates for Bark-style endpoints", async () => {
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Browser]: {
+            enabled: false,
+          },
+          [TASK_NOTIFICATION_CHANNELS.Webhook]: {
+            enabled: true,
+            url: "https://api.day.app/device-key/{title}/{message}?group={task}&status={status}&total={total}&success={success}&failed={failed}&skipped={skipped}",
+          },
+        },
+      },
+    })
+
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.WebdavAutoSync,
+        status: TASK_NOTIFICATION_STATUSES.PartialSuccess,
+        counts: {
+          total: 4,
+          success: 2,
+          failed: 1,
+        },
+        title: "All API Hub 测试通知",
+        message: "同步完成 2/4",
+      }),
+    ).resolves.toBe(true)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.day.app/device-key/All%20API%20Hub%20%E6%B5%8B%E8%AF%95%E9%80%9A%E7%9F%A5/%E5%90%8C%E6%AD%A5%E5%AE%8C%E6%88%90%202%2F4%20total%204%20success%202%20failed%201%20skipped%200?group=webdavAutoSync&status=partial_success&total=4&success=2&failed=1&skipped=",
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining('"status":"partial_success"'),
+      }),
+    )
+  })
+
+  it("renders URL-encoded generic webhook placeholders", async () => {
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Browser]: {
+            enabled: false,
+          },
+          [TASK_NOTIFICATION_CHANNELS.Webhook]: {
+            enabled: true,
+            url: "https://api.day.app/device-key/%7Btitle%7D/%7Bmessage%7D%20and%20%7Bstatus%7D",
+          },
+        },
+      },
+    })
+
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+        title: "All API Hub test",
+        message: "Webhook template",
+      }),
+    ).resolves.toBe(true)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://api.day.app/device-key/All%20API%20Hub%20test/Webhook%20template%20and%20success",
+      expect.objectContaining({
+        method: "POST",
+      }),
+    )
+  })
+
   it("sends Feishu custom bot notifications", async () => {
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {

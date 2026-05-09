@@ -438,6 +438,12 @@ describe("TaskNotificationSettings", () => {
         channel: TASK_NOTIFICATION_CHANNELS.Webhook,
       })
     })
+
+    expect(
+      within(webhookChannel).getByText(
+        "settings:taskNotifications.channels.webhook.urlDescription",
+      ),
+    ).toBeInTheDocument()
   })
 
   it("updates channel switches and saves trimmed third-party channel drafts", async () => {
@@ -744,6 +750,66 @@ describe("TaskNotificationSettings", () => {
         }),
       })
     })
+  })
+
+  it("saves the current webhook draft before sending a test notification", async () => {
+    taskNotificationsMock.current = {
+      ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      channels: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+        [TASK_NOTIFICATION_CHANNELS.Webhook]: {
+          enabled: true,
+          url: "https://hooks.example.com/old",
+        },
+      },
+    }
+
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await screen.findByText("settings:taskNotifications.channels.webhook.title")
+    const webhookChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
+    )
+    if (!webhookChannel) {
+      throw new Error("Expected webhook channel settings row")
+    }
+
+    fireEvent.change(
+      within(webhookChannel).getByLabelText(
+        "settings:taskNotifications.channels.webhook.url",
+      ),
+      {
+        target: {
+          value: "  https://api.day.app/key/{title}/{message} and {status}  ",
+        },
+      },
+    )
+    fireEvent.click(
+      within(webhookChannel).getByRole("button", {
+        name: "settings:taskNotifications.test.action",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Webhook]: expect.objectContaining({
+            url: "https://api.day.app/key/{title}/{message} and {status}",
+          }),
+        }),
+      })
+      expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Webhook,
+      })
+    })
+
+    expect(
+      updateTaskNotificationsMock.mock.invocationCallOrder[0],
+    ).toBeLessThan(sendRuntimeMessageMock.mock.invocationCallOrder[0])
   })
 
   it("does not save unchanged third-party channel drafts", async () => {

@@ -549,10 +549,11 @@
         "title": "Telegram Bot"
       },
       "webhook": {
-        "description": "Send JSON notifications to a custom HTTP(S) webhook for self-hosted services or compatible third-party platforms.",
+        "description": "Send JSON notifications to a custom HTTP(S) webhook. The URL supports template variables for services such as Bark that put notification text in the path.",
         "title": "Generic webhook",
         "url": "Webhook URL",
-        "urlPlaceholder": "https://example.com/webhook"
+        "urlDescription": "Use {title}, {message}, {task}, {status}, {total}, {success}, {failed}, or {skipped} in the URL. Values are URL-encoded before sending. For Bark, use https://api.day.app/your-key/{title}/{message}.",
+        "urlPlaceholder": "https://api.day.app/your-key/{title}/{message}"
       },
       "wecom": {
         "description": "Send task notifications through WeCom group message push. Pasting the full webhook URL from WeCom is recommended, and the key value is still supported.",

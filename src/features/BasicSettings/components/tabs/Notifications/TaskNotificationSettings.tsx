@@ -506,6 +506,33 @@ export default function TaskNotificationSettings() {
     showUpdateToast(success, t("taskNotifications.siteAnnouncements.enable"))
   }
 
+  const saveChannelDraftBeforeTest = async (
+    channel: TaskNotificationChannel,
+  ) => {
+    switch (channel) {
+      case TASK_NOTIFICATION_CHANNELS.Telegram:
+        await handleTelegramConfigSave()
+        return
+      case TASK_NOTIFICATION_CHANNELS.Feishu:
+        await handleFeishuConfigSave()
+        return
+      case TASK_NOTIFICATION_CHANNELS.Dingtalk:
+        await handleDingtalkConfigSave()
+        return
+      case TASK_NOTIFICATION_CHANNELS.Wecom:
+        await handleWecomConfigSave()
+        return
+      case TASK_NOTIFICATION_CHANNELS.Ntfy:
+        await handleNtfyConfigSave()
+        return
+      case TASK_NOTIFICATION_CHANNELS.Webhook:
+        await handleWebhookConfigSave()
+        return
+      case TASK_NOTIFICATION_CHANNELS.Browser:
+        return
+    }
+  }
+
   const handleRequestPermission = async () => {
     setIsRequestingPermission(true)
     try {
@@ -526,6 +553,7 @@ export default function TaskNotificationSettings() {
   const handleSendTest = async (channel: TaskNotificationChannel) => {
     setTestingChannel(channel)
     try {
+      await saveChannelDraftBeforeTest(channel)
       const response = await sendRuntimeMessage({
         action: RuntimeActionIds.TaskNotificationsTest,
         channel,
@@ -1123,6 +1151,9 @@ export default function TaskNotificationSettings() {
                   }
                   onBlur={() => void handleWebhookConfigSave()}
                 />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t("taskNotifications.channels.webhook.urlDescription")}
+                </p>
               </FormField>
             </NotificationSettingItem>
           </CardList>

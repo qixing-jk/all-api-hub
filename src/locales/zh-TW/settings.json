@@ -549,10 +549,11 @@
         "title": "Telegram Bot"
       },
       "webhook": {
-        "description": "向自訂 HTTP(S) Webhook 傳送 JSON 通知，可用於自建服務或相容的第三方平台。",
+        "description": "向自訂 HTTP(S) Webhook 傳送 JSON 通知。URL 支援範本變數，可用於 Bark 等把通知內容放在路徑中的服務。",
         "title": "通用 Webhook",
         "url": "Webhook URL",
-        "urlPlaceholder": "https://example.com/webhook"
+        "urlDescription": "URL 中可使用 {title}、{message}、{task}、{status}、{total}、{success}、{failed}、{skipped}，傳送前會按 URL 片段自動編碼。例如 Bark 可填寫 https://api.day.app/your-key/{title}/{message}。",
+        "urlPlaceholder": "https://api.day.app/your-key/{title}/{message}"
       },
       "wecom": {
         "description": "透過企業微信群消息推送傳送任務通知。建議直接貼上企業微信提供的完整 Webhook URL，也相容只填寫 key。",

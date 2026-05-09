@@ -103,6 +103,8 @@ const WECOM_BOT_WEBHOOK_PREFIX =
   "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key="
 const NTFY_DEFAULT_SERVER_URL = "https://ntfy.sh"
 const ASCII_HEADER_VALUE_PATTERN = /^[\x20-\x7e]*$/
+const WEBHOOK_URL_TEMPLATE_PATTERN =
+  /(?:\{|%7b)(title|message|task|status|total|success|failed|skipped)(?:\}|%7d)/gi
 
 const TASK_LABEL_KEYS: Record<TaskNotificationTask, string> = {
   [TASK_NOTIFICATION_TASKS.AutoCheckin]:
@@ -724,6 +726,40 @@ async function sendNtfyNotification(
 }
 
 /**
+ *
+ */
+function formatWebhookTemplateCount(value: number | undefined): string {
+  return typeof value === "number" && Number.isFinite(value)
+    ? value.toString()
+    : ""
+}
+
+/**
+ *
+ */
+function renderWebhookUrlTemplate(
+  template: string,
+  payload: TaskNotificationPayload,
+  content: TaskNotificationContent,
+): string {
+  const values = {
+    title: content.title,
+    message: content.message,
+    task: payload.task,
+    status: payload.status,
+    total: formatWebhookTemplateCount(payload.counts?.total),
+    success: formatWebhookTemplateCount(payload.counts?.success),
+    failed: formatWebhookTemplateCount(payload.counts?.failed),
+    skipped: formatWebhookTemplateCount(payload.counts?.skipped),
+  }
+
+  return template.replace(WEBHOOK_URL_TEMPLATE_PATTERN, (_, key: string) => {
+    const normalizedKey = key.toLowerCase() as keyof typeof values
+    return encodeURIComponent(values[normalizedKey])
+  })
+}
+
+/**
  * Sends a JSON payload to a user-provided webhook endpoint.
  */
 async function sendWebhookNotification(
@@ -736,7 +772,7 @@ async function sendWebhookNotification(
     throw new Error(t("settings:taskNotifications.test.webhookMissingConfig"))
   }
 
-  const parsedUrl = new URL(url)
+  const parsedUrl = new URL(renderWebhookUrlTemplate(url, payload, content))
   if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
     logger.warn("Webhook task notification skipped: unsupported URL protocol", {
       task: payload.task,

@@ -549,10 +549,11 @@
         "title": "Telegram Bot"
       },
       "webhook": {
-        "description": "自ホストサービスや互換性のあるサードパーティ向けに、カスタム HTTP(S) Webhook へ JSON 通知を送信します。",
+        "description": "カスタム HTTP(S) Webhook へ JSON 通知を送信します。URL ではテンプレート変数を利用でき、通知本文をパスに含める Bark などのサービスに使えます。",
         "title": "汎用 Webhook",
         "url": "Webhook URL",
-        "urlPlaceholder": "https://example.com/webhook"
+        "urlDescription": "URL では {title}、{message}、{task}、{status}、{total}、{success}、{failed}、{skipped} を使用できます。値は送信前に URL エンコードされます。Bark では https://api.day.app/your-key/{title}/{message} を指定できます。",
+        "urlPlaceholder": "https://api.day.app/your-key/{title}/{message}"
       },
       "wecom": {
         "description": "WeCom グループのメッセージプッシュでタスク通知を送信します。WeCom が提供する Webhook URL 全体を貼り付ける方法を推奨します。key だけの入力にも対応しています。",
