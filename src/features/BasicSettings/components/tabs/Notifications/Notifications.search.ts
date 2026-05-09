@@ -28,7 +28,7 @@ const TASK_NOTIFICATION_TASK_BREADCRUMBS = [
   "settings:taskNotifications.groups.tasks.title",
 ]
 
-const TASK_NOTIFICATION_TASK_CONTROL_ORDER_START = 613
+const TASK_NOTIFICATION_TASK_CONTROL_ORDER_START = 614
 
 const TASK_NOTIFICATION_TASK_SEARCH_CONTROLS = [
   {
@@ -106,6 +106,8 @@ export const notificationsSearchSections: OptionsSearchItemDefinition[] = [
         "telegram",
         "feishu",
         "lark",
+        "wecom",
+        "企业微信",
         "webhook",
       ],
     },
@@ -186,11 +188,23 @@ export const notificationsSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
+    "control:task-notifications-channel-wecom",
+    NOTIFICATIONS_TAB_ID,
+    SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WECOM,
+    "settings:taskNotifications.channels.wecom.title",
+    612,
+    {
+      descriptionKey: "settings:taskNotifications.channels.wecom.description",
+      breadcrumbsKeys: TASK_NOTIFICATION_CHANNEL_BREADCRUMBS,
+      keywords: ["notification", "wecom", "wechat work", "企业微信", "bot"],
+    },
+  ),
+  buildControlDefinition(
     "control:task-notifications-channel-webhook",
     NOTIFICATIONS_TAB_ID,
     SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
     "settings:taskNotifications.channels.webhook.title",
-    612,
+    613,
     {
       descriptionKey: "settings:taskNotifications.channels.webhook.description",
       breadcrumbsKeys: TASK_NOTIFICATION_CHANNEL_BREADCRUMBS,

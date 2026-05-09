@@ -75,8 +75,15 @@ interface FeishuWebhookResponseBody {
   StatusMessage?: unknown
 }
 
+interface WecomWebhookResponseBody {
+  errcode?: unknown
+  errmsg?: unknown
+}
+
 const FEISHU_CUSTOM_BOT_WEBHOOK_PREFIX =
   "https://open.feishu.cn/open-apis/bot/v2/hook/"
+const WECOM_BOT_WEBHOOK_PREFIX =
+  "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key="
 
 const TASK_LABEL_KEYS: Record<TaskNotificationTask, string> = {
   [TASK_NOTIFICATION_TASKS.AutoCheckin]:
@@ -459,6 +466,65 @@ async function sendFeishuNotification(
 }
 
 /**
+ * Sends a plain-text WeCom group bot message.
+ */
+async function sendWecomNotification(
+  content: TaskNotificationContent,
+  config: TaskNotificationPreferences["channels"][typeof TASK_NOTIFICATION_CHANNELS.Wecom],
+): Promise<boolean> {
+  const webhookInput = config.webhookKey.trim()
+  if (!webhookInput) {
+    throw new Error(t("settings:taskNotifications.test.wecomMissingConfig"))
+  }
+
+  const labelKey = "settings:taskNotifications.channels.wecom.title"
+  const webhookUrl =
+    webhookInput.startsWith("http://") || webhookInput.startsWith("https://")
+      ? webhookInput
+      : `${WECOM_BOT_WEBHOOK_PREFIX}${encodeURIComponent(webhookInput)}`
+
+  const response = await fetch(webhookUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      msgtype: "text",
+      text: {
+        content: `${content.title}\n${content.message}`,
+      },
+    }),
+  })
+
+  let body: WecomWebhookResponseBody | null = null
+
+  try {
+    body = (await response.json()) as WecomWebhookResponseBody
+  } catch {
+    body = null
+  }
+
+  const detail =
+    typeof body?.errmsg === "string" && body.errmsg.trim()
+      ? body.errmsg.trim()
+      : null
+
+  if (!response.ok) {
+    throw new Error(
+      getNotificationParsedErrorMessage(labelKey, response.status, detail),
+    )
+  }
+
+  if (body?.errcode !== 0) {
+    throw new Error(
+      getNotificationParsedErrorMessage(labelKey, response.status, detail),
+    )
+  }
+
+  return true
+}
+
+/**
  * Sends a JSON payload to a user-provided webhook endpoint.
  */
 async function sendWebhookNotification(
@@ -578,6 +644,22 @@ async function sendConfiguredChannels(
       )
     } catch (error) {
       handleChannelFailure(TASK_NOTIFICATION_CHANNELS.Feishu, error)
+    }
+  }
+
+  if (
+    shouldSendChannel(TASK_NOTIFICATION_CHANNELS.Wecom) &&
+    channels[TASK_NOTIFICATION_CHANNELS.Wecom].enabled
+  ) {
+    try {
+      deliveryResults.push(
+        await sendWecomNotification(
+          content,
+          channels[TASK_NOTIFICATION_CHANNELS.Wecom],
+        ),
+      )
+    } catch (error) {
+      handleChannelFailure(TASK_NOTIFICATION_CHANNELS.Wecom, error)
     }
   }
 

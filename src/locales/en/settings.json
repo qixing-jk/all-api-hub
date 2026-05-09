@@ -533,6 +533,14 @@
         "title": "Generic webhook",
         "url": "Webhook URL",
         "urlPlaceholder": "https://example.com/webhook"
+      },
+      "wecom": {
+        "description": "Send task notifications through WeCom group message push. Pasting the full webhook URL from WeCom is recommended, and the key value is still supported.",
+        "docsLink": "View setup docs",
+        "title": "WeCom Bot",
+        "webhookKey": "Webhook URL or key",
+        "webhookKeyDescription": "Copy the webhook URL from the WeCom group's message push settings and paste it here. If you enter only the key after `key=`, All API Hub will complete the URL automatically.",
+        "webhookKeyPlaceholder": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       }
     },
     "enable": "Enable task notifications",
@@ -603,7 +611,8 @@
       "telegramMissingConfig": "Telegram Bot token or Chat ID is not configured.",
       "title": "All API Hub test notification",
       "webhookInvalidUrl": "Webhook URL must use http:// or https://.",
-      "webhookMissingConfig": "Webhook URL is not configured."
+      "webhookMissingConfig": "Webhook URL is not configured.",
+      "wecomMissingConfig": "WeCom Bot webhook URL or key is not configured."
     }
   },
   "theme": {

@@ -14,6 +14,7 @@
 | ブラウザシステム通知 | 現在の端末だけで通知を受け取る | ブラウザの `notifications` 権限 |
 | Telegram Bot | Telegram のチャットやグループで通知を受け取る | Bot Token、Chat ID |
 | Feishu Bot | Feishu グループでチーム通知を受け取る | Feishu カスタムボットの Webhook URL または key |
+| WeCom Bot | WeCom グループでチーム通知を受け取る | WeCom グループのメッセージプッシュ Webhook URL または key |
 | 汎用 Webhook | 自ホストサービス、自動化プラットフォーム、互換サービスへ接続する | JSON リクエストを受け取れる HTTP(S) エンドポイント |
 
 設定後は、各チャネルの **`テスト通知を送信`** をクリックして、通知が届くことを確認してください。
@@ -55,6 +56,51 @@ All API Hub で利用する際の注意点:
 | `param invalid: incoming webhook access token invalid` | Webhook URL または key が間違っている、またはボットが削除 / 再作成された | Feishu ボット設定ページから完全な Webhook URL を再コピーする |
 | `Bad Request` | Feishu がリクエスト本文を拒否した。多くの場合、ボットのセキュリティ設定と一致していない | キーワード、セキュリティ設定、ボットが対象グループに残っているかを確認する |
 | テスト通知が届かない | チャネルが無効、URL が空、ネットワーク失敗、または Feishu のセキュリティポリシーにブロックされた | チャネルを有効化して再度テスト通知を送り、Feishu グループのボット設定を確認する |
+
+<a id="wecom"></a>
+## WeCom Bot
+
+WeCom チャネルは、WeCom グループのメッセージプッシュ設定を使ってテキスト通知を送信します。最も簡単な設定方法は、WeCom が提供する Webhook URL 全体を貼り付けることです。
+
+### Webhook URL を取得する
+
+1. 通知を送りたい WeCom グループを開きます。
+2. グループ設定を開き、**メッセージプッシュ** を探します。
+3. 新しいメッセージプッシュ設定を作成するか、既存の設定を開きます。
+4. WeCom が生成した Webhook URL をコピーします。通常は次のような形式です。
+
+```text
+https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
+```
+
+5. All API Hub で **`設定 → 一般 → 通知 → WeCom Bot`** を開きます。
+6. 完全な Webhook URL を **`Webhook URL または key`** に貼り付け、チャネルを有効にして **`テスト通知を送信`** をクリックします。
+
+`key=` の後ろにある key だけをコピーした場合も、そのまま入力できます。All API Hub が WeCom Webhook URL を自動補完します。
+
+### API の動作
+
+WeCom のメッセージプッシュ API は `POST /cgi-bin/webhook/send?key=...` でメッセージを送信します。All API Hub はテキストメッセージを送信します。
+
+```json
+{
+  "msgtype": "text",
+  "text": {
+    "content": "通知タイトル\n通知内容"
+  }
+}
+```
+
+All API Hub は `errcode: 0` を成功として扱います。WeCom が別の `errcode` を返した場合、テスト通知では返された `errmsg` を表示し、設定確認に使えるようにします。
+
+### 制限
+
+メッセージ形式と送信頻度制限は [WeCom メッセージプッシュ設定ドキュメント](https://developer.work.weixin.qq.com/document/path/99110) に従います。
+
+All API Hub で利用する際の注意点:
+
+- WeCom メッセージプッシュには送信頻度制限があります。多数のタスクが同時に完了すると、プラットフォーム側のレート制限にかかる可能性があります。
+- テスト通知で `invalid webhook url`、`key not found`、または類似のエラーが返る場合は、WeCom のメッセージプッシュ設定から完全な Webhook URL を再コピーしてください。
 
 ## 関連ドキュメント
 

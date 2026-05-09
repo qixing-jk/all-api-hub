@@ -36,7 +36,7 @@ import { migrateSortingConfig } from "./sortingConfigMigration"
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 20
+export const CURRENT_PREFERENCES_VERSION = 21
 
 /**
  * Migration function type
@@ -444,6 +444,26 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
           ? normalizeTaskNotificationPreferences(stored)
           : DEFAULT_TASK_NOTIFICATION_PREFERENCES,
       preferencesVersion: 20,
+    }
+  },
+
+  // Version 20 -> 21: re-run task notification normalization so users already
+  // on v20 get the WeCom channel default backfilled without losing existing
+  // third-party channel settings.
+  21: (prefs: UserPreferences): UserPreferences => {
+    logger.debug(
+      "Migrating preferences from v20 to v21 (WeCom notification channel)",
+    )
+
+    const stored = (prefs as any).taskNotifications
+
+    return {
+      ...prefs,
+      taskNotifications:
+        stored && typeof stored === "object"
+          ? normalizeTaskNotificationPreferences(stored)
+          : DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      preferencesVersion: 21,
     }
   },
 }

@@ -533,6 +533,14 @@
         "title": "通用 Webhook",
         "url": "Webhook URL",
         "urlPlaceholder": "https://example.com/webhook"
+      },
+      "wecom": {
+        "description": "透過企業微信群消息推送傳送任務通知。建議直接貼上企業微信提供的完整 Webhook URL，也相容只填寫 key。",
+        "docsLink": "查看設定文件",
+        "title": "企業微信機器人",
+        "webhookKey": "Webhook URL 或 Key",
+        "webhookKeyDescription": "在企業微信群設定的消息推送配置中複製 Webhook 地址並貼到這裡；如果只填寫 `key=` 後面的 key，也會自動補全地址。",
+        "webhookKeyPlaceholder": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       }
     },
     "enable": "啟用任務通知",
@@ -603,7 +611,8 @@
       "telegramMissingConfig": "Telegram Bot Token 或 Chat ID 未設定。",
       "title": "All API Hub 測試通知",
       "webhookInvalidUrl": "Webhook URL 必須使用 http:// 或 https://。",
-      "webhookMissingConfig": "Webhook URL 未設定。"
+      "webhookMissingConfig": "Webhook URL 未設定。",
+      "wecomMissingConfig": "企業微信機器人 Webhook URL 或 Key 未設定。"
     }
   },
   "theme": {

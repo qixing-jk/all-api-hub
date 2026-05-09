@@ -533,6 +533,14 @@
         "title": "汎用 Webhook",
         "url": "Webhook URL",
         "urlPlaceholder": "https://example.com/webhook"
+      },
+      "wecom": {
+        "description": "WeCom グループのメッセージプッシュでタスク通知を送信します。WeCom が提供する Webhook URL 全体を貼り付ける方法を推奨します。key だけの入力にも対応しています。",
+        "docsLink": "設定ドキュメントを見る",
+        "title": "WeCom Bot",
+        "webhookKey": "Webhook URL または key",
+        "webhookKeyDescription": "WeCom グループのメッセージプッシュ設定で Webhook URL をコピーしてここに貼り付けます。`key=` の後ろにある key だけを入力した場合も、All API Hub が URL を自動補完します。",
+        "webhookKeyPlaceholder": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       }
     },
     "enable": "タスク通知を有効化",
@@ -603,7 +611,8 @@
       "telegramMissingConfig": "Telegram Bot Token または Chat ID が設定されていません。",
       "title": "All API Hub テスト通知",
       "webhookInvalidUrl": "Webhook URL は http:// または https:// を使用する必要があります。",
-      "webhookMissingConfig": "Webhook URL が設定されていません。"
+      "webhookMissingConfig": "Webhook URL が設定されていません。",
+      "wecomMissingConfig": "WeCom Bot の Webhook URL または key が設定されていません。"
     }
   },
   "theme": {

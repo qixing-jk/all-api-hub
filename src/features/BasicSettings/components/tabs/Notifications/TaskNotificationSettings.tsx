@@ -38,7 +38,10 @@ import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
-import { getDocsTaskNotificationsFeishuUrl } from "~/utils/navigation/docsLinks"
+import {
+  getDocsTaskNotificationsFeishuUrl,
+  getDocsTaskNotificationsWecomUrl,
+} from "~/utils/navigation/docsLinks"
 
 const logger = createLogger("TaskNotificationSettings")
 
@@ -204,6 +207,9 @@ export default function TaskNotificationSettings() {
   const [feishuDraft, setFeishuDraft] = useState(
     channels[TASK_NOTIFICATION_CHANNELS.Feishu],
   )
+  const [wecomDraft, setWecomDraft] = useState(
+    channels[TASK_NOTIFICATION_CHANNELS.Wecom],
+  )
   const [webhookDraft, setWebhookDraft] = useState(
     channels[TASK_NOTIFICATION_CHANNELS.Webhook],
   )
@@ -220,6 +226,7 @@ export default function TaskNotificationSettings() {
     setFeishuDraft(
       taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Feishu],
     )
+    setWecomDraft(taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Wecom])
     setWebhookDraft(
       taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Webhook],
     )
@@ -286,6 +293,19 @@ export default function TaskNotificationSettings() {
     )
   }
 
+  const handleWecomChannelToggle = async (enabled: boolean) => {
+    await handleChannelUpdate(
+      {
+        ...channels,
+        [TASK_NOTIFICATION_CHANNELS.Wecom]: {
+          ...channels[TASK_NOTIFICATION_CHANNELS.Wecom],
+          enabled,
+        },
+      },
+      t("taskNotifications.channels.wecom.title"),
+    )
+  }
+
   const handleWebhookChannelToggle = async (enabled: boolean) => {
     await handleChannelUpdate(
       {
@@ -340,6 +360,27 @@ export default function TaskNotificationSettings() {
         [TASK_NOTIFICATION_CHANNELS.Feishu]: nextFeishu,
       },
       t("taskNotifications.channels.feishu.title"),
+    )
+  }
+
+  const handleWecomConfigSave = async () => {
+    const nextWecom = {
+      ...channels[TASK_NOTIFICATION_CHANNELS.Wecom],
+      webhookKey: wecomDraft.webhookKey.trim(),
+    }
+    if (
+      nextWecom.webhookKey ===
+      channels[TASK_NOTIFICATION_CHANNELS.Wecom].webhookKey
+    ) {
+      return
+    }
+
+    await handleChannelUpdate(
+      {
+        ...channels,
+        [TASK_NOTIFICATION_CHANNELS.Wecom]: nextWecom,
+      },
+      t("taskNotifications.channels.wecom.title"),
     )
   }
 
@@ -446,12 +487,18 @@ export default function TaskNotificationSettings() {
     channels[TASK_NOTIFICATION_CHANNELS.Feishu].enabled &&
     Boolean(channels[TASK_NOTIFICATION_CHANNELS.Feishu].webhookKey.trim()) &&
     !isAnyChannelTesting
+  const canSendWecomTest =
+    taskNotifications.enabled &&
+    channels[TASK_NOTIFICATION_CHANNELS.Wecom].enabled &&
+    Boolean(channels[TASK_NOTIFICATION_CHANNELS.Wecom].webhookKey.trim()) &&
+    !isAnyChannelTesting
   const canSendWebhookTest =
     taskNotifications.enabled &&
     channels[TASK_NOTIFICATION_CHANNELS.Webhook].enabled &&
     Boolean(channels[TASK_NOTIFICATION_CHANNELS.Webhook].url.trim()) &&
     !isAnyChannelTesting
   const feishuDocsUrl = getDocsTaskNotificationsFeishuUrl(i18n.language)
+  const wecomDocsUrl = getDocsTaskNotificationsWecomUrl(i18n.language)
 
   return (
     <div className="space-y-6">
@@ -683,6 +730,66 @@ export default function TaskNotificationSettings() {
                     className="text-xs"
                   >
                     {t("taskNotifications.channels.feishu.docsLink")}
+                  </Link>
+                </p>
+              </FormField>
+            </NotificationSettingItem>
+
+            <NotificationSettingItem
+              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WECOM}
+              title={t("taskNotifications.channels.wecom.title")}
+              description={t("taskNotifications.channels.wecom.description")}
+              actions={
+                <NotificationChannelActions
+                  checked={channels[TASK_NOTIFICATION_CHANNELS.Wecom].enabled}
+                  disabled={!taskNotifications.enabled}
+                  loading={testingChannel === TASK_NOTIFICATION_CHANNELS.Wecom}
+                  testDisabled={!canSendWecomTest}
+                  testLabel={t("taskNotifications.test.action")}
+                  onToggle={(enabled) => void handleWecomChannelToggle(enabled)}
+                  onTest={() =>
+                    void handleSendTest(TASK_NOTIFICATION_CHANNELS.Wecom)
+                  }
+                />
+              }
+            >
+              <FormField
+                label={t("taskNotifications.channels.wecom.webhookKey")}
+                htmlFor={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_WECOM_WEBHOOK_KEY}
+              >
+                <Input
+                  id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_WECOM_WEBHOOK_KEY}
+                  type="password"
+                  revealable
+                  revealLabels={{
+                    show: t("keyManagement:actions.showKey"),
+                    hide: t("keyManagement:actions.hideKey"),
+                  }}
+                  value={wecomDraft.webhookKey}
+                  disabled={
+                    !taskNotifications.enabled ||
+                    !channels[TASK_NOTIFICATION_CHANNELS.Wecom].enabled
+                  }
+                  placeholder={t(
+                    "taskNotifications.channels.wecom.webhookKeyPlaceholder",
+                  )}
+                  onChange={(event) =>
+                    setWecomDraft((draft) => ({
+                      ...draft,
+                      webhookKey: event.target.value,
+                    }))
+                  }
+                  onBlur={() => void handleWecomConfigSave()}
+                />
+                <p className="text-xs text-gray-500 dark:text-gray-400">
+                  {t("taskNotifications.channels.wecom.webhookKeyDescription")}{" "}
+                  <Link
+                    href={wecomDocsUrl}
+                    target="_blank"
+                    rel="noreferrer noopener"
+                    className="text-xs"
+                  >
+                    {t("taskNotifications.channels.wecom.docsLink")}
                   </Link>
                 </p>
               </FormField>

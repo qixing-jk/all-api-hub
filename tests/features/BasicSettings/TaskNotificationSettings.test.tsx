@@ -213,6 +213,10 @@ describe("TaskNotificationSettings", () => {
           enabled: true,
           webhookKey: "feishu-webhook-key",
         },
+        [TASK_NOTIFICATION_CHANNELS.Wecom]: {
+          enabled: true,
+          webhookKey: "wecom-webhook-key",
+        },
         [TASK_NOTIFICATION_CHANNELS.Webhook]: {
           enabled: true,
           url: "https://hooks.example.com/all-api-hub",
@@ -234,10 +238,18 @@ describe("TaskNotificationSettings", () => {
     const feishuChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_FEISHU,
     )
+    const wecomChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WECOM,
+    )
     const webhookChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
     )
-    if (!telegramChannel || !feishuChannel || !webhookChannel) {
+    if (
+      !telegramChannel ||
+      !feishuChannel ||
+      !wecomChannel ||
+      !webhookChannel
+    ) {
       throw new Error("Expected third-party channel settings rows")
     }
 
@@ -299,6 +311,39 @@ describe("TaskNotificationSettings", () => {
       })
     })
 
+    const wecomWebhookKeyInput = within(wecomChannel).getByLabelText(
+      "settings:taskNotifications.channels.wecom.webhookKey",
+    )
+    expect(wecomWebhookKeyInput).toHaveAttribute("type", "password")
+    expect(
+      within(wecomChannel).getByRole("link", {
+        name: "settings:taskNotifications.channels.wecom.docsLink",
+      }),
+    ).toHaveAttribute(
+      "href",
+      "https://all-api-hub.qixing1217.top/en/task-notifications#wecom",
+    )
+
+    fireEvent.click(
+      within(wecomChannel).getByRole("button", {
+        name: "keyManagement:actions.showKey",
+      }),
+    )
+    expect(wecomWebhookKeyInput).toHaveAttribute("type", "text")
+
+    fireEvent.click(
+      within(wecomChannel).getByRole("button", {
+        name: "settings:taskNotifications.test.action",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Wecom,
+      })
+    })
+
     fireEvent.click(
       within(webhookChannel).getByRole("button", {
         name: "settings:taskNotifications.test.action",
@@ -328,6 +373,10 @@ describe("TaskNotificationSettings", () => {
           enabled: true,
           webhookKey: "feishu-webhook-key",
         },
+        [TASK_NOTIFICATION_CHANNELS.Wecom]: {
+          enabled: true,
+          webhookKey: "wecom-webhook-key",
+        },
         [TASK_NOTIFICATION_CHANNELS.Webhook]: {
           enabled: true,
           url: "https://hooks.example.com/all-api-hub",
@@ -350,6 +399,9 @@ describe("TaskNotificationSettings", () => {
     const feishuChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_FEISHU,
     )
+    const wecomChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WECOM,
+    )
     const webhookChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
     )
@@ -357,6 +409,7 @@ describe("TaskNotificationSettings", () => {
       !browserChannel ||
       !telegramChannel ||
       !feishuChannel ||
+      !wecomChannel ||
       !webhookChannel
     ) {
       throw new Error("Expected channel settings rows")
@@ -365,6 +418,7 @@ describe("TaskNotificationSettings", () => {
     fireEvent.click(within(browserChannel).getByRole("switch"))
     fireEvent.click(within(telegramChannel).getByRole("switch"))
     fireEvent.click(within(feishuChannel).getByRole("switch"))
+    fireEvent.click(within(wecomChannel).getByRole("switch"))
     fireEvent.click(within(webhookChannel).getByRole("switch"))
 
     await waitFor(() => {
@@ -396,6 +450,13 @@ describe("TaskNotificationSettings", () => {
           }),
         }),
       })
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Wecom]: expect.objectContaining({
+            enabled: false,
+          }),
+        }),
+      })
     })
 
     updateTaskNotificationsMock.mockClear()
@@ -407,6 +468,9 @@ describe("TaskNotificationSettings", () => {
     )
     const feishuWebhookKeyInput = within(feishuChannel).getByLabelText(
       "settings:taskNotifications.channels.feishu.webhookKey",
+    )
+    const wecomWebhookKeyInput = within(wecomChannel).getByLabelText(
+      "settings:taskNotifications.channels.wecom.webhookKey",
     )
     const webhookUrlInput = within(webhookChannel).getByLabelText(
       "settings:taskNotifications.channels.webhook.url",
@@ -459,6 +523,21 @@ describe("TaskNotificationSettings", () => {
       })
     })
 
+    fireEvent.change(wecomWebhookKeyInput, {
+      target: { value: "  next-wecom-key  " },
+    })
+    fireEvent.blur(wecomWebhookKeyInput)
+
+    await waitFor(() => {
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Wecom]: expect.objectContaining({
+            webhookKey: "next-wecom-key",
+          }),
+        }),
+      })
+    })
+
     fireEvent.change(webhookUrlInput, {
       target: { value: "  https://hooks.example.com/next  " },
     })
@@ -489,6 +568,10 @@ describe("TaskNotificationSettings", () => {
           enabled: true,
           webhookKey: "feishu-webhook-key",
         },
+        [TASK_NOTIFICATION_CHANNELS.Wecom]: {
+          enabled: true,
+          webhookKey: "wecom-webhook-key",
+        },
         [TASK_NOTIFICATION_CHANNELS.Webhook]: {
           enabled: true,
           url: "https://hooks.example.com/all-api-hub",
@@ -510,10 +593,18 @@ describe("TaskNotificationSettings", () => {
     const feishuChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_FEISHU,
     )
+    const wecomChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WECOM,
+    )
     const webhookChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
     )
-    if (!telegramChannel || !feishuChannel || !webhookChannel) {
+    if (
+      !telegramChannel ||
+      !feishuChannel ||
+      !wecomChannel ||
+      !webhookChannel
+    ) {
       throw new Error("Expected third-party channel settings rows")
     }
 
@@ -531,6 +622,11 @@ describe("TaskNotificationSettings", () => {
       fireEvent.blur(
         within(feishuChannel).getByLabelText(
           "settings:taskNotifications.channels.feishu.webhookKey",
+        ),
+      )
+      fireEvent.blur(
+        within(wecomChannel).getByLabelText(
+          "settings:taskNotifications.channels.wecom.webhookKey",
         ),
       )
       fireEvent.blur(

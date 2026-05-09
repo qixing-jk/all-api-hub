@@ -533,6 +533,14 @@
         "title": "通用 Webhook",
         "url": "Webhook URL",
         "urlPlaceholder": "https://example.com/webhook"
+      },
+      "wecom": {
+        "description": "通过企业微信群消息推送发送任务通知。推荐直接粘贴企业微信提供的完整 Webhook URL，也兼容只填写 key。",
+        "docsLink": "查看配置文档",
+        "title": "企业微信机器人",
+        "webhookKey": "Webhook URL 或 Key",
+        "webhookKeyDescription": "在企业微信群设置的消息推送配置中复制 Webhook 地址并粘贴到这里；如果只填写 `key=` 后面的 key，也会自动补全地址。",
+        "webhookKeyPlaceholder": "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       }
     },
     "enable": "启用任务通知",
@@ -603,7 +611,8 @@
       "telegramMissingConfig": "Telegram Bot Token 或 Chat ID 未配置。",
       "title": "All API Hub 测试通知",
       "webhookInvalidUrl": "Webhook URL 必须使用 http:// 或 https://。",
-      "webhookMissingConfig": "Webhook URL 未配置。"
+      "webhookMissingConfig": "Webhook URL 未配置。",
+      "wecomMissingConfig": "企业微信机器人 Webhook URL 或 Key 未配置。"
     }
   },
   "theme": {

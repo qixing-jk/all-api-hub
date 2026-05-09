@@ -90,6 +90,10 @@ vi.mock("~/utils/i18n/core", () => ({
       return "Feishu Bot"
     }
 
+    if (key === "settings:taskNotifications.channels.wecom.title") {
+      return "WeCom Bot"
+    }
+
     if (key === "settings:taskNotifications.channels.webhook.title") {
       return "Generic webhook"
     }
@@ -479,6 +483,92 @@ describe("taskNotificationService", () => {
     )
   })
 
+  it("sends WeCom group bot notifications", async () => {
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Browser]: {
+            enabled: false,
+          },
+          [TASK_NOTIFICATION_CHANNELS.Wecom]: {
+            enabled: true,
+            webhookKey: "wecom-webhook-key",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        errcode: 0,
+        errmsg: "ok",
+      }),
+    })
+
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+      }),
+    ).resolves.toBe(true)
+
+    expect(createNotificationMock).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=wecom-webhook-key",
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: expect.stringContaining('"msgtype":"text"'),
+      }),
+    )
+  })
+
+  it("uses the full WeCom webhook URL when one is configured", async () => {
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Browser]: {
+            enabled: false,
+          },
+          [TASK_NOTIFICATION_CHANNELS.Wecom]: {
+            enabled: true,
+            webhookKey:
+              "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=full-wecom-webhook-key",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        errcode: 0,
+        errmsg: "ok",
+      }),
+    })
+
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+      }),
+    ).resolves.toBe(true)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=full-wecom-webhook-key",
+      expect.objectContaining({
+        method: "POST",
+      }),
+    )
+  })
+
   it("returns false when webhook delivery responds with non-OK", async () => {
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
@@ -698,6 +788,51 @@ describe("taskNotificationService", () => {
     })
   })
 
+  it("handles WeCom channel-specific test notification runtime messages", async () => {
+    const sendResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Wecom]: {
+            enabled: true,
+            webhookKey: "wecom-webhook-key",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        errcode: 0,
+        errmsg: "ok",
+      }),
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Wecom,
+      },
+      sendResponse,
+    )
+
+    expect(createNotificationMock).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=wecom-webhook-key",
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining("settings:taskNotifications.test.title"),
+      }),
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      error: undefined,
+    })
+  })
+
   it("returns Telegram API response descriptions for channel-specific tests", async () => {
     const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
@@ -857,6 +992,46 @@ describe("taskNotificationService", () => {
       success: false,
       error:
         "Feishu Bot returned HTTP 200: param invalid: incoming webhook access token invalid",
+    })
+  })
+
+  it("treats WeCom business error responses as channel-specific test failures", async () => {
+    const sendResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Wecom]: {
+            enabled: true,
+            webhookKey: "invalid-wecom-webhook-key",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: {
+        get: () => "application/json",
+      },
+      json: async () => ({
+        errcode: 93000,
+        errmsg: "invalid webhook url",
+      }),
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Wecom,
+      },
+      sendResponse,
+    )
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "WeCom Bot returned HTTP 200: invalid webhook url",
     })
   })
 
@@ -1113,6 +1288,33 @@ describe("taskNotificationService", () => {
     expect(missingFeishuResponse).toHaveBeenCalledWith({
       success: false,
       error: "settings:taskNotifications.test.feishuMissingConfig",
+    })
+
+    const missingWecomResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Wecom]: {
+            enabled: true,
+            webhookKey: "",
+          },
+        },
+      },
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Wecom,
+      },
+      missingWecomResponse,
+    )
+
+    expect(missingWecomResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "settings:taskNotifications.test.wecomMissingConfig",
     })
 
     const invalidWebhookResponse = vi.fn()
