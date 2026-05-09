@@ -1,4 +1,4 @@
-import { NEW_API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildControlDefinition,
   buildSectionDefinition,
@@ -15,7 +15,7 @@ export const managedSiteNewApiSearchSections: OptionsSearchItemDefinition[] = [
     341,
     {
       keywords: ["new-api"],
-      isVisible: (context) => context.managedSiteType === NEW_API,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.NEW_API,
     },
   ),
 ]
@@ -35,7 +35,7 @@ export const managedSiteNewApiSearchControls: OptionsSearchItemDefinition[] = [
         "settings:newApi.title",
       ],
       keywords: ["new-api", "base url"],
-      isVisible: (context) => context.managedSiteType === NEW_API,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.NEW_API,
     },
   ),
   buildControlDefinition(
@@ -52,7 +52,7 @@ export const managedSiteNewApiSearchControls: OptionsSearchItemDefinition[] = [
         "settings:newApi.title",
       ],
       keywords: ["new-api", "token", "admin token"],
-      isVisible: (context) => context.managedSiteType === NEW_API,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.NEW_API,
     },
   ),
   buildControlDefinition(
@@ -69,7 +69,7 @@ export const managedSiteNewApiSearchControls: OptionsSearchItemDefinition[] = [
         "settings:newApi.title",
       ],
       keywords: ["new-api", "user id"],
-      isVisible: (context) => context.managedSiteType === NEW_API,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.NEW_API,
     },
   ),
   buildControlDefinition(
@@ -86,7 +86,7 @@ export const managedSiteNewApiSearchControls: OptionsSearchItemDefinition[] = [
         "settings:newApi.title",
       ],
       keywords: ["new-api", "username", "login"],
-      isVisible: (context) => context.managedSiteType === NEW_API,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.NEW_API,
     },
   ),
   buildControlDefinition(
@@ -103,7 +103,7 @@ export const managedSiteNewApiSearchControls: OptionsSearchItemDefinition[] = [
         "settings:newApi.title",
       ],
       keywords: ["new-api", "password", "login"],
-      isVisible: (context) => context.managedSiteType === NEW_API,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.NEW_API,
     },
   ),
   buildControlDefinition(
@@ -120,7 +120,7 @@ export const managedSiteNewApiSearchControls: OptionsSearchItemDefinition[] = [
         "settings:newApi.title",
       ],
       keywords: ["new-api", "totp", "2fa"],
-      isVisible: (context) => context.managedSiteType === NEW_API,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.NEW_API,
     },
   ),
   buildControlDefinition(
@@ -137,7 +137,7 @@ export const managedSiteNewApiSearchControls: OptionsSearchItemDefinition[] = [
         "settings:newApi.title",
       ],
       keywords: ["new-api", "admin credentials", "login"],
-      isVisible: (context) => context.managedSiteType === NEW_API,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.NEW_API,
     },
   ),
   buildControlDefinition(
@@ -154,7 +154,7 @@ export const managedSiteNewApiSearchControls: OptionsSearchItemDefinition[] = [
         "settings:newApi.title",
       ],
       keywords: ["new-api", "session", "test", "totp"],
-      isVisible: (context) => context.managedSiteType === NEW_API,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.NEW_API,
     },
   ),
 ]

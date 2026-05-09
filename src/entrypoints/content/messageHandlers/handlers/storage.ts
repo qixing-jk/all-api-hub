@@ -1,4 +1,4 @@
-import { SUB2API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { parseSub2ApiUserIdentity } from "~/services/apiService/sub2api/parsing"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
@@ -251,7 +251,7 @@ export function handleGetUserFromLocalStorage(
                     },
                   }
                 : {}),
-              siteTypeHint: SUB2API,
+              siteTypeHint: SITE_TYPES.SUB2API,
             },
           })
           return

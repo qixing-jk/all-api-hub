@@ -3,14 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { ChannelType } from "~/constants/managedSite"
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  DONE_HUB,
-  NEW_API,
-  OCTOPUS,
-  VELOERA,
-} from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   DEFAULT_PREFERENCES,
   type UserPreferences,
@@ -170,7 +163,7 @@ describe("channelMigration", () => {
       message: "ok",
     })
     mockGetManagedSiteServiceForType.mockImplementation((siteType: string) => {
-      if (siteType === DONE_HUB) {
+      if (siteType === SITE_TYPES.DONE_HUB) {
         return {
           getConfig: mockDoneHubGetConfig,
           buildChannelPayload: mockDoneHubBuildChannelPayload,
@@ -179,7 +172,7 @@ describe("channelMigration", () => {
         }
       }
 
-      if (siteType === VELOERA) {
+      if (siteType === SITE_TYPES.VELOERA) {
         return {
           getConfig: mockVeloeraGetConfig,
           buildChannelPayload: vi.fn((draft: any) => ({
@@ -197,7 +190,7 @@ describe("channelMigration", () => {
         }
       }
 
-      if (siteType === AXON_HUB) {
+      if (siteType === SITE_TYPES.AXON_HUB) {
         return {
           getConfig: mockAxonHubGetConfig,
           buildChannelPayload: mockAxonHubBuildChannelPayload,
@@ -205,7 +198,7 @@ describe("channelMigration", () => {
         }
       }
 
-      if (siteType === CLAUDE_CODE_HUB) {
+      if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
         return {
           getConfig: mockClaudeCodeHubGetConfig,
           buildChannelPayload: mockClaudeCodeHubBuildChannelPayload,
@@ -241,8 +234,8 @@ describe("channelMigration", () => {
 
     const preview = await prepareManagedSiteChannelMigrationPreview({
       preferences: buildPreferences(),
-      sourceSiteType: NEW_API,
-      targetSiteType: DONE_HUB,
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.DONE_HUB,
       channels: [
         buildManagedSiteChannel({
           id: 11,
@@ -272,8 +265,8 @@ describe("channelMigration", () => {
 
     const preview = await prepareManagedSiteChannelMigrationPreview({
       preferences: buildPreferences(),
-      sourceSiteType: NEW_API,
-      targetSiteType: DONE_HUB,
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.DONE_HUB,
       channels: [
         buildManagedSiteChannel({
           id: 12,
@@ -298,8 +291,8 @@ describe("channelMigration", () => {
 
     const preview = await prepareManagedSiteChannelMigrationPreview({
       preferences: buildPreferences(),
-      sourceSiteType: DONE_HUB,
-      targetSiteType: OCTOPUS,
+      sourceSiteType: SITE_TYPES.DONE_HUB,
+      targetSiteType: SITE_TYPES.OCTOPUS,
       channels: [
         buildManagedSiteChannel({
           id: 21,
@@ -357,8 +350,8 @@ describe("channelMigration", () => {
           userId: "8",
         },
       }),
-      sourceSiteType: VELOERA,
-      targetSiteType: DONE_HUB,
+      sourceSiteType: SITE_TYPES.VELOERA,
+      targetSiteType: SITE_TYPES.DONE_HUB,
       channels: [
         buildManagedSiteChannel({
           id: 22,
@@ -390,8 +383,8 @@ describe("channelMigration", () => {
           userId: "",
         },
       }),
-      sourceSiteType: DONE_HUB,
-      targetSiteType: VELOERA,
+      sourceSiteType: SITE_TYPES.DONE_HUB,
+      targetSiteType: SITE_TYPES.VELOERA,
       channels: [
         buildManagedSiteChannel({
           id: 22_1,
@@ -416,7 +409,7 @@ describe("channelMigration", () => {
     )
 
     mockGetManagedSiteServiceForType.mockImplementation((siteType: string) => {
-      if (siteType === DONE_HUB) {
+      if (siteType === SITE_TYPES.DONE_HUB) {
         return {
           getConfig: mockDoneHubGetConfig,
           buildChannelPayload: mockDoneHubBuildChannelPayload,
@@ -446,8 +439,8 @@ describe("channelMigration", () => {
 
     const preview = await prepareManagedSiteChannelMigrationPreview({
       preferences: buildPreferences(),
-      sourceSiteType: DONE_HUB,
-      targetSiteType: VELOERA,
+      sourceSiteType: SITE_TYPES.DONE_HUB,
+      targetSiteType: SITE_TYPES.VELOERA,
       channels: [
         buildManagedSiteChannel({
           id: 22_2,
@@ -472,8 +465,8 @@ describe("channelMigration", () => {
 
     const preview = await prepareManagedSiteChannelMigrationPreview({
       preferences: buildPreferences(),
-      sourceSiteType: OCTOPUS,
-      targetSiteType: DONE_HUB,
+      sourceSiteType: SITE_TYPES.OCTOPUS,
+      targetSiteType: SITE_TYPES.DONE_HUB,
       channels: [
         buildManagedSiteChannel({
           id: 22_3,
@@ -517,8 +510,8 @@ describe("channelMigration", () => {
 
     const preview = await prepareManagedSiteChannelMigrationPreview({
       preferences: buildPreferences(),
-      sourceSiteType: AXON_HUB,
-      targetSiteType: DONE_HUB,
+      sourceSiteType: SITE_TYPES.AXON_HUB,
+      targetSiteType: SITE_TYPES.DONE_HUB,
       channels: [
         buildManagedSiteChannel({
           id: 22_4,
@@ -543,8 +536,8 @@ describe("channelMigration", () => {
 
     const preview = await prepareManagedSiteChannelMigrationPreview({
       preferences: buildPreferences(),
-      sourceSiteType: AXON_HUB,
-      targetSiteType: DONE_HUB,
+      sourceSiteType: SITE_TYPES.AXON_HUB,
+      targetSiteType: SITE_TYPES.DONE_HUB,
       channels: [
         buildManagedSiteChannel({
           id: 22_5,
@@ -574,8 +567,8 @@ describe("channelMigration", () => {
           adminToken: "cch-token",
         },
       }),
-      sourceSiteType: CLAUDE_CODE_HUB,
-      targetSiteType: DONE_HUB,
+      sourceSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      targetSiteType: SITE_TYPES.DONE_HUB,
       channels: [
         buildManagedSiteChannel({
           id: 22_51,
@@ -628,8 +621,8 @@ describe("channelMigration", () => {
           password: "secret",
         },
       }),
-      sourceSiteType: NEW_API,
-      targetSiteType: AXON_HUB,
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.AXON_HUB,
       channels: [
         buildManagedSiteChannel({
           id: 22_6,
@@ -675,8 +668,8 @@ describe("channelMigration", () => {
           password: "secret",
         },
       }),
-      sourceSiteType: NEW_API,
-      targetSiteType: AXON_HUB,
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.AXON_HUB,
       channels: [
         buildManagedSiteChannel({
           id: 22_61,
@@ -720,8 +713,8 @@ describe("channelMigration", () => {
           password: "secret",
         },
       }),
-      sourceSiteType: NEW_API,
-      targetSiteType: AXON_HUB,
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.AXON_HUB,
       channels: [
         buildManagedSiteChannel({
           id: 22_7,
@@ -751,8 +744,8 @@ describe("channelMigration", () => {
           adminToken: "cch-token",
         },
       }),
-      sourceSiteType: NEW_API,
-      targetSiteType: CLAUDE_CODE_HUB,
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
       channels: [
         buildManagedSiteChannel({
           id: 22_71,
@@ -800,8 +793,8 @@ describe("channelMigration", () => {
           adminToken: "cch-token",
         },
       }),
-      sourceSiteType: NEW_API,
-      targetSiteType: CLAUDE_CODE_HUB,
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
       channels: [
         buildManagedSiteChannel({
           id: 22_72,
@@ -840,8 +833,8 @@ describe("channelMigration", () => {
           adminToken: "cch-token",
         },
       }),
-      sourceSiteType: NEW_API,
-      targetSiteType: CLAUDE_CODE_HUB,
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
       channels: [
         buildManagedSiteChannel({
           id: 22_73,
@@ -872,8 +865,8 @@ describe("channelMigration", () => {
           password: "secret",
         },
       }),
-      sourceSiteType: AXON_HUB,
-      targetSiteType: DONE_HUB,
+      sourceSiteType: SITE_TYPES.AXON_HUB,
+      targetSiteType: SITE_TYPES.DONE_HUB,
       channels: [
         buildManagedSiteChannel({
           id: 22_8,
@@ -920,8 +913,8 @@ describe("channelMigration", () => {
           adminToken: "cch-token",
         },
       }),
-      sourceSiteType: CLAUDE_CODE_HUB,
-      targetSiteType: DONE_HUB,
+      sourceSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      targetSiteType: SITE_TYPES.DONE_HUB,
       channels: [
         buildManagedSiteChannel({
           id: 22_91,
@@ -980,8 +973,8 @@ describe("channelMigration", () => {
 
     const previewPromise = prepareManagedSiteChannelMigrationPreview({
       preferences: buildPreferences(),
-      sourceSiteType: NEW_API,
-      targetSiteType: DONE_HUB,
+      sourceSiteType: SITE_TYPES.NEW_API,
+      targetSiteType: SITE_TYPES.DONE_HUB,
       channels,
       resolveNewApiSourceKey: vi.fn(async ({ channelId }) => {
         activeResolvers += 1
@@ -1037,8 +1030,8 @@ describe("channelMigration", () => {
           userId: "8",
         },
       }),
-      sourceSiteType: VELOERA,
-      targetSiteType: DONE_HUB,
+      sourceSiteType: SITE_TYPES.VELOERA,
+      targetSiteType: SITE_TYPES.DONE_HUB,
       channels: [
         buildManagedSiteChannel({
           id: 23,
@@ -1064,8 +1057,8 @@ describe("channelMigration", () => {
 
     const result = await executeManagedSiteChannelMigration({
       preview: {
-        sourceSiteType: NEW_API,
-        targetSiteType: DONE_HUB,
+        sourceSiteType: SITE_TYPES.NEW_API,
+        targetSiteType: SITE_TYPES.DONE_HUB,
         generalWarningCodes: [],
         totalCount: 2,
         readyCount: 1,
@@ -1149,8 +1142,8 @@ describe("channelMigration", () => {
 
     const result = await executeManagedSiteChannelMigration({
       preview: {
-        sourceSiteType: NEW_API,
-        targetSiteType: AXON_HUB,
+        sourceSiteType: SITE_TYPES.NEW_API,
+        targetSiteType: SITE_TYPES.AXON_HUB,
         generalWarningCodes: [],
         totalCount: 2,
         readyCount: 2,
@@ -1252,8 +1245,8 @@ describe("channelMigration", () => {
 
     const result = await executeManagedSiteChannelMigration({
       preview: {
-        sourceSiteType: NEW_API,
-        targetSiteType: CLAUDE_CODE_HUB,
+        sourceSiteType: SITE_TYPES.NEW_API,
+        targetSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
         generalWarningCodes: [],
         totalCount: 2,
         readyCount: 2,
@@ -1347,8 +1340,8 @@ describe("channelMigration", () => {
 
     const result = await executeManagedSiteChannelMigration({
       preview: {
-        sourceSiteType: NEW_API,
-        targetSiteType: DONE_HUB,
+        sourceSiteType: SITE_TYPES.NEW_API,
+        targetSiteType: SITE_TYPES.DONE_HUB,
         generalWarningCodes: [],
         totalCount: 2,
         readyCount: 1,
@@ -1419,8 +1412,8 @@ describe("channelMigration", () => {
 
     const result = await executeManagedSiteChannelMigration({
       preview: {
-        sourceSiteType: NEW_API,
-        targetSiteType: DONE_HUB,
+        sourceSiteType: SITE_TYPES.NEW_API,
+        targetSiteType: SITE_TYPES.DONE_HUB,
         generalWarningCodes: [],
         totalCount: 1,
         readyCount: 1,
@@ -1474,8 +1467,8 @@ describe("channelMigration", () => {
 
     const result = await executeManagedSiteChannelMigration({
       preview: {
-        sourceSiteType: NEW_API,
-        targetSiteType: DONE_HUB,
+        sourceSiteType: SITE_TYPES.NEW_API,
+        targetSiteType: SITE_TYPES.DONE_HUB,
         generalWarningCodes: [],
         totalCount: 1,
         readyCount: 1,

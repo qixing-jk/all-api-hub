@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { NEW_API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { modelSyncScheduler } from "~/services/models/modelSync/scheduler"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -91,7 +91,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
 
   const setPrefs = (overrides: { pruneMissingTargetsOnModelSync: boolean }) => {
     mockedUserPreferences.getPreferences.mockResolvedValue({
-      managedSiteType: NEW_API,
+      managedSiteType: SITE_TYPES.NEW_API,
       newApi: {
         baseUrl: "https://example.com",
         adminToken: "token",
@@ -175,7 +175,7 @@ describe("modelSyncScheduler.executeSync - model redirect pruning", () => {
     ).toHaveBeenCalledWith(channel, {}, expect.anything(), {
       pruneMissingTargets: true,
       availableModels: newModels,
-      siteType: NEW_API,
+      siteType: SITE_TYPES.NEW_API,
     })
   })
 

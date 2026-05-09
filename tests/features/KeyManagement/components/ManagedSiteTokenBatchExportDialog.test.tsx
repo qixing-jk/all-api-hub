@@ -2,7 +2,7 @@ import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { NEW_API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { ManagedSiteTokenBatchExportDialog } from "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog"
 import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
@@ -159,7 +159,7 @@ const token = {
 }
 
 const preview: ManagedSiteTokenBatchExportPreview = {
-  siteType: NEW_API,
+  siteType: SITE_TYPES.NEW_API,
   totalCount: 2,
   readyCount: 2,
   warningCount: 0,
@@ -210,7 +210,7 @@ const preview: ManagedSiteTokenBatchExportPreview = {
 }
 
 const richPreview: ManagedSiteTokenBatchExportPreview = {
-  siteType: NEW_API,
+  siteType: SITE_TYPES.NEW_API,
   totalCount: 4,
   readyCount: 1,
   warningCount: 1,
@@ -270,7 +270,7 @@ const richPreview: ManagedSiteTokenBatchExportPreview = {
 }
 
 const modelsRequiredPreview: ManagedSiteTokenBatchExportPreview = {
-  siteType: NEW_API,
+  siteType: SITE_TYPES.NEW_API,
   totalCount: 3,
   readyCount: 0,
   warningCount: 0,
@@ -973,7 +973,7 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
 
   it("renders localized text for every blocked reason code", async () => {
     mockPreparePreview.mockResolvedValue({
-      siteType: NEW_API,
+      siteType: SITE_TYPES.NEW_API,
       totalCount: 6,
       readyCount: 0,
       warningCount: 0,

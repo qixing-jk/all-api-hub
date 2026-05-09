@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { NEW_API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { ApiError } from "~/services/apiService/common/errors"
 import {
   fetchSiteOriginalTitle,
@@ -103,10 +103,16 @@ describe("detectSiteType temp-context fallbacks", () => {
       "<html><title>Mystery Control Panel</title></html>",
     )
     mocks.fetchApiData.mockRejectedValue(
-      new ApiError(`invalid user id ${NEW_API}`, 400, "/api/user/self"),
+      new ApiError(
+        `invalid user id ${SITE_TYPES.NEW_API}`,
+        400,
+        "/api/user/self",
+      ),
     )
 
-    await expect(getSiteType("https://example.com")).resolves.toBe(NEW_API)
+    await expect(getSiteType("https://example.com")).resolves.toBe(
+      SITE_TYPES.NEW_API,
+    )
   })
 
   it("returns UNKNOWN when the API error message is blank", async () => {

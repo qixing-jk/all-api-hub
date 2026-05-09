@@ -1,4 +1,4 @@
-import { DONE_HUB } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildControlDefinition,
   buildSectionDefinition,
@@ -15,7 +15,7 @@ export const managedSiteDoneHubSearchSections: OptionsSearchItemDefinition[] = [
     342,
     {
       keywords: ["done-hub", "donehub"],
-      isVisible: (context) => context.managedSiteType === DONE_HUB,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.DONE_HUB,
     },
   ),
 ]
@@ -35,7 +35,7 @@ export const managedSiteDoneHubSearchControls: OptionsSearchItemDefinition[] = [
         "settings:doneHub.title",
       ],
       keywords: ["done-hub", "donehub", "base url"],
-      isVisible: (context) => context.managedSiteType === DONE_HUB,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.DONE_HUB,
     },
   ),
   buildControlDefinition(
@@ -52,7 +52,7 @@ export const managedSiteDoneHubSearchControls: OptionsSearchItemDefinition[] = [
         "settings:doneHub.title",
       ],
       keywords: ["done-hub", "donehub", "admin credentials"],
-      isVisible: (context) => context.managedSiteType === DONE_HUB,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.DONE_HUB,
     },
   ),
   buildControlDefinition(
@@ -69,7 +69,7 @@ export const managedSiteDoneHubSearchControls: OptionsSearchItemDefinition[] = [
         "settings:doneHub.title",
       ],
       keywords: ["done-hub", "donehub", "token"],
-      isVisible: (context) => context.managedSiteType === DONE_HUB,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.DONE_HUB,
     },
   ),
   buildControlDefinition(
@@ -86,7 +86,7 @@ export const managedSiteDoneHubSearchControls: OptionsSearchItemDefinition[] = [
         "settings:doneHub.title",
       ],
       keywords: ["done-hub", "donehub", "user id"],
-      isVisible: (context) => context.managedSiteType === DONE_HUB,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.DONE_HUB,
     },
   ),
 ]

@@ -1,5 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
+import { isSiteType, SITE_TYPES, type SiteType } from "~/constants/siteType"
 import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import type {
@@ -32,6 +33,13 @@ function normalizeProviderId(value: unknown): SiteAnnouncementProviderId {
   return value === SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api
     ? SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api
     : SITE_ANNOUNCEMENT_PROVIDER_IDS.Common
+}
+
+/**
+ * Normalizes persisted site type values before storing or displaying records.
+ */
+function sanitizeSiteType(value: unknown): SiteType {
+  return isSiteType(value) ? value : SITE_TYPES.UNKNOWN
 }
 
 /**
@@ -77,7 +85,7 @@ function sanitizeRecord(value: unknown): SiteAnnouncementRecord | null {
     id,
     siteKey,
     siteName: typeof value.siteName === "string" ? value.siteName : "",
-    siteType: typeof value.siteType === "string" ? value.siteType : "unknown",
+    siteType: sanitizeSiteType(value.siteType),
     baseUrl: typeof value.baseUrl === "string" ? value.baseUrl : "",
     accountId: typeof value.accountId === "string" ? value.accountId : "",
     providerId: normalizeProviderId(value.providerId),
@@ -130,7 +138,7 @@ function sanitizeSiteState(
   return {
     siteKey,
     siteName: typeof value.siteName === "string" ? value.siteName : "",
-    siteType: typeof value.siteType === "string" ? value.siteType : "unknown",
+    siteType: sanitizeSiteType(value.siteType),
     baseUrl: typeof value.baseUrl === "string" ? value.baseUrl : "",
     accountId: typeof value.accountId === "string" ? value.accountId : "",
     providerId: normalizeProviderId(value.providerId),
@@ -375,7 +383,7 @@ class SiteAnnouncementStorage {
   async recordFailure(params: {
     siteKey: string
     siteName: string
-    siteType: string
+    siteType: SiteType
     baseUrl: string
     accountId: string
     providerId: SiteAnnouncementProviderId

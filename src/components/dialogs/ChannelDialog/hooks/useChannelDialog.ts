@@ -8,6 +8,7 @@ import {
   CHANNEL_DIALOG_ADVISORY_WARNING_KINDS,
 } from "~/components/dialogs/ChannelDialog/utils/advisoryWarning"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   ensureAccountApiToken,
   resolveSub2ApiQuickCreateResolution,
@@ -128,7 +129,7 @@ export function useChannelDialog() {
       todayIncome: { USD: 0, CNY: 0 },
       todayTokens: { upload: 0, download: 0 },
       health: { status: SiteHealthStatus.Healthy },
-      siteType: "default",
+      siteType: SITE_TYPES.UNKNOWN,
       baseUrl: options.baseUrl,
       token: "",
       userId: 0,

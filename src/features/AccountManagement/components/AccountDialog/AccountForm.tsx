@@ -23,7 +23,7 @@ import {
   Switch,
   Textarea,
 } from "~/components/ui"
-import { SITE_TITLE_RULES, SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
+import { SITE_TITLE_RULES, SITE_TYPES } from "~/constants/siteType"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/AccountFormSection"
 import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/accountFormSections"
 import type { AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
@@ -122,7 +122,7 @@ export default function AccountForm({
     checkIn,
     siteType,
   } = draft
-  const isSub2Api = siteType === SUB2API
+  const isSub2Api = siteType === SITE_TYPES.SUB2API
 
   return (
     <div className="space-y-3">
@@ -145,7 +145,7 @@ export default function AccountForm({
 
         <FormField label={t("form.siteType")}>
           <Select
-            value={siteType ?? UNKNOWN_SITE}
+            value={siteType ?? SITE_TYPES.UNKNOWN}
             onValueChange={onSiteTypeChange}
           >
             <SelectTrigger
@@ -153,7 +153,7 @@ export default function AccountForm({
               aria-label={t("form.siteType")}
               title={t("form.siteType")}
               data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.siteTypeTrigger}
-              data-site-type={siteType ?? UNKNOWN_SITE}
+              data-site-type={siteType ?? SITE_TYPES.UNKNOWN}
             >
               <div className="flex items-center gap-2">
                 <GlobeAltIcon className="text-muted-foreground h-5 w-5" />

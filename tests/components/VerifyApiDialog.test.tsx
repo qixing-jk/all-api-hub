@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
+import { SITE_TYPES } from "~/constants/siteType"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   createAccountModelVerificationHistoryTarget,
@@ -78,7 +79,7 @@ describe("VerifyApiDialog", () => {
           todayIncome: { USD: 0, CNY: 0 },
           todayTokens: { upload: 0, download: 0 },
           health: { status: "healthy" as any },
-          siteType: "newapi",
+          siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
           userId: 1,
@@ -150,7 +151,7 @@ describe("VerifyApiDialog", () => {
           todayIncome: { USD: 0, CNY: 0 },
           todayTokens: { upload: 0, download: 0 },
           health: { status: "healthy" as any },
-          siteType: "newapi",
+          siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
           userId: 1,
@@ -234,7 +235,7 @@ describe("VerifyApiDialog", () => {
           todayIncome: { USD: 0, CNY: 0 },
           todayTokens: { upload: 0, download: 0 },
           health: { status: "healthy" as any },
-          siteType: "newapi",
+          siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
           userId: 1,
@@ -317,7 +318,7 @@ describe("VerifyApiDialog", () => {
           todayIncome: { USD: 0, CNY: 0 },
           todayTokens: { upload: 0, download: 0 },
           health: { status: "healthy" as any },
-          siteType: "newapi",
+          siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
           userId: 1,

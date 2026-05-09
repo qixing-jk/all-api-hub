@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import type { CreateChannelPayload, UpdateChannelPayload } from "~/types/newApi"
 
@@ -84,7 +85,7 @@ function createMockDisplaySiteData(
     todayTokens: { upload: 0, download: 0 },
     health: { status: "healthy" as any },
     last_sync_time: Date.now(),
-    siteType: "veloera",
+    siteType: SITE_TYPES.VELOERA,
     baseUrl: "https://api.example.com",
     token: "access-token",
     userId: 1,
@@ -203,7 +204,7 @@ describe("veloeraService", () => {
   })
 
   describe("searchChannel/createChannel/updateChannel/deleteChannel", () => {
-    it("passes VELOERA site hint to apiService wrappers", async () => {
+    it("passes SITE_TYPES.VELOERA site hint to apiService wrappers", async () => {
       const { searchChannel, createChannel, updateChannel, deleteChannel } =
         await import("~/services/managedSites/providers/veloera")
 

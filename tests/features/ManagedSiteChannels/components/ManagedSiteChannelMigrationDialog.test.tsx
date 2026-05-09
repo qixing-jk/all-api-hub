@@ -3,12 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  NEW_API,
-  OCTOPUS,
-} from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { ManagedSiteChannelMigrationDialog } from "~/features/ManagedSiteChannels/components/ManagedSiteChannelMigrationDialog"
 import {
   executeManagedSiteChannelMigration,
@@ -153,7 +148,7 @@ const mockedExecuteMigration =
 
 const availableTargets = [
   { siteType: "done-hub", label: "DoneHub" },
-  { siteType: OCTOPUS, label: "Octopus" },
+  { siteType: SITE_TYPES.OCTOPUS, label: "Octopus" },
 ] as any
 
 const channels = [
@@ -168,7 +163,7 @@ const channels = [
 ] as any
 
 const previewPayload = {
-  targetSiteType: OCTOPUS,
+  targetSiteType: SITE_TYPES.OCTOPUS,
   readyCount: 1,
   blockedCount: 1,
   totalCount: 2,
@@ -280,7 +275,7 @@ describe("ManagedSiteChannelMigrationDialog", () => {
         onClose={vi.fn()}
         channels={channels}
         preferences={{} as any}
-        sourceSiteType={NEW_API}
+        sourceSiteType={SITE_TYPES.NEW_API}
         availableTargets={availableTargets}
       />,
     )
@@ -290,7 +285,7 @@ describe("ManagedSiteChannelMigrationDialog", () => {
         expect.objectContaining({
           channels,
           preferences: {},
-          sourceSiteType: NEW_API,
+          sourceSiteType: SITE_TYPES.NEW_API,
           targetSiteType: "done-hub",
         }),
       )
@@ -322,7 +317,7 @@ describe("ManagedSiteChannelMigrationDialog", () => {
   it("renders AxonHub string channel type labels and unknown type fallbacks", async () => {
     mockedPreparePreview.mockResolvedValueOnce({
       ...previewPayload,
-      targetSiteType: AXON_HUB,
+      targetSiteType: SITE_TYPES.AXON_HUB,
       items: [
         {
           ...previewPayload.items[0],
@@ -373,8 +368,10 @@ describe("ManagedSiteChannelMigrationDialog", () => {
         onClose={vi.fn()}
         channels={channels}
         preferences={{} as any}
-        sourceSiteType={NEW_API}
-        availableTargets={[{ siteType: AXON_HUB, label: "AxonHub" }] as any}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={
+          [{ siteType: SITE_TYPES.AXON_HUB, label: "AxonHub" }] as any
+        }
       />,
     )
 
@@ -391,7 +388,7 @@ describe("ManagedSiteChannelMigrationDialog", () => {
   it("renders Claude Code Hub string provider type labels and unknown type fallbacks", async () => {
     mockedPreparePreview.mockResolvedValueOnce({
       ...previewPayload,
-      targetSiteType: CLAUDE_CODE_HUB,
+      targetSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
       items: [
         {
           ...previewPayload.items[0],
@@ -416,9 +413,11 @@ describe("ManagedSiteChannelMigrationDialog", () => {
         onClose={vi.fn()}
         channels={channels}
         preferences={{} as any}
-        sourceSiteType={NEW_API}
+        sourceSiteType={SITE_TYPES.NEW_API}
         availableTargets={
-          [{ siteType: CLAUDE_CODE_HUB, label: "Claude Code Hub" }] as any
+          [
+            { siteType: SITE_TYPES.CLAUDE_CODE_HUB, label: "Claude Code Hub" },
+          ] as any
         }
       />,
     )
@@ -440,7 +439,7 @@ describe("ManagedSiteChannelMigrationDialog", () => {
         onClose={vi.fn()}
         channels={channels}
         preferences={{} as any}
-        sourceSiteType={NEW_API}
+        sourceSiteType={SITE_TYPES.NEW_API}
         availableTargets={availableTargets}
       />,
     )
@@ -475,7 +474,7 @@ describe("ManagedSiteChannelMigrationDialog", () => {
         onClose={vi.fn()}
         channels={channels}
         preferences={{} as any}
-        sourceSiteType={NEW_API}
+        sourceSiteType={SITE_TYPES.NEW_API}
         availableTargets={availableTargets}
       />,
     )
@@ -537,7 +536,7 @@ describe("ManagedSiteChannelMigrationDialog", () => {
         onClose={onClose}
         channels={channels}
         preferences={{} as any}
-        sourceSiteType={NEW_API}
+        sourceSiteType={SITE_TYPES.NEW_API}
         availableTargets={availableTargets}
       />,
     )

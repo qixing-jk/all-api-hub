@@ -1,11 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  NEW_API,
-  VELOERA,
-} from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import type { ManagedSiteService } from "~/services/managedSites/managedSiteService"
 import type { AccountToken } from "~/types"
 import {
@@ -76,7 +71,7 @@ const buildService = (
   overrides: Partial<ManagedSiteService> = {},
 ): ManagedSiteService =>
   ({
-    siteType: NEW_API,
+    siteType: SITE_TYPES.NEW_API,
     messagesKey: "newapi",
     getConfig: vi.fn().mockResolvedValue({
       baseUrl: "https://target.example.com",
@@ -351,7 +346,7 @@ describe("managed-site token batch export", () => {
 
   it("keeps dedupe-unsupported targets executable with a warning", async () => {
     const service = buildService({
-      siteType: VELOERA,
+      siteType: SITE_TYPES.VELOERA,
       messagesKey: "veloera",
     })
     mockGetManagedSiteService.mockResolvedValue(service)
@@ -401,7 +396,7 @@ describe("managed-site token batch export", () => {
     {
       label: "masked Claude Code Hub key",
       serviceOverrides: {
-        siteType: CLAUDE_CODE_HUB,
+        siteType: SITE_TYPES.CLAUDE_CODE_HUB,
         messagesKey: "claudeCodeHub",
         prepareChannelFormData: vi.fn(async () => ({
           name: "Masked key",
@@ -439,7 +434,7 @@ describe("managed-site token batch export", () => {
     {
       label: "missing base URL",
       serviceOverrides: {
-        siteType: AXON_HUB,
+        siteType: SITE_TYPES.AXON_HUB,
         messagesKey: "axonhub",
         prepareChannelFormData: vi.fn(async () => ({
           name: "Missing base URL",

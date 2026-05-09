@@ -1,12 +1,7 @@
 import type { ReactNode } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  NEW_API,
-  VELOERA,
-} from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { TokenDetails } from "~/features/AccountManagement/components/CopyKeyDialog/TokenDetails"
 import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
@@ -80,9 +75,9 @@ function createTokenStub(overrides: Record<string, unknown> = {}) {
 }
 
 describe("Managed site logo", () => {
-  it("renders NewAPI icon when managedSiteType is NEW_API", async () => {
+  it("renders NewAPI icon when managedSiteType is SITE_TYPES.NEW_API", async () => {
     mockedUseUserPreferencesContext.mockReturnValue({
-      managedSiteType: NEW_API,
+      managedSiteType: SITE_TYPES.NEW_API,
     })
 
     render(
@@ -100,9 +95,9 @@ describe("Managed site logo", () => {
     expect(screen.queryByRole("img", { name: "Veloera logo" })).toBeNull()
   })
 
-  it("renders Veloera logo when managedSiteType is VELOERA", async () => {
+  it("renders Veloera logo when managedSiteType is SITE_TYPES.VELOERA", async () => {
     mockedUseUserPreferencesContext.mockReturnValue({
-      managedSiteType: VELOERA,
+      managedSiteType: SITE_TYPES.VELOERA,
     })
 
     render(
@@ -122,9 +117,9 @@ describe("Managed site logo", () => {
     ).toBeInTheDocument()
   })
 
-  it("renders AxonHub logo when managedSiteType is AXON_HUB", async () => {
+  it("renders AxonHub logo when managedSiteType is SITE_TYPES.AXON_HUB", async () => {
     mockedUseUserPreferencesContext.mockReturnValue({
-      managedSiteType: AXON_HUB,
+      managedSiteType: SITE_TYPES.AXON_HUB,
     })
 
     render(
@@ -144,9 +139,9 @@ describe("Managed site logo", () => {
     ).toBeInTheDocument()
   })
 
-  it("renders Claude Code Hub logo when managedSiteType is CLAUDE_CODE_HUB", async () => {
+  it("renders Claude Code Hub logo when managedSiteType is SITE_TYPES.CLAUDE_CODE_HUB", async () => {
     mockedUseUserPreferencesContext.mockReturnValue({
-      managedSiteType: CLAUDE_CODE_HUB,
+      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
     })
 
     render(
@@ -166,9 +161,9 @@ describe("Managed site logo", () => {
     ).toBeInTheDocument()
   })
 
-  it("renders Veloera logo in CopyKeyDialog token details when managedSiteType is VELOERA", async () => {
+  it("renders Veloera logo in CopyKeyDialog token details when managedSiteType is SITE_TYPES.VELOERA", async () => {
     mockedUseUserPreferencesContext.mockReturnValue({
-      managedSiteType: VELOERA,
+      managedSiteType: SITE_TYPES.VELOERA,
     })
 
     render(
@@ -188,9 +183,9 @@ describe("Managed site logo", () => {
     ).toBeInTheDocument()
   })
 
-  it("renders Claude Code Hub logo in CopyKeyDialog token details when managedSiteType is CLAUDE_CODE_HUB", async () => {
+  it("renders Claude Code Hub logo in CopyKeyDialog token details when managedSiteType is SITE_TYPES.CLAUDE_CODE_HUB", async () => {
     mockedUseUserPreferencesContext.mockReturnValue({
-      managedSiteType: CLAUDE_CODE_HUB,
+      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
     })
 
     render(

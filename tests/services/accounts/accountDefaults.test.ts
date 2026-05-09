@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { UNKNOWN_SITE } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
   applySiteAccountUpdates,
@@ -22,7 +22,7 @@ describe("accountDefaults", () => {
       site_name: "Test Site",
       site_url: "https://test.com",
       health: { status: SiteHealthStatus.Healthy },
-      site_type: "test-site",
+      site_type: SITE_TYPES.UNKNOWN,
       exchange_rate: 7,
       account_info: {
         id: 1,
@@ -173,7 +173,7 @@ describe("accountDefaults", () => {
         tags: "legacy" as any,
       } as any)
 
-      expect(normalized.site_type).toBe(UNKNOWN_SITE)
+      expect(normalized.site_type).toBe(SITE_TYPES.UNKNOWN)
       expect(normalized.exchange_rate).toBe(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT)
       expect(normalized.authType).toBe(AuthTypeEnum.AccessToken)
       expect(normalized.account_info.id).toBe(12)

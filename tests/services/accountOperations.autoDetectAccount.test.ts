@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_DETECT_ERROR_CODES } from "~/constants/autoDetect"
-import { SUB2API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { autoDetectAccount } from "~/services/accounts/accountOperations"
 import { AuthTypeEnum } from "~/types"
@@ -73,7 +73,7 @@ describe("accountOperations autoDetectAccount", () => {
       data: {
         userId: 1,
         user: { id: 1, username: "" },
-        siteType: SUB2API,
+        siteType: SITE_TYPES.SUB2API,
         accessToken: "jwt-token",
       },
     })
@@ -88,7 +88,7 @@ describe("accountOperations autoDetectAccount", () => {
     )
 
     expect(result.success).toBe(true)
-    expect(result.data?.siteType).toBe(SUB2API)
+    expect(result.data?.siteType).toBe(SITE_TYPES.SUB2API)
     expect(result.data?.username).toBe("")
     expect(result.data?.accessToken).toBe("jwt-token")
     expect(result.data?.exchangeRate).toBe(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT)

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { CLAUDE_CODE_HUB } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import * as managedSiteUtils from "~/services/managedSites/utils/managedSite"
 import {
@@ -164,7 +164,7 @@ describe("handleManagedSiteModelSyncMessage", () => {
 
   it("rejects model sync for Claude Code Hub because the backend does not support it", async () => {
     mockedUserPreferences.getPreferences.mockResolvedValueOnce({
-      managedSiteType: CLAUDE_CODE_HUB,
+      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
       claudeCodeHub: {
         baseUrl: "https://cch.example.com",
         adminToken: "admin-token",
@@ -181,7 +181,7 @@ describe("handleManagedSiteModelSyncMessage", () => {
 
   it("throws the config-missing message when Claude Code Hub admin config is unavailable", async () => {
     mockedUserPreferences.getPreferences.mockResolvedValueOnce({
-      managedSiteType: CLAUDE_CODE_HUB,
+      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
       managedSiteModelSync: {
         ...(DEFAULT_PREFERENCES as any).managedSiteModelSync,
       },
@@ -212,7 +212,7 @@ describe("handleManagedSiteModelSyncMessage", () => {
     })
 
     mockedUserPreferences.getPreferences.mockResolvedValueOnce({
-      managedSiteType: CLAUDE_CODE_HUB,
+      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
       claudeCodeHub: {
         baseUrl: managedConfig.baseUrl,
         adminToken: managedConfig.adminToken,
@@ -238,7 +238,7 @@ describe("handleManagedSiteModelSyncMessage", () => {
 
     expect(getManagedSiteAdminConfigSpy).toHaveBeenCalled()
     expect(mockedGetManagedSiteServiceForType).toHaveBeenCalledWith(
-      CLAUDE_CODE_HUB,
+      SITE_TYPES.CLAUDE_CODE_HUB,
     )
     expect(searchChannel).toHaveBeenCalledWith(
       managedConfig.baseUrl,
@@ -257,7 +257,7 @@ describe("handleManagedSiteModelSyncMessage", () => {
     const searchChannel = vi.fn().mockResolvedValue(null)
 
     mockedUserPreferences.getPreferences.mockResolvedValueOnce({
-      managedSiteType: CLAUDE_CODE_HUB,
+      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
       claudeCodeHub: {
         baseUrl: managedConfig.baseUrl,
         adminToken: managedConfig.adminToken,

@@ -8,7 +8,7 @@ import { ChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { ChannelType } from "~/constants/managedSite"
-import { AXON_HUB, NEW_API, OCTOPUS } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { CHANNEL_STATUS, type ChannelFormData } from "~/types/managedSite"
 
 const {
@@ -431,7 +431,7 @@ describe("ChannelDialog behavior", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     resetChannelFormScenario()
-    mockUserPreferences.managedSiteType = NEW_API
+    mockUserPreferences.managedSiteType = SITE_TYPES.NEW_API
     mockUserPreferences.newApiBaseUrl = "https://managed.example.com"
     mockUserPreferences.newApiUserId = "1"
     mockUserPreferences.newApiUsername = "admin"
@@ -709,7 +709,7 @@ describe("ChannelDialog behavior", () => {
   })
 
   it("hides non-octopus fields when the managed site is octopus", () => {
-    mockUserPreferences.managedSiteType = OCTOPUS
+    mockUserPreferences.managedSiteType = SITE_TYPES.OCTOPUS
 
     render(<ChannelDialog isOpen={true} onClose={vi.fn()} />)
 
@@ -720,7 +720,7 @@ describe("ChannelDialog behavior", () => {
   })
 
   it("uses AxonHub string channel types and hides New API-only fields", () => {
-    mockUserPreferences.managedSiteType = AXON_HUB
+    mockUserPreferences.managedSiteType = SITE_TYPES.AXON_HUB
     channelFormScenario.formData = buildFormData({
       type: "custom_axonhub_type",
     })
@@ -753,7 +753,7 @@ describe("ChannelDialog behavior", () => {
     firstRender.unmount()
     vi.clearAllMocks()
     resetChannelFormScenario()
-    mockUserPreferences.managedSiteType = AXON_HUB
+    mockUserPreferences.managedSiteType = SITE_TYPES.AXON_HUB
 
     render(<ChannelDialog isOpen={true} onClose={vi.fn()} />)
 

@@ -1,3 +1,4 @@
+import { SITE_TYPES } from "~/constants/siteType"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 
 export const createAccount = (overrides: Partial<any>) => ({
@@ -9,7 +10,7 @@ export const createAccount = (overrides: Partial<any>) => ({
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
   health: { status: SiteHealthStatus.Healthy },
-  siteType: "new-api",
+  siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://example.com/v1",
   token: "token",
   userId: 1,

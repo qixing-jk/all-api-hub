@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
+import { SITE_TYPES } from "~/constants/siteType"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import {
   AuthTypeEnum,
@@ -95,7 +96,7 @@ const createDisplayAccount = (
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
   health: { status: SiteHealthStatus.Healthy },
-  siteType: "default",
+  siteType: SITE_TYPES.UNKNOWN,
   baseUrl: "https://example.com",
   token: "access-token",
   userId: 1,

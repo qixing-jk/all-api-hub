@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { NEW_API, OCTOPUS } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { modelSyncScheduler } from "~/services/models/modelSync/scheduler"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 
@@ -148,7 +148,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     mocks.notifyTaskResult.mockResolvedValue(true)
 
     mocks.getPreferences.mockResolvedValue({
-      managedSiteType: NEW_API,
+      managedSiteType: SITE_TYPES.NEW_API,
       newApi: {
         baseUrl: "https://example.com",
         adminToken: "token",
@@ -228,7 +228,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
 
   it("lists Octopus channels through the Octopus adapter and validates config", async () => {
     mocks.getPreferences.mockResolvedValueOnce({
-      managedSiteType: OCTOPUS,
+      managedSiteType: SITE_TYPES.OCTOPUS,
       octopus: {
         baseUrl: "https://octopus.example.com",
         username: "admin",
@@ -253,7 +253,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     })
 
     mocks.getPreferences.mockResolvedValueOnce({
-      managedSiteType: OCTOPUS,
+      managedSiteType: SITE_TYPES.OCTOPUS,
       octopus: {
         baseUrl: "https://octopus.example.com",
         username: "",
@@ -473,7 +473,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
 
   it("delegates Octopus sync batches, tracks failures, and skips full-sync caching for selected ids", async () => {
     mocks.getPreferences.mockResolvedValueOnce({
-      managedSiteType: OCTOPUS,
+      managedSiteType: SITE_TYPES.OCTOPUS,
       octopus: {
         baseUrl: "https://octopus.example.com",
         username: "admin",
@@ -540,7 +540,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
 
   it("caches collected upstream models for Octopus full syncs and rejects empty/full-invalid Octopus runs", async () => {
     mocks.getPreferences.mockResolvedValueOnce({
-      managedSiteType: OCTOPUS,
+      managedSiteType: SITE_TYPES.OCTOPUS,
       octopus: {
         baseUrl: "https://octopus.example.com",
         username: "admin",
@@ -573,7 +573,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     ])
 
     mocks.getPreferences.mockResolvedValueOnce({
-      managedSiteType: OCTOPUS,
+      managedSiteType: SITE_TYPES.OCTOPUS,
       octopus: {
         baseUrl: "",
         username: "",
@@ -586,7 +586,7 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     await expect(modelSyncScheduler.executeSync()).rejects.toThrow()
 
     mocks.getPreferences.mockResolvedValueOnce({
-      managedSiteType: OCTOPUS,
+      managedSiteType: SITE_TYPES.OCTOPUS,
       octopus: {
         baseUrl: "https://octopus.example.com",
         username: "admin",

@@ -1,13 +1,7 @@
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  NEW_API,
-  OCTOPUS,
-  type ManagedSiteType,
-} from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import {
   getManagedSiteServiceForType,
   type ManagedSiteService,
@@ -203,14 +197,14 @@ const getSharedChannelType = (
   const numericChannelType =
     typeof channel.type === "number"
       ? channel.type
-      : sourceSiteType === AXON_HUB
+      : sourceSiteType === SITE_TYPES.AXON_HUB
         ? AXON_HUB_TO_SHARED_CHANNEL_TYPE[channel.type] ?? ChannelType.OpenAI
-        : sourceSiteType === CLAUDE_CODE_HUB
+        : sourceSiteType === SITE_TYPES.CLAUDE_CODE_HUB
           ? CLAUDE_CODE_HUB_TO_SHARED_CHANNEL_TYPE[channel.type] ??
             ChannelType.OpenAI
           : ChannelType.OpenAI
 
-  if (sourceSiteType === OCTOPUS) {
+  if (sourceSiteType === SITE_TYPES.OCTOPUS) {
     return mapOctopusOutboundTypeToChannelType(numericChannelType)
   }
 
@@ -224,11 +218,11 @@ const getTargetChannelType = (
 ) => {
   const sharedType = getSharedChannelType(sourceSiteType, channel)
 
-  if (targetSiteType === OCTOPUS) {
+  if (targetSiteType === SITE_TYPES.OCTOPUS) {
     return mapChannelTypeToOctopusOutboundType(sharedType)
   }
 
-  if (targetSiteType === AXON_HUB) {
+  if (targetSiteType === SITE_TYPES.AXON_HUB) {
     // AxonHub rejects New API numeric channel types. Unknown or unsupported
     // shared types fall back to OpenAI-compatible with a preview remap warning.
     return (
@@ -237,7 +231,7 @@ const getTargetChannelType = (
     )
   }
 
-  if (targetSiteType === CLAUDE_CODE_HUB) {
+  if (targetSiteType === SITE_TYPES.CLAUDE_CODE_HUB) {
     // Claude Code Hub uses string provider types. Source types that cannot be
     // represented exactly fall back to OpenAI-compatible and receive a preview
     // remap warning before the create payload is built.
@@ -287,11 +281,12 @@ const collectItemWarningCodes = (params: {
 
   if (sourceSiteType !== targetSiteType) {
     if (
-      sourceSiteType === OCTOPUS ||
-      targetSiteType === OCTOPUS ||
-      targetSiteType === AXON_HUB ||
-      targetSiteType === CLAUDE_CODE_HUB ||
-      ((sourceSiteType === AXON_HUB || sourceSiteType === CLAUDE_CODE_HUB) &&
+      sourceSiteType === SITE_TYPES.OCTOPUS ||
+      targetSiteType === SITE_TYPES.OCTOPUS ||
+      targetSiteType === SITE_TYPES.AXON_HUB ||
+      targetSiteType === SITE_TYPES.CLAUDE_CODE_HUB ||
+      ((sourceSiteType === SITE_TYPES.AXON_HUB ||
+        sourceSiteType === SITE_TYPES.CLAUDE_CODE_HUB) &&
         typeof channel.type === "string")
     ) {
       warnings.add(
@@ -300,7 +295,7 @@ const collectItemWarningCodes = (params: {
     }
   }
 
-  if (targetSiteType === OCTOPUS) {
+  if (targetSiteType === SITE_TYPES.OCTOPUS) {
     const normalizedBaseUrl = buildOctopusBaseUrl(channel.base_url ?? "")
     if ((channel.base_url ?? "").trim() !== normalizedBaseUrl) {
       warnings.add(
@@ -334,7 +329,7 @@ const collectItemWarningCodes = (params: {
     }
   }
 
-  if (targetSiteType === AXON_HUB) {
+  if (targetSiteType === SITE_TYPES.AXON_HUB) {
     const sourceGroups = parseDelimitedValues(channel.group)
     const emittedGroups = [...DEFAULT_CHANNEL_FIELDS.groups]
     if (!areStringArraysEqual(sourceGroups, emittedGroups)) {
@@ -356,7 +351,7 @@ const collectItemWarningCodes = (params: {
     }
   }
 
-  if (targetSiteType === CLAUDE_CODE_HUB) {
+  if (targetSiteType === SITE_TYPES.CLAUDE_CODE_HUB) {
     const sourceGroups = parseDelimitedValues(channel.group)
     const emittedGroups =
       sourceGroups.length > 0
@@ -396,9 +391,9 @@ const buildDraftFromSourceChannel = (params: {
   const models = parseDelimitedValues(channel.models)
   const sourceStatus = channel.status ?? DEFAULT_CHANNEL_FIELDS.status
   const targetStatus =
-    targetSiteType === OCTOPUS ||
-    targetSiteType === AXON_HUB ||
-    targetSiteType === CLAUDE_CODE_HUB
+    targetSiteType === SITE_TYPES.OCTOPUS ||
+    targetSiteType === SITE_TYPES.AXON_HUB ||
+    targetSiteType === SITE_TYPES.CLAUDE_CODE_HUB
       ? sourceStatus === 1
         ? 1
         : 2
@@ -409,26 +404,28 @@ const buildDraftFromSourceChannel = (params: {
     type: getTargetChannelType(sourceSiteType, targetSiteType, channel),
     key: key.trim(),
     base_url:
-      targetSiteType === OCTOPUS
+      targetSiteType === SITE_TYPES.OCTOPUS
         ? buildOctopusBaseUrl(channel.base_url ?? "")
         : (channel.base_url ?? "").trim(),
     models,
     groups:
-      targetSiteType === OCTOPUS || targetSiteType === AXON_HUB
+      targetSiteType === SITE_TYPES.OCTOPUS ||
+      targetSiteType === SITE_TYPES.AXON_HUB
         ? [...DEFAULT_CHANNEL_FIELDS.groups]
-        : targetSiteType === CLAUDE_CODE_HUB
+        : targetSiteType === SITE_TYPES.CLAUDE_CODE_HUB
           ? [groups[0] ?? DEFAULT_CHANNEL_FIELDS.groups[0]]
           : groups.length > 0
             ? groups
             : [...DEFAULT_CHANNEL_FIELDS.groups],
     priority:
-      targetSiteType === OCTOPUS || targetSiteType === AXON_HUB
+      targetSiteType === SITE_TYPES.OCTOPUS ||
+      targetSiteType === SITE_TYPES.AXON_HUB
         ? DEFAULT_CHANNEL_FIELDS.priority
         : channel.priority ?? DEFAULT_CHANNEL_FIELDS.priority,
     weight:
-      targetSiteType === OCTOPUS
+      targetSiteType === SITE_TYPES.OCTOPUS
         ? DEFAULT_CHANNEL_FIELDS.weight
-        : targetSiteType === CLAUDE_CODE_HUB
+        : targetSiteType === SITE_TYPES.CLAUDE_CODE_HUB
           ? getSafeClaudeCodeHubWeight(channel.weight)
           : channel.weight ?? DEFAULT_CHANNEL_FIELDS.weight,
     status: targetStatus,
@@ -448,7 +445,7 @@ const resolveSourceChannelKey = async (params: {
     return { key: existingKey }
   }
 
-  if (sourceSiteType === CLAUDE_CODE_HUB) {
+  if (sourceSiteType === SITE_TYPES.CLAUDE_CODE_HUB) {
     const rawProviderKey = (
       channel as ManagedSiteChannel & {
         _claudeCodeHubData?: { key?: string | null }
@@ -466,7 +463,7 @@ const resolveSourceChannelKey = async (params: {
     }
   }
 
-  if (sourceSiteType === NEW_API) {
+  if (sourceSiteType === SITE_TYPES.NEW_API) {
     if (!resolveNewApiSourceKey) {
       return {
         key: null,

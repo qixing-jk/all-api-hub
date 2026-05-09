@@ -1,4 +1,4 @@
-import { NEW_API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import {
   getManagedSiteChannelExactMatch,
@@ -74,7 +74,7 @@ export interface ManagedSiteTokenChannelAssessment {
 }
 
 export interface ManagedSiteTokenChannelRecovery {
-  siteType: typeof NEW_API
+  siteType: typeof SITE_TYPES.NEW_API
   managedBaseUrl: string
   searchBaseUrl?: string
   loginCredentialsConfigured: boolean
@@ -171,7 +171,7 @@ const buildNewApiRecoveryMetadata = async (params: {
   const loginAssistConfig = await getNewApiLoginAssistConfig()
 
   return {
-    siteType: NEW_API,
+    siteType: SITE_TYPES.NEW_API,
     managedBaseUrl: params.managedConfig.baseUrl,
     searchBaseUrl: params.assessment?.searchBaseUrl,
     loginCredentialsConfigured:
@@ -299,7 +299,7 @@ export async function getManagedSiteTokenChannelStatus(
       let recovery: ManagedSiteTokenChannelRecovery | undefined
 
       if (
-        service.siteType === NEW_API &&
+        service.siteType === SITE_TYPES.NEW_API &&
         resolution.url.matched &&
         !resolution.key.comparable
       ) {

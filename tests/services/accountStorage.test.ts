@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
@@ -112,7 +113,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
     site_name: overrides.site_name || "Test Site",
     site_url: overrides.site_url || "https://test.example.com",
     health: overrides.health || { status: SiteHealthStatus.Healthy },
-    site_type: overrides.site_type || "test",
+    site_type: overrides.site_type || SITE_TYPES.UNKNOWN,
     exchange_rate: overrides.exchange_rate ?? 7.2,
     account_info: {
       id: overrides.account_info?.id ?? Number(numericId),
@@ -1417,7 +1418,7 @@ describe("accountStorage core behaviors", () => {
       id: "disabled-revive",
       disabled: true,
       site_url: "https://revive.example.com",
-      site_type: "test",
+      site_type: SITE_TYPES.UNKNOWN,
     })
     seedStorage([account])
 
@@ -1458,7 +1459,7 @@ describe("accountStorage core behaviors", () => {
       id: "disabled-persist-fail",
       disabled: true,
       site_url: "https://persist.example.com",
-      site_type: "test",
+      site_type: SITE_TYPES.UNKNOWN,
     })
     seedStorage([account])
 

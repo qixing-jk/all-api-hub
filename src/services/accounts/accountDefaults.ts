@@ -1,4 +1,4 @@
-import { UNKNOWN_SITE } from "~/constants/siteType"
+import { isSiteType, SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
   AuthTypeEnum,
@@ -38,7 +38,7 @@ const DEFAULT_SITE_ACCOUNT: SiteAccount = {
   site_name: "",
   site_url: "",
   health: DEFAULT_HEALTH_STATUS,
-  site_type: UNKNOWN_SITE,
+  site_type: SITE_TYPES.UNKNOWN,
   exchange_rate: UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
   account_info: DEFAULT_ACCOUNT_INFO,
   last_sync_time: 0,
@@ -220,7 +220,9 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
     id: coerceString(merged.id, ""),
     site_name: coerceString(merged.site_name, ""),
     site_url: coerceString(merged.site_url, ""),
-    site_type: coerceString(merged.site_type, UNKNOWN_SITE) || UNKNOWN_SITE,
+    site_type: isSiteType(merged.site_type)
+      ? merged.site_type
+      : SITE_TYPES.UNKNOWN,
     exchange_rate: coerceNumber(
       merged.exchange_rate,
       UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,

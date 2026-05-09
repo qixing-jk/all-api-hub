@@ -7,7 +7,7 @@ import type { CompactMultiSelectOption } from "~/components/ui"
 import { DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS } from "~/constants/claudeCodeHub"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
-import { AXON_HUB, CLAUDE_CODE_HUB } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { getApiService } from "~/services/apiService"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import {
@@ -83,7 +83,7 @@ export function useChannelForm({
   const applyManagedSiteDefaults = useCallback(
     (data: ChannelFormData, siteType: string): ChannelFormData => {
       if (
-        siteType === CLAUDE_CODE_HUB &&
+        siteType === SITE_TYPES.CLAUDE_CODE_HUB &&
         mode === DIALOG_MODES.ADD &&
         !initialValues?.type
       ) {
@@ -204,11 +204,11 @@ export function useChannelForm({
     setIsLoadingGroups(true)
     try {
       const service = serviceOverride ?? (await loadManagedSiteType())
-      if (service.siteType === AXON_HUB) {
+      if (service.siteType === SITE_TYPES.AXON_HUB) {
         setAvailableGroups([])
         return
       }
-      if (service.siteType === CLAUDE_CODE_HUB) {
+      if (service.siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
         const fallback = [{ label: "default", value: "default" }]
         const preselectedGroups = (
           initialValues?.groups ??
@@ -328,11 +328,11 @@ export function useChannelForm({
 
   const isKeyFieldRequired = mode === DIALOG_MODES.ADD
   const requiresRealClaudeCodeHubKey =
-    managedSiteType === CLAUDE_CODE_HUB && mode === DIALOG_MODES.ADD
+    managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB && mode === DIALOG_MODES.ADD
 
   const isBaseUrlRequired =
-    managedSiteType === AXON_HUB ||
-    managedSiteType === CLAUDE_CODE_HUB ||
+    managedSiteType === SITE_TYPES.AXON_HUB ||
+    managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB ||
     formData.type === ChannelType.VolcEngine ||
     formData.type === ChannelType.SunoAPI
 

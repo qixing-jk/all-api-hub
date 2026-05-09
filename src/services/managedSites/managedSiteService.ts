@@ -1,12 +1,4 @@
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  DONE_HUB,
-  NEW_API,
-  OCTOPUS,
-  VELOERA,
-  type ManagedSiteType,
-} from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import type { ApiResponse } from "~/services/apiService/common/type"
 import type { ManagedSiteMessagesKey } from "~/services/managedSites/utils/managedSite"
 import {
@@ -164,7 +156,7 @@ export function getManagedSiteServiceForType(
   const messagesKey: ManagedSiteMessagesKey =
     getManagedSiteMessagesKeyFromSiteType(siteType)
 
-  if (siteType === OCTOPUS) {
+  if (siteType === SITE_TYPES.OCTOPUS) {
     return {
       siteType,
       messagesKey,
@@ -183,7 +175,7 @@ export function getManagedSiteServiceForType(
     }
   }
 
-  if (siteType === AXON_HUB) {
+  if (siteType === SITE_TYPES.AXON_HUB) {
     return {
       siteType,
       messagesKey,
@@ -202,7 +194,7 @@ export function getManagedSiteServiceForType(
     }
   }
 
-  if (siteType === CLAUDE_CODE_HUB) {
+  if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
     return {
       siteType,
       messagesKey,
@@ -221,7 +213,7 @@ export function getManagedSiteServiceForType(
     }
   }
 
-  if (siteType === VELOERA) {
+  if (siteType === SITE_TYPES.VELOERA) {
     return {
       siteType,
       messagesKey,
@@ -241,7 +233,7 @@ export function getManagedSiteServiceForType(
     }
   }
 
-  if (siteType === DONE_HUB) {
+  if (siteType === SITE_TYPES.DONE_HUB) {
     return {
       siteType,
       messagesKey,
@@ -262,7 +254,7 @@ export function getManagedSiteServiceForType(
   }
 
   return {
-    siteType: NEW_API,
+    siteType: SITE_TYPES.NEW_API,
     messagesKey,
     searchChannel: newApiService.searchChannel,
     createChannel: newApiService.createChannel,

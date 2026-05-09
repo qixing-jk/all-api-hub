@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { useFilteredModels } from "~/features/ModelList/hooks/useFilteredModels"
@@ -27,7 +28,7 @@ const createDisplayAccount = (
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
   health: { status: SiteHealthStatus.Healthy },
-  siteType: "default",
+  siteType: SITE_TYPES.UNKNOWN,
   baseUrl: "https://example.com",
   token: "token",
   userId: 1,

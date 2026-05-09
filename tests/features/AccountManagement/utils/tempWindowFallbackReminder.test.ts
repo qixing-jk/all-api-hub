@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { getTempWindowFallbackIssue } from "~/features/AccountManagement/utils/tempWindowFallbackReminder"
 import {
   SiteHealthStatus,
@@ -23,7 +24,7 @@ function makeSite(overrides: Partial<DisplaySiteData>): DisplaySiteData {
       status: SiteHealthStatus.Healthy,
       reason: "ok",
     },
-    siteType: "oneHub",
+    siteType: SITE_TYPES.ONE_HUB,
     baseUrl: "https://example.com",
     token: "token",
     userId: 1,

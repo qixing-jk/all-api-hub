@@ -1,14 +1,6 @@
 import type { TFunction } from "i18next"
 
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  DONE_HUB,
-  NEW_API,
-  OCTOPUS,
-  VELOERA,
-  type ManagedSiteType,
-} from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { hasUsableApiTokenKey } from "~/services/apiService/common/apiKey"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
@@ -79,15 +71,15 @@ function getManagedSiteConfigFromPreferencesForType(
   config: ManagedSiteConfig
 } {
   let config: ManagedSiteConfig
-  if (siteType === AXON_HUB) {
+  if (siteType === SITE_TYPES.AXON_HUB) {
     config = preferences.axonHub || DEFAULT_AXON_HUB_CONFIG
-  } else if (siteType === CLAUDE_CODE_HUB) {
+  } else if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
     config = preferences.claudeCodeHub || DEFAULT_CLAUDE_CODE_HUB_CONFIG
-  } else if (siteType === OCTOPUS) {
+  } else if (siteType === SITE_TYPES.OCTOPUS) {
     config = preferences.octopus || { baseUrl: "", username: "", password: "" }
-  } else if (siteType === DONE_HUB) {
+  } else if (siteType === SITE_TYPES.DONE_HUB) {
     config = preferences.doneHub ?? DEFAULT_DONE_HUB_CONFIG
-  } else if (siteType === VELOERA) {
+  } else if (siteType === SITE_TYPES.VELOERA) {
     config = preferences.veloera
   } else {
     config = preferences.newApi
@@ -105,7 +97,8 @@ export function getManagedSiteConfigFromPreferences(
   siteType: ManagedSiteType
   config: ManagedSiteConfig
 } {
-  const siteType: ManagedSiteType = preferences.managedSiteType || NEW_API
+  const siteType: ManagedSiteType =
+    preferences.managedSiteType || SITE_TYPES.NEW_API
   return getManagedSiteConfigFromPreferencesForType(preferences, siteType)
 }
 
@@ -125,19 +118,19 @@ export function getManagedSiteConfig(prefs: UserPreferences): {
 export function getManagedSiteLabelKey(
   siteType: ManagedSiteType,
 ): ManagedSiteLabelKey {
-  if (siteType === OCTOPUS) {
+  if (siteType === SITE_TYPES.OCTOPUS) {
     return "settings:managedSite.octopus"
   }
-  if (siteType === AXON_HUB) {
+  if (siteType === SITE_TYPES.AXON_HUB) {
     return "settings:managedSite.axonHub"
   }
-  if (siteType === CLAUDE_CODE_HUB) {
+  if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
     return "settings:managedSite.claudeCodeHub"
   }
-  if (siteType === DONE_HUB) {
+  if (siteType === SITE_TYPES.DONE_HUB) {
     return "settings:managedSite.doneHub"
   }
-  return siteType === VELOERA
+  return siteType === SITE_TYPES.VELOERA
     ? "settings:managedSite.veloera"
     : "settings:managedSite.newApi"
 }
@@ -147,17 +140,17 @@ export function getManagedSiteLabelKey(
  */
 export function getManagedSiteLabel(t: TFunction, siteType: ManagedSiteType) {
   switch (siteType) {
-    case OCTOPUS:
+    case SITE_TYPES.OCTOPUS:
       return t("settings:managedSite.octopus")
-    case AXON_HUB:
+    case SITE_TYPES.AXON_HUB:
       return t("settings:managedSite.axonHub")
-    case CLAUDE_CODE_HUB:
+    case SITE_TYPES.CLAUDE_CODE_HUB:
       return t("settings:managedSite.claudeCodeHub")
-    case DONE_HUB:
+    case SITE_TYPES.DONE_HUB:
       return t("settings:managedSite.doneHub")
-    case VELOERA:
+    case SITE_TYPES.VELOERA:
       return t("settings:managedSite.veloera")
-    case NEW_API:
+    case SITE_TYPES.NEW_API:
     default:
       return t("settings:managedSite.newApi")
   }
@@ -169,19 +162,19 @@ export function getManagedSiteLabel(t: TFunction, siteType: ManagedSiteType) {
 export function getManagedSiteMessagesKeyFromSiteType(
   siteType: ManagedSiteType,
 ): ManagedSiteMessagesKey {
-  if (siteType === OCTOPUS) {
+  if (siteType === SITE_TYPES.OCTOPUS) {
     return "octopus"
   }
-  if (siteType === AXON_HUB) {
+  if (siteType === SITE_TYPES.AXON_HUB) {
     return "axonhub"
   }
-  if (siteType === CLAUDE_CODE_HUB) {
+  if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
     return "claudecodehub"
   }
-  if (siteType === DONE_HUB) {
+  if (siteType === SITE_TYPES.DONE_HUB) {
     return "donehub"
   }
-  return siteType === VELOERA ? "veloera" : "newapi"
+  return siteType === SITE_TYPES.VELOERA ? "veloera" : "newapi"
 }
 
 /**
@@ -210,7 +203,7 @@ export function getManagedSiteAdminConfigForType(
   )
 
   // Octopus 使用不同的配置结构
-  if (siteType === OCTOPUS) {
+  if (siteType === SITE_TYPES.OCTOPUS) {
     const octopusConfig = config as OctopusConfig
     if (
       !octopusConfig?.baseUrl ||
@@ -226,7 +219,7 @@ export function getManagedSiteAdminConfigForType(
     }
   }
 
-  if (siteType === AXON_HUB) {
+  if (siteType === SITE_TYPES.AXON_HUB) {
     const axonHubConfig = config as AxonHubConfig
     if (
       !axonHubConfig?.baseUrl ||
@@ -245,7 +238,7 @@ export function getManagedSiteAdminConfigForType(
     }
   }
 
-  if (siteType === CLAUDE_CODE_HUB) {
+  if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
     const claudeCodeHubConfig = config as ClaudeCodeHubConfig
     if (!claudeCodeHubConfig?.baseUrl || !claudeCodeHubConfig?.adminToken) {
       return null
@@ -280,7 +273,7 @@ export function getManagedSiteAdminConfigForType(
  * Gets the current managed site type from user preferences.
  */
 export function getManagedSiteType(prefs: UserPreferences): ManagedSiteType {
-  return prefs.managedSiteType || NEW_API
+  return prefs.managedSiteType || SITE_TYPES.NEW_API
 }
 
 /**
@@ -290,7 +283,9 @@ export function getManagedSiteType(prefs: UserPreferences): ManagedSiteType {
 export function supportsManagedSiteBaseUrlChannelLookup(
   siteType: ManagedSiteType,
 ): boolean {
-  return siteType !== VELOERA && siteType !== CLAUDE_CODE_HUB
+  return (
+    siteType !== SITE_TYPES.VELOERA && siteType !== SITE_TYPES.CLAUDE_CODE_HUB
+  )
 }
 
 /**
@@ -329,12 +324,12 @@ export function getManagedSiteTargetOptions(
 ): ManagedSiteTargetOption[] {
   const excluded = new Set(options?.excludeSiteTypes ?? [])
   const siteTypes: ManagedSiteType[] = [
-    NEW_API,
-    VELOERA,
-    DONE_HUB,
-    OCTOPUS,
-    AXON_HUB,
-    CLAUDE_CODE_HUB,
+    SITE_TYPES.NEW_API,
+    SITE_TYPES.VELOERA,
+    SITE_TYPES.DONE_HUB,
+    SITE_TYPES.OCTOPUS,
+    SITE_TYPES.AXON_HUB,
+    SITE_TYPES.CLAUDE_CODE_HUB,
   ]
 
   return siteTypes

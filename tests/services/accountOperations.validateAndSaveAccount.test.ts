@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SUB2API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS,
   validateAndSaveAccount,
@@ -147,7 +147,7 @@ describe("accountOperations validateAndSaveAccount", () => {
       "",
       [" group-a ", "", "group-b", "group-a"],
       CHECK_IN_DISABLED,
-      SUB2API,
+      SITE_TYPES.SUB2API,
       AuthTypeEnum.AccessToken,
       "",
       undefined,
@@ -168,7 +168,7 @@ describe("accountOperations validateAndSaveAccount", () => {
     expect(saved).not.toBeNull()
     expect(saved).toMatchObject({
       site_name: "Sub2 Portal",
-      site_type: SUB2API,
+      site_type: SITE_TYPES.SUB2API,
       excludeFromTotalBalance: true,
       tagIds: ["group-a", "group-b"],
       sub2apiAuth: { refreshToken: "refresh-token" },

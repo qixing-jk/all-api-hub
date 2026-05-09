@@ -514,7 +514,7 @@ export const extractDefaultExchangeRate = (
 }
 
 /**
- * Fetch payment info (RIX_API specific; kept in common for fallback).
+ * Fetch payment info (SITE_TYPES.RIX_API specific; kept in common for fallback).
  * @param request ApiServiceRequest.
  * @returns Payment summary from backend.
  */

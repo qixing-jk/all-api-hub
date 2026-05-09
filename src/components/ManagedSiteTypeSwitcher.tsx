@@ -9,15 +9,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  DONE_HUB,
-  NEW_API,
-  OCTOPUS,
-  VELOERA,
-  type ManagedSiteType,
-} from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { cn } from "~/lib/utils"
 import {
@@ -27,12 +19,12 @@ import {
 import { showUpdateToast } from "~/utils/core/toastHelpers"
 
 const MANAGED_SITE_TYPES: ManagedSiteType[] = [
-  NEW_API,
-  DONE_HUB,
-  VELOERA,
-  OCTOPUS,
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
+  SITE_TYPES.NEW_API,
+  SITE_TYPES.DONE_HUB,
+  SITE_TYPES.VELOERA,
+  SITE_TYPES.OCTOPUS,
+  SITE_TYPES.AXON_HUB,
+  SITE_TYPES.CLAUDE_CODE_HUB,
 ]
 
 interface ManagedSiteTypeSwitcherProps {

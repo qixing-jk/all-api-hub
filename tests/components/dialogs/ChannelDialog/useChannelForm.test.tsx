@@ -6,7 +6,7 @@ import { useChannelForm } from "~/components/dialogs/ChannelDialog/hooks/useChan
 import { DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS } from "~/constants/claudeCodeHub"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
-import { AXON_HUB, CLAUDE_CODE_HUB, NEW_API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
 import type {
   CreateChannelPayload,
@@ -77,7 +77,7 @@ describe("useChannelForm", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(getManagedSiteService).mockResolvedValue({
-      siteType: NEW_API,
+      siteType: SITE_TYPES.NEW_API,
       checkValidConfig: mockCheckValidConfig.mockResolvedValue(false),
       getConfig: mockGetConfig,
       buildChannelPayload: mockBuildChannelPayload,
@@ -195,7 +195,7 @@ describe("useChannelForm", () => {
 
   it("preserves AxonHub string channel types and skips New API group loading", async () => {
     vi.mocked(getManagedSiteService).mockResolvedValue({
-      siteType: AXON_HUB,
+      siteType: SITE_TYPES.AXON_HUB,
       messagesKey: "axonhub",
       checkValidConfig: mockCheckValidConfig,
       getConfig: mockGetConfig,
@@ -322,7 +322,7 @@ describe("useChannelForm", () => {
 
   it("does not require a real provider key when editing a Claude Code Hub channel", async () => {
     vi.mocked(getManagedSiteService).mockResolvedValue({
-      siteType: CLAUDE_CODE_HUB,
+      siteType: SITE_TYPES.CLAUDE_CODE_HUB,
       messagesKey: "claudecodehub",
       checkValidConfig: mockCheckValidConfig.mockResolvedValue(true),
       getConfig: mockGetConfig,
@@ -384,7 +384,7 @@ describe("useChannelForm", () => {
 
   it("prefers the Claude Code Hub specific key toast in add mode", async () => {
     vi.mocked(getManagedSiteService).mockResolvedValue({
-      siteType: CLAUDE_CODE_HUB,
+      siteType: SITE_TYPES.CLAUDE_CODE_HUB,
       messagesKey: "claudecodehub",
       checkValidConfig: mockCheckValidConfig.mockResolvedValue(true),
       getConfig: mockGetConfig,
@@ -434,7 +434,7 @@ describe("useChannelForm", () => {
 
   it("applies Claude Code Hub add defaults from the open effect", async () => {
     vi.mocked(getManagedSiteService).mockResolvedValue({
-      siteType: CLAUDE_CODE_HUB,
+      siteType: SITE_TYPES.CLAUDE_CODE_HUB,
       messagesKey: "claudecodehub",
       checkValidConfig: mockCheckValidConfig.mockResolvedValue(true),
       getConfig: mockGetConfig,

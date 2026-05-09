@@ -7,6 +7,7 @@
  */
 
 import { ChannelType } from "~/constants"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   createDefaultPreferences,
   DEFAULT_PREFERENCES,
@@ -100,7 +101,7 @@ export function buildDisplaySiteData(
     todayTokens: { upload: 0, download: 0 },
     health: { status: SiteHealthStatus.Healthy },
     created_at: 0,
-    siteType: "test",
+    siteType: SITE_TYPES.UNKNOWN,
     baseUrl: "https://example.com",
     token: "test-token",
     userId: 1,
@@ -197,7 +198,7 @@ export function buildSiteAccount(
     id: "account-1",
     site_name: "Test",
     site_url: "https://example.com",
-    site_type: "test",
+    site_type: SITE_TYPES.UNKNOWN,
     exchange_rate: 7,
     notes: "",
     tagIds: [],

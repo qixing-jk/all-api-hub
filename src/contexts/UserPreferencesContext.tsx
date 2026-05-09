@@ -14,7 +14,7 @@ import {
   DATA_TYPE_INCOME,
 } from "~/constants"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { NEW_API, type ManagedSiteType } from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
   DEFAULT_PREFERENCES,
@@ -1889,7 +1889,7 @@ export const UserPreferencesProvider = ({
     claudeCodeHubAdminToken:
       preferences?.claudeCodeHub?.adminToken ||
       DEFAULT_CLAUDE_CODE_HUB_CONFIG.adminToken,
-    managedSiteType: preferences?.managedSiteType || NEW_API,
+    managedSiteType: preferences?.managedSiteType || SITE_TYPES.NEW_API,
     cliProxyBaseUrl: preferences?.cliProxy?.baseUrl || "",
     cliProxyManagementKey: preferences?.cliProxy?.managementKey || "",
     claudeCodeRouterBaseUrl: preferences?.claudeCodeRouter?.baseUrl || "",

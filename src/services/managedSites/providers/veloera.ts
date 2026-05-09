@@ -1,7 +1,7 @@
 import toast from "react-hot-toast"
 
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
-import { VELOERA } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { getApiService } from "~/services/apiService"
@@ -49,7 +49,7 @@ export async function searchChannel(
   userId: number | string,
   keyword: string,
 ): Promise<ManagedSiteChannelListData | null> {
-  return await getApiService(VELOERA).searchChannel(
+  return await getApiService(SITE_TYPES.VELOERA).searchChannel(
     {
       baseUrl,
       auth: {
@@ -71,7 +71,7 @@ export async function createChannel(
   userId: number | string,
   channelData: CreateChannelPayload,
 ) {
-  return await getApiService(VELOERA).createChannel(
+  return await getApiService(SITE_TYPES.VELOERA).createChannel(
     {
       baseUrl,
       auth: {
@@ -93,7 +93,7 @@ export async function updateChannel(
   userId: number | string,
   channelData: UpdateChannelPayload,
 ) {
-  return await getApiService(VELOERA).updateChannel(
+  return await getApiService(SITE_TYPES.VELOERA).updateChannel(
     {
       baseUrl,
       auth: {
@@ -115,7 +115,7 @@ export async function deleteChannel(
   userId: number | string,
   channelId: number,
 ) {
-  return await getApiService(VELOERA).deleteChannel(
+  return await getApiService(SITE_TYPES.VELOERA).deleteChannel(
     {
       baseUrl,
       auth: {
@@ -256,7 +256,7 @@ export async function prepareChannelFormData(
     availableModels.length > 0 ? availableModels : tokenModelList
 
   const resolvedGroups = await resolveDefaultChannelGroups({
-    siteType: VELOERA,
+    siteType: SITE_TYPES.VELOERA,
     getConfig: getVeloeraConfig,
     onError: (error) => {
       logger.warn("Failed to resolve Veloera default groups", error)

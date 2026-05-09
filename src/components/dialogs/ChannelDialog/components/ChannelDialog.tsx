@@ -34,12 +34,7 @@ import {
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelType, ChannelTypeOptions } from "~/constants/managedSite"
 import { OctopusOutboundTypeOptions } from "~/constants/octopus"
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  NEW_API,
-  OCTOPUS,
-} from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
@@ -126,11 +121,11 @@ export function ChannelDialog({
     newApiPassword,
     newApiTotpSecret,
   } = useUserPreferencesContext()
-  const isOctopus = managedSiteType === OCTOPUS
-  const isAxonHub = managedSiteType === AXON_HUB
-  const isClaudeCodeHub = managedSiteType === CLAUDE_CODE_HUB
+  const isOctopus = managedSiteType === SITE_TYPES.OCTOPUS
+  const isAxonHub = managedSiteType === SITE_TYPES.AXON_HUB
+  const isClaudeCodeHub = managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB
   const canRunManagedVerification =
-    managedSiteType === NEW_API && canRecoverManagedVerification
+    managedSiteType === SITE_TYPES.NEW_API && canRecoverManagedVerification
   const isAddMode = mode === DIALOG_MODES.ADD
   const isViewMode = mode === DIALOG_MODES.VIEW
 
@@ -206,7 +201,7 @@ export function ChannelDialog({
 
     if (
       !isOpen ||
-      managedSiteType !== NEW_API ||
+      managedSiteType !== SITE_TYPES.NEW_API ||
       currentAdvisoryWarning?.kind !==
         CHANNEL_DIALOG_ADVISORY_WARNING_KINDS.VERIFICATION_REQUIRED ||
       !managedBaseUrl

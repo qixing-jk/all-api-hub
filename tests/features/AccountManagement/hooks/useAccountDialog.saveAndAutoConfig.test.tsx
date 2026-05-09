@@ -3,7 +3,7 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
-import { NEW_API, SUB2API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { AuthTypeEnum, SiteAccount, SiteHealthStatus } from "~/types"
@@ -74,7 +74,7 @@ vi.mock(
     return {
       ...actual,
       getManagedSiteServiceForType: vi.fn(() => ({
-        siteType: NEW_API,
+        siteType: SITE_TYPES.NEW_API,
         messagesKey: "newapi",
         getConfig: mockGetManagedSiteConfig,
       })),
@@ -223,7 +223,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       result.current.setters.setAccessToken("jwt-token")
       result.current.setters.setUserId("42")
       result.current.setters.setExchangeRate("7")
-      result.current.setters.setSiteType(SUB2API)
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
       result.current.handlers.handleSub2apiUseRefreshTokenChange(true)
       result.current.setters.setSub2apiRefreshToken(" refresh-token ")
       result.current.setters.setSub2apiTokenExpiresAt(123456789)
@@ -243,7 +243,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       "",
       [],
       expect.any(Object),
-      SUB2API,
+      SITE_TYPES.SUB2API,
       AuthTypeEnum.AccessToken,
       "",
       "",
@@ -273,7 +273,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       result.current.setters.setAccessToken("jwt-token")
       result.current.setters.setUserId("42")
       result.current.setters.setExchangeRate("7")
-      result.current.setters.setSiteType(SUB2API)
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
       result.current.setters.setSub2apiRefreshToken(" refresh-token ")
       result.current.setters.setSub2apiTokenExpiresAt(123456789)
     })
@@ -292,7 +292,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       "",
       [],
       expect.any(Object),
-      SUB2API,
+      SITE_TYPES.SUB2API,
       AuthTypeEnum.AccessToken,
       "",
       "",
@@ -595,7 +595,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       result.current.setters.setAccessToken("jwt-token")
       result.current.setters.setUserId("42")
       result.current.setters.setExchangeRate("7")
-      result.current.setters.setSiteType(SUB2API)
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
     })
 
     let saveResult: any
@@ -815,7 +815,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       site_name: "Sub2API",
       site_url: "https://sub2.example.com",
       health: { status: SiteHealthStatus.Healthy },
-      site_type: SUB2API,
+      site_type: SITE_TYPES.SUB2API,
       exchange_rate: 7,
       authType: AuthTypeEnum.AccessToken,
       account_info: {
@@ -849,7 +849,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       result.current.setters.setAccessToken("jwt-token")
       result.current.setters.setUserId("11")
       result.current.setters.setExchangeRate("7")
-      result.current.setters.setSiteType(SUB2API)
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
     })
 
     await act(async () => {

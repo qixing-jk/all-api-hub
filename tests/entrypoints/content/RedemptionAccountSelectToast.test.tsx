@@ -9,6 +9,7 @@ import type { ReactElement } from "react"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { RedemptionAccountSelectToast } from "~/entrypoints/content/redemptionAssist/components/RedemptionAccountSelectToast"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { testI18n } from "~~/tests/test-utils/i18n"
@@ -23,7 +24,7 @@ const makeAccount = (
     todayIncome: { USD: 0, CNY: 0 },
     todayTokens: { upload: 0, download: 0 },
     health: { status: SiteHealthStatus.Healthy },
-    siteType: "test",
+    siteType: SITE_TYPES.UNKNOWN,
     baseUrl: "https://example.com",
     token: "token",
     userId: 1,

@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DONE_HUB, ONE_HUB, WONG_GONGYI } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { getApiService } from "~/services/apiService"
 
 const {
@@ -64,7 +64,7 @@ describe("apiService index wrapper", () => {
       baseUrl: "https://example.com",
       auth: { authType: "none" },
     }
-    await (getApiService(ONE_HUB).fetchModelPricing as any)(request)
+    await (getApiService(SITE_TYPES.ONE_HUB).fetchModelPricing as any)(request)
 
     expect(oneHubFetchModelPricing).toHaveBeenCalledTimes(1)
     expect(oneHubFetchModelPricing).toHaveBeenCalledWith(request)
@@ -77,7 +77,9 @@ describe("apiService index wrapper", () => {
       baseUrl: "https://example.com",
       auth: { authType: "none" },
     }
-    await (getApiService(DONE_HUB).fetchAccountTokens as any)(request)
+    await (getApiService(SITE_TYPES.DONE_HUB).fetchAccountTokens as any)(
+      request,
+    )
 
     expect(oneHubFetchAccountTokens).toHaveBeenCalledTimes(1)
     expect(oneHubFetchAccountTokens).toHaveBeenCalledWith(request)
@@ -89,7 +91,7 @@ describe("apiService index wrapper", () => {
     const request = {
       baseUrl: "https://example.com",
       auth: { authType: "none" },
-      siteType: ONE_HUB,
+      siteType: SITE_TYPES.ONE_HUB,
     }
     await (getApiService(undefined).fetchModelPricing as any)(request)
 
@@ -104,7 +106,10 @@ describe("apiService index wrapper", () => {
       baseUrl: "https://example.com",
       auth: { authType: "none" },
     }
-    await (getApiService(undefined).fetchModelPricing as any)(request, DONE_HUB)
+    await (getApiService(undefined).fetchModelPricing as any)(
+      request,
+      SITE_TYPES.DONE_HUB,
+    )
 
     expect(oneHubFetchModelPricing).toHaveBeenCalledTimes(1)
     expect(oneHubFetchModelPricing).toHaveBeenCalledWith(request)
@@ -118,7 +123,7 @@ describe("apiService index wrapper", () => {
       auth: { authType: "cookie", userId: 1 },
     }
 
-    await (getApiService(ONE_HUB).fetchUserInfo as any)(request)
+    await (getApiService(SITE_TYPES.ONE_HUB).fetchUserInfo as any)(request)
 
     expect(commonFetchUserInfo).toHaveBeenCalledTimes(1)
     expect(commonFetchUserInfo).toHaveBeenCalledWith(request)
@@ -136,7 +141,10 @@ describe("apiService index wrapper", () => {
       key: "sk-abcd************wxyz",
     }
 
-    await (getApiService(WONG_GONGYI).resolveApiTokenKey as any)(request, token)
+    await (getApiService(SITE_TYPES.WONG_GONGYI).resolveApiTokenKey as any)(
+      request,
+      token,
+    )
 
     expect(wongResolveApiTokenKey).toHaveBeenCalledTimes(1)
     expect(wongResolveApiTokenKey).toHaveBeenCalledWith(request, token)

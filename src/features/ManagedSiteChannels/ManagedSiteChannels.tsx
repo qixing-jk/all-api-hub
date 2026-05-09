@@ -93,14 +93,7 @@ import { ChannelTypeNames } from "~/constants/managedSite"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  DONE_HUB,
-  NEW_API,
-  OCTOPUS,
-  VELOERA,
-} from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
@@ -207,16 +200,17 @@ export default function ManagedSiteChannels({
     newApiPassword,
     newApiTotpSecret,
   } = useUserPreferencesContext()
-  const isOctopus = managedSiteType === OCTOPUS
-  const isAxonHub = managedSiteType === AXON_HUB
-  const isClaudeCodeHub = managedSiteType === CLAUDE_CODE_HUB
+  const isOctopus = managedSiteType === SITE_TYPES.OCTOPUS
+  const isAxonHub = managedSiteType === SITE_TYPES.AXON_HUB
+  const isClaudeCodeHub = managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB
   // Migration has provider-specific create-only adapters; New API-only channel
   // controls stay gated separately below.
   const supportsChannelMigration = true
   const supportsNewApiOnlyChannelActions = !isAxonHub && !isClaudeCodeHub
-  const isNewApiManagedSite = managedSiteType === NEW_API
+  const isNewApiManagedSite = managedSiteType === SITE_TYPES.NEW_API
   const supportsDetailBackedRealKeyLoading =
-    managedSiteType === DONE_HUB || managedSiteType === VELOERA
+    managedSiteType === SITE_TYPES.DONE_HUB ||
+    managedSiteType === SITE_TYPES.VELOERA
   const isConfigMissing = !hasValidManagedSiteConfig(
     preferences,
     managedSiteType,

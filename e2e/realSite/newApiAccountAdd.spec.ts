@@ -1,4 +1,4 @@
-import { NEW_API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   forceExtensionLanguage,
@@ -42,7 +42,7 @@ test.describe("real-site E2E: New API account add flow", () => {
     const serviceWorker = await getServiceWorker(context)
 
     await seedUserPreferences(serviceWorker, {
-      managedSiteType: NEW_API,
+      managedSiteType: SITE_TYPES.NEW_API,
       autoFillCurrentSiteUrlOnAccountAdd: false,
       autoProvisionKeyOnAccountAdd: false,
       openChangelogOnUpdate: false,
@@ -63,11 +63,11 @@ test.describe("real-site E2E: New API account add flow", () => {
 
     const savedAccount = await waitForSavedAccount({
       serviceWorker,
-      siteType: NEW_API,
+      siteType: SITE_TYPES.NEW_API,
       baseUrl: config.baseUrl,
     })
 
-    expect(savedAccount.site_type).toBe(NEW_API)
+    expect(savedAccount.site_type).toBe(SITE_TYPES.NEW_API)
     expect(savedAccount.site_url).toBe(config.baseUrl)
     expect(String(savedAccount.account_info.id)).not.toBe("")
     expect(savedAccount.account_info.username.trim()).not.toBe("")

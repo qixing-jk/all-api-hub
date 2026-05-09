@@ -1,6 +1,7 @@
 import { renderHook, waitFor } from "@testing-library/react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountData } from "~/hooks/useAccountData"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
@@ -35,7 +36,7 @@ const createDisplayAccount = (
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
   health: { status: SiteHealthStatus.Healthy },
-  siteType: "default",
+  siteType: SITE_TYPES.UNKNOWN,
   baseUrl: "https://example.com",
   token: "token",
   userId: 1,

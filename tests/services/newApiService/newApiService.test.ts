@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type { ChannelFormData, CreateChannelPayload } from "~/types/newApi"
@@ -140,7 +141,7 @@ function createMockDisplaySiteData(
     todayTokens: { upload: 1000, download: 2000 },
     health: { status: SiteHealthStatus.Healthy },
     last_sync_time: Date.now(),
-    siteType: "openai",
+    siteType: SITE_TYPES.UNKNOWN,
     baseUrl: "https://api.example.com",
     token: "test-token-123",
     userId: 1,
@@ -280,7 +281,7 @@ function createMockSiteAccount(overrides?: Partial<SiteAccount>): SiteAccount {
     site_name: "Test Site",
     site_url: "https://api.example.com",
     health: { status: SiteHealthStatus.Healthy },
-    site_type: "openai",
+    site_type: SITE_TYPES.UNKNOWN,
     exchange_rate: 7.0,
     notes: "",
     tagIds: [],

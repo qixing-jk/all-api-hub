@@ -4,7 +4,7 @@ import {
   RuntimeActionIds,
   RuntimeMessageTypes,
 } from "~/constants/runtimeActions"
-import { SUB2API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { AuthTypeEnum } from "~/types"
 import {
   buildDisplaySiteData,
@@ -140,7 +140,7 @@ describe("accountKeyRepair", () => {
   it("records skipped, created, and failed outcomes during a repair run", async () => {
     const sub2apiAccount = buildSiteAccount({
       id: "sub2api-1",
-      site_type: SUB2API,
+      site_type: SITE_TYPES.SUB2API,
       site_url: "https://sub2api.example.com",
       authType: AuthTypeEnum.AccessToken,
       disabled: false,

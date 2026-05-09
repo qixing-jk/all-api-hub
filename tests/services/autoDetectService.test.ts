@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_DETECT_ERROR_CODES } from "~/constants/autoDetect"
+import { SITE_TYPES } from "~/constants/siteType"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 
 const {
@@ -87,7 +88,7 @@ describe("autoDetectSmart", () => {
         userId: 12,
         user: { id: 12, username: "alice" },
         accessToken: "current-tab-token",
-        siteTypeHint: "veloera",
+        siteTypeHint: SITE_TYPES.VELOERA,
       },
     })
 
@@ -98,7 +99,7 @@ describe("autoDetectSmart", () => {
       data: {
         userId: 12,
         user: { id: 12, username: "alice" },
-        siteType: "veloera",
+        siteType: SITE_TYPES.VELOERA,
         accessToken: "current-tab-token",
         sub2apiAuth: undefined,
       },

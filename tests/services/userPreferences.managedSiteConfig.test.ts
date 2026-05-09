@@ -2,14 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  DONE_HUB,
-  NEW_API,
-  OCTOPUS,
-  VELOERA,
-} from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { USER_PREFERENCES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   DEFAULT_PREFERENCES,
@@ -39,7 +32,9 @@ describe("userPreferences managed-site helpers", () => {
       structuredClone(DEFAULT_PREFERENCES),
     )
 
-    expect(await userPreferences.updateManagedSiteType(VELOERA)).toBe(true)
+    expect(
+      await userPreferences.updateManagedSiteType(SITE_TYPES.VELOERA),
+    ).toBe(true)
     expect(
       await userPreferences.updateVeloeraConfig({
         baseUrl: "https://veloera.example.com",
@@ -47,14 +42,16 @@ describe("userPreferences managed-site helpers", () => {
     ).toBe(true)
 
     let managedSite = await userPreferences.getManagedSiteConfig()
-    expect(managedSite.siteType).toBe(VELOERA)
+    expect(managedSite.siteType).toBe(SITE_TYPES.VELOERA)
     expect(managedSite.config).toEqual(
       expect.objectContaining({
         baseUrl: "https://veloera.example.com",
       }),
     )
 
-    expect(await userPreferences.updateManagedSiteType(DONE_HUB)).toBe(true)
+    expect(
+      await userPreferences.updateManagedSiteType(SITE_TYPES.DONE_HUB),
+    ).toBe(true)
     expect(
       await userPreferences.updateDoneHubConfig({
         baseUrl: "https://done.example.com",
@@ -64,7 +61,7 @@ describe("userPreferences managed-site helpers", () => {
     ).toBe(true)
 
     managedSite = await userPreferences.getManagedSiteConfig()
-    expect(managedSite.siteType).toBe(DONE_HUB)
+    expect(managedSite.siteType).toBe(SITE_TYPES.DONE_HUB)
     expect(managedSite.config).toEqual({
       ...DEFAULT_PREFERENCES.doneHub,
       baseUrl: "https://done.example.com",
@@ -72,7 +69,9 @@ describe("userPreferences managed-site helpers", () => {
       userId: "done-user",
     })
 
-    expect(await userPreferences.updateManagedSiteType(OCTOPUS)).toBe(true)
+    expect(
+      await userPreferences.updateManagedSiteType(SITE_TYPES.OCTOPUS),
+    ).toBe(true)
     expect(
       await userPreferences.updateOctopusConfig({
         baseUrl: "https://octopus.example.com",
@@ -82,7 +81,7 @@ describe("userPreferences managed-site helpers", () => {
     ).toBe(true)
 
     managedSite = await userPreferences.getManagedSiteConfig()
-    expect(managedSite.siteType).toBe(OCTOPUS)
+    expect(managedSite.siteType).toBe(SITE_TYPES.OCTOPUS)
     expect(managedSite.config).toEqual({
       ...DEFAULT_PREFERENCES.octopus,
       baseUrl: "https://octopus.example.com",
@@ -90,7 +89,9 @@ describe("userPreferences managed-site helpers", () => {
       password: "octopus-pass",
     })
 
-    expect(await userPreferences.updateManagedSiteType(AXON_HUB)).toBe(true)
+    expect(
+      await userPreferences.updateManagedSiteType(SITE_TYPES.AXON_HUB),
+    ).toBe(true)
     expect(
       await userPreferences.updateAxonHubConfig({
         baseUrl: "https://axonhub.example.com",
@@ -100,7 +101,7 @@ describe("userPreferences managed-site helpers", () => {
     ).toBe(true)
 
     managedSite = await userPreferences.getManagedSiteConfig()
-    expect(managedSite.siteType).toBe(AXON_HUB)
+    expect(managedSite.siteType).toBe(SITE_TYPES.AXON_HUB)
     expect(managedSite.config).toEqual({
       ...DEFAULT_PREFERENCES.axonHub,
       baseUrl: "https://axonhub.example.com",
@@ -108,9 +109,9 @@ describe("userPreferences managed-site helpers", () => {
       password: "secret",
     })
 
-    expect(await userPreferences.updateManagedSiteType(CLAUDE_CODE_HUB)).toBe(
-      true,
-    )
+    expect(
+      await userPreferences.updateManagedSiteType(SITE_TYPES.CLAUDE_CODE_HUB),
+    ).toBe(true)
     expect(
       await userPreferences.updateClaudeCodeHubConfig({
         baseUrl: "https://cch.example.com",
@@ -119,7 +120,7 @@ describe("userPreferences managed-site helpers", () => {
     ).toBe(true)
 
     managedSite = await userPreferences.getManagedSiteConfig()
-    expect(managedSite.siteType).toBe(CLAUDE_CODE_HUB)
+    expect(managedSite.siteType).toBe(SITE_TYPES.CLAUDE_CODE_HUB)
     expect(managedSite.config).toEqual({
       ...DEFAULT_PREFERENCES.claudeCodeHub,
       baseUrl: "https://cch.example.com",
@@ -139,12 +140,12 @@ describe("userPreferences managed-site helpers", () => {
     )
 
     let managedSite = await userPreferences.getManagedSiteConfig()
-    expect(managedSite.siteType).toBe(NEW_API)
+    expect(managedSite.siteType).toBe(SITE_TYPES.NEW_API)
     expect(managedSite.config).toEqual(DEFAULT_PREFERENCES.newApi)
 
     const missingDoneHub: any = {
       ...structuredClone(DEFAULT_PREFERENCES),
-      managedSiteType: DONE_HUB,
+      managedSiteType: SITE_TYPES.DONE_HUB,
     }
     delete missingDoneHub.doneHub
 
@@ -154,12 +155,12 @@ describe("userPreferences managed-site helpers", () => {
     )
 
     managedSite = await userPreferences.getManagedSiteConfig()
-    expect(managedSite.siteType).toBe(DONE_HUB)
+    expect(managedSite.siteType).toBe(SITE_TYPES.DONE_HUB)
     expect(managedSite.config).toEqual(DEFAULT_DONE_HUB_CONFIG)
 
     const missingOctopus: any = {
       ...structuredClone(DEFAULT_PREFERENCES),
-      managedSiteType: OCTOPUS,
+      managedSiteType: SITE_TYPES.OCTOPUS,
     }
     delete missingOctopus.octopus
 
@@ -169,12 +170,12 @@ describe("userPreferences managed-site helpers", () => {
     )
 
     managedSite = await userPreferences.getManagedSiteConfig()
-    expect(managedSite.siteType).toBe(OCTOPUS)
+    expect(managedSite.siteType).toBe(SITE_TYPES.OCTOPUS)
     expect(managedSite.config).toEqual(DEFAULT_OCTOPUS_CONFIG)
 
     const missingAxonHub: any = {
       ...structuredClone(DEFAULT_PREFERENCES),
-      managedSiteType: AXON_HUB,
+      managedSiteType: SITE_TYPES.AXON_HUB,
     }
     delete missingAxonHub.axonHub
 
@@ -184,12 +185,12 @@ describe("userPreferences managed-site helpers", () => {
     )
 
     managedSite = await userPreferences.getManagedSiteConfig()
-    expect(managedSite.siteType).toBe(AXON_HUB)
+    expect(managedSite.siteType).toBe(SITE_TYPES.AXON_HUB)
     expect(managedSite.config).toEqual(DEFAULT_AXON_HUB_CONFIG)
 
     const missingClaudeCodeHub: any = {
       ...structuredClone(DEFAULT_PREFERENCES),
-      managedSiteType: CLAUDE_CODE_HUB,
+      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
     }
     delete missingClaudeCodeHub.claudeCodeHub
 
@@ -199,14 +200,14 @@ describe("userPreferences managed-site helpers", () => {
     )
 
     managedSite = await userPreferences.getManagedSiteConfig()
-    expect(managedSite.siteType).toBe(CLAUDE_CODE_HUB)
+    expect(managedSite.siteType).toBe(SITE_TYPES.CLAUDE_CODE_HUB)
     expect(managedSite.config).toEqual(DEFAULT_CLAUDE_CODE_HUB_CONFIG)
   })
 
   it("restores managed-site configs to their defaults with dedicated reset helpers", async () => {
     await storage.set(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES, {
       ...structuredClone(DEFAULT_PREFERENCES),
-      managedSiteType: OCTOPUS,
+      managedSiteType: SITE_TYPES.OCTOPUS,
       veloera: {
         ...DEFAULT_PREFERENCES.veloera,
         baseUrl: "https://veloera.example.com",

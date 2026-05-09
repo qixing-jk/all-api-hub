@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SUB2API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
   extractDomainPrefix,
@@ -230,7 +230,7 @@ describe("accountOperations", () => {
           siteName: "Test",
           username: "",
           userId: "123",
-          siteType: SUB2API,
+          siteType: SITE_TYPES.SUB2API,
           authType: AuthTypeEnum.AccessToken,
           accessToken: "token",
           exchangeRate: "7.0",
@@ -396,11 +396,11 @@ describe("accountOperations", () => {
 
       const result = await getSiteName(
         "https://sub2.example.com/console",
-        SUB2API,
+        SITE_TYPES.SUB2API,
       )
 
       expect(result).toBe("Sub2 Portal")
-      expect(vi.mocked(getApiService)).toHaveBeenCalledWith(SUB2API)
+      expect(vi.mocked(getApiService)).toHaveBeenCalledWith(SITE_TYPES.SUB2API)
     })
 
     it("falls back to system_name when a default tab title is paired with a site-type hint", async () => {

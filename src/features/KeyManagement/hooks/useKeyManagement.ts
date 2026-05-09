@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
-import { DONE_HUB, OCTOPUS, VELOERA } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountData } from "~/hooks/useAccountData"
 import {
@@ -156,7 +156,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   }, [enabledDisplayData])
 
   const managedSiteConfigFingerprint = useMemo(() => {
-    if (managedSiteType === OCTOPUS) {
+    if (managedSiteType === SITE_TYPES.OCTOPUS) {
       return [
         managedSiteType,
         (octopusBaseUrl ?? "").trim(),
@@ -165,7 +165,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       ].join("|")
     }
 
-    if (managedSiteType === DONE_HUB) {
+    if (managedSiteType === SITE_TYPES.DONE_HUB) {
       return [
         managedSiteType,
         (doneHubBaseUrl ?? "").trim(),
@@ -174,7 +174,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       ].join("|")
     }
 
-    if (managedSiteType === VELOERA) {
+    if (managedSiteType === SITE_TYPES.VELOERA) {
       return [
         managedSiteType,
         (veloeraBaseUrl ?? "").trim(),

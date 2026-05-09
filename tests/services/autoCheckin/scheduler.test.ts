@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SITE_TYPES } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { resolveAutoCheckinProvider } from "~/services/checkin/autoCheckin/providers"
 import {
@@ -808,7 +809,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       id: "a",
       disabled: false,
       site_name: "SiteA",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-a" },
       checkIn: {
         enableDetection: true,
@@ -819,7 +820,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       id: "b",
       disabled: false,
       site_name: "SiteB",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-b" },
       checkIn: { enableDetection: true },
     }
@@ -876,7 +877,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       id: "daily-fail-1",
       disabled: false,
       site_name: "Boundary Site",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
       checkIn: {
         enableDetection: true,
@@ -952,7 +953,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       id: "b",
       disabled: false,
       site_name: "SiteB",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-b" },
       checkIn: { enableDetection: true },
     }
@@ -996,7 +997,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       id: "disabled",
       disabled: true,
       site_name: "Disabled Site",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "disabled-user" },
       checkIn: { enableDetection: true },
     }
@@ -1004,7 +1005,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       id: "detection-off",
       disabled: false,
       site_name: "Detection Off",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "off-user" },
       checkIn: { enableDetection: false, autoCheckInEnabled: true },
     }
@@ -1074,7 +1075,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       id: "paused-daily",
       disabled: false,
       site_name: "Paused Daily",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
       checkIn: { enableDetection: true, autoCheckInEnabled: false },
     }
@@ -1414,7 +1415,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       id: "disabled",
       disabled: true,
       site_name: "Disabled Site",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "disabled-user" },
       checkIn: { enableDetection: true },
     }
@@ -1422,7 +1423,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       id: "success",
       disabled: false,
       site_name: "Success Site",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "success-user" },
       checkIn: { enableDetection: true, autoCheckInEnabled: true },
     }
@@ -1430,7 +1431,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       id: "failed",
       disabled: false,
       site_name: "Failed Site",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "failed-user" },
       checkIn: { enableDetection: true, autoCheckInEnabled: true },
     }
@@ -1556,7 +1557,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
         id: "exhausted",
         disabled: false,
         site_name: "Exhausted Site",
-        site_type: "veloera",
+        site_type: SITE_TYPES.VELOERA,
         account_info: { username: "user" },
         checkIn: { enableDetection: true, autoCheckInEnabled: true },
       },
@@ -2093,7 +2094,7 @@ describe("autoCheckinScheduler retry scheduling", () => {
       id: "paused",
       disabled: false,
       site_name: "Paused Site",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
       checkIn: { enableDetection: true, autoCheckInEnabled: false },
     }
@@ -2230,7 +2231,7 @@ describe("autoCheckinScheduler targeting support", () => {
       id: "disabled",
       disabled: true,
       site_name: "Disabled Site",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "disabled-user" },
       checkIn: { enableDetection: true, autoCheckInEnabled: true },
     }
@@ -2238,7 +2239,7 @@ describe("autoCheckinScheduler targeting support", () => {
       id: "detection-disabled",
       disabled: false,
       site_name: "Detection Disabled Site",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "detection-user" },
       checkIn: { enableDetection: false, autoCheckInEnabled: true },
     }
@@ -2357,7 +2358,7 @@ describe("autoCheckinScheduler targeting support", () => {
       id: "target",
       disabled: false,
       site_name: "Retry Target",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
       checkIn: { enableDetection: true, autoCheckInEnabled: true },
     }
@@ -2365,7 +2366,7 @@ describe("autoCheckinScheduler targeting support", () => {
       id: "other",
       disabled: false,
       site_name: "Other Retry",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "other" },
       checkIn: { enableDetection: true, autoCheckInEnabled: true },
     }
@@ -2465,7 +2466,7 @@ describe("autoCheckinScheduler targeting support", () => {
       id: "target",
       disabled: false,
       site_name: "Final Retry Target",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
       checkIn: { enableDetection: true, autoCheckInEnabled: true },
     }
@@ -2521,7 +2522,7 @@ describe("autoCheckinScheduler targeting support", () => {
       id: "a",
       disabled: false,
       site_name: "SiteA",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-a" },
       checkIn: { enableDetection: true },
     }
@@ -2529,7 +2530,7 @@ describe("autoCheckinScheduler targeting support", () => {
       id: "b",
       disabled: false,
       site_name: "SiteB",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-b" },
       checkIn: { enableDetection: true },
     }
@@ -2579,7 +2580,7 @@ describe("autoCheckinScheduler targeting support", () => {
       id: "a",
       disabled: false,
       site_name: "Same Name",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "alice" },
       checkIn: { enableDetection: true },
     }
@@ -2587,7 +2588,7 @@ describe("autoCheckinScheduler targeting support", () => {
       id: "b",
       disabled: false,
       site_name: "same   name",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "bob" },
       checkIn: { enableDetection: true },
     }
@@ -2631,7 +2632,7 @@ describe("autoCheckinScheduler targeting support", () => {
       id: "a",
       disabled: false,
       site_name: "Same Name",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "alice" },
       checkIn: { enableDetection: true },
     }
@@ -2639,7 +2640,7 @@ describe("autoCheckinScheduler targeting support", () => {
       id: "b",
       disabled: false,
       site_name: "same   name",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "bob" },
       checkIn: { enableDetection: true },
     }
@@ -2701,7 +2702,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
       id: "a",
       disabled: false,
       site_name: "SiteA",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-a" },
       checkIn: { enableDetection: true },
     }
@@ -2709,7 +2710,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
       id: "b",
       disabled: false,
       site_name: "SiteB",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-b" },
       checkIn: { enableDetection: true },
     }
@@ -2786,7 +2787,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
       id: "a",
       disabled: false,
       site_name: "SiteA",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-a" },
       checkIn: { enableDetection: true },
     }
@@ -2849,7 +2850,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
       id: "a",
       disabled: false,
       site_name: "SiteA",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user-a" },
       checkIn: { enableDetection: true },
     }
@@ -3398,7 +3399,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       id: "disabled-1",
       disabled: true,
       site_name: "Disabled",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
       checkIn: { enableDetection: true, autoCheckInEnabled: true },
     }
@@ -3477,7 +3478,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       id: "retry-1",
       disabled: false,
       site_name: "Retry Site",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
       checkIn: { enableDetection: true, autoCheckInEnabled: true },
     }
@@ -3567,7 +3568,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       id: "retry-1",
       disabled: false,
       site_name: "Retry Site",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
       checkIn: { enableDetection: true, autoCheckInEnabled: true },
     }
@@ -3651,7 +3652,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       id: "retry-1",
       disabled: false,
       site_name: "Retry Site",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
       checkIn: { enableDetection: true, autoCheckInEnabled: true },
     }
@@ -3659,7 +3660,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       id: "retry-2",
       disabled: false,
       site_name: "Still Failing",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "other" },
       checkIn: { enableDetection: true, autoCheckInEnabled: true },
     }
@@ -3759,7 +3760,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       id: "retry-1",
       disabled: false,
       site_name: "Retry Site",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "user" },
       checkIn: { enableDetection: true, autoCheckInEnabled: true },
     }
@@ -3848,7 +3849,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       id: "adhoc-1",
       disabled: false,
       site_name: "Adhoc Retry",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "adhoc" },
       checkIn: { enableDetection: true, autoCheckInEnabled: true },
     }
@@ -3856,7 +3857,7 @@ describe("autoCheckinScheduler.retryAccount", () => {
       id: "retry-2",
       disabled: false,
       site_name: "Queued Retry",
-      site_type: "veloera",
+      site_type: SITE_TYPES.VELOERA,
       account_info: { username: "queued" },
       checkIn: { enableDetection: true, autoCheckInEnabled: true },
     }

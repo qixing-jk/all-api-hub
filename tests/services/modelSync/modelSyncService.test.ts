@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelType } from "~/constants/newApi"
-import { VELOERA } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { getApiService } from "~/services/apiService"
 import { matchesProbeFilterRule } from "~/services/models/modelSync/channelModelFilterEvaluator"
 import { ModelSyncService } from "~/services/models/modelSync/modelSyncService"
@@ -161,12 +161,12 @@ describe("ModelSyncService - siteType routing", () => {
       undefined,
       undefined,
       undefined,
-      VELOERA,
+      SITE_TYPES.VELOERA,
     )
 
     await service.listChannels()
 
-    expect(getApiService).toHaveBeenCalledWith(VELOERA)
+    expect(getApiService).toHaveBeenCalledWith(SITE_TYPES.VELOERA)
     expect(listAllChannelsMock).toHaveBeenCalled()
   })
 })
@@ -605,7 +605,7 @@ describe("ModelSyncService - probe-backed filters", () => {
         base_url: "https://channel.example.com",
         key: "sk-channel-key",
       },
-      siteType: VELOERA,
+      siteType: SITE_TYPES.VELOERA,
       managedSiteBaseUrl: "https://managed.example.com",
       adminToken: "admin-token",
       cache: new Map<string, boolean>(),
@@ -629,7 +629,7 @@ describe("ModelSyncService - probe-backed filters", () => {
         base_url: "   ",
         key: "sk-channel-key",
       },
-      siteType: VELOERA,
+      siteType: SITE_TYPES.VELOERA,
       managedSiteBaseUrl: "https://managed.example.com",
       adminToken: "admin-token",
       cache: new Map<string, boolean>(),
@@ -764,7 +764,7 @@ describe("ModelSyncService - probe-backed filters", () => {
         base_url: "https://channel.example.com",
         key: "",
       },
-      siteType: VELOERA,
+      siteType: SITE_TYPES.VELOERA,
       managedSiteBaseUrl: "https://managed.example.com",
       adminToken: "admin-token",
       userId: "1",
@@ -789,7 +789,7 @@ describe("ModelSyncService - probe-backed filters", () => {
         base_url: "https://channel.example.com",
         key: "sk-channel-key",
       },
-      siteType: VELOERA,
+      siteType: SITE_TYPES.VELOERA,
       managedSiteBaseUrl: "https://managed.example.com",
       adminToken: "admin-token",
       cache: new Map<string, boolean>(),

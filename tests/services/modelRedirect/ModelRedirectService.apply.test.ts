@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { DONE_HUB, NEW_API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
@@ -188,7 +188,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
       {
         pruneMissingTargets: true,
         availableModels: ["gpt-4o-2024-05-13"],
-        siteType: NEW_API,
+        siteType: SITE_TYPES.NEW_API,
       },
     )
 
@@ -212,7 +212,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
       {
         pruneMissingTargets: true,
         availableModels: ["ok"],
-        siteType: NEW_API,
+        siteType: SITE_TYPES.NEW_API,
       },
     )
 
@@ -236,7 +236,7 @@ describe("ModelRedirectService.applyModelMappingToChannel", () => {
       {
         pruneMissingTargets: true,
         availableModels: ["gpt-4o"],
-        siteType: DONE_HUB,
+        siteType: SITE_TYPES.DONE_HUB,
       },
     )
 

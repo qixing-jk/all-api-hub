@@ -4,12 +4,7 @@
  * Based on gpt-api-sync logic with enhancements for weighted channel selection
  */
 
-import {
-  DONE_HUB,
-  NEW_API,
-  OCTOPUS,
-  type ManagedSiteType,
-} from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import {
   getManagedSiteAdminConfig,
   getManagedSiteConfig,
@@ -89,8 +84,8 @@ export class ModelRedirectService {
     const prunedMapping: Record<string, unknown> = {}
 
     const siteType = options?.siteType
-    const supportsChainedMapping = siteType === NEW_API
-    const supportsBillingPrefix = siteType === DONE_HUB
+    const supportsChainedMapping = siteType === SITE_TYPES.NEW_API
+    const supportsBillingPrefix = siteType === SITE_TYPES.DONE_HUB
 
     const normalizeTargetForAvailability = (targetModel: string): string => {
       const trimmed = targetModel.trim()
@@ -165,7 +160,7 @@ export class ModelRedirectService {
 
     const { siteType } = getManagedSiteConfig(resolvedPrefs)
 
-    if (siteType === OCTOPUS) {
+    if (siteType === SITE_TYPES.OCTOPUS) {
       return {
         ok: false,
         errors: ["Model redirect is not supported for Octopus sites"],

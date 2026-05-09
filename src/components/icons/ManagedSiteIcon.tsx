@@ -6,14 +6,7 @@ import { DoneHubIcon } from "~/components/icons/DoneHubIcon"
 import { ICON_SIZE_CLASSNAME, IconSize } from "~/components/icons/iconSizes"
 import { OctopusIcon } from "~/components/icons/OctopusIcon"
 import { VeloeraIcon } from "~/components/icons/VeloeraIcon"
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  DONE_HUB,
-  ManagedSiteType,
-  OCTOPUS,
-  VELOERA,
-} from "~/constants/siteType"
+import { ManagedSiteType, SITE_TYPES } from "~/constants/siteType"
 import { cn } from "~/lib/utils"
 
 interface ManagedSiteIconProps {
@@ -28,23 +21,23 @@ export function ManagedSiteIcon({
   siteType,
   size = "sm",
 }: ManagedSiteIconProps) {
-  if (siteType === OCTOPUS) {
+  if (siteType === SITE_TYPES.OCTOPUS) {
     return <OctopusIcon size={size} />
   }
 
-  if (siteType === VELOERA) {
+  if (siteType === SITE_TYPES.VELOERA) {
     return <VeloeraIcon size={size} />
   }
 
-  if (siteType === DONE_HUB) {
+  if (siteType === SITE_TYPES.DONE_HUB) {
     return <DoneHubIcon size={size} />
   }
 
-  if (siteType === AXON_HUB) {
+  if (siteType === SITE_TYPES.AXON_HUB) {
     return <AxonHubIcon size={size} />
   }
 
-  if (siteType === CLAUDE_CODE_HUB) {
+  if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
     return <ClaudeCodeHubIcon size={size} />
   }
 

@@ -20,7 +20,7 @@ import { AxonHubChannelTypeNames } from "~/constants/axonHub"
 import { ClaudeCodeHubProviderTypeNames } from "~/constants/claudeCodeHub"
 import { ChannelTypeNames, type ChannelType } from "~/constants/managedSite"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
-import { AXON_HUB, CLAUDE_CODE_HUB, OCTOPUS } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   executeManagedSiteChannelMigration,
   prepareManagedSiteChannelMigrationPreview,
@@ -173,14 +173,14 @@ const getChannelTypeText = (
   siteType: ManagedSiteTargetOption["siteType"],
   type?: number | string,
 ) => {
-  if (siteType === AXON_HUB && typeof type === "string") {
+  if (siteType === SITE_TYPES.AXON_HUB && typeof type === "string") {
     return (
       AxonHubChannelTypeNames[type as keyof typeof AxonHubChannelTypeNames] ??
       type
     )
   }
 
-  if (siteType === CLAUDE_CODE_HUB && typeof type === "string") {
+  if (siteType === SITE_TYPES.CLAUDE_CODE_HUB && typeof type === "string") {
     return (
       ClaudeCodeHubProviderTypeNames[
         type as keyof typeof ClaudeCodeHubProviderTypeNames
@@ -192,7 +192,7 @@ const getChannelTypeText = (
     return "—"
   }
 
-  return siteType === OCTOPUS
+  return siteType === SITE_TYPES.OCTOPUS
     ? OctopusOutboundTypeNames[type] ?? String(type)
     : ChannelTypeNames[type as ChannelType] ?? String(type)
 }

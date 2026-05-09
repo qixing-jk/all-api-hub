@@ -1,5 +1,5 @@
 import { ChannelType } from "~/constants/managedSite"
-import { AXON_HUB, CLAUDE_CODE_HUB } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { getManagedSiteChannelExactMatch } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
@@ -120,7 +120,7 @@ const getDraftBlockedReason = (
   }
 
   if (
-    service.siteType === CLAUDE_CODE_HUB &&
+    service.siteType === SITE_TYPES.CLAUDE_CODE_HUB &&
     !hasUsableManagedSiteChannelKey(draft.key)
   ) {
     return MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES.REAL_KEY_REQUIRED
@@ -131,8 +131,8 @@ const getDraftBlockedReason = (
   }
 
   const requiresBaseUrl =
-    service.siteType === AXON_HUB ||
-    service.siteType === CLAUDE_CODE_HUB ||
+    service.siteType === SITE_TYPES.AXON_HUB ||
+    service.siteType === SITE_TYPES.CLAUDE_CODE_HUB ||
     draft.type === ChannelType.VolcEngine ||
     draft.type === ChannelType.SunoAPI
 

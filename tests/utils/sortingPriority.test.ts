@@ -6,6 +6,7 @@ import {
   DATA_TYPE_CREATED_AT,
   DATA_TYPE_INCOME,
 } from "~/constants"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   createDynamicSortComparator,
   DEFAULT_SORTING_PRIORITY_CONFIG,
@@ -32,7 +33,7 @@ describe("createDynamicSortComparator", () => {
     todayIncome: { USD: 5, CNY: 35 },
     todayTokens: { upload: 0, download: 0 },
     health: { status: SiteHealthStatus.Healthy },
-    siteType: "test-site",
+    siteType: SITE_TYPES.UNKNOWN,
     baseUrl: "https://test.com",
     token: "test-token",
     userId: 1,
@@ -171,7 +172,7 @@ describe("createDynamicSortComparator", () => {
       id: "detected-account",
       site_name: "Detected Site",
       site_url: "https://detected.com",
-      site_type: "test-site",
+      site_type: SITE_TYPES.UNKNOWN,
       exchange_rate: 7.0,
       checkIn: { enableDetection: false },
       ...overrides,

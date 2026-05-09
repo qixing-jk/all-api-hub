@@ -4,6 +4,7 @@ import type { ReactNode } from "react"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { useModelData } from "~/features/ModelList/hooks/useModelData"
 import {
   createAccountSource,
@@ -88,7 +89,7 @@ const createDisplayAccount = (
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
   health: { status: SiteHealthStatus.Healthy },
-  siteType: "default",
+  siteType: SITE_TYPES.UNKNOWN,
   baseUrl: "https://example.com",
   token: "token",
   userId: 1,
@@ -256,7 +257,7 @@ describe("useModelData all-accounts loading", () => {
       id: "credential-change-account",
       baseUrl: "https://credential-change.example.com",
       userId: 61,
-      siteType: "default",
+      siteType: SITE_TYPES.UNKNOWN,
       authType: AuthTypeEnum.AccessToken,
     })
     const secondAccount = createDisplayAccount({
@@ -904,7 +905,7 @@ describe("useModelData all-accounts loading", () => {
       new InvalidTokenPayloadError({
         accountId: "invalid-token-account",
         baseUrl: "https://invalid-token.example.com",
-        siteType: "default",
+        siteType: SITE_TYPES.UNKNOWN,
         responseType: "object",
       }),
     )

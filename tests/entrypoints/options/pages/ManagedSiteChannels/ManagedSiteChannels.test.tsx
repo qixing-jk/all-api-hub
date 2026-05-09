@@ -6,14 +6,7 @@ import { ChannelDialogContainer } from "~/components/dialogs/ChannelDialog"
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  DONE_HUB,
-  NEW_API,
-  OCTOPUS,
-  VELOERA,
-} from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ManagedSiteChannels from "~/entrypoints/options/pages/ManagedSiteChannels"
 import { fetchChannelFilters } from "~/features/ManagedSiteChannels/utils/channelFilters"
@@ -245,10 +238,10 @@ describe("ManagedSiteChannels", () => {
   })
 
   const buildPreferences = (options?: {
-    managedSiteType?: string
+    managedSiteType?: ManagedSiteType
     withMigrationTarget?: boolean
   }) => {
-    const managedSiteType = options?.managedSiteType ?? NEW_API
+    const managedSiteType = options?.managedSiteType ?? SITE_TYPES.NEW_API
 
     return {
       managedSiteType,
@@ -261,7 +254,7 @@ describe("ManagedSiteChannels", () => {
         totpSecret: "JBSWY3DPEHPK3PXP",
       },
       doneHub:
-        options?.withMigrationTarget || managedSiteType === DONE_HUB
+        options?.withMigrationTarget || managedSiteType === SITE_TYPES.DONE_HUB
           ? {
               baseUrl: "https://donehub.example",
               adminToken: "donehub-token",
@@ -273,7 +266,7 @@ describe("ManagedSiteChannels", () => {
               userId: "",
             },
       veloera:
-        managedSiteType === VELOERA
+        managedSiteType === SITE_TYPES.VELOERA
           ? {
               baseUrl: "https://veloera.example",
               adminToken: "veloera-token",
@@ -285,7 +278,7 @@ describe("ManagedSiteChannels", () => {
               userId: "",
             },
       octopus:
-        managedSiteType === OCTOPUS
+        managedSiteType === SITE_TYPES.OCTOPUS
           ? {
               baseUrl: "https://octopus.example",
               username: "octopus-admin",
@@ -297,7 +290,7 @@ describe("ManagedSiteChannels", () => {
               password: "",
             },
       axonHub:
-        managedSiteType === AXON_HUB
+        managedSiteType === SITE_TYPES.AXON_HUB
           ? {
               baseUrl: "https://axonhub.example",
               email: "admin@example.com",
@@ -309,7 +302,7 @@ describe("ManagedSiteChannels", () => {
               password: "",
             },
       claudeCodeHub:
-        managedSiteType === CLAUDE_CODE_HUB
+        managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB
           ? {
               baseUrl: "https://cch.example",
               adminToken: "cch-token",
@@ -324,22 +317,22 @@ describe("ManagedSiteChannels", () => {
   const mockChannels = (
     channels: any[],
     options?: {
-      managedSiteType?: string
+      managedSiteType?: ManagedSiteType
       messagesKey?: string
       withMigrationTarget?: boolean
       fetchChannelSecretKey?: (...args: unknown[]) => Promise<string>
     },
   ) => {
-    const managedSiteType = options?.managedSiteType ?? NEW_API
+    const managedSiteType = options?.managedSiteType ?? SITE_TYPES.NEW_API
     const messagesKey =
       options?.messagesKey ??
-      (managedSiteType === DONE_HUB
+      (managedSiteType === SITE_TYPES.DONE_HUB
         ? "donehub"
-        : managedSiteType === VELOERA
+        : managedSiteType === SITE_TYPES.VELOERA
           ? "veloera"
-          : managedSiteType === AXON_HUB
+          : managedSiteType === SITE_TYPES.AXON_HUB
             ? "axonhub"
-            : managedSiteType === CLAUDE_CODE_HUB
+            : managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB
               ? "claudecodehub"
               : "newapi")
     const preferences = buildPreferences({
@@ -383,7 +376,7 @@ describe("ManagedSiteChannels", () => {
     } as any)
 
     vi.mocked(getManagedSiteServiceForType).mockReturnValue({
-      siteType: DONE_HUB,
+      siteType: SITE_TYPES.DONE_HUB,
       messagesKey: "donehub",
       getConfig: vi.fn().mockResolvedValue({
         baseUrl: "https://donehub.example",
@@ -470,7 +463,7 @@ describe("ManagedSiteChannels", () => {
   })
 
   it("reloads the channel list when the managed site type changes", async () => {
-    let currentManagedSiteType = NEW_API
+    let currentManagedSiteType: ManagedSiteType = SITE_TYPES.NEW_API
     let currentPreferences = buildPreferences({
       managedSiteType: currentManagedSiteType,
       withMigrationTarget: true,
@@ -507,10 +500,12 @@ describe("ManagedSiteChannels", () => {
         ({
           siteType: currentManagedSiteType,
           messagesKey:
-            currentManagedSiteType === DONE_HUB ? "donehub" : "newapi",
+            currentManagedSiteType === SITE_TYPES.DONE_HUB
+              ? "donehub"
+              : "newapi",
           getConfig: vi.fn().mockResolvedValue({
             baseUrl:
-              currentManagedSiteType === DONE_HUB
+              currentManagedSiteType === SITE_TYPES.DONE_HUB
                 ? "https://donehub.example"
                 : "https://admin.example",
             token: "token",
@@ -537,7 +532,7 @@ describe("ManagedSiteChannels", () => {
 
     await waitForRowText("Alpha")
 
-    currentManagedSiteType = DONE_HUB
+    currentManagedSiteType = SITE_TYPES.DONE_HUB
     currentPreferences = buildPreferences({
       managedSiteType: currentManagedSiteType,
       withMigrationTarget: true,
@@ -737,7 +732,9 @@ describe("ManagedSiteChannels", () => {
   })
 
   it("shows a config warning and skips the channel query when managed-site config is missing", async () => {
-    const preferences = buildPreferences({ managedSiteType: NEW_API })
+    const preferences = buildPreferences({
+      managedSiteType: SITE_TYPES.NEW_API,
+    })
     preferences.newApi = {
       ...preferences.newApi,
       baseUrl: "",
@@ -747,7 +744,7 @@ describe("ManagedSiteChannels", () => {
 
     vi.mocked(useUserPreferencesContext).mockReturnValue({
       preferences,
-      managedSiteType: NEW_API,
+      managedSiteType: SITE_TYPES.NEW_API,
       newApiBaseUrl: preferences.newApi.baseUrl,
       newApiUserId: preferences.newApi.userId,
       newApiUsername: preferences.newApi.username,
@@ -959,7 +956,7 @@ describe("ManagedSiteChannels", () => {
           weight: 5,
         },
       ],
-      { managedSiteType: OCTOPUS },
+      { managedSiteType: SITE_TYPES.OCTOPUS },
     )
 
     render(<ManagedSiteChannels />)
@@ -1000,7 +997,7 @@ describe("ManagedSiteChannels", () => {
           weight: 5,
         },
       ],
-      { managedSiteType: AXON_HUB },
+      { managedSiteType: SITE_TYPES.AXON_HUB },
     )
 
     render(<ManagedSiteChannels />)
@@ -1236,7 +1233,7 @@ describe("ManagedSiteChannels", () => {
     ])
 
     vi.mocked(getManagedSiteService).mockResolvedValue({
-      siteType: NEW_API,
+      siteType: SITE_TYPES.NEW_API,
       messagesKey: "newapi",
       getConfig: vi.fn().mockResolvedValue({
         baseUrl: "https://admin.example",
@@ -1312,7 +1309,7 @@ describe("ManagedSiteChannels", () => {
       )
 
     vi.mocked(getManagedSiteService).mockResolvedValue({
-      siteType: NEW_API,
+      siteType: SITE_TYPES.NEW_API,
       messagesKey: "newapi",
       getConfig: vi.fn().mockResolvedValue({
         baseUrl: "https://admin.example",
@@ -1707,8 +1704,8 @@ describe("ManagedSiteChannels", () => {
   })
 
   it.each([
-    [DONE_HUB, "donehub"],
-    [VELOERA, "veloera"],
+    [SITE_TYPES.DONE_HUB, "donehub"],
+    [SITE_TYPES.VELOERA, "veloera"],
   ])(
     "loads the real channel key from the edit dialog for %s",
     async (managedSiteType, messagesKey) => {
@@ -1804,7 +1801,7 @@ describe("ManagedSiteChannels", () => {
   it("keeps the migration exit action available when targets disappear", async () => {
     const user = userEvent.setup()
     let currentPreferences = buildPreferences({
-      managedSiteType: NEW_API,
+      managedSiteType: SITE_TYPES.NEW_API,
       withMigrationTarget: true,
     })
 
@@ -1812,7 +1809,7 @@ describe("ManagedSiteChannels", () => {
       () =>
         ({
           preferences: currentPreferences,
-          managedSiteType: NEW_API,
+          managedSiteType: SITE_TYPES.NEW_API,
           newApiBaseUrl: currentPreferences.newApi.baseUrl,
           newApiUserId: currentPreferences.newApi.userId,
           newApiUsername: currentPreferences.newApi.username,
@@ -1850,7 +1847,7 @@ describe("ManagedSiteChannels", () => {
     ).toBeInTheDocument()
 
     currentPreferences = buildPreferences({
-      managedSiteType: NEW_API,
+      managedSiteType: SITE_TYPES.NEW_API,
       withMigrationTarget: false,
     })
     rerender(<ManagedSiteChannels />)
@@ -1907,7 +1904,7 @@ describe("ManagedSiteChannels", () => {
         },
       ],
       {
-        managedSiteType: AXON_HUB,
+        managedSiteType: SITE_TYPES.AXON_HUB,
         messagesKey: "axonhub",
         withMigrationTarget: true,
       },
@@ -2001,7 +1998,7 @@ describe("ManagedSiteChannels", () => {
         },
       ],
       {
-        managedSiteType: CLAUDE_CODE_HUB,
+        managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
         messagesKey: "claudecodehub",
         withMigrationTarget: true,
       },
@@ -2498,7 +2495,7 @@ describe("ManagedSiteChannels", () => {
     const dialog = await screen.findByRole("dialog")
 
     vi.mocked(getManagedSiteService).mockResolvedValue({
-      siteType: NEW_API,
+      siteType: SITE_TYPES.NEW_API,
       messagesKey: "newapi",
       getConfig: vi.fn().mockResolvedValue(null),
       deleteChannel,

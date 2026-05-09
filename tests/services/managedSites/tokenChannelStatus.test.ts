@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { VELOERA } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
@@ -635,7 +635,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     const searchChannel = vi.fn()
     const prepareChannelFormData = vi.fn()
     const service = createManagedSiteServiceStub({
-      siteType: VELOERA,
+      siteType: SITE_TYPES.VELOERA,
       searchChannel,
       prepareChannelFormData,
     })

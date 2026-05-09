@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   commonSiteAnnouncementProvider,
   createCommonSiteAnnouncementKey,
@@ -8,7 +9,10 @@ import {
   sub2ApiSiteAnnouncementProvider,
 } from "~/services/siteAnnouncements/providers"
 import { AuthTypeEnum } from "~/types"
-import { SITE_ANNOUNCEMENT_STATUS } from "~/types/siteAnnouncements"
+import {
+  SITE_ANNOUNCEMENT_STATUS,
+  type SiteAnnouncementProviderRequest,
+} from "~/types/siteAnnouncements"
 
 const { getApiServiceMock } = vi.hoisted(() => ({
   getApiServiceMock: vi.fn(),
@@ -18,10 +22,10 @@ vi.mock("~/services/apiService", () => ({
   getApiService: getApiServiceMock,
 }))
 
-const baseRequest = {
+const baseRequest: SiteAnnouncementProviderRequest = {
   accountId: "account-1",
   siteName: "Example",
-  siteType: "new-api",
+  siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://Example.com/",
   providerId: "common" as const,
   apiRequest: {
@@ -37,7 +41,7 @@ describe("site announcement providers", () => {
   it("uses normalized site keys for common and Sub2API providers", () => {
     expect(
       createCommonSiteAnnouncementKey({
-        siteType: "new-api",
+        siteType: SITE_TYPES.NEW_API,
         baseUrl: "https://Example.com/path",
       }),
     ).toBe("notice:new-api:https://example.com")
@@ -110,7 +114,7 @@ describe("site announcement providers", () => {
 
     const request = {
       ...baseRequest,
-      siteType: "sub2api",
+      siteType: SITE_TYPES.SUB2API,
       providerId: "sub2api" as const,
     }
     const result = await sub2ApiSiteAnnouncementProvider.fetch(request)
@@ -163,7 +167,7 @@ describe("site announcement providers", () => {
 
     const request = {
       ...baseRequest,
-      siteType: "sub2api",
+      siteType: SITE_TYPES.SUB2API,
       providerId: "sub2api" as const,
     }
     const result = await sub2ApiSiteAnnouncementProvider.fetch(request)
@@ -195,7 +199,7 @@ describe("site announcement providers", () => {
 
     const request = {
       ...baseRequest,
-      siteType: "sub2api",
+      siteType: SITE_TYPES.SUB2API,
       providerId: "sub2api" as const,
     }
     const result = await sub2ApiSiteAnnouncementProvider.fetch(request)
@@ -218,7 +222,7 @@ describe("site announcement providers", () => {
 
     const request = {
       ...baseRequest,
-      siteType: "sub2api",
+      siteType: SITE_TYPES.SUB2API,
       providerId: "sub2api" as const,
     }
 
@@ -238,7 +242,7 @@ describe("site announcement providers", () => {
 
     const request = {
       ...baseRequest,
-      siteType: "sub2api",
+      siteType: SITE_TYPES.SUB2API,
       providerId: "sub2api" as const,
     }
 
@@ -255,7 +259,7 @@ describe("site announcement providers", () => {
 
     const request = {
       ...baseRequest,
-      siteType: "sub2api",
+      siteType: SITE_TYPES.SUB2API,
       providerId: "sub2api" as const,
     }
 
@@ -273,7 +277,7 @@ describe("site announcement providers", () => {
 
     const request = {
       ...baseRequest,
-      siteType: "sub2api",
+      siteType: SITE_TYPES.SUB2API,
       providerId: "sub2api" as const,
     }
 
@@ -295,7 +299,7 @@ describe("site announcement providers", () => {
 
     const request = {
       ...baseRequest,
-      siteType: "sub2api",
+      siteType: SITE_TYPES.SUB2API,
       providerId: "sub2api" as const,
     }
     const result = await sub2ApiSiteAnnouncementProvider.fetch(request)

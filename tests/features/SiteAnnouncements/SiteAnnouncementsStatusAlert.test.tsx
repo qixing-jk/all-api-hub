@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { SiteAnnouncementsStatusAlert } from "~/features/SiteAnnouncements/components/SiteAnnouncementsStatusAlert"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { render, screen } from "~~/tests/test-utils/render"
@@ -7,7 +8,7 @@ import { render, screen } from "~~/tests/test-utils/render"
 const baseStatus = {
   siteKey: "site-1",
   siteName: "Example",
-  siteType: "new-api",
+  siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://example.com",
   accountId: "account-1",
   providerId: "common" as const,

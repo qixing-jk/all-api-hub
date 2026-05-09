@@ -1,6 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
-import { SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
   collectDuplicateAccountNameKeys,
@@ -1052,7 +1052,7 @@ class AccountStorageService {
           }
 
           if (
-            account.site_type === SUB2API &&
+            account.site_type === SITE_TYPES.SUB2API &&
             authUpdate.sub2apiAuth &&
             typeof authUpdate.sub2apiAuth.refreshToken === "string" &&
             authUpdate.sub2apiAuth.refreshToken.trim()
@@ -1114,7 +1114,7 @@ class AccountStorageService {
     try {
       const account = await this.getAccountById(id)
       const shouldSerializeSub2ApiRefresh =
-        account?.site_type === SUB2API &&
+        account?.site_type === SITE_TYPES.SUB2API &&
         typeof account.sub2apiAuth?.refreshToken === "string" &&
         account.sub2apiAuth.refreshToken.trim().length > 0
 
@@ -1950,9 +1950,9 @@ class AccountStorageService {
       return account
     }
 
-    // Check if site_type is missing or set to UNKNOWN_SITE
+    // Check if site_type is missing or set to SITE_TYPES.UNKNOWN
     const needsSiteType =
-      !account.site_type || account.site_type === UNKNOWN_SITE
+      !account.site_type || account.site_type === SITE_TYPES.UNKNOWN
 
     if (!needsSiteType) {
       return account
@@ -1961,10 +1961,10 @@ class AccountStorageService {
     const updates: DeepPartial<SiteAccount> = {}
 
     if (needsSiteType) {
-      // Remote inference fills in UNKNOWN_SITE entries after migrations
+      // Remote inference fills in SITE_TYPES.UNKNOWN entries after migrations
       try {
         const detectedType = await getSiteType(normalizedUrl)
-        if (detectedType && detectedType !== UNKNOWN_SITE) {
+        if (detectedType && detectedType !== SITE_TYPES.UNKNOWN) {
           updates.site_type = detectedType
         }
       } catch (error) {

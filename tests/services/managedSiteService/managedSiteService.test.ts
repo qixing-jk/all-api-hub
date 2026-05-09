@@ -1,13 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  DONE_HUB,
-  NEW_API,
-  OCTOPUS,
-  VELOERA,
-} from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 
 const mockGetPreferences = vi.fn()
 
@@ -149,7 +142,7 @@ describe("managedSiteService", () => {
     )
 
     const prefs = {
-      managedSiteType: NEW_API,
+      managedSiteType: SITE_TYPES.NEW_API,
       newApi: {
         baseUrl: "https://new-api.example.com",
         adminToken: "admin-token",
@@ -163,7 +156,9 @@ describe("managedSiteService", () => {
     }
 
     expect(hasValidManagedSiteConfig(prefs as any)).toBe(true)
-    expect(hasValidManagedSiteConfig(prefs as any, OCTOPUS)).toBe(true)
+    expect(hasValidManagedSiteConfig(prefs as any, SITE_TYPES.OCTOPUS)).toBe(
+      true,
+    )
   })
 
   it("validates AxonHub config completeness by site type", async () => {
@@ -172,7 +167,7 @@ describe("managedSiteService", () => {
     )
 
     const prefs = {
-      managedSiteType: AXON_HUB,
+      managedSiteType: SITE_TYPES.AXON_HUB,
       axonHub: {
         baseUrl: "https://axonhub.example.com",
         email: "admin@example.com",
@@ -195,7 +190,7 @@ describe("managedSiteService", () => {
     )
 
     const prefs = {
-      managedSiteType: CLAUDE_CODE_HUB,
+      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
       claudeCodeHub: {
         baseUrl: "https://cch.example.com",
         adminToken: "admin-token",
@@ -216,10 +211,12 @@ describe("managedSiteService", () => {
       "~/services/managedSites/managedSiteService"
     )
 
-    mockGetPreferences.mockResolvedValueOnce({ managedSiteType: NEW_API })
+    mockGetPreferences.mockResolvedValueOnce({
+      managedSiteType: SITE_TYPES.NEW_API,
+    })
 
     const service = await getManagedSiteService()
-    expect(service.siteType).toBe(NEW_API)
+    expect(service.siteType).toBe(SITE_TYPES.NEW_API)
     expect(service.messagesKey).toBe("newapi")
 
     const config = await service.getConfig()
@@ -231,10 +228,12 @@ describe("managedSiteService", () => {
       "~/services/managedSites/managedSiteService"
     )
 
-    mockGetPreferences.mockResolvedValueOnce({ managedSiteType: VELOERA })
+    mockGetPreferences.mockResolvedValueOnce({
+      managedSiteType: SITE_TYPES.VELOERA,
+    })
 
     const service = await getManagedSiteService()
-    expect(service.siteType).toBe(VELOERA)
+    expect(service.siteType).toBe(SITE_TYPES.VELOERA)
     expect(service.messagesKey).toBe("veloera")
 
     const config = await service.getConfig()
@@ -246,8 +245,8 @@ describe("managedSiteService", () => {
       "~/services/managedSites/managedSiteService"
     )
 
-    const service = getManagedSiteServiceForType(DONE_HUB)
-    expect(service.siteType).toBe(DONE_HUB)
+    const service = getManagedSiteServiceForType(SITE_TYPES.DONE_HUB)
+    expect(service.siteType).toBe(SITE_TYPES.DONE_HUB)
     expect(service.messagesKey).toBe("donehub")
 
     const config = await service.getConfig()
@@ -259,8 +258,8 @@ describe("managedSiteService", () => {
       "~/services/managedSites/managedSiteService"
     )
 
-    const service = getManagedSiteServiceForType(OCTOPUS)
-    expect(service.siteType).toBe(OCTOPUS)
+    const service = getManagedSiteServiceForType(SITE_TYPES.OCTOPUS)
+    expect(service.siteType).toBe(SITE_TYPES.OCTOPUS)
     expect(service.messagesKey).toBe("octopus")
 
     const config = await service.getConfig()
@@ -272,8 +271,8 @@ describe("managedSiteService", () => {
       "~/services/managedSites/managedSiteService"
     )
 
-    const service = getManagedSiteServiceForType(AXON_HUB)
-    expect(service.siteType).toBe(AXON_HUB)
+    const service = getManagedSiteServiceForType(SITE_TYPES.AXON_HUB)
+    expect(service.siteType).toBe(SITE_TYPES.AXON_HUB)
     expect(service.messagesKey).toBe("axonhub")
 
     const config = await service.getConfig()
@@ -289,8 +288,8 @@ describe("managedSiteService", () => {
       "~/services/managedSites/managedSiteService"
     )
 
-    const service = getManagedSiteServiceForType(CLAUDE_CODE_HUB)
-    expect(service.siteType).toBe(CLAUDE_CODE_HUB)
+    const service = getManagedSiteServiceForType(SITE_TYPES.CLAUDE_CODE_HUB)
+    expect(service.siteType).toBe(SITE_TYPES.CLAUDE_CODE_HUB)
     expect(service.messagesKey).toBe("claudecodehub")
     expect(service.fetchChannelSecretKey).toBeUndefined()
 

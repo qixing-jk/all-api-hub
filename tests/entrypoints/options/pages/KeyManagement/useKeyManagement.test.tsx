@@ -4,6 +4,7 @@ import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE } from "~/features/KeyManagement/constants"
 import { useKeyManagement } from "~/features/KeyManagement/hooks/useKeyManagement"
 import { buildTokenIdentityKey } from "~/features/KeyManagement/utils"
@@ -63,7 +64,7 @@ const createDisplayAccount = (
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
   health: { status: SiteHealthStatus.Healthy },
-  siteType: "default",
+  siteType: SITE_TYPES.UNKNOWN,
   baseUrl: "https://example.com",
   token: "token",
   userId: 1,

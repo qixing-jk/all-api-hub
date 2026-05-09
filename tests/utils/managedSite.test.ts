@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { DONE_HUB, NEW_API, VELOERA } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   getManagedSiteAdminConfig,
   getManagedSiteAdminConfigForType,
@@ -22,7 +22,7 @@ describe("managedSite", () => {
   it("resolves Done Hub config when selected", () => {
     const prefs = {
       ...DEFAULT_PREFERENCES,
-      managedSiteType: DONE_HUB,
+      managedSiteType: SITE_TYPES.DONE_HUB,
       doneHub: {
         baseUrl: "https://donehub.example.com",
         adminToken: "token",
@@ -31,13 +31,15 @@ describe("managedSite", () => {
     } satisfies UserPreferences
 
     const { siteType, config } = getManagedSiteConfigFromPreferences(prefs)
-    expect(siteType).toBe(DONE_HUB)
+    expect(siteType).toBe(SITE_TYPES.DONE_HUB)
     expect(config).toEqual(prefs.doneHub)
   })
 
   it("returns Done Hub messages key + label key", () => {
-    expect(getManagedSiteMessagesKeyFromSiteType(DONE_HUB)).toBe("donehub")
-    expect(getManagedSiteLabelKey(DONE_HUB)).toBe(
+    expect(getManagedSiteMessagesKeyFromSiteType(SITE_TYPES.DONE_HUB)).toBe(
+      "donehub",
+    )
+    expect(getManagedSiteLabelKey(SITE_TYPES.DONE_HUB)).toBe(
       "settings:managedSite.doneHub",
     )
   })
@@ -45,10 +47,10 @@ describe("managedSite", () => {
   it("builds managed-site context for Done Hub", () => {
     const prefs = {
       ...DEFAULT_PREFERENCES,
-      managedSiteType: DONE_HUB,
+      managedSiteType: SITE_TYPES.DONE_HUB,
     } satisfies UserPreferences
     expect(getManagedSiteContext(prefs)).toEqual({
-      siteType: DONE_HUB,
+      siteType: SITE_TYPES.DONE_HUB,
       messagesKey: "donehub",
     })
   })
@@ -56,7 +58,7 @@ describe("managedSite", () => {
   it("returns null admin config when Done Hub credentials are incomplete", () => {
     const prefs = {
       ...DEFAULT_PREFERENCES,
-      managedSiteType: DONE_HUB,
+      managedSiteType: SITE_TYPES.DONE_HUB,
       doneHub: {
         baseUrl: "",
         adminToken: "token",
@@ -70,7 +72,7 @@ describe("managedSite", () => {
   it("returns admin config when Done Hub credentials are present", () => {
     const prefs = {
       ...DEFAULT_PREFERENCES,
-      managedSiteType: DONE_HUB,
+      managedSiteType: SITE_TYPES.DONE_HUB,
       doneHub: {
         baseUrl: "https://donehub.example.com",
         adminToken: "token",
@@ -88,7 +90,7 @@ describe("managedSite", () => {
   it("can resolve admin config for an explicit target site type", () => {
     const prefs = {
       ...DEFAULT_PREFERENCES,
-      managedSiteType: NEW_API,
+      managedSiteType: SITE_TYPES.NEW_API,
       doneHub: {
         baseUrl: "https://donehub.example.com",
         adminToken: "donehub-token",
@@ -96,7 +98,9 @@ describe("managedSite", () => {
       },
     } satisfies UserPreferences
 
-    expect(getManagedSiteAdminConfigForType(prefs, DONE_HUB)).toEqual({
+    expect(
+      getManagedSiteAdminConfigForType(prefs, SITE_TYPES.DONE_HUB),
+    ).toEqual({
       baseUrl: prefs.doneHub.baseUrl,
       adminToken: prefs.doneHub.adminToken,
       userId: prefs.doneHub.userId,
@@ -104,8 +108,8 @@ describe("managedSite", () => {
   })
 
   it("builds managed-site context for an explicit target site type", () => {
-    expect(getManagedSiteContextForType(VELOERA)).toEqual({
-      siteType: VELOERA,
+    expect(getManagedSiteContextForType(SITE_TYPES.VELOERA)).toEqual({
+      siteType: SITE_TYPES.VELOERA,
       messagesKey: "veloera",
     })
   })
@@ -113,7 +117,7 @@ describe("managedSite", () => {
   it("lists only configured migration targets and excludes selected site types", () => {
     const prefs = {
       ...DEFAULT_PREFERENCES,
-      managedSiteType: NEW_API,
+      managedSiteType: SITE_TYPES.NEW_API,
       doneHub: {
         baseUrl: "https://donehub.example.com",
         adminToken: "donehub-token",
@@ -133,11 +137,11 @@ describe("managedSite", () => {
 
     expect(
       getManagedSiteTargetOptions(prefs, {
-        excludeSiteTypes: [NEW_API],
+        excludeSiteTypes: [SITE_TYPES.NEW_API],
       }),
     ).toEqual([
       {
-        siteType: DONE_HUB,
+        siteType: SITE_TYPES.DONE_HUB,
         labelKey: "settings:managedSite.doneHub",
         messagesKey: "donehub",
         config: {
@@ -175,9 +179,11 @@ describe("managedSite", () => {
   it("preserves existing behavior for New API selection", () => {
     const prefs = {
       ...DEFAULT_PREFERENCES,
-      managedSiteType: NEW_API,
+      managedSiteType: SITE_TYPES.NEW_API,
     } satisfies UserPreferences
-    expect(getManagedSiteMessagesKeyFromSiteType(NEW_API)).toBe("newapi")
-    expect(getManagedSiteContext(prefs).siteType).toBe(NEW_API)
+    expect(getManagedSiteMessagesKeyFromSiteType(SITE_TYPES.NEW_API)).toBe(
+      "newapi",
+    )
+    expect(getManagedSiteContext(prefs).siteType).toBe(SITE_TYPES.NEW_API)
   })
 })

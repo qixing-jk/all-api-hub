@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   migrateAccountTagsData,
   needsAccountTagsDataMigration,
@@ -36,7 +37,7 @@ function makeAccount(overrides: Partial<SiteAccount>): SiteAccount {
     site_name: overrides.site_name ?? "Site",
     site_url: overrides.site_url ?? "https://example.com",
     health: overrides.health ?? ({ status: "healthy" } as any),
-    site_type: overrides.site_type ?? "test",
+    site_type: overrides.site_type ?? SITE_TYPES.UNKNOWN,
     exchange_rate: overrides.exchange_rate ?? 7,
     account_info:
       overrides.account_info ??

@@ -1,15 +1,7 @@
 import { Storage } from "@plasmohq/storage"
 
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  DONE_HUB,
-  NEW_API,
-  OCTOPUS,
-  VELOERA,
-  type ManagedSiteType,
-} from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import {
   STORAGE_LOCKS,
   USER_PREFERENCES_STORAGE_KEYS,
@@ -519,7 +511,7 @@ export const DEFAULT_PREFERENCES: UserPreferences = {
   octopus: DEFAULT_OCTOPUS_CONFIG,
   axonHub: DEFAULT_AXON_HUB_CONFIG,
   claudeCodeHub: DEFAULT_CLAUDE_CODE_HUB_CONFIG,
-  managedSiteType: NEW_API,
+  managedSiteType: SITE_TYPES.NEW_API,
   cliProxy: DEFAULT_CLI_PROXY_CONFIG,
   claudeCodeRouter: DEFAULT_CLAUDE_CODE_ROUTER_CONFIG,
   managedSiteModelSync: {
@@ -1135,7 +1127,7 @@ class UserPreferencesService {
       | ClaudeCodeHubConfig
   }> {
     const prefs = await this.getPreferences()
-    const siteType = prefs.managedSiteType || NEW_API
+    const siteType = prefs.managedSiteType || SITE_TYPES.NEW_API
     let config:
       | NewApiConfig
       | DoneHubConfig
@@ -1143,15 +1135,15 @@ class UserPreferencesService {
       | OctopusConfig
       | AxonHubConfig
       | ClaudeCodeHubConfig
-    if (siteType === AXON_HUB) {
+    if (siteType === SITE_TYPES.AXON_HUB) {
       config = prefs.axonHub || DEFAULT_AXON_HUB_CONFIG
-    } else if (siteType === CLAUDE_CODE_HUB) {
+    } else if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
       config = prefs.claudeCodeHub || DEFAULT_CLAUDE_CODE_HUB_CONFIG
-    } else if (siteType === OCTOPUS) {
+    } else if (siteType === SITE_TYPES.OCTOPUS) {
       config = prefs.octopus || DEFAULT_OCTOPUS_CONFIG
-    } else if (siteType === VELOERA) {
+    } else if (siteType === SITE_TYPES.VELOERA) {
       config = prefs.veloera
-    } else if (siteType === DONE_HUB) {
+    } else if (siteType === SITE_TYPES.DONE_HUB) {
       config = prefs.doneHub ?? DEFAULT_DONE_HUB_CONFIG
     } else {
       config = prefs.newApi

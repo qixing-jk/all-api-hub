@@ -4,7 +4,7 @@ import {
   RuntimeActionIds,
   RuntimeMessageTypes,
 } from "~/constants/runtimeActions"
-import { SUB2API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { DisplaySiteData, SiteAccount } from "~/types"
@@ -71,7 +71,7 @@ function getOriginKey(siteUrl: string): string {
 function getSkipReason(
   account: SiteAccount,
 ): AccountKeyRepairSkipReason | null {
-  if (account.site_type === SUB2API) {
+  if (account.site_type === SITE_TYPES.SUB2API) {
     return "sub2api"
   }
 

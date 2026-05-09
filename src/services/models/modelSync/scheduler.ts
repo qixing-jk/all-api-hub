@@ -1,5 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { CLAUDE_CODE_HUB, OCTOPUS } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import * as octopusApi from "~/services/apiService/octopus"
 import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import {
@@ -235,7 +235,7 @@ class ModelSyncScheduler {
     const { siteType, messagesKey } = getManagedSiteContext(userPrefs)
 
     // Octopus 使用独立的 API 服务
-    if (siteType === OCTOPUS) {
+    if (siteType === SITE_TYPES.OCTOPUS) {
       const { config } = getManagedSiteConfig(userPrefs)
       const octopusConfig = config as OctopusConfig
 
@@ -256,7 +256,7 @@ class ModelSyncScheduler {
       }
     }
 
-    if (siteType === CLAUDE_CODE_HUB) {
+    if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
       const managedConfig = getManagedSiteAdminConfig(userPrefs)
       if (!managedConfig) {
         throw new Error(getManagedSiteConfigMissingMessage(t, messagesKey))
@@ -296,7 +296,7 @@ class ModelSyncScheduler {
     const { maxRetries } = config
 
     // Octopus 使用独立的模型同步逻辑
-    if (siteType === OCTOPUS) {
+    if (siteType === SITE_TYPES.OCTOPUS) {
       return this.executeSyncForOctopus(
         channelIds,
         prefs,
@@ -306,7 +306,7 @@ class ModelSyncScheduler {
       )
     }
 
-    if (siteType === CLAUDE_CODE_HUB) {
+    if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
       throw new Error(t("messages:claudecodehub.unsupportedModelSync"))
     }
 

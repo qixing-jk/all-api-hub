@@ -2,6 +2,7 @@ import { act } from "@testing-library/react"
 import type React from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { MODEL_LIST_BATCH_VERIFY_CONCURRENCY } from "~/features/ModelList/batchVerification"
 import {
   BatchVerifyModelsDialog,
@@ -112,7 +113,7 @@ const account = {
   id: "acc-1",
   name: "Account One",
   baseUrl: "https://api.example.com",
-  siteType: "newapi",
+  siteType: SITE_TYPES.NEW_API,
   token: "account-token",
   cookieAuthSessionCookie: "",
   authType: "access_token",

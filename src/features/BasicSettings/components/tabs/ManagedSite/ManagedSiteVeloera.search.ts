@@ -1,4 +1,4 @@
-import { VELOERA } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildControlDefinition,
   buildSectionDefinition,
@@ -15,7 +15,7 @@ export const managedSiteVeloeraSearchSections: OptionsSearchItemDefinition[] = [
     343,
     {
       keywords: ["veloera"],
-      isVisible: (context) => context.managedSiteType === VELOERA,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.VELOERA,
     },
   ),
 ]
@@ -35,7 +35,7 @@ export const managedSiteVeloeraSearchControls: OptionsSearchItemDefinition[] = [
         "settings:veloera.title",
       ],
       keywords: ["veloera", "base url"],
-      isVisible: (context) => context.managedSiteType === VELOERA,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.VELOERA,
     },
   ),
   buildControlDefinition(
@@ -52,7 +52,7 @@ export const managedSiteVeloeraSearchControls: OptionsSearchItemDefinition[] = [
         "settings:veloera.title",
       ],
       keywords: ["veloera", "admin credentials"],
-      isVisible: (context) => context.managedSiteType === VELOERA,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.VELOERA,
     },
   ),
   buildControlDefinition(
@@ -69,7 +69,7 @@ export const managedSiteVeloeraSearchControls: OptionsSearchItemDefinition[] = [
         "settings:veloera.title",
       ],
       keywords: ["veloera", "token"],
-      isVisible: (context) => context.managedSiteType === VELOERA,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.VELOERA,
     },
   ),
   buildControlDefinition(
@@ -86,7 +86,7 @@ export const managedSiteVeloeraSearchControls: OptionsSearchItemDefinition[] = [
         "settings:veloera.title",
       ],
       keywords: ["veloera", "user id"],
-      isVisible: (context) => context.managedSiteType === VELOERA,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.VELOERA,
     },
   ),
 ]

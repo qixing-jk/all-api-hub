@@ -6,6 +6,7 @@ import {
 } from "~/components/dialogs/ChannelDialog"
 import { ChannelType } from "~/constants"
 import { DIALOG_MODES } from "~/constants/dialogModes"
+import { SITE_TYPES } from "~/constants/siteType"
 import * as accountOperations from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
@@ -65,7 +66,7 @@ const buildSiteAccount = (
   health: {
     status: SiteHealthStatus.Healthy,
   },
-  site_type: "newapi",
+  site_type: SITE_TYPES.NEW_API,
   exchange_rate: 7,
   account_info: {
     id: 1,
@@ -103,7 +104,7 @@ const buildDisplaySiteData = (
   todayIncome: { USD: 0, CNY: 0 },
   todayTokens: { upload: 0, download: 0 },
   health: { status: SiteHealthStatus.Healthy },
-  siteType: "newapi",
+  siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://upstream.example.com",
   token: "access-token",
   userId: 1,

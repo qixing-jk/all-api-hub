@@ -12,6 +12,7 @@ import {
   type AutoDetectErrorCode,
 } from "~/constants/autoDetect"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { isSiteType, type SiteType } from "~/constants/siteType"
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 import {
   getActiveOrAllTabs,
@@ -31,12 +32,19 @@ import { getSiteType } from "./detectSiteType"
  */
 const logger = createLogger("AutoDetectService")
 
+/**
+ * Normalizes optional site type hints received from content scripts.
+ */
+function normalizeSiteTypeHint(value: unknown): SiteType | undefined {
+  return isSiteType(value) ? value : undefined
+}
+
 interface AutoDetectResult {
   success: boolean
   data?: {
     userId: number
     user: any
-    siteType: string
+    siteType: SiteType
     accessToken?: string
     sub2apiAuth?: Sub2ApiAuthConfig
   }
@@ -49,7 +57,7 @@ interface UserDataResult {
   user: any
   accessToken?: string
   sub2apiAuth?: Sub2ApiAuthConfig
-  siteTypeHint?: string
+  siteTypeHint?: SiteType
 }
 
 interface CurrentTabUserDataResult {
@@ -130,7 +138,7 @@ async function combineUserDataAndSiteType(
  */
 async function getUserDataViaAPI(
   url: string,
-  siteType: string,
+  siteType: SiteType,
 ): Promise<UserDataResult | null> {
   try {
     const userInfo = await getApiService(siteType).fetchUserInfo({
@@ -193,7 +201,7 @@ async function autoDetectDirect(url: string): Promise<AutoDetectResult> {
  */
 async function getUserDataViaBackground(
   url: string,
-  siteType: string,
+  siteType: SiteType,
 ): Promise<UserDataResult | null> {
   try {
     const requestId = `auto-detect-${Date.now()}`
@@ -213,7 +221,7 @@ async function getUserDataViaBackground(
       user: response.data.user,
       accessToken: response.data.accessToken,
       sub2apiAuth: response.data.sub2apiAuth,
-      siteTypeHint: response.data.siteTypeHint,
+      siteTypeHint: normalizeSiteTypeHint(response.data.siteTypeHint),
     }
   } catch (error) {
     logger.error("Background 方式获取用户数据失败", error)
@@ -248,7 +256,7 @@ async function autoDetectViaBackground(url: string): Promise<AutoDetectResult> {
  */
 async function getUserDataFromCurrentTab(
   url: string,
-  siteType: string,
+  siteType: SiteType,
 ): Promise<CurrentTabUserDataResult> {
   let contentScriptUnavailable = false
 
@@ -277,7 +285,7 @@ async function getUserDataFromCurrentTab(
             user: userResponse.data.user,
             accessToken: userResponse.data.accessToken,
             sub2apiAuth: userResponse.data.sub2apiAuth,
-            siteTypeHint: userResponse.data.siteTypeHint,
+            siteTypeHint: normalizeSiteTypeHint(userResponse.data.siteTypeHint),
           },
           contentScriptUnavailable,
         }

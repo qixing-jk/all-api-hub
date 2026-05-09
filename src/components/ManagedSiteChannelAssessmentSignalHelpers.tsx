@@ -2,7 +2,7 @@ import type { TFunction } from "i18next"
 
 import Tooltip from "~/components/Tooltip"
 import { Badge } from "~/components/ui"
-import { NEW_API, type ManagedSiteType } from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
@@ -74,7 +74,7 @@ export const appendNewApiKeyHintToTooltip = (
   t: TFunction,
 ) => {
   if (
-    managedSiteType !== NEW_API ||
+    managedSiteType !== SITE_TYPES.NEW_API ||
     assessment.key.reason !==
       MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.COMPARISON_UNAVAILABLE
   ) {

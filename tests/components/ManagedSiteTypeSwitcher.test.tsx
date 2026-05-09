@@ -3,13 +3,7 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  DONE_HUB,
-  NEW_API,
-  VELOERA,
-} from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const { mockedUseUserPreferencesContext, showUpdateToastMock } = vi.hoisted(
@@ -35,7 +29,9 @@ vi.mock("~/utils/core/toastHelpers", () => ({
   showUpdateToast: (...args: unknown[]) => showUpdateToastMock(...args),
 }))
 
-const createPreferences = (managedSiteType = NEW_API) => ({
+const createPreferences = (
+  managedSiteType: ManagedSiteType = SITE_TYPES.NEW_API,
+) => ({
   managedSiteType,
   newApi: {
     baseUrl: "https://new-api.example",
@@ -72,7 +68,7 @@ const createPreferences = (managedSiteType = NEW_API) => ({
 })
 
 const createContextValue = (overrides: Record<string, unknown> = {}) => ({
-  managedSiteType: NEW_API,
+  managedSiteType: SITE_TYPES.NEW_API,
   preferences: createPreferences(),
   updateManagedSiteType: vi.fn().mockResolvedValue(true),
   ...overrides,
@@ -89,10 +85,10 @@ describe("ManagedSiteTypeSwitcher", () => {
     const user = userEvent.setup()
     mockedUseUserPreferencesContext.mockReturnValue(
       createContextValue({
-        managedSiteType: VELOERA,
+        managedSiteType: SITE_TYPES.VELOERA,
         preferences: {
-          ...createPreferences(VELOERA),
-          managedSiteType: VELOERA,
+          ...createPreferences(SITE_TYPES.VELOERA),
+          managedSiteType: SITE_TYPES.VELOERA,
         },
       }),
     )
@@ -167,7 +163,7 @@ describe("ManagedSiteTypeSwitcher", () => {
     )
     await user.click(await screen.findByText("settings:managedSite.doneHub"))
 
-    expect(updateManagedSiteType).toHaveBeenCalledWith(DONE_HUB)
+    expect(updateManagedSiteType).toHaveBeenCalledWith(SITE_TYPES.DONE_HUB)
     expect(showUpdateToastMock).toHaveBeenCalledWith(
       true,
       "settings:managedSite.siteTypeLabel",
@@ -180,7 +176,7 @@ describe("ManagedSiteTypeSwitcher", () => {
     )
     await user.click(await screen.findByText("settings:managedSite.axonHub"))
 
-    expect(updateManagedSiteType).toHaveBeenLastCalledWith(AXON_HUB)
+    expect(updateManagedSiteType).toHaveBeenLastCalledWith(SITE_TYPES.AXON_HUB)
 
     await user.click(
       await screen.findByRole("combobox", {
@@ -191,6 +187,8 @@ describe("ManagedSiteTypeSwitcher", () => {
       await screen.findByText("settings:managedSite.claudeCodeHub"),
     )
 
-    expect(updateManagedSiteType).toHaveBeenLastCalledWith(CLAUDE_CODE_HUB)
+    expect(updateManagedSiteType).toHaveBeenLastCalledWith(
+      SITE_TYPES.CLAUDE_CODE_HUB,
+    )
   })
 })

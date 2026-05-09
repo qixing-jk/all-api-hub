@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { API_CREDENTIAL_PROFILES_STORAGE_KEYS } from "~/services/core/storageKeys"
 import { tagStorage } from "~/services/tags/tagStorage"
@@ -119,7 +120,7 @@ describe("tagStorage", () => {
           site_name: "Site",
           site_url: "https://example.com",
           health: { status: "healthy" } as any,
-          site_type: "test",
+          site_type: SITE_TYPES.UNKNOWN,
           exchange_rate: 7,
           account_info: {
             id: 1,
@@ -172,7 +173,7 @@ describe("tagStorage", () => {
           site_name: "Site",
           site_url: "https://example.com",
           health: { status: "healthy" } as any,
-          site_type: "test",
+          site_type: SITE_TYPES.UNKNOWN,
           exchange_rate: 7,
           account_info: { id: 1, access_token: "token" } as any,
           last_sync_time: 0,
@@ -203,7 +204,7 @@ describe("tagStorage", () => {
           site_name: "Site",
           site_url: "https://example.com",
           health: { status: "healthy" } as any,
-          site_type: "test",
+          site_type: SITE_TYPES.UNKNOWN,
           exchange_rate: 7,
           account_info: { id: 1, access_token: "token" } as any,
           last_sync_time: 0,
@@ -242,7 +243,7 @@ describe("tagStorage", () => {
           site_name: "Site",
           site_url: "https://example.com",
           health: { status: "healthy" } as any,
-          site_type: "test",
+          site_type: SITE_TYPES.UNKNOWN,
           exchange_rate: 7,
           account_info: {
             id: 1,
@@ -314,7 +315,7 @@ describe("tagStorage", () => {
           site_name: "Site",
           site_url: "https://example.com",
           health: { status: "healthy" },
-          site_type: "test",
+          site_type: SITE_TYPES.UNKNOWN,
           exchange_rate: 7,
           account_info: { id: 1, access_token: "token" },
           last_sync_time: 0,
@@ -329,7 +330,7 @@ describe("tagStorage", () => {
           site_name: "Site",
           site_url: "https://example.com/empty",
           health: { status: "healthy" },
-          site_type: "test",
+          site_type: SITE_TYPES.UNKNOWN,
           exchange_rate: 7,
           account_info: { id: 2, access_token: "token" },
           last_sync_time: 0,
@@ -344,7 +345,7 @@ describe("tagStorage", () => {
           site_name: "Site",
           site_url: "https://example.com/miss",
           health: { status: "healthy" },
-          site_type: "test",
+          site_type: SITE_TYPES.UNKNOWN,
           exchange_rate: 7,
           account_info: { id: 3, access_token: "token" },
           last_sync_time: 0,
@@ -359,7 +360,7 @@ describe("tagStorage", () => {
           site_name: "Site",
           site_url: "https://example.com/none",
           health: { status: "healthy" },
-          site_type: "test",
+          site_type: SITE_TYPES.UNKNOWN,
           exchange_rate: 7,
           account_info: { id: 4, access_token: "token" },
           last_sync_time: 0,

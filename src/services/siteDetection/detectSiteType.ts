@@ -1,4 +1,8 @@
-import { SITE_TITLE_RULES, UNKNOWN_SITE } from "~/constants/siteType"
+import {
+  SITE_TITLE_RULES,
+  SITE_TYPES,
+  type SiteType,
+} from "~/constants/siteType"
 import { COMPAT_USER_ID_ERROR_HEADER_TO_SITE_TYPE } from "~/services/apiService/common/compatHeaders"
 import { ApiError } from "~/services/apiService/common/errors"
 import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
@@ -84,10 +88,10 @@ export const fetchSiteOriginalTitle = async (url: string) => {
  * 1. Known site-specific compat user-id header markers from upstream auth errors
  * 2. Whole-message matching against existing site detection rules
  */
-function detectSiteTypeFromApiErrorMessage(message: string): string {
+function detectSiteTypeFromApiErrorMessage(message: string): SiteType {
   const normalizedMessage = message.trim()
   if (!normalizedMessage) {
-    return UNKNOWN_SITE
+    return SITE_TYPES.UNKNOWN
   }
 
   for (const knownRule of COMPAT_USER_ID_HEADER_MESSAGE_RULES) {
@@ -102,14 +106,14 @@ function detectSiteTypeFromApiErrorMessage(message: string): string {
     }
   }
 
-  return UNKNOWN_SITE
+  return SITE_TYPES.UNKNOWN
 }
 
 /**
  * Probes the /api/user/self endpoint using cookie auth and infers the site
  * type from upstream auth error messages when title detection fails.
  */
-async function getSiteUserIdType(url: string): Promise<string> {
+async function getSiteUserIdType(url: string): Promise<SiteType> {
   try {
     await fetchApiData<unknown>(
       {
@@ -129,10 +133,10 @@ async function getSiteUserIdType(url: string): Promise<string> {
     }
     throw error
   }
-  return UNKNOWN_SITE
+  return SITE_TYPES.UNKNOWN
 }
 
-export const getSiteType = async (url: string) => {
+export const getSiteType = async (url: string): Promise<SiteType> => {
   const title = await fetchSiteOriginalTitle(url)
   for (const rule of SITE_TITLE_RULES) {
     if (rule.regex.test(title)) {

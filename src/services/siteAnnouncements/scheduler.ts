@@ -1,5 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { SUB2API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -154,7 +154,7 @@ function dedupeCommonAccounts(accounts: SiteAccount[]): SiteAccount[] {
   const result: SiteAccount[] = []
 
   for (const account of accounts) {
-    if (account.site_type === SUB2API) {
+    if (account.site_type === SITE_TYPES.SUB2API) {
       result.push(account)
       continue
     }
@@ -393,7 +393,7 @@ async function syncSub2ApiAnnouncementRead(recordId: string): Promise<void> {
   )
   if (
     !record ||
-    record.siteType !== SUB2API ||
+    record.siteType !== SITE_TYPES.SUB2API ||
     record.providerId !== SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api ||
     !record.upstreamId
   ) {
@@ -412,7 +412,7 @@ async function syncSub2ApiAnnouncementRead(recordId: string): Promise<void> {
     return
   }
 
-  const service = getSiteAnnouncementProvider(SUB2API)
+  const service = getSiteAnnouncementProvider(SITE_TYPES.SUB2API)
   await service.markRead?.(createProviderRequest(account, service), [
     { id: record.upstreamId },
   ])

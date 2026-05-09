@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { NEW_API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -24,7 +24,7 @@ const mockAccount = buildSiteAccount({
   id: "test-id",
   site_name: "Test",
   site_url: "https://test.com",
-  site_type: NEW_API,
+  site_type: SITE_TYPES.NEW_API,
   authType: AuthTypeEnum.AccessToken,
   exchange_rate: 7.0,
   notes: "",

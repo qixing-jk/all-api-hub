@@ -1,4 +1,4 @@
-import { AXON_HUB } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildControlDefinition,
   buildSectionDefinition,
@@ -15,7 +15,7 @@ export const managedSiteAxonHubSearchSections: OptionsSearchItemDefinition[] = [
     345,
     {
       keywords: ["axonhub", "graphql"],
-      isVisible: (context) => context.managedSiteType === AXON_HUB,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.AXON_HUB,
     },
   ),
 ]
@@ -35,7 +35,7 @@ export const managedSiteAxonHubSearchControls: OptionsSearchItemDefinition[] = [
         "settings:axonHub.title",
       ],
       keywords: ["axonhub", "base url"],
-      isVisible: (context) => context.managedSiteType === AXON_HUB,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.AXON_HUB,
     },
   ),
   buildControlDefinition(
@@ -52,7 +52,7 @@ export const managedSiteAxonHubSearchControls: OptionsSearchItemDefinition[] = [
         "settings:axonHub.title",
       ],
       keywords: ["axonhub", "email"],
-      isVisible: (context) => context.managedSiteType === AXON_HUB,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.AXON_HUB,
     },
   ),
   buildControlDefinition(
@@ -69,7 +69,7 @@ export const managedSiteAxonHubSearchControls: OptionsSearchItemDefinition[] = [
         "settings:axonHub.title",
       ],
       keywords: ["axonhub", "password"],
-      isVisible: (context) => context.managedSiteType === AXON_HUB,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.AXON_HUB,
     },
   ),
   buildControlDefinition(
@@ -86,7 +86,7 @@ export const managedSiteAxonHubSearchControls: OptionsSearchItemDefinition[] = [
         "settings:axonHub.title",
       ],
       keywords: ["axonhub", "validate", "signin"],
-      isVisible: (context) => context.managedSiteType === AXON_HUB,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.AXON_HUB,
     },
   ),
   buildControlDefinition(
@@ -103,7 +103,7 @@ export const managedSiteAxonHubSearchControls: OptionsSearchItemDefinition[] = [
         "settings:axonHub.title",
       ],
       keywords: ["axonhub", "cors", "forbidden"],
-      isVisible: (context) => context.managedSiteType === AXON_HUB,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.AXON_HUB,
     },
   ),
 ]

@@ -3,7 +3,7 @@ import { useTranslation } from "react-i18next"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { NEW_API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
@@ -212,7 +212,7 @@ export default function KeyManagement(props: {
     token: AccountToken,
     managedSiteStatus: ManagedSiteTokenChannelStatus,
   ) => {
-    if (managedSiteType !== NEW_API) {
+    if (managedSiteType !== SITE_TYPES.NEW_API) {
       return
     }
 

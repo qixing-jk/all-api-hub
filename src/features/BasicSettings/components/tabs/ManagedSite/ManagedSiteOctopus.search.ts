@@ -1,4 +1,4 @@
-import { OCTOPUS } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildControlDefinition,
   buildSectionDefinition,
@@ -15,7 +15,7 @@ export const managedSiteOctopusSearchSections: OptionsSearchItemDefinition[] = [
     344,
     {
       keywords: ["octopus"],
-      isVisible: (context) => context.managedSiteType === OCTOPUS,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.OCTOPUS,
     },
   ),
 ]
@@ -35,7 +35,7 @@ export const managedSiteOctopusSearchControls: OptionsSearchItemDefinition[] = [
         "settings:octopus.title",
       ],
       keywords: ["octopus", "base url"],
-      isVisible: (context) => context.managedSiteType === OCTOPUS,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.OCTOPUS,
     },
   ),
   buildControlDefinition(
@@ -52,7 +52,7 @@ export const managedSiteOctopusSearchControls: OptionsSearchItemDefinition[] = [
         "settings:octopus.title",
       ],
       keywords: ["octopus", "username"],
-      isVisible: (context) => context.managedSiteType === OCTOPUS,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.OCTOPUS,
     },
   ),
   buildControlDefinition(
@@ -69,7 +69,7 @@ export const managedSiteOctopusSearchControls: OptionsSearchItemDefinition[] = [
         "settings:octopus.title",
       ],
       keywords: ["octopus", "password"],
-      isVisible: (context) => context.managedSiteType === OCTOPUS,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.OCTOPUS,
     },
   ),
   buildControlDefinition(
@@ -86,7 +86,7 @@ export const managedSiteOctopusSearchControls: OptionsSearchItemDefinition[] = [
         "settings:octopus.title",
       ],
       keywords: ["octopus", "validate", "login"],
-      isVisible: (context) => context.managedSiteType === OCTOPUS,
+      isVisible: (context) => context.managedSiteType === SITE_TYPES.OCTOPUS,
     },
   ),
 ]

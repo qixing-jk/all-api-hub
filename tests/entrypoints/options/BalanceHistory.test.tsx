@@ -4,7 +4,7 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { echarts } from "~/components/charts/echarts"
-import { ONE_API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import BalanceHistory from "~/entrypoints/options/pages/BalanceHistory"
@@ -203,7 +203,7 @@ describe("BalanceHistory options page", () => {
     const escapeRegExp = (value: string) =>
       value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 
-    const SITE_TYPE = ONE_API
+    const SITE_TYPE = SITE_TYPES.ONE_API
 
     const ACCOUNT_ID_A = "a1"
     const ACCOUNT_ID_B = "a2"
@@ -323,14 +323,14 @@ describe("BalanceHistory options page", () => {
           id: "a1",
           site_name: "Site A",
           site_url: "https://a.example.com",
-          site_type: ONE_API,
+          site_type: SITE_TYPES.ONE_API,
           account_info: { username: "User A" },
         },
         {
           id: "a2",
           site_name: "Site B",
           site_url: "https://b.example.com",
-          site_type: ONE_API,
+          site_type: SITE_TYPES.ONE_API,
           account_info: { username: "User B" },
         },
       ] as any)
@@ -398,14 +398,14 @@ describe("BalanceHistory options page", () => {
           id: "a1",
           site_name: "Shared Site",
           site_url: "https://one.example.com",
-          site_type: ONE_API,
+          site_type: SITE_TYPES.ONE_API,
           account_info: { username: "alice" },
         },
         {
           id: "a2",
           site_name: "Shared Site",
           site_url: "https://two.example.com",
-          site_type: ONE_API,
+          site_type: SITE_TYPES.ONE_API,
           account_info: { username: "bob" },
         },
       ] as any)
@@ -484,14 +484,14 @@ describe("BalanceHistory options page", () => {
           id: "a1",
           site_name: "Site A",
           site_url: "https://a.example.com",
-          site_type: ONE_API,
+          site_type: SITE_TYPES.ONE_API,
           account_info: { username: "User A" },
         },
         {
           id: "a2",
           site_name: "Site B",
           site_url: "https://b.example.com",
-          site_type: ONE_API,
+          site_type: SITE_TYPES.ONE_API,
           account_info: { username: "User B" },
         },
       ] as any)
@@ -580,14 +580,14 @@ describe("BalanceHistory options page", () => {
           id: "a1",
           site_name: "Site A",
           site_url: "https://a.example.com",
-          site_type: ONE_API,
+          site_type: SITE_TYPES.ONE_API,
           account_info: { username: "User A" },
         },
         {
           id: "a2",
           site_name: "Site B",
           site_url: "https://b.example.com",
-          site_type: ONE_API,
+          site_type: SITE_TYPES.ONE_API,
           account_info: { username: "User B" },
         },
       ] as any)
@@ -679,14 +679,14 @@ describe("BalanceHistory options page", () => {
           id: "a1",
           site_name: "Site A",
           site_url: "https://a.example.com",
-          site_type: ONE_API,
+          site_type: SITE_TYPES.ONE_API,
           account_info: { username: "User A" },
         },
         {
           id: "a2",
           site_name: "Site B",
           site_url: "https://b.example.com",
-          site_type: ONE_API,
+          site_type: SITE_TYPES.ONE_API,
           account_info: { username: "User B" },
         },
       ] as any)
@@ -765,7 +765,7 @@ describe("BalanceHistory options page", () => {
           id: "a1",
           site_name: "Site A",
           site_url: "https://a.example.com",
-          site_type: ONE_API,
+          site_type: SITE_TYPES.ONE_API,
           account_info: { username: "User A" },
         },
       ] as any)
@@ -868,7 +868,7 @@ describe("BalanceHistory options page", () => {
           id: "a1",
           site_name: "Site A",
           site_url: "https://a.example.com",
-          site_type: ONE_API,
+          site_type: SITE_TYPES.ONE_API,
           account_info: { username: "User A" },
         },
       ] as any)
@@ -1007,7 +1007,7 @@ describe("BalanceHistory options page", () => {
           id: "a1",
           site_name: "Site A",
           site_url: "https://a.example.com",
-          site_type: ONE_API,
+          site_type: SITE_TYPES.ONE_API,
           account_info: { username: "User A" },
         },
       ] as any)

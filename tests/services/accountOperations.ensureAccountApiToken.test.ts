@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   DEFAULT_AUTO_PROVISION_TOKEN_NAME,
   ensureDefaultApiTokenForAccount,
@@ -77,7 +78,7 @@ const createTestAccounts = () => {
 const createNonSub2ApiAccounts = () => {
   const displayAccount = {
     id: "new-api-account",
-    siteType: "new-api",
+    siteType: SITE_TYPES.NEW_API,
     baseUrl: "https://new-api.example.com",
     authType: AuthTypeEnum.AccessToken,
     userId: 456,
@@ -87,7 +88,7 @@ const createNonSub2ApiAccounts = () => {
 
   const siteAccount = buildSiteAccount({
     id: displayAccount.id,
-    site_type: "new-api",
+    site_type: SITE_TYPES.NEW_API,
     site_url: displayAccount.baseUrl,
     authType: AuthTypeEnum.AccessToken,
     account_info: {

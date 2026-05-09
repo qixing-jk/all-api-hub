@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import SiteInfo from "~/features/AccountManagement/components/AccountList/SiteInfo"
 import { TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
@@ -115,7 +116,7 @@ const buildSite = (overrides: Record<string, unknown> = {}) =>
     name: "Site",
     username: "user",
     baseUrl: "https://example.com",
-    siteType: "test",
+    siteType: SITE_TYPES.UNKNOWN,
     token: "token",
     userId: 1,
     authType: "access_token",

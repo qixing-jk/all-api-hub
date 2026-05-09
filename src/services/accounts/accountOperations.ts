@@ -5,7 +5,12 @@
 import toast from "react-hot-toast"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { SITE_TITLE_RULES, SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
+import {
+  isSiteType,
+  SITE_TITLE_RULES,
+  SITE_TYPES,
+  type SiteType,
+} from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
   ensureDefaultApiTokenForAccount,
@@ -159,7 +164,7 @@ export async function autoDetectAccount(
     }
 
     const { userId, siteType, sub2apiAuth } = detectResult.data
-    const isSub2Api = siteType === SUB2API
+    const isSub2Api = siteType === SITE_TYPES.SUB2API
     const effectiveAuthType = isSub2Api ? AuthTypeEnum.AccessToken : authType
 
     if (!userId) {
@@ -325,16 +330,20 @@ export function isValidAccount({
   siteName: string
   username: string
   userId: string
-  siteType?: string
+  siteType?: SiteType
   authType: AuthTypeEnum
   accessToken: string
   cookieAuthSessionCookie?: string
   exchangeRate: string
 }) {
+  const normalizedSiteType = isSiteType(siteType)
+    ? siteType
+    : SITE_TYPES.UNKNOWN
+
   return (
     !!siteName.trim() &&
     // Sub2API 默认可能返回空 username（""），允许保存账号信息
-    (siteType === SUB2API || !!username.trim()) &&
+    (normalizedSiteType === SITE_TYPES.SUB2API || !!username.trim()) &&
     !!userId.trim() &&
     isValidExchangeRate(exchangeRate) &&
     (authType !== AuthTypeEnum.AccessToken || !!accessToken.trim()) &&
@@ -368,10 +377,10 @@ function normalizeTagIdsInput(tagIds: TagIdsInput): string[] {
  * Normalizes the Sub2API auth input.
  */
 function normalizeSub2ApiAuthInput(
-  siteType: string,
+  siteType: SiteType,
   sub2apiAuth: Sub2ApiAuthConfig | undefined,
 ): Sub2ApiAuthConfig | undefined {
-  if (siteType !== SUB2API) return undefined
+  if (siteType !== SITE_TYPES.SUB2API) return undefined
 
   const refreshToken =
     typeof sub2apiAuth?.refreshToken === "string"
@@ -449,7 +458,7 @@ export async function resolveSub2ApiQuickCreateResolution(
     | "cookieAuthSessionCookie"
   >,
 ): Promise<Sub2ApiQuickCreateResolution> {
-  if (account.siteType !== SUB2API) {
+  if (account.siteType !== SITE_TYPES.SUB2API) {
     throw new Error("sub2api_quick_create_not_applicable")
   }
 
@@ -514,6 +523,9 @@ export async function validateAndSaveAccount(
     authType === AuthTypeEnum.Cookie
       ? extractSessionCookieHeader(cookieAuthSessionCookie)
       : ""
+  const normalizedSiteType = isSiteType(siteType)
+    ? siteType
+    : SITE_TYPES.UNKNOWN
 
   // 表单验证
   if (
@@ -521,7 +533,7 @@ export async function validateAndSaveAccount(
       siteName,
       username,
       userId,
-      siteType,
+      siteType: normalizedSiteType,
       authType,
       accessToken,
       cookieAuthSessionCookie: sessionCookieHeader,
@@ -560,18 +572,21 @@ export async function validateAndSaveAccount(
   const manualQuota = parseManualQuotaFromUsd(manualBalanceUsd)
   const normalizedManualBalanceUsd =
     manualQuota === undefined ? "" : manualBalanceUsd!.trim()
-  const normalizedSub2ApiAuth = normalizeSub2ApiAuthInput(siteType, sub2apiAuth)
+  const normalizedSub2ApiAuth = normalizeSub2ApiAuthInput(
+    normalizedSiteType,
+    sub2apiAuth,
+  )
 
   try {
     // 获取账号余额和今日使用情况
     logger.debug("Fetching account data for new account", {
       baseUrl: url.trim(),
-      siteType,
+      siteType: normalizedSiteType,
       authType,
       userId: parsedUserId,
     })
     const freshAccountData = await withTimeout(
-      getApiService(siteType).fetchAccountData({
+      getApiService(normalizedSiteType).fetchAccountData({
         baseUrl: url.trim(),
         checkIn: checkInConfig,
         accountId: undefined, // New account, no ID yet
@@ -599,7 +614,7 @@ export async function validateAndSaveAccount(
       site_name: siteName.trim(),
       site_url: url.trim(),
       health: { status: SiteHealthStatus.Healthy }, // 成功获取数据说明状态正常
-      site_type: siteType,
+      site_type: normalizedSiteType,
       authType: authType,
       disabled: false,
       excludeFromTotalBalance: excludeFromTotalBalance === true,
@@ -631,7 +646,7 @@ export async function validateAndSaveAccount(
     logger.info("Account saved with data refresh", {
       accountId,
       siteName: siteName.trim(),
-      siteType,
+      siteType: normalizedSiteType,
     })
 
     void autoProvisionKeyOnAccountAdd(
@@ -658,7 +673,7 @@ export async function validateAndSaveAccount(
     > = {
       site_name: siteName.trim(),
       site_url: url.trim(),
-      site_type: siteType,
+      site_type: normalizedSiteType,
       authType: authType,
       disabled: false,
       excludeFromTotalBalance: excludeFromTotalBalance === true,
@@ -766,6 +781,9 @@ export async function validateAndUpdateAccount(
     authType === AuthTypeEnum.Cookie
       ? extractSessionCookieHeader(cookieAuthSessionCookie)
       : ""
+  const normalizedSiteType = isSiteType(siteType)
+    ? siteType
+    : SITE_TYPES.UNKNOWN
 
   // 表单验证
   if (
@@ -773,7 +791,7 @@ export async function validateAndUpdateAccount(
       siteName,
       username,
       userId,
-      siteType,
+      siteType: normalizedSiteType,
       authType,
       accessToken,
       cookieAuthSessionCookie: sessionCookieHeader,
@@ -797,20 +815,25 @@ export async function validateAndUpdateAccount(
   const manualQuota = parseManualQuotaFromUsd(manualBalanceUsd)
   const normalizedManualBalanceUsd =
     manualQuota === undefined ? "" : manualBalanceUsd!.trim()
-  const normalizedSub2ApiAuth = normalizeSub2ApiAuthInput(siteType, sub2apiAuth)
+  const normalizedSub2ApiAuth = normalizeSub2ApiAuthInput(
+    normalizedSiteType,
+    sub2apiAuth,
+  )
 
   try {
     // 获取账号余额和今日使用情况
     logger.debug("Fetching account data for update", {
       accountId,
       baseUrl: url.trim(),
-      siteType,
+      siteType: normalizedSiteType,
       authType,
       userId: parsedUserId,
     })
     const includeTodayCashflow =
       (await userPreferences.getPreferences()).showTodayCashflow ?? true
-    const freshAccountData = await getApiService(siteType).fetchAccountData({
+    const freshAccountData = await getApiService(
+      normalizedSiteType,
+    ).fetchAccountData({
       baseUrl: url.trim(),
       checkIn: checkInConfig,
       accountId,
@@ -832,7 +855,7 @@ export async function validateAndUpdateAccount(
       site_name: siteName.trim(),
       site_url: url.trim(),
       health: { status: SiteHealthStatus.Healthy }, // 成功获取数据说明状态正常
-      site_type: siteType,
+      site_type: normalizedSiteType,
       authType: authType,
       excludeFromTotalBalance: excludeFromTotalBalance === true,
       cookieAuth:
@@ -891,7 +914,7 @@ export async function validateAndUpdateAccount(
     const partialUpdateData = {
       site_name: siteName.trim(),
       site_url: url.trim(),
-      site_type: siteType,
+      site_type: normalizedSiteType,
       authType: authType,
       excludeFromTotalBalance: excludeFromTotalBalance === true,
       cookieAuth:
@@ -987,7 +1010,7 @@ export function extractDomainPrefix(hostname: string): string {
  */
 function IsNotDefaultSiteName(siteName: string): boolean {
   return !SITE_TITLE_RULES.some(
-    (rule) => rule.name !== UNKNOWN_SITE && rule.regex.test(siteName),
+    (rule) => rule.name !== SITE_TYPES.UNKNOWN && rule.regex.test(siteName),
   )
 }
 /**
@@ -1088,7 +1111,7 @@ export async function ensureAccountApiToken(
 
   if (!apiToken) {
     const newTokenData = generateDefaultTokenRequest()
-    if (displaySiteData.siteType === SUB2API) {
+    if (displaySiteData.siteType === SITE_TYPES.SUB2API) {
       const normalizedGroup =
         typeof options.sub2apiGroup === "string"
           ? options.sub2apiGroup.trim()
@@ -1170,7 +1193,7 @@ async function autoProvisionKeyOnAccountAdd(
       return
     }
 
-    if (account.site_type === SUB2API) {
+    if (account.site_type === SITE_TYPES.SUB2API) {
       return
     }
 

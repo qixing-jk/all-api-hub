@@ -1,4 +1,4 @@
-import { getSiteApiRouter, SUB2API } from "~/constants/siteType"
+import { getSiteApiRouter, SITE_TYPES } from "~/constants/siteType"
 import {
   SITE_ANNOUNCEMENT_PROVIDER_IDS,
   type SiteAnnouncementRecord,
@@ -44,7 +44,7 @@ export function formatSub2ApiRelativeTimestamp(record: SiteAnnouncementRecord) {
  */
 export function isSub2ApiAnnouncement(record: SiteAnnouncementRecord) {
   return (
-    record.siteType === SUB2API ||
+    record.siteType === SITE_TYPES.SUB2API ||
     record.providerId === SITE_ANNOUNCEMENT_PROVIDER_IDS.Sub2Api
   )
 }

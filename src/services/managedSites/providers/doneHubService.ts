@@ -1,7 +1,7 @@
 import toast from "react-hot-toast"
 
 import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
-import { DONE_HUB } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { getApiService } from "~/services/apiService"
@@ -69,7 +69,7 @@ export async function searchChannel(
   userId: number | string,
   keyword: string,
 ): Promise<ManagedSiteChannelListData | null> {
-  return await getApiService(DONE_HUB).searchChannel(
+  return await getApiService(SITE_TYPES.DONE_HUB).searchChannel(
     {
       baseUrl,
       auth: {
@@ -91,7 +91,7 @@ export async function createChannel(
   userId: number | string,
   channelData: CreateChannelPayload,
 ) {
-  return await getApiService(DONE_HUB).createChannel(
+  return await getApiService(SITE_TYPES.DONE_HUB).createChannel(
     {
       baseUrl,
       auth: {
@@ -113,7 +113,7 @@ export async function updateChannel(
   userId: number | string,
   channelData: UpdateChannelPayload,
 ) {
-  return await getApiService(DONE_HUB).updateChannel(
+  return await getApiService(SITE_TYPES.DONE_HUB).updateChannel(
     {
       baseUrl,
       auth: {
@@ -135,7 +135,7 @@ export async function deleteChannel(
   userId: number | string,
   channelId: number,
 ) {
-  return await getApiService(DONE_HUB).deleteChannel(
+  return await getApiService(SITE_TYPES.DONE_HUB).deleteChannel(
     {
       baseUrl,
       auth: {
@@ -275,7 +275,7 @@ export async function prepareChannelFormData(
   )
 
   const resolvedGroups = await resolveDefaultChannelGroups({
-    siteType: DONE_HUB,
+    siteType: SITE_TYPES.DONE_HUB,
     getConfig: getDoneHubConfig,
     onError: (error) => {
       logger.warn("Failed to resolve Done Hub default groups", error)

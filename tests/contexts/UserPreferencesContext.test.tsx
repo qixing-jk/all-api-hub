@@ -9,7 +9,7 @@ import {
   DATA_TYPE_INCOME,
 } from "~/constants"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { VELOERA } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   UserPreferencesProvider,
   useUserPreferencesContext,
@@ -463,7 +463,7 @@ describe("UserPreferencesContext", () => {
         baseUrl: "https://managed-cch.example",
         adminToken: "managed-cch-token",
       })
-      await context.updateManagedSiteType(VELOERA)
+      await context.updateManagedSiteType(SITE_TYPES.VELOERA)
       await context.updateThemeMode("dark")
       await context.updateLoggingConsoleEnabled(false)
       await context.updateLoggingLevel("warn")
@@ -526,7 +526,7 @@ describe("UserPreferencesContext", () => {
       "asc",
     )
     expect(mockedUserPreferences.updateManagedSiteType).toHaveBeenCalledWith(
-      VELOERA,
+      SITE_TYPES.VELOERA,
     )
     expect(mockedUserPreferences.updateLoggingPreferences).toHaveBeenCalledWith(
       {
@@ -597,7 +597,7 @@ describe("UserPreferencesContext", () => {
     expect((latestContext as any)?.sortField).toBe(DATA_TYPE_INCOME)
     expect((latestContext as any)?.sortOrder).toBe("asc")
     expect((latestContext as any)?.actionClickBehavior).toBe("sidepanel")
-    expect((latestContext as any)?.managedSiteType).toBe(VELOERA)
+    expect((latestContext as any)?.managedSiteType).toBe(SITE_TYPES.VELOERA)
     expect((latestContext as any)?.themeMode).toBe("dark")
     expect((latestContext as any)?.preferences.newApi.baseUrl).toBe(
       "https://new-api.example",
@@ -890,7 +890,7 @@ describe("UserPreferencesContext", () => {
     preferences.activeTab = DATA_TYPE_BALANCE
     preferences.themeMode = "dark"
     preferences.language = "en"
-    preferences.managedSiteType = VELOERA
+    preferences.managedSiteType = SITE_TYPES.VELOERA
     preferences.accountAutoRefresh = {
       ...preferences.accountAutoRefresh,
       enabled: true,
@@ -1144,7 +1144,7 @@ describe("UserPreferencesContext", () => {
     preferences.activeTab = DATA_TYPE_BALANCE
     preferences.currencyType = "USD"
     preferences.themeMode = "system"
-    preferences.managedSiteType = VELOERA
+    preferences.managedSiteType = SITE_TYPES.VELOERA
 
     mockedUserPreferences.updateActiveTab.mockResolvedValue(false)
     mockedUserPreferences.savePreferencesWithResult.mockResolvedValue(null)
@@ -1202,7 +1202,9 @@ describe("UserPreferencesContext", () => {
       expect(
         await context.updateOctopusBaseUrl("https://octopus.example"),
       ).toBe(false)
-      expect(await context.updateManagedSiteType(VELOERA)).toBe(false)
+      expect(await context.updateManagedSiteType(SITE_TYPES.VELOERA)).toBe(
+        false,
+      )
       expect(await context.updateThemeMode("dark")).toBe(false)
       expect(await context.updateLoggingConsoleEnabled(false)).toBe(false)
       expect(await context.updateLoggingLevel("warn")).toBe(false)

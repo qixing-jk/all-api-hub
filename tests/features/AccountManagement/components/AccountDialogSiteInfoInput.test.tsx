@@ -2,7 +2,7 @@ import userEvent from "@testing-library/user-event"
 import type { ComponentProps } from "react"
 import { describe, expect, it, vi } from "vitest"
 
-import { SUB2API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import SiteInfoInput from "~/features/AccountManagement/components/AccountDialog/SiteInfoInput"
 import { AuthTypeEnum } from "~/types"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
@@ -112,7 +112,7 @@ describe("AccountDialog SiteInfoInput", () => {
   it("locks the site fields for detected Sub2API sites and hides the add-mode current-tab helper", async () => {
     const props = createAddModeProps()
     props.isDetected = true
-    props.siteType = SUB2API
+    props.siteType = SITE_TYPES.SUB2API
 
     render(<SiteInfoInput {...props} />)
 
@@ -137,7 +137,7 @@ describe("AccountDialog SiteInfoInput", () => {
 
   it("keeps the entry auth selector visible but locked for add-mode Sub2API", async () => {
     const props = createAddModeProps()
-    props.siteType = SUB2API
+    props.siteType = SITE_TYPES.SUB2API
 
     render(<SiteInfoInput {...props} />)
 

@@ -2,7 +2,7 @@ import userEvent from "@testing-library/user-event"
 import type { ComponentProps } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SUB2API, UNKNOWN_SITE } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import AccountForm from "~/features/AccountManagement/components/AccountDialog/AccountForm"
 import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/accountFormSections"
 import { createEmptyAccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
@@ -72,7 +72,7 @@ describe("AccountDialog AccountForm", () => {
       sub2apiUseRefreshToken: false,
       sub2apiRefreshToken: "",
       sub2apiTokenExpiresAt: null,
-      siteType: UNKNOWN_SITE,
+      siteType: SITE_TYPES.UNKNOWN,
       checkIn: createCheckIn(),
     },
     isDetected: false,
@@ -411,7 +411,7 @@ describe("AccountDialog AccountForm", () => {
   it("renders Sub2API refresh-token controls, visibility toggles, and expiry metadata", async () => {
     const user = userEvent.setup()
     const props = createProps()
-    props.draft.siteType = SUB2API
+    props.draft.siteType = SITE_TYPES.SUB2API
     props.draft.sub2apiUseRefreshToken = true
     props.draft.sub2apiRefreshToken = "refresh-secret"
     props.draft.sub2apiTokenExpiresAt = 1700000000000

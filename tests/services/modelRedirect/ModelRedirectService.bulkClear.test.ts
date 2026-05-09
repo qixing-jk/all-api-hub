@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { NEW_API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   getManagedSiteAdminConfig,
   getManagedSiteConfig,
@@ -50,7 +50,7 @@ describe("ModelRedirectService.clearChannelModelMappings", () => {
       userId: "1",
     })
     mockedGetManagedSiteConfig.mockReturnValue({
-      siteType: NEW_API,
+      siteType: SITE_TYPES.NEW_API,
       config: {
         baseUrl: "https://example.com",
         adminToken: "token",

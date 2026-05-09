@@ -1,4 +1,4 @@
-import { CLAUDE_CODE_HUB } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildControlDefinition,
   buildSectionDefinition,
@@ -16,7 +16,8 @@ export const managedSiteClaudeCodeHubSearchSections: OptionsSearchItemDefinition
       346,
       {
         keywords: ["claude-code-hub", "claude code hub"],
-        isVisible: (context) => context.managedSiteType === CLAUDE_CODE_HUB,
+        isVisible: (context) =>
+          context.managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB,
       },
     ),
   ]
@@ -37,7 +38,8 @@ export const managedSiteClaudeCodeHubSearchControls: OptionsSearchItemDefinition
           "settings:claudeCodeHub.title",
         ],
         keywords: ["claude-code-hub", "claude code hub", "base url"],
-        isVisible: (context) => context.managedSiteType === CLAUDE_CODE_HUB,
+        isVisible: (context) =>
+          context.managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB,
       },
     ),
     buildControlDefinition(
@@ -54,7 +56,8 @@ export const managedSiteClaudeCodeHubSearchControls: OptionsSearchItemDefinition
           "settings:claudeCodeHub.title",
         ],
         keywords: ["claude-code-hub", "claude code hub", "token"],
-        isVisible: (context) => context.managedSiteType === CLAUDE_CODE_HUB,
+        isVisible: (context) =>
+          context.managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB,
       },
     ),
     buildControlDefinition(
@@ -71,7 +74,8 @@ export const managedSiteClaudeCodeHubSearchControls: OptionsSearchItemDefinition
           "settings:claudeCodeHub.title",
         ],
         keywords: ["claude-code-hub", "claude code hub", "validate"],
-        isVisible: (context) => context.managedSiteType === CLAUDE_CODE_HUB,
+        isVisible: (context) =>
+          context.managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB,
       },
     ),
     buildControlDefinition(
@@ -88,7 +92,8 @@ export const managedSiteClaudeCodeHubSearchControls: OptionsSearchItemDefinition
           "settings:claudeCodeHub.title",
         ],
         keywords: ["claude-code-hub", "claude code hub", "unsupported"],
-        isVisible: (context) => context.managedSiteType === CLAUDE_CODE_HUB,
+        isVisible: (context) =>
+          context.managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB,
       },
     ),
   ]

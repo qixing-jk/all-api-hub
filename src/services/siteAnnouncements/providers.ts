@@ -1,4 +1,4 @@
-import { SUB2API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { getApiService } from "~/services/apiService"
 import type { Sub2ApiAnnouncementData } from "~/services/apiService/sub2api/type"
 import type {
@@ -152,7 +152,7 @@ export const sub2ApiSiteAnnouncementProvider: SiteAnnouncementProvider = {
   ): Promise<SiteAnnouncementProviderResult> {
     const siteKey = createSub2ApiSiteAnnouncementKey(request)
     try {
-      const announcements = await getApiService(SUB2API)
+      const announcements = await getApiService(SITE_TYPES.SUB2API)
         .fetchSub2ApiAnnouncements(request.apiRequest, { unreadOnly: true })
         .then((items) =>
           items
@@ -177,7 +177,7 @@ export const sub2ApiSiteAnnouncementProvider: SiteAnnouncementProvider = {
     }
   },
   async markRead(request, announcements) {
-    const service = getApiService(SUB2API)
+    const service = getApiService(SITE_TYPES.SUB2API)
     const ids = announcements
       .map((announcement) => announcement.id)
       .filter((id): id is string => Boolean(id))
@@ -221,7 +221,7 @@ export const sub2ApiSiteAnnouncementProvider: SiteAnnouncementProvider = {
 export function getSiteAnnouncementProvider(
   siteType: string,
 ): SiteAnnouncementProvider {
-  return siteType === SUB2API
+  return siteType === SITE_TYPES.SUB2API
     ? sub2ApiSiteAnnouncementProvider
     : commonSiteAnnouncementProvider
 }

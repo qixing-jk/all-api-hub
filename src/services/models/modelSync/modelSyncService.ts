@@ -1,6 +1,6 @@
 import { union } from "lodash-es"
 
-import { NEW_API, type ManagedSiteType } from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { getApiService } from "~/services/apiService"
 import { AuthTypeEnum } from "~/types"
 import type { ChannelConfigMap } from "~/types/channelConfig"
@@ -69,7 +69,7 @@ export class ModelSyncService {
     allowedModels?: string[],
     channelConfigs?: ChannelConfigMap | null,
     globalChannelModelFilters?: ChannelModelFilterRule[] | null,
-    siteType: ManagedSiteType = NEW_API,
+    siteType: ManagedSiteType = SITE_TYPES.NEW_API,
   ) {
     this.baseUrl = baseUrl
     this.token = token

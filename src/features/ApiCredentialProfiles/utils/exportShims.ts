@@ -1,3 +1,4 @@
+import { SITE_TYPES } from "~/constants/siteType"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import {
   AuthTypeEnum,
@@ -43,7 +44,7 @@ export function createExportAccount(
     todayIncome: { USD: 0, CNY: 0 },
     todayTokens: { upload: 0, download: 0 },
     health: { status: SiteHealthStatus.Healthy },
-    siteType: "default",
+    siteType: SITE_TYPES.UNKNOWN,
     baseUrl: profile.baseUrl,
     token: "",
     userId: 0,

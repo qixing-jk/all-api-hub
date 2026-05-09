@@ -1,6 +1,6 @@
 import type { BrowserContext, Page, Worker } from "@playwright/test"
 
-import { NEW_API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   createDefaultAccountStorageConfig,
   normalizeAccountStorageConfigForWrite,
@@ -141,7 +141,7 @@ export function createStoredAccount(
     site_name: "E2E Example",
     site_url: "https://example.com",
     health: { status: SiteHealthStatus.Healthy },
-    site_type: NEW_API,
+    site_type: SITE_TYPES.NEW_API,
     exchange_rate: 7,
     account_info: {
       id: 1,

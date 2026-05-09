@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
-import { ANYROUTER } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { anyrouterProvider } from "~/services/checkin/autoCheckin/providers/anyrouter"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 
@@ -12,7 +12,7 @@ const mockAccount: SiteAccount = {
   id: "test-id",
   site_name: "AnyRouter",
   site_url: "https://anyrouter.top",
-  site_type: ANYROUTER,
+  site_type: SITE_TYPES.ANYROUTER,
   authType: AuthTypeEnum.Cookie,
   exchange_rate: 7.0,
   notes: "",

@@ -1,13 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  DONE_HUB,
-  NEW_API,
-  OCTOPUS,
-  VELOERA,
-} from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   getManagedSiteAdminConfigForType,
   getManagedSiteConfigFromPreferences,
@@ -35,37 +28,53 @@ describe("managedSite utils", () => {
     }
 
     expect(getManagedSiteConfigFromPreferences(prefs as any)).toEqual({
-      siteType: NEW_API,
+      siteType: SITE_TYPES.NEW_API,
       config: prefs.newApi,
     })
     expect(getManagedSiteContext(prefs as any)).toEqual({
-      siteType: NEW_API,
+      siteType: SITE_TYPES.NEW_API,
       messagesKey: "newapi",
     })
   })
 
   it("returns label and message keys for each managed-site type", () => {
-    expect(getManagedSiteLabelKey(OCTOPUS)).toBe("settings:managedSite.octopus")
-    expect(getManagedSiteLabelKey(AXON_HUB)).toBe(
+    expect(getManagedSiteLabelKey(SITE_TYPES.OCTOPUS)).toBe(
+      "settings:managedSite.octopus",
+    )
+    expect(getManagedSiteLabelKey(SITE_TYPES.AXON_HUB)).toBe(
       "settings:managedSite.axonHub",
     )
-    expect(getManagedSiteLabelKey(CLAUDE_CODE_HUB)).toBe(
+    expect(getManagedSiteLabelKey(SITE_TYPES.CLAUDE_CODE_HUB)).toBe(
       "settings:managedSite.claudeCodeHub",
     )
-    expect(getManagedSiteLabelKey(DONE_HUB)).toBe(
+    expect(getManagedSiteLabelKey(SITE_TYPES.DONE_HUB)).toBe(
       "settings:managedSite.doneHub",
     )
-    expect(getManagedSiteLabelKey(VELOERA)).toBe("settings:managedSite.veloera")
-    expect(getManagedSiteLabelKey(NEW_API)).toBe("settings:managedSite.newApi")
-
-    expect(getManagedSiteMessagesKeyFromSiteType(OCTOPUS)).toBe("octopus")
-    expect(getManagedSiteMessagesKeyFromSiteType(AXON_HUB)).toBe("axonhub")
-    expect(getManagedSiteMessagesKeyFromSiteType(CLAUDE_CODE_HUB)).toBe(
-      "claudecodehub",
+    expect(getManagedSiteLabelKey(SITE_TYPES.VELOERA)).toBe(
+      "settings:managedSite.veloera",
     )
-    expect(getManagedSiteMessagesKeyFromSiteType(DONE_HUB)).toBe("donehub")
-    expect(getManagedSiteMessagesKeyFromSiteType(VELOERA)).toBe("veloera")
-    expect(getManagedSiteMessagesKeyFromSiteType(NEW_API)).toBe("newapi")
+    expect(getManagedSiteLabelKey(SITE_TYPES.NEW_API)).toBe(
+      "settings:managedSite.newApi",
+    )
+
+    expect(getManagedSiteMessagesKeyFromSiteType(SITE_TYPES.OCTOPUS)).toBe(
+      "octopus",
+    )
+    expect(getManagedSiteMessagesKeyFromSiteType(SITE_TYPES.AXON_HUB)).toBe(
+      "axonhub",
+    )
+    expect(
+      getManagedSiteMessagesKeyFromSiteType(SITE_TYPES.CLAUDE_CODE_HUB),
+    ).toBe("claudecodehub")
+    expect(getManagedSiteMessagesKeyFromSiteType(SITE_TYPES.DONE_HUB)).toBe(
+      "donehub",
+    )
+    expect(getManagedSiteMessagesKeyFromSiteType(SITE_TYPES.VELOERA)).toBe(
+      "veloera",
+    )
+    expect(getManagedSiteMessagesKeyFromSiteType(SITE_TYPES.NEW_API)).toBe(
+      "newapi",
+    )
   })
 
   it("validates octopus admin config separately from legacy token-based configs", () => {
@@ -96,29 +105,40 @@ describe("managedSite utils", () => {
       },
     }
 
-    expect(getManagedSiteAdminConfigForType(prefs as any, OCTOPUS)).toEqual({
+    expect(
+      getManagedSiteAdminConfigForType(prefs as any, SITE_TYPES.OCTOPUS),
+    ).toEqual({
       baseUrl: "https://octopus.example.com",
       adminToken: "",
       userId: "admin",
     })
-    expect(getManagedSiteAdminConfigForType(prefs as any, VELOERA)).toEqual({
+    expect(
+      getManagedSiteAdminConfigForType(prefs as any, SITE_TYPES.VELOERA),
+    ).toEqual({
       baseUrl: "https://veloera.example.com",
       adminToken: "admin-token",
       userId: "42",
     })
-    expect(getManagedSiteAdminConfigForType(prefs as any, AXON_HUB)).toEqual({
+    expect(
+      getManagedSiteAdminConfigForType(prefs as any, SITE_TYPES.AXON_HUB),
+    ).toEqual({
       baseUrl: "https://axonhub.example.com",
       adminToken: "secret",
       userId: "admin@example.com",
     })
     expect(
-      getManagedSiteAdminConfigForType(prefs as any, CLAUDE_CODE_HUB),
+      getManagedSiteAdminConfigForType(
+        prefs as any,
+        SITE_TYPES.CLAUDE_CODE_HUB,
+      ),
     ).toEqual({
       baseUrl: "https://cch.example.com",
       adminToken: "admin-token",
       userId: "admin",
     })
-    expect(getManagedSiteAdminConfigForType(prefs as any, DONE_HUB)).toBeNull()
+    expect(
+      getManagedSiteAdminConfigForType(prefs as any, SITE_TYPES.DONE_HUB),
+    ).toBeNull()
     expect(
       getManagedSiteAdminConfigForType(
         {
@@ -128,7 +148,7 @@ describe("managedSite utils", () => {
             password: "",
           },
         } as any,
-        OCTOPUS,
+        SITE_TYPES.OCTOPUS,
       ),
     ).toBeNull()
     expect(
@@ -139,7 +159,7 @@ describe("managedSite utils", () => {
             adminToken: "admin-token",
           },
         } as any,
-        CLAUDE_CODE_HUB,
+        SITE_TYPES.CLAUDE_CODE_HUB,
       ),
     ).toBeNull()
     expect(
@@ -150,7 +170,7 @@ describe("managedSite utils", () => {
             adminToken: "",
           },
         } as any,
-        CLAUDE_CODE_HUB,
+        SITE_TYPES.CLAUDE_CODE_HUB,
       ),
     ).toBeNull()
   })
@@ -189,14 +209,14 @@ describe("managedSite utils", () => {
     }
 
     const options = getManagedSiteTargetOptions(prefs as any, {
-      excludeSiteTypes: [VELOERA],
+      excludeSiteTypes: [SITE_TYPES.VELOERA],
     })
 
     expect(options.map((item) => item.siteType)).toEqual([
-      NEW_API,
-      OCTOPUS,
-      AXON_HUB,
-      CLAUDE_CODE_HUB,
+      SITE_TYPES.NEW_API,
+      SITE_TYPES.OCTOPUS,
+      SITE_TYPES.AXON_HUB,
+      SITE_TYPES.CLAUDE_CODE_HUB,
     ])
   })
 
@@ -211,7 +231,7 @@ describe("managedSite utils", () => {
 
     expect(getManagedSiteTargetOptions(prefs as any)).toEqual([
       expect.objectContaining({
-        siteType: AXON_HUB,
+        siteType: SITE_TYPES.AXON_HUB,
         labelKey: "settings:managedSite.axonHub",
         messagesKey: "axonhub",
         config: {
@@ -223,7 +243,7 @@ describe("managedSite utils", () => {
     ])
     expect(
       getManagedSiteTargetOptions(prefs as any, {
-        excludeSiteTypes: [AXON_HUB],
+        excludeSiteTypes: [SITE_TYPES.AXON_HUB],
       }),
     ).toEqual([])
   })
@@ -250,7 +270,7 @@ describe("managedSite utils", () => {
 
     expect(getManagedSiteTargetOptions(prefs as any)).toEqual([
       expect.objectContaining({
-        siteType: CLAUDE_CODE_HUB,
+        siteType: SITE_TYPES.CLAUDE_CODE_HUB,
         labelKey: "settings:managedSite.claudeCodeHub",
         messagesKey: "claudecodehub",
         config: {
@@ -262,7 +282,7 @@ describe("managedSite utils", () => {
     ])
     expect(
       getManagedSiteTargetOptions(prefs as any, {
-        excludeSiteTypes: [CLAUDE_CODE_HUB],
+        excludeSiteTypes: [SITE_TYPES.CLAUDE_CODE_HUB],
       }),
     ).toEqual([])
   })
@@ -328,8 +348,14 @@ describe("managedSite utils", () => {
       getManagedSiteNoChannelsToSyncMessage(translate as any, "newapi"),
     ).toBe("messages:newapi.noChannelsToSync")
 
-    expect(supportsManagedSiteBaseUrlChannelLookup(VELOERA)).toBe(false)
-    expect(supportsManagedSiteBaseUrlChannelLookup(CLAUDE_CODE_HUB)).toBe(false)
-    expect(supportsManagedSiteBaseUrlChannelLookup(NEW_API)).toBe(true)
+    expect(supportsManagedSiteBaseUrlChannelLookup(SITE_TYPES.VELOERA)).toBe(
+      false,
+    )
+    expect(
+      supportsManagedSiteBaseUrlChannelLookup(SITE_TYPES.CLAUDE_CODE_HUB),
+    ).toBe(false)
+    expect(supportsManagedSiteBaseUrlChannelLookup(SITE_TYPES.NEW_API)).toBe(
+      true,
+    )
   })
 })

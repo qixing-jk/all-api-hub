@@ -1,7 +1,7 @@
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AXON_HUB, CLAUDE_CODE_HUB } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import ManagedSiteTab from "~/features/BasicSettings/components/tabs/ManagedSite/ManagedSiteTab"
 import { render, screen } from "~~/tests/test-utils/render"
 
@@ -119,7 +119,7 @@ describe("ManagedSiteTab", () => {
   it("hides model-sync and redirect settings for AxonHub", () => {
     mockedUseUserPreferencesContext.mockReturnValue(
       createContextValue({
-        managedSiteType: AXON_HUB,
+        managedSiteType: SITE_TYPES.AXON_HUB,
         axonHubBaseUrl: "https://axonhub.example",
         axonHubEmail: "admin@example.com",
         axonHubPassword: "secret-password",
@@ -144,7 +144,7 @@ describe("ManagedSiteTab", () => {
   it("renders Claude Code Hub settings and hides unsupported model controls", () => {
     mockedUseUserPreferencesContext.mockReturnValue(
       createContextValue({
-        managedSiteType: CLAUDE_CODE_HUB,
+        managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
       }),
     )
 

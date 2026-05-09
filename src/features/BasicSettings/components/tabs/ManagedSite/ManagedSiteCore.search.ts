@@ -1,4 +1,4 @@
-import { AXON_HUB, CLAUDE_CODE_HUB } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildControlDefinition,
   buildSectionDefinition,
@@ -7,7 +7,8 @@ import {
 import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
 
 const isStandardManagedSite = (managedSiteType: string) =>
-  managedSiteType !== AXON_HUB && managedSiteType !== CLAUDE_CODE_HUB
+  managedSiteType !== SITE_TYPES.AXON_HUB &&
+  managedSiteType !== SITE_TYPES.CLAUDE_CODE_HUB
 
 export const managedSiteCoreSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(

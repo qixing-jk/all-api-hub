@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import { DATA_TYPE_CASHFLOW, DATA_TYPE_CONSUMPTION } from "~/constants"
-import { NEW_API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   CURRENT_PREFERENCES_VERSION,
   getPreferencesVersion,
@@ -80,7 +80,7 @@ function createV0Preferences(
     webdav: DEFAULT_WEBDAV_SETTINGS,
     newApi: DEFAULT_NEW_API_CONFIG,
     veloera: DEFAULT_VELOERA_CONFIG,
-    managedSiteType: NEW_API,
+    managedSiteType: SITE_TYPES.NEW_API,
     // Legacy field preserved for v6->v7 migration
     newApiModelSync: {
       enabled: false,
@@ -605,7 +605,7 @@ describe("preferencesMigration", () => {
         showHealthStatus: true,
         newApi: DEFAULT_NEW_API_CONFIG,
         veloera: DEFAULT_VELOERA_CONFIG,
-        managedSiteType: NEW_API,
+        managedSiteType: SITE_TYPES.NEW_API,
         newApiModelSync: {
           enabled: false,
           interval: 24 * 60 * 60 * 1000,

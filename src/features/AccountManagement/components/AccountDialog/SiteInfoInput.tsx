@@ -18,7 +18,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "~/components/ui"
-import { SUB2API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
 
@@ -81,7 +81,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
     onEditAccount,
   } = props
   const { t } = useTranslation(["accountDialog", "common"])
-  const isSub2Api = siteType === SUB2API
+  const isSub2Api = siteType === SITE_TYPES.SUB2API
 
   const handleEditClick = () => {
     if (detectedAccount && onEditAccount) {

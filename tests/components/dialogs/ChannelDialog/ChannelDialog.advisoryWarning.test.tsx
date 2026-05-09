@@ -2,7 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelDialog } from "~/components/dialogs/ChannelDialog"
-import { NEW_API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -82,7 +82,7 @@ vi.mock("~/contexts/UserPreferencesContext", async () => {
   return {
     ...actual,
     useUserPreferencesContext: () => ({
-      managedSiteType: NEW_API,
+      managedSiteType: SITE_TYPES.NEW_API,
       newApiBaseUrl: "https://managed.example.com",
       newApiUserId: "1",
       newApiUsername: mockUserPreferences.newApiUsername,
@@ -146,7 +146,7 @@ vi.mock(
 
 vi.mock("~/services/managedSites/managedSiteService", () => ({
   getManagedSiteService: vi.fn(async () => ({
-    siteType: NEW_API,
+    siteType: SITE_TYPES.NEW_API,
     messagesKey: "newapi",
     getConfig: vi.fn(async () => ({
       baseUrl: "https://managed.example.com",

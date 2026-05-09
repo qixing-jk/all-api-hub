@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { migrateCheckInConfig } from "~/services/accounts/migrations/checkInMigration"
 import type { SiteAccount } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
@@ -14,7 +15,7 @@ describe("checkInMigration", () => {
       site_name: "Test Site",
       site_url: "https://test.com",
       health: { status: SiteHealthStatus.Healthy },
-      site_type: "test-site",
+      site_type: SITE_TYPES.UNKNOWN,
       exchange_rate: 7.0,
       account_info: {
         id: 1,

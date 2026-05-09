@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { useUsageAnalyticsFilters } from "~/features/UsageAnalytics/hooks/useUsageAnalyticsFilters"
 import * as usageAnalytics from "~/services/history/usageHistory/analytics"
 import { createEmptyUsageHistoryAccountStore } from "~/services/history/usageHistory/core"
@@ -315,7 +316,7 @@ describe("useUsageAnalyticsFilters", () => {
       id: "account-a",
       site_name: "Token Site",
       site_url: "",
-      site_type: "",
+      site_type: SITE_TYPES.UNKNOWN,
       notes: "Needs review",
       account_info: undefined as any,
     })
@@ -377,8 +378,8 @@ describe("useUsageAnalyticsFilters", () => {
     expect(result.current.siteOptions[0]?.title).not.toContain(
       "usageAnalytics:hover.url",
     )
-    expect(result.current.siteOptions[0]?.title).not.toContain(
-      "usageAnalytics:hover.type",
+    expect(result.current.siteOptions[0]?.title).toContain(
+      `usageAnalytics:hover.type: ${SITE_TYPES.UNKNOWN}`,
     )
     expect(result.current.accountOptions[0]?.title).toContain(
       "usageAnalytics:hover.notes: Needs review",

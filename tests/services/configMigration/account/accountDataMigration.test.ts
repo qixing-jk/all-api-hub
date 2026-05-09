@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   CURRENT_CONFIG_VERSION,
   getConfigVersion,
@@ -20,7 +21,7 @@ describe("accountDataMigration", () => {
       site_name: "Test Site",
       site_url: "https://test.com",
       health: { status: SiteHealthStatus.Healthy },
-      site_type: "test-site",
+      site_type: SITE_TYPES.UNKNOWN,
       exchange_rate: 7.0,
       account_info: {
         id: 1,
@@ -229,7 +230,7 @@ describe("accountDataMigration", () => {
     it("drops sub2apiAuth for non-sub2api accounts when migrating version 4 to current version", () => {
       const legacyV4NonSub2Api = createSiteAccount({
         configVersion: 4,
-        site_type: "test-site",
+        site_type: SITE_TYPES.UNKNOWN,
         sub2apiAuth: { refreshToken: "token" } as any,
       })
 

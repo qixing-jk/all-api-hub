@@ -1,4 +1,4 @@
-import { SUB2API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { getApiService } from "~/services/apiService"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
@@ -54,7 +54,7 @@ export async function ensureDefaultApiTokenForAccount(params: {
     return { token: apiToken, created: false }
   }
 
-  if (displaySiteData.siteType === SUB2API) {
+  if (displaySiteData.siteType === SITE_TYPES.SUB2API) {
     throw new Error(t("messages:sub2api.createRequiresGroup"))
   }
 

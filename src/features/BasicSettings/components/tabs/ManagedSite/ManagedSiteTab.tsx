@@ -1,11 +1,4 @@
-import {
-  AXON_HUB,
-  CLAUDE_CODE_HUB,
-  DONE_HUB,
-  NEW_API,
-  OCTOPUS,
-  VELOERA,
-} from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 
 import AxonHubSettings from "./AxonHubSettings"
@@ -27,17 +20,17 @@ export default function ManagedSiteTab() {
 
   const renderSiteSettings = () => {
     switch (managedSiteType) {
-      case OCTOPUS:
+      case SITE_TYPES.OCTOPUS:
         return <OctopusSettings />
-      case DONE_HUB:
+      case SITE_TYPES.DONE_HUB:
         return <DoneHubSettings />
-      case VELOERA:
+      case SITE_TYPES.VELOERA:
         return <VeloeraSettings />
-      case AXON_HUB:
+      case SITE_TYPES.AXON_HUB:
         return <AxonHubSettings />
-      case CLAUDE_CODE_HUB:
+      case SITE_TYPES.CLAUDE_CODE_HUB:
         return <ClaudeCodeHubSettings />
-      case NEW_API:
+      case SITE_TYPES.NEW_API:
       default:
         return <NewApiSettings />
     }
@@ -51,12 +44,13 @@ export default function ManagedSiteTab() {
 
       {/* AxonHub and Claude Code Hub do not expose New-API-style model sync or
           redirect controls. */}
-      {managedSiteType !== AXON_HUB && managedSiteType !== CLAUDE_CODE_HUB && (
-        <>
-          <ManagedSiteModelSyncSettings />
-          <ModelRedirectSettings />
-        </>
-      )}
+      {managedSiteType !== SITE_TYPES.AXON_HUB &&
+        managedSiteType !== SITE_TYPES.CLAUDE_CODE_HUB && (
+          <>
+            <ManagedSiteModelSyncSettings />
+            <ModelRedirectSettings />
+          </>
+        )}
     </div>
   )
 }

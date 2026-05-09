@@ -1,4 +1,4 @@
-import { SUB2API } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   forceExtensionLanguage,
@@ -75,7 +75,7 @@ test.describe("real-site E2E: Sub2API auto-detect account add flow", () => {
       )
       await expect(dialog.siteTypeTrigger).toHaveAttribute(
         "data-site-type",
-        SUB2API,
+        SITE_TYPES.SUB2API,
       )
       await expect(dialog.sub2apiRefreshTokenSwitch).toHaveAttribute(
         "aria-checked",
@@ -116,11 +116,11 @@ test.describe("real-site E2E: Sub2API auto-detect account add flow", () => {
 
       const savedAccount = await waitForSavedAccount({
         serviceWorker,
-        siteType: SUB2API,
+        siteType: SITE_TYPES.SUB2API,
         baseUrl: config.baseUrl,
       })
 
-      expect(savedAccount.site_type).toBe(SUB2API)
+      expect(savedAccount.site_type).toBe(SITE_TYPES.SUB2API)
       expect(savedAccount.site_url).toBe(config.baseUrl)
       expect(savedAccount.account_info.id).toBeDefined()
       expect(savedAccount.account_info.id).not.toBeNull()

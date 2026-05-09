@@ -9,7 +9,7 @@ import {
   Input,
   WorkflowTransitionButton,
 } from "~/components/ui"
-import { getSiteApiRouter, VELOERA } from "~/constants/siteType"
+import { getSiteApiRouter, SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
@@ -96,7 +96,10 @@ export default function VeloeraSettings() {
       : undefined
   const shouldShowAdminCredentialsLink = Boolean(trimmedBaseUrl)
   const adminCredentialsUrl = shouldShowAdminCredentialsLink
-    ? joinUrl(trimmedBaseUrl, getSiteApiRouter(VELOERA).adminCredentialsPath)
+    ? joinUrl(
+        trimmedBaseUrl,
+        getSiteApiRouter(SITE_TYPES.VELOERA).adminCredentialsPath,
+      )
     : ""
 
   const handleOpenAdminCredentials = async () => {

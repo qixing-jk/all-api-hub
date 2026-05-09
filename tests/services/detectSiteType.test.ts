@@ -1,7 +1,7 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { NEW_API, SITE_TITLE_RULES, UNKNOWN_SITE } from "~/constants/siteType"
+import { SITE_TITLE_RULES, SITE_TYPES } from "~/constants/siteType"
 import {
   fetchSiteOriginalTitle,
   getSiteType,
@@ -187,7 +187,7 @@ describe("detectSiteType", () => {
         if (knownTypes.includes(siteType)) {
           expect(knownTypes).toContain(siteType)
         } else {
-          expect(siteType).toBe(UNKNOWN_SITE)
+          expect(siteType).toBe(SITE_TYPES.UNKNOWN)
         }
       })
     })
@@ -219,7 +219,7 @@ describe("detectSiteType", () => {
         expect(typeof siteType).toBe("string")
       })
 
-      it("should return UNKNOWN_SITE when no match found", async () => {
+      it("should return SITE_TYPES.UNKNOWN when no match found", async () => {
         const mockHTML = "<html><title>Unrecognized Title</title></html>"
         const mockApiResponse = {
           success: false,
@@ -239,10 +239,10 @@ describe("detectSiteType", () => {
 
         const siteType = await getSiteType("https://example.com")
 
-        // Should return UNKNOWN_SITE if no rule matches
+        // Should return SITE_TYPES.UNKNOWN if no rule matches
         const knownTypes = SITE_TITLE_RULES.map((rule) => rule.name)
         if (!knownTypes.some((type) => siteType === type)) {
-          expect(siteType).toBe(UNKNOWN_SITE)
+          expect(siteType).toBe(SITE_TYPES.UNKNOWN)
         }
       })
     })
@@ -268,7 +268,7 @@ describe("detectSiteType", () => {
 
         const siteType = await getSiteType("https://example.com")
 
-        expect(siteType).toBe(NEW_API)
+        expect(siteType).toBe(SITE_TYPES.NEW_API)
       })
 
       it("should detect site type from any token in the API error message", async () => {
@@ -291,10 +291,10 @@ describe("detectSiteType", () => {
 
         const siteType = await getSiteType("https://example.com")
 
-        expect(siteType).toBe(NEW_API)
+        expect(siteType).toBe(SITE_TYPES.NEW_API)
       })
 
-      it("should detect NEW_API from the upstream English New-Api-User header error", async () => {
+      it("should detect SITE_TYPES.NEW_API from the upstream English New-Api-User header error", async () => {
         const mockHTML = "<html><title>No Match</title></html>"
         const mockApiResponse = {
           success: false,
@@ -314,10 +314,10 @@ describe("detectSiteType", () => {
 
         const siteType = await getSiteType("https://example.com")
 
-        expect(siteType).toBe(NEW_API)
+        expect(siteType).toBe(SITE_TYPES.NEW_API)
       })
 
-      it("should detect NEW_API from the localized Chinese New-Api-User header error", async () => {
+      it("should detect SITE_TYPES.NEW_API from the localized Chinese New-Api-User header error", async () => {
         const mockHTML = "<html><title>No Match</title></html>"
         const mockApiResponse = {
           success: false,
@@ -337,7 +337,7 @@ describe("detectSiteType", () => {
 
         const siteType = await getSiteType("https://example.com")
 
-        expect(siteType).toBe(NEW_API)
+        expect(siteType).toBe(SITE_TYPES.NEW_API)
       })
 
       it("should not infer a site type from the generic User-id header error alone", async () => {
@@ -360,7 +360,7 @@ describe("detectSiteType", () => {
 
         const siteType = await getSiteType("https://example.com")
 
-        expect(siteType).toBe(UNKNOWN_SITE)
+        expect(siteType).toBe(SITE_TYPES.UNKNOWN)
       })
 
       it("should handle API response without message", async () => {
@@ -380,7 +380,7 @@ describe("detectSiteType", () => {
 
         const siteType = await getSiteType("https://example.com")
 
-        expect(siteType).toBe(UNKNOWN_SITE)
+        expect(siteType).toBe(SITE_TYPES.UNKNOWN)
       })
     })
 
@@ -397,7 +397,7 @@ describe("detectSiteType", () => {
 
       it.skip("should handle HTML parsing error", async () => {
         // Skipped: Complex to mock parsing errors with MSW
-        // The function handles errors internally and returns UNKNOWN_SITE
+        // The function handles errors internally and returns SITE_TYPES.UNKNOWN
         server.use(
           http.get("https://example.com", () => {
             // Return a response that will cause text() to throw
@@ -408,7 +408,7 @@ describe("detectSiteType", () => {
         )
 
         const siteType = await getSiteType("https://example.com")
-        // The function should handle the error and return UNKNOWN_SITE
+        // The function should handle the error and return SITE_TYPES.UNKNOWN
         expect(typeof siteType).toBe("string")
       })
     })

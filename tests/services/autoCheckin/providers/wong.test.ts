@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { WONG_GONGYI } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { wongGongyiProvider } from "~/services/checkin/autoCheckin/providers/wong"
 import { AuthTypeEnum, SiteHealthStatus, type SiteAccount } from "~/types"
 
@@ -12,7 +12,7 @@ const mockAccount: SiteAccount = {
   id: "test-id",
   site_name: "WONG公益站",
   site_url: "https://wong.example.com",
-  site_type: WONG_GONGYI,
+  site_type: SITE_TYPES.WONG_GONGYI,
   authType: AuthTypeEnum.AccessToken,
   exchange_rate: 7.0,
   notes: "",
