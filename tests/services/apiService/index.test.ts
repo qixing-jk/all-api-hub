@@ -99,14 +99,16 @@ describe("apiService index wrapper", () => {
     expect(oneHubFetchModelPricing).toHaveBeenCalledWith(request)
   })
 
-  it("should ignore inherited object keys when detecting override sites", async () => {
+  it("should ignore prototype-inherited siteType when detecting override sites", async () => {
     commonFetchUserInfo.mockResolvedValue({} as any)
 
-    const request = {
-      baseUrl: "https://example.com",
-      auth: { authType: "none" },
-      siteType: "toString",
-    }
+    const request = Object.assign(
+      Object.create({ siteType: SITE_TYPES.ONE_HUB }),
+      {
+        baseUrl: "https://example.com",
+        auth: { authType: "none" },
+      },
+    )
 
     await (getApiService(undefined).fetchUserInfo as any)(request)
 
@@ -114,7 +116,7 @@ describe("apiService index wrapper", () => {
     expect(commonFetchUserInfo).toHaveBeenCalledWith(request)
   })
 
-  it("should ignore inherited object keys when selecting a site-scoped api instance", async () => {
+  it("should ignore non-site trailing selector values", async () => {
     commonFetchUserInfo.mockResolvedValue({} as any)
 
     const request = {

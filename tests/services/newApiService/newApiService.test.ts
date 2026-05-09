@@ -1187,6 +1187,44 @@ describe("newApiService", () => {
     })
   })
 
+  describe("managed-site channel api delegation", () => {
+    it("uses the New API site override for channel mutations", async () => {
+      const { createChannel, deleteChannel, searchChannel, updateChannel } =
+        await import("~/services/managedSites/providers/newApi")
+      const baseUrl = "https://new-api.example.com"
+      const adminToken = "admin-token"
+      const userId = 1
+      const channelData = { name: "Test Channel" } as CreateChannelPayload
+
+      mockSearchChannel.mockResolvedValueOnce({ items: [] })
+      mockCreateChannel.mockResolvedValueOnce({ success: true })
+      mockUpdateChannel.mockResolvedValueOnce({ success: true })
+      mockDeleteChannel.mockResolvedValueOnce({ success: true })
+
+      await searchChannel(baseUrl, adminToken, userId, "test")
+      await createChannel(baseUrl, adminToken, userId, channelData)
+      await updateChannel(baseUrl, adminToken, userId, channelData)
+      await deleteChannel(baseUrl, adminToken, userId, 7)
+
+      expect(mockSearchChannel).toHaveBeenCalledWith(
+        expect.objectContaining({ baseUrl }),
+        "test",
+      )
+      expect(mockCreateChannel).toHaveBeenCalledWith(
+        expect.objectContaining({ baseUrl }),
+        channelData,
+      )
+      expect(mockUpdateChannel).toHaveBeenCalledWith(
+        expect.objectContaining({ baseUrl }),
+        channelData,
+      )
+      expect(mockDeleteChannel).toHaveBeenCalledWith(
+        expect.objectContaining({ baseUrl }),
+        7,
+      )
+    })
+  })
+
   // ========================================================================
   // buildChannelPayload
   // ========================================================================

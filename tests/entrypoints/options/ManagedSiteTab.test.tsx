@@ -86,7 +86,7 @@ describe("ManagedSiteTab", () => {
   it("does not render the New API login-assist fields when the managed site is not new-api", () => {
     mockedUseUserPreferencesContext.mockReturnValue(
       createContextValue({
-        managedSiteType: "Veloera",
+        managedSiteType: SITE_TYPES.VELOERA,
         veloeraBaseUrl: "",
         veloeraAdminToken: "",
         veloeraUserId: "",
@@ -99,6 +99,9 @@ describe("ManagedSiteTab", () => {
 
     render(<ManagedSiteTab />)
 
+    expect(
+      screen.getByPlaceholderText("settings:veloera.fields.baseUrlPlaceholder"),
+    ).toBeInTheDocument()
     expect(
       screen.queryByPlaceholderText(
         "settings:newApi.fields.usernamePlaceholder",
@@ -167,4 +170,51 @@ describe("ManagedSiteTab", () => {
       screen.queryByTestId("model-redirect-settings"),
     ).not.toBeInTheDocument()
   })
+
+  it.each([
+    [
+      SITE_TYPES.DONE_HUB,
+      {
+        doneHubBaseUrl: "https://done-hub.example",
+        doneHubAdminToken: "admin-token",
+        doneHubUserId: "7",
+        updateDoneHubBaseUrl: vi.fn().mockResolvedValue(true),
+        updateDoneHubAdminToken: vi.fn().mockResolvedValue(true),
+        updateDoneHubUserId: vi.fn().mockResolvedValue(true),
+        resetDoneHubConfig: vi.fn().mockResolvedValue(true),
+      },
+      "settings:doneHub.fields.baseUrlPlaceholder",
+    ],
+    [
+      SITE_TYPES.OCTOPUS,
+      {
+        octopusBaseUrl: "https://octopus.example",
+        octopusUsername: "admin",
+        octopusPassword: "secret-password",
+        updateOctopusBaseUrl: vi.fn().mockResolvedValue(true),
+        updateOctopusUsername: vi.fn().mockResolvedValue(true),
+        updateOctopusPassword: vi.fn().mockResolvedValue(true),
+        resetOctopusConfig: vi.fn().mockResolvedValue(true),
+      },
+      "settings:octopus.fields.baseUrlPlaceholder",
+    ],
+  ])(
+    "renders %s settings with shared model controls",
+    (managedSiteType, config, placeholder) => {
+      mockedUseUserPreferencesContext.mockReturnValue(
+        createContextValue({
+          managedSiteType,
+          ...config,
+        }),
+      )
+
+      render(<ManagedSiteTab />)
+
+      expect(screen.getByPlaceholderText(placeholder)).toBeInTheDocument()
+      expect(
+        screen.getByTestId("managed-site-model-sync-settings"),
+      ).toBeInTheDocument()
+      expect(screen.getByTestId("model-redirect-settings")).toBeInTheDocument()
+    },
+  )
 })

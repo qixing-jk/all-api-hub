@@ -182,6 +182,44 @@ describe("accountOperations", () => {
         message: "messages:errors.validation.updateAccountFailed",
       })
     })
+
+    it("normalizes unsupported site types before updating", async () => {
+      mockFetchAccountData.mockResolvedValueOnce({
+        quota: 1,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+        checkIn: { enableDetection: false },
+      })
+      mockUpdateAccount.mockResolvedValueOnce(true)
+
+      const result = await validateAndUpdateAccount(
+        "account-1",
+        "https://api.example.com",
+        "Test Site",
+        "user",
+        "token",
+        "1",
+        "7.0",
+        "notes",
+        [],
+        { enableDetection: false },
+        "legacy-invalid-site",
+        AuthTypeEnum.AccessToken,
+        "",
+      )
+
+      expect(result.success).toBe(true)
+      expect(vi.mocked(getApiService)).toHaveBeenCalledWith(SITE_TYPES.UNKNOWN)
+      expect(mockUpdateAccount).toHaveBeenCalledWith(
+        "account-1",
+        expect.objectContaining({
+          site_type: SITE_TYPES.UNKNOWN,
+        }),
+      )
+    })
   })
 
   describe("isValidAccount", () => {
@@ -217,6 +255,20 @@ describe("accountOperations", () => {
           siteName: "Test",
           username: "",
           userId: "123",
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "token",
+          exchangeRate: "7.0",
+        }),
+      ).toBe(false)
+    })
+
+    it("does not treat invalid site types as Sub2API username exemptions", () => {
+      expect(
+        isValidAccount({
+          siteName: "Legacy",
+          username: "",
+          userId: "123",
+          siteType: "legacy-sub2api" as any,
           authType: AuthTypeEnum.AccessToken,
           accessToken: "token",
           exchangeRate: "7.0",

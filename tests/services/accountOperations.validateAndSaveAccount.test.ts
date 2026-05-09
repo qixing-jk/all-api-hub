@@ -28,9 +28,9 @@ vi.mock("react-hot-toast", () => ({
 }))
 
 vi.mock("~/services/apiService", () => ({
-  getApiService: () => ({
+  getApiService: vi.fn(() => ({
     fetchAccountData: fetchAccountDataMock,
-  }),
+  })),
 }))
 
 vi.mock(
@@ -183,6 +183,40 @@ describe("accountOperations validateAndSaveAccount", () => {
         quota: 0,
       },
     })
+  })
+
+  it("normalizes unsupported site types before saving", async () => {
+    const { getApiService } = await import("~/services/apiService")
+    fetchAccountDataMock.mockResolvedValueOnce({
+      quota: 12,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
+      today_requests_count: 0,
+      today_income: 0,
+      checkIn: CHECK_IN_DISABLED,
+    })
+
+    const result = await validateAndSaveAccount(
+      "https://legacy.example.com",
+      "Legacy Site",
+      "legacy-user",
+      "token",
+      "5",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      "legacy-invalid-site",
+      AuthTypeEnum.AccessToken,
+      "",
+    )
+
+    expect(result.success).toBe(true)
+    expect(getApiService).toHaveBeenCalledWith(SITE_TYPES.UNKNOWN)
+
+    const saved = await accountStorage.getAccountById(result.accountId!)
+    expect(saved?.site_type).toBe(SITE_TYPES.UNKNOWN)
   })
 
   it("falls back to partial save when manual-add data refresh times out", async () => {
