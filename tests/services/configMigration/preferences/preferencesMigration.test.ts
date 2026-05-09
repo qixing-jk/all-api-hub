@@ -1098,6 +1098,48 @@ describe("preferencesMigration", () => {
       })
     })
 
+    it("backfills the DingTalk notification channel during v21 to v22 migration", () => {
+      const {
+        [TASK_NOTIFICATION_CHANNELS.Dingtalk]: _dingtalk,
+        ...legacyChannels
+      } = DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels
+      void _dingtalk
+      const prefs = createV0Preferences({
+        preferencesVersion: 21,
+        taskNotifications: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+          channels: {
+            ...legacyChannels,
+            [TASK_NOTIFICATION_CHANNELS.Telegram]: {
+              enabled: true,
+              botToken: "telegram-token",
+              chatId: "-1001234567890",
+            },
+          },
+        } as any,
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.taskNotifications).toEqual({
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Telegram]: {
+            enabled: true,
+            botToken: "telegram-token",
+            chatId: "-1001234567890",
+          },
+          [TASK_NOTIFICATION_CHANNELS.Dingtalk]: {
+            enabled: false,
+            webhookKey: "",
+            secret: "",
+          },
+        },
+      })
+    })
+
     it("falls back to defaults when stored taskNotifications is a non-object during v18 to v19 migration", () => {
       const prefs = createV0Preferences({
         preferencesVersion: 18,

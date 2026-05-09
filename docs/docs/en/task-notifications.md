@@ -14,6 +14,7 @@ Currently supported channels:
 | Browser system notifications | Receiving reminders on the current device | Browser `notifications` permission |
 | Telegram Bot | Receiving reminders in a Telegram chat or group | Bot token and Chat ID |
 | Feishu Bot | Receiving team reminders in a Feishu group | Feishu custom bot webhook URL or key |
+| DingTalk Bot | Receiving team reminders in a DingTalk group | DingTalk custom bot webhook URL or access_token, optional signing secret |
 | WeCom Bot | Receiving team reminders in a WeCom group | WeCom group message push webhook URL or key |
 | Generic webhook | Connecting self-hosted services, automation platforms, or compatible services | An HTTP(S) endpoint that accepts JSON requests |
 
@@ -56,6 +57,65 @@ When using All API Hub:
 | `param invalid: incoming webhook access token invalid` | The webhook URL or key is wrong, or the bot was deleted / recreated | Copy the full webhook URL again from the Feishu bot settings page |
 | `Bad Request` | Feishu rejected the request body, commonly because bot security settings do not match | Check keywords, security settings, and whether the bot is still in the target group |
 | Test notification does not arrive | The channel is disabled, the URL is empty, the network failed, or Feishu security policies blocked it | Enable the channel, send another test notification, and check the Feishu group bot configuration |
+
+<a id="dingtalk"></a>
+## DingTalk Bot
+
+The DingTalk channel sends plain-text messages through a DingTalk group custom bot. The easiest setup is to paste the full webhook URL provided by DingTalk. If you copied only the value after `access_token=`, you can enter that too.
+
+### Create The Bot And Get The Webhook URL
+
+1. Open the target DingTalk group.
+2. Open group settings, choose **Bots**, and add a **custom bot**.
+3. Configure the bot name and security settings. DingTalk supports custom keywords, signed requests, and IP address ranges.
+4. After creating the bot, open its configuration page and copy the webhook URL. It usually looks like:
+
+```text
+https://oapi.dingtalk.com/robot/send?access_token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+5. In All API Hub, go to **`Settings → General → Notifications → DingTalk Bot`**.
+6. Paste the full webhook URL into **`Webhook URL or access_token`**. If the DingTalk bot uses signed security, paste the generated `SEC...` value into **`Signing secret`**.
+7. Enable the channel and click **`Send test notification`**.
+
+### Security Settings
+
+When using All API Hub with DingTalk security settings:
+
+- If keyword verification is enabled, make sure the notification title or body contains your configured keyword, such as `All API Hub`.
+- If signed security is enabled, enter the `SEC...` secret from DingTalk. All API Hub generates a fresh `timestamp` and HMAC-SHA256 `sign` value for each request.
+- IP address range rules depend on your current network egress. Mobile networks, proxies, or home broadband changes may cause delivery failures.
+- Keep the webhook URL and signing secret private. Do not publish them in public repositories, public docs, or screenshots.
+
+For DingTalk's official setup flow, see [Create a custom bot](https://open.dingtalk.com/document/dingstart/custom-bot-creation-and-installation), [Custom bot security settings](https://open.dingtalk.com/document/dingstart/customize-robot-security-settings), and [Get the custom bot webhook URL](https://open.dingtalk.com/document/dingstart/obtain-the-webhook-address-of-a-custom-robot).
+
+### API Behavior
+
+The DingTalk custom bot API sends messages through `POST /robot/send?access_token=...`. All API Hub sends a text message:
+
+```json
+{
+  "msgtype": "text",
+  "text": {
+    "content": "Notification title\nNotification content"
+  },
+  "at": {
+    "isAtAll": false
+  }
+}
+```
+
+If a signing secret is configured, the request URL also includes `timestamp` and `sign` parameters. All API Hub treats `errcode: 0` as success. If DingTalk returns another `errcode`, the test notification surfaces the returned `errmsg` to help you check the configuration.
+
+### Common Errors
+
+| Error | Possible cause | What to do |
+|-------|----------------|------------|
+| `keywords not in content` or a similar keyword error | Keyword verification is enabled, but the notification content does not contain the keyword | Adjust the DingTalk keyword, or make sure the notification title/body contains it |
+| `sign not match` or a similar signing error | Signed security is enabled, but the secret is missing or wrong | Copy the `SEC...` secret again from the DingTalk bot settings page |
+| `msgtype is null` | DingTalk did not parse the request body as a valid bot message | Update All API Hub to a version that sends the DingTalk text payload with `msgtype`, and send another test notification |
+| `access_token` related errors | The webhook URL or access_token is wrong, or the bot was deleted / recreated | Copy the full webhook URL again from the DingTalk bot settings page |
+| Test notification does not arrive | The channel is disabled, the URL is empty, the network failed, or DingTalk security policies blocked it | Enable the channel, send another test notification, and check the DingTalk group bot configuration |
 
 <a id="wecom"></a>
 ## WeCom Bot

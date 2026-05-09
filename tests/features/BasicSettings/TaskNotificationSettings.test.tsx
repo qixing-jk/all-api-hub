@@ -213,6 +213,11 @@ describe("TaskNotificationSettings", () => {
           enabled: true,
           webhookKey: "feishu-webhook-key",
         },
+        [TASK_NOTIFICATION_CHANNELS.Dingtalk]: {
+          enabled: true,
+          webhookKey: "dingtalk-access-token",
+          secret: "SECdingtalk-secret",
+        },
         [TASK_NOTIFICATION_CHANNELS.Wecom]: {
           enabled: true,
           webhookKey: "wecom-webhook-key",
@@ -238,6 +243,9 @@ describe("TaskNotificationSettings", () => {
     const feishuChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_FEISHU,
     )
+    const dingtalkChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_DINGTALK,
+    )
     const wecomChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WECOM,
     )
@@ -247,6 +255,7 @@ describe("TaskNotificationSettings", () => {
     if (
       !telegramChannel ||
       !feishuChannel ||
+      !dingtalkChannel ||
       !wecomChannel ||
       !webhookChannel
     ) {
@@ -308,6 +317,43 @@ describe("TaskNotificationSettings", () => {
       expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
         action: RuntimeActionIds.TaskNotificationsTest,
         channel: TASK_NOTIFICATION_CHANNELS.Feishu,
+      })
+    })
+
+    const dingtalkWebhookKeyInput = within(dingtalkChannel).getByLabelText(
+      "settings:taskNotifications.channels.dingtalk.webhookKey",
+    )
+    const dingtalkSecretInput = within(dingtalkChannel).getByLabelText(
+      "settings:taskNotifications.channels.dingtalk.secret",
+    )
+    expect(dingtalkWebhookKeyInput).toHaveAttribute("type", "password")
+    expect(dingtalkSecretInput).toHaveAttribute("type", "password")
+    expect(
+      within(dingtalkChannel).getByRole("link", {
+        name: "settings:taskNotifications.channels.dingtalk.docsLink",
+      }),
+    ).toHaveAttribute(
+      "href",
+      "https://all-api-hub.qixing1217.top/en/task-notifications#dingtalk",
+    )
+
+    fireEvent.click(
+      within(dingtalkChannel).getAllByRole("button", {
+        name: "keyManagement:actions.showKey",
+      })[0],
+    )
+    expect(dingtalkWebhookKeyInput).toHaveAttribute("type", "text")
+
+    fireEvent.click(
+      within(dingtalkChannel).getByRole("button", {
+        name: "settings:taskNotifications.test.action",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
       })
     })
 
@@ -373,6 +419,11 @@ describe("TaskNotificationSettings", () => {
           enabled: true,
           webhookKey: "feishu-webhook-key",
         },
+        [TASK_NOTIFICATION_CHANNELS.Dingtalk]: {
+          enabled: true,
+          webhookKey: "dingtalk-access-token",
+          secret: "SECdingtalk-secret",
+        },
         [TASK_NOTIFICATION_CHANNELS.Wecom]: {
           enabled: true,
           webhookKey: "wecom-webhook-key",
@@ -399,6 +450,9 @@ describe("TaskNotificationSettings", () => {
     const feishuChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_FEISHU,
     )
+    const dingtalkChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_DINGTALK,
+    )
     const wecomChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WECOM,
     )
@@ -409,6 +463,7 @@ describe("TaskNotificationSettings", () => {
       !browserChannel ||
       !telegramChannel ||
       !feishuChannel ||
+      !dingtalkChannel ||
       !wecomChannel ||
       !webhookChannel
     ) {
@@ -418,6 +473,7 @@ describe("TaskNotificationSettings", () => {
     fireEvent.click(within(browserChannel).getByRole("switch"))
     fireEvent.click(within(telegramChannel).getByRole("switch"))
     fireEvent.click(within(feishuChannel).getByRole("switch"))
+    fireEvent.click(within(dingtalkChannel).getByRole("switch"))
     fireEvent.click(within(wecomChannel).getByRole("switch"))
     fireEvent.click(within(webhookChannel).getByRole("switch"))
 
@@ -452,6 +508,13 @@ describe("TaskNotificationSettings", () => {
       })
       expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
         channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Dingtalk]: expect.objectContaining({
+            enabled: false,
+          }),
+        }),
+      })
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
           [TASK_NOTIFICATION_CHANNELS.Wecom]: expect.objectContaining({
             enabled: false,
           }),
@@ -468,6 +531,12 @@ describe("TaskNotificationSettings", () => {
     )
     const feishuWebhookKeyInput = within(feishuChannel).getByLabelText(
       "settings:taskNotifications.channels.feishu.webhookKey",
+    )
+    const dingtalkWebhookKeyInput = within(dingtalkChannel).getByLabelText(
+      "settings:taskNotifications.channels.dingtalk.webhookKey",
+    )
+    const dingtalkSecretInput = within(dingtalkChannel).getByLabelText(
+      "settings:taskNotifications.channels.dingtalk.secret",
     )
     const wecomWebhookKeyInput = within(wecomChannel).getByLabelText(
       "settings:taskNotifications.channels.wecom.webhookKey",
@@ -523,6 +592,38 @@ describe("TaskNotificationSettings", () => {
       })
     })
 
+    fireEvent.change(dingtalkWebhookKeyInput, {
+      target: { value: "  next-dingtalk-token  " },
+    })
+    fireEvent.blur(dingtalkWebhookKeyInput)
+
+    await waitFor(() => {
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Dingtalk]: expect.objectContaining({
+            webhookKey: "next-dingtalk-token",
+            secret: "SECdingtalk-secret",
+          }),
+        }),
+      })
+    })
+
+    fireEvent.change(dingtalkSecretInput, {
+      target: { value: "  SECnext-dingtalk-secret  " },
+    })
+    fireEvent.blur(dingtalkSecretInput)
+
+    await waitFor(() => {
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Dingtalk]: expect.objectContaining({
+            webhookKey: "next-dingtalk-token",
+            secret: "SECnext-dingtalk-secret",
+          }),
+        }),
+      })
+    })
+
     fireEvent.change(wecomWebhookKeyInput, {
       target: { value: "  next-wecom-key  " },
     })
@@ -568,6 +669,11 @@ describe("TaskNotificationSettings", () => {
           enabled: true,
           webhookKey: "feishu-webhook-key",
         },
+        [TASK_NOTIFICATION_CHANNELS.Dingtalk]: {
+          enabled: true,
+          webhookKey: "dingtalk-access-token",
+          secret: "SECdingtalk-secret",
+        },
         [TASK_NOTIFICATION_CHANNELS.Wecom]: {
           enabled: true,
           webhookKey: "wecom-webhook-key",
@@ -593,6 +699,9 @@ describe("TaskNotificationSettings", () => {
     const feishuChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_FEISHU,
     )
+    const dingtalkChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_DINGTALK,
+    )
     const wecomChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WECOM,
     )
@@ -602,6 +711,7 @@ describe("TaskNotificationSettings", () => {
     if (
       !telegramChannel ||
       !feishuChannel ||
+      !dingtalkChannel ||
       !wecomChannel ||
       !webhookChannel
     ) {
@@ -622,6 +732,16 @@ describe("TaskNotificationSettings", () => {
       fireEvent.blur(
         within(feishuChannel).getByLabelText(
           "settings:taskNotifications.channels.feishu.webhookKey",
+        ),
+      )
+      fireEvent.blur(
+        within(dingtalkChannel).getByLabelText(
+          "settings:taskNotifications.channels.dingtalk.webhookKey",
+        ),
+      )
+      fireEvent.blur(
+        within(dingtalkChannel).getByLabelText(
+          "settings:taskNotifications.channels.dingtalk.secret",
         ),
       )
       fireEvent.blur(

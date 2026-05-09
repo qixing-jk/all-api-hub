@@ -39,6 +39,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
 import {
+  getDocsTaskNotificationsDingtalkUrl,
   getDocsTaskNotificationsFeishuUrl,
   getDocsTaskNotificationsWecomUrl,
 } from "~/utils/navigation/docsLinks"
@@ -207,6 +208,9 @@ export default function TaskNotificationSettings() {
   const [feishuDraft, setFeishuDraft] = useState(
     channels[TASK_NOTIFICATION_CHANNELS.Feishu],
   )
+  const [dingtalkDraft, setDingtalkDraft] = useState(
+    channels[TASK_NOTIFICATION_CHANNELS.Dingtalk],
+  )
   const [wecomDraft, setWecomDraft] = useState(
     channels[TASK_NOTIFICATION_CHANNELS.Wecom],
   )
@@ -225,6 +229,9 @@ export default function TaskNotificationSettings() {
     )
     setFeishuDraft(
       taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Feishu],
+    )
+    setDingtalkDraft(
+      taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Dingtalk],
     )
     setWecomDraft(taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Wecom])
     setWebhookDraft(
@@ -290,6 +297,19 @@ export default function TaskNotificationSettings() {
         },
       },
       t("taskNotifications.channels.feishu.title"),
+    )
+  }
+
+  const handleDingtalkChannelToggle = async (enabled: boolean) => {
+    await handleChannelUpdate(
+      {
+        ...channels,
+        [TASK_NOTIFICATION_CHANNELS.Dingtalk]: {
+          ...channels[TASK_NOTIFICATION_CHANNELS.Dingtalk],
+          enabled,
+        },
+      },
+      t("taskNotifications.channels.dingtalk.title"),
     )
   }
 
@@ -360,6 +380,29 @@ export default function TaskNotificationSettings() {
         [TASK_NOTIFICATION_CHANNELS.Feishu]: nextFeishu,
       },
       t("taskNotifications.channels.feishu.title"),
+    )
+  }
+
+  const handleDingtalkConfigSave = async () => {
+    const nextDingtalk = {
+      ...channels[TASK_NOTIFICATION_CHANNELS.Dingtalk],
+      webhookKey: dingtalkDraft.webhookKey.trim(),
+      secret: dingtalkDraft.secret.trim(),
+    }
+    const currentDingtalk = channels[TASK_NOTIFICATION_CHANNELS.Dingtalk]
+    if (
+      nextDingtalk.webhookKey === currentDingtalk.webhookKey &&
+      nextDingtalk.secret === currentDingtalk.secret
+    ) {
+      return
+    }
+
+    await handleChannelUpdate(
+      {
+        ...channels,
+        [TASK_NOTIFICATION_CHANNELS.Dingtalk]: nextDingtalk,
+      },
+      t("taskNotifications.channels.dingtalk.title"),
     )
   }
 
@@ -487,6 +530,11 @@ export default function TaskNotificationSettings() {
     channels[TASK_NOTIFICATION_CHANNELS.Feishu].enabled &&
     Boolean(channels[TASK_NOTIFICATION_CHANNELS.Feishu].webhookKey.trim()) &&
     !isAnyChannelTesting
+  const canSendDingtalkTest =
+    taskNotifications.enabled &&
+    channels[TASK_NOTIFICATION_CHANNELS.Dingtalk].enabled &&
+    Boolean(channels[TASK_NOTIFICATION_CHANNELS.Dingtalk].webhookKey.trim()) &&
+    !isAnyChannelTesting
   const canSendWecomTest =
     taskNotifications.enabled &&
     channels[TASK_NOTIFICATION_CHANNELS.Wecom].enabled &&
@@ -498,6 +546,7 @@ export default function TaskNotificationSettings() {
     Boolean(channels[TASK_NOTIFICATION_CHANNELS.Webhook].url.trim()) &&
     !isAnyChannelTesting
   const feishuDocsUrl = getDocsTaskNotificationsFeishuUrl(i18n.language)
+  const dingtalkDocsUrl = getDocsTaskNotificationsDingtalkUrl(i18n.language)
   const wecomDocsUrl = getDocsTaskNotificationsWecomUrl(i18n.language)
 
   return (
@@ -733,6 +782,107 @@ export default function TaskNotificationSettings() {
                   </Link>
                 </p>
               </FormField>
+            </NotificationSettingItem>
+
+            <NotificationSettingItem
+              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_DINGTALK}
+              title={t("taskNotifications.channels.dingtalk.title")}
+              description={t("taskNotifications.channels.dingtalk.description")}
+              actions={
+                <NotificationChannelActions
+                  checked={
+                    channels[TASK_NOTIFICATION_CHANNELS.Dingtalk].enabled
+                  }
+                  disabled={!taskNotifications.enabled}
+                  loading={
+                    testingChannel === TASK_NOTIFICATION_CHANNELS.Dingtalk
+                  }
+                  testDisabled={!canSendDingtalkTest}
+                  testLabel={t("taskNotifications.test.action")}
+                  onToggle={(enabled) =>
+                    void handleDingtalkChannelToggle(enabled)
+                  }
+                  onTest={() =>
+                    void handleSendTest(TASK_NOTIFICATION_CHANNELS.Dingtalk)
+                  }
+                />
+              }
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FormField
+                  label={t("taskNotifications.channels.dingtalk.webhookKey")}
+                  htmlFor={
+                    SETTINGS_ANCHORS.TASK_NOTIFICATIONS_DINGTALK_WEBHOOK_KEY
+                  }
+                >
+                  <Input
+                    id={
+                      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_DINGTALK_WEBHOOK_KEY
+                    }
+                    type="password"
+                    revealable
+                    revealLabels={{
+                      show: t("keyManagement:actions.showKey"),
+                      hide: t("keyManagement:actions.hideKey"),
+                    }}
+                    value={dingtalkDraft.webhookKey}
+                    disabled={
+                      !taskNotifications.enabled ||
+                      !channels[TASK_NOTIFICATION_CHANNELS.Dingtalk].enabled
+                    }
+                    placeholder={t(
+                      "taskNotifications.channels.dingtalk.webhookKeyPlaceholder",
+                    )}
+                    onChange={(event) =>
+                      setDingtalkDraft((draft) => ({
+                        ...draft,
+                        webhookKey: event.target.value,
+                      }))
+                    }
+                    onBlur={() => void handleDingtalkConfigSave()}
+                  />
+                </FormField>
+                <FormField
+                  label={t("taskNotifications.channels.dingtalk.secret")}
+                  htmlFor={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_DINGTALK_SECRET}
+                >
+                  <Input
+                    id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_DINGTALK_SECRET}
+                    type="password"
+                    revealable
+                    revealLabels={{
+                      show: t("keyManagement:actions.showKey"),
+                      hide: t("keyManagement:actions.hideKey"),
+                    }}
+                    value={dingtalkDraft.secret}
+                    disabled={
+                      !taskNotifications.enabled ||
+                      !channels[TASK_NOTIFICATION_CHANNELS.Dingtalk].enabled
+                    }
+                    placeholder={t(
+                      "taskNotifications.channels.dingtalk.secretPlaceholder",
+                    )}
+                    onChange={(event) =>
+                      setDingtalkDraft((draft) => ({
+                        ...draft,
+                        secret: event.target.value,
+                      }))
+                    }
+                    onBlur={() => void handleDingtalkConfigSave()}
+                  />
+                </FormField>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t("taskNotifications.channels.dingtalk.webhookKeyDescription")}{" "}
+                <Link
+                  href={dingtalkDocsUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-xs"
+                >
+                  {t("taskNotifications.channels.dingtalk.docsLink")}
+                </Link>
+              </p>
             </NotificationSettingItem>
 
             <NotificationSettingItem

@@ -98,7 +98,7 @@ After adding an account, you can "push" these configurations to other AI tools w
 - **[WebDAV Sync & Encryption](./webdav-sync.md)**: Supports cross-device encrypted backups, ensuring data is never lost.
 
 ### 🔔 Notification Channels
-- **[Task notifications](./task-notifications.md)**: Enable them in **`Settings → General → Notifications`** to receive background task result reminders through browser system notifications, Telegram Bot, Feishu Bot, WeCom Bot, or generic webhook delivery.
+- **[Task notifications](./task-notifications.md)**: Enable them in **`Settings → General → Notifications`** to receive background task result reminders through browser system notifications, Telegram Bot, Feishu Bot, DingTalk Bot, WeCom Bot, or generic webhook delivery.
 
 ### 🛠️ Self-hosted Site Operation Tools
 - **[Self-hosted Site Management](./self-hosted-site-management.md)**: Directly add, delete, modify, and query channels within the plugin.

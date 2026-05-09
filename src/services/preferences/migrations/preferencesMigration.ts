@@ -36,7 +36,7 @@ import { migrateSortingConfig } from "./sortingConfigMigration"
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 21
+export const CURRENT_PREFERENCES_VERSION = 22
 
 /**
  * Migration function type
@@ -464,6 +464,26 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
           ? normalizeTaskNotificationPreferences(stored)
           : DEFAULT_TASK_NOTIFICATION_PREFERENCES,
       preferencesVersion: 21,
+    }
+  },
+
+  // Version 21 -> 22: re-run task notification normalization so users already
+  // on v21 get the DingTalk channel default backfilled without losing existing
+  // third-party channel settings.
+  22: (prefs: UserPreferences): UserPreferences => {
+    logger.debug(
+      "Migrating preferences from v21 to v22 (DingTalk notification channel)",
+    )
+
+    const stored = (prefs as any).taskNotifications
+
+    return {
+      ...prefs,
+      taskNotifications:
+        stored && typeof stored === "object"
+          ? normalizeTaskNotificationPreferences(stored)
+          : DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      preferencesVersion: 22,
     }
   },
 }

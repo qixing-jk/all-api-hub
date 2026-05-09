@@ -512,6 +512,16 @@
         "description": "透過瀏覽器系統通知傳送，需要授予 notifications 權限。",
         "title": "瀏覽器系統通知"
       },
+      "dingtalk": {
+        "description": "透過釘釘群組自訂機器人傳送任務通知。建議直接貼上釘釘提供的完整 Webhook URL，也相容只填寫 access_token。",
+        "docsLink": "查看設定文件",
+        "secret": "加簽 Secret（可選）",
+        "secretPlaceholder": "SECxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "title": "釘釘機器人",
+        "webhookKey": "Webhook URL 或 access_token",
+        "webhookKeyDescription": "在釘釘群組的自訂機器人設定頁複製 Webhook 地址並貼到這裡；如果只填寫 `access_token=` 後面的值，也會自動補全地址。啟用加簽安全設定時，請同時填寫 Secret。",
+        "webhookKeyPlaceholder": "https://oapi.dingtalk.com/robot/send?access_token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
       "feishu": {
         "description": "透過飛書自訂機器人傳送任務通知。建議直接貼上飛書提供的完整 Webhook URL，也相容只填寫最後一段 key。",
         "docsLink": "查看設定文件",
@@ -547,7 +557,7 @@
     "enableDesc": "開啟後，已勾選任務在定時執行完成時會傳送成功、部分成功或失敗通知。",
     "groups": {
       "channels": {
-        "description": "選擇通知透過哪些渠道送達。瀏覽器通知需要授權，Telegram、飛書和 Webhook 可分別配置並傳送測試。",
+        "description": "選擇通知透過哪些渠道送達。瀏覽器通知需要授權，Telegram、飛書、釘釘、企業微信和 Webhook 可分別配置並傳送測試。",
         "title": "通知渠道"
       },
       "setup": {
@@ -602,6 +612,7 @@
       "action": "傳送測試通知",
       "browserFailed": "瀏覽器通知測試失敗，請確認已啟用瀏覽器通知渠道並授予通知權限。",
       "channelDisabled": "測試通知傳送失敗，請先啟用並設定此通知渠道。",
+      "dingtalkMissingConfig": "釘釘機器人 Webhook URL 或 access_token 未設定。",
       "failed": "測試通知傳送失敗，請檢查此通知渠道設定。",
       "feishuMissingConfig": "飛書機器人 Webhook URL 或 Key 未設定。",
       "httpError": "{{label}} 回傳了 HTTP {{status}}。",

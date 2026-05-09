@@ -90,6 +90,10 @@ vi.mock("~/utils/i18n/core", () => ({
       return "Feishu Bot"
     }
 
+    if (key === "settings:taskNotifications.channels.dingtalk.title") {
+      return "DingTalk Bot"
+    }
+
     if (key === "settings:taskNotifications.channels.wecom.title") {
       return "WeCom Bot"
     }
@@ -483,6 +487,108 @@ describe("taskNotificationService", () => {
     )
   })
 
+  it("sends DingTalk custom bot notifications", async () => {
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Browser]: {
+            enabled: false,
+          },
+          [TASK_NOTIFICATION_CHANNELS.Dingtalk]: {
+            enabled: true,
+            webhookKey: "dingtalk-access-token",
+            secret: "",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        errcode: 0,
+        errmsg: "ok",
+      }),
+    })
+
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+      }),
+    ).resolves.toBe(true)
+
+    expect(createNotificationMock).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://oapi.dingtalk.com/robot/send?access_token=dingtalk-access-token",
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json;charset=utf-8",
+        },
+        body: JSON.stringify({
+          msgtype: "text",
+          text: {
+            content:
+              "settings:taskNotifications.notification.title.success:settings:taskNotifications.tasks.autoCheckin\nsettings:taskNotifications.notification.body.success:settings:taskNotifications.tasks.autoCheckin",
+          },
+          at: {
+            isAtAll: false,
+          },
+        }),
+      }),
+    )
+  })
+
+  it("adds DingTalk signature parameters when a signing secret is configured", async () => {
+    vi.spyOn(Date, "now").mockReturnValue(1710000000000)
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Browser]: {
+            enabled: false,
+          },
+          [TASK_NOTIFICATION_CHANNELS.Dingtalk]: {
+            enabled: true,
+            webhookKey:
+              "https://oapi.dingtalk.com/robot/send?access_token=full-dingtalk-access-token",
+            secret: "SECtestsecret",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        errcode: 0,
+        errmsg: "ok",
+      }),
+    })
+
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+      }),
+    ).resolves.toBe(true)
+
+    const [url] = fetchMock.mock.calls[0] as [string, RequestInit]
+    const parsedUrl = new URL(url)
+    expect(parsedUrl.origin + parsedUrl.pathname).toBe(
+      "https://oapi.dingtalk.com/robot/send",
+    )
+    expect(parsedUrl.searchParams.get("access_token")).toBe(
+      "full-dingtalk-access-token",
+    )
+    expect(parsedUrl.searchParams.get("timestamp")).toBe("1710000000000")
+    expect(parsedUrl.searchParams.get("sign")).toBeTruthy()
+  })
+
   it("sends WeCom group bot notifications", async () => {
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
@@ -788,6 +894,52 @@ describe("taskNotificationService", () => {
     })
   })
 
+  it("handles DingTalk channel-specific test notification runtime messages", async () => {
+    const sendResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Dingtalk]: {
+            enabled: true,
+            webhookKey: "dingtalk-access-token",
+            secret: "",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      json: async () => ({
+        errcode: 0,
+        errmsg: "ok",
+      }),
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
+      },
+      sendResponse,
+    )
+
+    expect(createNotificationMock).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://oapi.dingtalk.com/robot/send?access_token=dingtalk-access-token",
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining("settings:taskNotifications.test.title"),
+      }),
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      error: undefined,
+    })
+  })
+
   it("handles WeCom channel-specific test notification runtime messages", async () => {
     const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
@@ -1032,6 +1184,94 @@ describe("taskNotificationService", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "WeCom Bot returned HTTP 200: invalid webhook url",
+    })
+  })
+
+  it("treats DingTalk business error responses as channel-specific test failures", async () => {
+    const sendResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Dingtalk]: {
+            enabled: true,
+            webhookKey: "invalid-dingtalk-access-token",
+            secret: "",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: {
+        get: () => "application/json",
+      },
+      json: async () => ({
+        errcode: 310000,
+        errmsg: "keywords not in content",
+      }),
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
+      },
+      sendResponse,
+    )
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "DingTalk Bot returned HTTP 200: keywords not in content",
+    })
+  })
+
+  it("surfaces DingTalk msgtype validation failures from channel-specific tests", async () => {
+    const sendResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Dingtalk]: {
+            enabled: true,
+            webhookKey: "dingtalk-access-token",
+            secret: "",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: {
+        get: () => "application/json",
+      },
+      json: async () => ({
+        errcode: 300001,
+        errmsg: "msgtype  is null",
+      }),
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
+      },
+      sendResponse,
+    )
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://oapi.dingtalk.com/robot/send?access_token=dingtalk-access-token",
+      expect.objectContaining({
+        body: expect.stringContaining('"msgtype":"text"'),
+      }),
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "DingTalk Bot returned HTTP 200: msgtype  is null",
     })
   })
 
@@ -1288,6 +1528,34 @@ describe("taskNotificationService", () => {
     expect(missingFeishuResponse).toHaveBeenCalledWith({
       success: false,
       error: "settings:taskNotifications.test.feishuMissingConfig",
+    })
+
+    const missingDingtalkResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Dingtalk]: {
+            enabled: true,
+            webhookKey: "",
+            secret: "",
+          },
+        },
+      },
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
+      },
+      missingDingtalkResponse,
+    )
+
+    expect(missingDingtalkResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "settings:taskNotifications.test.dingtalkMissingConfig",
     })
 
     const missingWecomResponse = vi.fn()

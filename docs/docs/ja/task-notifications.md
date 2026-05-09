@@ -14,6 +14,7 @@
 | ブラウザシステム通知 | 現在の端末だけで通知を受け取る | ブラウザの `notifications` 権限 |
 | Telegram Bot | Telegram のチャットやグループで通知を受け取る | Bot Token、Chat ID |
 | Feishu Bot | Feishu グループでチーム通知を受け取る | Feishu カスタムボットの Webhook URL または key |
+| DingTalk Bot | DingTalk グループでチーム通知を受け取る | DingTalk カスタムボットの Webhook URL または access_token、任意の署名 Secret |
 | WeCom Bot | WeCom グループでチーム通知を受け取る | WeCom グループのメッセージプッシュ Webhook URL または key |
 | 汎用 Webhook | 自ホストサービス、自動化プラットフォーム、互換サービスへ接続する | JSON リクエストを受け取れる HTTP(S) エンドポイント |
 
@@ -56,6 +57,65 @@ All API Hub で利用する際の注意点:
 | `param invalid: incoming webhook access token invalid` | Webhook URL または key が間違っている、またはボットが削除 / 再作成された | Feishu ボット設定ページから完全な Webhook URL を再コピーする |
 | `Bad Request` | Feishu がリクエスト本文を拒否した。多くの場合、ボットのセキュリティ設定と一致していない | キーワード、セキュリティ設定、ボットが対象グループに残っているかを確認する |
 | テスト通知が届かない | チャネルが無効、URL が空、ネットワーク失敗、または Feishu のセキュリティポリシーにブロックされた | チャネルを有効化して再度テスト通知を送り、Feishu グループのボット設定を確認する |
+
+<a id="dingtalk"></a>
+## DingTalk Bot
+
+DingTalk チャネルは、DingTalk グループのカスタムボットを使ってテキスト通知を送信します。最も簡単な設定方法は、DingTalk が提供する Webhook URL 全体を貼り付けることです。`access_token=` の後ろの値だけをコピーした場合も、そのまま入力できます。
+
+### ボットを作成して Webhook URL を取得する
+
+1. 通知を送りたい DingTalk グループを開きます。
+2. グループ設定で **ボット** を選び、**カスタムボット** を追加します。
+3. ボット名とセキュリティ設定を構成します。DingTalk はカスタムキーワード、署名、IP アドレス範囲に対応しています。
+4. 作成後、カスタムボットの設定ページを開き、Webhook URL をコピーします。通常は次のような形式です。
+
+```text
+https://oapi.dingtalk.com/robot/send?access_token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+```
+
+5. All API Hub で **`設定 → 一般 → 通知 → DingTalk Bot`** を開きます。
+6. 完全な Webhook URL を **`Webhook URL または access_token`** に貼り付けます。DingTalk 側で署名セキュリティを有効にしている場合は、生成された `SEC...` の値を **`署名 Secret`** に貼り付けます。
+7. チャネルを有効にして **`テスト通知を送信`** をクリックします。
+
+### セキュリティ設定
+
+All API Hub で DingTalk のセキュリティ設定を使う際の注意点:
+
+- キーワード検証を有効にしている場合は、通知タイトルまたは本文に設定済みキーワードが含まれるようにしてください。例: `All API Hub`。
+- 署名セキュリティを有効にしている場合は、DingTalk の `SEC...` Secret を入力してください。All API Hub は送信ごとに `timestamp` と HMAC-SHA256 の `sign` を生成します。
+- IP アドレス範囲は現在のネットワーク出口に依存します。モバイル回線、プロキシ、自宅回線の出口変更により送信に失敗することがあります。
+- Webhook URL と署名 Secret は公開しないでください。公開リポジトリ、公開ドキュメント、スクリーンショットに含めないようにしてください。
+
+DingTalk の公式手順は、[カスタムボットの作成](https://open.dingtalk.com/document/dingstart/custom-bot-creation-and-installation)、[カスタムボットのセキュリティ設定](https://open.dingtalk.com/document/dingstart/customize-robot-security-settings)、[カスタムボット Webhook URL の取得](https://open.dingtalk.com/document/dingstart/obtain-the-webhook-address-of-a-custom-robot) を参照してください。
+
+### API の動作
+
+DingTalk カスタムボット API は `POST /robot/send?access_token=...` でメッセージを送信します。All API Hub はテキストメッセージを送信します。
+
+```json
+{
+  "msgtype": "text",
+  "text": {
+    "content": "通知タイトル\n通知内容"
+  },
+  "at": {
+    "isAtAll": false
+  }
+}
+```
+
+署名 Secret を設定している場合、リクエスト URL には `timestamp` と `sign` も含まれます。All API Hub は `errcode: 0` を成功として扱います。DingTalk が別の `errcode` を返した場合、テスト通知では返された `errmsg` を表示し、設定確認に使えるようにします。
+
+### よくあるエラー
+
+| エラー | 考えられる原因 | 対処方法 |
+|--------|----------------|----------|
+| `keywords not in content` または類似のキーワードエラー | キーワード検証が有効だが、通知内容にキーワードが含まれていない | DingTalk のキーワードを調整するか、通知タイトル/本文にそのキーワードを含める |
+| `sign not match` または類似の署名エラー | 署名セキュリティが有効だが、Secret が未入力または間違っている | DingTalk ボット設定ページから `SEC...` Secret を再コピーする |
+| `msgtype is null` | DingTalk がリクエスト本文を有効なボットメッセージとして解析できなかった | `msgtype` を含む DingTalk テキスト payload を送信するバージョンに All API Hub を更新し、再度テスト通知を送る |
+| `access_token` 関連のエラー | Webhook URL または access_token が間違っている、またはボットが削除 / 再作成された | DingTalk ボット設定ページから完全な Webhook URL を再コピーする |
+| テスト通知が届かない | チャネルが無効、URL が空、ネットワーク失敗、または DingTalk のセキュリティポリシーにブロックされた | チャネルを有効化して再度テスト通知を送り、DingTalk グループのボット設定を確認する |
 
 <a id="wecom"></a>
 ## WeCom Bot

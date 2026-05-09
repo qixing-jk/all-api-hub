@@ -4,6 +4,7 @@ import { getHomepage } from "~/utils/navigation/packageMeta"
 
 const DOCS_COMMUNITY_ANCHOR = "community"
 const DOCS_TASK_NOTIFICATIONS_FEISHU_ANCHOR = "feishu"
+const DOCS_TASK_NOTIFICATIONS_DINGTALK_ANCHOR = "dingtalk"
 const DOCS_TASK_NOTIFICATIONS_WECOM_ANCHOR = "wecom"
 
 /**
@@ -40,6 +41,12 @@ export const getDocsTaskNotificationsUrl = (language?: string) =>
 export const getDocsTaskNotificationsFeishuUrl = (language?: string) => {
   const url = new URL(getDocsTaskNotificationsUrl(language))
   url.hash = DOCS_TASK_NOTIFICATIONS_FEISHU_ANCHOR
+  return url.toString()
+}
+
+export const getDocsTaskNotificationsDingtalkUrl = (language?: string) => {
+  const url = new URL(getDocsTaskNotificationsUrl(language))
+  url.hash = DOCS_TASK_NOTIFICATIONS_DINGTALK_ANCHOR
   return url.toString()
 }
 

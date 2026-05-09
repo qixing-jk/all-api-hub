@@ -512,6 +512,16 @@
         "description": "通过浏览器系统通知发送，需要授予 notifications 权限。",
         "title": "浏览器系统通知"
       },
+      "dingtalk": {
+        "description": "通过钉钉群自定义机器人发送任务通知。推荐直接粘贴钉钉提供的完整 Webhook URL，也兼容只填写 access_token。",
+        "docsLink": "查看配置文档",
+        "secret": "加签 Secret（可选）",
+        "secretPlaceholder": "SECxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "title": "钉钉机器人",
+        "webhookKey": "Webhook URL 或 access_token",
+        "webhookKeyDescription": "在钉钉群的自定义机器人配置页复制 Webhook 地址并粘贴到这里；如果只填写 `access_token=` 后面的值，也会自动补全地址。启用加签安全设置时，请同时填写 Secret。",
+        "webhookKeyPlaceholder": "https://oapi.dingtalk.com/robot/send?access_token=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+      },
       "feishu": {
         "description": "通过飞书自定义机器人发送任务通知。推荐直接粘贴飞书提供的完整 Webhook URL，也兼容只填写最后一段 key。",
         "docsLink": "查看配置文档",
@@ -547,7 +557,7 @@
     "enableDesc": "开启后，已勾选任务在定时运行完成时会发送成功、部分成功或失败通知。",
     "groups": {
       "channels": {
-        "description": "选择通知通过哪些渠道送达。浏览器通知需要授权，Telegram、飞书和 Webhook 可分别配置并发送测试。",
+        "description": "选择通知通过哪些渠道送达。浏览器通知需要授权，Telegram、飞书、钉钉、企业微信和 Webhook 可分别配置并发送测试。",
         "title": "通知渠道"
       },
       "setup": {
@@ -602,6 +612,7 @@
       "action": "发送测试通知",
       "browserFailed": "浏览器通知测试失败，请确认已启用浏览器通知渠道并授予通知权限。",
       "channelDisabled": "测试通知发送失败，请先启用并配置该通知渠道。",
+      "dingtalkMissingConfig": "钉钉机器人 Webhook URL 或 access_token 未配置。",
       "failed": "测试通知发送失败，请检查该通知渠道配置。",
       "feishuMissingConfig": "飞书机器人 Webhook URL 或 Key 未配置。",
       "httpError": "{{label}} 返回了 HTTP {{status}}。",
