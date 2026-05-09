@@ -1,4 +1,4 @@
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import {
   buildControlDefinition,
   buildSectionDefinition,
@@ -6,7 +6,7 @@ import {
 } from "~/entrypoints/options/search/registryHelpers"
 import type { OptionsSearchItemDefinition } from "~/entrypoints/options/search/types"
 
-const isStandardManagedSite = (managedSiteType: string) =>
+const isStandardManagedSite = (managedSiteType: ManagedSiteType) =>
   managedSiteType !== SITE_TYPES.AXON_HUB &&
   managedSiteType !== SITE_TYPES.CLAUDE_CODE_HUB
 

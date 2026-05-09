@@ -313,10 +313,10 @@ describe("site announcement providers", () => {
   })
 
   it("selects the provider implementation from the site type", () => {
-    expect(getSiteAnnouncementProvider("sub2api")).toBe(
+    expect(getSiteAnnouncementProvider(SITE_TYPES.SUB2API)).toBe(
       sub2ApiSiteAnnouncementProvider,
     )
-    expect(getSiteAnnouncementProvider("new-api")).toBe(
+    expect(getSiteAnnouncementProvider(SITE_TYPES.NEW_API)).toBe(
       commonSiteAnnouncementProvider,
     )
   })

@@ -30,6 +30,10 @@ type SiteOverrideMap = typeof siteOverrideMap
 
 export type ApiOverrideSite = keyof SiteOverrideMap
 
+const hasOwnOverrideSite = (value: unknown): value is ApiOverrideSite =>
+  typeof value === "string" &&
+  Object.prototype.hasOwnProperty.call(siteOverrideMap, value)
+
 /**
  * Append an optional SiteType hint to a function signature.
  * This allows callers to explicitly request a site/version implementation
@@ -51,10 +55,8 @@ function getApiFunc<T extends keyof typeof commonAPI>(
   currentSite: ApiOverrideSite | null = null,
 ): (typeof commonAPI)[T] {
   const overrideModules =
-    currentSite && currentSite in siteOverrideMap
-      ? (siteOverrideMap[
-          currentSite as keyof SiteOverrideMap
-        ] as readonly ApiOverrideModule[])
+    currentSite && hasOwnOverrideSite(currentSite)
+      ? (siteOverrideMap[currentSite] as readonly ApiOverrideModule[])
       : null
 
   if (overrideModules) {
@@ -82,15 +84,15 @@ function createWrappedFunction<T extends (...args: any[]) => any>(
     let currentSite: ApiOverrideSite | null = null
     const lastArg = args[args.length - 1]
 
-    if (typeof lastArg === "string" && lastArg in siteOverrideMap) {
-      currentSite = lastArg as ApiOverrideSite
+    if (hasOwnOverrideSite(lastArg)) {
+      currentSite = lastArg
       args.pop()
     } else {
       for (const arg of args) {
         if (arg && typeof arg === "object" && "siteType" in arg) {
           const candidate = arg.siteType
-          if (typeof candidate === "string" && candidate in siteOverrideMap) {
-            currentSite = candidate as ApiOverrideSite
+          if (hasOwnOverrideSite(candidate)) {
+            currentSite = candidate
             break
           }
         }
@@ -135,7 +137,7 @@ const apiForSite = (site: ApiOverrideSite) => {
 }
 
 const isApiOverrideSite = (value: unknown): value is ApiOverrideSite =>
-  typeof value === "string" && value in siteOverrideMap
+  hasOwnOverrideSite(value)
 
 export const getApiService = (site: unknown) =>
   (isApiOverrideSite(site)

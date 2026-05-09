@@ -123,7 +123,9 @@ describe("detectSiteType temp-context fallbacks", () => {
       new ApiError("   ", 401, "/api/user/self"),
     )
 
-    await expect(getSiteType("https://example.com")).resolves.toBe("unknown")
+    await expect(getSiteType("https://example.com")).resolves.toBe(
+      SITE_TYPES.UNKNOWN,
+    )
   })
 
   it("returns UNKNOWN when the API error message is empty", async () => {
@@ -134,7 +136,9 @@ describe("detectSiteType temp-context fallbacks", () => {
       new ApiError("", 401, "/api/user/self"),
     )
 
-    await expect(getSiteType("https://example.com")).resolves.toBe("unknown")
+    await expect(getSiteType("https://example.com")).resolves.toBe(
+      SITE_TYPES.UNKNOWN,
+    )
   })
 
   it("rethrows unexpected non-ApiError failures from the API fallback probe", async () => {

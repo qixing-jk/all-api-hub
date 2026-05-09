@@ -6,7 +6,7 @@ import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { isSiteType, SITE_TYPES } from "~/constants/siteType"
+import { isSiteType, SITE_TYPES, type SiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   autoDetectAccount,
@@ -251,7 +251,10 @@ export function useAccountDialog({
   )
   const setSiteType = useCallback(
     (value: string) => {
-      updateDraft((prev) => ({ ...prev, siteType: value }))
+      updateDraft((prev) => ({
+        ...prev,
+        siteType: isSiteType(value) ? value : SITE_TYPES.UNKNOWN,
+      }))
     },
     [updateDraft],
   )
@@ -468,9 +471,10 @@ export function useAccountDialog({
         if (siteAccount) {
           setUrl(siteAccount.site_url)
           const refreshToken = siteAccount.sub2apiAuth?.refreshToken ?? ""
-          const normalizedSiteType =
-            siteAccount.site_type ||
-            (siteAccount.sub2apiAuth ? SITE_TYPES.SUB2API : SITE_TYPES.UNKNOWN)
+          const normalizedSiteType = resolveStoredSiteType(
+            siteAccount.site_type,
+            Boolean(siteAccount.sub2apiAuth),
+          )
           setDraft({
             siteName: siteAccount.site_name,
             username: siteAccount.account_info.username,
@@ -951,7 +955,9 @@ export function useAccountDialog({
           mode === DIALOG_MODES.EDIT ||
           formSource !== ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
 
-        const nextSiteType = resultData.siteType || siteType
+        const nextSiteType = isSiteType(resultData.siteType)
+          ? resultData.siteType
+          : siteType
         const nextCheckIn =
           nextSiteType === SITE_TYPES.SUB2API
             ? {
@@ -1507,7 +1513,7 @@ function clearSub2ApiRefreshTokenState(
 function buildDraftFromAutoDetectResult(params: {
   draft: AccountDialogDraft
   resultData: NonNullable<Awaited<ReturnType<typeof autoDetectAccount>>["data"]>
-  nextSiteType: string
+  nextSiteType: SiteType
   nextCheckIn: CheckInConfig
   preserveExistingCheckIn: boolean
   mode: DialogMode
@@ -1573,4 +1579,18 @@ function areDraftsEquivalent(
     left.sub2apiRefreshToken === right.sub2apiRefreshToken &&
     left.sub2apiTokenExpiresAt === right.sub2apiTokenExpiresAt
   )
+}
+
+/**
+ * Normalizes legacy persisted site types before hydrating edit-mode draft state.
+ */
+function resolveStoredSiteType(
+  value: unknown,
+  hasSub2ApiAuth: boolean,
+): SiteType {
+  if (isSiteType(value)) {
+    return value
+  }
+
+  return hasSub2ApiAuth ? SITE_TYPES.SUB2API : SITE_TYPES.UNKNOWN
 }

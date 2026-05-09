@@ -1,4 +1,4 @@
-import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES, type SiteType } from "~/constants/siteType"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 
 export const ACCOUNT_DIALOG_PHASES = {
@@ -29,7 +29,7 @@ export interface AccountDialogDraft {
   tagIds: string[]
   excludeFromTotalBalance: boolean
   checkIn: CheckInConfig
-  siteType: string
+  siteType: SiteType
   authType: AuthTypeEnum
   cookieAuthSessionCookie: string
   sub2apiUseRefreshToken: boolean

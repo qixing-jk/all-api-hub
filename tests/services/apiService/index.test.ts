@@ -99,6 +99,35 @@ describe("apiService index wrapper", () => {
     expect(oneHubFetchModelPricing).toHaveBeenCalledWith(request)
   })
 
+  it("should ignore inherited object keys when detecting override sites", async () => {
+    commonFetchUserInfo.mockResolvedValue({} as any)
+
+    const request = {
+      baseUrl: "https://example.com",
+      auth: { authType: "none" },
+      siteType: "toString",
+    }
+
+    await (getApiService(undefined).fetchUserInfo as any)(request)
+
+    expect(commonFetchUserInfo).toHaveBeenCalledTimes(1)
+    expect(commonFetchUserInfo).toHaveBeenCalledWith(request)
+  })
+
+  it("should ignore inherited object keys when selecting a site-scoped api instance", async () => {
+    commonFetchUserInfo.mockResolvedValue({} as any)
+
+    const request = {
+      baseUrl: "https://example.com",
+      auth: { authType: "none" },
+    }
+
+    await (getApiService("toString").fetchUserInfo as any)(request)
+
+    expect(commonFetchUserInfo).toHaveBeenCalledTimes(1)
+    expect(commonFetchUserInfo).toHaveBeenCalledWith(request)
+  })
+
   it("should respect an explicit trailing site hint when using the exported wrapper", async () => {
     oneHubFetchModelPricing.mockResolvedValue({} as any)
 

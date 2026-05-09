@@ -151,7 +151,7 @@ describe("managedSite", () => {
         },
       },
       {
-        siteType: "octopus",
+        siteType: SITE_TYPES.OCTOPUS,
         labelKey: "settings:managedSite.octopus",
         messagesKey: "octopus",
         config: {
