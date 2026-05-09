@@ -12,6 +12,12 @@ import {
   TASK_NOTIFICATION_TASKS,
   type TaskNotificationPreferences,
 } from "~/types/taskNotifications"
+import {
+  getDocsTaskNotificationsDingtalkUrl,
+  getDocsTaskNotificationsFeishuUrl,
+  getDocsTaskNotificationsNtfyUrl,
+  getDocsTaskNotificationsWecomUrl,
+} from "~/utils/navigation/docsLinks"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -304,10 +310,7 @@ describe("TaskNotificationSettings", () => {
       within(feishuChannel).getByRole("link", {
         name: "settings:taskNotifications.channels.feishu.docsLink",
       }),
-    ).toHaveAttribute(
-      "href",
-      "https://all-api-hub.qixing1217.top/en/task-notifications#feishu",
-    )
+    ).toHaveAttribute("href", getDocsTaskNotificationsFeishuUrl("en"))
 
     fireEvent.click(
       within(feishuChannel).getByRole("button", {
@@ -341,10 +344,7 @@ describe("TaskNotificationSettings", () => {
       within(dingtalkChannel).getByRole("link", {
         name: "settings:taskNotifications.channels.dingtalk.docsLink",
       }),
-    ).toHaveAttribute(
-      "href",
-      "https://all-api-hub.qixing1217.top/en/task-notifications#dingtalk",
-    )
+    ).toHaveAttribute("href", getDocsTaskNotificationsDingtalkUrl("en"))
 
     fireEvent.click(
       within(dingtalkChannel).getAllByRole("button", {
@@ -374,10 +374,7 @@ describe("TaskNotificationSettings", () => {
       within(wecomChannel).getByRole("link", {
         name: "settings:taskNotifications.channels.wecom.docsLink",
       }),
-    ).toHaveAttribute(
-      "href",
-      "https://all-api-hub.qixing1217.top/en/task-notifications#wecom",
-    )
+    ).toHaveAttribute("href", getDocsTaskNotificationsWecomUrl("en"))
 
     fireEvent.click(
       within(wecomChannel).getByRole("button", {
@@ -407,10 +404,7 @@ describe("TaskNotificationSettings", () => {
       within(ntfyChannel).getByRole("link", {
         name: "settings:taskNotifications.channels.ntfy.docsLink",
       }),
-    ).toHaveAttribute(
-      "href",
-      "https://all-api-hub.qixing1217.top/en/task-notifications#ntfy",
-    )
+    ).toHaveAttribute("href", getDocsTaskNotificationsNtfyUrl("en"))
 
     fireEvent.click(
       within(ntfyChannel).getByRole("button", {

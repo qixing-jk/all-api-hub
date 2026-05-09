@@ -1098,6 +1098,20 @@ describe("preferencesMigration", () => {
       })
     })
 
+    it("falls back to default task notifications during v20 to v21 migration when stored data is invalid", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 20,
+        taskNotifications: null as any,
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.taskNotifications).toEqual(
+        DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      )
+    })
+
     it("backfills the DingTalk notification channel during v21 to v22 migration", () => {
       const {
         [TASK_NOTIFICATION_CHANNELS.Dingtalk]: _dingtalk,
@@ -1140,6 +1154,20 @@ describe("preferencesMigration", () => {
       })
     })
 
+    it("falls back to default task notifications during v21 to v22 migration when stored data is invalid", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 21,
+        taskNotifications: undefined as any,
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.taskNotifications).toEqual(
+        DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      )
+    })
+
     it("backfills the ntfy notification channel during v22 to v23 migration", () => {
       const { [TASK_NOTIFICATION_CHANNELS.Ntfy]: _ntfy, ...legacyChannels } =
         DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels
@@ -1178,6 +1206,20 @@ describe("preferencesMigration", () => {
           },
         },
       })
+    })
+
+    it("falls back to default task notifications during v22 to v23 migration when stored data is invalid", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 22,
+        taskNotifications: "invalid" as any,
+      })
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.taskNotifications).toEqual(
+        DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      )
     })
 
     it("falls back to defaults when stored taskNotifications is a non-object during v18 to v19 migration", () => {

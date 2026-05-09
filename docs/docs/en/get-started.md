@@ -112,4 +112,3 @@ After adding an account, you can "push" these configurations to other AI tools w
 - [Changelog](./changelog.md)
 - [Permissions Explanation](./permissions.md)
 - [Data Import and Export](./data-management.md)
-</latest_source_markdown>

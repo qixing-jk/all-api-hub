@@ -696,12 +696,6 @@ async function sendNtfyNotification(
             `${NTFY_DEFAULT_SERVER_URL}/`,
           )
 
-  if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
-    logger.warn("ntfy task notification skipped: unsupported URL protocol", {
-      protocol: parsedUrl.protocol,
-    })
-    throw new Error(t("settings:taskNotifications.test.ntfyInvalidUrl"))
-  }
   if (!parsedUrl.pathname.replace(/^\/+/, "").trim()) {
     throw new Error(t("settings:taskNotifications.test.ntfyInvalidUrl"))
   }
