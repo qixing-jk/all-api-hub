@@ -530,6 +530,16 @@
         "webhookKeyDescription": "Feishu カスタムボットの設定ページで Webhook URL をコピーしてここに貼り付けます。`/hook/` の後ろにある key だけを入力した場合も、All API Hub が URL を自動補完します。",
         "webhookKeyPlaceholder": "https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       },
+      "ntfy": {
+        "accessToken": "アクセストークン（任意）",
+        "accessTokenPlaceholder": "tk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "description": "ntfy トピックでタスク通知を送信します。ntfy.sh または自ホスト ntfy サーバーを利用できます。",
+        "docsLink": "設定ドキュメントを見る",
+        "title": "ntfy",
+        "topicUrl": "Topic URL またはトピック名",
+        "topicUrlDescription": "`https://ntfy.sh/mytopic` のような完全なトピック URL、または ntfy.sh のトピック名だけを入力できます。自ホストサーバーや非公開トピックで必要な場合はアクセストークンを入力してください。",
+        "topicUrlPlaceholder": "https://ntfy.sh/mytopic"
+      },
       "telegram": {
         "botToken": "Bot Token",
         "botTokenPlaceholder": "123456:ABC-DEF...",
@@ -557,7 +567,7 @@
     "enableDesc": "有効にすると、選択したタスクがスケジュール実行を終えた後に成功、部分成功、失敗の通知を送ります。",
     "groups": {
       "channels": {
-        "description": "通知の送信先を選択します。ブラウザ通知には権限が必要です。Telegram、Feishu、DingTalk、WeCom、Webhook は個別に設定してテストできます。",
+        "description": "通知の送信先を選択します。ブラウザ通知には権限が必要です。Telegram、Feishu、DingTalk、WeCom、ntfy、Webhook は個別に設定してテストできます。",
         "title": "通知チャネル"
       },
       "setup": {
@@ -618,6 +628,8 @@
       "httpError": "{{label}} が HTTP {{status}} を返しました。",
       "httpErrorWithDetail": "{{label}} が HTTP {{status}} を返しました: {{detail}}",
       "message": "これは All API Hub のタスク通知テストです。",
+      "ntfyInvalidUrl": "ntfy トピックは http:// または https:// の URL、または有効な ntfy.sh トピック名である必要があります。",
+      "ntfyMissingConfig": "ntfy の Topic URL またはトピック名が設定されていません。",
       "sent": "テスト通知を送信しました",
       "telegramMissingConfig": "Telegram Bot Token または Chat ID が設定されていません。",
       "title": "All API Hub テスト通知",

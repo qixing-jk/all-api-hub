@@ -9,6 +9,7 @@ import {
   getDocsHomepageUrl,
   getDocsPageUrl,
   getDocsTaskNotificationsDingtalkUrl,
+  getDocsTaskNotificationsNtfyUrl,
 } from "~/utils/navigation/docsLinks"
 import { getDocsLocalePath } from "~/utils/navigation/docsLocale"
 import { getHomepage } from "~/utils/navigation/packageMeta"
@@ -66,8 +67,11 @@ describe("docsLinks", () => {
 
   it("builds channel-specific task notification docs urls", () => {
     const url = getDocsTaskNotificationsDingtalkUrl("en")
+    const ntfyUrl = getDocsTaskNotificationsNtfyUrl("en")
 
     expect(url).toContain("/en/task-notifications")
     expect(url.endsWith("#dingtalk")).toBe(true)
+    expect(ntfyUrl).toContain("/en/task-notifications")
+    expect(ntfyUrl.endsWith("#ntfy")).toBe(true)
   })
 })

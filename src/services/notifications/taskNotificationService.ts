@@ -101,6 +101,8 @@ const DINGTALK_CUSTOM_BOT_WEBHOOK_PREFIX =
   "https://oapi.dingtalk.com/robot/send?access_token="
 const WECOM_BOT_WEBHOOK_PREFIX =
   "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key="
+const NTFY_DEFAULT_SERVER_URL = "https://ntfy.sh"
+const ASCII_HEADER_VALUE_PATTERN = /^[\x20-\x7e]*$/
 
 const TASK_LABEL_KEYS: Record<TaskNotificationTask, string> = {
   [TASK_NOTIFICATION_TASKS.AutoCheckin]:
@@ -483,7 +485,7 @@ async function sendFeishuNotification(
 }
 
 /**
- *
+ * Normalizes DingTalk webhook response codes returned as numbers or strings.
  */
 function getDingtalkErrcode(body: DingtalkWebhookResponseBody | null) {
   if (typeof body?.errcode === "number") {
@@ -645,6 +647,89 @@ async function sendWecomNotification(
 }
 
 /**
+ * Encodes non-ASCII header values for APIs such as ntfy that accept RFC 2047
+ * encoded UTF-8 headers while browser fetch only allows ByteString headers.
+ */
+function encodeNotificationHeaderValue(value: string): string {
+  if (ASCII_HEADER_VALUE_PATTERN.test(value)) {
+    return value
+  }
+
+  const bytes = new TextEncoder().encode(value)
+  let binary = ""
+  for (const byte of bytes) {
+    binary += String.fromCharCode(byte)
+  }
+
+  return `=?UTF-8?B?${btoa(binary)}?=`
+}
+
+/**
+ * Sends a plain-text ntfy notification to a topic URL.
+ */
+async function sendNtfyNotification(
+  content: TaskNotificationContent,
+  config: TaskNotificationPreferences["channels"][typeof TASK_NOTIFICATION_CHANNELS.Ntfy],
+): Promise<boolean> {
+  const topicInput = config.topicUrl.trim()
+  if (!topicInput) {
+    throw new Error(t("settings:taskNotifications.test.ntfyMissingConfig"))
+  }
+
+  const labelKey = "settings:taskNotifications.channels.ntfy.title"
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(topicInput)) {
+    if (
+      !topicInput.startsWith("http://") &&
+      !topicInput.startsWith("https://")
+    ) {
+      throw new Error(t("settings:taskNotifications.test.ntfyInvalidUrl"))
+    }
+  }
+  const normalizedTopicInput = topicInput.replace(/^\/+/, "")
+  const parsedUrl =
+    topicInput.startsWith("http://") || topicInput.startsWith("https://")
+      ? new URL(topicInput)
+      : normalizedTopicInput.includes("/")
+        ? new URL(`https://${normalizedTopicInput}`)
+        : new URL(
+            encodeURIComponent(normalizedTopicInput),
+            `${NTFY_DEFAULT_SERVER_URL}/`,
+          )
+
+  if (parsedUrl.protocol !== "https:" && parsedUrl.protocol !== "http:") {
+    logger.warn("ntfy task notification skipped: unsupported URL protocol", {
+      protocol: parsedUrl.protocol,
+    })
+    throw new Error(t("settings:taskNotifications.test.ntfyInvalidUrl"))
+  }
+  if (!parsedUrl.pathname.replace(/^\/+/, "").trim()) {
+    throw new Error(t("settings:taskNotifications.test.ntfyInvalidUrl"))
+  }
+
+  const headers: Record<string, string> = {
+    Title: encodeNotificationHeaderValue(content.title),
+    Priority: "default",
+    Tags: "bell",
+  }
+  const accessToken = config.accessToken.trim()
+  if (accessToken) {
+    headers.Authorization = `Bearer ${accessToken}`
+  }
+
+  const response = await fetch(parsedUrl.toString(), {
+    method: "POST",
+    headers,
+    body: content.message,
+  })
+
+  if (!response.ok) {
+    throw new Error(await getNotificationHttpErrorMessage(labelKey, response))
+  }
+
+  return true
+}
+
+/**
  * Sends a JSON payload to a user-provided webhook endpoint.
  */
 async function sendWebhookNotification(
@@ -796,6 +881,22 @@ async function sendConfiguredChannels(
       )
     } catch (error) {
       handleChannelFailure(TASK_NOTIFICATION_CHANNELS.Wecom, error)
+    }
+  }
+
+  if (
+    shouldSendChannel(TASK_NOTIFICATION_CHANNELS.Ntfy) &&
+    channels[TASK_NOTIFICATION_CHANNELS.Ntfy].enabled
+  ) {
+    try {
+      deliveryResults.push(
+        await sendNtfyNotification(
+          content,
+          channels[TASK_NOTIFICATION_CHANNELS.Ntfy],
+        ),
+      )
+    } catch (error) {
+      handleChannelFailure(TASK_NOTIFICATION_CHANNELS.Ntfy, error)
     }
   }
 

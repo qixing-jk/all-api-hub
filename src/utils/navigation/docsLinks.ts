@@ -6,6 +6,7 @@ const DOCS_COMMUNITY_ANCHOR = "community"
 const DOCS_TASK_NOTIFICATIONS_FEISHU_ANCHOR = "feishu"
 const DOCS_TASK_NOTIFICATIONS_DINGTALK_ANCHOR = "dingtalk"
 const DOCS_TASK_NOTIFICATIONS_WECOM_ANCHOR = "wecom"
+const DOCS_TASK_NOTIFICATIONS_NTFY_ANCHOR = "ntfy"
 
 /**
  * Resolve the documentation homepage URL for a given language.
@@ -53,6 +54,12 @@ export const getDocsTaskNotificationsDingtalkUrl = (language?: string) => {
 export const getDocsTaskNotificationsWecomUrl = (language?: string) => {
   const url = new URL(getDocsTaskNotificationsUrl(language))
   url.hash = DOCS_TASK_NOTIFICATIONS_WECOM_ANCHOR
+  return url.toString()
+}
+
+export const getDocsTaskNotificationsNtfyUrl = (language?: string) => {
+  const url = new URL(getDocsTaskNotificationsUrl(language))
+  url.hash = DOCS_TASK_NOTIFICATIONS_NTFY_ANCHOR
   return url.toString()
 }
 

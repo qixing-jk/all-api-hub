@@ -98,6 +98,10 @@ vi.mock("~/utils/i18n/core", () => ({
       return "WeCom Bot"
     }
 
+    if (key === "settings:taskNotifications.channels.ntfy.title") {
+      return "ntfy"
+    }
+
     if (key === "settings:taskNotifications.channels.webhook.title") {
       return "Generic webhook"
     }
@@ -671,6 +675,138 @@ describe("taskNotificationService", () => {
       "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=full-wecom-webhook-key",
       expect.objectContaining({
         method: "POST",
+      }),
+    )
+  })
+
+  it("sends ntfy notifications to a full topic URL", async () => {
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Browser]: {
+            enabled: false,
+          },
+          [TASK_NOTIFICATION_CHANNELS.Ntfy]: {
+            enabled: true,
+            topicUrl: "https://ntfy.example.com/all-api-hub",
+            accessToken: "ntfy-token",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+    })
+
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+      }),
+    ).resolves.toBe(true)
+
+    expect(createNotificationMock).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://ntfy.example.com/all-api-hub",
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          Title:
+            "settings:taskNotifications.notification.title.success:settings:taskNotifications.tasks.autoCheckin",
+          Priority: "default",
+          Tags: "bell",
+          Authorization: "Bearer ntfy-token",
+        },
+        body: expect.stringContaining(
+          "settings:taskNotifications.notification.body.success",
+        ),
+      }),
+    )
+  })
+
+  it("sends ntfy notifications to an ntfy.sh topic name", async () => {
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Browser]: {
+            enabled: false,
+          },
+          [TASK_NOTIFICATION_CHANNELS.Ntfy]: {
+            enabled: true,
+            topicUrl: "all-api-hub-topic",
+            accessToken: "",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+    })
+
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+      }),
+    ).resolves.toBe(true)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://ntfy.sh/all-api-hub-topic",
+      expect.objectContaining({
+        headers: {
+          Title:
+            "settings:taskNotifications.notification.title.success:settings:taskNotifications.tasks.autoCheckin",
+          Priority: "default",
+          Tags: "bell",
+        },
+      }),
+    )
+  })
+
+  it("RFC 2047 encodes non-ASCII ntfy title headers for browser fetch", async () => {
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Browser]: {
+            enabled: false,
+          },
+          [TASK_NOTIFICATION_CHANNELS.Ntfy]: {
+            enabled: true,
+            topicUrl: "https://ntfy.sh/all-api-hub-topic",
+            accessToken: "",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+    })
+
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+        title: "自动签到完成",
+        message: "测试内容",
+      }),
+    ).resolves.toBe(true)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://ntfy.sh/all-api-hub-topic",
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Title: "=?UTF-8?B?6Ieq5Yqo562+5Yiw5a6M5oiQ?=",
+        }),
+        body: "测试内容",
       }),
     )
   })
@@ -1402,6 +1538,46 @@ describe("taskNotificationService", () => {
     })
   })
 
+  it("returns ntfy response details for channel-specific tests", async () => {
+    const sendResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Ntfy]: {
+            enabled: true,
+            topicUrl: "https://ntfy.example.com/private-topic",
+            accessToken: "invalid-token",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 401,
+      headers: {
+        get: () => "application/json",
+      },
+      json: async () => ({
+        error: "unauthorized",
+      }),
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Ntfy,
+      },
+      sendResponse,
+    )
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "ntfy returned HTTP 401: unauthorized",
+    })
+  })
+
   it("reports disabled or unavailable channel-specific test notifications", async () => {
     const disabledChannelResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
@@ -1583,6 +1759,62 @@ describe("taskNotificationService", () => {
     expect(missingWecomResponse).toHaveBeenCalledWith({
       success: false,
       error: "settings:taskNotifications.test.wecomMissingConfig",
+    })
+
+    const missingNtfyResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Ntfy]: {
+            enabled: true,
+            topicUrl: "",
+            accessToken: "",
+          },
+        },
+      },
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Ntfy,
+      },
+      missingNtfyResponse,
+    )
+
+    expect(missingNtfyResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "settings:taskNotifications.test.ntfyMissingConfig",
+    })
+
+    const invalidNtfyResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Ntfy]: {
+            enabled: true,
+            topicUrl: "ftp://ntfy.example.com/all-api-hub",
+            accessToken: "",
+          },
+        },
+      },
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Ntfy,
+      },
+      invalidNtfyResponse,
+    )
+
+    expect(invalidNtfyResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "settings:taskNotifications.test.ntfyInvalidUrl",
     })
 
     const invalidWebhookResponse = vi.fn()

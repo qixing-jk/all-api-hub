@@ -25,6 +25,7 @@ export const TASK_NOTIFICATION_CHANNELS = {
   Feishu: "feishu",
   Dingtalk: "dingtalk",
   Wecom: "wecom",
+  Ntfy: "ntfy",
   Webhook: "webhook",
 } as const
 
@@ -62,6 +63,12 @@ export interface TaskNotificationWecomChannelPreferences {
   webhookKey: string
 }
 
+export interface TaskNotificationNtfyChannelPreferences {
+  enabled: boolean
+  topicUrl: string
+  accessToken: string
+}
+
 export interface TaskNotificationWebhookChannelPreferences {
   enabled: boolean
   url: string
@@ -73,6 +80,7 @@ export interface TaskNotificationChannelPreferences {
   [TASK_NOTIFICATION_CHANNELS.Feishu]: TaskNotificationFeishuChannelPreferences
   [TASK_NOTIFICATION_CHANNELS.Dingtalk]: TaskNotificationDingtalkChannelPreferences
   [TASK_NOTIFICATION_CHANNELS.Wecom]: TaskNotificationWecomChannelPreferences
+  [TASK_NOTIFICATION_CHANNELS.Ntfy]: TaskNotificationNtfyChannelPreferences
   [TASK_NOTIFICATION_CHANNELS.Webhook]: TaskNotificationWebhookChannelPreferences
 }
 
@@ -120,6 +128,11 @@ export const DEFAULT_TASK_NOTIFICATION_CHANNEL_PREFERENCES: TaskNotificationChan
     [TASK_NOTIFICATION_CHANNELS.Wecom]: {
       enabled: false,
       webhookKey: "",
+    },
+    [TASK_NOTIFICATION_CHANNELS.Ntfy]: {
+      enabled: false,
+      topicUrl: "",
+      accessToken: "",
     },
     [TASK_NOTIFICATION_CHANNELS.Webhook]: {
       enabled: false,
@@ -171,6 +184,12 @@ export function normalizeTaskNotificationChannels(
         TASK_NOTIFICATION_CHANNELS.Wecom
       ],
       ...(channels?.[TASK_NOTIFICATION_CHANNELS.Wecom] ?? {}),
+    },
+    [TASK_NOTIFICATION_CHANNELS.Ntfy]: {
+      ...DEFAULT_TASK_NOTIFICATION_CHANNEL_PREFERENCES[
+        TASK_NOTIFICATION_CHANNELS.Ntfy
+      ],
+      ...(channels?.[TASK_NOTIFICATION_CHANNELS.Ntfy] ?? {}),
     },
     [TASK_NOTIFICATION_CHANNELS.Webhook]: {
       ...DEFAULT_TASK_NOTIFICATION_CHANNEL_PREFERENCES[

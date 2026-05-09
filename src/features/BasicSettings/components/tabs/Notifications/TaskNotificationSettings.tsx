@@ -41,6 +41,7 @@ import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
 import {
   getDocsTaskNotificationsDingtalkUrl,
   getDocsTaskNotificationsFeishuUrl,
+  getDocsTaskNotificationsNtfyUrl,
   getDocsTaskNotificationsWecomUrl,
 } from "~/utils/navigation/docsLinks"
 
@@ -214,6 +215,9 @@ export default function TaskNotificationSettings() {
   const [wecomDraft, setWecomDraft] = useState(
     channels[TASK_NOTIFICATION_CHANNELS.Wecom],
   )
+  const [ntfyDraft, setNtfyDraft] = useState(
+    channels[TASK_NOTIFICATION_CHANNELS.Ntfy],
+  )
   const [webhookDraft, setWebhookDraft] = useState(
     channels[TASK_NOTIFICATION_CHANNELS.Webhook],
   )
@@ -234,6 +238,7 @@ export default function TaskNotificationSettings() {
       taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Dingtalk],
     )
     setWecomDraft(taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Wecom])
+    setNtfyDraft(taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Ntfy])
     setWebhookDraft(
       taskNotifications.channels[TASK_NOTIFICATION_CHANNELS.Webhook],
     )
@@ -326,6 +331,19 @@ export default function TaskNotificationSettings() {
     )
   }
 
+  const handleNtfyChannelToggle = async (enabled: boolean) => {
+    await handleChannelUpdate(
+      {
+        ...channels,
+        [TASK_NOTIFICATION_CHANNELS.Ntfy]: {
+          ...channels[TASK_NOTIFICATION_CHANNELS.Ntfy],
+          enabled,
+        },
+      },
+      t("taskNotifications.channels.ntfy.title"),
+    )
+  }
+
   const handleWebhookChannelToggle = async (enabled: boolean) => {
     await handleChannelUpdate(
       {
@@ -336,6 +354,29 @@ export default function TaskNotificationSettings() {
         },
       },
       t("taskNotifications.channels.webhook.title"),
+    )
+  }
+
+  const handleNtfyConfigSave = async () => {
+    const nextNtfy = {
+      ...channels[TASK_NOTIFICATION_CHANNELS.Ntfy],
+      topicUrl: ntfyDraft.topicUrl.trim(),
+      accessToken: ntfyDraft.accessToken.trim(),
+    }
+    const currentNtfy = channels[TASK_NOTIFICATION_CHANNELS.Ntfy]
+    if (
+      nextNtfy.topicUrl === currentNtfy.topicUrl &&
+      nextNtfy.accessToken === currentNtfy.accessToken
+    ) {
+      return
+    }
+
+    await handleChannelUpdate(
+      {
+        ...channels,
+        [TASK_NOTIFICATION_CHANNELS.Ntfy]: nextNtfy,
+      },
+      t("taskNotifications.channels.ntfy.title"),
     )
   }
 
@@ -540,6 +581,11 @@ export default function TaskNotificationSettings() {
     channels[TASK_NOTIFICATION_CHANNELS.Wecom].enabled &&
     Boolean(channels[TASK_NOTIFICATION_CHANNELS.Wecom].webhookKey.trim()) &&
     !isAnyChannelTesting
+  const canSendNtfyTest =
+    taskNotifications.enabled &&
+    channels[TASK_NOTIFICATION_CHANNELS.Ntfy].enabled &&
+    Boolean(channels[TASK_NOTIFICATION_CHANNELS.Ntfy].topicUrl.trim()) &&
+    !isAnyChannelTesting
   const canSendWebhookTest =
     taskNotifications.enabled &&
     channels[TASK_NOTIFICATION_CHANNELS.Webhook].enabled &&
@@ -548,6 +594,7 @@ export default function TaskNotificationSettings() {
   const feishuDocsUrl = getDocsTaskNotificationsFeishuUrl(i18n.language)
   const dingtalkDocsUrl = getDocsTaskNotificationsDingtalkUrl(i18n.language)
   const wecomDocsUrl = getDocsTaskNotificationsWecomUrl(i18n.language)
+  const ntfyDocsUrl = getDocsTaskNotificationsNtfyUrl(i18n.language)
 
   return (
     <div className="space-y-6">
@@ -943,6 +990,93 @@ export default function TaskNotificationSettings() {
                   </Link>
                 </p>
               </FormField>
+            </NotificationSettingItem>
+
+            <NotificationSettingItem
+              id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_NTFY}
+              title={t("taskNotifications.channels.ntfy.title")}
+              description={t("taskNotifications.channels.ntfy.description")}
+              actions={
+                <NotificationChannelActions
+                  checked={channels[TASK_NOTIFICATION_CHANNELS.Ntfy].enabled}
+                  disabled={!taskNotifications.enabled}
+                  loading={testingChannel === TASK_NOTIFICATION_CHANNELS.Ntfy}
+                  testDisabled={!canSendNtfyTest}
+                  testLabel={t("taskNotifications.test.action")}
+                  onToggle={(enabled) => void handleNtfyChannelToggle(enabled)}
+                  onTest={() =>
+                    void handleSendTest(TASK_NOTIFICATION_CHANNELS.Ntfy)
+                  }
+                />
+              }
+            >
+              <div className="grid gap-3 sm:grid-cols-2">
+                <FormField
+                  label={t("taskNotifications.channels.ntfy.topicUrl")}
+                  htmlFor={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_NTFY_TOPIC_URL}
+                >
+                  <Input
+                    id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_NTFY_TOPIC_URL}
+                    value={ntfyDraft.topicUrl}
+                    disabled={
+                      !taskNotifications.enabled ||
+                      !channels[TASK_NOTIFICATION_CHANNELS.Ntfy].enabled
+                    }
+                    placeholder={t(
+                      "taskNotifications.channels.ntfy.topicUrlPlaceholder",
+                    )}
+                    onChange={(event) =>
+                      setNtfyDraft((draft) => ({
+                        ...draft,
+                        topicUrl: event.target.value,
+                      }))
+                    }
+                    onBlur={() => void handleNtfyConfigSave()}
+                  />
+                </FormField>
+                <FormField
+                  label={t("taskNotifications.channels.ntfy.accessToken")}
+                  htmlFor={
+                    SETTINGS_ANCHORS.TASK_NOTIFICATIONS_NTFY_ACCESS_TOKEN
+                  }
+                >
+                  <Input
+                    id={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_NTFY_ACCESS_TOKEN}
+                    type="password"
+                    revealable
+                    revealLabels={{
+                      show: t("keyManagement:actions.showKey"),
+                      hide: t("keyManagement:actions.hideKey"),
+                    }}
+                    value={ntfyDraft.accessToken}
+                    disabled={
+                      !taskNotifications.enabled ||
+                      !channels[TASK_NOTIFICATION_CHANNELS.Ntfy].enabled
+                    }
+                    placeholder={t(
+                      "taskNotifications.channels.ntfy.accessTokenPlaceholder",
+                    )}
+                    onChange={(event) =>
+                      setNtfyDraft((draft) => ({
+                        ...draft,
+                        accessToken: event.target.value,
+                      }))
+                    }
+                    onBlur={() => void handleNtfyConfigSave()}
+                  />
+                </FormField>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-gray-400">
+                {t("taskNotifications.channels.ntfy.topicUrlDescription")}{" "}
+                <Link
+                  href={ntfyDocsUrl}
+                  target="_blank"
+                  rel="noreferrer noopener"
+                  className="text-xs"
+                >
+                  {t("taskNotifications.channels.ntfy.docsLink")}
+                </Link>
+              </p>
             </NotificationSettingItem>
 
             <NotificationSettingItem

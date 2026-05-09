@@ -36,6 +36,7 @@ describe("notifications settings search definitions", () => {
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_FEISHU,
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_DINGTALK,
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WECOM,
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_NTFY,
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_AUTO_CHECKIN,
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_WEBDAV_AUTO_SYNC,
@@ -45,7 +46,10 @@ describe("notifications settings search definitions", () => {
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_SITE_ANNOUNCEMENTS,
     ])
     expect(notificationsSearchControls.map((control) => control.order)).toEqual(
-      [607, 608, 609, 610, 611, 612, 613, 614, 615, 616, 617, 618, 619, 620],
+      [
+        607, 608, 609, 610, 611, 612, 613, 614, 615, 616, 617, 618, 619, 620,
+        621,
+      ],
     )
   })
 })

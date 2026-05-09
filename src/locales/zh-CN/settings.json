@@ -530,6 +530,16 @@
         "webhookKeyDescription": "在飞书群的自定义机器人配置页复制 Webhook 地址并粘贴到这里；如果只填写 `/hook/` 后面的 key，也会自动补全地址。",
         "webhookKeyPlaceholder": "https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       },
+      "ntfy": {
+        "accessToken": "访问令牌（可选）",
+        "accessTokenPlaceholder": "tk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "description": "通过 ntfy 主题发送任务通知，支持 ntfy.sh 或自建 ntfy 服务。",
+        "docsLink": "查看配置文档",
+        "title": "ntfy",
+        "topicUrl": "Topic URL 或主题名",
+        "topicUrlDescription": "可以填写完整主题 URL，例如 `https://ntfy.sh/mytopic`，也可以只填写 ntfy.sh 的主题名。自建服务或私有主题需要按需填写访问令牌。",
+        "topicUrlPlaceholder": "https://ntfy.sh/mytopic"
+      },
       "telegram": {
         "botToken": "Bot Token",
         "botTokenPlaceholder": "123456:ABC-DEF...",
@@ -557,7 +567,7 @@
     "enableDesc": "开启后，已勾选任务在定时运行完成时会发送成功、部分成功或失败通知。",
     "groups": {
       "channels": {
-        "description": "选择通知通过哪些渠道送达。浏览器通知需要授权，Telegram、飞书、钉钉、企业微信和 Webhook 可分别配置并发送测试。",
+        "description": "选择通知通过哪些渠道送达。浏览器通知需要授权，Telegram、飞书、钉钉、企业微信、ntfy 和 Webhook 可分别配置并发送测试。",
         "title": "通知渠道"
       },
       "setup": {
@@ -618,6 +628,8 @@
       "httpError": "{{label}} 返回了 HTTP {{status}}。",
       "httpErrorWithDetail": "{{label}} 返回了 HTTP {{status}}：{{detail}}",
       "message": "这是一条 All API Hub 任务通知测试。",
+      "ntfyInvalidUrl": "ntfy Topic URL 必须使用 http:// 或 https://，或填写有效的 ntfy.sh 主题名。",
+      "ntfyMissingConfig": "ntfy Topic URL 或主题名未配置。",
       "sent": "测试通知已发送",
       "telegramMissingConfig": "Telegram Bot Token 或 Chat ID 未配置。",
       "title": "All API Hub 测试通知",

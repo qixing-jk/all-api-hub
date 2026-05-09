@@ -222,6 +222,11 @@ describe("TaskNotificationSettings", () => {
           enabled: true,
           webhookKey: "wecom-webhook-key",
         },
+        [TASK_NOTIFICATION_CHANNELS.Ntfy]: {
+          enabled: true,
+          topicUrl: "https://ntfy.sh/all-api-hub",
+          accessToken: "ntfy-token",
+        },
         [TASK_NOTIFICATION_CHANNELS.Webhook]: {
           enabled: true,
           url: "https://hooks.example.com/all-api-hub",
@@ -249,6 +254,9 @@ describe("TaskNotificationSettings", () => {
     const wecomChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WECOM,
     )
+    const ntfyChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_NTFY,
+    )
     const webhookChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
     )
@@ -257,6 +265,7 @@ describe("TaskNotificationSettings", () => {
       !feishuChannel ||
       !dingtalkChannel ||
       !wecomChannel ||
+      !ntfyChannel ||
       !webhookChannel
     ) {
       throw new Error("Expected third-party channel settings rows")
@@ -390,6 +399,39 @@ describe("TaskNotificationSettings", () => {
       })
     })
 
+    const ntfyAccessTokenInput = within(ntfyChannel).getByLabelText(
+      "settings:taskNotifications.channels.ntfy.accessToken",
+    )
+    expect(ntfyAccessTokenInput).toHaveAttribute("type", "password")
+    expect(
+      within(ntfyChannel).getByRole("link", {
+        name: "settings:taskNotifications.channels.ntfy.docsLink",
+      }),
+    ).toHaveAttribute(
+      "href",
+      "https://all-api-hub.qixing1217.top/en/task-notifications#ntfy",
+    )
+
+    fireEvent.click(
+      within(ntfyChannel).getByRole("button", {
+        name: "keyManagement:actions.showKey",
+      }),
+    )
+    expect(ntfyAccessTokenInput).toHaveAttribute("type", "text")
+
+    fireEvent.click(
+      within(ntfyChannel).getByRole("button", {
+        name: "settings:taskNotifications.test.action",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Ntfy,
+      })
+    })
+
     fireEvent.click(
       within(webhookChannel).getByRole("button", {
         name: "settings:taskNotifications.test.action",
@@ -428,6 +470,11 @@ describe("TaskNotificationSettings", () => {
           enabled: true,
           webhookKey: "wecom-webhook-key",
         },
+        [TASK_NOTIFICATION_CHANNELS.Ntfy]: {
+          enabled: true,
+          topicUrl: "https://ntfy.sh/all-api-hub",
+          accessToken: "ntfy-token",
+        },
         [TASK_NOTIFICATION_CHANNELS.Webhook]: {
           enabled: true,
           url: "https://hooks.example.com/all-api-hub",
@@ -456,6 +503,9 @@ describe("TaskNotificationSettings", () => {
     const wecomChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WECOM,
     )
+    const ntfyChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_NTFY,
+    )
     const webhookChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
     )
@@ -465,6 +515,7 @@ describe("TaskNotificationSettings", () => {
       !feishuChannel ||
       !dingtalkChannel ||
       !wecomChannel ||
+      !ntfyChannel ||
       !webhookChannel
     ) {
       throw new Error("Expected channel settings rows")
@@ -475,6 +526,7 @@ describe("TaskNotificationSettings", () => {
     fireEvent.click(within(feishuChannel).getByRole("switch"))
     fireEvent.click(within(dingtalkChannel).getByRole("switch"))
     fireEvent.click(within(wecomChannel).getByRole("switch"))
+    fireEvent.click(within(ntfyChannel).getByRole("switch"))
     fireEvent.click(within(webhookChannel).getByRole("switch"))
 
     await waitFor(() => {
@@ -520,6 +572,13 @@ describe("TaskNotificationSettings", () => {
           }),
         }),
       })
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Ntfy]: expect.objectContaining({
+            enabled: false,
+          }),
+        }),
+      })
     })
 
     updateTaskNotificationsMock.mockClear()
@@ -540,6 +599,12 @@ describe("TaskNotificationSettings", () => {
     )
     const wecomWebhookKeyInput = within(wecomChannel).getByLabelText(
       "settings:taskNotifications.channels.wecom.webhookKey",
+    )
+    const ntfyTopicUrlInput = within(ntfyChannel).getByLabelText(
+      "settings:taskNotifications.channels.ntfy.topicUrl",
+    )
+    const ntfyAccessTokenInput = within(ntfyChannel).getByLabelText(
+      "settings:taskNotifications.channels.ntfy.accessToken",
     )
     const webhookUrlInput = within(webhookChannel).getByLabelText(
       "settings:taskNotifications.channels.webhook.url",
@@ -639,6 +704,38 @@ describe("TaskNotificationSettings", () => {
       })
     })
 
+    fireEvent.change(ntfyTopicUrlInput, {
+      target: { value: "  https://ntfy.sh/next-topic  " },
+    })
+    fireEvent.blur(ntfyTopicUrlInput)
+
+    await waitFor(() => {
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Ntfy]: expect.objectContaining({
+            topicUrl: "https://ntfy.sh/next-topic",
+            accessToken: "ntfy-token",
+          }),
+        }),
+      })
+    })
+
+    fireEvent.change(ntfyAccessTokenInput, {
+      target: { value: "  next-ntfy-token  " },
+    })
+    fireEvent.blur(ntfyAccessTokenInput)
+
+    await waitFor(() => {
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Ntfy]: expect.objectContaining({
+            topicUrl: "https://ntfy.sh/next-topic",
+            accessToken: "next-ntfy-token",
+          }),
+        }),
+      })
+    })
+
     fireEvent.change(webhookUrlInput, {
       target: { value: "  https://hooks.example.com/next  " },
     })
@@ -678,6 +775,11 @@ describe("TaskNotificationSettings", () => {
           enabled: true,
           webhookKey: "wecom-webhook-key",
         },
+        [TASK_NOTIFICATION_CHANNELS.Ntfy]: {
+          enabled: true,
+          topicUrl: "https://ntfy.sh/all-api-hub",
+          accessToken: "ntfy-token",
+        },
         [TASK_NOTIFICATION_CHANNELS.Webhook]: {
           enabled: true,
           url: "https://hooks.example.com/all-api-hub",
@@ -705,6 +807,9 @@ describe("TaskNotificationSettings", () => {
     const wecomChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WECOM,
     )
+    const ntfyChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_NTFY,
+    )
     const webhookChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
     )
@@ -713,6 +818,7 @@ describe("TaskNotificationSettings", () => {
       !feishuChannel ||
       !dingtalkChannel ||
       !wecomChannel ||
+      !ntfyChannel ||
       !webhookChannel
     ) {
       throw new Error("Expected third-party channel settings rows")
@@ -747,6 +853,16 @@ describe("TaskNotificationSettings", () => {
       fireEvent.blur(
         within(wecomChannel).getByLabelText(
           "settings:taskNotifications.channels.wecom.webhookKey",
+        ),
+      )
+      fireEvent.blur(
+        within(ntfyChannel).getByLabelText(
+          "settings:taskNotifications.channels.ntfy.topicUrl",
+        ),
+      )
+      fireEvent.blur(
+        within(ntfyChannel).getByLabelText(
+          "settings:taskNotifications.channels.ntfy.accessToken",
         ),
       )
       fireEvent.blur(

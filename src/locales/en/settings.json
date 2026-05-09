@@ -530,6 +530,16 @@
         "webhookKeyDescription": "Copy the webhook URL from the Feishu custom bot settings page and paste it here. If you enter only the key after `/hook/`, All API Hub will complete the URL automatically.",
         "webhookKeyPlaceholder": "https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
       },
+      "ntfy": {
+        "accessToken": "Access token (optional)",
+        "accessTokenPlaceholder": "tk_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+        "description": "Send task notifications through an ntfy topic, using ntfy.sh or a self-hosted ntfy server.",
+        "docsLink": "View setup docs",
+        "title": "ntfy",
+        "topicUrl": "Topic URL or topic name",
+        "topicUrlDescription": "Enter a full topic URL such as `https://ntfy.sh/mytopic`, or enter only an ntfy.sh topic name. Add an access token when your self-hosted server or private topic requires one.",
+        "topicUrlPlaceholder": "https://ntfy.sh/mytopic"
+      },
       "telegram": {
         "botToken": "Bot token",
         "botTokenPlaceholder": "123456:ABC-DEF...",
@@ -557,7 +567,7 @@
     "enableDesc": "When enabled, selected tasks send success, partial success, or failure notifications after scheduled runs finish.",
     "groups": {
       "channels": {
-        "description": "Choose where notifications are delivered. Browser notifications need permission, while Telegram, Feishu, DingTalk, WeCom, and webhook channels can be configured and tested separately.",
+        "description": "Choose where notifications are delivered. Browser notifications need permission, while Telegram, Feishu, DingTalk, WeCom, ntfy, and webhook channels can be configured and tested separately.",
         "title": "Notification channels"
       },
       "setup": {
@@ -618,6 +628,8 @@
       "httpError": "{{label}} returned HTTP {{status}}.",
       "httpErrorWithDetail": "{{label}} returned HTTP {{status}}: {{detail}}",
       "message": "This is an All API Hub task notification test.",
+      "ntfyInvalidUrl": "The ntfy topic must be an http:// or https:// URL, or a valid ntfy.sh topic name.",
+      "ntfyMissingConfig": "The ntfy topic URL or topic name is not configured.",
       "sent": "Test notification sent",
       "telegramMissingConfig": "Telegram Bot token or Chat ID is not configured.",
       "title": "All API Hub test notification",

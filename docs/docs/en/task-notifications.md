@@ -16,6 +16,7 @@ Currently supported channels:
 | Feishu Bot | Receiving team reminders in a Feishu group | Feishu custom bot webhook URL or key |
 | DingTalk Bot | Receiving team reminders in a DingTalk group | DingTalk custom bot webhook URL or access_token, optional signing secret |
 | WeCom Bot | Receiving team reminders in a WeCom group | WeCom group message push webhook URL or key |
+| ntfy | Receiving reminders through the ntfy app, a self-hosted ntfy server, or a subscribed topic | Topic URL or topic name, optional access token |
 | Generic webhook | Connecting self-hosted services, automation platforms, or compatible services | An HTTP(S) endpoint that accepts JSON requests |
 
 After configuring a channel, click **`Send test notification`** to confirm delivery.
@@ -161,6 +162,48 @@ When using All API Hub:
 
 - WeCom message push has sending frequency limits. If many tasks finish at the same time, platform rate limiting may apply.
 - If the test notification returns `invalid webhook url`, `key not found`, or a similar error, copy the full webhook URL again from the WeCom message push configuration.
+
+<a id="ntfy"></a>
+## ntfy
+
+The ntfy channel sends plain-text notifications through ntfy's topic publish API. You can use the public `ntfy.sh` service or enter a topic URL from a self-hosted ntfy server.
+
+### Configure The Topic
+
+1. Prepare a topic name in the ntfy app, web app, or your self-hosted server, such as `all-api-hub-alerts`.
+2. In All API Hub, go to **`Settings → General → Notifications → ntfy`**.
+3. Enter the full topic URL in **`Topic URL or topic name`**:
+
+```text
+https://ntfy.sh/all-api-hub-alerts
+```
+
+You can also enter only the topic name:
+
+```text
+all-api-hub-alerts
+```
+
+When only a topic name is entered, All API Hub sends to `https://ntfy.sh/<topic>`. For a self-hosted ntfy server, enter the full URL, for example:
+
+```text
+https://ntfy.example.com/all-api-hub-alerts
+```
+
+4. If the topic requires authentication, enter the ntfy access token in **`Access token (optional)`**. Leave it empty for public topics.
+5. Enable the channel and click **`Send test notification`**.
+
+### API Behavior
+
+All API Hub uses ntfy's publish API and sends a `POST` request to the topic URL. The notification body is sent as the plain-text request body, and the notification title is sent in the `Title` request header. Non-ASCII titles are RFC 2047 encoded before sending so they remain compatible with browser extension background request-header limits. If an access token is configured, the request includes `Authorization: Bearer <token>`.
+
+For ntfy's publish API, request headers, and authentication options, see the official [Publishing messages](https://docs.ntfy.sh/publish/) documentation.
+
+### Limits
+
+- Public `ntfy.sh` topics are not private namespaces. Use a hard-to-guess topic name, or use a self-hosted server with an access token.
+- If your self-hosted server uses private topics, confirm that the access token has publish permission.
+- If the test notification returns `401`, `403`, or a similar authentication error, check the topic URL, access token, and server-side permissions.
 
 ## Related Docs
 

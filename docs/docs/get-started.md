@@ -98,7 +98,7 @@ All API Hub 几乎支持市面上所有主流的 AI 中转站架构，包括：
 - **[WebDAV 同步与加密](./webdav-sync.md)**：支持跨设备加密备份，数据永不丢失。
 
 ### 🔔 通知渠道
-- **[任务通知](./task-notifications.md)**：在 **`设置 → 通用 → 通知`** 中开启，可通过浏览器系统通知、Telegram Bot、飞书机器人、钉钉机器人、企业微信机器人或通用 Webhook 接收后台任务结果提醒。
+- **[任务通知](./task-notifications.md)**：在 **`设置 → 通用 → 通知`** 中开启，可通过浏览器系统通知、Telegram Bot、飞书机器人、钉钉机器人、企业微信机器人、ntfy 或通用 Webhook 接收后台任务结果提醒。
 
 ### 🛠️ 自建站点运营工具
 - **[自建站点管理](./self-hosted-site-management.md)**：在插件内直接对渠道进行增删改查。

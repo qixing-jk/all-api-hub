@@ -36,7 +36,7 @@ import { migrateSortingConfig } from "./sortingConfigMigration"
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 22
+export const CURRENT_PREFERENCES_VERSION = 23
 
 /**
  * Migration function type
@@ -484,6 +484,26 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
           ? normalizeTaskNotificationPreferences(stored)
           : DEFAULT_TASK_NOTIFICATION_PREFERENCES,
       preferencesVersion: 22,
+    }
+  },
+
+  // Version 22 -> 23: re-run task notification normalization so users already
+  // on v22 get the ntfy channel default backfilled without losing existing
+  // third-party channel settings.
+  23: (prefs: UserPreferences): UserPreferences => {
+    logger.debug(
+      "Migrating preferences from v22 to v23 (ntfy notification channel)",
+    )
+
+    const stored = (prefs as any).taskNotifications
+
+    return {
+      ...prefs,
+      taskNotifications:
+        stored && typeof stored === "object"
+          ? normalizeTaskNotificationPreferences(stored)
+          : DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      preferencesVersion: 23,
     }
   },
 }

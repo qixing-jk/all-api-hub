@@ -28,7 +28,7 @@ const TASK_NOTIFICATION_TASK_BREADCRUMBS = [
   "settings:taskNotifications.groups.tasks.title",
 ]
 
-const TASK_NOTIFICATION_TASK_CONTROL_ORDER_START = 615
+const TASK_NOTIFICATION_TASK_CONTROL_ORDER_START = 616
 
 const TASK_NOTIFICATION_TASK_SEARCH_CONTROLS = [
   {
@@ -110,6 +110,7 @@ export const notificationsSearchSections: OptionsSearchItemDefinition[] = [
         "钉钉",
         "wecom",
         "企业微信",
+        "ntfy",
         "webhook",
       ],
     },
@@ -215,11 +216,23 @@ export const notificationsSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
+    "control:task-notifications-channel-ntfy",
+    NOTIFICATIONS_TAB_ID,
+    SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_NTFY,
+    "settings:taskNotifications.channels.ntfy.title",
+    614,
+    {
+      descriptionKey: "settings:taskNotifications.channels.ntfy.description",
+      breadcrumbsKeys: TASK_NOTIFICATION_CHANNEL_BREADCRUMBS,
+      keywords: ["notification", "ntfy", "push", "topic"],
+    },
+  ),
+  buildControlDefinition(
     "control:task-notifications-channel-webhook",
     NOTIFICATIONS_TAB_ID,
     SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
     "settings:taskNotifications.channels.webhook.title",
-    614,
+    615,
     {
       descriptionKey: "settings:taskNotifications.channels.webhook.description",
       breadcrumbsKeys: TASK_NOTIFICATION_CHANNEL_BREADCRUMBS,

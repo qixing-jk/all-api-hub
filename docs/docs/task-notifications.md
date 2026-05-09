@@ -16,6 +16,7 @@
 | 飞书机器人 | 希望在飞书群中接收团队提醒 | 飞书自定义机器人的 Webhook URL 或 Key |
 | 钉钉机器人 | 希望在钉钉群中接收团队提醒 | 钉钉自定义机器人的 Webhook URL 或 access_token，可选加签 Secret |
 | 企业微信机器人 | 希望在企业微信群中接收团队提醒 | 企业微信群消息推送的 Webhook URL 或 Key |
+| ntfy | 希望通过 ntfy App、自建 ntfy 服务或订阅主题接收提醒 | Topic URL 或主题名，可选访问令牌 |
 | 通用 Webhook | 接入自建服务、自动化平台或其它兼容服务 | 可接收 JSON 请求的 HTTP(S) 地址 |
 
 配置完成后，建议先点击对应渠道的 **`发送测试通知`**，确认通知可以正常送达。
@@ -160,6 +161,48 @@ https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=xxxxxxxx-xxxx-xxxx-xxxx-xxx
 
 - 企业微信机器人有发送频率限制；如果大量任务同时完成，可能触发平台限流。
 - 如果测试通知返回 `invalid webhook url`、`key not found` 或类似错误，请从企业微信机器人配置页重新复制完整 Webhook URL。
+
+<a id="ntfy"></a>
+## ntfy
+
+ntfy 渠道通过 ntfy 的主题发布接口发送纯文本通知。你可以使用公共服务 `ntfy.sh`，也可以填写自建 ntfy 服务的主题 URL。
+
+### 配置主题
+
+1. 在 ntfy App、网页端或自建服务中准备一个主题名，例如 `all-api-hub-alerts`。
+2. 回到 All API Hub，进入 **`设置 → 通用 → 通知 → ntfy`**。
+3. 在 **`Topic URL 或主题名`** 中填写完整主题 URL：
+
+```text
+https://ntfy.sh/all-api-hub-alerts
+```
+
+也可以只填写主题名：
+
+```text
+all-api-hub-alerts
+```
+
+只填写主题名时，All API Hub 会自动发送到 `https://ntfy.sh/<主题名>`。如果你使用自建 ntfy 服务，请填写完整 URL，例如：
+
+```text
+https://ntfy.example.com/all-api-hub-alerts
+```
+
+4. 如果该主题需要认证，在 **`访问令牌（可选）`** 中填写 ntfy access token；公开主题可以留空。
+5. 启用渠道后点击 **`发送测试通知`**。
+
+### 接口行为
+
+All API Hub 使用 ntfy 的发布接口，向主题 URL 发送 `POST` 请求。通知正文作为纯文本请求体发送，通知标题放在 `Title` 请求头中；非 ASCII 标题会按 RFC 2047 编码后发送，以兼容浏览器扩展后台的请求头限制。如果填写了访问令牌，请求会带上 `Authorization: Bearer <token>`。
+
+ntfy 的发布接口、请求头和认证方式可参考官方文档：[Publishing messages](https://docs.ntfy.sh/publish/)。
+
+### 使用限制
+
+- 公共 `ntfy.sh` 主题不是私有命名空间，请使用不容易猜到的主题名，或改用自建服务和访问令牌。
+- 如果自建服务使用私有主题，请确认访问令牌有发布权限。
+- 如果测试通知返回 `401`、`403` 或类似认证错误，请检查主题 URL、访问令牌和服务端权限配置。
 
 ## 相关文档
 
