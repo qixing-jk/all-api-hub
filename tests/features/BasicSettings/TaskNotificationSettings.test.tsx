@@ -812,6 +812,66 @@ describe("TaskNotificationSettings", () => {
     ).toBeLessThan(sendRuntimeMessageMock.mock.invocationCallOrder[0])
   })
 
+  it("does not send a webhook test notification when saving the draft fails", async () => {
+    updateTaskNotificationsMock.mockResolvedValueOnce(false)
+    taskNotificationsMock.current = {
+      ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+      channels: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+        [TASK_NOTIFICATION_CHANNELS.Webhook]: {
+          enabled: true,
+          url: "https://hooks.example.com/old",
+        },
+      },
+    }
+
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await screen.findByText("settings:taskNotifications.channels.webhook.title")
+    const webhookChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
+    )
+    if (!webhookChannel) {
+      throw new Error("Expected webhook channel settings row")
+    }
+
+    fireEvent.change(
+      within(webhookChannel).getByLabelText(
+        "settings:taskNotifications.channels.webhook.url",
+      ),
+      {
+        target: {
+          value: "https://hooks.example.com/next",
+        },
+      },
+    )
+    fireEvent.click(
+      within(webhookChannel).getByRole("button", {
+        name: "settings:taskNotifications.test.action",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Webhook]: expect.objectContaining({
+            url: "https://hooks.example.com/next",
+          }),
+        }),
+      })
+      expect(showResultToastMock).toHaveBeenCalledWith({
+        success: false,
+        message: "settings:messages.saveSettingsFailed",
+        errorFallback: "settings:taskNotifications.test.failed",
+      })
+    })
+
+    expect(sendRuntimeMessageMock).not.toHaveBeenCalled()
+  })
+
   it("does not save unchanged third-party channel drafts", async () => {
     taskNotificationsMock.current = {
       ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,

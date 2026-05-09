@@ -726,7 +726,7 @@ async function sendNtfyNotification(
 }
 
 /**
- *
+ * Formats optional task result counts for URL template substitution.
  */
 function formatWebhookTemplateCount(value: number | undefined): string {
   return typeof value === "number" && Number.isFinite(value)
@@ -735,7 +735,7 @@ function formatWebhookTemplateCount(value: number | undefined): string {
 }
 
 /**
- *
+ * Replaces supported webhook URL placeholders with encoded notification values.
  */
 function renderWebhookUrlTemplate(
   template: string,

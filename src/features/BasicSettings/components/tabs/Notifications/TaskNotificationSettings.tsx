@@ -357,7 +357,7 @@ export default function TaskNotificationSettings() {
     )
   }
 
-  const handleNtfyConfigSave = async () => {
+  const handleNtfyConfigSave = async (): Promise<boolean> => {
     const nextNtfy = {
       ...channels[TASK_NOTIFICATION_CHANNELS.Ntfy],
       topicUrl: ntfyDraft.topicUrl.trim(),
@@ -368,10 +368,10 @@ export default function TaskNotificationSettings() {
       nextNtfy.topicUrl === currentNtfy.topicUrl &&
       nextNtfy.accessToken === currentNtfy.accessToken
     ) {
-      return
+      return true
     }
 
-    await handleChannelUpdate(
+    return await handleChannelUpdate(
       {
         ...channels,
         [TASK_NOTIFICATION_CHANNELS.Ntfy]: nextNtfy,
@@ -380,7 +380,7 @@ export default function TaskNotificationSettings() {
     )
   }
 
-  const handleTelegramConfigSave = async () => {
+  const handleTelegramConfigSave = async (): Promise<boolean> => {
     const nextTelegram = {
       ...channels[TASK_NOTIFICATION_CHANNELS.Telegram],
       botToken: telegramDraft.botToken.trim(),
@@ -391,10 +391,10 @@ export default function TaskNotificationSettings() {
       nextTelegram.botToken === currentTelegram.botToken &&
       nextTelegram.chatId === currentTelegram.chatId
     ) {
-      return
+      return true
     }
 
-    await handleChannelUpdate(
+    return await handleChannelUpdate(
       {
         ...channels,
         [TASK_NOTIFICATION_CHANNELS.Telegram]: nextTelegram,
@@ -403,7 +403,7 @@ export default function TaskNotificationSettings() {
     )
   }
 
-  const handleFeishuConfigSave = async () => {
+  const handleFeishuConfigSave = async (): Promise<boolean> => {
     const nextFeishu = {
       ...channels[TASK_NOTIFICATION_CHANNELS.Feishu],
       webhookKey: feishuDraft.webhookKey.trim(),
@@ -412,10 +412,10 @@ export default function TaskNotificationSettings() {
       nextFeishu.webhookKey ===
       channels[TASK_NOTIFICATION_CHANNELS.Feishu].webhookKey
     ) {
-      return
+      return true
     }
 
-    await handleChannelUpdate(
+    return await handleChannelUpdate(
       {
         ...channels,
         [TASK_NOTIFICATION_CHANNELS.Feishu]: nextFeishu,
@@ -424,7 +424,7 @@ export default function TaskNotificationSettings() {
     )
   }
 
-  const handleDingtalkConfigSave = async () => {
+  const handleDingtalkConfigSave = async (): Promise<boolean> => {
     const nextDingtalk = {
       ...channels[TASK_NOTIFICATION_CHANNELS.Dingtalk],
       webhookKey: dingtalkDraft.webhookKey.trim(),
@@ -435,10 +435,10 @@ export default function TaskNotificationSettings() {
       nextDingtalk.webhookKey === currentDingtalk.webhookKey &&
       nextDingtalk.secret === currentDingtalk.secret
     ) {
-      return
+      return true
     }
 
-    await handleChannelUpdate(
+    return await handleChannelUpdate(
       {
         ...channels,
         [TASK_NOTIFICATION_CHANNELS.Dingtalk]: nextDingtalk,
@@ -447,7 +447,7 @@ export default function TaskNotificationSettings() {
     )
   }
 
-  const handleWecomConfigSave = async () => {
+  const handleWecomConfigSave = async (): Promise<boolean> => {
     const nextWecom = {
       ...channels[TASK_NOTIFICATION_CHANNELS.Wecom],
       webhookKey: wecomDraft.webhookKey.trim(),
@@ -456,10 +456,10 @@ export default function TaskNotificationSettings() {
       nextWecom.webhookKey ===
       channels[TASK_NOTIFICATION_CHANNELS.Wecom].webhookKey
     ) {
-      return
+      return true
     }
 
-    await handleChannelUpdate(
+    return await handleChannelUpdate(
       {
         ...channels,
         [TASK_NOTIFICATION_CHANNELS.Wecom]: nextWecom,
@@ -468,16 +468,16 @@ export default function TaskNotificationSettings() {
     )
   }
 
-  const handleWebhookConfigSave = async () => {
+  const handleWebhookConfigSave = async (): Promise<boolean> => {
     const nextWebhook = {
       ...channels[TASK_NOTIFICATION_CHANNELS.Webhook],
       url: webhookDraft.url.trim(),
     }
     if (nextWebhook.url === channels[TASK_NOTIFICATION_CHANNELS.Webhook].url) {
-      return
+      return true
     }
 
-    await handleChannelUpdate(
+    return await handleChannelUpdate(
       {
         ...channels,
         [TASK_NOTIFICATION_CHANNELS.Webhook]: nextWebhook,
@@ -508,28 +508,22 @@ export default function TaskNotificationSettings() {
 
   const saveChannelDraftBeforeTest = async (
     channel: TaskNotificationChannel,
-  ) => {
+  ): Promise<boolean> => {
     switch (channel) {
       case TASK_NOTIFICATION_CHANNELS.Telegram:
-        await handleTelegramConfigSave()
-        return
+        return await handleTelegramConfigSave()
       case TASK_NOTIFICATION_CHANNELS.Feishu:
-        await handleFeishuConfigSave()
-        return
+        return await handleFeishuConfigSave()
       case TASK_NOTIFICATION_CHANNELS.Dingtalk:
-        await handleDingtalkConfigSave()
-        return
+        return await handleDingtalkConfigSave()
       case TASK_NOTIFICATION_CHANNELS.Wecom:
-        await handleWecomConfigSave()
-        return
+        return await handleWecomConfigSave()
       case TASK_NOTIFICATION_CHANNELS.Ntfy:
-        await handleNtfyConfigSave()
-        return
+        return await handleNtfyConfigSave()
       case TASK_NOTIFICATION_CHANNELS.Webhook:
-        await handleWebhookConfigSave()
-        return
+        return await handleWebhookConfigSave()
       case TASK_NOTIFICATION_CHANNELS.Browser:
-        return
+        return true
     }
   }
 
@@ -553,7 +547,11 @@ export default function TaskNotificationSettings() {
   const handleSendTest = async (channel: TaskNotificationChannel) => {
     setTestingChannel(channel)
     try {
-      await saveChannelDraftBeforeTest(channel)
+      const saved = await saveChannelDraftBeforeTest(channel)
+      if (!saved) {
+        throw new Error(t("messages.saveSettingsFailed"))
+      }
+
       const response = await sendRuntimeMessage({
         action: RuntimeActionIds.TaskNotificationsTest,
         channel,
