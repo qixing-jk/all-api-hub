@@ -512,6 +512,14 @@
         "description": "通过浏览器系统通知发送，需要授予 notifications 权限。",
         "title": "浏览器系统通知"
       },
+      "feishu": {
+        "description": "通过飞书自定义机器人发送任务通知。推荐直接粘贴飞书提供的完整 Webhook URL，也兼容只填写最后一段 key。",
+        "docsLink": "查看配置文档",
+        "title": "飞书机器人",
+        "webhookKey": "Webhook URL 或 Key",
+        "webhookKeyDescription": "在飞书群的自定义机器人配置页复制 Webhook 地址并粘贴到这里；如果只填写 `/hook/` 后面的 key，也会自动补全地址。",
+        "webhookKeyPlaceholder": "https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      },
       "telegram": {
         "botToken": "Bot Token",
         "botTokenPlaceholder": "123456:ABC-DEF...",
@@ -531,7 +539,7 @@
     "enableDesc": "开启后，已勾选任务在定时运行完成时会发送成功、部分成功或失败通知。",
     "groups": {
       "channels": {
-        "description": "选择通知通过哪些渠道送达。浏览器通知需要授权，Telegram 和 Webhook 可分别配置并发送测试。",
+        "description": "选择通知通过哪些渠道送达。浏览器通知需要授权，Telegram、飞书和 Webhook 可分别配置并发送测试。",
         "title": "通知渠道"
       },
       "setup": {
@@ -587,6 +595,7 @@
       "browserFailed": "浏览器通知测试失败，请确认已启用浏览器通知渠道并授予通知权限。",
       "channelDisabled": "测试通知发送失败，请先启用并配置该通知渠道。",
       "failed": "测试通知发送失败，请检查该通知渠道配置。",
+      "feishuMissingConfig": "飞书机器人 Webhook URL 或 Key 未配置。",
       "httpError": "{{label}} 返回了 HTTP {{status}}。",
       "httpErrorWithDetail": "{{label}} 返回了 HTTP {{status}}：{{detail}}",
       "message": "这是一条 All API Hub 任务通知测试。",

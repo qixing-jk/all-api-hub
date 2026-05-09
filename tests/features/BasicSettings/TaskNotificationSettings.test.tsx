@@ -209,6 +209,10 @@ describe("TaskNotificationSettings", () => {
           botToken: "telegram-token",
           chatId: "-1001234567890",
         },
+        [TASK_NOTIFICATION_CHANNELS.Feishu]: {
+          enabled: true,
+          webhookKey: "feishu-webhook-key",
+        },
         [TASK_NOTIFICATION_CHANNELS.Webhook]: {
           enabled: true,
           url: "https://hooks.example.com/all-api-hub",
@@ -227,10 +231,13 @@ describe("TaskNotificationSettings", () => {
     const telegramChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_TELEGRAM,
     )
+    const feishuChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_FEISHU,
+    )
     const webhookChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
     )
-    if (!telegramChannel || !webhookChannel) {
+    if (!telegramChannel || !feishuChannel || !webhookChannel) {
       throw new Error("Expected third-party channel settings rows")
     }
 
@@ -259,6 +266,39 @@ describe("TaskNotificationSettings", () => {
       })
     })
 
+    const webhookKeyInput = within(feishuChannel).getByLabelText(
+      "settings:taskNotifications.channels.feishu.webhookKey",
+    )
+    expect(webhookKeyInput).toHaveAttribute("type", "password")
+    expect(
+      within(feishuChannel).getByRole("link", {
+        name: "settings:taskNotifications.channels.feishu.docsLink",
+      }),
+    ).toHaveAttribute(
+      "href",
+      "https://all-api-hub.qixing1217.top/en/task-notifications#feishu",
+    )
+
+    fireEvent.click(
+      within(feishuChannel).getByRole("button", {
+        name: "keyManagement:actions.showKey",
+      }),
+    )
+    expect(webhookKeyInput).toHaveAttribute("type", "text")
+
+    fireEvent.click(
+      within(feishuChannel).getByRole("button", {
+        name: "settings:taskNotifications.test.action",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Feishu,
+      })
+    })
+
     fireEvent.click(
       within(webhookChannel).getByRole("button", {
         name: "settings:taskNotifications.test.action",
@@ -284,6 +324,10 @@ describe("TaskNotificationSettings", () => {
           botToken: "telegram-token",
           chatId: "-1001234567890",
         },
+        [TASK_NOTIFICATION_CHANNELS.Feishu]: {
+          enabled: true,
+          webhookKey: "feishu-webhook-key",
+        },
         [TASK_NOTIFICATION_CHANNELS.Webhook]: {
           enabled: true,
           url: "https://hooks.example.com/all-api-hub",
@@ -303,15 +347,24 @@ describe("TaskNotificationSettings", () => {
     const telegramChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_TELEGRAM,
     )
+    const feishuChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_FEISHU,
+    )
     const webhookChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
     )
-    if (!browserChannel || !telegramChannel || !webhookChannel) {
+    if (
+      !browserChannel ||
+      !telegramChannel ||
+      !feishuChannel ||
+      !webhookChannel
+    ) {
       throw new Error("Expected channel settings rows")
     }
 
     fireEvent.click(within(browserChannel).getByRole("switch"))
     fireEvent.click(within(telegramChannel).getByRole("switch"))
+    fireEvent.click(within(feishuChannel).getByRole("switch"))
     fireEvent.click(within(webhookChannel).getByRole("switch"))
 
     await waitFor(() => {
@@ -336,6 +389,13 @@ describe("TaskNotificationSettings", () => {
           }),
         }),
       })
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Feishu]: expect.objectContaining({
+            enabled: false,
+          }),
+        }),
+      })
     })
 
     updateTaskNotificationsMock.mockClear()
@@ -344,6 +404,9 @@ describe("TaskNotificationSettings", () => {
     )
     const chatIdInput = within(telegramChannel).getByLabelText(
       "settings:taskNotifications.channels.telegram.chatId",
+    )
+    const feishuWebhookKeyInput = within(feishuChannel).getByLabelText(
+      "settings:taskNotifications.channels.feishu.webhookKey",
     )
     const webhookUrlInput = within(webhookChannel).getByLabelText(
       "settings:taskNotifications.channels.webhook.url",
@@ -381,6 +444,21 @@ describe("TaskNotificationSettings", () => {
       })
     })
 
+    fireEvent.change(feishuWebhookKeyInput, {
+      target: { value: "  next-feishu-key  " },
+    })
+    fireEvent.blur(feishuWebhookKeyInput)
+
+    await waitFor(() => {
+      expect(updateTaskNotificationsMock).toHaveBeenCalledWith({
+        channels: expect.objectContaining({
+          [TASK_NOTIFICATION_CHANNELS.Feishu]: expect.objectContaining({
+            webhookKey: "next-feishu-key",
+          }),
+        }),
+      })
+    })
+
     fireEvent.change(webhookUrlInput, {
       target: { value: "  https://hooks.example.com/next  " },
     })
@@ -407,6 +485,10 @@ describe("TaskNotificationSettings", () => {
           botToken: "telegram-token",
           chatId: "-1001234567890",
         },
+        [TASK_NOTIFICATION_CHANNELS.Feishu]: {
+          enabled: true,
+          webhookKey: "feishu-webhook-key",
+        },
         [TASK_NOTIFICATION_CHANNELS.Webhook]: {
           enabled: true,
           url: "https://hooks.example.com/all-api-hub",
@@ -425,10 +507,13 @@ describe("TaskNotificationSettings", () => {
     const telegramChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_TELEGRAM,
     )
+    const feishuChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_FEISHU,
+    )
     const webhookChannel = document.getElementById(
       SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
     )
-    if (!telegramChannel || !webhookChannel) {
+    if (!telegramChannel || !feishuChannel || !webhookChannel) {
       throw new Error("Expected third-party channel settings rows")
     }
 
@@ -441,6 +526,11 @@ describe("TaskNotificationSettings", () => {
       fireEvent.blur(
         within(telegramChannel).getByLabelText(
           "settings:taskNotifications.channels.telegram.chatId",
+        ),
+      )
+      fireEvent.blur(
+        within(feishuChannel).getByLabelText(
+          "settings:taskNotifications.channels.feishu.webhookKey",
         ),
       )
       fireEvent.blur(

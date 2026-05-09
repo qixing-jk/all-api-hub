@@ -22,6 +22,7 @@ export type TaskNotificationStatus =
 export const TASK_NOTIFICATION_CHANNELS = {
   Browser: "browser",
   Telegram: "telegram",
+  Feishu: "feishu",
   Webhook: "webhook",
 } as const
 
@@ -43,6 +44,11 @@ export interface TaskNotificationTelegramChannelPreferences {
   chatId: string
 }
 
+export interface TaskNotificationFeishuChannelPreferences {
+  enabled: boolean
+  webhookKey: string
+}
+
 export interface TaskNotificationWebhookChannelPreferences {
   enabled: boolean
   url: string
@@ -51,6 +57,7 @@ export interface TaskNotificationWebhookChannelPreferences {
 export interface TaskNotificationChannelPreferences {
   [TASK_NOTIFICATION_CHANNELS.Browser]: TaskNotificationBrowserChannelPreferences
   [TASK_NOTIFICATION_CHANNELS.Telegram]: TaskNotificationTelegramChannelPreferences
+  [TASK_NOTIFICATION_CHANNELS.Feishu]: TaskNotificationFeishuChannelPreferences
   [TASK_NOTIFICATION_CHANNELS.Webhook]: TaskNotificationWebhookChannelPreferences
 }
 
@@ -86,6 +93,10 @@ export const DEFAULT_TASK_NOTIFICATION_CHANNEL_PREFERENCES: TaskNotificationChan
       botToken: "",
       chatId: "",
     },
+    [TASK_NOTIFICATION_CHANNELS.Feishu]: {
+      enabled: false,
+      webhookKey: "",
+    },
     [TASK_NOTIFICATION_CHANNELS.Webhook]: {
       enabled: false,
       url: "",
@@ -118,6 +129,12 @@ export function normalizeTaskNotificationChannels(
         TASK_NOTIFICATION_CHANNELS.Telegram
       ],
       ...(channels?.[TASK_NOTIFICATION_CHANNELS.Telegram] ?? {}),
+    },
+    [TASK_NOTIFICATION_CHANNELS.Feishu]: {
+      ...DEFAULT_TASK_NOTIFICATION_CHANNEL_PREFERENCES[
+        TASK_NOTIFICATION_CHANNELS.Feishu
+      ],
+      ...(channels?.[TASK_NOTIFICATION_CHANNELS.Feishu] ?? {}),
     },
     [TASK_NOTIFICATION_CHANNELS.Webhook]: {
       ...DEFAULT_TASK_NOTIFICATION_CHANNEL_PREFERENCES[

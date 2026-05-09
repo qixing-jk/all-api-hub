@@ -512,6 +512,14 @@
         "description": "ブラウザのシステム通知で送信します。notifications 権限が必要です。",
         "title": "ブラウザシステム通知"
       },
+      "feishu": {
+        "description": "Feishu のカスタムボットでタスク通知を送信します。Feishu が提供する Webhook URL 全体を貼り付ける方法を推奨します。最後の key 部分だけの入力にも対応しています。",
+        "docsLink": "設定ドキュメントを見る",
+        "title": "Feishu Bot",
+        "webhookKey": "Webhook URL または key",
+        "webhookKeyDescription": "Feishu カスタムボットの設定ページで Webhook URL をコピーしてここに貼り付けます。`/hook/` の後ろにある key だけを入力した場合も、All API Hub が URL を自動補完します。",
+        "webhookKeyPlaceholder": "https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      },
       "telegram": {
         "botToken": "Bot Token",
         "botTokenPlaceholder": "123456:ABC-DEF...",
@@ -531,7 +539,7 @@
     "enableDesc": "有効にすると、選択したタスクがスケジュール実行を終えた後に成功、部分成功、失敗の通知を送ります。",
     "groups": {
       "channels": {
-        "description": "通知の送信先を選択します。ブラウザ通知には権限が必要です。Telegram と Webhook は個別に設定してテストできます。",
+        "description": "通知の送信先を選択します。ブラウザ通知には権限が必要です。Telegram、Feishu、Webhook は個別に設定してテストできます。",
         "title": "通知チャネル"
       },
       "setup": {
@@ -587,6 +595,7 @@
       "browserFailed": "ブラウザ通知のテストに失敗しました。ブラウザ通知チャネルが有効で、通知権限が許可されていることを確認してください。",
       "channelDisabled": "テスト通知を送信できませんでした。この通知チャネルを有効化して設定してください。",
       "failed": "テスト通知を送信できませんでした。この通知チャネル設定を確認してください。",
+      "feishuMissingConfig": "Feishu Bot の Webhook URL または key が設定されていません。",
       "httpError": "{{label}} が HTTP {{status}} を返しました。",
       "httpErrorWithDetail": "{{label}} が HTTP {{status}} を返しました: {{detail}}",
       "message": "これは All API Hub のタスク通知テストです。",

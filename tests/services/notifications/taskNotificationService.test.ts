@@ -86,6 +86,10 @@ vi.mock("~/utils/i18n/core", () => ({
       return "Telegram Bot"
     }
 
+    if (key === "settings:taskNotifications.channels.feishu.title") {
+      return "Feishu Bot"
+    }
+
     if (key === "settings:taskNotifications.channels.webhook.title") {
       return "Generic webhook"
     }
@@ -122,6 +126,11 @@ describe("taskNotificationService", () => {
     fetchMock.mockResolvedValue({
       ok: true,
       status: 200,
+      json: async () => ({
+        code: 0,
+        data: {},
+        msg: "success",
+      }),
     })
   })
 
@@ -400,6 +409,76 @@ describe("taskNotificationService", () => {
     )
   })
 
+  it("sends Feishu custom bot notifications", async () => {
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Browser]: {
+            enabled: false,
+          },
+          [TASK_NOTIFICATION_CHANNELS.Feishu]: {
+            enabled: true,
+            webhookKey: "feishu-webhook-key",
+          },
+        },
+      },
+    })
+
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+      }),
+    ).resolves.toBe(true)
+
+    expect(createNotificationMock).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://open.feishu.cn/open-apis/bot/v2/hook/feishu-webhook-key",
+      expect.objectContaining({
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: expect.stringContaining('"msg_type":"text"'),
+      }),
+    )
+  })
+
+  it("uses the full Feishu webhook URL when one is configured", async () => {
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Browser]: {
+            enabled: false,
+          },
+          [TASK_NOTIFICATION_CHANNELS.Feishu]: {
+            enabled: true,
+            webhookKey:
+              "https://open.feishu.cn/open-apis/bot/v2/hook/full-feishu-webhook-key",
+          },
+        },
+      },
+    })
+
+    await expect(
+      notifyTaskResult({
+        task: TASK_NOTIFICATION_TASKS.AutoCheckin,
+        status: TASK_NOTIFICATION_STATUSES.Success,
+      }),
+    ).resolves.toBe(true)
+
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://open.feishu.cn/open-apis/bot/v2/hook/full-feishu-webhook-key",
+      expect.objectContaining({
+        method: "POST",
+      }),
+    )
+  })
+
   it("returns false when webhook delivery responds with non-OK", async () => {
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
@@ -582,6 +661,43 @@ describe("taskNotificationService", () => {
     })
   })
 
+  it("handles Feishu channel-specific test notification runtime messages", async () => {
+    const sendResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Feishu]: {
+            enabled: true,
+            webhookKey: "feishu-webhook-key",
+          },
+        },
+      },
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Feishu,
+      },
+      sendResponse,
+    )
+
+    expect(createNotificationMock).not.toHaveBeenCalled()
+    expect(fetchMock).toHaveBeenCalledWith(
+      "https://open.feishu.cn/open-apis/bot/v2/hook/feishu-webhook-key",
+      expect.objectContaining({
+        method: "POST",
+        body: expect.stringContaining("settings:taskNotifications.test.title"),
+      }),
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      error: undefined,
+    })
+  })
+
   it("returns Telegram API response descriptions for channel-specific tests", async () => {
     const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
@@ -659,6 +775,175 @@ describe("taskNotificationService", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "Generic webhook returned HTTP 502: bad gateway",
+    })
+  })
+
+  it("returns Feishu response details for channel-specific tests", async () => {
+    const sendResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Feishu]: {
+            enabled: true,
+            webhookKey: "feishu-webhook-key",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: false,
+      status: 400,
+      headers: {
+        get: () => "application/json",
+      },
+      json: async () => ({
+        code: 9499,
+        msg: "Bad Request",
+      }),
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Feishu,
+      },
+      sendResponse,
+    )
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "Feishu Bot returned HTTP 400: Bad Request",
+    })
+  })
+
+  it("treats Feishu business error responses as channel-specific test failures", async () => {
+    const sendResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Feishu]: {
+            enabled: true,
+            webhookKey: "invalid-feishu-webhook-key",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: {
+        get: () => "application/json",
+      },
+      json: async () => ({
+        code: 19001,
+        data: {},
+        msg: "param invalid: incoming webhook access token invalid",
+      }),
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Feishu,
+      },
+      sendResponse,
+    )
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error:
+        "Feishu Bot returned HTTP 200: param invalid: incoming webhook access token invalid",
+    })
+  })
+
+  it("accepts Feishu success responses with StatusCode and code set to zero", async () => {
+    const sendResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Feishu]: {
+            enabled: true,
+            webhookKey: "feishu-webhook-key",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: {
+        get: () => "application/json",
+      },
+      json: async () => ({
+        StatusCode: 0,
+        StatusMessage: "success",
+        code: 0,
+        data: {},
+        msg: "success",
+      }),
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Feishu,
+      },
+      sendResponse,
+    )
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      error: undefined,
+    })
+  })
+
+  it("prioritizes Feishu code over legacy StatusCode when judging business success", async () => {
+    const sendResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Feishu]: {
+            enabled: true,
+            webhookKey: "invalid-feishu-webhook-key",
+          },
+        },
+      },
+    })
+    fetchMock.mockResolvedValueOnce({
+      ok: true,
+      status: 200,
+      headers: {
+        get: () => "application/json",
+      },
+      json: async () => ({
+        StatusCode: 0,
+        StatusMessage: "success",
+        code: 19001,
+        data: {},
+        msg: "param invalid: incoming webhook access token invalid",
+      }),
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Feishu,
+      },
+      sendResponse,
+    )
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error:
+        "Feishu Bot returned HTTP 200: param invalid: incoming webhook access token invalid",
     })
   })
 
@@ -801,6 +1086,33 @@ describe("taskNotificationService", () => {
     expect(missingWebhookResponse).toHaveBeenCalledWith({
       success: false,
       error: "settings:taskNotifications.test.webhookMissingConfig",
+    })
+
+    const missingFeishuResponse = vi.fn()
+    getPreferencesMock.mockResolvedValueOnce({
+      taskNotifications: {
+        ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+        channels: {
+          ...DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
+          [TASK_NOTIFICATION_CHANNELS.Feishu]: {
+            enabled: true,
+            webhookKey: "",
+          },
+        },
+      },
+    })
+
+    await handleTaskNotificationMessage(
+      {
+        action: RuntimeActionIds.TaskNotificationsTest,
+        channel: TASK_NOTIFICATION_CHANNELS.Feishu,
+      },
+      missingFeishuResponse,
+    )
+
+    expect(missingFeishuResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "settings:taskNotifications.test.feishuMissingConfig",
     })
 
     const invalidWebhookResponse = vi.fn()

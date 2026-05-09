@@ -28,7 +28,7 @@ const TASK_NOTIFICATION_TASK_BREADCRUMBS = [
   "settings:taskNotifications.groups.tasks.title",
 ]
 
-const TASK_NOTIFICATION_TASK_CONTROL_ORDER_START = 612
+const TASK_NOTIFICATION_TASK_CONTROL_ORDER_START = 613
 
 const TASK_NOTIFICATION_TASK_SEARCH_CONTROLS = [
   {
@@ -99,7 +99,15 @@ export const notificationsSearchSections: OptionsSearchItemDefinition[] = [
     304,
     {
       descriptionKey: "settings:taskNotifications.groups.channels.description",
-      keywords: ["notification", "channel", "delivery", "telegram", "webhook"],
+      keywords: [
+        "notification",
+        "channel",
+        "delivery",
+        "telegram",
+        "feishu",
+        "lark",
+        "webhook",
+      ],
     },
   ),
   buildSectionDefinition(
@@ -166,11 +174,23 @@ export const notificationsSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
+    "control:task-notifications-channel-feishu",
+    NOTIFICATIONS_TAB_ID,
+    SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_FEISHU,
+    "settings:taskNotifications.channels.feishu.title",
+    611,
+    {
+      descriptionKey: "settings:taskNotifications.channels.feishu.description",
+      breadcrumbsKeys: TASK_NOTIFICATION_CHANNEL_BREADCRUMBS,
+      keywords: ["notification", "feishu", "lark", "bot"],
+    },
+  ),
+  buildControlDefinition(
     "control:task-notifications-channel-webhook",
     NOTIFICATIONS_TAB_ID,
     SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_WEBHOOK,
     "settings:taskNotifications.channels.webhook.title",
-    611,
+    612,
     {
       descriptionKey: "settings:taskNotifications.channels.webhook.description",
       breadcrumbsKeys: TASK_NOTIFICATION_CHANNEL_BREADCRUMBS,

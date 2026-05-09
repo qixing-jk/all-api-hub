@@ -68,6 +68,16 @@ interface TaskNotificationDeliveryOptions {
   surfaceErrors?: boolean
 }
 
+interface FeishuWebhookResponseBody {
+  code?: unknown
+  msg?: unknown
+  StatusCode?: unknown
+  StatusMessage?: unknown
+}
+
+const FEISHU_CUSTOM_BOT_WEBHOOK_PREFIX =
+  "https://open.feishu.cn/open-apis/bot/v2/hook/"
+
 const TASK_LABEL_KEYS: Record<TaskNotificationTask, string> = {
   [TASK_NOTIFICATION_TASKS.AutoCheckin]:
     "settings:taskNotifications.tasks.autoCheckin",
@@ -248,9 +258,16 @@ async function getNotificationResponseErrorDetail(
       const body = (await response.json()) as {
         description?: unknown
         message?: unknown
+        msg?: unknown
+        StatusMessage?: unknown
         error?: unknown
       }
-      const message = body.description ?? body.message ?? body.error
+      const message =
+        body.description ??
+        body.message ??
+        body.msg ??
+        body.StatusMessage ??
+        body.error
       return typeof message === "string" && message.trim()
         ? message.trim()
         : null
@@ -264,6 +281,27 @@ async function getNotificationResponseErrorDetail(
 }
 
 /**
+ * Builds a user-facing failure message from a parsed third-party response body.
+ */
+function getNotificationParsedErrorMessage(
+  labelKey: string,
+  status: number,
+  detail: string | null,
+): string {
+  const label = t(labelKey)
+  return detail
+    ? t("settings:taskNotifications.test.httpErrorWithDetail", {
+        label,
+        status,
+        detail,
+      })
+    : t("settings:taskNotifications.test.httpError", {
+        label,
+        status,
+      })
+}
+
+/**
  * Builds a user-facing HTTP failure message from a third-party response.
  */
 async function getNotificationHttpErrorMessage(
@@ -271,17 +309,7 @@ async function getNotificationHttpErrorMessage(
   response: Response,
 ): Promise<string> {
   const detail = await getNotificationResponseErrorDetail(response)
-  const label = t(labelKey)
-  return detail
-    ? t("settings:taskNotifications.test.httpErrorWithDetail", {
-        label,
-        status: response.status,
-        detail,
-      })
-    : t("settings:taskNotifications.test.httpError", {
-        label,
-        status: response.status,
-      })
+  return getNotificationParsedErrorMessage(labelKey, response.status, detail)
 }
 
 /**
@@ -356,6 +384,74 @@ async function sendTelegramNotification(
         "settings:taskNotifications.channels.telegram.title",
         response,
       ),
+    )
+  }
+
+  return true
+}
+
+/**
+ * Sends a plain-text Feishu custom bot message.
+ */
+async function sendFeishuNotification(
+  content: TaskNotificationContent,
+  config: TaskNotificationPreferences["channels"][typeof TASK_NOTIFICATION_CHANNELS.Feishu],
+): Promise<boolean> {
+  const webhookInput = config.webhookKey.trim()
+  if (!webhookInput) {
+    throw new Error(t("settings:taskNotifications.test.feishuMissingConfig"))
+  }
+
+  const labelKey = "settings:taskNotifications.channels.feishu.title"
+  const webhookUrl = webhookInput.startsWith("http://")
+    ? webhookInput
+    : webhookInput.startsWith("https://")
+      ? webhookInput
+      : `${FEISHU_CUSTOM_BOT_WEBHOOK_PREFIX}${encodeURIComponent(webhookInput)}`
+
+  const response = await fetch(webhookUrl, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      msg_type: "text",
+      content: {
+        text: `${content.title}\n${content.message}`,
+      },
+    }),
+  })
+
+  let body: FeishuWebhookResponseBody | null = null
+
+  try {
+    body = (await response.json()) as FeishuWebhookResponseBody
+  } catch {
+    body = null
+  }
+
+  const detail =
+    typeof body?.msg === "string" && body.msg.trim()
+      ? body.msg.trim()
+      : typeof body?.StatusMessage === "string" && body.StatusMessage.trim()
+        ? body.StatusMessage.trim()
+        : null
+
+  if (!response.ok) {
+    throw new Error(
+      getNotificationParsedErrorMessage(labelKey, response.status, detail),
+    )
+  }
+
+  // Feishu's custom bot docs define `code` as the current success indicator.
+  // `StatusCode` is retained only as a legacy fallback for older responses.
+  const code = typeof body?.code === "number" ? body.code : null
+  const statusCode =
+    typeof body?.StatusCode === "number" ? body.StatusCode : null
+  const isBusinessSuccess = code !== null ? code === 0 : statusCode === 0
+  if (!isBusinessSuccess) {
+    throw new Error(
+      getNotificationParsedErrorMessage(labelKey, response.status, detail),
     )
   }
 
@@ -466,6 +562,22 @@ async function sendConfiguredChannels(
       )
     } catch (error) {
       handleChannelFailure(TASK_NOTIFICATION_CHANNELS.Telegram, error)
+    }
+  }
+
+  if (
+    shouldSendChannel(TASK_NOTIFICATION_CHANNELS.Feishu) &&
+    channels[TASK_NOTIFICATION_CHANNELS.Feishu].enabled
+  ) {
+    try {
+      deliveryResults.push(
+        await sendFeishuNotification(
+          content,
+          channels[TASK_NOTIFICATION_CHANNELS.Feishu],
+        ),
+      )
+    } catch (error) {
+      handleChannelFailure(TASK_NOTIFICATION_CHANNELS.Feishu, error)
     }
   }
 

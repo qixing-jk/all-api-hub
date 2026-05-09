@@ -512,6 +512,14 @@
         "description": "Send through browser system notifications. Requires the notifications permission.",
         "title": "Browser system notifications"
       },
+      "feishu": {
+        "description": "Send task notifications through a Feishu custom bot. Pasting the full webhook URL from Feishu is recommended, and the final key segment is still supported.",
+        "docsLink": "View setup docs",
+        "title": "Feishu Bot",
+        "webhookKey": "Webhook URL or key",
+        "webhookKeyDescription": "Copy the webhook URL from the Feishu custom bot settings page and paste it here. If you enter only the key after `/hook/`, All API Hub will complete the URL automatically.",
+        "webhookKeyPlaceholder": "https://open.feishu.cn/open-apis/bot/v2/hook/xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
+      },
       "telegram": {
         "botToken": "Bot token",
         "botTokenPlaceholder": "123456:ABC-DEF...",
@@ -531,7 +539,7 @@
     "enableDesc": "When enabled, selected tasks send success, partial success, or failure notifications after scheduled runs finish.",
     "groups": {
       "channels": {
-        "description": "Choose where notifications are delivered. Browser notifications need permission, while Telegram and webhook channels can be configured and tested separately.",
+        "description": "Choose where notifications are delivered. Browser notifications need permission, while Telegram, Feishu, and webhook channels can be configured and tested separately.",
         "title": "Notification channels"
       },
       "setup": {
@@ -587,6 +595,7 @@
       "browserFailed": "Browser notification test failed. Make sure the browser notification channel is enabled and notification permission is granted.",
       "channelDisabled": "Failed to send the test notification. Enable and configure this notification channel first.",
       "failed": "Failed to send the test notification. Check this notification channel configuration.",
+      "feishuMissingConfig": "Feishu Bot webhook URL or key is not configured.",
       "httpError": "{{label}} returned HTTP {{status}}.",
       "httpErrorWithDetail": "{{label}} returned HTTP {{status}}: {{detail}}",
       "message": "This is an All API Hub task notification test.",

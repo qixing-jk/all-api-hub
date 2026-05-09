@@ -9,6 +9,9 @@ export const SETTINGS_ANCHORS = {
   TASK_NOTIFICATIONS_TELEGRAM_BOT_TOKEN:
     "task-notifications-telegram-bot-token",
   TASK_NOTIFICATIONS_TELEGRAM_CHAT_ID: "task-notifications-telegram-chat-id",
+  TASK_NOTIFICATIONS_CHANNEL_FEISHU: "task-notifications-channel-feishu",
+  TASK_NOTIFICATIONS_FEISHU_WEBHOOK_KEY:
+    "task-notifications-feishu-webhook-key",
   TASK_NOTIFICATIONS_CHANNEL_WEBHOOK: "task-notifications-channel-webhook",
   TASK_NOTIFICATIONS_WEBHOOK_URL: "task-notifications-webhook-url",
   TASK_NOTIFICATIONS_AUTO_CHECKIN: "task-notifications-autoCheckin",

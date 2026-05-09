@@ -3,6 +3,7 @@ import { getChangelogAnchorId } from "~/utils/navigation/changelogAnchor"
 import { getHomepage } from "~/utils/navigation/packageMeta"
 
 const DOCS_COMMUNITY_ANCHOR = "community"
+const DOCS_TASK_NOTIFICATIONS_FEISHU_ANCHOR = "feishu"
 
 /**
  * Resolve the documentation homepage URL for a given language.
@@ -31,6 +32,15 @@ export const getDocsAutoDetectUrl = (language?: string) =>
 
 export const getDocsGetStartedUrl = (language?: string) =>
   getDocsPageUrl("get-started", language)
+
+export const getDocsTaskNotificationsUrl = (language?: string) =>
+  getDocsPageUrl("task-notifications", language)
+
+export const getDocsTaskNotificationsFeishuUrl = (language?: string) => {
+  const url = new URL(getDocsTaskNotificationsUrl(language))
+  url.hash = DOCS_TASK_NOTIFICATIONS_FEISHU_ANCHOR
+  return url.toString()
+}
 
 /**
  * Resolve the shared community hub on the localized docs homepage.
