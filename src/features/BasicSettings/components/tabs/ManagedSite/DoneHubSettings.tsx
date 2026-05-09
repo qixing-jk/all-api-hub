@@ -9,7 +9,7 @@ import {
   Input,
   WorkflowTransitionButton,
 } from "~/components/ui"
-import { getSiteApiRouter, SITE_TYPES } from "~/constants/siteType"
+import { getSiteRouteConfigForKey, SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
@@ -93,7 +93,7 @@ export default function DoneHubSettings() {
   const adminCredentialsUrl = shouldShowAdminCredentialsLink
     ? joinUrl(
         trimmedBaseUrl,
-        getSiteApiRouter(SITE_TYPES.DONE_HUB).adminCredentialsPath,
+        getSiteRouteConfigForKey(SITE_TYPES.DONE_HUB).adminCredentialsPath,
       )
     : ""
 

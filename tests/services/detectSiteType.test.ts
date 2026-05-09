@@ -1,10 +1,10 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { SITE_TITLE_RULES, SITE_TYPES } from "~/constants/siteType"
+import { ACCOUNT_SITE_TITLE_RULES, SITE_TYPES } from "~/constants/siteType"
 import {
   fetchSiteOriginalTitle,
-  getSiteType,
+  getAccountSiteType,
 } from "~/services/siteDetection/detectSiteType"
 import { server } from "~~/tests/msw/server"
 
@@ -149,11 +149,11 @@ describe("detectSiteType", () => {
     })
   })
 
-  describe("getSiteType", () => {
+  describe("getAccountSiteType", () => {
     describe("Title-based detection", () => {
       it("should detect site type from title when match found", async () => {
-        // Find a real rule from SITE_TITLE_RULES
-        const firstRule = SITE_TITLE_RULES[0]
+        // Find a real rule from ACCOUNT_SITE_TITLE_RULES
+        const firstRule = ACCOUNT_SITE_TITLE_RULES[0]
         const matchingTitle = firstRule.name // This should match the regex
 
         const mockHTML = `<html><title>${matchingTitle}</title></html>`
@@ -165,7 +165,7 @@ describe("detectSiteType", () => {
           }),
         )
 
-        const siteType = await getSiteType("https://example.com")
+        const siteType = await getAccountSiteType("https://example.com")
 
         expect(siteType).toBe(firstRule.name)
       })
@@ -180,14 +180,46 @@ describe("detectSiteType", () => {
           }),
         )
 
-        const siteType = await getSiteType("https://example.com")
+        const siteType = await getAccountSiteType("https://example.com")
 
         // Check if result matches one of the known site types
-        const knownTypes = SITE_TITLE_RULES.map((rule) => rule.name)
+        const knownTypes = ACCOUNT_SITE_TITLE_RULES.map((rule) => rule.name)
         if (knownTypes.includes(siteType)) {
           expect(knownTypes).toContain(siteType)
         } else {
           expect(siteType).toBe(SITE_TYPES.UNKNOWN)
+        }
+      })
+
+      it("should not classify managed-only titles as account site types", async () => {
+        const managedOnlyTitles = [
+          ["Octopus", SITE_TYPES.OCTOPUS],
+          ["AxonHub", SITE_TYPES.AXON_HUB],
+          ["Claude Code Hub", SITE_TYPES.CLAUDE_CODE_HUB],
+        ] as const
+
+        for (const [title] of managedOnlyTitles) {
+          server.resetHandlers()
+          server.use(
+            http.get("https://example.com", () => {
+              return new HttpResponse(`<html><title>${title}</title></html>`, {
+                headers: { "Content-Type": "text/html" },
+              })
+            }),
+            http.get("https://example.com/api/user/self", () => {
+              return HttpResponse.json(
+                {
+                  success: false,
+                  message: "error: completely unmatched identifier",
+                },
+                { status: 400 },
+              )
+            }),
+          )
+
+          await expect(getAccountSiteType("https://example.com")).resolves.toBe(
+            SITE_TYPES.UNKNOWN,
+          )
         }
       })
     })
@@ -213,7 +245,7 @@ describe("detectSiteType", () => {
           }),
         )
 
-        const siteType = await getSiteType("https://example.com")
+        const siteType = await getAccountSiteType("https://example.com")
 
         // Result depends on whether "unknown-api-identifier" matches any rule
         expect(typeof siteType).toBe("string")
@@ -237,10 +269,10 @@ describe("detectSiteType", () => {
           }),
         )
 
-        const siteType = await getSiteType("https://example.com")
+        const siteType = await getAccountSiteType("https://example.com")
 
         // Should return SITE_TYPES.UNKNOWN if no rule matches
-        const knownTypes = SITE_TITLE_RULES.map((rule) => rule.name)
+        const knownTypes = ACCOUNT_SITE_TITLE_RULES.map((rule) => rule.name)
         if (!knownTypes.some((type) => siteType === type)) {
           expect(siteType).toBe(SITE_TYPES.UNKNOWN)
         }
@@ -266,7 +298,7 @@ describe("detectSiteType", () => {
           }),
         )
 
-        const siteType = await getSiteType("https://example.com")
+        const siteType = await getAccountSiteType("https://example.com")
 
         expect(siteType).toBe(SITE_TYPES.NEW_API)
       })
@@ -289,7 +321,7 @@ describe("detectSiteType", () => {
           }),
         )
 
-        const siteType = await getSiteType("https://example.com")
+        const siteType = await getAccountSiteType("https://example.com")
 
         expect(siteType).toBe(SITE_TYPES.NEW_API)
       })
@@ -312,7 +344,7 @@ describe("detectSiteType", () => {
           }),
         )
 
-        const siteType = await getSiteType("https://example.com")
+        const siteType = await getAccountSiteType("https://example.com")
 
         expect(siteType).toBe(SITE_TYPES.NEW_API)
       })
@@ -335,7 +367,7 @@ describe("detectSiteType", () => {
           }),
         )
 
-        const siteType = await getSiteType("https://example.com")
+        const siteType = await getAccountSiteType("https://example.com")
 
         expect(siteType).toBe(SITE_TYPES.NEW_API)
       })
@@ -358,7 +390,7 @@ describe("detectSiteType", () => {
           }),
         )
 
-        const siteType = await getSiteType("https://example.com")
+        const siteType = await getAccountSiteType("https://example.com")
 
         expect(siteType).toBe(SITE_TYPES.UNKNOWN)
       })
@@ -378,7 +410,7 @@ describe("detectSiteType", () => {
           }),
         )
 
-        const siteType = await getSiteType("https://example.com")
+        const siteType = await getAccountSiteType("https://example.com")
 
         expect(siteType).toBe(SITE_TYPES.UNKNOWN)
       })
@@ -392,7 +424,9 @@ describe("detectSiteType", () => {
           }),
         )
 
-        await expect(getSiteType("https://example.com")).rejects.toThrow()
+        await expect(
+          getAccountSiteType("https://example.com"),
+        ).rejects.toThrow()
       })
 
       it.skip("should handle HTML parsing error", async () => {
@@ -407,7 +441,7 @@ describe("detectSiteType", () => {
           }),
         )
 
-        const siteType = await getSiteType("https://example.com")
+        const siteType = await getAccountSiteType("https://example.com")
         // The function should handle the error and return SITE_TYPES.UNKNOWN
         expect(typeof siteType).toBe("string")
       })

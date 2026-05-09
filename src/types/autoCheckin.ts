@@ -6,7 +6,7 @@
 import type { TFunction } from "i18next"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import type { SiteType } from "~/constants/siteType"
+import type { AccountSiteType } from "~/constants/siteType"
 
 /**
  * Check-in result status
@@ -226,7 +226,7 @@ export interface AutoCheckinRetryState {
 export interface AutoCheckinAccountSnapshot {
   accountId: string
   accountName: string
-  siteType: SiteType
+  siteType: AccountSiteType
   detectionEnabled: boolean
   autoCheckinEnabled: boolean
   providerAvailable: boolean

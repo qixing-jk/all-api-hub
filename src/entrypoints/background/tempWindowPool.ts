@@ -10,7 +10,7 @@ import {
   TempWindowFallbackPreferences,
   userPreferences,
 } from "~/services/preferences/userPreferences"
-import { getSiteType } from "~/services/siteDetection/detectSiteType"
+import { getAccountSiteType } from "~/services/siteDetection/detectSiteType"
 import { AuthTypeEnum } from "~/types"
 import type {
   TempWindowFetch,
@@ -763,7 +763,7 @@ export async function handleAutoDetectSite(
   try {
     const [userData, siteType] = await Promise.all([
       getSiteDataFromTab(url, requestId),
-      getSiteType(url),
+      getAccountSiteType(url),
     ])
 
     let result = null

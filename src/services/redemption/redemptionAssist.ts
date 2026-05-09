@@ -1,5 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { getSiteApiRouter } from "~/constants/siteType"
+import { getAccountSiteApiRouter } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { redeemService } from "~/services/redemption/redeemService"
@@ -252,7 +252,7 @@ class RedemptionAssistService {
         const origin = this.getOrigin(account.baseUrl)
         if (!origin) continue
 
-        const router = getSiteApiRouter(account.siteType)
+        const router = getAccountSiteApiRouter(account.siteType)
         const resolvedCheckInUrl =
           account.checkIn?.customCheckIn?.url ||
           joinUrl(origin, router.checkInPath)

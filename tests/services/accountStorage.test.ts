@@ -33,7 +33,7 @@ const storageHooks: {
 const {
   mockValidateAccountConnection,
   mockFetchSupportCheckIn,
-  mockGetSiteType,
+  mockGetAccountSiteType,
   mockRefreshAccountData,
   mockFetchTodayIncome,
   markAccountDisabledInStatusMock,
@@ -42,7 +42,7 @@ const {
 } = vi.hoisted(() => ({
   mockValidateAccountConnection: vi.fn(),
   mockFetchSupportCheckIn: vi.fn(),
-  mockGetSiteType: vi.fn(),
+  mockGetAccountSiteType: vi.fn(),
   mockRefreshAccountData: vi.fn(),
   mockFetchTodayIncome: vi.fn(),
   markAccountDisabledInStatusMock: vi.fn(),
@@ -81,7 +81,7 @@ vi.mock("~/services/apiService", () => ({
 }))
 
 vi.mock("~/services/siteDetection/detectSiteType", () => ({
-  getSiteType: mockGetSiteType,
+  getAccountSiteType: mockGetAccountSiteType,
 }))
 
 vi.mock("~/services/checkin/autoCheckin/storage", () => ({
@@ -169,7 +169,7 @@ describe("accountStorage core behaviors", () => {
     storageHooks.beforeRemove = async () => {}
     mockValidateAccountConnection.mockReset()
     mockFetchSupportCheckIn.mockReset()
-    mockGetSiteType.mockReset()
+    mockGetAccountSiteType.mockReset()
     mockRefreshAccountData.mockReset()
     mockFetchTodayIncome.mockReset()
     markAccountDisabledInStatusMock.mockReset()
@@ -1369,14 +1369,16 @@ describe("accountStorage core behaviors", () => {
     })
     seedStorage([account])
 
-    mockGetSiteType.mockResolvedValue("one-api")
+    mockGetAccountSiteType.mockResolvedValue("one-api")
     mockFetchSupportCheckIn.mockResolvedValue(true)
 
     await accountStorage.refreshAccount("needs-detect", true)
 
     const updatedAccount = await accountStorage.getAccountById("needs-detect")
 
-    expect(mockGetSiteType).toHaveBeenCalledWith("https://foo.example.com")
+    expect(mockGetAccountSiteType).toHaveBeenCalledWith(
+      "https://foo.example.com",
+    )
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
       baseUrl: "https://foo.example.com",
       auth: {
@@ -1407,7 +1409,7 @@ describe("accountStorage core behaviors", () => {
         skippedReason: "account_disabled",
       }),
     )
-    expect(mockGetSiteType).not.toHaveBeenCalled()
+    expect(mockGetAccountSiteType).not.toHaveBeenCalled()
     expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
     expect(mockRefreshAccountData).not.toHaveBeenCalled()
     expect(mockFetchTodayIncome).not.toHaveBeenCalled()
@@ -1540,7 +1542,7 @@ describe("accountStorage core behaviors", () => {
 
     await accountStorage.refreshAccount("known-site", true)
 
-    expect(mockGetSiteType).not.toHaveBeenCalled()
+    expect(mockGetAccountSiteType).not.toHaveBeenCalled()
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
       baseUrl: "https://bar.example.com",
       auth: {

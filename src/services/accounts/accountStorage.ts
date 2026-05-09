@@ -32,7 +32,7 @@ import { t } from "~/utils/i18n/core"
 
 import { autoCheckinStorage } from "../checkin/autoCheckin/storage"
 import { userPreferences } from "../preferences/userPreferences"
-import { getSiteType } from "../siteDetection/detectSiteType"
+import { getAccountSiteType } from "../siteDetection/detectSiteType"
 import {
   applySiteAccountUpdates,
   createDefaultAccountStorageConfig,
@@ -1963,7 +1963,7 @@ class AccountStorageService {
     if (needsSiteType) {
       // Remote inference fills in SITE_TYPES.UNKNOWN entries after migrations
       try {
-        const detectedType = await getSiteType(normalizedUrl)
+        const detectedType = await getAccountSiteType(normalizedUrl)
         if (detectedType && detectedType !== SITE_TYPES.UNKNOWN) {
           updates.site_type = detectedType
         }

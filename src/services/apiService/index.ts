@@ -35,7 +35,7 @@ const hasOwnOverrideSite = (value: unknown): value is ApiOverrideSite =>
   Object.prototype.hasOwnProperty.call(siteOverrideMap, value)
 
 /**
- * Append an optional SiteType hint to a function signature.
+ * Append an optional ApiOverrideSite hint to a function signature.
  * This allows callers to explicitly request a site/version implementation
  * without changing the underlying common API function shapes.
  */

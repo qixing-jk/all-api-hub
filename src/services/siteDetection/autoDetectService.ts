@@ -12,7 +12,7 @@ import {
   type AutoDetectErrorCode,
 } from "~/constants/autoDetect"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { isSiteType, type SiteType } from "~/constants/siteType"
+import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 import {
   getActiveOrAllTabs,
@@ -25,7 +25,7 @@ import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
 import { getApiService } from "../apiService"
-import { getSiteType } from "./detectSiteType"
+import { getAccountSiteType } from "./detectSiteType"
 
 /**
  * Unified logger scoped to the account auto-detection service.
@@ -35,8 +35,8 @@ const logger = createLogger("AutoDetectService")
 /**
  * Normalizes optional site type hints received from content scripts.
  */
-function normalizeSiteTypeHint(value: unknown): SiteType | undefined {
-  return isSiteType(value) ? value : undefined
+function normalizeSiteTypeHint(value: unknown): AccountSiteType | undefined {
+  return isAccountSiteType(value) ? value : undefined
 }
 
 interface AutoDetectResult {
@@ -44,7 +44,7 @@ interface AutoDetectResult {
   data?: {
     userId: number
     user: any
-    siteType: SiteType
+    siteType: AccountSiteType
     accessToken?: string
     sub2apiAuth?: Sub2ApiAuthConfig
   }
@@ -57,7 +57,7 @@ interface UserDataResult {
   user: any
   accessToken?: string
   sub2apiAuth?: Sub2ApiAuthConfig
-  siteTypeHint?: SiteType
+  siteTypeHint?: AccountSiteType
 }
 
 interface CurrentTabUserDataResult {
@@ -111,7 +111,7 @@ async function combineUserDataAndSiteType(
   }
 
   try {
-    const siteType = userData.siteTypeHint || (await getSiteType(url))
+    const siteType = userData.siteTypeHint || (await getAccountSiteType(url))
     return {
       success: true,
       data: {
@@ -138,7 +138,7 @@ async function combineUserDataAndSiteType(
  */
 async function getUserDataViaAPI(
   url: string,
-  siteType: SiteType,
+  siteType: AccountSiteType,
 ): Promise<UserDataResult | null> {
   try {
     const userInfo = await getApiService(siteType).fetchUserInfo({
@@ -174,7 +174,7 @@ async function autoDetectDirect(url: string): Promise<AutoDetectResult> {
 
   try {
     // 检测站点类型，避免在未知站点上下文中使用默认 API
-    const siteType = await getSiteType(url)
+    const siteType = await getAccountSiteType(url)
 
     // 通过 API 获取用户数据
     const userData = await getUserDataViaAPI(url, siteType)
@@ -201,7 +201,7 @@ async function autoDetectDirect(url: string): Promise<AutoDetectResult> {
  */
 async function getUserDataViaBackground(
   url: string,
-  siteType: SiteType,
+  siteType: AccountSiteType,
 ): Promise<UserDataResult | null> {
   try {
     const requestId = `auto-detect-${Date.now()}`
@@ -239,7 +239,7 @@ async function autoDetectViaBackground(url: string): Promise<AutoDetectResult> {
   logger.debug("使用 Background 方式", { url })
 
   // 检测站点类型，避免在未知站点上下文中使用默认 API
-  const siteType = await getSiteType(url)
+  const siteType = await getAccountSiteType(url)
 
   // 通过 Background 获取用户数据
   const userData = await getUserDataViaBackground(url, siteType)
@@ -256,7 +256,7 @@ async function autoDetectViaBackground(url: string): Promise<AutoDetectResult> {
  */
 async function getUserDataFromCurrentTab(
   url: string,
-  siteType: SiteType,
+  siteType: AccountSiteType,
 ): Promise<CurrentTabUserDataResult> {
   let contentScriptUnavailable = false
 
@@ -332,7 +332,7 @@ async function autoDetectFromCurrentTab(
   logger.debug("使用当前标签页方式", { url })
 
   // 检测站点类型，避免在未知站点上下文中使用默认 API
-  const siteType = await getSiteType(url)
+  const siteType = await getAccountSiteType(url)
 
   // 从当前标签页获取用户数据
   const { userData, contentScriptUnavailable } =

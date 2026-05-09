@@ -6,10 +6,10 @@ import toast from "react-hot-toast"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
-  isSiteType,
-  SITE_TITLE_RULES,
+  ACCOUNT_SITE_TITLE_RULES,
+  isAccountSiteType,
   SITE_TYPES,
-  type SiteType,
+  type AccountSiteType,
 } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
@@ -330,13 +330,13 @@ export function isValidAccount({
   siteName: string
   username: string
   userId: string
-  siteType?: SiteType
+  siteType?: AccountSiteType
   authType: AuthTypeEnum
   accessToken: string
   cookieAuthSessionCookie?: string
   exchangeRate: string
 }) {
-  const normalizedSiteType = isSiteType(siteType)
+  const normalizedSiteType = isAccountSiteType(siteType)
     ? siteType
     : SITE_TYPES.UNKNOWN
 
@@ -377,7 +377,7 @@ function normalizeTagIdsInput(tagIds: TagIdsInput): string[] {
  * Normalizes the Sub2API auth input.
  */
 function normalizeSub2ApiAuthInput(
-  siteType: SiteType,
+  siteType: AccountSiteType,
   sub2apiAuth: Sub2ApiAuthConfig | undefined,
 ): Sub2ApiAuthConfig | undefined {
   if (siteType !== SITE_TYPES.SUB2API) return undefined
@@ -523,7 +523,7 @@ export async function validateAndSaveAccount(
     authType === AuthTypeEnum.Cookie
       ? extractSessionCookieHeader(cookieAuthSessionCookie)
       : ""
-  const normalizedSiteType = isSiteType(siteType)
+  const normalizedSiteType = isAccountSiteType(siteType)
     ? siteType
     : SITE_TYPES.UNKNOWN
 
@@ -781,7 +781,7 @@ export async function validateAndUpdateAccount(
     authType === AuthTypeEnum.Cookie
       ? extractSessionCookieHeader(cookieAuthSessionCookie)
       : ""
-  const normalizedSiteType = isSiteType(siteType)
+  const normalizedSiteType = isAccountSiteType(siteType)
     ? siteType
     : SITE_TYPES.UNKNOWN
 
@@ -1009,7 +1009,7 @@ export function extractDomainPrefix(hostname: string): string {
  * @returns true 表示不是默认名称
  */
 function IsNotDefaultSiteName(siteName: string): boolean {
-  return !SITE_TITLE_RULES.some(
+  return !ACCOUNT_SITE_TITLE_RULES.some(
     (rule) => rule.name !== SITE_TYPES.UNKNOWN && rule.regex.test(siteName),
   )
 }

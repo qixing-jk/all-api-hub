@@ -177,6 +177,33 @@ describe("AccountDialog AccountForm", () => {
     expect(props.onAuthTypeChange).toHaveBeenCalledWith(AuthTypeEnum.Cookie)
   })
 
+  it("only lists account site types in the site type selector", async () => {
+    const user = userEvent.setup()
+    const props = createProps()
+
+    render(<AccountForm {...props} />)
+
+    await user.click(
+      await screen.findByTestId("account-management-site-type-trigger"),
+    )
+
+    expect(
+      await screen.findByRole("option", { name: SITE_TYPES.NEW_API }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("option", { name: SITE_TYPES.SUB2API }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("option", { name: SITE_TYPES.OCTOPUS }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("option", { name: SITE_TYPES.AXON_HUB }),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("option", { name: SITE_TYPES.CLAUDE_CODE_HUB }),
+    ).not.toBeInTheDocument()
+  })
+
   it("disables auth type changes when the account data is detected", async () => {
     const user = userEvent.setup()
     const props = createProps()

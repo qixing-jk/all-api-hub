@@ -1,4 +1,4 @@
-import { SITE_TYPES, type SiteType } from "~/constants/siteType"
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { getApiService } from "~/services/apiService"
 import type { Sub2ApiAnnouncementData } from "~/services/apiService/sub2api/type"
 import type {
@@ -219,7 +219,7 @@ export const sub2ApiSiteAnnouncementProvider: SiteAnnouncementProvider = {
  * Selects the announcement provider implementation for a site type.
  */
 export function getSiteAnnouncementProvider(
-  siteType: SiteType,
+  siteType: AccountSiteType,
 ): SiteAnnouncementProvider {
   return siteType === SITE_TYPES.SUB2API
     ? sub2ApiSiteAnnouncementProvider

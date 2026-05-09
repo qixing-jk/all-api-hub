@@ -10,7 +10,7 @@ import {
   Input,
   WorkflowTransitionButton,
 } from "~/components/ui"
-import { getSiteApiRouter, SITE_TYPES } from "~/constants/siteType"
+import { getSiteRouteConfigForKey, SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
@@ -143,7 +143,7 @@ export default function NewApiSettings() {
   const adminCredentialsUrl = shouldShowAdminCredentialsLink
     ? joinUrl(
         trimmedBaseUrl,
-        getSiteApiRouter(SITE_TYPES.NEW_API).adminCredentialsPath,
+        getSiteRouteConfigForKey(SITE_TYPES.NEW_API).adminCredentialsPath,
       )
     : ""
 

@@ -1,4 +1,4 @@
-import type { SiteType } from "~/constants/siteType"
+import type { AccountSiteType } from "~/constants/siteType"
 
 export type AccountKeyRepairJobState =
   | "idle"
@@ -17,7 +17,7 @@ export type AccountKeyRepairSkipReason = "sub2api" | "noneAuth"
 export interface AccountKeyRepairAccountResult {
   accountId: string
   accountName: string
-  siteType: SiteType
+  siteType: AccountSiteType
   siteUrlOrigin: string
   outcome: AccountKeyRepairOutcome
   skipReason?: AccountKeyRepairSkipReason

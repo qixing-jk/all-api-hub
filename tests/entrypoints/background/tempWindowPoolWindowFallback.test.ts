@@ -165,7 +165,7 @@ describe("tempWindowPool window fallback", () => {
       isProtectionBypassFirefoxEnv: isProtectionBypassFirefoxEnvMock,
     }))
     vi.doMock("~/services/siteDetection/detectSiteType", () => ({
-      getSiteType: getSiteTypeMock,
+      getAccountSiteType: getSiteTypeMock,
     }))
     vi.doMock("~/services/preferences/userPreferences", () => ({
       DEFAULT_PREFERENCES: {

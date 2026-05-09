@@ -13,11 +13,11 @@ import {
 } from "~/features/SiteAnnouncements/utils"
 import type { SiteAnnouncementRecord } from "~/types/siteAnnouncements"
 
-const { formatRelativeTimeMock, joinUrlMock, getSiteApiRouterMock } =
+const { formatRelativeTimeMock, joinUrlMock, getAccountSiteApiRouterMock } =
   vi.hoisted(() => ({
     formatRelativeTimeMock: vi.fn(),
     joinUrlMock: vi.fn((baseUrl: string, path: string) => `${baseUrl}${path}`),
-    getSiteApiRouterMock: vi.fn(() => ({
+    getAccountSiteApiRouterMock: vi.fn(() => ({
       siteAnnouncementsPath: "/dashboard",
     })),
   }))
@@ -32,7 +32,7 @@ vi.mock("~/utils/core/url", () => ({
 
 vi.mock("~/constants/siteType", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/constants/siteType")>()),
-  getSiteApiRouter: getSiteApiRouterMock,
+  getAccountSiteApiRouter: getAccountSiteApiRouterMock,
 }))
 
 const record: SiteAnnouncementRecord = {
@@ -89,7 +89,7 @@ describe("SiteAnnouncements utils", () => {
     expect(getAnnouncementSourceUrl(record)).toBe(
       "https://example.com/dashboard",
     )
-    expect(getSiteApiRouterMock).toHaveBeenCalledWith("new-api")
+    expect(getAccountSiteApiRouterMock).toHaveBeenCalledWith("new-api")
     expect(joinUrlMock).toHaveBeenCalledWith(
       "https://example.com",
       "/dashboard",

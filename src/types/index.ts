@@ -5,7 +5,7 @@ import {
   DATA_TYPE_CREATED_AT,
   DATA_TYPE_INCOME,
 } from "~/constants"
-import type { SiteType } from "~/constants/siteType"
+import type { AccountSiteType } from "~/constants/siteType"
 import { TempWindowHealthStatusCode } from "~/types/tempWindow"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
 
@@ -78,7 +78,7 @@ export interface SiteAccount {
   site_name: string // 站点名称
   site_url: string // 站点 url
   health: HealthStatus
-  site_type: SiteType // 站点类型
+  site_type: AccountSiteType // 账号站点类型
   exchange_rate: number // 人民币与美元充值比例 (CNY per USD)
   account_info: AccountInfo // 账号信息
   last_sync_time: number // 最后同步时间 (timestamp)
@@ -390,7 +390,7 @@ export interface DisplaySiteData {
   health: HealthStatus
   last_sync_time?: number
   created_at?: number
-  siteType: SiteType // 站点类型
+  siteType: AccountSiteType // 账号站点类型
   baseUrl: string // 站点 URL，用于复制功能
   token: string // 访问令牌，用于复制功能
   userId: number // 真实的用户 ID，用于 API 调用

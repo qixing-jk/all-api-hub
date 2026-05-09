@@ -1,6 +1,10 @@
 import { Storage } from "@plasmohq/storage"
 
-import { isSiteType, SITE_TYPES, type SiteType } from "~/constants/siteType"
+import {
+  isAccountSiteType,
+  SITE_TYPES,
+  type AccountSiteType,
+} from "~/constants/siteType"
 import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import type {
@@ -38,8 +42,8 @@ function normalizeProviderId(value: unknown): SiteAnnouncementProviderId {
 /**
  * Normalizes persisted site type values before storing or displaying records.
  */
-function sanitizeSiteType(value: unknown): SiteType {
-  return isSiteType(value) ? value : SITE_TYPES.UNKNOWN
+function sanitizeSiteType(value: unknown): AccountSiteType {
+  return isAccountSiteType(value) ? value : SITE_TYPES.UNKNOWN
 }
 
 /**
@@ -383,7 +387,7 @@ class SiteAnnouncementStorage {
   async recordFailure(params: {
     siteKey: string
     siteName: string
-    siteType: SiteType
+    siteType: AccountSiteType
     baseUrl: string
     accountId: string
     providerId: SiteAnnouncementProviderId

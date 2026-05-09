@@ -6,7 +6,11 @@ import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { isSiteType, SITE_TYPES, type SiteType } from "~/constants/siteType"
+import {
+  isAccountSiteType,
+  SITE_TYPES,
+  type AccountSiteType,
+} from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   autoDetectAccount,
@@ -253,7 +257,7 @@ export function useAccountDialog({
     (value: string) => {
       updateDraft((prev) => ({
         ...prev,
-        siteType: isSiteType(value) ? value : SITE_TYPES.UNKNOWN,
+        siteType: isAccountSiteType(value) ? value : SITE_TYPES.UNKNOWN,
       }))
     },
     [updateDraft],
@@ -955,7 +959,7 @@ export function useAccountDialog({
           mode === DIALOG_MODES.EDIT ||
           formSource !== ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
 
-        const nextSiteType = isSiteType(resultData.siteType)
+        const nextSiteType = isAccountSiteType(resultData.siteType)
           ? resultData.siteType
           : siteType
         const nextCheckIn =
@@ -1324,7 +1328,7 @@ export function useAccountDialog({
     }
   }
 
-  const normalizedFormSiteType = isSiteType(siteType)
+  const normalizedFormSiteType = isAccountSiteType(siteType)
     ? siteType
     : SITE_TYPES.UNKNOWN
   const isFormValid = isValidAccount({
@@ -1513,7 +1517,7 @@ function clearSub2ApiRefreshTokenState(
 function buildDraftFromAutoDetectResult(params: {
   draft: AccountDialogDraft
   resultData: NonNullable<Awaited<ReturnType<typeof autoDetectAccount>>["data"]>
-  nextSiteType: SiteType
+  nextSiteType: AccountSiteType
   nextCheckIn: CheckInConfig
   preserveExistingCheckIn: boolean
   mode: DialogMode
@@ -1587,8 +1591,8 @@ function areDraftsEquivalent(
 function resolveStoredSiteType(
   value: unknown,
   hasSub2ApiAuth: boolean,
-): SiteType {
-  if (isSiteType(value)) {
+): AccountSiteType {
+  if (isAccountSiteType(value)) {
     return value
   }
 

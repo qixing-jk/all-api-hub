@@ -8,14 +8,14 @@ const {
   mockFetchUserInfo,
   mockGetActiveOrAllTabs,
   mockGetActiveTabs,
-  mockGetSiteType,
+  mockGetAccountSiteType,
   mockIsMessageReceiverUnavailableError,
   mockSendRuntimeMessage,
 } = vi.hoisted(() => ({
   mockFetchUserInfo: vi.fn(),
   mockGetActiveOrAllTabs: vi.fn(),
   mockGetActiveTabs: vi.fn(),
-  mockGetSiteType: vi.fn(),
+  mockGetAccountSiteType: vi.fn(),
   mockIsMessageReceiverUnavailableError: vi.fn(),
   mockSendRuntimeMessage: vi.fn(),
 }))
@@ -27,7 +27,7 @@ vi.mock("~/services/apiService", () => ({
 }))
 
 vi.mock("~/services/siteDetection/detectSiteType", () => ({
-  getSiteType: mockGetSiteType,
+  getAccountSiteType: mockGetAccountSiteType,
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -57,7 +57,7 @@ describe("autoDetectSmart", () => {
       sendMessage: vi.fn(),
     }
 
-    mockGetSiteType.mockResolvedValue(SITE_TYPES.NEW_API)
+    mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.NEW_API)
     mockGetActiveOrAllTabs.mockResolvedValue([])
     mockGetActiveTabs.mockResolvedValue([])
     mockIsMessageReceiverUnavailableError.mockReturnValue(false)
@@ -207,7 +207,7 @@ describe("autoDetectSmart", () => {
         url: "https://different.example.com/home",
       },
     ])
-    mockGetSiteType
+    mockGetAccountSiteType
       .mockRejectedValueOnce(new Error("background detect failed"))
       .mockResolvedValueOnce(SITE_TYPES.NEW_API)
     mockFetchUserInfo.mockResolvedValue({
@@ -267,7 +267,7 @@ describe("autoDetectSmart", () => {
   it("falls back to direct detection when browser tab and runtime capabilities are unavailable", async () => {
     browserAny.tabs = null
     browserAny.runtime = null
-    mockGetSiteType.mockRejectedValue(new Error("detect failed"))
+    mockGetAccountSiteType.mockRejectedValue(new Error("detect failed"))
 
     const result = await autoDetectSmart("https://example.com")
 

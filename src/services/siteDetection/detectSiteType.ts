@@ -1,7 +1,7 @@
 import {
-  SITE_TITLE_RULES,
+  ACCOUNT_SITE_TITLE_RULES,
   SITE_TYPES,
-  type SiteType,
+  type AccountSiteType,
 } from "~/constants/siteType"
 import { COMPAT_USER_ID_ERROR_HEADER_TO_SITE_TYPE } from "~/services/apiService/common/compatHeaders"
 import { ApiError } from "~/services/apiService/common/errors"
@@ -88,7 +88,9 @@ export const fetchSiteOriginalTitle = async (url: string) => {
  * 1. Known site-specific compat user-id header markers from upstream auth errors
  * 2. Whole-message matching against existing site detection rules
  */
-function detectSiteTypeFromApiErrorMessage(message: string): SiteType {
+function detectAccountSiteTypeFromApiErrorMessage(
+  message: string,
+): AccountSiteType {
   const normalizedMessage = message.trim()
   if (!normalizedMessage) {
     return SITE_TYPES.UNKNOWN
@@ -100,7 +102,7 @@ function detectSiteTypeFromApiErrorMessage(message: string): SiteType {
     }
   }
 
-  for (const rule of SITE_TITLE_RULES) {
+  for (const rule of ACCOUNT_SITE_TITLE_RULES) {
     if (rule.regex.test(normalizedMessage)) {
       return rule.name
     }
@@ -113,7 +115,7 @@ function detectSiteTypeFromApiErrorMessage(message: string): SiteType {
  * Probes the /api/user/self endpoint using cookie auth and infers the site
  * type from upstream auth error messages when title detection fails.
  */
-async function getSiteUserIdType(url: string): Promise<SiteType> {
+async function getAccountSiteUserIdType(url: string): Promise<AccountSiteType> {
   try {
     await fetchApiData<unknown>(
       {
@@ -129,20 +131,22 @@ async function getSiteUserIdType(url: string): Promise<SiteType> {
     )
   } catch (error) {
     if (error instanceof ApiError) {
-      return detectSiteTypeFromApiErrorMessage(error.message)
+      return detectAccountSiteTypeFromApiErrorMessage(error.message)
     }
     throw error
   }
   return SITE_TYPES.UNKNOWN
 }
 
-export const getSiteType = async (url: string): Promise<SiteType> => {
+export const getAccountSiteType = async (
+  url: string,
+): Promise<AccountSiteType> => {
   const title = await fetchSiteOriginalTitle(url)
-  for (const rule of SITE_TITLE_RULES) {
+  for (const rule of ACCOUNT_SITE_TITLE_RULES) {
     if (rule.regex.test(title)) {
       return rule.name
     }
   }
 
-  return await getSiteUserIdType(url)
+  return await getAccountSiteUserIdType(url)
 }

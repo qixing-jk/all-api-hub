@@ -1,4 +1,4 @@
-import type { SiteType } from "~/constants/siteType"
+import type { AccountSiteType } from "~/constants/siteType"
 import type { ApiServiceRequest } from "~/services/apiService/common/type"
 
 export const SITE_ANNOUNCEMENT_PROVIDER_IDS = {
@@ -70,7 +70,7 @@ export interface SiteAnnouncement {
 export interface SiteAnnouncementProviderRequest {
   accountId: string
   siteName: string
-  siteType: SiteType
+  siteType: AccountSiteType
   baseUrl: string
   providerId: SiteAnnouncementProviderId
   apiRequest: ApiServiceRequest
@@ -88,7 +88,7 @@ export interface SiteAnnouncementProvider {
   id: SiteAnnouncementProviderId
   createSiteKey: (input: {
     accountId: string
-    siteType: SiteType
+    siteType: AccountSiteType
     baseUrl: string
   }) => string
   fetch: (
@@ -104,7 +104,7 @@ export interface SiteAnnouncementRecord {
   id: string
   siteKey: string
   siteName: string
-  siteType: SiteType
+  siteType: AccountSiteType
   baseUrl: string
   accountId: string
   providerId: SiteAnnouncementProviderId
@@ -125,7 +125,7 @@ export interface SiteAnnouncementRecord {
 export interface SiteAnnouncementSiteState {
   siteKey: string
   siteName: string
-  siteType: SiteType
+  siteType: AccountSiteType
   baseUrl: string
   accountId: string
   providerId: SiteAnnouncementProviderId

@@ -25,7 +25,7 @@ import {
   DATA_TYPE_CREATED_AT,
   DATA_TYPE_INCOME,
 } from "~/constants"
-import { SITE_TITLE_RULES } from "~/constants/siteType"
+import { ACCOUNT_SITE_TITLE_RULES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
@@ -467,9 +467,9 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     const availableSiteTypes = Array.from(
       new Set(displayData.map((account) => account.siteType)),
     )
-    const knownSiteTypes = SITE_TITLE_RULES.map((rule) => rule.name).filter(
-      (siteType) => availableSiteTypes.includes(siteType),
-    )
+    const knownSiteTypes = ACCOUNT_SITE_TITLE_RULES.map(
+      (rule) => rule.name,
+    ).filter((siteType) => availableSiteTypes.includes(siteType))
     const extraSiteTypes = availableSiteTypes
       .filter((siteType) => !knownSiteTypes.includes(siteType))
       .sort((a, b) => a.localeCompare(b))

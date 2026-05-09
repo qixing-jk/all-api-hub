@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { getSiteApiRouter } from "~/constants/siteType"
+import { getAccountSiteApiRouter } from "~/constants/siteType"
 import { isExtensionPopup } from "~/utils/browser"
 import {
   createTab as createTabApi,
@@ -76,7 +76,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 })
 
 vi.mock("~/constants/siteType", () => ({
-  getSiteApiRouter: vi.fn(() => ({
+  getAccountSiteApiRouter: vi.fn(() => ({
     usagePath: "/usage",
     checkInPath: "/checkin",
     redeemPath: "/redeem",
@@ -105,7 +105,7 @@ const mockedFocusTab = vi.mocked(focusTabApi)
 const mockedGetExtensionURL = vi.mocked(getExtensionURL)
 const mockedHasWindowsAPI = vi.mocked(hasWindowsAPI)
 const mockedOpenSidePanel = vi.mocked(openSidePanelApi)
-const mockedGetSiteApiRouter = vi.mocked(getSiteApiRouter)
+const mockedGetAccountSiteApiRouter = vi.mocked(getAccountSiteApiRouter)
 const mockedJoinUrl = vi.mocked(joinUrl)
 
 describe("navigation utilities", () => {
@@ -163,7 +163,7 @@ describe("navigation utilities", () => {
 
     await openUsagePage(account)
 
-    expect(mockedGetSiteApiRouter).toHaveBeenCalledWith("one-api")
+    expect(mockedGetAccountSiteApiRouter).toHaveBeenCalledWith("one-api")
     expect(mockedJoinUrl).toHaveBeenCalledWith("https://example.com", "/usage")
     const url = mockedJoinUrl.mock.results[0].value
     expect(mockedCreateTab).toHaveBeenCalledWith(url, true)

@@ -1,5 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { getSiteApiRouter } from "~/constants/siteType"
+import { getAccountSiteApiRouter } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   createTab,
@@ -144,7 +144,7 @@ export async function handleExternalCheckInMessage(
                 account.checkIn?.customCheckIn?.redeemUrl ||
                 joinUrl(
                   account.site_url,
-                  getSiteApiRouter(account.site_type).redeemPath,
+                  getAccountSiteApiRouter(account.site_type).redeemPath,
                 )
 
               try {

@@ -1,4 +1,4 @@
-import { getSiteApiRouter, SITE_TYPES } from "~/constants/siteType"
+import { getAccountSiteApiRouter, SITE_TYPES } from "~/constants/siteType"
 import {
   SITE_ANNOUNCEMENT_PROVIDER_IDS,
   type SiteAnnouncementRecord,
@@ -55,7 +55,7 @@ export function isSub2ApiAnnouncement(record: SiteAnnouncementRecord) {
 export function getAnnouncementSourceUrl(record: SiteAnnouncementRecord) {
   return joinUrl(
     record.baseUrl,
-    getSiteApiRouter(record.siteType).siteAnnouncementsPath,
+    getAccountSiteApiRouter(record.siteType).siteAnnouncementsPath,
   )
 }
 

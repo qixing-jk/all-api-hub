@@ -1,4 +1,4 @@
-import { getSiteApiRouter } from "~/constants/siteType"
+import { getAccountSiteApiRouter } from "~/constants/siteType"
 import { TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS } from "~/constants/turnstile"
 import { buildCompatUserIdHeaders } from "~/services/apiService/common/compatHeaders"
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
@@ -77,7 +77,7 @@ function isTurnstileRequiredMessage(message: string): boolean {
 function resolveCheckInUrl(account: SiteAccount): string {
   return joinUrl(
     account.site_url,
-    getSiteApiRouter(account.site_type).checkInPath,
+    getAccountSiteApiRouter(account.site_type).checkInPath,
   )
 }
 

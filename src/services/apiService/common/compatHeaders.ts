@@ -1,4 +1,4 @@
-import { SITE_TYPES, type SiteType } from "~/constants/siteType"
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 
 /**
  * Compatibility headers for One-API/New-API family deployments.
@@ -18,7 +18,7 @@ const COMPAT_USER_ID_HEADER_TO_SITE_TYPE = {
   "User-id": SITE_TYPES.NEW_API,
   "Rix-Api-User": SITE_TYPES.RIX_API,
   "neo-api-user": SITE_TYPES.NEO_API,
-} as const satisfies Record<string, SiteType>
+} as const satisfies Record<string, AccountSiteType>
 
 /**
  * Error-message detection should only use header names that carry an
@@ -31,7 +31,7 @@ export const COMPAT_USER_ID_ERROR_HEADER_TO_SITE_TYPE = {
   "voapi-user": SITE_TYPES.VO_API,
   "Rix-Api-User": SITE_TYPES.RIX_API,
   "neo-api-user": SITE_TYPES.NEO_API,
-} as const satisfies Record<string, SiteType>
+} as const satisfies Record<string, AccountSiteType>
 
 const COMPAT_USER_ID_HEADER_NAMES = Object.keys(
   COMPAT_USER_ID_HEADER_TO_SITE_TYPE,

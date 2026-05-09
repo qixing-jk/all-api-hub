@@ -4,7 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { ApiError } from "~/services/apiService/common/errors"
 import {
   fetchSiteOriginalTitle,
-  getSiteType,
+  getAccountSiteType,
 } from "~/services/siteDetection/detectSiteType"
 import { AuthTypeEnum } from "~/types"
 
@@ -110,7 +110,7 @@ describe("detectSiteType temp-context fallbacks", () => {
       ),
     )
 
-    await expect(getSiteType("https://example.com")).resolves.toBe(
+    await expect(getAccountSiteType("https://example.com")).resolves.toBe(
       SITE_TYPES.NEW_API,
     )
   })
@@ -123,7 +123,7 @@ describe("detectSiteType temp-context fallbacks", () => {
       new ApiError("   ", 401, "/api/user/self"),
     )
 
-    await expect(getSiteType("https://example.com")).resolves.toBe(
+    await expect(getAccountSiteType("https://example.com")).resolves.toBe(
       SITE_TYPES.UNKNOWN,
     )
   })
@@ -136,7 +136,7 @@ describe("detectSiteType temp-context fallbacks", () => {
       new ApiError("", 401, "/api/user/self"),
     )
 
-    await expect(getSiteType("https://example.com")).resolves.toBe(
+    await expect(getAccountSiteType("https://example.com")).resolves.toBe(
       SITE_TYPES.UNKNOWN,
     )
   })
@@ -147,7 +147,7 @@ describe("detectSiteType temp-context fallbacks", () => {
     )
     mocks.fetchApiData.mockRejectedValue(new TypeError("network down"))
 
-    await expect(getSiteType("https://example.com")).rejects.toThrow(
+    await expect(getAccountSiteType("https://example.com")).rejects.toThrow(
       "network down",
     )
   })

@@ -1,4 +1,4 @@
-import { isSiteType, SITE_TYPES } from "~/constants/siteType"
+import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
   AuthTypeEnum,
@@ -220,7 +220,7 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
     id: coerceString(merged.id, ""),
     site_name: coerceString(merged.site_name, ""),
     site_url: coerceString(merged.site_url, ""),
-    site_type: isSiteType(merged.site_type)
+    site_type: isAccountSiteType(merged.site_type)
       ? merged.site_type
       : SITE_TYPES.UNKNOWN,
     exchange_rate: coerceNumber(

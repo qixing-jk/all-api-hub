@@ -2,7 +2,7 @@ import {
   MENU_ITEM_IDS,
   type OptionsMenuItemId,
 } from "~/constants/optionsMenuIds"
-import { getSiteApiRouter } from "~/constants/siteType"
+import { getAccountSiteApiRouter } from "~/constants/siteType"
 import type { DisplaySiteData } from "~/types"
 import { isExtensionPopup, OPTIONS_PAGE_URL } from "~/utils/browser"
 import {
@@ -546,7 +546,7 @@ const _openAccountBaseUrl = async (
 const _openUsagePage = async (account: DisplaySiteData) => {
   const logUrl = joinUrl(
     account.baseUrl,
-    getSiteApiRouter(account.siteType).usagePath,
+    getAccountSiteApiRouter(account.siteType).usagePath,
   )
   await createActiveTab(logUrl)
 }
@@ -556,7 +556,10 @@ const _openUsagePage = async (account: DisplaySiteData) => {
  * @param account Account metadata used to resolve the check-in URL.
  */
 const getCheckInPageUrl = (account: DisplaySiteData) =>
-  joinUrl(account.baseUrl, getSiteApiRouter(account.siteType).checkInPath)
+  joinUrl(
+    account.baseUrl,
+    getAccountSiteApiRouter(account.siteType).checkInPath,
+  )
 
 /**
  * Best-effort URL opener for grouped navigation flows.
@@ -647,7 +650,10 @@ const _openCheckInPage = async (account: DisplaySiteData) => {
 const _openCustomCheckInPage = async (account: DisplaySiteData) => {
   const customCheckInUrl =
     account.checkIn?.customCheckIn?.url ||
-    joinUrl(account.baseUrl, getSiteApiRouter(account.siteType).checkInPath)
+    joinUrl(
+      account.baseUrl,
+      getAccountSiteApiRouter(account.siteType).checkInPath,
+    )
   await createActiveTab(customCheckInUrl)
 }
 
@@ -658,7 +664,10 @@ const _openCustomCheckInPage = async (account: DisplaySiteData) => {
 const _openRedeemPage = async (account: DisplaySiteData) => {
   const redeemUrl =
     account.checkIn?.customCheckIn?.redeemUrl ||
-    joinUrl(account.baseUrl, getSiteApiRouter(account.siteType).redeemPath)
+    joinUrl(
+      account.baseUrl,
+      getAccountSiteApiRouter(account.siteType).redeemPath,
+    )
   await createActiveTab(redeemUrl)
 }
 

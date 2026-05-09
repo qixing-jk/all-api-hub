@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { getSiteApiRouter } from "~/constants/siteType"
+import { getAccountSiteApiRouter } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { handleExternalCheckInMessage } from "~/services/checkin/externalCheckInService"
 import {
@@ -30,7 +30,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 })
 
 vi.mock("~/constants/siteType", () => ({
-  getSiteApiRouter: vi.fn(() => ({ redeemPath: "/redeem" })),
+  getAccountSiteApiRouter: vi.fn(() => ({ redeemPath: "/redeem" })),
 }))
 
 vi.mock("~/utils/core/url", () => ({
@@ -41,7 +41,7 @@ const mockedAccountStorage = vi.mocked(accountStorage)
 const mockedCreateTab = vi.mocked(createTab)
 const mockedCreateWindow = vi.mocked(createWindow)
 const mockedHasWindowsAPI = vi.mocked(hasWindowsAPI)
-const mockedGetSiteApiRouter = vi.mocked(getSiteApiRouter)
+const mockedGetAccountSiteApiRouter = vi.mocked(getAccountSiteApiRouter)
 const mockedJoinUrl = vi.mocked(joinUrl)
 
 describe("handleExternalCheckInMessage", () => {
@@ -198,7 +198,7 @@ describe("handleExternalCheckInMessage", () => {
       sendResponse,
     )
 
-    expect(mockedGetSiteApiRouter).toHaveBeenCalledWith("one-api")
+    expect(mockedGetAccountSiteApiRouter).toHaveBeenCalledWith("one-api")
     expect(mockedJoinUrl).toHaveBeenCalledWith("https://example.com", "/redeem")
     expect(mockedCreateTab).toHaveBeenNthCalledWith(
       1,
@@ -300,7 +300,7 @@ describe("handleExternalCheckInMessage", () => {
       sendResponse,
     )
 
-    expect(mockedGetSiteApiRouter).toHaveBeenCalledWith("one-api")
+    expect(mockedGetAccountSiteApiRouter).toHaveBeenCalledWith("one-api")
     expect(mockedJoinUrl).toHaveBeenCalledWith("https://example.com", "/redeem")
     expect(mockedCreateWindow).toHaveBeenCalledWith({
       url: "https://example.com/redeem",
