@@ -9,7 +9,16 @@
     "helpDocument": "Help Document",
     "reloadCurrentPage": "Reload current page",
     "saveAccount": "Save Account",
-    "saveChanges": "Save Changes"
+    "saveChanges": "Save Changes",
+    "workflow": {
+      "checkingToken": "Checking API keys...",
+      "creatingToken": "Creating default key...",
+      "loadingSavedAccount": "Loading saved account...",
+      "openingManagedSiteDialog": "Opening channel setup...",
+      "savingAccount": "Saving account...",
+      "waitingForOneTimeKey": "Save the one-time key first...",
+      "waitingForSub2ApiGroup": "Choose a Sub2API group..."
+    }
   },
   "form": {
     "accessToken": "Access Token",

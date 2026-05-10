@@ -9,7 +9,16 @@
     "helpDocument": "ヘルプドキュメント",
     "reloadCurrentPage": "現在のページを再読み込み",
     "saveAccount": "アカウントを保存",
-    "saveChanges": "変更を保存"
+    "saveChanges": "変更を保存",
+    "workflow": {
+      "checkingToken": "API キーを確認しています...",
+      "creatingToken": "デフォルトキーを作成しています...",
+      "loadingSavedAccount": "保存済みアカウントを読み込んでいます...",
+      "openingManagedSiteDialog": "チャンネル設定を開いています...",
+      "savingAccount": "アカウントを保存しています...",
+      "waitingForOneTimeKey": "ワンタイムキーを先に保存してください...",
+      "waitingForSub2ApiGroup": "Sub2API グループを選択してください..."
+    }
   },
   "form": {
     "accessToken": "Access Token",

@@ -1,4 +1,5 @@
 import type { ComponentProps } from "react"
+import { useTranslation } from "react-i18next"
 
 import { ThemeAwareToaster } from "~/components/ThemeAwareToaster"
 import { Modal } from "~/components/ui/Dialog/Modal"
@@ -6,6 +7,9 @@ import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
+import { OneTimeApiKeyDialog } from "~/features/KeyManagement/components/OneTimeApiKeyDialog"
+import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import type { DisplaySiteData } from "~/types"
 
 import AccountForm from "./AccountForm"
@@ -47,6 +51,7 @@ export default function AccountDialog({
   onSuccess,
   onError,
 }: AccountDialogProps) {
+  const { t } = useTranslation("messages")
   const {
     displayData,
     detectedSiteAccounts,
@@ -116,6 +121,19 @@ export default function AccountDialog({
           ...addModeSiteInfoProps,
         }
 
+  const postSaveSub2ApiCreatePrefill =
+    state.postSaveSub2ApiAllowedGroups &&
+    state.postSaveSub2ApiAllowedGroups.length > 0
+      ? {
+          modelId: "",
+          defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+          group: state.postSaveSub2ApiAllowedGroups.includes("default")
+            ? "default"
+            : state.postSaveSub2ApiAllowedGroups[0] ?? "default",
+          allowedGroups: state.postSaveSub2ApiAllowedGroups,
+        }
+      : undefined
+
   return (
     <>
       <Modal
@@ -143,6 +161,7 @@ export default function AccountDialog({
             isSaving={state.isSaving}
             onAutoConfig={handlers.handleAutoConfig}
             isAutoConfiguring={state.isAutoConfiguring}
+            accountPostSaveWorkflowStep={state.accountPostSaveWorkflowStep}
             // ensure submit button in footer can submit the form by linking via form id
             formId="account-form"
           />
@@ -241,6 +260,27 @@ export default function AccountDialog({
         missingMessage={state.managedSiteConfigPrompt.missingMessage}
         onClose={handlers.handleManagedSiteConfigPromptClose}
         onOpenSettings={handlers.handleOpenManagedSiteSettings}
+      />
+
+      {state.postSaveSub2ApiAccount && postSaveSub2ApiCreatePrefill ? (
+        <AddTokenDialog
+          isOpen={true}
+          onClose={() =>
+            void handlers.handlePostSaveSub2ApiTokenCreated(undefined)
+          }
+          availableAccounts={[state.postSaveSub2ApiAccount]}
+          preSelectedAccountId={state.postSaveSub2ApiAccount.id}
+          createPrefill={postSaveSub2ApiCreatePrefill}
+          prefillNotice={t("sub2api.createRequiresGroupSelection")}
+          onSuccess={handlers.handlePostSaveSub2ApiTokenCreated}
+          showOneTimeKeyDialog={false}
+        />
+      ) : null}
+
+      <OneTimeApiKeyDialog
+        isOpen={!!state.postSaveOneTimeToken}
+        token={state.postSaveOneTimeToken}
+        onClose={handlers.handlePostSaveOneTimeTokenClose}
       />
     </>
   )

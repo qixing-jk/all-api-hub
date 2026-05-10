@@ -9,7 +9,16 @@
     "helpDocument": "帮助文档",
     "reloadCurrentPage": "刷新当前页面",
     "saveAccount": "保存账号",
-    "saveChanges": "保存更改"
+    "saveChanges": "保存更改",
+    "workflow": {
+      "checkingToken": "正在检查 API 密钥...",
+      "creatingToken": "正在创建默认密钥...",
+      "loadingSavedAccount": "正在读取已保存账号...",
+      "openingManagedSiteDialog": "正在打开渠道配置...",
+      "savingAccount": "正在保存账号...",
+      "waitingForOneTimeKey": "请先保存一次性密钥...",
+      "waitingForSub2ApiGroup": "请选择 Sub2API 分组..."
+    }
   },
   "form": {
     "accessToken": "访问令牌",

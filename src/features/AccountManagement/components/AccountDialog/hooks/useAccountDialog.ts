@@ -149,6 +149,8 @@ export function useAccountDialog({
     useState<ApiToken | null>(null)
   const [postSaveSub2ApiAllowedGroups, setPostSaveSub2ApiAllowedGroups] =
     useState<string[] | null>(null)
+  const [postSaveSub2ApiAccount, setPostSaveSub2ApiAccount] =
+    useState<DisplaySiteData | null>(null)
 
   const [duplicateAccountWarning, setDuplicateAccountWarning] = useState<{
     isOpen: boolean
@@ -482,6 +484,7 @@ export function useAccountDialog({
     setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
     setPostSaveOneTimeToken(null)
     setPostSaveSub2ApiAllowedGroups(null)
+    setPostSaveSub2ApiAccount(null)
     pendingPostSaveChannelRef.current = null
   }, [invalidatePostSaveAutoConfigRun])
 
@@ -1329,6 +1332,7 @@ export function useAccountDialog({
       const runId = postSaveAutoConfigRunRef.current
       const pending = pendingPostSaveChannelRef.current
       setPostSaveSub2ApiAllowedGroups(null)
+      setPostSaveSub2ApiAccount(null)
 
       if (!pending || !createdToken) {
         pendingPostSaveChannelRef.current = null
@@ -1497,6 +1501,7 @@ export function useAccountDialog({
           return
         case ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired:
           pendingPostSaveChannelRef.current = { displaySiteData }
+          setPostSaveSub2ApiAccount(displaySiteData)
           setPostSaveSub2ApiAllowedGroups(ensureResult.allowedGroups)
           setAccountPostSaveWorkflowStep(
             ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
@@ -1625,6 +1630,7 @@ export function useAccountDialog({
       accountPostSaveWorkflowStep,
       postSaveOneTimeToken,
       postSaveSub2ApiAllowedGroups,
+      postSaveSub2ApiAccount,
       duplicateAccountWarning,
       managedSiteConfigPrompt,
     },
