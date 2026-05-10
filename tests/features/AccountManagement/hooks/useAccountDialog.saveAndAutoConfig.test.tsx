@@ -964,6 +964,127 @@ describe("useAccountDialog save and auto-config flows", () => {
     )
   })
 
+  it("does not restore AIHubMix paused post-save state when a pending token check resolves after close and reopen", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: 13,
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData = buildDisplayAccount({
+      name: "AIHubMix",
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+      token: "aihubmix-access-token",
+      userId: 13,
+    })
+    const oneTimeToken = buildToken({
+      id: 108,
+      key: "sk-aihubmix-stale-one-time",
+    })
+
+    let resolveEnsureAccountToken:
+      | ((
+          value: Awaited<
+            ReturnType<typeof mockEnsureAccountTokenForPostSaveWorkflow>
+          >,
+        ) => void)
+      | null = null
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockEnsureAccountTokenForPostSaveWorkflow.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveEnsureAccountToken = resolve
+        }),
+    )
+
+    const onClose = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ isOpen }: { isOpen: boolean }) =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen,
+          onClose,
+          onSuccess: vi.fn(),
+        }),
+      {
+        initialProps: { isOpen: true },
+      },
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://aihubmix.com")
+      result.current.setters.setSiteName("AIHubMix")
+      result.current.setters.setUsername("aihubmix-user")
+      result.current.setters.setAccessToken("aihubmix-access-token")
+      result.current.setters.setUserId("13")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+    })
+
+    let autoConfigPromise: Promise<void> | undefined
+
+    await act(async () => {
+      autoConfigPromise = result.current.handlers.handleAutoConfig()
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.CheckingToken,
+      )
+    })
+
+    await act(async () => {
+      result.current.handlers.handleClose()
+    })
+
+    rerender({ isOpen: false })
+    rerender({ isOpen: true })
+
+    await waitFor(() => {
+      expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
+      )
+      expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    })
+
+    await act(async () => {
+      resolveEnsureAccountToken?.({
+        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
+        token: oneTimeToken,
+        created: true,
+        oneTimeSecret: true,
+      })
+      await autoConfigPromise
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
+      )
+      expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    })
+  })
+
   it("marks the AIHubMix paused workflow as failed when opening quick-config rejects after token acknowledgement", async () => {
     const savedSiteAccount = buildSiteAccount({
       id: "saved-account-id",
