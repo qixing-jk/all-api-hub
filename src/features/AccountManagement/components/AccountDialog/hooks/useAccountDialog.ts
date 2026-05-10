@@ -20,6 +20,12 @@ import {
   validateAndSaveAccount,
   validateAndUpdateAccount,
 } from "~/services/accounts/accountOperations"
+import {
+  ACCOUNT_POST_SAVE_WORKFLOW_STEPS,
+  ENSURE_ACCOUNT_TOKEN_RESULT_KINDS,
+  ensureAccountTokenForPostSaveWorkflow,
+  type AccountPostSaveWorkflowStep,
+} from "~/services/accounts/accountPostSaveWorkflow"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   analyzeAutoDetectError,
@@ -33,8 +39,10 @@ import {
 } from "~/services/managedSites/utils/managedSite"
 import {
   AuthTypeEnum,
+  type ApiToken,
   type CheckInConfig,
   type DisplaySiteData,
+  type SiteAccount,
   type Sub2ApiAuthConfig,
 } from "~/types"
 import { deepOverride } from "~/utils"
@@ -135,6 +143,12 @@ export function useAccountDialog({
     useState(false)
   const [isImportingSub2apiSession, setIsImportingSub2apiSession] =
     useState(false)
+  const [accountPostSaveWorkflowStep, setAccountPostSaveWorkflowStep] =
+    useState<AccountPostSaveWorkflowStep>(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
+  const [postSaveOneTimeToken, setPostSaveOneTimeToken] =
+    useState<ApiToken | null>(null)
+  const [postSaveSub2ApiAllowedGroups, setPostSaveSub2ApiAllowedGroups] =
+    useState<string[] | null>(null)
 
   const [duplicateAccountWarning, setDuplicateAccountWarning] = useState<{
     isOpen: boolean
@@ -447,6 +461,10 @@ export function useAccountDialog({
   // useRef 保存跨渲染引用
   const newAccountRef = useRef<any>(null)
   const targetAccountRef = useRef<any>(null)
+  const pendingPostSaveChannelRef = useRef<{
+    displaySiteData: DisplaySiteData
+    token?: ApiToken
+  } | null>(null)
   const detectSlowHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
@@ -470,6 +488,10 @@ export function useAccountDialog({
     setIsImportingCookies(false)
     setShowCookiePermissionWarning(false)
     setIsImportingSub2apiSession(false)
+    setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
+    setPostSaveOneTimeToken(null)
+    setPostSaveSub2ApiAllowedGroups(null)
+    pendingPostSaveChannelRef.current = null
     targetAccountRef.current = null
   }, [mode])
 
@@ -1061,6 +1083,7 @@ export function useAccountDialog({
 
   const handleSaveAccount = async (options?: {
     skipSub2ApiKeyPrompt?: boolean
+    skipAutoProvisionKeyOnAccountAdd?: boolean
   }) => {
     try {
       setIsSaving(true)
@@ -1094,6 +1117,10 @@ export function useAccountDialog({
               manualBalanceUsd,
               excludeFromTotalBalance,
               sub2apiAuth,
+              {
+                skipAutoProvisionKeyOnAccountAdd:
+                  options?.skipAutoProvisionKeyOnAccountAdd === true,
+              },
             )
           : await validateAndUpdateAccount(
               account!.id,
@@ -1223,6 +1250,50 @@ export function useAccountDialog({
     }
   }
 
+  const openPostSaveManagedSiteDialog = useCallback(
+    async (displaySiteData: DisplaySiteData, token: ApiToken) => {
+      setAccountPostSaveWorkflowStep(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.OpeningManagedSiteDialog,
+      )
+      await openChannelDialog(displaySiteData, token, () => {
+        if (onSuccess && targetAccountRef.current) {
+          onSuccess(targetAccountRef.current)
+        }
+      })
+      setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed)
+    },
+    [onSuccess, openChannelDialog],
+  )
+
+  const handlePostSaveOneTimeTokenClose = useCallback(async () => {
+    setPostSaveOneTimeToken(null)
+    const pending = pendingPostSaveChannelRef.current
+    pendingPostSaveChannelRef.current = null
+    if (!pending?.token) {
+      setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
+      return
+    }
+
+    await openPostSaveManagedSiteDialog(pending.displaySiteData, pending.token)
+  }, [openPostSaveManagedSiteDialog])
+
+  const handlePostSaveSub2ApiTokenCreated = useCallback(
+    async (createdToken?: ApiToken) => {
+      const pending = pendingPostSaveChannelRef.current
+      setPostSaveSub2ApiAllowedGroups(null)
+
+      if (!pending || !createdToken) {
+        pendingPostSaveChannelRef.current = null
+        setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
+        return
+      }
+
+      pendingPostSaveChannelRef.current = null
+      await openPostSaveManagedSiteDialog(pending.displaySiteData, createdToken)
+    },
+    [openPostSaveManagedSiteDialog],
+  )
+
   const handleAutoConfig = async () => {
     try {
       const isManagedSiteReady = await ensureManagedSiteAutoConfigReady()
@@ -1249,13 +1320,23 @@ export function useAccountDialog({
     try {
       let targetAccount: DisplaySiteData | null | string | undefined =
         account || newAccountRef.current
+      let savedSiteAccount: SiteAccount | null = null
       // 如果是新增（account 不存在），就先保存
       if (!targetAccount) {
+        setAccountPostSaveWorkflowStep(
+          ACCOUNT_POST_SAVE_WORKFLOW_STEPS.SavingAccount,
+        )
         targetAccount = (
-          await handleSaveAccount({ skipSub2ApiKeyPrompt: true })
+          await handleSaveAccount({
+            skipSub2ApiKeyPrompt: true,
+            skipAutoProvisionKeyOnAccountAdd: true,
+          })
         ).accountId
         if (!targetAccount) {
           toast.error(t("messages.saveAccountFailed"))
+          setAccountPostSaveWorkflowStep(
+            ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
+          )
           return
         }
         // 缓存到 ref，避免重复保存
@@ -1267,12 +1348,19 @@ export function useAccountDialog({
       let displaySiteData
 
       if (typeof targetAccount === "string") {
+        setAccountPostSaveWorkflowStep(
+          ACCOUNT_POST_SAVE_WORKFLOW_STEPS.LoadingSavedAccount,
+        )
         // 获取账户详细信息
         const siteAccount = await accountStorage.getAccountById(targetAccount)
         if (!siteAccount) {
           toast.error(t("messages:toast.error.findAccountDetailsFailed"))
+          setAccountPostSaveWorkflowStep(
+            ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
+          )
           return
         }
+        savedSiteAccount = siteAccount
         displaySiteData =
           (await accountStorage.getDisplayDataById(siteAccount.id)) ??
           accountStorage.convertToDisplayData(siteAccount)
@@ -1283,17 +1371,70 @@ export function useAccountDialog({
       // The current runtime path opens the channel dialog with prefilled data
       // so users can review it before creation. The direct auto-import helpers
       // are kept only as deprecated compatibility shims.
-      await openChannelDialog(displaySiteData, null, () => {
-        if (onSuccess && targetAccountRef.current) {
-          onSuccess(targetAccountRef.current)
-        }
+      if (!savedSiteAccount) {
+        await openChannelDialog(displaySiteData, null, () => {
+          if (onSuccess && targetAccountRef.current) {
+            onSuccess(targetAccountRef.current)
+          }
+        })
+        setAccountPostSaveWorkflowStep(
+          ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
+        )
+        return
+      }
+
+      setAccountPostSaveWorkflowStep(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.CheckingToken,
+      )
+      const ensureResult = await ensureAccountTokenForPostSaveWorkflow({
+        account: savedSiteAccount,
+        displaySiteData,
       })
+
+      switch (ensureResult.kind) {
+        case ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready:
+        case ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created:
+          if (
+            ensureResult.kind === ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created &&
+            ensureResult.oneTimeSecret
+          ) {
+            pendingPostSaveChannelRef.current = {
+              displaySiteData,
+              token: ensureResult.token,
+            }
+            setPostSaveOneTimeToken(ensureResult.token)
+            setAccountPostSaveWorkflowStep(
+              ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForOneTimeKeyAcknowledgement,
+            )
+            return
+          }
+
+          await openPostSaveManagedSiteDialog(
+            displaySiteData,
+            ensureResult.token,
+          )
+          return
+        case ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired:
+          pendingPostSaveChannelRef.current = { displaySiteData }
+          setPostSaveSub2ApiAllowedGroups(ensureResult.allowedGroups)
+          setAccountPostSaveWorkflowStep(
+            ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
+          )
+          return
+        case ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked:
+          toast.error(ensureResult.message)
+          setAccountPostSaveWorkflowStep(
+            ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
+          )
+          return
+      }
     } catch (error) {
       toast.error(
         t("messages.newApiConfigFailed", {
           error: getErrorMessage(error),
         }),
       )
+      setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed)
       logger.error("Auto configuration failed", { error })
     } finally {
       setIsAutoConfiguring(false)
@@ -1395,6 +1536,9 @@ export function useAccountDialog({
       isImportingCookies,
       showCookiePermissionWarning,
       isImportingSub2apiSession,
+      accountPostSaveWorkflowStep,
+      postSaveOneTimeToken,
+      postSaveSub2ApiAllowedGroups,
       duplicateAccountWarning,
       managedSiteConfigPrompt,
     },
@@ -1448,6 +1592,8 @@ export function useAccountDialog({
       handleDuplicateAccountWarningContinue,
       handleManagedSiteConfigPromptClose,
       handleOpenManagedSiteSettings,
+      handlePostSaveOneTimeTokenClose,
+      handlePostSaveSub2ApiTokenCreated,
     },
   }
 }
