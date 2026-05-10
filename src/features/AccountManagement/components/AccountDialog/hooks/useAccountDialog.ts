@@ -1375,6 +1375,9 @@ export function useAccountDialog({
           pending.displaySiteData,
         )
         const fetchedTokens = await service.fetchAccountTokens(request)
+        if (postSaveAutoConfigRunRef.current !== runId) {
+          return
+        }
         const latestToken = Array.isArray(fetchedTokens)
           ? selectSingleNewApiTokenByIdDiff({
               existingTokenIds: pending.existingTokenIds ?? [],
@@ -1383,6 +1386,9 @@ export function useAccountDialog({
           : null
 
         if (!latestToken) {
+          if (postSaveAutoConfigRunRef.current !== runId) {
+            return
+          }
           setAccountPostSaveWorkflowStep(
             ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
           )
@@ -1390,12 +1396,18 @@ export function useAccountDialog({
           return
         }
 
+        if (postSaveAutoConfigRunRef.current !== runId) {
+          return
+        }
         await openPostSaveManagedSiteDialog(
           pending.displaySiteData,
           latestToken,
           runId,
         )
       } catch (error) {
+        if (postSaveAutoConfigRunRef.current !== runId) {
+          return
+        }
         setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed)
         toast.error(
           t("messages.newApiConfigFailed", {

@@ -1444,6 +1444,144 @@ describe("useAccountDialog save and auto-config flows", () => {
     )
   })
 
+  it("ignores stale boolean Sub2API token recovery results after the dialog closes", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "Sub2API",
+      site_url: "https://sub2.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.SUB2API,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: 14,
+        username: "sub-user",
+        access_token: "sub-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData = buildDisplayAccount({
+      name: "Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://sub2.example.com",
+      token: "sub-token",
+      userId: 14,
+    })
+    const existingToken = buildToken({
+      id: 88,
+      key: "sk-sub2-existing",
+      group: "default",
+    })
+
+    let resolveFetchAccountTokens: ((value: ApiToken[]) => void) | null = null
+    const fetchAccountTokens = vi.fn(
+      () =>
+        new Promise<ApiToken[]>((resolve) => {
+          resolveFetchAccountTokens = resolve
+        }),
+    )
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    vi.spyOn(
+      apiServiceRequest,
+      "createDisplayAccountApiContext",
+    ).mockReturnValue({
+      service: {
+        fetchAccountTokens,
+      } as any,
+      request: { accountId: savedDisplayData.id } as any,
+    })
+    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
+      allowedGroups: ["default", "vip"],
+      existingTokenIds: [existingToken.id],
+    })
+
+    const onClose = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ isOpen }: { isOpen: boolean }) =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen,
+          onClose,
+          onSuccess: vi.fn(),
+        }),
+      {
+        initialProps: { isOpen: true },
+      },
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteName("Sub2API")
+      result.current.setters.setUsername("sub-user")
+      result.current.setters.setAccessToken("sub-token")
+      result.current.setters.setUserId("14")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
+    )
+
+    let recoverPromise: Promise<void> | undefined
+    await act(async () => {
+      recoverPromise =
+        result.current.handlers.handlePostSaveSub2ApiTokenCreated()
+    })
+
+    await waitFor(() => {
+      expect(fetchAccountTokens).toHaveBeenCalledWith({
+        accountId: savedDisplayData.id,
+      })
+    })
+
+    await act(async () => {
+      result.current.handlers.handleClose()
+    })
+
+    rerender({ isOpen: false })
+    rerender({ isOpen: true })
+
+    await waitFor(() => {
+      expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
+      )
+      expect(result.current.state.postSaveSub2ApiAllowedGroups).toBeNull()
+      expect(result.current.state.postSaveSub2ApiAccount).toBeNull()
+    })
+
+    await act(async () => {
+      resolveFetchAccountTokens?.([existingToken])
+      await recoverPromise
+    })
+
+    expect(mockOpenWithAccount).not.toHaveBeenCalled()
+    expect(toast.error).not.toHaveBeenCalledWith(
+      "messages:accountOperations.createTokenFailed",
+    )
+    expect(toast.error).not.toHaveBeenCalledWith(
+      "accountDialog:messages.newApiConfigFailed",
+    )
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
+    )
+  })
+
   it("marks the Sub2API paused workflow as failed when opening quick-config rejects after token creation", async () => {
     const savedSiteAccount = buildSiteAccount({
       id: "saved-account-id",
