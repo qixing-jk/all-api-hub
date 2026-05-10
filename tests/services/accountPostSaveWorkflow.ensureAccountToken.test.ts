@@ -120,7 +120,8 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     const account = buildStoredAccount(displayAccount)
     const createdToken = buildToken({ id: 6, key: "sk-created" })
     fetchAccountTokensMock.mockResolvedValueOnce([])
-    createApiTokenMock.mockResolvedValueOnce(createdToken)
+    createApiTokenMock.mockResolvedValueOnce(true)
+    fetchAccountTokensMock.mockResolvedValueOnce([createdToken])
 
     await expect(
       ensureAccountTokenForPostSaveWorkflow({
@@ -143,7 +144,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
         group: "",
       }),
     )
-    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
   })
 
   it("creates an AIHubMix token and marks the full secret as one-time", async () => {
@@ -228,7 +229,8 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     const createdToken = buildToken({ id: 9, key: "sk-sub2", group: "vip" })
     fetchAccountTokensMock.mockResolvedValueOnce([])
     fetchUserGroupsMock.mockResolvedValueOnce({ vip: { ratio: 1 } })
-    createApiTokenMock.mockResolvedValueOnce(createdToken)
+    createApiTokenMock.mockResolvedValueOnce(true)
+    fetchAccountTokensMock.mockResolvedValueOnce([createdToken])
 
     await expect(
       ensureAccountTokenForPostSaveWorkflow({
@@ -245,6 +247,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
       expect.anything(),
       expect.objectContaining({ group: "vip" }),
     )
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
   })
 
   it("requires Sub2API group selection when multiple current groups exist", async () => {

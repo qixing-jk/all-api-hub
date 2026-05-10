@@ -36,6 +36,19 @@ const buildCreateRequest = (account: SiteAccount): ApiServiceRequest => ({
   },
 })
 
+const buildDisplayAccountRequest = (
+  displaySiteData: DisplaySiteData,
+): ApiServiceRequest => ({
+  baseUrl: displaySiteData.baseUrl,
+  accountId: displaySiteData.id,
+  auth: {
+    authType: displaySiteData.authType,
+    userId: displaySiteData.userId,
+    accessToken: displaySiteData.token,
+    cookie: displaySiteData.cookieAuthSessionCookie,
+  },
+})
+
 /**
  *
  */
@@ -45,17 +58,34 @@ async function createDefaultToken(params: {
   group?: string
 }): Promise<ApiToken | null> {
   const { account, displaySiteData, group } = params
+  const service = getApiService(displaySiteData.siteType)
   const tokenData = generateDefaultTokenRequest()
   if (typeof group === "string") {
     tokenData.group = group
   }
 
-  const created = await getApiService(displaySiteData.siteType).createApiToken(
+  const created = await service.createApiToken(
     buildCreateRequest(account),
     tokenData,
   )
 
-  return isCreatedApiToken(created) ? created : null
+  if (!created) {
+    return null
+  }
+
+  if (isCreatedApiToken(created)) {
+    return created
+  }
+
+  if (displaySiteData.siteType === SITE_TYPES.AIHUBMIX) {
+    return null
+  }
+
+  const updatedTokens = await service.fetchAccountTokens(
+    buildDisplayAccountRequest(displaySiteData),
+  )
+
+  return Array.isArray(updatedTokens) ? updatedTokens.at(-1) ?? null : null
 }
 
 /**
@@ -67,16 +97,9 @@ export async function ensureAccountTokenForPostSaveWorkflow(params: {
 }): Promise<EnsureAccountTokenResult> {
   const { account, displaySiteData } = params
   const service = getApiService(displaySiteData.siteType)
-  const tokens = await service.fetchAccountTokens({
-    baseUrl: displaySiteData.baseUrl,
-    accountId: displaySiteData.id,
-    auth: {
-      authType: displaySiteData.authType,
-      userId: displaySiteData.userId,
-      accessToken: displaySiteData.token,
-      cookie: displaySiteData.cookieAuthSessionCookie,
-    },
-  })
+  const tokens = await service.fetchAccountTokens(
+    buildDisplayAccountRequest(displaySiteData),
+  )
 
   const existingToken = Array.isArray(tokens) ? tokens.at(-1) : undefined
   if (existingToken) {
