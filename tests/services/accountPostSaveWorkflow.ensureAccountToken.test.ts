@@ -176,6 +176,32 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
   })
 
+  it("returns ready for an existing AIHubMix token with a full secret", async () => {
+    const displayAccount = buildDisplayAccount({
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+    })
+    const account = buildStoredAccount(displayAccount)
+    const existingToken = buildToken({
+      id: 8,
+      key: "sk-aihubmix-existing-full-secret",
+    })
+    fetchAccountTokensMock.mockResolvedValueOnce([existingToken])
+
+    await expect(
+      ensureAccountTokenForPostSaveWorkflow({
+        account,
+        displaySiteData: displayAccount,
+      }),
+    ).resolves.toEqual({
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready,
+      token: existingToken,
+      created: false,
+    })
+    expect(createApiTokenMock).not.toHaveBeenCalled()
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+  })
+
   it("blocks AIHubMix when an existing inventory token has a masked key", async () => {
     const displayAccount = buildDisplayAccount({
       siteType: SITE_TYPES.AIHUBMIX,

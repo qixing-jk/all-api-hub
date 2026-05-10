@@ -49,9 +49,6 @@ const buildDisplayAccountRequest = (
   },
 })
 
-/**
- *
- */
 async function createDefaultToken(params: {
   account: SiteAccount
   displaySiteData: DisplaySiteData
@@ -88,9 +85,6 @@ async function createDefaultToken(params: {
   return Array.isArray(updatedTokens) ? updatedTokens.at(-1) ?? null : null
 }
 
-/**
- *
- */
 export async function ensureAccountTokenForPostSaveWorkflow(params: {
   account: SiteAccount
   displaySiteData: DisplaySiteData
