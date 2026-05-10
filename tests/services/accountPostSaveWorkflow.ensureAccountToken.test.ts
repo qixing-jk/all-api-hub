@@ -176,6 +176,30 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
   })
 
+  it("blocks AIHubMix when an existing inventory token has a masked key", async () => {
+    const displayAccount = buildDisplayAccount({
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+    })
+    const account = buildStoredAccount(displayAccount)
+    fetchAccountTokensMock.mockResolvedValueOnce([
+      buildToken({ id: 8, key: "sk-***masked***" }),
+    ])
+
+    await expect(
+      ensureAccountTokenForPostSaveWorkflow({
+        account,
+        displaySiteData: displayAccount,
+      }),
+    ).resolves.toEqual({
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
+      code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenSecretUnavailable,
+      message: "messages:aihubmix.createRequiresOneTimeKeyDialog",
+    })
+    expect(createApiTokenMock).not.toHaveBeenCalled()
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+  })
+
   it("blocks AIHubMix when creation does not return a usable full secret", async () => {
     const displayAccount = buildDisplayAccount({
       siteType: SITE_TYPES.AIHUBMIX,

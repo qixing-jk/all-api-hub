@@ -103,6 +103,17 @@ export async function ensureAccountTokenForPostSaveWorkflow(params: {
 
   const existingToken = Array.isArray(tokens) ? tokens.at(-1) : undefined
   if (existingToken) {
+    if (
+      displaySiteData.siteType === SITE_TYPES.AIHUBMIX &&
+      !hasUsableFullTokenSecret(existingToken)
+    ) {
+      return {
+        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
+        code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenSecretUnavailable,
+        message: t("messages:aihubmix.createRequiresOneTimeKeyDialog"),
+      }
+    }
+
     return {
       kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready,
       token: existingToken,
