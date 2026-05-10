@@ -27,6 +27,7 @@ import {
   type AccountPostSaveWorkflowStep,
 } from "~/services/accounts/accountPostSaveWorkflow"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import {
   analyzeAutoDetectError,
   AutoDetectError,
@@ -1337,6 +1338,13 @@ export function useAccountDialog({
     )
   }, [openPostSaveManagedSiteDialog])
 
+  const handlePostSaveSub2ApiTokenDialogClose = useCallback(() => {
+    pendingPostSaveChannelRef.current = null
+    setPostSaveSub2ApiAllowedGroups(null)
+    setPostSaveSub2ApiAccount(null)
+    setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
+  }, [])
+
   const handlePostSaveSub2ApiTokenCreated = useCallback(
     async (createdToken?: ApiToken) => {
       const runId = postSaveAutoConfigRunRef.current
@@ -1344,20 +1352,58 @@ export function useAccountDialog({
       setPostSaveSub2ApiAllowedGroups(null)
       setPostSaveSub2ApiAccount(null)
 
-      if (!pending || !createdToken) {
+      if (!pending) {
         pendingPostSaveChannelRef.current = null
         setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
         return
       }
 
       pendingPostSaveChannelRef.current = null
-      await openPostSaveManagedSiteDialog(
-        pending.displaySiteData,
-        createdToken,
-        runId,
-      )
+      if (createdToken) {
+        await openPostSaveManagedSiteDialog(
+          pending.displaySiteData,
+          createdToken,
+          runId,
+        )
+        return
+      }
+
+      try {
+        const { service, request } = createDisplayAccountApiContext(
+          pending.displaySiteData,
+        )
+        const fetchedTokens = await service.fetchAccountTokens(request)
+        const latestToken = Array.isArray(fetchedTokens)
+          ? fetchedTokens.at(-1) ?? null
+          : null
+
+        if (!latestToken) {
+          setAccountPostSaveWorkflowStep(
+            ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
+          )
+          toast.error(t("messages:accountOperations.createTokenFailed"))
+          return
+        }
+
+        await openPostSaveManagedSiteDialog(
+          pending.displaySiteData,
+          latestToken,
+          runId,
+        )
+      } catch (error) {
+        setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed)
+        toast.error(
+          t("messages.newApiConfigFailed", {
+            error: getErrorMessage(error),
+          }),
+        )
+        logger.error("Failed to resolve latest Sub2API token after create", {
+          accountId: pending.displaySiteData.id,
+          error: getErrorMessage(error),
+        })
+      }
     },
-    [openPostSaveManagedSiteDialog],
+    [openPostSaveManagedSiteDialog, t],
   )
 
   const handleAutoConfig = async () => {
@@ -1708,6 +1754,7 @@ export function useAccountDialog({
       handleManagedSiteConfigPromptClose,
       handleOpenManagedSiteSettings,
       handlePostSaveOneTimeTokenClose,
+      handlePostSaveSub2ApiTokenDialogClose,
       handlePostSaveSub2ApiTokenCreated,
     },
   }

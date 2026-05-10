@@ -265,9 +265,7 @@ export default function AccountDialog({
       {state.postSaveSub2ApiAccount && postSaveSub2ApiCreatePrefill ? (
         <AddTokenDialog
           isOpen={true}
-          onClose={() =>
-            void handlers.handlePostSaveSub2ApiTokenCreated(undefined)
-          }
+          onClose={handlers.handlePostSaveSub2ApiTokenDialogClose}
           availableAccounts={[state.postSaveSub2ApiAccount]}
           preSelectedAccountId={state.postSaveSub2ApiAccount.id}
           createPrefill={postSaveSub2ApiCreatePrefill}
