@@ -1,9 +1,11 @@
 import { http, HttpResponse } from "msw"
 import { beforeEach, describe, expect, it } from "vitest"
 
+import { UI_CONSTANTS } from "~/constants/ui"
 import {
   createApiToken,
   deleteApiToken,
+  extractDefaultExchangeRate,
   fetchAccountAvailableModels,
   fetchAccountData,
   fetchAccountTokens,
@@ -43,6 +45,18 @@ const tokenRequest: CreateTokenRequest = {
 describe("apiService AIHubMix", () => {
   beforeEach(() => {
     server.resetHandlers()
+  })
+
+  it("uses the app default exchange rate because AIHubMix exposes no site rate field", () => {
+    expect(extractDefaultExchangeRate(null)).toBe(
+      UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,
+    )
+    expect(
+      extractDefaultExchangeRate({
+        system_name: "AIHubMix",
+        checkin_enabled: false,
+      }),
+    ).toBe(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT)
   })
 
   it("fetches cookie-authenticated user info from /call/usr/self", async () => {

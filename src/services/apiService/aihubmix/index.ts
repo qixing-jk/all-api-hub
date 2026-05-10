@@ -1,3 +1,4 @@
+import { UI_CONSTANTS } from "~/constants/ui"
 import { determineHealthStatus } from "~/services/apiService/common"
 import {
   hasUsableApiTokenKey,
@@ -369,6 +370,18 @@ export async function fetchSiteStatus(
     system_name: "AIHubMix",
     checkin_enabled: false,
   }
+}
+
+/**
+ * Return AIHubMix's app-level default exchange rate.
+ */
+export function extractDefaultExchangeRate(
+  _statusInfo: SiteStatusInfo | null,
+): number {
+  // AIHubMix public management docs expose quota accounting
+  // (`used_quota / 500000`) but no site-status default exchange-rate field.
+  // Reference: https://docs.aihubmix.com/cn/api/CliEndpoints/list-keys
+  return UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
 }
 
 /**
