@@ -62,6 +62,22 @@ type AIHubMixTokenRaw = Partial<ApiToken> & {
   subnet?: string
 }
 
+type AIHubMixUserAvailableModel = {
+  model: string
+  developer_id?: number
+  order?: number
+}
+
+type AIHubMixCatalogModel = {
+  id: string
+  name?: string
+  channel?: string
+  type?: string
+  description?: string
+}
+
+type AIHubMixCatalogModels = Record<string, AIHubMixCatalogModel[]>
+
 // AIHubMix create-key docs define the management payload as:
 // name, expired_time, unlimited_quota, remain_quota, models, subnet.
 // They do not define One-API style group/model_limits/allow_ips fields.
@@ -616,11 +632,19 @@ export async function deleteApiToken(
 export async function fetchAccountAvailableModels(
   request: ApiServiceRequest,
 ): Promise<string[]> {
-  const payload = await fetchAIHubMixData<unknown>(
-    request,
-    "/api/user/available_models",
-  )
-  return normalizeModelIds(payload)
+  try {
+    const payload = await fetchAIHubMixData<AIHubMixUserAvailableModel[]>(
+      request,
+      "/api/user/available_models",
+    )
+    return normalizeModelIds(payload)
+  } catch (error) {
+    logger.warn(
+      "Failed to fetch AIHubMix user available models; falling back to all models",
+      error,
+    )
+    return fetchAllModels(request)
+  }
 }
 
 /**
@@ -629,6 +653,9 @@ export async function fetchAccountAvailableModels(
 export async function fetchAllModels(
   request: ApiServiceRequest,
 ): Promise<string[]> {
-  const payload = await fetchAIHubMixData<unknown>(request, "/api/models")
+  const payload = await fetchAIHubMixData<AIHubMixCatalogModels>(
+    request,
+    "/api/models",
+  )
   return normalizeModelIds(payload)
 }

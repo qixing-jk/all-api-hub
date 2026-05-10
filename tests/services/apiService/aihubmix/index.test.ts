@@ -724,10 +724,11 @@ describe("apiService AIHubMix", () => {
         HttpResponse.json({
           success: true,
           message: "",
-          data: {
-            OpenAI: ["gpt-4o", { id: "gpt-4o-mini" }],
-            Anthropic: [{ model: "claude-3-5-sonnet" }],
-          },
+          data: [
+            { model: "gpt-4o", developer_id: 1, order: 10 },
+            { model: "gpt-4o-mini", developer_id: 1, order: 20 },
+            { model: "claude-3-5-sonnet", developer_id: 2, order: 30 },
+          ],
         }),
       ),
     )
@@ -769,6 +770,39 @@ describe("apiService AIHubMix", () => {
       }),
     ).resolves.toEqual(["gpt-4o"])
     expect(mainOriginModelsCalled).toBe(true)
+  })
+
+  it("falls back to the global model catalog when user available models fail", async () => {
+    let globalModelsCalled = false
+    server.use(
+      http.get("https://aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json(
+          {
+            success: false,
+            message: "available models unavailable",
+            data: [],
+          },
+          { status: 500 },
+        ),
+      ),
+      http.get("https://aihubmix.com/api/models", () => {
+        globalModelsCalled = true
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            OpenAI: [{ id: "gpt-4o" }],
+            Anthropic: [{ id: "claude-3-5-sonnet" }],
+          },
+        })
+      }),
+    )
+
+    await expect(fetchAccountAvailableModels(baseRequest)).resolves.toEqual([
+      "gpt-4o",
+      "claude-3-5-sonnet",
+    ])
+    expect(globalModelsCalled).toBe(true)
   })
 
   it("throws ApiError for malformed response bodies", async () => {
