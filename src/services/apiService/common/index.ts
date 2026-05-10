@@ -15,6 +15,7 @@ import {
   ApiServiceRequest,
   CheckInStatus,
   CreateTokenRequest,
+  CreateTokenResult,
   HealthCheckResult,
   LogItem,
   LogResponseData,
@@ -1184,7 +1185,7 @@ export async function fetchSiteUserGroups(
 export async function createApiToken(
   request: ApiServiceRequest,
   tokenData: CreateTokenRequest,
-): Promise<boolean> {
+): Promise<CreateTokenResult> {
   try {
     const response = await fetchApi<any>(request, {
       endpoint: "/api/token/",

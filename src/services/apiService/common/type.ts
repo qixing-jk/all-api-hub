@@ -127,6 +127,8 @@ export interface CreateTokenRequest {
   group: string
 }
 
+export type CreateTokenResult = boolean | ApiToken
+
 // 模型定价信息类型
 export interface ModelPricing {
   model_name: string

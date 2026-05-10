@@ -11,6 +11,7 @@ import type {
   ApiServiceAccountRequest,
   ApiServiceRequest,
   CreateTokenRequest,
+  CreateTokenResult,
   RefreshAccountResult,
   SiteStatusInfo,
   TodayIncomeData,
@@ -1157,7 +1158,7 @@ export async function fetchAccountAvailableModels(
 export async function createApiToken(
   request: ApiServiceRequest,
   tokenData: CreateTokenRequest,
-): Promise<boolean> {
+): Promise<CreateTokenResult> {
   try {
     const groupId = await resolveSelectedGroupId(request, tokenData.group)
     const payload = translateSub2ApiCreateTokenRequest(tokenData, groupId)

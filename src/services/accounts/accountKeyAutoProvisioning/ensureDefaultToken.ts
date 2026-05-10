@@ -25,6 +25,9 @@ export function generateDefaultTokenRequest(): CreateTokenRequest {
   }
 }
 
+const isCreatedApiToken = (value: unknown): value is ApiToken =>
+  !!value && typeof value === "object" && "id" in value && "key" in value
+
 /**
  * Ensures that an API token exists for the supplied account by checking the
  * remote token inventory and lazily issuing a default token when none exist.
@@ -75,6 +78,10 @@ export async function ensureDefaultApiTokenForAccount(params: {
 
   if (!createApiTokenResult) {
     throw new Error("create_token_failed")
+  }
+
+  if (isCreatedApiToken(createApiTokenResult)) {
+    return { token: createApiTokenResult, created: true }
   }
 
   // Backends such as AIHubMix may only expose the full API key in the create

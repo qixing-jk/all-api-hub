@@ -518,7 +518,26 @@ describe("apiService AIHubMix", () => {
           pathname: new URL(request.url).pathname,
           body: await request.json(),
         })
-        return HttpResponse.json({ success: true, message: "", data: true })
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            id: 271585,
+            user_id: 152534,
+            key: "sk-yWR5****9275",
+            status: 1,
+            name: "11",
+            created_time: 1778417169,
+            accessed_time: 1778417169,
+            expired_time: -1,
+            remain_quota: -1,
+            unlimited_quota: true,
+            used_quota: 0,
+            models: null,
+            subnet: "",
+            full_key: "sk-yWR5oXeyLwbyavcr46F2AbE00040457cA2E6F1E00dAf9275",
+          },
+        })
       }),
       http.put("https://aihubmix.com/api/token/", async ({ request }) => {
         calls.push({
@@ -541,7 +560,14 @@ describe("apiService AIHubMix", () => {
       id: 12,
       key: "sk-detail-key",
     })
-    await expect(createApiToken(baseRequest, tokenRequest)).resolves.toBe(true)
+    await expect(createApiToken(baseRequest, tokenRequest)).resolves.toEqual(
+      expect.objectContaining({
+        id: 271585,
+        user_id: 152534,
+        key: "sk-yWR5oXeyLwbyavcr46F2AbE00040457cA2E6F1E00dAf9275",
+        name: "11",
+      }),
+    )
     await expect(updateApiToken(baseRequest, 12, tokenRequest)).resolves.toBe(
       true,
     )

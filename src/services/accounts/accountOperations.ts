@@ -52,6 +52,9 @@ const logger = createLogger("AccountOperations")
 
 export const MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS = 20000
 
+const isCreatedApiToken = (value: unknown): value is ApiToken =>
+  !!value && typeof value === "object" && "id" in value && "key" in value
+
 /**
  * Create a localized timeout error for manual account data fetching.
  * @param timeoutMs Timeout threshold in milliseconds.
@@ -1156,21 +1159,25 @@ export async function ensureAccountApiToken(
       throw new Error(t("messages:accountOperations.createTokenFailed"))
     }
 
-    // Do not assume a created key can be read back in full. AIHubMix returns
-    // complete API keys only at creation time and may list masked keys here.
-    const updatedTokens = await getApiService(
-      displaySiteData.siteType,
-    ).fetchAccountTokens({
-      baseUrl: displaySiteData.baseUrl,
-      accountId: displaySiteData.id,
-      auth: {
-        authType: displaySiteData.authType,
-        userId: displaySiteData.userId,
-        accessToken: displaySiteData.token,
-        cookie: displaySiteData.cookieAuthSessionCookie,
-      },
-    })
-    apiToken = updatedTokens.at(-1)
+    if (isCreatedApiToken(createApiTokenResult)) {
+      apiToken = createApiTokenResult
+    } else {
+      // Do not assume a created key can be read back in full. AIHubMix returns
+      // complete API keys only at creation time and may list masked keys here.
+      const updatedTokens = await getApiService(
+        displaySiteData.siteType,
+      ).fetchAccountTokens({
+        baseUrl: displaySiteData.baseUrl,
+        accountId: displaySiteData.id,
+        auth: {
+          authType: displaySiteData.authType,
+          userId: displaySiteData.userId,
+          accessToken: displaySiteData.token,
+          cookie: displaySiteData.cookieAuthSessionCookie,
+        },
+      })
+      apiToken = updatedTokens.at(-1)
+    }
   }
 
   if (!apiToken) {

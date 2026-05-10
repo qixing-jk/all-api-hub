@@ -18,6 +18,9 @@ import { createLogger } from "~/utils/core/logger"
  */
 const logger = createLogger("CopyKeyDialogHook")
 
+const isCreatedApiToken = (value: unknown): value is ApiToken =>
+  !!value && typeof value === "object" && "id" in value && "key" in value
+
 /**
  * CopyKeyDialog 核心逻辑 hook，负责加载 token、处理复制与展开状态。
  * @param isOpen 对话框是否打开
@@ -157,53 +160,67 @@ export function useCopyKeyDialog(
    * - Otherwise, keep the list visible and show a success toast.
    *
    * Some sites, including AIHubMix, only return the full key in the create
-   * response and list masked keys afterwards. Until create flows can consume a
-   * returned token secret directly, those sites may show a clear unsupported
-   * reveal message instead of auto-copying after refresh.
+   * response and list masked keys afterwards. Callers that receive a created
+   * token directly should pass it here so the secret can be copied before any
+   * follow-up inventory refresh loses it.
    */
-  const refreshTokensAfterCreate = useCallback(async () => {
-    if (!account) return
+  const refreshTokensAfterCreate = useCallback(
+    async (createdToken?: ApiToken) => {
+      if (!account) return
 
-    if (!canCreateDefaultKey) {
-      setCreateError(t("ui:dialog.copyKey.createNotSupported"))
-      return
-    }
-
-    setCreateError(null)
-
-    try {
-      const { service, request } = createDisplayAccountApiContext(account)
-      const refreshedTokens = await service.fetchAccountTokens(request)
-      if (!Array.isArray(refreshedTokens)) {
-        throw new Error("token_refresh_failed")
-      }
-
-      setTokens(refreshedTokens)
-
-      if (refreshedTokens.length === 0) {
-        setCreateError(t("ui:dialog.copyKey.noKeyFoundAfterCreate"))
+      if (!canCreateDefaultKey) {
+        setCreateError(t("ui:dialog.copyKey.createNotSupported"))
         return
       }
 
-      if (refreshedTokens.length === 1) {
-        await copyKey(refreshedTokens[0])
-        return
-      }
+      setCreateError(null)
 
-      toast.success(t("ui:dialog.copyKey.createSuccess"))
-    } catch (error) {
-      logger.error("Failed to refresh token list after create", {
-        error,
-        accountId: account.id,
-        baseUrl: account.baseUrl,
-        siteType: account.siteType,
-      })
-      const errorMessage = getErrorMessage(error)
-      setCreateError(
-        t("ui:dialog.copyKey.createFailed", { error: errorMessage }),
-      )
-    }
-  }, [account, canCreateDefaultKey, copyKey, t])
+      try {
+        if (createdToken) {
+          setTokens((currentTokens) => {
+            const withoutCreated = currentTokens.filter(
+              (token) => token.id !== createdToken.id,
+            )
+            return [...withoutCreated, createdToken]
+          })
+          await copyKey(createdToken)
+          return
+        }
+
+        const { service, request } = createDisplayAccountApiContext(account)
+        const refreshedTokens = await service.fetchAccountTokens(request)
+        if (!Array.isArray(refreshedTokens)) {
+          throw new Error("token_refresh_failed")
+        }
+
+        setTokens(refreshedTokens)
+
+        if (refreshedTokens.length === 0) {
+          setCreateError(t("ui:dialog.copyKey.noKeyFoundAfterCreate"))
+          return
+        }
+
+        if (refreshedTokens.length === 1) {
+          await copyKey(refreshedTokens[0])
+          return
+        }
+
+        toast.success(t("ui:dialog.copyKey.createSuccess"))
+      } catch (error) {
+        logger.error("Failed to refresh token list after create", {
+          error,
+          accountId: account.id,
+          baseUrl: account.baseUrl,
+          siteType: account.siteType,
+        })
+        const errorMessage = getErrorMessage(error)
+        setCreateError(
+          t("ui:dialog.copyKey.createFailed", { error: errorMessage }),
+        )
+      }
+    },
+    [account, canCreateDefaultKey, copyKey, t],
+  )
 
   const createDefaultKey = useCallback(async () => {
     if (!account) return
@@ -244,7 +261,9 @@ export function useCopyKeyDialog(
         throw new Error("create_token_failed")
       }
 
-      await refreshTokensAfterCreate()
+      await refreshTokensAfterCreate(
+        isCreatedApiToken(created) ? created : undefined,
+      )
     } catch (error) {
       logger.error("Failed to create default key", {
         error,

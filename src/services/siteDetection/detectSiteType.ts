@@ -146,7 +146,7 @@ function detectAccountSiteTypeFromDomain(url: string): AccountSiteType {
   try {
     const hostname = new URL(url).hostname.toLowerCase()
     const matchedRule = ACCOUNT_SITE_DOMAIN_RULES.find((rule) =>
-      rule.hostnames.includes(hostname),
+      rule.hostnames.some((allowedHostname) => allowedHostname === hostname),
     )
     return matchedRule?.name ?? SITE_TYPES.UNKNOWN
   } catch {

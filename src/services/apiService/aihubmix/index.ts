@@ -13,6 +13,7 @@ import type {
   ApiServiceAccountRequest,
   ApiServiceRequest,
   CreateTokenRequest,
+  CreateTokenResult,
   RefreshAccountResult,
   SiteStatusInfo,
   TodayIncomeData,
@@ -52,6 +53,7 @@ type AIHubMixUserInfo = UserInfo & {
 }
 
 type AIHubMixTokenRaw = Partial<ApiToken> & {
+  full_key?: string
   token?: string
   token_id?: number | string
   value?: string
@@ -159,7 +161,7 @@ const normalizeToken = (
   token: AIHubMixTokenRaw,
   defaultUserId?: number | string,
 ): ApiToken => {
-  const key = token.key ?? token.token ?? token.value ?? ""
+  const key = token.full_key ?? token.key ?? token.token ?? token.value ?? ""
   return normalizeApiTokenKey({
     id: toFiniteNumber(token.id ?? token.token_id),
     user_id: toFiniteNumber(token.user_id ?? defaultUserId),
@@ -509,11 +511,20 @@ export async function resolveApiTokenKey(
 export async function createApiToken(
   request: ApiServiceRequest,
   tokenData: CreateTokenRequest,
-): Promise<boolean> {
-  await fetchAIHubMixData<unknown>(request, "/api/token/", {
-    method: "POST",
-    body: JSON.stringify(tokenData),
-  })
+): Promise<CreateTokenResult> {
+  const createdToken = await fetchAIHubMixData<AIHubMixTokenRaw>(
+    request,
+    "/api/token/",
+    {
+      method: "POST",
+      body: JSON.stringify(tokenData),
+    },
+  )
+
+  if (createdToken && typeof createdToken === "object") {
+    return normalizeToken(createdToken, request.auth?.userId)
+  }
+
   return true
 }
 

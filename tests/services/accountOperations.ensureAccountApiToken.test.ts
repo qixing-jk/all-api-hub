@@ -283,6 +283,61 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     )
   })
 
+  it("uses a token returned by create without refetching masked inventory", async () => {
+    const { displayAccount, siteAccount } = createNonSub2ApiAccounts()
+    const createdToken = {
+      id: 22,
+      user_id: displayAccount.userId,
+      key: "sk-created-full-secret",
+      status: 1,
+      name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+      created_time: 1,
+      accessed_time: 1,
+      expired_time: -1,
+      remain_quota: -1,
+      unlimited_quota: true,
+      used_quota: 0,
+    }
+
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    createApiTokenMock.mockResolvedValueOnce(createdToken)
+
+    await expect(
+      ensureDefaultApiTokenForAccount({
+        account: siteAccount as any,
+        displaySiteData: displayAccount as any,
+      }),
+    ).resolves.toEqual({ token: createdToken, created: true })
+
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("uses a token returned by shared ensure creation without refetching masked inventory", async () => {
+    const { displayAccount, siteAccount } = createNonSub2ApiAccounts()
+    const createdToken = {
+      id: 23,
+      user_id: displayAccount.userId,
+      key: "sk-created-full-secret",
+      status: 1,
+      name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+      created_time: 1,
+      accessed_time: 1,
+      expired_time: -1,
+      remain_quota: -1,
+      unlimited_quota: true,
+      used_quota: 0,
+    }
+
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    createApiTokenMock.mockResolvedValueOnce(createdToken)
+
+    await expect(
+      ensureAccountApiToken(siteAccount as any, displayAccount as any),
+    ).resolves.toEqual(createdToken)
+
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+  })
+
   it("fails when default token creation reports false", async () => {
     const { displayAccount, siteAccount } = createNonSub2ApiAccounts()
 
