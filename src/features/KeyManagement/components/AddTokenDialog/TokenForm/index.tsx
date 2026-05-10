@@ -70,6 +70,10 @@ export function TokenForm({
         allowedGroups={allowedGroups}
         availableModels={availableModels}
         showGroupSelection={showGroupSelection}
+        currentSiteType={
+          availableAccounts.find((account) => account.id === formData.accountId)
+            ?.siteType
+        }
         handleInputChange={handleInputChange}
         handleSelectChange={handleSelectChange}
         handleModelLimitsChange={handleModelLimitsChange}

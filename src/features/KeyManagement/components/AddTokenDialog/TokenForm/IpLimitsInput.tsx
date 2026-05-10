@@ -6,6 +6,7 @@ import type { FormData } from "../hooks/useTokenForm"
 
 interface IpLimitsInputProps {
   allowIps: string
+  usesSubnetLimits?: boolean
   handleInputChange: (
     field: keyof FormData,
   ) => (e: React.ChangeEvent<HTMLInputElement>) => void
@@ -22,24 +23,34 @@ interface IpLimitsInputProps {
  */
 export function IpLimitsInput({
   allowIps,
+  usesSubnetLimits = false,
   handleInputChange,
   error,
 }: IpLimitsInputProps) {
   const { t } = useTranslation("keyManagement")
+  const label = usesSubnetLimits
+    ? t("dialog.subnetLimits")
+    : t("dialog.ipLimits")
+  const description = usesSubnetLimits
+    ? t("dialog.subnetExample")
+    : t("dialog.ipExample")
+  const placeholder = usesSubnetLimits
+    ? t("dialog.subnetPlaceholder")
+    : t("dialog.ipPlaceholder")
 
   return (
     <FormField
-      label={t("dialog.ipLimits")}
+      label={label}
       htmlFor="ipLimits"
       error={error}
-      description={t("dialog.ipExample")}
+      description={description}
     >
       <Input
         id="ipLimits"
         type="text"
         value={allowIps}
         onChange={handleInputChange("allowIps")}
-        placeholder={t("dialog.ipPlaceholder")}
+        placeholder={placeholder}
       />
     </FormField>
   )

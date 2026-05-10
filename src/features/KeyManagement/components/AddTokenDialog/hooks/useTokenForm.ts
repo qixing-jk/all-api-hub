@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import type { AccountToken } from "~/types"
 
@@ -11,6 +12,7 @@ interface Account {
   id: string
   name: string
   baseUrl: string
+  siteType: AccountSiteType
   userId: number
   token: string
 }
@@ -115,6 +117,11 @@ export function useTokenForm({
     () => allowedGroups.length > 0,
     [allowedGroups],
   )
+  const selectedAccount = useMemo(
+    () => availableAccounts.find((acc) => acc.id === formData.accountId),
+    [availableAccounts, formData.accountId],
+  )
+  const shouldValidateIpList = selectedAccount?.siteType !== SITE_TYPES.AIHUBMIX
 
   useEffect(() => {
     if (isOpen) {
@@ -226,7 +233,11 @@ export function useTokenForm({
         newErrors.expiredTime = t("dialog.validExpiration")
       }
     }
-    if (formData.allowIps && !isValidIpList(formData.allowIps)) {
+    if (
+      shouldValidateIpList &&
+      formData.allowIps &&
+      !isValidIpList(formData.allowIps)
+    ) {
       newErrors.allowIps = t("dialog.validIp")
     }
     const normalizedSelectedGroup = formData.group.trim()

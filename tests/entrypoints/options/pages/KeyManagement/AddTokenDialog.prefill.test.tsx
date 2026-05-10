@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Z_INDEX } from "~/components/ui"
+import { SITE_TYPES } from "~/constants/siteType"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { AuthTypeEnum } from "~/types"
@@ -44,7 +45,7 @@ const ACCOUNT = {
   id: "acc-1",
   name: "Example",
   username: "tester",
-  siteType: "new-api",
+  siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://example.com",
   token: "token",
   userId: 1,
@@ -282,6 +283,66 @@ describe("AddTokenDialog prefill", () => {
       model_limits_enabled: true,
       model_limits: "gpt-4",
     })
+  })
+
+  it("lets AIHubMix submit subnet values for backend validation", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockRejectedValueOnce(
+      new ApiError(
+        "aihubmix_user_groups_unsupported",
+        undefined,
+        undefined,
+        API_ERROR_CODES.FEATURE_UNSUPPORTED,
+      ),
+    )
+    createApiTokenMock.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+    const aihubmixAccount = {
+      ...ACCOUNT,
+      id: "aihubmix-1",
+      name: "AIHubMix",
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+    }
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={() => {}}
+        availableAccounts={[aihubmixAccount]}
+        preSelectedAccountId={aihubmixAccount.id}
+      />,
+    )
+
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "AIHubMix subnet test",
+    )
+    await user.type(
+      screen.getByLabelText("keyManagement:dialog.subnetLimits"),
+      "111",
+    )
+    expect(
+      screen.getByText("keyManagement:dialog.subnetExample"),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("keyManagement:dialog.ipExample")).toBeNull()
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(createApiTokenMock).toHaveBeenCalledTimes(1)
+    })
+
+    expect(createApiTokenMock.mock.calls[0]?.[1]).toMatchObject({
+      name: "AIHubMix subnet test",
+      allow_ips: "111",
+    })
+    expect(toastErrorMock).not.toHaveBeenCalledWith(
+      "keyManagement:dialog.validIp",
+    )
   })
 
   it("keeps the group selector popover above the modal and allows changing the group", async () => {
