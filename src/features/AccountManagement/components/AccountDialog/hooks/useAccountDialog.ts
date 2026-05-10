@@ -1261,14 +1261,30 @@ export function useAccountDialog({
       setAccountPostSaveWorkflowStep(
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.OpeningManagedSiteDialog,
       )
-      await openChannelDialog(displaySiteData, token, () => {
-        if (onSuccess && targetAccountRef.current) {
-          onSuccess(targetAccountRef.current)
-        }
-      })
-      setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed)
+      try {
+        await openChannelDialog(displaySiteData, token, () => {
+          if (onSuccess && targetAccountRef.current) {
+            onSuccess(targetAccountRef.current)
+          }
+        })
+        setAccountPostSaveWorkflowStep(
+          ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
+        )
+      } catch (error) {
+        setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed)
+        toast.error(
+          t("messages.newApiConfigFailed", {
+            error: getErrorMessage(error),
+          }),
+        )
+        logger.error("Failed to open post-save managed-site dialog", {
+          error: getErrorMessage(error),
+          accountId: targetAccountRef.current,
+          siteType: displaySiteData.siteType,
+        })
+      }
     },
-    [onSuccess, openChannelDialog],
+    [onSuccess, openChannelDialog, t],
   )
 
   const handlePostSaveOneTimeTokenClose = useCallback(async () => {

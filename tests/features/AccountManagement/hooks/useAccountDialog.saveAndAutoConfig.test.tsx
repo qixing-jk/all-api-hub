@@ -964,6 +964,91 @@ describe("useAccountDialog save and auto-config flows", () => {
     )
   })
 
+  it("marks the AIHubMix paused workflow as failed when opening quick-config rejects after token acknowledgement", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: 13,
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData = buildDisplayAccount({
+      name: "AIHubMix",
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+      token: "aihubmix-access-token",
+      userId: 13,
+    })
+    const oneTimeToken = buildToken({
+      id: 102,
+      key: "sk-aihubmix-one-time",
+    })
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
+      token: oneTimeToken,
+      created: true,
+      oneTimeSecret: true,
+    })
+    mockOpenWithAccount.mockRejectedValueOnce(
+      new Error("channel dialog failed"),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://aihubmix.com")
+      result.current.setters.setSiteName("AIHubMix")
+      result.current.setters.setUsername("aihubmix-user")
+      result.current.setters.setAccessToken("aihubmix-access-token")
+      result.current.setters.setUserId("13")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForOneTimeKeyAcknowledgement,
+    )
+
+    await expect(
+      act(async () => {
+        await result.current.handlers.handlePostSaveOneTimeTokenClose()
+      }),
+    ).resolves.toBeUndefined()
+
+    await waitFor(() => {
+      expect(result.current.state.postSaveOneTimeToken).toBeNull()
+      expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
+      )
+      expect(toast.error).toHaveBeenCalledWith(
+        "accountDialog:messages.newApiConfigFailed",
+      )
+    })
+  })
+
   it("waits for Sub2API group token creation before opening quick-config", async () => {
     const savedSiteAccount = buildSiteAccount({
       id: "saved-account-id",
@@ -1048,6 +1133,92 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
     )
+  })
+
+  it("marks the Sub2API paused workflow as failed when opening quick-config rejects after token creation", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "Sub2API",
+      site_url: "https://sub2.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.SUB2API,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: 14,
+        username: "sub-user",
+        access_token: "sub-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData = buildDisplayAccount({
+      name: "Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://sub2.example.com",
+      token: "sub-token",
+      userId: 14,
+    })
+    const createdToken = buildToken({
+      id: 103,
+      key: "sk-sub2-created",
+      group: "vip",
+    })
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
+      allowedGroups: ["default", "vip"],
+    })
+    mockOpenWithAccount.mockRejectedValueOnce(
+      new Error("channel dialog failed"),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteName("Sub2API")
+      result.current.setters.setUsername("sub-user")
+      result.current.setters.setAccessToken("sub-token")
+      result.current.setters.setUserId("14")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.WaitingForSub2ApiGroupSelection,
+    )
+
+    await expect(
+      act(async () => {
+        await result.current.handlers.handlePostSaveSub2ApiTokenCreated(
+          createdToken,
+        )
+      }),
+    ).resolves.toBeUndefined()
+
+    await waitFor(() => {
+      expect(result.current.state.postSaveSub2ApiAllowedGroups).toBeNull()
+      expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+        ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
+      )
+      expect(toast.error).toHaveBeenCalledWith(
+        "accountDialog:messages.newApiConfigFailed",
+      )
+    })
   })
 
   it("clears Sub2API post-save workflow state when the dialog closes during group selection", async () => {
