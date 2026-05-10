@@ -32,6 +32,8 @@ type SiteOverrideMap = typeof siteOverrideMap
 
 export type ApiOverrideSite = keyof SiteOverrideMap
 
+const strictOverrideSites = new Set<ApiOverrideSite>([SITE_TYPES.AIHUBMIX])
+
 const hasOwnOverrideSite = (value: unknown): value is ApiOverrideSite =>
   typeof value === "string" &&
   Object.prototype.hasOwnProperty.call(siteOverrideMap, value)
@@ -67,6 +69,12 @@ function getApiFunc<T extends keyof typeof commonAPI>(
         // 使用类型断言避免索引类型错误
         return (overrideModule as any)[funcName] as (typeof commonAPI)[T]
       }
+    }
+
+    if (currentSite && strictOverrideSites.has(currentSite)) {
+      throw new Error(
+        `apiService.${String(funcName)} is not implemented for ${currentSite}`,
+      )
     }
   }
   // eslint-disable-next-line import/namespace

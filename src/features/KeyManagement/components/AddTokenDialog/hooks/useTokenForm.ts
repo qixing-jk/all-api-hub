@@ -45,6 +45,10 @@ export interface FormData {
   group: string
 }
 
+interface ValidateFormOptions {
+  requireGroup?: boolean
+}
+
 const initialFormData: FormData = {
   accountId: "",
   name: "",
@@ -201,7 +205,8 @@ export function useTokenForm({
     hasRestrictedGroupSelection,
   ])
 
-  const validateForm = (): boolean => {
+  const validateForm = (options: ValidateFormOptions = {}): boolean => {
+    const requireGroup = options.requireGroup ?? true
     const newErrors: Record<string, string> = {}
     if (!formData.accountId) {
       newErrors.accountId = t("dialog.selectAccountError")
@@ -229,7 +234,7 @@ export function useTokenForm({
       !hasRestrictedGroupSelection ||
       allowedGroups.includes(normalizedSelectedGroup)
 
-    if (!normalizedSelectedGroup || !isRestrictedGroupValid) {
+    if (requireGroup && (!normalizedSelectedGroup || !isRestrictedGroupValid)) {
       newErrors.group = t("messages:sub2api.createRequiresGroupSelection")
     }
 

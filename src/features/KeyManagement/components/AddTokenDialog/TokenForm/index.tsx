@@ -14,6 +14,7 @@ interface TokenFormProps {
   groups: Record<string, UserGroupInfo>
   allowedGroups?: string[]
   availableModels: string[]
+  showGroupSelection: boolean
 }
 
 /**
@@ -29,6 +30,7 @@ export function TokenForm({
   groups,
   allowedGroups,
   availableModels,
+  showGroupSelection,
 }: TokenFormProps) {
   const handleInputChange =
     (field: keyof FormData) =>
@@ -67,6 +69,7 @@ export function TokenForm({
         groups={groups}
         allowedGroups={allowedGroups}
         availableModels={availableModels}
+        showGroupSelection={showGroupSelection}
         handleInputChange={handleInputChange}
         handleSelectChange={handleSelectChange}
         handleModelLimitsChange={handleModelLimitsChange}

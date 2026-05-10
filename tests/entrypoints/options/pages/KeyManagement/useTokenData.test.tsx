@@ -2,6 +2,7 @@ import { useState } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useTokenData } from "~/features/KeyManagement/components/AddTokenDialog/hooks/useTokenData"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { AuthTypeEnum } from "~/types"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
 
@@ -210,6 +211,31 @@ describe("useTokenData", () => {
     await waitFor(() => {
       expect(result.current.formData.group).toBe("beta")
     })
+  })
+
+  it("treats unsupported group capability as no group selection without showing an error", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValue(["gpt-4o-mini"])
+    fetchUserGroupsMock.mockRejectedValue(
+      new ApiError(
+        "groups_unsupported",
+        undefined,
+        undefined,
+        API_ERROR_CODES.FEATURE_UNSUPPORTED,
+      ),
+    )
+
+    const { result } = renderSubject({
+      isOpen: true,
+      currentAccount: ACCOUNT,
+      initialGroup: "default",
+    })
+
+    await waitFor(() => {
+      expect(result.current.availableModels).toEqual(["gpt-4o-mini"])
+    })
+
+    expect(result.current.groups).toEqual({})
+    expect(toastErrorMock).not.toHaveBeenCalled()
   })
 
   it("shows the localized fallback error when loading bootstrap data fails without a message", async () => {

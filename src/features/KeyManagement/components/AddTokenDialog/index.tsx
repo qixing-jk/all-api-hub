@@ -74,6 +74,9 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
     setFormData,
     !isEditMode ? props.createPrefill?.allowedGroups : undefined,
   )
+  const showGroupSelection =
+    Object.keys(groups).length > 0 ||
+    (!isEditMode && (props.createPrefill?.allowedGroups?.length ?? 0) > 0)
 
   const handleClose = () => {
     resetForm()
@@ -88,7 +91,9 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
   }
 
   const handleSubmit = async () => {
-    if (!currentAccount || !validateForm()) return
+    if (!currentAccount || !validateForm({ requireGroup: showGroupSelection })) {
+      return
+    }
 
     setIsSubmitting(true)
     try {
@@ -189,6 +194,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
                 !isEditMode ? props.createPrefill?.allowedGroups : undefined
               }
               availableModels={availableModels}
+              showGroupSelection={showGroupSelection}
             />
             {typeof props.prefillNotice === "string" &&
             props.prefillNotice.trim().length > 0 ? (

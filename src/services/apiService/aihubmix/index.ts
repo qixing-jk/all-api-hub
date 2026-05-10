@@ -18,6 +18,7 @@ import type {
   SiteStatusInfo,
   TodayIncomeData,
   TodayUsageData,
+  UserGroupInfo,
   UserInfo,
 } from "~/services/apiService/common/type"
 import { fetchApiData } from "~/services/apiService/common/utils"
@@ -58,6 +59,20 @@ type AIHubMixTokenRaw = Partial<ApiToken> & {
   token_id?: number | string
   value?: string
   ip_whitelist?: string
+  subnet?: string
+}
+
+// AIHubMix create-key docs define the management payload as:
+// name, expired_time, unlimited_quota, remain_quota, models, subnet.
+// They do not define One-API style group/model_limits/allow_ips fields.
+// Reference: https://docs.aihubmix.com/en/api/CliEndpoints/create-key
+type AIHubMixTokenPayload = {
+  name: string
+  expired_time: number
+  unlimited_quota: boolean
+  remain_quota: number
+  models: string
+  subnet: string
 }
 
 const toFiniteNumber = (value: unknown, fallback = 0): number => {
@@ -162,6 +177,21 @@ const normalizeToken = (
   defaultUserId?: number | string,
 ): ApiToken => {
   const key = token.full_key ?? token.key ?? token.token ?? token.value ?? ""
+  const modelLimits =
+    typeof token.model_limits === "string"
+      ? token.model_limits
+      : typeof token.models === "string"
+        ? token.models
+        : ""
+  const allowIps =
+    typeof token.allow_ips === "string"
+      ? token.allow_ips
+      : typeof token.ip_whitelist === "string"
+        ? token.ip_whitelist
+        : typeof token.subnet === "string"
+          ? token.subnet
+          : ""
+
   return normalizeApiTokenKey({
     id: toFiniteNumber(token.id ?? token.token_id),
     user_id: toFiniteNumber(token.user_id ?? defaultUserId),
@@ -174,21 +204,26 @@ const normalizeToken = (
     expired_time: toFiniteNumber(token.expired_time, -1),
     remain_quota: toFiniteNumber(token.remain_quota),
     unlimited_quota: Boolean(token.unlimited_quota),
-    model_limits_enabled: Boolean(token.model_limits_enabled),
-    model_limits:
-      typeof token.model_limits === "string" ? token.model_limits : "",
-    allow_ips:
-      typeof token.allow_ips === "string"
-        ? token.allow_ips
-        : typeof token.ip_whitelist === "string"
-          ? token.ip_whitelist
-          : "",
+    model_limits_enabled: Boolean(token.model_limits_enabled) || !!modelLimits,
+    model_limits: modelLimits,
+    allow_ips: allowIps,
     used_quota: toFiniteNumber(token.used_quota),
     group: typeof token.group === "string" ? token.group : undefined,
     DeletedAt: token.DeletedAt ?? null,
     models: typeof token.models === "string" ? token.models : undefined,
   })
 }
+
+const createAIHubMixTokenPayload = (
+  tokenData: CreateTokenRequest,
+): AIHubMixTokenPayload => ({
+  name: tokenData.name,
+  expired_time: tokenData.expired_time,
+  unlimited_quota: tokenData.unlimited_quota,
+  remain_quota: tokenData.unlimited_quota ? -1 : tokenData.remain_quota,
+  models: tokenData.model_limits_enabled ? tokenData.model_limits : "",
+  subnet: tokenData.allow_ips.trim(),
+})
 
 const extractTokenItems = (payload: unknown): AIHubMixTokenRaw[] => {
   if (Array.isArray(payload)) return payload as AIHubMixTokenRaw[]
@@ -470,6 +505,23 @@ export async function searchApiTokens(
 }
 
 /**
+ * AIHubMix key creation does not use One-API style groups. Surface this as an
+ * explicit unsupported capability so callers do not confuse it with an empty
+ * but otherwise supported group inventory. The create-key docs list no `group`
+ * request field: https://docs.aihubmix.com/en/api/CliEndpoints/create-key
+ */
+export async function fetchUserGroups(
+  _request: ApiServiceRequest,
+): Promise<Record<string, UserGroupInfo>> {
+  throw new ApiError(
+    "aihubmix_user_groups_unsupported",
+    undefined,
+    undefined,
+    API_ERROR_CODES.FEATURE_UNSUPPORTED,
+  )
+}
+
+/**
  * Fetch and normalize one AIHubMix API key by id.
  */
 export async function fetchTokenById(
@@ -512,12 +564,13 @@ export async function createApiToken(
   request: ApiServiceRequest,
   tokenData: CreateTokenRequest,
 ): Promise<CreateTokenResult> {
+  const payload = createAIHubMixTokenPayload(tokenData)
   const createdToken = await fetchAIHubMixData<AIHubMixTokenRaw>(
     request,
     "/api/token/",
     {
       method: "POST",
-      body: JSON.stringify(tokenData),
+      body: JSON.stringify(payload),
     },
   )
 
@@ -536,9 +589,10 @@ export async function updateApiToken(
   tokenId: number,
   tokenData: CreateTokenRequest,
 ): Promise<boolean> {
+  const payload = createAIHubMixTokenPayload(tokenData)
   await fetchAIHubMixData<unknown>(request, "/api/token/", {
     method: "PUT",
-    body: JSON.stringify({ ...tokenData, id: tokenId }),
+    body: JSON.stringify({ ...payload, id: tokenId }),
   })
   return true
 }

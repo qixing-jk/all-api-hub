@@ -204,4 +204,21 @@ describe("apiService index wrapper", () => {
     expect(aihubmixFetchAccountTokens).toHaveBeenCalledWith(request)
     expect(commonFetchAccountTokens).not.toHaveBeenCalled()
   })
+
+  it("should not silently fall back to common for missing AIHubMix overrides", async () => {
+    commonFetchModelPricing.mockResolvedValue({} as any)
+
+    const request = {
+      baseUrl: "https://aihubmix.com",
+      auth: { authType: "access_token", userId: 1, accessToken: "token" },
+    }
+
+    expect(() =>
+      (getApiService(SITE_TYPES.AIHUBMIX).fetchModelPricing as any)(request),
+    ).toThrow(
+      `apiService.fetchModelPricing is not implemented for ${SITE_TYPES.AIHUBMIX}`,
+    )
+
+    expect(commonFetchModelPricing).not.toHaveBeenCalled()
+  })
 })

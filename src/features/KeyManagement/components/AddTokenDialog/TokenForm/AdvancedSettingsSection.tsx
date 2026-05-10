@@ -16,6 +16,7 @@ interface AdvancedSettingsSectionProps {
   groups: Record<string, UserGroupInfo>
   allowedGroups?: string[]
   availableModels: string[]
+  showGroupSelection: boolean
   handleInputChange: (
     field: keyof FormData,
   ) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
@@ -32,6 +33,7 @@ interface AdvancedSettingsSectionProps {
  * @param props.groups Available user groups keyed by identifier.
  * @param props.allowedGroups Optional allow-list restricting selectable groups.
  * @param props.availableModels List of model IDs that can be targeted.
+ * @param props.showGroupSelection Whether group selection is supported.
  * @param props.handleInputChange Factory for text input change handlers.
  * @param props.handleSelectChange Factory for select change handlers.
  * @param props.handleModelLimitsChange Emits updated model whitelist.
@@ -44,6 +46,7 @@ export function AdvancedSettingsSection({
   groups,
   allowedGroups,
   availableModels,
+  showGroupSelection,
   handleInputChange,
   handleSelectChange,
   handleModelLimitsChange,
@@ -52,13 +55,15 @@ export function AdvancedSettingsSection({
 
   return (
     <FormSection title={t("dialog.advancedSettings")}>
-      <GroupSelection
-        group={formData.group}
-        handleSelectChange={handleSelectChange("group")}
-        groups={groups}
-        allowedGroups={allowedGroups}
-        error={errors.group}
-      />
+      {showGroupSelection ? (
+        <GroupSelection
+          group={formData.group}
+          handleSelectChange={handleSelectChange("group")}
+          groups={groups}
+          allowedGroups={allowedGroups}
+          error={errors.group}
+        />
+      ) : null}
       {isNotEmptyArray(availableModels) && (
         <ModelLimits
           modelLimitsEnabled={formData.modelLimitsEnabled}

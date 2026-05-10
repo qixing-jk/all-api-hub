@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Z_INDEX } from "~/components/ui"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { AuthTypeEnum } from "~/types"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
@@ -237,6 +238,49 @@ describe("AddTokenDialog prefill", () => {
 
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledWith("sk-created-full-secret")
+    })
+  })
+
+  it("creates tokens without rendering or requiring group selection when the site has no groups", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce(["gpt-4"])
+    fetchUserGroupsMock.mockRejectedValueOnce(
+      new ApiError(
+        "aihubmix_user_groups_unsupported",
+        undefined,
+        undefined,
+        API_ERROR_CODES.FEATURE_UNSUPPORTED,
+      ),
+    )
+    createApiTokenMock.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={() => {}}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+        createPrefill={{ modelId: "gpt-4", defaultName: "group-less token" }}
+      />,
+    )
+
+    await screen.findByLabelText(/keyManagement:dialog\.tokenName/)
+
+    expect(screen.queryByText("keyManagement:dialog.groupLabel")).toBeNull()
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(createApiTokenMock).toHaveBeenCalledTimes(1)
+    })
+
+    expect(createApiTokenMock.mock.calls[0]?.[1]).toMatchObject({
+      name: "group-less token",
+      model_limits_enabled: true,
+      model_limits: "gpt-4",
     })
   })
 

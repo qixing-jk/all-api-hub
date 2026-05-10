@@ -3,6 +3,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
+import { API_ERROR_CODES } from "~/services/apiService/common/errors"
 import type { UserGroupInfo } from "~/services/apiService/common/type"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
@@ -14,6 +15,14 @@ import type { FormData } from "./useTokenForm"
  * Unified logger scoped to Key Management token dialog bootstrap data loading.
  */
 const logger = createLogger("TokenDataHook")
+
+const EMPTY_USER_GROUPS: Record<string, UserGroupInfo> = {}
+
+const isFeatureUnsupportedError = (error: unknown): boolean =>
+  !!error &&
+  typeof error === "object" &&
+  "code" in error &&
+  (error as { code?: unknown }).code === API_ERROR_CODES.FEATURE_UNSUPPORTED
 
 /**
  * Loads available models and user groups for the selected account when dialog opens.
@@ -43,7 +52,13 @@ export function useTokenData(
 
       const [models, groupsData] = await Promise.all([
         service.fetchAccountAvailableModels(request),
-        service.fetchUserGroups(request),
+        service.fetchUserGroups(request).catch((error) => {
+          if (isFeatureUnsupportedError(error)) {
+            return EMPTY_USER_GROUPS
+          }
+
+          throw error
+        }),
       ])
 
       setAvailableModels(models)

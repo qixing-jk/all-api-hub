@@ -8,6 +8,7 @@ import {
   fetchAccountData,
   fetchAccountTokens,
   fetchTokenById,
+  fetchUserGroups,
   fetchUserInfo,
   getOrCreateAccessToken,
   resolveApiTokenKey,
@@ -486,6 +487,26 @@ describe("apiService AIHubMix", () => {
     })
   })
 
+  it("explicitly marks user groups unsupported without calling common group endpoints", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/user/self/groups", () =>
+        HttpResponse.json(
+          {
+            success: false,
+            message: "AIHubMix has no group endpoint",
+            data: null,
+          },
+          { status: 500 },
+        ),
+      ),
+    )
+
+    await expect(fetchUserGroups(baseRequest)).rejects.toMatchObject({
+      code: API_ERROR_CODES.FEATURE_UNSUPPORTED,
+      message: "aihubmix_user_groups_unsupported",
+    })
+  })
+
   it("maps token detail, create, update, and delete to documented endpoints", async () => {
     const calls: Array<{ method: string; pathname: string; body?: any }> = []
 
@@ -575,14 +596,90 @@ describe("apiService AIHubMix", () => {
 
     expect(calls).toEqual([
       { method: "GET", pathname: "/api/token/12" },
-      { method: "POST", pathname: "/api/token/", body: tokenRequest },
+      {
+        method: "POST",
+        pathname: "/api/token/",
+        body: {
+          name: tokenRequest.name,
+          expired_time: tokenRequest.expired_time,
+          unlimited_quota: tokenRequest.unlimited_quota,
+          remain_quota: tokenRequest.remain_quota,
+          models: "",
+          subnet: "",
+        },
+      },
       {
         method: "PUT",
         pathname: "/api/token/",
-        body: { ...tokenRequest, id: 12 },
+        body: {
+          id: 12,
+          name: tokenRequest.name,
+          expired_time: tokenRequest.expired_time,
+          unlimited_quota: tokenRequest.unlimited_quota,
+          remain_quota: tokenRequest.remain_quota,
+          models: "",
+          subnet: "",
+        },
       },
       { method: "DELETE", pathname: "/api/token/12" },
     ])
+  })
+
+  it("maps common form model and IP fields to AIHubMix create-key fields", async () => {
+    let createPayload: unknown = null
+    server.use(
+      http.post("https://aihubmix.com/api/token/", async ({ request }) => {
+        createPayload = await request.json()
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            id: 20,
+            user_id: 7,
+            key: "sk-created",
+            name: "model-limited",
+            status: 1,
+            created_time: 1,
+            accessed_time: 1,
+            expired_time: -1,
+            remain_quota: -1,
+            unlimited_quota: true,
+            used_quota: 0,
+            models: "gpt-4o,claude-3-5-sonnet",
+            subnet: "127.0.0.1",
+          },
+        })
+      }),
+    )
+
+    await expect(
+      createApiToken(baseRequest, {
+        ...tokenRequest,
+        name: "model-limited",
+        remain_quota: 123,
+        unlimited_quota: true,
+        model_limits_enabled: true,
+        model_limits: "gpt-4o,claude-3-5-sonnet",
+        allow_ips: "127.0.0.1",
+        group: "ignored-group",
+      }),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        id: 20,
+        model_limits: "gpt-4o,claude-3-5-sonnet",
+        model_limits_enabled: true,
+        allow_ips: "127.0.0.1",
+      }),
+    )
+
+    expect(createPayload).toEqual({
+      name: "model-limited",
+      expired_time: -1,
+      unlimited_quota: true,
+      remain_quota: -1,
+      models: "gpt-4o,claude-3-5-sonnet",
+      subnet: "127.0.0.1",
+    })
   })
 
   it("does not try to reveal masked keys through unsupported detail endpoints", async () => {
