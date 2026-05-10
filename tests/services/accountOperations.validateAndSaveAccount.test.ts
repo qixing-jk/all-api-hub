@@ -431,4 +431,43 @@ describe("accountOperations validateAndSaveAccount", () => {
     })
     expect(fetchAccountDataMock).not.toHaveBeenCalled()
   })
+
+  it("skips background auto-provisioning when requested by a foreground workflow", async () => {
+    vi.spyOn(userPreferences, "getPreferences").mockResolvedValueOnce({
+      ...DEFAULT_PREFERENCES,
+      autoProvisionKeyOnAccountAdd: true,
+      showTodayCashflow: false,
+    })
+    fetchAccountDataMock.mockResolvedValueOnce({
+      quota: 12,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
+      today_requests_count: 0,
+      today_income: 0,
+      checkIn: CHECK_IN_DISABLED,
+    })
+
+    const result = await validateAndSaveAccount(
+      "https://api.example.com",
+      "Example",
+      "user",
+      "token",
+      "1",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.NEW_API,
+      AuthTypeEnum.AccessToken,
+      "",
+      undefined,
+      false,
+      undefined,
+      { skipAutoProvisionKeyOnAccountAdd: true },
+    )
+
+    expect(result.success).toBe(true)
+    expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
+  })
 })

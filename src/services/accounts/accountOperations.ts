@@ -369,6 +369,10 @@ export function isValidAccount({
 
 type TagIdsInput = string[] | undefined
 
+export interface ValidateAndSaveAccountOptions {
+  skipAutoProvisionKeyOnAccountAdd?: boolean
+}
+
 /**
  * Normalizes a tag id list originating from UI widgets into a de-duped string
  * array, trimming whitespace and discarding empty values.
@@ -534,6 +538,7 @@ export async function validateAndSaveAccount(
   manualBalanceUsd?: string,
   excludeFromTotalBalance = false,
   sub2apiAuth?: Sub2ApiAuthConfig,
+  options: ValidateAndSaveAccountOptions = {},
 ): Promise<AccountSaveResponse> {
   const sessionCookieHeader =
     authType === AuthTypeEnum.Cookie
@@ -670,10 +675,12 @@ export async function validateAndSaveAccount(
       siteType: normalizedSiteType,
     })
 
-    void autoProvisionKeyOnAccountAdd(
-      accountId,
-      shouldAutoProvisionKeyOnAccountAdd,
-    )
+    if (!options.skipAutoProvisionKeyOnAccountAdd) {
+      void autoProvisionKeyOnAccountAdd(
+        accountId,
+        shouldAutoProvisionKeyOnAccountAdd,
+      )
+    }
 
     return {
       success: true,
@@ -735,10 +742,12 @@ export async function validateAndSaveAccount(
         siteType,
       })
 
-      void autoProvisionKeyOnAccountAdd(
-        accountId,
-        shouldAutoProvisionKeyOnAccountAdd,
-      )
+      if (!options.skipAutoProvisionKeyOnAccountAdd) {
+        void autoProvisionKeyOnAccountAdd(
+          accountId,
+          shouldAutoProvisionKeyOnAccountAdd,
+        )
+      }
 
       return {
         success: true,
