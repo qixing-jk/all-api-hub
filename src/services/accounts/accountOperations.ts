@@ -53,7 +53,10 @@ const logger = createLogger("AccountOperations")
 export const MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS = 20000
 
 const isCreatedApiToken = (value: unknown): value is ApiToken =>
-  !!value && typeof value === "object" && "id" in value && "key" in value
+  !!value &&
+  typeof value === "object" &&
+  typeof (value as Partial<ApiToken>).id === "number" &&
+  typeof (value as Partial<ApiToken>).key === "string"
 
 /**
  * Create a localized timeout error for manual account data fetching.

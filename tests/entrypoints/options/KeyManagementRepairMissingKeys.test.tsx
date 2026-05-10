@@ -313,6 +313,37 @@ const sub2apiSkippedProgress: AccountKeyRepairProgress = {
   ],
 }
 
+const aihubmixSkippedProgress: AccountKeyRepairProgress = {
+  jobId: "job-5",
+  state: "completed",
+  startedAt: 1,
+  updatedAt: 1,
+  finishedAt: 1,
+  totals: {
+    enabledAccounts: 2,
+    eligibleAccounts: 1,
+    processedAccounts: 1,
+    processedEligibleAccounts: 1,
+  },
+  summary: {
+    created: 0,
+    alreadyHad: 0,
+    skipped: 1,
+    failed: 0,
+  },
+  results: [
+    {
+      accountId: "account-aihubmix",
+      accountName: "AIHubMix",
+      siteType: "AIHubMix",
+      siteUrlOrigin: "https://aihubmix.com",
+      outcome: "skipped",
+      skipReason: "aihubmixOneTimeKey",
+      finishedAt: 1,
+    },
+  ],
+}
+
 describe("KeyManagement repair missing keys entry point", () => {
   beforeEach(() => {
     mockOpenSub2ApiTokenCreationDialog.mockReset()
@@ -527,5 +558,38 @@ describe("KeyManagement repair missing keys entry point", () => {
         }),
       )
     })
+  })
+
+  it("shows the AIHubMix one-time-key skip reason without a direct create action", async () => {
+    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+      if (message?.action === RuntimeActionIds.AccountKeyRepairGetProgress) {
+        return { success: true, data: idleProgress }
+      }
+      if (message?.action === RuntimeActionIds.AccountKeyRepairStart) {
+        return { success: true, data: aihubmixSkippedProgress }
+      }
+      return { success: false }
+    })
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+
+    expect(await screen.findAllByText("AIHubMix")).toHaveLength(2)
+    expect(
+      screen.getByText(
+        "keyManagement:repairMissingKeys.skipReasons.aihubmixOneTimeKey",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", {
+        name: "keyManagement:dialog.createToken",
+      }),
+    ).not.toBeInTheDocument()
+    expect(mockOpenSub2ApiTokenCreationDialog).not.toHaveBeenCalled()
   })
 })

@@ -26,7 +26,10 @@ import { WarningNote } from "./WarningNote"
 const logger = createLogger("AddTokenDialog")
 
 const isCreatedApiToken = (value: unknown): value is ApiToken =>
-  !!value && typeof value === "object" && "id" in value && "key" in value
+  !!value &&
+  typeof value === "object" &&
+  typeof (value as Partial<ApiToken>).id === "number" &&
+  typeof (value as Partial<ApiToken>).key === "string"
 
 interface AddTokenDialogProps {
   isOpen: boolean
@@ -91,7 +94,10 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
   }
 
   const handleSubmit = async () => {
-    if (!currentAccount || !validateForm({ requireGroup: showGroupSelection })) {
+    if (
+      !currentAccount ||
+      !validateForm({ requireGroup: showGroupSelection })
+    ) {
       return
     }
 

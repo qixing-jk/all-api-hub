@@ -8,14 +8,23 @@ import {
   extractDefaultExchangeRate,
   fetchAccountAvailableModels,
   fetchAccountData,
+  fetchAccountQuota,
   fetchAccountTokens,
+  fetchAllModels,
+  fetchCheckInStatus,
+  fetchSiteStatus,
+  fetchSupportCheckIn,
+  fetchTodayIncome,
+  fetchTodayUsage,
   fetchTokenById,
   fetchUserGroups,
   fetchUserInfo,
   getOrCreateAccessToken,
+  refreshAccountData,
   resolveApiTokenKey,
   searchApiTokens,
   updateApiToken,
+  validateAccountConnection,
 } from "~/services/apiService/aihubmix"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
@@ -29,6 +38,11 @@ const baseRequest = {
     userId: 7,
     accessToken: "system-access-token",
   },
+}
+
+const baseAccountRequest = {
+  ...baseRequest,
+  checkIn: { enableDetection: false },
 }
 
 const tokenRequest: CreateTokenRequest = {
@@ -57,6 +71,24 @@ describe("apiService AIHubMix", () => {
         checkin_enabled: false,
       }),
     ).toBe(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT)
+  })
+
+  it("returns static metadata and no built-in daily/check-in metrics", async () => {
+    await expect(fetchSiteStatus(baseRequest)).resolves.toEqual({
+      system_name: "AIHubMix",
+      checkin_enabled: false,
+    })
+    await expect(fetchSupportCheckIn(baseRequest)).resolves.toBe(false)
+    await expect(fetchCheckInStatus(baseRequest)).resolves.toBeUndefined()
+    await expect(fetchTodayUsage(baseRequest)).resolves.toEqual({
+      today_quota_consumption: 0,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_requests_count: 0,
+    })
+    await expect(fetchTodayIncome(baseRequest)).resolves.toEqual({
+      today_income: 0,
+    })
   })
 
   it("fetches cookie-authenticated user info from /call/usr/self", async () => {
@@ -388,6 +420,27 @@ describe("apiService AIHubMix", () => {
     ])
   })
 
+  it("rejects saved-token calls without an access token before network requests", async () => {
+    let tokenEndpointCalled = false
+    server.use(
+      http.get("https://aihubmix.com/api/token/", () => {
+        tokenEndpointCalled = true
+        return HttpResponse.json({ success: true, message: "", data: [] })
+      }),
+    )
+
+    await expect(
+      fetchAccountTokens({
+        ...baseRequest,
+        auth: { ...baseRequest.auth, accessToken: "   " },
+      }),
+    ).rejects.toMatchObject({
+      statusCode: 401,
+      code: API_ERROR_CODES.HTTP_401,
+    })
+    expect(tokenEndpointCalled).toBe(false)
+  })
+
   it("sends saved-token management calls to the main API origin for console.aihubmix.com", async () => {
     let mainOriginTokenListCalled = false
     server.use(
@@ -499,6 +552,81 @@ describe("apiService AIHubMix", () => {
         enableDetection: false,
       },
     })
+  })
+
+  it("fetches raw account quota and validates connection health", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/user/self", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            id: 7,
+            username: "aihubmix-user",
+            quota: "900000",
+          },
+        }),
+      ),
+    )
+
+    await expect(fetchAccountQuota(baseRequest)).resolves.toBe(900000)
+    await expect(validateAccountConnection(baseRequest)).resolves.toBe(true)
+  })
+
+  it("maps refresh and connection failures to shared health/failure shapes", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/user/self", () =>
+        HttpResponse.json(
+          {
+            success: false,
+            message: "bad access token",
+            data: null,
+          },
+          { status: 401 },
+        ),
+      ),
+    )
+
+    await expect(refreshAccountData(baseAccountRequest)).resolves.toMatchObject(
+      {
+        success: false,
+        healthStatus: {
+          message: "account:healthStatus.httpError",
+        },
+      },
+    )
+    await expect(validateAccountConnection(baseRequest)).resolves.toBe(false)
+  })
+
+  it("reports healthy refresh data when the account read succeeds", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/user/self", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            id: 7,
+            username: "aihubmix-user",
+            quota: 500000,
+            used_quota: 1000,
+          },
+        }),
+      ),
+    )
+
+    await expect(refreshAccountData(baseAccountRequest)).resolves.toMatchObject(
+      {
+        success: true,
+        data: {
+          quota: 500000,
+          today_quota_consumption: 1000,
+        },
+        healthStatus: {
+          status: "healthy",
+          message: "account:healthStatus.normal",
+        },
+      },
+    )
   })
 
   it("explicitly marks user groups unsupported without calling common group endpoints", async () => {
@@ -793,6 +921,46 @@ describe("apiService AIHubMix", () => {
     ])
   })
 
+  it("normalizes catalog model response variants and removes duplicates", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/models", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            OpenAI: [
+              { id: "gpt-4o" },
+              { name: "gpt-4o-mini" },
+              { model: "gpt-4o" },
+              { id: 123 },
+            ],
+            Misc: ["claude-3-5-sonnet"],
+          },
+        }),
+      ),
+    )
+
+    await expect(fetchAllModels(baseRequest)).resolves.toEqual([
+      "gpt-4o",
+      "gpt-4o-mini",
+      "claude-3-5-sonnet",
+    ])
+  })
+
+  it("returns an empty model list for unrecognized model payloads", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/models", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: null,
+        }),
+      ),
+    )
+
+    await expect(fetchAllModels(baseRequest)).resolves.toEqual([])
+  })
+
   it("fetches available models from the main API origin for console.aihubmix.com", async () => {
     let mainOriginModelsCalled = false
     server.use(
@@ -868,5 +1036,38 @@ describe("apiService AIHubMix", () => {
     await expect(fetchAccountTokens(baseRequest)).rejects.toBeInstanceOf(
       ApiError,
     )
+  })
+
+  it("throws a business ApiError when the API returns success false", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/token/", () =>
+        HttpResponse.json({
+          success: false,
+          message: "business failed",
+          data: null,
+        }),
+      ),
+    )
+
+    await expect(fetchAccountTokens(baseRequest)).rejects.toMatchObject({
+      code: API_ERROR_CODES.BUSINESS_ERROR,
+      message: "business failed",
+    })
+  })
+
+  it("falls back to invalid response copy for business errors without a message", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/token/", () =>
+        HttpResponse.json({
+          success: false,
+          data: null,
+        }),
+      ),
+    )
+
+    await expect(fetchAccountTokens(baseRequest)).rejects.toMatchObject({
+      code: API_ERROR_CODES.BUSINESS_ERROR,
+      message: "messages:errors.api.invalidResponseFormat",
+    })
   })
 })

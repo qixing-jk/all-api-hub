@@ -21,7 +21,10 @@ import { createLogger } from "~/utils/core/logger"
 const logger = createLogger("ModelKeyDialogHook")
 
 const isCreatedApiToken = (value: unknown): value is ApiToken =>
-  !!value && typeof value === "object" && "id" in value && "key" in value
+  !!value &&
+  typeof value === "object" &&
+  typeof (value as Partial<ApiToken>).id === "number" &&
+  typeof (value as Partial<ApiToken>).key === "string"
 
 /**
  * Input params for `useModelKeyDialog`.

@@ -242,6 +242,108 @@ describe("AddTokenDialog prefill", () => {
     })
   })
 
+  it("keeps the one-time key dialog open and shows a fallback when clipboard copy fails", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    createApiTokenMock.mockResolvedValueOnce({
+      id: 7,
+      user_id: 1,
+      key: "sk-created-full-secret",
+      status: 1,
+      name: "My Key",
+      created_time: 1,
+      accessed_time: 1,
+      expired_time: -1,
+      remain_quota: -1,
+      unlimited_quota: true,
+      used_quota: 0,
+    })
+
+    const user = userEvent.setup()
+    vi.spyOn(navigator.clipboard, "writeText").mockRejectedValue(
+      new Error("clipboard denied"),
+    )
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={() => {}}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+      />,
+    )
+
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "My Key",
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    expect(
+      await screen.findByText("keyManagement:oneTimeKey.title"),
+    ).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith("clipboard denied")
+    })
+
+    expect(
+      screen.getByLabelText("keyManagement:oneTimeKey.keyLabel"),
+    ).toHaveValue("sk-created-full-secret")
+  })
+
+  it("does not treat token-shaped create results with invalid secrets as one-time keys", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    createApiTokenMock.mockResolvedValueOnce({
+      id: 7,
+      key: null,
+      name: "invalid secret",
+    })
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={onClose}
+        onSuccess={onSuccess}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+      />,
+    )
+
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "Invalid secret",
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "keyManagement:dialog.createSuccess",
+      )
+      expect(onSuccess).toHaveBeenCalledWith(undefined)
+      expect(onClose).toHaveBeenCalled()
+    })
+
+    expect(
+      screen.queryByText("keyManagement:oneTimeKey.title"),
+    ).not.toBeInTheDocument()
+  })
+
   it("creates tokens without rendering or requiring group selection when the site has no groups", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValueOnce(["gpt-4"])
     fetchUserGroupsMock.mockRejectedValueOnce(

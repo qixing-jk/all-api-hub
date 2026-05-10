@@ -252,6 +252,52 @@ describe("ModelKeyDialog", () => {
     })
   })
 
+  it("refreshes tokens when default create returns a token-shaped object with an invalid secret", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      {
+        ...TOKEN,
+        id: 11,
+        key: "sk-refreshed-compatible",
+        name: "refreshed",
+      },
+    ])
+    createApiTokenMock.mockResolvedValueOnce({
+      ...TOKEN,
+      id: 8,
+      key: null,
+      name: "invalid-created-token",
+    })
+
+    const user = userEvent.setup()
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={ACCOUNT}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "modelList:keyDialog.createKey",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
+    })
+
+    expect(
+      screen.queryByText("keyManagement:oneTimeKey.title"),
+    ).not.toBeInTheDocument()
+    expect(
+      await screen.findByRole("button", { name: "common:actions.copyKey" }),
+    ).toBeInTheDocument()
+  })
+
   it("treats group mismatch as incompatible and shows empty state", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([{ ...TOKEN, group: "vip" }])
 

@@ -146,6 +146,40 @@ describe("CopyKeyDialog", () => {
     })
   })
 
+  it("refreshes instead of showing a one-time key when create returns a token-shaped object with an invalid secret", async () => {
+    fetchAccountTokensMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([TOKEN])
+    createApiTokenMock.mockResolvedValueOnce({
+      ...TOKEN,
+      id: 9,
+      key: null,
+      name: "invalid-created-token",
+    })
+
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.createKey",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
+      expect(writeText).toHaveBeenCalledWith("sk-test")
+    })
+
+    expect(
+      screen.queryByText("keyManagement:oneTimeKey.title"),
+    ).not.toBeInTheDocument()
+  })
+
   it("keeps the dialog actionable when create fails (retry works)", async () => {
     fetchAccountTokensMock
       .mockResolvedValueOnce([])
