@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import ActionButtons from "~/features/AccountManagement/components/AccountDialog/ActionButtons"
+import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
 import { render, screen } from "~~/tests/test-utils/render"
 
 describe("AccountDialog ActionButtons", () => {
@@ -20,6 +21,7 @@ describe("AccountDialog ActionButtons", () => {
     onClose: vi.fn(),
     onAutoConfig: vi.fn().mockResolvedValue(undefined),
     isAutoConfiguring: false,
+    accountPostSaveWorkflowStep: ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
     formId: "account-form",
   })
 
