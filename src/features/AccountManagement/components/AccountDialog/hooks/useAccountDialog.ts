@@ -472,6 +472,13 @@ export function useAccountDialog({
   const { openWithAccount: openChannelDialog, openSub2ApiTokenCreationDialog } =
     useChannelDialog()
 
+  const clearPostSaveWorkflowState = useCallback(() => {
+    setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
+    setPostSaveOneTimeToken(null)
+    setPostSaveSub2ApiAllowedGroups(null)
+    pendingPostSaveChannelRef.current = null
+  }, [])
+
   const resetForm = useCallback(() => {
     newAccountRef.current = null
     duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
@@ -488,12 +495,9 @@ export function useAccountDialog({
     setIsImportingCookies(false)
     setShowCookiePermissionWarning(false)
     setIsImportingSub2apiSession(false)
-    setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
-    setPostSaveOneTimeToken(null)
-    setPostSaveSub2ApiAllowedGroups(null)
-    pendingPostSaveChannelRef.current = null
+    clearPostSaveWorkflowState()
     targetAccountRef.current = null
-  }, [mode])
+  }, [clearPostSaveWorkflowState, mode])
 
   const loadAccountData = useCallback(
     async (accountId: string) => {
@@ -709,6 +713,7 @@ export function useAccountDialog({
   const handleClose = useCallback(() => {
     handleDuplicateAccountWarningCancel()
     cancelPendingDuplicateAccountWarning()
+    clearPostSaveWorkflowState()
     setManagedSiteConfigPrompt((prev) =>
       prev.isOpen ? { ...prev, isOpen: false } : prev,
     )
@@ -716,6 +721,7 @@ export function useAccountDialog({
     onClose()
   }, [
     cancelPendingDuplicateAccountWarning,
+    clearPostSaveWorkflowState,
     handleDuplicateAccountWarningCancel,
     onClose,
   ])
