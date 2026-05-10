@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS,
   validateAndSaveAccount,
+  validateAndUpdateAccount,
 } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
@@ -163,6 +164,70 @@ describe("accountOperations validateAndSaveAccount", () => {
     expect(result.success).toBe(true)
 
     const saved = await accountStorage.getAccountById(result.accountId!)
+    expect(saved?.site_url).toBe("https://console.aihubmix.com")
+    expect(fetchAccountDataMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://aihubmix.com/statistics?tab=detail",
+      }),
+    )
+  })
+
+  it("updates AIHubMix accounts with the canonical console origin", async () => {
+    const accountId = await accountStorage.addAccount({
+      site_name: "AIHubMix",
+      site_url: "https://aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      account_info: {
+        id: 11,
+        access_token: "old-access-token",
+        username: "aihubmix-user",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+      last_sync_time: 0,
+      notes: "",
+      tagIds: [],
+      disabled: false,
+      excludeFromTotalBalance: false,
+      authType: AuthTypeEnum.AccessToken,
+      checkIn: CHECK_IN_DISABLED,
+    })
+
+    fetchAccountDataMock.mockResolvedValueOnce({
+      quota: 100,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
+      today_requests_count: 0,
+      today_income: 0,
+      checkIn: CHECK_IN_DISABLED,
+    })
+
+    const result = await validateAndUpdateAccount(
+      accountId,
+      "https://aihubmix.com/statistics?tab=detail",
+      "AIHubMix",
+      "aihubmix-user",
+      "access-token",
+      "11",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.AIHUBMIX,
+      AuthTypeEnum.AccessToken,
+      "",
+    )
+
+    expect(result.success).toBe(true)
+
+    const saved = await accountStorage.getAccountById(accountId)
     expect(saved?.site_url).toBe("https://console.aihubmix.com")
     expect(fetchAccountDataMock).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -1,15 +1,12 @@
 import {
+  AIHUBMIX_HOSTNAMES,
   AIHUBMIX_WEB_ORIGIN,
   SITE_TYPES,
   type AccountSiteType,
 } from "~/constants/siteType"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
-const AIHUBMIX_HOSTNAMES = new Set([
-  "aihubmix.com",
-  "www.aihubmix.com",
-  "console.aihubmix.com",
-])
+const AIHUBMIX_HOSTNAME_SET: ReadonlySet<string> = new Set(AIHUBMIX_HOSTNAMES)
 
 const parseHttpUrl = (value: string): URL | null => {
   const trimmed = value.trim()
@@ -34,7 +31,9 @@ const parseHttpUrl = (value: string): URL | null => {
  */
 export function isAIHubMixSiteUrl(value: string): boolean {
   const parsed = parseHttpUrl(value)
-  return parsed ? AIHUBMIX_HOSTNAMES.has(parsed.hostname.toLowerCase()) : false
+  return parsed
+    ? AIHUBMIX_HOSTNAME_SET.has(parsed.hostname.toLowerCase())
+    : false
 }
 
 /**

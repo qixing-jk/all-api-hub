@@ -44,6 +44,7 @@ describe("siteType constants", () => {
       usagePath: "/statistics",
       checkInPath: "/",
       redeemPath: "/topup",
+      adminCredentialsPath: "/",
       siteAnnouncementsPath: "/",
     })
   })
