@@ -16,7 +16,7 @@
 | AnyRouter | Claude Code プロキシ · ゼロしきい値 · 無料 $50 | [ドキュメント](https://docs.anyrouter.top/) / [公式サイト](https://anyrouter.top) |
 | WONG公益站 | 安定した公開された公式説明はありません。 | 安定した公開された公式リンクはありません |
 | Sub2API | Sub2API-CRS2 ワンストップオープンソースプロキシサービス。Claude、Openai、Gemini、Antigravity のサブスクリプションを統一的にアクセス可能にし、グループ共有をサポートし、コストをより効率的に分担し、ネイティブツールをシームレスに使用できます。 | [GitHub](https://github.com/Wei-Shaw/sub2api) |
-| AIHubMix | 独立した AI API 集約サイト。プラグインは独立したアカウントタイプで、残高、キー、モデルインターフェースに対応します。 | [公式サイト](https://aihubmix.com/) / [API ドキュメント](https://docs.aihubmix.com/cn/api/Cli) |
+| AIHubMix | 独立した AI API 集約サイト。拡張機能では専用のアカウント種別として、残高、キー、モデル API に対応します。 | [公式サイト](https://aihubmix.com/) / [API ドキュメント](https://docs.aihubmix.com/jp/api/Cli) |
 | VoAPI | 次世代のハイビジュアル、ハイパフォーマンス、ハイ拡張性のインテリジェント AI 大規模モデル API 集約配布システム。 | [GitHub](https://github.com/VoAPI/VoAPI) |
 | Super-API | Super-Api 新しい AI モデルインターフェース管理および配布システム。個人学習目的のみに使用し、商業目的には絶対に使用しないでください。このプロジェクトは NewAPI をベースに開発されています。 | [公式サイト](https://api.cngov.top/) / [GitHub](https://github.com/SuperAI-Api/Super-API) |
 
@@ -47,4 +47,4 @@
 - [サポートされているエクスポートツールのリスト](./supported-export-tools.md)
 - [サイト構成のエクスポートを迅速に行う](./quick-export.md)
 - [セルフホスト型サイト管理](./self-hosted-site-management.md)
-- [セルフホスト型サイト管理](./managed-site-model-sync.md)
+- [セルフホスト型サイトモデル同期](./managed-site-model-sync.md)

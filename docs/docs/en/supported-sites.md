@@ -16,7 +16,7 @@ The following are the most common and suitable types of sites for unified manage
 | AnyRouter | Claude Code intermediate station · Zero threshold · Free $50 | [Documentation](https://docs.anyrouter.top/) / [Official Website](https://anyrouter.top) |
 | WONG Public Welfare Site | No stable public official description available. | No stable public official link available |
 | Sub2API | Sub2API-CRS2 one-stop open-source intermediate service, allowing unified access to Claude, Openai, Gemini, Antigravity subscriptions, supporting carpooling and sharing, more efficient cost sharing, and seamless use of native tools. | [GitHub](https://github.com/Wei-Shaw/sub2api) |
-| AIHubMix | Independent AI API aggregation site, the plugin adapts to balance, key, and model interfaces with independent account types. | [Official Website](https://aihubmix.com/) / [API Documentation](https://docs.aihubmix.com/cn/api/Cli) |
+| AIHubMix | Independent AI API aggregation site. The extension supports its balance, key, and model APIs through a dedicated account type. | [Official Website](https://aihubmix.com/) / [API Documentation](https://docs.aihubmix.com/en/api/Cli) |
 | VoAPI | Brand new next-generation, high-value, high-performance, and highly extensible intelligent AI large model API aggregation and distribution system. | [GitHub](https://github.com/VoAPI/VoAPI) |
 | Super-API | Super-Api brand new AI model interface management and distribution system, for personal learning use only, please do not use for any commercial purposes. This project is based on NewAPI. | [Official Website](https://api.cngov.top/) / [GitHub](https://github.com/SuperAI-Api/Super-API) |
 
@@ -47,4 +47,4 @@ If you are also building your own backend system, All API Hub supports importing
 - [Supported Export Tools List](./supported-export-tools.md)
 - [Quick Export Site Configuration](./quick-export.md)
 - [Self-Hosted Site Management](./self-hosted-site-management.md)
-- [Self-Hosted Site Management](./managed-site-model-sync.md)
+- [Managed Site Model Sync](./managed-site-model-sync.md)
