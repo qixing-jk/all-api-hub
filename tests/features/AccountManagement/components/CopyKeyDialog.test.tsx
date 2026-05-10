@@ -146,6 +146,38 @@ describe("CopyKeyDialog", () => {
     })
   })
 
+  it("shows the created one-time token without refetching inventory", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    createApiTokenMock.mockResolvedValueOnce({
+      ...TOKEN,
+      key: "sk-created-full-secret",
+      name: "aihubmix-default",
+    })
+
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.createKey",
+      }),
+    )
+
+    expect(
+      await screen.findByText("keyManagement:oneTimeKey.title"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("aihubmix-default")).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+      expect(writeText).toHaveBeenCalledWith("sk-created-full-secret")
+    })
+  })
+
   it("refreshes instead of showing a one-time key when create returns a token-shaped object with an invalid secret", async () => {
     fetchAccountTokensMock
       .mockResolvedValueOnce([])
@@ -178,6 +210,25 @@ describe("CopyKeyDialog", () => {
     expect(
       screen.queryByText("keyManagement:oneTimeKey.title"),
     ).not.toBeInTheDocument()
+  })
+
+  it("shows a create error when refreshed inventory is not an array", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([]).mockResolvedValueOnce(null)
+    createApiTokenMock.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.createKey",
+      }),
+    )
+
+    expect(
+      await screen.findByText("ui:dialog.copyKey.createFailed"),
+    ).toBeInTheDocument()
   })
 
   it("keeps the dialog actionable when create fails (retry works)", async () => {

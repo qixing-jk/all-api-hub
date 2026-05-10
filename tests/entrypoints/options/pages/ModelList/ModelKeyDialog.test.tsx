@@ -252,6 +252,48 @@ describe("ModelKeyDialog", () => {
     })
   })
 
+  it("shows a compatibility error when default create returns an incompatible full token", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    createApiTokenMock.mockResolvedValueOnce({
+      ...TOKEN,
+      id: 8,
+      key: "sk-created-full-secret",
+      name: "wrong-group-key",
+      group: "vip",
+    })
+
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={ACCOUNT}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "modelList:keyDialog.createKey",
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        "modelList:keyDialog.noCompatibleFoundAfterCreate",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("keyManagement:oneTimeKey.title"),
+    ).not.toBeInTheDocument()
+    expect(writeText).not.toHaveBeenCalled()
+  })
+
   it("refreshes tokens when default create returns a token-shaped object with an invalid secret", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([]).mockResolvedValueOnce([
       {
@@ -295,6 +337,65 @@ describe("ModelKeyDialog", () => {
     ).not.toBeInTheDocument()
     expect(
       await screen.findByRole("button", { name: "common:actions.copyKey" }),
+    ).toBeInTheDocument()
+  })
+
+  it("shows a create error when refreshed inventory has no compatible token", async () => {
+    fetchAccountTokensMock
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([{ ...TOKEN, id: 11, group: "vip" }])
+    createApiTokenMock.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={ACCOUNT}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "modelList:keyDialog.createKey",
+      }),
+    )
+
+    expect(
+      await screen.findByText(
+        "modelList:keyDialog.noCompatibleFoundAfterCreate",
+      ),
+    ).toBeInTheDocument()
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("shows a create error when the default create request fails", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    createApiTokenMock.mockRejectedValueOnce(new Error("create failed"))
+
+    const user = userEvent.setup()
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={ACCOUNT}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "modelList:keyDialog.createKey",
+      }),
+    )
+
+    expect(
+      await screen.findByText("modelList:keyDialog.createFailed"),
     ).toBeInTheDocument()
   })
 

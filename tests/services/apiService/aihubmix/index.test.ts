@@ -91,6 +91,62 @@ describe("apiService AIHubMix", () => {
     })
   })
 
+  it("normalizes invalid numbers, empty access tokens, and direct data bodies", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/token/", () =>
+        HttpResponse.json([
+          {
+            id: "bad-id",
+            user_id: "bad-user-id",
+            key: "direct-key",
+            status: "bad-status",
+            name: 123,
+            created_time: "bad-created",
+            accessed_time: "bad-accessed",
+            expired_time: "bad-expired",
+            remain_quota: "bad-quota",
+            used_quota: "bad-used",
+            unlimited_quota: false,
+            model_limits: 123,
+            models: ["not", "a", "string"],
+            allow_ips: 123,
+            ip_whitelist: 456,
+            subnet: 789,
+            group: 123,
+          },
+        ]),
+      ),
+    )
+
+    await expect(fetchAccountTokens(baseRequest)).resolves.toEqual([
+      expect.objectContaining({
+        id: 0,
+        user_id: 0,
+        key: "sk-direct-key",
+        status: 1,
+        name: "",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: -1,
+        remain_quota: 0,
+        used_quota: 0,
+        model_limits_enabled: false,
+        model_limits: "",
+        allow_ips: "",
+        group: undefined,
+      }),
+    ])
+
+    await expect(
+      fetchAccountTokens({
+        ...baseRequest,
+        auth: { ...baseRequest.auth, accessToken: null as any },
+      }),
+    ).rejects.toMatchObject({
+      code: API_ERROR_CODES.HTTP_401,
+    })
+  })
+
   it("fetches cookie-authenticated user info from /call/usr/self", async () => {
     let capturedCookieAuth = false
     server.use(
@@ -125,6 +181,7 @@ describe("apiService AIHubMix", () => {
 
   it("fetches cookie user info from the main web origin for console.aihubmix.com", async () => {
     let mainOriginUserInfoCalled = false
+    let consoleOriginUserInfoCalled = false
     server.use(
       http.get("https://aihubmix.com/call/usr/self", () => {
         mainOriginUserInfoCalled = true
@@ -138,16 +195,17 @@ describe("apiService AIHubMix", () => {
           },
         })
       }),
-      http.get("https://console.aihubmix.com/call/usr/self", () =>
-        HttpResponse.json(
+      http.get("https://console.aihubmix.com/call/usr/self", () => {
+        consoleOriginUserInfoCalled = true
+        return HttpResponse.json(
           {
             success: false,
             message: "wrong origin",
             data: null,
           },
           { status: 500 },
-        ),
-      ),
+        )
+      }),
     )
 
     await expect(
@@ -160,6 +218,7 @@ describe("apiService AIHubMix", () => {
       username: "aihubmix-user",
     })
     expect(mainOriginUserInfoCalled).toBe(true)
+    expect(consoleOriginUserInfoCalled).toBe(false)
   })
 
   it("fetches access-token user info from /api/user/self with raw Authorization", async () => {
@@ -698,7 +757,7 @@ describe("apiService AIHubMix", () => {
             used_quota: 0,
             models: null,
             subnet: "",
-            full_key: "sk-test-aihubmix-full-key-not-a-real-secret",
+            full_key: "sk-test-00000000000000000000000000000000",
           },
         })
       }),
@@ -727,7 +786,7 @@ describe("apiService AIHubMix", () => {
       expect.objectContaining({
         id: 271585,
         user_id: 152534,
-        key: "sk-test-aihubmix-full-key-not-a-real-secret",
+        key: "sk-test-00000000000000000000000000000000",
         name: "11",
       }),
     )
@@ -864,19 +923,23 @@ describe("apiService AIHubMix", () => {
   })
 
   it("does not try to reveal masked keys through unsupported detail endpoints", async () => {
+    let revealCalled = false
+    let detailCalled = false
     server.use(
-      http.post("https://aihubmix.com/api/token/:id/key", () =>
-        HttpResponse.json(
+      http.post("https://aihubmix.com/api/token/:id/key", () => {
+        revealCalled = true
+        return HttpResponse.json(
           { success: false, message: "unsupported" },
           { status: 500 },
-        ),
-      ),
-      http.get("https://aihubmix.com/api/token/:id", () =>
-        HttpResponse.json(
+        )
+      }),
+      http.get("https://aihubmix.com/api/token/:id", () => {
+        detailCalled = true
+        return HttpResponse.json(
           { success: false, message: "detail is not a secret endpoint" },
           { status: 500 },
-        ),
-      ),
+        )
+      }),
     )
 
     await expect(
@@ -888,15 +951,35 @@ describe("apiService AIHubMix", () => {
       code: API_ERROR_CODES.TOKEN_SECRET_UNAVAILABLE,
       message: "messages:errors.tokenSecretUnavailable",
     })
+    expect(revealCalled).toBe(false)
+    expect(detailCalled).toBe(false)
   })
 
   it("passes through usable AIHubMix keys without reveal requests", async () => {
+    let revealCalled = false
+    let detailCalled = false
+    server.use(
+      http.post("https://aihubmix.com/api/token/:id/key", () => {
+        revealCalled = true
+        return HttpResponse.json({ success: false, message: "unsupported" })
+      }),
+      http.get("https://aihubmix.com/api/token/:id", () => {
+        detailCalled = true
+        return HttpResponse.json({
+          success: false,
+          message: "detail is not a secret endpoint",
+        })
+      }),
+    )
+
     await expect(
       resolveApiTokenKey(baseRequest, {
         id: 12,
         key: "plain-key",
       } as any),
     ).resolves.toBe("sk-plain-key")
+    expect(revealCalled).toBe(false)
+    expect(detailCalled).toBe(false)
   })
 
   it("normalizes available model response variants to model id strings", async () => {

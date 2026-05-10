@@ -199,6 +199,65 @@ describe("autoDetectSmart", () => {
     })
   })
 
+  it("keeps API fallback access tokens only when the adapter returns a string", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 21,
+        active: true,
+        url: "https://different.example.com/home",
+      },
+    ])
+    mockSendRuntimeMessage.mockResolvedValue({
+      success: false,
+      data: undefined,
+    })
+    mockFetchUserInfo.mockResolvedValue({
+      id: 10,
+      username: "api-user",
+      access_token: "api-access-token",
+    })
+
+    await expect(
+      autoDetectSmart("https://example.com/console"),
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        userId: 10,
+        user: {
+          id: 10,
+          username: "api-user",
+          access_token: "api-access-token",
+        },
+        siteType: SITE_TYPES.NEW_API,
+        accessToken: "api-access-token",
+        sub2apiAuth: undefined,
+      },
+    })
+
+    mockFetchUserInfo.mockResolvedValueOnce({
+      id: 11,
+      username: "api-user-with-object-token",
+      access_token: { value: "not-a-string" },
+    })
+
+    await expect(
+      autoDetectSmart("https://example.com/console"),
+    ).resolves.toEqual({
+      success: true,
+      data: {
+        userId: 11,
+        user: {
+          id: 11,
+          username: "api-user-with-object-token",
+          access_token: { value: "not-a-string" },
+        },
+        siteType: SITE_TYPES.NEW_API,
+        accessToken: undefined,
+        sub2apiAuth: undefined,
+      },
+    })
+  })
+
   it("falls back to direct detection when background site-type detection throws", async () => {
     mockGetActiveOrAllTabs.mockResolvedValue([
       {

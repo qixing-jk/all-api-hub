@@ -174,6 +174,12 @@ describe("detectSiteType", () => {
         ).resolves.toBe(SITE_TYPES.AIHUBMIX)
       })
 
+      it("detects AIHubMix hostnames case-insensitively", async () => {
+        await expect(
+          getAccountSiteType("https://Console.AIHubMix.com/dashboard"),
+        ).resolves.toBe(SITE_TYPES.AIHUBMIX)
+      })
+
       it("uses domain detection before a conflicting title signal", async () => {
         let titleFetched = false
         server.use(

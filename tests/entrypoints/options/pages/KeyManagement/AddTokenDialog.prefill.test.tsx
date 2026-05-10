@@ -6,7 +6,13 @@ import { SITE_TYPES } from "~/constants/siteType"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { AuthTypeEnum } from "~/types"
-import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 const {
   createApiTokenMock,
@@ -236,6 +242,7 @@ describe("AddTokenDialog prefill", () => {
     expect(
       screen.getByLabelText("keyManagement:oneTimeKey.keyLabel"),
     ).toHaveValue("sk-created-full-secret")
+    fireEvent.focus(screen.getByLabelText("keyManagement:oneTimeKey.keyLabel"))
 
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledWith("sk-created-full-secret")
@@ -342,6 +349,114 @@ describe("AddTokenDialog prefill", () => {
     expect(
       screen.queryByText("keyManagement:oneTimeKey.title"),
     ).not.toBeInTheDocument()
+  })
+
+  it("passes a created one-time token to onSuccess when inline display is disabled", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    const createdToken = {
+      id: 7,
+      user_id: 1,
+      key: "sk-created-full-secret",
+      status: 1,
+      name: "My Key",
+      created_time: 1,
+      accessed_time: 1,
+      expired_time: -1,
+      remain_quota: -1,
+      unlimited_quota: true,
+      used_quota: 0,
+    }
+    createApiTokenMock.mockResolvedValueOnce(createdToken)
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={onClose}
+        onSuccess={onSuccess}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+        showOneTimeKeyDialog={false}
+      />,
+    )
+
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "My Key",
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "keyManagement:dialog.createSuccess",
+      )
+      expect(onSuccess).toHaveBeenCalledWith(createdToken)
+      expect(onClose).toHaveBeenCalled()
+    })
+
+    expect(
+      screen.queryByText("keyManagement:oneTimeKey.title"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("closes through the one-time key dialog acknowledgement", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    createApiTokenMock.mockResolvedValueOnce({
+      id: 7,
+      user_id: 1,
+      key: "sk-created-full-secret",
+      status: 1,
+      name: "My Key",
+      created_time: 1,
+      accessed_time: 1,
+      expired_time: -1,
+      remain_quota: -1,
+      unlimited_quota: true,
+      used_quota: 0,
+    })
+    const onClose = vi.fn()
+
+    const user = userEvent.setup()
+    vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined)
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={onClose}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+      />,
+    )
+
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "My Key",
+    )
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    expect(
+      await screen.findByText("keyManagement:oneTimeKey.title"),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:oneTimeKey.close" }),
+    )
+
+    expect(onClose).toHaveBeenCalled()
   })
 
   it("creates tokens without rendering or requiring group selection when the site has no groups", async () => {
