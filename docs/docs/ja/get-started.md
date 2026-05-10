@@ -57,6 +57,7 @@
 All API Hub は、市場のほぼすべての主要な AI 中継ステーションアーキテクチャをサポートしています。これらには以下が含まれます：
 - **One API / New API** シリーズ（最も一般的）
 - **Sub2API**
+- **AIHubMix**
 - **AnyRouter / VoAPI / Super-API** などの特殊アーキテクチャ
 
 ::: tip 互換性に関するヒント
