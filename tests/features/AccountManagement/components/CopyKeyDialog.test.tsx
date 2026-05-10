@@ -111,6 +111,41 @@ describe("CopyKeyDialog", () => {
     })
   })
 
+  it("shows a one-time key dialog when create returns a full token", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    createApiTokenMock.mockResolvedValueOnce({
+      ...TOKEN,
+      id: 9,
+      key: "sk-created-full-secret",
+      name: "aihubmix-default",
+    })
+
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.createKey",
+      }),
+    )
+
+    expect(
+      await screen.findByText("keyManagement:oneTimeKey.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByDisplayValue("sk-created-full-secret"),
+    ).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+      expect(writeText).toHaveBeenCalledWith("sk-created-full-secret")
+    })
+  })
+
   it("keeps the dialog actionable when create fails (retry works)", async () => {
     fetchAccountTokensMock
       .mockResolvedValueOnce([])
@@ -320,6 +355,52 @@ describe("CopyKeyDialog", () => {
       model_limits: "",
       allow_ips: "",
       group: "default",
+    })
+  })
+
+  it("shows one-time key dialog for custom AddTokenDialog create returns", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    createApiTokenMock.mockResolvedValueOnce({
+      ...TOKEN,
+      id: 10,
+      key: "sk-custom-full-secret",
+      name: "My Key",
+    })
+
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.createCustomKey",
+      }),
+    )
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "My Key",
+    )
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    expect(
+      await screen.findByText("keyManagement:oneTimeKey.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByDisplayValue("sk-custom-full-secret"),
+    ).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+      expect(writeText).toHaveBeenCalledWith("sk-custom-full-secret")
     })
   })
 })

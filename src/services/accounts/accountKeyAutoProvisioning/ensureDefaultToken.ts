@@ -61,6 +61,10 @@ export async function ensureDefaultApiTokenForAccount(params: {
     throw new Error(t("messages:sub2api.createRequiresGroup"))
   }
 
+  if (displaySiteData.siteType === SITE_TYPES.AIHUBMIX) {
+    throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
+  }
+
   const newTokenData = generateDefaultTokenRequest()
   const createApiTokenResult = await service.createApiToken(
     {

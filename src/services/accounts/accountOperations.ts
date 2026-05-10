@@ -1139,6 +1139,10 @@ export async function ensureAccountApiToken(
       newTokenData.group = normalizedGroup
     }
 
+    if (displaySiteData.siteType === SITE_TYPES.AIHUBMIX) {
+      throw new Error(t("messages:aihubmix.createRequiresOneTimeKeyDialog"))
+    }
+
     const createApiTokenResult = await getApiService(
       displaySiteData.siteType,
     ).createApiToken(
@@ -1211,7 +1215,10 @@ async function autoProvisionKeyOnAccountAdd(
       return
     }
 
-    if (account.site_type === SITE_TYPES.SUB2API) {
+    if (
+      account.site_type === SITE_TYPES.SUB2API ||
+      account.site_type === SITE_TYPES.AIHUBMIX
+    ) {
       return
     }
 

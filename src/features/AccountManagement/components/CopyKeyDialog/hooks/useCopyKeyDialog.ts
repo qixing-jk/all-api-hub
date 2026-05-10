@@ -37,6 +37,7 @@ export function useCopyKeyDialog(
   const [error, setError] = useState<string | null>(null)
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [oneTimeToken, setOneTimeToken] = useState<ApiToken | null>(null)
   const [sub2apiCreateAllowedGroups, setSub2apiCreateAllowedGroups] = useState<
     string[] | null
   >(null)
@@ -107,6 +108,7 @@ export function useCopyKeyDialog(
       setError(null)
       setIsCreating(false)
       setCreateError(null)
+      setOneTimeToken(null)
       clearSub2ApiCreateAllowedGroups()
       setCopiedTokenId(null)
       setExpandedTokens(new Set())
@@ -183,6 +185,7 @@ export function useCopyKeyDialog(
             )
             return [...withoutCreated, createdToken]
           })
+          setOneTimeToken(createdToken)
           await copyKey(createdToken)
           return
         }
@@ -305,6 +308,7 @@ export function useCopyKeyDialog(
     error,
     isCreating,
     createError,
+    oneTimeToken,
     sub2apiCreateAllowedGroups,
     copiedTokenId,
     expandedTokens,
@@ -315,5 +319,6 @@ export function useCopyKeyDialog(
     refreshTokensAfterCreate,
     toggleTokenExpansion,
     clearSub2ApiCreateAllowedGroups,
+    clearOneTimeToken: () => setOneTimeToken(null),
   }
 }

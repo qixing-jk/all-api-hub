@@ -16,6 +16,7 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
+import { OneTimeApiKeyDialog } from "~/features/KeyManagement/components/OneTimeApiKeyDialog"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import type { DisplaySiteData } from "~/types"
 import { openKeysPage } from "~/utils/navigation"
@@ -92,10 +93,12 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
     ineligibleDescription,
     isCreating,
     createError,
+    oneTimeToken,
     fetchTokens,
     copySelectedKey,
     createDefaultKey,
     refreshTokensAfterCreate,
+    clearOneTimeToken,
   } = useModelKeyDialog({
     isOpen,
     account,
@@ -341,6 +344,12 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
           allowedGroups: createGroupOptions,
         }}
         onSuccess={refreshTokensAfterCreate}
+        showOneTimeKeyDialog={false}
+      />
+      <OneTimeApiKeyDialog
+        isOpen={!!oneTimeToken}
+        token={oneTimeToken}
+        onClose={clearOneTimeToken}
       />
     </>
   )

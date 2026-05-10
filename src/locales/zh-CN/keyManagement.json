@@ -225,6 +225,19 @@
   },
   "noKeys": "暂无密钥数据",
   "noMatchingKeys": "没有找到匹配的密钥",
+  "oneTimeKey": {
+    "close": "我已保存，关闭",
+    "copied": "完整密钥已复制到剪贴板",
+    "copiedAction": "已复制",
+    "copy": "复制完整密钥",
+    "copyFailed": "复制完整密钥失败",
+    "keyLabel": "完整密钥",
+    "subtitle": "密钥 {{name}} 的完整值只会在本次创建后显示。",
+    "subtitleUnnamed": "完整密钥只会在本次创建后显示。",
+    "title": "立即保存完整密钥",
+    "warningDescription": "AIHubMix 不支持二次查看完整密钥。关闭此弹窗后，后续列表或详情可能只显示脱敏值。",
+    "warningTitle": "该密钥只能查看一次"
+  },
   "pleaseAddAccount": "请先添加账号",
   "pleaseSelectAccount": "请选择账号",
   "refreshTokenList": "刷新密钥列表",
@@ -249,6 +262,7 @@
     "searchLabel": "搜索",
     "searchPlaceholder": "搜索账号、域名或站点类型...",
     "skipReasons": {
+      "aihubmixOneTimeKey": "AIHubMix 密钥仅可查看一次，请手动创建并立即保存完整密钥",
       "noneAuth": "无凭据（认证方式：无）",
       "sub2api": "不支持的站点类型（Sub2API）"
     },

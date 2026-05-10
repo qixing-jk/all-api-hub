@@ -12,7 +12,10 @@ export type AccountKeyRepairOutcome =
   | "skipped"
   | "failed"
 
-export type AccountKeyRepairSkipReason = "sub2api" | "noneAuth"
+export type AccountKeyRepairSkipReason =
+  | "sub2api"
+  | "aihubmixOneTimeKey"
+  | "noneAuth"
 
 export interface AccountKeyRepairAccountResult {
   accountId: string

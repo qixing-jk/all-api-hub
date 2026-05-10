@@ -48,6 +48,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
 
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState<string | null>(null)
+  const [oneTimeToken, setOneTimeToken] = useState<ApiToken | null>(null)
 
   const canCreateToken = useMemo(
     () => canManageDisplayAccountTokens(account),
@@ -117,6 +118,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
       setSelectedTokenId(null)
       setIsCreating(false)
       setCreateError(null)
+      setOneTimeToken(null)
       return
     }
 
@@ -194,6 +196,7 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
           })
           if (isTokenCompatibleWithModel(createdToken, modelContext)) {
             setSelectedTokenId(createdToken.id)
+            setOneTimeToken(createdToken)
             toast.success(t("modelList:keyDialog.createSuccess"))
           } else {
             setCreateError(
@@ -314,9 +317,11 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
     ineligibleDescription,
     isCreating,
     createError,
+    oneTimeToken,
     fetchTokens,
     copySelectedKey,
     createDefaultKey,
     refreshTokensAfterCreate,
+    clearOneTimeToken: () => setOneTimeToken(null),
   }
 }

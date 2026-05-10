@@ -14,6 +14,9 @@
     "retrying": "エラーが発生したため、再試行 #{{attempt}} を行います",
     "tokenNotFound": "API トークンの作成または検索に失敗しました"
   },
+  "aihubmix": {
+    "createRequiresOneTimeKeyDialog": "AIHubMix のキーは作成時に一度しか表示できません。キー管理で手動作成し、完全なキーをすぐに保存してください。"
+  },
   "autodetect": {
     "currentTabNeedsReload": "このページは拡張機能のインストールまたは更新前から開かれている可能性があり、現時点ではこのタブの情報を読み取れません。現在のページを再読み込みしてから、もう一度自動検出を試してください。",
     "failed": "自動検出に失敗しました: {{error}}",

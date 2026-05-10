@@ -14,6 +14,9 @@
     "retrying": "出现错误，进行第{{attempt}}次重试",
     "tokenNotFound": "无法创建或找到 API 令牌"
   },
+  "aihubmix": {
+    "createRequiresOneTimeKeyDialog": "AIHubMix 创建的密钥只能查看一次，请在密钥管理中手动创建并立即保存完整密钥。"
+  },
   "autodetect": {
     "currentTabNeedsReload": "当前页面可能是在安装或更新扩展前打开的，插件暂时无法读取该标签页的信息。请刷新当前页面后再重试自动识别。",
     "failed": "自动识别失败：{{error}}",

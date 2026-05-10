@@ -110,6 +110,38 @@ const createNonSub2ApiAccounts = () => {
   }
 }
 
+const createAIHubMixAccounts = () => {
+  const displayAccount = {
+    id: "aihubmix-account",
+    siteType: SITE_TYPES.AIHUBMIX,
+    baseUrl: "https://aihubmix.com",
+    authType: AuthTypeEnum.AccessToken,
+    userId: 789,
+    token: "aihubmix-access-token",
+    cookieAuthSessionCookie: "",
+  }
+
+  const siteAccount = buildSiteAccount({
+    id: displayAccount.id,
+    site_type: SITE_TYPES.AIHUBMIX,
+    site_url: displayAccount.baseUrl,
+    authType: AuthTypeEnum.AccessToken,
+    account_info: {
+      id: displayAccount.userId,
+      access_token: displayAccount.token,
+      username: "aihubmix-user",
+      quota: 0,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
+      today_requests_count: 0,
+      today_income: 0,
+    },
+  })
+
+  return { displayAccount, siteAccount }
+}
+
 describe("accountOperations Sub2API token creation guards", () => {
   let DISPLAY_ACCOUNT: ReturnType<typeof buildSub2ApiAccount>
   let SITE_ACCOUNT: ReturnType<typeof buildSiteAccount>
@@ -312,6 +344,21 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
   })
 
+  it("blocks implicit AIHubMix default-token creation because the key must be shown once", async () => {
+    const { displayAccount, siteAccount } = createAIHubMixAccounts()
+
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+
+    await expect(
+      ensureDefaultApiTokenForAccount({
+        account: siteAccount as any,
+        displaySiteData: displayAccount as any,
+      }),
+    ).rejects.toThrow("messages:aihubmix.createRequiresOneTimeKeyDialog")
+
+    expect(createApiTokenMock).not.toHaveBeenCalled()
+  })
+
   it("uses a token returned by shared ensure creation without refetching masked inventory", async () => {
     const { displayAccount, siteAccount } = createNonSub2ApiAccounts()
     const createdToken = {
@@ -336,6 +383,43 @@ describe("ensureDefaultApiTokenForAccount non-Sub2API branches", () => {
     ).resolves.toEqual(createdToken)
 
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("blocks shared AIHubMix token ensure when no token exists because no one-time dialog is available", async () => {
+    const { displayAccount, siteAccount } = createAIHubMixAccounts()
+
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+
+    await expect(
+      ensureAccountApiToken(siteAccount as any, displayAccount as any),
+    ).rejects.toThrow("messages:aihubmix.createRequiresOneTimeKeyDialog")
+
+    expect(createApiTokenMock).not.toHaveBeenCalled()
+  })
+
+  it("returns an existing AIHubMix token without trying to create a new one", async () => {
+    const { displayAccount, siteAccount } = createAIHubMixAccounts()
+    const existingToken = {
+      id: 24,
+      user_id: displayAccount.userId,
+      key: "sk-existing",
+      status: 1,
+      name: "existing",
+      created_time: 1,
+      accessed_time: 1,
+      expired_time: -1,
+      remain_quota: -1,
+      unlimited_quota: true,
+      used_quota: 0,
+    }
+
+    fetchAccountTokensMock.mockResolvedValueOnce([existingToken])
+
+    await expect(
+      ensureAccountApiToken(siteAccount as any, displayAccount as any),
+    ).resolves.toEqual(existingToken)
+
+    expect(createApiTokenMock).not.toHaveBeenCalled()
   })
 
   it("fails when default token creation reports false", async () => {

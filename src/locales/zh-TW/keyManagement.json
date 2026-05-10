@@ -225,6 +225,19 @@
   },
   "noKeys": "暫無金鑰資料",
   "noMatchingKeys": "沒有找到匹配的金鑰",
+  "oneTimeKey": {
+    "close": "我已保存，關閉",
+    "copied": "完整金鑰已複製到剪貼簿",
+    "copiedAction": "已複製",
+    "copy": "複製完整金鑰",
+    "copyFailed": "複製完整金鑰失敗",
+    "keyLabel": "完整金鑰",
+    "subtitle": "金鑰 {{name}} 的完整值只會在本次建立後顯示。",
+    "subtitleUnnamed": "完整金鑰只會在本次建立後顯示。",
+    "title": "立即保存完整金鑰",
+    "warningDescription": "AIHubMix 不支援二次查看完整金鑰。關閉此彈窗後，後續列表或詳情可能只顯示脫敏值。",
+    "warningTitle": "該金鑰只能查看一次"
+  },
   "pleaseAddAccount": "請先新增帳號",
   "pleaseSelectAccount": "請選擇帳號",
   "refreshTokenList": "重新整理金鑰列表",
@@ -249,6 +262,7 @@
     "searchLabel": "搜尋",
     "searchPlaceholder": "搜尋帳號、域名或站點型別...",
     "skipReasons": {
+      "aihubmixOneTimeKey": "AIHubMix 金鑰僅可查看一次，請手動建立並立即保存完整金鑰",
       "noneAuth": "無憑據（認證方式：無）",
       "sub2api": "不支援的站點型別（Sub2API）"
     },

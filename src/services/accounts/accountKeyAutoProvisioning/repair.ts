@@ -75,6 +75,10 @@ function getSkipReason(
     return "sub2api"
   }
 
+  if (account.site_type === SITE_TYPES.AIHUBMIX) {
+    return "aihubmixOneTimeKey"
+  }
+
   if (account.authType === AuthTypeEnum.None) {
     return "noneAuth"
   }

@@ -14,6 +14,9 @@
     "retrying": "出現錯誤，進行第{{attempt}}次重試",
     "tokenNotFound": "無法建立或找到 API 令牌"
   },
+  "aihubmix": {
+    "createRequiresOneTimeKeyDialog": "AIHubMix 建立的金鑰只能查看一次，請在金鑰管理中手動建立並立即保存完整金鑰。"
+  },
   "autodetect": {
     "currentTabNeedsReload": "當前頁面可能是在安裝或更新擴充套件前開啟的，外掛暫時無法讀取這個標籤頁的資訊。請重新整理當前頁面後再試一次自動識別。",
     "failed": "自動識別失敗：{{error}}",

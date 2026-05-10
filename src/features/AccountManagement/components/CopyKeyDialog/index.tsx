@@ -5,6 +5,7 @@ import { CCSwitchExportDialog } from "~/components/CCSwitchExportDialog"
 import { Modal } from "~/components/ui"
 import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
+import { OneTimeApiKeyDialog } from "~/features/KeyManagement/components/OneTimeApiKeyDialog"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import type { ApiToken, DisplaySiteData } from "~/types"
 
@@ -41,6 +42,7 @@ export default function CopyKeyDialog({
     error,
     isCreating,
     createError,
+    oneTimeToken,
     sub2apiCreateAllowedGroups,
     copiedTokenId,
     expandedTokens,
@@ -51,6 +53,7 @@ export default function CopyKeyDialog({
     refreshTokensAfterCreate,
     toggleTokenExpansion,
     clearSub2ApiCreateAllowedGroups,
+    clearOneTimeToken,
   } = useCopyKeyDialog(isOpen, account)
 
   const handleOpenAddTokenDialog = () => {
@@ -61,9 +64,9 @@ export default function CopyKeyDialog({
     clearSub2ApiCreateAllowedGroups()
     setIsAddTokenDialogOpen(false)
   }
-  const handleAddTokenSuccess = () => {
+  const handleAddTokenSuccess = (createdToken?: ApiToken) => {
     clearSub2ApiCreateAllowedGroups()
-    return refreshTokensAfterCreate()
+    return refreshTokensAfterCreate(createdToken)
   }
 
   useEffect(() => {
@@ -173,8 +176,14 @@ export default function CopyKeyDialog({
               : undefined
           }
           onSuccess={handleAddTokenSuccess}
+          showOneTimeKeyDialog={false}
         />
       ) : null}
+      <OneTimeApiKeyDialog
+        isOpen={!!oneTimeToken}
+        token={oneTimeToken}
+        onClose={clearOneTimeToken}
+      />
     </>
   )
 }

@@ -209,6 +209,49 @@ describe("ModelKeyDialog", () => {
     ).toBeInTheDocument()
   })
 
+  it("shows a one-time key dialog when default create returns a full token", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    createApiTokenMock.mockResolvedValueOnce({
+      ...TOKEN,
+      id: 8,
+      key: "sk-created-full-secret",
+      name: "model-key",
+    })
+
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={ACCOUNT}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "modelList:keyDialog.createKey",
+      }),
+    )
+
+    expect(
+      await screen.findByText("keyManagement:oneTimeKey.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByDisplayValue("sk-created-full-secret"),
+    ).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+      expect(writeText).toHaveBeenCalledWith("sk-created-full-secret")
+    })
+  })
+
   it("treats group mismatch as incompatible and shows empty state", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([{ ...TOKEN, group: "vip" }])
 

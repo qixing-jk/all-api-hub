@@ -186,6 +186,60 @@ describe("AddTokenDialog prefill", () => {
     })
   })
 
+  it("shows a one-time key dialog when create returns a full token", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    createApiTokenMock.mockResolvedValueOnce({
+      id: 7,
+      user_id: 1,
+      key: "sk-created-full-secret",
+      status: 1,
+      name: "My Key",
+      created_time: 1,
+      accessed_time: 1,
+      expired_time: -1,
+      remain_quota: -1,
+      unlimited_quota: true,
+      used_quota: 0,
+    })
+
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={() => {}}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+      />,
+    )
+
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "My Key",
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    expect(
+      await screen.findByText("keyManagement:oneTimeKey.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByDisplayValue("sk-created-full-secret"),
+    ).toBeInTheDocument()
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith("sk-created-full-secret")
+    })
+  })
+
   it("keeps the group selector popover above the modal and allows changing the group", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValueOnce(["gpt-4", "gpt-3.5"])
     fetchUserGroupsMock.mockResolvedValueOnce({

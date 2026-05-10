@@ -231,6 +231,19 @@
   },
   "noKeys": "No key data yet",
   "noMatchingKeys": "No matching keys found",
+  "oneTimeKey": {
+    "close": "I saved it, close",
+    "copied": "Full key copied to clipboard",
+    "copiedAction": "Copied",
+    "copy": "Copy full key",
+    "copyFailed": "Failed to copy full key",
+    "keyLabel": "Full key",
+    "subtitle": "The full value for key {{name}} is shown only after this creation.",
+    "subtitleUnnamed": "The full key is shown only after this creation.",
+    "title": "Save the full key now",
+    "warningDescription": "AIHubMix does not support viewing the full key again. After closing this dialog, lists or details may only show a masked value.",
+    "warningTitle": "This key can only be viewed once"
+  },
   "pleaseAddAccount": "Please add an account first",
   "pleaseSelectAccount": "Please select account",
   "refreshTokenList": "Refresh Key List",
@@ -255,6 +268,7 @@
     "searchLabel": "Search",
     "searchPlaceholder": "Search account, origin, or site type...",
     "skipReasons": {
+      "aihubmixOneTimeKey": "AIHubMix keys can only be viewed once. Create the key manually and save the full key immediately.",
       "noneAuth": "No credentials (auth type: none)",
       "sub2api": "Unsupported site type (Sub2API)"
     },

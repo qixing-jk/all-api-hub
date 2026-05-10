@@ -52,6 +52,8 @@ function getSkipReasonLabel(
   switch (reason) {
     case "sub2api":
       return t("keyManagement:repairMissingKeys.skipReasons.sub2api")
+    case "aihubmixOneTimeKey":
+      return t("keyManagement:repairMissingKeys.skipReasons.aihubmixOneTimeKey")
     case "noneAuth":
       return t("keyManagement:repairMissingKeys.skipReasons.noneAuth")
   }

@@ -225,6 +225,19 @@
   },
   "noKeys": "まだキーデータがありません",
   "noMatchingKeys": "一致するキーが見つかりません",
+  "oneTimeKey": {
+    "close": "保存しました。閉じる",
+    "copied": "完全なキーをクリップボードにコピーしました",
+    "copiedAction": "コピー済み",
+    "copy": "完全なキーをコピー",
+    "copyFailed": "完全なキーのコピーに失敗しました",
+    "keyLabel": "完全なキー",
+    "subtitle": "キー {{name}} の完全な値は、この作成直後にのみ表示されます。",
+    "subtitleUnnamed": "完全なキーは、この作成直後にのみ表示されます。",
+    "title": "完全なキーを今すぐ保存してください",
+    "warningDescription": "AIHubMix は完全なキーの再表示をサポートしていません。このダイアログを閉じると、一覧や詳細にはマスクされた値だけが表示される場合があります。",
+    "warningTitle": "このキーは一度だけ表示できます"
+  },
   "pleaseAddAccount": "先にアカウントを追加してください",
   "pleaseSelectAccount": "アカウントを選択してください",
   "refreshTokenList": "キー一覧を更新",
@@ -249,6 +262,7 @@
     "searchLabel": "検索",
     "searchPlaceholder": "アカウント、origin、またはサイト種別で検索...",
     "skipReasons": {
+      "aihubmixOneTimeKey": "AIHubMix のキーは一度だけ表示できます。手動で作成し、完全なキーをすぐに保存してください。",
       "noneAuth": "認証情報なし（auth type: none）",
       "sub2api": "未対応サイト種別（Sub2API）"
     },
