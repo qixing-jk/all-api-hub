@@ -107,7 +107,8 @@
   "errors": {
     "api": {
       "invalidResponseFormat": "無効な応答形式です",
-      "onlyJsonSupported": "JSON 応答のみサポートしています"
+      "onlyJsonSupported": "JSON 応答のみサポートしています",
+      "requestFailed": "リクエストに失敗しました: {{status}}"
     },
     "operation": {
       "accountDataFetchTimeout": "アカウントデータの取得がタイムアウトしました（{{seconds}} 秒）",

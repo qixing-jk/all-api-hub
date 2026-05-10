@@ -26,7 +26,10 @@ export function generateDefaultTokenRequest(): CreateTokenRequest {
 }
 
 const isCreatedApiToken = (value: unknown): value is ApiToken =>
-  !!value && typeof value === "object" && "id" in value && "key" in value
+  !!value &&
+  typeof value === "object" &&
+  typeof (value as Partial<ApiToken>).id === "number" &&
+  typeof (value as Partial<ApiToken>).key === "string"
 
 /**
  * Ensures that an API token exists for the supplied account by checking the

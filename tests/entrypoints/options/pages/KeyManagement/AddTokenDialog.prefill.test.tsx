@@ -234,8 +234,8 @@ describe("AddTokenDialog prefill", () => {
       await screen.findByText("keyManagement:oneTimeKey.title"),
     ).toBeInTheDocument()
     expect(
-      screen.getByDisplayValue("sk-created-full-secret"),
-    ).toBeInTheDocument()
+      screen.getByLabelText("keyManagement:oneTimeKey.keyLabel"),
+    ).toHaveValue("sk-created-full-secret")
 
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledWith("sk-created-full-secret")

@@ -559,7 +559,7 @@ describe("apiService AIHubMix", () => {
           data: {
             id: 271585,
             user_id: 152534,
-            key: "sk-yWR5****9275",
+            key: "sk-test****fake",
             status: 1,
             name: "11",
             created_time: 1778417169,
@@ -570,7 +570,7 @@ describe("apiService AIHubMix", () => {
             used_quota: 0,
             models: null,
             subnet: "",
-            full_key: "sk-yWR5oXeyLwbyavcr46F2AbE00040457cA2E6F1E00dAf9275",
+            full_key: "sk-test-aihubmix-full-key-not-a-real-secret",
           },
         })
       }),
@@ -599,7 +599,7 @@ describe("apiService AIHubMix", () => {
       expect.objectContaining({
         id: 271585,
         user_id: 152534,
-        key: "sk-yWR5oXeyLwbyavcr46F2AbE00040457cA2E6F1E00dAf9275",
+        key: "sk-test-aihubmix-full-key-not-a-real-secret",
         name: "11",
       }),
     )
@@ -693,6 +693,45 @@ describe("apiService AIHubMix", () => {
       remain_quota: -1,
       models: "gpt-4o,claude-3-5-sonnet",
       subnet: "127.0.0.1",
+    })
+  })
+
+  it("normalizes missing IP limits to an empty subnet", async () => {
+    let createPayload: unknown = null
+    server.use(
+      http.post("https://aihubmix.com/api/token/", async ({ request }) => {
+        createPayload = await request.json()
+        return HttpResponse.json({ success: true, message: "", data: true })
+      }),
+    )
+
+    await expect(
+      createApiToken(baseRequest, {
+        ...tokenRequest,
+        allow_ips: undefined as any,
+      }),
+    ).resolves.toBe(true)
+
+    expect(createPayload).toEqual({
+      name: tokenRequest.name,
+      expired_time: tokenRequest.expired_time,
+      unlimited_quota: tokenRequest.unlimited_quota,
+      remain_quota: tokenRequest.remain_quota,
+      models: "",
+      subnet: "",
+    })
+  })
+
+  it("uses a localized fallback message for HTTP errors without response messages", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/token/", () =>
+        HttpResponse.json({ error: "unauthorized" }, { status: 401 }),
+      ),
+    )
+
+    await expect(fetchAccountTokens(baseRequest)).rejects.toMatchObject({
+      statusCode: 401,
+      message: "messages:errors.api.requestFailed",
     })
   })
 

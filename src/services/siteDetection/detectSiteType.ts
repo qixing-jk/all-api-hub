@@ -140,7 +140,10 @@ async function getAccountSiteUserIdType(url: string): Promise<AccountSiteType> {
 }
 
 /**
- *
+ * detectAccountSiteTypeFromDomain parses the URL hostname and compares it
+ * case-insensitively against ACCOUNT_SITE_DOMAIN_RULES. It returns the matched
+ * AccountSiteType rule name, or SITE_TYPES.UNKNOWN when parsing fails or no
+ * domain rule matches.
  */
 function detectAccountSiteTypeFromDomain(url: string): AccountSiteType {
   try {

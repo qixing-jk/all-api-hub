@@ -32,6 +32,7 @@ const logger = createLogger("ApiService.AIHubMix")
 // AIHubMix console traffic is pinned to the main origin even when detection
 // starts from console.aihubmix.com.
 const AIHUBMIX_API_ORIGIN = "https://aihubmix.com"
+const AIHUBMIX_API_USER_SELF_ENDPOINT = "/api/user/self"
 // These `/call/usr/*` routes are web-session endpoints used only while
 // importing an account from the logged-in browser session.
 const AIHUBMIX_USER_INFO_ENDPOINT = "/call/usr/self"
@@ -182,7 +183,7 @@ const fetchAIHubMixData = async <T>(
       typeof body === "object" &&
       typeof (body as any).message === "string"
         ? (body as any).message
-        : `请求失败: ${response.status}`
+        : t("messages:errors.api.requestFailed", { status: response.status })
     throw new ApiError(message, response.status, endpoint)
   }
 
@@ -239,7 +240,7 @@ const createAIHubMixTokenPayload = (
   unlimited_quota: tokenData.unlimited_quota,
   remain_quota: tokenData.unlimited_quota ? -1 : tokenData.remain_quota,
   models: tokenData.model_limits_enabled ? tokenData.model_limits : "",
-  subnet: tokenData.allow_ips.trim(),
+  subnet: (tokenData.allow_ips ?? "").trim(),
 })
 
 const extractTokenItems = (payload: unknown): AIHubMixTokenRaw[] => {
@@ -298,9 +299,13 @@ export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
 }> {
   const userData =
     request.auth?.authType === AuthTypeEnum.AccessToken
-      ? await fetchAIHubMixData<AIHubMixUserInfo>(request, "/api/user/self", {
-          cache: "no-store",
-        })
+      ? await fetchAIHubMixData<AIHubMixUserInfo>(
+          request,
+          AIHUBMIX_API_USER_SELF_ENDPOINT,
+          {
+            cache: "no-store",
+          },
+        )
       : await fetchApiData<AIHubMixUserInfo>(
           createAIHubMixApiOriginRequest(request),
           {
@@ -410,7 +415,7 @@ export async function fetchAccountQuota(
 ): Promise<number> {
   const userInfo = await fetchAIHubMixData<AIHubMixUserInfo>(
     request,
-    "/api/user/self",
+    AIHUBMIX_API_USER_SELF_ENDPOINT,
   )
   return toFiniteNumber(userInfo.quota)
 }
@@ -441,7 +446,7 @@ export async function fetchAccountData(
 ): Promise<AccountData> {
   const userInfo = await fetchAIHubMixData<AIHubMixUserInfo>(
     request,
-    "/api/user/self",
+    AIHUBMIX_API_USER_SELF_ENDPOINT,
   )
 
   return {

@@ -1,5 +1,5 @@
 import { CheckIcon, ClipboardDocumentIcon } from "@heroicons/react/24/outline"
-import { useCallback, useEffect, useState } from "react"
+import { useCallback, useEffect, useId, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
@@ -28,6 +28,7 @@ export function OneTimeApiKeyDialog({
   autoCopy = true,
 }: OneTimeApiKeyDialogProps) {
   const { t } = useTranslation("keyManagement")
+  const keyInputId = useId()
   const [copied, setCopied] = useState(false)
 
   const copyKey = useCallback(async () => {
@@ -106,10 +107,14 @@ export function OneTimeApiKeyDialog({
         />
 
         <div>
-          <label className="dark:text-dark-text-secondary text-sm font-medium text-gray-700">
+          <label
+            htmlFor={keyInputId}
+            className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+          >
             {t("oneTimeKey.keyLabel")}
           </label>
           <Input
+            id={keyInputId}
             className="mt-2 font-mono text-xs"
             value={token?.key ?? ""}
             readOnly

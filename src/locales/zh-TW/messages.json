@@ -107,7 +107,8 @@
   "errors": {
     "api": {
       "invalidResponseFormat": "響應資料格式錯誤",
-      "onlyJsonSupported": "僅支援 JSON 響應資料"
+      "onlyJsonSupported": "僅支援 JSON 響應資料",
+      "requestFailed": "請求失敗：{{status}}"
     },
     "operation": {
       "accountDataFetchTimeout": "取得帳號資料逾時（{{seconds}} 秒）",

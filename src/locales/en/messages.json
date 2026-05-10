@@ -107,7 +107,8 @@
   "errors": {
     "api": {
       "invalidResponseFormat": "Invalid response format",
-      "onlyJsonSupported": "Only JSON responses are supported"
+      "onlyJsonSupported": "Only JSON responses are supported",
+      "requestFailed": "Request failed: {{status}}"
     },
     "operation": {
       "accountDataFetchTimeout": "Timed out while fetching account data ({{seconds}}s)",

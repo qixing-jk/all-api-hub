@@ -107,7 +107,8 @@
   "errors": {
     "api": {
       "invalidResponseFormat": "响应数据格式错误",
-      "onlyJsonSupported": "仅支持 JSON 响应数据"
+      "onlyJsonSupported": "仅支持 JSON 响应数据",
+      "requestFailed": "请求失败：{{status}}"
     },
     "operation": {
       "accountDataFetchTimeout": "获取账号数据超时（{{seconds}} 秒）",
