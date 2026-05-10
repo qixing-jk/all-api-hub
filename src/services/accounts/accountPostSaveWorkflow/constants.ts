@@ -53,6 +53,7 @@ export type EnsureAccountTokenResult =
   | {
       kind: typeof ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired
       allowedGroups: string[]
+      existingTokenIds: number[]
     }
   | {
       kind: typeof ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked

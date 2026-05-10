@@ -24,6 +24,7 @@ import {
   ACCOUNT_POST_SAVE_WORKFLOW_STEPS,
   ENSURE_ACCOUNT_TOKEN_RESULT_KINDS,
   ensureAccountTokenForPostSaveWorkflow,
+  selectSingleNewApiTokenByIdDiff,
   type AccountPostSaveWorkflowStep,
 } from "~/services/accounts/accountPostSaveWorkflow"
 import { accountStorage } from "~/services/accounts/accountStorage"
@@ -467,6 +468,7 @@ export function useAccountDialog({
   const pendingPostSaveChannelRef = useRef<{
     displaySiteData: DisplaySiteData
     token?: ApiToken
+    existingTokenIds?: number[]
   } | null>(null)
   const postSaveAutoConfigRunRef = useRef(0)
   const detectSlowHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
@@ -1374,7 +1376,10 @@ export function useAccountDialog({
         )
         const fetchedTokens = await service.fetchAccountTokens(request)
         const latestToken = Array.isArray(fetchedTokens)
-          ? fetchedTokens.at(-1) ?? null
+          ? selectSingleNewApiTokenByIdDiff({
+              existingTokenIds: pending.existingTokenIds ?? [],
+              tokens: fetchedTokens,
+            })
           : null
 
         if (!latestToken) {
@@ -1569,7 +1574,10 @@ export function useAccountDialog({
           )
           return
         case ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired:
-          pendingPostSaveChannelRef.current = { displaySiteData }
+          pendingPostSaveChannelRef.current = {
+            displaySiteData,
+            existingTokenIds: ensureResult.existingTokenIds,
+          }
           setPostSaveSub2ApiAccount(displaySiteData)
           setPostSaveSub2ApiAllowedGroups(ensureResult.allowedGroups)
           setAccountPostSaveWorkflowStep(

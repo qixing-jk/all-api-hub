@@ -25,6 +25,24 @@ const isCreatedApiToken = (value: unknown): value is ApiToken =>
 const hasUsableFullTokenSecret = (token: ApiToken): boolean =>
   hasUsableApiTokenKey(token.key) && !isMaskedApiTokenKey(token.key)
 
+const getTokenIds = (tokens: ApiToken[]): number[] =>
+  tokens.map((token) => token.id)
+
+/**
+ *
+ */
+export function selectSingleNewApiTokenByIdDiff(params: {
+  existingTokenIds: number[]
+  tokens: ApiToken[]
+}): ApiToken | null {
+  const existingTokenIdSet = new Set(params.existingTokenIds)
+  const newTokens = params.tokens.filter(
+    (token) => !existingTokenIdSet.has(token.id),
+  )
+
+  return newTokens.length === 1 ? newTokens[0] : null
+}
+
 const buildCreateRequest = (account: SiteAccount): ApiServiceRequest => ({
   baseUrl: account.site_url,
   accountId: account.id,
@@ -49,12 +67,16 @@ const buildDisplayAccountRequest = (
   },
 })
 
+/**
+ *
+ */
 async function createDefaultToken(params: {
   account: SiteAccount
   displaySiteData: DisplaySiteData
   group?: string
+  existingTokenIds: number[]
 }): Promise<ApiToken | null> {
-  const { account, displaySiteData, group } = params
+  const { account, displaySiteData, group, existingTokenIds } = params
   const service = getApiService(displaySiteData.siteType)
   const tokenData = generateDefaultTokenRequest()
   if (typeof group === "string") {
@@ -82,9 +104,17 @@ async function createDefaultToken(params: {
     buildDisplayAccountRequest(displaySiteData),
   )
 
-  return Array.isArray(updatedTokens) ? updatedTokens.at(-1) ?? null : null
+  return Array.isArray(updatedTokens)
+    ? selectSingleNewApiTokenByIdDiff({
+        existingTokenIds,
+        tokens: updatedTokens,
+      })
+    : null
 }
 
+/**
+ *
+ */
 export async function ensureAccountTokenForPostSaveWorkflow(params: {
   account: SiteAccount
   displaySiteData: DisplaySiteData
@@ -94,8 +124,10 @@ export async function ensureAccountTokenForPostSaveWorkflow(params: {
   const tokens = await service.fetchAccountTokens(
     buildDisplayAccountRequest(displaySiteData),
   )
+  const existingTokens = Array.isArray(tokens) ? tokens : []
+  const existingTokenIds = getTokenIds(existingTokens)
 
-  const existingToken = Array.isArray(tokens) ? tokens.at(-1) : undefined
+  const existingToken = existingTokens.at(-1)
   if (existingToken) {
     if (
       displaySiteData.siteType === SITE_TYPES.AIHUBMIX &&
@@ -131,6 +163,7 @@ export async function ensureAccountTokenForPostSaveWorkflow(params: {
       return {
         kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
         allowedGroups: resolution.allowedGroups,
+        existingTokenIds,
       }
     }
 
@@ -138,6 +171,7 @@ export async function ensureAccountTokenForPostSaveWorkflow(params: {
       account,
       displaySiteData,
       group: resolution.group,
+      existingTokenIds,
     })
 
     if (!token) {
@@ -156,7 +190,11 @@ export async function ensureAccountTokenForPostSaveWorkflow(params: {
     }
   }
 
-  const token = await createDefaultToken({ account, displaySiteData })
+  const token = await createDefaultToken({
+    account,
+    displaySiteData,
+    existingTokenIds,
+  })
 
   if (!token) {
     return {

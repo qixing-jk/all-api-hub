@@ -1258,7 +1258,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     )
   })
 
-  it("resumes paused Sub2API quick-config after boolean token creation by refetching the latest token", async () => {
+  it("resumes paused Sub2API quick-config after boolean token creation by selecting the newly added token id", async () => {
     const savedSiteAccount = buildSiteAccount({
       id: "saved-account-id",
       site_name: "Sub2API",
@@ -1281,12 +1281,19 @@ describe("useAccountDialog save and auto-config flows", () => {
       token: "sub-token",
       userId: 14,
     })
-    const fetchedLatestToken = buildToken({
+    const existingToken = buildToken({
+      id: 88,
+      key: "sk-sub2-existing",
+      group: "default",
+    })
+    const createdToken = buildToken({
       id: 104,
       key: "sk-sub2-refetched",
       group: "vip",
     })
-    const fetchAccountTokens = vi.fn().mockResolvedValue([fetchedLatestToken])
+    const fetchAccountTokens = vi
+      .fn()
+      .mockResolvedValue([createdToken, existingToken])
 
     vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
       savedSiteAccount,
@@ -1306,6 +1313,7 @@ describe("useAccountDialog save and auto-config flows", () => {
     mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
       kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
       allowedGroups: ["default", "vip"],
+      existingTokenIds: [existingToken.id],
     })
 
     const { result } = renderAddHook()
@@ -1341,11 +1349,98 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
     expect(mockOpenWithAccount).toHaveBeenCalledWith(
       savedDisplayData,
-      fetchedLatestToken,
+      createdToken,
       expect.any(Function),
     )
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
+    )
+  })
+
+  it("fails closed when boolean Sub2API token creation refetch does not identify exactly one new token", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "Sub2API",
+      site_url: "https://sub2.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.SUB2API,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: 14,
+        username: "sub-user",
+        access_token: "sub-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData = buildDisplayAccount({
+      name: "Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://sub2.example.com",
+      token: "sub-token",
+      userId: 14,
+    })
+    const existingToken = buildToken({
+      id: 88,
+      key: "sk-sub2-existing",
+      group: "default",
+    })
+    const fetchAccountTokens = vi
+      .fn()
+      .mockResolvedValueOnce([existingToken])
+      .mockResolvedValueOnce([existingToken])
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    vi.spyOn(
+      apiServiceRequest,
+      "createDisplayAccountApiContext",
+    ).mockReturnValue({
+      service: {
+        fetchAccountTokens,
+      } as any,
+      request: { accountId: savedDisplayData.id } as any,
+    })
+    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
+      allowedGroups: ["default", "vip"],
+      existingTokenIds: [existingToken.id],
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://sub2.example.com")
+      result.current.setters.setSiteName("Sub2API")
+      result.current.setters.setUsername("sub-user")
+      result.current.setters.setAccessToken("sub-token")
+      result.current.setters.setUserId("14")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handlePostSaveSub2ApiTokenCreated()
+    })
+
+    expect(mockOpenWithAccount).not.toHaveBeenCalled()
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
+    )
+    expect(toast.error).toHaveBeenCalledWith(
+      "messages:accountOperations.createTokenFailed",
     )
   })
 

@@ -6,6 +6,7 @@ import {
   ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES,
   ENSURE_ACCOUNT_TOKEN_RESULT_KINDS,
   ensureAccountTokenForPostSaveWorkflow,
+  selectSingleNewApiTokenByIdDiff,
 } from "~/services/accounts/accountPostSaveWorkflow"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -94,6 +95,41 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     fetchAccountTokensMock.mockReset()
     createApiTokenMock.mockReset()
     fetchUserGroupsMock.mockReset()
+  })
+
+  it("selects the single newly created token by id diff even when it is not the last refetched token", () => {
+    const existingTokens = [
+      buildToken({ id: 3, key: "sk-existing-3" }),
+      buildToken({ id: 8, key: "sk-existing-8" }),
+    ]
+    const createdToken = buildToken({ id: 11, key: "sk-created-11" })
+
+    expect(
+      selectSingleNewApiTokenByIdDiff({
+        existingTokenIds: existingTokens.map((token) => token.id),
+        tokens: [createdToken, existingTokens[1], existingTokens[0]],
+      }),
+    ).toEqual(createdToken)
+  })
+
+  it("returns null when token id diff is ambiguous or empty", () => {
+    const existingTokenIds = [3, 8]
+    const createdTokenA = buildToken({ id: 11, key: "sk-created-11" })
+    const createdTokenB = buildToken({ id: 12, key: "sk-created-12" })
+
+    expect(
+      selectSingleNewApiTokenByIdDiff({
+        existingTokenIds,
+        tokens: [buildToken({ id: 3 }), buildToken({ id: 8 })],
+      }),
+    ).toBeNull()
+
+    expect(
+      selectSingleNewApiTokenByIdDiff({
+        existingTokenIds,
+        tokens: [createdTokenA, createdTokenB, buildToken({ id: 8 })],
+      }),
+    ).toBeNull()
   })
 
   it("returns a ready result when the account already has a token", async () => {
@@ -320,6 +356,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     ).resolves.toEqual({
       kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
       allowedGroups: ["default", "vip"],
+      existingTokenIds: [],
     })
     expect(createApiTokenMock).not.toHaveBeenCalled()
   })
