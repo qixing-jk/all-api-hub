@@ -1,10 +1,12 @@
 import { useTranslation } from "react-i18next"
 
 import { FormField, SearchableSelect } from "~/components/ui"
+import type { AccountSiteType } from "~/constants/siteType"
 
 export interface Account {
   id: string
   name: string
+  siteType: AccountSiteType
 }
 
 interface AccountSelectionProps {
