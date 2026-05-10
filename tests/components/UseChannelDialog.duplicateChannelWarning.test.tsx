@@ -407,6 +407,45 @@ describe("useChannelDialog", () => {
     expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
   })
 
+  it("does not ensure or create a token when openWithAccount receives a token", async () => {
+    const providedToken = buildApiToken({
+      id: 123,
+      key: "sk-provided-token",
+    })
+    const prepareChannelFormDataMock = vi.fn(
+      async (_account: DisplaySiteData, token: ApiToken) =>
+        buildPreparedFormData({
+          key: token.key,
+        }),
+    )
+    const mockService = buildManagedSiteServiceMock({
+      prepareChannelFormData: prepareChannelFormDataMock,
+    })
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+    getAccountByIdSpy.mockResolvedValue(buildSiteAccount())
+
+    const { result } = await renderChannelDialogHook()
+
+    await act(async () => {
+      await result.current.dialog.openWithAccount(
+        buildDisplaySiteData(),
+        providedToken,
+      )
+    })
+
+    expect(ensureAccountApiTokenSpy).not.toHaveBeenCalled()
+    expect(mockFetchAccountTokens).not.toHaveBeenCalled()
+    expect(prepareChannelFormDataMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "account-id",
+      }),
+      providedToken,
+    )
+    expect(result.current.context.state.isOpen).toBe(true)
+  })
+
   it("opens ChannelDialog when New API exact duplicate verification is unavailable", async () => {
     const hiddenKeyChannel = buildManagedSiteChannel({
       id: 22,
