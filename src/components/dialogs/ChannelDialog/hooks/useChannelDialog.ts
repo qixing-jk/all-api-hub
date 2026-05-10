@@ -13,6 +13,7 @@ import {
   ensureAccountApiToken,
   resolveSub2ApiQuickCreateResolution,
 } from "~/services/accounts/accountOperations"
+import { selectSingleNewApiTokenByIdDiff } from "~/services/accounts/accountPostSaveWorkflow"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   createDisplayAccountApiContext,
@@ -76,6 +77,15 @@ function isSiteAccount(
 }
 
 /**
+ *
+ */
+function getApiTokenIds(tokens: ApiToken[]): number[] {
+  return tokens
+    .map((token) => token?.id)
+    .filter((tokenId): tokenId is number => typeof tokenId === "number")
+}
+
+/**
  * Exposes helpers for opening channel dialogs from account data,
  * raw credentials, or custom initial values.
  */
@@ -88,7 +98,7 @@ export function useChannelDialog() {
     account: DisplaySiteData,
     options?: {
       notice?: string
-      onSuccess?: () => void | Promise<void>
+      onSuccess?: (createdToken?: ApiToken) => void | Promise<void>
     },
   ): Promise<boolean> => {
     const { service, request } = createDisplayAccountApiContext(account)
@@ -348,16 +358,27 @@ export function useChannelDialog() {
       }
 
       let apiToken = accountToken
+      let accountApiService:
+        | ReturnType<typeof createDisplayAccountApiContext>["service"]
+        | null = null
+      let accountApiRequest:
+        | ReturnType<typeof createDisplayAccountApiContext>["request"]
+        | null = null
+      let existingTokenIds: number[] = []
 
       if (!apiToken) {
-        const { service: accountApiService, request: accountApiRequest } =
+        const accountApiContext =
           createDisplayAccountApiContext(displaySiteData)
+        accountApiService = accountApiContext.service
+        accountApiRequest = accountApiContext.request
         const existingTokens =
           await accountApiService.fetchAccountTokens(accountApiRequest)
+        const existingTokenList = Array.isArray(existingTokens)
+          ? existingTokens
+          : []
+        existingTokenIds = getApiTokenIds(existingTokenList)
 
-        apiToken = Array.isArray(existingTokens)
-          ? existingTokens.at(-1) ?? null
-          : null
+        apiToken = existingTokenList.at(-1) ?? null
       }
 
       if (!apiToken) {
@@ -376,10 +397,38 @@ export function useChannelDialog() {
               account: displaySiteData,
               allowedGroups: resolution.allowedGroups,
               notice: t("messages:sub2api.createRequiresGroupSelection"),
-              onSuccess: async () => {
+              onSuccess: async (createdToken?: ApiToken) => {
+                if (createdToken) {
+                  await openWithAccount(
+                    displaySiteData!,
+                    createdToken,
+                    onSuccess,
+                    options,
+                  )
+                  return
+                }
+
+                const refetchedTokens =
+                  accountApiService && accountApiRequest
+                    ? await accountApiService.fetchAccountTokens(
+                        accountApiRequest,
+                      )
+                    : null
+                const recoveredToken = Array.isArray(refetchedTokens)
+                  ? selectSingleNewApiTokenByIdDiff({
+                      existingTokenIds,
+                      tokens: refetchedTokens,
+                    })
+                  : null
+
+                if (!recoveredToken) {
+                  toast.error(t("messages:accountOperations.createTokenFailed"))
+                  return
+                }
+
                 await openWithAccount(
                   displaySiteData!,
-                  null,
+                  recoveredToken,
                   onSuccess,
                   options,
                 )

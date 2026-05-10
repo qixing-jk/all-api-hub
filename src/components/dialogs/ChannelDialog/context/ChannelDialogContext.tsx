@@ -9,7 +9,7 @@ import React, {
 
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSites/channelAssessmentSignals"
-import type { DisplaySiteData } from "~/types"
+import type { ApiToken, DisplaySiteData } from "~/types"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 
 export interface ChannelDialogAdvisoryWarning {
@@ -44,7 +44,7 @@ interface Sub2ApiTokenDialogState {
   account: DisplaySiteData | null
   allowedGroups: string[]
   notice?: string
-  onSuccessCallback?: (() => void | Promise<void>) | null
+  onSuccessCallback?: ((createdToken?: ApiToken) => void | Promise<void>) | null
 }
 
 interface ChannelDialogContextValue {
@@ -70,10 +70,10 @@ interface ChannelDialogContextValue {
     account: DisplaySiteData
     allowedGroups: string[]
     notice?: string
-    onSuccess?: () => void | Promise<void>
+    onSuccess?: (createdToken?: ApiToken) => void | Promise<void>
   }) => void
   closeSub2ApiTokenDialog: () => void
-  handleSub2ApiTokenSuccess: () => Promise<void>
+  handleSub2ApiTokenSuccess: (createdToken?: ApiToken) => Promise<void>
   requestDuplicateChannelWarning: (options: {
     existingChannelName: string
   }) => Promise<boolean>
@@ -168,7 +168,7 @@ export function ChannelDialogProvider({
       account: DisplaySiteData
       allowedGroups: string[]
       notice?: string
-      onSuccess?: () => void | Promise<void>
+      onSuccess?: (createdToken?: ApiToken) => void | Promise<void>
     }) => {
       setSub2apiTokenDialog({
         isOpen: true,
@@ -197,11 +197,14 @@ export function ChannelDialogProvider({
     sub2apiTokenOnSuccessRef.current = sub2apiTokenDialog.onSuccessCallback
   }, [sub2apiTokenDialog.onSuccessCallback])
 
-  const handleSub2ApiTokenSuccess = useCallback(async () => {
-    const callback = sub2apiTokenOnSuccessRef.current
-    closeSub2ApiTokenDialog()
-    await callback?.()
-  }, [closeSub2ApiTokenDialog])
+  const handleSub2ApiTokenSuccess = useCallback(
+    async (createdToken?: ApiToken) => {
+      const callback = sub2apiTokenOnSuccessRef.current
+      closeSub2ApiTokenDialog()
+      await callback?.(createdToken)
+    },
+    [closeSub2ApiTokenDialog],
+  )
 
   const duplicateWarningResolverRef = useRef<
     ((shouldContinue: boolean) => void) | null

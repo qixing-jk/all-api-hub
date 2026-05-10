@@ -777,6 +777,134 @@ describe("useChannelDialog", () => {
     expect(mockFetchAccountTokens).toHaveBeenCalledTimes(2)
   })
 
+  it("resumes Sub2API channel opening with the single new refetched token when AddTokenDialog does not return one", async () => {
+    const existingToken = buildApiToken({
+      id: 3,
+      key: "sk-existing-3",
+      name: "Existing token",
+    })
+    const createdToken = buildApiToken({
+      id: 11,
+      key: "sk-created-11",
+      name: "Created token",
+    })
+    const prepareChannelFormDataMock = vi.fn(
+      async (_account: DisplaySiteData, token: ApiToken) =>
+        buildPreparedFormData({
+          key: token.key,
+        }),
+    )
+    const mockService = buildManagedSiteServiceMock({
+      prepareChannelFormData: prepareChannelFormDataMock,
+    })
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+    getAccountByIdSpy.mockResolvedValue(
+      buildSiteAccount({ site_type: "sub2api" }),
+    )
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([existingToken, undefined] as ApiToken[])
+      .mockResolvedValueOnce([createdToken, existingToken])
+    resolveSub2ApiQuickCreateResolutionSpy.mockResolvedValueOnce({
+      kind: "selection_required",
+      allowedGroups: ["default", "vip"],
+    })
+
+    const { result } = await renderChannelDialogHook()
+
+    await act(async () => {
+      await result.current.dialog.openWithAccount(
+        buildDisplaySiteData({ siteType: "sub2api" }),
+        null,
+      )
+    })
+
+    expect(result.current.context.sub2apiTokenDialog.isOpen).toBe(true)
+
+    await act(async () => {
+      await result.current.context.handleSub2ApiTokenSuccess()
+    })
+
+    expect(prepareChannelFormDataMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        id: "account-id",
+      }),
+      expect.objectContaining({
+        id: createdToken.id,
+        key: createdToken.key,
+      }),
+    )
+    expect(result.current.context.state).toMatchObject({
+      isOpen: true,
+      initialValues: {
+        key: createdToken.key,
+      },
+    })
+    expect(mockToastError).not.toHaveBeenCalled()
+  })
+
+  it("fails closed when Sub2API token refetch cannot identify a single new token after dialog success", async () => {
+    const existingToken = buildApiToken({
+      id: 3,
+      key: "sk-existing-3",
+      name: "Existing token",
+    })
+    const ambiguousTokenA = buildApiToken({
+      id: 11,
+      key: "sk-created-11",
+      name: "Created token A",
+    })
+    const ambiguousTokenB = buildApiToken({
+      id: 12,
+      key: "sk-created-12",
+      name: "Created token B",
+    })
+    const prepareChannelFormDataMock = vi.fn(
+      async (_account: DisplaySiteData, token: ApiToken) =>
+        buildPreparedFormData({
+          key: token.key,
+        }),
+    )
+    const mockService = buildManagedSiteServiceMock({
+      prepareChannelFormData: prepareChannelFormDataMock,
+    })
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+    getAccountByIdSpy.mockResolvedValue(
+      buildSiteAccount({ site_type: "sub2api" }),
+    )
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([existingToken, undefined] as ApiToken[])
+      .mockResolvedValueOnce([existingToken, ambiguousTokenA, ambiguousTokenB])
+    resolveSub2ApiQuickCreateResolutionSpy.mockResolvedValueOnce({
+      kind: "selection_required",
+      allowedGroups: ["default", "vip"],
+    })
+
+    const { result } = await renderChannelDialogHook()
+
+    await act(async () => {
+      await result.current.dialog.openWithAccount(
+        buildDisplaySiteData({ siteType: "sub2api" }),
+        null,
+      )
+    })
+
+    expect(result.current.context.sub2apiTokenDialog.isOpen).toBe(true)
+
+    await act(async () => {
+      await result.current.context.handleSub2ApiTokenSuccess()
+    })
+
+    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
+    expect(result.current.context.state.isOpen).toBe(false)
+    expect(mockToastError).toHaveBeenCalledWith(
+      "messages:accountOperations.createTokenFailed",
+    )
+  })
+
   it("does not open the Sub2API quick-create dialog when tokens already exist", async () => {
     mockFetchAccountTokens.mockResolvedValueOnce([buildApiToken()])
 
