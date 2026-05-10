@@ -79,6 +79,12 @@ When the user names a backend without a deployment URL or fork, treat these as t
 
 If the user's reported behavior differs from upstream, ask for the exact deployment, fork, or version before concluding the repo is wrong.
 
+### External Backend References in Code
+
+- When implementation behavior depends on external upstream documentation or verified backend behavior, add a concise code comment near the adapter logic that records the source and the specific contract being relied on.
+- This is required when the source determines protocol fields, authentication format, unsupported capabilities, compatibility boundaries, one-time secrets, endpoint selection, or deliberate non-fallback behavior.
+- Prefer a short URL or upstream repository reference plus the relevant contract summary. Do not add broad comments for ordinary implementation details that are already obvious from local types or tests.
+
 ## Build, Test, and Development Commands
 
 ### Prerequisites
