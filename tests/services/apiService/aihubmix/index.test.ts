@@ -147,6 +147,58 @@ describe("apiService AIHubMix", () => {
     })
   })
 
+  it("trims access tokens and treats blank string fields as empty normalized values", async () => {
+    let capturedAuthorization: string | null = null
+    server.use(
+      http.get("https://aihubmix.com/api/token/", ({ request }) => {
+        capturedAuthorization = request.headers.get("authorization")
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: [
+            {
+              id: "42",
+              user_id: "7",
+              key: "",
+              name: "blank-compatible",
+              status: 1,
+              created_time: "  ",
+              accessed_time: "  ",
+              expired_time: "  ",
+              remain_quota: "  ",
+              used_quota: "  ",
+              unlimited_quota: false,
+              models: "gpt-4o",
+              subnet: "192.168.0.0/24",
+            },
+          ],
+        })
+      }),
+    )
+
+    await expect(
+      fetchAccountTokens({
+        ...baseRequest,
+        auth: { ...baseRequest.auth, accessToken: "  trimmed-token  " },
+      }),
+    ).resolves.toEqual([
+      expect.objectContaining({
+        id: 42,
+        user_id: 7,
+        key: "",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: -1,
+        remain_quota: 0,
+        used_quota: 0,
+        model_limits_enabled: true,
+        model_limits: "gpt-4o",
+        allow_ips: "192.168.0.0/24",
+      }),
+    ])
+    expect(capturedAuthorization).toBe("trimmed-token")
+  })
+
   it("fetches cookie-authenticated user info from /call/usr/self", async () => {
     let capturedCookieAuth = false
     server.use(
@@ -1026,6 +1078,26 @@ describe("apiService AIHubMix", () => {
     await expect(fetchAllModels(baseRequest)).resolves.toEqual([
       "gpt-4o",
       "gpt-4o-mini",
+      "claude-3-5-sonnet",
+    ])
+  })
+
+  it("normalizes nested catalog string model values", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/models", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            OpenAI: ["gpt-4o", "gpt-4o"],
+            Anthropic: ["claude-3-5-sonnet"],
+          },
+        }),
+      ),
+    )
+
+    await expect(fetchAllModels(baseRequest)).resolves.toEqual([
+      "gpt-4o",
       "claude-3-5-sonnet",
     ])
   })

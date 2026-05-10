@@ -166,6 +166,24 @@ describe("useTokenData", () => {
     expect(result.current.formData.group).toBe("")
   })
 
+  it("leaves an invalid restricted group unchanged when no fallback group is available", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValue(["gpt-4o-mini"])
+    fetchUserGroupsMock.mockResolvedValue(createGroups(["default"]))
+
+    const { result } = renderSubject({
+      isOpen: true,
+      currentAccount: ACCOUNT,
+      initialGroup: "legacy",
+      allowedGroups: ["vip"],
+    })
+
+    await waitFor(() => {
+      expect(result.current.availableModels).toEqual(["gpt-4o-mini"])
+    })
+
+    expect(result.current.formData.group).toBe("legacy")
+  })
+
   it("falls back to the default group when the current group is no longer allowed", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValue(["gpt-4o-mini"])
     fetchUserGroupsMock.mockResolvedValue(createGroups(["default", "vip"]))

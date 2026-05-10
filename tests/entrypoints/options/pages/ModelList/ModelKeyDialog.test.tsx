@@ -89,6 +89,7 @@ const TOKEN = {
 
 describe("ModelKeyDialog", () => {
   beforeEach(() => {
+    vi.restoreAllMocks()
     fetchAccountTokensMock.mockReset()
     createApiTokenMock.mockReset()
     toastSuccessMock.mockReset()
@@ -442,6 +443,91 @@ describe("ModelKeyDialog", () => {
         name: "modelList:keyDialog.createCustomKey",
       }),
     ).toBeDisabled()
+  })
+
+  it("explains missing auth when an account has no auth mode", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{ ...ACCOUNT, authType: AuthTypeEnum.None, token: "" }}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    expect(
+      await screen.findByText("modelList:keyDialog.ineligible.missingAuth"),
+    ).toBeInTheDocument()
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("explains missing credentials when token management credentials are incomplete", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{ ...ACCOUNT, token: "", cookieAuthSessionCookie: "" }}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    expect(
+      await screen.findByText(
+        "modelList:keyDialog.ineligible.missingCredentials",
+      ),
+    ).toBeInTheDocument()
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("uses the unknown fallback when token inventory payload is invalid", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce(null)
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={ACCOUNT}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    expect(
+      await screen.findByText("modelList:keyDialog.loadFailed"),
+    ).toBeInTheDocument()
+  })
+
+  it("shows a create error when the default create request returns false", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    createApiTokenMock.mockResolvedValueOnce(false)
+
+    const user = userEvent.setup()
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={ACCOUNT}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "modelList:keyDialog.createKey",
+      }),
+    )
+
+    expect(
+      await screen.findByText("modelList:keyDialog.createFailed"),
+    ).toBeInTheDocument()
   })
 
   it("supports retry when token loading fails", async () => {

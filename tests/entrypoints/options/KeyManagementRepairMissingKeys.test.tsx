@@ -579,7 +579,7 @@ describe("KeyManagement repair missing keys entry point", () => {
       }),
     )
 
-    expect((await screen.findAllByText("AIHubMix")).length).toBeGreaterThan(0)
+    expect((await screen.findAllByText("AIHubMix"))[0]).toBeInTheDocument()
     expect(
       screen.getByText(
         "keyManagement:repairMissingKeys.skipReasons.aihubmixOneTimeKey",

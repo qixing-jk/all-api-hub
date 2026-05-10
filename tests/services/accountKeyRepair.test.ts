@@ -145,6 +145,13 @@ describe("accountKeyRepair", () => {
       authType: AuthTypeEnum.AccessToken,
       disabled: false,
     })
+    const aihubmixAccount = buildSiteAccount({
+      id: "aihubmix-1",
+      site_type: SITE_TYPES.AIHUBMIX,
+      site_url: "https://aihubmix.com/dashboard",
+      authType: AuthTypeEnum.AccessToken,
+      disabled: false,
+    })
     const validAccount = buildSiteAccount({
       id: "new-api-1",
       site_type: "new-api",
@@ -184,6 +191,7 @@ describe("accountKeyRepair", () => {
 
     mocks.getAllAccounts.mockResolvedValue([
       sub2apiAccount,
+      aihubmixAccount,
       validAccount,
       invalidDisplayAccount,
     ])
@@ -196,6 +204,15 @@ describe("accountKeyRepair", () => {
         authType: AuthTypeEnum.AccessToken,
         userId: 1,
         token: "sub2api-token",
+      }),
+      buildDisplaySiteData({
+        id: aihubmixAccount.id,
+        name: "AIHubMix",
+        baseUrl: aihubmixAccount.site_url,
+        siteType: aihubmixAccount.site_type,
+        authType: AuthTypeEnum.AccessToken,
+        userId: 2,
+        token: "aihubmix-token",
       }),
       buildDisplaySiteData({
         id: validAccount.id,
@@ -240,7 +257,7 @@ describe("accountKeyRepair", () => {
 
     const progress = await accountKeyRepairRunner.getProgress()
     expect(progress.totals).toMatchObject({
-      enabledAccounts: 3,
+      enabledAccounts: 4,
       eligibleAccounts: 2,
       processedAccounts: 2,
       processedEligibleAccounts: 2,
@@ -248,7 +265,7 @@ describe("accountKeyRepair", () => {
     expect(progress.summary).toEqual({
       created: 1,
       alreadyHad: 0,
-      skipped: 1,
+      skipped: 2,
       failed: 1,
     })
     expect(progress.results).toEqual(
@@ -258,6 +275,12 @@ describe("accountKeyRepair", () => {
           outcome: "skipped",
           skipReason: "sub2api",
           siteUrlOrigin: "https://sub2api.example.com",
+        }),
+        expect.objectContaining({
+          accountId: "aihubmix-1",
+          outcome: "skipped",
+          skipReason: "aihubmixOneTimeKey",
+          siteUrlOrigin: "https://aihubmix.com",
         }),
         expect.objectContaining({
           accountId: "new-api-1",

@@ -194,6 +194,52 @@ describe("AddTokenDialog prefill", () => {
     })
   })
 
+  it("falls back to the localized update failure message when the error is blank", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce(["gpt-4", "gpt-3.5"])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    updateApiTokenMock.mockRejectedValueOnce(new Error("   "))
+
+    const editingToken = {
+      id: 123,
+      accountId: ACCOUNT.id,
+      accountName: ACCOUNT.name,
+      name: "Existing key",
+      remain_quota: -1,
+      expired_time: -1,
+      unlimited_quota: true,
+      model_limits_enabled: false,
+      model_limits: "",
+      allow_ips: "",
+      group: "default",
+    } as any
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={() => {}}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+        editingToken={editingToken}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:dialog.updateToken",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "keyManagement:dialog.updateFailed",
+      )
+    })
+  })
+
   it("shows a one-time key dialog when create returns a full token", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
     fetchUserGroupsMock.mockResolvedValueOnce({
@@ -406,6 +452,47 @@ describe("AddTokenDialog prefill", () => {
     expect(
       screen.queryByText("keyManagement:oneTimeKey.title"),
     ).not.toBeInTheDocument()
+  })
+
+  it("continues closing the dialog when the create onSuccess callback rejects", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    createApiTokenMock.mockResolvedValueOnce(true)
+    const onClose = vi.fn()
+    const onSuccess = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("callback failed"))
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={onClose}
+        onSuccess={onSuccess}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+      />,
+    )
+
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "Callback failure",
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "keyManagement:dialog.createSuccess",
+      )
+      expect(onSuccess).toHaveBeenCalledWith(undefined)
+      expect(onClose).toHaveBeenCalled()
+    })
   })
 
   it("closes through the one-time key dialog acknowledgement", async () => {

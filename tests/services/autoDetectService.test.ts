@@ -211,11 +211,17 @@ describe("autoDetectSmart", () => {
       success: false,
       data: undefined,
     })
-    mockFetchUserInfo.mockResolvedValue({
-      id: 10,
-      username: "api-user",
-      access_token: "api-access-token",
-    })
+    mockFetchUserInfo
+      .mockResolvedValueOnce({
+        id: 10,
+        username: "api-user",
+        access_token: "api-access-token",
+      })
+      .mockResolvedValueOnce({
+        id: 11,
+        username: "api-user-with-object-token",
+        access_token: { value: "not-a-string" },
+      })
 
     await expect(
       autoDetectSmart("https://example.com/console"),
@@ -232,12 +238,6 @@ describe("autoDetectSmart", () => {
         accessToken: "api-access-token",
         sub2apiAuth: undefined,
       },
-    })
-
-    mockFetchUserInfo.mockResolvedValueOnce({
-      id: 11,
-      username: "api-user-with-object-token",
-      access_token: { value: "not-a-string" },
     })
 
     await expect(

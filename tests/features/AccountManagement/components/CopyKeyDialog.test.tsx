@@ -231,6 +231,29 @@ describe("CopyKeyDialog", () => {
     ).toBeInTheDocument()
   })
 
+  it("shows a load error when the initial token inventory request fails", async () => {
+    fetchAccountTokensMock.mockRejectedValueOnce(new Error("load failed"))
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    expect(
+      await screen.findByText("ui:dialog.copyKey.loadFailed"),
+    ).toBeInTheDocument()
+  })
+
+  it("handles a malformed initial token inventory as an empty list", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce(null)
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    expect(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.createKey",
+      }),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("default")).not.toBeInTheDocument()
+  })
+
   it("keeps the dialog actionable when create fails (retry works)", async () => {
     fetchAccountTokensMock
       .mockResolvedValueOnce([])
@@ -298,6 +321,98 @@ describe("CopyKeyDialog", () => {
       expect(fetchAccountTokensMock).toHaveBeenCalledTimes(3)
       expect(writeText).toHaveBeenCalledWith("sk-test")
     })
+  })
+
+  it("shows a success toast when refreshed inventory contains multiple tokens", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([]).mockResolvedValueOnce([
+      TOKEN,
+      {
+        ...TOKEN,
+        id: 2,
+        key: "sk-second",
+        name: "second",
+      },
+    ])
+    createApiTokenMock.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.createKey",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "ui:dialog.copyKey.createSuccess",
+      )
+    })
+    expect(await screen.findByText("default")).toBeInTheDocument()
+    expect(screen.getByText("second")).toBeInTheDocument()
+  })
+
+  it("does not start token creation for accounts without manageable credentials", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+
+    render(
+      <CopyKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{ ...ACCOUNT, token: "", cookieAuthSessionCookie: "" }}
+      />,
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.createKey",
+      }),
+    ).toBeDisabled()
+    expect(createApiTokenMock).not.toHaveBeenCalled()
+  })
+
+  it("requires manual Sub2API group selection when quick create cannot pick one", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      vip: { desc: "VIP", ratio: 1 },
+      pro: { desc: "Pro", ratio: 1 },
+    })
+
+    const user = userEvent.setup()
+
+    render(
+      <CopyKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          ...ACCOUNT,
+          siteType: "sub2api",
+          sub2apiAuth: {
+            jwtToken: "jwt",
+            refreshToken: "refresh",
+            user: {
+              id: "sub-user",
+              email: "sub@example.com",
+              displayName: "Sub User",
+              group: "vip",
+              groups: ["vip", "pro"],
+            },
+          },
+        }}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.copyKey.createKey",
+      }),
+    )
+
+    await screen.findByText("messages:sub2api.createRequiresGroupSelection")
+    expect(fetchUserGroupsMock).toHaveBeenCalled()
+    expect(createApiTokenMock).not.toHaveBeenCalled()
   })
 
   it("copies the resolved full key when inventory is masked", async () => {
