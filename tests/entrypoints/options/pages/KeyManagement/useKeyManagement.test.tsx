@@ -10,6 +10,7 @@ import { useKeyManagement } from "~/features/KeyManagement/hooks/useKeyManagemen
 import { buildTokenIdentityKey } from "~/features/KeyManagement/utils"
 import { useAccountData } from "~/hooks/useAccountData"
 import { getApiService } from "~/services/apiService"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { createToken } from "~~/tests/utils/keyManagementFactories"
@@ -1689,7 +1690,7 @@ describe("useKeyManagement enabled account filtering", () => {
     )
   })
 
-  it("shows copy failure feedback when writing to the clipboard fails", async () => {
+  it("shows the clipboard error message when writing to the clipboard fails", async () => {
     const account = createDisplayAccount({
       id: "copy-fail-acc",
       name: "Copy Fail Account",
@@ -1721,8 +1722,52 @@ describe("useKeyManagement enabled account filtering", () => {
     })
 
     expect(writeText).toHaveBeenCalledWith("resolved-token-secret")
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith("denied")
+  })
+
+  it("shows the resolver error message when a saved masked key cannot be copied", async () => {
+    const account = createDisplayAccount({
+      id: "copy-unavailable-acc",
+      name: "Copy Unavailable Account",
+    })
+    const token = createToken({
+      id: 913,
+      accountId: account.id,
+      accountName: account.name,
+      key: "sk-abcd************wxyz",
+      name: "Copy Unavailable Token",
+    })
+
+    const writeText = vi.fn().mockResolvedValue(undefined)
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText },
+    })
+
+    vi.mocked(getApiService).mockReturnValue({
+      resolveApiTokenKey: vi
+        .fn()
+        .mockRejectedValue(
+          new ApiError(
+            "messages:errors.tokenSecretUnavailable",
+            undefined,
+            undefined,
+            API_ERROR_CODES.TOKEN_SECRET_UNAVAILABLE,
+          ),
+        ),
+    } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    await act(async () => {
+      await result.current.copyKey(account, token)
+    })
+
+    expect(writeText).not.toHaveBeenCalled()
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
-      "keyManagement:messages.copyFailed",
+      "messages:errors.tokenSecretUnavailable",
     )
   })
 
@@ -1797,6 +1842,63 @@ describe("useKeyManagement enabled account filtering", () => {
     )
     expect(result.current.getVisibleTokenKey(token)).toBe(
       "resolved-token-secret",
+    )
+  })
+
+  it("shows the resolver error message when revealing a saved masked key fails", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "reveal-unavailable-acc",
+      name: "Reveal Unavailable Account",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    const token = createToken({
+      id: 914,
+      key: "sk-abcd************wxyz",
+      name: "Reveal Unavailable Token",
+      accountId: account.id,
+      accountName: account.name,
+      expired_time: 0,
+    })
+    const resolveApiTokenKey = vi
+      .fn()
+      .mockRejectedValue(
+        new ApiError(
+          "messages:errors.tokenSecretUnavailable",
+          undefined,
+          undefined,
+          API_ERROR_CODES.TOKEN_SECRET_UNAVAILABLE,
+        ),
+      )
+    vi.mocked(getApiService).mockReturnValue({
+      fetchAccountTokens: vi.fn().mockResolvedValue([token]),
+      resolveApiTokenKey,
+    } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() => expect(result.current.tokens).toHaveLength(1))
+
+    await act(async () => {
+      await result.current.toggleKeyVisibility(
+        account,
+        result.current.tokens[0]!,
+      )
+    })
+
+    expect(resolveApiTokenKey).toHaveBeenCalledTimes(1)
+    expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
+      "messages:errors.tokenSecretUnavailable",
     )
   })
 

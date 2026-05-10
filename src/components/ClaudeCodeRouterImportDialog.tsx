@@ -13,6 +13,7 @@ import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/a
 import { fetchOpenAICompatibleModels } from "~/services/apiService/openaiCompatible"
 import { importToClaudeCodeRouter } from "~/services/integrations/claudeCodeRouterService"
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
 
@@ -184,7 +185,7 @@ export function ClaudeCodeRouterImportDialog(
         showResultToast({
           success: false,
           message: t("messages:errors.operation.failed", {
-            error: error instanceof Error ? error.message : String(error),
+            error: getErrorMessage(error, t("messages:errors.unknown")),
           }),
         })
       } finally {

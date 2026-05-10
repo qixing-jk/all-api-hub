@@ -18,6 +18,7 @@ export const SITE_TYPES = {
   OCTOPUS: "octopus",
   AXON_HUB: "axonhub",
   CLAUDE_CODE_HUB: "claude-code-hub",
+  AIHUBMIX: "AIHubMix",
   UNKNOWN: "unknown",
 } as const
 
@@ -34,6 +35,7 @@ export const ACCOUNT_SITE_TYPES = [
   SITE_TYPES.NEO_API,
   SITE_TYPES.WONG_GONGYI,
   SITE_TYPES.SUB2API,
+  SITE_TYPES.AIHUBMIX,
   SITE_TYPES.UNKNOWN,
 ] as const
 
@@ -89,7 +91,17 @@ export const ACCOUNT_SITE_TITLE_RULES = [
    */
   { name: SITE_TYPES.WONG_GONGYI, regex: /wong\s*公益站/i },
   { name: SITE_TYPES.SUB2API, regex: makeTitleRegex(SITE_TYPES.SUB2API) },
+  { name: SITE_TYPES.AIHUBMIX, regex: makeTitleRegex(SITE_TYPES.AIHUBMIX) },
   { name: SITE_TYPES.UNKNOWN, regex: makeTitleRegex(SITE_TYPES.UNKNOWN) },
+] as const
+
+export const ACCOUNT_SITE_DOMAIN_RULES = [
+  {
+    name: SITE_TYPES.AIHUBMIX,
+    // Domain-first detection avoids treating AIHubMix as a generic
+    // One-API/New-API compatible site based on page title or fallback probes.
+    hostnames: ["aihubmix.com", "www.aihubmix.com", "console.aihubmix.com"],
+  },
 ] as const
 
 /**

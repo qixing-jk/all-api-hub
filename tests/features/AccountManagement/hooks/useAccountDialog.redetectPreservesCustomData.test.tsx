@@ -535,6 +535,52 @@ describe("useAccountDialog re-detect preservation", () => {
     expect(result.current.state.isDetected).toBe(true)
   })
 
+  it("switches AIHubMix auto-detect results to access-token mode and skips cookie import", async () => {
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: true,
+      message: "ok",
+      data: {
+        username: "aihubmix-user",
+        accessToken: "aihubmix-access-token",
+        userId: "21",
+        siteName: "AIHubMix",
+        siteType: SITE_TYPES.AIHUBMIX,
+        authType: AuthTypeEnum.AccessToken,
+        exchangeRate: 7,
+      },
+    })
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://console.aihubmix.com")
+      result.current.setters.setAuthType(AuthTypeEnum.Cookie)
+      result.current.setters.setCookieAuthSessionCookie("session=old")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(result.current.state.siteType).toBe(SITE_TYPES.AIHUBMIX)
+    expect(result.current.state.authType).toBe(AuthTypeEnum.AccessToken)
+    expect(result.current.state.accessToken).toBe("aihubmix-access-token")
+    expect(result.current.state.cookieAuthSessionCookie).toBe("")
+    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
   it("keeps detection successful but shows the permission warning when cookie auto-import is denied", async () => {
     const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
     vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({

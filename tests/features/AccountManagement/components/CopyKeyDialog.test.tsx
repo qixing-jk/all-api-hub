@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import CopyKeyDialog from "~/features/AccountManagement/components/CopyKeyDialog"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { AuthTypeEnum } from "~/types"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -206,7 +207,7 @@ describe("CopyKeyDialog", () => {
     })
   })
 
-  it("keeps masked-key copy failures localized to the action", async () => {
+  it("keeps masked-key copy failures localized to the action and shows the error message", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([
       {
         ...TOKEN,
@@ -232,8 +233,43 @@ describe("CopyKeyDialog", () => {
     await waitFor(() => {
       expect(resolveApiTokenKeyMock).toHaveBeenCalled()
       expect(writeText).not.toHaveBeenCalled()
+      expect(toastErrorMock).toHaveBeenCalledWith("masked fetch failed")
+    })
+  })
+
+  it("shows the resolver error message when a saved masked key cannot be copied", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([
+      {
+        ...TOKEN,
+        key: "sk-abcd************wxyz",
+      },
+    ])
+    resolveApiTokenKeyMock.mockRejectedValueOnce(
+      new ApiError(
+        "messages:errors.tokenSecretUnavailable",
+        undefined,
+        undefined,
+        API_ERROR_CODES.TOKEN_SECRET_UNAVAILABLE,
+      ),
+    )
+
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+
+    render(<CopyKeyDialog isOpen={true} onClose={() => {}} account={ACCOUNT} />)
+
+    await user.click(await screen.findByText("default"))
+    await user.click(
+      await screen.findByRole("button", { name: "ui:dialog.copyKey.copy" }),
+    )
+
+    await waitFor(() => {
+      expect(resolveApiTokenKeyMock).toHaveBeenCalled()
+      expect(writeText).not.toHaveBeenCalled()
       expect(toastErrorMock).toHaveBeenCalledWith(
-        "ui:dialog.copyKey.copyFailedManual",
+        "messages:errors.tokenSecretUnavailable",
       )
     })
   })

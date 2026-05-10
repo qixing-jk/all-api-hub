@@ -934,7 +934,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       await navigator.clipboard.writeText(resolvedToken.key)
       toast.success(t("keyManagement:messages.keyCopied", { name: token.name }))
     } catch (error) {
-      toast.error(t("keyManagement:messages.copyFailed"))
+      toast.error(
+        getErrorMessage(error, t("keyManagement:messages.copyFailed")),
+      )
       logger.warn("Failed to copy key to clipboard", error)
     }
   }
@@ -1002,7 +1004,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         return newSet
       })
     } catch (error) {
-      toast.error(t("keyManagement:messages.revealFailed"))
+      toast.error(
+        getErrorMessage(error, t("keyManagement:messages.revealFailed")),
+      )
       logger.warn("Failed to resolve key for visibility", error)
     } finally {
       if (isMountedRef.current) {

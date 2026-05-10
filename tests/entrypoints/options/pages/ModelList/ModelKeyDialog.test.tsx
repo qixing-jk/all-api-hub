@@ -151,6 +151,37 @@ describe("ModelKeyDialog", () => {
     })
   })
 
+  it("shows the resolver error message when copying the selected key fails", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([TOKEN])
+    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
+      new Error("resolver failed"),
+    )
+
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={ACCOUNT}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.copyKey" }),
+    )
+
+    await waitFor(() => {
+      expect(writeText).not.toHaveBeenCalled()
+      expect(toastErrorMock).toHaveBeenCalledWith("resolver failed")
+    })
+  })
+
   it("shows empty state and explicit create actions when no compatible tokens exist", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
 

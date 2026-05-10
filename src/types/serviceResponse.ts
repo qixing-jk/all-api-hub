@@ -1,6 +1,11 @@
 import { AutoDetectError } from "~/services/accounts/utils/autoDetectUtils"
 
-import type { ApiToken, CheckInConfig, Sub2ApiAuthConfig } from "./index"
+import type {
+  ApiToken,
+  AuthTypeEnum,
+  CheckInConfig,
+  Sub2ApiAuthConfig,
+} from "./index"
 
 /**
  * Unified service response structure
@@ -24,6 +29,7 @@ export interface AccountValidationResponse
     checkIn: CheckInConfig
     siteName: string
     siteType?: string
+    authType?: AuthTypeEnum
     sub2apiAuth?: Sub2ApiAuthConfig
   }> {
   detailedError?: AutoDetectError // Keep for backwards compatibility

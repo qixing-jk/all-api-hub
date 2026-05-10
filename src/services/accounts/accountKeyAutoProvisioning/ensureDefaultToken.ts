@@ -77,6 +77,9 @@ export async function ensureDefaultApiTokenForAccount(params: {
     throw new Error("create_token_failed")
   }
 
+  // Backends such as AIHubMix may only expose the full API key in the create
+  // response; a follow-up inventory fetch can return a masked key that cannot
+  // be revealed later. This helper currently returns inventory data only.
   const updatedTokens = await service.fetchAccountTokens({
     baseUrl: displaySiteData.baseUrl,
     accountId: displaySiteData.id,

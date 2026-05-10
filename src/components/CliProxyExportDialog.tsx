@@ -37,6 +37,7 @@ import {
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import { normalizeOpenAiFamilyBaseUrl } from "~/services/verification/webAiApiCheck/extractCredentials"
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
@@ -380,7 +381,7 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
         showResultToast({
           success: false,
           message: t("messages:errors.operation.failed", {
-            error: error instanceof Error ? error.message : String(error),
+            error: getErrorMessage(error, t("messages:errors.unknown")),
           }),
         })
       } finally {

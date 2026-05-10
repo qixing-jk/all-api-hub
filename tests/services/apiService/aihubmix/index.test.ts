@@ -1,0 +1,662 @@
+import { http, HttpResponse } from "msw"
+import { beforeEach, describe, expect, it } from "vitest"
+
+import {
+  createApiToken,
+  deleteApiToken,
+  fetchAccountAvailableModels,
+  fetchAccountData,
+  fetchAccountTokens,
+  fetchTokenById,
+  fetchUserInfo,
+  getOrCreateAccessToken,
+  resolveApiTokenKey,
+  searchApiTokens,
+  updateApiToken,
+} from "~/services/apiService/aihubmix"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import type { CreateTokenRequest } from "~/services/apiService/common/type"
+import { AuthTypeEnum } from "~/types"
+import { server } from "~~/tests/msw/server"
+
+const baseRequest = {
+  baseUrl: "https://aihubmix.com",
+  auth: {
+    authType: AuthTypeEnum.AccessToken,
+    userId: 7,
+    accessToken: "system-access-token",
+  },
+}
+
+const tokenRequest: CreateTokenRequest = {
+  name: "temporary-key",
+  remain_quota: 500000,
+  expired_time: -1,
+  unlimited_quota: false,
+  model_limits_enabled: false,
+  model_limits: "",
+  allow_ips: "",
+  group: "default",
+}
+
+describe("apiService AIHubMix", () => {
+  beforeEach(() => {
+    server.resetHandlers()
+  })
+
+  it("fetches cookie-authenticated user info from /call/usr/self", async () => {
+    let capturedCookieAuth = false
+    server.use(
+      http.get("https://aihubmix.com/call/usr/self", ({ request }) => {
+        capturedCookieAuth = request.credentials === "include"
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            id: 7,
+            username: "aihubmix-user",
+            access_token: "existing-access-token",
+            quota: 900000,
+            used_quota: 12345,
+          },
+        })
+      }),
+    )
+
+    const userInfo = await fetchUserInfo({
+      baseUrl: "https://aihubmix.com",
+      auth: { authType: AuthTypeEnum.Cookie },
+    })
+
+    expect(capturedCookieAuth).toBe(true)
+    expect(userInfo).toMatchObject({
+      id: 7,
+      username: "aihubmix-user",
+      access_token: "existing-access-token",
+    })
+  })
+
+  it("fetches cookie user info from the main web origin for console.aihubmix.com", async () => {
+    let mainOriginUserInfoCalled = false
+    server.use(
+      http.get("https://aihubmix.com/call/usr/self", () => {
+        mainOriginUserInfoCalled = true
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            id: 7,
+            username: "aihubmix-user",
+            access_token: "",
+          },
+        })
+      }),
+      http.get("https://console.aihubmix.com/call/usr/self", () =>
+        HttpResponse.json(
+          {
+            success: false,
+            message: "wrong origin",
+            data: null,
+          },
+          { status: 500 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchUserInfo({
+        baseUrl: "https://console.aihubmix.com",
+        auth: { authType: AuthTypeEnum.Cookie },
+      }),
+    ).resolves.toMatchObject({
+      id: 7,
+      username: "aihubmix-user",
+    })
+    expect(mainOriginUserInfoCalled).toBe(true)
+  })
+
+  it("fetches access-token user info from /api/user/self with raw Authorization", async () => {
+    let capturedAuthorization: string | null = null
+    let mainOriginUserInfoCalled = false
+    server.use(
+      http.get("https://aihubmix.com/api/user/self", ({ request }) => {
+        mainOriginUserInfoCalled = true
+        capturedAuthorization = request.headers.get("authorization")
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            id: 7,
+            username: "aihubmix-user",
+            access_token: "",
+            quota: 900000,
+          },
+        })
+      }),
+      http.get("https://console.aihubmix.com/api/user/self", () =>
+        HttpResponse.json(
+          {
+            success: false,
+            message: "wrong origin",
+            data: null,
+          },
+          { status: 500 },
+        ),
+      ),
+      http.get("https://aihubmix.com/call/usr/self", () =>
+        HttpResponse.json(
+          {
+            success: false,
+            message: "wrong auth endpoint",
+            data: null,
+          },
+          { status: 500 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchUserInfo({
+        baseUrl: "https://console.aihubmix.com",
+        auth: {
+          authType: AuthTypeEnum.AccessToken,
+          accessToken: "system-access-token",
+        },
+      }),
+    ).resolves.toMatchObject({
+      id: 7,
+      username: "aihubmix-user",
+    })
+    expect(mainOriginUserInfoCalled).toBe(true)
+    expect(capturedAuthorization).toBe("system-access-token")
+  })
+
+  it("uses existing access_token from /call/usr/self before fetching the console token", async () => {
+    let consoleTokenCalled = false
+    server.use(
+      http.get("https://aihubmix.com/call/usr/self", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            id: 7,
+            username: "aihubmix-user",
+            access_token: "existing-access-token",
+          },
+        }),
+      ),
+      http.get("https://aihubmix.com/call/usr/tkn", () => {
+        consoleTokenCalled = true
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: "created-access-token",
+        })
+      }),
+    )
+
+    await expect(
+      getOrCreateAccessToken({
+        baseUrl: "https://aihubmix.com",
+        auth: { authType: AuthTypeEnum.Cookie },
+      }),
+    ).resolves.toEqual({
+      username: "aihubmix-user",
+      access_token: "existing-access-token",
+    })
+    expect(consoleTokenCalled).toBe(false)
+  })
+
+  it("fetches the console access token when /call/usr/self has no usable token", async () => {
+    let consoleTokenRequestUrl: string | null = null
+    let capturedCookieAuth = false
+    server.use(
+      http.get("https://aihubmix.com/call/usr/self", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            id: 7,
+            username: "aihubmix-user",
+            access_token: "",
+          },
+        }),
+      ),
+      http.get("https://aihubmix.com/call/usr/tkn", ({ request }) => {
+        consoleTokenRequestUrl = request.url
+        capturedCookieAuth = request.credentials === "include"
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: "created-access-token",
+        })
+      }),
+    )
+
+    await expect(
+      getOrCreateAccessToken({
+        baseUrl: "https://aihubmix.com",
+        auth: { authType: AuthTypeEnum.Cookie },
+      }),
+    ).resolves.toEqual({
+      username: "aihubmix-user",
+      access_token: "created-access-token",
+    })
+    expect(capturedCookieAuth).toBe(true)
+    expect(consoleTokenRequestUrl).toContain(
+      "https://aihubmix.com/call/usr/tkn",
+    )
+    expect(consoleTokenRequestUrl).toContain("_t=")
+  })
+
+  it("fetches the console access token from the main API origin for console.aihubmix.com", async () => {
+    let mainOriginUserInfoCalled = false
+    let mainOriginTokenCalled = false
+    server.use(
+      http.get("https://aihubmix.com/call/usr/self", () => {
+        mainOriginUserInfoCalled = true
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            id: 7,
+            username: "aihubmix-user",
+            access_token: "",
+          },
+        })
+      }),
+      http.get("https://aihubmix.com/call/usr/tkn", () => {
+        mainOriginTokenCalled = true
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: "main-origin-access-token",
+        })
+      }),
+      http.get("https://aihubmix.com/api/user/self", () =>
+        HttpResponse.json(
+          {
+            success: false,
+            message: "api user self requires access token",
+            data: null,
+          },
+          { status: 401 },
+        ),
+      ),
+      http.get("https://console.aihubmix.com/api/user/self", () =>
+        HttpResponse.json(
+          {
+            success: false,
+            message: "wrong origin",
+            data: null,
+          },
+          { status: 500 },
+        ),
+      ),
+      http.get("https://console.aihubmix.com/call/usr/self", () =>
+        HttpResponse.json(
+          {
+            success: false,
+            message: "wrong origin",
+            data: null,
+          },
+          { status: 500 },
+        ),
+      ),
+      http.get("https://console.aihubmix.com/call/usr/tkn", () =>
+        HttpResponse.json(
+          {
+            success: false,
+            message: "wrong origin",
+            data: "",
+          },
+          { status: 500 },
+        ),
+      ),
+    )
+
+    await expect(
+      getOrCreateAccessToken({
+        baseUrl: "https://console.aihubmix.com",
+        auth: { authType: AuthTypeEnum.Cookie },
+      }),
+    ).resolves.toEqual({
+      username: "aihubmix-user",
+      access_token: "main-origin-access-token",
+    })
+    expect(mainOriginUserInfoCalled).toBe(true)
+    expect(mainOriginTokenCalled).toBe(true)
+  })
+
+  it("sends saved-token management calls with raw Authorization token", async () => {
+    let capturedAuthorization: string | null = null
+    server.use(
+      http.get("https://aihubmix.com/api/token/", ({ request }) => {
+        capturedAuthorization = request.headers.get("authorization")
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: [
+            {
+              id: 1,
+              user_id: 7,
+              key: "plain-key",
+              name: "test-key",
+              status: 1,
+              created_time: 100,
+              accessed_time: 200,
+              expired_time: -1,
+              remain_quota: "500000",
+              unlimited_quota: false,
+              used_quota: "1000",
+              model_limits: "gpt-4o",
+              allow_ips: "127.0.0.1",
+            },
+          ],
+        })
+      }),
+    )
+
+    const tokens = await fetchAccountTokens(baseRequest)
+
+    expect(capturedAuthorization).toBe("system-access-token")
+    expect(tokens).toEqual([
+      expect.objectContaining({
+        id: 1,
+        key: "sk-plain-key",
+        name: "test-key",
+        remain_quota: 500000,
+        used_quota: 1000,
+        model_limits: "gpt-4o",
+        allow_ips: "127.0.0.1",
+      }),
+    ])
+  })
+
+  it("sends saved-token management calls to the main API origin for console.aihubmix.com", async () => {
+    let mainOriginTokenListCalled = false
+    server.use(
+      http.get("https://aihubmix.com/api/token/", () => {
+        mainOriginTokenListCalled = true
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: [],
+        })
+      }),
+      http.get("https://console.aihubmix.com/api/token/", () =>
+        HttpResponse.json(
+          {
+            success: false,
+            message: "wrong origin",
+            data: [],
+          },
+          { status: 500 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchAccountTokens({
+        ...baseRequest,
+        baseUrl: "https://console.aihubmix.com",
+      }),
+    ).resolves.toEqual([])
+    expect(mainOriginTokenListCalled).toBe(true)
+  })
+
+  it("searches API keys through /api/token/search with keyword query", async () => {
+    let capturedAuthorization: string | null = null
+    let capturedKeyword: string | null = null
+    server.use(
+      http.get("https://aihubmix.com/api/token/search", ({ request }) => {
+        capturedAuthorization = request.headers.get("authorization")
+        capturedKeyword = new URL(request.url).searchParams.get("keyword")
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: [
+            {
+              id: 9,
+              user_id: 7,
+              key: "searched-key",
+              name: "search match",
+              status: 1,
+              created_time: 100,
+              accessed_time: 200,
+              expired_time: -1,
+              remain_quota: 500000,
+              unlimited_quota: false,
+              used_quota: 1000,
+            },
+          ],
+        })
+      }),
+    )
+
+    const tokens = await searchApiTokens(baseRequest, "temporary key")
+
+    expect(capturedAuthorization).toBe("system-access-token")
+    expect(capturedKeyword).toBe("temporary key")
+    expect(tokens).toEqual([
+      expect.objectContaining({
+        id: 9,
+        key: "sk-searched-key",
+        name: "search match",
+      }),
+    ])
+  })
+
+  it("parses account quota and used quota from /api/user/self", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/user/self", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            id: 7,
+            username: "aihubmix-user",
+            quota: "900000",
+            used_quota: "12345",
+          },
+        }),
+      ),
+    )
+
+    const accountData = await fetchAccountData({
+      ...baseRequest,
+      checkIn: {
+        enableDetection: true,
+        siteStatus: {
+          isCheckedInToday: false,
+        },
+      },
+    })
+
+    expect(accountData).toMatchObject({
+      quota: 900000,
+      today_quota_consumption: 12345,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_requests_count: 0,
+      today_income: 0,
+      checkIn: {
+        enableDetection: false,
+      },
+    })
+  })
+
+  it("maps token detail, create, update, and delete to documented endpoints", async () => {
+    const calls: Array<{ method: string; pathname: string; body?: any }> = []
+
+    server.use(
+      http.get("https://aihubmix.com/api/token/:id", ({ params, request }) => {
+        calls.push({
+          method: request.method,
+          pathname: new URL(request.url).pathname,
+        })
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            id: Number(params.id),
+            key: "detail-key",
+            name: "detail",
+            status: 1,
+            created_time: 1,
+            accessed_time: 2,
+            expired_time: -1,
+            remain_quota: 100,
+            unlimited_quota: false,
+            used_quota: 0,
+          },
+        })
+      }),
+      http.post("https://aihubmix.com/api/token/", async ({ request }) => {
+        calls.push({
+          method: request.method,
+          pathname: new URL(request.url).pathname,
+          body: await request.json(),
+        })
+        return HttpResponse.json({ success: true, message: "", data: true })
+      }),
+      http.put("https://aihubmix.com/api/token/", async ({ request }) => {
+        calls.push({
+          method: request.method,
+          pathname: new URL(request.url).pathname,
+          body: await request.json(),
+        })
+        return HttpResponse.json({ success: true, message: "", data: true })
+      }),
+      http.delete("https://aihubmix.com/api/token/:id", ({ request }) => {
+        calls.push({
+          method: request.method,
+          pathname: new URL(request.url).pathname,
+        })
+        return HttpResponse.json({ success: true, message: "", data: true })
+      }),
+    )
+
+    await expect(fetchTokenById(baseRequest, 12)).resolves.toMatchObject({
+      id: 12,
+      key: "sk-detail-key",
+    })
+    await expect(createApiToken(baseRequest, tokenRequest)).resolves.toBe(true)
+    await expect(updateApiToken(baseRequest, 12, tokenRequest)).resolves.toBe(
+      true,
+    )
+    await expect(deleteApiToken(baseRequest, 12)).resolves.toBe(true)
+
+    expect(calls).toEqual([
+      { method: "GET", pathname: "/api/token/12" },
+      { method: "POST", pathname: "/api/token/", body: tokenRequest },
+      {
+        method: "PUT",
+        pathname: "/api/token/",
+        body: { ...tokenRequest, id: 12 },
+      },
+      { method: "DELETE", pathname: "/api/token/12" },
+    ])
+  })
+
+  it("does not try to reveal masked keys through unsupported detail endpoints", async () => {
+    server.use(
+      http.post("https://aihubmix.com/api/token/:id/key", () =>
+        HttpResponse.json(
+          { success: false, message: "unsupported" },
+          { status: 500 },
+        ),
+      ),
+      http.get("https://aihubmix.com/api/token/:id", () =>
+        HttpResponse.json(
+          { success: false, message: "detail is not a secret endpoint" },
+          { status: 500 },
+        ),
+      ),
+    )
+
+    await expect(
+      resolveApiTokenKey(baseRequest, {
+        id: 12,
+        key: "sk-abcd************wxyz",
+      } as any),
+    ).rejects.toMatchObject({
+      code: API_ERROR_CODES.TOKEN_SECRET_UNAVAILABLE,
+      message: "messages:errors.tokenSecretUnavailable",
+    })
+  })
+
+  it("passes through usable AIHubMix keys without reveal requests", async () => {
+    await expect(
+      resolveApiTokenKey(baseRequest, {
+        id: 12,
+        key: "plain-key",
+      } as any),
+    ).resolves.toBe("sk-plain-key")
+  })
+
+  it("normalizes available model response variants to model id strings", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: {
+            OpenAI: ["gpt-4o", { id: "gpt-4o-mini" }],
+            Anthropic: [{ model: "claude-3-5-sonnet" }],
+          },
+        }),
+      ),
+    )
+
+    await expect(fetchAccountAvailableModels(baseRequest)).resolves.toEqual([
+      "gpt-4o",
+      "gpt-4o-mini",
+      "claude-3-5-sonnet",
+    ])
+  })
+
+  it("fetches available models from the main API origin for console.aihubmix.com", async () => {
+    let mainOriginModelsCalled = false
+    server.use(
+      http.get("https://aihubmix.com/api/user/available_models", () => {
+        mainOriginModelsCalled = true
+        return HttpResponse.json({
+          success: true,
+          message: "",
+          data: ["gpt-4o"],
+        })
+      }),
+      http.get("https://console.aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json(
+          {
+            success: false,
+            message: "wrong origin",
+            data: [],
+          },
+          { status: 500 },
+        ),
+      ),
+    )
+
+    await expect(
+      fetchAccountAvailableModels({
+        ...baseRequest,
+        baseUrl: "https://console.aihubmix.com",
+      }),
+    ).resolves.toEqual(["gpt-4o"])
+    expect(mainOriginModelsCalled).toBe(true)
+  })
+
+  it("throws ApiError for malformed response bodies", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/token/", () =>
+        HttpResponse.json(null),
+      ),
+    )
+
+    await expect(fetchAccountTokens(baseRequest)).rejects.toBeInstanceOf(
+      ApiError,
+    )
+  })
+})

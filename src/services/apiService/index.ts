@@ -1,5 +1,6 @@
 import { SITE_TYPES } from "~/constants/siteType"
 
+import * as aihubmixAPI from "./aihubmix"
 import * as anyrouterAPI from "./anyrouter"
 import * as axonHubAPI from "./axonHub"
 import * as commonAPI from "./common"
@@ -23,6 +24,7 @@ const siteOverrideMap = {
   [SITE_TYPES.SUB2API]: [sub2apiAPI],
   [SITE_TYPES.OCTOPUS]: [octopusAPI],
   [SITE_TYPES.AXON_HUB]: [axonHubAPI],
+  [SITE_TYPES.AIHUBMIX]: [aihubmixAPI],
 } as const
 
 // 添加类型定义

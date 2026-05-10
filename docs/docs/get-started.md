@@ -57,6 +57,7 @@
 All API Hub 几乎支持市面上所有主流的 AI 中转站架构，包括：
 - **One API / New API** 系列（最常见）
 - **Sub2API**
+- **AIHubMix**
 - **AnyRouter / VoAPI / Super-API** 等特色架构
 
 ::: tip 兼容性提示

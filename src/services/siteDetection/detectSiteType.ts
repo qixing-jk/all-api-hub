@@ -1,4 +1,5 @@
 import {
+  ACCOUNT_SITE_DOMAIN_RULES,
   ACCOUNT_SITE_TITLE_RULES,
   SITE_TYPES,
   type AccountSiteType,
@@ -138,9 +139,29 @@ async function getAccountSiteUserIdType(url: string): Promise<AccountSiteType> {
   return SITE_TYPES.UNKNOWN
 }
 
+/**
+ *
+ */
+function detectAccountSiteTypeFromDomain(url: string): AccountSiteType {
+  try {
+    const hostname = new URL(url).hostname.toLowerCase()
+    const matchedRule = ACCOUNT_SITE_DOMAIN_RULES.find((rule) =>
+      rule.hostnames.includes(hostname),
+    )
+    return matchedRule?.name ?? SITE_TYPES.UNKNOWN
+  } catch {
+    return SITE_TYPES.UNKNOWN
+  }
+}
+
 export const getAccountSiteType = async (
   url: string,
 ): Promise<AccountSiteType> => {
+  const domainSiteType = detectAccountSiteTypeFromDomain(url)
+  if (domainSiteType !== SITE_TYPES.UNKNOWN) {
+    return domainSiteType
+  }
+
   const title = await fetchSiteOriginalTitle(url)
   for (const rule of ACCOUNT_SITE_TITLE_RULES) {
     if (rule.regex.test(title)) {

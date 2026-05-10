@@ -8,6 +8,7 @@ const {
   commonFetchModelPricing,
   commonFetchAccountTokens,
   commonResolveApiTokenKey,
+  aihubmixFetchAccountTokens,
   oneHubFetchModelPricing,
   oneHubFetchAccountTokens,
   wongResolveApiTokenKey,
@@ -16,6 +17,7 @@ const {
   commonFetchModelPricing: vi.fn(),
   commonFetchAccountTokens: vi.fn(),
   commonResolveApiTokenKey: vi.fn(),
+  aihubmixFetchAccountTokens: vi.fn(),
   oneHubFetchModelPricing: vi.fn(),
   oneHubFetchAccountTokens: vi.fn(),
   wongResolveApiTokenKey: vi.fn(),
@@ -32,6 +34,10 @@ vi.mock("~/services/apiService/oneHub", () => ({
   fetchModelPricing: oneHubFetchModelPricing,
   fetchAccountTokens: oneHubFetchAccountTokens,
   // Intentionally omit fetchUserInfo so getApiFunc falls back to common
+}))
+
+vi.mock("~/services/apiService/aihubmix", () => ({
+  fetchAccountTokens: aihubmixFetchAccountTokens,
 }))
 
 vi.mock("~/services/apiService/wong", () => ({
@@ -180,5 +186,22 @@ describe("apiService index wrapper", () => {
     expect(wongResolveApiTokenKey).toHaveBeenCalledTimes(1)
     expect(wongResolveApiTokenKey).toHaveBeenCalledWith(request, token)
     expect(commonResolveApiTokenKey).not.toHaveBeenCalled()
+  })
+
+  it("should route AIHubMix account token calls through the site override", async () => {
+    aihubmixFetchAccountTokens.mockResolvedValue([])
+
+    const request = {
+      baseUrl: "https://aihubmix.com",
+      auth: { authType: "access_token", userId: 1, accessToken: "token" },
+    }
+
+    await (getApiService(SITE_TYPES.AIHUBMIX).fetchAccountTokens as any)(
+      request,
+    )
+
+    expect(aihubmixFetchAccountTokens).toHaveBeenCalledTimes(1)
+    expect(aihubmixFetchAccountTokens).toHaveBeenCalledWith(request)
+    expect(commonFetchAccountTokens).not.toHaveBeenCalled()
   })
 })

@@ -19,6 +19,7 @@ import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/a
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 import {
   formatKeyTime,
   formatQuota,
@@ -78,7 +79,7 @@ export function TokenDetails({
       showResultToast({
         success: false,
         message: t("messages:errors.operation.failed", {
-          error: error instanceof Error ? error.message : String(error),
+          error: getErrorMessage(error, t("messages:errors.unknown")),
         }),
       })
     }

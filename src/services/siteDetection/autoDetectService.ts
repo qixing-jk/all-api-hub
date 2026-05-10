@@ -153,6 +153,10 @@ async function getUserDataViaAPI(
     return {
       userId: userInfo.id,
       user: userInfo,
+      accessToken:
+        typeof userInfo.access_token === "string"
+          ? userInfo.access_token
+          : undefined,
       siteTypeHint: siteType,
     }
   } catch (error) {

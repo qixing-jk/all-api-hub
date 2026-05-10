@@ -35,6 +35,7 @@ import {
   type KiloCodeExportTuple,
 } from "~/services/integrations/kiloCodeExport"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
+import { getErrorMessage } from "~/utils/core/error"
 import { stripTrailingOpenAIV1 } from "~/utils/core/url"
 
 interface KiloCodeExportDialogProps {
@@ -734,8 +735,10 @@ export function KiloCodeExportDialog({
         JSON.stringify(resolvedApiConfigs, null, 2),
       )
       toast.success(t("ui:dialog.kiloCode.messages.copiedApiConfigs"))
-    } catch {
-      toast.error(t("ui:dialog.kiloCode.messages.copyFailed"))
+    } catch (error) {
+      toast.error(
+        getErrorMessage(error, t("ui:dialog.kiloCode.messages.copyFailed")),
+      )
     }
   }
 

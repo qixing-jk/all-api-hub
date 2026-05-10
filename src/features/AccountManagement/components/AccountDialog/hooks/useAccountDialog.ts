@@ -982,10 +982,13 @@ export function useAccountDialog({
           }),
         )
 
-        // Attempt to auto-import session cookies after detection for cookie-auth accounts.
+        // Attempt to auto-import session cookies after detection for cookie-auth
+        // accounts. AIHubMix uses cookies only during access-token import, so it
+        // should not keep a saved cookie-auth session.
         if (
           authType === AuthTypeEnum.Cookie &&
           resultData.siteType !== SITE_TYPES.SUB2API &&
+          resultData.siteType !== SITE_TYPES.AIHUBMIX &&
           !cookieAuthSessionCookie.trim() &&
           url.trim()
         ) {
@@ -1544,11 +1547,18 @@ function buildDraftFromAutoDetectResult(params: {
         : draft.exchangeRate,
     siteType: nextSiteType,
     authType:
-      nextSiteType === SITE_TYPES.SUB2API
+      resultData.authType ??
+      // AIHubMix auto-detect may start from a cookie-auth browser session, but
+      // the saved account must use the retrieved access token.
+      (nextSiteType === SITE_TYPES.SUB2API ||
+      nextSiteType === SITE_TYPES.AIHUBMIX
         ? AuthTypeEnum.AccessToken
-        : draft.authType,
+        : draft.authType),
     cookieAuthSessionCookie:
-      nextSiteType === SITE_TYPES.SUB2API ? "" : draft.cookieAuthSessionCookie,
+      nextSiteType === SITE_TYPES.SUB2API ||
+      nextSiteType === SITE_TYPES.AIHUBMIX
+        ? ""
+        : draft.cookieAuthSessionCookie,
     checkIn: preserveExistingCheckIn
       ? deepOverride(nextCheckIn, draft.checkIn)
       : nextCheckIn,

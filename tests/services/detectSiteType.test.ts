@@ -150,6 +150,48 @@ describe("detectSiteType", () => {
   })
 
   describe("getAccountSiteType", () => {
+    describe("Domain-based detection", () => {
+      it("detects AIHubMix from the canonical root domain without title fetch", async () => {
+        let titleFetched = false
+        server.use(
+          http.get("https://aihubmix.com", () => {
+            titleFetched = true
+            return new HttpResponse("<html><title>new-api</title></html>", {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+        )
+
+        await expect(getAccountSiteType("https://aihubmix.com/")).resolves.toBe(
+          SITE_TYPES.AIHUBMIX,
+        )
+        expect(titleFetched).toBe(false)
+      })
+
+      it("detects AIHubMix from www.aihubmix.com paths", async () => {
+        await expect(
+          getAccountSiteType("https://www.aihubmix.com/some/path"),
+        ).resolves.toBe(SITE_TYPES.AIHUBMIX)
+      })
+
+      it("uses domain detection before a conflicting title signal", async () => {
+        let titleFetched = false
+        server.use(
+          http.get("https://www.aihubmix.com", () => {
+            titleFetched = true
+            return new HttpResponse("<html><title>one-api</title></html>", {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+        )
+
+        await expect(
+          getAccountSiteType("https://www.aihubmix.com"),
+        ).resolves.toBe(SITE_TYPES.AIHUBMIX)
+        expect(titleFetched).toBe(false)
+      })
+    })
+
     describe("Title-based detection", () => {
       it("should detect site type from title when match found", async () => {
         // Find a real rule from ACCOUNT_SITE_TITLE_RULES
@@ -221,6 +263,20 @@ describe("detectSiteType", () => {
             SITE_TYPES.UNKNOWN,
           )
         }
+      })
+
+      it("keeps AIHubMix title matching as a secondary fallback for non-canonical URLs", async () => {
+        server.use(
+          http.get("https://mirror.example.com", () => {
+            return new HttpResponse("<html><title>AIHubMix</title></html>", {
+              headers: { "Content-Type": "text/html" },
+            })
+          }),
+        )
+
+        await expect(
+          getAccountSiteType("https://mirror.example.com"),
+        ).resolves.toBe(SITE_TYPES.AIHUBMIX)
       })
     })
 

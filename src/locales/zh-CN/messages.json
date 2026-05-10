@@ -111,6 +111,7 @@
       "failed": "操作失败：{{error}}",
       "saveFailed": "保存失败：{{error}}"
     },
+    "tokenSecretUnavailable": "该平台不支持二次查看完整密钥。请在创建密钥时立即复制并保存。",
     "unknown": "未知错误",
     "validation": {
       "bookmarkNameRequired": "书签名称不能为空",

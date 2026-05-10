@@ -203,6 +203,80 @@ describe("accountOperations autoDetectAccount", () => {
     expect(mockFetchSiteStatus).toHaveBeenCalledTimes(1)
   })
 
+  it("gets and saves the AIHubMix access token even when Cookie auth is selected", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: 11,
+        user: { id: 11, username: "aihubmix-user" },
+        siteType: SITE_TYPES.AIHUBMIX,
+        accessToken: "detected-token",
+      },
+    })
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "aihubmix-user",
+      access_token: "system-access-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "AIHubMix",
+      checkin_enabled: false,
+    })
+    mockFetchSupportCheckIn.mockResolvedValueOnce(false)
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await autoDetectAccount(
+      "https://aihubmix.com",
+      AuthTypeEnum.Cookie,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.data).toMatchObject({
+      siteType: SITE_TYPES.AIHUBMIX,
+      authType: AuthTypeEnum.AccessToken,
+      username: "aihubmix-user",
+      accessToken: "system-access-token",
+    })
+    expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      baseUrl: "https://aihubmix.com",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+        userId: 11,
+      },
+    })
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
+  })
+
+  it("fails AIHubMix auto-detect when token retrieval returns no token", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: 11,
+        user: { id: 11, username: "aihubmix-user" },
+        siteType: SITE_TYPES.AIHUBMIX,
+      },
+    })
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "aihubmix-user",
+      access_token: "",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({ system_name: "AIHubMix" })
+    mockFetchSupportCheckIn.mockResolvedValueOnce(false)
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await autoDetectAccount(
+      "https://aihubmix.com",
+      AuthTypeEnum.Cookie,
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      message: "messages:operations.detection.getInfoFailed",
+      detailedError: expect.any(Object),
+    })
+  })
+
   it("returns a get-info failure when access-token auth cannot obtain a usable token", async () => {
     mockSendRuntimeMessage.mockResolvedValueOnce(null)
     mockAutoDetectSmart.mockResolvedValueOnce({

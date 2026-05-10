@@ -158,11 +158,14 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
       await navigator.clipboard.writeText(resolvedToken.key)
       toast.success(t("modelList:keyDialog.keyCopied"))
     } catch (error) {
-      const errorMessage = getErrorMessage(error)
+      const errorMessage = getErrorMessage(
+        error,
+        t("modelList:keyDialog.copyFailed"),
+      )
       logger.error("Failed to copy key to clipboard from model key dialog", {
         message: errorMessage,
       })
-      toast.error(t("modelList:keyDialog.copyFailed"))
+      toast.error(errorMessage)
     }
   }, [account, selectedToken, t])
 

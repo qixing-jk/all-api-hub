@@ -39,6 +39,7 @@ When working on a site type:
 - **Claude Code Hub (`claude-code-hub`)** is not One-API/New-API compatible; it uses dedicated admin/provider integration in `src/services/apiService/claudeCodeHub/` plus a managed-site provider in `src/services/managedSites/providers/claudeCodeHub.ts`.
 - **AnyRouter (`anyrouter`)** and **WONG公益站 (`wong-gongyi`)** have custom check-in handling.
 - **Sub2API (`sub2api`)** is not One-API/New-API compatible; it has a different auth model and API surface.
+- **AIHubMix (`AIHubMix`)** is an account-only site type with dedicated overrides in `src/services/apiService/aihubmix/`. Always use `https://aihubmix.com` as the API origin, including accounts imported from `console.aihubmix.com`. Auto-detect may use logged-in web endpoints (`/call/usr/self`, `/call/usr/tkn`) to obtain the account access token, but saved accounts should operate as access-token accounts. Token-authenticated AIHubMix API requests send raw `Authorization: <access_token>` without a `Bearer` prefix. AIHubMix does not support revealing a saved API key after creation; list/detail/search responses may contain masked keys, and `resolveApiTokenKey` must not fall back to common `/api/token/{id}/key` behavior.
 
 ### Managed Sites
 
@@ -59,6 +60,7 @@ Do not assume `one-hub` or every New-API-like deployment is a managed site witho
 - Compatible user-id headers are handled in `src/services/apiService/common/utils.ts` and related helpers.
 - AxonHub keeps its own admin integration under `src/services/apiService/axonHub/` and managed-site provider logic under `src/services/managedSites/providers/axonHub.ts`.
 - Claude Code Hub keeps its own admin/provider integration under `src/services/apiService/claudeCodeHub/` and managed-site provider logic under `src/services/managedSites/providers/claudeCodeHub.ts`.
+- AIHubMix keeps account-only API overrides under `src/services/apiService/aihubmix/`; do not alias it to `new-api` or add managed-site/provider integration unless upstream support is explicitly verified.
 - Some adapter directories under `src/services/apiService/` are provider-specific integrations rather than `siteType` values, so check `src/constants/siteType.ts` before documenting behavior.
 
 ### Default Upstream References
@@ -73,6 +75,7 @@ When the user names a backend without a deployment URL or fork, treat these as t
 - AxonHub: `https://github.com/looplj/axonhub`
 - Claude Code Hub: `https://github.com/ding113/claude-code-hub`
 - Sub2API: `https://github.com/Wei-Shaw/sub2api`
+- AIHubMix API docs: `https://docs.aihubmix.com/en/api/Cli` and `https://docs.aihubmix.com/en/api/Models-API`
 
 If the user's reported behavior differs from upstream, ask for the exact deployment, fork, or version before concluding the repo is wrong.
 

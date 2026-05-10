@@ -111,6 +111,7 @@
       "failed": "Operation failed: {{error}}",
       "saveFailed": "Save failed: {{error}}"
     },
+    "tokenSecretUnavailable": "This platform does not support viewing the full key again. Copy and save it when you create it.",
     "unknown": "Unknown error",
     "validation": {
       "bookmarkNameRequired": "Bookmark name cannot be empty",

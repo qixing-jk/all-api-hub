@@ -111,6 +111,7 @@
       "failed": "操作に失敗しました: {{error}}",
       "saveFailed": "保存に失敗しました: {{error}}"
     },
+    "tokenSecretUnavailable": "このプラットフォームでは完全なキーを再表示できません。作成時にコピーして保存してください。",
     "unknown": "不明なエラー",
     "validation": {
       "bookmarkNameRequired": "ブックマーク名は空にできません",

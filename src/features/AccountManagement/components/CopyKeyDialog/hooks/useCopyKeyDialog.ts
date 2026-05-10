@@ -142,7 +142,9 @@ export function useCopyKeyDialog(
         }, 2000)
       } catch (error) {
         logger.error("Failed to copy key to clipboard", { error })
-        toast.error(t("ui:dialog.copyKey.copyFailedManual"))
+        toast.error(
+          getErrorMessage(error, t("ui:dialog.copyKey.copyFailedManual")),
+        )
       }
     },
     [account, clearCopiedTokenResetTimeout, t],
@@ -153,6 +155,11 @@ export function useCopyKeyDialog(
    * - If no token is found, show an actionable error.
    * - If exactly one token exists, auto-copy it.
    * - Otherwise, keep the list visible and show a success toast.
+   *
+   * Some sites, including AIHubMix, only return the full key in the create
+   * response and list masked keys afterwards. Until create flows can consume a
+   * returned token secret directly, those sites may show a clear unsupported
+   * reveal message instead of auto-copying after refresh.
    */
   const refreshTokensAfterCreate = useCallback(async () => {
     if (!account) return

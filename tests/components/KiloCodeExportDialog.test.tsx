@@ -1258,7 +1258,7 @@ describe("KiloCodeExportDialog", () => {
     expect(copiedPayload).not.toContain("sk-abcd************wxyz")
   })
 
-  it("shows copyFailed feedback when resolving export secrets throws", async () => {
+  it("shows resolver error feedback when resolving export secrets throws", async () => {
     const user = userEvent.setup()
 
     mockUseAccountData.mockReturnValue({
@@ -1303,9 +1303,7 @@ describe("KiloCodeExportDialog", () => {
     await user.click(copyButton)
 
     await waitFor(() => {
-      expect(toastErrorMock).toHaveBeenCalledWith(
-        "ui:dialog.kiloCode.messages.copyFailed",
-      )
+      expect(toastErrorMock).toHaveBeenCalledWith("resolve failed")
     })
   })
 
