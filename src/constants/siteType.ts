@@ -22,6 +22,9 @@ export const SITE_TYPES = {
   UNKNOWN: "unknown",
 } as const
 
+export const AIHUBMIX_API_ORIGIN = "https://aihubmix.com"
+export const AIHUBMIX_WEB_ORIGIN = "https://console.aihubmix.com"
+
 export const ACCOUNT_SITE_TYPES = [
   SITE_TYPES.ONE_API,
   SITE_TYPES.NEW_API,
@@ -169,6 +172,12 @@ const SITE_ROUTE_CONFIGS: Partial<
     usagePath: "/usage",
     redeemPath: "/redeem",
     siteAnnouncementsPath: "/dashboard",
+  },
+  [SITE_TYPES.AIHUBMIX]: {
+    usagePath: "/statistics",
+    redeemPath: "/topup",
+    checkInPath: "/",
+    adminCredentialsPath: "/",
   },
   Default: {
     usagePath: DEFAULT_USAGE_PATH,

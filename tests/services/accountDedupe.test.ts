@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { scanDuplicateAccounts } from "~/services/accounts/accountDedupe"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 
@@ -59,6 +60,33 @@ describe("scanDuplicateAccounts", () => {
     expect(result.groups).toHaveLength(1)
     expect(result.groups[0].key).toEqual({
       origin: "https://api.example.com",
+      userId: 1,
+    })
+  })
+
+  it("groups AIHubMix accounts across main and console hostnames", () => {
+    const main = buildSiteAccount({
+      id: "acc-1",
+      site_url: "https://aihubmix.com",
+      site_type: SITE_TYPES.AIHUBMIX,
+      account_info: { id: 1 } as any,
+    })
+    const console = buildSiteAccount({
+      id: "acc-2",
+      site_url: "https://console.aihubmix.com/statistics?tab=detail",
+      site_type: SITE_TYPES.AIHUBMIX,
+      account_info: { id: 1 } as any,
+    })
+
+    const result = scanDuplicateAccounts({
+      accounts: [main, console],
+      pinnedAccountIds: [],
+      strategy: "keepPinned",
+    })
+
+    expect(result.groups).toHaveLength(1)
+    expect(result.groups[0].key).toEqual({
+      origin: "https://console.aihubmix.com",
       userId: 1,
     })
   })

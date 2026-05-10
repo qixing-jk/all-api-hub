@@ -134,6 +134,43 @@ describe("accountOperations validateAndSaveAccount", () => {
     expect(ensureDefaultApiTokenForAccountMock).not.toHaveBeenCalled()
   })
 
+  it("stores AIHubMix accounts with the canonical console origin", async () => {
+    fetchAccountDataMock.mockResolvedValueOnce({
+      quota: 100,
+      today_prompt_tokens: 0,
+      today_completion_tokens: 0,
+      today_quota_consumption: 0,
+      today_requests_count: 0,
+      today_income: 0,
+      checkIn: CHECK_IN_DISABLED,
+    })
+
+    const result = await validateAndSaveAccount(
+      "https://aihubmix.com/statistics?tab=detail",
+      "AIHubMix",
+      "aihubmix-user",
+      "access-token",
+      "11",
+      "7.0",
+      "",
+      [],
+      CHECK_IN_DISABLED,
+      SITE_TYPES.AIHUBMIX,
+      AuthTypeEnum.AccessToken,
+      "",
+    )
+
+    expect(result.success).toBe(true)
+
+    const saved = await accountStorage.getAccountById(result.accountId!)
+    expect(saved?.site_url).toBe("https://console.aihubmix.com")
+    expect(fetchAccountDataMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://aihubmix.com/statistics?tab=detail",
+      }),
+    )
+  })
+
   it("saves a warning-only Sub2API account when remote data refresh fails", async () => {
     fetchAccountDataMock.mockRejectedValueOnce(new Error("quota fetch failed"))
 

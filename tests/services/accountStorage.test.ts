@@ -1025,6 +1025,35 @@ describe("accountStorage core behaviors", () => {
     expect(missing).toBeNull()
   })
 
+  it("getAccountByBaseUrlAndUserId should match AIHubMix canonical web origins", async () => {
+    seedStorage([
+      createAccount({
+        id: "aihubmix-target",
+        site_url: "https://aihubmix.com",
+        site_type: SITE_TYPES.AIHUBMIX,
+        account_info: {
+          id: 123,
+          access_token: "token",
+          username: "aihubmix-user",
+          quota: 100,
+          today_prompt_tokens: 0,
+          today_completion_tokens: 0,
+          today_quota_consumption: 0,
+          today_requests_count: 0,
+          today_income: 0,
+        },
+      }),
+    ])
+
+    const found = await accountStorage.getAccountByBaseUrlAndUserId(
+      "https://console.aihubmix.com/statistics?tab=detail",
+      "123",
+    )
+
+    expect(found?.id).toBe("aihubmix-target")
+    expect(found?.site_url).toBe("https://console.aihubmix.com")
+  })
+
   it("deleteAccount should remove account data and pinned references", async () => {
     const account = createAccount({ id: "to-delete" })
     seedStorage([account], ["to-delete"])

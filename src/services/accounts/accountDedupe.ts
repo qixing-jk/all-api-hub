@@ -1,3 +1,8 @@
+import { SITE_TYPES } from "~/constants/siteType"
+import {
+  isAIHubMixSiteUrl,
+  normalizeAccountSiteUrlForOriginKey,
+} from "~/services/accounts/utils/siteUrlNormalization"
 import type { SiteAccount } from "~/types"
 import { sanitizeOriginUrl } from "~/utils/core/url"
 
@@ -158,7 +163,14 @@ export function scanDuplicateAccounts(input: {
   >()
 
   for (const account of input.accounts) {
-    const origin = sanitizeOriginUrl(account.site_url)
+    const origin =
+      account.site_type === SITE_TYPES.AIHUBMIX ||
+      isAIHubMixSiteUrl(account.site_url)
+        ? normalizeAccountSiteUrlForOriginKey({
+            url: account.site_url,
+            siteType: account.site_type,
+          })
+        : sanitizeOriginUrl(account.site_url)
     const userId = coerceFiniteUserId(account.account_info?.id)
 
     if (!origin || userId === undefined) {

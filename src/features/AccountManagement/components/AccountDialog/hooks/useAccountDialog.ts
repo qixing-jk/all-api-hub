@@ -25,6 +25,7 @@ import {
   analyzeAutoDetectError,
   AutoDetectError,
 } from "~/services/accounts/utils/autoDetectUtils"
+import { normalizeAccountSiteUrlForOriginKey } from "~/services/accounts/utils/siteUrlNormalization"
 import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import {
   getManagedSiteConfigMissingMessage,
@@ -47,10 +48,7 @@ import {
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showWarningToast } from "~/utils/core/toastHelpers"
-import {
-  normalizeUrlForOriginKey,
-  tryParseOrigin,
-} from "~/utils/core/urlParsing"
+import { tryParseOrigin } from "~/utils/core/urlParsing"
 import { openSettingsTab } from "~/utils/navigation"
 
 import {
@@ -355,7 +353,10 @@ export function useAccountDialog({
     }
 
     const baseUrl = url.trim()
-    const normalizedBaseUrl = normalizeSiteUrlForDuplicateCheck(baseUrl)
+    const normalizedBaseUrl = normalizeSiteUrlForDuplicateCheck({
+      value: baseUrl,
+      siteType,
+    })
     const currentUserId = userId.trim()
 
     if (!baseUrl) {
@@ -372,7 +373,10 @@ export function useAccountDialog({
     const accounts = await accountStorage.getAllAccounts()
     const existingSiteAccounts = accounts.filter(
       (acc) =>
-        normalizeSiteUrlForDuplicateCheck(acc.site_url) === normalizedBaseUrl,
+        normalizeSiteUrlForDuplicateCheck({
+          value: acc.site_url,
+          siteType: acc.site_type,
+        }) === normalizedBaseUrl,
     )
 
     if (existingSiteAccounts.length === 0) {
@@ -405,6 +409,7 @@ export function useAccountDialog({
   }, [
     mode,
     requestDuplicateAccountAddConfirmation,
+    siteType,
     url,
     userId,
     warnOnDuplicateAccountAdd,
@@ -1450,8 +1455,14 @@ export function useAccountDialog({
 /**
  * Normalizes user-supplied site URLs for duplicate-account checks.
  */
-function normalizeSiteUrlForDuplicateCheck(value: string): string {
-  return normalizeUrlForOriginKey(value, { lowerCase: true })
+function normalizeSiteUrlForDuplicateCheck(params: {
+  value: string
+  siteType?: AccountSiteType | string
+}): string {
+  return normalizeAccountSiteUrlForOriginKey({
+    url: params.value,
+    siteType: params.siteType,
+  })
 }
 
 /**

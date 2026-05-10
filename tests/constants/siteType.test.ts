@@ -41,9 +41,9 @@ describe("siteType constants", () => {
 
   it("returns default routes for AIHubMix account pages", () => {
     expect(getAccountSiteApiRouter(SITE_TYPES.AIHUBMIX)).toMatchObject({
-      usagePath: "/console/log",
-      checkInPath: "/console/personal",
-      redeemPath: "/console/topup",
+      usagePath: "/statistics",
+      checkInPath: "/",
+      redeemPath: "/topup",
       siteAnnouncementsPath: "/",
     })
   })

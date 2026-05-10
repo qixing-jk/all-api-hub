@@ -1,5 +1,6 @@
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
 import {
   AuthTypeEnum,
   SiteHealthStatus,
@@ -219,10 +220,15 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
     ...merged,
     id: coerceString(merged.id, ""),
     site_name: coerceString(merged.site_name, ""),
-    site_url: coerceString(merged.site_url, ""),
     site_type: isAccountSiteType(merged.site_type)
       ? merged.site_type
       : SITE_TYPES.UNKNOWN,
+    site_url: normalizeAccountSiteUrlForStorage({
+      siteType: isAccountSiteType(merged.site_type)
+        ? merged.site_type
+        : SITE_TYPES.UNKNOWN,
+      url: coerceString(merged.site_url, ""),
+    }),
     exchange_rate: coerceNumber(
       merged.exchange_rate,
       UI_CONSTANTS.EXCHANGE_RATE.DEFAULT,

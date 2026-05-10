@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { userPreferences } from "~/services/preferences/userPreferences"
@@ -237,6 +238,43 @@ describe("useAccountDialog duplicate account warning", () => {
 
     expect(result.current.state.duplicateAccountWarning.isOpen).toBe(false)
     expect(result.current.state.showManualForm).toBe(true)
+  })
+
+  it("warns for AIHubMix duplicates across main and console hostnames", async () => {
+    await accountStorage.addAccount(
+      buildSiteAccount({
+        site_name: "AIHubMix Existing",
+        site_url: "https://aihubmix.com",
+        site_type: SITE_TYPES.AIHUBMIX,
+        account_info: {
+          ...defaultAccountInfo,
+          id: 11,
+          username: "aihubmix-user",
+        },
+      }),
+    )
+
+    const { result } = await renderDuplicateWarningHook()
+
+    await act(async () => {
+      result.current.setters.setUrl(
+        "https://console.aihubmix.com/statistics?tab=detail",
+      )
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+      result.current.setters.setUserId("11")
+    })
+
+    act(() => {
+      void result.current.handlers.handleShowManualForm()
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true)
+    })
+    expect(result.current.state.duplicateAccountWarning.siteUrl).toBe(
+      "https://console.aihubmix.com",
+    )
+    expect(result.current.state.duplicateAccountWarning.existingUserId).toBe(11)
   })
 
   it("skips duplicate warning in edit mode", async () => {

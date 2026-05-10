@@ -46,6 +46,10 @@ import {
   migrateAccountsConfig,
   needsConfigMigration,
 } from "./migrations/accountDataMigration"
+import {
+  isAIHubMixSiteUrl,
+  normalizeAccountSiteUrlForOriginKey,
+} from "./utils/siteUrlNormalization"
 
 // Re-export for backward compatibility across the codebase.
 export { ACCOUNT_STORAGE_KEYS }
@@ -253,11 +257,29 @@ class AccountStorageService {
         userId,
       })
       const accounts = await this.getAllAccounts()
-      const account = accounts.find(
-        (acc) =>
-          acc.site_url === baseUrl &&
-          String(acc.account_info.id) === String(userId),
-      )
+      const requestedOriginKey = isAIHubMixSiteUrl(baseUrl)
+        ? normalizeAccountSiteUrlForOriginKey({ url: baseUrl })
+        : null
+      const account = accounts.find((acc) => {
+        if (String(acc.account_info.id) !== String(userId)) {
+          return false
+        }
+
+        if (acc.site_url === baseUrl) {
+          return true
+        }
+
+        if (!requestedOriginKey || !isAIHubMixSiteUrl(acc.site_url)) {
+          return false
+        }
+
+        return (
+          normalizeAccountSiteUrlForOriginKey({
+            url: acc.site_url,
+            siteType: acc.site_type,
+          }) === requestedOriginKey
+        )
+      })
 
       if (account && needsConfigMigration(account)) {
         logger.debug("Migrating account on fetch", {

@@ -22,6 +22,7 @@ import {
   analyzeAutoDetectError,
   getAutoDetectErrorByCode,
 } from "~/services/accounts/utils/autoDetectUtils"
+import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
 import { getApiService } from "~/services/apiService"
 import {
   DEFAULT_PREFERENCES,
@@ -591,18 +592,23 @@ export async function validateAndSaveAccount(
     normalizedSiteType,
     sub2apiAuth,
   )
+  const requestBaseUrl = url.trim()
+  const storageSiteUrl = normalizeAccountSiteUrlForStorage({
+    siteType: normalizedSiteType,
+    url,
+  })
 
   try {
     // 获取账号余额和今日使用情况
     logger.debug("Fetching account data for new account", {
-      baseUrl: url.trim(),
+      baseUrl: requestBaseUrl,
       siteType: normalizedSiteType,
       authType,
       userId: parsedUserId,
     })
     const freshAccountData = await withTimeout(
       getApiService(normalizedSiteType).fetchAccountData({
-        baseUrl: url.trim(),
+        baseUrl: requestBaseUrl,
         checkIn: checkInConfig,
         accountId: undefined, // New account, no ID yet
         includeTodayCashflow,
@@ -627,7 +633,7 @@ export async function validateAndSaveAccount(
 
     const accountData: Omit<SiteAccount, "id" | "created_at" | "updated_at"> = {
       site_name: siteName.trim(),
-      site_url: url.trim(),
+      site_url: storageSiteUrl,
       health: { status: SiteHealthStatus.Healthy }, // 成功获取数据说明状态正常
       site_type: normalizedSiteType,
       authType: authType,
@@ -687,7 +693,7 @@ export async function validateAndSaveAccount(
       "id" | "created_at" | "updated_at"
     > = {
       site_name: siteName.trim(),
-      site_url: url.trim(),
+      site_url: storageSiteUrl,
       site_type: normalizedSiteType,
       authType: authType,
       disabled: false,
@@ -834,12 +840,17 @@ export async function validateAndUpdateAccount(
     normalizedSiteType,
     sub2apiAuth,
   )
+  const requestBaseUrl = url.trim()
+  const storageSiteUrl = normalizeAccountSiteUrlForStorage({
+    siteType: normalizedSiteType,
+    url,
+  })
 
   try {
     // 获取账号余额和今日使用情况
     logger.debug("Fetching account data for update", {
       accountId,
-      baseUrl: url.trim(),
+      baseUrl: requestBaseUrl,
       siteType: normalizedSiteType,
       authType,
       userId: parsedUserId,
@@ -849,7 +860,7 @@ export async function validateAndUpdateAccount(
     const freshAccountData = await getApiService(
       normalizedSiteType,
     ).fetchAccountData({
-      baseUrl: url.trim(),
+      baseUrl: requestBaseUrl,
       checkIn: checkInConfig,
       accountId,
       includeTodayCashflow,
@@ -868,7 +879,7 @@ export async function validateAndUpdateAccount(
 
     const updateData: Partial<Omit<SiteAccount, "id" | "created_at">> = {
       site_name: siteName.trim(),
-      site_url: url.trim(),
+      site_url: storageSiteUrl,
       health: { status: SiteHealthStatus.Healthy }, // 成功获取数据说明状态正常
       site_type: normalizedSiteType,
       authType: authType,
@@ -928,7 +939,7 @@ export async function validateAndUpdateAccount(
 
     const partialUpdateData = {
       site_name: siteName.trim(),
-      site_url: url.trim(),
+      site_url: storageSiteUrl,
       site_type: normalizedSiteType,
       authType: authType,
       excludeFromTotalBalance: excludeFromTotalBalance === true,

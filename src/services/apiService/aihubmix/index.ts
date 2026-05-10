@@ -1,3 +1,4 @@
+import { AIHUBMIX_API_ORIGIN } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { determineHealthStatus } from "~/services/apiService/common"
 import {
@@ -31,7 +32,6 @@ import { t } from "~/utils/i18n/core"
 const logger = createLogger("ApiService.AIHubMix")
 // AIHubMix console traffic is pinned to the main origin even when detection
 // starts from console.aihubmix.com.
-const AIHUBMIX_API_ORIGIN = "https://aihubmix.com"
 const AIHUBMIX_API_USER_SELF_ENDPOINT = "/api/user/self"
 // These `/call/usr/*` routes are web-session endpoints used only while
 // importing an account from the logged-in browser session.

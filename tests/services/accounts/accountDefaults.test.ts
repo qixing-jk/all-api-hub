@@ -146,6 +146,17 @@ describe("accountDefaults", () => {
       expect(normalized.notes).toBe("hello")
     })
 
+    it("canonicalizes AIHubMix accounts to the console web origin", () => {
+      const normalized = normalizeSiteAccount(
+        createSiteAccount({
+          site_type: SITE_TYPES.AIHUBMIX,
+          site_url: "https://aihubmix.com/statistics?tab=detail",
+        }),
+      )
+
+      expect(normalized.site_url).toBe("https://console.aihubmix.com")
+    })
+
     it("coerces invalid persisted values to stable defaults", () => {
       const normalized = normalizeSiteAccount({
         ...createSiteAccount(),
