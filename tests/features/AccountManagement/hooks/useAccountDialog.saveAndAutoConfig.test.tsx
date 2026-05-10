@@ -152,6 +152,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       token: buildToken({ id: 99, key: "sk-default-ensured" }),
       created: false,
     })
+    mockOpenWithAccount.mockResolvedValue({ opened: true })
   })
 
   const renderAddHook = (options?: { onSuccess?: ReturnType<typeof vi.fn> }) =>
@@ -1430,6 +1431,7 @@ describe("useAccountDialog save and auto-config flows", () => {
         onCompleted?: () => void,
       ) => {
         onCompleted?.()
+        return { opened: true }
       },
     )
 
@@ -1453,6 +1455,36 @@ describe("useAccountDialog save and auto-config flows", () => {
       expect.any(Function),
     )
     expect(onSuccess).toHaveBeenCalledWith(existingAccount)
+  })
+
+  it("does not mark direct auto-config complete when the channel dialog does not open", async () => {
+    const onSuccess = vi.fn()
+    const existingAccount = {
+      id: "existing-display-id",
+      siteUrl: "https://edit.example.com",
+      siteName: "Edit Example",
+    } as any
+
+    mockOpenWithAccount.mockResolvedValueOnce({ opened: false })
+
+    const { result } = renderEditHook({
+      account: existingAccount,
+      onSuccess,
+    })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
+    )
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
   })
 
   it("falls back to converted display data during auto-config when persisted display data is unavailable", async () => {
@@ -1753,6 +1785,7 @@ describe("useAccountDialog save and auto-config flows", () => {
         onCompleted?: () => void,
       ) => {
         onCompleted?.()
+        return { opened: true }
       },
     )
 
@@ -1864,6 +1897,7 @@ describe("useAccountDialog save and auto-config flows", () => {
         onCompleted?: () => void,
       ) => {
         onCompleted?.()
+        return { opened: true }
       },
     )
 

@@ -62,6 +62,10 @@ interface PrefilledDialogDuplicateState {
   advisoryWarning: ChannelDialogAdvisoryWarning | null
 }
 
+export interface OpenWithAccountResult {
+  opened: boolean
+}
+
 /**
  * Narrows a display account union to a persisted site account record.
  */
@@ -306,7 +310,7 @@ export function useChannelDialog() {
     accountToken: AccountToken | ApiToken | null,
     onSuccess?: (result: any) => void,
     options?: PrefilledChannelOpenOptions,
-  ) => {
+  ): Promise<OpenWithAccountResult> => {
     const toastId = toast.loading(
       t("messages:accountOperations.checkingApiKeys"),
     )
@@ -340,7 +344,7 @@ export function useChannelDialog() {
             id: toastId,
           },
         )
-        return
+        return { opened: false }
       }
 
       let apiToken = accountToken
@@ -363,7 +367,7 @@ export function useChannelDialog() {
 
           if (resolution.kind === "blocked") {
             toast.error(resolution.message, { id: toastId })
-            return
+            return { opened: false }
           }
 
           if (resolution.kind === "selection_required") {
@@ -381,7 +385,7 @@ export function useChannelDialog() {
                 )
               },
             })
-            return
+            return { opened: false }
           }
 
           apiToken = await ensureAccountApiToken(siteAccount, displaySiteData, {
@@ -429,7 +433,7 @@ export function useChannelDialog() {
           existingChannelName: duplicateState.existingChannelName,
         })
         if (!shouldContinue) {
-          return
+          return { opened: false }
         }
       } else {
         toast.dismiss(toastId)
@@ -449,6 +453,7 @@ export function useChannelDialog() {
           }
         },
       })
+      return { opened: true }
     } catch (error) {
       const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
       toast.error(
@@ -461,6 +466,7 @@ export function useChannelDialog() {
         accountId: displaySiteData?.id,
         diagnostic,
       })
+      return { opened: false }
     }
   }
 

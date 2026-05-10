@@ -323,11 +323,13 @@ describe("useChannelDialog", () => {
       })
     })
 
+    let openResult: Awaited<typeof openPromise> | undefined
     await act(async () => {
       result.current.context.resolveDuplicateChannelWarning(false)
-      await openPromise
+      openResult = await openPromise
     })
 
+    expect(openResult).toEqual({ opened: false })
     expect(result.current.context.state.isOpen).toBe(false)
     expect(mockToastError).not.toHaveBeenCalled()
     expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
@@ -387,11 +389,13 @@ describe("useChannelDialog", () => {
       })
     })
 
+    let openResult: Awaited<typeof openPromise> | undefined
     await act(async () => {
       result.current.context.resolveDuplicateChannelWarning(true)
-      await openPromise
+      openResult = await openPromise
     })
 
+    expect(openResult).toEqual({ opened: true })
     expect(result.current.context.state).toMatchObject({
       isOpen: true,
       mode: DIALOG_MODES.ADD,

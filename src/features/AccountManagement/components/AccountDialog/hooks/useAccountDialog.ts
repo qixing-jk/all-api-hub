@@ -1279,12 +1279,22 @@ export function useAccountDialog({
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.OpeningManagedSiteDialog,
       )
       try {
-        await openChannelDialog(displaySiteData, token, () => {
-          if (onSuccess && targetAccountRef.current) {
-            onSuccess(targetAccountRef.current)
-          }
-        })
+        const openResult = await openChannelDialog(
+          displaySiteData,
+          token,
+          () => {
+            if (onSuccess && targetAccountRef.current) {
+              onSuccess(targetAccountRef.current)
+            }
+          },
+        )
         if (postSaveAutoConfigRunRef.current !== runId) {
+          return
+        }
+        if (!openResult.opened) {
+          setAccountPostSaveWorkflowStep(
+            ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
+          )
           return
         }
         setAccountPostSaveWorkflowStep(
@@ -1450,12 +1460,25 @@ export function useAccountDialog({
       // so users can review it before creation. The direct auto-import helpers
       // are kept only as deprecated compatibility shims.
       if (!savedSiteAccount) {
-        await openChannelDialog(displaySiteData, null, () => {
-          if (onSuccess && targetAccountRef.current) {
-            onSuccess(targetAccountRef.current)
-          }
-        })
+        setAccountPostSaveWorkflowStep(
+          ACCOUNT_POST_SAVE_WORKFLOW_STEPS.OpeningManagedSiteDialog,
+        )
+        const openResult = await openChannelDialog(
+          displaySiteData,
+          null,
+          () => {
+            if (onSuccess && targetAccountRef.current) {
+              onSuccess(targetAccountRef.current)
+            }
+          },
+        )
         if (!isCurrentRun()) {
+          return
+        }
+        if (!openResult.opened) {
+          setAccountPostSaveWorkflowStep(
+            ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
+          )
           return
         }
         setAccountPostSaveWorkflowStep(
