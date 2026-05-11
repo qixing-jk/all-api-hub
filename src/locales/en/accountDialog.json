@@ -20,6 +20,15 @@
       "waitingForSub2ApiGroup": "Choose a Sub2API group..."
     }
   },
+  "aihubmixDefaultKeyPrompt": {
+    "cancel": "Create later",
+    "cancelHint": "Cancelling does not affect the saved account. You can create an AIHubMix API key manually in Key Management later.",
+    "confirm": "Create and view now",
+    "creating": "Creating...",
+    "description": "{{accountName}} has been saved. AIHubMix API keys are shown only once after creation, so make sure you can copy and save the full key now.",
+    "title": "Create an AIHubMix default key?",
+    "warningTitle": "The full key is shown only once"
+  },
   "form": {
     "accessToken": "Access Token",
     "autoCheckInEnabled": "Enable daily automatic check-in",

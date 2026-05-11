@@ -15,7 +15,9 @@
     "tokenNotFound": "無法建立或找到 API 令牌"
   },
   "aihubmix": {
-    "createRequiresOneTimeKeyDialog": "AIHubMix 建立的金鑰只能查看一次，請在金鑰管理中手動建立並立即保存完整金鑰。"
+    "createRequiresOneTimeKeyDialog": "AIHubMix 建立的金鑰只能查看一次，請在金鑰管理中手動建立並立即保存完整金鑰。",
+    "oneTimeKeyPromptCancelled": "帳號已儲存。你之後可以在金鑰管理中手動建立 AIHubMix API 金鑰。",
+    "oneTimeKeyUnavailableAfterCreate": "帳號已儲存，但未能取得完整 AIHubMix API 金鑰。AIHubMix 金鑰只在建立時顯示一次，請在金鑰管理中重新建立並立即保存完整金鑰。"
   },
   "autodetect": {
     "currentTabNeedsReload": "當前頁面可能是在安裝或更新擴充套件前開啟的，外掛暫時無法讀取這個標籤頁的資訊。請重新整理當前頁面後再試一次自動識別。",

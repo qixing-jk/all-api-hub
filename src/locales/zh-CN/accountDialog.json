@@ -20,6 +20,15 @@
       "waitingForSub2ApiGroup": "请选择 Sub2API 分组..."
     }
   },
+  "aihubmixDefaultKeyPrompt": {
+    "cancel": "稍后手动创建",
+    "cancelHint": "取消不会影响账号保存。你之后也可以在密钥管理中手动创建 AIHubMix API 密钥。",
+    "confirm": "现在创建并查看",
+    "creating": "正在创建...",
+    "description": "{{accountName}} 已保存。AIHubMix API 密钥创建后只会显示一次，请确认你现在可以立即复制并保存完整密钥。",
+    "title": "创建 AIHubMix 默认密钥？",
+    "warningTitle": "完整密钥只显示一次"
+  },
   "form": {
     "accessToken": "访问令牌",
     "autoCheckInEnabled": "启用每日自动签到",

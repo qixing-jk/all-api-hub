@@ -14,6 +14,7 @@ import type { DisplaySiteData } from "~/types"
 
 import AccountForm from "./AccountForm"
 import ActionButtons from "./ActionButtons"
+import { AihubmixDefaultKeyPromptDialog } from "./AihubmixDefaultKeyPromptDialog"
 import AutoDetectErrorAlert from "./AutoDetectErrorAlert"
 import AutoDetectSlowHintAlert from "./AutoDetectSlowHintAlert"
 import DialogHeader from "./DialogHeader"
@@ -78,7 +79,9 @@ export default function AccountDialog({
     e.preventDefault()
     try {
       const result = await handlers.handleSaveAccount()
-      onSuccess(result)
+      if (!handlers.shouldDeferAccountSaveSuccess(result)) {
+        onSuccess(result)
+      }
     } catch (error) {
       onError(error)
     }
@@ -271,6 +274,14 @@ export default function AccountDialog({
         missingMessage={state.managedSiteConfigPrompt.missingMessage}
         onClose={handlers.handleManagedSiteConfigPromptClose}
         onOpenSettings={handlers.handleOpenManagedSiteSettings}
+      />
+
+      <AihubmixDefaultKeyPromptDialog
+        isOpen={state.aihubmixPostSaveKeyPrompt.isOpen}
+        accountName={state.aihubmixPostSaveKeyPrompt.accountName}
+        isCreating={state.aihubmixPostSaveKeyPrompt.isCreating}
+        onCancel={handlers.handleAihubmixPostSaveKeyPromptCancel}
+        onConfirm={handlers.handleAihubmixPostSaveKeyPromptConfirm}
       />
 
       {state.postSaveSub2ApiAccount && postSaveSub2ApiCreatePrefill ? (

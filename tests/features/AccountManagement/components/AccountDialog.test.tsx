@@ -10,7 +10,7 @@ import {
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
 import { AuthTypeEnum } from "~/types"
-import { render, screen } from "~~/tests/test-utils/render"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
   mockState,
@@ -95,6 +95,11 @@ const {
       managedSiteLabel: "",
       missingMessage: "",
     },
+    aihubmixPostSaveKeyPrompt: {
+      isOpen: false,
+      accountName: "",
+      isCreating: false,
+    },
     postSaveOneTimeToken: null,
     postSaveSub2ApiAllowedGroups: null,
     postSaveSub2ApiAccount: null,
@@ -134,6 +139,9 @@ const {
     handleDuplicateAccountWarningContinue: vi.fn(),
     handleManagedSiteConfigPromptClose: vi.fn(),
     handleOpenManagedSiteSettings: vi.fn(),
+    handleAihubmixPostSaveKeyPromptCancel: vi.fn(),
+    handleAihubmixPostSaveKeyPromptConfirm: vi.fn(),
+    shouldDeferAccountSaveSuccess: vi.fn(),
     handlePostSaveOneTimeTokenClose: vi.fn(),
     handlePostSaveSub2ApiTokenDialogClose: vi.fn(),
     handlePostSaveSub2ApiTokenCreated: vi.fn(),
@@ -188,6 +196,11 @@ function resetMockState() {
       isOpen: false,
       managedSiteLabel: "",
       missingMessage: "",
+    },
+    aihubmixPostSaveKeyPrompt: {
+      isOpen: false,
+      accountName: "",
+      isCreating: false,
     },
     accountPostSaveWorkflowStep: ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
     postSaveOneTimeToken: null,
@@ -281,6 +294,7 @@ describe("AccountDialog", () => {
       dispatchEvent: vi.fn(),
     }))
     resetMockState()
+    mockHandlers.shouldDeferAccountSaveSuccess.mockReturnValue(false)
   })
 
   it("hides the form before the dialog reaches the account-form phase", async () => {
@@ -442,5 +456,73 @@ describe("AccountDialog", () => {
     expect(
       screen.getByTestId("post-save-one-time-key-value"),
     ).toHaveTextContent("sk-one-time")
+  })
+
+  it("renders the AIHubMix post-save key confirmation dialog", async () => {
+    mockState.aihubmixPostSaveKeyPrompt = {
+      isOpen: true,
+      accountName: "AIHubMix",
+      isCreating: false,
+    }
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    expect(
+      await screen.findByText("accountDialog:aihubmixDefaultKeyPrompt.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("accountDialog:aihubmixDefaultKeyPrompt.description"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:aihubmixDefaultKeyPrompt.cancel",
+      }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:aihubmixDefaultKeyPrompt.confirm",
+      }),
+    ).toBeInTheDocument()
+  })
+
+  it("does not close the dialog immediately when save success is deferred for AIHubMix key creation", async () => {
+    const onSuccess = vi.fn()
+    const saveResult = {
+      success: true,
+      accountId: "aihubmix-account",
+      message: "Saved",
+    }
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockHandlers.handleSaveAccount.mockResolvedValueOnce(saveResult)
+    mockHandlers.shouldDeferAccountSaveSuccess.mockReturnValueOnce(true)
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={onSuccess}
+        onError={vi.fn()}
+      />,
+    )
+
+    const form = await screen.findByTestId("account-management-account-form")
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+
+    expect(mockHandlers.handleSaveAccount).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(mockHandlers.shouldDeferAccountSaveSuccess).toHaveBeenCalledWith(
+        saveResult,
+      )
+    })
+    expect(onSuccess).not.toHaveBeenCalled()
   })
 })

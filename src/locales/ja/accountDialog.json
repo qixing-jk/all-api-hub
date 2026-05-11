@@ -20,6 +20,15 @@
       "waitingForSub2ApiGroup": "Sub2API グループを選択してください..."
     }
   },
+  "aihubmixDefaultKeyPrompt": {
+    "cancel": "あとで作成",
+    "cancelHint": "キャンセルしても保存済みアカウントには影響しません。あとでキー管理から AIHubMix API キーを手動作成できます。",
+    "confirm": "今すぐ作成して表示",
+    "creating": "作成中...",
+    "description": "{{accountName}} は保存されました。AIHubMix API キーは作成直後に一度だけ表示されるため、今すぐ完全なキーをコピーして保存できることを確認してください。",
+    "title": "AIHubMix の既定キーを作成しますか？",
+    "warningTitle": "完全なキーは一度だけ表示されます"
+  },
   "form": {
     "accessToken": "Access Token",
     "autoCheckInEnabled": "毎日の自動チェックインを有効化",

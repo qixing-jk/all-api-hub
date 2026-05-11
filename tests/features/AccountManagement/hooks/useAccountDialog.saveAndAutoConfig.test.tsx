@@ -6,11 +6,16 @@ import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import {
+  ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES,
   ACCOUNT_POST_SAVE_WORKFLOW_STEPS,
   ENSURE_ACCOUNT_TOKEN_RESULT_KINDS,
 } from "~/services/accounts/accountPostSaveWorkflow"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import * as apiServiceRequest from "~/services/accounts/utils/apiServiceRequest"
+import {
+  DEFAULT_PREFERENCES,
+  userPreferences,
+} from "~/services/preferences/userPreferences"
 import {
   AuthTypeEnum,
   SiteAccount,
@@ -154,6 +159,10 @@ describe("useAccountDialog save and auto-config flows", () => {
       created: false,
     })
     mockOpenWithAccount.mockResolvedValue({ opened: true })
+    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
+      ...structuredClone(DEFAULT_PREFERENCES),
+      autoProvisionKeyOnAccountAdd: true,
+    })
   })
 
   const renderAddHook = (options?: { onSuccess?: ReturnType<typeof vi.fn> }) =>
@@ -689,6 +698,306 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(toast.success).toHaveBeenCalledWith("Saved successfully")
     expect(toast.error).not.toHaveBeenCalled()
     expect(result.current.state.isSaving).toBe(false)
+  })
+
+  it("opens the AIHubMix foreground key prompt after a normal save when auto-provision is enabled", async () => {
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://aihubmix.com")
+      result.current.setters.setSiteName("AIHubMix")
+      result.current.setters.setUsername("aihubmix-user")
+      result.current.setters.setAccessToken("aihubmix-access-token")
+      result.current.setters.setUserId("13")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(mockValidateAndSaveAccount).toHaveBeenCalledWith(
+      "https://aihubmix.com",
+      "AIHubMix",
+      "aihubmix-user",
+      "aihubmix-access-token",
+      "13",
+      "7",
+      "",
+      [],
+      expect.any(Object),
+      SITE_TYPES.AIHUBMIX,
+      AuthTypeEnum.AccessToken,
+      "",
+      "",
+      false,
+      undefined,
+      { skipAutoProvisionKeyOnAccountAdd: true },
+    )
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(true)
+    expect(mockEnsureAccountTokenForPostSaveWorkflow).not.toHaveBeenCalled()
+  })
+
+  it("shows the AIHubMix one-time key after the user confirms foreground creation", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://console.aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: 13,
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData =
+      accountStorage.convertToDisplayData(savedSiteAccount)
+    const oneTimeToken = buildToken({
+      id: 501,
+      key: "sk-aihubmix-one-time",
+    })
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValueOnce({
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
+      token: oneTimeToken,
+      created: true,
+      oneTimeSecret: true,
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://aihubmix.com")
+      result.current.setters.setSiteName("AIHubMix")
+      result.current.setters.setUsername("aihubmix-user")
+      result.current.setters.setAccessToken("aihubmix-access-token")
+      result.current.setters.setUserId("13")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAihubmixPostSaveKeyPromptConfirm()
+    })
+
+    expect(mockEnsureAccountTokenForPostSaveWorkflow).toHaveBeenCalledWith({
+      account: savedSiteAccount,
+      displaySiteData: savedDisplayData,
+    })
+    expect(result.current.state.postSaveOneTimeToken).toBe(oneTimeToken)
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
+    expect(mockOpenWithAccount).not.toHaveBeenCalled()
+  })
+
+  it("shows a fallback error instead of a fake AIHubMix key when creation cannot return a full secret", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://console.aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: 13,
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      accountStorage.convertToDisplayData(savedSiteAccount),
+    )
+    mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValueOnce({
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
+      code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenSecretUnavailable,
+      message: "",
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://aihubmix.com")
+      result.current.setters.setSiteName("AIHubMix")
+      result.current.setters.setUsername("aihubmix-user")
+      result.current.setters.setAccessToken("aihubmix-access-token")
+      result.current.setters.setUserId("13")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAihubmixPostSaveKeyPromptConfirm()
+    })
+
+    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(toast.error).toHaveBeenCalledWith(
+      "messages:aihubmix.oneTimeKeyUnavailableAfterCreate",
+    )
+    expect(mockOpenWithAccount).not.toHaveBeenCalled()
+  })
+
+  it("does not create an AIHubMix key when the user cancels the foreground prompt", async () => {
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://aihubmix.com")
+      result.current.setters.setSiteName("AIHubMix")
+      result.current.setters.setUsername("aihubmix-user")
+      result.current.setters.setAccessToken("aihubmix-access-token")
+      result.current.setters.setUserId("13")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await act(async () => {
+      result.current.handlers.handleAihubmixPostSaveKeyPromptCancel()
+    })
+
+    expect(mockEnsureAccountTokenForPostSaveWorkflow).not.toHaveBeenCalled()
+    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
+    expect(toast.success).toHaveBeenCalledWith("Saved successfully")
+    expect(toast).toHaveBeenCalledWith(
+      "messages:aihubmix.oneTimeKeyPromptCancelled",
+    )
+  })
+
+  it("ignores late AIHubMix key creation results after the dialog is closed", async () => {
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://console.aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: 13,
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+    const oneTimeToken = buildToken({
+      id: 502,
+      key: "sk-aihubmix-late",
+    })
+    let resolveEnsure:
+      | ((
+          value: Awaited<
+            ReturnType<typeof mockEnsureAccountTokenForPostSaveWorkflow>
+          >,
+        ) => void)
+      | undefined
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      accountStorage.convertToDisplayData(savedSiteAccount),
+    )
+    mockEnsureAccountTokenForPostSaveWorkflow.mockImplementationOnce(
+      () =>
+        new Promise((resolve) => {
+          resolveEnsure = resolve
+        }),
+    )
+
+    const onClose = vi.fn()
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose,
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://aihubmix.com")
+      result.current.setters.setSiteName("AIHubMix")
+      result.current.setters.setUsername("aihubmix-user")
+      result.current.setters.setAccessToken("aihubmix-access-token")
+      result.current.setters.setUserId("13")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await act(async () => {
+      void result.current.handlers.handleAihubmixPostSaveKeyPromptConfirm()
+    })
+
+    await waitFor(() => {
+      expect(mockEnsureAccountTokenForPostSaveWorkflow).toHaveBeenCalledTimes(1)
+    })
+
+    await act(async () => {
+      result.current.handlers.handleClose()
+    })
+
+    await act(async () => {
+      resolveEnsure?.({
+        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Created,
+        token: oneTimeToken,
+        created: true,
+        oneTimeSecret: true,
+      })
+    })
+
+    expect(result.current.state.postSaveOneTimeToken).toBeNull()
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it("stops auto-config after save when the saved account id is missing", async () => {

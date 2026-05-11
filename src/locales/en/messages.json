@@ -15,7 +15,9 @@
     "tokenNotFound": "Failed to create or find an API token"
   },
   "aihubmix": {
-    "createRequiresOneTimeKeyDialog": "AIHubMix keys can only be viewed once. Create the key manually in Key Management and save the full key immediately."
+    "createRequiresOneTimeKeyDialog": "AIHubMix keys can only be viewed once. Create the key manually in Key Management and save the full key immediately.",
+    "oneTimeKeyPromptCancelled": "Account saved. You can create an AIHubMix API key manually in Key Management later.",
+    "oneTimeKeyUnavailableAfterCreate": "Account saved, but the full AIHubMix API key could not be retrieved. AIHubMix keys are shown only once after creation; create a new key in Key Management and save the full key immediately."
   },
   "autodetect": {
     "currentTabNeedsReload": "This page may have been opened before the extension was installed or updated, so the extension cannot read data from this tab yet. Reload the current page, then try auto-detect again.",

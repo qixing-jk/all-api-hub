@@ -15,7 +15,9 @@
     "tokenNotFound": "API トークンの作成または検索に失敗しました"
   },
   "aihubmix": {
-    "createRequiresOneTimeKeyDialog": "AIHubMix のキーは作成時に一度しか表示できません。キー管理で手動作成し、完全なキーをすぐに保存してください。"
+    "createRequiresOneTimeKeyDialog": "AIHubMix のキーは作成時に一度しか表示できません。キー管理で手動作成し、完全なキーをすぐに保存してください。",
+    "oneTimeKeyPromptCancelled": "アカウントは保存されました。あとでキー管理から AIHubMix API キーを手動作成できます。",
+    "oneTimeKeyUnavailableAfterCreate": "アカウントは保存されましたが、完全な AIHubMix API キーを取得できませんでした。AIHubMix キーは作成直後に一度だけ表示されます。キー管理で新しいキーを作成し、完全なキーをすぐに保存してください。"
   },
   "autodetect": {
     "currentTabNeedsReload": "このページは拡張機能のインストールまたは更新前から開かれている可能性があり、現時点ではこのタブの情報を読み取れません。現在のページを再読み込みしてから、もう一度自動検出を試してください。",

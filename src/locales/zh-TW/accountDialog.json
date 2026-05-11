@@ -20,6 +20,15 @@
       "waitingForSub2ApiGroup": "請選擇 Sub2API 分組..."
     }
   },
+  "aihubmixDefaultKeyPrompt": {
+    "cancel": "稍後手動建立",
+    "cancelHint": "取消不會影響帳號儲存。你之後也可以在金鑰管理中手動建立 AIHubMix API 金鑰。",
+    "confirm": "立即建立並查看",
+    "creating": "正在建立...",
+    "description": "{{accountName}} 已儲存。AIHubMix API 金鑰建立後只會顯示一次，請確認你現在可以立即複製並保存完整金鑰。",
+    "title": "建立 AIHubMix 預設金鑰？",
+    "warningTitle": "完整金鑰只顯示一次"
+  },
   "form": {
     "accessToken": "訪問令牌",
     "autoCheckInEnabled": "啟用每日自動簽到",
