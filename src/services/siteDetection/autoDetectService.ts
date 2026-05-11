@@ -112,21 +112,6 @@ function resolveAutoDetectUrl(url: string): string {
 }
 
 /**
- * Checks whether the current browser tab can serve as the source context for
- * the requested target after applying site-specific canonicalization.
- */
-function isSameAutoDetectContext(currentUrl: URL, targetUrl: URL): boolean {
-  if (currentUrl.origin === targetUrl.origin) {
-    return true
-  }
-
-  return (
-    AIHUBMIX_HOSTNAME_SET.has(currentUrl.hostname.toLowerCase()) &&
-    AIHUBMIX_HOSTNAME_SET.has(targetUrl.hostname.toLowerCase())
-  )
-}
-
-/**
  * 公共逻辑：组合用户数据和站点类型
  * 这是所有自动识别方式的最后一步
  */
@@ -417,14 +402,9 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
       if (currentTab?.url) {
         // 检查当前标签页是否是目标站点
         const currentUrl = new URL(currentTab.url)
-        const targetUrl = new URL(url)
+        const targetUrl = new URL(detectionUrl)
 
-        const sameAutoDetectContext = isSameAutoDetectContext(
-          currentUrl,
-          targetUrl,
-        )
-
-        if (sameAutoDetectContext) {
+        if (currentUrl.origin === targetUrl.origin) {
           logger.debug("当前标签页匹配目标站点，使用当前标签页方式", {
             url,
             currentTabUrl: currentTab.url,

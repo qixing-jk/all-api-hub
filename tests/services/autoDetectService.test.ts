@@ -108,7 +108,7 @@ describe("autoDetectSmart", () => {
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 
-  it("uses the AIHubMix API origin content-script flow when detecting from a console tab", async () => {
+  it("skips current-tab detection from an AIHubMix console tab and uses the API origin background flow", async () => {
     mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.AIHUBMIX)
     mockGetActiveOrAllTabs.mockResolvedValue([
       {
@@ -119,6 +119,15 @@ describe("autoDetectSmart", () => {
     ])
     mockGetActiveTabs.mockResolvedValue([{ id: 2 }])
     browserAny.tabs.sendMessage.mockResolvedValue({
+      success: true,
+      data: {
+        userId: 99,
+        user: { id: 99, username: "wrong-current-tab-user" },
+        accessToken: "wrong-current-tab-token",
+        siteTypeHint: SITE_TYPES.AIHUBMIX,
+      },
+    })
+    mockSendRuntimeMessage.mockResolvedValue({
       success: true,
       data: {
         userId: 7,
@@ -137,6 +146,47 @@ describe("autoDetectSmart", () => {
         user: { id: 7, username: "aihubmix-user" },
         siteType: SITE_TYPES.AIHUBMIX,
         accessToken: "console-session-token",
+        sub2apiAuth: undefined,
+      },
+    })
+    expect(browserAny.tabs.sendMessage).not.toHaveBeenCalled()
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+      action: expect.any(String),
+      requestId: expect.any(String),
+      url: "https://aihubmix.com",
+    })
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
+  })
+
+  it("uses current-tab detection for AIHubMix when the active tab is the API origin", async () => {
+    mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.AIHUBMIX)
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 2,
+        active: true,
+        url: "https://aihubmix.com/statistics",
+      },
+    ])
+    mockGetActiveTabs.mockResolvedValue([{ id: 2 }])
+    browserAny.tabs.sendMessage.mockResolvedValue({
+      success: true,
+      data: {
+        userId: 7,
+        user: { id: 7, username: "aihubmix-user" },
+        accessToken: "main-origin-session-token",
+        siteTypeHint: SITE_TYPES.AIHUBMIX,
+      },
+    })
+
+    const result = await autoDetectSmart("https://console.aihubmix.com")
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        userId: 7,
+        user: { id: 7, username: "aihubmix-user" },
+        siteType: SITE_TYPES.AIHUBMIX,
+        accessToken: "main-origin-session-token",
         sub2apiAuth: undefined,
       },
     })
