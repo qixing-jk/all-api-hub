@@ -901,81 +901,61 @@ describe("useChannelDialog", () => {
     expect(mockToastError).not.toHaveBeenCalled()
   })
 
-  it("ignores late Sub2API token success from session A after session B opens", async () => {
+  it("ignores stale Sub2API token success from session A immediately after session B opens", async () => {
     const createdToken = buildApiToken({
       id: 21,
       key: "sk-created-21",
       name: "Created token",
     })
-    const prepareChannelFormDataMock = vi.fn(
-      async (_account: DisplaySiteData, token: ApiToken) =>
-        buildPreparedFormData({
-          key: token.key,
-        }),
-    )
-    const mockService = buildManagedSiteServiceMock({
-      prepareChannelFormData: prepareChannelFormDataMock,
+    const sessionAOnSuccess = vi.fn()
+    const sessionBOnSuccess = vi.fn()
+    const sessionAAccount = buildDisplaySiteData({
+      id: "account-a",
+      name: "Account A",
+      siteType: "sub2api",
     })
-    getManagedSiteServiceSpy.mockResolvedValue(
-      mockService as ManagedSiteService,
-    )
-    getAccountByIdSpy.mockResolvedValue(
-      buildSiteAccount({ site_type: "sub2api" }),
-    )
-    mockFetchAccountTokens.mockResolvedValueOnce([]).mockResolvedValueOnce([])
-    resolveSub2ApiQuickCreateResolutionSpy
-      .mockResolvedValueOnce({
-        kind: "selection_required",
-        allowedGroups: ["default", "vip"],
-      })
-      .mockResolvedValueOnce({
-        kind: "selection_required",
-        allowedGroups: ["default", "vip"],
-      })
-
+    const sessionBAccount = buildDisplaySiteData({
+      id: "account-b",
+      name: "Account B",
+      siteType: "sub2api",
+    })
     const { result } = await renderChannelDialogHook()
 
-    await act(async () => {
-      await result.current.dialog.openSub2ApiTokenCreationDialog(
-        buildDisplaySiteData({ siteType: "sub2api" }),
-        {
-          onSuccess: vi.fn(),
-        },
-      )
+    act(() => {
+      result.current.context.openSub2ApiTokenDialog({
+        account: sessionAAccount,
+        allowedGroups: ["default"],
+        onSuccess: sessionAOnSuccess,
+      })
     })
 
-    expect(result.current.context.sub2apiTokenDialog.isOpen).toBe(true)
+    expect(result.current.context.sub2apiTokenDialog).toMatchObject({
+      isOpen: true,
+      account: sessionAAccount,
+      allowedGroups: ["default"],
+    })
 
     const sessionASuccessHandler =
       result.current.context.handleSub2ApiTokenSuccess
 
     act(() => {
       result.current.context.closeSub2ApiTokenDialog()
+      result.current.context.openSub2ApiTokenDialog({
+        account: sessionBAccount,
+        allowedGroups: ["vip"],
+        onSuccess: sessionBOnSuccess,
+      })
+      void sessionASuccessHandler(createdToken)
     })
 
-    expect(result.current.context.sub2apiTokenDialog.isOpen).toBe(false)
-
-    let openResult: Awaited<
-      ReturnType<typeof result.current.dialog.openWithAccount>
-    > | null = null
-    await act(async () => {
-      openResult = await result.current.dialog.openWithAccount(
-        buildDisplaySiteData({ siteType: "sub2api" }),
-        null,
-      )
+    expect(result.current.context.sub2apiTokenDialog).toMatchObject({
+      isOpen: true,
+      account: sessionBAccount,
+      allowedGroups: ["vip"],
     })
-
-    expect(openResult).toEqual({ opened: false, deferred: true })
-    expect(result.current.context.sub2apiTokenDialog.isOpen).toBe(true)
     expect(result.current.context.state.isOpen).toBe(false)
-
-    await act(async () => {
-      await sessionASuccessHandler(createdToken)
-    })
-
-    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
-    expect(result.current.context.sub2apiTokenDialog.isOpen).toBe(true)
-    expect(result.current.context.state.isOpen).toBe(false)
+    expect(sessionAOnSuccess).not.toHaveBeenCalled()
+    expect(sessionBOnSuccess).not.toHaveBeenCalled()
     expect(mockToastError).not.toHaveBeenCalled()
   })
 

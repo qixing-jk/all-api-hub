@@ -116,11 +116,6 @@ export function ChannelDialogProvider({
   const sub2apiTokenDialogSessionIdRef = useRef(sub2apiTokenDialog.sessionId)
   const sub2apiTokenOnSuccessRef = useRef(sub2apiTokenDialog.onSuccessCallback)
 
-  useEffect(() => {
-    sub2apiTokenDialogSessionIdRef.current = sub2apiTokenDialog.sessionId
-    sub2apiTokenOnSuccessRef.current = sub2apiTokenDialog.onSuccessCallback
-  }, [sub2apiTokenDialog.sessionId, sub2apiTokenDialog.onSuccessCallback])
-
   const openDialog = useCallback(
     (config: {
       mode?: DialogMode
@@ -179,23 +174,29 @@ export function ChannelDialogProvider({
       notice?: string
       onSuccess?: (createdToken?: ApiToken) => void | Promise<void>
     }) => {
-      setSub2apiTokenDialog((prev) => ({
+      const nextSessionId = sub2apiTokenDialogSessionIdRef.current + 1
+      const nextOnSuccess = config.onSuccess ?? null
+      sub2apiTokenDialogSessionIdRef.current = nextSessionId
+      sub2apiTokenOnSuccessRef.current = nextOnSuccess
+      setSub2apiTokenDialog(() => ({
         isOpen: true,
-        sessionId: prev.sessionId + 1,
+        sessionId: nextSessionId,
         account: config.account,
         allowedGroups: config.allowedGroups,
         notice: config.notice,
-        onSuccessCallback: config.onSuccess ?? null,
+        onSuccessCallback: nextOnSuccess,
       }))
     },
     [],
   )
 
   const closeSub2ApiTokenDialog = useCallback(() => {
+    const nextSessionId = sub2apiTokenDialogSessionIdRef.current + 1
+    sub2apiTokenDialogSessionIdRef.current = nextSessionId
     sub2apiTokenOnSuccessRef.current = null
-    setSub2apiTokenDialog((prev) => ({
+    setSub2apiTokenDialog(() => ({
       isOpen: false,
-      sessionId: prev.sessionId + 1,
+      sessionId: nextSessionId,
       account: null,
       allowedGroups: [],
       notice: undefined,
@@ -205,12 +206,12 @@ export function ChannelDialogProvider({
 
   const handleSub2ApiTokenSuccess = useCallback(
     async (createdToken?: ApiToken) => {
-      const activeSessionId = sub2apiTokenDialogSessionIdRef.current
+      const sessionIdAtInvocation = sub2apiTokenDialog.sessionId
       if (!sub2apiTokenDialog.isOpen) {
         return
       }
 
-      if (activeSessionId !== sub2apiTokenDialog.sessionId) {
+      if (sub2apiTokenDialogSessionIdRef.current !== sessionIdAtInvocation) {
         return
       }
 
