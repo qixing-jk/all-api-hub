@@ -175,6 +175,20 @@ describe("useAccountDialog save and auto-config flows", () => {
       }),
     )
 
+  const fillAihubmixAccountDraft = async (
+    result: ReturnType<typeof renderAddHook>["result"],
+  ) => {
+    await act(async () => {
+      result.current.setters.setUrl("https://aihubmix.com")
+      result.current.setters.setSiteName("AIHubMix")
+      result.current.setters.setUsername("aihubmix-user")
+      result.current.setters.setAccessToken("aihubmix-access-token")
+      result.current.setters.setUserId("13")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+    })
+  }
+
   const renderEditHook = (options?: {
     account?: any
     onSuccess?: ReturnType<typeof vi.fn>
@@ -707,15 +721,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       expect(result.current.state).toBeTruthy()
     })
 
-    await act(async () => {
-      result.current.setters.setUrl("https://aihubmix.com")
-      result.current.setters.setSiteName("AIHubMix")
-      result.current.setters.setUsername("aihubmix-user")
-      result.current.setters.setAccessToken("aihubmix-access-token")
-      result.current.setters.setUserId("13")
-      result.current.setters.setExchangeRate("7")
-      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
-    })
+    await fillAihubmixAccountDraft(result)
 
     await act(async () => {
       await result.current.handlers.handleSaveAccount()
@@ -785,15 +791,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       expect(result.current.state).toBeTruthy()
     })
 
-    await act(async () => {
-      result.current.setters.setUrl("https://aihubmix.com")
-      result.current.setters.setSiteName("AIHubMix")
-      result.current.setters.setUsername("aihubmix-user")
-      result.current.setters.setAccessToken("aihubmix-access-token")
-      result.current.setters.setUserId("13")
-      result.current.setters.setExchangeRate("7")
-      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
-    })
+    await fillAihubmixAccountDraft(result)
 
     await act(async () => {
       await result.current.handlers.handleSaveAccount()
@@ -847,15 +845,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       expect(result.current.state).toBeTruthy()
     })
 
-    await act(async () => {
-      result.current.setters.setUrl("https://aihubmix.com")
-      result.current.setters.setSiteName("AIHubMix")
-      result.current.setters.setUsername("aihubmix-user")
-      result.current.setters.setAccessToken("aihubmix-access-token")
-      result.current.setters.setUserId("13")
-      result.current.setters.setExchangeRate("7")
-      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
-    })
+    await fillAihubmixAccountDraft(result)
 
     await act(async () => {
       await result.current.handlers.handleSaveAccount()
@@ -872,6 +862,34 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockOpenWithAccount).not.toHaveBeenCalled()
   })
 
+  it("completes deferred AIHubMix save success when the saved account cannot be reloaded for key creation", async () => {
+    const onSuccess = vi.fn()
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(null)
+
+    const { result } = renderAddHook({ onSuccess })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillAihubmixAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAihubmixPostSaveKeyPromptConfirm()
+    })
+
+    expect(toast.error).toHaveBeenCalledWith(
+      "messages:toast.error.findAccountDetailsFailed",
+    )
+    expect(mockEnsureAccountTokenForPostSaveWorkflow).not.toHaveBeenCalled()
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
+    expect(onSuccess).toHaveBeenCalledWith("saved-account-id")
+  })
+
   it("does not create an AIHubMix key when the user cancels the foreground prompt", async () => {
     const { result } = renderAddHook()
 
@@ -879,15 +897,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       expect(result.current.state).toBeTruthy()
     })
 
-    await act(async () => {
-      result.current.setters.setUrl("https://aihubmix.com")
-      result.current.setters.setSiteName("AIHubMix")
-      result.current.setters.setUsername("aihubmix-user")
-      result.current.setters.setAccessToken("aihubmix-access-token")
-      result.current.setters.setUserId("13")
-      result.current.setters.setExchangeRate("7")
-      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
-    })
+    await fillAihubmixAccountDraft(result)
 
     await act(async () => {
       await result.current.handlers.handleSaveAccount()
@@ -904,6 +914,37 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(toast).toHaveBeenCalledWith(
       "messages:aihubmix.oneTimeKeyPromptCancelled",
     )
+  })
+
+  it("completes deferred AIHubMix save success when the dialog is closed while the key prompt is pending", async () => {
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose,
+        onSuccess,
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillAihubmixAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    await act(async () => {
+      result.current.handlers.handleClose()
+    })
+
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
+    expect(onSuccess).toHaveBeenCalledWith("saved-account-id")
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 
   it("ignores late AIHubMix key creation results after the dialog is closed", async () => {

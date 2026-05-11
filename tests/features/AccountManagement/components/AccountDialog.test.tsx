@@ -493,6 +493,64 @@ describe("AccountDialog", () => {
     ).toBeInTheDocument()
   })
 
+  it("renders the AIHubMix key prompt creating state with disabled actions", async () => {
+    mockState.aihubmixPostSaveKeyPrompt = {
+      isOpen: true,
+      accountName: "AIHubMix",
+      isCreating: true,
+    }
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "accountDialog:aihubmixDefaultKeyPrompt.creating",
+      }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole("button", {
+        name: "accountDialog:aihubmixDefaultKeyPrompt.cancel",
+      }),
+    ).toBeDisabled()
+  })
+
+  it("calls onSuccess immediately when save success is not deferred", async () => {
+    const onSuccess = vi.fn()
+    const saveResult = {
+      success: true,
+      accountId: "regular-account",
+      message: "Saved",
+    }
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockHandlers.handleSaveAccount.mockResolvedValueOnce(saveResult)
+    mockHandlers.shouldDeferAccountSaveSuccess.mockReturnValueOnce(false)
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={onSuccess}
+        onError={vi.fn()}
+      />,
+    )
+
+    const form = await screen.findByTestId("account-management-account-form")
+    form.dispatchEvent(new Event("submit", { bubbles: true, cancelable: true }))
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalledWith(saveResult)
+    })
+  })
+
   it("does not close the dialog immediately when save success is deferred for AIHubMix key creation", async () => {
     const onSuccess = vi.fn()
     const saveResult = {

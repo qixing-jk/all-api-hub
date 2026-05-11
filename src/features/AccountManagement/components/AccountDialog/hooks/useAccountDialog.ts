@@ -535,6 +535,14 @@ export function useAccountDialog({
     pendingPostSaveChannelRef.current = null
   }, [invalidatePostSaveAutoConfigRun, invalidatePostSaveSub2ApiDialogSession])
 
+  const completePendingAihubmixPostSaveSuccess = useCallback(() => {
+    const savedAccountId = pendingAihubmixPostSaveSuccessRef.current
+    pendingAihubmixPostSaveSuccessRef.current = null
+    if (savedAccountId) {
+      onSuccess?.(savedAccountId)
+    }
+  }, [onSuccess])
+
   const resetForm = useCallback(() => {
     newAccountRef.current = null
     duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
@@ -769,6 +777,7 @@ export function useAccountDialog({
   const handleClose = useCallback(() => {
     handleDuplicateAccountWarningCancel()
     cancelPendingDuplicateAccountWarning()
+    completePendingAihubmixPostSaveSuccess()
     clearPostSaveWorkflowState()
     setManagedSiteConfigPrompt((prev) =>
       prev.isOpen ? { ...prev, isOpen: false } : prev,
@@ -778,6 +787,7 @@ export function useAccountDialog({
   }, [
     cancelPendingDuplicateAccountWarning,
     clearPostSaveWorkflowState,
+    completePendingAihubmixPostSaveSuccess,
     handleDuplicateAccountWarningCancel,
     onClose,
   ])
@@ -1360,13 +1370,9 @@ export function useAccountDialog({
       accountName: "",
       isCreating: false,
     })
-    const savedAccountId = pendingAihubmixPostSaveSuccessRef.current
-    pendingAihubmixPostSaveSuccessRef.current = null
-    if (savedAccountId) {
-      onSuccess?.(savedAccountId)
-    }
+    completePendingAihubmixPostSaveSuccess()
     toast(t("messages:aihubmix.oneTimeKeyPromptCancelled"))
-  }, [onSuccess, t])
+  }, [completePendingAihubmixPostSaveSuccess, t])
 
   const handleAihubmixPostSaveKeyPromptConfirm = useCallback(async () => {
     const accountId = aihubmixPostSaveKeyPrompt.accountId
@@ -1392,6 +1398,7 @@ export function useAccountDialog({
           accountName: "",
           isCreating: false,
         })
+        completePendingAihubmixPostSaveSuccess()
         return
       }
 
@@ -1427,11 +1434,7 @@ export function useAccountDialog({
         accountName: "",
         isCreating: false,
       })
-      const savedAccountId = pendingAihubmixPostSaveSuccessRef.current
-      pendingAihubmixPostSaveSuccessRef.current = null
-      if (savedAccountId) {
-        onSuccess?.(savedAccountId)
-      }
+      completePendingAihubmixPostSaveSuccess()
     } catch (error) {
       if (!isCurrentRun()) return
 
@@ -1442,17 +1445,17 @@ export function useAccountDialog({
         accountName: "",
         isCreating: false,
       })
-      const savedAccountId = pendingAihubmixPostSaveSuccessRef.current
-      pendingAihubmixPostSaveSuccessRef.current = null
-      if (savedAccountId) {
-        onSuccess?.(savedAccountId)
-      }
+      completePendingAihubmixPostSaveSuccess()
       logger.error("AIHubMix post-save one-time key creation failed", {
         accountId,
         error: getErrorMessage(error),
       })
     }
-  }, [aihubmixPostSaveKeyPrompt.accountId, onSuccess, t])
+  }, [
+    aihubmixPostSaveKeyPrompt.accountId,
+    completePendingAihubmixPostSaveSuccess,
+    t,
+  ])
 
   const openPostSaveManagedSiteDialog = useCallback(
     async (
@@ -1522,11 +1525,7 @@ export function useAccountDialog({
     pendingPostSaveChannelRef.current = null
     if (!pending?.token) {
       setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
-      const savedAccountId = pendingAihubmixPostSaveSuccessRef.current
-      pendingAihubmixPostSaveSuccessRef.current = null
-      if (savedAccountId) {
-        onSuccess?.(savedAccountId)
-      }
+      completePendingAihubmixPostSaveSuccess()
       return
     }
 
@@ -1535,7 +1534,7 @@ export function useAccountDialog({
       pending.token,
       runId,
     )
-  }, [onSuccess, openPostSaveManagedSiteDialog])
+  }, [completePendingAihubmixPostSaveSuccess, openPostSaveManagedSiteDialog])
 
   const handlePostSaveSub2ApiTokenDialogCloseForSession = useCallback(
     (sessionId: number | null) => {
