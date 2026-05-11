@@ -79,7 +79,7 @@ function isSiteAccount(
 }
 
 /**
- *
+ * Extracts numeric token IDs from potentially sparse token lists.
  */
 function getApiTokenIds(tokens: ApiToken[]): number[] {
   return tokens
@@ -511,10 +511,10 @@ export function useChannelDialog() {
 
       if (duplicateState.existingChannelName) {
         toast.dismiss(toastId)
-        const shouldContinue = await requestDuplicateChannelWarning({
+        const confirmedDuplicate = await requestDuplicateChannelWarning({
           existingChannelName: duplicateState.existingChannelName,
         })
-        if (!shouldContinue) {
+        if (!confirmedDuplicate) {
           return { opened: false }
         }
       } else {
@@ -608,10 +608,10 @@ export function useChannelDialog() {
 
       if (duplicateState.existingChannelName) {
         toast.dismiss(toastId)
-        const shouldContinue = await requestDuplicateChannelWarning({
+        const confirmedDuplicate = await requestDuplicateChannelWarning({
           existingChannelName: duplicateState.existingChannelName,
         })
-        if (!shouldContinue) {
+        if (!confirmedDuplicate) {
           return
         }
       } else {

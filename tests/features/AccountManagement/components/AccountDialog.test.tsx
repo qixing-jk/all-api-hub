@@ -7,6 +7,7 @@ import {
   ACCOUNT_DIALOG_PHASES,
   createEmptyAccountDialogDraft,
 } from "~/features/AccountManagement/components/AccountDialog/models"
+import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { AuthTypeEnum } from "~/types"
 import { render, screen } from "~~/tests/test-utils/render"
 
@@ -93,7 +94,12 @@ const {
       managedSiteLabel: "",
       missingMessage: "",
     },
-  },
+    accountPostSaveWorkflowStep: "idle",
+    postSaveOneTimeToken: null,
+    postSaveSub2ApiAllowedGroups: null,
+    postSaveSub2ApiAccount: null,
+    postSaveSub2ApiDialogSessionId: null,
+  } as any,
   mockSetters: {
     setSiteName: vi.fn(),
     setUsername: vi.fn(),
@@ -128,6 +134,10 @@ const {
     handleDuplicateAccountWarningContinue: vi.fn(),
     handleManagedSiteConfigPromptClose: vi.fn(),
     handleOpenManagedSiteSettings: vi.fn(),
+    handlePostSaveOneTimeTokenClose: vi.fn(),
+    handlePostSaveSub2ApiTokenDialogClose: vi.fn(),
+    handlePostSaveSub2ApiTokenCreated: vi.fn(),
+    getPostSaveSub2ApiDialogHandlers: vi.fn(),
   },
   mockCreateTag: vi.fn(),
   mockRenameTag: vi.fn(),
@@ -179,8 +189,53 @@ function resetMockState() {
       managedSiteLabel: "",
       missingMessage: "",
     },
+    accountPostSaveWorkflowStep: "idle",
+    postSaveOneTimeToken: null,
+    postSaveSub2ApiAllowedGroups: null,
+    postSaveSub2ApiAccount: null,
+    postSaveSub2ApiDialogSessionId: null,
   })
 }
+
+vi.mock("~/features/KeyManagement/components/AddTokenDialog", () => ({
+  default: (props: {
+    isOpen: boolean
+    preSelectedAccountId?: string
+    createPrefill?: Record<string, unknown>
+    prefillNotice?: string
+    showOneTimeKeyDialog?: boolean
+  }) => (
+    <div data-testid="post-save-add-token-dialog">
+      <div data-testid="post-save-add-token-open">{String(props.isOpen)}</div>
+      <div data-testid="post-save-add-token-account">
+        {props.preSelectedAccountId}
+      </div>
+      <div data-testid="post-save-add-token-prefill">
+        {JSON.stringify(props.createPrefill)}
+      </div>
+      <div data-testid="post-save-add-token-notice">{props.prefillNotice}</div>
+      <div data-testid="post-save-add-token-one-time">
+        {String(props.showOneTimeKeyDialog)}
+      </div>
+    </div>
+  ),
+}))
+
+vi.mock("~/features/KeyManagement/components/OneTimeApiKeyDialog", () => ({
+  OneTimeApiKeyDialog: (props: {
+    isOpen: boolean
+    token: { key?: string } | null
+  }) => (
+    <div data-testid="post-save-one-time-key-dialog">
+      <div data-testid="post-save-one-time-key-open">
+        {String(props.isOpen)}
+      </div>
+      <div data-testid="post-save-one-time-key-value">
+        {props.token?.key ?? ""}
+      </div>
+    </div>
+  ),
+}))
 
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
@@ -214,6 +269,7 @@ vi.mock(
 
 describe("AccountDialog", () => {
   beforeEach(() => {
+    vi.clearAllMocks()
     resetMockState()
   })
 
@@ -277,5 +333,104 @@ describe("AccountDialog", () => {
     expect(
       screen.queryByTestId("account-management-auth-type-trigger"),
     ).not.toBeInTheDocument()
+  })
+
+  it("renders the post-save Sub2API token dialog with default-token prefill", async () => {
+    mockState.postSaveSub2ApiAccount = {
+      id: "sub2-account-id",
+      name: "Sub2API",
+    }
+    mockState.postSaveSub2ApiAllowedGroups = ["vip", "default"]
+    mockState.postSaveSub2ApiDialogSessionId = 42
+    mockHandlers.getPostSaveSub2ApiDialogHandlers.mockReturnValue({
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    })
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    expect(
+      await screen.findByTestId("post-save-add-token-dialog"),
+    ).toBeInTheDocument()
+    expect(screen.getByTestId("post-save-add-token-account")).toHaveTextContent(
+      "sub2-account-id",
+    )
+    expect(screen.getByTestId("post-save-add-token-prefill")).toHaveTextContent(
+      JSON.stringify({
+        modelId: "",
+        defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        group: "default",
+        allowedGroups: ["vip", "default"],
+      }),
+    )
+    expect(screen.getByTestId("post-save-add-token-notice")).toHaveTextContent(
+      "messages:sub2api.createRequiresGroupSelection",
+    )
+    expect(
+      screen.getByTestId("post-save-add-token-one-time"),
+    ).toHaveTextContent("false")
+    expect(mockHandlers.getPostSaveSub2ApiDialogHandlers).toHaveBeenCalledWith(
+      42,
+    )
+  })
+
+  it("prefills the first allowed Sub2API group when default is unavailable", async () => {
+    mockState.postSaveSub2ApiAccount = {
+      id: "sub2-account-id",
+      name: "Sub2API",
+    }
+    mockState.postSaveSub2ApiAllowedGroups = ["vip", "paid"]
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    expect(
+      await screen.findByTestId("post-save-add-token-prefill"),
+    ).toHaveTextContent(
+      JSON.stringify({
+        modelId: "",
+        defaultName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+        group: "vip",
+        allowedGroups: ["vip", "paid"],
+      }),
+    )
+  })
+
+  it("renders the post-save one-time key dialog only when a token is pending", async () => {
+    mockState.postSaveOneTimeToken = {
+      key: "sk-one-time",
+    }
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    expect(
+      await screen.findByTestId("post-save-one-time-key-open"),
+    ).toHaveTextContent("true")
+    expect(
+      screen.getByTestId("post-save-one-time-key-value"),
+    ).toHaveTextContent("sk-one-time")
   })
 })

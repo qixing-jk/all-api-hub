@@ -1020,6 +1020,211 @@ describe("useChannelDialog", () => {
     )
   })
 
+  it("fails closed when Sub2API token refetch returns a non-array after dialog success", async () => {
+    const prepareChannelFormDataMock = vi.fn(
+      async (_account: DisplaySiteData, token: ApiToken) =>
+        buildPreparedFormData({
+          key: token.key,
+        }),
+    )
+    const mockService = buildManagedSiteServiceMock({
+      prepareChannelFormData: prepareChannelFormDataMock,
+    })
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+    getAccountByIdSpy.mockResolvedValue(
+      buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
+    )
+    mockFetchAccountTokens.mockResolvedValueOnce([]).mockResolvedValueOnce(null)
+    resolveSub2ApiQuickCreateResolutionSpy.mockResolvedValueOnce({
+      kind: "selection_required",
+      allowedGroups: ["default", "vip"],
+    })
+
+    const { result } = await renderChannelDialogHook()
+
+    await act(async () => {
+      await result.current.dialog.openWithAccount(
+        buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API }),
+        null,
+      )
+    })
+
+    expect(result.current.context.sub2apiTokenDialog.isOpen).toBe(true)
+
+    await act(async () => {
+      await result.current.context.handleSub2ApiTokenSuccess()
+    })
+
+    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
+    expect(result.current.context.state.isOpen).toBe(false)
+    expect(mockToastError).toHaveBeenCalledWith(
+      "messages:accountOperations.createTokenFailed",
+    )
+  })
+
+  it("cancels deferred Sub2API resume before using a returned created token", async () => {
+    const createdToken = buildApiToken({
+      id: 11,
+      key: "sk-created-11",
+      name: "Created token",
+    })
+    const prepareChannelFormDataMock = vi.fn(
+      async (_account: DisplaySiteData, token: ApiToken) =>
+        buildPreparedFormData({
+          key: token.key,
+        }),
+    )
+    const mockService = buildManagedSiteServiceMock({
+      prepareChannelFormData: prepareChannelFormDataMock,
+    })
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+    getAccountByIdSpy.mockResolvedValue(
+      buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
+    )
+    mockFetchAccountTokens.mockResolvedValueOnce([])
+    resolveSub2ApiQuickCreateResolutionSpy.mockResolvedValueOnce({
+      kind: "selection_required",
+      allowedGroups: ["default", "vip"],
+    })
+
+    let shouldContinue = true
+    const { result } = await renderChannelDialogHook()
+
+    await act(async () => {
+      await result.current.dialog.openWithAccount(
+        buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API }),
+        null,
+        undefined,
+        { shouldContinue: () => shouldContinue },
+      )
+    })
+
+    shouldContinue = false
+
+    await act(async () => {
+      await result.current.context.handleSub2ApiTokenSuccess(createdToken)
+    })
+
+    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
+    expect(mockFetchAccountTokens).toHaveBeenCalledTimes(1)
+    expect(result.current.context.state.isOpen).toBe(false)
+    expect(mockToastError).not.toHaveBeenCalled()
+  })
+
+  it("cancels deferred Sub2API resume before refetching tokens", async () => {
+    const prepareChannelFormDataMock = vi.fn(
+      async (_account: DisplaySiteData, token: ApiToken) =>
+        buildPreparedFormData({
+          key: token.key,
+        }),
+    )
+    const mockService = buildManagedSiteServiceMock({
+      prepareChannelFormData: prepareChannelFormDataMock,
+    })
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+    getAccountByIdSpy.mockResolvedValue(
+      buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
+    )
+    mockFetchAccountTokens.mockResolvedValueOnce([])
+    resolveSub2ApiQuickCreateResolutionSpy.mockResolvedValueOnce({
+      kind: "selection_required",
+      allowedGroups: ["default", "vip"],
+    })
+
+    let shouldContinueCalls = 0
+    const { result } = await renderChannelDialogHook()
+
+    await act(async () => {
+      await result.current.dialog.openWithAccount(
+        buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API }),
+        null,
+        undefined,
+        {
+          shouldContinue: () => {
+            shouldContinueCalls += 1
+            return shouldContinueCalls < 4
+          },
+        },
+      )
+    })
+
+    await act(async () => {
+      await result.current.context.handleSub2ApiTokenSuccess()
+    })
+
+    expect(mockFetchAccountTokens).toHaveBeenCalledTimes(1)
+    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
+    expect(result.current.context.state.isOpen).toBe(false)
+    expect(mockToastError).not.toHaveBeenCalled()
+  })
+
+  it("cancels deferred Sub2API resume after refetching tokens but before recovery", async () => {
+    const existingToken = buildApiToken({
+      id: 3,
+      key: "sk-existing-3",
+      name: "Existing token",
+    })
+    const createdToken = buildApiToken({
+      id: 11,
+      key: "sk-created-11",
+      name: "Created token",
+    })
+    const prepareChannelFormDataMock = vi.fn(
+      async (_account: DisplaySiteData, token: ApiToken) =>
+        buildPreparedFormData({
+          key: token.key,
+        }),
+    )
+    const mockService = buildManagedSiteServiceMock({
+      prepareChannelFormData: prepareChannelFormDataMock,
+    })
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+    getAccountByIdSpy.mockResolvedValue(
+      buildSiteAccount({ site_type: SITE_TYPES.SUB2API }),
+    )
+    mockFetchAccountTokens
+      .mockResolvedValueOnce([])
+      .mockResolvedValueOnce([createdToken, existingToken])
+    resolveSub2ApiQuickCreateResolutionSpy.mockResolvedValueOnce({
+      kind: "selection_required",
+      allowedGroups: ["default", "vip"],
+    })
+
+    let shouldContinueCalls = 0
+    const { result } = await renderChannelDialogHook()
+
+    await act(async () => {
+      await result.current.dialog.openWithAccount(
+        buildDisplaySiteData({ siteType: SITE_TYPES.SUB2API }),
+        null,
+        undefined,
+        {
+          shouldContinue: () => {
+            shouldContinueCalls += 1
+            return shouldContinueCalls < 5
+          },
+        },
+      )
+    })
+
+    await act(async () => {
+      await result.current.context.handleSub2ApiTokenSuccess()
+    })
+
+    expect(mockFetchAccountTokens).toHaveBeenCalledTimes(2)
+    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
+    expect(result.current.context.state.isOpen).toBe(false)
+    expect(mockToastError).not.toHaveBeenCalled()
+  })
+
   it("does not open the Sub2API quick-create dialog when tokens already exist", async () => {
     mockFetchAccountTokens.mockResolvedValueOnce([buildApiToken()])
 
