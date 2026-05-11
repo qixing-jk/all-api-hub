@@ -209,6 +209,19 @@ export async function autoDetectAccount(
         username: detectedUsername,
         access_token: accessToken,
       })
+    } else if (
+      isAIHubMix &&
+      typeof detectResult.data.accessToken === "string"
+    ) {
+      const detectedUsername =
+        typeof detectResult.data.user?.username === "string"
+          ? detectResult.data.user.username.trim()
+          : ""
+
+      tokenPromise = Promise.resolve({
+        username: detectedUsername,
+        access_token: detectResult.data.accessToken.trim(),
+      })
     } else if (effectiveAuthType === AuthTypeEnum.Cookie) {
       tokenPromise = getApiService(siteType).fetchUserInfo({
         baseUrl: url,

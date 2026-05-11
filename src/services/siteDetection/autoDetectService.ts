@@ -12,7 +12,12 @@ import {
   type AutoDetectErrorCode,
 } from "~/constants/autoDetect"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { isAccountSiteType, type AccountSiteType } from "~/constants/siteType"
+import {
+  AIHUBMIX_API_ORIGIN,
+  AIHUBMIX_HOSTNAMES,
+  isAccountSiteType,
+  type AccountSiteType,
+} from "~/constants/siteType"
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 import {
   getActiveOrAllTabs,
@@ -31,6 +36,7 @@ import { getAccountSiteType } from "./detectSiteType"
  * Unified logger scoped to the account auto-detection service.
  */
 const logger = createLogger("AutoDetectService")
+const AIHUBMIX_HOSTNAME_SET: ReadonlySet<string> = new Set(AIHUBMIX_HOSTNAMES)
 
 /**
  * Normalizes optional site type hints received from content scripts.
@@ -87,6 +93,37 @@ function detectPlatformCapabilities() {
     hasTabs: !!b?.tabs,
     hasBackgroundMessaging: !!b?.runtime,
   }
+}
+
+/**
+ * Returns the canonical page origin that should back AIHubMix auto-detect reads.
+ */
+function resolveAutoDetectUrl(url: string): string {
+  try {
+    const parsed = new URL(url)
+    if (AIHUBMIX_HOSTNAME_SET.has(parsed.hostname.toLowerCase())) {
+      return AIHUBMIX_API_ORIGIN
+    }
+  } catch {
+    return url
+  }
+
+  return url
+}
+
+/**
+ * Checks whether the current browser tab can serve as the source context for
+ * the requested target after applying site-specific canonicalization.
+ */
+function isSameAutoDetectContext(currentUrl: URL, targetUrl: URL): boolean {
+  if (currentUrl.origin === targetUrl.origin) {
+    return true
+  }
+
+  return (
+    AIHUBMIX_HOSTNAME_SET.has(currentUrl.hostname.toLowerCase()) &&
+    AIHUBMIX_HOSTNAME_SET.has(targetUrl.hostname.toLowerCase())
+  )
 }
 
 /**
@@ -365,6 +402,7 @@ async function autoDetectFromCurrentTab(
  * 3. 直接 API 方式（所有平台的 fallback）
  */
 export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
+  const detectionUrl = resolveAutoDetectUrl(url)
   const capabilities = detectPlatformCapabilities()
   let shouldHintCurrentTabReload = false
   let currentTabReloadHintResult: AutoDetectResult | null = null
@@ -381,12 +419,17 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
         const currentUrl = new URL(currentTab.url)
         const targetUrl = new URL(url)
 
-        if (currentUrl.origin === targetUrl.origin) {
+        const sameAutoDetectContext = isSameAutoDetectContext(
+          currentUrl,
+          targetUrl,
+        )
+
+        if (sameAutoDetectContext) {
           logger.debug("当前标签页匹配目标站点，使用当前标签页方式", {
             url,
             currentTabUrl: currentTab.url,
           })
-          const currentTabResult = await autoDetectFromCurrentTab(url)
+          const currentTabResult = await autoDetectFromCurrentTab(detectionUrl)
           if (currentTabResult.success) {
             return currentTabResult
           }
@@ -410,7 +453,7 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
     // Background path uses a temporary browser context, which may be backed by
     // a window or a tab depending on the current temp-context mode and browser capabilities.
     try {
-      const result = await autoDetectViaBackground(url)
+      const result = await autoDetectViaBackground(detectionUrl)
       if (result.success) {
         return result
       }
@@ -424,7 +467,7 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
   }
 
   // 3. Fallback: 使用直接方式（手机 或其他方式失败）
-  const directResult = await autoDetectDirect(url)
+  const directResult = await autoDetectDirect(detectionUrl)
 
   if (
     shouldHintCurrentTabReload &&

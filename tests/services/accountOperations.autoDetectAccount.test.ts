@@ -203,7 +203,7 @@ describe("accountOperations autoDetectAccount", () => {
     expect(mockFetchSiteStatus).toHaveBeenCalledTimes(1)
   })
 
-  it("gets and saves the AIHubMix access token even when Cookie auth is selected", async () => {
+  it("uses the AIHubMix access token returned by auto-detect without an options-page cookie fallback", async () => {
     mockSendRuntimeMessage.mockResolvedValueOnce(null)
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
@@ -211,12 +211,8 @@ describe("accountOperations autoDetectAccount", () => {
         userId: 11,
         user: { id: 11, username: "aihubmix-user" },
         siteType: SITE_TYPES.AIHUBMIX,
-        accessToken: "detected-token",
+        accessToken: "detected-console-token",
       },
-    })
-    mockGetOrCreateAccessToken.mockResolvedValueOnce({
-      username: "aihubmix-user",
-      access_token: "system-access-token",
     })
     mockFetchSiteStatus.mockResolvedValueOnce({
       system_name: "AIHubMix",
@@ -235,15 +231,9 @@ describe("accountOperations autoDetectAccount", () => {
       siteType: SITE_TYPES.AIHUBMIX,
       authType: AuthTypeEnum.AccessToken,
       username: "aihubmix-user",
-      accessToken: "system-access-token",
+      accessToken: "detected-console-token",
     })
-    expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
-      baseUrl: "https://aihubmix.com",
-      auth: {
-        authType: AuthTypeEnum.Cookie,
-        userId: 11,
-      },
-    })
+    expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 

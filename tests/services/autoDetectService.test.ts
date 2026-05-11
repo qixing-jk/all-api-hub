@@ -108,6 +108,46 @@ describe("autoDetectSmart", () => {
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 
+  it("uses the AIHubMix API origin content-script flow when detecting from a console tab", async () => {
+    mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.AIHUBMIX)
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 2,
+        active: true,
+        url: "https://console.aihubmix.com/statistics",
+      },
+    ])
+    mockGetActiveTabs.mockResolvedValue([{ id: 2 }])
+    browserAny.tabs.sendMessage.mockResolvedValue({
+      success: true,
+      data: {
+        userId: 7,
+        user: { id: 7, username: "aihubmix-user" },
+        accessToken: "console-session-token",
+        siteTypeHint: SITE_TYPES.AIHUBMIX,
+      },
+    })
+
+    const result = await autoDetectSmart("https://aihubmix.com")
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        userId: 7,
+        user: { id: 7, username: "aihubmix-user" },
+        siteType: SITE_TYPES.AIHUBMIX,
+        accessToken: "console-session-token",
+        sub2apiAuth: undefined,
+      },
+    })
+    expect(browserAny.tabs.sendMessage).toHaveBeenCalledWith(2, {
+      action: expect.any(String),
+      url: "https://aihubmix.com",
+    })
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
+  })
+
   it("surfaces a current-tab reload hint when the content script is unavailable and direct fallback stays generic", async () => {
     browserAny.runtime = null
 
