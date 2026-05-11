@@ -104,11 +104,10 @@ function resolveAutoDetectUrl(url: string): string {
     if (AIHUBMIX_HOSTNAME_SET.has(parsed.hostname.toLowerCase())) {
       return AIHUBMIX_API_ORIGIN
     }
+    return url
   } catch {
     return url
   }
-
-  return url
 }
 
 /**

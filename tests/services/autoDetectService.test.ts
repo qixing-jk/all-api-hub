@@ -425,4 +425,36 @@ describe("autoDetectSmart", () => {
       error: "detect failed",
     })
   })
+
+  it("keeps an invalid input URL on the direct detection path", async () => {
+    browserAny.tabs = null
+    browserAny.runtime = null
+    mockFetchUserInfo.mockResolvedValue({
+      id: 42,
+      username: "invalid-url-user",
+    })
+
+    const result = await autoDetectSmart("not a url")
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        userId: 42,
+        user: {
+          id: 42,
+          username: "invalid-url-user",
+        },
+        siteType: SITE_TYPES.NEW_API,
+        accessToken: undefined,
+        sub2apiAuth: undefined,
+      },
+    })
+    expect(mockGetAccountSiteType).toHaveBeenCalledWith("not a url")
+    expect(mockFetchUserInfo).toHaveBeenCalledWith({
+      baseUrl: "not a url",
+      auth: {
+        authType: expect.any(String),
+      },
+    })
+  })
 })

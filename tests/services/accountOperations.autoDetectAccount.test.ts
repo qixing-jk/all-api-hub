@@ -237,6 +237,37 @@ describe("accountOperations autoDetectAccount", () => {
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 
+  it("fails AIHubMix auto-detect when the detected user has no username", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: 11,
+        user: { id: 11 },
+        siteType: SITE_TYPES.AIHUBMIX,
+        accessToken: "detected-console-token",
+      },
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "AIHubMix",
+    })
+    mockFetchSupportCheckIn.mockResolvedValueOnce(false)
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await autoDetectAccount(
+      "https://aihubmix.com",
+      AuthTypeEnum.Cookie,
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      message: "messages:operations.detection.getInfoFailed",
+      detailedError: expect.any(Object),
+    })
+    expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
+  })
+
   it("fails AIHubMix auto-detect when token retrieval returns no token", async () => {
     mockSendRuntimeMessage.mockResolvedValueOnce(null)
     mockAutoDetectSmart.mockResolvedValueOnce({
