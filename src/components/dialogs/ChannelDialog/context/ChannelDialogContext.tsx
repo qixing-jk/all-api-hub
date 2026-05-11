@@ -41,6 +41,7 @@ interface DuplicateChannelWarningState {
 
 interface Sub2ApiTokenDialogState {
   isOpen: boolean
+  sessionId: number
   account: DisplaySiteData | null
   allowedGroups: string[]
   notice?: string
@@ -106,11 +107,19 @@ export function ChannelDialogProvider({
   const [sub2apiTokenDialog, setSub2apiTokenDialog] =
     useState<Sub2ApiTokenDialogState>({
       isOpen: false,
+      sessionId: 0,
       account: null,
       allowedGroups: [],
       notice: undefined,
       onSuccessCallback: null,
     })
+  const sub2apiTokenDialogSessionIdRef = useRef(sub2apiTokenDialog.sessionId)
+  const sub2apiTokenOnSuccessRef = useRef(sub2apiTokenDialog.onSuccessCallback)
+
+  useEffect(() => {
+    sub2apiTokenDialogSessionIdRef.current = sub2apiTokenDialog.sessionId
+    sub2apiTokenOnSuccessRef.current = sub2apiTokenDialog.onSuccessCallback
+  }, [sub2apiTokenDialog.sessionId, sub2apiTokenDialog.onSuccessCallback])
 
   const openDialog = useCallback(
     (config: {
@@ -170,42 +179,50 @@ export function ChannelDialogProvider({
       notice?: string
       onSuccess?: (createdToken?: ApiToken) => void | Promise<void>
     }) => {
-      sub2apiTokenOnSuccessRef.current = config.onSuccess ?? null
-      setSub2apiTokenDialog({
+      setSub2apiTokenDialog((prev) => ({
         isOpen: true,
+        sessionId: prev.sessionId + 1,
         account: config.account,
         allowedGroups: config.allowedGroups,
         notice: config.notice,
         onSuccessCallback: config.onSuccess ?? null,
-      })
+      }))
     },
     [],
   )
 
   const closeSub2ApiTokenDialog = useCallback(() => {
     sub2apiTokenOnSuccessRef.current = null
-    setSub2apiTokenDialog({
+    setSub2apiTokenDialog((prev) => ({
       isOpen: false,
+      sessionId: prev.sessionId + 1,
       account: null,
       allowedGroups: [],
       notice: undefined,
       onSuccessCallback: null,
-    })
+    }))
   }, [])
-
-  const sub2apiTokenOnSuccessRef = useRef(sub2apiTokenDialog.onSuccessCallback)
-
-  useEffect(() => {
-    sub2apiTokenOnSuccessRef.current = sub2apiTokenDialog.onSuccessCallback
-  }, [sub2apiTokenDialog.onSuccessCallback])
 
   const handleSub2ApiTokenSuccess = useCallback(
     async (createdToken?: ApiToken) => {
+      const activeSessionId = sub2apiTokenDialogSessionIdRef.current
+      if (!sub2apiTokenDialog.isOpen) {
+        return
+      }
+
+      if (activeSessionId !== sub2apiTokenDialog.sessionId) {
+        return
+      }
+
       const callback = sub2apiTokenOnSuccessRef.current
       closeSub2ApiTokenDialog()
       await callback?.(createdToken)
     },
-    [closeSub2ApiTokenDialog],
+    [
+      closeSub2ApiTokenDialog,
+      sub2apiTokenDialog.isOpen,
+      sub2apiTokenDialog.sessionId,
+    ],
   )
 
   const duplicateWarningResolverRef = useRef<
