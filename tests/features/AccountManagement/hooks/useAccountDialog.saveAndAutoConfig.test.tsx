@@ -1811,6 +1811,216 @@ describe("useAccountDialog save and auto-config flows", () => {
     )
   })
 
+  it("ignores stale AccountDialog-owned Sub2API dialog success after close and reopen", async () => {
+    const firstSavedSiteAccount = buildSiteAccount({
+      id: "first-account-id",
+      site_name: "First Sub2API",
+      site_url: "https://first-sub2.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.SUB2API,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: 21,
+        username: "first-user",
+        access_token: "first-token",
+      },
+    }) as SiteAccount
+    const secondSavedSiteAccount = buildSiteAccount({
+      id: "second-account-id",
+      site_name: "Second Sub2API",
+      site_url: "https://second-sub2.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.SUB2API,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: 22,
+        username: "second-user",
+        access_token: "second-token",
+      },
+    }) as SiteAccount
+    const firstDisplayData = buildDisplayAccount({
+      id: "first-account-id",
+      name: "First Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://first-sub2.example.com",
+      token: "first-token",
+      userId: 21,
+    })
+    const secondDisplayData = buildDisplayAccount({
+      id: "second-account-id",
+      name: "Second Sub2API",
+      siteType: SITE_TYPES.SUB2API,
+      baseUrl: "https://second-sub2.example.com",
+      token: "second-token",
+      userId: 22,
+    })
+
+    vi.spyOn(accountStorage, "getAccountById").mockImplementation(
+      async (accountId) => {
+        if (accountId === "first-account-id") {
+          return firstSavedSiteAccount
+        }
+        if (accountId === "second-account-id") {
+          return secondSavedSiteAccount
+        }
+        return null
+      },
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockImplementation(
+      async (accountId) => {
+        if (accountId === "first-account-id") {
+          return firstDisplayData
+        }
+        if (accountId === "second-account-id") {
+          return secondDisplayData
+        }
+        return null
+      },
+    )
+    mockValidateAndSaveAccount
+      .mockResolvedValueOnce({
+        success: true,
+        accountId: "first-account-id",
+        message: "Saved successfully",
+        feedbackLevel: "success",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        accountId: "second-account-id",
+        message: "Saved successfully",
+        feedbackLevel: "success",
+      })
+    mockEnsureAccountTokenForPostSaveWorkflow
+      .mockResolvedValueOnce({
+        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
+        allowedGroups: ["default", "vip"],
+      })
+      .mockResolvedValueOnce({
+        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired,
+        allowedGroups: ["default", "vip"],
+      })
+
+    let resolveOpenWithAccount:
+      | ((value: Awaited<ReturnType<typeof mockOpenWithAccount>>) => void)
+      | null = null
+    mockOpenWithAccount.mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          resolveOpenWithAccount = resolve
+        }),
+    )
+
+    const onClose = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ isOpen }: { isOpen: boolean }) =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen,
+          onClose,
+          onSuccess: vi.fn(),
+        }),
+      {
+        initialProps: { isOpen: true },
+      },
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://first-sub2.example.com")
+      result.current.setters.setSiteName("First Sub2API")
+      result.current.setters.setUsername("first-user")
+      result.current.setters.setAccessToken("first-token")
+      result.current.setters.setUserId("21")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    const firstSessionId = result.current.state.postSaveSub2ApiDialogSessionId
+    expect(firstSessionId).not.toBeNull()
+    const firstDialogHandlers =
+      result.current.handlers.getPostSaveSub2ApiDialogHandlers(firstSessionId)
+
+    await act(async () => {
+      result.current.handlers.handleClose()
+    })
+
+    rerender({ isOpen: false })
+    rerender({ isOpen: true })
+
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("")
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://second-sub2.example.com")
+      result.current.setters.setSiteName("Second Sub2API")
+      result.current.setters.setUsername("second-user")
+      result.current.setters.setAccessToken("second-token")
+      result.current.setters.setUserId("22")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType(SITE_TYPES.SUB2API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    const secondSessionId = result.current.state.postSaveSub2ApiDialogSessionId
+    expect(secondSessionId).not.toBeNull()
+    expect(secondSessionId).not.toBe(firstSessionId)
+    const secondDialogHandlers =
+      result.current.handlers.getPostSaveSub2ApiDialogHandlers(secondSessionId)
+
+    const staleToken = buildToken({
+      id: 201,
+      key: "sk-stale-sub2",
+      group: "default",
+    })
+    await act(async () => {
+      await firstDialogHandlers.onSuccess(staleToken)
+    })
+
+    expect(mockOpenWithAccount).not.toHaveBeenCalled()
+
+    const currentToken = buildToken({
+      id: 202,
+      key: "sk-current-sub2",
+      group: "vip",
+    })
+    let resumePromise: Promise<void> | undefined
+    await act(async () => {
+      resumePromise = secondDialogHandlers.onSuccess(currentToken)
+      secondDialogHandlers.onClose()
+    })
+
+    expect(mockOpenWithAccount).toHaveBeenCalledTimes(1)
+    expect(mockOpenWithAccount).toHaveBeenCalledWith(
+      secondDisplayData,
+      currentToken,
+      expect.any(Function),
+    )
+
+    await act(async () => {
+      resolveOpenWithAccount?.({ opened: true })
+      await resumePromise
+    })
+
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
+    )
+  })
+
   it("opens channel auto-config directly for an existing edit-mode account without saving again", async () => {
     const onSuccess = vi.fn()
     const existingAccount = {

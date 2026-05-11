@@ -133,6 +133,17 @@ export default function AccountDialog({
           allowedGroups: state.postSaveSub2ApiAllowedGroups,
         }
       : undefined
+  const postSaveSub2ApiDialogSessionId =
+    typeof state.postSaveSub2ApiDialogSessionId === "number"
+      ? state.postSaveSub2ApiDialogSessionId
+      : null
+  const postSaveSub2ApiDialogHandlers =
+    postSaveSub2ApiDialogSessionId !== null &&
+    typeof handlers.getPostSaveSub2ApiDialogHandlers === "function"
+      ? handlers.getPostSaveSub2ApiDialogHandlers(
+          postSaveSub2ApiDialogSessionId,
+        )
+      : null
 
   return (
     <>
@@ -265,12 +276,18 @@ export default function AccountDialog({
       {state.postSaveSub2ApiAccount && postSaveSub2ApiCreatePrefill ? (
         <AddTokenDialog
           isOpen={true}
-          onClose={handlers.handlePostSaveSub2ApiTokenDialogClose}
+          onClose={
+            postSaveSub2ApiDialogHandlers?.onClose ??
+            handlers.handlePostSaveSub2ApiTokenDialogClose
+          }
           availableAccounts={[state.postSaveSub2ApiAccount]}
           preSelectedAccountId={state.postSaveSub2ApiAccount.id}
           createPrefill={postSaveSub2ApiCreatePrefill}
           prefillNotice={t("sub2api.createRequiresGroupSelection")}
-          onSuccess={handlers.handlePostSaveSub2ApiTokenCreated}
+          onSuccess={
+            postSaveSub2ApiDialogHandlers?.onSuccess ??
+            handlers.handlePostSaveSub2ApiTokenCreated
+          }
           showOneTimeKeyDialog={false}
         />
       ) : null}

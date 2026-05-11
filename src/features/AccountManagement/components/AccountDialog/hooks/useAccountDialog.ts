@@ -153,6 +153,8 @@ export function useAccountDialog({
     useState<string[] | null>(null)
   const [postSaveSub2ApiAccount, setPostSaveSub2ApiAccount] =
     useState<DisplaySiteData | null>(null)
+  const [postSaveSub2ApiDialogSessionId, setPostSaveSub2ApiDialogSessionId] =
+    useState<number | null>(null)
 
   const [duplicateAccountWarning, setDuplicateAccountWarning] = useState<{
     isOpen: boolean
@@ -471,6 +473,8 @@ export function useAccountDialog({
     existingTokenIds?: number[]
   } | null>(null)
   const postSaveAutoConfigRunRef = useRef(0)
+  const nextPostSaveSub2ApiDialogSessionIdRef = useRef(0)
+  const activePostSaveSub2ApiDialogSessionIdRef = useRef<number | null>(null)
   const detectSlowHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
@@ -482,14 +486,28 @@ export function useAccountDialog({
     postSaveAutoConfigRunRef.current += 1
   }, [])
 
+  const openPostSaveSub2ApiDialogSession = useCallback(() => {
+    const nextSessionId = nextPostSaveSub2ApiDialogSessionIdRef.current + 1
+    nextPostSaveSub2ApiDialogSessionIdRef.current = nextSessionId
+    activePostSaveSub2ApiDialogSessionIdRef.current = nextSessionId
+    setPostSaveSub2ApiDialogSessionId(nextSessionId)
+    return nextSessionId
+  }, [])
+
+  const invalidatePostSaveSub2ApiDialogSession = useCallback(() => {
+    activePostSaveSub2ApiDialogSessionIdRef.current = null
+    setPostSaveSub2ApiDialogSessionId(null)
+  }, [])
+
   const clearPostSaveWorkflowState = useCallback(() => {
     invalidatePostSaveAutoConfigRun()
+    invalidatePostSaveSub2ApiDialogSession()
     setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
     setPostSaveOneTimeToken(null)
     setPostSaveSub2ApiAllowedGroups(null)
     setPostSaveSub2ApiAccount(null)
     pendingPostSaveChannelRef.current = null
-  }, [invalidatePostSaveAutoConfigRun])
+  }, [invalidatePostSaveAutoConfigRun, invalidatePostSaveSub2ApiDialogSession])
 
   const resetForm = useCallback(() => {
     newAccountRef.current = null
@@ -1340,15 +1358,40 @@ export function useAccountDialog({
     )
   }, [openPostSaveManagedSiteDialog])
 
-  const handlePostSaveSub2ApiTokenDialogClose = useCallback(() => {
-    pendingPostSaveChannelRef.current = null
-    setPostSaveSub2ApiAllowedGroups(null)
-    setPostSaveSub2ApiAccount(null)
-    setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
-  }, [])
+  const handlePostSaveSub2ApiTokenDialogCloseForSession = useCallback(
+    (sessionId: number | null) => {
+      if (
+        sessionId === null ||
+        activePostSaveSub2ApiDialogSessionIdRef.current !== sessionId
+      ) {
+        return
+      }
 
-  const handlePostSaveSub2ApiTokenCreated = useCallback(
-    async (createdToken?: ApiToken) => {
+      invalidatePostSaveSub2ApiDialogSession()
+      pendingPostSaveChannelRef.current = null
+      setPostSaveSub2ApiAllowedGroups(null)
+      setPostSaveSub2ApiAccount(null)
+      setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle)
+    },
+    [invalidatePostSaveSub2ApiDialogSession],
+  )
+
+  const handlePostSaveSub2ApiTokenDialogClose = useCallback(() => {
+    handlePostSaveSub2ApiTokenDialogCloseForSession(
+      activePostSaveSub2ApiDialogSessionIdRef.current,
+    )
+  }, [handlePostSaveSub2ApiTokenDialogCloseForSession])
+
+  const handlePostSaveSub2ApiTokenCreatedForSession = useCallback(
+    async (sessionId: number | null, createdToken?: ApiToken) => {
+      if (
+        sessionId === null ||
+        activePostSaveSub2ApiDialogSessionIdRef.current !== sessionId
+      ) {
+        return
+      }
+
+      invalidatePostSaveSub2ApiDialogSession()
       const runId = postSaveAutoConfigRunRef.current
       const pending = pendingPostSaveChannelRef.current
       setPostSaveSub2ApiAllowedGroups(null)
@@ -1420,7 +1463,35 @@ export function useAccountDialog({
         })
       }
     },
-    [openPostSaveManagedSiteDialog, t],
+    [invalidatePostSaveSub2ApiDialogSession, openPostSaveManagedSiteDialog, t],
+  )
+
+  const handlePostSaveSub2ApiTokenCreated = useCallback(
+    async (createdToken?: ApiToken) => {
+      await handlePostSaveSub2ApiTokenCreatedForSession(
+        activePostSaveSub2ApiDialogSessionIdRef.current,
+        createdToken,
+      )
+    },
+    [handlePostSaveSub2ApiTokenCreatedForSession],
+  )
+
+  const getPostSaveSub2ApiDialogHandlers = useCallback(
+    (sessionId: number | null) => ({
+      onClose: () => {
+        handlePostSaveSub2ApiTokenDialogCloseForSession(sessionId)
+      },
+      onSuccess: async (createdToken?: ApiToken) => {
+        await handlePostSaveSub2ApiTokenCreatedForSession(
+          sessionId,
+          createdToken,
+        )
+      },
+    }),
+    [
+      handlePostSaveSub2ApiTokenCreatedForSession,
+      handlePostSaveSub2ApiTokenDialogCloseForSession,
+    ],
   )
 
   const handleAutoConfig = async () => {
@@ -1589,6 +1660,7 @@ export function useAccountDialog({
           )
           return
         case ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired:
+          openPostSaveSub2ApiDialogSession()
           pendingPostSaveChannelRef.current = {
             displaySiteData,
             existingTokenIds: ensureResult.existingTokenIds,
@@ -1723,6 +1795,7 @@ export function useAccountDialog({
       postSaveOneTimeToken,
       postSaveSub2ApiAllowedGroups,
       postSaveSub2ApiAccount,
+      postSaveSub2ApiDialogSessionId,
       duplicateAccountWarning,
       managedSiteConfigPrompt,
     },
@@ -1779,6 +1852,7 @@ export function useAccountDialog({
       handlePostSaveOneTimeTokenClose,
       handlePostSaveSub2ApiTokenDialogClose,
       handlePostSaveSub2ApiTokenCreated,
+      getPostSaveSub2ApiDialogHandlers,
     },
   }
 }
