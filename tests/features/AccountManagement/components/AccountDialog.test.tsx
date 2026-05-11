@@ -8,6 +8,7 @@ import {
   createEmptyAccountDialogDraft,
 } from "~/features/AccountManagement/components/AccountDialog/models"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
 import { AuthTypeEnum } from "~/types"
 import { render, screen } from "~~/tests/test-utils/render"
 
@@ -94,7 +95,6 @@ const {
       managedSiteLabel: "",
       missingMessage: "",
     },
-    accountPostSaveWorkflowStep: "idle",
     postSaveOneTimeToken: null,
     postSaveSub2ApiAllowedGroups: null,
     postSaveSub2ApiAccount: null,
@@ -189,7 +189,7 @@ function resetMockState() {
       managedSiteLabel: "",
       missingMessage: "",
     },
-    accountPostSaveWorkflowStep: "idle",
+    accountPostSaveWorkflowStep: ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Idle,
     postSaveOneTimeToken: null,
     postSaveSub2ApiAllowedGroups: null,
     postSaveSub2ApiAccount: null,
@@ -269,7 +269,17 @@ vi.mock(
 
 describe("AccountDialog", () => {
   beforeEach(() => {
-    vi.clearAllMocks()
+    vi.resetAllMocks()
+    vi.mocked(window.matchMedia).mockImplementation((query: string) => ({
+      matches: false,
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    }))
     resetMockState()
   })
 

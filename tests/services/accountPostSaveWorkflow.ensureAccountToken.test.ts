@@ -219,6 +219,25 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     expect(fetchAccountTokensMock).toHaveBeenCalledTimes(2)
   })
 
+  it("blocks ordinary token creation when the create request returns a falsy result", async () => {
+    const displayAccount = buildDisplayAccount()
+    const account = buildStoredAccount(displayAccount)
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    createApiTokenMock.mockResolvedValueOnce(false)
+
+    await expect(
+      ensureAccountTokenForPostSaveWorkflow({
+        account,
+        displaySiteData: displayAccount,
+      }),
+    ).resolves.toEqual({
+      kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
+      code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenCreationFailed,
+      message: "messages:accountOperations.createTokenFailed",
+    })
+    expect(fetchAccountTokensMock).toHaveBeenCalledTimes(1)
+  })
+
   it("creates an AIHubMix token and marks the full secret as one-time", async () => {
     const displayAccount = buildDisplayAccount({
       siteType: SITE_TYPES.AIHUBMIX,
