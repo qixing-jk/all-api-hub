@@ -389,7 +389,7 @@ export function useChannelDialog() {
       }
 
       if (!apiToken) {
-        if (displaySiteData.siteType === "sub2api") {
+        if (displaySiteData.siteType === SITE_TYPES.SUB2API) {
           const resolution =
             await resolveSub2ApiQuickCreateResolution(displaySiteData)
           if (!shouldContinue()) {

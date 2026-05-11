@@ -25,6 +25,14 @@ const isCreatedApiToken = (value: unknown): value is ApiToken =>
 const hasUsableFullTokenSecret = (token: ApiToken): boolean =>
   hasUsableApiTokenKey(token.key) && !isMaskedApiTokenKey(token.key)
 
+const isApiTokenWithValidId = (value: unknown): value is ApiToken =>
+  !!value &&
+  typeof value === "object" &&
+  typeof (value as Partial<ApiToken>).id === "number"
+
+const sanitizeApiTokens = (tokens: unknown): ApiToken[] =>
+  Array.isArray(tokens) ? tokens.filter(isApiTokenWithValidId) : []
+
 const getTokenIds = (tokens: ApiToken[]): number[] =>
   tokens.map((token) => token.id)
 
@@ -33,10 +41,10 @@ const getTokenIds = (tokens: ApiToken[]): number[] =>
  */
 export function selectSingleNewApiTokenByIdDiff(params: {
   existingTokenIds: number[]
-  tokens: ApiToken[]
+  tokens: unknown[]
 }): ApiToken | null {
   const existingTokenIdSet = new Set(params.existingTokenIds)
-  const newTokens = params.tokens.filter(
+  const newTokens = sanitizeApiTokens(params.tokens).filter(
     (token) => !existingTokenIdSet.has(token.id),
   )
 
@@ -104,10 +112,12 @@ async function createDefaultToken(params: {
     buildDisplayAccountRequest(displaySiteData),
   )
 
-  return Array.isArray(updatedTokens)
+  const sanitizedUpdatedTokens = sanitizeApiTokens(updatedTokens)
+
+  return sanitizedUpdatedTokens.length > 0
     ? selectSingleNewApiTokenByIdDiff({
         existingTokenIds,
-        tokens: updatedTokens,
+        tokens: sanitizedUpdatedTokens,
       })
     : null
 }
@@ -124,7 +134,7 @@ export async function ensureAccountTokenForPostSaveWorkflow(params: {
   const tokens = await service.fetchAccountTokens(
     buildDisplayAccountRequest(displaySiteData),
   )
-  const existingTokens = Array.isArray(tokens) ? tokens : []
+  const existingTokens = sanitizeApiTokens(tokens)
   const existingTokenIds = getTokenIds(existingTokens)
 
   const existingToken = existingTokens.at(-1)

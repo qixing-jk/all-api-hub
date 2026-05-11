@@ -132,6 +132,22 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
     ).toBeNull()
   })
 
+  it("ignores malformed token entries when selecting a token by id diff", () => {
+    const createdToken = buildToken({ id: 11, key: "sk-created-11" })
+
+    expect(
+      selectSingleNewApiTokenByIdDiff({
+        existingTokenIds: [3],
+        tokens: [
+          null,
+          { id: "bad-token-id", key: "sk-invalid" },
+          buildToken({ id: 3 }),
+          createdToken,
+        ],
+      }),
+    ).toEqual(createdToken)
+  })
+
   it("returns a ready result when the account already has a token", async () => {
     const displayAccount = buildDisplayAccount()
     const account = buildStoredAccount(displayAccount)

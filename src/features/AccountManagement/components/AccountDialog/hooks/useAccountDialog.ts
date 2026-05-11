@@ -1316,6 +1316,9 @@ export function useAccountDialog({
           return
         }
         if (!openResult.opened) {
+          if (openResult.deferred) {
+            return
+          }
           setAccountPostSaveWorkflowStep(
             ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed,
           )

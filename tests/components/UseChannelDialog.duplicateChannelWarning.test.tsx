@@ -938,14 +938,14 @@ describe("useChannelDialog", () => {
     const sessionASuccessHandler =
       result.current.context.handleSub2ApiTokenSuccess
 
-    act(() => {
+    await act(async () => {
       result.current.context.closeSub2ApiTokenDialog()
       result.current.context.openSub2ApiTokenDialog({
         account: sessionBAccount,
         allowedGroups: ["vip"],
         onSuccess: sessionBOnSuccess,
       })
-      void sessionASuccessHandler(createdToken)
+      await sessionASuccessHandler(createdToken)
     })
 
     expect(result.current.context.sub2apiTokenDialog).toMatchObject({
