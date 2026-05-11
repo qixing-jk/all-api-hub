@@ -844,6 +844,63 @@ describe("useChannelDialog", () => {
     expect(mockToastError).not.toHaveBeenCalled()
   })
 
+  it("ignores late Sub2API token success after the dialog was closed", async () => {
+    const createdToken = buildApiToken({
+      id: 11,
+      key: "sk-created-11",
+      name: "Created token",
+    })
+    const prepareChannelFormDataMock = vi.fn(
+      async (_account: DisplaySiteData, token: ApiToken) =>
+        buildPreparedFormData({
+          key: token.key,
+        }),
+    )
+    const mockService = buildManagedSiteServiceMock({
+      prepareChannelFormData: prepareChannelFormDataMock,
+    })
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+    getAccountByIdSpy.mockResolvedValue(
+      buildSiteAccount({ site_type: "sub2api" }),
+    )
+    mockFetchAccountTokens.mockResolvedValueOnce([])
+    resolveSub2ApiQuickCreateResolutionSpy.mockResolvedValueOnce({
+      kind: "selection_required",
+      allowedGroups: ["default", "vip"],
+    })
+
+    const { result } = await renderChannelDialogHook()
+
+    let openResult: Awaited<
+      ReturnType<typeof result.current.dialog.openWithAccount>
+    > | null = null
+    await act(async () => {
+      openResult = await result.current.dialog.openWithAccount(
+        buildDisplaySiteData({ siteType: "sub2api" }),
+        null,
+      )
+    })
+
+    expect(openResult).toEqual({ opened: false, deferred: true })
+    expect(result.current.context.sub2apiTokenDialog.isOpen).toBe(true)
+
+    act(() => {
+      result.current.context.closeSub2ApiTokenDialog()
+    })
+
+    expect(result.current.context.sub2apiTokenDialog.isOpen).toBe(false)
+
+    await act(async () => {
+      await result.current.context.handleSub2ApiTokenSuccess(createdToken)
+    })
+
+    expect(prepareChannelFormDataMock).not.toHaveBeenCalled()
+    expect(result.current.context.state.isOpen).toBe(false)
+    expect(mockToastError).not.toHaveBeenCalled()
+  })
+
   it("fails closed when Sub2API token refetch cannot identify a single new token after dialog success", async () => {
     const existingToken = buildApiToken({
       id: 3,

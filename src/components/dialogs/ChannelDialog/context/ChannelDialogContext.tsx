@@ -170,6 +170,7 @@ export function ChannelDialogProvider({
       notice?: string
       onSuccess?: (createdToken?: ApiToken) => void | Promise<void>
     }) => {
+      sub2apiTokenOnSuccessRef.current = config.onSuccess ?? null
       setSub2apiTokenDialog({
         isOpen: true,
         account: config.account,
@@ -182,6 +183,7 @@ export function ChannelDialogProvider({
   )
 
   const closeSub2ApiTokenDialog = useCallback(() => {
+    sub2apiTokenOnSuccessRef.current = null
     setSub2apiTokenDialog({
       isOpen: false,
       account: null,

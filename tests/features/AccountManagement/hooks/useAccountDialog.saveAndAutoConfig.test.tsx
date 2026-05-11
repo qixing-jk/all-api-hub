@@ -1882,6 +1882,40 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(toast.success).not.toHaveBeenCalled()
   })
 
+  it("keeps direct auto-config waiting when channel opening is deferred by a prerequisite dialog", async () => {
+    const onSuccess = vi.fn()
+    const existingAccount = {
+      id: "existing-display-id",
+      siteUrl: "https://edit.example.com",
+      siteName: "Edit Example",
+    } as any
+
+    mockOpenWithAccount.mockResolvedValueOnce({
+      opened: false,
+      deferred: true,
+    })
+
+    const { result } = renderEditHook({
+      account: existingAccount,
+      onSuccess,
+    })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(result.current.state.accountPostSaveWorkflowStep).toBe(
+      ACCOUNT_POST_SAVE_WORKFLOW_STEPS.OpeningManagedSiteDialog,
+    )
+    expect(onSuccess).not.toHaveBeenCalled()
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(toast.success).not.toHaveBeenCalled()
+  })
+
   it("falls back to converted display data during auto-config when persisted display data is unavailable", async () => {
     const savedSiteAccount = buildSiteAccount({
       id: "saved-account-id",

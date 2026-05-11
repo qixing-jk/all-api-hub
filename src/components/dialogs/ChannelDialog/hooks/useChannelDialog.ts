@@ -65,6 +65,7 @@ interface PrefilledDialogDuplicateState {
 
 export interface OpenWithAccountResult {
   opened: boolean
+  deferred?: boolean
 }
 
 /**
@@ -434,7 +435,7 @@ export function useChannelDialog() {
                 )
               },
             })
-            return { opened: false }
+            return { opened: false, deferred: true }
           }
 
           apiToken = await ensureAccountApiToken(siteAccount, displaySiteData, {
