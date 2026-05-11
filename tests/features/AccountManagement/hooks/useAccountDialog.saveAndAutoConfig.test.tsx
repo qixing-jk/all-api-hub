@@ -802,6 +802,9 @@ describe("useAccountDialog save and auto-config flows", () => {
       savedDisplayData,
       ensuredToken,
       expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
     )
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
@@ -884,6 +887,9 @@ describe("useAccountDialog save and auto-config flows", () => {
       savedDisplayData,
       oneTimeToken,
       expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
     )
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
@@ -1252,6 +1258,9 @@ describe("useAccountDialog save and auto-config flows", () => {
       savedDisplayData,
       createdToken,
       expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
     )
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
@@ -1351,6 +1360,9 @@ describe("useAccountDialog save and auto-config flows", () => {
       savedDisplayData,
       createdToken,
       expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
     )
     expect(result.current.state.accountPostSaveWorkflowStep).toBe(
       ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
@@ -2009,6 +2021,9 @@ describe("useAccountDialog save and auto-config flows", () => {
       secondDisplayData,
       currentToken,
       expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
     )
 
     await act(async () => {
@@ -2058,6 +2073,9 @@ describe("useAccountDialog save and auto-config flows", () => {
       existingAccount,
       null,
       expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
     )
     expect(onSuccess).toHaveBeenCalledWith(existingAccount)
   })
@@ -2181,6 +2199,9 @@ describe("useAccountDialog save and auto-config flows", () => {
       fallbackDisplayData,
       ensuredToken,
       expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
     )
     expect(mockOpenSub2ApiTokenCreationDialog).not.toHaveBeenCalled()
     expect(toast.error).not.toHaveBeenCalledWith(
@@ -2307,6 +2328,9 @@ describe("useAccountDialog save and auto-config flows", () => {
       savedDisplayData,
       ensuredToken,
       expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
     )
     expect(mockOpenSub2ApiTokenCreationDialog).not.toHaveBeenCalled()
   })
@@ -2609,6 +2633,204 @@ describe("useAccountDialog save and auto-config flows", () => {
       accountStorage.convertToDisplayData(secondSavedSiteAccount),
       secondEnsuredToken,
       expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
     )
+  })
+
+  it("cancels a stale channel-open continuation after close and does not retarget success to a reopened account", async () => {
+    const firstSavedSiteAccount = buildSiteAccount({
+      id: "first-account-id",
+      site_name: "First Example",
+      site_url: "https://first.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: "new-api",
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: 31,
+        username: "first-user",
+        access_token: "first-token",
+      },
+    }) as SiteAccount
+    const secondSavedSiteAccount = buildSiteAccount({
+      id: "second-account-id",
+      site_name: "Second Example",
+      site_url: "https://second.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: "new-api",
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: 32,
+        username: "second-user",
+        access_token: "second-token",
+      },
+    }) as SiteAccount
+
+    vi.spyOn(accountStorage, "getAccountById").mockImplementation(
+      async (accountId) => {
+        if (accountId === "first-account-id") return firstSavedSiteAccount
+        if (accountId === "second-account-id") return secondSavedSiteAccount
+        return null
+      },
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockImplementation(
+      async (accountId) => {
+        if (accountId === "first-account-id") {
+          return accountStorage.convertToDisplayData(firstSavedSiteAccount)
+        }
+        if (accountId === "second-account-id") {
+          return accountStorage.convertToDisplayData(secondSavedSiteAccount)
+        }
+        return null
+      },
+    )
+
+    mockValidateAndSaveAccount
+      .mockResolvedValueOnce({
+        success: true,
+        accountId: "first-account-id",
+        message: "Saved successfully",
+        feedbackLevel: "success",
+      })
+      .mockResolvedValueOnce({
+        success: true,
+        accountId: "second-account-id",
+        message: "Saved successfully",
+        feedbackLevel: "success",
+      })
+
+    const firstEnsuredToken = buildToken({ id: 301, key: "sk-first-ensured" })
+    const secondEnsuredToken = buildToken({
+      id: 302,
+      key: "sk-second-ensured",
+    })
+    mockEnsureAccountTokenForPostSaveWorkflow
+      .mockResolvedValueOnce({
+        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready,
+        token: firstEnsuredToken,
+        created: false,
+      })
+      .mockResolvedValueOnce({
+        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready,
+        token: secondEnsuredToken,
+        created: false,
+      })
+
+    let firstShouldContinue: (() => boolean) | undefined
+    let firstOnCompleted: (() => void) | undefined
+    mockOpenWithAccount
+      .mockImplementationOnce(
+        async (
+          _displaySiteData: any,
+          _channelId: any,
+          onCompleted?: () => void,
+          options?: { shouldContinue?: () => boolean },
+        ) => {
+          firstOnCompleted = onCompleted
+          firstShouldContinue = options?.shouldContinue
+          return new Promise(() => {})
+        },
+      )
+      .mockImplementationOnce(
+        async (
+          _displaySiteData: any,
+          _channelId: any,
+          onCompleted?: () => void,
+        ) => {
+          onCompleted?.()
+          return { opened: true }
+        },
+      )
+
+    const onClose = vi.fn()
+    const onSuccess = vi.fn()
+    const { result, rerender } = renderHook(
+      ({ isOpen }: { isOpen: boolean }) =>
+        useAccountDialog({
+          mode: DIALOG_MODES.ADD,
+          isOpen,
+          onClose,
+          onSuccess,
+        }),
+      {
+        initialProps: { isOpen: true },
+      },
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://first.example.com")
+      result.current.setters.setSiteName("First Example")
+      result.current.setters.setUsername("first-user")
+      result.current.setters.setAccessToken("first-token")
+      result.current.setters.setUserId("31")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("new-api")
+    })
+
+    await act(async () => {
+      void result.current.handlers.handleAutoConfig()
+    })
+
+    await waitFor(() => {
+      expect(mockOpenWithAccount).toHaveBeenCalledTimes(1)
+    })
+
+    expect(firstShouldContinue?.()).toBe(true)
+
+    await act(async () => {
+      result.current.handlers.handleClose()
+    })
+
+    expect(firstShouldContinue?.()).toBe(false)
+
+    rerender({ isOpen: false })
+    rerender({ isOpen: true })
+
+    await waitFor(() => {
+      expect(result.current.state.url).toBe("")
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://second.example.com")
+      result.current.setters.setSiteName("Second Example")
+      result.current.setters.setUsername("second-user")
+      result.current.setters.setAccessToken("second-token")
+      result.current.setters.setUserId("32")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setSiteType("new-api")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleAutoConfig()
+    })
+
+    expect(mockOpenWithAccount).toHaveBeenCalledTimes(2)
+    expect(mockOpenWithAccount).toHaveBeenNthCalledWith(
+      2,
+      accountStorage.convertToDisplayData(secondSavedSiteAccount),
+      secondEnsuredToken,
+      expect.any(Function),
+      expect.objectContaining({
+        shouldContinue: expect.any(Function),
+      }),
+    )
+    expect(onSuccess).toHaveBeenCalledTimes(1)
+    expect(onSuccess).toHaveBeenCalledWith("second-account-id")
+
+    await act(async () => {
+      firstOnCompleted?.()
+    })
+
+    expect(onSuccess).toHaveBeenCalledTimes(1)
+    expect(onSuccess).not.toHaveBeenCalledWith("first-account-id")
   })
 })

@@ -1357,6 +1357,56 @@ describe("useChannelDialog", () => {
     expect(result.current.context.state.isOpen).toBe(false)
   })
 
+  it("returns closed without opening when the caller continuation guard cancels before dialog open", async () => {
+    let releasePrepare: (() => void) | undefined
+    const prepareChannelFormDataMock = vi.fn(
+      async (_account: DisplaySiteData, token: ApiToken) => {
+        await new Promise<void>((resolve) => {
+          releasePrepare = resolve
+        })
+
+        return buildPreparedFormData({
+          key: token.key,
+        })
+      },
+    )
+    const mockService = buildManagedSiteServiceMock({
+      prepareChannelFormData: prepareChannelFormDataMock,
+    })
+    getManagedSiteServiceSpy.mockResolvedValue(
+      mockService as ManagedSiteService,
+    )
+
+    let shouldContinue = true
+    const { result } = await renderChannelDialogHook()
+
+    const openPromise = result.current.dialog.openWithAccount(
+      buildDisplaySiteData(),
+      buildApiToken(),
+      undefined,
+      {
+        shouldContinue: () => shouldContinue,
+      },
+    )
+
+    await waitFor(() => {
+      expect(prepareChannelFormDataMock).toHaveBeenCalledTimes(1)
+    })
+
+    shouldContinue = false
+
+    let openResult: Awaited<typeof openPromise> | undefined
+    await act(async () => {
+      releasePrepare?.()
+      openResult = await openPromise
+    })
+
+    expect(openResult).toEqual({ opened: false })
+    expect(result.current.context.state.isOpen).toBe(false)
+    expect(mockToastDismiss).toHaveBeenCalledWith("toast-id")
+    expect(mockToastError).not.toHaveBeenCalled()
+  })
+
   it("shows a duplicate warning when opening from raw credentials and aborts on cancel", async () => {
     const existingChannel = buildManagedSiteChannel({
       key: "sk-credential",

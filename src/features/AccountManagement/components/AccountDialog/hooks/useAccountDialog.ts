@@ -1291,10 +1291,12 @@ export function useAccountDialog({
       displaySiteData: DisplaySiteData,
       token: ApiToken,
       runId = postSaveAutoConfigRunRef.current,
+      targetAccount = targetAccountRef.current,
     ) => {
       if (postSaveAutoConfigRunRef.current !== runId) {
         return
       }
+      const isCurrentRun = () => postSaveAutoConfigRunRef.current === runId
 
       setAccountPostSaveWorkflowStep(
         ACCOUNT_POST_SAVE_WORKFLOW_STEPS.OpeningManagedSiteDialog,
@@ -1304,12 +1306,13 @@ export function useAccountDialog({
           displaySiteData,
           token,
           () => {
-            if (onSuccess && targetAccountRef.current) {
-              onSuccess(targetAccountRef.current)
+            if (onSuccess && targetAccount && isCurrentRun()) {
+              onSuccess(targetAccount)
             }
           },
+          { shouldContinue: isCurrentRun },
         )
-        if (postSaveAutoConfigRunRef.current !== runId) {
+        if (!isCurrentRun()) {
           return
         }
         if (!openResult.opened) {
@@ -1322,7 +1325,7 @@ export function useAccountDialog({
           ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Completed,
         )
       } catch (error) {
-        if (postSaveAutoConfigRunRef.current !== runId) {
+        if (!isCurrentRun()) {
           return
         }
         setAccountPostSaveWorkflowStep(ACCOUNT_POST_SAVE_WORKFLOW_STEPS.Failed)
@@ -1333,7 +1336,7 @@ export function useAccountDialog({
         )
         logger.error("Failed to open post-save managed-site dialog", {
           error: getErrorMessage(error),
-          accountId: targetAccountRef.current,
+          accountId: targetAccount,
           siteType: displaySiteData.siteType,
         })
       }
@@ -1561,6 +1564,7 @@ export function useAccountDialog({
         return
       }
       targetAccountRef.current = targetAccount
+      const intendedTargetAccount = targetAccount
       let displaySiteData
 
       if (typeof targetAccount === "string") {
@@ -1601,10 +1605,11 @@ export function useAccountDialog({
           displaySiteData,
           null,
           () => {
-            if (onSuccess && targetAccountRef.current) {
-              onSuccess(targetAccountRef.current)
+            if (onSuccess && intendedTargetAccount && isCurrentRun()) {
+              onSuccess(intendedTargetAccount)
             }
           },
+          { shouldContinue: isCurrentRun },
         )
         if (!isCurrentRun()) {
           return
@@ -1657,6 +1662,7 @@ export function useAccountDialog({
             displaySiteData,
             ensureResult.token,
             runId,
+            intendedTargetAccount,
           )
           return
         case ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Sub2ApiSelectionRequired:
