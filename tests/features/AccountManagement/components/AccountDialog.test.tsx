@@ -1,3 +1,4 @@
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
@@ -459,6 +460,7 @@ describe("AccountDialog", () => {
   })
 
   it("renders the AIHubMix post-save key confirmation dialog", async () => {
+    const user = userEvent.setup()
     mockState.aihubmixPostSaveKeyPrompt = {
       isOpen: true,
       accountName: "AIHubMix",
@@ -491,9 +493,28 @@ describe("AccountDialog", () => {
         name: "accountDialog:aihubmixDefaultKeyPrompt.confirm",
       }),
     ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:aihubmixDefaultKeyPrompt.cancel",
+      }),
+    )
+    expect(
+      mockHandlers.handleAihubmixPostSaveKeyPromptCancel,
+    ).toHaveBeenCalledTimes(1)
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:aihubmixDefaultKeyPrompt.confirm",
+      }),
+    )
+    expect(
+      mockHandlers.handleAihubmixPostSaveKeyPromptConfirm,
+    ).toHaveBeenCalledTimes(1)
   })
 
   it("renders the AIHubMix key prompt creating state with disabled actions", async () => {
+    const user = userEvent.setup()
     mockState.aihubmixPostSaveKeyPrompt = {
       isOpen: true,
       accountName: "AIHubMix",
@@ -520,6 +541,24 @@ describe("AccountDialog", () => {
         name: "accountDialog:aihubmixDefaultKeyPrompt.cancel",
       }),
     ).toBeDisabled()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:aihubmixDefaultKeyPrompt.cancel",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "accountDialog:aihubmixDefaultKeyPrompt.creating",
+      }),
+    )
+
+    expect(
+      mockHandlers.handleAihubmixPostSaveKeyPromptCancel,
+    ).not.toHaveBeenCalled()
+    expect(
+      mockHandlers.handleAihubmixPostSaveKeyPromptConfirm,
+    ).not.toHaveBeenCalled()
   })
 
   it("calls onSuccess immediately when save success is not deferred", async () => {
