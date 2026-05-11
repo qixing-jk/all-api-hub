@@ -24,9 +24,6 @@ export const ENSURE_ACCOUNT_TOKEN_RESULT_KINDS = {
   Blocked: "blocked",
 } as const
 
-export type EnsureAccountTokenResultKind =
-  (typeof ENSURE_ACCOUNT_TOKEN_RESULT_KINDS)[keyof typeof ENSURE_ACCOUNT_TOKEN_RESULT_KINDS]
-
 export const ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES = {
   SavedAccountNotFound: "saved_account_not_found",
   TokenCreationFailed: "token_creation_failed",
