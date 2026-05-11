@@ -5,6 +5,7 @@ import {
   ClaudeCodeHubProviderTypeOptions,
   DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS,
 } from "~/constants/claudeCodeHub"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   autoConfigToClaudeCodeHub,
   buildChannelPayload,
@@ -305,6 +306,38 @@ describe("Claude Code Hub managed-site provider", () => {
       models: [],
       modelPrefillFetchFailed: true,
     })
+  })
+
+  it("uses the AIHubMix API origin for managed-site channel imports", async () => {
+    mockFetchTokenScopedModels.mockResolvedValueOnce({
+      models: ["gpt-aihubmix-mini"],
+      fetchFailed: false,
+    })
+
+    const token = { id: 1, name: "Token", key: "sk-aihubmix-key" } as any
+
+    await expect(
+      prepareChannelFormData(
+        {
+          id: "account-1",
+          name: "AIHubMix",
+          siteType: SITE_TYPES.AIHUBMIX,
+          baseUrl: "https://console.aihubmix.com",
+        } as any,
+        token,
+      ),
+    ).resolves.toMatchObject({
+      key: "sk-aihubmix-key",
+      base_url: "https://aihubmix.com",
+      models: ["gpt-aihubmix-mini"],
+    })
+
+    expect(mockFetchTokenScopedModels).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://aihubmix.com",
+      }),
+      token,
+    )
   })
 
   it("searches, creates, updates, and deletes providers with stored admin config", async () => {

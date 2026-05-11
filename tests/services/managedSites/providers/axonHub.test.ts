@@ -5,6 +5,7 @@ import {
   AXON_HUB_CHANNEL_STATUS,
   AXON_HUB_CHANNEL_TYPE,
 } from "~/constants/axonHub"
+import { SITE_TYPES } from "~/constants/siteType"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 import {
   buildApiToken,
@@ -470,6 +471,34 @@ describe("AxonHub managed-site provider", () => {
         status: CHANNEL_STATUS.Enable,
       }),
     ).toThrow("messages:axonhub.modelsMissing")
+  })
+
+  it("uses the AIHubMix API origin for managed-site channel imports", async () => {
+    const provider = await import("~/services/managedSites/providers/axonHub")
+    const account = buildDisplaySiteData({
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://console.aihubmix.com",
+    })
+    const token = buildApiToken({
+      name: "AIHubMix Token",
+      key: "test-aihubmix-token-key",
+    })
+
+    await expect(
+      provider.prepareChannelFormData(account, token),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        key: "test-aihubmix-token-key",
+        base_url: "https://aihubmix.com",
+      }),
+    )
+
+    expect(mockFetchTokenScopedModels).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://aihubmix.com",
+      }),
+      token,
+    )
   })
 
   it("marks model prefill failures for manual review and still accepts manual fallback models", async () => {

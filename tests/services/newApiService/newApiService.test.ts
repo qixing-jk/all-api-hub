@@ -1106,6 +1106,33 @@ describe("newApiService", () => {
       expect(result.modelPrefillFetchFailed).toBe(true)
     })
 
+    it("should use the AIHubMix API origin when preparing managed-site channel data", async () => {
+      const { prepareChannelFormData } = await import(
+        "~/services/managedSites/providers/newApi"
+      )
+      const account = createMockDisplaySiteData({
+        siteType: SITE_TYPES.AIHUBMIX,
+        baseUrl: "https://console.aihubmix.com",
+      })
+      const token = createMockApiToken()
+
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithNewApi(),
+      )
+      mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([
+        "gpt-aihubmix-mini",
+      ])
+      mockFetchSiteUserGroups.mockResolvedValueOnce(["default"])
+
+      const result = await prepareChannelFormData(account, token)
+
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
+        baseUrl: "https://aihubmix.com",
+        apiKey: token.key,
+      })
+      expect(result.base_url).toBe("https://aihubmix.com")
+    })
+
     it("should keep models empty when only account-level fallback models exist", async () => {
       const { prepareChannelFormData } = await import(
         "~/services/managedSites/providers/newApi"
@@ -1701,6 +1728,48 @@ describe("newApiService", () => {
 
       expect(result.success).toBe(true)
       expect(result.message).toBeTruthy()
+    })
+
+    it("should match existing AIHubMix channels by API origin during direct import", async () => {
+      const { importToNewApi } = await import(
+        "~/services/managedSites/providers/newApi"
+      )
+      const account = createMockDisplaySiteData({
+        siteType: SITE_TYPES.AIHUBMIX,
+        baseUrl: "https://console.aihubmix.com",
+      })
+      const token = createMockApiToken({
+        key: "sk-aihubmix-key",
+        models: "gpt-aihubmix-mini",
+      })
+
+      const existingChannel = createMockNewApiChannel({
+        name: "Existing AIHubMix Channel",
+        base_url: "https://aihubmix.com",
+        models: "gpt-aihubmix-mini",
+        key: "sk-aihubmix-key",
+      })
+
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithNewApi(),
+      )
+      mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([
+        "gpt-aihubmix-mini",
+      ])
+      mockSearchChannel.mockResolvedValueOnce(
+        createMockNewApiChannelListData([existingChannel]),
+      )
+
+      const result = await importToNewApi(account, token)
+
+      expect(result.success).toBe(false)
+      expect(mockSearchChannel).toHaveBeenCalledWith(
+        expect.objectContaining({
+          baseUrl: "https://new-api.example.com",
+        }),
+        "https://aihubmix.com",
+      )
+      expect(mockCreateChannel).not.toHaveBeenCalled()
     })
 
     it("should stop importing when duplicate resolution requires verification", async () => {

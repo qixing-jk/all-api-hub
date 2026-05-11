@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ChannelType } from "~/constants"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   OctopusAutoGroupType,
   OctopusOutboundType,
@@ -271,6 +272,31 @@ describe("octopus additional flows", () => {
       groups: ["default"],
       status: 1,
     })
+  })
+
+  it("uses the AIHubMix API origin before appending the Octopus /v1 suffix", async () => {
+    const { prepareChannelFormData } = await import(
+      "~/services/managedSites/providers/octopus"
+    )
+    const account = buildDisplaySiteData({
+      siteType: SITE_TYPES.AIHUBMIX,
+      name: "AIHubMix",
+      baseUrl: "https://console.aihubmix.com",
+    })
+    const token = buildApiToken({
+      key: "octo-aihubmix-key",
+      name: "AIHubMix Token",
+    })
+
+    const result = await prepareChannelFormData(account, token)
+
+    expect(mockFetchTokenScopedModels).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://aihubmix.com",
+      }),
+      token,
+    )
+    expect(result.base_url).toBe("https://aihubmix.com/v1")
   })
 
   it("marks Octopus model-prefill failures while keeping the normalized base URL", async () => {

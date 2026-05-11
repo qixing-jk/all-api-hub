@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildApiToken,
   buildDisplaySiteData,
@@ -145,6 +146,30 @@ describe("doneHubService additional flows", () => {
       groups: ["ops", "default"],
     })
     expect(result.modelPrefillFetchFailed).toBeUndefined()
+  })
+
+  it("uses the AIHubMix API origin for managed-site channel imports", async () => {
+    const { prepareChannelFormData } = await import(
+      "~/services/managedSites/providers/doneHubService"
+    )
+    const account = buildDisplaySiteData({
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://console.aihubmix.com",
+    })
+    const token = buildApiToken({
+      key: "aihubmix-key",
+      name: "AIHubMix Token",
+    })
+
+    const result = await prepareChannelFormData(account, token)
+
+    expect(mockFetchTokenScopedModels).toHaveBeenCalledWith(
+      expect.objectContaining({
+        baseUrl: "https://aihubmix.com",
+      }),
+      token,
+    )
+    expect(result.base_url).toBe("https://aihubmix.com")
   })
 
   it("marks model prefill failure and trims payload fields when building a channel payload", async () => {

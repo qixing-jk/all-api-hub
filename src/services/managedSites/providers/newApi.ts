@@ -4,6 +4,7 @@ import { DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import { getApiService } from "~/services/apiService"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
@@ -321,10 +322,12 @@ export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
 ): Promise<ChannelFormData> {
+  const upstreamAccount = normalizeAccountForManagedChannel(account)
+
   // Channel import prefill must reflect only the selected key's live upstream
   // model list; on failure we keep the dialog editable and require manual input.
   const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
-    account,
+    upstreamAccount,
     token,
   )
 
@@ -340,7 +343,7 @@ export async function prepareChannelFormData(
     name: buildChannelName(account, token),
     type: DEFAULT_CHANNEL_FIELDS.type,
     key: token.key,
-    base_url: account.baseUrl,
+    base_url: upstreamAccount.baseUrl,
     models: normalizeList(availableModels),
     ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: normalizeList(resolvedGroups),
@@ -500,7 +503,7 @@ export async function importToNewApi(
       newApiBaseUrl!,
       newApiAdminToken!,
       newApiUserId!,
-      account.baseUrl,
+      formData.base_url,
       formData.models,
       formData.key,
     )

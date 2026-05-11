@@ -1,4 +1,5 @@
 import {
+  AIHUBMIX_API_ORIGIN,
   AIHUBMIX_HOSTNAMES,
   AIHUBMIX_WEB_ORIGIN,
   SITE_TYPES,
@@ -51,6 +52,44 @@ export function normalizeAccountSiteUrlForStorage(params: {
   }
 
   return params.url.trim()
+}
+
+/**
+ * Resolves the API origin to use when an account is exported into a managed-site
+ * upstream channel. AIHubMix adapters pin token-authenticated API traffic to
+ * `https://aihubmix.com`; the console origin is only the account UI entrypoint.
+ *
+ * Source: https://docs.aihubmix.com/en/api/Aihubmix-Integration documents
+ * OpenAI-compatible calls with `base_url="https://aihubmix.com/v1"`.
+ */
+export function normalizeAccountSiteUrlForManagedChannel(params: {
+  siteType?: AccountSiteType | string
+  url: string
+}): string {
+  if (
+    params.siteType === SITE_TYPES.AIHUBMIX ||
+    isAIHubMixSiteUrl(params.url)
+  ) {
+    return AIHUBMIX_API_ORIGIN
+  }
+
+  return params.url.trim()
+}
+
+/**
+ * Returns an account copy with the upstream URL normalized for managed-channel
+ * import flows.
+ */
+export function normalizeAccountForManagedChannel<
+  TAccount extends { siteType?: AccountSiteType | string; baseUrl: string },
+>(account: TAccount): TAccount {
+  return {
+    ...account,
+    baseUrl: normalizeAccountSiteUrlForManagedChannel({
+      siteType: account.siteType,
+      url: account.baseUrl,
+    }),
+  }
 }
 
 /**

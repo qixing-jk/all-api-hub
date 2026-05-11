@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   isAIHubMixSiteUrl,
+  normalizeAccountSiteUrlForManagedChannel,
   normalizeAccountSiteUrlForOriginKey,
   normalizeAccountSiteUrlForStorage,
 } from "~/services/accounts/utils/siteUrlNormalization"
@@ -33,6 +34,20 @@ describe("siteUrlNormalization", () => {
     ).toBe("https://console.aihubmix.com")
   })
 
+  it("resolves AIHubMix managed-channel upstreams to the API origin", () => {
+    expect(
+      normalizeAccountSiteUrlForManagedChannel({
+        siteType: SITE_TYPES.AIHUBMIX,
+        url: "https://console.aihubmix.com",
+      }),
+    ).toBe("https://aihubmix.com")
+    expect(
+      normalizeAccountSiteUrlForManagedChannel({
+        url: "https://www.aihubmix.com/statistics",
+      }),
+    ).toBe("https://aihubmix.com")
+  })
+
   it("preserves non-AIHubMix storage URLs and origin keys", () => {
     expect(
       normalizeAccountSiteUrlForStorage({
@@ -46,5 +61,11 @@ describe("siteUrlNormalization", () => {
         url: "https://example.com/path?tab=1",
       }),
     ).toBe("https://example.com")
+    expect(
+      normalizeAccountSiteUrlForManagedChannel({
+        siteType: SITE_TYPES.NEW_API,
+        url: " https://example.com/path ",
+      }),
+    ).toBe("https://example.com/path")
   })
 })

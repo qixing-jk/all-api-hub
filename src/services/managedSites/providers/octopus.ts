@@ -8,6 +8,7 @@ import { ChannelType } from "~/constants"
 import { DEFAULT_OCTOPUS_CHANNEL_FIELDS } from "~/constants/octopus"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import type { ApiResponse } from "~/services/apiService/common/type"
 import * as octopusApi from "~/services/apiService/octopus"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
@@ -417,8 +418,9 @@ export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
 ): Promise<ChannelFormData> {
+  const upstreamAccount = normalizeAccountForManagedChannel(account)
   const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
-    account,
+    upstreamAccount,
     token,
   )
 
@@ -426,7 +428,7 @@ export async function prepareChannelFormData(
     name: buildChannelName(account, token),
     type: DEFAULT_OCTOPUS_CHANNEL_FIELDS.type,
     key: token.key,
-    base_url: buildOctopusBaseUrl(account.baseUrl), // Octopus 需要 /v1 后缀
+    base_url: buildOctopusBaseUrl(upstreamAccount.baseUrl), // Octopus 需要 /v1 后缀
     models: normalizeList(availableModels),
     ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: ["default"],
@@ -526,7 +528,7 @@ export async function autoConfigToOctopus(
       config.baseUrl,
       "",
       "",
-      displaySiteData.baseUrl,
+      formData.base_url,
       formData.models,
       formData.key,
     )

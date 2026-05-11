@@ -7,6 +7,7 @@ import {
 } from "~/constants/claudeCodeHub"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import * as claudeCodeHubApi from "~/services/apiService/claudeCodeHub"
 import type { ApiResponse } from "~/services/apiService/common/type"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
@@ -520,8 +521,9 @@ export async function prepareChannelFormData(
   account: DisplaySiteData,
   token: ApiToken | AccountToken,
 ): Promise<ChannelFormData> {
+  const upstreamAccount = normalizeAccountForManagedChannel(account)
   const { models: availableModels, fetchFailed } = await fetchTokenScopedModels(
-    account,
+    upstreamAccount,
     token,
   )
 
@@ -529,7 +531,7 @@ export async function prepareChannelFormData(
     name: buildChannelName(account, token),
     type: CLAUDE_CODE_HUB_PROVIDER_TYPE.OPENAI_COMPATIBLE,
     key: token.key,
-    base_url: account.baseUrl,
+    base_url: upstreamAccount.baseUrl,
     models: normalizeList(availableModels),
     ...(fetchFailed ? { modelPrefillFetchFailed: true } : {}),
     groups: [DEFAULT_GROUP_TAG],
@@ -616,7 +618,7 @@ async function importToClaudeCodeHub(
       config.baseUrl,
       config.adminToken,
       "admin",
-      account.baseUrl,
+      formData.base_url,
       formData.models,
       formData.key,
     )

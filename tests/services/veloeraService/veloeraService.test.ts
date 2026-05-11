@@ -371,5 +371,31 @@ describe("veloeraService", () => {
       expect(result.models).toEqual(["gpt-4o-mini", "gpt-4o"])
       expect(result.modelPrefillFetchFailed).toBeUndefined()
     })
+
+    it("uses the AIHubMix API origin for managed-site channel imports", async () => {
+      const { prepareChannelFormData } = await import(
+        "~/services/managedSites/providers/veloera"
+      )
+      const account = createMockDisplaySiteData({
+        siteType: SITE_TYPES.AIHUBMIX,
+        baseUrl: "https://console.aihubmix.com",
+      })
+      const token = createMockApiToken({ models: "fallback-model" })
+
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithVeloera(),
+      )
+      mockFetchOpenAICompatibleModelIds.mockResolvedValueOnce([
+        "gpt-aihubmix-mini",
+      ])
+
+      const result = await prepareChannelFormData(account, token)
+
+      expect(mockFetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
+        baseUrl: "https://aihubmix.com",
+        apiKey: token.key,
+      })
+      expect(result.base_url).toBe("https://aihubmix.com")
+    })
   })
 })
