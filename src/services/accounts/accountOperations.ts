@@ -19,7 +19,6 @@ import {
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   fetchSiteStatusViaAutoDetectContent,
-  fetchSupportCheckInViaAutoDetectContent,
   fetchUserInfoViaAutoDetectContent,
   getOrCreateAccessTokenViaAutoDetectContent,
 } from "~/services/accounts/autoDetectContentFetch"
@@ -66,15 +65,22 @@ const isCreatedApiToken = (value: unknown): value is ApiToken =>
   typeof (value as Partial<ApiToken>).id === "number" &&
   typeof (value as Partial<ApiToken>).key === "string"
 
-const COMMON_AUTO_DETECT_CONTENT_FETCH_SITE_TYPES = new Set<string>([
-  SITE_TYPES.ONE_API,
-  SITE_TYPES.NEW_API,
-  SITE_TYPES.VELOERA,
-  SITE_TYPES.VO_API,
-  SITE_TYPES.SUPER_API,
-  SITE_TYPES.RIX_API,
-  SITE_TYPES.NEO_API,
-])
+const COMMON_AUTO_DETECT_CONTENT_FETCH_SITE_TYPES: ReadonlySet<AccountSiteType> =
+  new Set([
+    SITE_TYPES.ONE_API,
+    SITE_TYPES.NEW_API,
+    SITE_TYPES.VELOERA,
+    SITE_TYPES.VO_API,
+    SITE_TYPES.SUPER_API,
+    SITE_TYPES.RIX_API,
+    SITE_TYPES.NEO_API,
+  ])
+
+const isCommonAutoDetectContentFetchSite = (
+  siteType: string,
+): siteType is AccountSiteType =>
+  isAccountSiteType(siteType) &&
+  COMMON_AUTO_DETECT_CONTENT_FETCH_SITE_TYPES.has(siteType)
 
 /**
  * Create a localized timeout error for manual account data fetching.
@@ -142,9 +148,6 @@ function getCurrentTabAutoDetectContext(
 type CurrentTabAutoDetectContext = NonNullable<
   ReturnType<typeof getCurrentTabAutoDetectContext>
 >
-
-const isCommonAutoDetectContentFetchSite = (siteType: string): boolean =>
-  COMMON_AUTO_DETECT_CONTENT_FETCH_SITE_TYPES.has(siteType)
 
 /**
  * Returns the current-tab context only for common-compatible auto-detect
@@ -382,14 +385,10 @@ export async function autoDetectAccount(
 
     const checkSupportPromise: Promise<boolean | undefined> =
       commonAutoDetectContentContext
-        ? fetchSupportCheckInViaAutoDetectContent({
-            tabId: commonAutoDetectContentContext.tabId,
-            baseUrl: url,
-            userId,
-          }).then((checkSupport) =>
-            checkSupport === undefined
-              ? fetchSupportCheckInFallback()
-              : checkSupport,
+        ? siteStatusPromise.then((siteStatus) =>
+            typeof siteStatus?.checkin_enabled === "boolean"
+              ? siteStatus.checkin_enabled
+              : fetchSupportCheckInFallback(),
           )
         : fetchSupportCheckInFallback()
 

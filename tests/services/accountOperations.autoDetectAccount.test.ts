@@ -185,7 +185,6 @@ describe("accountOperations autoDetectAccount", () => {
       price: 7.4,
       checkin_enabled: true,
     })
-    mockFetchSupportCheckInViaAutoDetectContent.mockResolvedValueOnce(true)
     mockExtractDefaultExchangeRate.mockReturnValueOnce(7.4)
 
     const result = await autoDetectAccount(
@@ -207,6 +206,9 @@ describe("accountOperations autoDetectAccount", () => {
       baseUrl: "https://status.example.com",
       userId: 7,
     })
+    expect(mockFetchSiteStatusViaAutoDetectContent).toHaveBeenCalledTimes(1)
+    expect(mockFetchSupportCheckInViaAutoDetectContent).not.toHaveBeenCalled()
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
     expect(mockFetchSiteStatus).not.toHaveBeenCalled()
     expect(mockExtractDefaultExchangeRate).toHaveBeenCalledWith({
       system_name: "Content Status Portal",
@@ -237,7 +239,6 @@ describe("accountOperations autoDetectAccount", () => {
       system_name: "Service Status Portal",
       price: 6.9,
     })
-    mockFetchSupportCheckInViaAutoDetectContent.mockResolvedValueOnce(undefined)
     mockFetchSupportCheckIn.mockResolvedValueOnce(false)
     mockExtractDefaultExchangeRate.mockReturnValueOnce(6.9)
 
@@ -261,6 +262,7 @@ describe("accountOperations autoDetectAccount", () => {
         authType: AuthTypeEnum.AccessToken,
       },
     })
+    expect(mockFetchSupportCheckInViaAutoDetectContent).not.toHaveBeenCalled()
   })
 
   it("returns a get-user-id failure when detection succeeds without a user id", async () => {
@@ -350,8 +352,8 @@ describe("accountOperations autoDetectAccount", () => {
     mockFetchSiteStatusViaAutoDetectContent.mockResolvedValueOnce({
       billing_mode: "quota",
       system_name: "Incognito Portal",
+      checkin_enabled: true,
     })
-    mockFetchSupportCheckInViaAutoDetectContent.mockResolvedValueOnce(true)
     mockExtractDefaultExchangeRate.mockReturnValueOnce(6.6)
 
     const result = await autoDetectAccount(
@@ -372,6 +374,8 @@ describe("accountOperations autoDetectAccount", () => {
     })
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
     expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    expect(mockFetchSupportCheckInViaAutoDetectContent).not.toHaveBeenCalled()
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
   })
 
   it("uses current-tab content fetch for New API access-token auto-detect completion", async () => {
@@ -394,8 +398,8 @@ describe("accountOperations autoDetectAccount", () => {
     mockFetchSiteStatusViaAutoDetectContent.mockResolvedValueOnce({
       billing_mode: "quota",
       system_name: "Incognito Token Portal",
+      checkin_enabled: true,
     })
-    mockFetchSupportCheckInViaAutoDetectContent.mockResolvedValueOnce(true)
     mockExtractDefaultExchangeRate.mockReturnValueOnce(6.6)
 
     const result = await autoDetectAccount(
@@ -418,6 +422,8 @@ describe("accountOperations autoDetectAccount", () => {
     )
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
     expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    expect(mockFetchSupportCheckInViaAutoDetectContent).not.toHaveBeenCalled()
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
   })
 
   it("falls back to the service-layer New API token flow when current-tab content fetch fails", async () => {
@@ -442,8 +448,8 @@ describe("accountOperations autoDetectAccount", () => {
     })
     mockFetchSiteStatusViaAutoDetectContent.mockResolvedValueOnce({
       system_name: "Fallback Portal",
+      checkin_enabled: false,
     })
-    mockFetchSupportCheckInViaAutoDetectContent.mockResolvedValueOnce(false)
     mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
@@ -463,6 +469,8 @@ describe("accountOperations autoDetectAccount", () => {
         userId: 7,
       },
     })
+    expect(mockFetchSupportCheckInViaAutoDetectContent).not.toHaveBeenCalled()
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
   })
 
   it("uses current-tab content fetch for Veloera access-token auto-detect completion", async () => {
@@ -484,8 +492,8 @@ describe("accountOperations autoDetectAccount", () => {
     })
     mockFetchSiteStatusViaAutoDetectContent.mockResolvedValueOnce({
       system_name: "Veloera Portal",
+      checkin_enabled: false,
     })
-    mockFetchSupportCheckInViaAutoDetectContent.mockResolvedValueOnce(false)
     mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
@@ -509,6 +517,8 @@ describe("accountOperations autoDetectAccount", () => {
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
     expect(mockFetchUserInfoViaAutoDetectContent).not.toHaveBeenCalled()
     expect(mockFetchSiteStatus).not.toHaveBeenCalled()
+    expect(mockFetchSupportCheckInViaAutoDetectContent).not.toHaveBeenCalled()
+    expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
   })
 
   it("uses service-layer check-in support for current-tab AnyRouter auto-detect completion", async () => {
@@ -557,6 +567,57 @@ describe("accountOperations autoDetectAccount", () => {
     })
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
       baseUrl: "https://anyrouter.example.com",
+      auth: {
+        authType: AuthTypeEnum.None,
+      },
+    })
+    expect(mockFetchUserInfoViaAutoDetectContent).not.toHaveBeenCalled()
+    expect(
+      mockGetOrCreateAccessTokenViaAutoDetectContent,
+    ).not.toHaveBeenCalled()
+    expect(mockFetchSiteStatusViaAutoDetectContent).not.toHaveBeenCalled()
+    expect(mockFetchSupportCheckInViaAutoDetectContent).not.toHaveBeenCalled()
+  })
+
+  it("uses service-layer check-in support for current-tab WONG auto-detect completion", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: 7,
+        siteType: SITE_TYPES.WONG_GONGYI,
+        fetchContext: {
+          kind: "current-tab",
+          tabId: 123,
+        },
+      },
+    })
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "wong-user",
+      access_token: "wong-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "WONG公益站",
+    })
+    mockFetchSupportCheckIn.mockResolvedValueOnce(true)
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await autoDetectAccount(
+      "https://wong.example.com",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.data).toMatchObject({
+      username: "wong-user",
+      accessToken: "wong-token",
+      siteType: SITE_TYPES.WONG_GONGYI,
+      checkIn: expect.objectContaining({
+        enableDetection: true,
+      }),
+    })
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
+      baseUrl: "https://wong.example.com",
       auth: {
         authType: AuthTypeEnum.None,
       },
