@@ -805,6 +805,7 @@ export async function handleTempWindowFetch(
     accountId,
     authType,
     cookieAuthSessionCookie,
+    useIncognito,
   } = request
 
   if (!originUrl || !fetchUrl) {
@@ -832,10 +833,22 @@ export async function handleTempWindowFetch(
   const resolvedAuthType = resolveAuthTypeEnum(authType)
 
   try {
+    if (useIncognito) {
+      const allowed = await isAllowedIncognitoAccess()
+      if (allowed === false) {
+        sendResponse({
+          success: false,
+          error: t("messages:background.incognitoAccessRequired"),
+        })
+        return
+      }
+    }
+
     const context = await acquireTempContext(
       originUrl,
       tempRequestId,
       suppressMinimize,
+      { incognito: Boolean(useIncognito) },
     )
     const { tabId } = context
 

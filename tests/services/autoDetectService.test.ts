@@ -119,6 +119,7 @@ describe("autoDetectSmart", () => {
         id: 101,
         active: true,
         url: "https://example.com/dashboard",
+        incognito: true,
       },
     ])
     browserAny.tabs.sendMessage.mockResolvedValue({
@@ -143,6 +144,7 @@ describe("autoDetectSmart", () => {
           kind: "current-tab",
           tabId: 101,
           origin: "https://example.com",
+          incognito: true,
         },
       },
     })

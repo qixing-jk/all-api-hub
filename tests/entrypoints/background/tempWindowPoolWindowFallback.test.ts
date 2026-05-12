@@ -506,6 +506,33 @@ describe("tempWindowPool window fallback", () => {
     })
   })
 
+  it("requires incognito access before opening a temp fetch context", async () => {
+    isAllowedIncognitoAccessMock.mockResolvedValueOnce(false)
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    await handleTempWindowFetch(
+      {
+        originUrl: "https://example.com",
+        fetchUrl: "https://example.com/api/models",
+        fetchOptions: { method: "GET" },
+        useIncognito: true,
+        requestId: "req-fetch-incognito-access-denied",
+      },
+      sendResponse,
+    )
+
+    expect(createWindowMock).not.toHaveBeenCalled()
+    expect(createTabMock).not.toHaveBeenCalled()
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "messages:background.incognitoAccessRequired",
+    })
+  })
+
   it("falls back to the default saved temp-context mode when user preferences are missing that field", async () => {
     tempContextMode = "tab"
     defaultTempContextMode = "composite"

@@ -662,6 +662,7 @@ async function fetchViaTempWindow<T>(
     accountId: context.accountId,
     authType: context.authType,
     cookieAuthSessionCookie: context.cookieAuthSessionCookie,
+    useIncognito: context.useIncognito,
   }
 
   logger.info("Using temp window fetch fallback", {

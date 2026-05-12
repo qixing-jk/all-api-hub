@@ -48,6 +48,7 @@ type AutoDetectFetchContext = {
   kind: "current-tab"
   tabId: number
   origin: string
+  incognito?: boolean
 }
 
 interface AutoDetectResult {
@@ -294,6 +295,7 @@ async function getUserDataFromCurrentTab(
   url: string,
   siteType: AccountSiteType,
   tabId: number,
+  incognito?: boolean,
 ): Promise<CurrentTabUserDataResult> {
   let contentScriptUnavailable = false
 
@@ -317,6 +319,7 @@ async function getUserDataFromCurrentTab(
               kind: "current-tab",
               tabId,
               origin: new URL(url).origin,
+              ...(incognito === true ? { incognito: true } : {}),
             },
           },
           contentScriptUnavailable,
@@ -361,6 +364,7 @@ async function getUserDataFromCurrentTab(
 async function autoDetectFromCurrentTab(
   url: string,
   tabId: number,
+  incognito?: boolean,
 ): Promise<AutoDetectResult> {
   logger.debug("使用当前标签页方式", { url, tabId })
 
@@ -369,7 +373,7 @@ async function autoDetectFromCurrentTab(
 
   // 从当前标签页获取用户数据
   const { userData, contentScriptUnavailable } =
-    await getUserDataFromCurrentTab(url, siteType, tabId)
+    await getUserDataFromCurrentTab(url, siteType, tabId, incognito)
 
   // 组合用户数据和站点类型（公共逻辑）
   const result = await combineUserDataAndSiteType(userData, url)
@@ -423,6 +427,7 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
           const currentTabResult = await autoDetectFromCurrentTab(
             detectionUrl,
             currentTab.id,
+            currentTab.incognito === true,
           )
           if (currentTabResult.success) {
             return currentTabResult

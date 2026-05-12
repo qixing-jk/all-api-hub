@@ -17,6 +17,8 @@ export interface TempWindowFetchParams {
   authType?: AuthTypeEnum
   /** Per-account session cookie header to merge with WAF cookies */
   cookieAuthSessionCookie?: string
+  /** Open the temporary context in an incognito/private window. */
+  useIncognito?: boolean
 }
 
 export type TempWindowTurnstileStatus =
@@ -91,4 +93,6 @@ export interface TempWindowFallbackContext {
   authType: AuthTypeEnum
   /** Per-account session cookie header to merge with WAF cookies */
   cookieAuthSessionCookie?: string
+  /** Whether the temp-window fallback should use an incognito/private context. */
+  useIncognito?: boolean
 }

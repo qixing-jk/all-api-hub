@@ -341,6 +341,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
         accountId: "acct-1",
         authType: AuthTypeEnum.Cookie,
         cookieAuthSessionCookie: "session=abc",
+        useIncognito: true,
       }),
       async () => {
         throw new ApiError(
@@ -366,6 +367,7 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
         accountId: "acct-1",
         authType: AuthTypeEnum.Cookie,
         cookieAuthSessionCookie: "session=abc",
+        useIncognito: true,
       }),
     )
   })

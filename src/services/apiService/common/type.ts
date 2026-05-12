@@ -330,6 +330,7 @@ export type ApiServiceFetchContext = {
   kind: "current-tab"
   tabId: number
   origin: string
+  incognito?: boolean
 }
 
 /**
