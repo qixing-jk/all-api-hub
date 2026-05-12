@@ -102,10 +102,97 @@ describe("autoDetectSmart", () => {
         siteType: SITE_TYPES.VELOERA,
         accessToken: "current-tab-token",
         sub2apiAuth: undefined,
+        fetchContext: {
+          kind: "current-tab",
+          tabId: 1,
+        },
       },
     })
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
+  })
+
+  it("returns a current-tab fetch context when current-tab detection succeeds", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 101,
+        active: true,
+        url: "https://example.com/dashboard",
+      },
+    ])
+    browserAny.tabs.sendMessage.mockResolvedValue({
+      success: true,
+      data: {
+        userId: 12,
+        user: { id: 12, username: "alice" },
+      },
+    })
+
+    const result = await autoDetectSmart("https://example.com/console")
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        userId: 12,
+        user: { id: 12, username: "alice" },
+        siteType: SITE_TYPES.NEW_API,
+        accessToken: undefined,
+        sub2apiAuth: undefined,
+        fetchContext: {
+          kind: "current-tab",
+          tabId: 101,
+        },
+      },
+    })
+    expect(browserAny.tabs.sendMessage).toHaveBeenCalledWith(101, {
+      action: expect.any(String),
+      url: "https://example.com/console",
+    })
+    expect(mockGetActiveTabs).not.toHaveBeenCalled()
+  })
+
+  it("uses the matched current tab id instead of re-querying active tabs", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 101,
+        active: true,
+        url: "https://example.com/dashboard",
+      },
+    ])
+    mockGetActiveTabs.mockResolvedValue([
+      {
+        id: 202,
+        active: true,
+        url: "https://other.example.com/home",
+      },
+    ])
+    browserAny.tabs.sendMessage.mockResolvedValue({
+      success: true,
+      data: {
+        userId: 12,
+        user: { id: 12, username: "alice" },
+      },
+    })
+
+    const result = await autoDetectSmart("https://example.com/console")
+
+    expect(result.success).toBe(true)
+    expect(result.data).toMatchObject({
+      userId: 12,
+      fetchContext: {
+        kind: "current-tab",
+        tabId: 101,
+      },
+    })
+    expect(browserAny.tabs.sendMessage).toHaveBeenCalledWith(101, {
+      action: expect.any(String),
+      url: "https://example.com/console",
+    })
+    expect(browserAny.tabs.sendMessage).not.toHaveBeenCalledWith(
+      202,
+      expect.anything(),
+    )
+    expect(mockGetActiveTabs).not.toHaveBeenCalled()
   })
 
   it("skips current-tab detection from an AIHubMix console tab and uses the API origin background flow", async () => {
@@ -149,6 +236,7 @@ describe("autoDetectSmart", () => {
         sub2apiAuth: undefined,
       },
     })
+    expect(result.data).not.toHaveProperty("fetchContext")
     expect(browserAny.tabs.sendMessage).not.toHaveBeenCalled()
     expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
       action: expect.any(String),
@@ -188,6 +276,10 @@ describe("autoDetectSmart", () => {
         siteType: SITE_TYPES.AIHUBMIX,
         accessToken: "main-origin-session-token",
         sub2apiAuth: undefined,
+        fetchContext: {
+          kind: "current-tab",
+          tabId: 2,
+        },
       },
     })
     expect(browserAny.tabs.sendMessage).toHaveBeenCalledWith(2, {
@@ -252,6 +344,7 @@ describe("autoDetectSmart", () => {
         sub2apiAuth: undefined,
       },
     })
+    expect(result.data).not.toHaveProperty("fetchContext")
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 
@@ -287,6 +380,7 @@ describe("autoDetectSmart", () => {
         sub2apiAuth: undefined,
       },
     })
+    expect(result.data).not.toHaveProperty("fetchContext")
   })
 
   it("keeps API fallback access tokens only when the adapter returns a string", async () => {
@@ -379,6 +473,7 @@ describe("autoDetectSmart", () => {
         sub2apiAuth: undefined,
       },
     })
+    expect(result.data).not.toHaveProperty("fetchContext")
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
   })
 
@@ -410,6 +505,7 @@ describe("autoDetectSmart", () => {
         sub2apiAuth: undefined,
       },
     })
+    expect(result.data).not.toHaveProperty("fetchContext")
     expect(mockFetchUserInfo).toHaveBeenCalledTimes(2)
   })
 
@@ -449,6 +545,7 @@ describe("autoDetectSmart", () => {
         sub2apiAuth: undefined,
       },
     })
+    expect(result.data).not.toHaveProperty("fetchContext")
     expect(mockGetAccountSiteType).toHaveBeenCalledWith("not a url")
     expect(mockFetchUserInfo).toHaveBeenCalledWith({
       baseUrl: "not a url",

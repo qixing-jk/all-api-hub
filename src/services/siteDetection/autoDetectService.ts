@@ -21,7 +21,6 @@ import {
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 import {
   getActiveOrAllTabs,
-  getActiveTabs,
   isMessageReceiverUnavailableError,
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
@@ -45,6 +44,11 @@ function normalizeSiteTypeHint(value: unknown): AccountSiteType | undefined {
   return isAccountSiteType(value) ? value : undefined
 }
 
+export type AutoDetectFetchContext = {
+  kind: "current-tab"
+  tabId: number
+}
+
 interface AutoDetectResult {
   success: boolean
   data?: {
@@ -53,6 +57,7 @@ interface AutoDetectResult {
     siteType: AccountSiteType
     accessToken?: string
     sub2apiAuth?: Sub2ApiAuthConfig
+    fetchContext?: AutoDetectFetchContext
   }
   error?: string
   errorCode?: AutoDetectErrorCode
@@ -64,6 +69,7 @@ interface UserDataResult {
   accessToken?: string
   sub2apiAuth?: Sub2ApiAuthConfig
   siteTypeHint?: AccountSiteType
+  fetchContext?: AutoDetectFetchContext
 }
 
 interface CurrentTabUserDataResult {
@@ -141,6 +147,9 @@ async function combineUserDataAndSiteType(
         siteType,
         accessToken: userData.accessToken,
         sub2apiAuth: userData.sub2apiAuth,
+        ...(userData.fetchContext
+          ? { fetchContext: userData.fetchContext }
+          : {}),
       },
     }
   } catch (error) {
@@ -282,21 +291,12 @@ async function autoDetectViaBackground(url: string): Promise<AutoDetectResult> {
 async function getUserDataFromCurrentTab(
   url: string,
   siteType: AccountSiteType,
+  tabId: number,
 ): Promise<CurrentTabUserDataResult> {
   let contentScriptUnavailable = false
 
   try {
-    // 1. 获取当前活动标签页
-    const tabs = await getActiveTabs()
-
-    if (!tabs || tabs.length === 0 || !tabs[0]?.id) {
-      logger.warn("无法获取当前标签页", { url })
-      return { userData: null, contentScriptUnavailable }
-    }
-
-    const tabId = tabs[0].id
-
-    // 2. 通过 content script 获取用户信息
+    // 通过 content script 获取用户信息
     try {
       const userResponse = await browser.tabs.sendMessage(tabId, {
         action: RuntimeActionIds.ContentGetUserFromLocalStorage,
@@ -311,6 +311,10 @@ async function getUserDataFromCurrentTab(
             accessToken: userResponse.data.accessToken,
             sub2apiAuth: userResponse.data.sub2apiAuth,
             siteTypeHint: normalizeSiteTypeHint(userResponse.data.siteTypeHint),
+            fetchContext: {
+              kind: "current-tab",
+              tabId,
+            },
           },
           contentScriptUnavailable,
         }
@@ -353,15 +357,16 @@ async function getUserDataFromCurrentTab(
  */
 async function autoDetectFromCurrentTab(
   url: string,
+  tabId: number,
 ): Promise<AutoDetectResult> {
-  logger.debug("使用当前标签页方式", { url })
+  logger.debug("使用当前标签页方式", { url, tabId })
 
   // 检测站点类型，避免在未知站点上下文中使用默认 API
   const siteType = await getAccountSiteType(url)
 
   // 从当前标签页获取用户数据
   const { userData, contentScriptUnavailable } =
-    await getUserDataFromCurrentTab(url, siteType)
+    await getUserDataFromCurrentTab(url, siteType, tabId)
 
   // 组合用户数据和站点类型（公共逻辑）
   const result = await combineUserDataAndSiteType(userData, url)
@@ -403,12 +408,19 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
         const currentUrl = new URL(currentTab.url)
         const targetUrl = new URL(detectionUrl)
 
-        if (currentUrl.origin === targetUrl.origin) {
+        if (
+          currentUrl.origin === targetUrl.origin &&
+          typeof currentTab.id === "number"
+        ) {
           logger.debug("当前标签页匹配目标站点，使用当前标签页方式", {
             url,
             currentTabUrl: currentTab.url,
+            tabId: currentTab.id,
           })
-          const currentTabResult = await autoDetectFromCurrentTab(detectionUrl)
+          const currentTabResult = await autoDetectFromCurrentTab(
+            detectionUrl,
+            currentTab.id,
+          )
           if (currentTabResult.success) {
             return currentTabResult
           }
