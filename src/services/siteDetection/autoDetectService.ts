@@ -47,6 +47,7 @@ function normalizeSiteTypeHint(value: unknown): AccountSiteType | undefined {
 type AutoDetectFetchContext = {
   kind: "current-tab"
   tabId: number
+  origin: string
 }
 
 interface AutoDetectResult {
@@ -315,6 +316,7 @@ async function getUserDataFromCurrentTab(
             fetchContext: {
               kind: "current-tab",
               tabId,
+              origin: new URL(url).origin,
             },
           },
           contentScriptUnavailable,

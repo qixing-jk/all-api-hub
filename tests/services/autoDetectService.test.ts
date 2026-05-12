@@ -105,6 +105,7 @@ describe("autoDetectSmart", () => {
         fetchContext: {
           kind: "current-tab",
           tabId: 1,
+          origin: "https://example.com",
         },
       },
     })
@@ -141,6 +142,7 @@ describe("autoDetectSmart", () => {
         fetchContext: {
           kind: "current-tab",
           tabId: 101,
+          origin: "https://example.com",
         },
       },
     })
@@ -279,6 +281,7 @@ describe("autoDetectSmart", () => {
         fetchContext: {
           kind: "current-tab",
           tabId: 2,
+          origin: "https://aihubmix.com",
         },
       },
     })

@@ -2,9 +2,9 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make account auto-detect continue using the matched current tab's content-script fetch for New API compatible requests during the auto-detect flow, so incognito sidepanel imports can use the page's session and required user-id headers.
+**Goal:** Make account auto-detect continue using the matched current tab's content-script fetch for API requests during the auto-detect flow, so incognito sidepanel imports can use the page's session and required headers without limiting the transport preference to one site family.
 
-**Architecture:** Preserve the existing current-tab/background/direct detection order, but carry a task-scoped `fetchContext` from successful current-tab detection into `autoDetectAccount`. Add a small auto-detect API helper that can execute common New API requests through `ContentPerformTempWindowFetch` in the matched tab and falls back to existing `apiService` behavior when unavailable or unsuccessful. The change is limited to the auto-detect completion path; saved account refresh and long-running background operations continue using the normal service layer.
+**Architecture:** Preserve the existing current-tab/background/direct detection order, but carry a task-scoped `fetchContext` from successful current-tab detection into normal `apiService` requests. The common fetch executor treats that context as a transport preference: when the final request URL is same-origin with the matched tab and the response type is safe for extension messaging, it first executes the already-built request through `ContentPerformTempWindowFetch`; on mismatch, unsupported response type, opt-out, or content-script failure, it falls back to the existing direct/temp-window fetch path. The change is limited to the auto-detect completion path by only attaching this context from `autoDetectAccount`; saved account refresh and long-running background operations continue using requests without current-tab context.
 
 **Tech Stack:** TypeScript, WXT WebExtension APIs, React sidepanel, Vitest, existing content-script fetch handler (`RuntimeActionIds.ContentPerformTempWindowFetch`).
 
@@ -15,24 +15,23 @@
 - Modify `src/services/siteDetection/autoDetectService.ts`
   - Extend `AutoDetectResult.data` and `UserDataResult` with a source/fetch context for current-tab detection.
   - Pass the already-selected current tab id into `autoDetectFromCurrentTab` and `getUserDataFromCurrentTab` to avoid a second active-tab lookup drift.
-- Create `src/services/accounts/autoDetectContentFetch.ts`
-  - Provide auto-detect-only helpers for current-tab content fetch:
-    - `fetchUserInfoViaAutoDetectContent`
-    - `getOrCreateAccessTokenViaAutoDetectContent`
-    - lower-level `fetchApiDataViaAutoDetectContent`
-  - Reuse `buildCompatUserIdHeaders` and extension headers instead of handwritten New API-only headers.
-  - Parse common `{ success, message, data }` envelopes and throw `ApiError` on failures so fallback behavior remains simple.
+- Modify `src/services/apiService/common/type.ts`
+  - Add a current-tab `fetchContext` to `ApiServiceRequest`.
+  - Add a request-level `currentTabTransport` opt-out for callers that must bypass tab messaging.
+- Modify `src/services/apiService/common/utils.ts`
+  - Prefer current-tab content fetch when a request has same-origin current-tab context.
+  - Reuse the final authenticated `fetchOptions` built by the common executor.
+  - Fall back to the existing direct/temp-window fetch path if tab messaging fails.
 - Modify `src/services/accounts/accountOperations.ts`
-  - Route auto-detect completion requests through the new helper when `autoDetectSmart` reports a current-tab fetch context.
-  - Preserve existing behavior for Sub2API, AIHubMix, background, direct API, and saved-account operations.
+  - Pass current-tab context into normal service-layer requests during auto-detect completion.
+  - Preserve site-specific adapter behavior for Sub2API, AIHubMix, WONG, AnyRouter, and other overrides by keeping all business calls on `getApiService(siteType)`.
 - Modify `tests/services/autoDetectService.test.ts`
   - Assert current-tab detection returns a current-tab fetch context and sends the content-script request to the matched tab id.
   - Add a regression for the two-query drift: first matched tab differs from later active tab, and the implementation must still use the matched tab.
-- Create `tests/services/accounts/autoDetectContentFetch.test.ts`
-  - Cover current-tab content fetch success, access-token creation fallback, compatibility headers, and API failure parsing.
+- Modify `tests/services/apiService/common/fetchApi.test.ts`
+  - Cover current-tab content fetch success, same-origin gating, failure fallback, opt-out, and binary response exclusion.
 - Modify `tests/services/accountOperations.autoDetectAccount.test.ts`
-  - Mock the new helper and verify Cookie and AccessToken New API auto-detect uses it when current-tab context is present.
-  - Verify fallback to existing `apiService` when the helper rejects.
+  - Verify auto-detect completion passes current-tab context into normal service requests across site types.
 
 ---
 

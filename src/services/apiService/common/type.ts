@@ -326,6 +326,12 @@ export interface AuthConfig {
   tokenExpiresAt?: number
 }
 
+export type ApiServiceFetchContext = {
+  kind: "current-tab"
+  tabId: number
+  origin: string
+}
+
 /**
  * API 服务请求的统一参数对象。
  *
@@ -349,6 +355,11 @@ export interface ApiServiceRequest {
    * 账号 ID（用于后续查询账号信息，目前可选）
    */
   accountId?: string
+  /**
+   * Optional transport context from account auto-detect. When present, common
+   * fetch helpers may try the matched tab content script before normal fetch.
+   */
+  fetchContext?: ApiServiceFetchContext
 }
 
 /**
@@ -381,6 +392,7 @@ export interface FetchApiOptions {
   options?: RequestInit
   responseType?: TempWindowResponseType
   tempWindowFallback?: TempWindowFallbackAllowlist
+  currentTabTransport?: "prefer" | "disabled"
 }
 
 /**
