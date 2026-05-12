@@ -4,6 +4,7 @@ import { AUTO_DETECT_ERROR_CODES } from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { autoDetectAccount } from "~/services/accounts/accountOperations"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
 import { AuthTypeEnum } from "~/types"
 
 const {
@@ -52,7 +53,7 @@ vi.mock("~/services/apiService", async (importOriginal) => {
 })
 
 const currentTabFetchContext = (origin: string) => ({
-  kind: "current-tab" as const,
+  kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
   tabId: 123,
   origin,
 })

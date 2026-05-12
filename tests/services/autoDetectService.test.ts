@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_DETECT_ERROR_CODES } from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
 
 const {
@@ -103,7 +104,7 @@ describe("autoDetectSmart", () => {
         accessToken: "current-tab-token",
         sub2apiAuth: undefined,
         fetchContext: {
-          kind: "current-tab",
+          kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
           tabId: 1,
           origin: "https://example.com",
         },
@@ -142,7 +143,7 @@ describe("autoDetectSmart", () => {
         accessToken: undefined,
         sub2apiAuth: undefined,
         fetchContext: {
-          kind: "current-tab",
+          kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
           tabId: 101,
           origin: "https://example.com",
           incognito: true,
@@ -187,7 +188,7 @@ describe("autoDetectSmart", () => {
         accessToken: undefined,
         sub2apiAuth: undefined,
         fetchContext: {
-          kind: "current-tab",
+          kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
           tabId: 102,
           origin: "https://example.com",
           incognito: true,
@@ -201,7 +202,7 @@ describe("autoDetectSmart", () => {
         authType: expect.any(String),
       },
       fetchContext: {
-        kind: "current-tab",
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
         tabId: 102,
         origin: "https://example.com",
         incognito: true,
@@ -239,7 +240,7 @@ describe("autoDetectSmart", () => {
     expect(result.data).toMatchObject({
       userId: 12,
       fetchContext: {
-        kind: "current-tab",
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
         tabId: 101,
       },
     })
@@ -336,7 +337,7 @@ describe("autoDetectSmart", () => {
         accessToken: "main-origin-session-token",
         sub2apiAuth: undefined,
         fetchContext: {
-          kind: "current-tab",
+          kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
           tabId: 2,
           origin: "https://aihubmix.com",
         },
@@ -434,7 +435,7 @@ describe("autoDetectSmart", () => {
       userId: 89,
       siteType: SITE_TYPES.NEW_API,
       fetchContext: {
-        kind: "browser-context",
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
         incognito: true,
         cookieStoreId: "1-incognito",
       },
@@ -479,7 +480,7 @@ describe("autoDetectSmart", () => {
       userId: 14,
       siteType: SITE_TYPES.NEW_API,
       fetchContext: {
-        kind: "current-tab",
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
         tabId: 103,
         origin: "https://example.com",
         incognito: true,
@@ -562,7 +563,7 @@ describe("autoDetectSmart", () => {
         accessToken: undefined,
         sub2apiAuth: undefined,
         fetchContext: {
-          kind: "browser-context",
+          kind: API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
           incognito: true,
           cookieStoreId: "1-incognito",
         },
@@ -574,7 +575,7 @@ describe("autoDetectSmart", () => {
         authType: expect.any(String),
       },
       fetchContext: {
-        kind: "browser-context",
+        kind: API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
         incognito: true,
         cookieStoreId: "1-incognito",
       },

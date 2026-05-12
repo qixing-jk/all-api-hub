@@ -8,6 +8,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
 import { AuthTypeEnum, SiteHealthStatus, type CheckInConfig } from "~/types"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -493,7 +494,7 @@ describe("useAccountDialog re-detect preservation", () => {
         siteName: "Detected Cookie Site",
         siteType: "new-api",
         fetchContext: {
-          kind: "current-tab",
+          kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
           tabId: 101,
           origin: "https://cookie.example.com",
           incognito: true,

@@ -24,10 +24,11 @@ import {
 } from "~/services/accounts/utils/autoDetectUtils"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
 import { getApiService } from "~/services/apiService"
-import type {
-  ApiServiceFetchContext,
-  ApiServiceRequest,
-  SiteStatusInfo,
+import {
+  API_SERVICE_FETCH_CONTEXT_KINDS,
+  type ApiServiceFetchContext,
+  type ApiServiceRequest,
+  type SiteStatusInfo,
 } from "~/services/apiService/common/type"
 import {
   DEFAULT_PREFERENCES,
@@ -114,11 +115,11 @@ function getAutoDetectFetchContext(
   >,
 ): ApiServiceFetchContext | undefined {
   const fetchContext = detectResultData.fetchContext
-  if (fetchContext?.kind === "browser-context") {
+  if (fetchContext?.kind === API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT) {
     return fetchContext
   }
 
-  if (fetchContext?.kind === "current-tab") {
+  if (fetchContext?.kind === API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB) {
     if (
       typeof fetchContext.tabId === "number" &&
       typeof fetchContext.origin === "string" &&

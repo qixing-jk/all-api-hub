@@ -326,6 +326,14 @@ export interface AuthConfig {
   tokenExpiresAt?: number
 }
 
+export const API_SERVICE_FETCH_CONTEXT_KINDS = {
+  CURRENT_TAB: "current-tab",
+  BROWSER_CONTEXT: "browser-context",
+} as const
+
+export type ApiServiceFetchContextKind =
+  (typeof API_SERVICE_FETCH_CONTEXT_KINDS)[keyof typeof API_SERVICE_FETCH_CONTEXT_KINDS]
+
 type ApiServiceBrowserFetchContext = {
   incognito?: boolean
   cookieStoreId?: string
@@ -333,13 +341,34 @@ type ApiServiceBrowserFetchContext = {
 
 export type ApiServiceFetchContext =
   | (ApiServiceBrowserFetchContext & {
-      kind: "current-tab"
+      kind: typeof API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB
       tabId: number
       origin: string
     })
   | (ApiServiceBrowserFetchContext & {
-      kind: "browser-context"
+      kind: typeof API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT
     })
+
+/**
+ * Builds a log-safe summary of a fetch context without exposing cookie-store values.
+ */
+export function summarizeApiServiceFetchContext(
+  fetchContext: ApiServiceFetchContext | undefined,
+) {
+  if (!fetchContext) return undefined
+
+  return {
+    kind: fetchContext.kind,
+    incognito: fetchContext.incognito === true,
+    hasCookieStoreId: Boolean(fetchContext.cookieStoreId),
+    ...(fetchContext.kind === API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB
+      ? {
+          tabId: fetchContext.tabId,
+          origin: fetchContext.origin,
+        }
+      : {}),
+  }
+}
 
 /**
  * API 服务请求的统一参数对象。

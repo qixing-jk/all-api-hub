@@ -18,7 +18,11 @@ import {
   isAccountSiteType,
   type AccountSiteType,
 } from "~/constants/siteType"
-import type { ApiServiceFetchContext } from "~/services/apiService/common/type"
+import {
+  API_SERVICE_FETCH_CONTEXT_KINDS,
+  summarizeApiServiceFetchContext,
+  type ApiServiceFetchContext,
+} from "~/services/apiService/common/type"
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 import {
   getActiveOrAllTabs,
@@ -126,7 +130,7 @@ function createBrowserContextFromTab(
   }
 
   return {
-    kind: "browser-context",
+    kind: API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
     ...(tab.incognito === true ? { incognito: true } : {}),
     ...(tab.cookieStoreId ? { cookieStoreId: tab.cookieStoreId } : {}),
   }
@@ -188,6 +192,14 @@ async function getUserDataViaAPI(
   fetchContext?: AutoDetectFetchContext,
 ): Promise<UserDataResult | null> {
   try {
+    if (fetchContext) {
+      logger.debug("API auto-detect using browser fetch context", {
+        url,
+        siteType,
+        fetchContext: summarizeApiServiceFetchContext(fetchContext),
+      })
+    }
+
     const userInfo = await getApiService(siteType).fetchUserInfo({
       baseUrl: url,
       auth: {
@@ -196,6 +208,11 @@ async function getUserDataViaAPI(
       ...(fetchContext ? { fetchContext } : {}),
     })
     if (!userInfo || !userInfo.id) {
+      logger.debug("API auto-detect returned no user id", {
+        url,
+        siteType,
+        hasFetchContext: Boolean(fetchContext),
+      })
       return null
     }
     return {
@@ -209,7 +226,12 @@ async function getUserDataViaAPI(
       ...(fetchContext ? { fetchContext } : {}),
     }
   } catch (error) {
-    logger.error("API 方式获取用户数据失败", error)
+    logger.error("API 方式获取用户数据失败", {
+      url,
+      siteType,
+      fetchContext: summarizeApiServiceFetchContext(fetchContext),
+      error: getErrorMessage(error),
+    })
     return null
   }
 }
@@ -259,6 +281,14 @@ async function getUserDataViaBackground(
 ): Promise<UserDataResult | null> {
   try {
     const requestId = `auto-detect-${Date.now()}`
+    logger.debug("Background auto-detect request prepared", {
+      url,
+      siteType,
+      requestId,
+      useIncognito: fetchContext?.incognito === true,
+      fetchContext: summarizeApiServiceFetchContext(fetchContext),
+    })
+
     const response = await sendRuntimeMessage({
       action: RuntimeActionIds.AutoDetectSite,
       url: url,
@@ -268,8 +298,27 @@ async function getUserDataViaBackground(
 
     if (!response || !response.success || !response.data) {
       // Fallback: if content script/localStorage fetch fails, attempt API-based fetch
+      logger.debug(
+        "Background auto-detect returned no user data; using API fallback",
+        {
+          url,
+          siteType,
+          requestId,
+          responseSuccess: response?.success === true,
+          hasResponseData: Boolean(response?.data),
+          fetchContext: summarizeApiServiceFetchContext(fetchContext),
+        },
+      )
       return await getUserDataViaAPI(url, siteType, fetchContext)
     }
+
+    logger.debug("Background auto-detect returned user data", {
+      url,
+      siteType,
+      requestId,
+      hasFetchContext: Boolean(fetchContext),
+      siteTypeHint: response.data.siteTypeHint ?? null,
+    })
 
     return {
       userId: response.data.userId,
@@ -280,7 +329,12 @@ async function getUserDataViaBackground(
       ...(fetchContext ? { fetchContext } : {}),
     }
   } catch (error) {
-    logger.error("Background 方式获取用户数据失败", error)
+    logger.error("Background 方式获取用户数据失败", {
+      url,
+      siteType,
+      fetchContext: summarizeApiServiceFetchContext(fetchContext),
+      error: getErrorMessage(error),
+    })
     return null
   }
 }
@@ -295,7 +349,10 @@ async function autoDetectViaBackground(
   url: string,
   fetchContext?: AutoDetectFetchContext,
 ): Promise<AutoDetectResult> {
-  logger.debug("使用 Background 方式", { url })
+  logger.debug("使用 Background 方式", {
+    url,
+    fetchContext: summarizeApiServiceFetchContext(fetchContext),
+  })
 
   // 检测站点类型，避免在未知站点上下文中使用默认 API
   const siteType = await getAccountSiteType(url)
@@ -323,12 +380,18 @@ async function getUserDataFromCurrentTab(
 ): Promise<CurrentTabUserDataResult> {
   let contentScriptUnavailable = false
   const fetchContext: AutoDetectFetchContext = {
-    kind: "current-tab",
+    kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
     tabId,
     origin: new URL(url).origin,
     ...(incognito === true ? { incognito: true } : {}),
     ...(cookieStoreId ? { cookieStoreId } : {}),
   }
+
+  logger.debug("Current-tab auto-detect fetch context prepared", {
+    url,
+    siteType,
+    fetchContext: summarizeApiServiceFetchContext(fetchContext),
+  })
 
   try {
     // 通过 content script 获取用户信息
@@ -358,10 +421,16 @@ async function getUserDataFromCurrentTab(
         logger.warn("当前标签页 content script 不可用，尝试 API 降级", {
           url,
           tabId,
+          fetchContext: summarizeApiServiceFetchContext(fetchContext),
           error: getErrorMessage(error),
         })
       } else {
-        logger.error("从当前标签页获取用户数据失败", error)
+        logger.error("从当前标签页获取用户数据失败", {
+          url,
+          tabId,
+          fetchContext: summarizeApiServiceFetchContext(fetchContext),
+          error: getErrorMessage(error),
+        })
       }
     }
 
@@ -380,7 +449,12 @@ async function getUserDataFromCurrentTab(
 
     return { userData: null, contentScriptUnavailable }
   } catch (error) {
-    logger.error("从当前标签页获取用户数据失败", error)
+    logger.error("从当前标签页获取用户数据失败", {
+      url,
+      tabId,
+      fetchContext: summarizeApiServiceFetchContext(fetchContext),
+      error: getErrorMessage(error),
+    })
     return { userData: null, contentScriptUnavailable }
   }
 }
@@ -448,6 +522,14 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
       const tabs = await getActiveOrAllTabs()
       const currentTab = tabs.find((t) => t.active) ?? tabs[0]
       browserFallbackContext = createBrowserContextFromTab(currentTab)
+      if (browserFallbackContext) {
+        logger.debug("Prepared browser-context fallback for auto-detect", {
+          url,
+          detectionUrl,
+          currentTabUrl: currentTab?.url ?? null,
+          fetchContext: summarizeApiServiceFetchContext(browserFallbackContext),
+        })
+      }
 
       if (currentTab?.url) {
         // 检查当前标签页是否是目标站点
@@ -482,7 +564,7 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
           }
 
           const currentTabContext: AutoDetectFetchContext = {
-            kind: "current-tab",
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: currentTab.id,
             origin: new URL(detectionUrl).origin,
             ...(currentTab.incognito === true ? { incognito: true } : {}),
@@ -490,6 +572,14 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
               ? { cookieStoreId: currentTab.cookieStoreId }
               : {}),
           }
+          logger.debug(
+            "Current-tab auto-detect failed; trying background with same browser context",
+            {
+              url,
+              detectionUrl,
+              fetchContext: summarizeApiServiceFetchContext(currentTabContext),
+            },
+          )
           const backgroundResult = await autoDetectViaBackgroundWithContext(
             detectionUrl,
             currentTabContext,
@@ -516,10 +606,16 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
       if (result.success) {
         return result
       }
-      logger.debug("Background 方式失败，降级到直接方式", { url })
+      logger.debug("Background 方式失败，降级到直接方式", {
+        url,
+        detectionUrl,
+        fetchContext: summarizeApiServiceFetchContext(browserFallbackContext),
+      })
     } catch (error) {
       logger.warn("Background 方式抛出异常，降级到直接方式", {
         url,
+        detectionUrl,
+        fetchContext: summarizeApiServiceFetchContext(browserFallbackContext),
         error: getErrorMessage(error),
       })
     }
@@ -554,7 +650,10 @@ async function autoDetectViaBackgroundWithContext(
   url: string,
   fetchContext: AutoDetectFetchContext,
 ): Promise<AutoDetectResult> {
-  logger.debug("使用带当前标签页上下文的 Background 方式", { url })
+  logger.debug("使用带当前标签页上下文的 Background 方式", {
+    url,
+    fetchContext: summarizeApiServiceFetchContext(fetchContext),
+  })
 
   const siteType = await getAccountSiteType(url)
   const userData = await getUserDataViaBackground(url, siteType, fetchContext)

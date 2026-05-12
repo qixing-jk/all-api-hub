@@ -2,6 +2,7 @@ import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
 import { AuthTypeEnum, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 import {
   COOKIE_AUTH_HEADER_NAME,
@@ -361,7 +362,7 @@ describe("apiService common fetchApi helpers", () => {
             userId: 123,
           },
           fetchContext: {
-            kind: "current-tab",
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
             origin: "https://example.com",
           },
@@ -421,7 +422,7 @@ describe("apiService common fetchApi helpers", () => {
             accessToken: "token",
           },
           fetchContext: {
-            kind: "current-tab",
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
             origin: "https://other.example.com",
           },
@@ -459,7 +460,7 @@ describe("apiService common fetchApi helpers", () => {
             accessToken: "token",
           },
           fetchContext: {
-            kind: "current-tab",
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
             origin: "https://example.com",
           },
@@ -519,7 +520,7 @@ describe("apiService common fetchApi helpers", () => {
             userId: 123,
           },
           fetchContext: {
-            kind: "current-tab",
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
             origin: "https://example.com",
             incognito: true,
@@ -585,7 +586,7 @@ describe("apiService common fetchApi helpers", () => {
             userId: 123,
           },
           fetchContext: {
-            kind: "browser-context",
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
             incognito: true,
             cookieStoreId: "1-incognito",
           },
@@ -627,7 +628,7 @@ describe("apiService common fetchApi helpers", () => {
             accessToken: "token",
           },
           fetchContext: {
-            kind: "current-tab",
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
             origin: "https://example.com",
           },
@@ -659,7 +660,7 @@ describe("apiService common fetchApi helpers", () => {
           accessToken: "token",
         },
         fetchContext: {
-          kind: "current-tab",
+          kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
           tabId: 456,
           origin: "https://example.com",
         },

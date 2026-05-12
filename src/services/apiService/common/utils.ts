@@ -16,6 +16,10 @@ import type {
   LogItem,
   TodayUsageData,
 } from "~/services/apiService/common/type"
+import {
+  API_SERVICE_FETCH_CONTEXT_KINDS,
+  summarizeApiServiceFetchContext,
+} from "~/services/apiService/common/type"
 import { AuthTypeEnum } from "~/types"
 import type {
   TempWindowFallbackContext,
@@ -265,7 +269,8 @@ function isCurrentTabContentFetchEligible(params: {
   if (responseType !== "json" && responseType !== "text") return false
 
   const fetchContext = params.request.fetchContext
-  if (fetchContext?.kind !== "current-tab") return false
+  if (fetchContext?.kind !== API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB)
+    return false
   if (typeof fetchContext.tabId !== "number") return false
 
   try {
@@ -289,7 +294,7 @@ async function fetchViaCurrentTabContent<T>(context: {
   responseType: TempWindowResponseType
 }): Promise<T | ApiResponse<T>> {
   const fetchContext = context.request.fetchContext
-  if (fetchContext?.kind !== "current-tab") {
+  if (fetchContext?.kind !== API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB) {
     throw new ApiError(
       "Current-tab content fetch is not available",
       undefined,
@@ -602,6 +607,17 @@ const _fetchApi = async <T>(
     useIncognito: request.fetchContext?.incognito === true,
     cookieStoreId: request.fetchContext?.cookieStoreId,
     forceTempWindow: request.fetchContext?.incognito === true,
+  }
+
+  if (context.forceTempWindow) {
+    logger.info(
+      "Forcing temp-window fetch for browser-profile auto-detect context",
+      {
+        endpoint: options.endpoint,
+        url,
+        fetchContext: summarizeApiServiceFetchContext(request.fetchContext),
+      },
+    )
   }
 
   const siteRequestLimitKey = resolveSiteRequestLimitKey(baseUrl)
