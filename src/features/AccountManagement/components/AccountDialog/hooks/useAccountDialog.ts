@@ -1067,7 +1067,7 @@ export function useAccountDialog({
           resultData.fetchContext &&
           typeof resultData.fetchContext.cookieStoreId === "string" &&
           resultData.fetchContext.cookieStoreId.trim()
-            ? resultData.fetchContext.cookieStoreId
+            ? resultData.fetchContext.cookieStoreId.trim()
             : null
 
         const detectedCheckIn: CheckInConfig = {

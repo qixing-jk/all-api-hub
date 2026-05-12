@@ -364,6 +364,9 @@ async function executeWithCurrentTabContentPreference<T>(
       url: context.url,
       error: getErrorMessage(error),
     })
+    // Keep current-tab fallback behavior aligned with temp-window fallback for
+    // now. If mutating-request replay becomes a real issue, handle it in the
+    // shared transport-fallback layer instead of special-casing this path.
     return await fallback()
   }
 }
@@ -606,7 +609,9 @@ const _fetchApi = async <T>(
       request.auth?.cookie ?? accountInfo?.cookieAuth?.sessionCookie,
     useIncognito: request.fetchContext?.incognito === true,
     cookieStoreId: request.fetchContext?.cookieStoreId,
-    forceTempWindow: request.fetchContext?.incognito === true,
+    forceTempWindow:
+      request.fetchContext?.incognito === true ||
+      Boolean(request.fetchContext?.cookieStoreId),
   }
 
   if (context.forceTempWindow) {

@@ -446,6 +446,7 @@ describe("autoDetectSmart", () => {
       requestId: expect.any(String),
       url: "https://example.com/console",
       useIncognito: true,
+      cookieStoreId: "1-incognito",
     })
   })
 
@@ -492,6 +493,7 @@ describe("autoDetectSmart", () => {
       requestId: expect.any(String),
       url: "https://example.com/console",
       useIncognito: true,
+      cookieStoreId: "1-incognito",
     })
   })
 

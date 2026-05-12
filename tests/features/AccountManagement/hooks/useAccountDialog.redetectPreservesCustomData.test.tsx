@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { DIALOG_MODES } from "~/constants/dialogModes"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { accountStorage } from "~/services/accounts/accountStorage"
@@ -498,7 +499,7 @@ describe("useAccountDialog re-detect preservation", () => {
           tabId: 101,
           origin: "https://cookie.example.com",
           incognito: true,
-          cookieStoreId: "1-incognito",
+          cookieStoreId: " 1-incognito ",
         },
       },
     })
@@ -534,7 +535,7 @@ describe("useAccountDialog re-detect preservation", () => {
 
     expect(sendRuntimeMessage).toHaveBeenCalledWith(
       expect.objectContaining({
-        action: expect.any(String),
+        action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
         url: "https://cookie.example.com",
         cookieStoreId: "1-incognito",
       }),

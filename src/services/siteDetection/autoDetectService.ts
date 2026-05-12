@@ -294,6 +294,9 @@ async function getUserDataViaBackground(
       url: url,
       requestId: requestId,
       ...(fetchContext?.incognito === true ? { useIncognito: true } : {}),
+      ...(fetchContext?.cookieStoreId
+        ? { cookieStoreId: fetchContext.cookieStoreId }
+        : {}),
     })
 
     if (!response || !response.success || !response.data) {

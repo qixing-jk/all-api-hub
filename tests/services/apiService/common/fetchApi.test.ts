@@ -341,7 +341,7 @@ describe("apiService common fetchApi helpers", () => {
     expect(capturedSessionOverride).toBe("session=abc123")
   })
 
-  it("fetchApiData prefers current-tab content fetch when the auto-detect context is same-origin", async () => {
+  it("fetchApiData prefers current-tab content fetch for same-origin read requests", async () => {
     mockSendTabMessageWithRetry.mockResolvedValueOnce({
       success: true,
       status: 200,
@@ -370,8 +370,7 @@ describe("apiService common fetchApi helpers", () => {
         {
           endpoint: ENDPOINT,
           options: {
-            method: "POST",
-            body: JSON.stringify({ probe: true }),
+            method: "GET",
             headers: {
               "X-Probe": "auto-detect",
             },
@@ -391,13 +390,61 @@ describe("apiService common fetchApi helpers", () => {
     )
     expect(mockSendTabMessageWithRetry.mock.calls[0][1].fetchOptions).toEqual(
       expect.objectContaining({
-        method: "POST",
+        method: "GET",
         credentials: "include",
-        body: JSON.stringify({ probe: true }),
         headers: expect.objectContaining({
           Cookie: "session=abc123",
           "X-Probe": "auto-detect",
         }),
+      }),
+    )
+  })
+
+  it("fetchApiData can use current-tab content fetch for mutating requests", async () => {
+    mockSendTabMessageWithRetry.mockResolvedValueOnce({
+      success: true,
+      data: { success: true, data: { ok: true }, message: "content" },
+    })
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: {
+            authType: AuthTypeEnum.Cookie,
+            cookie: "session=abc123",
+            userId: 123,
+          },
+          fetchContext: {
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: 456,
+            origin: "https://example.com",
+          },
+        },
+        {
+          endpoint: ENDPOINT,
+          options: {
+            method: "POST",
+            body: JSON.stringify({ probe: true }),
+          },
+        },
+      ),
+    ).resolves.toEqual({ ok: true })
+
+    expect(mockSendTabMessageWithRetry).toHaveBeenCalledTimes(1)
+    expect(mockSendTabMessageWithRetry).toHaveBeenCalledWith(
+      456,
+      expect.objectContaining({
+        action: RuntimeActionIds.ContentPerformTempWindowFetch,
+        fetchUrl: API_URL,
+        responseType: "json",
+      }),
+    )
+    expect(mockSendTabMessageWithRetry.mock.calls[0][1].fetchOptions).toEqual(
+      expect.objectContaining({
+        method: "POST",
+        credentials: "include",
+        body: JSON.stringify({ probe: true }),
       }),
     )
   })
@@ -604,6 +651,69 @@ describe("apiService common fetchApi helpers", () => {
         fetchUrl: API_URL,
         useIncognito: true,
         cookieStoreId: "1-incognito",
+      }),
+    )
+  })
+
+  it("fetchApiData skips normal fetch when a browser-context cookie store is present", async () => {
+    mockGetPreferences.mockResolvedValueOnce({
+      tempWindowFallback: {
+        enabled: true,
+        useInPopup: true,
+        useInSidePanel: true,
+        useInOptions: true,
+        useForAutoRefresh: true,
+        useForManualRefresh: true,
+      },
+    })
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: {
+        success: true,
+        data: { ok: true },
+        message: "temp",
+      },
+    })
+
+    let normalFetchCount = 0
+    server.use(
+      http.get(API_URL, () => {
+        normalFetchCount += 1
+        return HttpResponse.json({
+          success: true,
+          data: { ok: false },
+          message: "normal",
+        })
+      }),
+    )
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: {
+            authType: AuthTypeEnum.Cookie,
+            cookie: "session=abc123",
+            userId: 123,
+          },
+          fetchContext: {
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+            cookieStoreId: "firefox-container-2",
+          },
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).resolves.toEqual({ ok: true })
+
+    expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
+    expect(normalFetchCount).toBe(0)
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.TempWindowFetch,
+        originUrl: BASE_URL,
+        fetchUrl: API_URL,
+        cookieStoreId: "firefox-container-2",
       }),
     )
   })
