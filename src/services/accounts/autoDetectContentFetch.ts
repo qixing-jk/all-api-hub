@@ -87,7 +87,7 @@ const unwrapApiEnvelope = <T>(
 /**
  * Fetches New API compatible data through the matched current tab content script.
  */
-export async function fetchApiDataViaAutoDetectContent<T>({
+async function fetchApiDataViaAutoDetectContent<T>({
   tabId,
   baseUrl,
   userId,

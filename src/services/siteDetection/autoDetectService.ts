@@ -44,7 +44,7 @@ function normalizeSiteTypeHint(value: unknown): AccountSiteType | undefined {
   return isAccountSiteType(value) ? value : undefined
 }
 
-export type AutoDetectFetchContext = {
+type AutoDetectFetchContext = {
   kind: "current-tab"
   tabId: number
 }
@@ -286,6 +286,7 @@ async function autoDetectViaBackground(url: string): Promise<AutoDetectResult> {
  * Fetch user data from the active tab using content script, with API fallback.
  * @param url Target site URL.
  * @param siteType Detected site type used to select an API implementation.
+ * @param tabId The ID of the tab to query for user data via content script messaging.
  * @returns User data or null when not available.
  */
 async function getUserDataFromCurrentTab(
