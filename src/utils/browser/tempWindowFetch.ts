@@ -470,6 +470,10 @@ export async function executeWithTempWindowFallback<T>(
   context: TempWindowFallbackContext,
   primaryRequest: () => Promise<T | ApiResponse<T>>,
 ): Promise<T | ApiResponse<T>> {
+  if (context.forceTempWindow) {
+    return await fetchViaTempWindow<T>(context)
+  }
+
   try {
     return await primaryRequest()
   } catch (error) {
@@ -663,6 +667,7 @@ async function fetchViaTempWindow<T>(
     authType: context.authType,
     cookieAuthSessionCookie: context.cookieAuthSessionCookie,
     useIncognito: context.useIncognito,
+    cookieStoreId: context.cookieStoreId,
   }
 
   logger.info("Using temp window fetch fallback", {

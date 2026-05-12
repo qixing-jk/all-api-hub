@@ -383,6 +383,9 @@ export async function autoDetectAccount(
         },
         siteType: siteType,
         ...(isSub2Api && sub2apiAuth ? { sub2apiAuth } : {}),
+        ...(currentTabAutoDetectContext
+          ? { fetchContext: currentTabAutoDetectContext }
+          : {}),
       },
     }
   } catch (error) {

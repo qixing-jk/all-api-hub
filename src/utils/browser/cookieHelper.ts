@@ -141,7 +141,7 @@ export async function checkCookieInterceptorRequirement(): Promise<boolean> {
  */
 export async function getCookieHeaderForUrl(
   url: string,
-  options: { includeSession?: boolean } = {},
+  options: { includeSession?: boolean; storeId?: string } = {},
 ): Promise<string> {
   const result = await getCookieHeaderForUrlResult(url, options)
   return result.header
@@ -153,7 +153,7 @@ export async function getCookieHeaderForUrl(
  */
 export async function getCookieHeaderForUrlResult(
   url: string,
-  options: { includeSession?: boolean } = {},
+  options: { includeSession?: boolean; storeId?: string } = {},
 ): Promise<CookieHeaderReadResult> {
   const includeSession = options.includeSession ?? true
 
@@ -162,6 +162,7 @@ export async function getCookieHeaderForUrlResult(
     const cookies = await browser.cookies.getAll({
       url,
       partitionKey: {},
+      ...(options.storeId ? { storeId: options.storeId } : {}),
     })
 
     // 过滤并格式化

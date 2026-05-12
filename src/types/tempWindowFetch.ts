@@ -19,6 +19,8 @@ export interface TempWindowFetchParams {
   cookieAuthSessionCookie?: string
   /** Open the temporary context in an incognito/private window. */
   useIncognito?: boolean
+  /** Browser cookie store to use when reading cookies for injected requests. */
+  cookieStoreId?: string
 }
 
 export type TempWindowTurnstileStatus =
@@ -95,4 +97,8 @@ export interface TempWindowFallbackContext {
   cookieAuthSessionCookie?: string
   /** Whether the temp-window fallback should use an incognito/private context. */
   useIncognito?: boolean
+  /** Browser cookie store to use when reading cookies for injected requests. */
+  cookieStoreId?: string
+  /** Skip the primary request and execute directly in the temp context. */
+  forceTempWindow?: boolean
 }

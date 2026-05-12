@@ -144,6 +144,7 @@ async function prepareTempContextFetchOptions(params: {
   resolvedAuthType?: AuthTypeEnum
   accountId?: string
   cookieAuthSessionCookie?: string
+  cookieStoreId?: string
   addFirefoxAuthModeHeader?: boolean
 }): Promise<{
   ruleIds: number[]
@@ -159,6 +160,7 @@ async function prepareTempContextFetchOptions(params: {
   if (!isProtectionBypassFirefoxEnv() && rawOptions.credentials === "omit") {
     const cookieHeader = await getCookieHeaderForUrl(url, {
       includeSession: false,
+      ...(params.cookieStoreId ? { storeId: params.cookieStoreId } : {}),
     })
 
     if (cookieHeader) {
@@ -192,6 +194,7 @@ async function prepareTempContextFetchOptions(params: {
     if (sessionCookie && sessionCookie.trim()) {
       const wafCookieHeader = await getCookieHeaderForUrl(url, {
         includeSession: false,
+        ...(params.cookieStoreId ? { storeId: params.cookieStoreId } : {}),
       })
       const mergedCookieHeader = mergeCookieHeaders(
         wafCookieHeader,
@@ -758,11 +761,24 @@ export async function handleAutoDetectSite(
   request: any,
   sendResponse: (response?: any) => void,
 ) {
-  const { url, requestId } = request
+  const { url, requestId, useIncognito } = request
 
   try {
+    if (useIncognito) {
+      const allowed = await isAllowedIncognitoAccess()
+      if (allowed === false) {
+        sendResponse({
+          success: false,
+          error: t("messages:background.incognitoAccessRequired"),
+        })
+        return
+      }
+    }
+
     const [userData, siteType] = await Promise.all([
-      getSiteDataFromTab(url, requestId),
+      getSiteDataFromTab(url, requestId, undefined, {
+        incognito: Boolean(useIncognito),
+      }),
       getAccountSiteType(url),
     ])
 
@@ -806,6 +822,7 @@ export async function handleTempWindowFetch(
     authType,
     cookieAuthSessionCookie,
     useIncognito,
+    cookieStoreId,
   } = request
 
   if (!originUrl || !fetchUrl) {
@@ -859,6 +876,7 @@ export async function handleTempWindowFetch(
       resolvedAuthType,
       accountId,
       cookieAuthSessionCookie,
+      cookieStoreId,
     })
     for (const ruleId of prepared.ruleIds) {
       ruleIds.add(ruleId)
@@ -927,6 +945,7 @@ export async function handleTempWindowTurnstileFetch(
     accountId,
     authType,
     cookieAuthSessionCookie,
+    cookieStoreId,
     turnstileTimeoutMs,
     turnstileParamName,
     turnstilePreTrigger,
@@ -1043,6 +1062,7 @@ export async function handleTempWindowTurnstileFetch(
       resolvedAuthType,
       accountId,
       cookieAuthSessionCookie,
+      cookieStoreId,
       addFirefoxAuthModeHeader: true,
     })
     for (const ruleId of prepared.ruleIds) {
@@ -1099,9 +1119,15 @@ async function getSiteDataFromTab(
   url: string,
   requestId: string,
   suppressMinimize?: boolean,
+  options: { incognito?: boolean } = {},
 ) {
   try {
-    const context = await acquireTempContext(url, requestId, suppressMinimize)
+    const context = await acquireTempContext(
+      url,
+      requestId,
+      suppressMinimize,
+      options,
+    )
     const { tabId } = context
 
     // 通过 content script 获取用户信息

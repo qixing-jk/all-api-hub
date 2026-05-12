@@ -331,6 +331,7 @@ export type ApiServiceFetchContext = {
   tabId: number
   origin: string
   incognito?: boolean
+  cookieStoreId?: string
 }
 
 /**

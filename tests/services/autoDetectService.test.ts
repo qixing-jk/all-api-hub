@@ -120,6 +120,7 @@ describe("autoDetectSmart", () => {
         active: true,
         url: "https://example.com/dashboard",
         incognito: true,
+        cookieStoreId: "1-incognito",
       },
     ])
     browserAny.tabs.sendMessage.mockResolvedValue({
@@ -145,6 +146,7 @@ describe("autoDetectSmart", () => {
           tabId: 101,
           origin: "https://example.com",
           incognito: true,
+          cookieStoreId: "1-incognito",
         },
       },
     })
@@ -153,6 +155,59 @@ describe("autoDetectSmart", () => {
       url: "https://example.com/console",
     })
     expect(mockGetActiveTabs).not.toHaveBeenCalled()
+  })
+
+  it("keeps incognito current-tab context on API fallback when content user data is missing", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 102,
+        active: true,
+        url: "https://example.com/dashboard",
+        incognito: true,
+        cookieStoreId: "1-incognito",
+      },
+    ])
+    browserAny.tabs.sendMessage.mockResolvedValue({
+      success: false,
+      error: "no local storage user",
+    })
+    mockFetchUserInfo.mockResolvedValue({
+      id: 13,
+      username: "api-incognito-user",
+    })
+
+    const result = await autoDetectSmart("https://example.com/console")
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        userId: 13,
+        user: { id: 13, username: "api-incognito-user" },
+        siteType: SITE_TYPES.NEW_API,
+        accessToken: undefined,
+        sub2apiAuth: undefined,
+        fetchContext: {
+          kind: "current-tab",
+          tabId: 102,
+          origin: "https://example.com",
+          incognito: true,
+          cookieStoreId: "1-incognito",
+        },
+      },
+    })
+    expect(mockFetchUserInfo).toHaveBeenCalledWith({
+      baseUrl: "https://example.com/console",
+      auth: {
+        authType: expect.any(String),
+      },
+      fetchContext: {
+        kind: "current-tab",
+        tabId: 102,
+        origin: "https://example.com",
+        incognito: true,
+        cookieStoreId: "1-incognito",
+      },
+    })
   })
 
   it("uses the matched current tab id instead of re-querying active tabs", async () => {
@@ -351,6 +406,52 @@ describe("autoDetectSmart", () => {
     })
     expect(result.data).not.toHaveProperty("fetchContext")
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
+  })
+
+  it("asks background auto-detect to use incognito when a matching current tab cannot provide content data", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 103,
+        active: true,
+        url: "https://example.com/dashboard",
+        incognito: true,
+        cookieStoreId: "1-incognito",
+      },
+    ])
+    browserAny.tabs.sendMessage.mockResolvedValue({
+      success: false,
+      error: "no local storage user",
+    })
+    mockFetchUserInfo.mockResolvedValue(null)
+    mockSendRuntimeMessage.mockResolvedValue({
+      success: true,
+      data: {
+        userId: 14,
+        user: { id: 14, username: "background-incognito-user" },
+        siteTypeHint: SITE_TYPES.NEW_API,
+      },
+    })
+
+    const result = await autoDetectSmart("https://example.com/console")
+
+    expect(result.success).toBe(true)
+    expect(result.data).toMatchObject({
+      userId: 14,
+      siteType: SITE_TYPES.NEW_API,
+      fetchContext: {
+        kind: "current-tab",
+        tabId: 103,
+        origin: "https://example.com",
+        incognito: true,
+        cookieStoreId: "1-incognito",
+      },
+    })
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+      action: expect.any(String),
+      requestId: expect.any(String),
+      url: "https://example.com/console",
+      useIncognito: true,
+    })
   })
 
   it("uses API fallback when background auto-detect cannot return user data", async () => {

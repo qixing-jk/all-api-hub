@@ -73,6 +73,24 @@ describe("cookieHelper", () => {
     expect(header).toBe("cf_clearance=def")
   })
 
+  it("reads cookies from the requested browser cookie store", async () => {
+    const getAll = vi
+      .fn()
+      .mockResolvedValue([{ name: "session", value: "incognito" } as any])
+    ;(globalThis as any).browser.cookies.getAll = getAll
+
+    const header = await getCookieHeaderForUrl("https://example.com", {
+      storeId: "1-incognito",
+    })
+
+    expect(header).toBe("session=incognito")
+    expect(getAll).toHaveBeenCalledWith({
+      url: "https://example.com",
+      partitionKey: {},
+      storeId: "1-incognito",
+    })
+  })
+
   it("returns an empty string when cookies.getAll fails", async () => {
     const getAll = vi.fn().mockRejectedValue(new Error("boom"))
     ;(globalThis as any).browser.cookies.getAll = getAll

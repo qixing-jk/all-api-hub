@@ -57,6 +57,12 @@ const currentTabFetchContext = (origin: string) => ({
   origin,
 })
 
+const incognitoCurrentTabFetchContext = (origin: string) => ({
+  ...currentTabFetchContext(origin),
+  incognito: true,
+  cookieStoreId: "1-incognito",
+})
+
 describe("accountOperations autoDetectAccount", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -199,6 +205,38 @@ describe("accountOperations autoDetectAccount", () => {
       price: 7.4,
       checkin_enabled: true,
     })
+  })
+
+  it("returns current-tab fetch context for dialog cookie-store follow-up work", async () => {
+    const fetchContext = incognitoCurrentTabFetchContext(
+      "https://status.example.com",
+    )
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: 7,
+        siteType: SITE_TYPES.NEW_API,
+        fetchContext,
+      },
+    })
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "content-status-user",
+      access_token: "content-status-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Content Status Portal",
+      checkin_enabled: true,
+    })
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await autoDetectAccount(
+      "https://status.example.com",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.data?.fetchContext).toEqual(fetchContext)
   })
 
   it("uses service-layer check-in support when current-tab site status has no check-in flag", async () => {

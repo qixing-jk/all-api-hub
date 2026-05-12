@@ -830,6 +830,73 @@ describe("tempWindowPool window fallback", () => {
     expect(removeTabOrWindowMock).toHaveBeenCalledWith(508)
   })
 
+  it("uses an incognito temp context for incognito auto-detect requests", async () => {
+    tempContextMode = "window"
+    createWindowMock.mockResolvedValueOnce({ id: 608, tabs: [{ id: 609 }] })
+    tabsQueryMock.mockResolvedValueOnce([{ id: 609 }])
+
+    const { handleAutoDetectSite } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleAutoDetectSite(
+      {
+        url: "https://example.com/account",
+        requestId: "req-auto-detect-incognito",
+        useIncognito: true,
+      },
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(isAllowedIncognitoAccessMock).toHaveBeenCalled()
+    expect(createWindowMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "https://example.com/account",
+        incognito: true,
+      }),
+    )
+    expect(createTabMock).not.toHaveBeenCalled()
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        siteType: "new-api",
+        userId: "user-1",
+        user: "alice",
+        accessToken: "access-token",
+        siteTypeHint: "new-api",
+      },
+    })
+  })
+
+  it("rejects incognito auto-detect requests when incognito access is unavailable", async () => {
+    isAllowedIncognitoAccessMock.mockResolvedValueOnce(false)
+
+    const { handleAutoDetectSite } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    await handleAutoDetectSite(
+      {
+        url: "https://example.com/account",
+        requestId: "req-auto-detect-incognito-denied",
+        useIncognito: true,
+      },
+      sendResponse,
+    )
+
+    expect(createWindowMock).not.toHaveBeenCalled()
+    expect(createTabMock).not.toHaveBeenCalled()
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "messages:background.incognitoAccessRequired",
+    })
+  })
+
   it("returns a safe null result when site detection succeeds but no user data can be read", async () => {
     tempContextMode = "tab"
     createTabMock.mockResolvedValueOnce({ id: 509 })
@@ -2027,6 +2094,56 @@ describe("tempWindowPool window fallback", () => {
       }),
     )
     expect(removeTempWindowCookieRuleMock).toHaveBeenCalledWith(1_000_606)
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        success: true,
+        message: "",
+        data: "ok",
+      },
+    })
+  })
+
+  it("reads WAF cookies from the requested cookie store for temp fetches", async () => {
+    tempContextMode = "tab"
+    createTabMock.mockResolvedValueOnce({ id: 616 })
+    getCookieHeaderForUrlMock.mockResolvedValueOnce("cf_clearance=incognito")
+    applyTempWindowCookieRuleMock.mockResolvedValueOnce(1_000_616)
+
+    const { handleTempWindowFetch } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleTempWindowFetch(
+      {
+        originUrl: "https://example.com",
+        fetchUrl: "https://example.com/api/token-auth-cookie-store",
+        fetchOptions: {
+          method: "GET",
+          credentials: "omit",
+        },
+        authType: AuthTypeEnum.AccessToken,
+        requestId: "req-token-auth-cookie-store",
+        cookieStoreId: "1-incognito",
+      },
+      sendResponse,
+    )
+    await vi.advanceTimersByTimeAsync(1000)
+    await request
+
+    expect(getCookieHeaderForUrlMock).toHaveBeenCalledWith(
+      "https://example.com/api/token-auth-cookie-store",
+      {
+        includeSession: false,
+        storeId: "1-incognito",
+      },
+    )
+    expect(applyTempWindowCookieRuleMock).toHaveBeenCalledWith({
+      tabId: 616,
+      url: "https://example.com/api/token-auth-cookie-store",
+      cookieHeader: "cf_clearance=incognito",
+    })
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
       data: {

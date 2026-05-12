@@ -40,9 +40,12 @@ const { mockHasCookieInterceptorPermissions, mockGetPreferences } = vi.hoisted(
   }),
 )
 
-const { mockSendTabMessageWithRetry } = vi.hoisted(() => ({
-  mockSendTabMessageWithRetry: vi.fn(),
-}))
+const { mockSendTabMessageWithRetry, mockSendRuntimeMessage } = vi.hoisted(
+  () => ({
+    mockSendTabMessageWithRetry: vi.fn(),
+    mockSendRuntimeMessage: vi.fn(),
+  }),
+)
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
@@ -50,6 +53,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   return {
     ...actual,
     sendTabMessageWithRetry: mockSendTabMessageWithRetry,
+    sendRuntimeMessage: mockSendRuntimeMessage,
   }
 })
 
@@ -96,6 +100,13 @@ vi.mock("~/utils/browser/protectionBypass", () => ({
   isProtectionBypassFirefoxEnv: vi.fn(() => true),
 }))
 
+vi.mock("~/utils/browser/index", () => ({
+  OPTIONS_PAGE_URL: "chrome-extension://test/options.html",
+  isExtensionBackground: vi.fn(() => false),
+  isExtensionPopup: vi.fn(() => false),
+  isExtensionSidePanel: vi.fn(() => false),
+}))
+
 const BASE_URL = "https://example.com/base/"
 const ENDPOINT = "/api/test"
 const API_URL = "https://example.com/base/api/test"
@@ -122,6 +133,8 @@ describe("apiService common fetchApi helpers", () => {
     vi.restoreAllMocks()
     server.resetHandlers()
 
+    mockHasCookieInterceptorPermissions.mockReset()
+    mockGetPreferences.mockReset()
     mockWithSiteApiRequestLimit.mockImplementation(
       async (_key: string, task: () => Promise<unknown>) => await task(),
     )
@@ -137,6 +150,8 @@ describe("apiService common fetchApi helpers", () => {
       },
     })
     mockSendTabMessageWithRetry.mockReset()
+    mockSendRuntimeMessage.mockReset()
+    mockSendRuntimeMessage.mockResolvedValue({ success: true })
   })
 
   afterEach(() => {
@@ -454,6 +469,77 @@ describe("apiService common fetchApi helpers", () => {
     ).resolves.toEqual({ ok: true })
 
     expect(mockSendTabMessageWithRetry).toHaveBeenCalledTimes(1)
+  })
+
+  it("fetchApiData skips normal fetch for incognito current-tab fallback and uses the temp context", async () => {
+    mockGetPreferences.mockResolvedValueOnce({
+      tempWindowFallback: {
+        enabled: true,
+        useInPopup: true,
+        useInSidePanel: true,
+        useInOptions: true,
+        useForAutoRefresh: true,
+        useForManualRefresh: true,
+      },
+    })
+    mockSendTabMessageWithRetry.mockResolvedValueOnce({
+      success: false,
+      status: 503,
+      error: "content fetch failed",
+    })
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: {
+        success: true,
+        data: { ok: true },
+        message: "temp",
+      },
+    })
+
+    let normalFetchCount = 0
+    server.use(
+      http.get(API_URL, () => {
+        normalFetchCount += 1
+        return HttpResponse.json({
+          success: true,
+          data: { ok: false },
+          message: "normal",
+        })
+      }),
+    )
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: {
+            authType: AuthTypeEnum.Cookie,
+            cookie: "session=abc123",
+            userId: 123,
+          },
+          fetchContext: {
+            kind: "current-tab",
+            tabId: 456,
+            origin: "https://example.com",
+            incognito: true,
+            cookieStoreId: "1-incognito",
+          },
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).resolves.toEqual({ ok: true })
+
+    expect(normalFetchCount).toBe(0)
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.TempWindowFetch,
+        originUrl: BASE_URL,
+        fetchUrl: API_URL,
+        useIncognito: true,
+        cookieStoreId: "1-incognito",
+      }),
+    )
   })
 
   it("fetchApiData honors current-tab transport opt-out", async () => {
@@ -898,6 +984,16 @@ describe("apiService common fetchApi helpers", () => {
   })
 
   it("fetchApiData should tag eligible errors when temp-window fallback is disabled", async () => {
+    mockGetPreferences.mockResolvedValueOnce({
+      tempWindowFallback: {
+        enabled: false,
+        useInPopup: true,
+        useInSidePanel: true,
+        useInOptions: true,
+        useForAutoRefresh: true,
+        useForManualRefresh: true,
+      },
+    })
     server.use(
       http.get(API_URL, () => {
         return HttpResponse.json({}, { status: 403 })

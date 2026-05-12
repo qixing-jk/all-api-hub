@@ -492,6 +492,13 @@ describe("useAccountDialog re-detect preservation", () => {
         userId: "12",
         siteName: "Detected Cookie Site",
         siteType: "new-api",
+        fetchContext: {
+          kind: "current-tab",
+          tabId: 101,
+          origin: "https://cookie.example.com",
+          incognito: true,
+          cookieStoreId: "1-incognito",
+        },
       },
     })
 
@@ -526,7 +533,9 @@ describe("useAccountDialog re-detect preservation", () => {
 
     expect(sendRuntimeMessage).toHaveBeenCalledWith(
       expect.objectContaining({
+        action: expect.any(String),
         url: "https://cookie.example.com",
+        cookieStoreId: "1-incognito",
       }),
     )
     expect(result.current.state.cookieAuthSessionCookie).toBe("session=abc123")

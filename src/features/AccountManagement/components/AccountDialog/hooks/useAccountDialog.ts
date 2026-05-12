@@ -496,6 +496,7 @@ export function useAccountDialog({
   const detectSlowHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
+  const detectedCookieStoreIdRef = useRef<string | null>(null)
 
   const { openWithAccount: openChannelDialog, openSub2ApiTokenCreationDialog } =
     useChannelDialog()
@@ -545,6 +546,7 @@ export function useAccountDialog({
 
   const resetForm = useCallback(() => {
     newAccountRef.current = null
+    detectedCookieStoreIdRef.current = null
     duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
     hasConsumedAutoFillCurrentSiteUrlRef.current = false
     setUrl("")
@@ -829,6 +831,9 @@ export function useAccountDialog({
       const response = await sendRuntimeMessage<CookieImportResponse>({
         action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
         url: url.trim(),
+        ...(detectedCookieStoreIdRef.current
+          ? { cookieStoreId: detectedCookieStoreIdRef.current }
+          : {}),
       })
       if (response?.success && response.data) {
         setCookieAuthSessionCookie(response.data)
@@ -1045,6 +1050,7 @@ export function useAccountDialog({
 
     setIsDetecting(true)
     setDetectionError(null)
+    detectedCookieStoreIdRef.current = null
 
     try {
       const result = await autoDetectAccount(url.trim(), authType)
@@ -1057,6 +1063,13 @@ export function useAccountDialog({
 
       const resultData = result.data
       if (resultData) {
+        detectedCookieStoreIdRef.current =
+          resultData.fetchContext?.kind === "current-tab" &&
+          typeof resultData.fetchContext.cookieStoreId === "string" &&
+          resultData.fetchContext.cookieStoreId.trim()
+            ? resultData.fetchContext.cookieStoreId
+            : null
+
         const detectedCheckIn: CheckInConfig = {
           ...(resultData.checkIn ?? {}),
           enableDetection: resultData.checkIn?.enableDetection ?? false,
@@ -1119,6 +1132,9 @@ export function useAccountDialog({
               action:
                 RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
               url: url.trim(),
+              ...(detectedCookieStoreIdRef.current
+                ? { cookieStoreId: detectedCookieStoreIdRef.current }
+                : {}),
             })
             const header =
               typeof cookieResponse?.data === "string"
@@ -1879,6 +1895,7 @@ export function useAccountDialog({
 
   const handleUrlChange = (newUrl: string) => {
     duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
+    detectedCookieStoreIdRef.current = null
     hasConsumedAutoFillCurrentSiteUrlRef.current = true
     if (newUrl.trim()) {
       try {

@@ -175,8 +175,14 @@ export function setupRuntimeMessageListeners() {
               return
             }
 
+            const cookieStoreId =
+              typeof request.cookieStoreId === "string" &&
+              request.cookieStoreId.trim()
+                ? request.cookieStoreId
+                : undefined
             const result = await getCookieHeaderForUrlResult(request.url, {
               includeSession: true,
+              ...(cookieStoreId ? { storeId: cookieStoreId } : {}),
             })
             const sessionOnly = extractSessionCookieHeader(result.header)
             if (sessionOnly) {
