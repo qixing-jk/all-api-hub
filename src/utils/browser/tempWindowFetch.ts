@@ -670,7 +670,7 @@ async function fetchViaTempWindow<T>(
     cookieStoreId: context.cookieStoreId,
   }
 
-  logger.info("Using temp window fetch fallback", {
+  logger.debug("Using temp window fetch fallback", {
     endpoint: context.endpoint,
     url: context.url,
   })

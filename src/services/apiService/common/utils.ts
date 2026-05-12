@@ -359,7 +359,7 @@ async function executeWithCurrentTabContentPreference<T>(
   try {
     return await fetchViaCurrentTabContent<T>(context)
   } catch (error) {
-    logger.warn("Current-tab content fetch failed; falling back", {
+    logger.debug("Current-tab content fetch failed; falling back", {
       endpoint: context.endpoint,
       url: context.url,
       error: getErrorMessage(error),
@@ -610,7 +610,7 @@ const _fetchApi = async <T>(
   }
 
   if (context.forceTempWindow) {
-    logger.info(
+    logger.debug(
       "Forcing temp-window fetch for browser-profile auto-detect context",
       {
         endpoint: options.endpoint,
