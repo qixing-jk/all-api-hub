@@ -511,6 +511,64 @@ describe("accountOperations autoDetectAccount", () => {
     expect(mockFetchSiteStatus).not.toHaveBeenCalled()
   })
 
+  it("uses service-layer check-in support for current-tab AnyRouter auto-detect completion", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: 7,
+        siteType: SITE_TYPES.ANYROUTER,
+        fetchContext: {
+          kind: "current-tab",
+          tabId: 123,
+        },
+      },
+    })
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "anyrouter-user",
+      access_token: "anyrouter-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "AnyRouter Portal",
+    })
+    mockFetchSupportCheckIn.mockResolvedValueOnce(true)
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await autoDetectAccount(
+      "https://anyrouter.example.com",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.data).toMatchObject({
+      username: "anyrouter-user",
+      accessToken: "anyrouter-token",
+      siteType: SITE_TYPES.ANYROUTER,
+      checkIn: expect.objectContaining({
+        enableDetection: true,
+      }),
+    })
+    expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      baseUrl: "https://anyrouter.example.com",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+        userId: 7,
+      },
+    })
+    expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
+      baseUrl: "https://anyrouter.example.com",
+      auth: {
+        authType: AuthTypeEnum.None,
+      },
+    })
+    expect(mockFetchUserInfoViaAutoDetectContent).not.toHaveBeenCalled()
+    expect(
+      mockGetOrCreateAccessTokenViaAutoDetectContent,
+    ).not.toHaveBeenCalled()
+    expect(mockFetchSiteStatusViaAutoDetectContent).not.toHaveBeenCalled()
+    expect(mockFetchSupportCheckInViaAutoDetectContent).not.toHaveBeenCalled()
+  })
+
   it("uses the AIHubMix access token returned by auto-detect without an options-page cookie fallback", async () => {
     mockSendRuntimeMessage.mockResolvedValueOnce(null)
     mockAutoDetectSmart.mockResolvedValueOnce({
