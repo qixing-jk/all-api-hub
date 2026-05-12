@@ -2,6 +2,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
+  fetchSiteStatusViaAutoDetectContent,
+  fetchSupportCheckInViaAutoDetectContent,
   fetchUserInfoViaAutoDetectContent,
   getOrCreateAccessTokenViaAutoDetectContent,
 } from "~/services/accounts/autoDetectContentFetch"
@@ -118,6 +120,74 @@ describe("autoDetectContentFetch", () => {
         fetchUrl: "https://ai.example.com/api/user/token",
       }),
     )
+  })
+
+  it("fetches site status through the current tab", async () => {
+    browserAny.tabs.sendMessage.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: {
+        success: true,
+        message: "",
+        data: {
+          system_name: "Content Status Portal",
+          price: 7.25,
+          checkin_enabled: true,
+        },
+      },
+    })
+
+    const result = await fetchSiteStatusViaAutoDetectContent({
+      tabId: 123,
+      baseUrl: "https://ai.example.com/",
+    })
+
+    expect(result).toEqual({
+      system_name: "Content Status Portal",
+      price: 7.25,
+      checkin_enabled: true,
+    })
+    expect(browserAny.tabs.sendMessage).toHaveBeenCalledWith(
+      123,
+      expect.objectContaining({
+        action: RuntimeActionIds.ContentPerformTempWindowFetch,
+        fetchUrl: "https://ai.example.com/api/status",
+      }),
+    )
+  })
+
+  it("returns null when site status content fetch fails", async () => {
+    browserAny.tabs.sendMessage.mockRejectedValueOnce(
+      new Error("content unavailable"),
+    )
+
+    const result = await fetchSiteStatusViaAutoDetectContent({
+      tabId: 123,
+      baseUrl: "https://ai.example.com/",
+    })
+
+    expect(result).toBeNull()
+  })
+
+  it("derives support check-in from content-fetched site status", async () => {
+    browserAny.tabs.sendMessage.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: {
+        success: true,
+        message: "",
+        data: {
+          checkin_enabled: false,
+        },
+      },
+    })
+
+    const result = await fetchSupportCheckInViaAutoDetectContent({
+      tabId: 123,
+      baseUrl: "https://ai.example.com/",
+    })
+
+    expect(result).toBe(false)
   })
 
   it("throws a stable error when content fetch returns an API failure envelope", async () => {

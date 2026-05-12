@@ -2,14 +2,20 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { buildCompatUserIdHeaders } from "~/services/apiService/common/compatHeaders"
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import { ApiError } from "~/services/apiService/common/errors"
-import type { UserInfo } from "~/services/apiService/common/type"
+import type {
+  SiteStatusInfo,
+  UserInfo,
+} from "~/services/apiService/common/type"
 import { sendTabMessageWithRetry } from "~/utils/browser/browserApi"
 import {
   EXTENSION_HEADER_NAME,
   EXTENSION_HEADER_VALUE,
 } from "~/utils/browser/cookieHelper"
 import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 import { joinUrl } from "~/utils/core/url"
+
+const logger = createLogger("AutoDetectContentFetch")
 
 interface AutoDetectContentFetchContext {
   tabId: number
@@ -174,4 +180,33 @@ export async function getOrCreateAccessTokenViaAutoDetectContent(
     username: userInfo.username,
     access_token: accessToken,
   }
+}
+
+/**
+ * Fetches common-compatible site status through content fetch.
+ */
+export async function fetchSiteStatusViaAutoDetectContent(
+  context: AutoDetectContentFetchContext,
+): Promise<SiteStatusInfo | null> {
+  try {
+    return await fetchApiDataViaAutoDetectContent<SiteStatusInfo>({
+      ...context,
+      endpoint: "/api/status",
+    })
+  } catch (error) {
+    logger.warn("Failed to fetch site status through auto-detect content", {
+      error: getErrorMessage(error),
+    })
+    return null
+  }
+}
+
+/**
+ * Fetches common-compatible check-in support from site status through content.
+ */
+export async function fetchSupportCheckInViaAutoDetectContent(
+  context: AutoDetectContentFetchContext,
+): Promise<boolean | undefined> {
+  const siteStatus = await fetchSiteStatusViaAutoDetectContent(context)
+  return siteStatus?.checkin_enabled
 }

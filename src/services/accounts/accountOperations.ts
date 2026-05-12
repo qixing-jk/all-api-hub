@@ -18,6 +18,8 @@ import {
 } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
+  fetchSiteStatusViaAutoDetectContent,
+  fetchSupportCheckInViaAutoDetectContent,
   fetchUserInfoViaAutoDetectContent,
   getOrCreateAccessTokenViaAutoDetectContent,
 } from "~/services/accounts/autoDetectContentFetch"
@@ -28,6 +30,7 @@ import {
 } from "~/services/accounts/utils/autoDetectUtils"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
 import { getApiService } from "~/services/apiService"
+import type { SiteStatusInfo } from "~/services/apiService/common/type"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -62,6 +65,16 @@ const isCreatedApiToken = (value: unknown): value is ApiToken =>
   typeof value === "object" &&
   typeof (value as Partial<ApiToken>).id === "number" &&
   typeof (value as Partial<ApiToken>).key === "string"
+
+const COMMON_AUTO_DETECT_CONTENT_FETCH_SITE_TYPES = new Set<string>([
+  SITE_TYPES.ONE_API,
+  SITE_TYPES.NEW_API,
+  SITE_TYPES.VELOERA,
+  SITE_TYPES.VO_API,
+  SITE_TYPES.SUPER_API,
+  SITE_TYPES.RIX_API,
+  SITE_TYPES.NEO_API,
+])
 
 /**
  * Create a localized timeout error for manual account data fetching.
@@ -124,6 +137,26 @@ function getCurrentTabAutoDetectContext(
     return { tabId: fetchContext.tabId }
   }
   return undefined
+}
+
+type CurrentTabAutoDetectContext = NonNullable<
+  ReturnType<typeof getCurrentTabAutoDetectContext>
+>
+
+const isCommonAutoDetectContentFetchSite = (siteType: string): boolean =>
+  COMMON_AUTO_DETECT_CONTENT_FETCH_SITE_TYPES.has(siteType)
+
+/**
+ * Returns the current-tab context only for common-compatible auto-detect
+ * completion fetches. Site-specific auth models stay on their local adapters.
+ */
+function getAutoDetectContentContextForCommonFetch(
+  siteType: string,
+  currentTabContext: CurrentTabAutoDetectContext | undefined,
+): CurrentTabAutoDetectContext | undefined {
+  return currentTabContext && isCommonAutoDetectContentFetchSite(siteType)
+    ? currentTabContext
+    : undefined
 }
 
 /**
@@ -221,6 +254,11 @@ export async function autoDetectAccount(
     const currentTabAutoDetectContext = getCurrentTabAutoDetectContext(
       detectResult.data,
     )
+    const commonAutoDetectContentContext =
+      getAutoDetectContentContextForCommonFetch(
+        siteType,
+        currentTabAutoDetectContext,
+      )
     const isSub2Api = siteType === SITE_TYPES.SUB2API
     const isAIHubMix = siteType === SITE_TYPES.AIHUBMIX
     const effectiveAuthType =
@@ -274,10 +312,10 @@ export async function autoDetectAccount(
       })
     } else if (effectiveAuthType === AuthTypeEnum.Cookie) {
       tokenPromise = withAutoDetectContentFallback(
-        siteType === SITE_TYPES.NEW_API && currentTabAutoDetectContext
+        commonAutoDetectContentContext
           ? () =>
               fetchUserInfoViaAutoDetectContent({
-                tabId: currentTabAutoDetectContext.tabId,
+                tabId: commonAutoDetectContentContext.tabId,
                 baseUrl: url,
                 userId,
               })
@@ -293,10 +331,10 @@ export async function autoDetectAccount(
       )
     } else if (effectiveAuthType === AuthTypeEnum.AccessToken) {
       tokenPromise = withAutoDetectContentFallback(
-        siteType === SITE_TYPES.NEW_API && currentTabAutoDetectContext
+        commonAutoDetectContentContext
           ? () =>
               getOrCreateAccessTokenViaAutoDetectContent({
-                tabId: currentTabAutoDetectContext.tabId,
+                tabId: commonAutoDetectContentContext.tabId,
                 baseUrl: url,
                 userId,
               })
@@ -315,23 +353,51 @@ export async function autoDetectAccount(
       tokenPromise = Promise.resolve(null)
     }
 
-    const siteStatusPromise = getApiService(siteType).fetchSiteStatus({
-      baseUrl: url,
-      auth: {
-        authType: detectionAuthType || AuthTypeEnum.None,
-      },
-    })
+    const fetchSiteStatusFallback = () =>
+      getApiService(siteType).fetchSiteStatus({
+        baseUrl: url,
+        auth: {
+          authType: detectionAuthType || AuthTypeEnum.None,
+        },
+      })
 
-    // 并行执行 token 获取和 site 状态获取（降低端到端等待）
-    const [tokenInfo, siteStatus, checkSupport, siteName] = await Promise.all([
-      tokenPromise,
-      siteStatusPromise,
+    const siteStatusPromise: Promise<SiteStatusInfo | null> =
+      commonAutoDetectContentContext
+        ? fetchSiteStatusViaAutoDetectContent({
+            tabId: commonAutoDetectContentContext.tabId,
+            baseUrl: url,
+            userId,
+          }).then((siteStatus) =>
+            siteStatus === null ? fetchSiteStatusFallback() : siteStatus,
+          )
+        : fetchSiteStatusFallback()
+
+    const fetchSupportCheckInFallback = () =>
       getApiService(siteType).fetchSupportCheckIn({
         baseUrl: url,
         auth: {
           authType: AuthTypeEnum.None,
         },
-      }),
+      })
+
+    const checkSupportPromise: Promise<boolean | undefined> =
+      commonAutoDetectContentContext
+        ? fetchSupportCheckInViaAutoDetectContent({
+            tabId: commonAutoDetectContentContext.tabId,
+            baseUrl: url,
+            userId,
+          }).then((checkSupport) =>
+            checkSupport === undefined
+              ? fetchSupportCheckInFallback()
+              : checkSupport,
+          )
+        : fetchSupportCheckInFallback()
+
+    // 并行执行 token 获取和 site 状态获取（降低端到端等待）
+    const [tokenInfo, siteStatus, checkSupport, siteName] = await Promise.all([
+      tokenPromise,
+      siteStatusPromise,
+      checkSupportPromise,
       siteStatusPromise.then((resolvedSiteStatus) =>
         getSiteName(url, siteType, resolvedSiteStatus),
       ),
