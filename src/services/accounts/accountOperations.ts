@@ -17,6 +17,10 @@ import {
   generateDefaultTokenRequest,
 } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import {
+  fetchUserInfoViaAutoDetectContent,
+  getOrCreateAccessTokenViaAutoDetectContent,
+} from "~/services/accounts/autoDetectContentFetch"
 import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import {
   analyzeAutoDetectError,
@@ -101,6 +105,49 @@ async function withTimeout<T>(
 }
 
 /**
+ * Extracts the matched current-tab context from successful auto-detect data.
+ */
+function getCurrentTabAutoDetectContext(
+  detectResultData: NonNullable<
+    Awaited<ReturnType<typeof autoDetectSmart>>["data"]
+  >,
+):
+  | {
+      tabId: number
+    }
+  | undefined {
+  const fetchContext = detectResultData.fetchContext
+  if (
+    fetchContext?.kind === "current-tab" &&
+    typeof fetchContext.tabId === "number"
+  ) {
+    return { tabId: fetchContext.tabId }
+  }
+  return undefined
+}
+
+/**
+ * Tries the current-tab content fetch first, then falls back to service APIs.
+ */
+async function withAutoDetectContentFallback<T>(
+  preferred: (() => Promise<T>) | null,
+  fallback: () => Promise<T>,
+): Promise<T> {
+  if (!preferred) {
+    return await fallback()
+  }
+
+  try {
+    return await preferred()
+  } catch (error) {
+    logger.warn("Current-tab auto-detect content fetch failed; falling back", {
+      error: getErrorMessage(error),
+    })
+    return await fallback()
+  }
+}
+
+/**
  * Parses a manual balance in USD from a string value and converts it to quota
  * units.
  *
@@ -171,6 +218,9 @@ export async function autoDetectAccount(
     }
 
     const { userId, siteType, sub2apiAuth } = detectResult.data
+    const currentTabAutoDetectContext = getCurrentTabAutoDetectContext(
+      detectResult.data,
+    )
     const isSub2Api = siteType === SITE_TYPES.SUB2API
     const isAIHubMix = siteType === SITE_TYPES.AIHUBMIX
     const effectiveAuthType =
@@ -223,21 +273,43 @@ export async function autoDetectAccount(
         access_token: detectResult.data.accessToken.trim(),
       })
     } else if (effectiveAuthType === AuthTypeEnum.Cookie) {
-      tokenPromise = getApiService(siteType).fetchUserInfo({
-        baseUrl: url,
-        auth: {
-          authType: AuthTypeEnum.Cookie,
-          userId,
-        },
-      })
+      tokenPromise = withAutoDetectContentFallback(
+        siteType === SITE_TYPES.NEW_API && currentTabAutoDetectContext
+          ? () =>
+              fetchUserInfoViaAutoDetectContent({
+                tabId: currentTabAutoDetectContext.tabId,
+                baseUrl: url,
+                userId,
+              })
+          : null,
+        () =>
+          getApiService(siteType).fetchUserInfo({
+            baseUrl: url,
+            auth: {
+              authType: AuthTypeEnum.Cookie,
+              userId,
+            },
+          }),
+      )
     } else if (effectiveAuthType === AuthTypeEnum.AccessToken) {
-      tokenPromise = getApiService(siteType).getOrCreateAccessToken({
-        baseUrl: url,
-        auth: {
-          authType: AuthTypeEnum.Cookie,
-          userId,
-        },
-      })
+      tokenPromise = withAutoDetectContentFallback(
+        siteType === SITE_TYPES.NEW_API && currentTabAutoDetectContext
+          ? () =>
+              getOrCreateAccessTokenViaAutoDetectContent({
+                tabId: currentTabAutoDetectContext.tabId,
+                baseUrl: url,
+                userId,
+              })
+          : null,
+        () =>
+          getApiService(siteType).getOrCreateAccessToken({
+            baseUrl: url,
+            auth: {
+              authType: AuthTypeEnum.Cookie,
+              userId,
+            },
+          }),
+      )
     } else {
       // none 或其他情况
       tokenPromise = Promise.resolve(null)

@@ -14,6 +14,8 @@ const {
   mockExtractDefaultExchangeRate,
   mockFetchUserInfo,
   mockGetOrCreateAccessToken,
+  mockFetchUserInfoViaAutoDetectContent,
+  mockGetOrCreateAccessTokenViaAutoDetectContent,
 } = vi.hoisted(() => ({
   mockAutoDetectSmart: vi.fn(),
   mockSendRuntimeMessage: vi.fn(),
@@ -22,10 +24,18 @@ const {
   mockExtractDefaultExchangeRate: vi.fn(),
   mockFetchUserInfo: vi.fn(),
   mockGetOrCreateAccessToken: vi.fn(),
+  mockFetchUserInfoViaAutoDetectContent: vi.fn(),
+  mockGetOrCreateAccessTokenViaAutoDetectContent: vi.fn(),
 }))
 
 vi.mock("~/services/siteDetection/autoDetectService", () => ({
   autoDetectSmart: mockAutoDetectSmart,
+}))
+
+vi.mock("~/services/accounts/autoDetectContentFetch", () => ({
+  fetchUserInfoViaAutoDetectContent: mockFetchUserInfoViaAutoDetectContent,
+  getOrCreateAccessTokenViaAutoDetectContent:
+    mockGetOrCreateAccessTokenViaAutoDetectContent,
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -78,9 +88,9 @@ describe("accountOperations autoDetectAccount", () => {
       },
     })
 
-    mockFetchSiteStatus.mockResolvedValue(null)
-    mockFetchSupportCheckIn.mockResolvedValue(false)
-    mockExtractDefaultExchangeRate.mockReturnValue(null)
+    mockFetchSiteStatus.mockResolvedValueOnce(null)
+    mockFetchSupportCheckIn.mockResolvedValueOnce(false)
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
 
     const result = await autoDetectAccount(
       "https://sub2.example.com",
@@ -201,6 +211,186 @@ describe("accountOperations autoDetectAccount", () => {
     })
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
     expect(mockFetchSiteStatus).toHaveBeenCalledTimes(1)
+  })
+
+  it("uses current-tab content fetch for New API cookie-auth auto-detect completion", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: 7,
+        siteType: SITE_TYPES.NEW_API,
+        fetchContext: {
+          kind: "current-tab",
+          tabId: 123,
+        },
+      },
+    })
+    mockFetchUserInfoViaAutoDetectContent.mockResolvedValueOnce({
+      username: "incognito-cookie-user",
+      access_token: "",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      billing_mode: "quota",
+      system_name: "Incognito Portal",
+    })
+    mockFetchSupportCheckIn.mockResolvedValueOnce(true)
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(6.6)
+
+    const result = await autoDetectAccount(
+      "https://cookie.example.com",
+      AuthTypeEnum.Cookie,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.data).toMatchObject({
+      username: "incognito-cookie-user",
+      siteName: "Incognito Portal",
+      authType: AuthTypeEnum.Cookie,
+    })
+    expect(mockFetchUserInfoViaAutoDetectContent).toHaveBeenCalledWith({
+      tabId: 123,
+      baseUrl: "https://cookie.example.com",
+      userId: 7,
+    })
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
+  })
+
+  it("uses current-tab content fetch for New API access-token auto-detect completion", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: 7,
+        siteType: SITE_TYPES.NEW_API,
+        fetchContext: {
+          kind: "current-tab",
+          tabId: 123,
+        },
+      },
+    })
+    mockGetOrCreateAccessTokenViaAutoDetectContent.mockResolvedValueOnce({
+      username: "incognito-token-user",
+      access_token: "incognito-created-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      billing_mode: "quota",
+      system_name: "Incognito Token Portal",
+    })
+    mockFetchSupportCheckIn.mockResolvedValueOnce(true)
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(6.6)
+
+    const result = await autoDetectAccount(
+      "https://cookie.example.com",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.data).toMatchObject({
+      username: "incognito-token-user",
+      accessToken: "incognito-created-token",
+      authType: AuthTypeEnum.AccessToken,
+    })
+    expect(mockGetOrCreateAccessTokenViaAutoDetectContent).toHaveBeenCalledWith(
+      {
+        tabId: 123,
+        baseUrl: "https://cookie.example.com",
+        userId: 7,
+      },
+    )
+    expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
+  })
+
+  it("falls back to the service-layer New API token flow when current-tab content fetch fails", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: 7,
+        siteType: SITE_TYPES.NEW_API,
+        fetchContext: {
+          kind: "current-tab",
+          tabId: 123,
+        },
+      },
+    })
+    mockGetOrCreateAccessTokenViaAutoDetectContent.mockRejectedValueOnce(
+      new Error("content fetch unavailable"),
+    )
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "fallback-user",
+      access_token: "fallback-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Fallback Portal",
+    })
+    mockFetchSupportCheckIn.mockResolvedValueOnce(false)
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await autoDetectAccount(
+      "https://cookie.example.com",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.data).toMatchObject({
+      username: "fallback-user",
+      accessToken: "fallback-token",
+    })
+    expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      baseUrl: "https://cookie.example.com",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+        userId: 7,
+      },
+    })
+  })
+
+  it("ignores current-tab content fetch for Veloera auto-detect completion", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: 7,
+        siteType: SITE_TYPES.VELOERA,
+        fetchContext: {
+          kind: "current-tab",
+          tabId: 123,
+        },
+      },
+    })
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "veloera-user",
+      access_token: "veloera-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Veloera Portal",
+    })
+    mockFetchSupportCheckIn.mockResolvedValueOnce(false)
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await autoDetectAccount(
+      "https://veloera.example.com",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.data).toMatchObject({
+      username: "veloera-user",
+      accessToken: "veloera-token",
+      siteType: SITE_TYPES.VELOERA,
+    })
+    expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      baseUrl: "https://veloera.example.com",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+        userId: 7,
+      },
+    })
+    expect(mockFetchUserInfoViaAutoDetectContent).not.toHaveBeenCalled()
+    expect(
+      mockGetOrCreateAccessTokenViaAutoDetectContent,
+    ).not.toHaveBeenCalled()
   })
 
   it("uses the AIHubMix access token returned by auto-detect without an options-page cookie fallback", async () => {
