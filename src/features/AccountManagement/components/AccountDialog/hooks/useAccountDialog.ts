@@ -1064,7 +1064,7 @@ export function useAccountDialog({
       const resultData = result.data
       if (resultData) {
         detectedCookieStoreIdRef.current =
-          resultData.fetchContext?.kind === "current-tab" &&
+          resultData.fetchContext &&
           typeof resultData.fetchContext.cookieStoreId === "string" &&
           resultData.fetchContext.cookieStoreId.trim()
             ? resultData.fetchContext.cookieStoreId

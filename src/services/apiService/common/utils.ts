@@ -599,16 +599,9 @@ const _fetchApi = async <T>(
     authType: resolvedAuth.authType,
     cookieAuthSessionCookie:
       request.auth?.cookie ?? accountInfo?.cookieAuth?.sessionCookie,
-    useIncognito:
-      request.fetchContext?.kind === "current-tab" &&
-      request.fetchContext.incognito === true,
-    cookieStoreId:
-      request.fetchContext?.kind === "current-tab"
-        ? request.fetchContext.cookieStoreId
-        : undefined,
-    forceTempWindow:
-      request.fetchContext?.kind === "current-tab" &&
-      request.fetchContext.incognito === true,
+    useIncognito: request.fetchContext?.incognito === true,
+    cookieStoreId: request.fetchContext?.cookieStoreId,
+    forceTempWindow: request.fetchContext?.incognito === true,
   }
 
   const siteRequestLimitKey = resolveSiteRequestLimitKey(baseUrl)

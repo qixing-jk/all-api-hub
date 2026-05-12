@@ -408,6 +408,46 @@ describe("autoDetectSmart", () => {
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 
+  it("uses active incognito tab context for background fallback even when the origin does not match", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 104,
+        active: true,
+        url: "https://other.example.com/profile",
+        incognito: true,
+        cookieStoreId: "1-incognito",
+      },
+    ])
+    mockSendRuntimeMessage.mockResolvedValue({
+      success: true,
+      data: {
+        userId: 89,
+        user: { id: 89, username: "background-incognito-user" },
+        siteTypeHint: SITE_TYPES.NEW_API,
+      },
+    })
+
+    const result = await autoDetectSmart("https://example.com/console")
+
+    expect(result.success).toBe(true)
+    expect(result.data).toMatchObject({
+      userId: 89,
+      siteType: SITE_TYPES.NEW_API,
+      fetchContext: {
+        kind: "browser-context",
+        incognito: true,
+        cookieStoreId: "1-incognito",
+      },
+    })
+    expect(browserAny.tabs.sendMessage).not.toHaveBeenCalled()
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+      action: expect.any(String),
+      requestId: expect.any(String),
+      url: "https://example.com/console",
+      useIncognito: true,
+    })
+  })
+
   it("asks background auto-detect to use incognito when a matching current tab cannot provide content data", async () => {
     mockGetActiveOrAllTabs.mockResolvedValue([
       {
@@ -487,6 +527,58 @@ describe("autoDetectSmart", () => {
       },
     })
     expect(result.data).not.toHaveProperty("fetchContext")
+  })
+
+  it("keeps active incognito tab context on API fallback after background cannot return user data", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 105,
+        active: true,
+        url: "https://different.example.com/home",
+        incognito: true,
+        cookieStoreId: "1-incognito",
+      },
+    ])
+    mockSendRuntimeMessage.mockResolvedValue({
+      success: false,
+      data: undefined,
+    })
+    mockFetchUserInfo.mockResolvedValue({
+      id: 15,
+      username: "api-incognito-context-user",
+    })
+
+    const result = await autoDetectSmart("https://example.com/console")
+
+    expect(result).toEqual({
+      success: true,
+      data: {
+        userId: 15,
+        user: {
+          id: 15,
+          username: "api-incognito-context-user",
+        },
+        siteType: SITE_TYPES.NEW_API,
+        accessToken: undefined,
+        sub2apiAuth: undefined,
+        fetchContext: {
+          kind: "browser-context",
+          incognito: true,
+          cookieStoreId: "1-incognito",
+        },
+      },
+    })
+    expect(mockFetchUserInfo).toHaveBeenCalledWith({
+      baseUrl: "https://example.com/console",
+      auth: {
+        authType: expect.any(String),
+      },
+      fetchContext: {
+        kind: "browser-context",
+        incognito: true,
+        cookieStoreId: "1-incognito",
+      },
+    })
   })
 
   it("keeps API fallback access tokens only when the adapter returns a string", async () => {

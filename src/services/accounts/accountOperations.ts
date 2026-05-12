@@ -108,20 +108,30 @@ async function withTimeout<T>(
 /**
  * Extracts the matched current-tab context from successful auto-detect data.
  */
-function getCurrentTabAutoDetectContext(
+function getAutoDetectFetchContext(
   detectResultData: NonNullable<
     Awaited<ReturnType<typeof autoDetectSmart>>["data"]
   >,
 ): ApiServiceFetchContext | undefined {
   const fetchContext = detectResultData.fetchContext
-  if (
-    fetchContext?.kind === "current-tab" &&
-    typeof fetchContext.tabId === "number" &&
-    typeof fetchContext.origin === "string" &&
-    fetchContext.origin.trim()
-  ) {
+  if (fetchContext?.kind === "browser-context") {
     return fetchContext
   }
+
+  if (fetchContext?.kind === "current-tab") {
+    if (
+      typeof fetchContext.tabId === "number" &&
+      typeof fetchContext.origin === "string" &&
+      fetchContext.origin.trim()
+    ) {
+      return fetchContext
+    }
+  }
+
+  if (fetchContext?.incognito === true || fetchContext?.cookieStoreId) {
+    return fetchContext
+  }
+
   return undefined
 }
 
@@ -211,9 +221,7 @@ export async function autoDetectAccount(
     }
 
     const { userId, siteType, sub2apiAuth } = detectResult.data
-    const currentTabAutoDetectContext = getCurrentTabAutoDetectContext(
-      detectResult.data,
-    )
+    const autoDetectFetchContext = getAutoDetectFetchContext(detectResult.data)
     const isSub2Api = siteType === SITE_TYPES.SUB2API
     const isAIHubMix = siteType === SITE_TYPES.AIHUBMIX
     const effectiveAuthType =
@@ -269,7 +277,7 @@ export async function autoDetectAccount(
       tokenPromise = getApiService(siteType).fetchUserInfo(
         createAutoDetectApiRequest({
           baseUrl: url,
-          fetchContext: currentTabAutoDetectContext,
+          fetchContext: autoDetectFetchContext,
           auth: {
             authType: AuthTypeEnum.Cookie,
             userId,
@@ -280,7 +288,7 @@ export async function autoDetectAccount(
       tokenPromise = getApiService(siteType).getOrCreateAccessToken(
         createAutoDetectApiRequest({
           baseUrl: url,
-          fetchContext: currentTabAutoDetectContext,
+          fetchContext: autoDetectFetchContext,
           auth: {
             authType: AuthTypeEnum.Cookie,
             userId,
@@ -296,7 +304,7 @@ export async function autoDetectAccount(
       getApiService(siteType).fetchSiteStatus(
         createAutoDetectApiRequest({
           baseUrl: url,
-          fetchContext: currentTabAutoDetectContext,
+          fetchContext: autoDetectFetchContext,
           auth: {
             authType: detectionAuthType || AuthTypeEnum.None,
           },
@@ -310,7 +318,7 @@ export async function autoDetectAccount(
       getApiService(siteType).fetchSupportCheckIn(
         createAutoDetectApiRequest({
           baseUrl: url,
-          fetchContext: currentTabAutoDetectContext,
+          fetchContext: autoDetectFetchContext,
           auth: {
             authType: AuthTypeEnum.None,
           },
@@ -383,8 +391,8 @@ export async function autoDetectAccount(
         },
         siteType: siteType,
         ...(isSub2Api && sub2apiAuth ? { sub2apiAuth } : {}),
-        ...(currentTabAutoDetectContext
-          ? { fetchContext: currentTabAutoDetectContext }
+        ...(autoDetectFetchContext
+          ? { fetchContext: autoDetectFetchContext }
           : {}),
       },
     }

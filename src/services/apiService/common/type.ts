@@ -326,13 +326,20 @@ export interface AuthConfig {
   tokenExpiresAt?: number
 }
 
-export type ApiServiceFetchContext = {
-  kind: "current-tab"
-  tabId: number
-  origin: string
+type ApiServiceBrowserFetchContext = {
   incognito?: boolean
   cookieStoreId?: string
 }
+
+export type ApiServiceFetchContext =
+  | (ApiServiceBrowserFetchContext & {
+      kind: "current-tab"
+      tabId: number
+      origin: string
+    })
+  | (ApiServiceBrowserFetchContext & {
+      kind: "browser-context"
+    })
 
 /**
  * API 服务请求的统一参数对象。

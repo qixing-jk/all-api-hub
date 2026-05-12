@@ -18,6 +18,7 @@ import {
   isAccountSiteType,
   type AccountSiteType,
 } from "~/constants/siteType"
+import type { ApiServiceFetchContext } from "~/services/apiService/common/type"
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 import {
   getActiveOrAllTabs,
@@ -44,13 +45,7 @@ function normalizeSiteTypeHint(value: unknown): AccountSiteType | undefined {
   return isAccountSiteType(value) ? value : undefined
 }
 
-type AutoDetectFetchContext = {
-  kind: "current-tab"
-  tabId: number
-  origin: string
-  incognito?: boolean
-  cookieStoreId?: string
-}
+type AutoDetectFetchContext = ApiServiceFetchContext
 
 interface AutoDetectResult {
   success: boolean
@@ -116,6 +111,24 @@ function resolveAutoDetectUrl(url: string): string {
     return url
   } catch {
     return url
+  }
+}
+
+/**
+ * Builds a browser-profile context from a tab without implying that the tab can
+ * execute same-origin content-script fetches for the requested site.
+ */
+function createBrowserContextFromTab(
+  tab: { incognito?: boolean; cookieStoreId?: string } | null | undefined,
+): AutoDetectFetchContext | undefined {
+  if (!tab?.incognito && !tab?.cookieStoreId) {
+    return undefined
+  }
+
+  return {
+    kind: "browser-context",
+    ...(tab.incognito === true ? { incognito: true } : {}),
+    ...(tab.cookieStoreId ? { cookieStoreId: tab.cookieStoreId } : {}),
   }
 }
 
@@ -278,14 +291,17 @@ async function getUserDataViaBackground(
  * 1) Background script acquires a temporary browser context to read localStorage
  * 2) Falls back to API-based fetch when storage read fails
  */
-async function autoDetectViaBackground(url: string): Promise<AutoDetectResult> {
+async function autoDetectViaBackground(
+  url: string,
+  fetchContext?: AutoDetectFetchContext,
+): Promise<AutoDetectResult> {
   logger.debug("使用 Background 方式", { url })
 
   // 检测站点类型，避免在未知站点上下文中使用默认 API
   const siteType = await getAccountSiteType(url)
 
   // 通过 Background 获取用户数据
-  const userData = await getUserDataViaBackground(url, siteType)
+  const userData = await getUserDataViaBackground(url, siteType, fetchContext)
 
   // 组合用户数据和站点类型（公共逻辑）
   return await combineUserDataAndSiteType(userData, url)
@@ -423,6 +439,7 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
   const capabilities = detectPlatformCapabilities()
   let shouldHintCurrentTabReload = false
   let currentTabReloadHintResult: AutoDetectResult | null = null
+  let browserFallbackContext: AutoDetectFetchContext | undefined
 
   // 1. 尝试从当前标签页获取（最快，无需创建新窗口）
   if (capabilities.hasTabs) {
@@ -430,6 +447,7 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
       // On mobile, currentWindow may be unsupported; fall back to first available tab
       const tabs = await getActiveOrAllTabs()
       const currentTab = tabs.find((t) => t.active) ?? tabs[0]
+      browserFallbackContext = createBrowserContextFromTab(currentTab)
 
       if (currentTab?.url) {
         // 检查当前标签页是否是目标站点
@@ -491,7 +509,10 @@ export async function autoDetectSmart(url: string): Promise<AutoDetectResult> {
     // Background path uses a temporary browser context, which may be backed by
     // a window or a tab depending on the current temp-context mode and browser capabilities.
     try {
-      const result = await autoDetectViaBackground(detectionUrl)
+      const result = await autoDetectViaBackground(
+        detectionUrl,
+        browserFallbackContext,
+      )
       if (result.success) {
         return result
       }

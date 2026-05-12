@@ -542,6 +542,71 @@ describe("apiService common fetchApi helpers", () => {
     )
   })
 
+  it("fetchApiData skips normal fetch for incognito browser-context fallback", async () => {
+    mockGetPreferences.mockResolvedValueOnce({
+      tempWindowFallback: {
+        enabled: true,
+        useInPopup: true,
+        useInSidePanel: true,
+        useInOptions: true,
+        useForAutoRefresh: true,
+        useForManualRefresh: true,
+      },
+    })
+    mockSendRuntimeMessage.mockResolvedValueOnce({
+      success: true,
+      status: 200,
+      data: {
+        success: true,
+        data: { ok: true },
+        message: "temp",
+      },
+    })
+
+    let normalFetchCount = 0
+    server.use(
+      http.get(API_URL, () => {
+        normalFetchCount += 1
+        return HttpResponse.json({
+          success: true,
+          data: { ok: false },
+          message: "normal",
+        })
+      }),
+    )
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: {
+            authType: AuthTypeEnum.Cookie,
+            cookie: "session=abc123",
+            userId: 123,
+          },
+          fetchContext: {
+            kind: "browser-context",
+            incognito: true,
+            cookieStoreId: "1-incognito",
+          },
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).resolves.toEqual({ ok: true })
+
+    expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
+    expect(normalFetchCount).toBe(0)
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.TempWindowFetch,
+        originUrl: BASE_URL,
+        fetchUrl: API_URL,
+        useIncognito: true,
+        cookieStoreId: "1-incognito",
+      }),
+    )
+  })
+
   it("fetchApiData honors current-tab transport opt-out", async () => {
     server.use(
       http.get(API_URL, () => {
