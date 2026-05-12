@@ -10,6 +10,7 @@ import { createMinIntervalLimiter } from "~/services/apiService/common/minInterv
 import { withSiteApiRequestLimit } from "~/services/apiService/common/siteRequestLimiter"
 import type {
   ApiResponse,
+  ApiServiceFetchContext,
   ApiServiceRequest,
   AuthConfig,
   FetchApiOptions,
@@ -286,23 +287,17 @@ function isCurrentTabContentFetchEligible(params: {
  * Sends the prepared request through the matched tab's content script.
  */
 async function fetchViaCurrentTabContent<T>(context: {
-  request: ApiServiceRequest
+  fetchContext: Extract<
+    ApiServiceFetchContext,
+    { kind: typeof API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB }
+  >
   url: string
   endpoint: string
   fetchOptions: RequestInit
   onlyData: boolean
   responseType: TempWindowResponseType
 }): Promise<T | ApiResponse<T>> {
-  const fetchContext = context.request.fetchContext
-  if (fetchContext?.kind !== API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB) {
-    throw new ApiError(
-      "Current-tab content fetch is not available",
-      undefined,
-      context.endpoint,
-    )
-  }
-
-  const response = (await sendTabMessageWithRetry(fetchContext.tabId, {
+  const response = (await sendTabMessageWithRetry(context.fetchContext.tabId, {
     action: RuntimeActionIds.ContentPerformTempWindowFetch,
     requestId: safeRandomUUID(`current-tab-fetch-${context.url}`),
     fetchUrl: context.url,
@@ -356,8 +351,20 @@ async function executeWithCurrentTabContentPreference<T>(
     return await fallback()
   }
 
+  const fetchContext = context.request.fetchContext as Extract<
+    ApiServiceFetchContext,
+    { kind: typeof API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB }
+  >
+
   try {
-    return await fetchViaCurrentTabContent<T>(context)
+    return await fetchViaCurrentTabContent<T>({
+      fetchContext,
+      url: context.url,
+      endpoint: context.endpoint,
+      fetchOptions: context.fetchOptions,
+      onlyData: context.onlyData,
+      responseType: context.responseType,
+    })
   } catch (error) {
     logger.debug("Current-tab content fetch failed; falling back", {
       endpoint: context.endpoint,
@@ -383,10 +390,15 @@ const createAuthRequest = async (
   const credentials: RequestCredentials =
     auth.authType === AuthTypeEnum.Cookie ? "include" : "omit"
 
+  const normalizedOptions: RequestInit = {
+    ...options,
+    headers: normalizeHeaderInit(options.headers),
+  }
+
   return createBaseRequest(
     await createRequestHeaders(auth),
     credentials,
-    options,
+    normalizedOptions,
   )
 }
 

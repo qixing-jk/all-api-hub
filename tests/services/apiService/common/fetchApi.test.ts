@@ -400,6 +400,90 @@ describe("apiService common fetchApi helpers", () => {
     )
   })
 
+  it("normalizes Headers objects before sending current-tab content fetch", async () => {
+    mockSendTabMessageWithRetry.mockResolvedValueOnce({
+      success: true,
+      data: { success: true, data: { ok: true }, message: "content" },
+    })
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: {
+            authType: AuthTypeEnum.Cookie,
+            cookie: "session=abc123",
+            userId: 123,
+          },
+          fetchContext: {
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: 456,
+            origin: "https://example.com",
+          },
+        },
+        {
+          endpoint: ENDPOINT,
+          options: {
+            method: "GET",
+            headers: new Headers({
+              "X-Header-Object": "yes",
+            }),
+          },
+        },
+      ),
+    ).resolves.toEqual({ ok: true })
+
+    expect(mockSendTabMessageWithRetry.mock.calls[0][1].fetchOptions).toEqual(
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Cookie: "session=abc123",
+          "x-header-object": "yes",
+        }),
+      }),
+    )
+  })
+
+  it("normalizes header tuple arrays before sending current-tab content fetch", async () => {
+    mockSendTabMessageWithRetry.mockResolvedValueOnce({
+      success: true,
+      data: { success: true, data: { ok: true }, message: "content" },
+    })
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: {
+            authType: AuthTypeEnum.Cookie,
+            cookie: "session=abc123",
+            userId: 123,
+          },
+          fetchContext: {
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: 456,
+            origin: "https://example.com",
+          },
+        },
+        {
+          endpoint: ENDPOINT,
+          options: {
+            method: "GET",
+            headers: [["X-Header-Tuple", "yes"]],
+          },
+        },
+      ),
+    ).resolves.toEqual({ ok: true })
+
+    expect(mockSendTabMessageWithRetry.mock.calls[0][1].fetchOptions).toEqual(
+      expect.objectContaining({
+        headers: expect.objectContaining({
+          Cookie: "session=abc123",
+          "X-Header-Tuple": "yes",
+        }),
+      }),
+    )
+  })
+
   it("fetchApiData can use current-tab content fetch for mutating requests", async () => {
     mockSendTabMessageWithRetry.mockResolvedValueOnce({
       success: true,
@@ -472,6 +556,70 @@ describe("apiService common fetchApi helpers", () => {
             kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
             origin: "https://other.example.com",
+          },
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).resolves.toEqual({ ok: true })
+
+    expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
+  })
+
+  it("skips current-tab content fetch when the context origin is invalid", async () => {
+    server.use(
+      http.get(API_URL, () => {
+        return HttpResponse.json({
+          success: true,
+          data: { ok: true },
+          message: "direct",
+        })
+      }),
+    )
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: "token",
+          },
+          fetchContext: {
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: 456,
+            origin: "not a url",
+          },
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).resolves.toEqual({ ok: true })
+
+    expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
+  })
+
+  it("skips current-tab content fetch when the tab id is invalid", async () => {
+    server.use(
+      http.get(API_URL, () => {
+        return HttpResponse.json({
+          success: true,
+          data: { ok: true },
+          message: "direct",
+        })
+      }),
+    )
+
+    await expect(
+      fetchApiData<{ ok: boolean }>(
+        {
+          baseUrl: BASE_URL,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: "token",
+          },
+          fetchContext: {
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: "456" as unknown as number,
+            origin: "https://example.com",
           },
         },
         { endpoint: ENDPOINT },
@@ -781,6 +929,64 @@ describe("apiService common fetchApi helpers", () => {
 
     expect(Array.from(new Uint8Array(result))).toEqual([9, 8, 7])
     expect(mockSendTabMessageWithRetry).not.toHaveBeenCalled()
+  })
+
+  it("fetchApi returns full JSON envelopes from current-tab content fetch when unwrapping is disabled", async () => {
+    const apiEnvelope = {
+      success: true,
+      data: { nested: "value" },
+      message: "content-envelope",
+    }
+    mockSendTabMessageWithRetry.mockResolvedValueOnce({
+      success: true,
+      data: apiEnvelope,
+    })
+
+    const result = await fetchApi<{ nested: string }>(
+      {
+        baseUrl: BASE_URL,
+        auth: { authType: AuthTypeEnum.Cookie, cookie: "session=abc123" },
+        fetchContext: {
+          kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+          tabId: 456,
+          origin: "https://example.com",
+        },
+      },
+      { endpoint: ENDPOINT },
+    )
+
+    expect(result).toEqual(apiEnvelope)
+    expect(mockSendTabMessageWithRetry).toHaveBeenCalledTimes(1)
+  })
+
+  it("fetchApi returns text responses from current-tab content fetch", async () => {
+    mockSendTabMessageWithRetry.mockResolvedValueOnce({
+      success: true,
+      data: "content text",
+    })
+
+    await expect(
+      fetchApi<string>(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.Cookie, cookie: "session=abc123" },
+          fetchContext: {
+            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            tabId: 456,
+            origin: "https://example.com",
+          },
+        },
+        { endpoint: ENDPOINT, responseType: "text" },
+        true,
+      ),
+    ).resolves.toBe("content text")
+
+    expect(mockSendTabMessageWithRetry).toHaveBeenCalledWith(
+      456,
+      expect.objectContaining({
+        responseType: "text",
+      }),
+    )
   })
 
   it("fetchApi should unwrap ApiResponse when _normalResponseType is true", async () => {

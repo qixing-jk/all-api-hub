@@ -64,6 +64,11 @@ const incognitoCurrentTabFetchContext = (origin: string) => ({
   cookieStoreId: "1-incognito",
 })
 
+const browserFetchContext = () => ({
+  kind: API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+  cookieStoreId: "firefox-container-2",
+})
+
 describe("accountOperations autoDetectAccount", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -205,6 +210,140 @@ describe("accountOperations autoDetectAccount", () => {
       system_name: "Content Status Portal",
       price: 7.4,
       checkin_enabled: true,
+    })
+  })
+
+  it("passes browser-context auto-detect data through service requests", async () => {
+    const fetchContext = browserFetchContext()
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: 8,
+        siteType: SITE_TYPES.NEW_API,
+        fetchContext,
+      },
+    })
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "browser-context-user",
+      access_token: "browser-context-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Browser Context Portal",
+      checkin_enabled: true,
+    })
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await autoDetectAccount(
+      "https://browser-context.example.com",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.data?.fetchContext).toEqual(fetchContext)
+    expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      baseUrl: "https://browser-context.example.com",
+      fetchContext,
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+        userId: 8,
+      },
+    })
+    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+      baseUrl: "https://browser-context.example.com",
+      fetchContext,
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+      },
+    })
+  })
+
+  it("drops malformed current-tab fetch context before service requests", async () => {
+    const malformedFetchContext = {
+      kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+      tabId: "not-a-number",
+      origin: "https://malformed.example.com",
+      cookieStoreId: "",
+    }
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: 8,
+        siteType: SITE_TYPES.NEW_API,
+        fetchContext: malformedFetchContext,
+      },
+    })
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "malformed-context-user",
+      access_token: "malformed-context-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Malformed Context Portal",
+      checkin_enabled: true,
+    })
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await autoDetectAccount(
+      "https://malformed.example.com",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.data).not.toHaveProperty("fetchContext")
+    expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      baseUrl: "https://malformed.example.com",
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+        userId: 8,
+      },
+    })
+    expect(mockFetchSiteStatus).toHaveBeenCalledWith({
+      baseUrl: "https://malformed.example.com",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+      },
+    })
+  })
+
+  it("keeps legacy browser-profile context without current-tab kind", async () => {
+    const legacyFetchContext = {
+      incognito: true,
+      cookieStoreId: "legacy-container",
+    }
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      data: {
+        userId: 8,
+        siteType: SITE_TYPES.NEW_API,
+        fetchContext: legacyFetchContext,
+      },
+    })
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "legacy-context-user",
+      access_token: "legacy-context-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Legacy Context Portal",
+      checkin_enabled: true,
+    })
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await autoDetectAccount(
+      "https://legacy-context.example.com",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.data?.fetchContext).toEqual(legacyFetchContext)
+    expect(mockGetOrCreateAccessToken).toHaveBeenCalledWith({
+      baseUrl: "https://legacy-context.example.com",
+      fetchContext: legacyFetchContext,
+      auth: {
+        authType: AuthTypeEnum.Cookie,
+        userId: 8,
+      },
     })
   })
 
