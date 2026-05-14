@@ -27,6 +27,7 @@ vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
 describe("useProductAnalyticsPageView", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.unstubAllEnvs()
     analyticsNow.value += 1000
     vi.spyOn(Date, "now").mockReturnValue(analyticsNow.value)
     trackProductAnalyticsEventMock.mockResolvedValue({ success: true })
@@ -104,6 +105,8 @@ describe("useProductAnalyticsPageView", () => {
   })
 
   it("dedupes initial StrictMode remount app_opened and page_viewed effects", async () => {
+    vi.stubEnv("MODE", "development")
+
     function StrictModeHarness() {
       useProductAnalyticsPageView({
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
@@ -147,5 +150,41 @@ describe("useProductAnalyticsPageView", () => {
         ([eventName]) => eventName === PRODUCT_ANALYTICS_EVENTS.PageViewed,
       ),
     ).toHaveLength(1)
+  })
+
+  it("does not dedupe non-development remounts", async () => {
+    vi.stubEnv("MODE", "production")
+
+    function Harness() {
+      useProductAnalyticsPageView({
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        pageId: PRODUCT_ANALYTICS_PAGE_IDS.OptionsBasicSettings,
+      })
+
+      return null
+    }
+
+    const firstRender = render(<Harness />)
+
+    await waitFor(() => {
+      expect(trackProductAnalyticsEventMock).toHaveBeenCalledTimes(2)
+    })
+
+    firstRender.unmount()
+    render(<Harness />)
+
+    await waitFor(() => {
+      expect(trackProductAnalyticsEventMock).toHaveBeenCalledTimes(4)
+    })
+    expect(
+      trackProductAnalyticsEventMock.mock.calls.filter(
+        ([eventName]) => eventName === PRODUCT_ANALYTICS_EVENTS.AppOpened,
+      ),
+    ).toHaveLength(2)
+    expect(
+      trackProductAnalyticsEventMock.mock.calls.filter(
+        ([eventName]) => eventName === PRODUCT_ANALYTICS_EVENTS.PageViewed,
+      ),
+    ).toHaveLength(2)
   })
 })

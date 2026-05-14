@@ -6,6 +6,7 @@ import {
   type ProductAnalyticsEntrypoint,
   type ProductAnalyticsPageId,
 } from "~/services/productAnalytics/events"
+import { isDevelopmentMode } from "~/utils/core/environment"
 
 interface UseProductAnalyticsPageViewParams {
   entrypoint: ProductAnalyticsEntrypoint
@@ -19,6 +20,8 @@ const recentTrackedEvents = new Map<string, number>()
  * Returns whether an analytics event key has not been tracked in the short dedupe window.
  */
 function shouldTrackRecentEvent(eventKey: string): boolean {
+  if (!isDevelopmentMode()) return true
+
   const now = Date.now()
   const lastTrackedAt = recentTrackedEvents.get(eventKey)
 
