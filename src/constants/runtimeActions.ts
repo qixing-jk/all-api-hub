@@ -23,6 +23,7 @@ export const RuntimeActionPrefixes = {
   OpenSettings: "openSettings:",
   Permissions: "permissions:",
   Preferences: "preferences:",
+  ProductAnalytics: "productAnalytics:",
   ReleaseUpdate: "releaseUpdate:",
   RedemptionAssist: "redemptionAssist:",
   SiteAnnouncements: "siteAnnouncements:",
@@ -123,6 +124,15 @@ export const RuntimeActionIds = {
   PreferencesRefreshContextMenus: composeRuntimeAction(
     RuntimeActionPrefixes.Preferences,
     "refreshContextMenus",
+  ),
+
+  ProductAnalyticsTrackEvent: composeRuntimeAction(
+    RuntimeActionPrefixes.ProductAnalytics,
+    "trackEvent",
+  ),
+  ProductAnalyticsTrackSiteEcosystemSnapshot: composeRuntimeAction(
+    RuntimeActionPrefixes.ProductAnalytics,
+    "trackSiteEcosystemSnapshot",
   ),
 
   ReleaseUpdateGetStatus: composeRuntimeAction(

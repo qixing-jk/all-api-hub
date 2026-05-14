@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { PRODUCT_ANALYTICS_EVENTS } from "~/services/productAnalytics/events"
 
 type RuntimeMessageListener = (
   request: any,
@@ -30,6 +31,7 @@ const mocks = vi.hoisted(() => ({
   handleLdohSiteLookupMessage: vi.fn(),
   handleWebAiApiCheckMessage: vi.fn(),
   handleAccountKeyRepairMessage: vi.fn(),
+  handleProductAnalyticsMessage: vi.fn(),
   setupContextMenus: vi.fn(),
   trackCookieInterceptorUrl: vi.fn(),
   openOrFocusOptionsMenuItem: vi.fn(),
@@ -133,6 +135,10 @@ vi.mock("~/services/verification/webAiApiCheck/background", () => ({
 
 vi.mock("~/services/accounts/accountKeyAutoProvisioning", () => ({
   handleAccountKeyRepairMessage: mocks.handleAccountKeyRepairMessage,
+}))
+
+vi.mock("~/services/productAnalytics/runtime", () => ({
+  handleProductAnalyticsMessage: mocks.handleProductAnalyticsMessage,
 }))
 
 describe("setupRuntimeMessageListeners additional routing", () => {
@@ -396,6 +402,22 @@ describe("setupRuntimeMessageListeners additional routing", () => {
         expect(expected).toHaveBeenLastCalledWith(request, sendResponse)
       }
     }
+  })
+
+  it("routes product analytics runtime messages", async () => {
+    const listener = await loadListener()
+    const sendResponse = vi.fn()
+    const request = {
+      action: RuntimeActionIds.ProductAnalyticsTrackEvent,
+      eventName: PRODUCT_ANALYTICS_EVENTS.AppOpened,
+      properties: { entrypoint: "popup" },
+    }
+
+    expect(listener(request, {}, sendResponse)).toBe(true)
+    expect(mocks.handleProductAnalyticsMessage).toHaveBeenCalledWith(
+      request,
+      sendResponse,
+    )
   })
 
   it("returns cookie import success when a session cookie can be extracted", async () => {

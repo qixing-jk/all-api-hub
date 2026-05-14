@@ -11,10 +11,12 @@ import { render, screen } from "~~/tests/test-utils/render"
 const {
   mockedHandleMenuItemChange,
   mockedOptionsSearchDialog,
+  mockedUseProductAnalyticsPageView,
   mockedUseSearchHotkeys,
 } = vi.hoisted(() => ({
   mockedHandleMenuItemChange: vi.fn(),
   mockedOptionsSearchDialog: vi.fn(),
+  mockedUseProductAnalyticsPageView: vi.fn(),
   mockedUseSearchHotkeys: vi.fn(),
 }))
 
@@ -41,6 +43,10 @@ vi.mock("~/entrypoints/options/hooks/useHashNavigation", () => ({
     handleMenuItemChange: mockedHandleMenuItemChange,
     refreshKey: 7,
   }),
+}))
+
+vi.mock("~/hooks/useProductAnalyticsPageView", () => ({
+  useProductAnalyticsPageView: mockedUseProductAnalyticsPageView,
 }))
 
 vi.mock("~/entrypoints/options/components/Header", () => ({
@@ -135,6 +141,7 @@ describe("options App", () => {
   beforeEach(() => {
     mockedHandleMenuItemChange.mockReset()
     mockedOptionsSearchDialog.mockReset()
+    mockedUseProductAnalyticsPageView.mockReset()
     mockedUseSearchHotkeys.mockReset()
   })
 
@@ -150,6 +157,10 @@ describe("options App", () => {
     expect(screen.getByLabelText("common:status.loading")).toBeInTheDocument()
     expect(await screen.findByText("source:test")).toBeInTheDocument()
     expect(screen.getByText("refresh:7")).toBeInTheDocument()
+    expect(mockedUseProductAnalyticsPageView).toHaveBeenCalledWith({
+      entrypoint: "options",
+      pageId: "options_basic_settings",
+    })
 
     await user.click(screen.getByText("open search"))
     expect(screen.getByRole("dialog")).toBeInTheDocument()

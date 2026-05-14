@@ -5,6 +5,12 @@ import { AppLayout } from "~/components/AppLayout"
 import { Spinner } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { useProductAnalyticsPageView } from "~/hooks/useProductAnalyticsPageView"
+import {
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_PAGE_IDS,
+  type ProductAnalyticsPageId,
+} from "~/services/productAnalytics/events"
 
 import Header from "./components/Header"
 import Sidebar from "./components/Sidebar"
@@ -17,9 +23,44 @@ import { useOptionsSearchContext } from "./search/useOptionsSearch"
 import { useSearchHotkeys } from "./search/useSearchHotkeys"
 
 /**
- * Main Options page shell: renders header, sidebar, and routed content panes.
- * Handles hash navigation, mobile sidebar toggles, and collapse state.
+ * Maps options navigation state to the fixed analytics page id enum.
  */
+function mapOptionsMenuItemToAnalyticsPageId(
+  menuItem: string,
+): ProductAnalyticsPageId {
+  switch (menuItem) {
+    case MENU_ITEM_IDS.ACCOUNT:
+      return PRODUCT_ANALYTICS_PAGE_IDS.OptionsAccountManagement
+    case MENU_ITEM_IDS.BOOKMARK:
+      return PRODUCT_ANALYTICS_PAGE_IDS.OptionsBookmarkManagement
+    case MENU_ITEM_IDS.KEYS:
+      return PRODUCT_ANALYTICS_PAGE_IDS.OptionsKeyManagement
+    case MENU_ITEM_IDS.MANAGED_SITE_CHANNELS:
+      return PRODUCT_ANALYTICS_PAGE_IDS.OptionsManagedSiteChannels
+    case MENU_ITEM_IDS.MODELS:
+      return PRODUCT_ANALYTICS_PAGE_IDS.OptionsModelList
+    case MENU_ITEM_IDS.USAGE_ANALYTICS:
+      return PRODUCT_ANALYTICS_PAGE_IDS.OptionsUsageAnalytics
+    case MENU_ITEM_IDS.BALANCE_HISTORY:
+      return PRODUCT_ANALYTICS_PAGE_IDS.OptionsBalanceHistory
+    case MENU_ITEM_IDS.API_CREDENTIAL_PROFILES:
+      return PRODUCT_ANALYTICS_PAGE_IDS.OptionsApiCredentialProfiles
+    case MENU_ITEM_IDS.SITE_ANNOUNCEMENTS:
+      return PRODUCT_ANALYTICS_PAGE_IDS.OptionsSiteAnnouncements
+    case MENU_ITEM_IDS.IMPORT_EXPORT:
+      return PRODUCT_ANALYTICS_PAGE_IDS.OptionsImportExport
+    case MENU_ITEM_IDS.AUTO_CHECKIN:
+      return PRODUCT_ANALYTICS_PAGE_IDS.OptionsAutoCheckin
+    case MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC:
+      return PRODUCT_ANALYTICS_PAGE_IDS.OptionsManagedSiteModelSync
+    case MENU_ITEM_IDS.ABOUT:
+      return PRODUCT_ANALYTICS_PAGE_IDS.OptionsAbout
+    case MENU_ITEM_IDS.BASIC:
+    default:
+      return PRODUCT_ANALYTICS_PAGE_IDS.OptionsBasicSettings
+  }
+}
+
 /**
  * Localized fallback used while a lazily loaded options page chunk is being fetched.
  */
@@ -35,6 +76,7 @@ function OptionsPageContentFallback() {
 
 /**
  * Options page shell with a local Suspense boundary for route-level lazy chunks.
+ * Handles hash navigation, mobile sidebar toggles, and collapse state.
  */
 function OptionsPage() {
   const { activeMenuItem, routeParams, handleMenuItemChange, refreshKey } =
@@ -44,6 +86,11 @@ function OptionsPage() {
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false)
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false)
   const [isSearchOpen, setIsSearchOpen] = useState(false)
+
+  useProductAnalyticsPageView({
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    pageId: mapOptionsMenuItemToAnalyticsPageId(activeMenuItem),
+  })
 
   // 获取当前活动的组件
   const ActiveComponent =

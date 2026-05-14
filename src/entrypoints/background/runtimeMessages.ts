@@ -16,6 +16,7 @@ import { handleLdohSiteLookupMessage } from "~/services/integrations/ldohSiteLoo
 import { handleChannelConfigMessage } from "~/services/managedSites/channelConfigStorage"
 import { handleManagedSiteModelSyncMessage } from "~/services/models/modelSync"
 import { handleTaskNotificationMessage } from "~/services/notifications/taskNotificationService"
+import { handleProductAnalyticsMessage } from "~/services/productAnalytics/runtime"
 import { handleRedemptionAssistMessage } from "~/services/redemption/redemptionAssist"
 import { handleSiteAnnouncementMessage } from "~/services/siteAnnouncements/scheduler"
 import { handleReleaseUpdateMessage } from "~/services/updates/releaseUpdateService"
@@ -379,6 +380,16 @@ export function setupRuntimeMessageListeners() {
         )
       ) {
         handleDailyBalanceHistoryMessage(request, sendResponse)
+        return true
+      }
+
+      if (
+        hasRuntimeActionPrefix(
+          request.action,
+          RuntimeActionPrefixes.ProductAnalytics,
+        )
+      ) {
+        void handleProductAnalyticsMessage(request, sendResponse)
         return true
       }
 

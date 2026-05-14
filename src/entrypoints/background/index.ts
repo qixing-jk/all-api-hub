@@ -15,6 +15,10 @@ import {
   OPTIONAL_PERMISSIONS,
 } from "~/services/permissions/permissionManager"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import {
+  setupProductAnalyticsAccountChangeListener,
+  triggerStartupSiteEcosystemSnapshot,
+} from "~/services/productAnalytics/runtime"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import {
@@ -62,6 +66,7 @@ export default defineBackground(() => {
   setupTempWindowListeners()
   setupCookieInterceptorListeners()
   setupContextMenus()
+  setupProductAnalyticsAccountChangeListener()
 
   /**
    * 监听插件安装/更新事件
@@ -199,4 +204,5 @@ async function main() {
   await applyActionClickBehavior(prefs.actionClickBehavior ?? "popup")
 
   await initializeCookieInterceptors()
+  triggerStartupSiteEcosystemSnapshot()
 }
