@@ -64,6 +64,9 @@ jobs:
       - name: Build extension bundles
         id: package
         uses: ./.github/actions/package-extension
+        env:
+          VITE_PUBLIC_POSTHOG_PROJECT_TOKEN: ${{ secrets.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN || vars.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN }}
+          VITE_PUBLIC_POSTHOG_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST || vars.VITE_PUBLIC_POSTHOG_HOST }}
 
       - name: Write PR build metadata (for workflow_run commenter)
         # pull_request runs from forks use a read-only GITHUB_TOKEN, so comment publishing must be done

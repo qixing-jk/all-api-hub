@@ -122,6 +122,9 @@ jobs:
         id: package
         if: ${{ steps.get_ref.outputs.checkout_ref != '' }}
         uses: ./.github/actions/package-extension
+        env:
+          VITE_PUBLIC_POSTHOG_PROJECT_TOKEN: ${{ secrets.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN || vars.VITE_PUBLIC_POSTHOG_PROJECT_TOKEN }}
+          VITE_PUBLIC_POSTHOG_HOST: ${{ secrets.VITE_PUBLIC_POSTHOG_HOST || vars.VITE_PUBLIC_POSTHOG_HOST }}
         with:
           working-directory: source
 
