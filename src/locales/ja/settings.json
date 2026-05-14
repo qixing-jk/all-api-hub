@@ -375,6 +375,12 @@
       "success": "推奨権限をすべて許可しました"
     }
   },
+  "productAnalytics": {
+    "description": "匿名の利用統計で All API Hub の改善に協力します。API キー、Cookie、アカウント URL、残高、リクエスト内容、ユーザー入力は収集しません。",
+    "enableDescription": "開発優先度の判断に役立てるため、機能利用、エラー分類、粗いサイト種別の統計のみ送信します。",
+    "enableLabel": "匿名プロダクト分析を有効にする",
+    "title": "匿名プロダクト分析"
+  },
   "refresh": {
     "autoRefresh": "自動更新",
     "autoRefreshDesc": "アカウントデータを定期的に自動更新します",

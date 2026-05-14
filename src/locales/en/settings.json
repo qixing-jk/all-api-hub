@@ -375,6 +375,12 @@
       "success": "All recommended permissions granted"
     }
   },
+  "productAnalytics": {
+    "description": "Help improve All API Hub with anonymous usage statistics. We do not collect API keys, cookies, account URLs, balances, request content, or user input.",
+    "enableDescription": "Allow limited feature usage, error category, and coarse site-type statistics to guide development priorities.",
+    "enableLabel": "Enable anonymous product analytics",
+    "title": "Anonymous product analytics"
+  },
   "refresh": {
     "autoRefresh": "Auto Refresh",
     "autoRefreshDesc": "Regularly auto-refresh account data",

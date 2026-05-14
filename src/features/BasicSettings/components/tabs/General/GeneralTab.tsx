@@ -3,6 +3,7 @@ import AppearanceSettings from "./AppearanceSettings"
 import ChangelogOnUpdateSettings from "./ChangelogOnUpdateSettings"
 import DisplaySettings from "./DisplaySettings"
 import LoggingSettings from "./LoggingSettings"
+import ProductAnalyticsSettings from "./ProductAnalyticsSettings"
 import ResetSettingsSection from "./ResetSettingsSection"
 import SiteAnnouncementNotificationSettings from "./SiteAnnouncementNotificationSettings"
 
@@ -19,6 +20,7 @@ export default function GeneralTab() {
       <SiteAnnouncementNotificationSettings />
       <ChangelogOnUpdateSettings />
       <LoggingSettings />
+      <ProductAnalyticsSettings />
       <section id="dangerous-zone">
         <ResetSettingsSection />
       </section>

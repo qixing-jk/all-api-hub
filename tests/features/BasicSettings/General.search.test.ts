@@ -14,17 +14,21 @@ describe("general settings search definitions", () => {
       "section:site-announcements",
       "section:changelog",
       "section:logging",
+      "section:product-analytics",
       "section:danger",
     ])
   })
 
-  it("keeps maintenance controls before diagnostics and reset actions", () => {
+  it("keeps diagnostics controls before product analytics and reset actions", () => {
     const orderedControlIds = generalSearchControls.map((control) => control.id)
     const siteAnnouncementsIndex = orderedControlIds.indexOf(
       "control:site-announcements-polling",
     )
     const changelogIndex = orderedControlIds.indexOf(
       "control:changelog-on-update",
+    )
+    const productAnalyticsIndex = orderedControlIds.indexOf(
+      "control:product-analytics-enabled",
     )
     const loggingIndex = orderedControlIds.indexOf("control:logging-enabled")
     const dangerResetIndex = orderedControlIds.indexOf(
@@ -33,11 +37,14 @@ describe("general settings search definitions", () => {
 
     expect(siteAnnouncementsIndex).toBeGreaterThanOrEqual(0)
     expect(changelogIndex).toBeGreaterThanOrEqual(0)
+    expect(productAnalyticsIndex).toBeGreaterThanOrEqual(0)
     expect(loggingIndex).toBeGreaterThanOrEqual(0)
     expect(dangerResetIndex).toBeGreaterThanOrEqual(0)
 
     expect(siteAnnouncementsIndex).toBeLessThan(changelogIndex)
     expect(changelogIndex).toBeLessThan(loggingIndex)
+    expect(loggingIndex).toBeLessThan(productAnalyticsIndex)
+    expect(productAnalyticsIndex).toBeLessThan(dangerResetIndex)
     expect(loggingIndex).toBeLessThan(dangerResetIndex)
   })
 })

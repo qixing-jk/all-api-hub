@@ -12,6 +12,12 @@ const SITE_ANNOUNCEMENT_BREADCRUMBS = [
   "settings:siteAnnouncementNotifications.title",
 ]
 
+const PRODUCT_ANALYTICS_BREADCRUMBS = [
+  ...DEFAULT_BREADCRUMBS,
+  "settings:tabs.general",
+  "settings:productAnalytics.title",
+]
+
 export const generalSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:display",
@@ -60,11 +66,22 @@ export const generalSearchSections: OptionsSearchItemDefinition[] = [
     205,
   ),
   buildSectionDefinition(
+    "section:product-analytics",
+    "general",
+    "product-analytics",
+    "settings:productAnalytics.title",
+    206,
+    {
+      descriptionKey: "settings:productAnalytics.description",
+      keywords: ["analytics", "posthog", "privacy", "anonymous", "opt out"],
+    },
+  ),
+  buildSectionDefinition(
     "section:danger",
     "general",
     "dangerous-zone",
     "settings:danger.title",
-    206,
+    207,
   ),
 ]
 
@@ -257,11 +274,23 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
+    "control:product-analytics-enabled",
+    "general",
+    "product-analytics-enabled",
+    "settings:productAnalytics.enableLabel",
+    512,
+    {
+      descriptionKey: "settings:productAnalytics.enableDescription",
+      breadcrumbsKeys: PRODUCT_ANALYTICS_BREADCRUMBS,
+      keywords: ["analytics", "posthog", "privacy", "anonymous", "disable"],
+    },
+  ),
+  buildControlDefinition(
     "control:danger-reset-settings",
     "general",
     "danger-reset-settings",
     "settings:danger.resetSettings",
-    512,
+    515,
     {
       descriptionKey: "settings:danger.resetDesc",
       breadcrumbsKeys: [

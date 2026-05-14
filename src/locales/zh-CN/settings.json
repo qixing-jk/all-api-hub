@@ -375,6 +375,12 @@
       "success": "已授予全部推荐权限"
     }
   },
+  "productAnalytics": {
+    "description": "帮助改进 All API Hub 的匿名使用统计。我们不会收集 API Key、Cookie、账号 URL、余额、请求内容或用户输入。",
+    "enableDescription": "允许发送有限的功能使用情况、错误类别和粗略站点类型统计，用于判断开发优先级。",
+    "enableLabel": "启用匿名产品统计",
+    "title": "匿名产品统计"
+  },
   "refresh": {
     "autoRefresh": "自动刷新",
     "autoRefreshDesc": "定期自动刷新账号数据",

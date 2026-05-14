@@ -375,6 +375,12 @@
       "success": "已授予全部推薦權限"
     }
   },
+  "productAnalytics": {
+    "description": "協助改進 All API Hub 的匿名使用統計。我們不會收集 API Key、Cookie、帳號 URL、餘額、請求內容或使用者輸入。",
+    "enableDescription": "允許傳送有限的功能使用情況、錯誤類別和粗略站點類型統計，用於判斷開發優先順序。",
+    "enableLabel": "啟用匿名產品統計",
+    "title": "匿名產品統計"
+  },
   "refresh": {
     "autoRefresh": "自動重新整理",
     "autoRefreshDesc": "定期自動重新整理帳號資料",
