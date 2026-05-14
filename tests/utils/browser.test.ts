@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  detectBrowserFamily,
   detectExtensionStore,
   getDeviceTypeInfo,
   isEdgeByUA,
@@ -14,6 +15,30 @@ describe("browser", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
+  })
+
+  describe("detectBrowserFamily", () => {
+    it("classifies common browser families from explicit user agents", () => {
+      expect(detectBrowserFamily("Mozilla/5.0 Firefox/123.0")).toBe("firefox")
+      expect(detectBrowserFamily("Mozilla/5.0 Edg/120.0.0.0")).toBe("edge")
+      expect(detectBrowserFamily("Mozilla/5.0 Chrome/120.0.0.0")).toBe(
+        "chromium",
+      )
+      expect(
+        detectBrowserFamily("Mozilla/5.0 Version/17.0 Safari/605.1.15"),
+      ).toBe("safari")
+      expect(detectBrowserFamily("Mozilla/5.0 UnknownBrowser/1.0")).toBe(
+        "unknown",
+      )
+    })
+
+    it("falls back to navigator.userAgent when no UA override is provided", () => {
+      vi.stubGlobal("navigator", {
+        userAgent: "Mozilla/5.0 Chromium/120.0.0.0",
+      })
+
+      expect(detectBrowserFamily()).toBe("chromium")
+    })
   })
 
   describe("isFirefoxByUA", () => {

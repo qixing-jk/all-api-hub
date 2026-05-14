@@ -102,6 +102,7 @@
     "marked": "16.4.0",
     "otpauth": "^9.5.0",
     "postcss": "^8.5.6",
+    "posthog-js": "^1.373.2",
     "react": "^19.1.1",
     "react-countup": "^6.5.3",
     "react-dom": "^19.1.1",

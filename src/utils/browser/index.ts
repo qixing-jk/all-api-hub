@@ -12,6 +12,8 @@ import {
   isTabletDevice,
 } from "./device"
 
+export { detectBrowserFamily } from "./userAgent"
+
 export const OPTIONS_PAGE_URL = getExtensionURL(OPTIONS_PAGE_PATH)
 
 export type ExtensionStoreId = "chrome" | "edge" | "firefox"
