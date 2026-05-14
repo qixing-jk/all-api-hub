@@ -1,6 +1,26 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
+
+const { startProductAnalyticsActionMock, trackerCompleteMock } = vi.hoisted(
+  () => ({
+    startProductAnalyticsActionMock: vi.fn(),
+    trackerCompleteMock: vi.fn(),
+  }),
+)
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: unknown[]) =>
+    startProductAnalyticsActionMock(...args),
+}))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
@@ -45,6 +65,12 @@ describe("background context menu refresh", () => {
     contextMenusRemove.mockClear()
     contextMenusAddListener.mockClear()
     tabsSendMessage.mockClear()
+    startProductAnalyticsActionMock.mockReset()
+    trackerCompleteMock.mockReset()
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: trackerCompleteMock,
+    })
+    trackerCompleteMock.mockResolvedValue(undefined)
   })
 
   afterAll(() => {
@@ -118,6 +144,95 @@ describe("background context menu refresh", () => {
       expect.objectContaining({
         action: RuntimeActionIds.ApiCheckContextMenuTrigger,
       }),
+    )
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.TriggerApiCredentialCheckFromContextMenu,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundContextMenu,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+    })
+    expect(trackerCompleteMock).toHaveBeenCalledWith()
+  })
+
+  it("reports a skipped redemption context-menu action when no text is selected", async () => {
+    const { refreshContextMenus } = await import(
+      "~/entrypoints/background/contextMenus"
+    )
+
+    await refreshContextMenus({
+      redemptionAssist: { enabled: true, contextMenu: { enabled: true } },
+      webAiApiCheck: { enabled: true, contextMenu: { enabled: true } },
+    } as any)
+
+    await Promise.all(
+      listeners.map((listener) =>
+        listener(
+          {
+            menuItemId: "redemption-assist-context-menu",
+            selectionText: "   ",
+            pageUrl: "https://example.com",
+          },
+          { id: 123, url: "https://example.com" },
+        ),
+      ),
+    )
+
+    expect(tabsSendMessage).not.toHaveBeenCalled()
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.TriggerRedemptionAssistFromContextMenu,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundContextMenu,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+    })
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+    )
+  })
+
+  it("reports a failed AI API Check context-menu action when forwarding fails", async () => {
+    tabsSendMessage.mockRejectedValueOnce(new Error("content unavailable"))
+    const { refreshContextMenus } = await import(
+      "~/entrypoints/background/contextMenus"
+    )
+
+    await refreshContextMenus({
+      redemptionAssist: { enabled: true, contextMenu: { enabled: true } },
+      webAiApiCheck: { enabled: true, contextMenu: { enabled: true } },
+    } as any)
+
+    await Promise.all(
+      listeners.map((listener) =>
+        listener(
+          {
+            menuItemId: "ai-api-check-context-menu",
+            selectionText: "sk-test",
+            pageUrl: "https://example.com",
+          },
+          { id: 123, url: "https://example.com" },
+        ),
+      ),
+    )
+
+    expect(tabsSendMessage).toHaveBeenCalledWith(
+      123,
+      expect.objectContaining({
+        action: RuntimeActionIds.ApiCheckContextMenuTrigger,
+      }),
+    )
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.TriggerApiCredentialCheckFromContextMenu,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundContextMenu,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+    })
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
     )
   })
 })

@@ -1,6 +1,14 @@
 import type { ReactNode } from "react"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsActionId,
+  type ProductAnalyticsFeatureId,
+} from "~/services/productAnalytics/events"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
@@ -20,6 +28,7 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
 // Shared mocks to control account data and capture bulk check-in clicks.
 let displayDataMock: any[] = []
 const handleOpenExternalCheckInsMock = vi.fn()
+const trackProductAnalyticsActionStartedMock = vi.hoisted(() => vi.fn())
 
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
@@ -33,13 +42,61 @@ vi.mock("~/features/AccountManagement/hooks/AccountActionsContext", () => ({
   }),
 }))
 
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionStarted: (...args: any[]) =>
+    trackProductAnalyticsActionStartedMock(...args),
+}))
+
 afterEach(() => {
   vi.restoreAllMocks()
   displayDataMock = []
   handleOpenExternalCheckInsMock.mockReset()
+  trackProductAnalyticsActionStartedMock.mockReset()
 })
 
+const expectPopupAction = ({
+  featureId,
+  actionId,
+  surfaceId = PRODUCT_ANALYTICS_SURFACE_IDS.PopupActionBar,
+}: {
+  featureId: ProductAnalyticsFeatureId
+  actionId: ProductAnalyticsActionId
+  surfaceId?: (typeof PRODUCT_ANALYTICS_SURFACE_IDS)[keyof typeof PRODUCT_ANALYTICS_SURFACE_IDS]
+}) => {
+  expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+    featureId,
+    actionId,
+    surfaceId,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+  })
+}
+
 describe("popup ActionButtons", () => {
+  it("tracks the account primary action with popup action bar metadata", async () => {
+    const onPrimaryAction = vi.fn()
+    const { default: ActionButtons } = await import(
+      "~/entrypoints/popup/components/ActionButtons"
+    )
+    render(
+      <ActionButtons
+        primaryActionLabel="addAccount"
+        onPrimaryAction={onPrimaryAction}
+        primaryAnalyticsAction={{
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateAccountDialog,
+        }}
+      />,
+    )
+
+    fireEvent.click(await screen.findByRole("button", { name: "addAccount" }))
+
+    expect(onPrimaryAction).toHaveBeenCalledTimes(1)
+    expectPopupAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateAccountDialog,
+    })
+  })
+
   it("opens auto check-in page and triggers run when quick check-in button clicked", async () => {
     vi.resetModules()
     const navigation = await import("~/utils/navigation")
@@ -64,6 +121,43 @@ describe("popup ActionButtons", () => {
     fireEvent.click(quickCheckinButton)
 
     expect(openAutoCheckinPageSpy).toHaveBeenCalledWith({ runNow: "true" })
+    expectPopupAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunPopupQuickCheckin,
+    })
+  })
+
+  it("tracks popup navigation shortcuts from the action bar", async () => {
+    vi.resetModules()
+    const navigation = await import("~/utils/navigation")
+    vi.spyOn(navigation, "openKeysPage").mockImplementation(vi.fn() as any)
+    vi.spyOn(navigation, "openModelsPage").mockImplementation(vi.fn() as any)
+
+    const { default: ActionButtons } = await import(
+      "~/entrypoints/popup/components/ActionButtons"
+    )
+    render(
+      <ActionButtons
+        primaryActionLabel="addAccount"
+        onPrimaryAction={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "ui:navigation.keys" }),
+    )
+    expectPopupAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupKeyManagement,
+    })
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "ui:navigation.models" }),
+    )
+    expectPopupAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupModelManagement,
+    })
   })
 
   it("hides external check-in button when no custom check-in URLs exist", async () => {
@@ -112,8 +206,20 @@ describe("popup ActionButtons", () => {
       {
         openAll: false,
         openInNewWindow: false,
+        analyticsContext: {
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupExternalCheckIns,
+          surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.PopupActionBar,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+        },
       },
     )
+    expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupExternalCheckIns,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.PopupActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+    })
   })
 
   it("opens all external check-ins on ctrl/cmd click", async () => {
@@ -148,6 +254,12 @@ describe("popup ActionButtons", () => {
       {
         openAll: true,
         openInNewWindow: false,
+        analyticsContext: {
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupExternalCheckIns,
+          surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.PopupActionBar,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+        },
       },
     )
   })
@@ -180,6 +292,12 @@ describe("popup ActionButtons", () => {
       {
         openAll: false,
         openInNewWindow: true,
+        analyticsContext: {
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupExternalCheckIns,
+          surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.PopupActionBar,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+        },
       },
     )
   })
@@ -216,6 +334,12 @@ describe("popup ActionButtons", () => {
       {
         openAll: true,
         openInNewWindow: true,
+        analyticsContext: {
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupExternalCheckIns,
+          surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.PopupActionBar,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+        },
       },
     )
   })

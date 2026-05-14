@@ -1,4 +1,13 @@
 import { POPUP_PAGE_PATH } from "~/constants/extensionPages"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import {
   addActionClickListener,
   getSidePanelSupport,
@@ -23,7 +32,22 @@ const logger = createLogger("ActionClickBehavior")
  * the original user gesture.
  */
 const handleActionClick = async (tab: browser.tabs.Tab) => {
-  await openSidePanelWithFallback(tab)
+  const tracker = startProductAnalyticsAction({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.SidepanelNavigation,
+    actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenSidepanelFromToolbarAction,
+    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundToolbarAction,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+  })
+
+  try {
+    await openSidePanelWithFallback(tab)
+    await tracker.complete()
+  } catch (error) {
+    await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+    })
+    throw error
+  }
 }
 
 /**

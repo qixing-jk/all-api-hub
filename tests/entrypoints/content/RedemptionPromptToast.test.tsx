@@ -4,10 +4,21 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { RedemptionPromptToast } from "~/entrypoints/content/redemptionAssist/components/RedemptionPromptToast"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 
-const { loggerErrorMock, sendRuntimeMessageMock } = vi.hoisted(() => ({
+const {
+  loggerErrorMock,
+  sendRuntimeMessageMock,
+  trackProductAnalyticsActionStartedMock,
+} = vi.hoisted(() => ({
   loggerErrorMock: vi.fn(),
   sendRuntimeMessageMock: vi.fn(),
+  trackProductAnalyticsActionStartedMock: vi.fn(),
 }))
 
 vi.mock("react-i18next", async (importOriginal) => {
@@ -35,12 +46,14 @@ vi.mock("react-i18next", async (importOriginal) => {
 vi.mock("~/components/ui", () => ({
   Body: ({ children }: { children: React.ReactNode }) => <p>{children}</p>,
   Button: ({
+    analyticsAction,
     children,
     disabled,
     onClick,
     variant,
   }: {
     children: React.ReactNode
+    analyticsAction?: unknown
     disabled?: boolean
     onClick?: (event: React.MouseEvent) => void
     variant?: string
@@ -48,6 +61,7 @@ vi.mock("~/components/ui", () => ({
     <button
       type="button"
       data-variant={variant}
+      data-analytics-action={analyticsAction ? "present" : undefined}
       disabled={disabled}
       onClick={onClick}
     >
@@ -92,6 +106,11 @@ vi.mock("~/utils/core/logger", () => ({
   createLogger: () => ({
     error: loggerErrorMock,
   }),
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionStarted: (...args: unknown[]) =>
+    trackProductAnalyticsActionStartedMock(...args),
 }))
 
 describe("RedemptionPromptToast", () => {
@@ -143,6 +162,12 @@ describe("RedemptionPromptToast", () => {
       action: "auto",
       selectedCodes: ["code-1", "code-2"],
     })
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ConfirmRedemptionPrompt,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionPromptToast,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+    })
   })
 
   it("hides the select-all control for a single code and returns a cancel action", () => {
@@ -165,6 +190,12 @@ describe("RedemptionPromptToast", () => {
     expect(onAction).toHaveBeenCalledWith({
       action: "cancel",
       selectedCodes: [],
+    })
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CancelRedemptionPrompt,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionPromptToast,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
     })
   })
 
@@ -191,5 +222,12 @@ describe("RedemptionPromptToast", () => {
       "Failed to open settings page",
       runtimeError,
     )
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.VisitRedemptionAssistSettingsFromPrompt,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionPromptToast,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+    })
   })
 })

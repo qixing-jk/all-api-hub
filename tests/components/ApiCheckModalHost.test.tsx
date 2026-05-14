@@ -18,8 +18,28 @@ import {
   dispatchOpenApiCheckModal,
   type ApiCheckOpenModalDetail,
 } from "~/entrypoints/content/webAiApiCheck/events"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { render } from "~~/tests/test-utils/render"
+
+const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
+  vi.hoisted(() => ({
+    startProductAnalyticsActionMock: vi.fn(),
+    completeProductAnalyticsActionMock: vi.fn(),
+  }))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: startProductAnalyticsActionMock,
+}))
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   const actual =
@@ -57,6 +77,11 @@ describe("ApiCheckModalHost", () => {
     ;(toast.success as any).mockReset()
     ;(toast.error as any).mockReset()
     ;(toast.dismiss as any).mockReset()
+    startProductAnalyticsActionMock.mockReset()
+    completeProductAnalyticsActionMock.mockReset()
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: completeProductAnalyticsActionMock,
+    })
     vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
       if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
         return { success: true, modelIds: [] }
@@ -130,6 +155,61 @@ describe("ApiCheckModalHost", () => {
       trigger: "contextMenu",
       reason: "dismissed",
     })
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DismissDetectedApiCredentialCheck,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      {
+        insights: {
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+        },
+      },
+    )
+  })
+
+  it("tracks auto-detected dismiss analytics as auto source without credential details", async () => {
+    const user = userEvent.setup()
+    const sourceText =
+      "Base URL: https://proxy.example.com/api\nAPI Key: sk-auto-secret"
+    const pageUrl = "https://console.example.com/settings?token=secret"
+
+    await openModal({
+      sourceText,
+      pageUrl,
+      trigger: "autoDetect",
+    })
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.close" }),
+    )
+
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DismissDetectedApiCredentialCheck,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      {
+        insights: {
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+        },
+      },
+    )
+
+    const analyticsCalls = JSON.stringify([
+      startProductAnalyticsActionMock.mock.calls,
+      completeProductAnalyticsActionMock.mock.calls,
+    ])
+    expect(analyticsCalls).not.toContain(sourceText)
+    expect(analyticsCalls).not.toContain("sk-auto-secret")
+    expect(analyticsCalls).not.toContain("https://proxy.example.com/api")
+    expect(analyticsCalls).not.toContain(pageUrl)
   })
 
   it("auto-extract fills baseUrl + apiKey from pasted text", async () => {
@@ -197,6 +277,48 @@ describe("ApiCheckModalHost", () => {
 
     await waitFor(() => {
       expect(screen.getByTestId("api-check-model-id")).toHaveTextContent("m2")
+    })
+  })
+
+  it("tracks manual model fetch completion with model-count insights", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return { success: true, modelIds: ["m1", "m2"] }
+      }
+      return { success: false }
+    })
+
+    await openModal()
+
+    await user.type(
+      await screen.findByPlaceholderText("https://example.com/api"),
+      "https://proxy.example.com/api",
+    )
+    await user.type(await screen.findByPlaceholderText("sk-..."), "sk-secret")
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.actions.fetchModels",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.FetchApiCredentialModelList,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+      })
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            modelCount: 2,
+          },
+        },
+      )
     })
   })
 
@@ -323,6 +445,155 @@ describe("ApiCheckModalHost", () => {
     expect(screen.queryByText("OpenAI result")).not.toBeInTheDocument()
   })
 
+  it("tracks single unsupported probe completion as skipped", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return { success: true, modelIds: [] }
+      }
+
+      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
+        return {
+          success: true,
+          result: {
+            id: message.probeId,
+            status: "unsupported",
+            latencyMs: 0,
+            summary: "Streaming is not supported",
+          },
+        }
+      }
+
+      return { success: false }
+    })
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-secret-xyz")
+
+    const probeCard = await screen.findByTestId(
+      "api-check-probe-text-generation",
+    )
+
+    await user.click(
+      within(probeCard).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.runOne",
+      }),
+    )
+
+    expect(
+      await within(probeCard).findByText("Streaming is not supported"),
+    ).toBeInTheDocument()
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunApiCredentialProbe,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+      {
+        insights: {
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+        },
+      },
+    )
+  })
+
+  it("tracks successful individual probe with fixed source/mode and no credential details", async () => {
+    const user = userEvent.setup()
+    const sourceText =
+      "Base URL: https://proxy.example.com/api\nAPI Key: sk-secret-xyz"
+    const pageUrl = "https://console.example.com/settings?token=secret"
+    const baseUrl = "https://proxy.example.com/api"
+    const apiKey = "sk-secret-xyz"
+    const modelId = "gpt-4o-sensitive"
+
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return { success: true, modelIds: [modelId] }
+      }
+
+      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
+        return {
+          success: true,
+          result: {
+            id: message.probeId,
+            status: "pass",
+            latencyMs: 5,
+            summary: "Probe OK",
+          },
+        }
+      }
+
+      return { success: false }
+    })
+
+    await openModal({
+      sourceText,
+      pageUrl,
+      trigger: "contextMenu",
+    })
+
+    await waitFor(() => {
+      expect(sendRuntimeMessage).toHaveBeenCalledWith({
+        action: RuntimeActionIds.ApiCheckFetchModels,
+        apiType: "openai-compatible",
+        baseUrl,
+        apiKey,
+      })
+      expect(screen.getByTestId("api-check-model-id")).toHaveTextContent(
+        modelId,
+      )
+    })
+
+    const probeCard = await screen.findByTestId(
+      "api-check-probe-text-generation",
+    )
+
+    await user.click(
+      within(probeCard).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.runOne",
+      }),
+    )
+
+    expect(await within(probeCard).findByText("Probe OK")).toBeInTheDocument()
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunApiCredentialProbe,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: expect.objectContaining({
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+        }),
+      },
+    )
+
+    const analyticsCalls = JSON.stringify([
+      startProductAnalyticsActionMock.mock.calls,
+      completeProductAnalyticsActionMock.mock.calls,
+    ])
+    expect(analyticsCalls).not.toContain(sourceText)
+    expect(analyticsCalls).not.toContain(apiKey)
+    expect(analyticsCalls).not.toContain(baseUrl)
+    expect(analyticsCalls).not.toContain(pageUrl)
+    expect(analyticsCalls).not.toContain(modelId)
+  })
+
   it("test displays sanitized errors returned from background", async () => {
     const user = userEvent.setup()
     vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
@@ -366,6 +637,25 @@ describe("ApiCheckModalHost", () => {
     expect(
       await within(probeCard).findByText("Unauthorized: [REDACTED]"),
     ).toBeInTheDocument()
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunApiCredentialProbeSuite,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+          itemCount: 5,
+          successCount: 0,
+          failureCount: 5,
+        },
+      },
+    )
   })
 
   it("falls back to the local probe error when the background probe call throws", async () => {
@@ -476,6 +766,20 @@ describe("ApiCheckModalHost", () => {
         pageUrl: "https://example.com",
       })
     })
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+        },
+      },
+    )
   })
 
   it("shows a quick-open button after saving to profiles", async () => {

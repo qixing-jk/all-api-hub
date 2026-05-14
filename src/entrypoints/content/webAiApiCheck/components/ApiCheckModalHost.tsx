@@ -14,6 +14,19 @@ import {
 import { inputVariants } from "~/components/ui/input"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { cn } from "~/lib/utils"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsResult,
+  type ProductAnalyticsSourceKind,
+} from "~/services/productAnalytics/events"
 import {
   API_TYPES,
   getApiVerificationProbeDefinitions,
@@ -46,6 +59,35 @@ type ProbeItemState = {
 // Preserve the real debounce in dev/prod to avoid bursty background requests
 // while typing, but skip the wall-clock delay in Vitest.
 const MODEL_AUTO_FETCH_DEBOUNCE_MS = import.meta.env.MODE === "test" ? 0 : 300
+
+const contentApiCheckAnalyticsScope = {
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+  surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+} as const
+
+/**
+ * Classifies the modal opening source without carrying page content.
+ */
+function getApiCheckSourceKind(
+  trigger: ApiCheckOpenModalDetail["trigger"],
+): ProductAnalyticsSourceKind {
+  return trigger === "autoDetect"
+    ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
+    : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual
+}
+
+/**
+ * Converts probe status into a fixed analytics completion result.
+ */
+function getProbeAnalyticsResult(
+  result: ApiVerificationProbeResult | undefined,
+): ProductAnalyticsResult {
+  if (!result) return PRODUCT_ANALYTICS_RESULTS.Failure
+  if (result.status === "pass") return PRODUCT_ANALYTICS_RESULTS.Success
+  if (result.status === "unsupported") return PRODUCT_ANALYTICS_RESULTS.Skipped
+  return PRODUCT_ANALYTICS_RESULTS.Failure
+}
 
 /**
  * Build the initial probe UI state for the selected API type.
@@ -201,6 +243,18 @@ export function ApiCheckModalHost() {
 
   const close = () => {
     const reason = hasAnyResult || hasFetchedModels ? "completed" : "dismissed"
+    if (reason === "dismissed") {
+      const tracker = startProductAnalyticsAction({
+        ...contentApiCheckAnalyticsScope,
+        actionId:
+          PRODUCT_ANALYTICS_ACTION_IDS.DismissDetectedApiCredentialCheck,
+      })
+      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+        insights: {
+          sourceKind: getApiCheckSourceKind(trigger),
+        },
+      })
+    }
     dispatchApiCheckModalClosed({
       pageUrl: pageUrl || window.location.href,
       trigger,
@@ -226,6 +280,15 @@ export function ApiCheckModalHost() {
 
       if (!modelListSupported) return
 
+      const tracker =
+        origin === "manual"
+          ? startProductAnalyticsAction({
+              ...contentApiCheckAnalyticsScope,
+              actionId:
+                PRODUCT_ANALYTICS_ACTION_IDS.FetchApiCredentialModelList,
+            })
+          : null
+
       const trimmedBaseUrl = baseUrl.trim()
       const trimmedApiKey = apiKey.trim()
       if (!trimmedBaseUrl || !trimmedApiKey) {
@@ -234,6 +297,15 @@ export function ApiCheckModalHost() {
             t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"),
           )
         }
+        await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+          insights: {
+            sourceKind:
+              origin === "auto"
+                ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
+                : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            modelCount: 0,
+          },
+        })
         return
       }
 
@@ -248,7 +320,18 @@ export function ApiCheckModalHost() {
         })
 
         // Ignore stale responses when a newer request is already in-flight.
-        if (fetchModelsRequestIdRef.current !== requestId) return
+        if (fetchModelsRequestIdRef.current !== requestId) {
+          await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+            insights: {
+              sourceKind:
+                origin === "auto"
+                  ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
+                  : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+              modelCount: 0,
+            },
+          })
+          return
+        }
 
         if (response?.success) {
           const ids = Array.isArray(response.modelIds) ? response.modelIds : []
@@ -257,12 +340,43 @@ export function ApiCheckModalHost() {
             // Provide a helpful default to reduce friction.
             setModelId(ids[0] ?? "")
           }
+          await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+            insights: {
+              sourceKind:
+                origin === "auto"
+                  ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
+                  : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+              modelCount: ids.length,
+            },
+          })
         } else {
           setFetchModelsError(
             response?.error ||
               t("webAiApiCheck:modal.errors.fetchModelsFailed"),
           )
+          await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            insights: {
+              sourceKind:
+                origin === "auto"
+                  ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
+                  : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+              modelCount: 0,
+            },
+          })
         }
+      } catch (error) {
+        await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            sourceKind:
+              origin === "auto"
+                ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
+                : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            modelCount: 0,
+          },
+        })
+        throw error
       } finally {
         if (fetchModelsRequestIdRef.current === requestId) {
           setIsFetchingModels(false)
@@ -323,7 +437,18 @@ export function ApiCheckModalHost() {
     modelListSupported,
   ])
 
-  const runProbe = async (probeId: ApiVerificationProbeId) => {
+  const runProbe = async (
+    probeId: ApiVerificationProbeId,
+    options: { trackIndividual?: boolean } = {},
+  ): Promise<ApiVerificationProbeResult | null> => {
+    const shouldTrack = options.trackIndividual !== false
+    const tracker = shouldTrack
+      ? startProductAnalyticsAction({
+          ...contentApiCheckAnalyticsScope,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunApiCredentialProbe,
+        })
+      : null
+
     setValidationError(null)
 
     const trimmedBaseUrl = baseUrl.trim()
@@ -331,7 +456,13 @@ export function ApiCheckModalHost() {
 
     if (!trimmedBaseUrl || !trimmedApiKey) {
       setValidationError(t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"))
-      return
+      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+        insights: {
+          sourceKind: getApiCheckSourceKind(trigger),
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+        },
+      })
+      return null
     }
 
     setProbes((prev) =>
@@ -365,7 +496,17 @@ export function ApiCheckModalHost() {
               : probe,
           ),
         )
-        return
+        const analyticsResult = getProbeAnalyticsResult(result)
+        await tracker?.complete(analyticsResult, {
+          ...(analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure
+            ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
+            : {}),
+          insights: {
+            sourceKind: getApiCheckSourceKind(trigger),
+            mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+          },
+        })
+        return result
       }
 
       const message =
@@ -389,37 +530,102 @@ export function ApiCheckModalHost() {
             : probe,
         ),
       )
+      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          sourceKind: getApiCheckSourceKind(trigger),
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+        },
+      })
+      return fallback
     } catch {
+      const fallback: ApiVerificationProbeResult = {
+        id: probeId,
+        status: "fail",
+        latencyMs: 0,
+        summary: t("webAiApiCheck:modal.errors.runProbeFailed"),
+        input: {
+          apiType,
+          baseUrl: trimmedBaseUrl,
+        },
+      }
       setProbes((prev) =>
         prev.map((probe) =>
           probe.id === probeId
             ? {
                 ...probe,
                 isRunning: false,
-                result: {
-                  id: probeId,
-                  status: "fail",
-                  latencyMs: 0,
-                  summary: t("webAiApiCheck:modal.errors.runProbeFailed"),
-                  input: {
-                    apiType,
-                    baseUrl: trimmedBaseUrl,
-                  },
-                },
+                result: fallback,
               }
             : probe,
         ),
       )
+      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          sourceKind: getApiCheckSourceKind(trigger),
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+        },
+      })
+      return fallback
     }
   }
 
   const runAll = async () => {
+    const tracker = startProductAnalyticsAction({
+      ...contentApiCheckAnalyticsScope,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunApiCredentialProbeSuite,
+    })
+
+    const trimmedBaseUrl = baseUrl.trim()
+    const trimmedApiKey = apiKey.trim()
+    if (!trimmedBaseUrl || !trimmedApiKey) {
+      setValidationError(t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"))
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+        insights: {
+          sourceKind: getApiCheckSourceKind(trigger),
+          mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+          itemCount: probeDefinitions.length,
+          successCount: 0,
+          failureCount: 0,
+        },
+      })
+      return
+    }
+
     setIsRunningAll(true)
+    const results: ApiVerificationProbeResult[] = []
     try {
       for (const def of probeDefinitions) {
         // Run sequentially so the UI updates progressively and we avoid bursty network traffic.
-        await runProbe(def.id)
+        const result = await runProbe(def.id, { trackIndividual: false })
+        if (result) results.push(result)
       }
+      const successCount = results.filter(
+        (result) => result.status === "pass",
+      ).length
+      const failureCount = results.filter(
+        (result) => result.status === "fail",
+      ).length
+      const analyticsResult =
+        failureCount > 0
+          ? PRODUCT_ANALYTICS_RESULTS.Failure
+          : successCount > 0
+            ? PRODUCT_ANALYTICS_RESULTS.Success
+            : PRODUCT_ANALYTICS_RESULTS.Skipped
+
+      await tracker.complete(analyticsResult, {
+        ...(analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure
+          ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
+          : {}),
+        insights: {
+          sourceKind: getApiCheckSourceKind(trigger),
+          mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+          itemCount: results.length || probeDefinitions.length,
+          successCount,
+          failureCount,
+        },
+      })
     } finally {
       setIsRunningAll(false)
     }
@@ -429,6 +635,11 @@ export function ApiCheckModalHost() {
   const canSaveProfile = !!baseUrl.trim() && !!apiKey.trim() && !isSavingProfile
 
   const handleSaveProfile = async () => {
+    const tracker = startProductAnalyticsAction({
+      ...contentApiCheckAnalyticsScope,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+    })
+
     setValidationError(null)
 
     const trimmedBaseUrl = baseUrl.trim()
@@ -436,6 +647,11 @@ export function ApiCheckModalHost() {
 
     if (!trimmedBaseUrl || !trimmedApiKey) {
       setValidationError(t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"))
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+        insights: {
+          sourceKind: getApiCheckSourceKind(trigger),
+        },
+      })
       return
     }
 
@@ -474,14 +690,31 @@ export function ApiCheckModalHost() {
           ),
           { duration: 8000 },
         )
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          insights: {
+            sourceKind: getApiCheckSourceKind(trigger),
+          },
+        })
       } else {
         toast.error(
           response?.error ||
             t("webAiApiCheck:modal.errors.saveToProfilesFailed"),
         )
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            sourceKind: getApiCheckSourceKind(trigger),
+          },
+        })
       }
     } catch {
       toast.error(t("webAiApiCheck:modal.errors.saveToProfilesFailed"))
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          sourceKind: getApiCheckSourceKind(trigger),
+        },
+      })
     } finally {
       setIsSavingProfile(false)
     }

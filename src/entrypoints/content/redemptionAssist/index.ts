@@ -1,6 +1,15 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { isEventFromAllApiHubContentUi } from "~/entrypoints/content/shared/contentUi"
 import { isLikelyCopyActionTarget } from "~/entrypoints/content/shared/copyActionTarget"
+import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type {
   RedemptionAssistShouldPromptRequest,
   RedemptionAssistShouldPromptResponse,
@@ -190,6 +199,7 @@ async function handleContextMenuRedemption(
       relaxedCharset: true,
     })
     const codes = extracted.length > 0 ? extracted : [trimmedSelection]
+    let confirmedPrompt = false
 
     const selectedCodes =
       codes.length > 1
@@ -205,6 +215,7 @@ async function handleContextMenuRedemption(
               codes.map((code) => ({ code, preview: maskCode(code) })),
             )
             if (prompt.action !== "auto") return []
+            confirmedPrompt = true
             return prompt.selectedCodes
           })()
         : codes
@@ -229,6 +240,9 @@ async function handleContextMenuRedemption(
         codes: selectedCodes,
         dismissOuterLoading: dismissLoadingToast,
       })
+      if (confirmedPrompt) {
+        await trackConfirmRedemptionPromptCompleted(results)
+      }
 
       if (results.length === 1 && results[0]?.success) {
         await showRedeemResultToast(true, results[0].message)
@@ -354,6 +368,7 @@ async function scanForRedemptionCodes(sourceText?: string) {
         codes: selectedCodes,
         dismissOuterLoading: dismissLoadingToast,
       })
+      await trackConfirmRedemptionPromptCompleted(results)
 
       if (results.length === 1 && results[0]?.success) {
         await showRedeemResultToast(true, results[0].message)
@@ -400,6 +415,36 @@ type RedeemBatchItem = {
   preview: string
   success: boolean
   message: string
+}
+
+/**
+ * Completes the prompt-confirm action using only aggregate success/failure state.
+ */
+async function trackConfirmRedemptionPromptCompleted(
+  results: RedeemBatchItem[],
+) {
+  const successCount = results.filter((item) => item.success).length
+  const failureCount = results.length - successCount
+  const result =
+    results.length > 0 && failureCount === 0
+      ? PRODUCT_ANALYTICS_RESULTS.Success
+      : PRODUCT_ANALYTICS_RESULTS.Failure
+
+  await trackProductAnalyticsActionCompleted({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+    actionId: PRODUCT_ANALYTICS_ACTION_IDS.ConfirmRedemptionPrompt,
+    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionPromptToast,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+    result,
+    ...(result === PRODUCT_ANALYTICS_RESULTS.Failure
+      ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
+      : {}),
+    insights: {
+      itemCount: results.length,
+      successCount,
+      failureCount,
+    },
+  })
 }
 
 /**

@@ -1,6 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { POPUP_PAGE_PATH } from "~/constants/extensionPages"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 
 describe("background applyActionClickBehavior", () => {
   let addActionClickListener: ReturnType<typeof vi.fn>
@@ -9,6 +15,8 @@ describe("background applyActionClickBehavior", () => {
   let getSidePanelSupport: ReturnType<typeof vi.fn>
   let openSidePanelWithFallback: ReturnType<typeof vi.fn>
   let setPanelBehavior: ReturnType<typeof vi.fn>
+  let startProductAnalyticsAction: ReturnType<typeof vi.fn>
+  let trackerComplete: ReturnType<typeof vi.fn>
 
   beforeEach(() => {
     addActionClickListener = vi.fn()
@@ -17,6 +25,10 @@ describe("background applyActionClickBehavior", () => {
     getSidePanelSupport = vi.fn()
     openSidePanelWithFallback = vi.fn().mockResolvedValue(undefined)
     setPanelBehavior = vi.fn().mockResolvedValue(undefined)
+    trackerComplete = vi.fn().mockResolvedValue(undefined)
+    startProductAnalyticsAction = vi.fn().mockReturnValue({
+      complete: trackerComplete,
+    })
     ;(globalThis as any).chrome = {
       sidePanel: {
         setPanelBehavior,
@@ -35,12 +47,17 @@ describe("background applyActionClickBehavior", () => {
     vi.doMock("~/utils/navigation", () => ({
       openSidePanelWithFallback,
     }))
+
+    vi.doMock("~/services/productAnalytics/actions", () => ({
+      startProductAnalyticsAction,
+    }))
   })
 
   afterEach(() => {
     ;(globalThis as any).chrome = undefined
     vi.doUnmock("~/utils/browser/browserApi")
     vi.doUnmock("~/utils/navigation")
+    vi.doUnmock("~/services/productAnalytics/actions")
     vi.resetModules()
     vi.restoreAllMocks()
   })
@@ -125,5 +142,12 @@ describe("background applyActionClickBehavior", () => {
     await clickHandler?.(clickedTab)
 
     expect(openSidePanelWithFallback).toHaveBeenCalledWith(clickedTab)
+    expect(startProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.SidepanelNavigation,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenSidepanelFromToolbarAction,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundToolbarAction,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+    })
+    expect(trackerComplete).toHaveBeenCalledWith()
   })
 })

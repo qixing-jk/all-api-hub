@@ -2,8 +2,15 @@ import React, { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import AccountSearchInput from "~/features/AccountManagement/components/AccountList/AccountSearchInput"
 import { useAccountSearch } from "~/features/AccountManagement/hooks/useAccountSearch"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { DisplaySiteData } from "~/types"
 
 export interface RedemptionAccountSelectToastProps {
@@ -107,78 +114,98 @@ export const RedemptionAccountSelectToast: React.FC<
   }
 
   return (
-    <div
-      className="border-border bg-background text-foreground pointer-events-auto flex w-full flex-col gap-3 rounded-lg border px-3 py-2 text-xs sm:px-4 sm:py-3 sm:text-sm"
-      onKeyDownCapture={handleKeyDownCapture}
+    <ProductAnalyticsScope
+      entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Content}
+      featureId={PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist}
+      surfaceId={
+        PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionAccountSelectToast
+      }
     >
-      <div className="flex flex-col gap-1">
-        <div className="text-foreground text-sm font-medium">
-          {title || t("accountSelect.title")}
+      <div
+        className="border-border bg-background text-foreground pointer-events-auto flex w-full flex-col gap-3 rounded-lg border px-3 py-2 text-xs sm:px-4 sm:py-3 sm:text-sm"
+        onKeyDownCapture={handleKeyDownCapture}
+      >
+        <div className="flex flex-col gap-1">
+          <div className="text-foreground text-sm font-medium">
+            {title || t("accountSelect.title")}
+          </div>
+          {message && (
+            <div className="text-muted-foreground text-xs whitespace-pre-line">
+              {message}
+            </div>
+          )}
         </div>
-        {message && (
-          <div className="text-muted-foreground text-xs whitespace-pre-line">
-            {message}
-          </div>
-        )}
-      </div>
 
-      <AccountSearchInput
-        value={query}
-        onChange={setQuery}
-        onClear={clearSearch}
-      />
+        <AccountSearchInput
+          value={query}
+          onChange={setQuery}
+          onClear={clearSearch}
+        />
 
-      <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
-        {displayedAccounts.length === 0 ? (
-          <div className="text-muted-foreground py-4 text-center text-xs">
-            {t("accountSelect.noResults")}
-          </div>
-        ) : (
-          displayedAccounts.map((account) => {
-            const checkInUrl =
-              account.checkIn?.customCheckIn?.url || account.baseUrl
-            return (
-              <label
-                key={account.id}
-                ref={(el) => {
-                  if (el) {
-                    accountRefs.current.set(account.id, el)
-                  } else {
-                    accountRefs.current.delete(account.id)
-                  }
-                }}
-                className="border-border/60 hover:bg-muted/70 flex cursor-pointer flex-col gap-0.5 rounded-md border px-2 py-1.5 text-xs"
-              >
-                <div className="flex items-center gap-2">
-                  <input
-                    type="radio"
-                    className="h-3 w-3"
-                    checked={selectedAccount?.id === account.id}
-                    onChange={() => setSelectedId(account.id)}
-                  />
-                  <span className="text-foreground font-medium">
-                    {account.name}
-                  </span>
-                </div>
-                {checkInUrl && (
-                  <div className="text-muted-foreground truncate pl-5 text-[11px]">
-                    {checkInUrl}
+        <div className="max-h-56 space-y-1 overflow-y-auto pr-1">
+          {displayedAccounts.length === 0 ? (
+            <div className="text-muted-foreground py-4 text-center text-xs">
+              {t("accountSelect.noResults")}
+            </div>
+          ) : (
+            displayedAccounts.map((account) => {
+              const checkInUrl =
+                account.checkIn?.customCheckIn?.url || account.baseUrl
+              return (
+                <label
+                  key={account.id}
+                  ref={(el) => {
+                    if (el) {
+                      accountRefs.current.set(account.id, el)
+                    } else {
+                      accountRefs.current.delete(account.id)
+                    }
+                  }}
+                  className="border-border/60 hover:bg-muted/70 flex cursor-pointer flex-col gap-0.5 rounded-md border px-2 py-1.5 text-xs"
+                >
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="radio"
+                      className="h-3 w-3"
+                      checked={selectedAccount?.id === account.id}
+                      onChange={() => setSelectedId(account.id)}
+                    />
+                    <span className="text-foreground font-medium">
+                      {account.name}
+                    </span>
                   </div>
-                )}
-              </label>
-            )
-          })
-        )}
-      </div>
+                  {checkInUrl && (
+                    <div className="text-muted-foreground truncate pl-5 text-[11px]">
+                      {checkInUrl}
+                    </div>
+                  )}
+                </label>
+              )
+            })
+          )}
+        </div>
 
-      <div className="mt-2 flex justify-end gap-2">
-        <Button variant="secondary" onClick={handleCancel}>
-          {t("common:actions.cancel")}
-        </Button>
-        <Button disabled={!selectedAccount} onClick={handleConfirm}>
-          {t("accountSelect.confirm")}
-        </Button>
+        <div className="mt-2 flex justify-end gap-2">
+          <Button
+            variant="secondary"
+            analyticsAction={
+              PRODUCT_ANALYTICS_ACTION_IDS.CancelRedemptionAccountSelection
+            }
+            onClick={handleCancel}
+          >
+            {t("common:actions.cancel")}
+          </Button>
+          <Button
+            disabled={!selectedAccount}
+            analyticsAction={
+              PRODUCT_ANALYTICS_ACTION_IDS.ConfirmRedemptionAccountSelection
+            }
+            onClick={handleConfirm}
+          >
+            {t("accountSelect.confirm")}
+          </Button>
+        </div>
       </div>
-    </div>
+    </ProductAnalyticsScope>
   )
 }

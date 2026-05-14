@@ -9,6 +9,13 @@ import {
   CardHeader,
   Heading3,
 } from "~/components/ui"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 
 /** Removes a previously applied prefix from a title string. */
 function stripPrefixedTitle(title: string, prefix: string) {
@@ -100,21 +107,38 @@ export function ShieldBypassPromptToast({
   usePrefixedDocumentTitle(titlePrefix)
 
   return (
-    <Card>
-      <CardHeader padding="sm">
-        <Heading3>{t("toast.title")}</Heading3>
-      </CardHeader>
-      <CardContent padding="sm">
-        <Body className="whitespace-pre-line">{t("toast.body")}</Body>
-        <div className="mt-3 flex justify-end gap-2">
-          <Button variant="secondary" onClick={onDismiss}>
-            {t("toast.actions.dismiss")}
-          </Button>
-          <Button onClick={onOpenSettings}>
-            {t("toast.actions.openSettings")}
-          </Button>
-        </div>
-      </CardContent>
-    </Card>
+    <ProductAnalyticsScope
+      entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Content}
+      featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist}
+      surfaceId={PRODUCT_ANALYTICS_SURFACE_IDS.ContentShieldBypassPromptToast}
+    >
+      <Card>
+        <CardHeader padding="sm">
+          <Heading3>{t("toast.title")}</Heading3>
+        </CardHeader>
+        <CardContent padding="sm">
+          <Body className="whitespace-pre-line">{t("toast.body")}</Body>
+          <div className="mt-3 flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              analyticsAction={
+                PRODUCT_ANALYTICS_ACTION_IDS.ShieldBypassPromptDismissed
+              }
+              onClick={onDismiss}
+            >
+              {t("toast.actions.dismiss")}
+            </Button>
+            <Button
+              analyticsAction={
+                PRODUCT_ANALYTICS_ACTION_IDS.ShieldBypassSettingsVisited
+              }
+              onClick={onOpenSettings}
+            >
+              {t("toast.actions.openSettings")}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+    </ProductAnalyticsScope>
   )
 }

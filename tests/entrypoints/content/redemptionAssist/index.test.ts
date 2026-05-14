@@ -2,6 +2,14 @@ import { waitFor } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 
 const {
   mockCheckPermissionViaMessage,
@@ -12,6 +20,7 @@ const {
   mockShowRedeemLoadingToast,
   mockShowRedeemResultToast,
   mockShowRedemptionPromptToast,
+  mockTrackProductAnalyticsActionCompleted,
   logger,
 } = vi.hoisted(() => ({
   mockCheckPermissionViaMessage: vi.fn(),
@@ -22,11 +31,17 @@ const {
   mockShowRedeemLoadingToast: vi.fn(),
   mockShowRedeemResultToast: vi.fn(),
   mockShowRedemptionPromptToast: vi.fn(),
+  mockTrackProductAnalyticsActionCompleted: vi.fn(),
   logger: {
     debug: vi.fn(),
     warn: vi.fn(),
     error: vi.fn(),
   },
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionCompleted: (...args: unknown[]) =>
+    mockTrackProductAnalyticsActionCompleted(...args),
 }))
 
 vi.mock("~/utils/browser/browserApi", () => ({
@@ -220,6 +235,18 @@ describe("setupRedemptionAssistContent", () => {
     expect(mockShowRedeemResultToast).toHaveBeenCalledWith(true, "redeemed")
     expect(mockShowRedeemBatchResultToast).not.toHaveBeenCalled()
     expect(mockDismissToast).toHaveBeenCalledWith("loading-toast-id")
+    expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ConfirmRedemptionPrompt,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionPromptToast,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        itemCount: 1,
+        successCount: 1,
+        failureCount: 0,
+      },
+    })
 
     cleanup()
   })
@@ -599,6 +626,7 @@ describe("setupRedemptionAssistContent", () => {
 
     expect(mockShowRedemptionPromptToast).toHaveBeenCalledTimes(1)
     expect(mockShowRedeemLoadingToast).not.toHaveBeenCalled()
+    expect(mockTrackProductAnalyticsActionCompleted).not.toHaveBeenCalled()
     expect(
       mockSendRuntimeMessage.mock.calls.filter(
         ([message]) =>
@@ -637,6 +665,7 @@ describe("setupRedemptionAssistContent", () => {
     expect(mockShowRedeemLoadingToast).not.toHaveBeenCalled()
     expect(mockShowRedeemResultToast).not.toHaveBeenCalled()
     expect(mockShowRedeemBatchResultToast).not.toHaveBeenCalled()
+    expect(mockTrackProductAnalyticsActionCompleted).not.toHaveBeenCalled()
     expect(
       mockSendRuntimeMessage.mock.calls.filter(
         ([message]) =>
@@ -696,6 +725,73 @@ describe("setupRedemptionAssistContent", () => {
     expect(mockShowRedemptionPromptToast).not.toHaveBeenCalled()
     expect(mockShowRedeemBatchResultToast).not.toHaveBeenCalled()
     expect(mockDismissToast).toHaveBeenCalledWith("loading-toast-id")
+
+    cleanup()
+  })
+
+  it("tracks failure completion when detected-code prompt redemption fails", async () => {
+    mockShowRedemptionPromptToast.mockResolvedValueOnce({
+      action: "auto",
+      selectedCodes: [codeA],
+    })
+    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.RedemptionAssistShouldPrompt) {
+        return {
+          success: true,
+          promptableCodes: [codeA],
+        }
+      }
+
+      if (message.action === RuntimeActionIds.RedemptionAssistAutoRedeemByUrl) {
+        return {
+          data: {
+            success: false,
+            message: "redeem failed",
+          },
+        }
+      }
+
+      return { success: false }
+    })
+
+    const { setupRedemptionAssistContent } = await import(
+      "~/entrypoints/content/redemptionAssist"
+    )
+
+    const cleanup = setupRedemptionAssistContent({
+      enableDetection: true,
+      enableContextMenu: false,
+    })
+
+    document.dispatchEvent(makeClipboardEvent("copy", codeA))
+
+    await waitFor(() => {
+      expect(mockShowRedeemBatchResultToast).toHaveBeenCalledWith(
+        [
+          {
+            code: codeA,
+            preview: "a1b2****c5d6",
+            success: false,
+            message: "redeem failed",
+          },
+        ],
+        expect.any(Function),
+      )
+    })
+
+    expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ConfirmRedemptionPrompt,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionPromptToast,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      insights: {
+        itemCount: 1,
+        successCount: 0,
+        failureCount: 1,
+      },
+    })
 
     cleanup()
   })
@@ -961,6 +1057,18 @@ describe("setupRedemptionAssistContent", () => {
       ],
       expect.any(Function),
     )
+    expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ConfirmRedemptionPrompt,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionPromptToast,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        itemCount: 2,
+        successCount: 2,
+        failureCount: 0,
+      },
+    })
 
     cleanup()
   })

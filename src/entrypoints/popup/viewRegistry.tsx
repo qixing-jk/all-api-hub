@@ -12,6 +12,12 @@ import AccountList from "~/features/AccountManagement/components/AccountList"
 import type { ApiCredentialProfilesPopupViewHandle } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesPopupView"
 import { useBookmarkDialogContext } from "~/features/SiteBookmarks/hooks/BookmarkDialogStateContext"
 import { useAddAccountHandler } from "~/hooks/useAddAccountHandler"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  type ProductAnalyticsActionId,
+  type ProductAnalyticsFeatureId,
+} from "~/services/productAnalytics/events"
 
 import BalanceSection from "./components/BalanceSection"
 import type { PopupViewType } from "./components/PopupViewSwitchTabs"
@@ -42,6 +48,10 @@ interface PopupViewConfig {
   statsSection?: ReactNode
   primaryActionLabel: string
   onPrimaryAction: () => void
+  primaryAnalyticsAction: {
+    featureId: ProductAnalyticsFeatureId
+    actionId: ProductAnalyticsActionId
+  }
   content: ReactNode
   preload?: () => void
 }
@@ -105,6 +115,10 @@ export function usePopupViewRegistry(): Record<PopupViewType, PopupViewConfig> {
       statsSection: <BalanceSection />,
       primaryActionLabel: t("account:addAccount"),
       onPrimaryAction: handleAddAccountClick,
+      primaryAnalyticsAction: {
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateAccountDialog,
+      },
       content: <AccountList />,
     },
     bookmarks: {
@@ -116,6 +130,10 @@ export function usePopupViewRegistry(): Record<PopupViewType, PopupViewConfig> {
       ),
       primaryActionLabel: t("bookmark:actions.add"),
       onPrimaryAction: openAddBookmark,
+      primaryAnalyticsAction: {
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark,
+      },
       content: (
         <Suspense fallback={<PopupContentFallback />}>
           <LazyBookmarksList />
@@ -141,6 +159,10 @@ export function usePopupViewRegistry(): Record<PopupViewType, PopupViewConfig> {
 
         setPendingApiCredentialProfilesAdd(true)
         void loadApiCredentialProfilesPopupView()
+      },
+      primaryAnalyticsAction: {
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
       },
       content: (
         <Suspense fallback={<PopupContentFallback />}>

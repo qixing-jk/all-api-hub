@@ -6,9 +6,25 @@ import {
   RedemptionBatchResultToast,
   type RedemptionBatchResultItem,
 } from "~/entrypoints/content/redemptionAssist/components/RedemptionBatchResultToast"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 
-const { loggerErrorMock } = vi.hoisted(() => ({
+const {
+  completeProductAnalyticsActionMock,
+  loggerErrorMock,
+  startProductAnalyticsActionMock,
+  trackProductAnalyticsActionStartedMock,
+} = vi.hoisted(() => ({
+  completeProductAnalyticsActionMock: vi.fn(),
   loggerErrorMock: vi.fn(),
+  startProductAnalyticsActionMock: vi.fn(),
+  trackProductAnalyticsActionStartedMock: vi.fn(),
 }))
 
 vi.mock("react-i18next", async (importOriginal) => {
@@ -83,9 +99,27 @@ vi.mock("~/utils/core/logger", () => ({
   }),
 }))
 
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: unknown[]) =>
+    startProductAnalyticsActionMock(...args),
+  trackProductAnalyticsActionStarted: (...args: unknown[]) =>
+    trackProductAnalyticsActionStartedMock(...args),
+}))
+
+const retryAnalyticsContext = {
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+  actionId: PRODUCT_ANALYTICS_ACTION_IDS.RetryRedemptionCode,
+  surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionBatchResultToast,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+}
+
 describe("RedemptionBatchResultToast", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    completeProductAnalyticsActionMock.mockResolvedValue(undefined)
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: completeProductAnalyticsActionMock,
+    })
   })
 
   it("renders the batch summary, distinguishes success from failure rows, and closes from the header action", () => {
@@ -168,6 +202,53 @@ describe("RedemptionBatchResultToast", () => {
     expect(
       screen.queryByRole("button", { name: "Retry" }),
     ).not.toBeInTheDocument()
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith(
+      retryAnalyticsContext,
+    )
+    expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith(
+      retryAnalyticsContext,
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+  })
+
+  it("completes retry analytics as failure when the retry resolves with a failed result", async () => {
+    const onRetry = vi.fn().mockResolvedValue({
+      code: "code-failed",
+      preview: "ERR***2",
+      success: false,
+      message: "Still failed",
+    })
+
+    render(
+      <RedemptionBatchResultToast
+        results={[
+          {
+            code: "code-failed",
+            preview: "ERR***2",
+            success: false,
+            message: "Redeem failed",
+          },
+        ]}
+        onRetry={onRetry}
+        onClose={vi.fn()}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry" }))
+
+    await waitFor(() => {
+      expect(screen.getByText("Still failed")).toBeInTheDocument()
+    })
+
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith(
+      retryAnalyticsContext,
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+    )
   })
 
   it("keeps the row failed and records the retry error message when a retry throws", async () => {
@@ -198,6 +279,13 @@ describe("RedemptionBatchResultToast", () => {
     expect(loggerErrorMock).toHaveBeenCalledWith("Retry failed", retryError)
     expect(screen.getByText("summary:1/0/1")).toBeInTheDocument()
     expect(screen.getByText("Failed")).toBeInTheDocument()
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith(
+      retryAnalyticsContext,
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+    )
   })
 
   it("surfaces Error retry failures with the error message", async () => {

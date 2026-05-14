@@ -9,6 +9,16 @@ import {
   CardHeader,
   Heading3,
 } from "~/components/ui"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -52,14 +62,32 @@ export const RedemptionBatchResultToast: React.FC<
 
   const handleRetry = async (code: string) => {
     if (retryingCode) return
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RetryRedemptionCode,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionBatchResultToast,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+    })
+
     setRetryingCode(code)
     try {
       const updated = await onRetry(code)
       setItems((prev) =>
         prev.map((item) => (item.code === code ? updated : item)),
       )
+      if (updated.success) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      } else {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
+      }
     } catch (error) {
       logger.error("Retry failed", error)
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
       const errorMessage =
         error instanceof Error
           ? error.message
@@ -84,63 +112,80 @@ export const RedemptionBatchResultToast: React.FC<
   }
 
   return (
-    <Card>
-      <CardHeader padding="sm">
-        <div className="flex items-center justify-between gap-2">
-          <Heading3>{t("redemptionAssist:messages.batchResultTitle")}</Heading3>
-          <Button size="sm" variant="secondary" onClick={onClose}>
-            {t("common:actions.close")}
-          </Button>
-        </div>
-      </CardHeader>
-      <CardContent padding="sm">
-        <Body>
-          {t("redemptionAssist:messages.batchResultSummary", {
-            total: summary.total,
-            success: summary.successCount,
-            failed: summary.failedCount,
-          })}
-        </Body>
-
-        <div className="mt-3 max-h-60 space-y-2 overflow-y-auto pr-1">
-          {items.map((item, index) => (
-            <div
-              key={`${item.code}-${index}`}
-              className="border-border/60 bg-muted/20 flex flex-col gap-1 rounded-md border px-2 py-2 text-xs"
+    <ProductAnalyticsScope
+      entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Content}
+      featureId={PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist}
+      surfaceId={
+        PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionBatchResultToast
+      }
+    >
+      <Card>
+        <CardHeader padding="sm">
+          <div className="flex items-center justify-between gap-2">
+            <Heading3>
+              {t("redemptionAssist:messages.batchResultTitle")}
+            </Heading3>
+            <Button
+              size="sm"
+              variant="secondary"
+              analyticsAction={
+                PRODUCT_ANALYTICS_ACTION_IDS.CloseRedemptionBatchResult
+              }
+              onClick={onClose}
             >
-              <div className="flex items-center justify-between gap-2">
-                <code className="text-foreground font-mono">
-                  {item.preview}
-                </code>
-                {item.success ? (
-                  <span className="text-emerald-700 dark:text-emerald-300">
-                    {t("common:status.success")}
-                  </span>
-                ) : (
-                  <div className="flex items-center gap-2">
-                    <span className="text-rose-700 dark:text-rose-300">
-                      {t("common:status.failed")}
+              {t("common:actions.close")}
+            </Button>
+          </div>
+        </CardHeader>
+        <CardContent padding="sm">
+          <Body>
+            {t("redemptionAssist:messages.batchResultSummary", {
+              total: summary.total,
+              success: summary.successCount,
+              failed: summary.failedCount,
+            })}
+          </Body>
+
+          <div className="mt-3 max-h-60 space-y-2 overflow-y-auto pr-1">
+            {items.map((item, index) => (
+              <div
+                key={`${item.code}-${index}`}
+                className="border-border/60 bg-muted/20 flex flex-col gap-1 rounded-md border px-2 py-2 text-xs"
+              >
+                <div className="flex items-center justify-between gap-2">
+                  <code className="text-foreground font-mono">
+                    {item.preview}
+                  </code>
+                  {item.success ? (
+                    <span className="text-emerald-700 dark:text-emerald-300">
+                      {t("common:status.success")}
                     </span>
-                    <Button
-                      size="sm"
-                      variant="secondary"
-                      disabled={retryingCode !== null}
-                      onClick={() => handleRetry(item.code)}
-                    >
-                      {retryingCode === item.code
-                        ? t("common:status.loading")
-                        : t("common:actions.retry")}
-                    </Button>
-                  </div>
-                )}
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <span className="text-rose-700 dark:text-rose-300">
+                        {t("common:status.failed")}
+                      </span>
+                      <Button
+                        size="sm"
+                        variant="secondary"
+                        disabled={retryingCode !== null}
+                        onClick={() => handleRetry(item.code)}
+                      >
+                        {retryingCode === item.code
+                          ? t("common:status.loading")
+                          : t("common:actions.retry")}
+                      </Button>
+                    </div>
+                  )}
+                </div>
+                <div className="text-muted-foreground whitespace-pre-line">
+                  {item.message}
+                </div>
               </div>
-              <div className="text-muted-foreground whitespace-pre-line">
-                {item.message}
-              </div>
-            </div>
-          ))}
-        </div>
-      </CardContent>
-    </Card>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+    </ProductAnalyticsScope>
   )
 }

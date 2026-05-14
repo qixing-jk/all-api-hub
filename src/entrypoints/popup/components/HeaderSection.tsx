@@ -16,7 +16,17 @@ import Tooltip from "~/components/Tooltip"
 import { BodySmall, IconButton } from "~/components/ui"
 import { VersionBadge } from "~/components/VersionBadge"
 import { COLORS } from "~/constants/designTokens"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { isExtensionSidePanel } from "~/utils/browser"
 import { getManifest, getSidePanelSupport } from "~/utils/browser/browserApi"
@@ -93,8 +103,21 @@ export default function HeaderSection({
   const { isRefreshing, handleRefresh } = useAccountDataContext()
   const inSidePanel = isExtensionSidePanel()
   const sidePanelSupported = getSidePanelSupport().supported
+  const entrypoint = inSidePanel
+    ? PRODUCT_ANALYTICS_ENTRYPOINTS.Sidepanel
+    : PRODUCT_ANALYTICS_ENTRYPOINTS.Popup
+  const headerSurface = inSidePanel
+    ? PRODUCT_ANALYTICS_SURFACE_IDS.SidepanelHeader
+    : PRODUCT_ANALYTICS_SURFACE_IDS.PopupHeader
 
   const handleGlobalRefresh = useCallback(async () => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshPopupAccounts,
+      surfaceId: headerSurface,
+      entrypoint,
+    })
+
     try {
       await toast.promise(handleRefresh(true), {
         loading: t("account:refresh.refreshingAll"),
@@ -109,10 +132,14 @@ export default function HeaderSection({
         },
         error: t("account:refresh.refreshFailed"),
       })
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       logger.error("Error during global refresh", error)
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
-  }, [handleRefresh, t])
+  }, [entrypoint, handleRefresh, headerSurface, t])
 
   const openFullPageLabel =
     activeView === "bookmarks"
@@ -120,6 +147,18 @@ export default function HeaderSection({
       : activeView === "apiCredentialProfiles"
         ? t("ui:navigation.apiCredentialProfiles")
         : t("ui:navigation.account")
+  const openFullPageFeatureId =
+    activeView === "bookmarks"
+      ? PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement
+      : activeView === "apiCredentialProfiles"
+        ? PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles
+        : PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement
+  const openFullPageActionId =
+    activeView === "bookmarks"
+      ? PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupBookmarkManagementPage
+      : activeView === "apiCredentialProfiles"
+        ? PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupApiCredentialProfilesPage
+        : PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupAccountManagementPage
 
   const handleOpenFullPage = async () => {
     if (activeView === "bookmarks") {
@@ -169,68 +208,88 @@ export default function HeaderSection({
       </div>
 
       {/* Action Buttons Section */}
-      <div className="flex shrink-0 items-center gap-1 sm:gap-2">
-        <CompactThemeToggle />
+      <ProductAnalyticsScope entrypoint={entrypoint} surfaceId={headerSurface}>
+        <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <CompactThemeToggle />
 
-        {import.meta.env.MODE === "development" && (
-          <DevTriggerUpdateLogButton />
-        )}
+          {import.meta.env.MODE === "development" && (
+            <DevTriggerUpdateLogButton />
+          )}
 
-        <FeedbackDropdownMenu language={i18n.language} />
+          <FeedbackDropdownMenu language={i18n.language} />
 
-        {showRefresh && (
-          <Tooltip content={t("common:actions.refresh")}>
-            <IconButton
-              onClick={handleGlobalRefresh}
-              disabled={isRefreshing}
-              variant="outline"
-              size="sm"
-              aria-label={t("common:actions.refresh")}
-              className="touch-manipulation"
-            >
-              <ArrowPathIcon
-                className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
-              />
-            </IconButton>
-          </Tooltip>
-        )}
-
-        <Tooltip content={openFullPageLabel}>
-          <IconButton
-            onClick={handleOpenFullPage}
-            variant="outline"
-            size="sm"
-            aria-label={openFullPageLabel}
-            className="touch-manipulation"
+          <ProductAnalyticsScope
+            featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement}
           >
-            <ArrowsPointingOutIcon className="h-4 w-4" />
-          </IconButton>
-        </Tooltip>
+            {showRefresh && (
+              <Tooltip content={t("common:actions.refresh")}>
+                <IconButton
+                  onClick={handleGlobalRefresh}
+                  disabled={isRefreshing}
+                  variant="outline"
+                  size="sm"
+                  aria-label={t("common:actions.refresh")}
+                  className="touch-manipulation"
+                >
+                  <ArrowPathIcon
+                    className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`}
+                  />
+                </IconButton>
+              </Tooltip>
+            )}
 
-        <Tooltip content={t("common:labels.settings")}>
-          <IconButton
-            onClick={handleOpenSetting}
-            variant="outline"
-            size="sm"
-            aria-label={t("common:labels.settings")}
-            className="touch-manipulation"
+            <ProductAnalyticsScope featureId={openFullPageFeatureId}>
+              <Tooltip content={openFullPageLabel}>
+                <IconButton
+                  onClick={handleOpenFullPage}
+                  variant="outline"
+                  size="sm"
+                  aria-label={openFullPageLabel}
+                  className="touch-manipulation"
+                  analyticsAction={openFullPageActionId}
+                >
+                  <ArrowsPointingOutIcon className="h-4 w-4" />
+                </IconButton>
+              </Tooltip>
+            </ProductAnalyticsScope>
+
+            {!inSidePanel && sidePanelSupported && (
+              <Tooltip content={t("common:actions.openSidePanel")}>
+                <IconButton
+                  aria-label={t("common:actions.openSidePanel")}
+                  size="sm"
+                  variant="outline"
+                  onClick={handleOpenSidePanel}
+                  analyticsAction={
+                    PRODUCT_ANALYTICS_ACTION_IDS.OpenSidepanelFromPopup
+                  }
+                >
+                  <PanelRightClose className="h-4 w-4" />
+                </IconButton>
+              </Tooltip>
+            )}
+          </ProductAnalyticsScope>
+
+          <ProductAnalyticsScope
+            featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ProductAnalyticsSettings}
           >
-            <Cog6ToothIcon className="h-4 w-4" />
-          </IconButton>
-        </Tooltip>
-        {!inSidePanel && sidePanelSupported && (
-          <Tooltip content={t("common:actions.openSidePanel")}>
-            <IconButton
-              aria-label={t("common:actions.openSidePanel")}
-              size="sm"
-              variant="outline"
-              onClick={handleOpenSidePanel}
-            >
-              <PanelRightClose className="h-4 w-4" />
-            </IconButton>
-          </Tooltip>
-        )}
-      </div>
+            <Tooltip content={t("common:labels.settings")}>
+              <IconButton
+                onClick={handleOpenSetting}
+                variant="outline"
+                size="sm"
+                aria-label={t("common:labels.settings")}
+                className="touch-manipulation"
+                analyticsAction={
+                  PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupSettingsPage
+                }
+              >
+                <Cog6ToothIcon className="h-4 w-4" />
+              </IconButton>
+            </Tooltip>
+          </ProductAnalyticsScope>
+        </div>
+      </ProductAnalyticsScope>
     </header>
   )
 }

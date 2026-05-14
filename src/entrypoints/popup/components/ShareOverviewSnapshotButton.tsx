@@ -5,9 +5,18 @@ import { useTranslation } from "react-i18next"
 
 import Tooltip from "~/components/Tooltip"
 import { IconButton } from "~/components/ui"
+import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
+import { resolveProductAnalyticsActionContext } from "~/services/productAnalytics/actionConfig"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+} from "~/services/productAnalytics/events"
 import { buildOverviewShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -21,6 +30,7 @@ export default function ShareOverviewSnapshotButton() {
   const { t } = useTranslation(["shareSnapshots", "messages", "common"])
   const { accounts, displayData } = useAccountDataContext()
   const { currencyType, showTodayCashflow } = useUserPreferencesContext()
+  const analyticsScope = useProductAnalyticsScope()
 
   const enabledAccounts = useMemo(
     () => accounts.filter((account) => account.disabled !== true),
@@ -30,8 +40,20 @@ export default function ShareOverviewSnapshotButton() {
   const enabledAccountCount = enabledAccounts.length
 
   const handleShare = async () => {
+    const analyticsContext = resolveProductAnalyticsActionContext(
+      {
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShareSnapshots,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShareOverviewSnapshot,
+      },
+      analyticsScope,
+    )
+    const tracker = analyticsContext
+      ? startProductAnalyticsAction(analyticsContext)
+      : undefined
+
     if (enabledAccountCount <= 0) {
       toast.error(t("messages:toast.error.shareSnapshotNoEnabledAccounts"))
+      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
       return
     }
 
@@ -74,12 +96,16 @@ export default function ShareOverviewSnapshotButton() {
 
     try {
       await exportShareSnapshotWithToast({ payload })
+      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       logger.error("Failed to export overview share snapshot", error)
       const errorText = getErrorMessage(error) || t("messages:errors.unknown")
       toast.error(
         t("messages:toast.error.operationFailed", { error: errorText }),
       )
+      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
   }
 

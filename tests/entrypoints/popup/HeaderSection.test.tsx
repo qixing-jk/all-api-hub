@@ -3,6 +3,16 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import HeaderSection from "~/entrypoints/popup/components/HeaderSection"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsActionId,
+  type ProductAnalyticsFeatureId,
+} from "~/services/productAnalytics/events"
 import { isExtensionSidePanel } from "~/utils/browser"
 import { getSidePanelSupport } from "~/utils/browser/browserApi"
 import {
@@ -12,9 +22,10 @@ import {
   openFeatureRequestPage,
   openFullAccountManagerPage,
   openFullBookmarkManagerPage,
+  openSettingsPage,
   openSidePanelPage,
 } from "~/utils/navigation"
-import { fireEvent, render, screen } from "~~/tests/test-utils/render"
+import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   const actual =
@@ -51,13 +62,6 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
-vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
-  useAccountDataContext: () => ({
-    isRefreshing: false,
-    handleRefresh: vi.fn().mockResolvedValue({ success: 0, failed: 0 }),
-  }),
-}))
-
 vi.mock("~/contexts/ReleaseUpdateStatusContext", () => ({
   useReleaseUpdateStatus: () => ({
     status: null,
@@ -80,6 +84,32 @@ vi.mock("~/utils/navigation", () => ({
   openSidePanelPage: vi.fn(),
 }))
 
+const {
+  handleRefreshMock,
+  startProductAnalyticsActionMock,
+  trackerCompleteMock,
+  trackProductAnalyticsActionStartedMock,
+} = vi.hoisted(() => ({
+  handleRefreshMock: vi.fn(),
+  startProductAnalyticsActionMock: vi.fn(),
+  trackerCompleteMock: vi.fn(),
+  trackProductAnalyticsActionStartedMock: vi.fn(),
+}))
+
+vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
+  useAccountDataContext: () => ({
+    isRefreshing: false,
+    handleRefresh: handleRefreshMock,
+  }),
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: unknown[]) =>
+    startProductAnalyticsActionMock(...args),
+  trackProductAnalyticsActionStarted: (...args: any[]) =>
+    trackProductAnalyticsActionStartedMock(...args),
+}))
+
 const mockedIsExtensionSidePanel = vi.mocked(isExtensionSidePanel)
 const mockedGetSidePanelSupport = vi.mocked(getSidePanelSupport)
 const mockedOpenApiCredentialProfilesPage = vi.mocked(
@@ -90,11 +120,36 @@ const mockedOpenCommunityPage = vi.mocked(openCommunityPage)
 const mockedOpenFeatureRequestPage = vi.mocked(openFeatureRequestPage)
 const mockedOpenFullAccountManagerPage = vi.mocked(openFullAccountManagerPage)
 const mockedOpenFullBookmarkManagerPage = vi.mocked(openFullBookmarkManagerPage)
+const mockedOpenSettingsPage = vi.mocked(openSettingsPage)
 const mockedOpenSidePanelPage = vi.mocked(openSidePanelPage)
+
+const expectPopupHeaderAction = ({
+  featureId,
+  actionId,
+}: {
+  featureId: ProductAnalyticsFeatureId
+  actionId: ProductAnalyticsActionId
+}) => {
+  expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+    featureId,
+    actionId,
+    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.PopupHeader,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+  })
+}
 
 describe("popup HeaderSection", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    trackProductAnalyticsActionStartedMock.mockReset()
+    trackerCompleteMock.mockReset()
+    trackerCompleteMock.mockResolvedValue(undefined)
+    startProductAnalyticsActionMock.mockReset()
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: trackerCompleteMock,
+    })
+    handleRefreshMock.mockReset()
+    handleRefreshMock.mockResolvedValue({ success: 0, failed: 0 })
     mockedIsExtensionSidePanel.mockReturnValue(false)
     mockedGetSidePanelSupport.mockReturnValue({
       supported: true,
@@ -145,6 +200,10 @@ describe("popup HeaderSection", () => {
     )
 
     expect(mockedOpenSidePanelPage).toHaveBeenCalledTimes(1)
+    expectPopupHeaderAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenSidepanelFromPopup,
+    })
   })
 
   it("routes open full page to account manager for accounts view", async () => {
@@ -157,6 +216,10 @@ describe("popup HeaderSection", () => {
     )
 
     expect(mockedOpenFullAccountManagerPage).toHaveBeenCalledTimes(1)
+    expectPopupHeaderAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupAccountManagementPage,
+    })
   })
 
   it("routes open full page to bookmark manager for bookmarks view", async () => {
@@ -169,6 +232,10 @@ describe("popup HeaderSection", () => {
     )
 
     expect(mockedOpenFullBookmarkManagerPage).toHaveBeenCalledTimes(1)
+    expectPopupHeaderAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupBookmarkManagementPage,
+    })
   })
 
   it("routes open full page to API credential profiles for API credentials view", async () => {
@@ -183,6 +250,59 @@ describe("popup HeaderSection", () => {
     )
 
     expect(mockedOpenApiCredentialProfilesPage).toHaveBeenCalledTimes(1)
+    expectPopupHeaderAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupApiCredentialProfilesPage,
+    })
+  })
+
+  it("completes popup header refresh analytics with the default success result", async () => {
+    render(<HeaderSection />, { withReleaseUpdateStatusProvider: false })
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "common:actions.refresh" }),
+    )
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshPopupAccounts,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.PopupHeader,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+    })
+    await waitFor(() => {
+      expect(trackerCompleteMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+      )
+    })
+  })
+
+  it("completes popup header refresh analytics failure with an unknown error category", async () => {
+    handleRefreshMock.mockRejectedValue(new Error("refresh failed"))
+
+    render(<HeaderSection />, { withReleaseUpdateStatusProvider: false })
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "common:actions.refresh" }),
+    )
+
+    await waitFor(() => {
+      expect(trackerCompleteMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      )
+    })
+  })
+
+  it("tracks popup header settings shortcut as started-only analytics", async () => {
+    render(<HeaderSection />, { withReleaseUpdateStatusProvider: false })
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "common:labels.settings" }),
+    )
+    expect(mockedOpenSettingsPage).toHaveBeenCalledTimes(1)
+    expectPopupHeaderAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ProductAnalyticsSettings,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenPopupSettingsPage,
+    })
   })
 
   it("opens feedback actions from the header menu", async () => {
