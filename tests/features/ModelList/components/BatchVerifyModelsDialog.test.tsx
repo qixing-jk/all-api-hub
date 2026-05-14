@@ -26,7 +26,8 @@ const {
   mockResolveDisplayAccountTokenForSecret,
   mockRunApiVerificationProbe,
   mockStartProductAnalyticsAction,
-  mockCompleteProductAnalyticsAction,
+  mockCompleteStartProductAnalyticsAction,
+  mockCompleteTrackedProductAnalyticsAction,
   mockTotalListHeightChanged,
   mockTrackProductAnalyticsActionStarted,
   mockUpsertLatestSummary,
@@ -36,7 +37,8 @@ const {
   mockResolveDisplayAccountTokenForSecret: vi.fn(),
   mockRunApiVerificationProbe: vi.fn(),
   mockStartProductAnalyticsAction: vi.fn(),
-  mockCompleteProductAnalyticsAction: vi.fn(),
+  mockCompleteStartProductAnalyticsAction: vi.fn(),
+  mockCompleteTrackedProductAnalyticsAction: vi.fn(),
   mockTotalListHeightChanged: {
     current: undefined as undefined | ((height: number) => void),
   },
@@ -154,12 +156,16 @@ describe("BatchVerifyModelsDialog", () => {
     mockResolveDisplayAccountTokenForSecret.mockReset()
     mockRunApiVerificationProbe.mockReset()
     mockStartProductAnalyticsAction.mockReset()
-    mockCompleteProductAnalyticsAction.mockReset()
+    mockCompleteStartProductAnalyticsAction.mockReset()
+    mockCompleteTrackedProductAnalyticsAction.mockReset()
     mockStartProductAnalyticsAction.mockReturnValue({
-      complete: mockCompleteProductAnalyticsAction,
+      complete: mockCompleteStartProductAnalyticsAction,
     })
     mockTotalListHeightChanged.current = undefined
     mockTrackProductAnalyticsActionStarted.mockReset()
+    mockTrackProductAnalyticsActionStarted.mockReturnValue({
+      complete: mockCompleteTrackedProductAnalyticsAction,
+    })
     mockUpsertLatestSummary.mockReset()
     mockUpsertLatestSummary.mockImplementation(async (summary) => summary)
   })
@@ -546,7 +552,7 @@ describe("BatchVerifyModelsDialog", () => {
       expect(receivedSignal?.aborted).toBe(true)
     })
     await waitFor(() => {
-      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      expect(mockCompleteStartProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Cancelled,
       )
     })
@@ -607,7 +613,7 @@ describe("BatchVerifyModelsDialog", () => {
     )
 
     await waitFor(() => {
-      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      expect(mockCompleteStartProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
       )
     })
@@ -659,7 +665,7 @@ describe("BatchVerifyModelsDialog", () => {
     )
 
     await waitFor(() => {
-      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      expect(mockCompleteStartProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
         { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
       )
@@ -696,7 +702,7 @@ describe("BatchVerifyModelsDialog", () => {
     )
 
     await waitFor(() => {
-      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      expect(mockCompleteStartProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Skipped,
       )
     })

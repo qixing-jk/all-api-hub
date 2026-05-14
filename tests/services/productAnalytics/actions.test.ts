@@ -259,6 +259,30 @@ describe("product analytics action helpers", () => {
     )
   })
 
+  it("omits absent optional completion metadata fields", async () => {
+    const { trackProductAnalyticsActionCompleted } = await import(
+      "~/services/productAnalytics/actions"
+    )
+
+    await trackProductAnalyticsActionCompleted({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteModels,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {},
+    })
+
+    expect(trackMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteModels,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+      },
+    )
+  })
+
   it("creates a manual action tracker that reports elapsed duration on completion", async () => {
     vi.spyOn(Date, "now").mockReturnValueOnce(1_000).mockReturnValueOnce(2_250)
     const { startProductAnalyticsAction } = await import(
