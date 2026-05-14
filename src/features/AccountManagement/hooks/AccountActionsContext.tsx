@@ -10,6 +10,19 @@ import toast from "react-hot-toast"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import {
+  startProductAnalyticsAction,
+  type ProductAnalyticsActionContext,
+} from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsResult,
+} from "~/services/productAnalytics/events"
 import type { DisplaySiteData } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
@@ -48,7 +61,11 @@ interface AccountActionsContextType {
   ) => Promise<void>
   handleOpenExternalCheckIns: (
     accounts: DisplaySiteData[],
-    options?: { openAll?: boolean; openInNewWindow?: boolean },
+    options?: {
+      openAll?: boolean
+      openInNewWindow?: boolean
+      analyticsContext?: ProductAnalyticsActionContext
+    },
   ) => Promise<void>
 }
 
@@ -74,6 +91,29 @@ export const AccountActionsProvider = ({
       if (account.disabled === true) return
 
       setRefreshingAccountId(account.id)
+      const tracker = startProductAnalyticsAction({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccount,
+        surfaceId:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+      let analyticsCompleted = false
+      const completeRefreshAnalytics = async (
+        result: ProductAnalyticsResult,
+        options?: Parameters<typeof tracker.complete>[1],
+      ) => {
+        analyticsCompleted = true
+        try {
+          if (options) {
+            await tracker.complete(result, options)
+            return
+          }
+          await tracker.complete(result)
+        } catch {
+          // Product analytics must never block or alter the refresh action.
+        }
+      }
 
       const refreshPromise = async () => {
         const result = await accountStorage.refreshAccount(account.id, force)
@@ -91,10 +131,12 @@ export const AccountActionsProvider = ({
 
       try {
         await toast.promise(
-          refreshPromise().then((result) => {
+          refreshPromise().then(async (result) => {
             if (!result.refreshed) {
+              await completeRefreshAnalytics(PRODUCT_ANALYTICS_RESULTS.Skipped)
               return t("messages:toast.success.refreshSkipped")
             }
+            await completeRefreshAnalytics(PRODUCT_ANALYTICS_RESULTS.Success)
             return t("messages:toast.success.refreshAccount", {
               accountName: account.name,
             })
@@ -110,6 +152,11 @@ export const AccountActionsProvider = ({
           },
         )
       } catch (error) {
+        if (!analyticsCompleted) {
+          await completeRefreshAnalytics(PRODUCT_ANALYTICS_RESULTS.Failure, {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          })
+        }
         logger.error("Error refreshing account", error)
       } finally {
         setRefreshingAccountId(null)
@@ -269,8 +316,36 @@ export const AccountActionsProvider = ({
   const handleOpenExternalCheckIns = useCallback(
     async (
       accounts: DisplaySiteData[],
-      options?: { openAll?: boolean; openInNewWindow?: boolean },
+      options?: {
+        openAll?: boolean
+        openInNewWindow?: boolean
+        analyticsContext?: ProductAnalyticsActionContext
+      },
     ) => {
+      const tracker = options?.analyticsContext
+        ? startProductAnalyticsAction(options.analyticsContext)
+        : undefined
+      let analyticsCompleted = false
+      const completeExternalCheckInAnalytics = async (
+        result: ProductAnalyticsResult,
+        completeOptions?: Parameters<
+          NonNullable<typeof tracker>["complete"]
+        >[1],
+      ) => {
+        if (!tracker) return
+
+        analyticsCompleted = true
+        try {
+          if (completeOptions) {
+            await tracker.complete(result, completeOptions)
+            return
+          }
+          await tracker.complete(result)
+        } catch {
+          // Product analytics must never block or alter external check-in behavior.
+        }
+      }
+
       const enabledAccounts = accounts.filter((account) => !account.disabled)
       const accountsToOpen = options?.openAll
         ? enabledAccounts
@@ -279,6 +354,9 @@ export const AccountActionsProvider = ({
           )
 
       if (!accountsToOpen.length) {
+        await completeExternalCheckInAnalytics(
+          PRODUCT_ANALYTICS_RESULTS.Skipped,
+        )
         toast.error(t("messages:toast.error.externalCheckInNonePending"))
         return
       }
@@ -290,13 +368,25 @@ export const AccountActionsProvider = ({
           openInNewWindow: Boolean(options?.openInNewWindow),
         })
 
-        if (!response?.data) {
+        if (!response?.success || !response.data) {
+          await completeExternalCheckInAnalytics(
+            PRODUCT_ANALYTICS_RESULTS.Failure,
+            {
+              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            },
+          )
           throw new Error(response?.error || "Empty response")
         }
 
         await loadAccountData()
 
         if (response.data.failedCount > 0) {
+          await completeExternalCheckInAnalytics(
+            PRODUCT_ANALYTICS_RESULTS.Failure,
+            {
+              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            },
+          )
           toast.error(
             t("messages:errors.operation.failed", {
               error: `${response.data.failedCount}/${response.data.totalCount} failed`,
@@ -304,8 +394,19 @@ export const AccountActionsProvider = ({
           )
           return
         }
+        await completeExternalCheckInAnalytics(
+          PRODUCT_ANALYTICS_RESULTS.Success,
+        )
       } catch (error) {
         logger.error("Error opening external check-ins", error)
+        if (!analyticsCompleted) {
+          await completeExternalCheckInAnalytics(
+            PRODUCT_ANALYTICS_RESULTS.Failure,
+            {
+              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            },
+          )
+        }
         toast.error(
           t("messages:errors.operation.failed", {
             error: getErrorMessage(error),

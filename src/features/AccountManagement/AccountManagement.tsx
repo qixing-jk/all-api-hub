@@ -6,6 +6,7 @@ import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import AccountList from "~/features/AccountManagement/components/AccountList"
 import DedupeAccountsDialog from "~/features/AccountManagement/components/DedupeAccountsDialog"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
@@ -13,10 +14,22 @@ import { useAccountDataContext } from "~/features/AccountManagement/hooks/Accoun
 import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { createLogger } from "~/utils/core/logger"
 import { getExternalCheckInOpenOptions } from "~/utils/core/shortcutKeys"
 
 const logger = createLogger("AccountManagementPage")
+const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
+const headerSurface =
+  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementHeader
 
 /**
  * Renders the Account Management page body: header with CTA and account list.
@@ -52,12 +65,25 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
     await handleOpenExternalCheckIns(externalCheckInAccounts, {
       openAll,
       openInNewWindow,
+      analyticsContext: {
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAllExternalCheckIns,
+        surfaceId: headerSurface,
+        entrypoint: optionsEntrypoint,
+      },
     })
   }
 
   const handleGlobalRefresh = useCallback(async () => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAllAccounts,
+      surfaceId: headerSurface,
+      entrypoint: optionsEntrypoint,
+    })
+
     try {
-      await toast.promise(handleRefresh(true), {
+      const result = await toast.promise(handleRefresh(true), {
         loading: t("account:refresh.refreshingAll"),
         success: (result) => {
           if (result.failed > 0) {
@@ -84,14 +110,31 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
         },
         error: t("account:refresh.refreshFailed"),
       })
+      if (result.failed > 0) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
+      } else {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      }
     } catch (error) {
       logger.error("Error during global refresh", error)
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
   }, [handleRefresh, t])
 
   const handleDisabledRefresh = useCallback(async () => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshDisabledAccounts,
+      surfaceId: headerSurface,
+      entrypoint: optionsEntrypoint,
+    })
+
     try {
-      await toast.promise(handleRefreshDisabledAccounts(true), {
+      const result = await toast.promise(handleRefreshDisabledAccounts(true), {
         loading: t("account:refresh.refreshingDisabled"),
         success: (result) =>
           t(
@@ -111,8 +154,18 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
           ),
         error: t("account:refresh.refreshDisabledFailed"),
       })
+      if (result.failedCount > 0) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
+      } else {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      }
     } catch (error) {
       logger.error("Error during disabled account refresh", error)
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
   }, [handleRefreshDisabledAccounts, t])
 
@@ -123,51 +176,67 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
         title={t("account:title")}
         description={t("account:description")}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <Button
-              onClick={() => void handleGlobalRefresh()}
-              variant="secondary"
-              leftIcon={<ArrowPathIcon className="h-4 w-4" />}
-              loading={isRefreshing}
-              disabled={isAnyRefreshRunning}
-            >
-              {t("common:actions.refresh")}
-            </Button>
-            {canRefreshDisabledAccounts && (
+          <ProductAnalyticsScope
+            entrypoint={optionsEntrypoint}
+            featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement}
+            surfaceId={headerSurface}
+          >
+            <div className="flex flex-wrap items-center gap-2">
               <Button
-                onClick={() => void handleDisabledRefresh()}
+                onClick={() => void handleGlobalRefresh()}
                 variant="secondary"
                 leftIcon={<ArrowPathIcon className="h-4 w-4" />}
-                loading={isRefreshingDisabledAccounts}
+                loading={isRefreshing}
                 disabled={isAnyRefreshRunning}
               >
-                {t("account:actions.refreshDisabledAccounts")}
+                {t("common:actions.refresh")}
               </Button>
-            )}
-            {canOpenExternalCheckIns && (
+              {canRefreshDisabledAccounts && (
+                <Button
+                  onClick={() => void handleDisabledRefresh()}
+                  variant="secondary"
+                  leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+                  loading={isRefreshingDisabledAccounts}
+                  disabled={isAnyRefreshRunning}
+                >
+                  {t("account:actions.refreshDisabledAccounts")}
+                </Button>
+              )}
+              {canOpenExternalCheckIns && (
+                <ProductAnalyticsScope
+                  featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin}
+                >
+                  <Button
+                    onClick={handleOpenExternalCheckInsClick}
+                    leftIcon={<CalendarCheck2 className="h-4 w-4" />}
+                    title={t("account:actions.openAllExternalCheckInHint")}
+                  >
+                    {t("account:actions.openAllExternalCheckIn")}
+                  </Button>
+                </ProductAnalyticsScope>
+              )}
               <Button
-                onClick={handleOpenExternalCheckInsClick}
-                leftIcon={<CalendarCheck2 className="h-4 w-4" />}
-                title={t("account:actions.openAllExternalCheckInHint")}
+                onClick={() => setIsDedupeDialogOpen(true)}
+                variant="secondary"
+                leftIcon={<Search className="h-4 w-4" />}
+                title={t("account:actions.scanDuplicatesHint")}
+                analyticsAction={
+                  PRODUCT_ANALYTICS_ACTION_IDS.ScanDuplicateAccounts
+                }
               >
-                {t("account:actions.openAllExternalCheckIn")}
+                {t("account:actions.scanDuplicates")}
               </Button>
-            )}
-            <Button
-              onClick={() => setIsDedupeDialogOpen(true)}
-              variant="secondary"
-              leftIcon={<Search className="h-4 w-4" />}
-              title={t("account:actions.scanDuplicatesHint")}
-            >
-              {t("account:actions.scanDuplicates")}
-            </Button>
-            <Button
-              onClick={openAddAccount}
-              data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton}
-            >
-              {t("account:addAccount")}
-            </Button>
-          </div>
+              <Button
+                onClick={openAddAccount}
+                data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton}
+                analyticsAction={
+                  PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateAccountDialog
+                }
+              >
+                {t("account:addAccount")}
+              </Button>
+            </div>
+          </ProductAnalyticsScope>
         }
       />
 

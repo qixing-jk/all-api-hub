@@ -1,6 +1,9 @@
 import { MenuItem } from "@headlessui/react"
 import React from "react"
 
+import { useProductAnalyticsActionTracking } from "~/hooks/useProductAnalyticsActionTracking"
+import type { ProductAnalyticsScopedActionConfig } from "~/services/productAnalytics/actionConfig"
+
 interface AccountActionMenuItemProps {
   /** Click handler; receives the original click event (after propagation is stopped). */
   onClick: (e?: React.MouseEvent) => void
@@ -22,6 +25,8 @@ interface AccountActionMenuItemProps {
   tone?: "default" | "warning" | "success"
   /** Disables the item and renders it with the disabled palette. */
   disabled?: boolean
+  /** Fixed analytics identifiers emitted for explicitly tracked menu actions. */
+  analyticsAction?: ProductAnalyticsScopedActionConfig
 }
 
 const menuItemClassName =
@@ -44,8 +49,14 @@ export const AccountActionMenuItem: React.FC<AccountActionMenuItemProps> = ({
   isDestructive = false,
   tone = "default",
   disabled = false,
+  analyticsAction,
 }) => {
   const descriptionId = React.useId()
+  const analytics = useProductAnalyticsActionTracking({
+    analyticsAction,
+    disabled,
+  })
+  const trackingProps = analytics.getActionTrackingProps()
 
   return (
     <MenuItem disabled={disabled}>
@@ -60,6 +71,7 @@ export const AccountActionMenuItem: React.FC<AccountActionMenuItemProps> = ({
             e.stopPropagation()
             if (isMenuItemDisabled) return
             onClick(e)
+            trackingProps.onClick(e)
             // Ensure the dropdown closes immediately after selection to avoid UI flicker
             // (e.g., Disable triggers a reload and would otherwise swap to Enable while still open).
             close()

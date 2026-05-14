@@ -1,6 +1,12 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ApiCredentialProfileListItem } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfileListItem"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { SiteHealthStatus } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
@@ -67,17 +73,42 @@ vi.mock("~/components/icons/ManagedSiteIcon", () => ({
   ManagedSiteIcon: () => <span data-testid="managed-site-icon" />,
 }))
 
-vi.mock("~/components/ui", () => ({
-  Badge: ({ children }: any) => <span>{children}</span>,
-  Card: ({ children }: any) => <div>{children}</div>,
-  CardContent: ({ children }: any) => <div>{children}</div>,
-  Heading6: ({ children }: any) => <h6>{children}</h6>,
-  IconButton: ({ children, ...props }: any) => (
-    <button type="button" {...props}>
-      {children}
-    </button>
-  ),
-}))
+vi.mock("~/components/ui", async () => {
+  const { useProductAnalyticsScope } = await import(
+    "~/contexts/ProductAnalyticsScopeContext"
+  )
+  const { resolveProductAnalyticsActionContext } = await import(
+    "~/services/productAnalytics/actionConfig"
+  )
+
+  return {
+    Badge: ({ children }: any) => <span>{children}</span>,
+    Card: ({ children }: any) => <div>{children}</div>,
+    CardContent: ({ children }: any) => <div>{children}</div>,
+    Heading6: ({ children }: any) => <h6>{children}</h6>,
+    IconButton: ({ analyticsAction, children, ...props }: any) => {
+      const scope = useProductAnalyticsScope()
+      const resolvedAction = resolveProductAnalyticsActionContext(
+        analyticsAction,
+        scope,
+      )
+
+      return (
+        <button
+          type="button"
+          data-analytics-action={
+            resolvedAction
+              ? `${resolvedAction.featureId}:${resolvedAction.actionId}:${resolvedAction.surfaceId}:${resolvedAction.entrypoint}`
+              : undefined
+          }
+          {...props}
+        >
+          {children}
+        </button>
+      )
+    },
+  }
+})
 
 vi.mock("~/components/ui/dropdown-menu", () => ({
   DropdownMenu: ({ children }: any) => <div>{children}</div>,
@@ -159,6 +190,77 @@ function renderListItem(
 }
 
 describe("ApiCredentialProfileListItem", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  it("declares controlled analytics metadata for profile row actions", () => {
+    renderListItem(buildProfile())
+
+    const profileAction = (actionId: string) =>
+      `${PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles}:${actionId}:${PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions}:${PRODUCT_ANALYTICS_ENTRYPOINTS.Options}`
+
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:actions.copyBaseUrl",
+      }),
+    ).toHaveAttribute(
+      "data-analytics-action",
+      profileAction(PRODUCT_ANALYTICS_ACTION_IDS.CopyBaseUrl),
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:actions.copyApiKey",
+      }),
+    ).toHaveAttribute(
+      "data-analytics-action",
+      profileAction(PRODUCT_ANALYTICS_ACTION_IDS.CopyApiKey),
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:actions.copyBundle",
+      }),
+    ).toHaveAttribute(
+      "data-analytics-action",
+      profileAction(PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialBundle),
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:actions.verifyApi",
+      }),
+    ).toHaveAttribute(
+      "data-analytics-action",
+      profileAction(PRODUCT_ANALYTICS_ACTION_IDS.VerifyApiCredential),
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "apiCredentialProfiles:actions.openModelManagement",
+      }),
+    ).toHaveAttribute(
+      "data-analytics-action",
+      `${PRODUCT_ANALYTICS_FEATURE_IDS.ModelList}:${PRODUCT_ANALYTICS_ACTION_IDS.OpenApiCredentialModelManagement}:${PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions}:${PRODUCT_ANALYTICS_ENTRYPOINTS.Options}`,
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "common:actions.export",
+      }),
+    ).toHaveAttribute(
+      "data-analytics-action",
+      profileAction(PRODUCT_ANALYTICS_ACTION_IDS.OpenApiCredentialExportMenu),
+    )
+  })
+
+  it("delegates telemetry refresh without row-level started-only analytics", () => {
+    const onRefreshTelemetry = vi.fn()
+    renderListItem(buildProfile(), { onRefreshTelemetry })
+
+    fireEvent.click(screen.getByRole("button", { name: "Refresh telemetry" }))
+
+    expect(onRefreshTelemetry).toHaveBeenCalledWith(
+      expect.objectContaining({ id: "profile-1" }),
+    )
+  })
+
   it("explicitly marks missing daily telemetry from a successful source as not provided", () => {
     renderListItem(buildProfile())
 

@@ -8,6 +8,22 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { refreshApiCredentialProfileTelemetry } from "~/services/apiCredentialProfiles/telemetry"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
+import {
+  startProductAnalyticsAction,
+  type ProductAnalyticsActionInsights,
+} from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_STATUS_KINDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TELEMETRY_SOURCES,
+  type ProductAnalyticsStatusKind,
+  type ProductAnalyticsTelemetrySource,
+} from "~/services/productAnalytics/events"
 import { tagStorage } from "~/services/tags/tagStorage"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import {
@@ -16,9 +32,11 @@ import {
   useVerificationResultHistorySummaries,
 } from "~/services/verification/verificationResultHistory"
 import type { Tag } from "~/types"
+import { SiteHealthStatus } from "~/types"
 import type {
   ApiCredentialProfile,
   ApiCredentialTelemetryConfig,
+  ApiCredentialTelemetrySnapshot,
 } from "~/types/apiCredentialProfiles"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
@@ -45,6 +63,75 @@ type RuntimeBroadcastMessage = {
 }
 
 const logger = createLogger("ApiCredentialProfilesController")
+const apiCredentialProfilesFeature =
+  PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles
+const apiCredentialProfilesRefreshSurface =
+  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions
+const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
+
+const telemetrySourceBySnapshotSource: Partial<
+  Record<
+    NonNullable<ApiCredentialTelemetrySnapshot["source"]>,
+    ProductAnalyticsTelemetrySource
+  >
+> = {
+  models: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.Models,
+  openaiBilling: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.OpenAiBilling,
+  newApiTokenUsage: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.NewApiTokenUsage,
+  sub2apiUsage: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.Sub2ApiUsage,
+  customReadOnlyEndpoint:
+    PRODUCT_ANALYTICS_TELEMETRY_SOURCES.CustomReadOnlyEndpoint,
+}
+
+const analyticsStatusByHealthStatus: Record<
+  SiteHealthStatus,
+  ProductAnalyticsStatusKind
+> = {
+  [SiteHealthStatus.Healthy]: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
+  [SiteHealthStatus.Warning]: PRODUCT_ANALYTICS_STATUS_KINDS.Warning,
+  [SiteHealthStatus.Error]: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
+  [SiteHealthStatus.Unknown]: PRODUCT_ANALYTICS_STATUS_KINDS.Unknown,
+}
+
+/**
+ * Detects whether a telemetry snapshot includes any usage-facing metrics.
+ */
+function hasTelemetryUsageData(snapshot: ApiCredentialTelemetrySnapshot) {
+  return (
+    snapshot.balanceUsd !== undefined ||
+    snapshot.todayCostUsd !== undefined ||
+    snapshot.todayRequests !== undefined ||
+    snapshot.todayTokens !== undefined ||
+    snapshot.unlimitedQuota === true ||
+    snapshot.totalUsedUsd !== undefined ||
+    snapshot.totalGrantedUsd !== undefined ||
+    snapshot.totalAvailableUsd !== undefined ||
+    snapshot.expiresAt !== undefined
+  )
+}
+
+/**
+ * Converts telemetry snapshot metadata into privacy-safe analytics insights.
+ */
+function getApiCredentialTelemetryAnalyticsInsights(
+  snapshot: ApiCredentialTelemetrySnapshot,
+): ProductAnalyticsActionInsights {
+  return {
+    ...(snapshot.source && telemetrySourceBySnapshotSource[snapshot.source]
+      ? { telemetrySource: telemetrySourceBySnapshotSource[snapshot.source] }
+      : {}),
+    statusKind:
+      analyticsStatusByHealthStatus[snapshot.health.status] ??
+      PRODUCT_ANALYTICS_STATUS_KINDS.Unknown,
+    ...(Array.isArray(snapshot.attempts)
+      ? { itemCount: snapshot.attempts.length }
+      : {}),
+    ...(typeof snapshot.models?.count === "number"
+      ? { modelCount: snapshot.models.count }
+      : {}),
+    usageDataPresent: hasTelemetryUsageData(snapshot),
+  }
+}
 
 /**
  * Controller hook for managing API credential profiles, including CRUD operations,
@@ -341,14 +428,25 @@ export function useApiCredentialProfilesController() {
 
   const handleRefreshTelemetry = useCallback(
     async (profile: ApiCredentialProfile) => {
-      if (refreshingTelemetryProfileIdsRef.current.has(profile.id)) return
+      const tracker = startProductAnalyticsAction({
+        featureId: apiCredentialProfilesFeature,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshApiCredentialTelemetry,
+        surfaceId: apiCredentialProfilesRefreshSurface,
+        entrypoint: optionsEntrypoint,
+      })
+
+      if (refreshingTelemetryProfileIdsRef.current.has(profile.id)) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+        return
+      }
 
       refreshingTelemetryProfileIdsRef.current.add(profile.id)
       setRefreshingTelemetryProfileIds([
         ...refreshingTelemetryProfileIdsRef.current,
       ])
       try {
-        await toast.promise(refreshApiCredentialProfileTelemetry(profile.id), {
+        const refreshPromise = refreshApiCredentialProfileTelemetry(profile.id)
+        await toast.promise(refreshPromise, {
           loading: t("apiCredentialProfiles:telemetry.messages.refreshing"),
           success: t("apiCredentialProfiles:telemetry.messages.refreshed"),
           error: (error) => {
@@ -356,6 +454,23 @@ export function useApiCredentialProfilesController() {
             return t("apiCredentialProfiles:telemetry.messages.refreshFailed")
           },
         })
+        const snapshot = await refreshPromise
+        const insights = getApiCredentialTelemetryAnalyticsInsights(snapshot)
+        if (snapshot.health.status === SiteHealthStatus.Healthy) {
+          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+            insights,
+          })
+        } else {
+          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            insights,
+          })
+        }
+      } catch (error) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
+        throw error
       } finally {
         refreshingTelemetryProfileIdsRef.current.delete(profile.id)
         setRefreshingTelemetryProfileIds([

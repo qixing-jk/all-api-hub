@@ -7,6 +7,14 @@ import {
   AccountActionsProvider,
   useAccountActionsContext,
 } from "~/features/AccountManagement/hooks/AccountActionsContext"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 
 // Verifies account action flows through the public context API, including
 // refresh, enable/disable, copy URL, custom check-in state, and external
@@ -21,6 +29,8 @@ const {
   mockSetAccountsDisabled,
   mockMarkAccountAsCustomCheckedIn,
   mockLoggerError,
+  mockStartProductAnalyticsAction,
+  mockCompleteProductAnalyticsAction,
 } = vi.hoisted(() => ({
   mockLoadAccountData: vi.fn(),
   mockSendRuntimeMessage: vi.fn(),
@@ -35,6 +45,8 @@ const {
   mockSetAccountsDisabled: vi.fn(),
   mockMarkAccountAsCustomCheckedIn: vi.fn(),
   mockLoggerError: vi.fn(),
+  mockStartProductAnalyticsAction: vi.fn(),
+  mockCompleteProductAnalyticsAction: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -69,6 +81,11 @@ vi.mock("~/utils/core/logger", () => ({
   }),
 }))
 
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: unknown[]) =>
+    mockStartProductAnalyticsAction(...args),
+}))
+
 /**
  * Helper component to capture and expose the AccountActionsContext value.
  */
@@ -94,6 +111,27 @@ const createAccount = (overrides: Record<string, unknown> = {}) =>
     ...overrides,
   }) as any
 
+const expectExternalCheckInAnalyticsStarted = () => {
+  expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+    actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAllExternalCheckIns,
+    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementHeader,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  })
+}
+
+const withExternalCheckInAnalytics = <T extends Record<string, unknown>>(
+  options?: T,
+) => ({
+  ...options,
+  analyticsContext: {
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+    actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAllExternalCheckIns,
+    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementHeader,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  },
+})
+
 const renderContext = async () => {
   let captured: ReturnType<typeof useAccountActionsContext> | undefined
   render(
@@ -116,6 +154,9 @@ beforeEach(() => {
   mockToast.promise.mockImplementation(
     async (promise: Promise<unknown>) => promise,
   )
+  mockStartProductAnalyticsAction.mockReturnValue({
+    complete: mockCompleteProductAnalyticsAction,
+  })
   Object.assign(navigator, {
     clipboard: {
       writeText: vi.fn(),
@@ -157,7 +198,10 @@ describe("AccountActionsContext", () => {
           totalCount: 2,
         },
       })
-      await getContext().handleOpenExternalCheckIns(accounts)
+      await getContext().handleOpenExternalCheckIns(
+        accounts,
+        withExternalCheckInAnalytics(),
+      )
     })
 
     expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
@@ -168,6 +212,10 @@ describe("AccountActionsContext", () => {
     })
     expect(mockLoadAccountData).toHaveBeenCalled()
     expect(mockToast.success).toHaveBeenCalled()
+    expectExternalCheckInAnalyticsStarted()
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
   })
 
   it("opens all external check-ins when openAll is true", async () => {
@@ -195,7 +243,10 @@ describe("AccountActionsContext", () => {
           totalCount: 2,
         },
       })
-      await getContext().handleOpenExternalCheckIns(accounts, { openAll: true })
+      await getContext().handleOpenExternalCheckIns(
+        accounts,
+        withExternalCheckInAnalytics({ openAll: true }),
+      )
     })
 
     expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
@@ -206,6 +257,10 @@ describe("AccountActionsContext", () => {
     })
     expect(mockLoadAccountData).toHaveBeenCalled()
     expect(mockToast.success).toHaveBeenCalled()
+    expectExternalCheckInAnalyticsStarted()
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
   })
 
   it("forwards openInNewWindow to background handler", async () => {
@@ -233,9 +288,10 @@ describe("AccountActionsContext", () => {
           totalCount: 1,
         },
       })
-      await getContext().handleOpenExternalCheckIns(accounts, {
-        openInNewWindow: true,
-      })
+      await getContext().handleOpenExternalCheckIns(
+        accounts,
+        withExternalCheckInAnalytics({ openInNewWindow: true }),
+      )
     })
 
     expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
@@ -246,6 +302,10 @@ describe("AccountActionsContext", () => {
     })
     expect(mockLoadAccountData).toHaveBeenCalled()
     expect(mockToast.success).toHaveBeenCalled()
+    expectExternalCheckInAnalyticsStarted()
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
   })
 
   it("shows a toast when no unchecked external check-ins remain", async () => {
@@ -263,13 +323,20 @@ describe("AccountActionsContext", () => {
     ] as any
 
     await act(async () => {
-      await getContext().handleOpenExternalCheckIns(accounts)
+      await getContext().handleOpenExternalCheckIns(
+        accounts,
+        withExternalCheckInAnalytics(),
+      )
     })
 
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
     expect(mockLoadAccountData).not.toHaveBeenCalled()
     expect(mockToast.error).toHaveBeenCalledWith(
       "messages:toast.error.externalCheckInNonePending",
+    )
+    expectExternalCheckInAnalyticsStarted()
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
     )
   })
 
@@ -319,6 +386,17 @@ describe("AccountActionsContext", () => {
       expect(getContext().refreshingAccountId).toBeNull()
     })
     expect(mockLoadAccountData).toHaveBeenCalledTimes(1)
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledTimes(1)
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccount,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+    )
   })
 
   it("uses the refreshed success message when account data actually changes", async () => {
@@ -336,6 +414,9 @@ describe("AccountActionsContext", () => {
       "messages:toast.success.refreshAccount",
     )
     expect(mockLoadAccountData).toHaveBeenCalledTimes(1)
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
   })
 
   it("does not attempt to refresh disabled accounts", async () => {
@@ -350,6 +431,42 @@ describe("AccountActionsContext", () => {
     expect(mockRefreshAccount).not.toHaveBeenCalled()
     expect(mockToast.promise).not.toHaveBeenCalled()
     expect(mockLoadAccountData).not.toHaveBeenCalled()
+    expect(mockStartProductAnalyticsAction).not.toHaveBeenCalled()
+    expect(mockCompleteProductAnalyticsAction).not.toHaveBeenCalled()
+  })
+
+  it("tracks failed single refresh outcomes when storage returns false", async () => {
+    const { getContext } = await renderContext()
+
+    mockRefreshAccount.mockResolvedValueOnce(false)
+
+    await act(async () => {
+      await getContext().handleRefreshAccount(
+        createAccount({ id: "refresh-false", name: "False Refresh" }),
+      )
+    })
+
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+    )
+  })
+
+  it("tracks failed single refresh outcomes when storage throws", async () => {
+    const { getContext } = await renderContext()
+
+    mockRefreshAccount.mockRejectedValueOnce(new Error("refresh exploded"))
+
+    await act(async () => {
+      await getContext().handleRefreshAccount(
+        createAccount({ id: "refresh-throws", name: "Throwing Refresh" }),
+      )
+    })
+
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+    )
   })
 
   it("shows success feedback for both disabling and enabling accounts", async () => {
@@ -585,10 +702,10 @@ describe("AccountActionsContext", () => {
           totalCount: 2,
         },
       })
-      await getContext().handleOpenExternalCheckIns([
-        createAccount({ id: "open-1" }),
-        createAccount({ id: "open-2" }),
-      ])
+      await getContext().handleOpenExternalCheckIns(
+        [createAccount({ id: "open-1" }), createAccount({ id: "open-2" })],
+        withExternalCheckInAnalytics(),
+      )
     })
 
     expect(mockLoadAccountData).toHaveBeenCalled()
@@ -596,6 +713,11 @@ describe("AccountActionsContext", () => {
       "messages:errors.operation.failed",
     )
     expect(mockToast.success).not.toHaveBeenCalled()
+    expectExternalCheckInAnalyticsStarted()
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+    )
   })
 
   it("falls back to runtime errors when external check-in open responses are empty", async () => {
@@ -606,9 +728,10 @@ describe("AccountActionsContext", () => {
         success: false,
         error: "Background unavailable",
       })
-      await getContext().handleOpenExternalCheckIns([
-        createAccount({ id: "e1" }),
-      ])
+      await getContext().handleOpenExternalCheckIns(
+        [createAccount({ id: "e1" })],
+        withExternalCheckInAnalytics(),
+      )
     })
 
     expect(mockLoadAccountData).not.toHaveBeenCalled()
@@ -618,6 +741,40 @@ describe("AccountActionsContext", () => {
     )
     expect(mockToast.error).toHaveBeenCalledWith(
       "messages:errors.operation.failed",
+    )
+    expectExternalCheckInAnalyticsStarted()
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+    )
+  })
+
+  it("tracks thrown external check-in errors without blocking user feedback", async () => {
+    const { getContext } = await renderContext()
+
+    await act(async () => {
+      mockSendRuntimeMessage.mockRejectedValueOnce(new Error("open failed"))
+      mockCompleteProductAnalyticsAction.mockRejectedValueOnce(
+        new Error("analytics failed"),
+      )
+      await getContext().handleOpenExternalCheckIns(
+        [createAccount({ id: "throw-1" })],
+        withExternalCheckInAnalytics(),
+      )
+    })
+
+    expect(mockLoadAccountData).not.toHaveBeenCalled()
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      "Error opening external check-ins",
+      expect.any(Error),
+    )
+    expect(mockToast.error).toHaveBeenCalledWith(
+      "messages:errors.operation.failed",
+    )
+    expectExternalCheckInAnalyticsStarted()
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
     )
   })
 })

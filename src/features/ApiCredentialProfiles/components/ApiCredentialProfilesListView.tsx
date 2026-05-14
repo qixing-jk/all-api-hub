@@ -12,6 +12,12 @@ import {
 } from "~/components/ui"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
 import { cn } from "~/lib/utils"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 
 import type { ApiCredentialProfilesController } from "../hooks/useApiCredentialProfilesController"
@@ -152,6 +158,23 @@ export function ApiCredentialProfilesListView({
   const isInitialLoading =
     controller.isLoading && controller.profiles.length === 0
 
+  const emptyStateAddAnalyticsAction =
+    variant === "popup"
+      ? {
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+          surfaceId:
+            PRODUCT_ANALYTICS_SURFACE_IDS.PopupApiCredentialProfilesEmptyState,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+        }
+      : {
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+          surfaceId:
+            PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesEmptyState,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        }
+
   return (
     <div className={cn("space-y-4", className)}>
       <ApiCredentialProfilesDialogs controller={controller} />
@@ -246,6 +269,7 @@ export function ApiCredentialProfilesListView({
               ? {
                   label: t("apiCredentialProfiles:actions.add"),
                   onClick: controller.openAddDialog,
+                  analyticsAction: emptyStateAddAnalyticsAction,
                 }
               : undefined
           }

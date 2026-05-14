@@ -13,12 +13,19 @@ import {
   Textarea,
 } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import {
   coerceApiCredentialTelemetryJsonPathMap,
   isSupportedApiCredentialTelemetryEndpoint,
   type ApiCredentialTelemetryJsonPathField,
 } from "~/services/apiCredentialProfiles/telemetryConfig"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import {
   API_TYPES,
   type ApiVerificationApiType,
@@ -42,6 +49,8 @@ import { createLogger } from "~/utils/core/logger"
  * Unified logger scoped to the API credential profile dialog.
  */
 const logger = createLogger("ApiCredentialProfileDialog")
+const dialogSurface =
+  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesDialog
 
 type SaveProfileInput = {
   id?: string
@@ -358,288 +367,315 @@ export function ApiCredentialProfileDialog({
   }
 
   return (
-    <Modal
-      isOpen={isOpen}
-      onClose={handleClose}
-      closeOnBackdropClick={!isSaving}
-      closeOnEsc={!isSaving}
-      showCloseButton={!isSaving}
-      size="lg"
-      header={
-        <div className="flex min-w-0 items-center gap-3">
-          {isEditMode ? (
-            <PencilIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-          ) : (
-            <PlusIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
-          )}
-          <DialogTitle className="dark:text-dark-text-primary truncate text-lg font-semibold text-gray-900">
-            {isEditMode
-              ? t("apiCredentialProfiles:dialog.editTitle")
-              : t("apiCredentialProfiles:dialog.addTitle")}
-          </DialogTitle>
-        </div>
-      }
-      footer={
-        <div className="flex justify-end gap-2">
-          <Button variant="secondary" onClick={handleClose} disabled={isSaving}>
-            {t("common:actions.cancel")}
-          </Button>
-          <Button onClick={handleSave} loading={isSaving} disabled={isSaving}>
-            {t("common:actions.save")}
-          </Button>
-        </div>
-      }
+    <ProductAnalyticsScope
+      entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+      featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles}
+      surfaceId={dialogSurface}
     >
-      <div className="space-y-4">
-        <FormField
-          label={t("apiCredentialProfiles:dialog.fields.name")}
-          required
-          error={errors.name}
-          htmlFor={nameInputId}
-        >
-          <Input
-            id={nameInputId}
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            placeholder={t("apiCredentialProfiles:dialog.placeholders.name")}
-          />
-        </FormField>
-
-        <FormField label={t("aiApiVerification:verifyDialog.meta.apiType")}>
-          <SearchableSelect
-            options={[
-              {
-                value: API_TYPES.OPENAI_COMPATIBLE,
-                label: t(
-                  "aiApiVerification:verifyDialog.apiTypes.openaiCompatible",
-                ),
-              },
-              {
-                value: API_TYPES.OPENAI,
-                label: t("aiApiVerification:verifyDialog.apiTypes.openai"),
-              },
-              {
-                value: API_TYPES.ANTHROPIC,
-                label: t("aiApiVerification:verifyDialog.apiTypes.anthropic"),
-              },
-              {
-                value: API_TYPES.GOOGLE,
-                label: t("aiApiVerification:verifyDialog.apiTypes.google"),
-              },
-            ]}
-            value={apiType}
-            onChange={(value) => setApiType(value as ApiVerificationApiType)}
-            placeholder={t(
-              "aiApiVerification:verifyDialog.meta.apiTypePlaceholder",
+      <Modal
+        isOpen={isOpen}
+        onClose={handleClose}
+        closeOnBackdropClick={!isSaving}
+        closeOnEsc={!isSaving}
+        showCloseButton={!isSaving}
+        size="lg"
+        header={
+          <div className="flex min-w-0 items-center gap-3">
+            {isEditMode ? (
+              <PencilIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
+            ) : (
+              <PlusIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             )}
-            disabled={isSaving}
-          />
-        </FormField>
-
-        <FormField
-          label={t("apiCredentialProfiles:dialog.fields.baseUrl")}
-          required
-          error={errors.baseUrl}
-          htmlFor={baseUrlInputId}
-          description={
-            normalizedBaseUrlPreview
-              ? t("apiCredentialProfiles:dialog.hints.baseUrlNormalized", {
-                  baseUrl: normalizedBaseUrlPreview,
-                })
-              : undefined
-          }
-        >
-          <Input
-            id={baseUrlInputId}
-            value={baseUrl}
-            onChange={(e) => setBaseUrl(e.target.value)}
-            placeholder={t("apiCredentialProfiles:dialog.placeholders.baseUrl")}
-            disabled={isSaving}
-          />
-        </FormField>
-
-        <FormField
-          label={t("apiCredentialProfiles:dialog.fields.apiKey")}
-          required
-          error={errors.apiKey}
-          htmlFor={apiKeyInputId}
-        >
-          <Input
-            id={apiKeyInputId}
-            type="password"
-            revealable
-            revealLabels={{
-              show: t("keyManagement:actions.showKey"),
-              hide: t("keyManagement:actions.hideKey"),
-            }}
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder={t("apiCredentialProfiles:dialog.placeholders.apiKey")}
-            disabled={isSaving}
-            leftIcon={<KeyIcon className="h-5 w-5" />}
-          />
-        </FormField>
-
-        <FormField
-          label={t("apiCredentialProfiles:dialog.fields.tags")}
-          description={t("apiCredentialProfiles:dialog.hints.tags")}
-        >
-          <TagPicker
-            tags={tags}
-            selectedTagIds={tagIds}
-            onSelectedTagIdsChange={setTagIds}
-            onCreateTag={createTag}
-            onRenameTag={renameTag}
-            onDeleteTag={deleteTag}
-            placeholder={t("apiCredentialProfiles:dialog.placeholders.tags")}
-            disabled={isSaving}
-          />
-        </FormField>
-
-        <FormField
-          label={t("apiCredentialProfiles:dialog.fields.notes")}
-          htmlFor={notesInputId}
-        >
-          <Textarea
-            id={notesInputId}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            placeholder={t("apiCredentialProfiles:dialog.placeholders.notes")}
-            disabled={isSaving}
-          />
-        </FormField>
-
-        <FormField
-          label={t("apiCredentialProfiles:dialog.fields.telemetryPreset")}
-          description={t("apiCredentialProfiles:dialog.hints.telemetryPreset")}
-          htmlFor={telemetryModeInputId}
-        >
-          <SearchableSelect
-            id={telemetryModeInputId}
-            aria-label={t(
-              "apiCredentialProfiles:dialog.fields.telemetryPreset",
-            )}
-            options={[
-              {
-                value: "auto",
-                label: t("apiCredentialProfiles:dialog.telemetryModes.auto"),
-              },
-              {
-                value: "disabled",
-                label: t(
-                  "apiCredentialProfiles:dialog.telemetryModes.disabled",
-                ),
-              },
-              {
-                value: "newApiTokenUsage",
-                label: t(
-                  "apiCredentialProfiles:dialog.telemetryModes.newApiTokenUsage",
-                ),
-              },
-              {
-                value: "sub2apiUsage",
-                label: t(
-                  "apiCredentialProfiles:dialog.telemetryModes.sub2apiUsage",
-                ),
-              },
-              {
-                value: "openaiBilling",
-                label: t(
-                  "apiCredentialProfiles:dialog.telemetryModes.openaiBilling",
-                ),
-              },
-              {
-                value: "customReadOnlyEndpoint",
-                label: t(
-                  "apiCredentialProfiles:dialog.telemetryModes.customReadOnlyEndpoint",
-                ),
-              },
-            ]}
-            value={telemetryMode}
-            onChange={(value) =>
-              setTelemetryMode(value as ApiCredentialTelemetryCapabilityMode)
-            }
-            placeholder={t(
-              "apiCredentialProfiles:dialog.placeholders.telemetryPreset",
-            )}
-            disabled={isSaving}
-          />
-        </FormField>
-
-        {telemetryMode === "customReadOnlyEndpoint" && (
-          <details
-            open
-            className="dark:border-dark-bg-tertiary rounded-lg border border-gray-200 p-3"
+            <DialogTitle className="dark:text-dark-text-primary truncate text-lg font-semibold text-gray-900">
+              {isEditMode
+                ? t("apiCredentialProfiles:dialog.editTitle")
+                : t("apiCredentialProfiles:dialog.addTitle")}
+            </DialogTitle>
+          </div>
+        }
+        footer={
+          <div className="flex justify-end gap-2">
+            <Button
+              variant="secondary"
+              onClick={handleClose}
+              disabled={isSaving}
+            >
+              {t("common:actions.cancel")}
+            </Button>
+            <Button
+              onClick={handleSave}
+              loading={isSaving}
+              disabled={isSaving}
+              analyticsAction={
+                isEditMode
+                  ? PRODUCT_ANALYTICS_ACTION_IDS.UpdateApiCredentialProfile
+                  : PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile
+              }
+            >
+              {t("common:actions.save")}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-4">
+          <FormField
+            label={t("apiCredentialProfiles:dialog.fields.name")}
+            required
+            error={errors.name}
+            htmlFor={nameInputId}
           >
-            <summary className="dark:text-dark-text-primary cursor-pointer text-sm font-medium text-gray-700">
-              {t("apiCredentialProfiles:dialog.customTelemetry.title")}
-            </summary>
-            <div className="mt-3 space-y-4">
-              <FormField
-                label={t(
-                  "apiCredentialProfiles:dialog.fields.telemetryEndpoint",
-                )}
-                required
-                error={errors.telemetryEndpoint}
-                description={t(
-                  "apiCredentialProfiles:dialog.hints.telemetryEndpoint",
-                )}
-                htmlFor={customEndpointInputId}
-              >
-                <Input
-                  id={customEndpointInputId}
-                  value={customEndpoint}
-                  onChange={(e) => setCustomEndpoint(e.target.value)}
-                  placeholder={t(
-                    "apiCredentialProfiles:dialog.placeholders.telemetryEndpoint",
+            <Input
+              id={nameInputId}
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder={t("apiCredentialProfiles:dialog.placeholders.name")}
+            />
+          </FormField>
+
+          <FormField label={t("aiApiVerification:verifyDialog.meta.apiType")}>
+            <SearchableSelect
+              options={[
+                {
+                  value: API_TYPES.OPENAI_COMPATIBLE,
+                  label: t(
+                    "aiApiVerification:verifyDialog.apiTypes.openaiCompatible",
+                  ),
+                },
+                {
+                  value: API_TYPES.OPENAI,
+                  label: t("aiApiVerification:verifyDialog.apiTypes.openai"),
+                },
+                {
+                  value: API_TYPES.ANTHROPIC,
+                  label: t("aiApiVerification:verifyDialog.apiTypes.anthropic"),
+                },
+                {
+                  value: API_TYPES.GOOGLE,
+                  label: t("aiApiVerification:verifyDialog.apiTypes.google"),
+                },
+              ]}
+              value={apiType}
+              onChange={(value) => setApiType(value as ApiVerificationApiType)}
+              placeholder={t(
+                "aiApiVerification:verifyDialog.meta.apiTypePlaceholder",
+              )}
+              disabled={isSaving}
+            />
+          </FormField>
+
+          <FormField
+            label={t("apiCredentialProfiles:dialog.fields.baseUrl")}
+            required
+            error={errors.baseUrl}
+            htmlFor={baseUrlInputId}
+            description={
+              normalizedBaseUrlPreview
+                ? t("apiCredentialProfiles:dialog.hints.baseUrlNormalized", {
+                    baseUrl: normalizedBaseUrlPreview,
+                  })
+                : undefined
+            }
+          >
+            <Input
+              id={baseUrlInputId}
+              value={baseUrl}
+              onChange={(e) => setBaseUrl(e.target.value)}
+              placeholder={t(
+                "apiCredentialProfiles:dialog.placeholders.baseUrl",
+              )}
+              disabled={isSaving}
+            />
+          </FormField>
+
+          <FormField
+            label={t("apiCredentialProfiles:dialog.fields.apiKey")}
+            required
+            error={errors.apiKey}
+            htmlFor={apiKeyInputId}
+          >
+            <Input
+              id={apiKeyInputId}
+              type="password"
+              revealable
+              revealLabels={{
+                show: t("keyManagement:actions.showKey"),
+                hide: t("keyManagement:actions.hideKey"),
+              }}
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder={t(
+                "apiCredentialProfiles:dialog.placeholders.apiKey",
+              )}
+              disabled={isSaving}
+              leftIcon={<KeyIcon className="h-5 w-5" />}
+            />
+          </FormField>
+
+          <FormField
+            label={t("apiCredentialProfiles:dialog.fields.tags")}
+            description={t("apiCredentialProfiles:dialog.hints.tags")}
+          >
+            <TagPicker
+              tags={tags}
+              selectedTagIds={tagIds}
+              onSelectedTagIdsChange={setTagIds}
+              onCreateTag={createTag}
+              onRenameTag={renameTag}
+              onDeleteTag={deleteTag}
+              placeholder={t("apiCredentialProfiles:dialog.placeholders.tags")}
+              disabled={isSaving}
+            />
+          </FormField>
+
+          <FormField
+            label={t("apiCredentialProfiles:dialog.fields.notes")}
+            htmlFor={notesInputId}
+          >
+            <Textarea
+              id={notesInputId}
+              value={notes}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder={t("apiCredentialProfiles:dialog.placeholders.notes")}
+              disabled={isSaving}
+            />
+          </FormField>
+
+          <FormField
+            label={t("apiCredentialProfiles:dialog.fields.telemetryPreset")}
+            description={t(
+              "apiCredentialProfiles:dialog.hints.telemetryPreset",
+            )}
+            htmlFor={telemetryModeInputId}
+          >
+            <SearchableSelect
+              id={telemetryModeInputId}
+              aria-label={t(
+                "apiCredentialProfiles:dialog.fields.telemetryPreset",
+              )}
+              options={[
+                {
+                  value: "auto",
+                  label: t("apiCredentialProfiles:dialog.telemetryModes.auto"),
+                },
+                {
+                  value: "disabled",
+                  label: t(
+                    "apiCredentialProfiles:dialog.telemetryModes.disabled",
+                  ),
+                },
+                {
+                  value: "newApiTokenUsage",
+                  label: t(
+                    "apiCredentialProfiles:dialog.telemetryModes.newApiTokenUsage",
+                  ),
+                },
+                {
+                  value: "sub2apiUsage",
+                  label: t(
+                    "apiCredentialProfiles:dialog.telemetryModes.sub2apiUsage",
+                  ),
+                },
+                {
+                  value: "openaiBilling",
+                  label: t(
+                    "apiCredentialProfiles:dialog.telemetryModes.openaiBilling",
+                  ),
+                },
+                {
+                  value: "customReadOnlyEndpoint",
+                  label: t(
+                    "apiCredentialProfiles:dialog.telemetryModes.customReadOnlyEndpoint",
+                  ),
+                },
+              ]}
+              value={telemetryMode}
+              onChange={(value) =>
+                setTelemetryMode(value as ApiCredentialTelemetryCapabilityMode)
+              }
+              placeholder={t(
+                "apiCredentialProfiles:dialog.placeholders.telemetryPreset",
+              )}
+              disabled={isSaving}
+            />
+          </FormField>
+
+          {telemetryMode === "customReadOnlyEndpoint" && (
+            <details
+              open
+              className="dark:border-dark-bg-tertiary rounded-lg border border-gray-200 p-3"
+            >
+              <summary className="dark:text-dark-text-primary cursor-pointer text-sm font-medium text-gray-700">
+                {t("apiCredentialProfiles:dialog.customTelemetry.title")}
+              </summary>
+              <div className="mt-3 space-y-4">
+                <FormField
+                  label={t(
+                    "apiCredentialProfiles:dialog.fields.telemetryEndpoint",
                   )}
-                  disabled={isSaving}
-                />
-              </FormField>
+                  required
+                  error={errors.telemetryEndpoint}
+                  description={t(
+                    "apiCredentialProfiles:dialog.hints.telemetryEndpoint",
+                  )}
+                  htmlFor={customEndpointInputId}
+                >
+                  <Input
+                    id={customEndpointInputId}
+                    value={customEndpoint}
+                    onChange={(e) => setCustomEndpoint(e.target.value)}
+                    placeholder={t(
+                      "apiCredentialProfiles:dialog.placeholders.telemetryEndpoint",
+                    )}
+                    disabled={isSaving}
+                  />
+                </FormField>
 
-              <div className="space-y-2">
-                <div>
-                  <div className="dark:text-dark-text-primary text-sm font-medium text-gray-700">
-                    {t("apiCredentialProfiles:dialog.customTelemetry.paths")}
+                <div className="space-y-2">
+                  <div>
+                    <div className="dark:text-dark-text-primary text-sm font-medium text-gray-700">
+                      {t("apiCredentialProfiles:dialog.customTelemetry.paths")}
+                    </div>
+                    <p className="dark:text-dark-text-secondary text-xs text-gray-500">
+                      {t(
+                        "apiCredentialProfiles:dialog.hints.telemetryJsonPaths",
+                      )}
+                    </p>
                   </div>
-                  <p className="dark:text-dark-text-secondary text-xs text-gray-500">
-                    {t("apiCredentialProfiles:dialog.hints.telemetryJsonPaths")}
-                  </p>
+                  <div className="grid gap-3 sm:grid-cols-2">
+                    {telemetryJsonPathFields.map(({ field, label }) => {
+                      const inputId = `api-credential-profile-telemetry-path-${field}`
+                      return (
+                        <FormField key={field} label={label} htmlFor={inputId}>
+                          <Input
+                            id={inputId}
+                            value={customJsonPaths[field] ?? ""}
+                            onChange={handleJsonPathChange(field)}
+                            placeholder={t(
+                              "apiCredentialProfiles:dialog.placeholders.telemetryJsonPath",
+                            )}
+                            disabled={isSaving}
+                          />
+                        </FormField>
+                      )
+                    })}
+                  </div>
+                  {errors.telemetryJsonPaths && (
+                    <p className="text-xs text-red-600 dark:text-red-400">
+                      {errors.telemetryJsonPaths}
+                    </p>
+                  )}
                 </div>
-                <div className="grid gap-3 sm:grid-cols-2">
-                  {telemetryJsonPathFields.map(({ field, label }) => {
-                    const inputId = `api-credential-profile-telemetry-path-${field}`
-                    return (
-                      <FormField key={field} label={label} htmlFor={inputId}>
-                        <Input
-                          id={inputId}
-                          value={customJsonPaths[field] ?? ""}
-                          onChange={handleJsonPathChange(field)}
-                          placeholder={t(
-                            "apiCredentialProfiles:dialog.placeholders.telemetryJsonPath",
-                          )}
-                          disabled={isSaving}
-                        />
-                      </FormField>
-                    )
-                  })}
-                </div>
-                {errors.telemetryJsonPaths && (
-                  <p className="text-xs text-red-600 dark:text-red-400">
-                    {errors.telemetryJsonPaths}
-                  </p>
-                )}
               </div>
-            </div>
-          </details>
-        )}
+            </details>
+          )}
 
-        <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-          {t("apiCredentialProfiles:dialog.meta.apiTypeHint", {
-            apiType: getApiVerificationApiTypeLabel(t, apiType),
-          })}
+          <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+            {t("apiCredentialProfiles:dialog.meta.apiTypeHint", {
+              apiType: getApiVerificationApiTypeLabel(t, apiType),
+            })}
+          </div>
         </div>
-      </div>
-    </Modal>
+      </Modal>
+    </ProductAnalyticsScope>
   )
 }

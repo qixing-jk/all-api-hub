@@ -10,11 +10,18 @@ import {
   Modal,
   SearchableSelect,
 } from "~/components/ui"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {
   buildKiloCodeApiConfigs,
   buildKiloCodeSettingsFile,
 } from "~/services/integrations/kiloCodeExport"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { createLogger } from "~/utils/core/logger"
 import { stripTrailingOpenAIV1 } from "~/utils/core/url"
@@ -23,6 +30,8 @@ import { stripTrailingOpenAIV1 } from "~/utils/core/url"
  * Unified logger scoped to the Kilo Code export dialog for API credential profiles.
  */
 const logger = createLogger("KiloCodeProfileExportDialog")
+const exportDialogSurface =
+  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesExportDialog
 
 interface KiloCodeProfileExportDialogProps {
   isOpen: boolean
@@ -188,26 +197,38 @@ export function KiloCodeProfileExportDialog({
         </div>
       }
       footer={
-        <div className="flex flex-wrap justify-end gap-2">
-          <Button variant="ghost" type="button" onClick={onClose}>
-            {t("common:actions.cancel")}
-          </Button>
-          <Button
-            type="button"
-            variant="secondary"
-            onClick={handleCopyApiConfigs}
-            disabled={!canExport}
-          >
-            {t("ui:dialog.kiloCode.actions.copyApiConfigs")}
-          </Button>
-          <Button
-            type="button"
-            onClick={handleDownloadSettings}
-            disabled={!canExport}
-          >
-            {t("ui:dialog.kiloCode.actions.downloadSettings")}
-          </Button>
-        </div>
+        <ProductAnalyticsScope
+          entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+          featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles}
+          surfaceId={exportDialogSurface}
+        >
+          <div className="flex flex-wrap justify-end gap-2">
+            <Button variant="ghost" type="button" onClick={onClose}>
+              {t("common:actions.cancel")}
+            </Button>
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={handleCopyApiConfigs}
+              disabled={!canExport}
+              analyticsAction={
+                PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialExportConfig
+              }
+            >
+              {t("ui:dialog.kiloCode.actions.copyApiConfigs")}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleDownloadSettings}
+              disabled={!canExport}
+              analyticsAction={
+                PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialSettingsFile
+              }
+            >
+              {t("ui:dialog.kiloCode.actions.downloadSettings")}
+            </Button>
+          </div>
+        </ProductAnalyticsScope>
       }
     >
       <div className="space-y-4">

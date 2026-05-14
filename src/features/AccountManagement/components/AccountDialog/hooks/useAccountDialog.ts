@@ -40,6 +40,19 @@ import {
   getManagedSiteLabel,
 } from "~/services/managedSites/utils/managedSite"
 import {
+  startProductAnalyticsAction,
+  type ProductAnalyticsActionCompleteOptions,
+} from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsResult,
+} from "~/services/productAnalytics/events"
+import {
   AuthTypeEnum,
   type ApiToken,
   type CheckInConfig,
@@ -1196,6 +1209,17 @@ export function useAccountDialog({
     skipSub2ApiKeyPrompt?: boolean
     skipAutoProvisionKeyOnAccountAdd?: boolean
   }) => {
+    const analyticsAction = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId:
+        mode === DIALOG_MODES.ADD
+          ? PRODUCT_ANALYTICS_ACTION_IDS.CreateAccount
+          : PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccount,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    let isAnalyticsActionCompleted = false
+
     try {
       setIsSaving(true)
       const sub2apiAuth: Sub2ApiAuthConfig | undefined =
@@ -1254,8 +1278,22 @@ export function useAccountDialog({
             )
 
       if (!result.success) {
+        await completeAccountSaveAnalyticsAction(
+          analyticsAction,
+          PRODUCT_ANALYTICS_RESULTS.Failure,
+          {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          },
+        )
+        isAnalyticsActionCompleted = true
         throw new Error(result.message || t("messages.saveFailed"))
       }
+
+      await completeAccountSaveAnalyticsAction(
+        analyticsAction,
+        PRODUCT_ANALYTICS_RESULTS.Success,
+      )
+      isAnalyticsActionCompleted = true
 
       const feedbackMessage =
         typeof result.message === "string" && result.message.trim().length > 0
@@ -1369,6 +1407,15 @@ export function useAccountDialog({
 
       return result
     } catch (error: any) {
+      if (!isAnalyticsActionCompleted) {
+        await completeAccountSaveAnalyticsAction(
+          analyticsAction,
+          PRODUCT_ANALYTICS_RESULTS.Failure,
+          {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          },
+        )
+      }
       toast.error(
         t("messages.operationFailed", { error: getErrorMessage(error) }),
       )
@@ -2070,6 +2117,26 @@ function normalizeSiteUrlForDuplicateCheck(params: {
     url: params.value,
     siteType: params.siteType,
   })
+}
+
+/**
+ * Keeps analytics best-effort so telemetry failures cannot alter account saves.
+ */
+async function completeAccountSaveAnalyticsAction(
+  tracker: ReturnType<typeof startProductAnalyticsAction>,
+  result: ProductAnalyticsResult,
+  options?: ProductAnalyticsActionCompleteOptions,
+) {
+  try {
+    if (options) {
+      await tracker.complete(result, options)
+      return
+    }
+
+    await tracker.complete(result)
+  } catch {
+    // Product analytics must never block account creation or updates.
+  }
 }
 
 /**

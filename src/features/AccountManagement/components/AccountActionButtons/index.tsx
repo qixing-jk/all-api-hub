@@ -23,6 +23,7 @@ import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
@@ -46,6 +47,19 @@ import {
   getManagedSiteType,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
+import {
+  startProductAnalyticsAction,
+  type ProductAnalyticsActionContext,
+} from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsResult,
+} from "~/services/productAnalytics/events"
 import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { DisplaySiteData } from "~/types"
@@ -133,6 +147,52 @@ export interface ActionButtonsProps {
  * Logger scoped to per-account action buttons so token-fetch failures can be diagnosed without logging secrets.
  */
 const logger = createLogger("AccountActionButtons")
+const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
+const rowActionsSurface =
+  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions
+
+type ProductAnalyticsActionTracker = ReturnType<
+  typeof startProductAnalyticsAction
+>
+
+const quickCheckinAnalyticsContext: ProductAnalyticsActionContext = {
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+  actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunQuickCheckin,
+  surfaceId: rowActionsSurface,
+  entrypoint: optionsEntrypoint,
+}
+
+const getQuickCheckinAnalyticsResult = (
+  status: string | undefined,
+): ProductAnalyticsResult => {
+  if (status === CHECKIN_RESULT_STATUS.FAILED) {
+    return PRODUCT_ANALYTICS_RESULTS.Failure
+  }
+
+  if (status === CHECKIN_RESULT_STATUS.SKIPPED) {
+    return PRODUCT_ANALYTICS_RESULTS.Skipped
+  }
+
+  return PRODUCT_ANALYTICS_RESULTS.Success
+}
+
+const completeQuickCheckinAnalytics = async (
+  tracker: ProductAnalyticsActionTracker,
+  result: ProductAnalyticsResult,
+) => {
+  try {
+    if (result === PRODUCT_ANALYTICS_RESULTS.Failure) {
+      await tracker.complete(result, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
+      return
+    }
+
+    await tracker.complete(result)
+  } catch {
+    // Product analytics must not block the user-triggered quick check-in.
+  }
+}
 
 const getLocateManagedSiteChannelToastMessage = (
   t: TFunction,
@@ -486,8 +546,16 @@ export default function AccountActionButtons({
   }
 
   const handleShareSnapshot = async () => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShareSnapshots,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShareAccountSnapshot,
+      surfaceId: rowActionsSurface,
+      entrypoint: optionsEntrypoint,
+    })
+
     if (isAccountDisabled) {
       toast.error(t("messages:toast.error.shareSnapshotAccountDisabled"))
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
       return
     }
 
@@ -512,7 +580,29 @@ export default function AccountActionButtons({
           : undefined,
     })
 
-    await exportShareSnapshotWithToast({ payload })
+    try {
+      await exportShareSnapshotWithToast({ payload })
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+    } catch (error) {
+      logger.error("Failed to export account share snapshot", {
+        diagnostic: toSanitizedErrorSummary(
+          error,
+          [site.token, site.cookieAuthSessionCookie].filter(
+            Boolean,
+          ) as string[],
+        ),
+        siteId: site.id,
+        siteType: site.siteType,
+      })
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
+      toast.error(
+        t("messages:toast.error.operationFailed", {
+          error: getErrorMessage(error),
+        }),
+      )
+    }
   }
 
   /**
@@ -520,8 +610,14 @@ export default function AccountActionButtons({
    * Uses the shared background scheduler so provider/persistence behavior stays consistent.
    */
   const handleQuickCheckin = async () => {
+    const tracker = startProductAnalyticsAction(quickCheckinAnalyticsContext)
+
     if (isAccountDisabled) {
       toast.error(t("autoCheckin:messages.error.accountDisabled"))
+      await completeQuickCheckinAnalytics(
+        tracker,
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+      )
       return
     }
 
@@ -541,6 +637,10 @@ export default function AccountActionButtons({
           t("autoCheckin:messages.error.runFailed", {
             error: response?.error ?? "",
           }),
+        )
+        await completeQuickCheckinAnalytics(
+          tracker,
+          PRODUCT_ANALYTICS_RESULTS.Failure,
         )
         return
       }
@@ -578,6 +678,10 @@ export default function AccountActionButtons({
         toast.success(t("autoCheckin:messages.success.runCompleted"))
       }
 
+      await completeQuickCheckinAnalytics(
+        tracker,
+        getQuickCheckinAnalyticsResult(status),
+      )
       void loadAccountData()
     } catch (error) {
       if (toastId) toast.dismiss(toastId)
@@ -586,191 +690,245 @@ export default function AccountActionButtons({
           error: getErrorMessage(error),
         }),
       )
+      await completeQuickCheckinAnalytics(
+        tracker,
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+      )
     }
   }
 
   return (
-    <div className="grid grid-cols-2 justify-end gap-2 sm:grid-cols-4">
-      {/* Primary Level - Standalone buttons */}
-      <IconButton
-        onClick={handleCopyUrlLocal}
-        variant="ghost"
-        size="sm"
-        className="touch-manipulation"
-        disabled={isAccountDisabled}
-        aria-label={t("actions.copyUrl")}
-        title={t("actions.copyUrl")}
-      >
-        <LinkIcon className="h-4 w-4" />
-      </IconButton>
-
-      <IconButton
-        onClick={handleSmartCopyKey}
-        variant="ghost"
-        size="sm"
-        className="touch-manipulation"
-        disabled={isCheckingTokens || isAccountDisabled}
-        aria-label={t("actions.copyKey")}
-        title={t("actions.copyKey")}
-      >
-        <KeyIcon className="h-4 w-4" />
-      </IconButton>
-
-      <IconButton
-        onClick={(e) => {
-          e.preventDefault()
-          e.stopPropagation()
-          openEditAccount(site)
-        }}
-        variant="ghost"
-        size="sm"
-        className="touch-manipulation"
-        disabled={isAccountDisabled}
-        aria-label={t("actions.edit")}
-        title={t("actions.edit")}
-      >
-        <PencilIcon className="h-4 w-4" />
-      </IconButton>
-
-      {/* Secondary Level - Dropdown menu */}
-      <Menu as="div" className="relative">
-        <MenuButton
-          as={IconButton}
+    <ProductAnalyticsScope
+      entrypoint={optionsEntrypoint}
+      featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement}
+      surfaceId={rowActionsSurface}
+    >
+      <div className="grid grid-cols-2 justify-end gap-2 sm:grid-cols-4">
+        {/* Primary Level - Standalone buttons */}
+        <IconButton
+          onClick={handleCopyUrlLocal}
           variant="ghost"
           size="sm"
-          aria-label={t("common:actions.more")}
+          className="touch-manipulation"
+          disabled={isAccountDisabled}
+          aria-label={t("actions.copyUrl")}
+          title={t("actions.copyUrl")}
+          analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountSiteUrl}
         >
-          <EllipsisHorizontalIcon className="h-4 w-4" />
-        </MenuButton>
+          <LinkIcon className="h-4 w-4" />
+        </IconButton>
 
-        <MenuItems
-          anchor="bottom end"
-          className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg [--anchor-gap:4px] [--anchor-padding:8px] focus:outline-none"
+        <IconButton
+          onClick={handleSmartCopyKey}
+          variant="ghost"
+          size="sm"
+          className="touch-manipulation"
+          disabled={isCheckingTokens || isAccountDisabled}
+          aria-label={t("actions.copyKey")}
+          title={t("actions.copyKey")}
+          analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.CopyApiKey}
         >
-          {isAccountDisabled ? (
-            <>
-              <AccountActionMenuItem
-                onClick={handleDisableToggle}
-                icon={CheckCircleIcon}
-                label={t("actions.enableAccount")}
-                tone="success"
-              />
+          <KeyIcon className="h-4 w-4" />
+        </IconButton>
 
-              <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
+        <IconButton
+          onClick={(e) => {
+            e.preventDefault()
+            e.stopPropagation()
+            openEditAccount(site)
+          }}
+          variant="ghost"
+          size="sm"
+          className="touch-manipulation"
+          disabled={isAccountDisabled}
+          aria-label={t("actions.edit")}
+          title={t("actions.edit")}
+          analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccount}
+        >
+          <PencilIcon className="h-4 w-4" />
+        </IconButton>
 
-              <AccountActionMenuItem
-                onClick={handleDeleteLocal}
-                icon={TrashIcon}
-                label={t("actions.delete")}
-                isDestructive={true}
-              />
-            </>
-          ) : (
-            <>
-              {/* Secondary Menu Items */}
-              <AccountActionMenuItem
-                onClick={handleOpenKeyList}
-                icon={ListBulletIcon}
-                label={t("actions.keyList")}
-              />
+        {/* Secondary Level - Dropdown menu */}
+        <Menu as="div" className="relative">
+          <MenuButton
+            as={IconButton}
+            variant="ghost"
+            size="sm"
+            aria-label={t("common:actions.more")}
+          >
+            <EllipsisHorizontalIcon className="h-4 w-4" />
+          </MenuButton>
 
-              <AccountActionMenuItem
-                onClick={handleNavigateToKeyManagement}
-                icon={KeyIcon}
-                label={t("actions.keyManagement")}
-              />
-
-              <AccountActionMenuItem
-                onClick={handleNavigateToModelManagement}
-                icon={CpuChipIcon}
-                label={t("actions.modelManagement")}
-              />
-
-              {canLocateManagedSiteChannel && (
+          <MenuItems
+            anchor="bottom end"
+            className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg [--anchor-gap:4px] [--anchor-padding:8px] focus:outline-none"
+          >
+            {isAccountDisabled ? (
+              <>
                 <AccountActionMenuItem
-                  onClick={handleLocateManagedSiteChannel}
-                  icon={MagnifyingGlassIcon}
-                  label={t("actions.locateManagedSiteChannel")}
-                  hint={
-                    !isManagedSiteChannelLookupSupported
-                      ? t("actions.locateManagedSiteChannelUnsupportedHint")
-                      : undefined
+                  onClick={handleDisableToggle}
+                  icon={CheckCircleIcon}
+                  label={t("actions.enableAccount")}
+                  tone="success"
+                  analyticsAction={
+                    PRODUCT_ANALYTICS_ACTION_IDS.ToggleAccountDisabled
                   }
-                  description={
-                    !isManagedSiteChannelLookupSupported
-                      ? t("actions.locateManagedSiteChannelUnsupported")
-                      : undefined
+                />
+
+                <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
+
+                <AccountActionMenuItem
+                  onClick={handleDeleteLocal}
+                  icon={TrashIcon}
+                  label={t("actions.delete")}
+                  isDestructive={true}
+                />
+              </>
+            ) : (
+              <>
+                {/* Secondary Menu Items */}
+                <AccountActionMenuItem
+                  onClick={handleOpenKeyList}
+                  icon={ListBulletIcon}
+                  label={t("actions.keyList")}
+                  analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenKeyList}
+                />
+
+                <AccountActionMenuItem
+                  onClick={handleNavigateToKeyManagement}
+                  icon={KeyIcon}
+                  label={t("actions.keyManagement")}
+                  analyticsAction={
+                    PRODUCT_ANALYTICS_ACTION_IDS.OpenKeyManagement
                   }
-                  disabled={!isManagedSiteChannelLookupSupported}
                 />
-              )}
 
-              <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
+                <ProductAnalyticsScope
+                  featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ModelList}
+                >
+                  <AccountActionMenuItem
+                    onClick={handleNavigateToModelManagement}
+                    icon={CpuChipIcon}
+                    label={t("actions.modelManagement")}
+                    analyticsAction={
+                      PRODUCT_ANALYTICS_ACTION_IDS.OpenModelManagement
+                    }
+                  />
+                </ProductAnalyticsScope>
 
-              <AccountActionMenuItem
-                onClick={handleNavigateToUsageManagement}
-                icon={ChartPieIcon}
-                label={t("actions.usageLog")}
-              />
+                {canLocateManagedSiteChannel && (
+                  <ProductAnalyticsScope
+                    featureId={
+                      PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels
+                    }
+                  >
+                    <AccountActionMenuItem
+                      onClick={handleLocateManagedSiteChannel}
+                      icon={MagnifyingGlassIcon}
+                      label={t("actions.locateManagedSiteChannel")}
+                      hint={
+                        !isManagedSiteChannelLookupSupported
+                          ? t("actions.locateManagedSiteChannelUnsupportedHint")
+                          : undefined
+                      }
+                      description={
+                        !isManagedSiteChannelLookupSupported
+                          ? t("actions.locateManagedSiteChannelUnsupported")
+                          : undefined
+                      }
+                      disabled={!isManagedSiteChannelLookupSupported}
+                      analyticsAction={
+                        PRODUCT_ANALYTICS_ACTION_IDS.LocateManagedSiteChannel
+                      }
+                    />
+                  </ProductAnalyticsScope>
+                )}
 
-              <AccountActionMenuItem
-                onClick={handleNavigateToRedeemPage}
-                icon={BanknotesIcon}
-                label={t("actions.redeemPage")}
-              />
+                <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
 
-              <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
+                <ProductAnalyticsScope
+                  featureId={PRODUCT_ANALYTICS_FEATURE_IDS.UsageAnalytics}
+                >
+                  <AccountActionMenuItem
+                    onClick={handleNavigateToUsageManagement}
+                    icon={ChartPieIcon}
+                    label={t("actions.usageLog")}
+                    analyticsAction={
+                      PRODUCT_ANALYTICS_ACTION_IDS.OpenAccountUsageLog
+                    }
+                  />
+                </ProductAnalyticsScope>
 
-              {/* Pin/Unpin */}
-              {isPinFeatureEnabled && (
                 <AccountActionMenuItem
-                  onClick={handleTogglePin}
-                  icon={PinToggleIcon}
-                  label={pinLabel}
+                  onClick={handleNavigateToRedeemPage}
+                  icon={BanknotesIcon}
+                  label={t("actions.redeemPage")}
+                  analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenRedeemPage}
                 />
-              )}
 
-              <AccountActionMenuItem
-                onClick={handleRefreshLocal}
-                icon={ArrowPathIcon}
-                label={t("actions.refresh")}
-                disabled={refreshingAccountId === site.id}
-              />
+                <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
 
-              {isQuickCheckinEligible && (
+                {/* Pin/Unpin */}
+                {isPinFeatureEnabled && (
+                  <AccountActionMenuItem
+                    onClick={handleTogglePin}
+                    icon={PinToggleIcon}
+                    label={pinLabel}
+                    analyticsAction={
+                      PRODUCT_ANALYTICS_ACTION_IDS.ToggleAccountPin
+                    }
+                  />
+                )}
+
                 <AccountActionMenuItem
-                  onClick={handleQuickCheckin}
-                  icon={CalendarCheck2}
-                  label={t("actions.quickCheckin")}
+                  onClick={handleRefreshLocal}
+                  icon={ArrowPathIcon}
+                  label={t("actions.refresh")}
+                  disabled={refreshingAccountId === site.id}
                 />
-              )}
 
-              <AccountActionMenuItem
-                onClick={handleShareSnapshot}
-                icon={ArrowUpOnSquareIcon}
-                label={t("shareSnapshots:actions.shareAccountSnapshot")}
-              />
+                {isQuickCheckinEligible && (
+                  <ProductAnalyticsScope
+                    featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin}
+                  >
+                    <AccountActionMenuItem
+                      onClick={handleQuickCheckin}
+                      icon={CalendarCheck2}
+                      label={t("actions.quickCheckin")}
+                    />
+                  </ProductAnalyticsScope>
+                )}
 
-              <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
+                <AccountActionMenuItem
+                  onClick={handleShareSnapshot}
+                  icon={ArrowUpOnSquareIcon}
+                  label={t("shareSnapshots:actions.shareAccountSnapshot")}
+                />
 
-              {/* Place Disable immediately above Delete for clarity and consistency. */}
-              <AccountActionMenuItem
-                onClick={handleDisableToggle}
-                icon={NoSymbolIcon}
-                label={t("actions.disableAccount")}
-                tone="warning"
-              />
+                <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
 
-              <AccountActionMenuItem
-                onClick={handleDeleteLocal}
-                icon={TrashIcon}
-                label={t("actions.delete")}
-                isDestructive={true}
-              />
-            </>
-          )}
-        </MenuItems>
-      </Menu>
-    </div>
+                {/* Place Disable immediately above Delete for clarity and consistency. */}
+                <AccountActionMenuItem
+                  onClick={handleDisableToggle}
+                  icon={NoSymbolIcon}
+                  label={t("actions.disableAccount")}
+                  tone="warning"
+                  analyticsAction={
+                    PRODUCT_ANALYTICS_ACTION_IDS.ToggleAccountDisabled
+                  }
+                />
+
+                <AccountActionMenuItem
+                  onClick={handleDeleteLocal}
+                  icon={TrashIcon}
+                  label={t("actions.delete")}
+                  isDestructive={true}
+                />
+              </>
+            )}
+          </MenuItems>
+        </Menu>
+      </div>
+    </ProductAnalyticsScope>
   )
 }

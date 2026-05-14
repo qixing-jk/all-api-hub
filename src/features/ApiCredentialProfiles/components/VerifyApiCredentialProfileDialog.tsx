@@ -23,6 +23,15 @@ import {
   fetchApiCredentialModelIds,
   normalizeApiCredentialModelIds,
 } from "~/services/apiCredentialProfiles/modelCatalog"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import {
   API_TYPES,
   getApiVerificationProbeDefinitions,
@@ -49,6 +58,11 @@ import { createLogger } from "~/utils/core/logger"
  * Unified logger scoped to API credential profile verification dialog.
  */
 const logger = createLogger("VerifyApiCredentialProfileDialog")
+const analyticsContext = {
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+  surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesDialog,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+}
 
 interface VerifyApiCredentialProfileDialogProps {
   isOpen: boolean
@@ -405,8 +419,16 @@ export function VerifyApiCredentialProfileDialog({
   const runProbe = async (
     probeId: ApiVerificationProbeId,
     modelIdOverride?: string,
+    trackAnalytics = true,
   ): Promise<ApiVerificationProbeResult | null> => {
     if (!profile) return null
+
+    const tracker = trackAnalytics
+      ? startProductAnalyticsAction({
+          ...analyticsContext,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunApiCredentialProbe,
+        })
+      : null
 
     const pendingProbes = probesRef.current.map((probe) =>
       probe.definition.id === probeId
@@ -449,6 +471,16 @@ export function VerifyApiCredentialProfileDialog({
       }
 
       await persistProbeResults(nextProbes, modelIdOverride)
+      if (result.status === "pass") {
+        await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      } else {
+        await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory:
+            result.status === "unsupported"
+              ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
+              : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
+      }
       return result
     } catch (error) {
       logger.error("Probe failed", {
@@ -476,6 +508,9 @@ export function VerifyApiCredentialProfileDialog({
       })
       replaceProbes(nextProbes)
       await persistProbeResults(nextProbes, modelIdOverride)
+      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
       return fallback
     }
   }
@@ -495,17 +530,23 @@ export function VerifyApiCredentialProfileDialog({
 
   const runAll = async () => {
     if (!profile) return
+    const tracker = startProductAnalyticsAction({
+      ...analyticsContext,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunApiCredentialProbeSuite,
+    })
+    const results: ApiVerificationProbeResult[] = []
     setIsRunning(true)
     setPersistedSummary(null)
-    replaceProbes(buildProbeState(apiType))
 
     try {
+      replaceProbes(buildProbeState(apiType))
       const ordered = getApiVerificationProbeDefinitions(apiType)
       let modelIdForSuite = modelId.trim()
 
       for (const probe of ordered) {
         if (probe.id === "models") {
-          const result = await runProbe("models")
+          const result = await runProbe("models", undefined, false)
+          if (result) results.push(result)
           if (!modelIdForSuite && result) {
             const modelsOutput = extractModelsProbeOutput(result)
             const suggested =
@@ -520,8 +561,34 @@ export function VerifyApiCredentialProfileDialog({
         }
 
         if (probe.requiresModelId && !modelIdForSuite) continue
-        await runProbe(probe.id, modelIdForSuite)
+        const result = await runProbe(probe.id, modelIdForSuite, false)
+        if (result) results.push(result)
       }
+
+      if (results.length === 0) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+        return
+      }
+
+      const hasFailedProbe = results.some((result) => result.status === "fail")
+      if (hasFailedProbe) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
+        return
+      }
+
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+    } catch (error) {
+      logger.error("Probe suite failed", {
+        message: toSanitizedErrorSummary(error, [
+          profile.apiKey,
+          profile.baseUrl,
+        ]),
+      })
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     } finally {
       setIsRunning(false)
     }

@@ -2,6 +2,12 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { KiloCodeProfileExportDialog } from "~/features/ApiCredentialProfiles/components/KiloCodeProfileExportDialog"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -10,6 +16,7 @@ const mockBuildKiloCodeApiConfigs = vi.fn()
 const mockBuildKiloCodeSettingsFile = vi.fn()
 const toastSuccessMock = vi.fn()
 const toastErrorMock = vi.fn()
+const trackProductAnalyticsActionStartedMock = vi.fn()
 
 vi.mock("~/services/apiService/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: (...args: any[]) =>
@@ -30,6 +37,23 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionStarted: (...args: any[]) =>
+    trackProductAnalyticsActionStartedMock(...args),
+}))
+
+const expectApiCredentialProfileActionTracked = (
+  actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
+) => {
+  expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+    actionId,
+    surfaceId:
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesExportDialog,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  })
+}
+
 const PROFILE = {
   id: "profile-1",
   name: "Reusable Key",
@@ -49,6 +73,7 @@ describe("KiloCodeProfileExportDialog", () => {
     mockBuildKiloCodeSettingsFile.mockReset()
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
+    trackProductAnalyticsActionStartedMock.mockReset()
 
     mockBuildKiloCodeApiConfigs.mockImplementation(({ selections }: any) => ({
       apiConfigs: [
@@ -115,6 +140,9 @@ describe("KiloCodeProfileExportDialog", () => {
 
     await user.click(copyButton)
 
+    expectApiCredentialProfileActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialExportConfig,
+    )
     await waitFor(() => {
       expect(writeText).toHaveBeenCalledTimes(1)
     })
@@ -172,6 +200,9 @@ describe("KiloCodeProfileExportDialog", () => {
 
     await user.click(copyButton)
 
+    expectApiCredentialProfileActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialExportConfig,
+    )
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith(
         "ui:dialog.kiloCode.messages.copyFailed",
@@ -208,6 +239,9 @@ describe("KiloCodeProfileExportDialog", () => {
 
     await user.click(downloadButton)
 
+    expectApiCredentialProfileActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialSettingsFile,
+    )
     await waitFor(() => {
       expect(mockBuildKiloCodeSettingsFile).toHaveBeenCalledWith({
         currentApiConfigName: "cfg-name",
@@ -248,6 +282,9 @@ describe("KiloCodeProfileExportDialog", () => {
 
     await user.click(downloadButton)
 
+    expectApiCredentialProfileActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialSettingsFile,
+    )
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith(
         "ui:dialog.kiloCode.messages.downloadFailed",

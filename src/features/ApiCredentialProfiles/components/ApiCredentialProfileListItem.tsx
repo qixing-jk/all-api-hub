@@ -29,7 +29,14 @@ import {
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
 import type { ManagedSiteType } from "~/constants/siteType"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import { SiteHealthStatus } from "~/types"
@@ -134,6 +141,10 @@ function getHealthStatusLabel(
   return t("account:healthStatus.unknown")
 }
 
+const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
+const rowActionsSurface =
+  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions
+
 /**
  * Renders a single profile row/card with copy, verify, export, edit, delete actions.
  */
@@ -166,6 +177,9 @@ export function ApiCredentialProfileListItem({
   ])
   const { currencyType } = useUserPreferencesContext()
   const telemetry = profile.telemetrySnapshot
+  const handleRefreshTelemetry = () => {
+    onRefreshTelemetry(profile)
+  }
   const missingTelemetryValue = telemetry
     ? t("apiCredentialProfiles:telemetry.notProvided")
     : "-"
@@ -179,368 +193,406 @@ export function ApiCredentialProfileListItem({
     .join(": ")
 
   return (
-    <Card>
-      <CardContent padding="md" spacing="sm">
-        <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-stretch sm:justify-between">
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <div className="flex min-w-0 flex-wrap items-center gap-2">
-              <Heading6 className="max-w-full min-w-0 truncate">
-                {profile.name}
-              </Heading6>
-              <Badge
-                variant="outline"
-                size="sm"
-                className="max-w-full truncate"
-              >
-                {getApiVerificationApiTypeLabel(t, profile.apiType)}
-              </Badge>
-              {tagNames.map((tag) => (
+    <ProductAnalyticsScope
+      entrypoint={optionsEntrypoint}
+      featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles}
+      surfaceId={rowActionsSurface}
+    >
+      <Card>
+        <CardContent padding="md" spacing="sm">
+          <div className="flex min-w-0 flex-col gap-5 sm:flex-row sm:items-stretch sm:justify-between">
+            <div className="flex min-w-0 flex-1 flex-col gap-2">
+              <div className="flex min-w-0 flex-wrap items-center gap-2">
+                <Heading6 className="max-w-full min-w-0 truncate">
+                  {profile.name}
+                </Heading6>
                 <Badge
-                  key={tag}
-                  variant="secondary"
+                  variant="outline"
                   size="sm"
                   className="max-w-full truncate"
                 >
-                  {tag}
+                  {getApiVerificationApiTypeLabel(t, profile.apiType)}
                 </Badge>
-              ))}
-            </div>
-
-            <div className="flex flex-1 flex-col gap-2 text-xs">
-              <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-                <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
-                  {t("apiCredentialProfiles:list.baseUrl")}
-                </span>
-                <div className="flex w-full min-w-0 items-center gap-0.5 sm:flex-1">
-                  <code className="dark:bg-dark-bg-tertiary dark:text-dark-text-secondary min-w-0 flex-1 truncate rounded bg-gray-100 px-2 py-1 font-mono text-[10px] text-gray-800 sm:text-xs">
-                    {profile.baseUrl}
-                  </code>
-                  <IconButton
-                    variant="ghost"
+                {tagNames.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="secondary"
                     size="sm"
-                    onClick={() => onCopyBaseUrl(profile)}
-                    aria-label={t("apiCredentialProfiles:actions.copyBaseUrl")}
-                    className="shrink-0"
+                    className="max-w-full truncate"
                   >
-                    <Copy className="h-4 w-4" />
-                  </IconButton>
-                </div>
+                    {tag}
+                  </Badge>
+                ))}
               </div>
 
-              <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-                <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
-                  {t("apiCredentialProfiles:list.apiKey")}
-                </span>
-                <div className="flex w-full min-w-0 items-center gap-0.5 sm:flex-1">
-                  <code className="dark:bg-dark-bg-tertiary dark:text-dark-text-secondary min-w-0 flex-1 truncate rounded bg-gray-100 px-2 py-1 font-mono text-[10px] text-gray-800 sm:text-xs">
-                    {formatSecret(profile.apiKey, profile.id, visibleKeys)}
-                  </code>
-                  <IconButton
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => toggleKeyVisibility(profile.id)}
-                    aria-label={
-                      visibleKeys.has(profile.id)
-                        ? t("keyManagement:actions.hideKey")
-                        : t("keyManagement:actions.showKey")
-                    }
-                    className="shrink-0"
-                  >
-                    {visibleKeys.has(profile.id) ? (
-                      <EyeSlashIcon className="h-4 w-4" />
-                    ) : (
-                      <EyeIcon className="h-4 w-4" />
-                    )}
-                  </IconButton>
-                  <IconButton
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onCopyApiKey(profile)}
-                    aria-label={t("apiCredentialProfiles:actions.copyApiKey")}
-                    className="shrink-0"
-                  >
-                    <Copy className="h-4 w-4" />
-                  </IconButton>
-                </div>
-              </div>
-
-              <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
-                <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
-                  {t("aiApiVerification:verifyDialog.history.lastVerified")}
-                </span>
-                <VerificationHistorySummary
-                  summary={verificationSummary}
-                  className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 sm:gap-2"
-                />
-              </div>
-
-              <div className="dark:bg-dark-bg-tertiary/60 flex flex-1 flex-col rounded-lg border border-gray-100 bg-gray-50 p-2 sm:p-3 dark:border-gray-800">
-                <div className="mb-2 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="flex min-w-0 flex-wrap items-center gap-2">
-                    <span
-                      className={`h-2 w-2 shrink-0 rounded-full ${getHealthIndicatorColor(
-                        health?.status,
-                      )}`}
-                      title={healthTitle}
-                      aria-label={healthTitle}
-                      role="img"
-                    />
-                    <span className="dark:text-dark-text-secondary text-xs font-medium text-gray-700">
-                      {t("apiCredentialProfiles:telemetry.title")}
-                    </span>
-                    {telemetry?.source ? (
-                      <Badge
-                        variant="outline"
-                        size="sm"
-                        className="max-w-full truncate"
-                      >
-                        {getTelemetrySourceLabel(t, telemetry.source)}
-                      </Badge>
-                    ) : null}
-                  </div>
-                  <button
-                    type="button"
-                    className="dark:text-dark-text-tertiary dark:hover:text-dark-text-primary inline-flex shrink-0 items-center gap-1 text-[11px] text-gray-500 transition-colors hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
-                    onClick={() => onRefreshTelemetry(profile)}
-                    disabled={isTelemetryRefreshing}
-                    aria-label={t(
-                      "apiCredentialProfiles:telemetry.actions.refresh",
-                    )}
-                  >
-                    <ArrowPathIcon
-                      className={`h-3.5 w-3.5 ${
-                        isTelemetryRefreshing ? "animate-spin" : ""
-                      }`}
-                    />
-                    {isTelemetryRefreshing
-                      ? t("apiCredentialProfiles:telemetry.refreshing")
-                      : t("apiCredentialProfiles:telemetry.actions.refresh")}
-                  </button>
-                </div>
-
-                <div className="grid flex-1 auto-rows-max grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] content-evenly gap-2 text-xs sm:grid-cols-4">
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <div className="dark:text-dark-text-tertiary text-gray-500">
-                      {t("apiCredentialProfiles:telemetry.balance")}
-                    </div>
-                    <div
-                      className="dark:text-dark-text-primary font-semibold text-gray-900"
-                      data-testid="api-credential-telemetry-balance"
+              <div className="flex flex-1 flex-col gap-2 text-xs">
+                <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+                  <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
+                    {t("apiCredentialProfiles:list.baseUrl")}
+                  </span>
+                  <div className="flex w-full min-w-0 items-center gap-0.5 sm:flex-1">
+                    <code className="dark:bg-dark-bg-tertiary dark:text-dark-text-secondary min-w-0 flex-1 truncate rounded bg-gray-100 px-2 py-1 font-mono text-[10px] text-gray-800 sm:text-xs">
+                      {profile.baseUrl}
+                    </code>
+                    <IconButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onCopyBaseUrl(profile)}
+                      aria-label={t(
+                        "apiCredentialProfiles:actions.copyBaseUrl",
+                      )}
+                      className="shrink-0"
+                      analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.CopyBaseUrl}
                     >
-                      {telemetry?.unlimitedQuota
-                        ? t("common:quota.unlimited")
-                        : telemetry?.balanceUsd !== undefined
+                      <Copy className="h-4 w-4" />
+                    </IconButton>
+                  </div>
+                </div>
+
+                <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+                  <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
+                    {t("apiCredentialProfiles:list.apiKey")}
+                  </span>
+                  <div className="flex w-full min-w-0 items-center gap-0.5 sm:flex-1">
+                    <code className="dark:bg-dark-bg-tertiary dark:text-dark-text-secondary min-w-0 flex-1 truncate rounded bg-gray-100 px-2 py-1 font-mono text-[10px] text-gray-800 sm:text-xs">
+                      {formatSecret(profile.apiKey, profile.id, visibleKeys)}
+                    </code>
+                    <IconButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => toggleKeyVisibility(profile.id)}
+                      aria-label={
+                        visibleKeys.has(profile.id)
+                          ? t("keyManagement:actions.hideKey")
+                          : t("keyManagement:actions.showKey")
+                      }
+                      className="shrink-0"
+                      analyticsAction={
+                        PRODUCT_ANALYTICS_ACTION_IDS.ToggleApiCredentialKeyVisibility
+                      }
+                    >
+                      {visibleKeys.has(profile.id) ? (
+                        <EyeSlashIcon className="h-4 w-4" />
+                      ) : (
+                        <EyeIcon className="h-4 w-4" />
+                      )}
+                    </IconButton>
+                    <IconButton
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onCopyApiKey(profile)}
+                      aria-label={t("apiCredentialProfiles:actions.copyApiKey")}
+                      className="shrink-0"
+                      analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.CopyApiKey}
+                    >
+                      <Copy className="h-4 w-4" />
+                    </IconButton>
+                  </div>
+                </div>
+
+                <div className="flex min-w-0 flex-col gap-1 sm:flex-row sm:items-center sm:gap-2">
+                  <span className="dark:text-dark-text-tertiary shrink-0 whitespace-nowrap text-gray-500">
+                    {t("aiApiVerification:verifyDialog.history.lastVerified")}
+                  </span>
+                  <VerificationHistorySummary
+                    summary={verificationSummary}
+                    className="flex min-w-0 flex-1 flex-wrap items-center gap-1.5 sm:gap-2"
+                  />
+                </div>
+
+                <div className="dark:bg-dark-bg-tertiary/60 flex flex-1 flex-col rounded-lg border border-gray-100 bg-gray-50 p-2 sm:p-3 dark:border-gray-800">
+                  <div className="mb-2 flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                      <span
+                        className={`h-2 w-2 shrink-0 rounded-full ${getHealthIndicatorColor(
+                          health?.status,
+                        )}`}
+                        title={healthTitle}
+                        aria-label={healthTitle}
+                        role="img"
+                      />
+                      <span className="dark:text-dark-text-secondary text-xs font-medium text-gray-700">
+                        {t("apiCredentialProfiles:telemetry.title")}
+                      </span>
+                      {telemetry?.source ? (
+                        <Badge
+                          variant="outline"
+                          size="sm"
+                          className="max-w-full truncate"
+                        >
+                          {getTelemetrySourceLabel(t, telemetry.source)}
+                        </Badge>
+                      ) : null}
+                    </div>
+                    <button
+                      type="button"
+                      className="dark:text-dark-text-tertiary dark:hover:text-dark-text-primary inline-flex shrink-0 items-center gap-1 text-[11px] text-gray-500 transition-colors hover:text-gray-800 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={handleRefreshTelemetry}
+                      disabled={isTelemetryRefreshing}
+                      aria-label={t(
+                        "apiCredentialProfiles:telemetry.actions.refresh",
+                      )}
+                    >
+                      <ArrowPathIcon
+                        className={`h-3.5 w-3.5 ${
+                          isTelemetryRefreshing ? "animate-spin" : ""
+                        }`}
+                      />
+                      {isTelemetryRefreshing
+                        ? t("apiCredentialProfiles:telemetry.refreshing")
+                        : t("apiCredentialProfiles:telemetry.actions.refresh")}
+                    </button>
+                  </div>
+
+                  <div className="grid flex-1 auto-rows-max grid-cols-[repeat(auto-fit,minmax(7rem,1fr))] content-evenly gap-2 text-xs sm:grid-cols-4">
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <div className="dark:text-dark-text-tertiary text-gray-500">
+                        {t("apiCredentialProfiles:telemetry.balance")}
+                      </div>
+                      <div
+                        className="dark:text-dark-text-primary font-semibold text-gray-900"
+                        data-testid="api-credential-telemetry-balance"
+                      >
+                        {telemetry?.unlimitedQuota
+                          ? t("common:quota.unlimited")
+                          : telemetry?.balanceUsd !== undefined
+                            ? formatTelemetryMoney(
+                                telemetry.balanceUsd,
+                                currencyType,
+                              )
+                            : missingTelemetryValue}
+                      </div>
+                    </div>
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <div className="dark:text-dark-text-tertiary text-gray-500">
+                        {t("apiCredentialProfiles:telemetry.todayUsage")}
+                      </div>
+                      <div
+                        className="font-semibold text-emerald-600 dark:text-emerald-400"
+                        data-testid="api-credential-telemetry-today-usage"
+                      >
+                        {telemetry?.todayCostUsd !== undefined
                           ? formatTelemetryMoney(
-                              telemetry.balanceUsd,
+                              telemetry.todayCostUsd,
                               currencyType,
                             )
                           : missingTelemetryValue}
+                      </div>
+                    </div>
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <div className="dark:text-dark-text-tertiary text-gray-500">
+                        {t("apiCredentialProfiles:telemetry.todayRequests")}
+                      </div>
+                      <div
+                        className="dark:text-dark-text-primary font-semibold text-gray-900"
+                        data-testid="api-credential-telemetry-today-requests"
+                      >
+                        {typeof telemetry?.todayRequests === "number"
+                          ? telemetry.todayRequests.toLocaleString()
+                          : missingTelemetryValue}
+                      </div>
+                    </div>
+                    <div className="flex min-w-0 flex-col gap-1">
+                      <div className="dark:text-dark-text-tertiary text-gray-500">
+                        {t("apiCredentialProfiles:telemetry.models")}
+                      </div>
+                      <div
+                        className="dark:text-dark-text-primary truncate font-semibold text-gray-900"
+                        data-testid="api-credential-telemetry-models"
+                        title={telemetry?.models?.preview.join(", ")}
+                      >
+                        {telemetry?.models
+                          ? t("apiCredentialProfiles:telemetry.modelCount", {
+                              count: telemetry.models.count,
+                            })
+                          : missingTelemetryValue}
+                      </div>
                     </div>
                   </div>
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <div className="dark:text-dark-text-tertiary text-gray-500">
-                      {t("apiCredentialProfiles:telemetry.todayUsage")}
-                    </div>
-                    <div
-                      className="font-semibold text-emerald-600 dark:text-emerald-400"
-                      data-testid="api-credential-telemetry-today-usage"
-                    >
-                      {telemetry?.todayCostUsd !== undefined
-                        ? formatTelemetryMoney(
-                            telemetry.todayCostUsd,
-                            currencyType,
-                          )
-                        : missingTelemetryValue}
-                    </div>
-                  </div>
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <div className="dark:text-dark-text-tertiary text-gray-500">
-                      {t("apiCredentialProfiles:telemetry.todayRequests")}
-                    </div>
-                    <div
-                      className="dark:text-dark-text-primary font-semibold text-gray-900"
-                      data-testid="api-credential-telemetry-today-requests"
-                    >
-                      {typeof telemetry?.todayRequests === "number"
-                        ? telemetry.todayRequests.toLocaleString()
-                        : missingTelemetryValue}
-                    </div>
-                  </div>
-                  <div className="flex min-w-0 flex-col gap-1">
-                    <div className="dark:text-dark-text-tertiary text-gray-500">
-                      {t("apiCredentialProfiles:telemetry.models")}
-                    </div>
-                    <div
-                      className="dark:text-dark-text-primary truncate font-semibold text-gray-900"
-                      data-testid="api-credential-telemetry-models"
-                      title={telemetry?.models?.preview.join(", ")}
-                    >
-                      {telemetry?.models
-                        ? t("apiCredentialProfiles:telemetry.modelCount", {
-                            count: telemetry.models.count,
-                          })
-                        : missingTelemetryValue}
-                    </div>
-                  </div>
-                </div>
 
-                <div className="dark:text-dark-text-tertiary mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-2 text-xs text-gray-500">
-                  <span>
-                    {t("apiCredentialProfiles:telemetry.lastSync")}:{" "}
-                    {formatLocaleDateTime(
-                      telemetry?.lastSyncTime,
-                      t("common:labels.notAvailable"),
-                    )}
-                  </span>
-                  {telemetry?.todayTokens ? (
+                  <div className="dark:text-dark-text-tertiary mt-auto flex flex-wrap gap-x-3 gap-y-1 pt-2 text-xs text-gray-500">
                     <span>
-                      {t("apiCredentialProfiles:telemetry.todayTokens")}:{" "}
-                      {formatTokenCount(
-                        telemetry.todayTokens.upload +
-                          telemetry.todayTokens.download,
+                      {t("apiCredentialProfiles:telemetry.lastSync")}:{" "}
+                      {formatLocaleDateTime(
+                        telemetry?.lastSyncTime,
+                        t("common:labels.notAvailable"),
                       )}
                     </span>
-                  ) : null}
-                  {telemetry?.lastError ? (
-                    <span className="text-amber-600 dark:text-amber-300">
-                      {telemetry.lastError}
-                    </span>
-                  ) : null}
+                    {telemetry?.todayTokens ? (
+                      <span>
+                        {t("apiCredentialProfiles:telemetry.todayTokens")}:{" "}
+                        {formatTokenCount(
+                          telemetry.todayTokens.upload +
+                            telemetry.todayTokens.download,
+                        )}
+                      </span>
+                    ) : null}
+                    {telemetry?.lastError ? (
+                      <span className="text-amber-600 dark:text-amber-300">
+                        {telemetry.lastError}
+                      </span>
+                    ) : null}
+                  </div>
                 </div>
               </div>
+
+              {profile.notes?.trim() ? (
+                <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-tertiary/40 dark:text-dark-text-secondary border-l-2 border-blue-200 bg-blue-50/60 px-3 py-2 text-xs text-gray-600">
+                  <div className="mb-1 text-[11px] font-medium tracking-wide text-blue-600 dark:text-blue-300">
+                    {t("apiCredentialProfiles:dialog.fields.notes")}
+                  </div>
+                  <div className="max-h-24 overflow-y-auto leading-relaxed break-words whitespace-pre-wrap">
+                    {profile.notes.trim()}
+                  </div>
+                </div>
+              ) : null}
             </div>
 
-            {profile.notes?.trim() ? (
-              <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-tertiary/40 dark:text-dark-text-secondary border-l-2 border-blue-200 bg-blue-50/60 px-3 py-2 text-xs text-gray-600">
-                <div className="mb-1 text-[11px] font-medium tracking-wide text-blue-600 dark:text-blue-300">
-                  {t("apiCredentialProfiles:dialog.fields.notes")}
-                </div>
-                <div className="max-h-24 overflow-y-auto leading-relaxed break-words whitespace-pre-wrap">
-                  {profile.notes.trim()}
-                </div>
-              </div>
-            ) : null}
+            <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:shrink-0 sm:flex-col sm:items-end sm:justify-start">
+              <IconButton
+                aria-label={t("apiCredentialProfiles:actions.copyBundle")}
+                size="sm"
+                variant="ghost"
+                onClick={() => onCopyBundle(profile)}
+                analyticsAction={
+                  PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialBundle
+                }
+              >
+                <Copy className="h-4 w-4" />
+              </IconButton>
+              <IconButton
+                aria-label={t("common:actions.edit")}
+                size="sm"
+                variant="ghost"
+                onClick={() => onEdit(profile)}
+                analyticsAction={
+                  PRODUCT_ANALYTICS_ACTION_IDS.UpdateApiCredentialProfile
+                }
+              >
+                <PencilIcon className="h-4 w-4 text-blue-500 dark:text-blue-400" />
+              </IconButton>
+              <IconButton
+                aria-label={t("apiCredentialProfiles:actions.verifyApi")}
+                size="sm"
+                variant="ghost"
+                onClick={() => onVerify(profile)}
+                analyticsAction={
+                  PRODUCT_ANALYTICS_ACTION_IDS.VerifyApiCredential
+                }
+              >
+                <WrenchScrewdriverIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
+              </IconButton>
+              <IconButton
+                aria-label={t("apiCredentialProfiles:actions.verifyCliSupport")}
+                size="sm"
+                variant="ghost"
+                onClick={() => onVerifyCliSupport(profile)}
+                analyticsAction={
+                  PRODUCT_ANALYTICS_ACTION_IDS.VerifyApiCredentialCliSupport
+                }
+              >
+                <CommandLineIcon className="h-4 w-4 text-sky-600 dark:text-sky-400" />
+              </IconButton>
+              <IconButton
+                aria-label={t(
+                  "apiCredentialProfiles:actions.openModelManagement",
+                )}
+                size="sm"
+                variant="ghost"
+                onClick={() => onOpenModelManagement(profile)}
+                analyticsAction={{
+                  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+                  actionId:
+                    PRODUCT_ANALYTICS_ACTION_IDS.OpenApiCredentialModelManagement,
+                  surfaceId: rowActionsSurface,
+                  entrypoint: optionsEntrypoint,
+                }}
+              >
+                <CpuChipIcon className="h-4 w-4" />
+              </IconButton>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <IconButton
+                    aria-label={t("common:actions.export")}
+                    size="sm"
+                    variant="ghost"
+                    analyticsAction={
+                      PRODUCT_ANALYTICS_ACTION_IDS.OpenApiCredentialExportMenu
+                    }
+                  >
+                    <ArrowUpTrayIcon className="h-4 w-4" />
+                  </IconButton>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem
+                    onSelect={() => onExport(profile, "cherryStudio")}
+                  >
+                    <span aria-hidden="true">
+                      <CherryIcon className="h-4 w-4" />
+                    </span>
+                    {t("keyManagement:actions.useInCherry")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => onExport(profile, "ccSwitch")}
+                  >
+                    <span aria-hidden="true">
+                      <CCSwitchIcon size="sm" />
+                    </span>
+                    {t("keyManagement:actions.exportToCCSwitch")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => onExport(profile, "kiloCode")}
+                  >
+                    <span aria-hidden="true">
+                      <KiloCodeIcon size="sm" />
+                    </span>
+                    {t("keyManagement:actions.exportToKiloCode")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={() => onExport(profile, "cliProxy")}
+                  >
+                    <span aria-hidden="true">
+                      <CliProxyIcon size="sm" />
+                    </span>
+                    {t("keyManagement:actions.importToCliProxy")}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onSelect={() => onExport(profile, "claudeCodeRouter")}
+                  >
+                    <span aria-hidden="true">
+                      <ClaudeCodeRouterIcon size="sm" />
+                    </span>
+                    {t("keyManagement:actions.importToClaudeCodeRouter")}
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem
+                    onSelect={() => onExport(profile, "managedSite")}
+                  >
+                    <span aria-hidden="true">
+                      <ManagedSiteIcon siteType={managedSiteType} size="sm" />
+                    </span>
+                    {t("keyManagement:actions.importToManagedSite", {
+                      site: managedSiteLabel,
+                    })}
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <IconButton
+                aria-label={t("common:actions.delete")}
+                size="sm"
+                variant="destructive"
+                onClick={() => onDelete(profile)}
+                analyticsAction={
+                  PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile
+                }
+              >
+                <TrashIcon className="h-4 w-4" />
+              </IconButton>
+            </div>
           </div>
-
-          <div className="flex w-full flex-wrap items-center justify-end gap-2 sm:w-auto sm:shrink-0 sm:flex-col sm:items-end sm:justify-start">
-            <IconButton
-              aria-label={t("apiCredentialProfiles:actions.copyBundle")}
-              size="sm"
-              variant="ghost"
-              onClick={() => onCopyBundle(profile)}
-            >
-              <Copy className="h-4 w-4" />
-            </IconButton>
-            <IconButton
-              aria-label={t("common:actions.edit")}
-              size="sm"
-              variant="ghost"
-              onClick={() => onEdit(profile)}
-            >
-              <PencilIcon className="h-4 w-4 text-blue-500 dark:text-blue-400" />
-            </IconButton>
-            <IconButton
-              aria-label={t("apiCredentialProfiles:actions.verifyApi")}
-              size="sm"
-              variant="ghost"
-              onClick={() => onVerify(profile)}
-            >
-              <WrenchScrewdriverIcon className="h-4 w-4 text-emerald-600 dark:text-emerald-400" />
-            </IconButton>
-            <IconButton
-              aria-label={t("apiCredentialProfiles:actions.verifyCliSupport")}
-              size="sm"
-              variant="ghost"
-              onClick={() => onVerifyCliSupport(profile)}
-            >
-              <CommandLineIcon className="h-4 w-4 text-sky-600 dark:text-sky-400" />
-            </IconButton>
-            <IconButton
-              aria-label={t(
-                "apiCredentialProfiles:actions.openModelManagement",
-              )}
-              size="sm"
-              variant="ghost"
-              onClick={() => onOpenModelManagement(profile)}
-            >
-              <CpuChipIcon className="h-4 w-4" />
-            </IconButton>
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <IconButton
-                  aria-label={t("common:actions.export")}
-                  size="sm"
-                  variant="ghost"
-                >
-                  <ArrowUpTrayIcon className="h-4 w-4" />
-                </IconButton>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onSelect={() => onExport(profile, "cherryStudio")}
-                >
-                  <span aria-hidden="true">
-                    <CherryIcon className="h-4 w-4" />
-                  </span>
-                  {t("keyManagement:actions.useInCherry")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => onExport(profile, "ccSwitch")}
-                >
-                  <span aria-hidden="true">
-                    <CCSwitchIcon size="sm" />
-                  </span>
-                  {t("keyManagement:actions.exportToCCSwitch")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => onExport(profile, "kiloCode")}
-                >
-                  <span aria-hidden="true">
-                    <KiloCodeIcon size="sm" />
-                  </span>
-                  {t("keyManagement:actions.exportToKiloCode")}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={() => onExport(profile, "cliProxy")}
-                >
-                  <span aria-hidden="true">
-                    <CliProxyIcon size="sm" />
-                  </span>
-                  {t("keyManagement:actions.importToCliProxy")}
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onSelect={() => onExport(profile, "claudeCodeRouter")}
-                >
-                  <span aria-hidden="true">
-                    <ClaudeCodeRouterIcon size="sm" />
-                  </span>
-                  {t("keyManagement:actions.importToClaudeCodeRouter")}
-                </DropdownMenuItem>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onSelect={() => onExport(profile, "managedSite")}
-                >
-                  <span aria-hidden="true">
-                    <ManagedSiteIcon siteType={managedSiteType} size="sm" />
-                  </span>
-                  {t("keyManagement:actions.importToManagedSite", {
-                    site: managedSiteLabel,
-                  })}
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-            <IconButton
-              aria-label={t("common:actions.delete")}
-              size="sm"
-              variant="destructive"
-              onClick={() => onDelete(profile)}
-            >
-              <TrashIcon className="h-4 w-4" />
-            </IconButton>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+        </CardContent>
+      </Card>
+    </ProductAnalyticsScope>
   )
 }

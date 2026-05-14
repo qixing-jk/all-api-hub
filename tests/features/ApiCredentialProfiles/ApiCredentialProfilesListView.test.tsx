@@ -1,6 +1,12 @@
 import { describe, expect, it, vi } from "vitest"
 
 import { ApiCredentialProfilesListView } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesListView"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
 vi.mock("~/hooks/useMediaQuery", () => ({
@@ -32,10 +38,23 @@ vi.mock("~/components/ui", () => ({
     />
   ),
   TagFilter: () => <div data-testid="tag-filter" />,
-  EmptyState: ({ title, description }: any) => (
+  EmptyState: ({ title, description, action }: any) => (
     <div>
       <div>{title}</div>
       <div>{description}</div>
+      {action ? (
+        <button
+          type="button"
+          onClick={action.onClick}
+          data-analytics-action={
+            action.analyticsAction
+              ? `${action.analyticsAction.featureId}:${action.analyticsAction.actionId}:${action.analyticsAction.surfaceId}:${action.analyticsAction.entrypoint}`
+              : undefined
+          }
+        >
+          {action.label}
+        </button>
+      ) : null}
     </div>
   ),
   Spinner: () => <div data-testid="spinner" />,
@@ -62,6 +81,60 @@ vi.mock(
 )
 
 describe("ApiCredentialProfilesListView", () => {
+  it("declares options empty-state add action analytics metadata", async () => {
+    const controller = {
+      profiles: [],
+      isLoading: false,
+      tags: [],
+      tagNameById: new Map<string, string>(),
+      openAddDialog: vi.fn(),
+    } as any
+
+    render(<ApiCredentialProfilesListView controller={controller} />)
+
+    expect(
+      await screen.findByRole("button", {
+        name: "apiCredentialProfiles:actions.add",
+      }),
+    ).toHaveAttribute(
+      "data-analytics-action",
+      [
+        PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+        PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesEmptyState,
+        PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      ].join(":"),
+    )
+  })
+
+  it("declares popup empty-state add action analytics metadata", async () => {
+    const controller = {
+      profiles: [],
+      isLoading: false,
+      tags: [],
+      tagNameById: new Map<string, string>(),
+      openAddDialog: vi.fn(),
+    } as any
+
+    render(
+      <ApiCredentialProfilesListView controller={controller} variant="popup" />,
+    )
+
+    expect(
+      await screen.findByRole("button", {
+        name: "apiCredentialProfiles:actions.add",
+      }),
+    ).toHaveAttribute(
+      "data-analytics-action",
+      [
+        PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+        PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+        PRODUCT_ANALYTICS_SURFACE_IDS.PopupApiCredentialProfilesEmptyState,
+        PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+      ].join(":"),
+    )
+  })
+
   it("keeps the current profile list visible while reloading", async () => {
     const controller = {
       profiles: [

@@ -17,6 +17,14 @@ import {
   userPreferences,
 } from "~/services/preferences/userPreferences"
 import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
+import {
   AuthTypeEnum,
   SiteAccount,
   SiteHealthStatus,
@@ -35,6 +43,8 @@ const {
   mockOpenSub2ApiTokenCreationDialog,
   mockGetManagedSiteConfig,
   mockOpenSettingsTab,
+  mockStartProductAnalyticsAction,
+  mockCompleteProductAnalyticsAction,
 } = vi.hoisted(() => ({
   mockToast: vi.fn(),
   mockValidateAndSaveAccount: vi.fn(),
@@ -44,6 +54,8 @@ const {
   mockOpenSub2ApiTokenCreationDialog: vi.fn(),
   mockGetManagedSiteConfig: vi.fn(),
   mockOpenSettingsTab: vi.fn().mockResolvedValue(undefined),
+  mockStartProductAnalyticsAction: vi.fn(),
+  mockCompleteProductAnalyticsAction: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => {
@@ -133,6 +145,10 @@ vi.mock("~/utils/navigation", () => ({
   openSettingsTab: mockOpenSettingsTab,
 }))
 
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: mockStartProductAnalyticsAction,
+}))
+
 describe("useAccountDialog save and auto-config flows", () => {
   beforeEach(async () => {
     vi.clearAllMocks()
@@ -160,6 +176,9 @@ describe("useAccountDialog save and auto-config flows", () => {
     })
     mockOpenWithAccount.mockResolvedValue({ opened: true })
     mockAutoProvisionKeyOnAccountAdd(false)
+    mockStartProductAnalyticsAction.mockReturnValue({
+      complete: mockCompleteProductAnalyticsAction,
+    })
   })
 
   const renderAddHook = (options?: { onSuccess?: ReturnType<typeof vi.fn> }) =>
@@ -251,6 +270,22 @@ describe("useAccountDialog save and auto-config flows", () => {
     used_quota: 0,
     ...overrides,
   })
+
+  const fillStandardAddAccountDraft = async (
+    result: ReturnType<typeof renderAddHook>["result"],
+  ) => {
+    await act(async () => {
+      result.current.setters.setUrl("https://api.example.com/private")
+      result.current.setters.setSiteName("Sensitive Site")
+      result.current.setters.setUsername("private-user")
+      result.current.setters.setAccessToken("sk-private-token")
+      result.current.setters.setUserId("12345")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setNotes("private notes")
+      result.current.setters.setTagIds(["secret-tag-id"])
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+    })
+  }
 
   it("shows managed-site setup guidance before saving when auto-config prerequisites are missing", async () => {
     mockGetManagedSiteConfig.mockResolvedValue(null)
@@ -712,6 +747,143 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockOpenSub2ApiTokenCreationDialog).toHaveBeenCalledWith(
       savedDisplayData,
     )
+    expect(toast.success).toHaveBeenCalledWith("Saved successfully")
+    expect(toast.error).not.toHaveBeenCalled()
+    expect(result.current.state.isSaving).toBe(false)
+  })
+
+  it("tracks successful account creation without exposing account-sensitive fields", async () => {
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateAccount,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+    expect(mockStartProductAnalyticsAction).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: expect.anything(),
+        baseUrl: expect.anything(),
+        accessToken: expect.anything(),
+        userId: expect.anything(),
+        username: expect.anything(),
+        notes: expect.anything(),
+        tagIds: expect.anything(),
+      }),
+    )
+    expect(mockCompleteProductAnalyticsAction).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        error: expect.anything(),
+        message: expect.anything(),
+      }),
+    )
+  })
+
+  it("tracks successful account updates without exposing account-sensitive fields", async () => {
+    const { result } = renderEditHook({
+      account: {
+        id: "existing-account-id",
+      },
+    })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://edit.example.com/private")
+      result.current.setters.setSiteName("Sensitive Edit Site")
+      result.current.setters.setUsername("edited-private-user")
+      result.current.setters.setAccessToken("edited-private-token")
+      result.current.setters.setUserId("98765")
+      result.current.setters.setExchangeRate("7")
+      result.current.setters.setNotes("edited private notes")
+      result.current.setters.setTagIds(["secret-edit-tag-id"])
+      result.current.setters.setSiteType(SITE_TYPES.NEW_API)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccount,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+  })
+
+  it("tracks failed account saves with a controlled category and no backend message", async () => {
+    mockValidateAndSaveAccount.mockResolvedValueOnce({
+      success: false,
+      message: "backend leaked details",
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillStandardAddAccountDraft(result)
+
+    await expect(
+      act(async () => {
+        await result.current.handlers.handleSaveAccount()
+      }),
+    ).rejects.toThrow("backend leaked details")
+
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
+    expect(mockCompleteProductAnalyticsAction).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        error: expect.anything(),
+        message: "backend leaked details",
+      }),
+    )
+  })
+
+  it("does not let analytics completion failures change account save behavior", async () => {
+    mockCompleteProductAnalyticsAction.mockRejectedValueOnce(
+      new Error("analytics unavailable"),
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillStandardAddAccountDraft(result)
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
     expect(toast.success).toHaveBeenCalledWith("Saved successfully")
     expect(toast.error).not.toHaveBeenCalled()
     expect(result.current.state.isSaving).toBe(false)

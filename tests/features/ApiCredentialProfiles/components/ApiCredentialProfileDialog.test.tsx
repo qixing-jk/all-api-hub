@@ -2,6 +2,12 @@ import type { ComponentProps, ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfileDialog"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -88,6 +94,24 @@ vi.mock("~/services/verification/aiApiVerification/i18n", () => ({
   getApiVerificationApiTypeLabel: (_t: unknown, apiType: string) => apiType,
 }))
 
+const trackProductAnalyticsActionStartedMock = vi.fn()
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionStarted: (...args: any[]) =>
+    trackProductAnalyticsActionStartedMock(...args),
+}))
+
+const expectApiCredentialProfileActionTracked = (
+  actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
+) => {
+  expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+    actionId,
+    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesDialog,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  })
+}
+
 function buildProfile(
   overrides: Partial<ApiCredentialProfile> = {},
 ): ApiCredentialProfile {
@@ -135,6 +159,7 @@ function renderDialog(
 describe("ApiCredentialProfileDialog", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    trackProductAnalyticsActionStartedMock.mockReset()
   })
 
   it("saves new profiles with auto telemetry by default", async () => {
@@ -167,6 +192,9 @@ describe("ApiCredentialProfileDialog", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
 
+    expectApiCredentialProfileActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+    )
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledWith({
         id: undefined,
@@ -283,6 +311,9 @@ describe("ApiCredentialProfileDialog", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
 
+    expectApiCredentialProfileActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+    )
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -329,5 +360,34 @@ describe("ApiCredentialProfileDialog", () => {
     expect(screen.getByDisplayValue("data.total.used")).toHaveValue(
       "data.total.used",
     )
+  })
+
+  it("tracks saving an edited profile", async () => {
+    const { onSave } = renderDialog({
+      profile: buildProfile(),
+    })
+
+    fireEvent.change(
+      screen.getByPlaceholderText(
+        "apiCredentialProfiles:dialog.placeholders.name",
+      ),
+      {
+        target: { value: "Renamed profile" },
+      },
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
+
+    expectApiCredentialProfileActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.UpdateApiCredentialProfile,
+    )
+    await waitFor(() => {
+      expect(onSave).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: "profile-1",
+          name: "Renamed profile",
+        }),
+      )
+    })
   })
 })
