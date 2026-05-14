@@ -20,6 +20,7 @@ import {
   Modal,
   SearchableSelect,
 } from "~/components/ui"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
   MODEL_LIST_BATCH_VERIFY_API_TYPE_MODES,
   MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
@@ -34,6 +35,15 @@ import {
   fetchDisplayAccountTokens,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import {
   API_TYPES,
   getApiVerificationProbeDefinitions,
@@ -459,7 +469,7 @@ export function BatchVerifyModelsDialog({
   const runOne = useCallback(
     async (item: BatchVerifyModelItem, abortSignal: AbortSignal) => {
       const isStopped = () => shouldStopRef.current || abortSignal.aborted
-      if (isStopped()) return
+      if (isStopped()) return undefined
 
       const startedAt = Date.now()
       updateRow(item.key, {
@@ -513,7 +523,9 @@ export function BatchVerifyModelsDialog({
                 }
               })()
 
-        if (!credentials || isStopped()) return
+        if (!credentials || isStopped()) {
+          return isStopped() ? undefined : BATCH_VERIFY_ROW_STATUSES.SKIPPED
+        }
 
         apiKey = credentials.apiKey
         const probesToRun = getApiVerificationProbeDefinitions(apiType).filter(
@@ -530,7 +542,7 @@ export function BatchVerifyModelsDialog({
             results: [],
             tokenName: credentials.tokenName,
           })
-          return
+          return BATCH_VERIFY_ROW_STATUSES.SKIPPED
         }
 
         const tokenMeta =
@@ -595,7 +607,7 @@ export function BatchVerifyModelsDialog({
           }
         }
 
-        if (stoppedBeforeCompletingProbes || isStopped()) return
+        if (stoppedBeforeCompletingProbes || isStopped()) return undefined
 
         await persistResult(item, apiType, results).catch((persistError) => {
           logger.error("Failed to persist batch verification result", {
@@ -610,8 +622,9 @@ export function BatchVerifyModelsDialog({
           (result) => result.status === "unsupported",
         ).length
 
+        const status = deriveBatchVerifyRowStatus(results)
         updateRow(item.key, {
-          status: deriveBatchVerifyRowStatus(results),
+          status,
           latencyMs: getRowLatency(results),
           summary: t("modelList:batchVerify.messages.probeSummary", {
             count: results.length,
@@ -622,8 +635,9 @@ export function BatchVerifyModelsDialog({
           results,
           tokenName: credentials.tokenName,
         })
+        return status
       } catch (error) {
-        if (isStopped()) return
+        if (isStopped()) return undefined
 
         const redactions =
           item.source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.PROFILE
@@ -664,6 +678,7 @@ export function BatchVerifyModelsDialog({
           summary: message,
           results: [result],
         })
+        return BATCH_VERIFY_ROW_STATUSES.FAIL
       }
     },
     [
@@ -703,6 +718,13 @@ export function BatchVerifyModelsDialog({
     clearCachedTokenPromises()
     const abortController = new AbortController()
     batchAbortControllerRef.current = abortController
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.StartBatchModelVerify,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListBatchVerifyDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
     setHasStarted(true)
     setIsRunning(true)
     setRows(
@@ -718,6 +740,7 @@ export function BatchVerifyModelsDialog({
     )
 
     let nextIndex = 0
+    const selectedOutcomes: BatchVerifyRowStatus[] = []
     const workerCount = Math.min(
       MODEL_LIST_BATCH_VERIFY_CONCURRENCY,
       selectedItems.length,
@@ -729,7 +752,10 @@ export function BatchVerifyModelsDialog({
         nextIndex += 1
         const item = selectedItems[index]
         if (!item) return
-        await runOne(item, abortController.signal)
+        const outcome = await runOne(item, abortController.signal)
+        if (outcome) {
+          selectedOutcomes.push(outcome)
+        }
       }
     }
 
@@ -747,6 +773,25 @@ export function BatchVerifyModelsDialog({
         batchAbortControllerRef.current = null
       }
       setIsRunning(false)
+      if (shouldStopRef.current) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
+      } else if (
+        selectedOutcomes.some(
+          (outcome) => outcome === BATCH_VERIFY_ROW_STATUSES.FAIL,
+        )
+      ) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
+      } else if (
+        selectedOutcomes.every(
+          (outcome) => outcome === BATCH_VERIFY_ROW_STATUSES.SKIPPED,
+        )
+      ) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+      } else {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      }
     }
   }
 
@@ -851,32 +896,46 @@ export function BatchVerifyModelsDialog({
   )
 
   const footer = (
-    <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-      <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-        {hasStarted
-          ? t("modelList:batchVerify.summary", {
-              ...summary,
-              count: summary.total,
-            })
-          : t("modelList:batchVerify.idleHint")}
-      </div>
-      <div className="flex justify-end gap-2">
-        <Button variant="secondary" onClick={onClose} disabled={!canClose}>
-          {t("aiApiVerification:verifyDialog.actions.close")}
-        </Button>
-        {isRunning ? (
-          <Button variant="destructive" onClick={stopBatch}>
-            {t("modelList:batchVerify.actions.stop")}
+    <ProductAnalyticsScope
+      entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+      featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ModelList}
+      surfaceId={
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListBatchVerifyDialog
+      }
+    >
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+          {hasStarted
+            ? t("modelList:batchVerify.summary", {
+                ...summary,
+                count: summary.total,
+              })
+            : t("modelList:batchVerify.idleHint")}
+        </div>
+        <div className="flex justify-end gap-2">
+          <Button variant="secondary" onClick={onClose} disabled={!canClose}>
+            {t("aiApiVerification:verifyDialog.actions.close")}
           </Button>
-        ) : (
-          <Button onClick={runBatch} disabled={!canStart}>
-            {hasStarted
-              ? t("modelList:batchVerify.actions.rerun")
-              : t("modelList:batchVerify.actions.start")}
-          </Button>
-        )}
+          {isRunning ? (
+            <Button
+              variant="destructive"
+              onClick={stopBatch}
+              analyticsAction={
+                PRODUCT_ANALYTICS_ACTION_IDS.StopBatchModelVerify
+              }
+            >
+              {t("modelList:batchVerify.actions.stop")}
+            </Button>
+          ) : (
+            <Button onClick={runBatch} disabled={!canStart}>
+              {hasStarted
+                ? t("modelList:batchVerify.actions.rerun")
+                : t("modelList:batchVerify.actions.start")}
+            </Button>
+          )}
+        </div>
       </div>
-    </div>
+    </ProductAnalyticsScope>
   )
   const listMaxHeight = getBatchVerifyListMaxHeight()
   const listContainerHeight = Math.min(
@@ -894,128 +953,139 @@ export function BatchVerifyModelsDialog({
       closeOnEsc={canClose}
       closeOnBackdropClick={canClose}
     >
-      <div className="space-y-4">
-        <div className="grid gap-3 sm:grid-cols-2">
-          <div className="space-y-1.5">
-            <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-              {t("modelList:batchVerify.apiType.label")}
+      <ProductAnalyticsScope
+        entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+        featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ModelList}
+        surfaceId={
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListBatchVerifyDialog
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div className="space-y-1.5">
+              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                {t("modelList:batchVerify.apiType.label")}
+              </div>
+              <SearchableSelect
+                options={apiTypeOptions}
+                value={apiTypeMode}
+                onChange={(value) =>
+                  setApiTypeMode(value as BatchVerifyApiTypeMode)
+                }
+                disabled={isRunning}
+              />
             </div>
-            <SearchableSelect
-              options={apiTypeOptions}
-              value={apiTypeMode}
-              onChange={(value) =>
-                setApiTypeMode(value as BatchVerifyApiTypeMode)
-              }
-              disabled={isRunning}
+
+            <div className="flex flex-wrap items-end gap-2 sm:justify-end">
+              <Badge variant="info">
+                {t("modelList:batchVerify.counts.total", {
+                  value: summary.total,
+                })}
+              </Badge>
+              <Badge variant="success">
+                {t("modelList:batchVerify.counts.pass", {
+                  value: summary.pass,
+                })}
+              </Badge>
+              <Badge variant="danger">
+                {t("modelList:batchVerify.counts.fail", {
+                  value: summary.fail,
+                })}
+              </Badge>
+              <Badge variant="warning">
+                {t("modelList:batchVerify.counts.skipped", {
+                  value: summary.skipped,
+                })}
+              </Badge>
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+              {t("modelList:batchVerify.probes.label")}
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {probeOptions.map((probe) => (
+                <label
+                  key={probe.id}
+                  className="dark:border-dark-bg-tertiary flex cursor-pointer items-center gap-2 rounded-md border border-gray-100 px-2 py-1.5 text-xs"
+                >
+                  <Checkbox
+                    checked={selectedProbeIds.includes(probe.id)}
+                    onCheckedChange={() => toggleProbe(probe.id)}
+                    disabled={isRunning}
+                  />
+                  <span>{probe.label}</span>
+                </label>
+              ))}
+            </div>
+            {selectedProbeIds.length === 0 ? (
+              <div className="text-xs text-red-500">
+                {t("modelList:batchVerify.probes.noneSelected")}
+              </div>
+            ) : null}
+          </div>
+
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                {t("modelList:batchVerify.modelSelection.label")}
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                  {t("modelList:batchVerify.modelSelection.selectedSummary", {
+                    count: selectedModelKeys.length,
+                    selected: selectedModelKeys.length,
+                    total: items.length,
+                  })}
+                </span>
+                <Button
+                  size="sm"
+                  variant="secondary"
+                  onClick={
+                    areAllModelsSelected ? clearSelectedModels : selectAllModels
+                  }
+                  disabled={isRunning || items.length === 0}
+                  analyticsAction={
+                    PRODUCT_ANALYTICS_ACTION_IDS.ToggleBatchModelSelection
+                  }
+                >
+                  {areAllModelsSelected
+                    ? t("modelList:batchVerify.modelSelection.clearAll")
+                    : t("modelList:batchVerify.modelSelection.selectAll")}
+                </Button>
+              </div>
+            </div>
+            {selectedModelKeys.length === 0 ? (
+              <div className="text-xs text-red-500">
+                {t("modelList:batchVerify.modelSelection.noneSelected")}
+              </div>
+            ) : null}
+          </div>
+
+          <Alert variant="warning">
+            <p>{t("modelList:batchVerify.warning")}</p>
+          </Alert>
+
+          <div
+            className="dark:border-dark-bg-tertiary overflow-hidden rounded-md border border-gray-100"
+            style={{ height: listContainerHeight }}
+          >
+            <Virtuoso
+              className="h-full"
+              data={rows}
+              computeItemKey={(_, row) => row.item.key}
+              components={{
+                Item: BatchVerifyRowsItem,
+                List: BatchVerifyRowsList,
+              }}
+              totalListHeightChanged={setListHeight}
+              style={{ height: "100%" }}
+              itemContent={(_, row) => renderRow(row)}
             />
           </div>
-
-          <div className="flex flex-wrap items-end gap-2 sm:justify-end">
-            <Badge variant="info">
-              {t("modelList:batchVerify.counts.total", {
-                value: summary.total,
-              })}
-            </Badge>
-            <Badge variant="success">
-              {t("modelList:batchVerify.counts.pass", {
-                value: summary.pass,
-              })}
-            </Badge>
-            <Badge variant="danger">
-              {t("modelList:batchVerify.counts.fail", {
-                value: summary.fail,
-              })}
-            </Badge>
-            <Badge variant="warning">
-              {t("modelList:batchVerify.counts.skipped", {
-                value: summary.skipped,
-              })}
-            </Badge>
-          </div>
         </div>
-
-        <div className="space-y-2">
-          <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-            {t("modelList:batchVerify.probes.label")}
-          </div>
-          <div className="flex flex-wrap gap-2">
-            {probeOptions.map((probe) => (
-              <label
-                key={probe.id}
-                className="dark:border-dark-bg-tertiary flex cursor-pointer items-center gap-2 rounded-md border border-gray-100 px-2 py-1.5 text-xs"
-              >
-                <Checkbox
-                  checked={selectedProbeIds.includes(probe.id)}
-                  onCheckedChange={() => toggleProbe(probe.id)}
-                  disabled={isRunning}
-                />
-                <span>{probe.label}</span>
-              </label>
-            ))}
-          </div>
-          {selectedProbeIds.length === 0 ? (
-            <div className="text-xs text-red-500">
-              {t("modelList:batchVerify.probes.noneSelected")}
-            </div>
-          ) : null}
-        </div>
-
-        <div className="space-y-2">
-          <div className="flex flex-wrap items-center justify-between gap-2">
-            <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
-              {t("modelList:batchVerify.modelSelection.label")}
-            </div>
-            <div className="flex items-center gap-2">
-              <span className="dark:text-dark-text-tertiary text-xs text-gray-500">
-                {t("modelList:batchVerify.modelSelection.selectedSummary", {
-                  count: selectedModelKeys.length,
-                  selected: selectedModelKeys.length,
-                  total: items.length,
-                })}
-              </span>
-              <Button
-                size="sm"
-                variant="secondary"
-                onClick={
-                  areAllModelsSelected ? clearSelectedModels : selectAllModels
-                }
-                disabled={isRunning || items.length === 0}
-              >
-                {areAllModelsSelected
-                  ? t("modelList:batchVerify.modelSelection.clearAll")
-                  : t("modelList:batchVerify.modelSelection.selectAll")}
-              </Button>
-            </div>
-          </div>
-          {selectedModelKeys.length === 0 ? (
-            <div className="text-xs text-red-500">
-              {t("modelList:batchVerify.modelSelection.noneSelected")}
-            </div>
-          ) : null}
-        </div>
-
-        <Alert variant="warning">
-          <p>{t("modelList:batchVerify.warning")}</p>
-        </Alert>
-
-        <div
-          className="dark:border-dark-bg-tertiary overflow-hidden rounded-md border border-gray-100"
-          style={{ height: listContainerHeight }}
-        >
-          <Virtuoso
-            className="h-full"
-            data={rows}
-            computeItemKey={(_, row) => row.item.key}
-            components={{
-              Item: BatchVerifyRowsItem,
-              List: BatchVerifyRowsList,
-            }}
-            totalListHeightChanged={setListHeight}
-            style={{ height: "100%" }}
-            itemContent={(_, row) => renderRow(row)}
-          />
-        </div>
-      </div>
+      </ProductAnalyticsScope>
     </Modal>
   )
 }

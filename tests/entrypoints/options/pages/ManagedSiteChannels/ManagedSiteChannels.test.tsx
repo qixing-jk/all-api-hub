@@ -20,6 +20,14 @@ import {
   isNewApiVerifiedSessionActive,
   NEW_API_MANAGED_SESSION_STATUSES,
 } from "~/services/managedSites/providers/newApiSession"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import {
   navigateWithinOptionsPage,
@@ -85,14 +93,53 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
-const { mockFetchChannelFilters } = vi.hoisted(() => ({
+const {
+  mockFetchChannelFilters,
+  mockStartProductAnalyticsAction,
+  mockTrackProductAnalyticsActionStarted,
+  mockCompleteProductAnalyticsAction,
+} = vi.hoisted(() => ({
   mockFetchChannelFilters: vi.fn(),
+  mockStartProductAnalyticsAction: vi.fn(),
+  mockTrackProductAnalyticsActionStarted: vi.fn(),
+  mockCompleteProductAnalyticsAction: vi.fn(),
 }))
 
 vi.mock("~/features/ManagedSiteChannels/utils/channelFilters", async () => ({
   fetchChannelFilters: mockFetchChannelFilters,
   saveChannelFilters: vi.fn(),
 }))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: any[]) =>
+    mockStartProductAnalyticsAction(...args),
+  trackProductAnalyticsActionStarted: (...args: any[]) =>
+    mockTrackProductAnalyticsActionStarted(...args),
+}))
+
+const expectManagedSiteChannelActionTracked = (
+  actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
+  surfaceId: (typeof PRODUCT_ANALYTICS_SURFACE_IDS)[keyof typeof PRODUCT_ANALYTICS_SURFACE_IDS],
+) => {
+  expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledWith({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+    actionId,
+    surfaceId,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  })
+}
+
+const expectManagedSiteChannelActionSpanStarted = (
+  actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
+  surfaceId: (typeof PRODUCT_ANALYTICS_SURFACE_IDS)[keyof typeof PRODUCT_ANALYTICS_SURFACE_IDS],
+) => {
+  expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+    actionId,
+    surfaceId,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  })
+}
 
 const waitForRowText = (text: string) =>
   waitFor(() => expect(screen.getByText(text)).toBeInTheDocument(), {
@@ -235,6 +282,11 @@ describe("ManagedSiteChannels", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     vi.mocked(fetchChannelFilters).mockResolvedValue([])
+    mockStartProductAnalyticsAction.mockReturnValue({
+      complete: mockCompleteProductAnalyticsAction,
+    })
+    mockTrackProductAnalyticsActionStarted.mockReset()
+    mockCompleteProductAnalyticsAction.mockReset()
   })
 
   const buildPreferences = (options?: {
@@ -626,6 +678,10 @@ describe("ManagedSiteChannels", () => {
       }),
     )
 
+    expectManagedSiteChannelActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteChannels,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+    )
     await waitFor(() => {
       expect(vi.mocked(sendRuntimeMessage)).toHaveBeenCalledTimes(2)
     })
@@ -643,6 +699,35 @@ describe("ManagedSiteChannels", () => {
       expect(screen.getByText("Beta")).toBeInTheDocument()
     })
     expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
+  })
+
+  it("tracks opening the create channel dialog from the toolbar", async () => {
+    const user = userEvent.setup()
+
+    mockChannels([])
+
+    render(
+      <>
+        <ManagedSiteChannels />
+        <ChannelDialogContainer />
+      </>,
+    )
+
+    await waitForChannelsRefreshIdle()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.addChannel",
+      }),
+    )
+
+    expectManagedSiteChannelActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.CreateManagedSiteChannel,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+    )
+    expect(
+      await screen.findByText("channelDialog:title.add"),
+    ).toBeInTheDocument()
   })
 
   it("keeps row selection attached to the same channel after refreshed rows reorder", async () => {
@@ -1157,6 +1242,10 @@ describe("ManagedSiteChannels", () => {
       }),
     )
 
+    expectManagedSiteChannelActionSpanStarted(
+      PRODUCT_ANALYTICS_ACTION_IDS.SyncManagedSiteChannel,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+    )
     await waitFor(() => {
       expect(sendRuntimeMessage).toHaveBeenCalledWith({
         action: RuntimeActionIds.ModelSyncTriggerSelected,
@@ -1166,6 +1255,64 @@ describe("ManagedSiteChannels", () => {
 
     expect(toast.error).toHaveBeenCalledWith(
       "managedSiteChannels:toasts.syncFailed",
+    )
+    expect(mockTrackProductAnalyticsActionStarted).not.toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SyncManagedSiteChannel,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
+  })
+
+  it("completes row sync analytics as skipped when no eligible channel id is available", async () => {
+    const user = userEvent.setup()
+    const channels = [
+      { id: 0, name: "Alpha", base_url: "https://alpha.example", key: "a" },
+    ]
+
+    mockChannels(channels)
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (payload: any) => {
+      if (payload.action === RuntimeActionIds.ModelSyncListChannels) {
+        return {
+          success: true,
+          data: { items: channels },
+        } as any
+      }
+
+      return { success: true } as any
+    })
+
+    render(<ManagedSiteChannels />)
+
+    await waitForRowText("Alpha")
+
+    const row = screen.getByText("Alpha").closest("tr")
+    expect(row).toBeTruthy()
+    await openRowActionsMenu(row!, user)
+
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "managedSiteChannels:table.rowActions.sync",
+      }),
+    )
+
+    expectManagedSiteChannelActionSpanStarted(
+      PRODUCT_ANALYTICS_ACTION_IDS.SyncManagedSiteChannel,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+    )
+    expect(sendRuntimeMessage).not.toHaveBeenCalledWith({
+      action: RuntimeActionIds.ModelSyncTriggerSelected,
+      channelIds: [0],
+    })
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
     )
   })
 
@@ -1190,6 +1337,10 @@ describe("ManagedSiteChannels", () => {
       }),
     )
 
+    expectManagedSiteChannelActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelModelSync,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+    )
     expect(openManagedSiteModelSyncForChannel).toHaveBeenCalledWith(1)
   })
 
@@ -1214,6 +1365,10 @@ describe("ManagedSiteChannels", () => {
       }),
     )
 
+    expectManagedSiteChannelActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelFilters,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+    )
     const dialog = await screen.findByRole("dialog")
     expect(
       within(dialog).getByText("managedSiteChannels:filters.title"),
@@ -1257,6 +1412,13 @@ describe("ManagedSiteChannels", () => {
       }),
     )
 
+    expect(mockTrackProductAnalyticsActionStarted).not.toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteManagedSiteChannel,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
     const dialog = await screen.findByRole("dialog")
     expect(
       within(dialog).getByText("managedSiteChannels:dialog.deleteTitle"),
@@ -1283,6 +1445,13 @@ describe("ManagedSiteChannels", () => {
 
     expect(toast.success).toHaveBeenCalledWith(
       "managedSiteChannels:toasts.channelDeleted",
+    )
+    expectManagedSiteChannelActionSpanStarted(
+      PRODUCT_ANALYTICS_ACTION_IDS.DeleteManagedSiteChannel,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
     )
   })
 
@@ -1346,6 +1515,13 @@ describe("ManagedSiteChannels", () => {
       }),
     )
 
+    expect(mockTrackProductAnalyticsActionStarted).not.toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteSelectedManagedSiteChannels,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
     const dialog = await screen.findByRole("dialog")
     expect(
       within(dialog).getByText("managedSiteChannels:dialog.deleteTitlePlural"),
@@ -1370,6 +1546,16 @@ describe("ManagedSiteChannels", () => {
       "managedSiteChannels:toasts.channelDeleted",
     )
     expect(toast.error).toHaveBeenCalledWith("delete beta failed")
+    expectManagedSiteChannelActionSpanStarted(
+      PRODUCT_ANALYTICS_ACTION_IDS.DeleteSelectedManagedSiteChannels,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
   })
 
   it("syncs the selected rows from the toolbar", async () => {
@@ -1455,6 +1641,10 @@ describe("ManagedSiteChannels", () => {
       }),
     )
 
+    expectManagedSiteChannelActionSpanStarted(
+      PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteChannels,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+    )
     await waitFor(() => {
       expect(sendRuntimeMessage).toHaveBeenCalledWith({
         action: RuntimeActionIds.ModelSyncTriggerSelected,
@@ -1474,6 +1664,16 @@ describe("ManagedSiteChannels", () => {
       expect(within(currentAlphaRow!).getByText("2")).toBeInTheDocument()
       expect(within(currentBetaRow!).getByText("0")).toBeInTheDocument()
     })
+    expect(mockTrackProductAnalyticsActionStarted).not.toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteChannels,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
   })
 
   it("uses the select-all checkbox to open a migration preview for the whole page", async () => {
@@ -1498,6 +1698,10 @@ describe("ManagedSiteChannels", () => {
       }),
     )
 
+    expectManagedSiteChannelActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.ToggleManagedSiteChannelMigrationMode,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+    )
     await user.click(
       screen.getByRole("checkbox", {
         name: "managedSiteChannels:table.selectAll",
@@ -1510,6 +1714,10 @@ describe("ManagedSiteChannels", () => {
       }),
     )
 
+    expectManagedSiteChannelActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.OpenSelectedManagedSiteChannelMigration,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+    )
     const dialog = await screen.findByRole("dialog")
     expect(
       within(dialog).getByText("managedSiteChannels:migration.title"),
@@ -1575,6 +1783,10 @@ describe("ManagedSiteChannels", () => {
         channelId: 208,
       })
     })
+    expectManagedSiteChannelActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteChannel,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+    )
 
     expect(
       screen.getByRole("button", {
@@ -1840,6 +2052,10 @@ describe("ManagedSiteChannels", () => {
       }),
     )
 
+    expectManagedSiteChannelActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.ToggleManagedSiteChannelMigrationMode,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+    )
     expect(
       screen.getByRole("button", {
         name: /managedSiteChannels:toolbar.exitMigrationMode/,
@@ -1974,6 +2190,10 @@ describe("ManagedSiteChannels", () => {
       }),
     )
 
+    expectManagedSiteChannelActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.OpenSelectedManagedSiteChannelMigration,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+    )
     const dialog = await screen.findByRole("dialog")
     expect(
       within(dialog).getByText("managedSiteChannels:migration.title"),
@@ -2155,6 +2375,10 @@ describe("ManagedSiteChannels", () => {
 
     await user.click(refreshButton)
 
+    expectManagedSiteChannelActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteChannels,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+    )
     await waitFor(() => {
       expect(sendRuntimeMessage).toHaveBeenCalledTimes(initialRequestCount + 1)
     })
@@ -2185,6 +2409,10 @@ describe("ManagedSiteChannels", () => {
       }),
     )
 
+    expectManagedSiteChannelActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.ViewManagedSiteChannel,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+    )
     const viewDialog = await screen.findByRole("dialog")
     expect(
       within(viewDialog).getByText("channelDialog:title.view"),
@@ -2224,6 +2452,10 @@ describe("ManagedSiteChannels", () => {
       }),
     )
 
+    expectManagedSiteChannelActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelMigration,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+    )
     const dialog = await screen.findByRole("dialog")
     expect(
       within(dialog).getByText("managedSiteChannels:migration.title"),
@@ -2301,6 +2533,10 @@ describe("ManagedSiteChannels", () => {
       }),
     )
 
+    expectManagedSiteChannelActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.OpenFilteredManagedSiteChannelMigration,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+    )
     const dialog = await screen.findByRole("dialog")
     expect(within(dialog).getByText("Alpha")).toBeInTheDocument()
     expect(within(dialog).queryByText("Beta")).not.toBeInTheDocument()

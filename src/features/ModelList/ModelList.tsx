@@ -9,6 +9,7 @@ import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDia
 import { PageHeader } from "~/components/PageHeader"
 import { Alert, Button, EmptyState } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { VerifyApiCredentialProfileDialog } from "~/features/ApiCredentialProfiles/components/VerifyApiCredentialProfileDialog"
 import {
   createBatchVerifyModelItems,
@@ -19,6 +20,12 @@ import {
   type ModelManagementItemSource,
 } from "~/features/ModelList/modelManagementSources"
 import { getAllProviders } from "~/services/models/utils/modelProviders"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import {
   createAccountModelVerificationHistoryTarget,
   createProfileModelVerificationHistoryTarget,
@@ -316,15 +323,24 @@ export default function ModelList(props: {
         description={t("description")}
         actions={
           selectedSource && hasModelData ? (
-            <Button
-              onClick={loadPricingData}
-              variant="secondary"
-              leftIcon={!isLoading && <ArrowPathIcon className="h-4 w-4" />}
-              loading={isLoading}
-              disabled={isLoading}
+            <ProductAnalyticsScope
+              entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+              featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ModelList}
+              surfaceId={PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage}
             >
-              {t("refreshData")}
-            </Button>
+              <Button
+                onClick={loadPricingData}
+                variant="secondary"
+                leftIcon={!isLoading && <ArrowPathIcon className="h-4 w-4" />}
+                loading={isLoading}
+                disabled={isLoading}
+                analyticsAction={
+                  PRODUCT_ANALYTICS_ACTION_IDS.RefreshModelPricingData
+                }
+              >
+                {t("refreshData")}
+              </Button>
+            </ProductAnalyticsScope>
           ) : undefined
         }
       />

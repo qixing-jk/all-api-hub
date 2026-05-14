@@ -94,6 +94,7 @@ import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
@@ -109,6 +110,18 @@ import {
   getManagedSiteTargetOptions,
   needsManagedSiteChannelKeyResolution,
 } from "~/services/managedSites/utils/managedSite"
+import {
+  startProductAnalyticsAction,
+  type ProductAnalyticsActionContext,
+} from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
@@ -127,6 +140,12 @@ import {
   multiColumnFilterFn,
   statusFilterFn,
 } from "./utils/filterFns"
+
+const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
+const channelsToolbarSurface =
+  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar
+const channelsRowActionsSurface =
+  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions
 
 /**
  * Main management page for New API channels including table, filters, and dialogs.
@@ -235,6 +254,8 @@ export default function ManagedSiteChannels({
   ])
   const [rowSelection, setRowSelection] = useState<Record<string, boolean>>({})
   const [pendingDeleteIds, setPendingDeleteIds] = useState<number[]>([])
+  const [pendingDeleteAnalyticsContext, setPendingDeleteAnalyticsContext] =
+    useState<ProductAnalyticsActionContext | null>(null)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [syncingIds, setSyncingIds] = useState<Set<number>>(new Set())
@@ -454,14 +475,21 @@ export default function ManagedSiteChannels({
     [openChannelDialogForMode],
   )
 
-  const scheduleDelete = useCallback((ids: number[]) => {
-    if (!ids.length) return
-    setPendingDeleteIds(ids)
-    setIsDeleteDialogOpen(true)
-  }, [])
+  const scheduleDelete = useCallback(
+    (ids: number[], analyticsContext: ProductAnalyticsActionContext) => {
+      if (!ids.length) return
+      setPendingDeleteIds(ids)
+      setPendingDeleteAnalyticsContext(analyticsContext)
+      setIsDeleteDialogOpen(true)
+    },
+    [],
+  )
 
   const handleDelete = useCallback(async () => {
     if (!pendingDeleteIds.length) return
+    const tracker = pendingDeleteAnalyticsContext
+      ? startProductAnalyticsAction(pendingDeleteAnalyticsContext)
+      : null
     setIsDeleting(true)
     try {
       const service = await getManagedSiteService()
@@ -516,38 +544,56 @@ export default function ManagedSiteChannels({
                 error: getErrorMessage(firstError),
               }),
         )
+        await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
+      } else {
+        await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       }
     } catch (err) {
       toast.error(getErrorMessage(err))
+      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     } finally {
       setIsDeleting(false)
       setIsDeleteDialogOpen(false)
       setPendingDeleteIds([])
+      setPendingDeleteAnalyticsContext(null)
     }
-  }, [pendingDeleteIds, t])
+  }, [pendingDeleteAnalyticsContext, pendingDeleteIds, t])
 
   const handleSyncChannels = useCallback(
-    async (channelIds: number[]) => {
-      if (!channelIds.length) return
+    async (
+      channelIds: number[],
+      analyticsContext: ProductAnalyticsActionContext,
+    ) => {
+      const tracker = startProductAnalyticsAction(analyticsContext)
+      const eligibleChannelIds = channelIds.filter((id) => id > 0)
+
+      if (!eligibleChannelIds.length) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+        return
+      }
       setSyncingIds((prev) => {
         const next = new Set(prev)
-        channelIds.forEach((id) => next.add(id))
+        eligibleChannelIds.forEach((id) => next.add(id))
         return next
       })
       try {
         const response = await sendRuntimeMessage({
           action: RuntimeActionIds.ModelSyncTriggerSelected,
-          channelIds,
+          channelIds: eligibleChannelIds,
         })
         if (!response?.success) {
           throw new Error(response?.error || "Failed to sync channels")
         }
         const successCount =
-          response.data?.statistics?.successCount ?? channelIds.length
+          response.data?.statistics?.successCount ?? eligibleChannelIds.length
         toast.success(
           t("toasts.syncCompleted", {
             success: successCount,
-            total: channelIds.length,
+            total: eligibleChannelIds.length,
           }),
         )
         const successfulItems = (response.data?.items ?? []).filter(
@@ -574,12 +620,16 @@ export default function ManagedSiteChannels({
             )
           }
         }
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       } catch (err) {
         toast.error(t("toasts.syncFailed", { error: getErrorMessage(err) }))
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
       } finally {
         setSyncingIds((prev) => {
           const next = new Set(prev)
-          channelIds.forEach((id) => next.delete(id))
+          eligibleChannelIds.forEach((id) => next.delete(id))
           return next
         })
       }
@@ -838,8 +888,22 @@ export default function ManagedSiteChannels({
             onEdit={handleOpenEditDialog}
             onView={handleOpenViewDialog}
             onMigrate={handleOpenSingleChannelMigration}
-            onDelete={scheduleDelete}
-            onSync={handleSyncChannels}
+            onDelete={(ids) =>
+              scheduleDelete(ids, {
+                featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+                actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteManagedSiteChannel,
+                surfaceId: channelsRowActionsSurface,
+                entrypoint: optionsEntrypoint,
+              })
+            }
+            onSync={(channelIds) =>
+              handleSyncChannels(channelIds, {
+                featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+                actionId: PRODUCT_ANALYTICS_ACTION_IDS.SyncManagedSiteChannel,
+                surfaceId: channelsRowActionsSurface,
+                entrypoint: optionsEntrypoint,
+              })
+            }
             onOpenSync={openManagedSiteModelSyncForChannel}
             onFilters={handleOpenFilterDialog}
             canMigrate={hasMigrationTargets}
@@ -1010,34 +1074,46 @@ export default function ManagedSiteChannels({
         actions={
           <>
             {!isConfigMissing && (
-              <>
-                <Button
-                  variant="outline"
-                  onClick={() => void refreshChannels()}
-                  disabled={isLoading}
-                  loading={isLoading && channels.length > 0}
-                  leftIcon={<RefreshCcw className="h-4 w-4" />}
-                >
-                  {t("toolbar.refresh")}
-                </Button>
-                {supportsChannelMigration &&
-                (hasMigrationTargets || isMigrationMode) ? (
+              <ProductAnalyticsScope
+                entrypoint={optionsEntrypoint}
+                featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels}
+                surfaceId={channelsToolbarSurface}
+              >
+                <>
                   <Button
-                    variant={isMigrationMode ? "default" : "outline"}
-                    onClick={handleToggleMigrationMode}
-                    leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+                    variant="outline"
+                    onClick={() => void refreshChannels()}
+                    disabled={isLoading}
+                    loading={isLoading && channels.length > 0}
+                    leftIcon={<RefreshCcw className="h-4 w-4" />}
+                    analyticsAction={
+                      PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteChannels
+                    }
                   >
-                    <span>
-                      {isMigrationMode
-                        ? t("toolbar.exitMigrationMode")
-                        : t("toolbar.enterMigrationMode")}
-                    </span>
-                    <Badge variant="warning" size="sm" className="shrink-0">
-                      {t("migration.betaBadge")}
-                    </Badge>
+                    {t("toolbar.refresh")}
                   </Button>
-                ) : null}
-              </>
+                  {supportsChannelMigration &&
+                  (hasMigrationTargets || isMigrationMode) ? (
+                    <Button
+                      variant={isMigrationMode ? "default" : "outline"}
+                      onClick={handleToggleMigrationMode}
+                      leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+                      analyticsAction={
+                        PRODUCT_ANALYTICS_ACTION_IDS.ToggleManagedSiteChannelMigrationMode
+                      }
+                    >
+                      <span>
+                        {isMigrationMode
+                          ? t("toolbar.exitMigrationMode")
+                          : t("toolbar.enterMigrationMode")}
+                      </span>
+                      <Badge variant="warning" size="sm" className="shrink-0">
+                        {t("migration.betaBadge")}
+                      </Badge>
+                    </Button>
+                  ) : null}
+                </>
+              </ProductAnalyticsScope>
             )}
             <ManagedSiteTypeSwitcher
               ariaLabel={t("settings:managedSite.siteTypeLabel")}
@@ -1173,70 +1249,103 @@ export default function ManagedSiteChannels({
                 </DropdownMenuContent>
               </DropdownMenu>
 
-              <div className="col-span-2 grid grid-cols-2 gap-2 md:ml-auto md:flex md:items-center md:justify-end md:gap-2">
-                {isMigrationMode && hasMigrationTargets && (
-                  <Button
-                    variant="outline"
-                    disabled={!selectedCount}
-                    onClick={() =>
-                      openMigrationDialog(
-                        selectedRows.map((row) => row.original),
-                      )
-                    }
-                    leftIcon={<ArrowRightLeft className="h-4 w-4" />}
-                  >
-                    {t("toolbar.migrateSelected")}
-                  </Button>
-                )}
-                {isMigrationMode && hasMigrationTargets && (
-                  <Button
-                    variant="outline"
-                    disabled={!filteredCount}
-                    onClick={() =>
-                      openMigrationDialog(
-                        filteredRows.map((row) => row.original),
-                      )
-                    }
-                    leftIcon={<ArrowRightLeft className="h-4 w-4" />}
-                  >
-                    {t("toolbar.migrateFiltered")}
-                  </Button>
-                )}
-                {!isMigrationMode && (
-                  <Button
-                    variant="outline"
-                    disabled={!selectedCount}
-                    onClick={() =>
-                      scheduleDelete(selectedRows.map((row) => row.original.id))
-                    }
-                    leftIcon={<Trash2 className="h-4 w-4" />}
-                  >
-                    {t("toolbar.deleteSelected")}
-                  </Button>
-                )}
-                {!isMigrationMode && supportsNewApiOnlyChannelActions && (
-                  <Button
-                    variant="outline"
-                    disabled={!selectedCount}
-                    onClick={() =>
-                      handleSyncChannels(
-                        selectedRows.map((row) => row.original.id),
-                      )
-                    }
-                    leftIcon={<RefreshCcw className="h-4 w-4" />}
-                  >
-                    {t("toolbar.syncSelected")}
-                  </Button>
-                )}
-                {!isMigrationMode && (
-                  <Button
-                    onClick={handleOpenCreateDialog}
-                    leftIcon={<Plus className="h-4 w-4" />}
-                  >
-                    {t("toolbar.addChannel")}
-                  </Button>
-                )}
-              </div>
+              <ProductAnalyticsScope
+                entrypoint={optionsEntrypoint}
+                featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels}
+                surfaceId={channelsToolbarSurface}
+              >
+                <div className="col-span-2 grid grid-cols-2 gap-2 md:ml-auto md:flex md:items-center md:justify-end md:gap-2">
+                  {isMigrationMode && hasMigrationTargets && (
+                    <Button
+                      variant="outline"
+                      disabled={!selectedCount}
+                      onClick={() =>
+                        openMigrationDialog(
+                          selectedRows.map((row) => row.original),
+                        )
+                      }
+                      leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+                      analyticsAction={
+                        PRODUCT_ANALYTICS_ACTION_IDS.OpenSelectedManagedSiteChannelMigration
+                      }
+                    >
+                      {t("toolbar.migrateSelected")}
+                    </Button>
+                  )}
+                  {isMigrationMode && hasMigrationTargets && (
+                    <Button
+                      variant="outline"
+                      disabled={!filteredCount}
+                      onClick={() =>
+                        openMigrationDialog(
+                          filteredRows.map((row) => row.original),
+                        )
+                      }
+                      leftIcon={<ArrowRightLeft className="h-4 w-4" />}
+                      analyticsAction={
+                        PRODUCT_ANALYTICS_ACTION_IDS.OpenFilteredManagedSiteChannelMigration
+                      }
+                    >
+                      {t("toolbar.migrateFiltered")}
+                    </Button>
+                  )}
+                  {!isMigrationMode && (
+                    <Button
+                      variant="outline"
+                      disabled={!selectedCount}
+                      onClick={() =>
+                        scheduleDelete(
+                          selectedRows.map((row) => row.original.id),
+                          {
+                            featureId:
+                              PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+                            actionId:
+                              PRODUCT_ANALYTICS_ACTION_IDS.DeleteSelectedManagedSiteChannels,
+                            surfaceId: channelsToolbarSurface,
+                            entrypoint: optionsEntrypoint,
+                          },
+                        )
+                      }
+                      leftIcon={<Trash2 className="h-4 w-4" />}
+                    >
+                      {t("toolbar.deleteSelected")}
+                    </Button>
+                  )}
+                  {!isMigrationMode && supportsNewApiOnlyChannelActions && (
+                    <Button
+                      variant="outline"
+                      disabled={!selectedCount}
+                      onClick={() =>
+                        handleSyncChannels(
+                          selectedRows.map((row) => row.original.id),
+                          {
+                            featureId:
+                              PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+                            actionId:
+                              PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteChannels,
+                            surfaceId: channelsToolbarSurface,
+                            entrypoint: optionsEntrypoint,
+                          },
+                        )
+                      }
+                      leftIcon={<RefreshCcw className="h-4 w-4" />}
+                    >
+                      {t("toolbar.syncSelected")}
+                    </Button>
+                  )}
+                  {!isMigrationMode && (
+                    <Button
+                      onClick={handleOpenCreateDialog}
+                      leftIcon={<Plus className="h-4 w-4" />}
+                      analyticsAction={
+                        PRODUCT_ANALYTICS_ACTION_IDS.CreateManagedSiteChannel
+                      }
+                    >
+                      {t("toolbar.addChannel")}
+                    </Button>
+                  )}
+                </div>
+              </ProductAnalyticsScope>
             </div>
           </div>
 
@@ -1434,6 +1543,7 @@ export default function ManagedSiteChannels({
           if (!isDeleting) {
             setIsDeleteDialogOpen(false)
             setPendingDeleteIds([])
+            setPendingDeleteAnalyticsContext(null)
           }
         }}
         title={

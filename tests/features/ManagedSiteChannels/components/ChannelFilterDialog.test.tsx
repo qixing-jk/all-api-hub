@@ -7,11 +7,26 @@ import {
   fetchChannelFilters,
   saveChannelFilters,
 } from "~/features/ManagedSiteChannels/utils/channelFilters"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
-const { mockFetchChannelFilters, mockSaveChannelFilters } = vi.hoisted(() => ({
+const {
+  mockFetchChannelFilters,
+  mockSaveChannelFilters,
+  mockStartProductAnalyticsAction,
+  mockCompleteProductAnalyticsAction,
+} = vi.hoisted(() => ({
   mockFetchChannelFilters: vi.fn(),
   mockSaveChannelFilters: vi.fn(),
+  mockStartProductAnalyticsAction: vi.fn(),
+  mockCompleteProductAnalyticsAction: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -24,6 +39,11 @@ vi.mock("react-hot-toast", () => ({
 vi.mock("~/features/ManagedSiteChannels/utils/channelFilters", () => ({
   fetchChannelFilters: mockFetchChannelFilters,
   saveChannelFilters: mockSaveChannelFilters,
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: any[]) =>
+    mockStartProductAnalyticsAction(...args),
 }))
 
 vi.mock("~/utils/core/identifier", () => ({
@@ -53,15 +73,30 @@ vi.mock("~/components/ui", () => ({
 
 vi.mock("~/components/ui/button", () => ({
   Button: ({
+    analyticsAction,
     children,
     onClick,
     disabled,
   }: {
+    analyticsAction?: {
+      featureId: string
+      actionId: string
+      surfaceId: string
+      entrypoint: string
+    }
     children: ReactNode
     onClick?: () => void
     disabled?: boolean
   }) => (
-    <button disabled={disabled} onClick={() => onClick?.()}>
+    <button
+      data-analytics-action={
+        analyticsAction
+          ? `${analyticsAction.featureId}:${analyticsAction.actionId}:${analyticsAction.surfaceId}:${analyticsAction.entrypoint}`
+          : undefined
+      }
+      disabled={disabled}
+      onClick={() => onClick?.()}
+    >
       {children}
     </button>
   ),
@@ -178,6 +213,9 @@ describe("ChannelFilterDialog", () => {
     vi.spyOn(Date, "now").mockReturnValue(1_700_000_000_000)
     mockedFetchChannelFilters.mockResolvedValue([])
     mockedSaveChannelFilters.mockResolvedValue(undefined)
+    mockStartProductAnalyticsAction.mockReturnValue({
+      complete: mockCompleteProductAnalyticsAction,
+    })
   })
 
   it("loads existing filters when opened", async () => {
@@ -288,6 +326,22 @@ describe("ChannelFilterDialog", () => {
     expect(mockedSaveChannelFilters).not.toHaveBeenCalled()
   })
 
+  it("does not declare static analytics metadata on the save button", async () => {
+    render(
+      <ChannelFilterDialog
+        channel={sampleChannel}
+        open={true}
+        onClose={vi.fn()}
+      />,
+    )
+
+    const saveButton = await screen.findByRole("button", {
+      name: "managedSiteChannels:filters.actions.save",
+    })
+
+    expect(saveButton).not.toHaveAttribute("data-analytics-action")
+  })
+
   it("parses and trims JSON filters before saving", async () => {
     const onClose = vi.fn()
 
@@ -344,6 +398,16 @@ describe("ChannelFilterDialog", () => {
 
     expect(toast.success).toHaveBeenCalledWith(
       "managedSiteChannels:filters.messages.saved",
+    )
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SaveManagedSiteChannelModelFilters,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelFilterDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
     )
     expect(onClose).toHaveBeenCalledTimes(1)
   })
@@ -424,6 +488,19 @@ describe("ChannelFilterDialog", () => {
     expect(mockedSaveChannelFilters).not.toHaveBeenCalled()
     expect(toast.success).not.toHaveBeenCalled()
     expect(onClose).not.toHaveBeenCalled()
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SaveManagedSiteChannelModelFilters,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelFilterDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      },
+    )
   })
 
   it("shows a save error without closing when persistence fails", async () => {

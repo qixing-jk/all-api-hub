@@ -15,7 +15,21 @@ import OverviewCard from "~/features/ManagedSiteModelSync/components/OverviewCar
 import ProgressCard from "~/features/ManagedSiteModelSync/components/ProgressCard"
 import ResultsTable from "~/features/ManagedSiteModelSync/components/ResultsTable"
 import StatisticsCard from "~/features/ManagedSiteModelSync/components/StatisticsCard"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { testI18n } from "~~/tests/test-utils/i18n"
+
+const { trackStartedMock } = vi.hoisted(() => ({
+  trackStartedMock: vi.fn(),
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionStarted: trackStartedMock,
+}))
 
 vi.mock("~/components/ManagedSiteChannelLinkButton", () => ({
   default: ({
@@ -37,9 +51,22 @@ function render(ui: ReactNode) {
   return rtlRender(<I18nextProvider i18n={testI18n}>{ui}</I18nextProvider>)
 }
 
+const expectModelSyncAction = (
+  actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
+  surfaceId: (typeof PRODUCT_ANALYTICS_SURFACE_IDS)[keyof typeof PRODUCT_ANALYTICS_SURFACE_IDS],
+) => {
+  expect(trackStartedMock).toHaveBeenCalledWith({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+    actionId,
+    surfaceId,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  })
+}
+
 describe("ManagedSiteModelSync components", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    trackStartedMock.mockResolvedValue(undefined)
   })
 
   it("renders overview, progress, and statistics states", () => {
@@ -212,6 +239,10 @@ describe("ManagedSiteModelSync components", () => {
     expect(onRunSelected).toHaveBeenCalledTimes(1)
     expect(onRetryFailed).toHaveBeenCalledTimes(1)
     expect(onRefresh).toHaveBeenCalledTimes(1)
+    expectModelSyncAction(
+      PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteModelSyncResults,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
+    )
     expect(onStatusChange).toHaveBeenCalledWith("success")
     expect(onKeywordChange).toHaveBeenCalledWith("alpha")
 
@@ -267,7 +298,7 @@ describe("ManagedSiteModelSync components", () => {
     fireEvent.click(
       screen.getAllByTitle(
         "managedSiteModelSync:execution.table.syncChannel",
-      )[0],
+      )[1],
     )
 
     expect(
@@ -278,7 +309,8 @@ describe("ManagedSiteModelSync components", () => {
     expect(screen.getByText("Alpha#11")).toBeInTheDocument()
     expect(onSelectAll).toHaveBeenCalledWith(true)
     expect(onSelectItem).toHaveBeenCalledWith(11, false)
-    expect(onRunSingle).toHaveBeenCalledWith(11)
+    expect(onRunSingle).toHaveBeenCalledWith(12)
+    expect(trackStartedMock).not.toHaveBeenCalled()
 
     render(<EmptyResults hasHistory={false} />)
 

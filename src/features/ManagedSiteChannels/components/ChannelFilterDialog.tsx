@@ -8,6 +8,15 @@ import { Modal } from "~/components/ui"
 import { Button } from "~/components/ui/button"
 import { normalizeChannelFilters } from "~/services/managedSites/channelModelFilterRules"
 import { resolveApiVerificationTypeForChannelType } from "~/services/models/modelSync/channelModelFilterEvaluator"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {
   DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS,
@@ -257,6 +266,13 @@ export default function ChannelFilterDialog({
   }
 
   const handleSave = async () => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SaveManagedSiteChannelModelFilters,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelFilterDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
     let rulesToSave: EditableFilter[]
 
     if (viewMode === "json") {
@@ -266,6 +282,9 @@ export default function ChannelFilterDialog({
         toast.error(
           t("filters.messages.jsonInvalid", { error: getErrorMessage(error) }),
         )
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        })
         return
       }
     } else {
@@ -275,6 +294,9 @@ export default function ChannelFilterDialog({
     const validationError = validateFilters(rulesToSave)
     if (validationError) {
       toast.error(validationError)
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      })
       return
     }
     setIsSaving(true)
@@ -297,11 +319,15 @@ export default function ChannelFilterDialog({
         // ignore serialization errors
       }
       toast.success(t("filters.messages.saved"))
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       onClose()
     } catch (error) {
       toast.error(
         t("filters.messages.saveFailed", { error: getErrorMessage(error) }),
       )
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     } finally {
       setIsSaving(false)
     }

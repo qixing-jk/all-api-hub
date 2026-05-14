@@ -2,7 +2,15 @@ import { render, screen } from "@testing-library/react"
 import React from "react"
 import { describe, expect, it, vi } from "vitest"
 
+import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { ModelItemHeader } from "~/features/ModelList/components/ModelItem/ModelItemHeader"
+import { resolveProductAnalyticsActionContext } from "~/services/productAnalytics/actionConfig"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 
 vi.mock("react-i18next", async (importOriginal) => {
   const actual = await importOriginal<typeof import("react-i18next")>()
@@ -45,6 +53,35 @@ vi.mock("~/services/models/utils/modelPricing", async (importOriginal) => {
   }
 })
 
+vi.mock("~/components/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/components/ui")>()
+
+  return {
+    ...actual,
+    IconButton: ({ analyticsAction, children, ...props }: any) => {
+      const scope = useProductAnalyticsScope()
+      const resolvedAction = resolveProductAnalyticsActionContext(
+        analyticsAction,
+        scope,
+      )
+
+      return (
+        <button
+          type="button"
+          data-analytics-action={
+            resolvedAction
+              ? `${resolvedAction.featureId}:${resolvedAction.actionId}:${resolvedAction.surfaceId}:${resolvedAction.entrypoint}`
+              : undefined
+          }
+          {...props}
+        >
+          {children}
+        </button>
+      )
+    },
+  }
+})
+
 function renderModelItemHeader(quotaType: number) {
   render(
     <ModelItemHeader
@@ -63,6 +100,62 @@ function renderModelItemHeader(quotaType: number) {
 }
 
 describe("ModelItemHeader", () => {
+  it("declares controlled analytics metadata for row action buttons", () => {
+    render(
+      <ModelItemHeader
+        model={
+          {
+            model_name: "gpt-private-model",
+            quota_type: 0,
+          } as any
+        }
+        isAvailableForUser={true}
+        handleCopyModelName={vi.fn()}
+        showPricingMetadata={true}
+        showAvailabilityBadge={false}
+        onOpenKeyDialog={vi.fn()}
+        onVerifyApi={vi.fn()}
+        onVerifyCliSupport={vi.fn()}
+      />,
+    )
+
+    const modelListAction = (actionId: string) =>
+      `${PRODUCT_ANALYTICS_FEATURE_IDS.ModelList}:${actionId}:${PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListRowActions}:${PRODUCT_ANALYTICS_ENTRYPOINTS.Options}`
+
+    expect(
+      screen.getByRole("button", {
+        name: "modelList:actions.copyModelName",
+      }),
+    ).toHaveAttribute(
+      "data-analytics-action",
+      modelListAction(PRODUCT_ANALYTICS_ACTION_IDS.CopyModelName),
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "modelList:actions.keyForModel",
+      }),
+    ).toHaveAttribute(
+      "data-analytics-action",
+      modelListAction(PRODUCT_ANALYTICS_ACTION_IDS.OpenModelKeyDialog),
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "modelList:actions.verifyApi",
+      }),
+    ).toHaveAttribute(
+      "data-analytics-action",
+      modelListAction(PRODUCT_ANALYTICS_ACTION_IDS.VerifyModelApi),
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "modelList:actions.verifyCliSupport",
+      }),
+    ).toHaveAttribute(
+      "data-analytics-action",
+      modelListAction(PRODUCT_ANALYTICS_ACTION_IDS.VerifyModelCliSupport),
+    )
+  })
+
   it("uses the default billing badge variant for quota_type 2 models", () => {
     renderModelItemHeader(2)
 

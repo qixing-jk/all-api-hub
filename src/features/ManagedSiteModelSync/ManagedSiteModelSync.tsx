@@ -16,6 +16,22 @@ import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteMessagesKeyFromSiteType,
 } from "~/services/managedSites/utils/managedSite"
+import {
+  startProductAnalyticsAction,
+  type ProductAnalyticsActionCompleteOptions,
+  type ProductAnalyticsActionContext,
+  type ProductAnalyticsActionInsights,
+} from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import type {
   ExecutionItemResult,
@@ -47,6 +63,34 @@ const TAB_INDEX = {
 
 const hasModelSyncFailures = (execution: ExecutionResult) =>
   execution.statistics.failureCount > 0
+
+const isEmptyModelSyncExecution = (execution: ExecutionResult) =>
+  execution.statistics.total === 0 || execution.items.length === 0
+
+const getModelSyncExecutionAnalyticsResult = (execution: ExecutionResult) => {
+  if (isEmptyModelSyncExecution(execution)) {
+    return PRODUCT_ANALYTICS_RESULTS.Skipped
+  }
+
+  if (hasModelSyncFailures(execution)) {
+    return PRODUCT_ANALYTICS_RESULTS.Failure
+  }
+
+  return PRODUCT_ANALYTICS_RESULTS.Success
+}
+
+const getModelSyncExecutionAnalyticsCompletionOptions = (
+  execution: ExecutionResult,
+): ProductAnalyticsActionCompleteOptions => ({
+  ...(hasModelSyncFailures(execution)
+    ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
+    : {}),
+  insights: {
+    itemCount: execution.statistics.total,
+    successCount: execution.statistics.successCount,
+    failureCount: execution.statistics.failureCount,
+  },
+})
 
 /**
  * New API Model Sync dashboard showing history, manual runs, progress, and filters.
@@ -343,6 +387,53 @@ export default function ManagedSiteModelSync({
     routeParams?.tab,
   ])
 
+  const actionBarAnalyticsScope = {
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+    surfaceId:
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  }
+  const manualPanelAnalyticsScope = {
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+    surfaceId:
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncManualPanel,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  }
+  const resultsTableAnalyticsScope = {
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+    surfaceId:
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncResultsTable,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  }
+
+  const completeModelSyncExecutionAnalytics = async (
+    tracker: ReturnType<typeof startProductAnalyticsAction>,
+    execution: ExecutionResult,
+    insights?: ProductAnalyticsActionInsights,
+  ) => {
+    const result = getModelSyncExecutionAnalyticsResult(execution)
+    const options = getModelSyncExecutionAnalyticsCompletionOptions(execution)
+
+    await tracker.complete(result, {
+      ...options,
+      insights: {
+        ...options.insights,
+        ...insights,
+      },
+    })
+  }
+
+  const completeModelSyncFailureAnalytics = async (
+    tracker: ReturnType<typeof startProductAnalyticsAction>,
+  ) => {
+    await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+    })
+  }
+
+  const startModelSyncAnalytics = (context: ProductAnalyticsActionContext) =>
+    startProductAnalyticsAction(context)
+
   /**
    * Shows a toast notification based on the execution result, highlighting any failures and providing a retry action if needed.
    */
@@ -376,6 +467,11 @@ export default function ManagedSiteModelSync({
    * Handles retrying only the failed channels from the last execution, showing appropriate success or error toasts based on the result.
    */
   async function handleRetryFailed() {
+    const tracker = startModelSyncAnalytics({
+      ...actionBarAnalyticsScope,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RetryFailedManagedSiteModelSync,
+    })
+
     try {
       const response = await sendRuntimeMessage({
         action: RuntimeActionIds.ModelSyncTriggerFailedOnly,
@@ -384,15 +480,25 @@ export default function ManagedSiteModelSync({
       if (response.success) {
         notifySyncCompletion(response.data)
         setLastExecution(response.data)
+        await completeModelSyncExecutionAnalytics(tracker, response.data, {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.RetryFailed,
+        })
       } else {
         toast.error(t("messages.error.syncFailed", { error: response.error }))
+        await completeModelSyncFailureAnalytics(tracker)
       }
     } catch (error: any) {
       toast.error(t("messages.error.syncFailed", { error: error.message }))
+      await completeModelSyncFailureAnalytics(tracker)
     }
   }
 
   const handleRunAll = async () => {
+    const tracker = startModelSyncAnalytics({
+      ...actionBarAnalyticsScope,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SyncAllManagedSiteModels,
+    })
+
     try {
       const response = await sendRuntimeMessage({
         action: RuntimeActionIds.ModelSyncTriggerAll,
@@ -401,11 +507,16 @@ export default function ManagedSiteModelSync({
       if (response.success) {
         notifySyncCompletion(response.data)
         setLastExecution(response.data)
+        await completeModelSyncExecutionAnalytics(tracker, response.data, {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+        })
       } else {
         toast.error(t("messages.error.syncFailed", { error: response.error }))
+        await completeModelSyncFailureAnalytics(tracker)
       }
     } catch (error: any) {
       toast.error(t("messages.error.syncFailed", { error: error.message }))
+      await completeModelSyncFailureAnalytics(tracker)
     }
   }
 
@@ -413,8 +524,25 @@ export default function ManagedSiteModelSync({
     const selectedSet =
       source === "history" ? historySelectedIds : manualSelectedIds
 
+    const tracker = startModelSyncAnalytics({
+      ...(source === "history"
+        ? actionBarAnalyticsScope
+        : manualPanelAnalyticsScope),
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteModels,
+    })
+
     if (selectedSet.size === 0) {
       toast.error(t("messages.error.noSelection"))
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+        insights: {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
+          sourceKind:
+            source === "history"
+              ? PRODUCT_ANALYTICS_SOURCE_KINDS.History
+              : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          selectedCount: 0,
+        },
+      })
       return
     }
 
@@ -432,11 +560,21 @@ export default function ManagedSiteModelSync({
         } else {
           setManualSelectedIds(new Set())
         }
+        await completeModelSyncExecutionAnalytics(tracker, response.data, {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
+          sourceKind:
+            source === "history"
+              ? PRODUCT_ANALYTICS_SOURCE_KINDS.History
+              : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          selectedCount: selectedSet.size,
+        })
       } else {
         toast.error(t("messages.error.syncFailed", { error: response.error }))
+        await completeModelSyncFailureAnalytics(tracker)
       }
     } catch (error: any) {
       toast.error(t("messages.error.syncFailed", { error: error.message }))
+      await completeModelSyncFailureAnalytics(tracker)
     }
   }
 
@@ -448,6 +586,11 @@ export default function ManagedSiteModelSync({
   }
 
   const handleRunSingle = async (channelId: number) => {
+    const tracker = startModelSyncAnalytics({
+      ...resultsTableAnalyticsScope,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SyncSingleManagedSiteModel,
+    })
+
     setRunningChannelId(channelId)
     try {
       const response = await sendRuntimeMessage({
@@ -497,11 +640,18 @@ export default function ManagedSiteModelSync({
             }
           })
         }
+        await completeModelSyncExecutionAnalytics(tracker, response.data, {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
+          selectedCount: 1,
+        })
       } else {
         toast.error(t("messages.error.syncFailed", { error: response.error }))
+        await completeModelSyncFailureAnalytics(tracker)
       }
     } catch (error: any) {
       toast.error(t("messages.error.syncFailed", { error: error.message }))
+      await completeModelSyncFailureAnalytics(tracker)
     } finally {
       setRunningChannelId(null)
     }
@@ -696,6 +846,11 @@ export default function ManagedSiteModelSync({
                   variant="ghost"
                   disabled={isChannelsLoading}
                   leftIcon={<RefreshCcw className="h-4 w-4" />}
+                  analyticsAction={{
+                    ...manualPanelAnalyticsScope,
+                    actionId:
+                      PRODUCT_ANALYTICS_ACTION_IDS.ReloadManagedSiteModelSyncChannels,
+                  }}
                 >
                   {t("execution.actions.refresh")}
                 </Button>
@@ -734,6 +889,11 @@ export default function ManagedSiteModelSync({
                 action={{
                   label: t("execution.manual.reload"),
                   onClick: () => void loadChannels(),
+                  analyticsAction: {
+                    ...manualPanelAnalyticsScope,
+                    actionId:
+                      PRODUCT_ANALYTICS_ACTION_IDS.ReloadManagedSiteModelSyncChannels,
+                  },
                 }}
               />
             )}

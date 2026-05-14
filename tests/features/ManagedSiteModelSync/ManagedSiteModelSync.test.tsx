@@ -13,6 +13,16 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import ManagedSiteModelSync from "~/features/ManagedSiteModelSync/ManagedSiteModelSync"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const {
@@ -20,12 +30,16 @@ const {
   mockUseUserPreferencesContext,
   mockShowWarningToast,
   mockOpenSettingsTab,
+  mockStartProductAnalyticsAction,
+  mockCompleteProductAnalyticsAction,
   loggerMocks,
 } = vi.hoisted(() => ({
   mockSendRuntimeMessage: vi.fn(),
   mockUseUserPreferencesContext: vi.fn(),
   mockShowWarningToast: vi.fn(),
   mockOpenSettingsTab: vi.fn(),
+  mockStartProductAnalyticsAction: vi.fn(),
+  mockCompleteProductAnalyticsAction: vi.fn(),
   loggerMocks: {
     error: vi.fn(),
     info: vi.fn(),
@@ -58,6 +72,11 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: unknown[]) =>
+    mockStartProductAnalyticsAction(...args),
+}))
+
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: mockUseUserPreferencesContext,
 }))
@@ -82,13 +101,97 @@ vi.mock("~/components/ManagedSiteChannelLinkButton", () => ({
   }) => <span>{`${channelName}#${channelId}`}</span>,
 }))
 
+vi.mock("~/components/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/components/ui")>()
+
+  return {
+    ...actual,
+    Button: ({
+      analyticsAction,
+      children,
+      leftIcon,
+      loading: _loading,
+      rightIcon,
+      ...props
+    }: any) => (
+      <button
+        type="button"
+        data-analytics-action={
+          analyticsAction
+            ? `${analyticsAction.featureId}:${analyticsAction.actionId}:${analyticsAction.surfaceId}:${analyticsAction.entrypoint}`
+            : undefined
+        }
+        {...props}
+      >
+        {leftIcon}
+        {children}
+        {rightIcon}
+      </button>
+    ),
+    EmptyState: ({ title, description, action, icon }: any) => (
+      <div>
+        {icon}
+        <div>{title}</div>
+        <div>{description}</div>
+        {action ? (
+          <button
+            type="button"
+            onClick={action.onClick}
+            data-analytics-action={
+              action.analyticsAction
+                ? `${action.analyticsAction.featureId}:${action.analyticsAction.actionId}:${action.analyticsAction.surfaceId}:${action.analyticsAction.entrypoint}`
+                : undefined
+            }
+          >
+            {action.label}
+          </button>
+        ) : null}
+      </div>
+    ),
+  }
+})
+
 function render(ui: ReactNode) {
   return rtlRender(<I18nextProvider i18n={testI18n}>{ui}</I18nextProvider>)
 }
 
+const manualPanelAnalyticsAction = (actionId: string) =>
+  [
+    PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+    actionId,
+    PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncManualPanel,
+    PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  ].join(":")
+
+const actionBarAnalyticsContext = (actionId: string) => ({
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+  actionId,
+  surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+})
+
+const manualPanelAnalyticsContext = (actionId: string) => ({
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+  actionId,
+  surfaceId:
+    PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncManualPanel,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+})
+
+const resultsTableAnalyticsContext = (actionId: string) => ({
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+  actionId,
+  surfaceId:
+    PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncResultsTable,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+})
+
 describe("ManagedSiteModelSync page", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    mockStartProductAnalyticsAction.mockReturnValue({
+      complete: mockCompleteProductAnalyticsAction,
+    })
     mockUseUserPreferencesContext.mockReturnValue({
       preferences: {
         managedSiteType: "new-api",
@@ -494,6 +597,23 @@ describe("ManagedSiteModelSync page", () => {
       )
     })
 
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      actionBarAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.SyncAllManagedSiteModels,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+          itemCount: 2,
+          successCount: 1,
+          failureCount: 1,
+        },
+      },
+    )
     expect(toast.success).not.toHaveBeenCalled()
   })
 
@@ -791,6 +911,25 @@ describe("ManagedSiteModelSync page", () => {
       )
       expect(screen.getByText("rate limited")).toBeInTheDocument()
     })
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      resultsTableAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.SyncSingleManagedSiteModel,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
+          selectedCount: 1,
+          itemCount: 1,
+          successCount: 0,
+          failureCount: 1,
+        },
+      },
+    )
   })
 
   it("supports selecting and clearing all manual rows", async () => {
@@ -802,11 +941,22 @@ describe("ManagedSiteModelSync page", () => {
     const [selectAllCheckbox] = screen.getAllByRole("checkbox")
     fireEvent.click(selectAllCheckbox)
 
+    const runSelectedButton = screen.getByRole("button", {
+      name: "managedSiteModelSync:execution.actions.runSelected (2)",
+    })
+    expect(runSelectedButton).toBeEnabled()
+    expect(runSelectedButton).not.toHaveAttribute("data-analytics-action")
+
     expect(
       screen.getByRole("button", {
-        name: "managedSiteModelSync:execution.actions.runSelected (2)",
+        name: "managedSiteModelSync:execution.actions.refresh",
       }),
-    ).toBeEnabled()
+    ).toHaveAttribute(
+      "data-analytics-action",
+      manualPanelAnalyticsAction(
+        PRODUCT_ANALYTICS_ACTION_IDS.ReloadManagedSiteModelSyncChannels,
+      ),
+    )
 
     const manualAlphaRow = screen.getByText("Manual Alpha#201").closest("tr")
     expect(manualAlphaRow).toBeTruthy()
@@ -862,11 +1012,80 @@ describe("ManagedSiteModelSync page", () => {
     })
 
     expect(toast.success).toHaveBeenCalled()
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      manualPanelAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteModels,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          selectedCount: 1,
+          itemCount: 1,
+          successCount: 1,
+          failureCount: 0,
+        },
+      },
+    )
     expect(
       screen.getByRole("button", {
         name: "managedSiteModelSync:execution.actions.runSelected (0)",
       }),
     ).toBeDisabled()
+  })
+
+  it("declares manual empty-state reload analytics metadata", async () => {
+    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
+      switch (message.action) {
+        case RuntimeActionIds.ModelSyncGetLastExecution:
+          return {
+            success: true,
+            data: {
+              items: [],
+              statistics: {
+                total: 0,
+                successCount: 0,
+                failureCount: 0,
+                durationMs: 0,
+                startedAt: 0,
+                endedAt: 0,
+              },
+            },
+          }
+        case RuntimeActionIds.ModelSyncGetProgress:
+          return {
+            success: true,
+            data: { isRunning: false, completed: 0, total: 0, failed: 0 },
+          }
+        case RuntimeActionIds.ModelSyncGetNextRun:
+          return { success: true, data: { nextScheduledAt: null } }
+        case RuntimeActionIds.ModelSyncGetPreferences:
+          return {
+            success: true,
+            data: { enableSync: true, intervalMs: 2 * 60 * 60 * 1000 },
+          }
+        case RuntimeActionIds.ModelSyncListChannels:
+          return { success: true, data: { items: [] } }
+        default:
+          return { success: true }
+      }
+    })
+
+    render(<ManagedSiteModelSync routeParams={{ tab: "manual" }} />)
+
+    expect(
+      await screen.findByRole("button", {
+        name: "managedSiteModelSync:execution.manual.reload",
+      }),
+    ).toHaveAttribute(
+      "data-analytics-action",
+      manualPanelAnalyticsAction(
+        PRODUCT_ANALYTICS_ACTION_IDS.ReloadManagedSiteModelSyncChannels,
+      ),
+    )
   })
 
   it("replaces the last execution snapshot when running all channels succeeds", async () => {
@@ -974,12 +1193,124 @@ describe("ManagedSiteModelSync page", () => {
       })
     })
 
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      actionBarAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.SyncAllManagedSiteModels,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+          itemCount: 2,
+          successCount: 2,
+          failureCount: 0,
+        },
+      },
+    )
     expect(toast.success).toHaveBeenCalled()
     await waitFor(() => {
       expect(screen.queryByText("failed")).not.toBeInTheDocument()
     })
     expect(screen.getByText("Alpha#101")).toBeInTheDocument()
     expect(screen.getByText("Beta#102")).toBeInTheDocument()
+  })
+
+  it("reports skipped analytics when running all channels has no executable work", async () => {
+    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ModelSyncTriggerAll) {
+        return {
+          success: true,
+          data: {
+            items: [],
+            statistics: {
+              total: 0,
+              successCount: 0,
+              failureCount: 0,
+              durationMs: 0,
+              startedAt: 1_700_000_010_000,
+              endedAt: 1_700_000_010_000,
+            },
+          },
+        }
+      }
+
+      return {
+        success: true,
+        data:
+          message.action === RuntimeActionIds.ModelSyncGetLastExecution
+            ? {
+                items: [
+                  {
+                    channelId: 101,
+                    channelName: "Alpha",
+                    ok: true,
+                    attempts: 1,
+                    finishedAt: 1_700_000_001_000,
+                  },
+                ],
+                statistics: {
+                  total: 1,
+                  successCount: 1,
+                  failureCount: 0,
+                  durationMs: 1000,
+                  startedAt: 1_700_000_000_000,
+                  endedAt: 1_700_000_001_000,
+                },
+              }
+            : message.action === RuntimeActionIds.ModelSyncGetProgress
+              ? { isRunning: false, completed: 0, total: 0, failed: 0 }
+              : message.action === RuntimeActionIds.ModelSyncGetNextRun
+                ? { nextScheduledAt: "2026-03-28T10:00:00.000Z" }
+                : message.action === RuntimeActionIds.ModelSyncGetPreferences
+                  ? {
+                      enableSync: true,
+                      intervalMs: 2 * 60 * 60 * 1000,
+                    }
+                  : message.action === RuntimeActionIds.ModelSyncListChannels
+                    ? {
+                        items: [
+                          { id: 201, name: "Manual Alpha" },
+                          { id: 202, name: "Manual Beta" },
+                        ],
+                      }
+                    : undefined,
+      }
+    })
+
+    render(<ManagedSiteModelSync />)
+
+    expect(await screen.findByText("Alpha#101")).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteModelSync:execution.actions.runAll",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+        action: RuntimeActionIds.ModelSyncTriggerAll,
+      })
+    })
+
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      actionBarAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.SyncAllManagedSiteModels,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+      {
+        insights: {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+          itemCount: 0,
+          successCount: 0,
+          failureCount: 0,
+        },
+      },
+    )
   })
 
   it("keeps the current execution snapshot when running all channels fails", async () => {
@@ -1062,6 +1393,15 @@ describe("ManagedSiteModelSync page", () => {
       )
     })
 
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      actionBarAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.SyncAllManagedSiteModels,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+    )
     expect(screen.getByText("failed")).toBeInTheDocument()
     expect(screen.getByText("Alpha#101")).toBeInTheDocument()
   })
@@ -1151,6 +1491,15 @@ describe("ManagedSiteModelSync page", () => {
       )
     })
 
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      actionBarAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteModels,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+    )
     expect(within(alphaRow!).getByRole("checkbox")).toBeChecked()
     expect(screen.getByText("failed")).toBeInTheDocument()
   })
@@ -1257,6 +1606,22 @@ describe("ManagedSiteModelSync page", () => {
       })
     })
 
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      actionBarAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.RetryFailedManagedSiteModelSync,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.RetryFailed,
+          itemCount: 2,
+          successCount: 2,
+          failureCount: 0,
+        },
+      },
+    )
     expect(toast.success).toHaveBeenCalled()
     await waitFor(() => {
       expect(screen.queryByText("failed")).not.toBeInTheDocument()
@@ -1335,6 +1700,24 @@ describe("ManagedSiteModelSync page", () => {
         channelIds: [201],
       })
     })
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      resultsTableAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.SyncSingleManagedSiteModel,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
+          selectedCount: 1,
+          itemCount: 1,
+          successCount: 1,
+          failureCount: 0,
+        },
+      },
+    )
     expect(toast.success).toHaveBeenCalled()
 
     fireEvent.click(

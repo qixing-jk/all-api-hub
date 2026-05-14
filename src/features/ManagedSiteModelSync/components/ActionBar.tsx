@@ -2,6 +2,17 @@ import { ArrowPathIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
 import { Button } from "~/components/ui"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
+
+const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
+const actionBarSurface =
+  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar
 
 interface ActionBarProps {
   isRunning: boolean
@@ -39,38 +50,47 @@ export default function ActionBar({
   const { t } = useTranslation("managedSiteModelSync")
 
   return (
-    <div className="flex flex-wrap gap-3">
-      <Button
-        onClick={onRunAll}
-        variant="default"
-        disabled={isRunning}
-        leftIcon={<ArrowPathIcon className="h-4 w-4" />}
-      >
-        {t("execution.actions.runAll")}
-      </Button>
-      <Button
-        onClick={onRunSelected}
-        variant="secondary"
-        disabled={isRunning || selectedCount === 0}
-      >
-        {t("execution.actions.runSelected")} ({selectedCount})
-      </Button>
-      <Button
-        onClick={onRetryFailed}
-        variant="outline"
-        disabled={isRunning || failedCount === 0}
-      >
-        {t("execution.actions.retryFailed")}
-      </Button>
-      <Button
-        onClick={onRefresh}
-        variant="ghost"
-        disabled={isRunning || isRefreshing === true}
-        loading={isRefreshing}
-        leftIcon={<ArrowPathIcon className="h-4 w-4" />}
-      >
-        {t("execution.actions.refresh")}
-      </Button>
-    </div>
+    <ProductAnalyticsScope
+      entrypoint={optionsEntrypoint}
+      featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync}
+      surfaceId={actionBarSurface}
+    >
+      <div className="flex flex-wrap gap-3">
+        <Button
+          onClick={onRunAll}
+          variant="default"
+          disabled={isRunning}
+          leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+        >
+          {t("execution.actions.runAll")}
+        </Button>
+        <Button
+          onClick={onRunSelected}
+          variant="secondary"
+          disabled={isRunning || selectedCount === 0}
+        >
+          {t("execution.actions.runSelected")} ({selectedCount})
+        </Button>
+        <Button
+          onClick={onRetryFailed}
+          variant="outline"
+          disabled={isRunning || failedCount === 0}
+        >
+          {t("execution.actions.retryFailed")}
+        </Button>
+        <Button
+          onClick={onRefresh}
+          variant="ghost"
+          disabled={isRunning || isRefreshing === true}
+          loading={isRefreshing}
+          leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+          analyticsAction={
+            PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteModelSyncResults
+          }
+        >
+          {t("execution.actions.refresh")}
+        </Button>
+      </div>
+    </ProductAnalyticsScope>
   )
 }

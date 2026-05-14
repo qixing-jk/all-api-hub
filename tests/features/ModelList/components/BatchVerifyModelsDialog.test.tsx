@@ -9,6 +9,14 @@ import {
   deriveBatchVerifyRowStatus,
   getBatchVerifyFailureLogIds,
 } from "~/features/ModelList/components/BatchVerifyModelsDialog"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -17,16 +25,22 @@ const {
   mockGetApiVerificationProbeDefinitions,
   mockResolveDisplayAccountTokenForSecret,
   mockRunApiVerificationProbe,
+  mockStartProductAnalyticsAction,
+  mockCompleteProductAnalyticsAction,
   mockTotalListHeightChanged,
+  mockTrackProductAnalyticsActionStarted,
   mockUpsertLatestSummary,
 } = vi.hoisted(() => ({
   mockFetchDisplayAccountTokens: vi.fn(),
   mockGetApiVerificationProbeDefinitions: vi.fn(),
   mockResolveDisplayAccountTokenForSecret: vi.fn(),
   mockRunApiVerificationProbe: vi.fn(),
+  mockStartProductAnalyticsAction: vi.fn(),
+  mockCompleteProductAnalyticsAction: vi.fn(),
   mockTotalListHeightChanged: {
     current: undefined as undefined | ((height: number) => void),
   },
+  mockTrackProductAnalyticsActionStarted: vi.fn(),
   mockUpsertLatestSummary: vi.fn(),
 }))
 
@@ -91,6 +105,13 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
   }
 })
 
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: any[]) =>
+    mockStartProductAnalyticsAction(...args),
+  trackProductAnalyticsActionStarted: (...args: any[]) =>
+    mockTrackProductAnalyticsActionStarted(...args),
+}))
+
 vi.mock(
   "~/services/verification/verificationResultHistory",
   async (importOriginal) => {
@@ -132,7 +153,13 @@ describe("BatchVerifyModelsDialog", () => {
     mockGetApiVerificationProbeDefinitions.mockReset()
     mockResolveDisplayAccountTokenForSecret.mockReset()
     mockRunApiVerificationProbe.mockReset()
+    mockStartProductAnalyticsAction.mockReset()
+    mockCompleteProductAnalyticsAction.mockReset()
+    mockStartProductAnalyticsAction.mockReturnValue({
+      complete: mockCompleteProductAnalyticsAction,
+    })
     mockTotalListHeightChanged.current = undefined
+    mockTrackProductAnalyticsActionStarted.mockReset()
     mockUpsertLatestSummary.mockReset()
     mockUpsertLatestSummary.mockImplementation(async (summary) => summary)
   })
@@ -492,6 +519,13 @@ describe("BatchVerifyModelsDialog", () => {
       }),
     )
 
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.StartBatchModelVerify,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListBatchVerifyDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
     const stopButton = await screen.findByRole("button", {
       name: "modelList:batchVerify.actions.stop",
     })
@@ -500,9 +534,21 @@ describe("BatchVerifyModelsDialog", () => {
     })
 
     fireEvent.click(stopButton)
+    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.StopBatchModelVerify,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListBatchVerifyDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
 
     await waitFor(() => {
       expect(receivedSignal?.aborted).toBe(true)
+    })
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Cancelled,
+      )
     })
     expect(
       await screen.findByText("modelList:batchVerify.messages.stopped"),
@@ -513,6 +559,147 @@ describe("BatchVerifyModelsDialog", () => {
       }),
     ).toBeEnabled()
     expect(mockUpsertLatestSummary).not.toHaveBeenCalled()
+  })
+
+  it("completes batch verification analytics as success when selected probes pass", async () => {
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "pass",
+      latencyMs: 12,
+      summary: "Text generation succeeded",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+      )
+    })
+  })
+
+  it("completes batch verification analytics as failure when a probe fails", async () => {
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockResolvedValueOnce({
+      id: "text-generation",
+      status: "fail",
+      latencyMs: 12,
+      summary: "Request failed",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      )
+    })
+  })
+
+  it("completes batch verification analytics as skipped when no compatible token exists", async () => {
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "vip-token",
+        key: "masked",
+        status: 1,
+        group: "vip",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+      )
+    })
   })
 
   it("records probe errors and continues when history persistence fails", async () => {
@@ -696,6 +883,13 @@ describe("BatchVerifyModelsDialog", () => {
       }),
     )
 
+    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ToggleBatchModelSelection,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListBatchVerifyDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
     expect(
       screen.getByRole("button", {
         name: "modelList:batchVerify.actions.start",
@@ -710,6 +904,13 @@ describe("BatchVerifyModelsDialog", () => {
         name: "modelList:batchVerify.modelSelection.selectAll",
       }),
     )
+    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ToggleBatchModelSelection,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListBatchVerifyDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
     expect(
       screen.getByRole("button", {
         name: "modelList:batchVerify.actions.start",

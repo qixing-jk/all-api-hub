@@ -10,6 +10,12 @@ import {
   createProfileSource,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
 import { render, screen } from "~~/tests/test-utils/render"
@@ -17,6 +23,7 @@ import { render, screen } from "~~/tests/test-utils/render"
 const mockUseModelListData = vi.fn()
 const mockSetAllAccountsFilterAccountIds = vi.fn()
 const mockAccountSelector = vi.fn()
+const mockTrackProductAnalyticsActionStarted = vi.fn()
 
 vi.mock("~/features/ModelList/hooks/useModelListData", () => ({
   useModelListData: (...args: any[]) => mockUseModelListData(...args),
@@ -39,6 +46,11 @@ vi.mock("~/services/verification/verificationResultHistory", () => ({
   useVerificationResultHistorySummaries: vi.fn(() => ({
     summariesByKey: {},
   })),
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionStarted: (...args: any[]) =>
+    mockTrackProductAnalyticsActionStarted(...args),
 }))
 
 const ACCOUNT = {
@@ -332,6 +344,7 @@ describe("ModelList page flows", () => {
     mockAccountSelector.mockReset()
     mockSetAllAccountsFilterAccountIds.mockReset()
     mockUseModelListData.mockReset()
+    mockTrackProductAnalyticsActionStarted.mockReset()
   })
 
   it("renders the status indicator when a source is selected but model data is still missing", async () => {
@@ -713,6 +726,12 @@ describe("ModelList page flows", () => {
     )
 
     expect(loadPricingData).toHaveBeenCalledTimes(1)
+    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshModelPricingData,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
   })
 
   it("keeps the page-level refresh action disabled while loading", async () => {

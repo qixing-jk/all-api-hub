@@ -8,6 +8,14 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "~/components/ui/dropdown-menu"
+import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsActionId,
+} from "~/services/productAnalytics/events"
 
 import type { ChannelRow, RowActionsLabels } from "../types"
 
@@ -25,6 +33,18 @@ interface RowActionsProps {
   showNewApiOnlyActions?: boolean
   isSyncing: boolean
   labels: RowActionsLabels
+}
+
+const trackManagedSiteChannelRowAction = (
+  actionId: ProductAnalyticsActionId,
+) => {
+  void trackProductAnalyticsActionStarted({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+    actionId,
+    surfaceId:
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  })
 }
 
 /**
@@ -63,12 +83,24 @@ export default function RowActions({
       <DropdownMenuContent align="end" className="w-44">
         {showMigrationAction ? (
           <>
-            <DropdownMenuItem onClick={() => onView(channel)}>
+            <DropdownMenuItem
+              onClick={() => {
+                onView(channel)
+                trackManagedSiteChannelRowAction(
+                  PRODUCT_ANALYTICS_ACTION_IDS.ViewManagedSiteChannel,
+                )
+              }}
+            >
               {labels.view}
             </DropdownMenuItem>
             <DropdownMenuSeparator />
             <DropdownMenuItem
-              onClick={() => onMigrate(channel)}
+              onClick={() => {
+                onMigrate(channel)
+                trackManagedSiteChannelRowAction(
+                  PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelMigration,
+                )
+              }}
               disabled={!canMigrate}
             >
               {labels.migrate}
@@ -76,20 +108,43 @@ export default function RowActions({
           </>
         ) : (
           <>
-            <DropdownMenuItem onClick={() => onEdit(channel)}>
+            <DropdownMenuItem
+              onClick={() => {
+                onEdit(channel)
+                trackManagedSiteChannelRowAction(
+                  PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteChannel,
+                )
+              }}
+            >
               {labels.edit}
             </DropdownMenuItem>
             {showNewApiOnlyActions ? (
               <>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={() => onFilters(channel)}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    onFilters(channel)
+                    trackManagedSiteChannelRowAction(
+                      PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelFilters,
+                    )
+                  }}
+                >
                   {labels.filters}
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={() => void onOpenSync(channel.id)}>
+                <DropdownMenuItem
+                  onClick={() => {
+                    void onOpenSync(channel.id)
+                    trackManagedSiteChannelRowAction(
+                      PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelModelSync,
+                    )
+                  }}
+                >
                   {labels.openSync}
                 </DropdownMenuItem>
                 <DropdownMenuItem
-                  onClick={() => onSync([channel.id])}
+                  onClick={() => {
+                    onSync([channel.id])
+                  }}
                   disabled={isSyncing}
                 >
                   {isSyncing ? labels.syncing : labels.sync}
@@ -99,7 +154,9 @@ export default function RowActions({
             <DropdownMenuSeparator />
             <DropdownMenuItem
               className="text-destructive focus:text-destructive"
-              onClick={() => onDelete([channel.id])}
+              onClick={() => {
+                onDelete([channel.id])
+              }}
             >
               {labels.delete}
             </DropdownMenuItem>

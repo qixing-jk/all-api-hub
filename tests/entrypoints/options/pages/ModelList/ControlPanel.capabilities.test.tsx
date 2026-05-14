@@ -5,12 +5,23 @@ import { MODEL_LIST_BILLING_MODES } from "~/features/ModelList/billingModes"
 import { ControlPanel } from "~/features/ModelList/components/ControlPanel"
 import { createProfileSource } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
-const { toastErrorMock, toastSuccessMock } = vi.hoisted(() => ({
+const {
+  toastErrorMock,
+  toastSuccessMock,
+  trackProductAnalyticsActionStartedMock,
+} = vi.hoisted(() => ({
   toastErrorMock: vi.fn(),
   toastSuccessMock: vi.fn(),
+  trackProductAnalyticsActionStartedMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -18,6 +29,11 @@ vi.mock("react-hot-toast", () => ({
     error: toastErrorMock,
     success: toastSuccessMock,
   },
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionStarted: (...args: any[]) =>
+    trackProductAnalyticsActionStartedMock(...args),
 }))
 
 describe("ControlPanel profile capabilities", () => {
@@ -183,6 +199,12 @@ describe("ControlPanel profile capabilities", () => {
         "gpt-4o-mini,claude-3-5-sonnet",
       ),
     )
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyVisibleModelNames,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
     expect(toast.success).toHaveBeenCalledWith(
       "modelList:messages.modelNamesCopied",
     )
@@ -279,6 +301,12 @@ describe("ControlPanel profile capabilities", () => {
     )
 
     expect(onBatchVerifyModels).toHaveBeenCalledTimes(1)
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenBatchModelVerifyDialog,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
   })
 
   it("disables the batch verification action when no filtered models are visible", async () => {
