@@ -1,7 +1,9 @@
 import { cva, type VariantProps } from "class-variance-authority"
 import React from "react"
 
+import { useProductAnalyticsActionTracking } from "~/hooks/useProductAnalyticsActionTracking"
 import { cn } from "~/lib/utils"
+import type { ProductAnalyticsScopedActionConfig } from "~/services/productAnalytics/actionConfig"
 
 const iconButtonVariants = cva(
   "inline-flex items-center justify-center rounded-md transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:opacity-50 disabled:pointer-events-none ring-offset-background",
@@ -43,20 +45,47 @@ export interface IconButtonProps
     VariantProps<typeof iconButtonVariants> {
   loading?: boolean
   "aria-label": string
+  analyticsAction?: ProductAnalyticsScopedActionConfig
 }
 
 const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
   (
-    { className, variant, size, loading, children, disabled, ...props },
+    {
+      className,
+      variant,
+      size,
+      loading,
+      children,
+      disabled,
+      analyticsAction,
+      onClick,
+      ...props
+    },
     ref,
   ) => {
     const isDisabled = disabled || loading
+    const analytics = useProductAnalyticsActionTracking({
+      analyticsAction,
+      disabled: Boolean(isDisabled),
+    })
+    const trackingProps = analytics.getActionTrackingProps()
+
+    const handleClick: React.MouseEventHandler<HTMLButtonElement> = (event) => {
+      onClick?.(event)
+
+      if (isDisabled || !analyticsAction) {
+        return
+      }
+
+      trackingProps.onClick(event)
+    }
 
     return (
       <button
         className={cn(iconButtonVariants({ variant, size, className }))}
         ref={ref}
         disabled={isDisabled}
+        onClick={handleClick}
         {...props}
       >
         {loading ? (
