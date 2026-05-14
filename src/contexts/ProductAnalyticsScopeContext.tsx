@@ -6,13 +6,11 @@ import type {
   ProductAnalyticsSurfaceId,
 } from "~/services/productAnalytics/events"
 
-export type ProductAnalyticsScopeValue = {
+type ProductAnalyticsScopeValue = {
   entrypoint?: ProductAnalyticsEntrypoint
   featureId?: ProductAnalyticsFeatureId
   surfaceId?: ProductAnalyticsSurfaceId
 }
-
-export type ProductAnalyticsScopeContext = ProductAnalyticsScopeValue
 
 type ProductAnalyticsScopeProps = ProductAnalyticsScopeValue & {
   children: ReactNode

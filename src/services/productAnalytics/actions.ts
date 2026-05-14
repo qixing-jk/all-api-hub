@@ -15,8 +15,6 @@ import { bucketCount, bucketDurationMs } from "./privacy"
 export {
   resolveProductAnalyticsActionContext,
   type ProductAnalyticsActionContext,
-  type ProductAnalyticsActionScope,
-  type ProductAnalyticsScopedActionConfig,
 } from "./actionConfig"
 
 type ProductAnalyticsActionCompletion = ProductAnalyticsActionContext & {

@@ -27,7 +27,7 @@ export type ProductAnalyticsScopedActionConfig =
       entrypoint?: ProductAnalyticsEntrypoint
     }
 
-export type ProductAnalyticsActionScope = Partial<
+type ProductAnalyticsActionScope = Partial<
   Pick<ProductAnalyticsActionContext, "featureId" | "surfaceId" | "entrypoint">
 >
 
