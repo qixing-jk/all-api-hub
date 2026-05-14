@@ -235,4 +235,35 @@ describe("background context menu refresh", () => {
       },
     )
   })
+
+  it("does not classify tracker completion failures as forwarding failures", async () => {
+    trackerCompleteMock.mockRejectedValueOnce(
+      new Error("analytics unavailable"),
+    )
+    const { refreshContextMenus } = await import(
+      "~/entrypoints/background/contextMenus"
+    )
+
+    await refreshContextMenus({
+      redemptionAssist: { enabled: true, contextMenu: { enabled: true } },
+      webAiApiCheck: { enabled: true, contextMenu: { enabled: true } },
+    } as any)
+
+    await Promise.all(
+      listeners.map((listener) =>
+        listener(
+          {
+            menuItemId: "ai-api-check-context-menu",
+            selectionText: "sk-test",
+            pageUrl: "https://example.com",
+          },
+          { id: 123, url: "https://example.com" },
+        ),
+      ),
+    )
+
+    expect(tabsSendMessage).toHaveBeenCalledTimes(1)
+    expect(trackerCompleteMock).toHaveBeenCalledTimes(1)
+    expect(trackerCompleteMock).toHaveBeenCalledWith()
+  })
 })

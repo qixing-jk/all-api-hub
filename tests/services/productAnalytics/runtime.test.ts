@@ -295,14 +295,14 @@ describe("product analytics runtime", () => {
     expect(captureMock).toHaveBeenCalledTimes(1)
 
     secondCleanup()
-    expect(removeListener).not.toHaveBeenCalled()
+    expect(removeListener).toHaveBeenCalledTimes(1)
+    expect(removeListener).toHaveBeenCalledWith(handler)
 
     handler({ site_accounts: {} }, "local")
     firstCleanup()
     await vi.advanceTimersByTimeAsync(2_000)
 
     expect(removeListener).toHaveBeenCalledTimes(1)
-    expect(removeListener).toHaveBeenCalledWith(handler)
     expect(captureMock).toHaveBeenCalledTimes(1)
   })
 })

@@ -4,7 +4,9 @@ import { POPUP_PAGE_PATH } from "~/constants/extensionPages"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 
@@ -149,5 +151,57 @@ describe("background applyActionClickBehavior", () => {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
     })
     expect(trackerComplete).toHaveBeenCalledWith()
+  })
+
+  it("does not let tracker completion failures break successful toolbar clicks", async () => {
+    getSidePanelSupport.mockReturnValue({
+      supported: true,
+      kind: "chromium-side-panel",
+    })
+    trackerComplete.mockRejectedValueOnce(new Error("analytics unavailable"))
+
+    const { applyActionClickBehavior } = await import(
+      "~/entrypoints/background/actionClickBehavior"
+    )
+
+    await applyActionClickBehavior("sidepanel")
+
+    const clickHandler = addActionClickListener.mock.calls[0]?.[0]
+
+    await expect(
+      clickHandler?.({ id: 123, windowId: 456 } as browser.tabs.Tab),
+    ).resolves.toBeUndefined()
+
+    expect(openSidePanelWithFallback).toHaveBeenCalledTimes(1)
+    expect(trackerComplete).toHaveBeenCalledWith()
+  })
+
+  it("preserves side-panel failures when failure tracking also fails", async () => {
+    getSidePanelSupport.mockReturnValue({
+      supported: true,
+      kind: "chromium-side-panel",
+    })
+    const sidePanelError = new Error("side panel unavailable")
+    openSidePanelWithFallback.mockRejectedValueOnce(sidePanelError)
+    trackerComplete.mockRejectedValueOnce(new Error("analytics unavailable"))
+
+    const { applyActionClickBehavior } = await import(
+      "~/entrypoints/background/actionClickBehavior"
+    )
+
+    await applyActionClickBehavior("sidepanel")
+
+    const clickHandler = addActionClickListener.mock.calls[0]?.[0]
+
+    await expect(
+      clickHandler?.({ id: 123, windowId: 456 } as browser.tabs.Tab),
+    ).rejects.toThrow(sidePanelError)
+
+    expect(trackerComplete).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
   })
 })

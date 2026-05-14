@@ -774,6 +774,8 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
     )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledTimes(1)
+    expect(mockCompleteProductAnalyticsAction.mock.calls[0]).toHaveLength(1)
     expect(mockStartProductAnalyticsAction).not.toHaveBeenCalledWith(
       expect.objectContaining({
         url: expect.anything(),

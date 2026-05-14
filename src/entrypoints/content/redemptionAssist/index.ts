@@ -426,9 +426,11 @@ async function trackConfirmRedemptionPromptCompleted(
   const successCount = results.filter((item) => item.success).length
   const failureCount = results.length - successCount
   const result =
-    results.length > 0 && failureCount === 0
-      ? PRODUCT_ANALYTICS_RESULTS.Success
-      : PRODUCT_ANALYTICS_RESULTS.Failure
+    results.length === 0
+      ? PRODUCT_ANALYTICS_RESULTS.Skipped
+      : failureCount === 0
+        ? PRODUCT_ANALYTICS_RESULTS.Success
+        : PRODUCT_ANALYTICS_RESULTS.Failure
 
   await trackProductAnalyticsActionCompleted({
     featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,

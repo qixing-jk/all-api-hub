@@ -22,9 +22,7 @@ export function detectBrowserFamily(userAgent?: string): BrowserFamily {
   const normalizedUserAgent = ua.toLowerCase()
 
   if (normalizedUserAgent.includes("firefox/")) return "firefox"
-  if (isEdgeUserAgent(ua) || normalizedUserAgent.includes("edge/")) {
-    return "edge"
-  }
+  if (isEdgeUserAgent(ua)) return "edge"
   if (
     normalizedUserAgent.includes("chrome/") ||
     normalizedUserAgent.includes("chromium/")

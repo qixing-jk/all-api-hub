@@ -883,7 +883,7 @@ describe("BatchVerifyModelsDialog", () => {
       }),
     )
 
-    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledWith({
+    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenNthCalledWith(1, {
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.ToggleBatchModelSelection,
       surfaceId:
@@ -904,13 +904,14 @@ describe("BatchVerifyModelsDialog", () => {
         name: "modelList:batchVerify.modelSelection.selectAll",
       }),
     )
-    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledWith({
+    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenNthCalledWith(2, {
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.ToggleBatchModelSelection,
       surfaceId:
         PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListBatchVerifyDialog,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
+    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledTimes(2)
     expect(
       screen.getByRole("button", {
         name: "modelList:batchVerify.actions.start",

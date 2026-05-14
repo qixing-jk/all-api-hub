@@ -124,6 +124,40 @@ describe("ProductAnalyticsSettings", () => {
     expect(trackMock).not.toHaveBeenCalled()
   })
 
+  it("keeps the switch usable when the initial preference read rejects", async () => {
+    preferenceMocks.isEnabled.mockRejectedValue(new Error("storage failed"))
+
+    render(<ProductAnalyticsSettings />)
+
+    const switchControl = await screen.findByRole("switch")
+
+    await waitFor(() => {
+      expect(switchControl).toBeEnabled()
+      expect(switchControl).toHaveAttribute("aria-checked", "false")
+    })
+  })
+
+  it("reverts state and shows a failure toast when preference persistence throws", async () => {
+    preferenceMocks.setEnabled.mockRejectedValue(new Error("storage failed"))
+    render(<ProductAnalyticsSettings />)
+
+    const switchControl = await findLoadedSwitch(true)
+    fireEvent.click(switchControl)
+
+    await waitFor(() => {
+      expect(preferenceMocks.setEnabled).toHaveBeenCalledWith(false)
+    })
+    await waitFor(() => {
+      expect(switchControl).toBeEnabled()
+      expect(switchControl).toHaveAttribute("aria-checked", "true")
+    })
+    expect(showUpdateToastMock).toHaveBeenCalledWith(
+      false,
+      "settings:productAnalytics.enableLabel",
+    )
+    expect(trackMock).not.toHaveBeenCalled()
+  })
+
   it("prevents overlapping preference writes while a save is pending", async () => {
     let resolveSetEnabled: (success: boolean) => void = () => {}
     preferenceMocks.setEnabled.mockReturnValue(

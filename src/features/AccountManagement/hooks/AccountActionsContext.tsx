@@ -35,6 +35,21 @@ import { useAccountDataContext } from "./AccountDataContext"
  * Unified logger scoped to account action handlers (refresh, check-in, external flows).
  */
 const logger = createLogger("AccountActionsContext")
+type AccountActionTracker = ReturnType<typeof startProductAnalyticsAction>
+
+/**
+ * Starts account-action analytics without letting telemetry initialization abort the user flow.
+ */
+function startAccountActionTrackerBestEffort(
+  context: ProductAnalyticsActionContext,
+): AccountActionTracker | null {
+  try {
+    return startProductAnalyticsAction(context)
+  } catch (error) {
+    logger.warn("Failed to start product analytics action", error)
+    return null
+  }
+}
 
 // 1. 定义 Context 的值类型
 interface AccountActionsContextType {
@@ -91,7 +106,7 @@ export const AccountActionsProvider = ({
       if (account.disabled === true) return
 
       setRefreshingAccountId(account.id)
-      const tracker = startProductAnalyticsAction({
+      const tracker = startAccountActionTrackerBestEffort({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccount,
         surfaceId:
@@ -101,8 +116,10 @@ export const AccountActionsProvider = ({
       let analyticsCompleted = false
       const completeRefreshAnalytics = async (
         result: ProductAnalyticsResult,
-        options?: Parameters<typeof tracker.complete>[1],
+        options?: Parameters<AccountActionTracker["complete"]>[1],
       ) => {
+        if (!tracker) return
+
         analyticsCompleted = true
         try {
           if (options) {
@@ -323,7 +340,7 @@ export const AccountActionsProvider = ({
       },
     ) => {
       const tracker = options?.analyticsContext
-        ? startProductAnalyticsAction(options.analyticsContext)
+        ? startAccountActionTrackerBestEffort(options.analyticsContext)
         : undefined
       let analyticsCompleted = false
       const completeExternalCheckInAnalytics = async (

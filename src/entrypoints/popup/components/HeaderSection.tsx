@@ -119,7 +119,7 @@ export default function HeaderSection({
     })
 
     try {
-      await toast.promise(handleRefresh(true), {
+      const result = await toast.promise(handleRefresh(true), {
         loading: t("account:refresh.refreshingAll"),
         success: (result) => {
           if (result.failed > 0) {
@@ -132,6 +132,13 @@ export default function HeaderSection({
         },
         error: t("account:refresh.refreshFailed"),
       })
+      if (result.failed > 0) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
+        return
+      }
+
       await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       logger.error("Error during global refresh", error)

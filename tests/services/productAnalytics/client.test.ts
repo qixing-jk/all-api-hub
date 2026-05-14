@@ -120,7 +120,6 @@ describe("productAnalyticsClient", () => {
       save_campaign_params: false,
       disable_session_recording: true,
       disable_external_dependency_loading: true,
-      persistence: "memory",
       disable_persistence: true,
       bootstrap: {
         distinctID: "analytics-123",
@@ -166,7 +165,6 @@ describe("productAnalyticsClient", () => {
     ).resolves.toBe(true)
 
     expect(posthogMocks.capture).toHaveBeenCalledWith("page_viewed", {
-      distinct_id: "analytics-123",
       app_version: "3.37.0",
       browser_family: "chromium",
       ui_language: "en-US",
@@ -189,7 +187,6 @@ describe("productAnalyticsClient", () => {
     ).resolves.toBe(true)
 
     expect(posthogMocks.capture).toHaveBeenCalledWith("app_opened", {
-      distinct_id: "analytics-development",
       app_version: "3.37.0",
       browser_family: "chromium",
       ui_language: "en-US",
@@ -220,7 +217,6 @@ describe("productAnalyticsClient", () => {
     expect(posthogMocks.capture).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_EVENTS.SiteEcosystemSnapshot,
       {
-        distinct_id: "analytics-123",
         app_version: "3.37.0",
         browser_family: "chromium",
         ui_language: "en-US",
@@ -290,7 +286,6 @@ describe("productAnalyticsClient", () => {
 
     expect(posthogMocks.init).toHaveBeenCalledTimes(1)
     expect(posthogMocks.capture).toHaveBeenCalledWith("app_opened", {
-      distinct_id: "analytics-locked",
       app_version: "3.37.0",
       browser_family: "chromium",
       ui_language: "en-US",
@@ -315,7 +310,6 @@ describe("productAnalyticsClient", () => {
 
     expect(getPostHogConfig().before_send).toBeUndefined()
     expect(posthogMocks.capture).toHaveBeenCalledWith("page_viewed", {
-      distinct_id: "analytics-123",
       app_version: "3.37.0",
       browser_family: "chromium",
       ui_language: "en-US",

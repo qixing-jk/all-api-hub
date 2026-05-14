@@ -102,4 +102,26 @@ describe("IconButton", () => {
 
     expect(trackStartedMock).not.toHaveBeenCalled()
   })
+
+  it("does not track when the click handler prevents the default action", () => {
+    render(
+      <IconButton
+        aria-label="Prevented action"
+        onClick={(event) => {
+          event.preventDefault()
+        }}
+        analyticsAction={{
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialBundle,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        }}
+      >
+        <span>Copy</span>
+      </IconButton>,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Prevented action" }))
+
+    expect(trackStartedMock).not.toHaveBeenCalled()
+  })
 })

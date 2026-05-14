@@ -570,7 +570,7 @@ export function VerifyApiCredentialProfileDialog({
         return
       }
 
-      const hasFailedProbe = results.some((result) => result.status === "fail")
+      const hasFailedProbe = results.some((result) => result.status !== "pass")
       if (hasFailedProbe) {
         await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,

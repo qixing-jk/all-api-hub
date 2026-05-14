@@ -73,7 +73,7 @@ const IconButton = React.forwardRef<HTMLButtonElement, IconButtonProps>(
     const handleClick: React.MouseEventHandler<HTMLButtonElement> = (event) => {
       onClick?.(event)
 
-      if (isDisabled || !analyticsAction) {
+      if (event.defaultPrevented || isDisabled || !analyticsAction) {
         return
       }
 

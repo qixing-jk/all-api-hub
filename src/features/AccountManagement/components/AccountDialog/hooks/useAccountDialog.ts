@@ -1209,7 +1209,7 @@ export function useAccountDialog({
     skipSub2ApiKeyPrompt?: boolean
     skipAutoProvisionKeyOnAccountAdd?: boolean
   }) => {
-    const analyticsAction = startProductAnalyticsAction({
+    const analyticsAction = startAccountSaveAnalyticsActionBestEffort({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
       actionId:
         mode === DIALOG_MODES.ADD
@@ -2123,10 +2123,12 @@ function normalizeSiteUrlForDuplicateCheck(params: {
  * Keeps analytics best-effort so telemetry failures cannot alter account saves.
  */
 async function completeAccountSaveAnalyticsAction(
-  tracker: ReturnType<typeof startProductAnalyticsAction>,
+  tracker: ReturnType<typeof startProductAnalyticsAction> | null,
   result: ProductAnalyticsResult,
   options?: ProductAnalyticsActionCompleteOptions,
 ) {
+  if (!tracker) return
+
   try {
     if (options) {
       await tracker.complete(result, options)
@@ -2136,6 +2138,20 @@ async function completeAccountSaveAnalyticsAction(
     await tracker.complete(result)
   } catch {
     // Product analytics must never block account creation or updates.
+  }
+}
+
+/**
+ * Starts account-save analytics without letting telemetry initialization abort the save flow.
+ */
+function startAccountSaveAnalyticsActionBestEffort(
+  context: Parameters<typeof startProductAnalyticsAction>[0],
+) {
+  try {
+    return startProductAnalyticsAction(context)
+  } catch (error) {
+    logger.warn("Failed to start product analytics action", error)
+    return null
   }
 }
 

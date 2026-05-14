@@ -194,6 +194,23 @@ const completeQuickCheckinAnalytics = async (
   }
 }
 
+const completeProductAnalyticsBestEffort = async (
+  tracker: ProductAnalyticsActionTracker,
+  result: ProductAnalyticsResult,
+  options?: Parameters<ProductAnalyticsActionTracker["complete"]>[1],
+) => {
+  try {
+    if (options) {
+      await tracker.complete(result, options)
+      return
+    }
+
+    await tracker.complete(result)
+  } catch {
+    // Product analytics must not block account row actions.
+  }
+}
+
 const getLocateManagedSiteChannelToastMessage = (
   t: TFunction,
   inspection: ManagedSiteChannelMatchInspection,
@@ -276,7 +293,6 @@ export default function AccountActionButtons({
   const PinToggleIcon = isPinned ? PinOffIcon : PinIcon
 
   const handleTogglePin = async (e?: React.MouseEvent) => {
-    e?.preventDefault()
     e?.stopPropagation()
     const success = await togglePinAccount(site.id)
     if (success) {
@@ -293,7 +309,6 @@ export default function AccountActionButtons({
 
   // Smart copy key logic - check token count before deciding action
   const handleSmartCopyKey = async (e: React.MouseEvent) => {
-    e.preventDefault()
     e.stopPropagation()
 
     if (isCheckingTokens) return
@@ -555,7 +570,10 @@ export default function AccountActionButtons({
 
     if (isAccountDisabled) {
       toast.error(t("messages:toast.error.shareSnapshotAccountDisabled"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+      await completeProductAnalyticsBestEffort(
+        tracker,
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+      )
       return
     }
 
@@ -582,7 +600,10 @@ export default function AccountActionButtons({
 
     try {
       await exportShareSnapshotWithToast({ payload })
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      await completeProductAnalyticsBestEffort(
+        tracker,
+        PRODUCT_ANALYTICS_RESULTS.Success,
+      )
     } catch (error) {
       logger.error("Failed to export account share snapshot", {
         diagnostic: toSanitizedErrorSummary(
@@ -594,13 +615,17 @@ export default function AccountActionButtons({
         siteId: site.id,
         siteType: site.siteType,
       })
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
       toast.error(
         t("messages:toast.error.operationFailed", {
           error: getErrorMessage(error),
         }),
+      )
+      await completeProductAnalyticsBestEffort(
+        tracker,
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        },
       )
     }
   }
@@ -733,7 +758,6 @@ export default function AccountActionButtons({
 
         <IconButton
           onClick={(e) => {
-            e.preventDefault()
             e.stopPropagation()
             openEditAccount(site)
           }}

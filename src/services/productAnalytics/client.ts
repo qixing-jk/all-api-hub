@@ -53,7 +53,6 @@ function initializePostHog(config: PostHogConfig, distinctId: string) {
     save_campaign_params: false,
     disable_session_recording: true,
     disable_external_dependency_loading: true,
-    persistence: "memory",
     disable_persistence: true,
     bootstrap: {
       distinctID: distinctId,
@@ -134,7 +133,6 @@ async function captureWithAnonymousId(
       initializePostHog(capture.config, distinctId)
 
       posthog.capture(eventName, {
-        distinct_id: distinctId,
         ...buildSharedContext(),
         ...capture.properties,
       })

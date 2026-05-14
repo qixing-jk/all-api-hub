@@ -30,11 +30,20 @@ export default function ProductAnalyticsSettings() {
   useEffect(() => {
     let mounted = true
 
-    void productAnalyticsPreferences.isEnabled().then((nextEnabled) => {
-      if (!mounted) return
-      setEnabled(nextEnabled)
-      setIsLoading(false)
-    })
+    void productAnalyticsPreferences
+      .isEnabled()
+      .then((nextEnabled) => {
+        if (!mounted) return
+        setEnabled(nextEnabled)
+      })
+      .catch(() => {
+        if (!mounted) return
+        setEnabled(false)
+      })
+      .finally(() => {
+        if (!mounted) return
+        setIsLoading(false)
+      })
 
     return () => {
       mounted = false
@@ -75,6 +84,9 @@ export default function ProductAnalyticsSettings() {
           },
         )
       }
+    } catch {
+      setEnabled(previous)
+      showUpdateToast(false, t("productAnalytics.enableLabel"))
     } finally {
       isSavingRef.current = false
       setIsSaving(false)

@@ -137,7 +137,7 @@ function captureSiteEcosystemSnapshotBestEffort() {
  */
 export function setupProductAnalyticsAccountChangeListener() {
   if (cleanupAccountChangeListener) {
-    return () => {}
+    return cleanupAccountChangeListener
   }
 
   if (!browser.storage?.onChanged) {
@@ -145,6 +145,7 @@ export function setupProductAnalyticsAccountChangeListener() {
   }
 
   let timer: ReturnType<typeof setTimeout> | null = null
+  let isListening = true
 
   const schedule = () => {
     if (timer) clearTimeout(timer)
@@ -158,6 +159,7 @@ export function setupProductAnalyticsAccountChangeListener() {
     changes: Record<string, browser.storage.StorageChange>,
     areaName: string,
   ) => {
+    if (!isListening) return
     if (areaName !== "local") return
     if (!(ACCOUNT_STORAGE_KEYS.ACCOUNTS in changes)) return
     schedule()
@@ -166,6 +168,11 @@ export function setupProductAnalyticsAccountChangeListener() {
   browser.storage.onChanged.addListener(handleStorageChanged)
 
   cleanupAccountChangeListener = () => {
+    if (!cleanupAccountChangeListener) {
+      return
+    }
+
+    isListening = false
     if (timer) {
       clearTimeout(timer)
       timer = null
