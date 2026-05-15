@@ -2,6 +2,7 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   ACCOUNT_SITE_TYPES,
   MANAGED_SITE_TYPES,
+  SITE_TYPES,
   type ManagedSiteType,
 } from "~/constants/siteType"
 import { API_TYPES } from "~/services/verification/aiApiVerification/types"
@@ -124,6 +125,14 @@ export const PRODUCT_ANALYTICS_MODE_IDS = {
 
 export type ProductAnalyticsModeId =
   (typeof PRODUCT_ANALYTICS_MODE_IDS)[keyof typeof PRODUCT_ANALYTICS_MODE_IDS]
+
+export const PRODUCT_ANALYTICS_EDITOR_MODES = {
+  Visual: "visual",
+  Json: "json",
+} as const
+
+export type ProductAnalyticsEditorMode =
+  (typeof PRODUCT_ANALYTICS_EDITOR_MODES)[keyof typeof PRODUCT_ANALYTICS_EDITOR_MODES]
 
 export const PRODUCT_ANALYTICS_STATUS_KINDS = {
   Healthy: "healthy",
@@ -530,6 +539,29 @@ export const PRODUCT_ANALYTICS_SITE_TYPES = [
 export type ProductAnalyticsSiteType =
   (typeof PRODUCT_ANALYTICS_SITE_TYPES)[number]
 
+export const PRODUCT_ANALYTICS_MANAGED_SITE_TYPES = {
+  NewApi: SITE_TYPES.NEW_API,
+  Veloera: SITE_TYPES.VELOERA,
+  DoneHub: SITE_TYPES.DONE_HUB,
+  Octopus: SITE_TYPES.OCTOPUS,
+  AxonHub: SITE_TYPES.AXON_HUB,
+  ClaudeCodeHub: SITE_TYPES.CLAUDE_CODE_HUB,
+} as const
+
+export type ProductAnalyticsManagedSiteType =
+  (typeof PRODUCT_ANALYTICS_MANAGED_SITE_TYPES)[keyof typeof PRODUCT_ANALYTICS_MANAGED_SITE_TYPES]
+
+export const PRODUCT_ANALYTICS_FAILURE_STAGES = {
+  Parse: "parse",
+  Validation: "validation",
+  Persist: "persist",
+  Preview: "preview",
+  Execute: "execute",
+} as const
+
+export type ProductAnalyticsFailureStage =
+  (typeof PRODUCT_ANALYTICS_FAILURE_STAGES)[keyof typeof PRODUCT_ANALYTICS_FAILURE_STAGES]
+
 export type ProductAnalyticsEventPayloadMap = {
   [PRODUCT_ANALYTICS_EVENTS.AppOpened]: {
     entrypoint: ProductAnalyticsEntrypoint
@@ -554,12 +586,20 @@ export type ProductAnalyticsEventPayloadMap = {
     api_type?: ProductAnalyticsApiType
     source_kind?: ProductAnalyticsSourceKind
     mode?: ProductAnalyticsModeId
+    editor_mode?: ProductAnalyticsEditorMode
     status_kind?: ProductAnalyticsStatusKind
     telemetry_source?: ProductAnalyticsTelemetrySource
+    managed_site_type?: ProductAnalyticsManagedSiteType
+    source_managed_site_type?: ProductAnalyticsManagedSiteType
+    target_managed_site_type?: ProductAnalyticsManagedSiteType
+    failure_stage?: ProductAnalyticsFailureStage
     item_count_bucket?: ProductAnalyticsCountBucket
     selected_count_bucket?: ProductAnalyticsCountBucket
     success_count_bucket?: ProductAnalyticsCountBucket
     failure_count_bucket?: ProductAnalyticsCountBucket
+    warning_count_bucket?: ProductAnalyticsCountBucket
+    ready_count_bucket?: ProductAnalyticsCountBucket
+    blocked_count_bucket?: ProductAnalyticsCountBucket
     model_count_bucket?: ProductAnalyticsCountBucket
     usage_data_present?: boolean
     entrypoint: ProductAnalyticsEntrypoint

@@ -6,10 +6,13 @@ import {
   PRODUCT_ANALYTICS_API_TYPES,
   PRODUCT_ANALYTICS_COUNT_BUCKETS,
   PRODUCT_ANALYTICS_DURATION_BUCKETS,
+  PRODUCT_ANALYTICS_EDITOR_MODES,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_PAGE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
@@ -240,6 +243,83 @@ describe("product analytics privacy filtering", () => {
       failure_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
       telemetry_source: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.NewApiTokenUsage,
       usage_data_present: true,
+    })
+  })
+
+  it("keeps managed-site channel analytics dimensions as fixed enums and buckets", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.MigrateManagedSiteChannels,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+        source_managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.Veloera,
+        target_managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.DoneHub,
+        failure_stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Preview,
+        editor_mode: PRODUCT_ANALYTICS_EDITOR_MODES.Json,
+        warning_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
+        ready_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+        blocked_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+        sourceSiteUrl: "https://source.example",
+        targetSiteUrl: "https://target.example",
+        channelName: "Production channel",
+        rawWarningCount: 7,
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.MigrateManagedSiteChannels,
+      surface_id:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+      source_managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.Veloera,
+      target_managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.DoneHub,
+      failure_stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Preview,
+      editor_mode: PRODUCT_ANALYTICS_EDITOR_MODES.Json,
+      warning_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
+      ready_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+      blocked_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+    })
+  })
+
+  it("drops raw managed-site channel values that are not fixed enums or buckets", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteChannel,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        managed_site_type: "private-fork",
+        source_managed_site_type: "https://source.example",
+        target_managed_site_type: "target-production",
+        failure_stage: "validation:missing token",
+        editor_mode: "json-with-secret",
+        warning_count_bucket: "7",
+        ready_count_bucket: 3,
+        blocked_count_bucket: "all-blocked",
+        sourceSiteUrl: "https://source.example",
+        targetSiteUrl: "https://target.example",
+        channelName: "Production channel",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteChannel,
+      surface_id:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
     })
   })
 

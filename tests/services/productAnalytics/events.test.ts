@@ -3,7 +3,10 @@ import { describe, expect, it } from "vitest"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_API_TYPES,
+  PRODUCT_ANALYTICS_EDITOR_MODES,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -132,6 +135,30 @@ describe("product analytics event enums", () => {
       OpenAi: "openai",
       Anthropic: "anthropic",
       Google: "google",
+    })
+  })
+
+  it("defines fixed managed-site channel analytics dimensions", () => {
+    expect(PRODUCT_ANALYTICS_MANAGED_SITE_TYPES).toMatchObject({
+      NewApi: "new-api",
+      Veloera: "Veloera",
+      DoneHub: "done-hub",
+      Octopus: "octopus",
+      AxonHub: "axonhub",
+      ClaudeCodeHub: "claude-code-hub",
+    })
+
+    expect(PRODUCT_ANALYTICS_FAILURE_STAGES).toMatchObject({
+      Parse: "parse",
+      Validation: "validation",
+      Persist: "persist",
+      Preview: "preview",
+      Execute: "execute",
+    })
+
+    expect(PRODUCT_ANALYTICS_EDITOR_MODES).toMatchObject({
+      Visual: "visual",
+      Json: "json",
     })
   })
 })
