@@ -79,7 +79,7 @@ const stopHostPageKeyboardShortcuts = (
   event.stopPropagation()
 }
 
-const KEYBOARD_EVENTS_TO_CONTAIN = ["keydown", "keypress", "keyup"] as const
+const KEYBOARD_EVENTS_TO_CONTAIN = ["keydown", "keyup"] as const
 
 /**
  * Classifies the modal opening source without carrying page content.
@@ -832,7 +832,6 @@ export function ApiCheckModalHost() {
           tabIndex={-1}
           className="border-border bg-background pointer-events-auto max-h-[90vh] w-full max-w-[860px] overflow-hidden rounded-lg border shadow-xl"
           onKeyDown={stopHostPageKeyboardShortcuts}
-          onKeyPress={stopHostPageKeyboardShortcuts}
           onKeyUp={stopHostPageKeyboardShortcuts}
         >
           <div className="border-border flex items-start justify-between gap-3 border-b p-4">

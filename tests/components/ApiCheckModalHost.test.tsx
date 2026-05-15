@@ -155,12 +155,17 @@ describe("ApiCheckModalHost", () => {
 
     const dialog = await screen.findByRole("dialog")
     const hostPageKeyDown = vi.fn()
+    const hostPageKeyUp = vi.fn()
     const hostPageWheel = vi.fn()
     window.addEventListener("keydown", hostPageKeyDown)
+    window.addEventListener("keyup", hostPageKeyUp)
     window.addEventListener("wheel", hostPageWheel)
 
     dialog.dispatchEvent(
       new KeyboardEvent("keydown", { key: "j", bubbles: true }),
+    )
+    dialog.dispatchEvent(
+      new KeyboardEvent("keyup", { key: "j", bubbles: true }),
     )
     const wheelEvent = new WheelEvent("wheel", {
       bubbles: true,
@@ -170,11 +175,35 @@ describe("ApiCheckModalHost", () => {
     dialog.dispatchEvent(wheelEvent)
 
     expect(hostPageKeyDown).not.toHaveBeenCalled()
+    expect(hostPageKeyUp).not.toHaveBeenCalled()
     expect(hostPageWheel).not.toHaveBeenCalled()
     expect(wheelEvent.defaultPrevented).toBe(true)
 
     window.removeEventListener("keydown", hostPageKeyDown)
+    window.removeEventListener("keyup", hostPageKeyUp)
     window.removeEventListener("wheel", hostPageWheel)
+  })
+
+  it("allows modal fields to receive keyboard input while host page shortcuts are blocked", async () => {
+    const user = userEvent.setup()
+    await openModal()
+
+    const hostPageKeyDown = vi.fn()
+    const hostPageKeyUp = vi.fn()
+    window.addEventListener("keydown", hostPageKeyDown)
+    window.addEventListener("keyup", hostPageKeyUp)
+
+    const baseUrlInput = screen.getByPlaceholderText(
+      "https://example.com/api",
+    ) as HTMLInputElement
+    await user.type(baseUrlInput, "https://api.example.com")
+
+    expect(baseUrlInput.value).toBe("https://api.example.com")
+    expect(hostPageKeyDown).not.toHaveBeenCalled()
+    expect(hostPageKeyUp).not.toHaveBeenCalled()
+
+    window.removeEventListener("keydown", hostPageKeyDown)
+    window.removeEventListener("keyup", hostPageKeyUp)
   })
 
   it("blocks host page capture-phase shortcuts while the modal itself is focused", async () => {
@@ -191,6 +220,31 @@ describe("ApiCheckModalHost", () => {
     expect(hostPageCaptureShortcut).not.toHaveBeenCalled()
 
     document.removeEventListener("keydown", hostPageCaptureShortcut, true)
+  })
+
+  it("allows wheel events inside the scrollable modal body without scrolling the host page", async () => {
+    await openModal()
+
+    const sourceTextInput = screen.getByPlaceholderText(
+      "webAiApiCheck:modal.sourceText.placeholder",
+    )
+    const scrollContainer = sourceTextInput.closest(".overflow-y-auto")
+    expect(scrollContainer).not.toBeNull()
+
+    const hostPageWheel = vi.fn()
+    window.addEventListener("wheel", hostPageWheel)
+
+    const wheelEvent = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      deltaY: 100,
+    })
+    scrollContainer?.dispatchEvent(wheelEvent)
+
+    expect(hostPageWheel).not.toHaveBeenCalled()
+    expect(wheelEvent.defaultPrevented).toBe(false)
+
+    window.removeEventListener("wheel", hostPageWheel)
   })
 
   it("locks host page scrolling while open and restores previous overflow styles after close", async () => {

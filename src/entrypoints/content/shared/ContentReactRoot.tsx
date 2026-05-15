@@ -74,7 +74,6 @@ export const ContentReactRoot: React.FC = () => {
     <div
       className={wrapperClassName}
       onKeyDown={stopHostPageKeyboardShortcuts}
-      onKeyPress={stopHostPageKeyboardShortcuts}
       onKeyUp={stopHostPageKeyboardShortcuts}
     >
       <ApiCheckModalHost />

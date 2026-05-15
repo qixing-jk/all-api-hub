@@ -183,10 +183,8 @@ describe("ContentReactRoot", () => {
     )
     getPreferencesMock.mockResolvedValue({ themeMode: "light" })
     const hostPageKeyDown = vi.fn()
-    const hostPageKeyPress = vi.fn()
     const hostPageKeyUp = vi.fn()
     window.addEventListener("keydown", hostPageKeyDown)
-    window.addEventListener("keypress", hostPageKeyPress)
     window.addEventListener("keyup", hostPageKeyUp)
 
     const { ContentReactRoot } = await import(
@@ -204,11 +202,9 @@ describe("ContentReactRoot", () => {
 
     expect(input.value).toBe("a")
     expect(hostPageKeyDown).not.toHaveBeenCalled()
-    expect(hostPageKeyPress).not.toHaveBeenCalled()
     expect(hostPageKeyUp).not.toHaveBeenCalled()
 
     window.removeEventListener("keydown", hostPageKeyDown)
-    window.removeEventListener("keypress", hostPageKeyPress)
     window.removeEventListener("keyup", hostPageKeyUp)
   })
 })
