@@ -279,6 +279,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   FetchApiCredentialModelList: "fetch_api_credential_model_list",
   FilterAutoCheckinResults: "filter_auto_checkin_results",
   FilterAccounts: "filter_accounts",
+  FilterManagedSiteModelSyncResults: "filter_managed_site_model_sync_results",
   ImportBackupData: "import_backup_data",
   ImportAccountCookies: "import_account_cookies",
   ImportApiCredentialProfileToClaudeCodeRouter:
@@ -318,8 +319,11 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   OpenUpdateApiCredentialProfileDialog:
     "open_update_api_credential_profile_dialog",
   OpenManagedSiteChannelFilters: "open_managed_site_channel_filters",
+  OpenManagedSiteChannelManagement: "open_managed_site_channel_management",
   OpenManagedSiteChannelMigration: "open_managed_site_channel_migration",
   OpenManagedSiteChannelModelSync: "open_managed_site_channel_model_sync",
+  OpenManagedSiteModelSyncConfigRequired:
+    "open_managed_site_model_sync_config_required",
   OpenModelKeyDialog: "open_model_key_dialog",
   OpenModelManagement: "open_model_management",
   OpenPopupExternalCheckIns: "open_popup_external_check_ins",
@@ -375,6 +379,10 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   SaveManagedSiteChannelModelFilters: "save_managed_site_channel_model_filters",
   ScanDuplicateAccounts: "scan_duplicate_accounts",
   SearchAccounts: "search_accounts",
+  SearchManagedSiteModelSyncChannels: "search_managed_site_model_sync_channels",
+  SelectAllManagedSiteModelSyncChannels:
+    "select_all_managed_site_model_sync_channels",
+  SelectManagedSiteModelSyncTab: "select_managed_site_model_sync_tab",
   SelectModelSource: "select_model_source",
   FilterModelList: "filter_model_list",
   SelectApiCredentialProfileExportDestination:
@@ -389,6 +397,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   ShieldBypassSettingsVisited: "shield_bypass_settings_visited",
   StartBatchModelVerify: "start_batch_model_verify",
   StopBatchModelVerify: "stop_batch_model_verify",
+  ScheduledManagedSiteModelSync: "scheduled_managed_site_model_sync",
   SyncWebDavNow: "sync_webdav_now",
   SyncManagedSiteChannel: "sync_managed_site_channel",
   SyncAllManagedSiteModels: "sync_all_managed_site_models",
@@ -407,6 +416,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   UpdateApiCredentialProfile: "update_api_credential_profile",
   UpdateBookmark: "update_bookmark",
   UpdateManagedSiteChannel: "update_managed_site_channel",
+  UpdateManagedSiteModelSyncSettings: "update_managed_site_model_sync_settings",
   UpdateWebDavAutoSyncSettings: "update_webdav_auto_sync_settings",
   UpdateWebDavConfig: "update_webdav_config",
   UploadWebDavBackup: "upload_webdav_backup",
@@ -516,6 +526,15 @@ export type ProductAnalyticsSurfaceId =
 
 export const PRODUCT_ANALYTICS_SETTING_IDS = {
   ProductAnalyticsEnabled: "product_analytics_enabled",
+  ManagedSiteModelSyncEnabled: "managed_site_model_sync_enabled",
+  ManagedSiteModelSyncInterval: "managed_site_model_sync_interval",
+  ManagedSiteModelSyncConcurrency: "managed_site_model_sync_concurrency",
+  ManagedSiteModelSyncMaxRetries: "managed_site_model_sync_max_retries",
+  ManagedSiteModelSyncRpm: "managed_site_model_sync_rpm",
+  ManagedSiteModelSyncBurst: "managed_site_model_sync_burst",
+  ManagedSiteModelSyncAllowedModels: "managed_site_model_sync_allowed_models",
+  ManagedSiteModelSyncGlobalFilters: "managed_site_model_sync_global_filters",
+  ManagedSiteModelSyncReset: "managed_site_model_sync_reset",
 } as const
 
 export type ProductAnalyticsSettingId =
@@ -606,7 +625,7 @@ export type ProductAnalyticsEventPayloadMap = {
   }
   [PRODUCT_ANALYTICS_EVENTS.SettingChanged]: {
     setting_id: ProductAnalyticsSettingId
-    enabled: boolean
+    enabled?: boolean
     entrypoint: ProductAnalyticsEntrypoint
   }
   [PRODUCT_ANALYTICS_EVENTS.PermissionResult]: {

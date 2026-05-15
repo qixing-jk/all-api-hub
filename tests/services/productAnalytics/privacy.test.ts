@@ -16,6 +16,7 @@ import {
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_PAGE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_STATUS_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -243,6 +244,77 @@ describe("product analytics privacy filtering", () => {
       failure_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
       telemetry_source: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.NewApiTokenUsage,
       usage_data_present: true,
+    })
+  })
+
+  it("keeps Managed Site Model Sync fixed action enums and drops raw UI text", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+        action_id:
+          PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelManagement,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
+        managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+        channelName: "Production channel",
+        tabLabel: "Private manual tab label",
+        filterText: "private-filter",
+        searchQuery: "secret-channel",
+        selectedChannelIds: [1, 2, 3],
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelManagement,
+      surface_id:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
+      managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+    })
+  })
+
+  it("keeps Managed Site Model Sync fixed setting ids without raw setting values", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      {
+        setting_id:
+          PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncConcurrency,
+        enabled: true,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        value: 6,
+        rawSettingValue: "private-model-a,private-model-b",
+        allowedModels: ["private-model-a"],
+        globalFilters: "private-filter",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncConcurrency,
+      enabled: true,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+  })
+
+  it("drops uncontrolled Managed Site Model Sync setting ids", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      {
+        setting_id: "managed_site_model_sync_private_custom_field",
+        enabled: true,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+
+    expect(sanitized).toEqual({
+      enabled: true,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
   })
 

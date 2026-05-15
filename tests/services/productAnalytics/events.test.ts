@@ -8,6 +8,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
@@ -159,6 +160,40 @@ describe("product analytics event enums", () => {
     expect(PRODUCT_ANALYTICS_EDITOR_MODES).toMatchObject({
       Visual: "visual",
       Json: "json",
+    })
+  })
+
+  it("defines fixed Managed Site Model Sync action ids", () => {
+    expect(PRODUCT_ANALYTICS_ACTION_IDS).toMatchObject({
+      SelectManagedSiteModelSyncTab: "select_managed_site_model_sync_tab",
+      FilterManagedSiteModelSyncResults:
+        "filter_managed_site_model_sync_results",
+      SearchManagedSiteModelSyncChannels:
+        "search_managed_site_model_sync_channels",
+      SelectAllManagedSiteModelSyncChannels:
+        "select_all_managed_site_model_sync_channels",
+      OpenManagedSiteChannelManagement: "open_managed_site_channel_management",
+      OpenManagedSiteModelSyncConfigRequired:
+        "open_managed_site_model_sync_config_required",
+      ScheduledManagedSiteModelSync: "scheduled_managed_site_model_sync",
+      UpdateManagedSiteModelSyncSettings:
+        "update_managed_site_model_sync_settings",
+    })
+  })
+
+  it("defines fixed Managed Site Model Sync setting ids", () => {
+    expect(PRODUCT_ANALYTICS_SETTING_IDS).toMatchObject({
+      ManagedSiteModelSyncEnabled: "managed_site_model_sync_enabled",
+      ManagedSiteModelSyncInterval: "managed_site_model_sync_interval",
+      ManagedSiteModelSyncConcurrency: "managed_site_model_sync_concurrency",
+      ManagedSiteModelSyncMaxRetries: "managed_site_model_sync_max_retries",
+      ManagedSiteModelSyncRpm: "managed_site_model_sync_rpm",
+      ManagedSiteModelSyncBurst: "managed_site_model_sync_burst",
+      ManagedSiteModelSyncAllowedModels:
+        "managed_site_model_sync_allowed_models",
+      ManagedSiteModelSyncGlobalFilters:
+        "managed_site_model_sync_global_filters",
+      ManagedSiteModelSyncReset: "managed_site_model_sync_reset",
     })
   })
 })

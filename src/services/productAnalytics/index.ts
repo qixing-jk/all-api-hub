@@ -1,5 +1,6 @@
 export * from "./client"
 export * from "./events"
+export * from "./managedSite"
 export * from "./preferences"
 export * from "./privacy"
 export * from "./runtime"
