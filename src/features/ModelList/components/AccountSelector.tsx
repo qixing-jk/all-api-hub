@@ -103,7 +103,7 @@ export function AccountSelector({
     })
 
     setSelectedSourceValue(sourceValue)
-    void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
       insights: {
         sourceKind: resolveAnalyticsSourceKind(sourceValue),
       },

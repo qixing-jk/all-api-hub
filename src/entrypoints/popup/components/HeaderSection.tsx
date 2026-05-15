@@ -95,19 +95,19 @@ export default function HeaderSection({
         failureCount: result.failed,
       }
       if (result.failed > 0) {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: refreshInsights,
         })
         return
       }
 
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         insights: refreshInsights,
       })
     } catch (error) {
       logger.error("Error during global refresh", error)
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     }

@@ -299,11 +299,11 @@ function TokenActionButtons({
     )
 
     if (result.opened || result.deferred) {
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       return
     }
 
-    await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
     })
   }
@@ -345,9 +345,9 @@ function TokenActionButtons({
         token,
       )
       OpenInCherryStudio(account, resolvedToken)
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
       showResultToast({
@@ -406,9 +406,9 @@ function TokenActionButtons({
         ),
         { duration: 8000 },
       )
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
       logger.error("Failed to save token to API profiles", {
@@ -621,10 +621,12 @@ export function TokenHeader({
     void Promise.resolve(
       onManagedSiteVerificationRetry(token, managedSiteStatus),
     )
-      .then(() => tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success))
+      .then(() => {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      })
       .catch((error) => {
         logger.error("Managed-site verification retry callback failed", error)
-        return tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
       })

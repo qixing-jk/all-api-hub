@@ -189,7 +189,7 @@ export function ProviderTabs({
           entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         })
         setSelectedProvider(newProvider)
-        void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       }}
     >
       <ProviderTabList

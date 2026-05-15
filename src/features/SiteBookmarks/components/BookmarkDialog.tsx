@@ -12,7 +12,7 @@ import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { getSiteName } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -187,29 +187,11 @@ export default function BookmarkDialog({
       mode === "add"
         ? PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark
         : PRODUCT_ANALYTICS_ACTION_IDS.UpdateBookmark
-    const analyticsStartedAt = Date.now()
+    const analyticsAction = startProductAnalyticsAction({
+      ...bookmarkAnalyticsContext,
+      actionId: analyticsActionId,
+    })
     let isAnalyticsActionCompleted = false
-
-    const completeBookmarkAnalyticsAction = async (
-      result: (typeof PRODUCT_ANALYTICS_RESULTS)[keyof typeof PRODUCT_ANALYTICS_RESULTS],
-      options: {
-        errorCategory?: typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
-      } = {},
-    ) => {
-      try {
-        await trackProductAnalyticsActionCompleted({
-          ...bookmarkAnalyticsContext,
-          actionId: analyticsActionId,
-          result,
-          ...(options.errorCategory
-            ? { errorCategory: options.errorCategory }
-            : {}),
-          durationMs: Date.now() - analyticsStartedAt,
-        })
-      } catch {
-        // Product analytics must never block bookmark creation or updates.
-      }
-    }
 
     try {
       if (mode === "add") {
@@ -219,7 +201,7 @@ export default function BookmarkDialog({
           notes,
           tagIds,
         })
-        await completeBookmarkAnalyticsAction(PRODUCT_ANALYTICS_RESULTS.Success)
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         isAnalyticsActionCompleted = true
         toast.success(
           t("messages:toast.success.bookmarkAdded", { name: name.trim() }),
@@ -232,16 +214,13 @@ export default function BookmarkDialog({
           tagIds,
         })
         if (!success) {
-          await completeBookmarkAnalyticsAction(
-            PRODUCT_ANALYTICS_RESULTS.Failure,
-            {
-              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            },
-          )
+          analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          })
           isAnalyticsActionCompleted = true
           throw new Error(t("messages:toast.error.saveFailed"))
         }
-        await completeBookmarkAnalyticsAction(PRODUCT_ANALYTICS_RESULTS.Success)
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         isAnalyticsActionCompleted = true
         toast.success(
           t("messages:toast.success.bookmarkUpdated", { name: name.trim() }),
@@ -252,12 +231,9 @@ export default function BookmarkDialog({
       onClose()
     } catch (error) {
       if (!isAnalyticsActionCompleted) {
-        await completeBookmarkAnalyticsAction(
-          PRODUCT_ANALYTICS_RESULTS.Failure,
-          {
-            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          },
-        )
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
       }
       toast.error(
         t("messages:toast.error.operationFailed", {

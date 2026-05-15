@@ -102,11 +102,11 @@ const completeWebDavAnalytics = (
   options?: Parameters<ProductAnalyticsTracker["complete"]>[1],
 ) => {
   if (options) {
-    void tracker.complete(result, options)
+    tracker.complete(result, options)
     return
   }
 
-  void tracker.complete(result)
+  tracker.complete(result)
 }
 
 const WEBDAV_SYNC_DATA_INPUT_IDS: Record<WebDAVSyncDataKey, string> = {

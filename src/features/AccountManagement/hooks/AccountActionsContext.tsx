@@ -123,10 +123,10 @@ export const AccountActionsProvider = ({
         analyticsCompleted = true
         try {
           if (options) {
-            await tracker.complete(result, options)
+            tracker.complete(result, options)
             return
           }
-          await tracker.complete(result)
+          tracker.complete(result)
         } catch {
           // Product analytics must never block or alter the refresh action.
         }
@@ -355,10 +355,10 @@ export const AccountActionsProvider = ({
         analyticsCompleted = true
         try {
           if (completeOptions) {
-            await tracker.complete(result, completeOptions)
+            tracker.complete(result, completeOptions)
             return
           }
-          await tracker.complete(result)
+          tracker.complete(result)
         } catch {
           // Product analytics must never block or alter external check-in behavior.
         }

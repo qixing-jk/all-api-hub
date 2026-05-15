@@ -144,11 +144,11 @@ const completeAutoCheckinAnalytics = async (
 ) => {
   try {
     if (options) {
-      await tracker.complete(result, options)
+      tracker.complete(result, options)
       return
     }
 
-    await tracker.complete(result)
+    tracker.complete(result)
   } catch (error) {
     // Product analytics must not block user-triggered check-in actions.
     logger.warn("Auto check-in analytics completion failed", error)

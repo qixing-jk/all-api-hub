@@ -765,14 +765,14 @@ export function KiloCodeExportDialog({
         JSON.stringify(resolvedApiConfigs, null, 2),
       )
       toast.success(t("ui:dialog.kiloCode.messages.copiedApiConfigs"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         insights: exportInsights,
       })
     } catch (error) {
       toast.error(
         getErrorMessage(error, t("ui:dialog.kiloCode.messages.copyFailed")),
       )
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: exportInsights,
       })
@@ -812,14 +812,14 @@ export function KiloCodeExportDialog({
       link.click()
 
       toast.success(t("ui:dialog.kiloCode.messages.downloadedSettings"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         insights: exportInsights,
       })
     } catch (error) {
       toast.error(
         getErrorMessage(error, t("ui:dialog.kiloCode.messages.downloadFailed")),
       )
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: exportInsights,
       })

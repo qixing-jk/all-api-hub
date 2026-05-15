@@ -147,11 +147,11 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
     })
     const isLoaded = await fetchTokens()
     if (isLoaded) {
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       return
     }
 
-    await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
     })
   }
@@ -173,13 +173,13 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
     }
 
     if (result === "failure") {
-      await tracker.complete(analyticsResultByCreateResult[result], {
+      tracker.complete(analyticsResultByCreateResult[result], {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
       return
     }
 
-    await tracker.complete(analyticsResultByCreateResult[result])
+    tracker.complete(analyticsResultByCreateResult[result])
   }
 
   const header = (

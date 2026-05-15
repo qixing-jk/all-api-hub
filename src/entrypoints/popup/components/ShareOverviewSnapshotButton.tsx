@@ -53,7 +53,7 @@ export default function ShareOverviewSnapshotButton() {
 
     if (enabledAccountCount <= 0) {
       toast.error(t("messages:toast.error.shareSnapshotNoEnabledAccounts"))
-      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+      tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
       return
     }
 
@@ -100,7 +100,7 @@ export default function ShareOverviewSnapshotButton() {
 
     try {
       await exportShareSnapshotWithToast({ payload })
-      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+      tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         insights: analyticsInsights,
       })
     } catch (error) {
@@ -109,7 +109,7 @@ export default function ShareOverviewSnapshotButton() {
       toast.error(
         t("messages:toast.error.operationFailed", { error: errorText }),
       )
-      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: analyticsInsights,
       })

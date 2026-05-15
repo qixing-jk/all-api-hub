@@ -282,7 +282,7 @@ export default function ChannelFilterDialog({
         toast.error(
           t("filters.messages.jsonInvalid", { error: getErrorMessage(error) }),
         )
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
         })
         return
@@ -294,7 +294,7 @@ export default function ChannelFilterDialog({
     const validationError = validateFilters(rulesToSave)
     if (validationError) {
       toast.error(validationError)
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
       })
       return
@@ -319,13 +319,13 @@ export default function ChannelFilterDialog({
         // ignore serialization errors
       }
       toast.success(t("filters.messages.saved"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       onClose()
     } catch (error) {
       toast.error(
         t("filters.messages.saveFailed", { error: getErrorMessage(error) }),
       )
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     } finally {

@@ -78,14 +78,14 @@ export const useUsageAnalyticsData = () => {
         ])
         setAccounts(nextAccounts)
         setStore(nextStore)
-        await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
             itemCount: nextAccounts.length,
             usageDataPresent: hasUsageAnalyticsData(nextStore),
           },
         })
       } catch (error) {
-        await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
         logger.error("Failed to load data", error)

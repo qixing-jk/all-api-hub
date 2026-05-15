@@ -206,7 +206,7 @@ export default function DedupeAccountsDialog({
 
       await loadAccountData()
 
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         insights: {
           ...cleanupInsights,
           successCount: deletedCount,
@@ -217,7 +217,7 @@ export default function DedupeAccountsDialog({
         onClose()
       }
     } catch (error) {
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: cleanupInsights,
       })

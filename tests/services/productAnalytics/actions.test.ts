@@ -296,7 +296,7 @@ describe("product analytics action helpers", () => {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
 
-    await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+    const completeResult = tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
 
     expect(trackMock).toHaveBeenNthCalledWith(
       1,
@@ -308,17 +308,82 @@ describe("product analytics action helpers", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       },
     )
-    expect(trackMock).toHaveBeenNthCalledWith(
-      2,
-      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
-      {
-        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
-        action_id: PRODUCT_ANALYTICS_ACTION_IDS.ImportBackupData,
-        surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsImportExportPage,
-        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-        result: PRODUCT_ANALYTICS_RESULTS.Success,
-        duration_bucket: "1_5s",
-      },
+    expect(completeResult).toBeUndefined()
+    await vi.waitFor(() => {
+      expect(trackMock).toHaveBeenNthCalledWith(
+        2,
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        {
+          feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+          action_id: PRODUCT_ANALYTICS_ACTION_IDS.ImportBackupData,
+          surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsImportExportPage,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+          result: PRODUCT_ANALYTICS_RESULTS.Success,
+          duration_bucket: "1_5s",
+        },
+      )
+    })
+  })
+
+  it("keeps manual tracker completion best-effort when analytics sending fails", async () => {
+    trackMock
+      .mockResolvedValueOnce({ success: true })
+      .mockRejectedValueOnce(new Error("network unavailable"))
+    const { startProductAnalyticsAction } = await import(
+      "~/services/productAnalytics/actions"
     )
+
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteModels,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
+    expect(() =>
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        durationMs: 2_000,
+        insights: {
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.History,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
+          statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
+          telemetrySource: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.NewApiTokenUsage,
+          selectedCount: 2,
+          itemCount: 3,
+          successCount: 3,
+          failureCount: 0,
+          modelCount: 11,
+          usageDataPresent: true,
+        },
+      }),
+    ).not.toThrow()
+
+    await vi.waitFor(() => {
+      expect(trackMock).toHaveBeenNthCalledWith(
+        2,
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        {
+          feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+          action_id: PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteModels,
+          surface_id:
+            PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+          result: PRODUCT_ANALYTICS_RESULTS.Success,
+          duration_bucket: "1_5s",
+          source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.History,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
+          status_kind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
+          telemetry_source:
+            PRODUCT_ANALYTICS_TELEMETRY_SOURCES.NewApiTokenUsage,
+          selected_count_bucket: "2_3",
+          item_count_bucket: "2_3",
+          success_count_bucket: "2_3",
+          failure_count_bucket: "0",
+          model_count_bucket: "10_plus",
+          usage_data_present: true,
+        },
+      )
+    })
   })
 })

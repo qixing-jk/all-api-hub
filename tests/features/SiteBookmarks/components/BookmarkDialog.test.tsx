@@ -21,7 +21,8 @@ const {
   updateBookmarkMock,
   toastSuccessMock,
   toastErrorMock,
-  trackProductAnalyticsActionCompletedMock,
+  startProductAnalyticsActionMock,
+  completeProductAnalyticsActionMock,
   trackProductAnalyticsActionStartedMock,
 } = vi.hoisted(() => ({
   addBookmarkMock: vi.fn().mockResolvedValue("bookmark-1"),
@@ -30,7 +31,8 @@ const {
   updateBookmarkMock: vi.fn().mockResolvedValue(true),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
-  trackProductAnalyticsActionCompletedMock: vi.fn(),
+  startProductAnalyticsActionMock: vi.fn(),
+  completeProductAnalyticsActionMock: vi.fn(),
   trackProductAnalyticsActionStartedMock: vi.fn(),
 }))
 
@@ -76,8 +78,8 @@ vi.mock("~/features/AccountManagement/components/TagPicker", () => ({
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
-  trackProductAnalyticsActionCompleted: (...args: any[]) =>
-    trackProductAnalyticsActionCompletedMock(...args),
+  startProductAnalyticsAction: (...args: any[]) =>
+    startProductAnalyticsActionMock(...args),
   trackProductAnalyticsActionStarted: (...args: any[]) =>
     trackProductAnalyticsActionStartedMock(...args),
 }))
@@ -101,15 +103,16 @@ const expectBookmarkActionCompleted = (
     errorCategory?: (typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES)[keyof typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES]
   } = {},
 ) => {
-  expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
-    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement,
+  expectBookmarkActionTracked(
     actionId,
-    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementDialog,
-    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementDialog,
+  )
+  expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
     result,
-    ...(options.errorCategory ? { errorCategory: options.errorCategory } : {}),
-    durationMs: expect.any(Number),
-  })
+    ...(options.errorCategory
+      ? [{ errorCategory: options.errorCategory }]
+      : []),
+  )
 }
 
 beforeEach(() => {
@@ -125,8 +128,12 @@ beforeEach(() => {
   updateBookmarkMock.mockClear()
   toastSuccessMock.mockClear()
   toastErrorMock.mockClear()
-  trackProductAnalyticsActionCompletedMock.mockReset()
+  startProductAnalyticsActionMock.mockReset()
+  completeProductAnalyticsActionMock.mockReset()
   trackProductAnalyticsActionStartedMock.mockReset()
+  startProductAnalyticsActionMock.mockReturnValue({
+    complete: completeProductAnalyticsActionMock,
+  })
   loadAccountDataMock.mockReset()
 })
 
@@ -165,7 +172,7 @@ describe("BookmarkDialog", () => {
     ).toBeInTheDocument()
 
     expect(addBookmarkMock).not.toHaveBeenCalled()
-    expect(trackProductAnalyticsActionCompletedMock).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).not.toHaveBeenCalled()
   })
 
   it("creates a bookmark in add mode", async () => {

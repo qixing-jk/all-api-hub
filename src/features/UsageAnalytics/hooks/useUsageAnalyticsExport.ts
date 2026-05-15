@@ -80,7 +80,7 @@ export const useUsageAnalyticsExport = (params: {
 
     if (!store || !exportSelection) {
       toast.error(t("messages.error.exportNoData"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
       return
     }
 
@@ -107,7 +107,7 @@ export const useUsageAnalyticsExport = (params: {
       document.body.removeChild(link)
       URL.revokeObjectURL(url)
       toast.success(t("messages.success.exported"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         insights: {
           mode:
             exportSelection.accountIds.length > 0
@@ -122,7 +122,7 @@ export const useUsageAnalyticsExport = (params: {
       toast.error(
         t("messages.error.exportFailed", { error: getErrorMessage(error) }),
       )
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     }

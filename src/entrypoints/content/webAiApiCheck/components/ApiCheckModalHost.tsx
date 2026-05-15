@@ -249,7 +249,7 @@ export function ApiCheckModalHost() {
         actionId:
           PRODUCT_ANALYTICS_ACTION_IDS.DismissDetectedApiCredentialCheck,
       })
-      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
         insights: {
           sourceKind: getApiCheckSourceKind(trigger),
         },
@@ -297,7 +297,7 @@ export function ApiCheckModalHost() {
             t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"),
           )
         }
-        await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
           insights: {
             sourceKind:
               origin === "auto"
@@ -321,7 +321,7 @@ export function ApiCheckModalHost() {
 
         // Ignore stale responses when a newer request is already in-flight.
         if (fetchModelsRequestIdRef.current !== requestId) {
-          await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+          tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
             insights: {
               sourceKind:
                 origin === "auto"
@@ -340,7 +340,7 @@ export function ApiCheckModalHost() {
             // Provide a helpful default to reduce friction.
             setModelId(ids[0] ?? "")
           }
-          await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
             insights: {
               sourceKind:
                 origin === "auto"
@@ -354,7 +354,7 @@ export function ApiCheckModalHost() {
             response?.error ||
               t("webAiApiCheck:modal.errors.fetchModelsFailed"),
           )
-          await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
             errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
             insights: {
               sourceKind:
@@ -366,7 +366,7 @@ export function ApiCheckModalHost() {
           })
         }
       } catch (error) {
-        await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             sourceKind:
@@ -456,7 +456,7 @@ export function ApiCheckModalHost() {
 
     if (!trimmedBaseUrl || !trimmedApiKey) {
       setValidationError(t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"))
-      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+      tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
         insights: {
           sourceKind: getApiCheckSourceKind(trigger),
           mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
@@ -497,7 +497,7 @@ export function ApiCheckModalHost() {
           ),
         )
         const analyticsResult = getProbeAnalyticsResult(result)
-        await tracker?.complete(analyticsResult, {
+        tracker?.complete(analyticsResult, {
           ...(analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure
             ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
             : {}),
@@ -530,7 +530,7 @@ export function ApiCheckModalHost() {
             : probe,
         ),
       )
-      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
           sourceKind: getApiCheckSourceKind(trigger),
@@ -560,7 +560,7 @@ export function ApiCheckModalHost() {
             : probe,
         ),
       )
-      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
           sourceKind: getApiCheckSourceKind(trigger),
@@ -581,7 +581,7 @@ export function ApiCheckModalHost() {
     const trimmedApiKey = apiKey.trim()
     if (!trimmedBaseUrl || !trimmedApiKey) {
       setValidationError(t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
         insights: {
           sourceKind: getApiCheckSourceKind(trigger),
           mode: PRODUCT_ANALYTICS_MODE_IDS.All,
@@ -614,7 +614,7 @@ export function ApiCheckModalHost() {
             ? PRODUCT_ANALYTICS_RESULTS.Success
             : PRODUCT_ANALYTICS_RESULTS.Skipped
 
-      await tracker.complete(analyticsResult, {
+      tracker.complete(analyticsResult, {
         ...(analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure
           ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
           : {}),
@@ -647,7 +647,7 @@ export function ApiCheckModalHost() {
 
     if (!trimmedBaseUrl || !trimmedApiKey) {
       setValidationError(t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
         insights: {
           sourceKind: getApiCheckSourceKind(trigger),
         },
@@ -690,7 +690,7 @@ export function ApiCheckModalHost() {
           ),
           { duration: 8000 },
         )
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
             sourceKind: getApiCheckSourceKind(trigger),
           },
@@ -700,7 +700,7 @@ export function ApiCheckModalHost() {
           response?.error ||
             t("webAiApiCheck:modal.errors.saveToProfilesFailed"),
         )
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             sourceKind: getApiCheckSourceKind(trigger),
@@ -709,7 +709,7 @@ export function ApiCheckModalHost() {
       }
     } catch {
       toast.error(t("webAiApiCheck:modal.errors.saveToProfilesFailed"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
           sourceKind: getApiCheckSourceKind(trigger),

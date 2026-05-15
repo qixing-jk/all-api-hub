@@ -783,13 +783,13 @@ export function BatchVerifyModelsDialog({
         ).length,
       }
       if (shouldStopRef.current) {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
       } else if (
         selectedOutcomes.some(
           (outcome) => outcome === BATCH_VERIFY_ROW_STATUSES.FAIL,
         )
       ) {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: completionInsights,
         })
@@ -798,9 +798,9 @@ export function BatchVerifyModelsDialog({
           (outcome) => outcome === BATCH_VERIFY_ROW_STATUSES.SKIPPED,
         )
       ) {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
       } else {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: completionInsights,
         })
       }

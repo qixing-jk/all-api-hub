@@ -247,13 +247,13 @@ export default function BalanceHistory() {
 
       toast.success(t("messages.success.refreshCompleted"), { id: toastId })
       await loadData()
-      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       toast.error(
         t("messages.error.refreshFailed", { error: getErrorMessage(error) }),
         { id: toastId },
       )
-      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     }
@@ -279,13 +279,13 @@ export default function BalanceHistory() {
 
       toast.success(t("messages.success.pruneCompleted"), { id: toastId })
       await loadData()
-      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       toast.error(
         t("messages.error.pruneFailed", { error: getErrorMessage(error) }),
         { id: toastId },
       )
-      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     }

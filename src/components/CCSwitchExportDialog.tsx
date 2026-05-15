@@ -200,7 +200,7 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
     event.preventDefault()
 
     void (async () => {
-      const analyticsSpan = startProductAnalyticsAction(
+      const tracker = startProductAnalyticsAction(
         analyticsContext ?? {
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
           actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportAccountTokenToCCSwitch,
@@ -227,13 +227,13 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
         })
 
         if (opened) {
-          void analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
           onClose()
         } else {
-          void analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
         }
       } catch (error) {
-        void analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
         logger.warn("Failed to resolve token for CC Switch export", error)

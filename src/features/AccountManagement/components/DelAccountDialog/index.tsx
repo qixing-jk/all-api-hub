@@ -66,11 +66,11 @@ export default function DelAccountDialog({
 
       try {
         if (options) {
-          await tracker.complete(result, options)
+          tracker.complete(result, options)
           return
         }
 
-        await tracker.complete(result)
+        tracker.complete(result)
       } catch (error) {
         logger.warn("Failed to complete product analytics action", error)
       }

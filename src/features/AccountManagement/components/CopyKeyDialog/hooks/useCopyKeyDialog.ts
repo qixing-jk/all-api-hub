@@ -159,7 +159,7 @@ export function useCopyKeyDialog(
         await navigator.clipboard.writeText(resolvedToken.key)
         setCopiedTokenId(token.id)
         toast.success(t("ui:dialog.copyKey.keyCopied"))
-        void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
 
         clearCopiedTokenResetTimeout()
         copiedTokenResetTimeoutRef.current = setTimeout(() => {
@@ -171,7 +171,7 @@ export function useCopyKeyDialog(
         toast.error(
           getErrorMessage(error, t("ui:dialog.copyKey.copyFailedManual")),
         )
-        void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
       }

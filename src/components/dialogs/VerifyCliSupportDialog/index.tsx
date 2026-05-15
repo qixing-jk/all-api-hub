@@ -393,7 +393,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
           : hasExecutedTool
             ? PRODUCT_ANALYTICS_RESULTS.Success
             : PRODUCT_ANALYTICS_RESULTS.Skipped
-      await tracker.complete(completionResult, {
+      tracker.complete(completionResult, {
         insights: {
           successCount,
           failureCount,
@@ -403,7 +403,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
       logger.error("CLI support verification run failed", {
         message: toSanitizedErrorSummary(error, []),
       })
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         insights: {
           successCount,
           failureCount,

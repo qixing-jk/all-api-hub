@@ -290,7 +290,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
           : hasExecutedProbe
             ? PRODUCT_ANALYTICS_RESULTS.Success
             : PRODUCT_ANALYTICS_RESULTS.Skipped
-      await tracker.complete(completionResult, {
+      tracker.complete(completionResult, {
         insights: {
           successCount,
           failureCount,
@@ -300,7 +300,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       logger.error("Model verification run failed", {
         message: toSanitizedErrorSummary(error, []),
       })
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         insights: {
           successCount,
           failureCount,

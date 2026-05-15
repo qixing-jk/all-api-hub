@@ -1,3 +1,5 @@
+import { createLogger } from "~/utils/core/logger"
+
 import type { ProductAnalyticsActionContext } from "./actionConfig"
 import {
   PRODUCT_ANALYTICS_EVENTS,
@@ -16,6 +18,8 @@ export {
   resolveProductAnalyticsActionContext,
   type ProductAnalyticsActionContext,
 } from "./actionConfig"
+
+const logger = createLogger("ProductAnalyticsActions")
 
 type ProductAnalyticsActionCompletion = ProductAnalyticsActionContext & {
   result: ProductAnalyticsResult
@@ -98,8 +102,8 @@ export async function trackProductAnalyticsActionStarted({
         entrypoint,
       },
     )
-  } catch {
-    // Product analytics must never block the user action being measured.
+  } catch (error) {
+    logger.warn("Product analytics action start failed", error)
   }
 }
 
@@ -132,8 +136,8 @@ export async function trackProductAnalyticsActionCompleted({
         ...mapProductAnalyticsActionInsights(insights),
       },
     )
-  } catch {
-    // Product analytics must never block the user action being measured.
+  } catch (error) {
+    logger.warn("Product analytics action completion failed", error)
   }
 }
 
@@ -147,11 +151,11 @@ export function startProductAnalyticsAction(
   void trackProductAnalyticsActionStarted(context)
 
   return {
-    async complete(
+    complete(
       result: ProductAnalyticsResult = PRODUCT_ANALYTICS_RESULTS.Success,
       options: ProductAnalyticsActionCompleteOptions = {},
     ) {
-      await trackProductAnalyticsActionCompleted({
+      void trackProductAnalyticsActionCompleted({
         ...context,
         result,
         errorCategory: options.errorCategory,

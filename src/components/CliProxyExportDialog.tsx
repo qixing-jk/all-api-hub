@@ -357,7 +357,7 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
     event.preventDefault()
 
     void (async () => {
-      const analyticsSpan = startProductAnalyticsAction(
+      const tracker = startProductAnalyticsAction(
         analyticsContext ?? {
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
           actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportAccountTokenToCliProxy,
@@ -399,15 +399,15 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
         const result = await importToCliProxy(payload)
         showResultToast(result)
         if (result.success) {
-          void analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
           onClose()
         } else if ("skipped" in result && result.skipped === true) {
-          void analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
         } else {
-          void analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
         }
       } catch (error) {
-        void analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
         showResultToast({

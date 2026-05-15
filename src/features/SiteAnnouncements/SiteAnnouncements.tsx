@@ -181,14 +181,14 @@ export default function SiteAnnouncementsPage({
           : undefined
       if (success) {
         if (checkInsights) {
-          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
             insights: checkInsights,
           })
         } else {
-          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         }
       } else {
-        await tracker.complete(
+        tracker.complete(
           PRODUCT_ANALYTICS_RESULTS.Failure,
           checkInsights
             ? {
@@ -205,7 +205,7 @@ export default function SiteAnnouncementsPage({
       })
       await loadData()
     } catch (error) {
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
       showResultToast({
@@ -231,15 +231,15 @@ export default function SiteAnnouncementsPage({
         recordId,
       })
       if (response?.success) {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         await loadData()
       } else {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
       }
     } catch {
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     }
@@ -259,20 +259,20 @@ export default function SiteAnnouncementsPage({
       })
       if (response?.success) {
         if (typeof response.data === "number") {
-          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
             insights: { itemCount: response.data },
           })
         } else {
-          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         }
         await loadData()
       } else {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
       }
     } catch {
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     }

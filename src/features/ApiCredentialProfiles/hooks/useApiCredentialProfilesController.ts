@@ -405,9 +405,9 @@ export function useApiCredentialProfilesController() {
             createExportAccount(profile),
             createExportToken(profile),
           )
-          void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         } catch (error) {
-          void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
             errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           })
           throw error
@@ -475,7 +475,7 @@ export function useApiCredentialProfilesController() {
             ),
           )
           .catch((error) => {
-            void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+            tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
               errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
             })
             showResultToast({
@@ -510,7 +510,7 @@ export function useApiCredentialProfilesController() {
       })
 
       if (refreshingTelemetryProfileIdsRef.current.has(profile.id)) {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
         return
       }
 
@@ -531,17 +531,17 @@ export function useApiCredentialProfilesController() {
         const snapshot = await refreshPromise
         const insights = getApiCredentialTelemetryAnalyticsInsights(snapshot)
         if (snapshot.health.status === SiteHealthStatus.Healthy) {
-          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
             insights,
           })
         } else {
-          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
             errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
             insights,
           })
         }
       } catch (error) {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
         throw error

@@ -182,13 +182,13 @@ const completeQuickCheckinAnalytics = async (
 ) => {
   try {
     if (result === PRODUCT_ANALYTICS_RESULTS.Failure) {
-      await tracker.complete(result, {
+      tracker.complete(result, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
       return
     }
 
-    await tracker.complete(result)
+    tracker.complete(result)
   } catch {
     // Product analytics must not block the user-triggered quick check-in.
   }
@@ -201,11 +201,11 @@ const completeProductAnalyticsBestEffort = async (
 ) => {
   try {
     if (options) {
-      await tracker.complete(result, options)
+      tracker.complete(result, options)
       return
     }
 
-    await tracker.complete(result)
+    tracker.complete(result)
   } catch {
     // Product analytics must not block account row actions.
   }

@@ -57,16 +57,16 @@ const handleContextMenuClick = async (info: any, tab: any) => {
     try {
       if (!tracker) return
       if (options) {
-        await tracker.complete(result, options)
+        tracker.complete(result, options)
         return
       }
 
       if (result) {
-        await tracker.complete(result)
+        tracker.complete(result)
         return
       }
 
-      await tracker.complete()
+      tracker.complete()
     } catch (error) {
       logger.warn("Failed to complete product analytics action", error)
     }

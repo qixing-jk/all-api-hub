@@ -150,12 +150,12 @@ export function KiloCodeProfileExportDialog({
     try {
       await navigator.clipboard.writeText(JSON.stringify(apiConfigs, null, 2))
       toast.success(t("ui:dialog.kiloCode.messages.copiedApiConfigs"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         insights: exportInsights,
       })
     } catch {
       toast.error(t("ui:dialog.kiloCode.messages.copyFailed"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: exportInsights,
       })
@@ -193,13 +193,13 @@ export function KiloCodeProfileExportDialog({
       link.click()
 
       toast.success(t("ui:dialog.kiloCode.messages.downloadedSettings"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         insights: exportInsights,
       })
     } catch (error) {
       logger.error("Failed to download Kilo Code settings file", error)
       toast.error(t("ui:dialog.kiloCode.messages.downloadFailed"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: exportInsights,
       })

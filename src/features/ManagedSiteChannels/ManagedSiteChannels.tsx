@@ -544,7 +544,7 @@ export default function ManagedSiteChannels({
                 error: getErrorMessage(firstError),
               }),
         )
-        await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             itemCount: pendingDeleteIds.length,
@@ -554,7 +554,7 @@ export default function ManagedSiteChannels({
           },
         })
       } else {
-        await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
             itemCount: pendingDeleteIds.length,
             selectedCount: pendingDeleteIds.length,
@@ -565,7 +565,7 @@ export default function ManagedSiteChannels({
       }
     } catch (err) {
       toast.error(getErrorMessage(err))
-      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
           itemCount: pendingDeleteIds.length,
@@ -589,7 +589,7 @@ export default function ManagedSiteChannels({
       const eligibleChannelIds = channelIds.filter((id) => id > 0)
 
       if (!eligibleChannelIds.length) {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
           insights: {
             itemCount: 0,
             selectedCount: channelIds.length,
@@ -645,7 +645,7 @@ export default function ManagedSiteChannels({
             )
           }
         }
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
             itemCount: eligibleChannelIds.length,
             selectedCount: channelIds.length,
@@ -655,7 +655,7 @@ export default function ManagedSiteChannels({
         })
       } catch (err) {
         toast.error(t("toasts.syncFailed", { error: getErrorMessage(err) }))
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             itemCount: eligibleChannelIds.length,

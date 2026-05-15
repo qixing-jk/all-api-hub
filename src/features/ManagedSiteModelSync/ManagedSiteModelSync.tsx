@@ -414,7 +414,7 @@ export default function ManagedSiteModelSync({
     const result = getModelSyncExecutionAnalyticsResult(execution)
     const options = getModelSyncExecutionAnalyticsCompletionOptions(execution)
 
-    await tracker.complete(result, {
+    tracker.complete(result, {
       ...options,
       insights: {
         ...options.insights,
@@ -426,7 +426,7 @@ export default function ManagedSiteModelSync({
   const completeModelSyncFailureAnalytics = async (
     tracker: ReturnType<typeof startProductAnalyticsAction>,
   ) => {
-    await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
     })
   }
@@ -533,7 +533,7 @@ export default function ManagedSiteModelSync({
 
     if (selectedSet.size === 0) {
       toast.error(t("messages.error.noSelection"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
         insights: {
           mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
           sourceKind:

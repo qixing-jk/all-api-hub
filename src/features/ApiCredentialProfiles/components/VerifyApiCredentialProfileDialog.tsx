@@ -472,9 +472,9 @@ export function VerifyApiCredentialProfileDialog({
 
       await persistProbeResults(nextProbes, modelIdOverride)
       if (result.status === "pass") {
-        await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       } else {
-        await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory:
             result.status === "unsupported"
               ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
@@ -508,7 +508,7 @@ export function VerifyApiCredentialProfileDialog({
       })
       replaceProbes(nextProbes)
       await persistProbeResults(nextProbes, modelIdOverride)
-      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
       return fallback
@@ -566,7 +566,7 @@ export function VerifyApiCredentialProfileDialog({
       }
 
       if (results.length === 0) {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
         return
       }
 
@@ -582,14 +582,14 @@ export function VerifyApiCredentialProfileDialog({
 
       const hasFailedProbe = failureCount > 0
       if (hasFailedProbe) {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights,
         })
         return
       }
 
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, { insights })
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, { insights })
     } catch (error) {
       logger.error("Probe suite failed", {
         message: toSanitizedErrorSummary(error, [
@@ -597,7 +597,7 @@ export function VerifyApiCredentialProfileDialog({
           profile.baseUrl,
         ]),
       })
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     } finally {

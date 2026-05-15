@@ -175,7 +175,7 @@ export function ClaudeCodeRouterImportDialog(
     const providerModels = selectedModels
 
     void (async () => {
-      const analyticsSpan = startProductAnalyticsAction(
+      const tracker = startProductAnalyticsAction(
         analyticsContext ?? {
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
           actionId:
@@ -204,15 +204,15 @@ export function ClaudeCodeRouterImportDialog(
         })
         showResultToast(result)
         if (result.success) {
-          await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
           onClose()
         } else if ("skipped" in result && result.skipped === true) {
-          await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
         } else {
-          await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
         }
       } catch (error) {
-        await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
         showResultToast({

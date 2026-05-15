@@ -148,7 +148,7 @@ export default function WebDAVAutoSyncSettings() {
             name: t("webdav.autoSync.title"),
           }),
         )
-        void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         await loadStatus()
       } else {
         toast.error(
@@ -157,7 +157,7 @@ export default function WebDAVAutoSyncSettings() {
               name: t("webdav.autoSync.title"),
             }),
         )
-        void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
       }
@@ -169,7 +169,7 @@ export default function WebDAVAutoSyncSettings() {
             name: t("webdav.autoSync.title"),
           }),
       )
-      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     } finally {
@@ -193,19 +193,19 @@ export default function WebDAVAutoSyncSettings() {
 
       if (response.success) {
         await loadPreferences()
-        void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         await loadStatus()
         toast.success(response.message || t("webdav.syncSuccess"))
       } else {
         toast.error(response.message || t("webdav.syncFailed"))
-        void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
       }
     } catch (error: any) {
       logger.error("Failed to trigger WebDAV auto-sync", error)
       toast.error(error?.message || t("webdav.syncFailed"))
-      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     } finally {

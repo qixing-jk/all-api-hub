@@ -91,9 +91,9 @@ export function TokenDetails({
         token,
       )
       OpenInCherryStudio(account, resolvedToken)
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
       showResultToast({
@@ -125,11 +125,11 @@ export function TokenDetails({
     })
 
     if (result.opened || result.deferred) {
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       return
     }
 
-    await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
   }
 
   const handleOpenCliProxyDialog = (event: MouseEvent) => {
