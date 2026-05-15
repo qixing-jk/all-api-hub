@@ -34,6 +34,18 @@ import {
   importToCliProxy,
   type ImportToCliProxyOptions,
 } from "~/services/integrations/cliProxyService"
+import {
+  startProductAnalyticsAction,
+  type ProductAnalyticsActionContext,
+} from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
 import { normalizeOpenAiFamilyBaseUrl } from "~/services/verification/webAiApiCheck/extractCredentials"
 import type { ApiToken, DisplaySiteData } from "~/types"
@@ -48,6 +60,7 @@ interface CliProxyExportDialogProps {
   account: DisplaySiteData
   token: ApiToken
   apiTypeHint?: ApiVerificationApiType
+  analyticsContext?: ProductAnalyticsActionContext
 }
 
 const logger = createLogger("CliProxyExportDialog")
@@ -125,7 +138,8 @@ async function fetchProviderModelSuggestions(options: {
  * A dialog component that allows the user to export their account and API token configuration to a CLI proxy provider. The form fields are dynamically adjusted based on the selected provider type, and model suggestions are fetched from the upstream provider if supported. Upon submission, the configuration is sent to the backend to be imported into the CLI proxy, and a toast notification is shown with the result.
  */
 export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
-  const { isOpen, onClose, account, token, apiTypeHint } = props
+  const { isOpen, onClose, account, token, apiTypeHint, analyticsContext } =
+    props
   const { t } = useTranslation(["ui", "common"])
 
   const defaultProviderType = useMemo(() => {
@@ -343,6 +357,16 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
     event.preventDefault()
 
     void (async () => {
+      const analyticsSpan = startProductAnalyticsAction(
+        analyticsContext ?? {
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportAccountTokenToCliProxy,
+          surfaceId:
+            PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        },
+      )
+
       try {
         setIsSubmitting(true)
         const resolvedToken = await resolveDisplayAccountTokenForSecret(
@@ -375,9 +399,17 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
         const result = await importToCliProxy(payload)
         showResultToast(result)
         if (result.success) {
+          await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Success)
           onClose()
+        } else if ("skipped" in result && result.skipped === true) {
+          await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+        } else {
+          await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
         }
       } catch (error) {
+        await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
         showResultToast({
           success: false,
           message: t("messages:errors.operation.failed", {

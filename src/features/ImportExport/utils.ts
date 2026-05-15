@@ -111,6 +111,7 @@ export const handleExportAll = async (
   } catch (error) {
     logger.error("导出失败", error)
     toast.error(t("importExport:export.exportFailed"))
+    throw error
   } finally {
     setIsExporting(false)
   }
@@ -155,6 +156,7 @@ export const handleExportAccounts = async (
   } catch (error) {
     logger.error("导出账号数据失败", error)
     toast.error(t("importExport:export.exportFailed"))
+    throw error
   } finally {
     setIsExporting(false)
   }
@@ -195,6 +197,7 @@ export const handleExportPreferences = async (
   } catch (error) {
     logger.error("导出用户设置失败", error)
     toast.error(t("importExport:export.exportFailed"))
+    throw error
   } finally {
     setIsExporting(false)
   }

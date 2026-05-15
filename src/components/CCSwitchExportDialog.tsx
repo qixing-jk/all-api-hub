@@ -23,6 +23,18 @@ import {
   openInCCSwitch,
   type CCSwitchApp,
 } from "~/services/integrations/ccSwitch"
+import {
+  startProductAnalyticsAction,
+  type ProductAnalyticsActionContext,
+} from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -37,6 +49,7 @@ interface CCSwitchExportDialogProps {
   onClose: () => void
   account: DisplaySiteData
   token: ApiToken
+  analyticsContext?: ProductAnalyticsActionContext
 }
 
 /**
@@ -87,7 +100,7 @@ const getCCSwitchLimitationNotice = (t: TFunction, app: CCSwitchApp) => {
  * @param props.token API token exported through CCSwitch.
  */
 export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
-  const { isOpen, onClose, account, token } = props
+  const { isOpen, onClose, account, token, analyticsContext } = props
   const { t } = useTranslation(["ui", "common"])
   const [app, setApp] = useState<CCSwitchApp>(DEFAULT_APP)
   const [model, setModel] = useState("")
@@ -187,6 +200,16 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
     event.preventDefault()
 
     void (async () => {
+      const analyticsSpan = startProductAnalyticsAction(
+        analyticsContext ?? {
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportAccountTokenToCCSwitch,
+          surfaceId:
+            PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        },
+      )
+
       try {
         const resolvedToken = await resolveDisplayAccountTokenForSecret(
           account,
@@ -204,9 +227,15 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
         })
 
         if (opened) {
+          await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Success)
           onClose()
+        } else {
+          await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
         }
       } catch (error) {
+        await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
         logger.warn("Failed to resolve token for CC Switch export", error)
         toast.error(
           t("messages:errors.operation.failed", {

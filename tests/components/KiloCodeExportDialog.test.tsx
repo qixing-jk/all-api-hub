@@ -5,6 +5,14 @@ import { KiloCodeExportDialog } from "~/components/KiloCodeExportDialog"
 import { SITE_TYPES } from "~/constants/siteType"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
+import {
   AuthTypeEnum,
   SiteHealthStatus,
   type DisplaySiteData,
@@ -13,12 +21,19 @@ import {
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const mockUseAccountData = vi.fn()
-const { toastSuccessMock, toastErrorMock, addTokenDialogPropsMock } =
-  vi.hoisted(() => ({
-    toastSuccessMock: vi.fn(),
-    toastErrorMock: vi.fn(),
-    addTokenDialogPropsMock: vi.fn(),
-  }))
+const {
+  toastSuccessMock,
+  toastErrorMock,
+  addTokenDialogPropsMock,
+  completeProductAnalyticsActionMock,
+  startProductAnalyticsActionMock,
+} = vi.hoisted(() => ({
+  toastSuccessMock: vi.fn(),
+  toastErrorMock: vi.fn(),
+  addTokenDialogPropsMock: vi.fn(),
+  completeProductAnalyticsActionMock: vi.fn(),
+  startProductAnalyticsActionMock: vi.fn(),
+}))
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -29,6 +44,11 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/hooks/useAccountData", () => ({
   useAccountData: () => mockUseAccountData(),
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: unknown[]) =>
+    startProductAnalyticsActionMock(...args),
 }))
 
 vi.mock("~/features/KeyManagement/components/AddTokenDialog", () => ({
@@ -134,11 +154,28 @@ const createSiteAccount = (site: DisplaySiteData): SiteAccount => ({
   updated_at: 0,
 })
 
+const expectKiloAccountExportActionStarted = (
+  actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
+) => {
+  expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+    actionId,
+    surfaceId:
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountTokenKiloCodeExportDialog,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  })
+}
+
 describe("KiloCodeExportDialog", () => {
   beforeEach(() => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
     addTokenDialogPropsMock.mockReset()
+    completeProductAnalyticsActionMock.mockReset()
+    startProductAnalyticsActionMock.mockReset()
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: completeProductAnalyticsActionMock,
+    })
     mockFetchOpenAICompatibleModelIds.mockReset()
     mockFetchOpenAICompatibleModelIds.mockResolvedValue(["gpt-4o-mini"])
     mockFetchAccountTokens.mockReset()
@@ -1256,6 +1293,13 @@ describe("KiloCodeExportDialog", () => {
     const copiedPayload = String(writeText.mock.calls[0]?.[0] ?? "")
     expect(copiedPayload).toContain("sk-full-secret")
     expect(copiedPayload).not.toContain("sk-abcd************wxyz")
+    expectKiloAccountExportActionStarted(
+      PRODUCT_ANALYTICS_ACTION_IDS.CopyKiloCodeAccountExportConfig,
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      { insights: { itemCount: 1, modelCount: 1, selectedCount: 1 } },
+    )
   })
 
   it("shows resolver error feedback when resolving export secrets throws", async () => {
@@ -1305,6 +1349,16 @@ describe("KiloCodeExportDialog", () => {
     await waitFor(() => {
       expect(toastErrorMock).toHaveBeenCalledWith("resolve failed")
     })
+    expectKiloAccountExportActionStarted(
+      PRODUCT_ANALYTICS_ACTION_IDS.CopyKiloCodeAccountExportConfig,
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: { itemCount: 1, modelCount: 1, selectedCount: 1 },
+      },
+    )
   })
 
   it("downloads settings with resolved full keys and cleans up the blob URL", async () => {
@@ -1377,9 +1431,73 @@ describe("KiloCodeExportDialog", () => {
     expect(toastSuccessMock).toHaveBeenCalledWith(
       "ui:dialog.kiloCode.messages.downloadedSettings",
     )
+    expectKiloAccountExportActionStarted(
+      PRODUCT_ANALYTICS_ACTION_IDS.ExportKiloCodeAccountSettingsFile,
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      { insights: { itemCount: 1, modelCount: 1, selectedCount: 1 } },
+    )
 
     clickSpy.mockRestore()
     revokeObjectUrl.mockRestore()
     createObjectUrl.mockRestore()
+  })
+
+  it("tracks download completion failure when resolving export secrets throws", async () => {
+    const user = userEvent.setup()
+
+    mockUseAccountData.mockReturnValue({
+      enabledAccounts: [],
+      enabledDisplayData: [
+        createDisplayAccount({
+          id: "b",
+          name: "Site B",
+          baseUrl: "https://b.test",
+        }),
+      ],
+    })
+
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      { id: 1, name: "Default", key: "sk-abcd************wxyz" },
+    ])
+    mockResolveApiTokenKey
+      .mockResolvedValueOnce("sk-full-secret")
+      .mockRejectedValueOnce(new Error("resolve failed"))
+    mockGetApiService.mockReturnValue({
+      fetchAccountTokens: mockFetchAccountTokens,
+      resolveApiTokenKey: mockResolveApiTokenKey,
+    })
+
+    render(<KiloCodeExportDialog isOpen={true} onClose={() => {}} />)
+
+    const sitePicker = await screen.findByPlaceholderText(
+      "ui:dialog.kiloCode.placeholders.selectSites",
+    )
+    await user.click(sitePicker)
+    await user.clear(sitePicker)
+    await user.type(sitePicker, "Site B")
+    await user.keyboard("{ArrowDown}")
+    await user.click(await screen.findByRole("option", { name: "Site B" }))
+
+    const downloadButton = await screen.findByRole("button", {
+      name: "ui:dialog.kiloCode.actions.downloadSettings",
+    })
+    await waitFor(() => expect(downloadButton).toBeEnabled())
+
+    await user.click(downloadButton)
+
+    expectKiloAccountExportActionStarted(
+      PRODUCT_ANALYTICS_ACTION_IDS.ExportKiloCodeAccountSettingsFile,
+    )
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: { itemCount: 1, modelCount: 1, selectedCount: 1 },
+        },
+      )
+    })
   })
 })

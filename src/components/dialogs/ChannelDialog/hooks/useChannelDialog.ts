@@ -562,7 +562,7 @@ export function useChannelDialog() {
   const openWithCredentials = async (
     credentials: { name: string; baseUrl: string; apiKey: string },
     onSuccess?: (result: any) => void,
-  ) => {
+  ): Promise<OpenWithAccountResult> => {
     const toastId = toast.loading(
       t("messages:accountOperations.checkingApiKeys"),
     )
@@ -578,7 +578,7 @@ export function useChannelDialog() {
             id: toastId,
           },
         )
-        return
+        return { opened: false }
       }
 
       const displaySiteData = createCredentialDisplaySiteData({
@@ -612,7 +612,7 @@ export function useChannelDialog() {
           existingChannelName: duplicateState.existingChannelName,
         })
         if (!confirmedDuplicate) {
-          return
+          return { opened: false }
         }
       } else {
         toast.dismiss(toastId)
@@ -629,6 +629,7 @@ export function useChannelDialog() {
           onSuccess?.(result)
         },
       })
+      return { opened: true }
     } catch (error) {
       const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)
       toast.error(
@@ -638,6 +639,7 @@ export function useChannelDialog() {
         { id: toastId },
       )
       logger.error("Failed to prepare channel data", { diagnostic })
+      return { opened: false }
     }
   }
 

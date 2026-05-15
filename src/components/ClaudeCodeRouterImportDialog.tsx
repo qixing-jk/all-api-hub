@@ -12,6 +12,18 @@ import {
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { fetchOpenAICompatibleModels } from "~/services/apiService/openaiCompatible"
 import { importToClaudeCodeRouter } from "~/services/integrations/claudeCodeRouterService"
+import {
+  startProductAnalyticsAction,
+  type ProductAnalyticsActionContext,
+} from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -24,6 +36,7 @@ interface ClaudeCodeRouterImportDialogProps {
   token: ApiToken
   routerBaseUrl: string
   routerApiKey?: string
+  analyticsContext?: ProductAnalyticsActionContext
 }
 
 /**
@@ -68,6 +81,7 @@ export function ClaudeCodeRouterImportDialog(
   props: ClaudeCodeRouterImportDialogProps,
 ) {
   const { isOpen, onClose, account, token, routerBaseUrl, routerApiKey } = props
+  const { analyticsContext } = props
 
   const { t } = useTranslation(["ui", "common"])
 
@@ -161,6 +175,17 @@ export function ClaudeCodeRouterImportDialog(
     const providerModels = selectedModels
 
     void (async () => {
+      const analyticsSpan = startProductAnalyticsAction(
+        analyticsContext ?? {
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+          actionId:
+            PRODUCT_ANALYTICS_ACTION_IDS.ExportAccountTokenToClaudeCodeRouter,
+          surfaceId:
+            PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        },
+      )
+
       try {
         setIsSubmitting(true)
         const resolvedToken = await resolveDisplayAccountTokenForSecret(
@@ -179,9 +204,17 @@ export function ClaudeCodeRouterImportDialog(
         })
         showResultToast(result)
         if (result.success) {
+          await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Success)
           onClose()
+        } else if ("skipped" in result && result.skipped === true) {
+          await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+        } else {
+          await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
         }
       } catch (error) {
+        await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
         showResultToast({
           success: false,
           message: t("messages:errors.operation.failed", {

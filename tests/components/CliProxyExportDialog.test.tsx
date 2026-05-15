@@ -4,6 +4,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
 import { CLI_PROXY_PROVIDER_TYPES } from "~/services/integrations/cliProxyProviderTypes"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   buildApiToken,
@@ -31,6 +39,11 @@ const mockFetchOpenAICompatibleModelIds = vi.fn()
 const mockImportToCliProxy = vi.fn()
 const mockShowResultToast = vi.fn()
 const mockResolveDisplayAccountTokenForSecret = vi.fn()
+const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
+  vi.hoisted(() => ({
+    startProductAnalyticsActionMock: vi.fn(),
+    completeProductAnalyticsActionMock: vi.fn(),
+  }))
 
 vi.mock(
   "~/services/accounts/utils/apiServiceRequest",
@@ -69,6 +82,10 @@ vi.mock("~/utils/core/toastHelpers", () => ({
   showResultToast: (...args: any[]) => mockShowResultToast(...args),
 }))
 
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: startProductAnalyticsActionMock,
+}))
+
 describe("CliProxyExportDialog", () => {
   beforeEach(() => {
     mockFetchAnthropicModelIds.mockReset()
@@ -77,9 +94,14 @@ describe("CliProxyExportDialog", () => {
     mockImportToCliProxy.mockReset()
     mockShowResultToast.mockReset()
     mockResolveDisplayAccountTokenForSecret.mockReset()
+    startProductAnalyticsActionMock.mockReset()
+    completeProductAnalyticsActionMock.mockReset()
     mockResolveDisplayAccountTokenForSecret.mockImplementation(
       async (_account, token) => token,
     )
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: completeProductAnalyticsActionMock,
+    })
 
     mockImportToCliProxy.mockResolvedValue({
       success: true,
@@ -444,6 +466,204 @@ describe("CliProxyExportDialog", () => {
         baseUrl: "https://proxy.example.com/openai",
         apiKey: "sk-test",
       })
+    })
+  })
+
+  it("tracks successful CLI Proxy imports without sensitive metadata", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
+
+    render(
+      <CliProxyExportDialog
+        isOpen={true}
+        onClose={onClose}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Sensitive Provider",
+          baseUrl: "https://private.example.com/v1",
+        })}
+        token={buildApiToken({ key: "sk-sensitive" })}
+      />,
+    )
+
+    await screen.findByLabelText("ui:dialog.cliproxy.fields.baseUrl")
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.import" }),
+    )
+
+    await waitFor(() => {
+      expect(mockImportToCliProxy).toHaveBeenCalled()
+    })
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportAccountTokenToCliProxy,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+    expect(onClose).toHaveBeenCalledTimes(1)
+
+    const analyticsCalls = JSON.stringify([
+      startProductAnalyticsActionMock.mock.calls,
+      completeProductAnalyticsActionMock.mock.calls,
+    ])
+    expect(analyticsCalls).not.toContain("sk-sensitive")
+    expect(analyticsCalls).not.toContain("https://private.example.com")
+    expect(analyticsCalls).not.toContain("Sensitive Provider")
+  })
+
+  it("tracks failed CLI Proxy import results as failures", async () => {
+    const user = userEvent.setup()
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
+    mockImportToCliProxy.mockResolvedValueOnce({
+      success: false,
+      message: "rejected",
+    })
+
+    render(
+      <CliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Example",
+          baseUrl: "https://x.test/v1",
+        })}
+        token={buildApiToken({ key: "sk-test" })}
+      />,
+    )
+
+    await screen.findByLabelText("ui:dialog.cliproxy.fields.baseUrl")
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.import" }),
+    )
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+      )
+    })
+  })
+
+  it("tracks skipped CLI Proxy import results as skipped", async () => {
+    const user = userEvent.setup()
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
+    mockImportToCliProxy.mockResolvedValueOnce({
+      success: false,
+      skipped: true,
+      message: "unchanged",
+    })
+
+    render(
+      <CliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Sensitive Provider",
+          baseUrl: "https://private.example.com/v1",
+        })}
+        token={buildApiToken({ key: "sk-sensitive" })}
+      />,
+    )
+
+    await screen.findByLabelText("ui:dialog.cliproxy.fields.baseUrl")
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.import" }),
+    )
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+      )
+    })
+
+    const analyticsCalls = JSON.stringify([
+      startProductAnalyticsActionMock.mock.calls,
+      completeProductAnalyticsActionMock.mock.calls,
+    ])
+    expect(analyticsCalls).not.toContain("sk-sensitive")
+    expect(analyticsCalls).not.toContain("https://private.example.com")
+    expect(analyticsCalls).not.toContain("Sensitive Provider")
+    expect(analyticsCalls).not.toContain("unchanged")
+  })
+
+  it("uses an explicit analytics context for profile-origin imports", async () => {
+    const user = userEvent.setup()
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
+
+    render(
+      <CliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Example",
+          baseUrl: "https://x.test/v1",
+        })}
+        token={buildApiToken({ key: "sk-test" })}
+        analyticsContext={{
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+          actionId:
+            PRODUCT_ANALYTICS_ACTION_IDS.ImportApiCredentialProfileToCliProxy,
+          surfaceId:
+            PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        }}
+      />,
+    )
+
+    await screen.findByLabelText("ui:dialog.cliproxy.fields.baseUrl")
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.import" }),
+    )
+
+    await waitFor(() => {
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+        actionId:
+          PRODUCT_ANALYTICS_ACTION_IDS.ImportApiCredentialProfileToCliProxy,
+        surfaceId:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+    })
+  })
+
+  it("tracks thrown CLI Proxy submissions as unknown failures", async () => {
+    const user = userEvent.setup()
+    mockFetchOpenAICompatibleModelIds.mockResolvedValue([])
+    mockImportToCliProxy.mockRejectedValueOnce(new Error("proxy unavailable"))
+
+    render(
+      <CliProxyExportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Example",
+          baseUrl: "https://x.test/v1",
+        })}
+        token={buildApiToken({ key: "sk-test" })}
+      />,
+    )
+
+    await screen.findByLabelText("ui:dialog.cliproxy.fields.baseUrl")
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.import" }),
+    )
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        },
+      )
     })
   })
 })

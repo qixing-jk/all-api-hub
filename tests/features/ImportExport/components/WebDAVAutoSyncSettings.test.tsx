@@ -11,26 +11,42 @@ import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
 import WebDAVAutoSyncSettings from "~/features/ImportExport/components/WebDAVAutoSyncSettings"
+import { resolveProductAnalyticsActionContext } from "~/services/productAnalytics/actionConfig"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
-const { mockUserPreferences, mockSendRuntimeMessage, loggerMocks } = vi.hoisted(
-  () => ({
-    mockUserPreferences: {
-      getPreferences: vi.fn(),
-      savePreferences: vi.fn(),
-    },
-    mockSendRuntimeMessage: vi.fn(),
-    loggerMocks: {
-      error: vi.fn(),
-      info: vi.fn(),
-      warn: vi.fn(),
-      debug: vi.fn(),
-    },
-  }),
-)
+const {
+  mockUserPreferences,
+  mockSendRuntimeMessage,
+  mockStartProductAnalyticsAction,
+  mockCompleteProductAnalyticsAction,
+  loggerMocks,
+} = vi.hoisted(() => ({
+  mockUserPreferences: {
+    getPreferences: vi.fn(),
+    savePreferences: vi.fn(),
+  },
+  mockSendRuntimeMessage: vi.fn(),
+  mockStartProductAnalyticsAction: vi.fn(),
+  mockCompleteProductAnalyticsAction: vi.fn(),
+  loggerMocks: {
+    error: vi.fn(),
+    info: vi.fn(),
+    warn: vi.fn(),
+    debug: vi.fn(),
+  },
+}))
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -60,6 +76,49 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
 vi.mock("~/utils/browser/browserApi", () => ({
   sendRuntimeMessage: mockSendRuntimeMessage,
 }))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: unknown[]) =>
+    mockStartProductAnalyticsAction(...args),
+}))
+
+vi.mock("~/components/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/components/ui")>()
+
+  return {
+    ...actual,
+    Button: ({
+      analyticsAction,
+      children,
+      leftIcon,
+      rightIcon,
+      loading: _loading,
+      ...props
+    }: any) => {
+      const scope = useProductAnalyticsScope()
+      const resolvedAction = resolveProductAnalyticsActionContext(
+        analyticsAction,
+        scope,
+      )
+
+      return (
+        <button
+          type="button"
+          data-analytics-action={
+            resolvedAction
+              ? `${resolvedAction.featureId}:${resolvedAction.actionId}:${resolvedAction.surfaceId}:${resolvedAction.entrypoint}`
+              : undefined
+          }
+          {...props}
+        >
+          {leftIcon}
+          {children}
+          {rightIcon}
+        </button>
+      )
+    },
+  }
+})
 
 function render(ui: ReactNode) {
   return rtlRender(
@@ -99,6 +158,69 @@ describe("WebDAVAutoSyncSettings", () => {
         default:
           return { success: true }
       }
+    })
+    mockStartProductAnalyticsAction.mockReturnValue({
+      complete: mockCompleteProductAnalyticsAction,
+    })
+  })
+
+  it("does not declare button analytics metadata for auto-sync settings save with a manual async span", async () => {
+    render(<WebDAVAutoSyncSettings />)
+
+    expect(
+      await screen.findByRole("button", {
+        name: "importExport:webdav.autoSync.saveSettings",
+      }),
+    ).not.toHaveAttribute("data-analytics-action")
+  })
+
+  it("completes WebDAV auto-sync settings save analytics as success", async () => {
+    render(<WebDAVAutoSyncSettings />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "importExport:webdav.autoSync.saveSettings",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateWebDavAutoSyncSettings,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsWebDavAutoSyncSettings,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+      )
+    })
+  })
+
+  it("completes WebDAV auto-sync settings save analytics as unknown failure when persistence rejects the update", async () => {
+    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
+      switch (message.action) {
+        case RuntimeActionIds.WebdavAutoSyncGetStatus:
+          return { success: true, data: null }
+        case RuntimeActionIds.WebdavAutoSyncUpdateSettings:
+          return { success: false, error: "save failed" }
+        default:
+          return { success: true }
+      }
+    })
+
+    render(<WebDAVAutoSyncSettings />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "importExport:webdav.autoSync.saveSettings",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      )
     })
   })
 
@@ -149,6 +271,15 @@ describe("WebDAVAutoSyncSettings", () => {
       })
     })
     expect(toast.success).toHaveBeenCalledWith("custom sync ok")
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SyncWebDavNow,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsWebDavAutoSyncSettings,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
   })
 
   it("surfaces status, save, and sync errors", async () => {
@@ -187,6 +318,10 @@ describe("WebDAVAutoSyncSettings", () => {
     )
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("sync failed")
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      )
     })
   })
 
@@ -261,6 +396,10 @@ describe("WebDAVAutoSyncSettings", () => {
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("sync rejected")
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      )
     })
   })
 

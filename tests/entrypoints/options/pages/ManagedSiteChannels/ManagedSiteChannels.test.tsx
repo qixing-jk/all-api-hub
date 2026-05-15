@@ -97,11 +97,13 @@ const {
   mockFetchChannelFilters,
   mockStartProductAnalyticsAction,
   mockTrackProductAnalyticsActionStarted,
+  mockTrackProductAnalyticsActionCompleted,
   mockCompleteProductAnalyticsAction,
 } = vi.hoisted(() => ({
   mockFetchChannelFilters: vi.fn(),
   mockStartProductAnalyticsAction: vi.fn(),
   mockTrackProductAnalyticsActionStarted: vi.fn(),
+  mockTrackProductAnalyticsActionCompleted: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
 }))
 
@@ -113,6 +115,8 @@ vi.mock("~/features/ManagedSiteChannels/utils/channelFilters", async () => ({
 vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: (...args: any[]) =>
     mockStartProductAnalyticsAction(...args),
+  trackProductAnalyticsActionCompleted: (...args: any[]) =>
+    mockTrackProductAnalyticsActionCompleted(...args),
   trackProductAnalyticsActionStarted: (...args: any[]) =>
     mockTrackProductAnalyticsActionStarted(...args),
 }))
@@ -286,6 +290,7 @@ describe("ManagedSiteChannels", () => {
       complete: mockCompleteProductAnalyticsAction,
     })
     mockTrackProductAnalyticsActionStarted.mockReset()
+    mockTrackProductAnalyticsActionCompleted.mockReset()
     mockCompleteProductAnalyticsAction.mockReset()
   })
 
@@ -1267,7 +1272,23 @@ describe("ManagedSiteChannels", () => {
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          itemCount: 1,
+          selectedCount: 1,
+        },
       },
+    )
+    expect(mockCompleteProductAnalyticsAction).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        error: expect.anything(),
+      }),
+    )
+    expect(mockCompleteProductAnalyticsAction).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        message: expect.anything(),
+      }),
     )
   })
 
@@ -1313,6 +1334,12 @@ describe("ManagedSiteChannels", () => {
     })
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Skipped,
+      {
+        insights: {
+          itemCount: 0,
+          selectedCount: 1,
+        },
+      },
     )
   })
 
@@ -1452,6 +1479,14 @@ describe("ManagedSiteChannels", () => {
     )
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          failureCount: 0,
+          itemCount: 1,
+          selectedCount: 1,
+          successCount: 1,
+        },
+      },
     )
   })
 
@@ -1554,6 +1589,12 @@ describe("ManagedSiteChannels", () => {
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          failureCount: 1,
+          itemCount: 2,
+          selectedCount: 2,
+          successCount: 1,
+        },
       },
     )
   })
@@ -1673,6 +1714,22 @@ describe("ManagedSiteChannels", () => {
     })
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          failureCount: 1,
+          itemCount: 2,
+          selectedCount: 2,
+          successCount: 1,
+        },
+      },
+    )
+    expect(mockCompleteProductAnalyticsAction).not.toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({
+        insights: expect.objectContaining({
+          message: expect.anything(),
+        }),
+      }),
     )
   })
 

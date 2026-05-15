@@ -34,9 +34,25 @@ import {
   buildKiloCodeSettingsFile,
   type KiloCodeExportTuple,
 } from "~/services/integrations/kiloCodeExport"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { stripTrailingOpenAIV1 } from "~/utils/core/url"
+
+const kiloCodeAccountExportAnalyticsContext = {
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+  surfaceId:
+    PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountTokenKiloCodeExportDialog,
+}
 
 interface KiloCodeExportDialogProps {
   isOpen: boolean
@@ -721,12 +737,26 @@ export function KiloCodeExportDialog({
     sites: selectedSiteIds.length,
     keys: exportSelections.length,
   })
+  const exportInsights = {
+    itemCount: exportSelections.length,
+    modelCount: exportSelections.filter((tuple) => tuple.modelId?.trim())
+      .length,
+    selectedCount: selectedSiteIds.length,
+  }
 
   const handleCopyApiConfigs = async () => {
-    if (typeof navigator === "undefined") return
     if (!canExport) return
 
+    const tracker = startProductAnalyticsAction({
+      ...kiloCodeAccountExportAnalyticsContext,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyKiloCodeAccountExportConfig,
+    })
+
     try {
+      if (typeof navigator === "undefined") {
+        throw new Error(t("ui:dialog.kiloCode.messages.copyFailed"))
+      }
+
       const resolvedSelections = await buildResolvedExportSelections()
       const { apiConfigs: resolvedApiConfigs } = buildKiloCodeApiConfigs({
         selections: resolvedSelections,
@@ -735,10 +765,17 @@ export function KiloCodeExportDialog({
         JSON.stringify(resolvedApiConfigs, null, 2),
       )
       toast.success(t("ui:dialog.kiloCode.messages.copiedApiConfigs"))
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        insights: exportInsights,
+      })
     } catch (error) {
       toast.error(
         getErrorMessage(error, t("ui:dialog.kiloCode.messages.copyFailed")),
       )
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: exportInsights,
+      })
     }
   }
 
@@ -746,28 +783,54 @@ export function KiloCodeExportDialog({
     if (!canExport) return
     if (!effectiveCurrentApiConfigName) return
 
-    const resolvedSelections = await buildResolvedExportSelections()
-    const { apiConfigs: resolvedApiConfigs } = buildKiloCodeApiConfigs({
-      selections: resolvedSelections,
-    })
-    const payload = buildKiloCodeSettingsFile({
-      currentApiConfigName: effectiveCurrentApiConfigName,
-      apiConfigs: resolvedApiConfigs,
+    const tracker = startProductAnalyticsAction({
+      ...kiloCodeAccountExportAnalyticsContext,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportKiloCodeAccountSettingsFile,
     })
 
-    const blob = new Blob([JSON.stringify(payload, null, 2)], {
-      type: "application/json",
-    })
-    const url = URL.createObjectURL(blob)
-    const link = document.createElement("a")
-    link.href = url
-    link.download = filename
-    document.body.appendChild(link)
-    link.click()
-    document.body.removeChild(link)
-    URL.revokeObjectURL(url)
+    let url: string | null = null
+    let link: HTMLAnchorElement | null = null
 
-    toast.success(t("ui:dialog.kiloCode.messages.downloadedSettings"))
+    try {
+      const resolvedSelections = await buildResolvedExportSelections()
+      const { apiConfigs: resolvedApiConfigs } = buildKiloCodeApiConfigs({
+        selections: resolvedSelections,
+      })
+      const payload = buildKiloCodeSettingsFile({
+        currentApiConfigName: effectiveCurrentApiConfigName,
+        apiConfigs: resolvedApiConfigs,
+      })
+
+      const blob = new Blob([JSON.stringify(payload, null, 2)], {
+        type: "application/json",
+      })
+      url = URL.createObjectURL(blob)
+      link = document.createElement("a")
+      link.href = url
+      link.download = filename
+      document.body.appendChild(link)
+      link.click()
+
+      toast.success(t("ui:dialog.kiloCode.messages.downloadedSettings"))
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        insights: exportInsights,
+      })
+    } catch (error) {
+      toast.error(
+        getErrorMessage(error, t("ui:dialog.kiloCode.messages.downloadFailed")),
+      )
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: exportInsights,
+      })
+    } finally {
+      if (link && document.body.contains(link)) {
+        document.body.removeChild(link)
+      }
+      if (url) {
+        URL.revokeObjectURL(url)
+      }
+    }
   }
 
   const handleCloseSub2ApiCreateDialog = () => {

@@ -10,6 +10,16 @@ import {
   CardList,
   CardTitle,
 } from "~/components/ui"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsActionId,
+} from "~/services/productAnalytics/events"
 
 import {
   handleExportAccounts,
@@ -20,6 +30,34 @@ import {
 interface ExportSectionProps {
   isExporting: boolean
   setIsExporting: (isExporting: boolean) => void
+}
+
+type ExportHandler = (
+  setIsExporting: (isExporting: boolean) => void,
+) => Promise<void>
+
+/**
+ * Tracks export intent and completion without inspecting exported data.
+ */
+function handleTrackedExport(
+  exportHandler: ExportHandler,
+  setIsExporting: (isExporting: boolean) => void,
+  actionId: ProductAnalyticsActionId,
+) {
+  const tracker = startProductAnalyticsAction({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+    actionId,
+    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsImportExportExportSection,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  })
+
+  void exportHandler(setIsExporting)
+    .then(() => tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success))
+    .catch(() =>
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      }),
+    )
 }
 
 /**
@@ -46,7 +84,13 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
             description={t("export.fullBackupDescription")}
             rightContent={
               <Button
-                onClick={() => handleExportAll(setIsExporting)}
+                onClick={() =>
+                  handleTrackedExport(
+                    handleExportAll,
+                    setIsExporting,
+                    PRODUCT_ANALYTICS_ACTION_IDS.ExportFullBackup,
+                  )
+                }
                 disabled={isExporting}
                 variant="success"
                 size="sm"
@@ -66,7 +110,13 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
             description={t("export.accountDataDescription")}
             rightContent={
               <Button
-                onClick={() => handleExportAccounts(setIsExporting)}
+                onClick={() =>
+                  handleTrackedExport(
+                    handleExportAccounts,
+                    setIsExporting,
+                    PRODUCT_ANALYTICS_ACTION_IDS.ExportAccountData,
+                  )
+                }
                 disabled={isExporting}
                 variant="default"
                 size="sm"
@@ -86,7 +136,13 @@ const ExportSection = ({ isExporting, setIsExporting }: ExportSectionProps) => {
             description={t("export.userSettingsDescription")}
             rightContent={
               <Button
-                onClick={() => handleExportPreferences(setIsExporting)}
+                onClick={() =>
+                  handleTrackedExport(
+                    handleExportPreferences,
+                    setIsExporting,
+                    PRODUCT_ANALYTICS_ACTION_IDS.ExportUserSettings,
+                  )
+                }
                 disabled={isExporting}
                 variant="secondary"
                 size="sm"

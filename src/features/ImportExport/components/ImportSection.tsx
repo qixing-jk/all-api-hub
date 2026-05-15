@@ -12,6 +12,12 @@ import {
   FormField,
   Textarea,
 } from "~/components/ui"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import {
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 
 interface ImportSectionProps {
   importData: string
@@ -118,18 +124,26 @@ const ImportSection = ({
             </Alert>
           )}
 
-          {/* 导入按钮 */}
-          <Button
-            onClick={handleImport}
-            disabled={isImporting || !validation?.valid}
-            loading={isImporting}
-            variant="default"
-            bleed
+          <ProductAnalyticsScope
+            entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+            featureId={PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport}
+            surfaceId={
+              PRODUCT_ANALYTICS_SURFACE_IDS.OptionsImportExportImportSection
+            }
           >
-            {isImporting
-              ? t("common:status.importing")
-              : t("common:actions.import")}
-          </Button>
+            {/* 导入按钮 */}
+            <Button
+              onClick={handleImport}
+              disabled={isImporting || !validation?.valid}
+              loading={isImporting}
+              variant="default"
+              bleed
+            >
+              {isImporting
+                ? t("common:status.importing")
+                : t("common:actions.import")}
+            </Button>
+          </ProductAnalyticsScope>
         </CardContent>
       </Card>
     </section>

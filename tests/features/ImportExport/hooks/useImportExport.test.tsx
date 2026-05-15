@@ -2,6 +2,14 @@ import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useImportExport } from "~/features/ImportExport/hooks/useImportExport"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 
 const {
   applyPreferenceLanguageMock,
@@ -10,6 +18,8 @@ const {
   loggerErrorMock,
   parseBackupSummaryMock,
   loadPreferencesMock,
+  startProductAnalyticsActionMock,
+  completeProductAnalyticsActionMock,
   toastErrorMock,
   toastSuccessMock,
 } = vi.hoisted(() => ({
@@ -19,6 +29,8 @@ const {
   loggerErrorMock: vi.fn(),
   parseBackupSummaryMock: vi.fn(),
   loadPreferencesMock: vi.fn(),
+  startProductAnalyticsActionMock: vi.fn(),
+  completeProductAnalyticsActionMock: vi.fn(),
   toastErrorMock: vi.fn(),
   toastSuccessMock: vi.fn(),
 }))
@@ -71,6 +83,10 @@ vi.mock("~/features/ImportExport/utils", () => ({
   parseBackupSummary: (...args: unknown[]) => parseBackupSummaryMock(...args),
 }))
 
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: startProductAnalyticsActionMock,
+}))
+
 class MockFileReader {
   onload: ((event: { target?: { result?: string } }) => void) | null = null
 
@@ -89,6 +105,9 @@ describe("useImportExport", () => {
     loadPreferencesMock.mockResolvedValue(undefined)
     getLanguageMock.mockResolvedValue("ja")
     applyPreferenceLanguageMock.mockResolvedValue(true)
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: completeProductAnalyticsActionMock,
+    })
   })
 
   it("loads selected backup file text into state and ignores empty file selections", async () => {
@@ -128,6 +147,15 @@ describe("useImportExport", () => {
       "importExport:import.selectFileImport",
     )
     expect(importFromBackupObjectMock).not.toHaveBeenCalled()
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ImportBackupData,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsImportExportImportSection,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+    )
     expect(result.current.isImporting).toBe(false)
   })
 
@@ -163,6 +191,15 @@ describe("useImportExport", () => {
     expect(getLanguageMock).toHaveBeenCalledTimes(1)
     expect(applyPreferenceLanguageMock).toHaveBeenCalledWith("ja")
     expect(result.current.isImporting).toBe(false)
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ImportBackupData,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsImportExportImportSection,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
 
     importFromBackupObjectMock.mockResolvedValueOnce({ allImported: false })
 
@@ -194,6 +231,9 @@ describe("useImportExport", () => {
     expect(getLanguageMock).toHaveBeenCalledTimes(1)
     expect(applyPreferenceLanguageMock).toHaveBeenCalledWith("ja")
     expect(toastSuccessMock).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
   })
 
   it("surfaces format errors for malformed JSON and detailed fallback errors for import failures", async () => {
@@ -211,6 +251,12 @@ describe("useImportExport", () => {
     expect(toastErrorMock).toHaveBeenCalledWith(
       "importExport:import.formatError",
     )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      },
+    )
     expect(result.current.isImporting).toBe(false)
 
     const importFailure = new Error("network down")
@@ -227,6 +273,12 @@ describe("useImportExport", () => {
     expect(loggerErrorMock).toHaveBeenCalledWith("Import failed", importFailure)
     expect(toastErrorMock).toHaveBeenLastCalledWith(
       "importExport:import.importFailed:network down",
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenLastCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
     )
     expect(result.current.isImporting).toBe(false)
   })

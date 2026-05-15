@@ -20,12 +20,25 @@ import {
   Label,
   Switch,
 } from "~/components/ui"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import {
+  startProductAnalyticsAction,
+  type ProductAnalyticsActionContext,
+} from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { tagStorage } from "~/services/tags/tagStorage"
 import {
   decryptWebdavBackupEnvelope,
@@ -65,6 +78,22 @@ import { WebDAVDecryptPasswordModal } from "./WebDAVDecryptPasswordModal"
  * Unified logger scoped to WebDAV settings and backup import/export actions.
  */
 const logger = createLogger("WebDAVSettings")
+const webDavSettingsSurface =
+  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsWebDavSettings
+const webDavAnalyticsContext = (
+  actionId:
+    | typeof PRODUCT_ANALYTICS_ACTION_IDS.DecryptImportWebDavBackup
+    | typeof PRODUCT_ANALYTICS_ACTION_IDS.DownloadImportWebDavBackup
+    | typeof PRODUCT_ANALYTICS_ACTION_IDS.UpdateWebDavConfig
+    | typeof PRODUCT_ANALYTICS_ACTION_IDS.UploadWebDavBackup
+    | typeof PRODUCT_ANALYTICS_ACTION_IDS.VerifyWebDavConnection,
+  surfaceId: ProductAnalyticsActionContext["surfaceId"] = webDavSettingsSurface,
+): ProductAnalyticsActionContext => ({
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync,
+  actionId,
+  surfaceId,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+})
 
 const WEBDAV_SYNC_DATA_INPUT_IDS: Record<WebDAVSyncDataKey, string> = {
   accounts: WEBDAV_TARGET_IDS.syncDataAccounts,
@@ -78,6 +107,15 @@ class PersistWebdavConfigError extends Error {
     super("Failed to persist WebDAV settings")
     this.name = "PersistWebdavConfigError"
   }
+}
+
+/** Classify WebDAV validation failures without exposing raw error details. */
+function getWebdavAnalyticsErrorCategory(error: unknown) {
+  if (error instanceof PersistWebdavConfigError) {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
+  }
+
+  return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
 }
 
 /**
@@ -223,6 +261,10 @@ export default function WebDAVSettings() {
   }
 
   const handleSaveConfig = async () => {
+    const tracker = startProductAnalyticsAction(
+      webDavAnalyticsContext(PRODUCT_ANALYTICS_ACTION_IDS.UpdateWebDavConfig),
+    )
+
     setSaving(true)
     try {
       await persistWebdavConfig(webdavConfig, { force: true })
@@ -231,6 +273,7 @@ export default function WebDAVSettings() {
           name: t("webdav.title"),
         }),
       )
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (e) {
       logger.error("Failed to save WebDAV settings", e)
       toast.error(
@@ -238,17 +281,27 @@ export default function WebDAVSettings() {
           name: t("webdav.title"),
         }),
       )
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: getWebdavAnalyticsErrorCategory(e),
+      })
     } finally {
       setSaving(false)
     }
   }
 
   const handleTestConnection = async () => {
+    const tracker = startProductAnalyticsAction(
+      webDavAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.VerifyWebDavConnection,
+      ),
+    )
+
     setTesting(true)
     try {
       await persistWebdavConfig()
       await testWebdavConnection(webdavConfig)
       toast.success(t("webdav.testSuccess"))
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (e: any) {
       logger.error("WebDAV connection test failed", e)
       toast.error(
@@ -256,6 +309,9 @@ export default function WebDAVSettings() {
           ? t("webdav.testFailed")
           : e?.message || t("webdav.testFailed"),
       )
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: getWebdavAnalyticsErrorCategory(e),
+      })
     } finally {
       setTesting(false)
     }
@@ -270,9 +326,16 @@ export default function WebDAVSettings() {
    *   current WebDAV encryption settings.
    */
   const handleUploadBackup = async () => {
+    const tracker = startProductAnalyticsAction(
+      webDavAnalyticsContext(PRODUCT_ANALYTICS_ACTION_IDS.UploadWebDavBackup),
+    )
+
     setUploading(true)
     try {
       if (!ensureSyncDataSelected()) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        })
         return
       }
 
@@ -321,6 +384,7 @@ export default function WebDAVSettings() {
 
       await uploadBackup(JSON.stringify(payload, null, 2), webdavConfig)
       toast.success(t("webdav.uploadSuccess"))
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (e: any) {
       logger.error("Failed to upload backup to WebDAV", e)
       toast.error(
@@ -328,6 +392,9 @@ export default function WebDAVSettings() {
           ? t("webdav.uploadFailed")
           : e?.message || t("webdav.uploadFailed"),
       )
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: getWebdavAnalyticsErrorCategory(e),
+      })
     } finally {
       setUploading(false)
     }
@@ -352,9 +419,18 @@ export default function WebDAVSettings() {
    * - If missing/incorrect, prompt the user with a retry modal.
    */
   const handleDownloadAndImport = async () => {
+    const tracker = startProductAnalyticsAction(
+      webDavAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.DownloadImportWebDavBackup,
+      ),
+    )
+
     setDownloading(true)
     try {
       if (!ensureSyncDataSelected()) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        })
         return
       }
 
@@ -370,6 +446,7 @@ export default function WebDAVSettings() {
           setPendingEnvelope(envelope)
           setDecryptPassword("")
           setDecryptDialogOpen(true)
+          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
           return
         }
 
@@ -383,6 +460,7 @@ export default function WebDAVSettings() {
           setPendingEnvelope(envelope)
           setDecryptPassword(pwd)
           setDecryptDialogOpen(true)
+          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
           return
         }
       }
@@ -396,6 +474,7 @@ export default function WebDAVSettings() {
       if (result.allImported) {
         toast.success(t("importExport:import.importSuccess"))
       }
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (e: any) {
       logger.error("Failed to download/import WebDAV backup", e)
       toast.error(
@@ -403,6 +482,9 @@ export default function WebDAVSettings() {
           ? t("importExport:import.downloadImportFailed")
           : e?.message || t("importExport:import.downloadImportFailed"),
       )
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: getWebdavAnalyticsErrorCategory(e),
+      })
     } finally {
       setDownloading(false)
     }
@@ -417,11 +499,21 @@ export default function WebDAVSettings() {
    */
   const handleDecryptAndImport = async () => {
     if (!pendingEnvelope) return
+    const tracker = startProductAnalyticsAction(
+      webDavAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.DecryptImportWebDavBackup,
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsWebDavDecryptPasswordDialog,
+      ),
+    )
     const pwd = decryptPassword.trim()
 
     setDecrypting(true)
+    let decryptCompleted = false
     try {
       if (!ensureSyncDataSelected()) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        })
         return
       }
 
@@ -429,6 +521,7 @@ export default function WebDAVSettings() {
         envelope: pendingEnvelope,
         password: pwd,
       })
+      decryptCompleted = true
 
       const data = JSON.parse(content)
       const result = await handleImportWithSelection(data)
@@ -469,9 +562,15 @@ export default function WebDAVSettings() {
 
       setDecryptDialogOpen(false)
       setPendingEnvelope(null)
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (e: any) {
       logger.error("Failed to decrypt/import WebDAV backup", e)
       toast.error(e?.message || t("webdav.encryption.decryptFailed"))
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: decryptCompleted
+          ? getWebdavAnalyticsErrorCategory(e)
+          : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      })
     } finally {
       setDecrypting(false)
     }
@@ -643,88 +742,94 @@ export default function WebDAVSettings() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
-            <Alert
-              compact
-              variant={webdavConfigDirty ? "warning" : "info"}
-              description={t(
-                webdavConfigDirty
-                  ? "webdav.actionState.unsaved"
-                  : "webdav.actionState.saved",
-              )}
-              className="sm:col-span-2 lg:col-span-4"
-            />
+          <ProductAnalyticsScope
+            entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+            featureId={PRODUCT_ANALYTICS_FEATURE_IDS.WebDavSync}
+            surfaceId={webDavSettingsSurface}
+          >
+            <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-4">
+              <Alert
+                compact
+                variant={webdavConfigDirty ? "warning" : "info"}
+                description={t(
+                  webdavConfigDirty
+                    ? "webdav.actionState.unsaved"
+                    : "webdav.actionState.saved",
+                )}
+                className="sm:col-span-2 lg:col-span-4"
+              />
 
-            {/* 保存配置 */}
-            <Button
-              id={WEBDAV_TARGET_IDS.saveConfig}
-              onClick={handleSaveConfig}
-              disabled={saving}
-              loading={saving}
-              variant="default"
-              size="sm"
-              bleed
-            >
-              {saving ? t("common:status.saving") : t("webdav.saveConfig")}
-            </Button>
+              {/* 保存配置 */}
+              <Button
+                id={WEBDAV_TARGET_IDS.saveConfig}
+                onClick={handleSaveConfig}
+                disabled={saving}
+                loading={saving}
+                variant="default"
+                size="sm"
+                bleed
+              >
+                {saving ? t("common:status.saving") : t("webdav.saveConfig")}
+              </Button>
 
-            {/* 测试连接 */}
-            <Button
-              id={WEBDAV_TARGET_IDS.testConnection}
-              onClick={handleTestConnection}
-              disabled={testing || !webdavConfigFilled}
-              loading={testing}
-              variant="secondary"
-              size="sm"
-              bleed
-            >
-              {testing
-                ? t("common:status.testing")
-                : t(
-                    webdavConfigDirty
-                      ? "webdav.testConnectionWithSave"
-                      : "webdav.testConnection",
-                  )}
-            </Button>
+              {/* 测试连接 */}
+              <Button
+                id={WEBDAV_TARGET_IDS.testConnection}
+                onClick={handleTestConnection}
+                disabled={testing || !webdavConfigFilled}
+                loading={testing}
+                variant="secondary"
+                size="sm"
+                bleed
+              >
+                {testing
+                  ? t("common:status.testing")
+                  : t(
+                      webdavConfigDirty
+                        ? "webdav.testConnectionWithSave"
+                        : "webdav.testConnection",
+                    )}
+              </Button>
 
-            {/* 上传备份 */}
-            <Button
-              id={WEBDAV_TARGET_IDS.uploadBackup}
-              onClick={handleUploadBackup}
-              disabled={uploading || !webdavConfigFilled}
-              loading={uploading}
-              variant="success"
-              size="sm"
-              bleed
-            >
-              {uploading
-                ? t("common:status.uploading")
-                : t(
-                    webdavConfigDirty
-                      ? "webdav.uploadBackupWithSave"
-                      : "webdav.uploadBackup",
-                  )}
-            </Button>
+              {/* 上传备份 */}
+              <Button
+                id={WEBDAV_TARGET_IDS.uploadBackup}
+                onClick={handleUploadBackup}
+                disabled={uploading || !webdavConfigFilled}
+                loading={uploading}
+                variant="success"
+                size="sm"
+                bleed
+              >
+                {uploading
+                  ? t("common:status.uploading")
+                  : t(
+                      webdavConfigDirty
+                        ? "webdav.uploadBackupWithSave"
+                        : "webdav.uploadBackup",
+                    )}
+              </Button>
 
-            {/* 下载并导入 */}
-            <Button
-              id={WEBDAV_TARGET_IDS.downloadImport}
-              onClick={handleDownloadAndImport}
-              disabled={downloading || !webdavConfigFilled}
-              loading={downloading}
-              variant="default"
-              size="sm"
-              bleed
-            >
-              {downloading
-                ? t("common:status.processing")
-                : t(
-                    webdavConfigDirty
-                      ? "webdav.downloadImportWithSave"
-                      : "webdav.downloadImport",
-                  )}
-            </Button>
-          </div>
+              {/* 下载并导入 */}
+              <Button
+                id={WEBDAV_TARGET_IDS.downloadImport}
+                onClick={handleDownloadAndImport}
+                disabled={downloading || !webdavConfigFilled}
+                loading={downloading}
+                variant="default"
+                size="sm"
+                bleed
+              >
+                {downloading
+                  ? t("common:status.processing")
+                  : t(
+                      webdavConfigDirty
+                        ? "webdav.downloadImportWithSave"
+                        : "webdav.downloadImport",
+                    )}
+              </Button>
+            </div>
+          </ProductAnalyticsScope>
         </CardContent>
       </Card>
 

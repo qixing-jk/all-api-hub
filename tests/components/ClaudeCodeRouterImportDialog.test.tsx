@@ -4,6 +4,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImportDialog"
 import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
+import {
   buildApiToken,
   buildDisplaySiteData,
 } from "~~/tests/test-utils/factories"
@@ -27,6 +35,11 @@ const mockResolveDisplayAccountTokenForSecret = vi.fn()
 const mockFetchOpenAICompatibleModels = vi.fn()
 const mockImportToClaudeCodeRouter = vi.fn()
 const mockShowResultToast = vi.fn()
+const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
+  vi.hoisted(() => ({
+    startProductAnalyticsActionMock: vi.fn(),
+    completeProductAnalyticsActionMock: vi.fn(),
+  }))
 
 vi.mock(
   "~/services/accounts/utils/apiServiceRequest",
@@ -57,12 +70,18 @@ vi.mock("~/utils/core/toastHelpers", () => ({
   showResultToast: (...args: any[]) => mockShowResultToast(...args),
 }))
 
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: startProductAnalyticsActionMock,
+}))
+
 describe("ClaudeCodeRouterImportDialog", () => {
   beforeEach(() => {
     mockResolveDisplayAccountTokenForSecret.mockReset()
     mockFetchOpenAICompatibleModels.mockReset()
     mockImportToClaudeCodeRouter.mockReset()
     mockShowResultToast.mockReset()
+    startProductAnalyticsActionMock.mockReset()
+    completeProductAnalyticsActionMock.mockReset()
 
     mockResolveDisplayAccountTokenForSecret.mockImplementation(
       async (_account, token) => token,
@@ -71,6 +90,9 @@ describe("ClaudeCodeRouterImportDialog", () => {
     mockImportToClaudeCodeRouter.mockResolvedValue({
       success: true,
       message: "ok",
+    })
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: completeProductAnalyticsActionMock,
     })
   })
 
@@ -265,6 +287,85 @@ describe("ClaudeCodeRouterImportDialog", () => {
     expect(onClose).not.toHaveBeenCalled()
   })
 
+  it("tracks failed Claude Code Router import results as failures", async () => {
+    const user = userEvent.setup()
+
+    mockImportToClaudeCodeRouter.mockResolvedValueOnce({
+      success: false,
+      message: "router rejected config",
+    })
+
+    render(
+      <ClaudeCodeRouterImportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Example",
+          baseUrl: "https://x.test",
+        })}
+        token={buildApiToken({ key: "sk-test" })}
+        routerBaseUrl="https://router.example.com"
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.import" }),
+    )
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+      )
+    })
+  })
+
+  it("tracks skipped Claude Code Router import results as skipped", async () => {
+    const user = userEvent.setup()
+
+    mockImportToClaudeCodeRouter.mockResolvedValueOnce({
+      success: false,
+      skipped: true,
+      message: "unchanged",
+    })
+
+    render(
+      <ClaudeCodeRouterImportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Sensitive Provider",
+          baseUrl: "https://private.example.com",
+        })}
+        token={buildApiToken({ key: "sk-sensitive" })}
+        routerBaseUrl="https://router.example.com"
+        routerApiKey="router-secret"
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.import" }),
+    )
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+      )
+    })
+
+    const analyticsCalls = JSON.stringify([
+      startProductAnalyticsActionMock.mock.calls,
+      completeProductAnalyticsActionMock.mock.calls,
+    ])
+    expect(analyticsCalls).not.toContain("sk-sensitive")
+    expect(analyticsCalls).not.toContain("router-secret")
+    expect(analyticsCalls).not.toContain("https://private.example.com")
+    expect(analyticsCalls).not.toContain("https://router.example.com")
+    expect(analyticsCalls).not.toContain("Sensitive Provider")
+    expect(analyticsCalls).not.toContain("unchanged")
+  })
+
   it("falls back to a local error toast when submission throws", async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
@@ -301,5 +402,131 @@ describe("ClaudeCodeRouterImportDialog", () => {
     expect(String(toastArg.message)).toBe("messages:errors.operation.failed")
     expect(onClose).not.toHaveBeenCalled()
     expect(submitButton).toBeEnabled()
+  })
+
+  it("tracks successful Claude Code Router imports without sensitive metadata", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+
+    render(
+      <ClaudeCodeRouterImportDialog
+        isOpen={true}
+        onClose={onClose}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Sensitive Provider",
+          baseUrl: "https://private.example.com",
+        })}
+        token={buildApiToken({ key: "sk-sensitive" })}
+        routerBaseUrl="https://router.example.com"
+        routerApiKey="router-secret"
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.import" }),
+    )
+
+    await waitFor(() => {
+      expect(mockImportToClaudeCodeRouter).toHaveBeenCalled()
+    })
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.ExportAccountTokenToClaudeCodeRouter,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+    expect(onClose).toHaveBeenCalledTimes(1)
+
+    const analyticsCalls = JSON.stringify([
+      startProductAnalyticsActionMock.mock.calls,
+      completeProductAnalyticsActionMock.mock.calls,
+    ])
+    expect(analyticsCalls).not.toContain("sk-sensitive")
+    expect(analyticsCalls).not.toContain("router-secret")
+    expect(analyticsCalls).not.toContain("https://private.example.com")
+    expect(analyticsCalls).not.toContain("https://router.example.com")
+    expect(analyticsCalls).not.toContain("Sensitive Provider")
+  })
+
+  it("tracks thrown Claude Code Router submissions as unknown failures", async () => {
+    const user = userEvent.setup()
+
+    mockImportToClaudeCodeRouter.mockRejectedValueOnce(
+      new Error("router unavailable"),
+    )
+
+    render(
+      <ClaudeCodeRouterImportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Example",
+          baseUrl: "https://x.test",
+        })}
+        token={buildApiToken({ key: "sk-test" })}
+        routerBaseUrl="https://router.example.com"
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.import" }),
+    )
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        },
+      )
+    })
+  })
+
+  it("uses an explicit analytics context for profile-origin imports", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <ClaudeCodeRouterImportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={buildDisplaySiteData({
+          id: "acc",
+          name: "Example",
+          baseUrl: "https://x.test",
+        })}
+        token={buildApiToken({ key: "sk-test" })}
+        routerBaseUrl="https://router.example.com"
+        analyticsContext={{
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+          actionId:
+            PRODUCT_ANALYTICS_ACTION_IDS.ImportApiCredentialProfileToClaudeCodeRouter,
+          surfaceId:
+            PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        }}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", { name: "common:actions.import" }),
+    )
+
+    await waitFor(() => {
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+        actionId:
+          PRODUCT_ANALYTICS_ACTION_IDS.ImportApiCredentialProfileToClaudeCodeRouter,
+        surfaceId:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+    })
   })
 })

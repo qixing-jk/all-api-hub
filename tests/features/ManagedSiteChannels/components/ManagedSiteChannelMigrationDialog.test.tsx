@@ -9,6 +9,15 @@ import {
   executeManagedSiteChannelMigration,
   prepareManagedSiteChannelMigrationPreview,
 } from "~/services/managedSites/channelMigration"
+import type { ProductAnalyticsActionInsights } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  type ProductAnalyticsResult,
+} from "~/services/productAnalytics/events"
 import {
   MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
   MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES,
@@ -22,14 +31,28 @@ import {
   within,
 } from "~~/tests/test-utils/render"
 
-const { mockPreparePreview, mockExecuteMigration } = vi.hoisted(() => ({
+const {
+  mockPreparePreview,
+  mockExecuteMigration,
+  mockTrackProductAnalyticsActionStarted,
+  mockTrackProductAnalyticsActionCompleted,
+} = vi.hoisted(() => ({
   mockPreparePreview: vi.fn(),
   mockExecuteMigration: vi.fn(),
+  mockTrackProductAnalyticsActionStarted: vi.fn(),
+  mockTrackProductAnalyticsActionCompleted: vi.fn(),
 }))
 
 vi.mock("~/services/managedSites/channelMigration", () => ({
   prepareManagedSiteChannelMigrationPreview: mockPreparePreview,
   executeManagedSiteChannelMigration: mockExecuteMigration,
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionStarted: (...args: any[]) =>
+    mockTrackProductAnalyticsActionStarted(...args),
+  trackProductAnalyticsActionCompleted: (...args: any[]) =>
+    mockTrackProductAnalyticsActionCompleted(...args),
 }))
 
 vi.mock("~/services/managedSites/utils/managedSite", () => ({
@@ -519,6 +542,122 @@ describe("ManagedSiteChannelMigrationDialog", () => {
     expect(
       screen.getByText("managedSiteChannels:migration.results.status.failed"),
     ).toBeInTheDocument()
+  })
+
+  it("tracks confirmed migration execution success with aggregate-only insights", async () => {
+    render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={{} as any}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={availableTargets}
+      />,
+    )
+
+    await screen.findByText(
+      "managedSiteChannels:migration.preview.status.ready",
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:migration.actions.start",
+      }),
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:migration.confirm.confirm",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockedExecuteMigration).toHaveBeenCalledWith({
+        preview: previewPayload,
+      })
+    })
+
+    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.MigrateManagedSiteChannels,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.MigrateManagedSiteChannels,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        itemCount: 3,
+        selectedCount: 3,
+        successCount: 1,
+        failureCount: 1,
+      } satisfies ProductAnalyticsActionInsights,
+    })
+    expect(
+      mockTrackProductAnalyticsActionCompleted.mock.calls[0]?.[0],
+    ).not.toHaveProperty("durationMs")
+  })
+
+  it("tracks confirmed migration execution failure without raw error details", async () => {
+    mockedExecuteMigration.mockRejectedValueOnce(new Error("private failure"))
+
+    render(
+      <ManagedSiteChannelMigrationDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        channels={channels}
+        preferences={{} as any}
+        sourceSiteType={SITE_TYPES.NEW_API}
+        availableTargets={availableTargets}
+      />,
+    )
+
+    await screen.findByText(
+      "managedSiteChannels:migration.preview.status.ready",
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:migration.actions.start",
+      }),
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:migration.confirm.confirm",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.MigrateManagedSiteChannels,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          itemCount: 2,
+          selectedCount: 2,
+        } satisfies ProductAnalyticsActionInsights,
+      })
+    })
+
+    const completionCalls = mockTrackProductAnalyticsActionCompleted.mock
+      .calls as Array<
+      [
+        {
+          result: ProductAnalyticsResult
+          errorCategory?: string
+          insights?: ProductAnalyticsActionInsights
+          error?: string
+          message?: string
+          durationMs?: number
+        },
+      ]
+    >
+    expect(completionCalls[0]?.[0]).not.toHaveProperty("error")
+    expect(completionCalls[0]?.[0]).not.toHaveProperty("message")
+    expect(completionCalls[0]?.[0]).not.toHaveProperty("durationMs")
   })
 
   it("prevents closing while execution is still running", async () => {

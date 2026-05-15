@@ -546,14 +546,31 @@ export default function ManagedSiteChannels({
         )
         await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            itemCount: pendingDeleteIds.length,
+            selectedCount: pendingDeleteIds.length,
+            successCount: successIds.length,
+            failureCount: failedResults.length,
+          },
         })
       } else {
-        await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          insights: {
+            itemCount: pendingDeleteIds.length,
+            selectedCount: pendingDeleteIds.length,
+            successCount: successIds.length,
+            failureCount: failedResults.length,
+          },
+        })
       }
     } catch (err) {
       toast.error(getErrorMessage(err))
       await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          itemCount: pendingDeleteIds.length,
+          selectedCount: pendingDeleteIds.length,
+        },
       })
     } finally {
       setIsDeleting(false)
@@ -572,7 +589,12 @@ export default function ManagedSiteChannels({
       const eligibleChannelIds = channelIds.filter((id) => id > 0)
 
       if (!eligibleChannelIds.length) {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+          insights: {
+            itemCount: 0,
+            selectedCount: channelIds.length,
+          },
+        })
         return
       }
       setSyncingIds((prev) => {
@@ -590,6 +612,9 @@ export default function ManagedSiteChannels({
         }
         const successCount =
           response.data?.statistics?.successCount ?? eligibleChannelIds.length
+        const failureCount =
+          response.data?.statistics?.failureCount ??
+          Math.max(eligibleChannelIds.length - successCount, 0)
         toast.success(
           t("toasts.syncCompleted", {
             success: successCount,
@@ -620,11 +645,22 @@ export default function ManagedSiteChannels({
             )
           }
         }
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          insights: {
+            itemCount: eligibleChannelIds.length,
+            selectedCount: channelIds.length,
+            successCount,
+            failureCount,
+          },
+        })
       } catch (err) {
         toast.error(t("toasts.syncFailed", { error: getErrorMessage(err) }))
         await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            itemCount: eligibleChannelIds.length,
+            selectedCount: channelIds.length,
+          },
         })
       } finally {
         setSyncingIds((prev) => {

@@ -31,6 +31,17 @@ import {
 } from "~/services/managedSites/utils/managedSite"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
+  trackProductAnalyticsActionCompleted,
+  trackProductAnalyticsActionStarted,
+} from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+} from "~/services/productAnalytics/events"
+import {
   MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
   MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES,
   MANAGED_SITE_CHANNEL_MIGRATION_ITEM_WARNING_CODES,
@@ -381,13 +392,38 @@ export function ManagedSiteChannelMigrationDialog({
 
     setIsRunning(true)
     setIsConfirmOpen(false)
+    const analyticsContext = {
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.MigrateManagedSiteChannels,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    }
+    void trackProductAnalyticsActionStarted(analyticsContext)
     try {
       const result = await executeManagedSiteChannelMigration({
         preview,
       })
       setExecutionResult(result)
+      void trackProductAnalyticsActionCompleted({
+        ...analyticsContext,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        insights: {
+          itemCount: result.totalSelected,
+          selectedCount: result.totalSelected,
+          successCount: result.createdCount,
+          failureCount: result.failedCount,
+        },
+      })
     } catch (error) {
       setPreviewError(getErrorMessage(error))
+      void trackProductAnalyticsActionCompleted({
+        ...analyticsContext,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          itemCount: preview.totalCount,
+          selectedCount: preview.totalCount,
+        },
+      })
     } finally {
       setIsRunning(false)
     }

@@ -4,6 +4,15 @@ import { useTranslation } from "react-i18next"
 
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"
@@ -37,8 +46,16 @@ export const useImportExport = () => {
 
   // 导入数据
   const handleImport = async () => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ImportBackupData,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsImportExportImportSection,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
     if (!importData.trim()) {
       toast.error(t("importExport:import.selectFileImport"))
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
       return
     }
 
@@ -47,6 +64,9 @@ export const useImportExport = () => {
 
       const data = JSON.parse(importData)
       const result = await importFromBackupObject(data)
+      const hasImportedSection = Object.values(result.sections ?? {}).some(
+        Boolean,
+      )
       if (result.allImported || result.sections?.preferences) {
         await loadPreferences()
         await applyPreferenceLanguage(await userPreferences.getLanguage())
@@ -54,16 +74,27 @@ export const useImportExport = () => {
       if (result.allImported) {
         toast.success(t("importExport:import.importSuccess"))
       }
+      if (result.allImported || hasImportedSection) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      } else {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+      }
     } catch (error) {
       logger.error("Import failed", error)
       if (error instanceof SyntaxError) {
         toast.error(t("importExport:import.formatError"))
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        })
       } else {
         toast.error(
           t("importExport:import.importFailed", {
             error: getErrorMessage(error),
           }),
         )
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
       }
     } finally {
       setIsImporting(false)
