@@ -25,6 +25,7 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
@@ -683,7 +684,7 @@ describe("ManagedSiteChannels", () => {
       }),
     )
 
-    expectManagedSiteChannelActionTracked(
+    expectManagedSiteChannelActionSpanStarted(
       PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteChannels,
       PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
     )
@@ -704,6 +705,93 @@ describe("ManagedSiteChannels", () => {
       expect(screen.getByText("Beta")).toBeInTheDocument()
     })
     expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
+  })
+
+  it("completes manual refresh analytics with the refreshed channel count", async () => {
+    const user = userEvent.setup()
+
+    mockChannels([])
+    vi.mocked(sendRuntimeMessage)
+      .mockResolvedValueOnce({
+        success: true,
+        data: { items: [] },
+      } as any)
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          items: [
+            { id: 1, name: "Alpha", base_url: "https://alpha.example" },
+            { id: 2, name: "Beta", base_url: "https://beta.example" },
+          ],
+        },
+      } as any)
+
+    render(<ManagedSiteChannels />)
+
+    await waitForChannelsRefreshIdle()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.refresh",
+      }),
+    )
+
+    expectManagedSiteChannelActionSpanStarted(
+      PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteChannels,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+    )
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            itemCount: 2,
+            managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+          },
+        },
+      )
+    })
+  })
+
+  it("tracks manual refresh analytics failure when channel loading fails", async () => {
+    const user = userEvent.setup()
+
+    mockChannels([])
+    vi.mocked(sendRuntimeMessage)
+      .mockResolvedValueOnce({
+        success: true,
+        data: { items: [] },
+      } as any)
+      .mockResolvedValueOnce({
+        success: false,
+        error: "load failed",
+      } as any)
+
+    render(<ManagedSiteChannels />)
+
+    await waitForChannelsRefreshIdle()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "managedSiteChannels:toolbar.refresh",
+      }),
+    )
+
+    expectManagedSiteChannelActionSpanStarted(
+      PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteChannels,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
+    )
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+          },
+        },
+      )
+    })
   })
 
   it("tracks opening the create channel dialog from the toolbar", async () => {
@@ -1274,6 +1362,7 @@ describe("ManagedSiteChannels", () => {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
           itemCount: 1,
+          managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
           selectedCount: 1,
         },
       },
@@ -1337,6 +1426,7 @@ describe("ManagedSiteChannels", () => {
       {
         insights: {
           itemCount: 0,
+          managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
           selectedCount: 1,
         },
       },
@@ -1483,6 +1573,7 @@ describe("ManagedSiteChannels", () => {
         insights: {
           failureCount: 0,
           itemCount: 1,
+          managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
           selectedCount: 1,
           successCount: 1,
         },
@@ -1592,6 +1683,7 @@ describe("ManagedSiteChannels", () => {
         insights: {
           failureCount: 1,
           itemCount: 2,
+          managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
           selectedCount: 2,
           successCount: 1,
         },
@@ -1718,6 +1810,7 @@ describe("ManagedSiteChannels", () => {
         insights: {
           failureCount: 1,
           itemCount: 2,
+          managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
           selectedCount: 2,
           successCount: 1,
         },
@@ -2432,7 +2525,7 @@ describe("ManagedSiteChannels", () => {
 
     await user.click(refreshButton)
 
-    expectManagedSiteChannelActionTracked(
+    expectManagedSiteChannelActionSpanStarted(
       PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteChannels,
       PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
     )

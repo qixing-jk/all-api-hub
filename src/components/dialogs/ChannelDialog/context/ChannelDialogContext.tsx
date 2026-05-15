@@ -12,6 +12,12 @@ import type { ManagedSiteChannelAssessmentSignals } from "~/services/managedSite
 import type { ApiToken, DisplaySiteData } from "~/types"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 
+type ChannelDialogMutationOutcomeHandler = (outcome: {
+  mode: DialogMode
+  result: "success" | "failure"
+  siteType: string
+}) => void
+
 export interface ChannelDialogAdvisoryWarning {
   kind: string
   title: string
@@ -32,6 +38,7 @@ interface ChannelDialogState {
     | ((options: { setKey: (key: string) => void }) => Promise<void>)
     | null
   onSuccessCallback?: (result: any) => void
+  onMutationOutcome?: ChannelDialogMutationOutcomeHandler | null
 }
 
 interface DuplicateChannelWarningState {
@@ -64,6 +71,7 @@ interface ChannelDialogContextValue {
       setKey: (key: string) => void
     }) => Promise<void>
     onSuccess?: (result: any) => void
+    onMutationOutcome?: ChannelDialogMutationOutcomeHandler
   }) => void
   closeDialog: () => void
   handleSuccess: (result: any) => void
@@ -129,6 +137,7 @@ export function ChannelDialogProvider({
         setKey: (key: string) => void
       }) => Promise<void>
       onSuccess?: (result: any) => void
+      onMutationOutcome?: ChannelDialogMutationOutcomeHandler
     }) => {
       setState({
         isOpen: true,
@@ -141,6 +150,7 @@ export function ChannelDialogProvider({
         advisoryWarning: config.advisoryWarning ?? null,
         onRequestRealKey: config.onRequestRealKey ?? null,
         onSuccessCallback: config.onSuccess,
+        onMutationOutcome: config.onMutationOutcome ?? null,
       })
     },
     [],

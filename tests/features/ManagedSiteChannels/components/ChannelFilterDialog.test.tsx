@@ -9,8 +9,10 @@ import {
 } from "~/features/ManagedSiteChannels/utils/channelFilters"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_EDITOR_MODES,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -408,6 +410,12 @@ describe("ChannelFilterDialog", () => {
     })
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          editorMode: PRODUCT_ANALYTICS_EDITOR_MODES.Json,
+          itemCount: 1,
+        },
+      },
     )
     expect(onClose).toHaveBeenCalledTimes(1)
   })
@@ -499,6 +507,11 @@ describe("ChannelFilterDialog", () => {
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        insights: {
+          editorMode: PRODUCT_ANALYTICS_EDITOR_MODES.Visual,
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+          itemCount: 1,
+        },
       },
     )
   })
@@ -544,6 +557,17 @@ describe("ChannelFilterDialog", () => {
     })
 
     expect(onClose).not.toHaveBeenCalled()
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          editorMode: PRODUCT_ANALYTICS_EDITOR_MODES.Json,
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
+          itemCount: 1,
+        },
+      },
+    )
   })
 
   it("preserves user-defined visual rule order when saving", async () => {

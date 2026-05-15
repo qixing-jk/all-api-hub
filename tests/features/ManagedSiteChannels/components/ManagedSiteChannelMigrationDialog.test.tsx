@@ -14,7 +14,9 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_RESULTS,
   type ProductAnalyticsResult,
 } from "~/services/productAnalytics/events"
@@ -592,6 +594,11 @@ describe("ManagedSiteChannelMigrationDialog", () => {
         selectedCount: 3,
         successCount: 1,
         failureCount: 1,
+        sourceManagedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+        targetManagedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.Octopus,
+        readyCount: 1,
+        blockedCount: 1,
+        warningCount: 13,
       } satisfies ProductAnalyticsActionInsights,
     })
     expect(
@@ -638,6 +645,12 @@ describe("ManagedSiteChannelMigrationDialog", () => {
         insights: {
           itemCount: 1,
           selectedCount: 1,
+          sourceManagedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+          targetManagedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.Octopus,
+          readyCount: 1,
+          blockedCount: 1,
+          warningCount: 13,
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
         } satisfies ProductAnalyticsActionInsights,
       })
     })

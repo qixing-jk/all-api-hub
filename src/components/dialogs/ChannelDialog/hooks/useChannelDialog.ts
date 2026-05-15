@@ -657,6 +657,7 @@ export function useChannelDialog() {
       setKey: (key: string) => void
     }) => Promise<void>
     onSuccess?: (channel: any) => void
+    onMutationOutcome?: Parameters<typeof openDialog>[0]["onMutationOutcome"]
   }) => {
     openDialog(options)
   }

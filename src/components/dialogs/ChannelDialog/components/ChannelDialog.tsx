@@ -70,6 +70,7 @@ export interface ChannelDialogProps {
   onRequestRealKey?: (options: {
     setKey: (key: string) => void
   }) => Promise<void>
+  onMutationOutcome?: Parameters<typeof useChannelForm>[0]["onMutationOutcome"]
 }
 
 /**
@@ -88,6 +89,7 @@ export interface ChannelDialogProps {
  * @param props.advisoryWarning Optional non-blocking duplicate-risk warning shown above the form.
  * @param props.onRequestRealKey Optional edit-mode hook that can load the real
  * managed-site key into the dialog when the list payload only provides a masked value.
+ * @param props.onMutationOutcome Optional opt-in callback for callers that track real save outcomes.
  */
 export function ChannelDialog({
   isOpen,
@@ -101,6 +103,7 @@ export function ChannelDialog({
   showModelPrefillWarning = false,
   advisoryWarning,
   onRequestRealKey,
+  onMutationOutcome,
 }: ChannelDialogProps) {
   const { t } = useTranslation(["channelDialog", "common", "messages"])
   const { requestDuplicateChannelWarning } = useChannelDialogContext()
@@ -151,6 +154,7 @@ export function ChannelDialog({
     initialValues,
     initialModels,
     initialGroups,
+    onMutationOutcome,
   })
 
   const channelTypeOptions = isClaudeCodeHub

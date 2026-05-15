@@ -112,6 +112,7 @@ import {
 } from "~/services/managedSites/utils/managedSite"
 import {
   startProductAnalyticsAction,
+  trackProductAnalyticsActionCompleted,
   type ProductAnalyticsActionContext,
 } from "~/services/productAnalytics/actions"
 import {
@@ -119,8 +120,10 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsManagedSiteType,
 } from "~/services/productAnalytics/events"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
@@ -146,6 +149,25 @@ const channelsToolbarSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar
 const channelsRowActionsSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions
+
+const managedSiteAnalyticsTypeBySiteType: Partial<
+  Record<string, ProductAnalyticsManagedSiteType>
+> = {
+  [SITE_TYPES.NEW_API]: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+  [SITE_TYPES.VELOERA]: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.Veloera,
+  [SITE_TYPES.DONE_HUB]: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.DoneHub,
+  [SITE_TYPES.OCTOPUS]: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.Octopus,
+  [SITE_TYPES.AXON_HUB]: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.AxonHub,
+  [SITE_TYPES.CLAUDE_CODE_HUB]:
+    PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.ClaudeCodeHub,
+}
+
+/**
+ * Maps a managed-site runtime site type to the fixed product analytics enum.
+ */
+function resolveManagedSiteAnalyticsType(siteType: string) {
+  return managedSiteAnalyticsTypeBySiteType[siteType]
+}
 
 /**
  * Main management page for New API channels including table, filters, and dialogs.
@@ -234,6 +256,8 @@ export default function ManagedSiteChannels({
     preferences,
     managedSiteType,
   )
+  const managedSiteAnalyticsType =
+    resolveManagedSiteAnalyticsType(managedSiteType)
 
   const [channels, setChannels] = useState<ChannelRow[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -280,32 +304,58 @@ export default function ManagedSiteChannels({
   )
   const hasMigrationTargets = migrationTargets.length > 0
 
-  const refreshChannels = useCallback(async () => {
-    if (isConfigMissing) {
-      setChannels([])
-      setError(null)
-      setIsLoading(false)
-      return
-    }
+  const refreshChannels = useCallback(
+    async (analyticsContext?: ProductAnalyticsActionContext) => {
+      const tracker = analyticsContext
+        ? startProductAnalyticsAction(analyticsContext)
+        : null
 
-    setIsLoading(true)
-    setError(null)
-    try {
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.ModelSyncListChannels,
-      })
-      if (!response?.success) {
-        throw new Error(response?.error || "Failed to load channels")
+      if (isConfigMissing) {
+        setChannels([])
+        setError(null)
+        setIsLoading(false)
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+          insights: {
+            itemCount: 0,
+            managedSiteType: managedSiteAnalyticsType,
+          },
+        })
+        return
       }
-      setChannels(response.data?.items ?? [])
-    } catch (err) {
-      const message = getErrorMessage(err)
-      setError(message)
-      toast.error(t("alerts.loadError.description", { error: message }))
-    } finally {
-      setIsLoading(false)
-    }
-  }, [isConfigMissing, t])
+
+      setIsLoading(true)
+      setError(null)
+      try {
+        const response = await sendRuntimeMessage({
+          action: RuntimeActionIds.ModelSyncListChannels,
+        })
+        if (!response?.success) {
+          throw new Error(response?.error || "Failed to load channels")
+        }
+        const items = response.data?.items ?? []
+        setChannels(items)
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          insights: {
+            itemCount: items.length,
+            managedSiteType: managedSiteAnalyticsType,
+          },
+        })
+      } catch (err) {
+        const message = getErrorMessage(err)
+        setError(message)
+        toast.error(t("alerts.loadError.description", { error: message }))
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            managedSiteType: managedSiteAnalyticsType,
+          },
+        })
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [isConfigMissing, managedSiteAnalyticsType, t],
+  )
 
   useLayoutEffect(() => {
     setChannels([])
@@ -346,12 +396,33 @@ export default function ManagedSiteChannels({
   const handleOpenCreateDialog = useCallback(() => {
     openWithCustom({
       mode: undefined,
+      onMutationOutcome: (outcome) => {
+        void trackProductAnalyticsActionCompleted({
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateManagedSiteChannel,
+          surfaceId: channelsToolbarSurface,
+          entrypoint: optionsEntrypoint,
+          result:
+            outcome.result === "success"
+              ? PRODUCT_ANALYTICS_RESULTS.Success
+              : PRODUCT_ANALYTICS_RESULTS.Failure,
+          errorCategory:
+            outcome.result === "failure"
+              ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+              : undefined,
+          insights: {
+            managedSiteType:
+              resolveManagedSiteAnalyticsType(outcome.siteType) ??
+              managedSiteAnalyticsType,
+          },
+        })
+      },
       onSuccess: () => {
         toast.success(t("toasts.channelSaved"))
         void refreshChannels()
       },
     })
-  }, [openWithCustom, refreshChannels, t])
+  }, [managedSiteAnalyticsType, openWithCustom, refreshChannels, t])
 
   const openChannelDialogForMode = useCallback(
     (channel: ChannelRow, mode: DialogMode) => {
@@ -444,10 +515,36 @@ export default function ManagedSiteChannels({
                 void refreshChannels()
               }
             : undefined,
+        onMutationOutcome:
+          mode === DIALOG_MODES.EDIT
+            ? (outcome) => {
+                void trackProductAnalyticsActionCompleted({
+                  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+                  actionId:
+                    PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteChannel,
+                  surfaceId: channelsRowActionsSurface,
+                  entrypoint: optionsEntrypoint,
+                  result:
+                    outcome.result === "success"
+                      ? PRODUCT_ANALYTICS_RESULTS.Success
+                      : PRODUCT_ANALYTICS_RESULTS.Failure,
+                  errorCategory:
+                    outcome.result === "failure"
+                      ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+                      : undefined,
+                  insights: {
+                    managedSiteType:
+                      resolveManagedSiteAnalyticsType(outcome.siteType) ??
+                      managedSiteAnalyticsType,
+                  },
+                })
+              }
+            : undefined,
       })
     },
     [
       isNewApiManagedSite,
+      managedSiteAnalyticsType,
       newApiBaseUrl,
       newApiPassword,
       newApiTotpSecret,
@@ -551,6 +648,7 @@ export default function ManagedSiteChannels({
             selectedCount: pendingDeleteIds.length,
             successCount: successIds.length,
             failureCount: failedResults.length,
+            managedSiteType: managedSiteAnalyticsType,
           },
         })
       } else {
@@ -560,6 +658,7 @@ export default function ManagedSiteChannels({
             selectedCount: pendingDeleteIds.length,
             successCount: successIds.length,
             failureCount: failedResults.length,
+            managedSiteType: managedSiteAnalyticsType,
           },
         })
       }
@@ -570,6 +669,7 @@ export default function ManagedSiteChannels({
         insights: {
           itemCount: pendingDeleteIds.length,
           selectedCount: pendingDeleteIds.length,
+          managedSiteType: managedSiteAnalyticsType,
         },
       })
     } finally {
@@ -578,7 +678,12 @@ export default function ManagedSiteChannels({
       setPendingDeleteIds([])
       setPendingDeleteAnalyticsContext(null)
     }
-  }, [pendingDeleteAnalyticsContext, pendingDeleteIds, t])
+  }, [
+    managedSiteAnalyticsType,
+    pendingDeleteAnalyticsContext,
+    pendingDeleteIds,
+    t,
+  ])
 
   const handleSyncChannels = useCallback(
     async (
@@ -593,6 +698,7 @@ export default function ManagedSiteChannels({
           insights: {
             itemCount: 0,
             selectedCount: channelIds.length,
+            managedSiteType: managedSiteAnalyticsType,
           },
         })
         return
@@ -651,6 +757,7 @@ export default function ManagedSiteChannels({
             selectedCount: channelIds.length,
             successCount,
             failureCount,
+            managedSiteType: managedSiteAnalyticsType,
           },
         })
       } catch (err) {
@@ -660,6 +767,7 @@ export default function ManagedSiteChannels({
           insights: {
             itemCount: eligibleChannelIds.length,
             selectedCount: channelIds.length,
+            managedSiteType: managedSiteAnalyticsType,
           },
         })
       } finally {
@@ -670,7 +778,7 @@ export default function ManagedSiteChannels({
         })
       }
     },
-    [t],
+    [managedSiteAnalyticsType, t],
   )
 
   const rowActionLabels = useMemo<RowActionsLabels>(
@@ -1118,13 +1226,19 @@ export default function ManagedSiteChannels({
                 <>
                   <Button
                     variant="outline"
-                    onClick={() => void refreshChannels()}
+                    onClick={() =>
+                      void refreshChannels({
+                        featureId:
+                          PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+                        actionId:
+                          PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteChannels,
+                        surfaceId: channelsToolbarSurface,
+                        entrypoint: optionsEntrypoint,
+                      })
+                    }
                     disabled={isLoading}
                     loading={isLoading && channels.length > 0}
                     leftIcon={<RefreshCcw className="h-4 w-4" />}
-                    analyticsAction={
-                      PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteChannels
-                    }
                   >
                     {t("toolbar.refresh")}
                   </Button>

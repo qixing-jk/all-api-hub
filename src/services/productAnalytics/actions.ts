@@ -6,7 +6,10 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   trackProductAnalyticsEvent,
   type ProductAnalyticsApiType,
+  type ProductAnalyticsEditorMode,
   type ProductAnalyticsErrorCategory,
+  type ProductAnalyticsFailureStage,
+  type ProductAnalyticsManagedSiteType,
   type ProductAnalyticsModeId,
   type ProductAnalyticsResult,
   type ProductAnalyticsSourceKind,
@@ -33,12 +36,20 @@ export type ProductAnalyticsActionInsights = {
   apiType?: ProductAnalyticsApiType
   sourceKind?: ProductAnalyticsSourceKind
   mode?: ProductAnalyticsModeId
+  editorMode?: ProductAnalyticsEditorMode
   statusKind?: ProductAnalyticsStatusKind
   telemetrySource?: ProductAnalyticsTelemetrySource
+  managedSiteType?: ProductAnalyticsManagedSiteType
+  sourceManagedSiteType?: ProductAnalyticsManagedSiteType
+  targetManagedSiteType?: ProductAnalyticsManagedSiteType
+  failureStage?: ProductAnalyticsFailureStage
   itemCount?: number
   selectedCount?: number
   successCount?: number
   failureCount?: number
+  warningCount?: number
+  readyCount?: number
+  blockedCount?: number
   modelCount?: number
   usageDataPresent?: boolean
 }
@@ -61,10 +72,21 @@ function mapProductAnalyticsActionInsights(
     ...(insights.apiType ? { api_type: insights.apiType } : {}),
     ...(insights.sourceKind ? { source_kind: insights.sourceKind } : {}),
     ...(insights.mode ? { mode: insights.mode } : {}),
+    ...(insights.editorMode ? { editor_mode: insights.editorMode } : {}),
     ...(insights.statusKind ? { status_kind: insights.statusKind } : {}),
     ...(insights.telemetrySource
       ? { telemetry_source: insights.telemetrySource }
       : {}),
+    ...(insights.managedSiteType
+      ? { managed_site_type: insights.managedSiteType }
+      : {}),
+    ...(insights.sourceManagedSiteType
+      ? { source_managed_site_type: insights.sourceManagedSiteType }
+      : {}),
+    ...(insights.targetManagedSiteType
+      ? { target_managed_site_type: insights.targetManagedSiteType }
+      : {}),
+    ...(insights.failureStage ? { failure_stage: insights.failureStage } : {}),
     ...(typeof insights.itemCount === "number"
       ? { item_count_bucket: bucketCount(insights.itemCount) }
       : {}),
@@ -76,6 +98,15 @@ function mapProductAnalyticsActionInsights(
       : {}),
     ...(typeof insights.failureCount === "number"
       ? { failure_count_bucket: bucketCount(insights.failureCount) }
+      : {}),
+    ...(typeof insights.warningCount === "number"
+      ? { warning_count_bucket: bucketCount(insights.warningCount) }
+      : {}),
+    ...(typeof insights.readyCount === "number"
+      ? { ready_count_bucket: bucketCount(insights.readyCount) }
+      : {}),
+    ...(typeof insights.blockedCount === "number"
+      ? { blocked_count_bucket: bucketCount(insights.blockedCount) }
       : {}),
     ...(typeof insights.modelCount === "number"
       ? { model_count_bucket: bucketCount(insights.modelCount) }

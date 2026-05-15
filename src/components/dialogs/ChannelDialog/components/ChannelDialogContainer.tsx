@@ -43,6 +43,7 @@ export function ChannelDialogContainer() {
         advisoryWarning={state.advisoryWarning}
         onRequestRealKey={state.onRequestRealKey ?? undefined}
         onSuccess={handleSuccess}
+        onMutationOutcome={state.onMutationOutcome ?? undefined}
       />
       {sub2apiTokenDialog.account && sub2apiTokenDialogPrefill ? (
         <AddTokenDialog

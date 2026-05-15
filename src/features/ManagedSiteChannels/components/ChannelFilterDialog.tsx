@@ -11,8 +11,10 @@ import { resolveApiVerificationTypeForChannelType } from "~/services/models/mode
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_EDITOR_MODES,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -266,6 +268,10 @@ export default function ChannelFilterDialog({
   }
 
   const handleSave = async () => {
+    const editorMode =
+      viewMode === "json"
+        ? PRODUCT_ANALYTICS_EDITOR_MODES.Json
+        : PRODUCT_ANALYTICS_EDITOR_MODES.Visual
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.SaveManagedSiteChannelModelFilters,
@@ -284,6 +290,10 @@ export default function ChannelFilterDialog({
         )
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          insights: {
+            editorMode,
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
+          },
         })
         return
       }
@@ -296,6 +306,11 @@ export default function ChannelFilterDialog({
       toast.error(validationError)
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        insights: {
+          editorMode,
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+          itemCount: rulesToSave.length,
+        },
       })
       return
     }
@@ -319,7 +334,12 @@ export default function ChannelFilterDialog({
         // ignore serialization errors
       }
       toast.success(t("filters.messages.saved"))
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        insights: {
+          editorMode,
+          itemCount: payload.length,
+        },
+      })
       onClose()
     } catch (error) {
       toast.error(
@@ -327,6 +347,11 @@ export default function ChannelFilterDialog({
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          editorMode,
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
+          itemCount: rulesToSave.length,
+        },
       })
     } finally {
       setIsSaving(false)
