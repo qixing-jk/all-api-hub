@@ -155,14 +155,6 @@ function render(ui: ReactNode) {
   return rtlRender(<I18nextProvider i18n={testI18n}>{ui}</I18nextProvider>)
 }
 
-const manualPanelAnalyticsAction = (actionId: string) =>
-  [
-    PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
-    actionId,
-    PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncManualPanel,
-    PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-  ].join(":")
-
 const actionBarAnalyticsContext = (actionId: string) => ({
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
   actionId,
@@ -351,6 +343,19 @@ describe("ManagedSiteModelSync page", () => {
       screen.getByText("messages:newapi.configMissing"),
     ).toBeInTheDocument()
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      actionBarAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteModelSyncConfigRequired,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+      {
+        insights: {
+          managedSiteType: "new-api",
+        },
+      },
+    )
 
     fireEvent.click(
       screen.getByRole("button", { name: "common:actions.goToSettings" }),
@@ -479,6 +484,20 @@ describe("ManagedSiteModelSync page", () => {
     await waitFor(() => {
       expect(screen.queryByText("failed")).not.toBeInTheDocument()
     })
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      actionBarAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteModelSyncResults,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.objectContaining({
+        insights: {
+          managedSiteType: "new-api",
+          itemCount: 1,
+        },
+      }),
+    )
   })
 
   it("uses a warning toast when run-all completes with failed channels still present", async () => {
@@ -607,6 +626,7 @@ describe("ManagedSiteModelSync page", () => {
       {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
+          managedSiteType: "new-api",
           mode: PRODUCT_ANALYTICS_MODE_IDS.All,
           itemCount: 2,
           successCount: 1,
@@ -685,6 +705,34 @@ describe("ManagedSiteModelSync page", () => {
     expect(await screen.findByDisplayValue("Beta")).toBeInTheDocument()
     expect(screen.getByText("Manual Beta#202")).toBeInTheDocument()
     expect(screen.queryByText("Manual Alpha#201")).not.toBeInTheDocument()
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      actionBarAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.SelectManagedSiteModelSyncTab,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.objectContaining({
+        insights: {
+          managedSiteType: "new-api",
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+        },
+      }),
+    )
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      manualPanelAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.SearchManagedSiteModelSyncChannels,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.objectContaining({
+        insights: {
+          managedSiteType: "new-api",
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+        },
+      }),
+    )
   })
 
   it("shows the manual empty-state error when channel loading fails and recovers on reload", async () => {
@@ -762,6 +810,22 @@ describe("ManagedSiteModelSync page", () => {
     await waitFor(() => {
       expect(screen.queryByText("Beta#102")).not.toBeInTheDocument()
     })
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      resultsTableAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.FilterManagedSiteModelSyncResults,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.objectContaining({
+        insights: {
+          managedSiteType: "new-api",
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.History,
+          statusKind: "error",
+          itemCount: 1,
+        },
+      }),
+    )
 
     const [selectAllCheckbox] = screen.getAllByRole("checkbox")
     fireEvent.click(selectAllCheckbox)
@@ -795,6 +859,24 @@ describe("ManagedSiteModelSync page", () => {
         name: "managedSiteModelSync:execution.actions.runSelected (0)",
       }),
     ).toBeDisabled()
+
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      resultsTableAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.SelectAllManagedSiteModelSyncChannels,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.objectContaining({
+        insights: {
+          managedSiteType: "new-api",
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.History,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
+          selectedCount: 1,
+          itemCount: 1,
+        },
+      }),
+    )
   })
 
   it("filters history rows by channel id and failure message and shows a no-results state", async () => {
@@ -820,6 +902,25 @@ describe("ManagedSiteModelSync page", () => {
     expect(
       await screen.findByText("managedSiteModelSync:execution.empty.noResults"),
     ).toBeInTheDocument()
+
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      resultsTableAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.SearchManagedSiteModelSyncChannels,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.objectContaining({
+        insights: {
+          managedSiteType: "new-api",
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.History,
+          itemCount: 0,
+        },
+      }),
+    )
+    expect(mockCompleteProductAnalyticsAction.mock.calls.flat()).not.toContain(
+      "zzz",
+    )
   })
 
   it("updates a single channel row with an inline failure result", async () => {
@@ -921,6 +1022,7 @@ describe("ManagedSiteModelSync page", () => {
       {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
+          managedSiteType: "new-api",
           mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
           selectedCount: 1,
@@ -951,12 +1053,7 @@ describe("ManagedSiteModelSync page", () => {
       screen.getByRole("button", {
         name: "managedSiteModelSync:execution.actions.refresh",
       }),
-    ).toHaveAttribute(
-      "data-analytics-action",
-      manualPanelAnalyticsAction(
-        PRODUCT_ANALYTICS_ACTION_IDS.ReloadManagedSiteModelSyncChannels,
-      ),
-    )
+    ).not.toHaveAttribute("data-analytics-action")
 
     const manualAlphaRow = screen.getByText("Manual Alpha#201").closest("tr")
     expect(manualAlphaRow).toBeTruthy()
@@ -981,6 +1078,24 @@ describe("ManagedSiteModelSync page", () => {
         name: "managedSiteModelSync:execution.actions.runSelected (0)",
       }),
     ).toBeDisabled()
+
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      resultsTableAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.SelectAllManagedSiteModelSyncChannels,
+      ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.objectContaining({
+        insights: {
+          managedSiteType: "new-api",
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
+          selectedCount: 2,
+          itemCount: 2,
+        },
+      }),
+    )
   })
 
   it("runs selected manual channels and clears the manual selection after success", async () => {
@@ -1021,6 +1136,7 @@ describe("ManagedSiteModelSync page", () => {
       PRODUCT_ANALYTICS_RESULTS.Success,
       {
         insights: {
+          managedSiteType: "new-api",
           mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
           selectedCount: 1,
@@ -1080,11 +1196,68 @@ describe("ManagedSiteModelSync page", () => {
       await screen.findByRole("button", {
         name: "managedSiteModelSync:execution.manual.reload",
       }),
-    ).toHaveAttribute(
-      "data-analytics-action",
-      manualPanelAnalyticsAction(
+    ).not.toHaveAttribute("data-analytics-action")
+  })
+
+  it("completes manual channel reload analytics without leaking backend error text", async () => {
+    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
+      switch (message.action) {
+        case RuntimeActionIds.ModelSyncGetLastExecution:
+          return {
+            success: true,
+            data: {
+              items: [],
+              statistics: {
+                total: 0,
+                successCount: 0,
+                failureCount: 0,
+                durationMs: 0,
+                startedAt: 0,
+                endedAt: 0,
+              },
+            },
+          }
+        case RuntimeActionIds.ModelSyncGetProgress:
+          return {
+            success: true,
+            data: { isRunning: false, completed: 0, total: 0, failed: 0 },
+          }
+        case RuntimeActionIds.ModelSyncGetNextRun:
+          return { success: true, data: { nextScheduledAt: null } }
+        case RuntimeActionIds.ModelSyncGetPreferences:
+          return { success: true, data: { enableSync: false, intervalMs: 0 } }
+        case RuntimeActionIds.ModelSyncListChannels:
+          return {
+            success: false,
+            error: "raw backend channel load failure",
+          }
+        default:
+          return { success: true }
+      }
+    })
+
+    render(<ManagedSiteModelSync routeParams={{ tab: "manual" }} />)
+
+    expect(
+      await screen.findByText("raw backend channel load failure"),
+    ).toBeInTheDocument()
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+      manualPanelAnalyticsContext(
         PRODUCT_ANALYTICS_ACTION_IDS.ReloadManagedSiteModelSyncChannels,
       ),
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          managedSiteType: "new-api",
+          itemCount: 0,
+        },
+      }),
+    )
+    expect(mockCompleteProductAnalyticsAction.mock.calls.flat()).not.toContain(
+      "raw backend channel load failure",
     )
   })
 
@@ -1202,6 +1375,7 @@ describe("ManagedSiteModelSync page", () => {
       PRODUCT_ANALYTICS_RESULTS.Success,
       {
         insights: {
+          managedSiteType: "new-api",
           mode: PRODUCT_ANALYTICS_MODE_IDS.All,
           itemCount: 2,
           successCount: 2,
@@ -1304,6 +1478,7 @@ describe("ManagedSiteModelSync page", () => {
       PRODUCT_ANALYTICS_RESULTS.Skipped,
       {
         insights: {
+          managedSiteType: "new-api",
           mode: PRODUCT_ANALYTICS_MODE_IDS.All,
           itemCount: 0,
           successCount: 0,
@@ -1400,7 +1575,12 @@ describe("ManagedSiteModelSync page", () => {
     )
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
-      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          managedSiteType: "new-api",
+        },
+      },
     )
     expect(screen.getByText("failed")).toBeInTheDocument()
     expect(screen.getByText("Alpha#101")).toBeInTheDocument()
@@ -1498,7 +1678,12 @@ describe("ManagedSiteModelSync page", () => {
     )
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
-      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          managedSiteType: "new-api",
+        },
+      },
     )
     expect(within(alphaRow!).getByRole("checkbox")).toBeChecked()
     expect(screen.getByText("failed")).toBeInTheDocument()
@@ -1615,6 +1800,7 @@ describe("ManagedSiteModelSync page", () => {
       PRODUCT_ANALYTICS_RESULTS.Success,
       {
         insights: {
+          managedSiteType: "new-api",
           mode: PRODUCT_ANALYTICS_MODE_IDS.RetryFailed,
           itemCount: 2,
           successCount: 2,
@@ -1709,6 +1895,7 @@ describe("ManagedSiteModelSync page", () => {
       PRODUCT_ANALYTICS_RESULTS.Success,
       {
         insights: {
+          managedSiteType: "new-api",
           mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
           selectedCount: 1,

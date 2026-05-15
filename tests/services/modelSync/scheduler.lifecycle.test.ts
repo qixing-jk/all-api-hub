@@ -3,6 +3,15 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { modelSyncScheduler } from "~/services/models/modelSync/scheduler"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
+} from "~/services/productAnalytics/events"
 
 const mocks = vi.hoisted(() => ({
   clearAlarm: vi.fn(),
@@ -28,6 +37,8 @@ const mocks = vi.hoisted(() => ({
   applyModelMappingToChannel: vi.fn(),
   octopusChannelToManagedSite: vi.fn(),
   notifyTaskResult: vi.fn(),
+  startProductAnalyticsAction: vi.fn(),
+  completeProductAnalyticsAction: vi.fn(),
 }))
 
 vi.mock("~/utils/core/error", () => ({
@@ -109,6 +120,10 @@ vi.mock("~/services/notifications/taskNotificationService", () => ({
   notifyTaskResult: mocks.notifyTaskResult,
 }))
 
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: mocks.startProductAnalyticsAction,
+}))
+
 vi.mock("~/services/apiService/octopus", () => ({
   listChannels: mocks.octopusListChannels,
 }))
@@ -146,6 +161,9 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     }))
     mocks.sendRuntimeMessage.mockResolvedValue(undefined)
     mocks.notifyTaskResult.mockResolvedValue(true)
+    mocks.startProductAnalyticsAction.mockReturnValue({
+      complete: mocks.completeProductAnalyticsAction,
+    })
 
     mocks.getPreferences.mockResolvedValue({
       managedSiteType: SITE_TYPES.NEW_API,
@@ -189,11 +207,56 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
 
     await alarmHandler?.({ name: "managedSiteModelSync" })
     expect(executeSpy).toHaveBeenCalledTimes(1)
+    expect(mocks.startProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ScheduledManagedSiteModelSync,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+    })
+    expect(mocks.completeProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        durationMs: expect.any(Number),
+        insights: {
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+          managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+        },
+      }),
+    )
     expect(mocks.notifyTaskResult).toHaveBeenCalledWith({
       task: "managedSiteModelSync",
       status: "failure",
       message: "scheduled sync failed",
     })
+  })
+
+  it.each([
+    ["unsupported backend", PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported],
+    ["missing config", PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation],
+    ["401 unauthorized", PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth],
+    ["failed to fetch", PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network],
+    ["429 too many requests", PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit],
+    ["unexpected failure", PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown],
+  ])("classifies scheduled sync failure as %s", async (message, category) => {
+    let alarmHandler: ((alarm: { name: string }) => Promise<void>) | undefined
+    mocks.onAlarm.mockImplementation((handler) => {
+      alarmHandler = handler
+    })
+
+    vi.spyOn(modelSyncScheduler, "setupAlarm").mockResolvedValue(undefined)
+    vi.spyOn(modelSyncScheduler, "executeSync").mockRejectedValue(
+      new Error(message),
+    )
+
+    await modelSyncScheduler.initialize()
+    await alarmHandler?.({ name: "managedSiteModelSync" })
+
+    expect(mocks.completeProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        errorCategory: category,
+      }),
+    )
   })
 
   it("notifies scheduled sync success counts after the alarm handler runs", async () => {
@@ -204,7 +267,14 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
 
     vi.spyOn(modelSyncScheduler, "setupAlarm").mockResolvedValue(undefined)
     vi.spyOn(modelSyncScheduler, "executeSync").mockResolvedValue({
-      items: [],
+      items: [
+        {
+          channelId: 3,
+          channelName: "Gamma",
+          ok: false,
+          httpStatus: 429,
+        },
+      ],
       statistics: {
         total: 3,
         successCount: 2,
@@ -215,6 +285,25 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     await modelSyncScheduler.initialize()
     await alarmHandler?.({ name: "managedSiteModelSync" })
 
+    expect(mocks.startProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ScheduledManagedSiteModelSync,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+    })
+    expect(mocks.completeProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        durationMs: expect.any(Number),
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit,
+        insights: {
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+          managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
+          itemCount: 3,
+          successCount: 2,
+          failureCount: 1,
+        },
+      }),
+    )
     expect(mocks.notifyTaskResult).toHaveBeenCalledWith({
       task: "managedSiteModelSync",
       status: "partial_success",

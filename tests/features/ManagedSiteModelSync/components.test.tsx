@@ -15,12 +15,6 @@ import OverviewCard from "~/features/ManagedSiteModelSync/components/OverviewCar
 import ProgressCard from "~/features/ManagedSiteModelSync/components/ProgressCard"
 import ResultsTable from "~/features/ManagedSiteModelSync/components/ResultsTable"
 import StatisticsCard from "~/features/ManagedSiteModelSync/components/StatisticsCard"
-import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
-  PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_SURFACE_IDS,
-} from "~/services/productAnalytics/events"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const { trackStartedMock } = vi.hoisted(() => ({
@@ -49,18 +43,6 @@ vi.mock("~/components/ManagedSiteChannelLinkButton", () => ({
 
 function render(ui: ReactNode) {
   return rtlRender(<I18nextProvider i18n={testI18n}>{ui}</I18nextProvider>)
-}
-
-const expectModelSyncAction = (
-  actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
-  surfaceId: (typeof PRODUCT_ANALYTICS_SURFACE_IDS)[keyof typeof PRODUCT_ANALYTICS_SURFACE_IDS],
-) => {
-  expect(trackStartedMock).toHaveBeenCalledWith({
-    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
-    actionId,
-    surfaceId,
-    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-  })
 }
 
 describe("ManagedSiteModelSync components", () => {
@@ -239,10 +221,6 @@ describe("ManagedSiteModelSync components", () => {
     expect(onRunSelected).toHaveBeenCalledTimes(1)
     expect(onRetryFailed).toHaveBeenCalledTimes(1)
     expect(onRefresh).toHaveBeenCalledTimes(1)
-    expectModelSyncAction(
-      PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteModelSyncResults,
-      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
-    )
     expect(onStatusChange).toHaveBeenCalledWith("success")
     expect(onKeywordChange).toHaveBeenCalledWith("alpha")
 

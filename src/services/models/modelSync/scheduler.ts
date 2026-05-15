@@ -12,6 +12,18 @@ import {
 } from "~/services/managedSites/utils/managedSite"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
+  type ProductAnalyticsErrorCategory,
+  type ProductAnalyticsManagedSiteType,
+} from "~/services/productAnalytics/events"
+import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import type {
   ManagedSiteChannel,
@@ -56,6 +68,96 @@ import { runOctopusBatch } from "./octopusModelSync"
 import { managedSiteModelSyncStorage } from "./storage"
 
 const logger = createLogger("ManagedSiteModelSync")
+
+const MODEL_SYNC_BACKGROUND_ANALYTICS_CONTEXT = {
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+  actionId: PRODUCT_ANALYTICS_ACTION_IDS.ScheduledManagedSiteModelSync,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+} as const
+
+/**
+ * Buckets automatic sync failures without exposing raw backend messages.
+ */
+function classifyModelSyncError(error: unknown): ProductAnalyticsErrorCategory {
+  const message = getErrorMessage(error).toLowerCase()
+
+  if (message.includes("unsupported") || message.includes("不支持")) {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
+  }
+  if (
+    message.includes("config") ||
+    message.includes("validation") ||
+    message.includes("invalid") ||
+    message.includes("missing") ||
+    message.includes("no channels") ||
+    message.includes("配置") ||
+    message.includes("无可同步") ||
+    message.includes("沒有可同步")
+  ) {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
+  }
+  if (
+    message.includes("401") ||
+    message.includes("403") ||
+    message.includes("unauthorized") ||
+    message.includes("forbidden") ||
+    message.includes("token") ||
+    message.includes("auth") ||
+    message.includes("鉴权") ||
+    message.includes("认证")
+  ) {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
+  }
+  if (
+    message.includes("429") ||
+    message.includes("rate limit") ||
+    message.includes("too many requests") ||
+    message.includes("限流")
+  ) {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit
+  }
+  if (
+    message.includes("network") ||
+    message.includes("fetch") ||
+    message.includes("timeout") ||
+    message.includes("failed to fetch") ||
+    message.includes("econn") ||
+    message.includes("enotfound") ||
+    message.includes("网络")
+  ) {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network
+  }
+
+  return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+}
+
+/**
+ * Picks one coarse failure category from failed batch items, if available.
+ */
+function classifyModelSyncResultError(
+  result: ExecutionResult,
+): ProductAnalyticsErrorCategory | undefined {
+  const failedItem = result.items.find((item) => !item.ok)
+  if (!failedItem) {
+    return undefined
+  }
+
+  if (failedItem.httpStatus === 401 || failedItem.httpStatus === 403) {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
+  }
+  if (failedItem.httpStatus === 429) {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit
+  }
+  if (
+    failedItem.httpStatus != null &&
+    failedItem.httpStatus >= 400 &&
+    failedItem.httpStatus < 500
+  ) {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
+  }
+
+  return classifyModelSyncError(failedItem.message ?? "unknown")
+}
 
 /**
  * Scheduler for New API Model Sync.
@@ -120,9 +222,39 @@ class ModelSyncScheduler {
       if (hasAlarmsAPI()) {
         onAlarm(async (alarm) => {
           if (alarm.name === ModelSyncScheduler.ALARM_NAME) {
+            const tracker = startProductAnalyticsAction(
+              MODEL_SYNC_BACKGROUND_ANALYTICS_CONTEXT,
+            )
+            const startedAt = Date.now()
+            let managedSiteType: ProductAnalyticsManagedSiteType | undefined
+
             try {
+              const prefs = await userPreferences.getPreferences()
+              managedSiteType = resolveProductAnalyticsManagedSiteType(
+                getManagedSiteContext(prefs).siteType,
+              )
+
               // Await to keep the MV3 service worker alive while the sync runs.
               const result = await this.executeSync()
+              tracker.complete(
+                result.statistics.failureCount > 0
+                  ? PRODUCT_ANALYTICS_RESULTS.Failure
+                  : PRODUCT_ANALYTICS_RESULTS.Success,
+                {
+                  durationMs: Date.now() - startedAt,
+                  errorCategory:
+                    result.statistics.failureCount > 0
+                      ? classifyModelSyncResultError(result)
+                      : undefined,
+                  insights: {
+                    sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+                    ...(managedSiteType ? { managedSiteType } : {}),
+                    itemCount: result.statistics.total,
+                    successCount: result.statistics.successCount,
+                    failureCount: result.statistics.failureCount,
+                  },
+                },
+              )
               await notifyTaskResult({
                 task: TASK_NOTIFICATION_TASKS.ManagedSiteModelSync,
                 status: getTaskNotificationStatusFromCounts({
@@ -137,6 +269,14 @@ class ModelSyncScheduler {
               })
             } catch (error) {
               logger.error("Scheduled execution failed", error)
+              tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+                durationMs: Date.now() - startedAt,
+                errorCategory: classifyModelSyncError(error),
+                insights: {
+                  sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+                  ...(managedSiteType ? { managedSiteType } : {}),
+                },
+              })
               await notifyTaskResult({
                 task: TASK_NOTIFICATION_TASKS.ManagedSiteModelSync,
                 status: TASK_NOTIFICATION_STATUSES.Failure,

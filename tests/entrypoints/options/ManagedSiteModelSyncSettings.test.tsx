@@ -6,6 +6,13 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import ManagedSiteModelSyncSettings from "~/features/BasicSettings/components/tabs/ManagedSite/managedSiteModelSyncSettings"
 import { modelMetadataService } from "~/services/models/modelMetadata"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -14,10 +21,14 @@ const {
   mockedUseUserPreferencesContext,
   mockUpdateNewApiModelSync,
   mockResetNewApiModelSyncConfig,
+  mockStartProductAnalyticsAction,
+  mockCompleteProductAnalyticsAction,
 } = vi.hoisted(() => ({
   mockedUseUserPreferencesContext: vi.fn(),
   mockUpdateNewApiModelSync: vi.fn(),
   mockResetNewApiModelSyncConfig: vi.fn(),
+  mockStartProductAnalyticsAction: vi.fn(),
+  mockCompleteProductAnalyticsAction: vi.fn(),
 }))
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
@@ -47,6 +58,10 @@ vi.mock("~/services/models/modelMetadata", () => ({
     initialize: vi.fn(),
     getAllMetadata: vi.fn(),
   },
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: mockStartProductAnalyticsAction,
 }))
 
 vi.mock("~/utils/navigation", async (importOriginal) => {
@@ -338,6 +353,9 @@ describe("ManagedSiteModelSyncSettings", () => {
 
     mockedModelMetadataService.initialize.mockResolvedValue(undefined)
     mockedModelMetadataService.getAllMetadata.mockReturnValue([])
+    mockStartProductAnalyticsAction.mockReturnValue({
+      complete: mockCompleteProductAnalyticsAction,
+    })
   })
 
   it("loads runtime model options and persists toggles, intervals, and allowed models", async () => {
@@ -392,6 +410,16 @@ describe("ManagedSiteModelSyncSettings", () => {
     expect(mockUpdateNewApiModelSync).toHaveBeenCalledWith({
       enabled: false,
     })
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteModelSyncSettings,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
     expect(toast.success).toHaveBeenCalledWith(
       "managedSiteModelSync:messages.success.settingsSaved",
     )
@@ -1442,6 +1470,23 @@ describe("ManagedSiteModelSyncSettings", () => {
       expect(mockResetNewApiModelSyncConfig).toHaveBeenCalledTimes(1)
     })
 
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteChannelModelSync,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteModelSyncSettings,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
     expect(mockedPushWithinOptionsPage).toHaveBeenCalledWith(
       `#${MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC}`,
     )

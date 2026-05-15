@@ -4,7 +4,6 @@ import { useTranslation } from "react-i18next"
 import { Button } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -84,9 +83,6 @@ export default function ActionBar({
           disabled={isRunning || isRefreshing === true}
           loading={isRefreshing}
           leftIcon={<ArrowPathIcon className="h-4 w-4" />}
-          analyticsAction={
-            PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteModelSyncResults
-          }
         >
           {t("execution.actions.refresh")}
         </Button>
