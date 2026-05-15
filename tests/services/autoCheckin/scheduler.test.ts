@@ -5111,6 +5111,30 @@ describe("autoCheckinScheduler private helpers", () => {
     expect((autoCheckinScheduler as any).parseTimeToMinutes("nope")).toBeNull()
   })
 
+  it("maps no-op run summaries to skipped analytics results", () => {
+    expect(
+      (autoCheckinScheduler as any).mapRunSummaryToProductAnalyticsResult({
+        executed: 0,
+        failedCount: 0,
+        skippedCount: 0,
+      }),
+    ).toBe(PRODUCT_ANALYTICS_RESULTS.Skipped)
+    expect(
+      (autoCheckinScheduler as any).mapRunSummaryToProductAnalyticsResult({
+        executed: 0,
+        failedCount: 1,
+        skippedCount: 0,
+      }),
+    ).toBe(PRODUCT_ANALYTICS_RESULTS.Failure)
+    expect(
+      (autoCheckinScheduler as any).mapRunSummaryToProductAnalyticsResult({
+        executed: 1,
+        failedCount: 0,
+        skippedCount: 0,
+      }),
+    ).toBe(PRODUCT_ANALYTICS_RESULTS.Success)
+  })
+
   it("handles same-day and overnight windows correctly", () => {
     expect(
       (autoCheckinScheduler as any).isMinutesWithinWindow(600, 600, 600),

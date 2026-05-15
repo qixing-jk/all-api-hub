@@ -114,4 +114,34 @@ describe("auto-checkin product analytics", () => {
     expect(snapshot.window_length_bucket).toBe("lt_1h")
     expect(snapshot.deterministic_time_bucket).toBe("unset")
   })
+
+  it("buckets invalid time bounds and long retry settings without raw values", () => {
+    const snapshot = buildAutoCheckinConfigSnapshotProperties(
+      {
+        globalEnabled: false,
+        pretriggerDailyOnUiOpen: true,
+        notifyUiOnCompletion: false,
+        windowStart: "24:00",
+        windowEnd: "12:30",
+        scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC,
+        deterministicTime: "18:45",
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 90,
+          maxAttemptsPerDay: 5,
+        },
+      },
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    )
+
+    expect(snapshot).toEqual(
+      expect.objectContaining({
+        retry_interval_bucket: "gt_60m",
+        retry_max_attempts_bucket: "4_plus",
+        window_length_bucket: "lt_1h",
+        deterministic_time_bucket: "evening",
+      }),
+    )
+    expect(JSON.stringify(snapshot)).not.toContain("18:45")
+  })
 })

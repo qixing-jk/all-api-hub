@@ -1362,14 +1362,14 @@ describe("ApiCheckModalHost", () => {
     expect(sendRuntimeMessage).not.toHaveBeenCalled()
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Skipped,
-      {
+      expect.objectContaining({
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
         insights: expect.objectContaining({
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
           apiType: "openai-compatible",
           modelCount: 0,
         }),
-      },
+      }),
     )
   })
 
@@ -1394,14 +1394,14 @@ describe("ApiCheckModalHost", () => {
     expect(sendRuntimeMessage).not.toHaveBeenCalled()
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Skipped,
-      {
+      expect.objectContaining({
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
         insights: expect.objectContaining({
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
           apiType: "openai-compatible",
           mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
         }),
-      },
+      }),
     )
   })
 

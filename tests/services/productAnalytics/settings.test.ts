@@ -440,4 +440,200 @@ describe("settings product analytics snapshots", () => {
       }),
     )
   })
+
+  it("buckets boundary settings and legacy managed-site sync preferences", () => {
+    const events = buildSettingsSnapshotEvents(
+      createPreferences({
+        accountAutoRefresh: {
+          enabled: true,
+          refreshOnOpen: false,
+          interval: 25 * 60 * 60 * 1000,
+          minInterval: 90 * 60 * 1000,
+        },
+        usageHistory: {
+          enabled: true,
+          scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.MANUAL,
+          syncIntervalMinutes: Number.NaN,
+          retentionDays: 400,
+        },
+        managedSiteType: "custom-site" as UserPreferences["managedSiteType"],
+        managedSiteModelSync: undefined,
+        newApiModelSync: {
+          enabled: true,
+          interval: 15 * 60 * 1000,
+          concurrency: 0,
+          maxRetries: 1,
+          rateLimit: {
+            requestsPerMinute: 10,
+            burst: 0,
+          },
+          allowedModels: [],
+          globalChannelModelFilters: [],
+        },
+        webdav: {
+          ...createPreferences().webdav,
+          syncStrategy: WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY,
+        },
+      }),
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      {
+        accountAutoRefresh: {},
+        usageHistory: {},
+        managedSiteType: "custom-site" as UserPreferences["managedSiteType"],
+        newApiModelSync: {},
+        webdav: {},
+      },
+    )
+
+    expect(events).toEqual([
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoRefreshConfigSnapshot,
+        refresh_interval_bucket:
+          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalGreaterThan24h,
+        min_refresh_interval_bucket:
+          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
+      }),
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.UsageHistoryConfigSnapshot,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.UsageHistoryManual,
+        sync_interval_bucket:
+          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalLessThan10m,
+        retention_days_bucket:
+          PRODUCT_ANALYTICS_MODE_IDS.RetentionDaysGreaterThan365,
+      }),
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteConfigSnapshot,
+        managed_site_type: SITE_TYPES.NEW_API,
+      }),
+      expect.objectContaining({
+        setting_id:
+          PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncConfigSnapshot,
+        sync_interval_bucket:
+          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalTenTo60m,
+        concurrency_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero,
+        retry_max_attempts_bucket:
+          PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.One,
+        rate_limit_rpm_bucket: PRODUCT_ANALYTICS_MODE_IDS.RateLimitLessThan20,
+        rate_limit_burst_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero,
+        allowed_models_configured: false,
+        global_filters_configured: false,
+      }),
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebDavConfigSnapshot,
+        sync_strategy: PRODUCT_ANALYTICS_MODE_IDS.WebDavUploadOnly,
+      }),
+    ])
+  })
+
+  it("resolves patch keys and remaining bucket branches for targeted snapshots", () => {
+    const preferences = createPreferences({
+      usageHistory: {
+        enabled: false,
+        scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH,
+        syncIntervalMinutes: 30,
+        retentionDays: 7,
+      },
+      balanceHistory: {
+        enabled: true,
+        endOfDayCapture: { enabled: false },
+        retentionDays: 365,
+      },
+      managedSiteModelSync: {
+        enabled: true,
+        interval: 3 * 60 * 60 * 1000,
+        concurrency: 12,
+        maxRetries: Number.NaN,
+        rateLimit: {
+          requestsPerMinute: 60,
+          burst: 0,
+        },
+        allowedModels: [],
+        globalChannelModelFilters: [],
+      },
+      tempWindowFallback: {
+        enabled: true,
+        useInPopup: false,
+        useInSidePanel: true,
+        useInOptions: false,
+        useForAutoRefresh: false,
+        useForManualRefresh: true,
+        tempContextMode: "tab",
+      },
+    })
+
+    const events = buildSettingsSnapshotEvents(
+      preferences,
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      {
+        showHealthStatus: true,
+        balanceHistory: {},
+        modelRedirect: {},
+        redemptionAssist: {},
+        webAiApiCheck: {},
+        tempWindowFallback: {},
+        taskNotifications: {},
+        siteAnnouncementNotifications: {},
+      },
+    )
+
+    expect(events).toEqual([
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AccountBehaviorSnapshot,
+      }),
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.BalanceHistoryConfigSnapshot,
+        retention_days_bucket:
+          PRODUCT_ANALYTICS_MODE_IDS.RetentionDaysThirtyOneTo365,
+      }),
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ModelRedirectConfigSnapshot,
+      }),
+      expect.objectContaining({
+        setting_id:
+          PRODUCT_ANALYTICS_SETTING_IDS.RedemptionAssistConfigSnapshot,
+      }),
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebAiApiCheckConfigSnapshot,
+      }),
+      expect.objectContaining({
+        setting_id:
+          PRODUCT_ANALYTICS_SETTING_IDS.TempWindowFallbackConfigSnapshot,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeTab,
+      }),
+      expect.objectContaining({
+        setting_id:
+          PRODUCT_ANALYTICS_SETTING_IDS.TaskNotificationsConfigSnapshot,
+      }),
+      expect.objectContaining({
+        setting_id:
+          PRODUCT_ANALYTICS_SETTING_IDS.SiteAnnouncementsConfigSnapshot,
+      }),
+    ])
+
+    const [usageSnapshot, syncSnapshot] = buildSettingsSnapshotEvents(
+      preferences,
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      {
+        usageHistory: {},
+        managedSiteModelSync: {},
+      },
+    )
+
+    expect(usageSnapshot).toEqual(
+      expect.objectContaining({
+        mode: PRODUCT_ANALYTICS_MODE_IDS.UsageHistoryAfterRefresh,
+        retention_days_bucket:
+          PRODUCT_ANALYTICS_MODE_IDS.RetentionDaysSevenOrLess,
+      }),
+    )
+    expect(syncSnapshot).toEqual(
+      expect.objectContaining({
+        sync_interval_bucket: PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
+        concurrency_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TenPlus,
+        retry_max_attempts_bucket:
+          PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.One,
+        rate_limit_rpm_bucket: PRODUCT_ANALYTICS_MODE_IDS.RateLimitTwentyTo60,
+      }),
+    )
+  })
 })
