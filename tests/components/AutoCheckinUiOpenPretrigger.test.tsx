@@ -1,14 +1,34 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AutoCheckinPretriggerCompletionDialog } from "~/components/AutoCheckinPretriggerCompletionDialog"
 import { AutoCheckinUiOpenPretrigger } from "~/components/AutoCheckinUiOpenPretrigger"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SETTING_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { openAutoCheckinPage, pushWithinOptionsPage } from "~/utils/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
+
+const {
+  trackProductAnalyticsActionCompletedMock,
+  trackProductAnalyticsActionStartedMock,
+  trackProductAnalyticsEventMock,
+} = vi.hoisted(() => ({
+  trackProductAnalyticsActionCompletedMock: vi.fn(),
+  trackProductAnalyticsActionStartedMock: vi.fn(),
+  trackProductAnalyticsEventMock: vi.fn(),
+}))
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -25,6 +45,24 @@ vi.mock("~/utils/navigation", async () => {
     ...actual,
     openAutoCheckinPage: vi.fn(),
     pushWithinOptionsPage: vi.fn(),
+  }
+})
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionCompleted: (...args: unknown[]) =>
+    trackProductAnalyticsActionCompletedMock(...args),
+  trackProductAnalyticsActionStarted: (...args: unknown[]) =>
+    trackProductAnalyticsActionStartedMock(...args),
+}))
+
+vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+
+  return {
+    ...actual,
+    trackProductAnalyticsEvent: (...args: unknown[]) =>
+      trackProductAnalyticsEventMock(...args),
   }
 })
 
@@ -93,12 +131,46 @@ describe("AutoCheckinUiOpenPretrigger", () => {
         }),
       )
     })
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
 
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith(
         "autoCheckin:messages.success.pretriggerStarted",
       )
     })
+    await waitFor(() => {
+      expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow,
+          result: PRODUCT_ANALYTICS_RESULTS.Success,
+        }),
+      )
+    })
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        insights: {
+          itemCount: 5,
+          successCount: 2,
+          failureCount: 1,
+          skippedCount: 2,
+        },
+      }),
+    )
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      expect.objectContaining({
+        global_enabled: true,
+        ui_pretrigger_enabled: true,
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
+      }),
+    )
 
     expect(
       await screen.findByText("autoCheckin:uiOpenPretrigger.dialogTitle"),
@@ -164,9 +236,77 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       }),
     )
 
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAutoCheckinStatus,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
     expect(vi.mocked(pushWithinOptionsPage)).toHaveBeenCalledWith(
       "#autoCheckin",
     )
     expect(vi.mocked(openAutoCheckinPage)).not.toHaveBeenCalled()
+  })
+
+  it("tracks failed pretrigger attempts without raw error details", async () => {
+    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
+      ...DEFAULT_PREFERENCES,
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin!,
+        globalEnabled: true,
+        pretriggerDailyOnUiOpen: true,
+      },
+    })
+
+    const browserApi = await import("~/utils/browser/browserApi")
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockResolvedValue({
+      success: false,
+      started: false,
+      error: "raw backend reason",
+    })
+
+    render(<AutoCheckinUiOpenPretrigger />)
+
+    await waitFor(() => {
+      expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result: PRODUCT_ANALYTICS_RESULTS.Skipped,
+        }),
+      )
+    })
+    for (const call of trackProductAnalyticsActionCompletedMock.mock.calls) {
+      expect(call[0]).not.toHaveProperty("error")
+      expect(call[0]).not.toHaveProperty("reason")
+    }
+  })
+
+  it("tracks completion dialog close clicks", async () => {
+    render(
+      <AutoCheckinPretriggerCompletionDialog
+        isOpen
+        summary={null}
+        pendingRetry={false}
+        onClose={vi.fn()}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    const user = userEvent.setup()
+    await user.click(
+      await screen.findByRole("button", {
+        name: "autoCheckin:uiOpenPretrigger.close",
+      }),
+    )
+
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CloseRedemptionBatchResult,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
   })
 })

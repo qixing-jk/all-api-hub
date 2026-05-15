@@ -76,6 +76,7 @@ const getAutoCheckinSummaryAnalyticsInsights = (
     itemCount: summary.executed,
     successCount: summary.successCount,
     failureCount: summary.failedCount,
+    skippedCount: summary.skippedCount,
   }
 }
 
@@ -99,11 +100,15 @@ const getAutoCheckinStatusAnalyticsInsights = (
   const failureCount = results.filter(
     (result) => result.status === CHECKIN_RESULT_STATUS.FAILED,
   ).length
+  const skippedCount = results.filter(
+    (result) => result.status === CHECKIN_RESULT_STATUS.SKIPPED,
+  ).length
 
   return {
     itemCount: successCount + failureCount,
     successCount,
     failureCount,
+    skippedCount,
   }
 }
 
@@ -551,7 +556,29 @@ export default function AutoCheckin(props: {
     .map((result) => result.accountId)
 
   const handleRefresh = () => {
-    void loadStatus()
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAutoCheckinStatus,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
+    void loadStatus().then((updatedStatus) => {
+      tracker.complete(
+        updatedStatus
+          ? PRODUCT_ANALYTICS_RESULTS.Success
+          : PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          ...(updatedStatus
+            ? {
+                insights: getAutoCheckinStatusAnalyticsInsights(updatedStatus),
+              }
+            : {
+                errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+              }),
+        },
+      )
+    })
   }
 
   const handleRetryAccount = async (accountId: string) => {
@@ -645,6 +672,13 @@ export default function AutoCheckin(props: {
   )
 
   const handleOpenAccountSite = async (accountId: string) => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountSite,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
     try {
       setPendingOpeningSiteAccountIds((prev) => {
         const next = new Set(prev)
@@ -652,10 +686,14 @@ export default function AutoCheckin(props: {
         return next
       })
       await openAccountSiteForAccount(accountId)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error: unknown) {
       toast.error(
         t("messages.error.openSiteFailed", { error: getErrorMessage(error) }),
       )
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     } finally {
       setPendingOpeningSiteAccountIds((prev) => {
         const next = new Set(prev)
@@ -666,13 +704,24 @@ export default function AutoCheckin(props: {
   }
 
   const handleOpenManualSignIn = async (accountId: string) => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinManualSignIn,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
     try {
       setOpeningManualAccountId(accountId)
       await openManualSignInForAccount(accountId)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error: unknown) {
       toast.error(
         t("messages.error.openManualFailed", { error: getErrorMessage(error) }),
       )
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     } finally {
       setOpeningManualAccountId(null)
     }
@@ -744,10 +793,42 @@ export default function AutoCheckin(props: {
     event: MouseEvent<HTMLButtonElement>,
   ) => {
     const { openInNewWindow } = getExternalCheckInOpenOptions(event)
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenFailedAutoCheckinManualSignIns,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
 
     if (!failedManualAccountIds.length) {
       toast.error(t("messages.error.openFailedManualNone"))
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+        insights: {
+          itemCount: 0,
+          selectedCount: 0,
+          successCount: 0,
+          failureCount: 0,
+        },
+      })
       return
+    }
+
+    const completeBulkManualOpen = (
+      result: ProductAnalyticsResult,
+      openedCount: number,
+      failedCount: number,
+    ) => {
+      tracker.complete(result, {
+        ...(result === PRODUCT_ANALYTICS_RESULTS.Failure
+          ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
+          : {}),
+        insights: {
+          itemCount: failedManualAccountIds.length,
+          selectedCount: failedManualAccountIds.length,
+          successCount: openedCount,
+          failureCount: failedCount,
+        },
+      })
     }
 
     try {
@@ -794,6 +875,11 @@ export default function AutoCheckin(props: {
             count: openedCount,
           }),
         )
+        completeBulkManualOpen(
+          PRODUCT_ANALYTICS_RESULTS.Success,
+          openedCount,
+          0,
+        )
         return
       }
 
@@ -804,6 +890,11 @@ export default function AutoCheckin(props: {
             failedCount,
           }),
         )
+        completeBulkManualOpen(
+          PRODUCT_ANALYTICS_RESULTS.Failure,
+          openedCount,
+          failedCount,
+        )
         return
       }
 
@@ -811,6 +902,11 @@ export default function AutoCheckin(props: {
         t("messages.error.openFailedManualFailed", {
           failedCount,
         }),
+      )
+      completeBulkManualOpen(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        openedCount,
+        failedCount,
       )
     } catch (error) {
       toast.dismiss()
@@ -822,6 +918,11 @@ export default function AutoCheckin(props: {
         t("messages.error.openFailedManualFailed", {
           failedCount: failedManualAccountIds.length,
         }),
+      )
+      completeBulkManualOpen(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        0,
+        failedManualAccountIds.length,
       )
     } finally {
       setIsOpeningFailedManualSignIns(false)

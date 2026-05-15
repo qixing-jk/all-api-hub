@@ -1,9 +1,17 @@
 import { fireEvent } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -20,12 +28,28 @@ vi.mock("react-hot-toast", () => ({
   default: toast,
 }))
 
+const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
+  vi.hoisted(() => ({
+    startProductAnalyticsActionMock: vi.fn(),
+    completeProductAnalyticsActionMock: vi.fn(),
+  }))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: startProductAnalyticsActionMock,
+}))
+
 afterEach(() => {
   vi.restoreAllMocks()
   vi.clearAllMocks()
 })
 
 describe("AutoCheckin bulk manual open", () => {
+  beforeEach(() => {
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: completeProductAnalyticsActionMock,
+    })
+  })
+
   it("disables the bulk manual-open button when there are no failed accounts", async () => {
     const browserApi = await import("~/utils/browser/browserApi")
 
@@ -144,6 +168,23 @@ describe("AutoCheckin bulk manual open", () => {
     expect(toast.success).toHaveBeenCalledWith(
       "autoCheckin:messages.success.openFailedManualCompleted",
     )
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenFailedAutoCheckinManualSignIns,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          itemCount: 2,
+          selectedCount: 2,
+          successCount: 2,
+          failureCount: 0,
+        },
+      },
+    )
   })
 
   it("keeps opening remaining failed accounts when one manual page fails", async () => {
@@ -210,6 +251,18 @@ describe("AutoCheckin bulk manual open", () => {
     expect(toast.error).toHaveBeenCalledWith(
       "autoCheckin:messages.error.openFailedManualPartial",
     )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          itemCount: 2,
+          selectedCount: 2,
+          successCount: 1,
+          failureCount: 1,
+        },
+      },
+    )
   })
 
   it("opens failed manual sign-ins in a new window when shift-clicked", async () => {
@@ -266,5 +319,16 @@ describe("AutoCheckin bulk manual open", () => {
         openInNewWindow: true,
       })
     })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          itemCount: 1,
+          selectedCount: 1,
+          successCount: 1,
+          failureCount: 0,
+        },
+      },
+    )
   })
 })

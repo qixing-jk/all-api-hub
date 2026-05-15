@@ -3,6 +3,13 @@ import { useTranslation } from "react-i18next"
 import { Button, WorkflowTransitionButton } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { AutoCheckinRunSummary } from "~/types/autoCheckin"
 import { openAutoCheckinPage, pushWithinOptionsPage } from "~/utils/navigation"
 
@@ -25,6 +32,12 @@ const isOnOptionsPage = (): boolean => {
   }
 }
 
+const COMPLETION_DIALOG_ANALYTICS_CONTEXT = {
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+  surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+} as const
+
 /**
  * Completion dialog for a pre-triggered daily auto check-in run.
  *
@@ -39,6 +52,14 @@ export function AutoCheckinPretriggerCompletionDialog({
 }: AutoCheckinPretriggerCompletionDialogProps) {
   const { t } = useTranslation("autoCheckin")
 
+  const handleClose = () => {
+    void trackProductAnalyticsActionStarted({
+      ...COMPLETION_DIALOG_ANALYTICS_CONTEXT,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CloseRedemptionBatchResult,
+    })
+    onClose()
+  }
+
   const header = (
     <div className="dark:text-dark-text-primary text-lg font-semibold text-gray-900">
       {t("uiOpenPretrigger.dialogTitle")}
@@ -46,6 +67,10 @@ export function AutoCheckinPretriggerCompletionDialog({
   )
 
   const handleViewDetails = async () => {
+    void trackProductAnalyticsActionStarted({
+      ...COMPLETION_DIALOG_ANALYTICS_CONTEXT,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAutoCheckinStatus,
+    })
     const targetHash = `#${MENU_ITEM_IDS.AUTO_CHECKIN}`
 
     if (isOnOptionsPage()) {
@@ -63,7 +88,7 @@ export function AutoCheckinPretriggerCompletionDialog({
         type="button"
         variant="secondary"
         className="flex-1"
-        onClick={onClose}
+        onClick={handleClose}
       >
         {t("uiOpenPretrigger.close")}
       </Button>
@@ -79,7 +104,12 @@ export function AutoCheckinPretriggerCompletionDialog({
   )
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} header={header} footer={footer}>
+    <Modal
+      isOpen={isOpen}
+      onClose={handleClose}
+      header={header}
+      footer={footer}
+    >
       <div className="space-y-4">
         <p className="dark:text-dark-text-secondary text-sm text-gray-600">
           {t("uiOpenPretrigger.dialogDescription")}

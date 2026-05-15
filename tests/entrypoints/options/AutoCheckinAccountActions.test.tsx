@@ -175,6 +175,7 @@ describe("AutoCheckin account actions", () => {
           itemCount: 1,
           successCount: 1,
           failureCount: 0,
+          skippedCount: 0,
         },
       },
     )
@@ -306,6 +307,18 @@ describe("AutoCheckin account actions", () => {
     await waitFor(() => {
       expect(openButton).not.toBeDisabled()
     })
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinManualSignIn,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
   })
 
   it("opens the provider site from the row action", async () => {
@@ -459,6 +472,15 @@ describe("AutoCheckin account actions", () => {
       expect(alphaButton).not.toBeDisabled()
       expect(betaButton).not.toBeDisabled()
     })
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountSite,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
   })
 
   it("shows an error when site opening fails and restores the button state", async () => {
@@ -527,6 +549,18 @@ describe("AutoCheckin account actions", () => {
     await waitFor(() => {
       expect(openButton).not.toBeDisabled()
     })
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountSite,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
   })
 
   it("disables a failed account, converts it to a disabled skip, and reloads the page data", async () => {
@@ -759,6 +793,12 @@ describe("AutoCheckin account actions", () => {
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccount,
       surfaceId:
         PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteAutoCheckinAccount,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
     expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith({
@@ -1074,5 +1114,22 @@ describe("AutoCheckin account actions", () => {
     await waitFor(() => {
       expect(screen.getByText("Alpha")).toBeInTheDocument()
     })
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAutoCheckinStatus,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          itemCount: 1,
+          successCount: 1,
+          failureCount: 0,
+          skippedCount: 0,
+        },
+      },
+    )
   })
 })

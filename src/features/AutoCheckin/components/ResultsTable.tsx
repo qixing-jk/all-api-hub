@@ -20,7 +20,6 @@ import {
 } from "~/features/AutoCheckin/utils/autoCheckin"
 import { cn } from "~/lib/utils"
 import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -273,9 +272,6 @@ export default function ResultsTable({
                                 leftIcon={
                                   <WorkflowTransitionIcon className="h-3.5 w-3.5" />
                                 }
-                                analyticsAction={
-                                  PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinManualSignIn
-                                }
                               >
                                 {t("execution.actions.openManual")}
                               </Button>
@@ -296,9 +292,6 @@ export default function ResultsTable({
                               leftIcon={
                                 <NoSymbolIcon className="h-3.5 w-3.5" />
                               }
-                              analyticsAction={
-                                PRODUCT_ANALYTICS_ACTION_IDS.DisableAutoCheckinAccount
-                              }
                             >
                               {t("account:actions.disableAccount")}
                             </Button>
@@ -311,9 +304,6 @@ export default function ResultsTable({
                               disabled={deletingAccountId === result.accountId}
                               onClick={() => onDeleteAccount(result.accountId)}
                               leftIcon={<TrashIcon className="h-3.5 w-3.5" />}
-                              analyticsAction={
-                                PRODUCT_ANALYTICS_ACTION_IDS.DeleteAutoCheckinAccount
-                              }
                             >
                               {t("account:actions.delete")}
                             </Button>
@@ -329,9 +319,6 @@ export default function ResultsTable({
                               }
                               leftIcon={
                                 <WorkflowTransitionIcon className="h-3.5 w-3.5" />
-                              }
-                              analyticsAction={
-                                PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountSite
                               }
                             >
                               {t("execution.actions.openSite")}

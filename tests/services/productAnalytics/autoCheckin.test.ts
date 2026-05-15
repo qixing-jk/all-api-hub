@@ -1,0 +1,94 @@
+import { describe, expect, it, vi } from "vitest"
+
+import {
+  buildAutoCheckinConfigSnapshotProperties,
+  trackAutoCheckinConfigSnapshot,
+} from "~/services/productAnalytics/autoCheckin"
+import {
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_SETTING_IDS,
+} from "~/services/productAnalytics/events"
+import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
+
+const { trackProductAnalyticsEventMock } = vi.hoisted(() => ({
+  trackProductAnalyticsEventMock: vi.fn(),
+}))
+
+vi.mock("~/services/productAnalytics/events", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/productAnalytics/events")
+  >()),
+  trackProductAnalyticsEvent: trackProductAnalyticsEventMock,
+}))
+
+describe("auto-checkin product analytics", () => {
+  it("builds a bucketed config snapshot without raw schedule values", () => {
+    const snapshot = buildAutoCheckinConfigSnapshotProperties(
+      {
+        globalEnabled: true,
+        pretriggerDailyOnUiOpen: false,
+        notifyUiOnCompletion: true,
+        windowStart: "08:15",
+        windowEnd: "12:45",
+        scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC,
+        deterministicTime: "09:30",
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+    )
+
+    expect(snapshot).toEqual({
+      setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      global_enabled: true,
+      ui_pretrigger_enabled: false,
+      notify_completion_enabled: true,
+      retry_enabled: true,
+      schedule_mode: "deterministic",
+      retry_interval_bucket: "10_30m",
+      retry_max_attempts_bucket: "2_3",
+      window_length_bucket: "4_12h",
+      deterministic_time_bucket: "morning",
+    })
+    expect(JSON.stringify(snapshot)).not.toContain("08:15")
+    expect(JSON.stringify(snapshot)).not.toContain("12:45")
+    expect(JSON.stringify(snapshot)).not.toContain("09:30")
+  })
+
+  it("tracks the config snapshot as a setting_changed event", () => {
+    trackAutoCheckinConfigSnapshot(
+      {
+        globalEnabled: false,
+        pretriggerDailyOnUiOpen: true,
+        notifyUiOnCompletion: false,
+        windowStart: "20:00",
+        windowEnd: "01:00",
+        scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.RANDOM,
+        retryStrategy: {
+          enabled: false,
+          intervalMinutes: 5,
+          maxAttemptsPerDay: 1,
+        },
+      },
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    )
+
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        global_enabled: false,
+        retry_interval_bucket: "lt_10m",
+        retry_max_attempts_bucket: "1",
+        window_length_bucket: "4_12h",
+        deterministic_time_bucket: "unset",
+      }),
+    )
+  })
+})

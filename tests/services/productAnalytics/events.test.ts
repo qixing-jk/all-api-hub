@@ -3,6 +3,11 @@ import { describe, expect, it } from "vitest"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_API_TYPES,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS,
   PRODUCT_ANALYTICS_EDITOR_MODES,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
@@ -194,6 +199,52 @@ describe("product analytics event enums", () => {
       ManagedSiteModelSyncGlobalFilters:
         "managed_site_model_sync_global_filters",
       ManagedSiteModelSyncReset: "managed_site_model_sync_reset",
+    })
+  })
+
+  it("defines fixed Auto Check-in setting ids and strategy dimensions", () => {
+    expect(PRODUCT_ANALYTICS_SETTING_IDS).toMatchObject({
+      AutoCheckinConfigSnapshot: "auto_checkin_config_snapshot",
+      AutoCheckinGlobalEnabled: "auto_checkin_global_enabled",
+      AutoCheckinUiPretriggerEnabled: "auto_checkin_ui_pretrigger_enabled",
+      AutoCheckinNotifyCompletionEnabled:
+        "auto_checkin_notify_completion_enabled",
+      AutoCheckinScheduleMode: "auto_checkin_schedule_mode",
+      AutoCheckinRetryEnabled: "auto_checkin_retry_enabled",
+      AutoCheckinConfigReset: "auto_checkin_config_reset",
+    })
+
+    expect(PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES).toMatchObject({
+      Random: "random",
+      Deterministic: "deterministic",
+    })
+    expect(PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS).toMatchObject(
+      {
+        LessThan10m: "lt_10m",
+        TenTo30m: "10_30m",
+        ThirtyTo60m: "30_60m",
+        GreaterThan60m: "gt_60m",
+      },
+    )
+    expect(PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS).toMatchObject({
+      One: "1",
+      TwoToThree: "2_3",
+      FourPlus: "4_plus",
+    })
+    expect(PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS).toMatchObject({
+      LessThan1h: "lt_1h",
+      OneTo4h: "1_4h",
+      FourTo12h: "4_12h",
+      GreaterThan12h: "gt_12h",
+    })
+    expect(
+      PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS,
+    ).toMatchObject({
+      Night: "night",
+      Morning: "morning",
+      Afternoon: "afternoon",
+      Evening: "evening",
+      Unset: "unset",
     })
   })
 })

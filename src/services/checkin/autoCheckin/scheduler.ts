@@ -7,6 +7,18 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
+import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
+import { trackAutoCheckinConfigSnapshot } from "~/services/productAnalytics/autoCheckin"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsResult,
+} from "~/services/productAnalytics/events"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_RUN_RESULT,
@@ -117,6 +129,13 @@ interface AutoCheckinDailyTriggerPlan {
 interface AutoCheckinDailyPlanningOptions {
   allowCatchUp?: boolean
 }
+
+const AUTO_CHECKIN_BACKGROUND_ANALYTICS_CONTEXT = {
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+  actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow,
+  surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundAutoCheckinScheduler,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+} as const
 
 /**
  * Scheduler service for Auto Check-in
@@ -331,6 +350,43 @@ class AutoCheckinScheduler {
       return null
     }
     return hours * 60 + minutes
+  }
+
+  private mapRunSummaryToProductAnalyticsResult(
+    summary: Pick<
+      AutoCheckinRunSummary,
+      "executed" | "failedCount" | "skippedCount"
+    >,
+  ): ProductAnalyticsResult {
+    if (summary.failedCount > 0) {
+      return PRODUCT_ANALYTICS_RESULTS.Failure
+    }
+    if (summary.executed === 0 && summary.skippedCount > 0) {
+      return PRODUCT_ANALYTICS_RESULTS.Skipped
+    }
+    return PRODUCT_ANALYTICS_RESULTS.Success
+  }
+
+  private trackBackgroundAutoCheckinCompleted(params: {
+    summary: AutoCheckinRunSummary
+    durationMs: number
+    mode: (typeof PRODUCT_ANALYTICS_MODE_IDS)[keyof typeof PRODUCT_ANALYTICS_MODE_IDS]
+  }) {
+    void trackProductAnalyticsActionCompleted({
+      ...AUTO_CHECKIN_BACKGROUND_ANALYTICS_CONTEXT,
+      result: this.mapRunSummaryToProductAnalyticsResult(params.summary),
+      durationMs: params.durationMs,
+      insights: {
+        itemCount:
+          params.summary.totalEligible ??
+          params.summary.executed + params.summary.skippedCount,
+        successCount: params.summary.successCount,
+        failureCount: params.summary.failedCount,
+        skippedCount: params.summary.skippedCount,
+        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+        mode: params.mode,
+      },
+    })
   }
 
   private isMinutesWithinWindow(
@@ -964,6 +1020,10 @@ class AutoCheckinScheduler {
     const prefs = await userPreferences.getPreferences()
     const config = prefs.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin!
     const currentStatus = await autoCheckinStorage.getStatus()
+    trackAutoCheckinConfigSnapshot(
+      config,
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+    )
 
     // Always remove the legacy single-alarm schedule to prevent duplicate executions.
     await clearAlarm(AutoCheckinScheduler.LEGACY_ALARM_NAME)
@@ -1873,6 +1933,13 @@ class AutoCheckinScheduler {
             summary: mergedSummary,
           })
         }
+        if (isDailyRun) {
+          this.trackBackgroundAutoCheckinCompleted({
+            summary: mergedSummary,
+            durationMs: Date.now() - startTime,
+            mode: PRODUCT_ANALYTICS_MODE_IDS.TelemetryAuto,
+          })
+        }
         return
       }
 
@@ -2015,6 +2082,11 @@ class AutoCheckinScheduler {
           skippedCount,
           total: runnableAccounts.length + skippedCount,
         })
+        this.trackBackgroundAutoCheckinCompleted({
+          summary: mergedSummary,
+          durationMs: Date.now() - startTime,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.TelemetryAuto,
+        })
       }
 
       const duration = Date.now() - startTime
@@ -2079,6 +2151,7 @@ class AutoCheckinScheduler {
    * - Retries stop once `attempts >= retryStrategy.maxAttemptsPerDay`.
    */
   private async runRetryCheckins(): Promise<void> {
+    const startTime = Date.now()
     const now = new Date()
     const today = this.getLocalDay(now)
 
@@ -2263,6 +2336,18 @@ class AutoCheckinScheduler {
         failedCount: retryFailedCount,
         skippedCount: retrySkippedCount,
         total: retryResults.length,
+      })
+      this.trackBackgroundAutoCheckinCompleted({
+        summary: {
+          totalEligible: retryResults.length,
+          executed: retrySuccessCount + retryFailedCount,
+          successCount: retrySuccessCount,
+          failedCount: retryFailedCount,
+          skippedCount: retrySkippedCount,
+          needsRetry: retryFailedCount > 0,
+        },
+        durationMs: Date.now() - startTime,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.RetryFailed,
       })
     }
   }

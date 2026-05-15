@@ -526,6 +526,13 @@ export type ProductAnalyticsSurfaceId =
 
 export const PRODUCT_ANALYTICS_SETTING_IDS = {
   ProductAnalyticsEnabled: "product_analytics_enabled",
+  AutoCheckinConfigSnapshot: "auto_checkin_config_snapshot",
+  AutoCheckinGlobalEnabled: "auto_checkin_global_enabled",
+  AutoCheckinUiPretriggerEnabled: "auto_checkin_ui_pretrigger_enabled",
+  AutoCheckinNotifyCompletionEnabled: "auto_checkin_notify_completion_enabled",
+  AutoCheckinScheduleMode: "auto_checkin_schedule_mode",
+  AutoCheckinRetryEnabled: "auto_checkin_retry_enabled",
+  AutoCheckinConfigReset: "auto_checkin_config_reset",
   ManagedSiteModelSyncEnabled: "managed_site_model_sync_enabled",
   ManagedSiteModelSyncInterval: "managed_site_model_sync_interval",
   ManagedSiteModelSyncConcurrency: "managed_site_model_sync_concurrency",
@@ -539,6 +546,54 @@ export const PRODUCT_ANALYTICS_SETTING_IDS = {
 
 export type ProductAnalyticsSettingId =
   (typeof PRODUCT_ANALYTICS_SETTING_IDS)[keyof typeof PRODUCT_ANALYTICS_SETTING_IDS]
+
+export const PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES = {
+  Random: "random",
+  Deterministic: "deterministic",
+} as const
+
+export type ProductAnalyticsAutoCheckinScheduleMode =
+  (typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES)[keyof typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES]
+
+export const PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS = {
+  LessThan10m: "lt_10m",
+  TenTo30m: "10_30m",
+  ThirtyTo60m: "30_60m",
+  GreaterThan60m: "gt_60m",
+} as const
+
+export type ProductAnalyticsAutoCheckinRetryIntervalBucket =
+  (typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS)[keyof typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS]
+
+export const PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS = {
+  One: "1",
+  TwoToThree: "2_3",
+  FourPlus: "4_plus",
+} as const
+
+export type ProductAnalyticsAutoCheckinRetryAttemptBucket =
+  (typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS)[keyof typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS]
+
+export const PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS = {
+  LessThan1h: "lt_1h",
+  OneTo4h: "1_4h",
+  FourTo12h: "4_12h",
+  GreaterThan12h: "gt_12h",
+} as const
+
+export type ProductAnalyticsAutoCheckinWindowLengthBucket =
+  (typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS)[keyof typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS]
+
+export const PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS = {
+  Night: "night",
+  Morning: "morning",
+  Afternoon: "afternoon",
+  Evening: "evening",
+  Unset: "unset",
+} as const
+
+export type ProductAnalyticsAutoCheckinDeterministicTimeBucket =
+  (typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS)[keyof typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS]
 
 export const PRODUCT_ANALYTICS_PERMISSION_IDS = {
   Notifications: "notifications",
@@ -616,6 +671,7 @@ export type ProductAnalyticsEventPayloadMap = {
     selected_count_bucket?: ProductAnalyticsCountBucket
     success_count_bucket?: ProductAnalyticsCountBucket
     failure_count_bucket?: ProductAnalyticsCountBucket
+    skipped_count_bucket?: ProductAnalyticsCountBucket
     warning_count_bucket?: ProductAnalyticsCountBucket
     ready_count_bucket?: ProductAnalyticsCountBucket
     blocked_count_bucket?: ProductAnalyticsCountBucket
@@ -626,6 +682,15 @@ export type ProductAnalyticsEventPayloadMap = {
   [PRODUCT_ANALYTICS_EVENTS.SettingChanged]: {
     setting_id: ProductAnalyticsSettingId
     enabled?: boolean
+    global_enabled?: boolean
+    ui_pretrigger_enabled?: boolean
+    notify_completion_enabled?: boolean
+    retry_enabled?: boolean
+    schedule_mode?: ProductAnalyticsAutoCheckinScheduleMode
+    retry_interval_bucket?: ProductAnalyticsAutoCheckinRetryIntervalBucket
+    retry_max_attempts_bucket?: ProductAnalyticsAutoCheckinRetryAttemptBucket
+    window_length_bucket?: ProductAnalyticsAutoCheckinWindowLengthBucket
+    deterministic_time_bucket?: ProductAnalyticsAutoCheckinDeterministicTimeBucket
     entrypoint: ProductAnalyticsEntrypoint
   }
   [PRODUCT_ANALYTICS_EVENTS.PermissionResult]: {

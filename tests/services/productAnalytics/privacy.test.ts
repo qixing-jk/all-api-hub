@@ -4,6 +4,11 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_API_TYPES,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS,
   PRODUCT_ANALYTICS_COUNT_BUCKETS,
   PRODUCT_ANALYTICS_DURATION_BUCKETS,
   PRODUCT_ANALYTICS_EDITOR_MODES,
@@ -220,6 +225,7 @@ describe("product analytics privacy filtering", () => {
         selected_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
         success_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
         failure_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
+        skipped_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
         telemetry_source: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.NewApiTokenUsage,
         usage_data_present: true,
         source_url: "https://private.example/path",
@@ -242,6 +248,7 @@ describe("product analytics privacy filtering", () => {
       selected_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
       success_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
       failure_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
+      skipped_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
       telemetry_source: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.NewApiTokenUsage,
       usage_data_present: true,
     })
@@ -315,6 +322,76 @@ describe("product analytics privacy filtering", () => {
     expect(sanitized).toEqual({
       enabled: true,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+  })
+
+  it("keeps Auto Check-in config snapshot strategy dimensions without raw settings", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      {
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        global_enabled: true,
+        ui_pretrigger_enabled: true,
+        notify_completion_enabled: false,
+        retry_enabled: true,
+        schedule_mode: PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES.Random,
+        retry_interval_bucket:
+          PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS.TenTo30m,
+        retry_max_attempts_bucket:
+          PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.TwoToThree,
+        window_length_bucket:
+          PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS.FourTo12h,
+        deterministic_time_bucket:
+          PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS.Unset,
+        windowStart: "09:15",
+        windowEnd: "18:45",
+        deterministicTime: "10:30",
+        retryIntervalMinutes: 15,
+        retryMaxAttemptsPerDay: 3,
+        accountId: "private-account-id",
+        siteUrl: "https://private.example",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      global_enabled: true,
+      ui_pretrigger_enabled: true,
+      notify_completion_enabled: false,
+      retry_enabled: true,
+      schedule_mode: PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES.Random,
+      retry_interval_bucket:
+        PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS.TenTo30m,
+      retry_max_attempts_bucket:
+        PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.TwoToThree,
+      window_length_bucket:
+        PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS.FourTo12h,
+      deterministic_time_bucket:
+        PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS.Unset,
+    })
+  })
+
+  it("drops uncontrolled Auto Check-in config snapshot dimensions", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      {
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        global_enabled: true,
+        schedule_mode: "custom-private-mode",
+        retry_interval_bucket: "15",
+        retry_max_attempts_bucket: "99",
+        window_length_bucket: "09:00-18:00",
+        deterministic_time_bucket: "10:30",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      global_enabled: true,
     })
   })
 

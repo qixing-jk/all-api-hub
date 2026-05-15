@@ -13,6 +13,17 @@ import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
+import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SETTING_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  trackProductAnalyticsEvent,
+} from "~/services/productAnalytics/events"
 import { AUTO_CHECKIN_RUN_TYPE } from "~/types/autoCheckin"
 import {
   clearAlarm,
@@ -92,6 +103,19 @@ vi.mock("~/utils/core/error", () => ({
   getErrorMessage: vi.fn((e: unknown) => String(e)),
 }))
 
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionCompleted: vi.fn(),
+}))
+
+vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+  return {
+    ...actual,
+    trackProductAnalyticsEvent: vi.fn(),
+  }
+})
+
 const mockedUserPreferences = userPreferences as unknown as {
   getPreferences: ReturnType<typeof vi.fn>
   savePreferences: ReturnType<typeof vi.fn>
@@ -125,6 +149,13 @@ const mockedBrowserApi = {
     isMessageReceiverUnavailableError as unknown as ReturnType<typeof vi.fn>,
   onAlarm: onAlarm as unknown as ReturnType<typeof vi.fn>,
   sendRuntimeMessage: sendRuntimeMessage as unknown as ReturnType<typeof vi.fn>,
+}
+
+const mockedProductAnalytics = {
+  trackProductAnalyticsActionCompleted:
+    trackProductAnalyticsActionCompleted as unknown as ReturnType<typeof vi.fn>,
+  trackProductAnalyticsEvent:
+    trackProductAnalyticsEvent as unknown as ReturnType<typeof vi.fn>,
 }
 
 let storedStatus: any = null
@@ -298,6 +329,62 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockedBrowserApi.hasAlarmsAPI.mockReturnValue(true)
+  })
+
+  it("tracks a background config snapshot with only bucketed schedule fields", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        pretriggerDailyOnUiOpen: false,
+        notifyUiOnCompletion: true,
+        windowStart: "08:15",
+        windowEnd: "12:45",
+        scheduleMode: "deterministic",
+        deterministicTime: "09:30",
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+
+    await autoCheckinScheduler.scheduleNextRun()
+
+    expect(mockedProductAnalytics.trackProductAnalyticsEvent).toHaveBeenCalled()
+    const snapshotCall =
+      mockedProductAnalytics.trackProductAnalyticsEvent.mock.calls.find(
+        ([eventName, payload]) =>
+          eventName === PRODUCT_ANALYTICS_EVENTS.SettingChanged &&
+          payload?.setting_id ===
+            PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
+      )
+
+    expect(snapshotCall).toBeTruthy()
+    expect(snapshotCall?.[1]).toEqual({
+      setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      global_enabled: true,
+      ui_pretrigger_enabled: false,
+      notify_completion_enabled: true,
+      retry_enabled: true,
+      schedule_mode: "deterministic",
+      retry_interval_bucket: "10_30m",
+      retry_max_attempts_bucket: "2_3",
+      window_length_bucket: "4_12h",
+      deterministic_time_bucket: "morning",
+    })
+    expect(JSON.stringify(snapshotCall?.[1])).not.toContain("08:15")
+    expect(JSON.stringify(snapshotCall?.[1])).not.toContain("12:45")
+    expect(JSON.stringify(snapshotCall?.[1])).not.toContain("09:30")
+    expect(snapshotCall?.[1]).not.toHaveProperty("intervalMinutes")
+    expect(snapshotCall?.[1]).not.toHaveProperty("maxAttemptsPerDay")
+
+    vi.useRealTimers()
   })
 
   it("returns without touching alarms when the alarms API is unavailable", async () => {
@@ -784,6 +871,90 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockedBrowserApi.hasAlarmsAPI.mockReturnValue(true)
+  })
+
+  it("tracks daily scheduled completion with sanitized product analytics counts", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        notifyUiOnCompletion: false,
+        retryStrategy: {
+          enabled: false,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+
+    const successAccount: any = {
+      id: "success",
+      disabled: false,
+      site_name: "Success Site",
+      site_type: SITE_TYPES.VELOERA,
+      account_info: { username: "success-user" },
+      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+    }
+    const failedAccount: any = {
+      id: "failed",
+      disabled: false,
+      site_name: "Failed Site",
+      site_type: SITE_TYPES.VELOERA,
+      account_info: { username: "failed-user" },
+      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+    }
+    const skippedAccount: any = {
+      id: "skipped",
+      disabled: false,
+      site_name: "Skipped Site",
+      site_type: SITE_TYPES.VELOERA,
+      account_info: { username: "skipped-user" },
+      checkIn: { enableDetection: true, autoCheckInEnabled: false },
+    }
+
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([
+      successAccount,
+      failedAccount,
+      skippedAccount,
+    ])
+
+    const provider = {
+      canCheckIn: vi.fn(() => true),
+      checkIn: vi.fn(async (account: any) =>
+        account.id === "success"
+          ? { status: "success" }
+          : { status: "failed", rawMessage: "boom" },
+      ),
+    }
+    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+
+    await autoCheckinScheduler.runCheckins({
+      runType: AUTO_CHECKIN_RUN_TYPE.DAILY,
+    })
+
+    expect(
+      mockedProductAnalytics.trackProductAnalyticsActionCompleted,
+    ).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundAutoCheckinScheduler,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      durationMs: expect.any(Number),
+      insights: {
+        itemCount: 3,
+        successCount: 1,
+        failureCount: 1,
+        skippedCount: 1,
+        sourceKind: "auto",
+        mode: "telemetry_auto",
+      },
+    })
+
+    vi.useRealTimers()
   })
 
   it("builds retry queue from failed accounts only and does not skip isCheckedInToday accounts", async () => {
@@ -1499,6 +1670,113 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       }),
       { maxAttempts: 1 },
     )
+
+    vi.useRealTimers()
+  })
+
+  it("tracks retry completion with retry mode and updated result counts", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 30, 0))
+
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        notifyUiOnCompletion: false,
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+
+    storedStatus = {
+      lastDailyRunDay: "2024-01-01",
+      retryState: {
+        day: "2024-01-01",
+        pendingAccountIds: ["success", "failed"],
+        attemptsByAccount: { success: 1, failed: 1 },
+      },
+      perAccount: {
+        success: {
+          accountId: "success",
+          accountName: "Success Site · success-user",
+          status: "failed",
+          timestamp: Date.now(),
+        },
+        failed: {
+          accountId: "failed",
+          accountName: "Failed Site · failed-user",
+          status: "failed",
+          timestamp: Date.now(),
+        },
+      },
+      summary: {
+        totalEligible: 2,
+        executed: 2,
+        successCount: 0,
+        failedCount: 2,
+        skippedCount: 0,
+        needsRetry: true,
+      },
+    } as any
+
+    const successAccount: any = {
+      id: "success",
+      disabled: false,
+      site_name: "Success Site",
+      site_type: SITE_TYPES.VELOERA,
+      account_info: { username: "success-user" },
+      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+    }
+    const failedAccount: any = {
+      id: "failed",
+      disabled: false,
+      site_name: "Failed Site",
+      site_type: SITE_TYPES.VELOERA,
+      account_info: { username: "failed-user" },
+      checkIn: { enableDetection: true, autoCheckInEnabled: true },
+    }
+
+    mockedAccountStorage.getAllAccounts.mockResolvedValue([
+      successAccount,
+      failedAccount,
+    ])
+    mockedAccountStorage.getAccountById.mockImplementation(
+      async (id: string) => (id === "success" ? successAccount : failedAccount),
+    )
+
+    const provider = {
+      canCheckIn: vi.fn(() => true),
+      checkIn: vi.fn(async (account: any) =>
+        account.id === "success"
+          ? { status: "success" }
+          : { status: "failed", rawMessage: "boom" },
+      ),
+    }
+    mockedProviders.resolveAutoCheckinProvider.mockReturnValue(provider)
+
+    await (autoCheckinScheduler as any).runRetryCheckins()
+
+    expect(
+      mockedProductAnalytics.trackProductAnalyticsActionCompleted,
+    ).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundAutoCheckinScheduler,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      durationMs: expect.any(Number),
+      insights: {
+        itemCount: 2,
+        successCount: 1,
+        failureCount: 1,
+        skippedCount: 0,
+        sourceKind: "auto",
+        mode: "retry_failed",
+      },
+    })
 
     vi.useRealTimers()
   })

@@ -77,7 +77,7 @@ const failedResult: CheckinAccountResult = {
 }
 
 describe("AutoCheckin ResultsTable", () => {
-  it("declares controlled analytics metadata for row action buttons", () => {
+  it("does not attach automatic analytics metadata to explicit-tracked row action buttons", () => {
     render(
       <ResultsTable
         results={[failedResult]}
@@ -94,11 +94,6 @@ describe("AutoCheckin ResultsTable", () => {
       },
     )
 
-    const autoCheckinAction = (actionId: string) =>
-      `${PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin}:${actionId}:${PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable}:${PRODUCT_ANALYTICS_ENTRYPOINTS.Options}`
-    const accountAction = (actionId: string) =>
-      `${PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement}:${actionId}:${PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable}:${PRODUCT_ANALYTICS_ENTRYPOINTS.Options}`
-
     expect(
       screen.getByRole("button", {
         name: "autoCheckin:execution.actions.retryAccount",
@@ -108,35 +103,21 @@ describe("AutoCheckin ResultsTable", () => {
       screen.getByRole("button", {
         name: "autoCheckin:execution.actions.openManual",
       }),
-    ).toHaveAttribute(
-      "data-analytics-action",
-      autoCheckinAction(
-        PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinManualSignIn,
-      ),
-    )
+    ).not.toHaveAttribute("data-analytics-action")
     expect(
       screen.getByRole("button", {
         name: "account:actions.disableAccount",
       }),
-    ).toHaveAttribute(
-      "data-analytics-action",
-      accountAction(PRODUCT_ANALYTICS_ACTION_IDS.DisableAutoCheckinAccount),
-    )
+    ).not.toHaveAttribute("data-analytics-action")
     expect(
       screen.getByRole("button", {
         name: "account:actions.delete",
       }),
-    ).toHaveAttribute(
-      "data-analytics-action",
-      accountAction(PRODUCT_ANALYTICS_ACTION_IDS.DeleteAutoCheckinAccount),
-    )
+    ).not.toHaveAttribute("data-analytics-action")
     expect(
       screen.getByRole("button", {
         name: "autoCheckin:execution.actions.openSite",
       }),
-    ).toHaveAttribute(
-      "data-analytics-action",
-      accountAction(PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountSite),
-    )
+    ).not.toHaveAttribute("data-analytics-action")
   })
 })

@@ -47,6 +47,7 @@ export type ProductAnalyticsActionInsights = {
   selectedCount?: number
   successCount?: number
   failureCount?: number
+  skippedCount?: number
   warningCount?: number
   readyCount?: number
   blockedCount?: number
@@ -98,6 +99,9 @@ function mapProductAnalyticsActionInsights(
       : {}),
     ...(typeof insights.failureCount === "number"
       ? { failure_count_bucket: bucketCount(insights.failureCount) }
+      : {}),
+    ...(typeof insights.skippedCount === "number"
+      ? { skipped_count_bucket: bucketCount(insights.skippedCount) }
       : {}),
     ...(typeof insights.warningCount === "number"
       ? { warning_count_bucket: bucketCount(insights.warningCount) }

@@ -24,7 +24,7 @@ describe("AutoCheckin ActionBar", () => {
     trackStartedMock.mockResolvedValue(undefined)
   })
 
-  it("tracks controlled analytics metadata for started-only toolbar actions", () => {
+  it("does not attach automatic analytics metadata to explicit-tracked toolbar actions", () => {
     render(
       <ActionBar
         isRunning={false}
@@ -52,13 +52,13 @@ describe("AutoCheckin ActionBar", () => {
       }),
     )
 
-    expect(trackStartedMock).toHaveBeenCalledWith({
+    expect(trackStartedMock).not.toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAutoCheckinStatus,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
-    expect(trackStartedMock).toHaveBeenCalledWith({
+    expect(trackStartedMock).not.toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenFailedAutoCheckinManualSignIns,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,

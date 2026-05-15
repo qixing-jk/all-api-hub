@@ -10,7 +10,6 @@ import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIco
 import { Button } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -100,9 +99,6 @@ export default function ActionBar({
             disabled={isBusy || isRefreshing === true}
             loading={isRefreshing}
             leftIcon={<ArrowPathIcon className="h-4 w-4" />}
-            analyticsAction={
-              PRODUCT_ANALYTICS_ACTION_IDS.RefreshAutoCheckinStatus
-            }
           >
             {t("execution.refresh")}
           </Button>
@@ -117,9 +113,6 @@ export default function ActionBar({
             loading={isOpeningFailedManualSignIns}
             leftIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
             title={bulkManualHint}
-            analyticsAction={
-              PRODUCT_ANALYTICS_ACTION_IDS.OpenFailedAutoCheckinManualSignIns
-            }
           >
             {t("execution.actions.openFailedManual")}
           </Button>

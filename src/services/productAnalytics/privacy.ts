@@ -1,6 +1,11 @@
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_API_TYPES,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS,
   PRODUCT_ANALYTICS_COUNT_BUCKETS,
   PRODUCT_ANALYTICS_DURATION_BUCKETS,
   PRODUCT_ANALYTICS_EDITOR_MODES,
@@ -58,6 +63,7 @@ const EVENT_ALLOWED_KEYS = {
     "selected_count_bucket",
     "success_count_bucket",
     "failure_count_bucket",
+    "skipped_count_bucket",
     "warning_count_bucket",
     "ready_count_bucket",
     "blocked_count_bucket",
@@ -68,6 +74,15 @@ const EVENT_ALLOWED_KEYS = {
   [PRODUCT_ANALYTICS_EVENTS.SettingChanged]: [
     "setting_id",
     "enabled",
+    "global_enabled",
+    "ui_pretrigger_enabled",
+    "notify_completion_enabled",
+    "retry_enabled",
+    "schedule_mode",
+    "retry_interval_bucket",
+    "retry_max_attempts_bucket",
+    "window_length_bucket",
+    "deterministic_time_bucket",
     "entrypoint",
   ],
   [PRODUCT_ANALYTICS_EVENTS.PermissionResult]: [
@@ -90,6 +105,9 @@ const EVENT_ALLOWED_KEYS = {
 
 const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   action_id: Object.values(PRODUCT_ANALYTICS_ACTION_IDS),
+  deterministic_time_bucket: Object.values(
+    PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS,
+  ),
   api_type: Object.values(PRODUCT_ANALYTICS_API_TYPES),
   account_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   blocked_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
@@ -111,9 +129,17 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   permission_id: Object.values(PRODUCT_ANALYTICS_PERMISSION_IDS),
   ready_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   result: Object.values(PRODUCT_ANALYTICS_RESULTS),
+  retry_interval_bucket: Object.values(
+    PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS,
+  ),
+  retry_max_attempts_bucket: Object.values(
+    PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS,
+  ),
+  schedule_mode: Object.values(PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES),
   selected_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   setting_id: Object.values(PRODUCT_ANALYTICS_SETTING_IDS),
   site_type: PRODUCT_ANALYTICS_SITE_TYPES,
+  skipped_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   source_managed_site_type: Object.values(PRODUCT_ANALYTICS_MANAGED_SITE_TYPES),
   source_kind: Object.values(PRODUCT_ANALYTICS_SOURCE_KINDS),
   status_kind: Object.values(PRODUCT_ANALYTICS_STATUS_KINDS),
@@ -124,6 +150,9 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   total_account_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   unknown_site_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   warning_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
+  window_length_bucket: Object.values(
+    PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS,
+  ),
 }
 
 const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
@@ -146,7 +175,14 @@ function isAllowedScalar(value: unknown): value is string | boolean {
  */
 function isAllowedFieldValue(key: string, value: string | boolean): boolean {
   if (typeof value === "boolean") {
-    return key === "enabled" || key === "usage_data_present"
+    return (
+      key === "enabled" ||
+      key === "usage_data_present" ||
+      key === "global_enabled" ||
+      key === "ui_pretrigger_enabled" ||
+      key === "notify_completion_enabled" ||
+      key === "retry_enabled"
+    )
   }
 
   const allowedValues = FIELD_ALLOWED_VALUES[key]
