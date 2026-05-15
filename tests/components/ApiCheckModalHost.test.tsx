@@ -249,20 +249,28 @@ describe("ApiCheckModalHost", () => {
 
   it("locks host page scrolling while open and restores previous overflow styles after close", async () => {
     const user = userEvent.setup()
+    const previousHtmlOverflow = document.documentElement.style.overflow
+    const previousBodyOverflow = document.body.style.overflow
+
     document.documentElement.style.overflow = "visible"
     document.body.style.overflow = "auto"
 
-    await openModal()
+    try {
+      await openModal()
 
-    expect(document.documentElement.style.overflow).toBe("hidden")
-    expect(document.body.style.overflow).toBe("hidden")
+      expect(document.documentElement.style.overflow).toBe("hidden")
+      expect(document.body.style.overflow).toBe("hidden")
 
-    await user.click(
-      screen.getByRole("button", { name: "common:actions.close" }),
-    )
+      await user.click(
+        screen.getByRole("button", { name: "common:actions.close" }),
+      )
 
-    expect(document.documentElement.style.overflow).toBe("visible")
-    expect(document.body.style.overflow).toBe("auto")
+      expect(document.documentElement.style.overflow).toBe("visible")
+      expect(document.body.style.overflow).toBe("auto")
+    } finally {
+      document.documentElement.style.overflow = previousHtmlOverflow
+      document.body.style.overflow = previousBodyOverflow
+    }
   })
 
   it("dispatches a dismissed close event when closed before any fetch or probe result", async () => {
