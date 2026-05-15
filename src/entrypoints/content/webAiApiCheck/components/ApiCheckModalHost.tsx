@@ -1,5 +1,12 @@
 import { XMarkIcon } from "@heroicons/react/24/outline"
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type KeyboardEvent as ReactKeyboardEvent,
+} from "react"
 import toast from "react-hot-toast/headless"
 import { useTranslation } from "react-i18next"
 
@@ -68,6 +75,14 @@ const contentApiCheckAnalyticsScope = {
   surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
   entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
 } as const
+
+const stopHostPageKeyboardShortcuts = (
+  event: ReactKeyboardEvent<HTMLElement>,
+) => {
+  event.stopPropagation()
+}
+
+const KEYBOARD_EVENTS_TO_CONTAIN = ["keydown", "keyup"] as const
 
 /**
  * Classifies the modal opening source without carrying page content.
@@ -169,6 +184,9 @@ export function ApiCheckModalHost() {
   const lastAutoFetchKeyRef = useRef<string | null>(null)
   const fetchModelsRequestIdRef = useRef(0)
   const hasSignaledHostReadyRef = useRef(false)
+  const dialogRef = useRef<HTMLDivElement | null>(null)
+  const backdropRef = useRef<HTMLDivElement | null>(null)
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null)
 
   /**
    * Radix popovers (used by `SearchableSelect`) portal to `document.body` by default.
@@ -228,6 +246,63 @@ export function ApiCheckModalHost() {
     setFetchModelsError(null)
     setValidationError(null)
   }, [apiType])
+
+  useEffect(() => {
+    if (!isOpen) return
+    dialogRef.current?.focus({ preventScroll: true })
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) return
+
+    const stopKeyboardShortcut = (event: KeyboardEvent) => {
+      const target = event.target
+      if (target instanceof Node && dialogRef.current?.contains(target)) {
+        event.stopImmediatePropagation()
+      }
+    }
+    const stopWheel = (event: WheelEvent) => {
+      event.stopPropagation()
+    }
+    const stopBackgroundWheel = (event: WheelEvent) => {
+      event.preventDefault()
+      event.stopPropagation()
+    }
+    const documentElement = document.documentElement
+    const body = document.body
+    const previousDocumentOverflow = documentElement.style.overflow
+    const previousBodyOverflow = body.style.overflow
+
+    const dialog = dialogRef.current
+    const backdrop = backdropRef.current
+    const scrollContainer = scrollContainerRef.current
+
+    KEYBOARD_EVENTS_TO_CONTAIN.forEach((eventName) => {
+      document.addEventListener(eventName, stopKeyboardShortcut, {
+        capture: true,
+      })
+    })
+    documentElement.style.overflow = "hidden"
+    body.style.overflow = "hidden"
+    dialog?.addEventListener("wheel", stopBackgroundWheel, { passive: false })
+    backdrop?.addEventListener("wheel", stopBackgroundWheel, {
+      passive: false,
+    })
+    scrollContainer?.addEventListener("wheel", stopWheel, { passive: false })
+
+    return () => {
+      KEYBOARD_EVENTS_TO_CONTAIN.forEach((eventName) => {
+        document.removeEventListener(eventName, stopKeyboardShortcut, {
+          capture: true,
+        })
+      })
+      documentElement.style.overflow = previousDocumentOverflow
+      body.style.overflow = previousBodyOverflow
+      dialog?.removeEventListener("wheel", stopBackgroundWheel)
+      backdrop?.removeEventListener("wheel", stopBackgroundWheel)
+      scrollContainer?.removeEventListener("wheel", stopWheel)
+    }
+  }, [isOpen])
 
   useEffect(() => {
     const handleOpen = (event: Event) => {
@@ -784,15 +859,28 @@ export function ApiCheckModalHost() {
         className="pointer-events-auto"
       />
       <div
+        ref={backdropRef}
         className="pointer-events-auto absolute inset-0 bg-black/40"
         onClick={close}
       />
 
       <div className="pointer-events-none absolute inset-0 flex items-center justify-center p-3">
-        <div className="border-border bg-background pointer-events-auto max-h-[90vh] w-full max-w-[860px] overflow-hidden rounded-lg border shadow-xl">
+        <div
+          ref={dialogRef}
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="api-check-modal-title"
+          tabIndex={-1}
+          className="border-border bg-background pointer-events-auto max-h-[90vh] w-full max-w-[860px] overflow-hidden rounded-lg border shadow-xl"
+          onKeyDown={stopHostPageKeyboardShortcuts}
+          onKeyUp={stopHostPageKeyboardShortcuts}
+        >
           <div className="border-border flex items-start justify-between gap-3 border-b p-4">
             <div className="min-w-0">
-              <div className="text-foreground text-base font-semibold">
+              <div
+                id="api-check-modal-title"
+                className="text-foreground text-base font-semibold"
+              >
                 {t("webAiApiCheck:modal.title")}
               </div>
               <div className="text-muted-foreground truncate text-xs">
@@ -810,7 +898,10 @@ export function ApiCheckModalHost() {
             </IconButton>
           </div>
 
-          <div className="max-h-[calc(90vh-64px)] overflow-y-auto p-4">
+          <div
+            ref={scrollContainerRef}
+            className="max-h-[calc(90vh-64px)] overflow-y-auto overscroll-contain p-4"
+          >
             <div className="space-y-4">
               <div className="space-y-2">
                 <div className="text-foreground text-sm font-medium">

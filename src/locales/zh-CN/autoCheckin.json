@@ -1,5 +1,5 @@
 {
-  "description": "在每天的指定时间窗口内，自动为符合条件的账号执行签到。",
+  "description": "在每天的指定时间窗口内，自动为符合条件的账号执行签到；下方结果列表显示已执行的签到记录，不是待签到队列。",
   "execution": {
     "actions": {
       "devModeHint": "开发模式：为便于测试，操作按钮将始终显示。",
@@ -20,7 +20,7 @@
     },
     "empty": {
       "noHistory": "暂无执行历史",
-      "noHistoryDesc": "点击\"立即执行\"对所有符合条件的账号进行自动签到",
+      "noHistoryDesc": "当前还没有签到执行记录。点击“立即执行”后，符合条件的账号会开始签到，完成后才会出现在结果列表中。",
       "noResults": "没有匹配的结果",
       "noResultsDesc": "尝试修改筛选条件或搜索关键字"
     },
@@ -137,7 +137,7 @@
     "title": "自动签到",
     "viewExecution": "查看签到历史",
     "viewExecutionButton": "打开记录",
-    "viewExecutionDesc": "查看每次自动签到的详细结果与日志。",
+    "viewExecutionDesc": "查看已执行的自动签到结果、跳过原因和账号准备状态；这里不是待签到账号列表。",
     "windowEnd": "时间窗口结束",
     "windowEndDesc": "允许每日自动签到开始的最晚本地时间。",
     "windowStart": "时间窗口开始",
@@ -159,7 +159,7 @@
       "providerAvailable": "可用",
       "providerUnavailable": "不可用"
     },
-    "description": "列出所有已启用检测的账号，帮助快速定位为什么某些账号会被跳过。",
+    "description": "列出所有已启用检测的账号及其准备状态。处于待执行状态的账号会在点击“立即执行”或到达计划时间后参与签到。",
     "table": {
       "autoCheckin": "自动签到",
       "detection": "检测",

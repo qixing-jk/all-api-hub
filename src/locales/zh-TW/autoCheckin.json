@@ -1,5 +1,5 @@
 {
-  "description": "在每天的指定時間視窗內，自動為符合條件的帳號執行簽到。",
+  "description": "在每天的指定時間視窗內，自動為符合條件的帳號執行簽到；下方結果列表顯示已執行的簽到記錄，不是待簽到佇列。",
   "execution": {
     "actions": {
       "devModeHint": "開發模式：為便於測試，操作按鈕將始終顯示。",
@@ -20,7 +20,7 @@
     },
     "empty": {
       "noHistory": "暫無執行歷史",
-      "noHistoryDesc": "點擊\"立即執行\"對所有符合條件的帳號進行自動簽到",
+      "noHistoryDesc": "目前還沒有簽到執行記錄。點擊「立即執行」後，符合條件的帳號會開始簽到，完成後才會出現在結果列表中。",
       "noResults": "沒有匹配的結果",
       "noResultsDesc": "嘗試修改篩選條件或搜尋關鍵字"
     },
@@ -137,7 +137,7 @@
     "title": "自動簽到",
     "viewExecution": "檢視簽到歷史",
     "viewExecutionButton": "開啟記錄",
-    "viewExecutionDesc": "檢視每次自動簽到的詳細結果與日誌。",
+    "viewExecutionDesc": "檢視已執行的自動簽到結果、跳過原因和帳號準備狀態；這裡不是待簽到帳號列表。",
     "windowEnd": "時間視窗結束",
     "windowEndDesc": "允許每日自動簽到開始的最晚本地時間。",
     "windowStart": "時間視窗開始",
@@ -159,7 +159,7 @@
       "providerAvailable": "可用",
       "providerUnavailable": "不可用"
     },
-    "description": "列出所有已啟用檢測的帳號，幫助快速定位為什麼某些帳號會被跳過。",
+    "description": "列出所有已啟用檢測的帳號及其準備狀態。處於待執行狀態的帳號會在點擊「立即執行」或到達計劃時間後參與簽到。",
     "table": {
       "autoCheckin": "自動簽到",
       "detection": "檢測",

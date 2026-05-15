@@ -1,5 +1,5 @@
 {
-  "description": "Automatically check in eligible accounts every day within a configurable time window.",
+  "description": "Automatically check in eligible accounts every day within a configurable time window. The result list below shows completed run records, not a pending queue.",
   "execution": {
     "actions": {
       "devModeHint": "Dev mode: action buttons are always shown for testing.",
@@ -20,7 +20,7 @@
     },
     "empty": {
       "noHistory": "No execution history",
-      "noHistoryDesc": "Click \"Run now\" to execute automatic check-in for all eligible accounts",
+      "noHistoryDesc": "There are no check-in run records yet. Click \"Run now\" to start eligible accounts; they appear in the result list after the run finishes.",
       "noResults": "No matching results",
       "noResultsDesc": "Try adjusting your filters or search query"
     },
@@ -139,7 +139,7 @@
     "title": "Auto Check-in",
     "viewExecution": "Auto check-in history",
     "viewExecutionButton": "Open results",
-    "viewExecutionDesc": "View detailed results and logs for each automatic check-in run.",
+    "viewExecutionDesc": "View completed auto check-in results, skip reasons, and account readiness. This is not a pending account list.",
     "windowEnd": "Time window end",
     "windowEndDesc": "The latest local time when the daily check-in can start.",
     "windowStart": "Time window start",
@@ -161,7 +161,7 @@
       "providerAvailable": "Available",
       "providerUnavailable": "Unavailable"
     },
-    "description": "Every detection-enabled account is listed below so you can see why it might be skipped before the next run.",
+    "description": "Every detection-enabled account and its readiness are listed below. Pending accounts join check-in when you click \"Run now\" or when the scheduled time arrives.",
     "table": {
       "autoCheckin": "Auto check-in",
       "detection": "Detection",

@@ -1,4 +1,5 @@
 import { act, render, screen, waitFor } from "@testing-library/react"
+import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 type MatchMediaListener = (event: MediaQueryListEvent) => void
@@ -26,7 +27,9 @@ vi.mock("~/utils/core/logger", () => ({
 vi.mock(
   "~/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost",
   () => ({
-    ApiCheckModalHost: () => <div data-testid="api-check-modal-host" />,
+    ApiCheckModalHost: () => (
+      <input aria-label="API credential" data-testid="api-check-modal-host" />
+    ),
   }),
 )
 
@@ -169,5 +172,39 @@ describe("ContentReactRoot", () => {
     })
 
     expect(container.firstChild).not.toHaveClass("dark")
+  })
+
+  it("stops content UI keyboard events from reaching host page shortcut listeners", async () => {
+    const user = userEvent.setup()
+    const media = createMatchMediaController(false)
+    vi.stubGlobal(
+      "matchMedia",
+      vi.fn(() => media.queryList),
+    )
+    getPreferencesMock.mockResolvedValue({ themeMode: "light" })
+    const hostPageKeyDown = vi.fn()
+    const hostPageKeyUp = vi.fn()
+    window.addEventListener("keydown", hostPageKeyDown)
+    window.addEventListener("keyup", hostPageKeyUp)
+
+    const { ContentReactRoot } = await import(
+      "~/entrypoints/content/shared/ContentReactRoot"
+    )
+
+    render(<ContentReactRoot />)
+
+    const input = screen.getByRole("textbox", {
+      name: "API credential",
+    }) as HTMLInputElement
+
+    input.focus()
+    await user.keyboard("a")
+
+    expect(input.value).toBe("a")
+    expect(hostPageKeyDown).not.toHaveBeenCalled()
+    expect(hostPageKeyUp).not.toHaveBeenCalled()
+
+    window.removeEventListener("keydown", hostPageKeyDown)
+    window.removeEventListener("keyup", hostPageKeyUp)
   })
 })

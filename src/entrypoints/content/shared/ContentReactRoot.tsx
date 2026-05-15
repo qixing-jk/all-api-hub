@@ -15,6 +15,12 @@ import { RedemptionToaster } from "../redemptionAssist/components/RedemptionToas
  */
 const logger = createLogger("ContentReactRoot")
 
+const stopHostPageKeyboardShortcuts = (
+  event: React.KeyboardEvent<HTMLDivElement>,
+) => {
+  event.stopPropagation()
+}
+
 export const ContentReactRoot: React.FC = () => {
   const [resolvedTheme, setResolvedTheme] = useState<ResolvedTheme>("light")
 
@@ -65,7 +71,11 @@ export const ContentReactRoot: React.FC = () => {
     resolvedTheme === "dark" ? "dark text-foreground bg-background" : ""
 
   return (
-    <div className={wrapperClassName}>
+    <div
+      className={wrapperClassName}
+      onKeyDown={stopHostPageKeyboardShortcuts}
+      onKeyUp={stopHostPageKeyboardShortcuts}
+    >
       <ApiCheckModalHost />
       <RedemptionToaster />
     </div>
