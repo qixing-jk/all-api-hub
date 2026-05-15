@@ -418,6 +418,23 @@ const _openSettingsPage = () => {
 }
 
 /**
+ * Opens the optional-permissions onboarding dialog through the Basic settings URL.
+ */
+const _openPermissionsOnboardingPage = (params?: { reason?: string }) => {
+  const searchParams = {
+    onboarding: "permissions",
+    reason: params?.reason,
+  }
+
+  if (isOnOptionsPage()) {
+    replaceWithinOptionsPage(getBasicSettingsHash(), searchParams)
+    return
+  }
+
+  return openOrFocusOptionsPage(getBasicSettingsHash(), searchParams)
+}
+
+/**
  * Navigates directly to a named settings tab.
  * @param tabId Unique identifier for the tab to activate.
  */
@@ -709,6 +726,13 @@ export const openBookmarkManagerWithSearch = withPopupClose((search: string) =>
  * applicable, so the user ends up in the options page only.
  */
 export const openSettingsPage = withPopupClose(_openSettingsPage)
+
+/**
+ * Open the optional-permissions onboarding flow for manual review/debugging.
+ */
+export const openPermissionsOnboardingPage = withPopupClose(
+  _openPermissionsOnboardingPage,
+)
 
 /**
  * Open a specific settings tab while ensuring popup teardown happens after

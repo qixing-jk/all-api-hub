@@ -1,11 +1,13 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
 import Header from "~/entrypoints/options/components/Header"
 import {
   openBugReportPage,
   openCommunityPage,
   openFeatureRequestPage,
+  openPermissionsOnboardingPage,
 } from "~/utils/navigation"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -32,6 +34,18 @@ vi.mock("~/assets/icon.png", () => ({
   default: "icon.png",
 }))
 
+vi.mock("~/components/dialogs/UpdateLogDialog", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/components/dialogs/UpdateLogDialog")
+    >()
+
+  return {
+    ...actual,
+    useUpdateLogDialogContext: vi.fn(),
+  }
+})
+
 vi.mock("~/components/LanguageSwitcher", () => ({
   LanguageSwitcher: () => <div data-testid="language-switcher" />,
 }))
@@ -47,15 +61,22 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
     openBugReportPage: vi.fn(),
     openCommunityPage: vi.fn(),
     openFeatureRequestPage: vi.fn(),
+    openPermissionsOnboardingPage: vi.fn(),
   }
 })
 
 const mockedOpenBugReportPage = vi.mocked(openBugReportPage)
 const mockedOpenCommunityPage = vi.mocked(openCommunityPage)
 const mockedOpenFeatureRequestPage = vi.mocked(openFeatureRequestPage)
+const mockedOpenPermissionsOnboardingPage = vi.mocked(
+  openPermissionsOnboardingPage,
+)
+const mockedUseUpdateLogDialogContext = vi.mocked(useUpdateLogDialogContext)
 
 describe("options Header", () => {
   beforeEach(() => {
+    vi.clearAllMocks()
+    vi.stubEnv("MODE", "development")
     Object.defineProperty(window, "scrollY", {
       configurable: true,
       writable: true,
@@ -71,6 +92,11 @@ describe("options Header", () => {
       removeEventListener: vi.fn(),
       dispatchEvent: vi.fn(),
     }))
+    mockedUseUpdateLogDialogContext.mockReturnValue({
+      state: { isOpen: false, version: null },
+      openDialog: vi.fn(),
+      closeDialog: vi.fn(),
+    })
   })
 
   it("exposes feedback shortcuts from the options header", async () => {
@@ -111,6 +137,32 @@ describe("options Header", () => {
     )
     expect(mockedOpenCommunityPage).toHaveBeenCalledTimes(1)
     expect(mockedOpenCommunityPage).toHaveBeenCalledWith("en")
+  })
+
+  it("opens onboarding from the shared development dialog debug menu", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <Header
+        onSearchOpen={vi.fn()}
+        onTitleClick={vi.fn()}
+        onMenuToggle={vi.fn()}
+        isMobileSidebarOpen={false}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
+    )
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "Dev: Trigger onboarding",
+      }),
+    )
+
+    expect(mockedOpenPermissionsOnboardingPage).toHaveBeenCalledWith({
+      reason: "debug",
+    })
   })
 
   it("keeps the logo title visible before scrolling on mobile", async () => {

@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
 import HeaderSection from "~/entrypoints/popup/components/HeaderSection"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -22,6 +23,7 @@ import {
   openFeatureRequestPage,
   openFullAccountManagerPage,
   openFullBookmarkManagerPage,
+  openPermissionsOnboardingPage,
   openSettingsPage,
   openSidePanelPage,
 } from "~/utils/navigation"
@@ -44,6 +46,18 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
 vi.mock("~/assets/icon.png", () => ({
   default: "icon.png",
 }))
+
+vi.mock("~/components/dialogs/UpdateLogDialog", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/components/dialogs/UpdateLogDialog")
+    >()
+
+  return {
+    ...actual,
+    useUpdateLogDialogContext: vi.fn(),
+  }
+})
 
 vi.mock("~/utils/browser", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/browser")>()
@@ -80,6 +94,7 @@ vi.mock("~/utils/navigation", () => ({
   openFeatureRequestPage: vi.fn(),
   openFullAccountManagerPage: vi.fn(),
   openFullBookmarkManagerPage: vi.fn(),
+  openPermissionsOnboardingPage: vi.fn(),
   openSettingsPage: vi.fn(),
   openSidePanelPage: vi.fn(),
 }))
@@ -120,8 +135,12 @@ const mockedOpenCommunityPage = vi.mocked(openCommunityPage)
 const mockedOpenFeatureRequestPage = vi.mocked(openFeatureRequestPage)
 const mockedOpenFullAccountManagerPage = vi.mocked(openFullAccountManagerPage)
 const mockedOpenFullBookmarkManagerPage = vi.mocked(openFullBookmarkManagerPage)
+const mockedOpenPermissionsOnboardingPage = vi.mocked(
+  openPermissionsOnboardingPage,
+)
 const mockedOpenSettingsPage = vi.mocked(openSettingsPage)
 const mockedOpenSidePanelPage = vi.mocked(openSidePanelPage)
+const mockedUseUpdateLogDialogContext = vi.mocked(useUpdateLogDialogContext)
 
 const expectPopupHeaderAction = ({
   featureId,
@@ -141,6 +160,7 @@ const expectPopupHeaderAction = ({
 describe("popup HeaderSection", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.stubEnv("MODE", "development")
     trackProductAnalyticsActionStartedMock.mockReset()
     trackerCompleteMock.mockReset()
     trackerCompleteMock.mockResolvedValue(undefined)
@@ -154,6 +174,11 @@ describe("popup HeaderSection", () => {
     mockedGetSidePanelSupport.mockReturnValue({
       supported: true,
       kind: "chromium-side-panel",
+    })
+    mockedUseUpdateLogDialogContext.mockReturnValue({
+      state: { isOpen: false, version: null },
+      openDialog: vi.fn(),
+      closeDialog: vi.fn(),
     })
   })
 
@@ -257,6 +282,8 @@ describe("popup HeaderSection", () => {
   })
 
   it("completes popup header refresh analytics with the default success result", async () => {
+    handleRefreshMock.mockResolvedValueOnce({ success: 4, failed: 0 })
+
     render(<HeaderSection />, { withReleaseUpdateStatusProvider: false })
 
     fireEvent.click(
@@ -271,6 +298,12 @@ describe("popup HeaderSection", () => {
     await waitFor(() => {
       expect(trackerCompleteMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            successCount: 4,
+            failureCount: 0,
+          },
+        },
       )
     })
   })
@@ -342,5 +375,24 @@ describe("popup HeaderSection", () => {
 
     expect(mockedOpenCommunityPage).toHaveBeenCalledTimes(1)
     expect(mockedOpenCommunityPage).toHaveBeenCalledWith("en")
+  })
+
+  it("opens onboarding from the shared development dialog debug menu", async () => {
+    const user = userEvent.setup()
+
+    render(<HeaderSection />, { withReleaseUpdateStatusProvider: false })
+
+    await user.click(
+      await screen.findByRole("button", { name: "Dev: Dialog debug menu" }),
+    )
+    await user.click(
+      await screen.findByRole("menuitem", {
+        name: "Dev: Trigger onboarding",
+      }),
+    )
+
+    expect(mockedOpenPermissionsOnboardingPage).toHaveBeenCalledWith({
+      reason: "debug",
+    })
   })
 })

@@ -27,7 +27,7 @@
   "homepageDesc": "查看详细文档、使用指南和更多信息",
   "implementedFeatures": "已实现功能",
   "intro": "All API Hub 是一款同时面向第三方 New API 系列中转站和自建 New API 实例的浏览器插件。它集中展示账号与余额、智能排序和当前站点识别，并提供自动刷新与临时窗口防火墙绕过等自动化能力；对于自建 New API，还支持渠道管理和模型列表同步，并集成 CLIProxyAPI、WebDAV 备份以及数据导入导出等工具。",
-  "privacyText": "本插件所有数据均存储在本地浏览器中，不会主动上传到任何服务器。您的账号信息和使用数据完全由您自己掌控，确保隐私安全",
+  "privacyText": "账号、API Key、Cookie、余额、请求内容和用户输入等敏感数据默认仅保存在本地。可关闭的匿名产品统计只用于优先修复常见问题、改进常用流程和兼容性，并减少不必要的干扰，不会收集上述敏感数据。",
   "privacyTitle": "隐私保护",
   "projectLinks": "项目链接",
   "releaseUpdate": {

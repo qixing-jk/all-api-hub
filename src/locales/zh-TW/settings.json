@@ -356,6 +356,7 @@
       "allowAll": "授予推薦權限",
       "maybeLater": "稍後再說"
     },
+    "analyticsDisclosure": "擴充套件包含可關閉的匿名產品統計，幫助我們優先修復常見問題、優化常用功能與相容性，並減少不必要的干擾；不會收集 API Key、Cookie、帳號 URL、餘額、請求內容或使用者輸入。",
     "intro": "權限只用於完成過盾必要的 Cookie/請求頭操作，而且可以隨時關閉。",
     "openSourceBadge": "開源 · 社羣共建",
     "permissionListDescription": "繞過防火牆防護等功能的必要權限，讓資料獲取能在存在防火牆的網站上正常工作。",
@@ -376,8 +377,8 @@
     }
   },
   "productAnalytics": {
-    "description": "協助改進 All API Hub 的匿名使用統計。我們不會收集 API Key、Cookie、帳號 URL、餘額、請求內容或使用者輸入。",
-    "enableDescription": "允許傳送有限的功能使用情況、錯誤類別和粗略站點類型統計，用於判斷開發優先順序。",
+    "description": "幫助我們更快發現常見問題、改進常用流程並提升相容性的匿名統計。我們不會收集 API Key、Cookie、帳號 URL、餘額、請求內容或使用者輸入。",
+    "enableDescription": "允許傳送有限的功能使用情況、錯誤類別和粗略站點類型統計，用於優先改進最影響你體驗的部分。",
     "enableLabel": "啟用匿名產品統計",
     "title": "匿名產品統計"
   },

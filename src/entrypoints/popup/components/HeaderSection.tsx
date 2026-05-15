@@ -1,7 +1,6 @@
 import {
   ArrowPathIcon,
   ArrowsPointingOutIcon,
-  BugAntIcon,
   Cog6ToothIcon,
 } from "@heroicons/react/24/outline"
 import { PanelRightClose } from "lucide-react"
@@ -10,7 +9,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import iconImage from "~/assets/icon.png"
-import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
+import { DevDialogDebugMenu } from "~/components/DevDialogDebugMenu"
 import { FeedbackDropdownMenu } from "~/components/FeedbackDropdownMenu"
 import Tooltip from "~/components/Tooltip"
 import { BodySmall, IconButton } from "~/components/ui"
@@ -27,10 +26,8 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
-import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { isExtensionSidePanel } from "~/utils/browser"
-import { getManifest, getSidePanelSupport } from "~/utils/browser/browserApi"
-import { getErrorMessage } from "~/utils/core/error"
+import { getSidePanelSupport } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 import {
   openApiCredentialProfilesPage,
@@ -47,45 +44,6 @@ import CompactThemeToggle from "./ThemeToggle"
  * Unified logger scoped to the popup header component.
  */
 const logger = createLogger("PopupHeaderSection")
-
-/**
- * Development-only shortcut for manually reopening the update log dialog.
- */
-function DevTriggerUpdateLogButton() {
-  const { openDialog } = useUpdateLogDialogContext()
-
-  const handleClick = useCallback(async () => {
-    try {
-      const { version } = getManifest()
-      if (!version) return
-
-      await changelogOnUpdateState.setPendingVersion(version)
-      const pendingVersion =
-        await changelogOnUpdateState.consumePendingVersion()
-      if (!pendingVersion) return
-
-      openDialog(pendingVersion)
-    } catch (error) {
-      const message = getErrorMessage(error)
-      logger.debug("Failed to trigger update log (dev)", { error: message })
-      toast.error(`Failed to trigger update log (dev): ${message}`)
-    }
-  }, [openDialog])
-
-  return (
-    <Tooltip content="Dev: Trigger update log">
-      <IconButton
-        onClick={() => void handleClick()}
-        variant="outline"
-        size="sm"
-        aria-label="Dev: Trigger update log"
-        className="touch-manipulation"
-      >
-        <BugAntIcon className="h-4 w-4" />
-      </IconButton>
-    </Tooltip>
-  )
-}
 
 /**
  * Popup header with app identity (including version), theme toggle, and navigation controls.
@@ -132,14 +90,21 @@ export default function HeaderSection({
         },
         error: t("account:refresh.refreshFailed"),
       })
+      const refreshInsights = {
+        successCount: result.success,
+        failureCount: result.failed,
+      }
       if (result.failed > 0) {
         await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: refreshInsights,
         })
         return
       }
 
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        insights: refreshInsights,
+      })
     } catch (error) {
       logger.error("Error during global refresh", error)
       await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
@@ -218,11 +183,6 @@ export default function HeaderSection({
       <ProductAnalyticsScope entrypoint={entrypoint} surfaceId={headerSurface}>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
           <CompactThemeToggle />
-
-          {import.meta.env.MODE === "development" && (
-            <DevTriggerUpdateLogButton />
-          )}
-
           <FeedbackDropdownMenu language={i18n.language} />
 
           <ProductAnalyticsScope
@@ -295,6 +255,8 @@ export default function HeaderSection({
               </IconButton>
             </Tooltip>
           </ProductAnalyticsScope>
+
+          <DevDialogDebugMenu />
         </div>
       </ProductAnalyticsScope>
     </header>

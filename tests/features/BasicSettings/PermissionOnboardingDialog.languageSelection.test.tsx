@@ -567,4 +567,19 @@ describe("PermissionOnboardingDialog language selection", () => {
       screen.getByText(i18n.t("permissions.items.notifications.description")),
     ).toBeInTheDocument()
   })
+
+  it("mentions anonymous product analytics in onboarding without making it the primary message", async () => {
+    const i18n = await createSettingsI18n("en")
+
+    renderWithI18n(<PermissionOnboardingDialog open onClose={vi.fn()} />, i18n)
+
+    expect(
+      await screen.findByText(
+        i18n.t("permissionsOnboarding.analyticsDisclosure"),
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(i18n.t("permissionsOnboarding.analyticsDisclosure")),
+    ).toHaveClass("text-gray-500")
+  })
 })

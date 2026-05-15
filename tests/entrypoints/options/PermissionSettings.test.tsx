@@ -2,6 +2,12 @@ import { act, cleanup, fireEvent } from "@testing-library/react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import PermissionSettings from "~/features/BasicSettings/components/tabs/Permissions/PermissionSettings"
+import {
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_PERMISSION_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+} from "~/services/productAnalytics/events"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const {
@@ -11,6 +17,7 @@ const {
   removePermissionMock,
   requestPermissionMock,
   showResultToastMock,
+  trackProductAnalyticsEventMock,
   unsubscribeMock,
 } = vi.hoisted(() => ({
   changedListenerRef: {
@@ -21,10 +28,19 @@ const {
   removePermissionMock: vi.fn(),
   requestPermissionMock: vi.fn(),
   showResultToastMock: vi.fn(),
+  trackProductAnalyticsEventMock: vi.fn(),
   unsubscribeMock: vi.fn(),
 }))
 
 vi.mock("~/services/permissions/permissionManager", () => ({
+  OPTIONAL_PERMISSION_IDS: {
+    Cookies: "cookies",
+    declarativeNetRequestWithHostAccess: "declarativeNetRequestWithHostAccess",
+    WebRequest: "webRequest",
+    WebRequestBlocking: "webRequestBlocking",
+    ClipboardRead: "clipboardRead",
+    Notifications: "notifications",
+  },
   OPTIONAL_PERMISSIONS: ["cookies", "clipboardRead", "notifications"],
   OPTIONAL_PERMISSION_DEFINITIONS: [
     { id: "cookies" },
@@ -41,6 +57,15 @@ vi.mock("~/services/permissions/permissionManager", () => ({
 vi.mock("~/utils/core/toastHelpers", () => ({
   showResultToast: (...args: unknown[]) => showResultToastMock(...args),
 }))
+
+vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+  return {
+    ...actual,
+    trackProductAnalyticsEvent: trackProductAnalyticsEventMock,
+  }
+})
 
 describe("PermissionSettings", () => {
   beforeEach(() => {
@@ -124,6 +149,30 @@ describe("PermissionSettings", () => {
     expect(hasPermissionMock).toHaveBeenCalledWith("clipboardRead")
     expect(hasPermissionMock).toHaveBeenCalledWith("notifications")
     expect(hasPermissionMock.mock.calls.length).toBeGreaterThanOrEqual(3)
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Cookies,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.ClipboardRead,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Notifications,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
   })
 
   it("reloads statuses on external permission change and unsubscribes on cleanup", async () => {
@@ -188,5 +237,13 @@ describe("PermissionSettings", () => {
         "settings:permissions.messages.grantFailed",
       )
     })
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.ClipboardRead,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
   })
 })

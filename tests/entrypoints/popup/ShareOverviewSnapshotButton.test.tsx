@@ -244,6 +244,12 @@ describe("ShareOverviewSnapshotButton", () => {
     })
     expect(trackerCompleteMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          itemCount: 2,
+          usageDataPresent: true,
+        },
+      },
     )
   })
 
@@ -318,7 +324,13 @@ describe("ShareOverviewSnapshotButton", () => {
     )
     expect(trackerCompleteMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
-      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          itemCount: 1,
+          usageDataPresent: true,
+        },
+      },
     )
   })
 })

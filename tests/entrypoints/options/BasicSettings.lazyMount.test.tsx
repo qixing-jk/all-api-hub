@@ -43,9 +43,14 @@ vi.mock("~/features/BasicSettings/components/shared/LoadingSkeleton", () => ({
 vi.mock(
   "~/features/BasicSettings/components/dialogs/PermissionOnboardingDialog",
   () => ({
-    PermissionOnboardingDialog: () => (
-      <div data-testid="permission-onboarding" />
-    ),
+    PermissionOnboardingDialog: ({
+      open,
+      reason,
+    }: {
+      open: boolean
+      reason: string | null
+    }) =>
+      open ? <div data-testid="permission-onboarding">{reason}</div> : null,
   }),
 )
 
@@ -328,6 +333,27 @@ describe("BasicSettings tab mounting", () => {
       await screen.findByTestId("managed-site-tab-content"),
     ).toBeInTheDocument()
     expect(screen.queryByTestId("general-tab-content")).not.toBeInTheDocument()
+  })
+
+  it("opens permissions onboarding when the options URL is updated in place", async () => {
+    render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
+
+    expect(
+      screen.queryByTestId("permission-onboarding"),
+    ).not.toBeInTheDocument()
+
+    act(() => {
+      window.history.replaceState(
+        null,
+        "",
+        "/?onboarding=permissions&reason=debug#basic",
+      )
+      window.dispatchEvent(new Event("hashchange"))
+    })
+
+    expect(
+      await screen.findByTestId("permission-onboarding"),
+    ).toHaveTextContent("debug")
   })
 
   it("keeps the current page visible during subsequent preference reloads", async () => {

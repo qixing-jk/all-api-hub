@@ -7,6 +7,7 @@ import { useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import iconImage from "~/assets/icon.png"
+import { DevDialogDebugMenu } from "~/components/DevDialogDebugMenu"
 import { FeedbackDropdownMenu } from "~/components/FeedbackDropdownMenu"
 import { LanguageSwitcher } from "~/components/LanguageSwitcher"
 import { Heading5, IconButton } from "~/components/ui"
@@ -205,6 +206,10 @@ function Header({
               showMobileExpandedSearch && "hidden md:flex",
             )}
           >
+            <HeaderThemeSwitcher />
+            <FeedbackDropdownMenu language={i18n.language} />
+            <LanguageSwitcher variant="icon-dropdown" />
+            <DevDialogDebugMenu />
             <IconButton
               onClick={onSearchOpen}
               variant="ghost"
@@ -214,9 +219,6 @@ function Header({
             >
               <MagnifyingGlassIcon className="h-5 w-5" />
             </IconButton>
-            <HeaderThemeSwitcher />
-            <FeedbackDropdownMenu language={i18n.language} />
-            <LanguageSwitcher variant="icon-dropdown" />
           </div>
         </div>
       </div>

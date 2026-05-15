@@ -356,6 +356,7 @@
       "allowAll": "授予推荐权限",
       "maybeLater": "稍后再说"
     },
+    "analyticsDisclosure": "扩展包含可关闭的匿名产品统计，帮助我们优先修复常见问题、优化常用功能和兼容性，并减少不必要的干扰；不会收集 API Key、Cookie、账号 URL、余额、请求内容或用户输入。",
     "intro": "权限只用于完成过盾必要的 Cookie/请求头操作，而且可以随时关闭。",
     "openSourceBadge": "开源 · 社区共建",
     "permissionListDescription": "绕过防火墙防护等功能的必要权限，让数据获取能在存在防火墙的网站上正常工作。",
@@ -376,8 +377,8 @@
     }
   },
   "productAnalytics": {
-    "description": "帮助改进 All API Hub 的匿名使用统计。我们不会收集 API Key、Cookie、账号 URL、余额、请求内容或用户输入。",
-    "enableDescription": "允许发送有限的功能使用情况、错误类别和粗略站点类型统计，用于判断开发优先级。",
+    "description": "帮助我们更快发现常见问题、改进常用流程并提升兼容性的匿名统计。我们不会收集 API Key、Cookie、账号 URL、余额、请求内容或用户输入。",
+    "enableDescription": "允许发送有限的功能使用情况、错误类别和粗略站点类型统计，用于优先改进最影响你体验的部分。",
     "enableLabel": "启用匿名产品统计",
     "title": "匿名产品统计"
   },

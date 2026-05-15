@@ -28,6 +28,10 @@ import {
   requestPermission,
 } from "~/services/permissions/permissionManager"
 import {
+  getPermissionAnalyticsResult,
+  trackOptionalPermissionResult,
+} from "~/services/productAnalytics/permissions"
+import {
   TASK_NOTIFICATION_CHANNELS,
   TASK_NOTIFICATION_TASKS,
   type TaskNotificationChannel,
@@ -533,12 +537,22 @@ export default function TaskNotificationSettings() {
       const success = await requestPermission(
         OPTIONAL_PERMISSION_IDS.Notifications,
       )
+      trackOptionalPermissionResult(
+        OPTIONAL_PERMISSION_IDS.Notifications,
+        getPermissionAnalyticsResult(success),
+      )
       await refreshPermissionStatus()
       showResultToast(
         success,
         t("taskNotifications.permission.requestSuccess"),
         t("taskNotifications.permission.requestFailed"),
       )
+    } catch (error) {
+      trackOptionalPermissionResult(
+        OPTIONAL_PERMISSION_IDS.Notifications,
+        getPermissionAnalyticsResult(false),
+      )
+      throw error
     } finally {
       setIsRequestingPermission(false)
     }

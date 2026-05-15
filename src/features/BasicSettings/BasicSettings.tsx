@@ -602,6 +602,14 @@ export default function BasicSettings() {
         }, 220)
       }
     }
+
+    if (hasOptionalPermissions) {
+      const onboarding = searchParams.get("onboarding")
+      if (onboarding === "permissions") {
+        setPermissionsOnboardingReason(searchParams.get("reason"))
+        setShowPermissionsOnboarding(true)
+      }
+    }
   }, [])
 
   useEffect(() => {
@@ -613,14 +621,6 @@ export default function BasicSettings() {
       window.removeEventListener("hashchange", applyUrlState)
     }
   }, [applyUrlState])
-
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search)
-    if (params.get("onboarding") === "permissions" && hasOptionalPermissions) {
-      setPermissionsOnboardingReason(params.get("reason"))
-      setShowPermissionsOnboarding(true)
-    }
-  }, [])
 
   const handleCloseOnboarding = useCallback(() => {
     setShowPermissionsOnboarding(false)

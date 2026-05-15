@@ -5,6 +5,12 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import TaskNotificationSettings from "~/features/BasicSettings/components/tabs/Notifications/TaskNotificationSettings"
 import { OPTIONAL_PERMISSION_IDS } from "~/services/permissions/permissionManager"
+import {
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_PERMISSION_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+} from "~/services/productAnalytics/events"
 import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
 import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -27,6 +33,7 @@ const {
   sendRuntimeMessageMock,
   showResultToastMock,
   taskNotificationsMock,
+  trackProductAnalyticsEventMock,
   showUpdateToastMock,
   updateSiteAnnouncementNotificationsMock,
   updateTaskNotificationsMock,
@@ -39,6 +46,7 @@ const {
   taskNotificationsMock: {
     current: undefined as TaskNotificationPreferences | undefined,
   },
+  trackProductAnalyticsEventMock: vi.fn(),
   showUpdateToastMock: vi.fn(),
   updateSiteAnnouncementNotificationsMock: vi.fn(),
   updateTaskNotificationsMock: vi.fn(),
@@ -78,6 +86,15 @@ vi.mock("~/utils/core/toastHelpers", () => ({
   showResultToast: (...args: unknown[]) => showResultToastMock(...args),
   showUpdateToast: (...args: unknown[]) => showUpdateToastMock(...args),
 }))
+
+vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+  return {
+    ...actual,
+    trackProductAnalyticsEvent: trackProductAnalyticsEventMock,
+  }
+})
 
 describe("TaskNotificationSettings", () => {
   beforeEach(() => {
@@ -124,6 +141,45 @@ describe("TaskNotificationSettings", () => {
       true,
       "settings:taskNotifications.permission.requestSuccess",
       "settings:taskNotifications.permission.requestFailed",
+    )
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Notifications,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+  })
+
+  it("tracks denied notification permission requests as failures", async () => {
+    requestPermissionMock.mockResolvedValueOnce(false)
+
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "settings:taskNotifications.permission.request",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToastMock).toHaveBeenCalledWith(
+        false,
+        "settings:taskNotifications.permission.requestSuccess",
+        "settings:taskNotifications.permission.requestFailed",
+      )
+    })
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Notifications,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
     )
   })
 

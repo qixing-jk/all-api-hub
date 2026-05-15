@@ -356,6 +356,7 @@
       "allowAll": "Allow recommended permissions",
       "maybeLater": "Maybe later"
     },
+    "analyticsDisclosure": "The extension includes optional anonymous product analytics that help us prioritize fixes for common issues, improve core workflows and compatibility, and reduce unnecessary friction. It does not collect API keys, cookies, account URLs, balances, request content, or user input.",
     "intro": "As an open-source project, we only ask for the minimal optional permissions needed to enable advanced workflows. You stay in full control.",
     "openSourceBadge": "Open-source & community-driven",
     "permissionListDescription": "These permissions are required for firewall-bypass flows so data refresh jobs keep working on protected sites.",
@@ -376,8 +377,8 @@
     }
   },
   "productAnalytics": {
-    "description": "Help improve All API Hub with anonymous usage statistics. We do not collect API keys, cookies, account URLs, balances, request content, or user input.",
-    "enableDescription": "Allow limited feature usage, error category, and coarse site-type statistics to guide development priorities.",
+    "description": "Anonymous statistics that help us spot common issues sooner, improve everyday workflows, and strengthen compatibility. We do not collect API keys, cookies, account URLs, balances, request content, or user input.",
+    "enableDescription": "Allow limited feature usage, error category, and coarse site-type statistics so we can focus on the parts that affect your experience most.",
     "enableLabel": "Enable anonymous product analytics",
     "title": "Anonymous product analytics"
   },

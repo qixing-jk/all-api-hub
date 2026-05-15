@@ -285,6 +285,9 @@ export function PermissionOnboardingDialog({
                 {t("permissionsOnboarding.intro")}
               </BodySmall>
             </div>
+            <BodySmall className="dark:text-dark-text-secondary text-gray-500">
+              {t("permissionsOnboarding.analyticsDisclosure")}
+            </BodySmall>
             <Alert
               variant="info"
               title={t("permissionsOnboarding.project.label")}

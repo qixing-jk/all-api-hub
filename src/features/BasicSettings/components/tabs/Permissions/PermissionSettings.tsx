@@ -17,6 +17,10 @@ import {
   removePermission,
   requestPermission,
 } from "~/services/permissions/permissionManager"
+import {
+  getPermissionAnalyticsResult,
+  trackOptionalPermissionResult,
+} from "~/services/productAnalytics/permissions"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
 
@@ -152,6 +156,10 @@ export default function PermissionSettings() {
       try {
         if (shouldEnable) {
           success = await requestPermission(id)
+          trackOptionalPermissionResult(
+            id,
+            getPermissionAnalyticsResult(success),
+          )
           logger.debug("Permission request completed", { id, success })
           showResultToast(
             success,
@@ -160,6 +168,10 @@ export default function PermissionSettings() {
           )
         } else {
           success = await removePermission(id)
+          trackOptionalPermissionResult(
+            id,
+            getPermissionAnalyticsResult(success),
+          )
           logger.debug("Permission revoke completed", { id, success })
           showResultToast(
             success,
@@ -179,6 +191,7 @@ export default function PermissionSettings() {
         }
       } catch (error) {
         success = false
+        trackOptionalPermissionResult(id, getPermissionAnalyticsResult(success))
         logger.error("Failed to toggle optional permission", { id, error })
         showResultToast(
           false,

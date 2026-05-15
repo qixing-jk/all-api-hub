@@ -37,6 +37,7 @@ import {
   openModelsPage,
   openMultiplePages,
   openOrFocusOptionsPage,
+  openPermissionsOnboardingPage,
   openRedeemPage,
   openSettingsPage,
   openSettingsTab,
@@ -668,6 +669,7 @@ describe("navigation utilities", () => {
     await openBookmarkManagerWithSearch("beta")
     await openSettingsPage()
     await openSettingsTab("permissions")
+    await openPermissionsOnboardingPage({ reason: "debug" })
     await openApiCredentialProfilesPage()
     await openManagedSiteChannelsPage({
       channelId: 42,
@@ -702,6 +704,10 @@ describe("navigation utilities", () => {
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
       `${OPTIONS_PAGE_URL}?tab=permissions#basic`,
+      true,
+    )
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      `${OPTIONS_PAGE_URL}?onboarding=permissions&reason=debug#basic`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(

@@ -63,6 +63,10 @@ export default function ShareOverviewSnapshotButton() {
     )
 
     const includeToday = showTodayCashflow !== false
+    const analyticsInsights = {
+      itemCount: enabledAccountCount,
+      usageDataPresent: includeToday,
+    }
 
     let totalBalance = 0
     let todayIncome = 0
@@ -96,7 +100,9 @@ export default function ShareOverviewSnapshotButton() {
 
     try {
       await exportShareSnapshotWithToast({ payload })
-      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        insights: analyticsInsights,
+      })
     } catch (error) {
       logger.error("Failed to export overview share snapshot", error)
       const errorText = getErrorMessage(error) || t("messages:errors.unknown")
@@ -105,6 +111,7 @@ export default function ShareOverviewSnapshotButton() {
       )
       await tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: analyticsInsights,
       })
     }
   }

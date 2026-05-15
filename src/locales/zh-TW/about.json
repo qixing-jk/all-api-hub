@@ -27,7 +27,7 @@
   "homepageDesc": "檢視詳細文件、使用指南和更多資訊",
   "implementedFeatures": "已實現功能",
   "intro": "All API Hub 是一款同時面向第三方 New API 系列中轉站和自建 New API 例項的瀏覽器外掛。它集中展示帳號與餘額、智慧排序和當前站點識別，並提供自動重新整理與臨時視窗防火牆繞過等自動化能力；對於自建 New API，還支援渠道管理和模型列表同步，並整合 CLIProxyAPI、WebDAV 備份以及資料匯入匯出等工具。",
-  "privacyText": "本外掛所有資料均儲存在本地瀏覽器中，不會主動上傳到任何伺服器。您的帳號資訊和使用資料完全由您自己掌控，確保隱私安全",
+  "privacyText": "帳號、API Key、Cookie、餘額、請求內容和使用者輸入等敏感資料預設僅儲存在本機。可關閉的匿名產品統計只用於優先修復常見問題、改進常用流程與相容性，並減少不必要的干擾，不會收集上述敏感資料。",
   "privacyTitle": "隱私保護",
   "projectLinks": "專案連結",
   "releaseUpdate": {
