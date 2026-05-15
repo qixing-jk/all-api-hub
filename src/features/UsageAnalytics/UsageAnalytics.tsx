@@ -7,10 +7,17 @@ import { PageHeader } from "~/components/PageHeader"
 import { Button, Card, WorkflowTransitionButton } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { UI_CONSTANTS } from "~/constants/ui"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useTheme } from "~/contexts/ThemeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { parseDayKey } from "~/services/history/usageHistory/core"
 import { formatPriceCompact } from "~/services/models/utils/modelPricing"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { formatTokenCount } from "~/utils/core/formatters"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
@@ -558,6 +565,9 @@ export default function UsageAnalytics() {
     })
   }, [])
 
+  const headerSurface =
+    PRODUCT_ANALYTICS_SURFACE_IDS.OptionsUsageAnalyticsHeader
+
   return (
     <div className="space-y-6 p-6" data-testid="usage-analytics-page">
       <PageHeader
@@ -565,31 +575,40 @@ export default function UsageAnalytics() {
         title={t("title")}
         description={t("description")}
         actions={
-          <div className="flex flex-wrap items-center gap-2">
-            <WorkflowTransitionButton
-              size="sm"
-              variant="outline"
-              onClick={handleOpenAccountUsageSettings}
-              leftIcon={<Settings className="h-4 w-4" />}
-            >
-              {t("actions.openAccountUsageSettings")}
-            </WorkflowTransitionButton>
-            <Button
-              size="sm"
-              variant="secondary"
-              onClick={() => void loadData()}
-              leftIcon={<RefreshCcw className="h-4 w-4" />}
-            >
-              {t("actions.refresh")}
-            </Button>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => void handleExport()}
-            >
-              {t("actions.export")}
-            </Button>
-          </div>
+          <ProductAnalyticsScope
+            entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+            featureId={PRODUCT_ANALYTICS_FEATURE_IDS.UsageAnalytics}
+            surfaceId={headerSurface}
+          >
+            <div className="flex flex-wrap items-center gap-2">
+              <WorkflowTransitionButton
+                size="sm"
+                variant="outline"
+                onClick={handleOpenAccountUsageSettings}
+                leftIcon={<Settings className="h-4 w-4" />}
+                analyticsAction={
+                  PRODUCT_ANALYTICS_ACTION_IDS.OpenUsageSyncSettings
+                }
+              >
+                {t("actions.openAccountUsageSettings")}
+              </WorkflowTransitionButton>
+              <Button
+                size="sm"
+                variant="secondary"
+                onClick={() => void loadData({ trackAnalytics: true })}
+                leftIcon={<RefreshCcw className="h-4 w-4" />}
+              >
+                {t("actions.refresh")}
+              </Button>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => void handleExport()}
+              >
+                {t("actions.export")}
+              </Button>
+            </div>
+          </ProductAnalyticsScope>
         }
       />
 
@@ -661,25 +680,36 @@ export default function UsageAnalytics() {
       ) : null}
 
       {showNoDataState ? (
-        <Card padding="md">
-          <div className="space-y-2">
-            <div className="text-sm font-medium">{t("empty.title")}</div>
-            <div className="dark:text-dark-text-tertiary text-sm text-gray-600">
-              {t("empty.description")}
+        <ProductAnalyticsScope
+          entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+          featureId={PRODUCT_ANALYTICS_FEATURE_IDS.UsageAnalytics}
+          surfaceId={
+            PRODUCT_ANALYTICS_SURFACE_IDS.OptionsUsageAnalyticsEmptyState
+          }
+        >
+          <Card padding="md">
+            <div className="space-y-2">
+              <div className="text-sm font-medium">{t("empty.title")}</div>
+              <div className="dark:text-dark-text-tertiary text-sm text-gray-600">
+                {t("empty.description")}
+              </div>
+              {/* Quick navigation so users can enable sync immediately. */}
+              <div className="pt-1">
+                <WorkflowTransitionButton
+                  size="sm"
+                  variant="outline"
+                  onClick={handleOpenAccountUsageSettings}
+                  leftIcon={<Settings className="h-4 w-4" />}
+                  analyticsAction={
+                    PRODUCT_ANALYTICS_ACTION_IDS.OpenUsageSyncSettings
+                  }
+                >
+                  {t("actions.openAccountUsageSettings")}
+                </WorkflowTransitionButton>
+              </div>
             </div>
-            {/* Quick navigation so users can enable sync immediately. */}
-            <div className="pt-1">
-              <WorkflowTransitionButton
-                size="sm"
-                variant="outline"
-                onClick={handleOpenAccountUsageSettings}
-                leftIcon={<Settings className="h-4 w-4" />}
-              >
-                {t("actions.openAccountUsageSettings")}
-              </WorkflowTransitionButton>
-            </div>
-          </div>
-        </Card>
+          </Card>
+        </ProductAnalyticsScope>
       ) : (
         <>
           {/*Daily Overview*/}

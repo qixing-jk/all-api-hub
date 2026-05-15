@@ -52,6 +52,15 @@ import {
 } from "~/services/history/dailyBalanceHistory/selectors"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import { clampBalanceHistoryRetentionDays } from "~/services/history/dailyBalanceHistory/utils"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { listTagsSorted } from "~/services/tags/tagStoreUtils"
 import type { CurrencyType, SiteAccount, TagStore } from "~/types"
@@ -76,6 +85,9 @@ import {
 } from "./echartsOptions"
 
 const logger = createLogger("BalanceHistoryPage")
+const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
+const balanceHistorySurface =
+  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBalanceHistoryPage
 
 const QUICK_RANGES = [
   { id: "7d", days: 7 },
@@ -213,6 +225,12 @@ export default function BalanceHistory() {
   }, [loadData])
 
   const handleRefreshNow = useCallback(async () => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshBalanceHistorySnapshots,
+      surfaceId: balanceHistorySurface,
+      entrypoint: optionsEntrypoint,
+    })
     let toastId: string | undefined
     try {
       toastId = toast.loading(t("messages.loading.refreshing"))
@@ -229,15 +247,25 @@ export default function BalanceHistory() {
 
       toast.success(t("messages.success.refreshCompleted"), { id: toastId })
       await loadData()
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       toast.error(
         t("messages.error.refreshFailed", { error: getErrorMessage(error) }),
         { id: toastId },
       )
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
   }, [loadData, selectedAccountIds, t])
 
   const handlePruneNow = useCallback(async () => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.PruneBalanceHistorySnapshots,
+      surfaceId: balanceHistorySurface,
+      entrypoint: optionsEntrypoint,
+    })
     let toastId: string | undefined
     try {
       toastId = toast.loading(t("messages.loading.pruning"))
@@ -251,11 +279,15 @@ export default function BalanceHistory() {
 
       toast.success(t("messages.success.pruneCompleted"), { id: toastId })
       await loadData()
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       toast.error(
         t("messages.error.pruneFailed", { error: getErrorMessage(error) }),
         { id: toastId },
       )
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
   }, [loadData, t])
 
@@ -933,6 +965,13 @@ export default function BalanceHistory() {
               variant="outline"
               onClick={openBalanceHistorySettings}
               leftIcon={<Settings className="h-4 w-4" />}
+              analyticsAction={{
+                featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
+                actionId:
+                  PRODUCT_ANALYTICS_ACTION_IDS.OpenBalanceHistorySettings,
+                surfaceId: balanceHistorySurface,
+                entrypoint: optionsEntrypoint,
+              }}
             >
               {t("common:labels.settings")}
             </WorkflowTransitionButton>
@@ -960,6 +999,13 @@ export default function BalanceHistory() {
               variant="outline"
               onClick={openBalanceHistorySettings}
               leftIcon={<Settings className="h-4 w-4" />}
+              analyticsAction={{
+                featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
+                actionId:
+                  PRODUCT_ANALYTICS_ACTION_IDS.OpenBalanceHistorySettings,
+                surfaceId: balanceHistorySurface,
+                entrypoint: optionsEntrypoint,
+              }}
             >
               {t("hints.disabled.actions.openSettings")}
             </WorkflowTransitionButton>

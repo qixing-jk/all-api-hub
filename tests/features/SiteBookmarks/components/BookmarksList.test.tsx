@@ -1,6 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import BookmarksList from "~/features/SiteBookmarks/components/BookmarksList"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { SiteBookmark, Tag, TagStore } from "~/types"
 import {
   fireEvent,
@@ -29,6 +37,9 @@ const {
   clipboardWriteTextMock,
   openAddBookmarkMock,
   openEditBookmarkMock,
+  startProductAnalyticsActionMock,
+  trackProductAnalyticsActionStartedMock,
+  completeProductAnalyticsActionMock,
 } = vi.hoisted(() => ({
   mockCreateTab: vi.fn().mockResolvedValue(undefined),
   mockCloseIfPopup: vi.fn(),
@@ -38,6 +49,9 @@ const {
   clipboardWriteTextMock: vi.fn().mockResolvedValue(undefined),
   openAddBookmarkMock: vi.fn(),
   openEditBookmarkMock: vi.fn(),
+  startProductAnalyticsActionMock: vi.fn(),
+  trackProductAnalyticsActionStartedMock: vi.fn(),
+  completeProductAnalyticsActionMock: vi.fn(),
 }))
 
 vi.mock("~/services/accounts/accountStorage", () => ({
@@ -148,6 +162,47 @@ vi.mock("~/features/SiteBookmarks/hooks/BookmarkDialogStateContext", () => ({
   }),
 }))
 
+vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/productAnalytics/actions")>()
+
+  return {
+    ...actual,
+    startProductAnalyticsAction: (...args: any[]) =>
+      startProductAnalyticsActionMock(...args),
+    trackProductAnalyticsActionStarted: (...args: any[]) =>
+      trackProductAnalyticsActionStartedMock(...args),
+  }
+})
+
+const expectBookmarkActionTracked = (
+  actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
+  surfaceId: (typeof PRODUCT_ANALYTICS_SURFACE_IDS)[keyof typeof PRODUCT_ANALYTICS_SURFACE_IDS],
+) => {
+  expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement,
+    actionId,
+    surfaceId,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  })
+}
+
+const deleteBookmarkActionContext = {
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement,
+  actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteBookmark,
+  surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementRowActions,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+}
+
+const expectConfirmedDeleteBookmarkActionStarted = () => {
+  expect(startProductAnalyticsActionMock).toHaveBeenCalledWith(
+    deleteBookmarkActionContext,
+  )
+  expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith(
+    deleteBookmarkActionContext,
+  )
+}
+
 beforeEach(() => {
   vi.useRealTimers()
   bookmarksMock = []
@@ -168,6 +223,13 @@ beforeEach(() => {
   clipboardWriteTextMock.mockClear()
   openAddBookmarkMock.mockClear()
   openEditBookmarkMock.mockClear()
+  startProductAnalyticsActionMock.mockReset()
+  trackProductAnalyticsActionStartedMock.mockReset()
+  completeProductAnalyticsActionMock.mockReset()
+  startProductAnalyticsActionMock.mockReturnValue({
+    complete: completeProductAnalyticsActionMock,
+  })
+  completeProductAnalyticsActionMock.mockResolvedValue(undefined)
 
   Object.assign(navigator, {
     clipboard: {
@@ -186,6 +248,10 @@ describe("BookmarksList", () => {
       await screen.findByRole("button", { name: "bookmark:addFirstBookmark" }),
     )
 
+    expectBookmarkActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementEmptyState,
+    )
     expect(openAddBookmarkMock).toHaveBeenCalledTimes(1)
   })
 
@@ -302,6 +368,10 @@ describe("BookmarksList", () => {
         true,
       )
     })
+    expectBookmarkActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.OpenBookmark,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementRowActions,
+    )
     expect(mockCloseIfPopup).toHaveBeenCalledTimes(1)
 
     fireEvent.click(
@@ -316,9 +386,17 @@ describe("BookmarksList", () => {
     expect(toastSuccessMock).toHaveBeenCalledWith(
       "messages:toast.success.bookmarkUrlCopied",
     )
+    expectBookmarkActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.CopyBookmarkUrl,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementRowActions,
+    )
 
     fireEvent.click(
       await screen.findByRole("button", { name: "common:actions.edit" }),
+    )
+    expectBookmarkActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.UpdateBookmark,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementRowActions,
     )
     expect(openEditBookmarkMock).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -352,6 +430,10 @@ describe("BookmarksList", () => {
         true,
       )
     })
+    expectBookmarkActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.OpenBookmark,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementRowActions,
+    )
     expect(mockCloseIfPopup).toHaveBeenCalledTimes(1)
 
     mockCreateTab.mockClear()
@@ -367,6 +449,10 @@ describe("BookmarksList", () => {
         true,
       )
     })
+    expectBookmarkActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.OpenBookmark,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementRowActions,
+    )
     expect(mockCloseIfPopup).toHaveBeenCalledTimes(1)
   })
 
@@ -422,6 +508,10 @@ describe("BookmarksList", () => {
       await screen.findByRole("button", { name: "bookmark:actions.pin" }),
     )
 
+    expectBookmarkActionTracked(
+      PRODUCT_ANALYTICS_ACTION_IDS.ToggleBookmarkPin,
+      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementRowActions,
+    )
     expect(togglePinAccountMock).toHaveBeenCalledWith("b1")
     await waitFor(() => {
       expect(toastSuccessMock).toHaveBeenCalledWith(
@@ -437,12 +527,18 @@ describe("BookmarksList", () => {
       await screen.findByRole("button", { name: "common:actions.delete" }),
     )
 
+    expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith(
+      deleteBookmarkActionContext,
+    )
+    expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
+
     const dialog = await screen.findByRole("dialog")
     fireEvent.click(
       await within(dialog).findByRole("button", {
         name: "common:actions.delete",
       }),
     )
+    expectConfirmedDeleteBookmarkActionStarted()
 
     await waitFor(() => {
       expect(mockDeleteBookmark).toHaveBeenCalledWith("b1")
@@ -450,6 +546,131 @@ describe("BookmarksList", () => {
     expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
     expect(toastSuccessMock).toHaveBeenCalledWith(
       "messages:toast.success.bookmarkDeleted",
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+  })
+
+  it("does not start delete bookmark analytics when confirmation is cancelled", async () => {
+    const bookmark: SiteBookmark = {
+      id: "b1",
+      name: "Docs",
+      url: "https://example.com/docs",
+      tagIds: [],
+      notes: "",
+      created_at: 0,
+      updated_at: 0,
+    }
+
+    bookmarksMock = [bookmark]
+
+    render(<BookmarksList />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "common:actions.more" }),
+    )
+    fireEvent.click(
+      await screen.findByRole("button", { name: "common:actions.delete" }),
+    )
+
+    const dialog = await screen.findByRole("dialog")
+    fireEvent.click(
+      await within(dialog).findByRole("button", {
+        name: "common:actions.cancel",
+      }),
+    )
+
+    expect(mockDeleteBookmark).not.toHaveBeenCalled()
+    expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
+    expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith(
+      deleteBookmarkActionContext,
+    )
+  })
+
+  it("tracks delete bookmark failure when storage delete returns false", async () => {
+    const bookmark: SiteBookmark = {
+      id: "b1",
+      name: "Docs",
+      url: "https://example.com/docs",
+      tagIds: [],
+      notes: "",
+      created_at: 0,
+      updated_at: 0,
+    }
+
+    bookmarksMock = [bookmark]
+    mockDeleteBookmark.mockResolvedValue(false)
+
+    render(<BookmarksList />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "common:actions.more" }),
+    )
+    fireEvent.click(
+      await screen.findByRole("button", { name: "common:actions.delete" }),
+    )
+
+    const dialog = await screen.findByRole("dialog")
+    fireEvent.click(
+      await within(dialog).findByRole("button", {
+        name: "common:actions.delete",
+      }),
+    )
+    expectConfirmedDeleteBookmarkActionStarted()
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      )
+    })
+    expect(loadAccountDataMock).not.toHaveBeenCalled()
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "messages:toast.error.operationFailed",
+    )
+  })
+
+  it("tracks delete bookmark failure when storage delete rejects", async () => {
+    const bookmark: SiteBookmark = {
+      id: "b1",
+      name: "Docs",
+      url: "https://example.com/docs",
+      tagIds: [],
+      notes: "",
+      created_at: 0,
+      updated_at: 0,
+    }
+
+    bookmarksMock = [bookmark]
+    mockDeleteBookmark.mockRejectedValue(new Error("delete failed"))
+
+    render(<BookmarksList />)
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "common:actions.more" }),
+    )
+    fireEvent.click(
+      await screen.findByRole("button", { name: "common:actions.delete" }),
+    )
+
+    const dialog = await screen.findByRole("dialog")
+    fireEvent.click(
+      await within(dialog).findByRole("button", {
+        name: "common:actions.delete",
+      }),
+    )
+    expectConfirmedDeleteBookmarkActionStarted()
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      )
+    })
+    expect(loadAccountDataMock).not.toHaveBeenCalled()
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "messages:toast.error.operationFailed",
     )
   })
 })

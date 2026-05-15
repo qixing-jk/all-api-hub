@@ -3,14 +3,33 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUsageAnalyticsExport } from "~/features/UsageAnalytics/hooks/useUsageAnalyticsExport"
 import * as usageAnalytics from "~/services/history/usageHistory/analytics"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { USAGE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/usageHistory"
 import { renderHook, waitFor } from "~~/tests/test-utils/render"
+
+const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
+  vi.hoisted(() => ({
+    startProductAnalyticsActionMock: vi.fn(),
+    completeProductAnalyticsActionMock: vi.fn(),
+  }))
 
 vi.mock("react-hot-toast", () => ({
   default: {
     success: vi.fn(),
     error: vi.fn(),
   },
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: startProductAnalyticsActionMock,
 }))
 
 describe("useUsageAnalyticsExport", () => {
@@ -22,6 +41,11 @@ describe("useUsageAnalyticsExport", () => {
     vi.restoreAllMocks()
     vi.mocked(toast.success).mockReset()
     vi.mocked(toast.error).mockReset()
+    startProductAnalyticsActionMock.mockReset()
+    completeProductAnalyticsActionMock.mockReset()
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: completeProductAnalyticsActionMock,
+    })
     URL.createObjectURL = vi.fn(() => "blob:usage-export") as any
     URL.revokeObjectURL = vi.fn() as any
   })
@@ -49,6 +73,15 @@ describe("useUsageAnalyticsExport", () => {
       "usageAnalytics:messages.error.exportNoData",
     )
     expect(URL.createObjectURL).not.toHaveBeenCalled()
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.UsageAnalytics,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportUsageAnalyticsData,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsUsageAnalyticsHeader,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+    )
   })
 
   it("downloads the computed export and reports success", async () => {
@@ -117,6 +150,17 @@ describe("useUsageAnalyticsExport", () => {
     expect(toast.success).toHaveBeenCalledWith(
       "usageAnalytics:messages.success.exported",
     )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
+          selectedCount: 1,
+          itemCount: 2,
+          usageDataPresent: false,
+        },
+      },
+    )
   })
 
   it("surfaces a translated failure toast when export generation fails", async () => {
@@ -150,5 +194,11 @@ describe("useUsageAnalyticsExport", () => {
     )
     expect(URL.createObjectURL).not.toHaveBeenCalled()
     expect(toast.success).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
   })
 })

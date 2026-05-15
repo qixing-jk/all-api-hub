@@ -6,7 +6,19 @@ import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
 import { EmptyState } from "~/components/ui/EmptyState"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsSurfaceId,
+} from "~/services/productAnalytics/events"
 import type {
+  SiteAnnouncementCheckResult,
   SiteAnnouncementRecord,
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
@@ -132,13 +144,60 @@ export default function SiteAnnouncementsPage({
     [affectedSiteCount, records.length, t, unreadCount],
   )
 
-  const handleCheckNow = async () => {
+  const handleCheckNow = async (surfaceId: ProductAnalyticsSurfaceId) => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.SiteAnnouncements,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CheckSiteAnnouncementsNow,
+      surfaceId,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
     setIsChecking(true)
     try {
       const response = await sendRuntimeMessage({
         action: RuntimeActionIds.SiteAnnouncementsCheckNow,
       })
       const success = response?.success === true
+      const checkResult = response?.data as
+        | SiteAnnouncementCheckResult
+        | null
+        | undefined
+      const checkInsights =
+        checkResult && typeof checkResult.checked === "number"
+          ? {
+              itemCount: checkResult.checked,
+              successCount: Math.max(
+                checkResult.checked -
+                  (typeof checkResult.failed === "number"
+                    ? checkResult.failed
+                    : 0) -
+                  (typeof checkResult.unsupported === "number"
+                    ? checkResult.unsupported
+                    : 0),
+                0,
+              ),
+              failureCount:
+                typeof checkResult.failed === "number" ? checkResult.failed : 0,
+            }
+          : undefined
+      if (success) {
+        if (checkInsights) {
+          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+            insights: checkInsights,
+          })
+        } else {
+          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        }
+      } else {
+        await tracker.complete(
+          PRODUCT_ANALYTICS_RESULTS.Failure,
+          checkInsights
+            ? {
+                errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+                insights: checkInsights,
+              }
+            : { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+        )
+      }
       showResultToast({
         success,
         successFallback: t("messages.checkCompleted"),
@@ -146,6 +205,9 @@ export default function SiteAnnouncementsPage({
       })
       await loadData()
     } catch (error) {
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
       showResultToast({
         success: false,
         message: getErrorMessage(error),
@@ -157,22 +219,62 @@ export default function SiteAnnouncementsPage({
   }
 
   const handleMarkRead = async (recordId: string) => {
-    const response = await sendRuntimeMessage({
-      action: RuntimeActionIds.SiteAnnouncementsMarkRead,
-      recordId,
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.SiteAnnouncements,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.MarkAnnouncementRead,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementCard,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
-    if (response?.success) {
-      await loadData()
+    try {
+      const response = await sendRuntimeMessage({
+        action: RuntimeActionIds.SiteAnnouncementsMarkRead,
+        recordId,
+      })
+      if (response?.success) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        await loadData()
+      } else {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
+      }
+    } catch {
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
   }
 
   const handleMarkAllRead = async () => {
-    const response = await sendRuntimeMessage({
-      action: RuntimeActionIds.SiteAnnouncementsMarkAllRead,
-      siteKey: siteKey === "all" ? undefined : siteKey,
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.SiteAnnouncements,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.MarkAllAnnouncementsRead,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementsPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
-    if (response?.success) {
-      await loadData()
+    try {
+      const response = await sendRuntimeMessage({
+        action: RuntimeActionIds.SiteAnnouncementsMarkAllRead,
+        siteKey: siteKey === "all" ? undefined : siteKey,
+      })
+      if (response?.success) {
+        if (typeof response.data === "number") {
+          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+            insights: { itemCount: response.data },
+          })
+        } else {
+          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        }
+        await loadData()
+      } else {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
+      }
+    } catch {
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
   }
 
@@ -202,7 +304,13 @@ export default function SiteAnnouncementsPage({
         description={t("description")}
         className="mb-5"
         actions={
-          <>
+          <ProductAnalyticsScope
+            entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+            featureId={PRODUCT_ANALYTICS_FEATURE_IDS.SiteAnnouncements}
+            surfaceId={
+              PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementsPage
+            }
+          >
             <Button
               type="button"
               variant="outline"
@@ -215,12 +323,16 @@ export default function SiteAnnouncementsPage({
             <Button
               type="button"
               loading={isChecking}
-              onClick={() => void handleCheckNow()}
+              onClick={() =>
+                void handleCheckNow(
+                  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementsPage,
+                )
+              }
               leftIcon={<RefreshCcw className="h-4 w-4" />}
             >
               {t("actions.checkNow")}
             </Button>
-          </>
+          </ProductAnalyticsScope>
         }
       />
 
@@ -250,17 +362,30 @@ export default function SiteAnnouncementsPage({
           title={t("loading")}
         />
       ) : filteredRecords.length === 0 ? (
-        <EmptyState
-          icon={<Megaphone className="h-10 w-10" />}
-          title={records.length === 0 ? t("empty.title") : t("empty.filtered")}
-          description={records.length === 0 ? t("empty.description") : null}
-          action={{
-            label: t("actions.checkNow"),
-            onClick: () => void handleCheckNow(),
-            loading: isChecking,
-            leftIcon: <RefreshCcw className="h-4 w-4" />,
-          }}
-        />
+        <ProductAnalyticsScope
+          entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+          featureId={PRODUCT_ANALYTICS_FEATURE_IDS.SiteAnnouncements}
+          surfaceId={
+            PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementsEmptyState
+          }
+        >
+          <EmptyState
+            icon={<Megaphone className="h-10 w-10" />}
+            title={
+              records.length === 0 ? t("empty.title") : t("empty.filtered")
+            }
+            description={records.length === 0 ? t("empty.description") : null}
+            action={{
+              label: t("actions.checkNow"),
+              onClick: () =>
+                void handleCheckNow(
+                  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementsEmptyState,
+                ),
+              loading: isChecking,
+              leftIcon: <RefreshCcw className="h-4 w-4" />,
+            }}
+          />
+        </ProductAnalyticsScope>
       ) : (
         <SiteAnnouncementsList
           records={filteredRecords}

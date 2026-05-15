@@ -2,6 +2,12 @@ import { fireEvent, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import { SiteAnnouncementCard } from "~/features/SiteAnnouncements/components/SiteAnnouncementCard"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { SiteAnnouncementRecord } from "~/types/siteAnnouncements"
 import { render } from "~~/tests/test-utils/render"
 
@@ -10,6 +16,47 @@ vi.mock("~/features/SiteAnnouncements/AnnouncementMarkdown", () => ({
     <div>{content}</div>
   ),
 }))
+
+vi.mock("~/components/ui", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/components/ui")>()
+
+  return {
+    ...actual,
+    Button: ({
+      analyticsAction,
+      asChild,
+      children,
+      leftIcon,
+      rightIcon,
+      ...props
+    }: any) => {
+      const analyticsValue = analyticsAction
+        ? typeof analyticsAction === "string"
+          ? `${PRODUCT_ANALYTICS_FEATURE_IDS.SiteAnnouncements}:${analyticsAction}:${PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementCard}:${PRODUCT_ANALYTICS_ENTRYPOINTS.Options}`
+          : `${analyticsAction.featureId}:${analyticsAction.actionId}:${analyticsAction.surfaceId}:${analyticsAction.entrypoint}`
+        : undefined
+
+      if (asChild) {
+        const child = Array.isArray(children) ? children[0] : children
+        return (
+          <span data-analytics-action={analyticsValue}>
+            {leftIcon}
+            {child}
+            {rightIcon}
+          </span>
+        )
+      }
+
+      return (
+        <button type="button" data-analytics-action={analyticsValue} {...props}>
+          {leftIcon}
+          {children}
+          {rightIcon}
+        </button>
+      )
+    },
+  }
+})
 
 const record: SiteAnnouncementRecord = {
   id: "record-1",
@@ -28,6 +75,46 @@ const record: SiteAnnouncementRecord = {
 }
 
 describe("SiteAnnouncementCard", () => {
+  it("declares controlled analytics metadata for card actions", () => {
+    render(
+      <SiteAnnouncementCard
+        record={record}
+        expanded={true}
+        onToggleExpanded={vi.fn()}
+        onMarkRead={vi.fn()}
+      />,
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    const announcementAction = (actionId: string) =>
+      `${PRODUCT_ANALYTICS_FEATURE_IDS.SiteAnnouncements}:${actionId}:${PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementCard}:${PRODUCT_ANALYTICS_ENTRYPOINTS.Options}`
+
+    expect(
+      screen.getAllByText("siteAnnouncements:actions.viewSource")[0]
+        ?.parentElement,
+    ).toHaveAttribute(
+      "data-analytics-action",
+      announcementAction(PRODUCT_ANALYTICS_ACTION_IDS.OpenAnnouncementSource),
+    )
+    expect(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.markRead",
+      }),
+    ).not.toHaveAttribute("data-analytics-action")
+    expect(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.collapse",
+      }),
+    ).toHaveAttribute(
+      "data-analytics-action",
+      announcementAction(PRODUCT_ANALYTICS_ACTION_IDS.CollapseAnnouncement),
+    )
+  })
+
   it("toggles from header keyboard shortcuts and keeps button clicks from bubbling", () => {
     const onToggleExpanded = vi.fn()
     const onMarkRead = vi.fn()

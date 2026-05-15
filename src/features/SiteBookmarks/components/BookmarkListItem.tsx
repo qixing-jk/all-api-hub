@@ -19,8 +19,15 @@ import {
   IconButton,
 } from "~/components/ui"
 import { useDevice } from "~/contexts/DeviceContext"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { AccountActionMenuItem } from "~/features/AccountManagement/components/AccountActionButtons/AccountActionMenuItem"
 import { cn } from "~/lib/utils"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { SiteBookmark } from "~/types"
 
 export interface BookmarkListItemProps {
@@ -57,123 +64,138 @@ export default function BookmarkListItem({
     ? t("bookmark:actions.unpin")
     : t("bookmark:actions.pin")
   const PinToggleIcon = isPinned ? PinOffIcon : PinIcon
+  const rowActionsSurface =
+    PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementRowActions
 
   const handleOpenClick = (event: MouseEvent<HTMLButtonElement>) => {
-    event.preventDefault()
     event.stopPropagation()
     onOpen()
   }
 
   return (
-    <CardItem
-      padding="none"
-      className={cn("group touch-manipulation transition-all")}
+    <ProductAnalyticsScope
+      entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+      featureId={PRODUCT_ANALYTICS_FEATURE_IDS.BookmarkManagement}
+      surfaceId={rowActionsSurface}
     >
-      <div className="flex w-full min-w-0 items-center gap-2 px-3 py-2.5 sm:px-4 sm:py-3">
-        <div className="min-w-0 flex-1 overflow-x-hidden">
-          <div className="flex min-w-0 items-center gap-2">
+      <CardItem
+        padding="none"
+        className={cn("group touch-manipulation transition-all")}
+      >
+        <div className="flex w-full min-w-0 items-center gap-2 px-3 py-2.5 sm:px-4 sm:py-3">
+          <div className="min-w-0 flex-1 overflow-x-hidden">
+            <div className="flex min-w-0 items-center gap-2">
+              <Button
+                type="button"
+                variant="link"
+                size="sm"
+                className="h-auto min-w-0 shrink justify-start p-0 text-left"
+                title={bookmark.name}
+                onClick={handleOpenClick}
+                analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenBookmark}
+              >
+                <BodySmall weight="medium" className="truncate">
+                  {bookmark.name}
+                </BodySmall>
+              </Button>
+              {isPinned && (
+                <PinIcon className="h-3.5 w-3.5 shrink-0 text-gray-500 dark:text-gray-300" />
+              )}
+            </div>
             <Button
               type="button"
               variant="link"
               size="sm"
-              className="h-auto min-w-0 shrink justify-start p-0 text-left"
-              title={bookmark.name}
+              className="h-auto w-full min-w-0 justify-start p-0 text-left"
+              title={bookmark.url}
               onClick={handleOpenClick}
+              analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenBookmark}
             >
-              <BodySmall weight="medium" className="truncate">
-                {bookmark.name}
-              </BodySmall>
+              <Caption className="truncate">{bookmark.url}</Caption>
             </Button>
-            {isPinned && (
-              <PinIcon className="h-3.5 w-3.5 shrink-0 text-gray-500 dark:text-gray-300" />
+            {bookmark.tags && bookmark.tags.length > 0 && (
+              <div className="mt-1 flex flex-wrap gap-1">
+                {bookmark.tags.slice(0, 6).map((tag) => (
+                  <Badge key={tag} variant="secondary" className="text-[10px]">
+                    {tag}
+                  </Badge>
+                ))}
+              </div>
             )}
           </div>
-          <Button
-            type="button"
-            variant="link"
-            size="sm"
-            className="h-auto w-full min-w-0 justify-start p-0 text-left"
-            title={bookmark.url}
-            onClick={handleOpenClick}
+
+          <div
+            className={`shrink-0 transition-opacity duration-200 ${revealButtonsClass}`}
           >
-            <Caption className="truncate">{bookmark.url}</Caption>
-          </Button>
-          {bookmark.tags && bookmark.tags.length > 0 && (
-            <div className="mt-1 flex flex-wrap gap-1">
-              {bookmark.tags.slice(0, 6).map((tag) => (
-                <Badge key={tag} variant="secondary" className="text-[10px]">
-                  {tag}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </div>
-
-        <div
-          className={`shrink-0 transition-opacity duration-200 ${revealButtonsClass}`}
-        >
-          <div className="grid grid-cols-2 justify-end gap-2 sm:grid-cols-4">
-            <IconButton
-              onClick={onOpen}
-              variant="ghost"
-              size="sm"
-              aria-label={t("bookmark:actions.open")}
-              title={t("bookmark:actions.open")}
-            >
-              <WorkflowTransitionIcon className="h-4 w-4" />
-            </IconButton>
-
-            <IconButton
-              onClick={onCopyUrl}
-              variant="ghost"
-              size="sm"
-              aria-label={t("bookmark:actions.copyUrl")}
-              title={t("bookmark:actions.copyUrl")}
-            >
-              <LinkIcon className="h-4 w-4" />
-            </IconButton>
-
-            <IconButton
-              onClick={onEdit}
-              variant="ghost"
-              size="sm"
-              aria-label={t("common:actions.edit")}
-              title={t("common:actions.edit")}
-            >
-              <PencilIcon className="h-4 w-4" />
-            </IconButton>
-
-            <Menu as="div" className="relative">
-              <MenuButton
-                as={IconButton}
+            <div className="grid grid-cols-2 justify-end gap-2 sm:grid-cols-4">
+              <IconButton
+                onClick={onOpen}
                 variant="ghost"
                 size="sm"
-                aria-label={t("common:actions.more")}
+                aria-label={t("bookmark:actions.open")}
+                title={t("bookmark:actions.open")}
+                analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenBookmark}
               >
-                <EllipsisHorizontalIcon className="h-4 w-4" />
-              </MenuButton>
+                <WorkflowTransitionIcon className="h-4 w-4" />
+              </IconButton>
 
-              <MenuItems
-                anchor="bottom end"
-                className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg [--anchor-gap:4px] [--anchor-padding:8px] focus:outline-none"
+              <IconButton
+                onClick={onCopyUrl}
+                variant="ghost"
+                size="sm"
+                aria-label={t("bookmark:actions.copyUrl")}
+                title={t("bookmark:actions.copyUrl")}
+                analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.CopyBookmarkUrl}
               >
-                <AccountActionMenuItem
-                  onClick={() => onTogglePin()}
-                  icon={PinToggleIcon}
-                  label={pinLabel}
-                />
-                <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
-                <AccountActionMenuItem
-                  onClick={() => onDelete()}
-                  icon={TrashIcon}
-                  label={t("common:actions.delete")}
-                  isDestructive={true}
-                />
-              </MenuItems>
-            </Menu>
+                <LinkIcon className="h-4 w-4" />
+              </IconButton>
+
+              <IconButton
+                onClick={onEdit}
+                variant="ghost"
+                size="sm"
+                aria-label={t("common:actions.edit")}
+                title={t("common:actions.edit")}
+                analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.UpdateBookmark}
+              >
+                <PencilIcon className="h-4 w-4" />
+              </IconButton>
+
+              <Menu as="div" className="relative">
+                <MenuButton
+                  as={IconButton}
+                  variant="ghost"
+                  size="sm"
+                  aria-label={t("common:actions.more")}
+                >
+                  <EllipsisHorizontalIcon className="h-4 w-4" />
+                </MenuButton>
+
+                <MenuItems
+                  anchor="bottom end"
+                  className="dark:border-dark-bg-tertiary dark:bg-dark-bg-secondary z-50 rounded-lg border border-gray-200 bg-white py-1 shadow-lg [--anchor-gap:4px] [--anchor-padding:8px] focus:outline-none"
+                >
+                  <AccountActionMenuItem
+                    onClick={() => onTogglePin()}
+                    icon={PinToggleIcon}
+                    label={pinLabel}
+                    analyticsAction={
+                      PRODUCT_ANALYTICS_ACTION_IDS.ToggleBookmarkPin
+                    }
+                  />
+                  <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
+                  <AccountActionMenuItem
+                    onClick={() => onDelete()}
+                    icon={TrashIcon}
+                    label={t("common:actions.delete")}
+                    isDestructive={true}
+                  />
+                </MenuItems>
+              </Menu>
+            </div>
           </div>
         </div>
-      </div>
-    </CardItem>
+      </CardItem>
+    </ProductAnalyticsScope>
   )
 }

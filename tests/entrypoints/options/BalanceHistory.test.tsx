@@ -14,6 +14,14 @@ import {
   subtractDaysFromDayKey,
 } from "~/services/history/dailyBalanceHistory/dayKeys"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
@@ -27,6 +35,16 @@ const getMetricDropdownButtonName = (
   new RegExp(
     `balanceHistory:${section}\\.title:\\s*${metric.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`,
   )
+
+const {
+  startProductAnalyticsActionMock,
+  completeProductAnalyticsActionMock,
+  trackProductAnalyticsActionStartedMock,
+} = vi.hoisted(() => ({
+  startProductAnalyticsActionMock: vi.fn(),
+  completeProductAnalyticsActionMock: vi.fn(),
+  trackProductAnalyticsActionStartedMock: vi.fn(),
+}))
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -57,6 +75,11 @@ vi.mock("~/services/accounts/accountStorage", () => ({
 
 vi.mock("~/services/history/dailyBalanceHistory/storage", () => ({
   dailyBalanceHistoryStorage: { getStore: vi.fn() },
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: startProductAnalyticsActionMock,
+  trackProductAnalyticsActionStarted: trackProductAnalyticsActionStartedMock,
 }))
 
 vi.mock("~/services/tags/tagStorage", () => ({
@@ -152,6 +175,9 @@ describe("BalanceHistory options page", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: completeProductAnalyticsActionMock,
+    })
     vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([] as any)
     vi.mocked(tagStorage.getTagStore).mockResolvedValue({
       version: 1,
@@ -745,6 +771,15 @@ describe("BalanceHistory options page", () => {
         "balanceHistory:messages.success.refreshCompleted",
         { id: "toast-id" },
       )
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshBalanceHistorySnapshots,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBalanceHistoryPage,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+      )
     } finally {
       dateNowSpy.mockRestore()
     }
@@ -908,6 +943,16 @@ describe("BalanceHistory options page", () => {
         "balanceHistory:messages.error.refreshFailed",
         { id: "toast-id" },
       )
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshBalanceHistorySnapshots,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBalanceHistoryPage,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      )
     } finally {
       dateNowSpy.mockRestore()
     }
@@ -943,6 +988,15 @@ describe("BalanceHistory options page", () => {
       "balanceHistory:messages.success.pruneCompleted",
       { id: "toast-id" },
     )
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.PruneBalanceHistorySnapshots,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBalanceHistoryPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
   })
 
   it("shows a fallback runtime error when prune fails without a server message", async () => {
@@ -968,6 +1022,16 @@ describe("BalanceHistory options page", () => {
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
       "balanceHistory:messages.error.pruneFailed",
       { id: "toast-id" },
+    )
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.PruneBalanceHistorySnapshots,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBalanceHistoryPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
     )
   })
 

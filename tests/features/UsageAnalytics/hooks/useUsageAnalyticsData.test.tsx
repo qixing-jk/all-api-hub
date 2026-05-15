@@ -3,8 +3,22 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useUsageAnalyticsData } from "~/features/UsageAnalytics/hooks/useUsageAnalyticsData"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
+
+const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
+  vi.hoisted(() => ({
+    startProductAnalyticsActionMock: vi.fn(),
+    completeProductAnalyticsActionMock: vi.fn(),
+  }))
 
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: { getAllAccounts: vi.fn() },
@@ -14,9 +28,16 @@ vi.mock("~/services/history/usageHistory/storage", () => ({
   usageHistoryStorage: { getStore: vi.fn() },
 }))
 
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: startProductAnalyticsActionMock,
+}))
+
 describe("useUsageAnalyticsData", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: completeProductAnalyticsActionMock,
+    })
   })
 
   it("loads accounts, filters enabled accounts, and refreshes on demand", async () => {
@@ -66,9 +87,10 @@ describe("useUsageAnalyticsData", () => {
         "disabled-account",
       ])
     })
+    expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
 
     await act(async () => {
-      await result.current.loadData()
+      await result.current.loadData({ trackAnalytics: true })
     })
 
     await waitFor(() => {
@@ -85,6 +107,21 @@ describe("useUsageAnalyticsData", () => {
         schemaVersion: 2,
       })
     })
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.UsageAnalytics,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshUsageAnalyticsData,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsUsageAnalyticsHeader,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          itemCount: 1,
+          usageDataPresent: true,
+        },
+      },
+    )
   })
 
   it("keeps prior data and clears loading when a reload fails", async () => {
@@ -112,7 +149,7 @@ describe("useUsageAnalyticsData", () => {
     })
 
     await act(async () => {
-      await result.current.loadData()
+      await result.current.loadData({ trackAnalytics: true })
     })
 
     await waitFor(() => {
@@ -125,5 +162,11 @@ describe("useUsageAnalyticsData", () => {
         result.current.enabledAccounts.map((current) => current.id),
       ).toEqual(["account-a"])
     })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
   })
 })
