@@ -55,7 +55,7 @@ export const useImportExport = () => {
 
     if (!importData.trim()) {
       toast.error(t("importExport:import.selectFileImport"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
       return
     }
 
@@ -75,15 +75,15 @@ export const useImportExport = () => {
         toast.success(t("importExport:import.importSuccess"))
       }
       if (result.allImported || hasImportedSection) {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       } else {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+        void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
       }
     } catch (error) {
       logger.error("Import failed", error)
       if (error instanceof SyntaxError) {
         toast.error(t("importExport:import.formatError"))
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
         })
       } else {
@@ -92,7 +92,7 @@ export const useImportExport = () => {
             error: getErrorMessage(error),
           }),
         )
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
       }

@@ -129,9 +129,7 @@ export function TokenDetails({
       return
     }
 
-    await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-    })
+    await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
   }
 
   const handleOpenCliProxyDialog = (event: MouseEvent) => {

@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
 import Header from "~/entrypoints/options/components/Header"
@@ -97,6 +97,10 @@ describe("options Header", () => {
       openDialog: vi.fn(),
       closeDialog: vi.fn(),
     })
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
   })
 
   it("exposes feedback shortcuts from the options header", async () => {

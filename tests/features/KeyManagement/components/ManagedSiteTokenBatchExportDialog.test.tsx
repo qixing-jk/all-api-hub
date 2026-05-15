@@ -667,12 +667,11 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         itemCount: 1,
       },
     })
-    expect(mockTrackProductAnalyticsActionCompleted).not.toHaveBeenCalledWith(
-      expect.objectContaining({
-        error: expect.anything(),
-        message: expect.anything(),
-      }),
-    )
+    for (const [payload] of mockTrackProductAnalyticsActionCompleted.mock
+      .calls) {
+      expect(payload).not.toHaveProperty("error")
+      expect(payload).not.toHaveProperty("message")
+    }
     expect(
       mockTrackProductAnalyticsActionCompleted.mock.calls[0]?.[0],
     ).not.toHaveProperty("durationMs")

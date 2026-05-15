@@ -729,6 +729,9 @@ describe("export handlers", () => {
   const originalCreateObjectURL = URL.createObjectURL
   const originalRevokeObjectURL = URL.revokeObjectURL
   const originalCreateElement = document.createElement
+  const createElement = originalCreateElement as unknown as (
+    tagName: string,
+  ) => HTMLElement
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -737,13 +740,16 @@ describe("export handlers", () => {
     URL.createObjectURL = vi.fn(() => "blob:mock-url") as any
     URL.revokeObjectURL = vi.fn() as any
 
-    // Mock anchor creation to avoid interacting with real DOM
-    document.createElement = vi.fn(() => ({
-      href: "",
-      download: "",
-      click: vi.fn(),
-      remove: vi.fn(),
-    })) as any
+    document.createElement = vi.fn((tagName: string) => {
+      const element =
+        tagName.toLowerCase() === "a"
+          ? createElement.call(document, "a")
+          : createElement.call(document, "div")
+      if (tagName.toLowerCase() === "a") {
+        vi.spyOn(element, "click").mockImplementation(() => {})
+      }
+      return element
+    }) as any
 
     mockAccountStorageExportData.mockResolvedValue({
       accounts: [],
@@ -821,6 +827,6 @@ describe("export handlers", () => {
 
     mockAccountStorageExportData.mockRejectedValue(new Error("boom"))
 
-    await handleExportAll(setIsExporting)
+    await expect(handleExportAll(setIsExporting)).rejects.toThrow("boom")
   })
 })

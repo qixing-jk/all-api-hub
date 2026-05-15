@@ -156,7 +156,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
       } else {
         const created = await service.createApiToken(request, tokenData)
         const createdToken = isCreatedApiToken(created) ? created : undefined
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         if (createdToken && showOneTimeKeyDialog) {
           setOneTimeToken(createdToken)
         } else {
@@ -174,7 +174,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
       }
 
       if (isEditMode) {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       }
       handleClose()
       if (isEditMode && onSuccess) {
@@ -192,7 +192,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
         message && message.trim() ? message : fallbackMessage
 
       toast.error(displayMessage)
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     } finally {

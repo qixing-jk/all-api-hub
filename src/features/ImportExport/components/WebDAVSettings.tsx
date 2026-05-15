@@ -94,6 +94,20 @@ const webDavAnalyticsContext = (
   surfaceId,
   entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
 })
+type ProductAnalyticsTracker = ReturnType<typeof startProductAnalyticsAction>
+
+const completeWebDavAnalytics = (
+  tracker: ProductAnalyticsTracker,
+  result: Parameters<ProductAnalyticsTracker["complete"]>[0],
+  options?: Parameters<ProductAnalyticsTracker["complete"]>[1],
+) => {
+  if (options) {
+    void tracker.complete(result, options)
+    return
+  }
+
+  void tracker.complete(result)
+}
 
 const WEBDAV_SYNC_DATA_INPUT_IDS: Record<WebDAVSyncDataKey, string> = {
   accounts: WEBDAV_TARGET_IDS.syncDataAccounts,
@@ -273,7 +287,7 @@ export default function WebDAVSettings() {
           name: t("webdav.title"),
         }),
       )
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      completeWebDavAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (e) {
       logger.error("Failed to save WebDAV settings", e)
       toast.error(
@@ -281,7 +295,7 @@ export default function WebDAVSettings() {
           name: t("webdav.title"),
         }),
       )
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      completeWebDavAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: getWebdavAnalyticsErrorCategory(e),
       })
     } finally {
@@ -301,7 +315,7 @@ export default function WebDAVSettings() {
       await persistWebdavConfig()
       await testWebdavConnection(webdavConfig)
       toast.success(t("webdav.testSuccess"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      completeWebDavAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (e: any) {
       logger.error("WebDAV connection test failed", e)
       toast.error(
@@ -309,7 +323,7 @@ export default function WebDAVSettings() {
           ? t("webdav.testFailed")
           : e?.message || t("webdav.testFailed"),
       )
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      completeWebDavAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: getWebdavAnalyticsErrorCategory(e),
       })
     } finally {
@@ -333,7 +347,7 @@ export default function WebDAVSettings() {
     setUploading(true)
     try {
       if (!ensureSyncDataSelected()) {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        completeWebDavAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
         })
         return
@@ -384,7 +398,7 @@ export default function WebDAVSettings() {
 
       await uploadBackup(JSON.stringify(payload, null, 2), webdavConfig)
       toast.success(t("webdav.uploadSuccess"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      completeWebDavAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (e: any) {
       logger.error("Failed to upload backup to WebDAV", e)
       toast.error(
@@ -392,7 +406,7 @@ export default function WebDAVSettings() {
           ? t("webdav.uploadFailed")
           : e?.message || t("webdav.uploadFailed"),
       )
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      completeWebDavAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: getWebdavAnalyticsErrorCategory(e),
       })
     } finally {
@@ -428,7 +442,7 @@ export default function WebDAVSettings() {
     setDownloading(true)
     try {
       if (!ensureSyncDataSelected()) {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        completeWebDavAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
         })
         return
@@ -446,7 +460,7 @@ export default function WebDAVSettings() {
           setPendingEnvelope(envelope)
           setDecryptPassword("")
           setDecryptDialogOpen(true)
-          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+          completeWebDavAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Skipped)
           return
         }
 
@@ -460,7 +474,7 @@ export default function WebDAVSettings() {
           setPendingEnvelope(envelope)
           setDecryptPassword(pwd)
           setDecryptDialogOpen(true)
-          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+          completeWebDavAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Skipped)
           return
         }
       }
@@ -474,7 +488,7 @@ export default function WebDAVSettings() {
       if (result.allImported) {
         toast.success(t("importExport:import.importSuccess"))
       }
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      completeWebDavAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (e: any) {
       logger.error("Failed to download/import WebDAV backup", e)
       toast.error(
@@ -482,7 +496,7 @@ export default function WebDAVSettings() {
           ? t("importExport:import.downloadImportFailed")
           : e?.message || t("importExport:import.downloadImportFailed"),
       )
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      completeWebDavAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: getWebdavAnalyticsErrorCategory(e),
       })
     } finally {
@@ -511,7 +525,7 @@ export default function WebDAVSettings() {
     let decryptCompleted = false
     try {
       if (!ensureSyncDataSelected()) {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        completeWebDavAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
         })
         return
@@ -562,11 +576,11 @@ export default function WebDAVSettings() {
 
       setDecryptDialogOpen(false)
       setPendingEnvelope(null)
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      completeWebDavAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (e: any) {
       logger.error("Failed to decrypt/import WebDAV backup", e)
       toast.error(e?.message || t("webdav.encryption.decryptFailed"))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      completeWebDavAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: decryptCompleted
           ? getWebdavAnalyticsErrorCategory(e)
           : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,

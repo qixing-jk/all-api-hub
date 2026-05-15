@@ -758,21 +758,22 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         loadEpoch,
         toastOnError: true,
       })
-      await tracker.complete(
+      const result =
         status === "loaded"
           ? PRODUCT_ANALYTICS_RESULTS.Success
-          : PRODUCT_ANALYTICS_RESULTS.Failure,
-        {
-          ...(status === "loaded"
-            ? {}
-            : {
-                errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-              }),
-          insights: {
-            mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
-          },
+          : status === null
+            ? PRODUCT_ANALYTICS_RESULTS.Skipped
+            : PRODUCT_ANALYTICS_RESULTS.Failure
+      await tracker.complete(result, {
+        ...(result !== PRODUCT_ANALYTICS_RESULTS.Failure
+          ? {}
+          : {
+              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            }),
+        insights: {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
         },
-      )
+      })
     },
     [
       accountById,
@@ -1131,13 +1132,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       )
       await navigator.clipboard.writeText(resolvedToken.key)
       toast.success(t("keyManagement:messages.keyCopied", { name: token.name }))
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       toast.error(
         getErrorMessage(error, t("keyManagement:messages.copyFailed")),
       )
       logger.warn("Failed to copy key to clipboard", error)
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: isClipboardPermissionError(error)
           ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission
           : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,

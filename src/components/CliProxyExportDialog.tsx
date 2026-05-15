@@ -399,15 +399,15 @@ export function CliProxyExportDialog(props: CliProxyExportDialogProps) {
         const result = await importToCliProxy(payload)
         showResultToast(result)
         if (result.success) {
-          await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+          void analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Success)
           onClose()
         } else if ("skipped" in result && result.skipped === true) {
-          await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+          void analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
         } else {
-          await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
+          void analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
         }
       } catch (error) {
-        await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        void analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
         showResultToast({

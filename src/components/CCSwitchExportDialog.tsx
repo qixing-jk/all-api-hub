@@ -227,13 +227,13 @@ export function CCSwitchExportDialog(props: CCSwitchExportDialogProps) {
         })
 
         if (opened) {
-          await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+          void analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Success)
           onClose()
         } else {
-          await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
+          void analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
         }
       } catch (error) {
-        await analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        void analyticsSpan.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
         logger.warn("Failed to resolve token for CC Switch export", error)

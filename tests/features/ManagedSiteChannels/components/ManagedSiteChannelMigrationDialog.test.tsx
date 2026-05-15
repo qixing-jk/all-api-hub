@@ -636,8 +636,8 @@ describe("ManagedSiteChannelMigrationDialog", () => {
         result: PRODUCT_ANALYTICS_RESULTS.Failure,
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
-          itemCount: 2,
-          selectedCount: 2,
+          itemCount: 1,
+          selectedCount: 1,
         } satisfies ProductAnalyticsActionInsights,
       })
     })

@@ -223,6 +223,13 @@ describe("options AccountManagement page", () => {
     await waitFor(() => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            itemCount: 0,
+            successCount: 0,
+            failureCount: 0,
+          },
+        },
       )
     })
   })
@@ -247,7 +254,14 @@ describe("options AccountManagement page", () => {
     await waitFor(() => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
-        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            itemCount: 3,
+            successCount: 2,
+            failureCount: 1,
+          },
+        },
       )
     })
   })
@@ -284,6 +298,13 @@ describe("options AccountManagement page", () => {
     await waitFor(() => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            itemCount: 0,
+            successCount: 0,
+            failureCount: 0,
+          },
+        },
       )
     })
   })
@@ -402,7 +423,14 @@ describe("options AccountManagement page", () => {
     ).toBe("account:refresh.refreshDisabledCompleteWithFailures")
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
-      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          itemCount: 3,
+          successCount: 2,
+          failureCount: 1,
+        },
+      },
     )
   })
 

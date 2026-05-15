@@ -420,8 +420,8 @@ export function ManagedSiteChannelMigrationDialog({
         result: PRODUCT_ANALYTICS_RESULTS.Failure,
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
-          itemCount: preview.totalCount,
-          selectedCount: preview.totalCount,
+          itemCount: preview.readyCount,
+          selectedCount: preview.readyCount,
         },
       })
     } finally {

@@ -608,6 +608,9 @@ export default function BasicSettings() {
       if (onboarding === "permissions") {
         setPermissionsOnboardingReason(searchParams.get("reason"))
         setShowPermissionsOnboarding(true)
+      } else {
+        setPermissionsOnboardingReason(null)
+        setShowPermissionsOnboarding(false)
       }
     }
   }, [])

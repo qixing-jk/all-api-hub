@@ -435,7 +435,6 @@ describe("useApiCredentialProfilesController", () => {
     )
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Skipped,
-      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
     )
   })
 

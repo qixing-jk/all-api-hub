@@ -359,9 +359,9 @@ export default function BookmarksList({
         t("messages:toast.success.bookmarkDeleted", { name: target.name }),
       )
       await loadAccountData()
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
       toast.error(

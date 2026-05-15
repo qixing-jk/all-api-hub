@@ -149,8 +149,9 @@ const completeAutoCheckinAnalytics = async (
     }
 
     await tracker.complete(result)
-  } catch {
+  } catch (error) {
     // Product analytics must not block user-triggered check-in actions.
+    logger.warn("Auto check-in analytics completion failed", error)
   }
 }
 
@@ -744,8 +745,9 @@ export default function AutoCheckin(props: {
             : {}),
           durationMs: Date.now() - startedAt,
         })
-      } catch {
+      } catch (error) {
         // Product analytics must not block disabling failed check-in accounts.
+        logger.warn("Auto check-in disable analytics completion failed", error)
       }
     }
 

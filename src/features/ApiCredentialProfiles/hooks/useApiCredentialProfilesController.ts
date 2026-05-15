@@ -40,6 +40,7 @@ import type {
   ApiCredentialTelemetrySnapshot,
 } from "~/types/apiCredentialProfiles"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
+import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
 import { openModelsPage } from "~/utils/navigation"
@@ -282,7 +283,7 @@ export function useApiCredentialProfilesController() {
             telemetryConfig: input.telemetryConfig,
           })
         }
-        await trackProductAnalyticsActionCompleted({
+        void trackProductAnalyticsActionCompleted({
           featureId: apiCredentialProfilesFeature,
           actionId,
           surfaceId: apiCredentialProfilesDialogSurface,
@@ -291,7 +292,7 @@ export function useApiCredentialProfilesController() {
           durationMs: Date.now() - startedAt,
         })
       } catch (error) {
-        await trackProductAnalyticsActionCompleted({
+        void trackProductAnalyticsActionCompleted({
           featureId: apiCredentialProfilesFeature,
           actionId,
           surfaceId: apiCredentialProfilesDialogSurface,
@@ -471,16 +472,17 @@ export function useApiCredentialProfilesController() {
               result?.opened || result?.deferred
                 ? PRODUCT_ANALYTICS_RESULTS.Success
                 : PRODUCT_ANALYTICS_RESULTS.Skipped,
-              result?.opened || result?.deferred
-                ? undefined
-                : {
-                    errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-                  },
             ),
           )
           .catch((error) => {
             void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
               errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            })
+            showResultToast({
+              success: false,
+              message: t("messages:errors.operation.failed", {
+                error: getErrorMessage(error, t("messages:errors.unknown")),
+              }),
             })
             logger.warn(
               "Failed to complete managed site import analytics.",
@@ -573,7 +575,7 @@ export function useApiCredentialProfilesController() {
       const deleted = await deleteProfile(deletingProfile.id)
       if (deleted) {
         toast.success(t("apiCredentialProfiles:messages.deleted"))
-        await trackProductAnalyticsActionCompleted({
+        void trackProductAnalyticsActionCompleted({
           featureId: apiCredentialProfilesFeature,
           actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile,
           surfaceId: apiCredentialProfilesRefreshSurface,
@@ -583,7 +585,7 @@ export function useApiCredentialProfilesController() {
         })
       } else {
         toast.error(t("apiCredentialProfiles:messages.deleteFailed"))
-        await trackProductAnalyticsActionCompleted({
+        void trackProductAnalyticsActionCompleted({
           featureId: apiCredentialProfilesFeature,
           actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile,
           surfaceId: apiCredentialProfilesRefreshSurface,
@@ -596,7 +598,7 @@ export function useApiCredentialProfilesController() {
       setDeletingProfile(null)
     } catch {
       toast.error(t("apiCredentialProfiles:messages.deleteFailed"))
-      await trackProductAnalyticsActionCompleted({
+      void trackProductAnalyticsActionCompleted({
         featureId: apiCredentialProfilesFeature,
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile,
         surfaceId: apiCredentialProfilesRefreshSurface,

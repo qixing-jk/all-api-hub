@@ -1,5 +1,5 @@
 import userEvent from "@testing-library/user-event"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DevDialogDebugMenu } from "~/components/DevDialogDebugMenu"
 import { useUpdateLogDialogContext } from "~/components/dialogs/UpdateLogDialog"
@@ -69,6 +69,11 @@ describe("DevDialogDebugMenu", () => {
     vi.spyOn(changelogOnUpdateState, "consumePendingVersion").mockResolvedValue(
       "3.37.0",
     )
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
   })
 
   it("groups update-log and onboarding debug actions in one development menu", async () => {
