@@ -1,6 +1,6 @@
 import { MagnifyingGlassIcon } from "@heroicons/react/24/outline"
 import { KeyRound } from "lucide-react"
-import { useCallback, useMemo, useState } from "react"
+import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import {
@@ -12,13 +12,20 @@ import {
 } from "~/components/ui"
 import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
 import { cn } from "~/lib/utils"
+import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_API_TYPES,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
-import { API_TYPES } from "~/services/verification/aiApiVerification"
+import {
+  API_TYPES,
+  type ApiVerificationApiType,
+} from "~/services/verification/aiApiVerification"
 
 import type { ApiCredentialProfilesController } from "../hooks/useApiCredentialProfilesController"
 import { ApiCredentialProfilesDialogs } from "./ApiCredentialProfilesDialogs"
@@ -46,6 +53,18 @@ function normalizeForSearch(value: string): string {
   return normalized
 }
 
+const analyticsApiTypeByVerificationApiType: Partial<
+  Record<
+    ApiVerificationApiType,
+    (typeof PRODUCT_ANALYTICS_API_TYPES)[keyof typeof PRODUCT_ANALYTICS_API_TYPES]
+  >
+> = {
+  [API_TYPES.OPENAI_COMPATIBLE]: PRODUCT_ANALYTICS_API_TYPES.OpenAiCompatible,
+  [API_TYPES.OPENAI]: PRODUCT_ANALYTICS_API_TYPES.OpenAi,
+  [API_TYPES.ANTHROPIC]: PRODUCT_ANALYTICS_API_TYPES.Anthropic,
+  [API_TYPES.GOOGLE]: PRODUCT_ANALYTICS_API_TYPES.Google,
+}
+
 /**
  * Search/filterable API credential profiles view used in Options and Popup variants.
  */
@@ -66,11 +85,35 @@ export function ApiCredentialProfilesListView({
   const [searchTerm, setSearchTerm] = useState("")
   const [apiTypeFilter, setApiTypeFilter] = useState<string>("")
   const [selectedTagIds, setSelectedTagIds] = useState<string[]>([])
+  const [lastFilterMode, setLastFilterMode] = useState<
+    | typeof PRODUCT_ANALYTICS_MODE_IDS.SearchFilter
+    | typeof PRODUCT_ANALYTICS_MODE_IDS.ProviderFilter
+    | typeof PRODUCT_ANALYTICS_MODE_IDS.GroupFilter
+    | null
+  >(null)
 
   const searchInputSize = variant === "popup" ? "sm" : "default"
 
   const clearSearch = useCallback(() => {
     setSearchTerm("")
+  }, [])
+
+  const handleSearchChange = useCallback(
+    (event: React.ChangeEvent<HTMLInputElement>) => {
+      setLastFilterMode(PRODUCT_ANALYTICS_MODE_IDS.SearchFilter)
+      setSearchTerm(event.target.value)
+    },
+    [],
+  )
+
+  const handleApiTypeFilterChange = useCallback((value: string) => {
+    setLastFilterMode(PRODUCT_ANALYTICS_MODE_IDS.ProviderFilter)
+    setApiTypeFilter(value)
+  }, [])
+
+  const handleTagFilterChange = useCallback((value: string[]) => {
+    setLastFilterMode(PRODUCT_ANALYTICS_MODE_IDS.GroupFilter)
+    setSelectedTagIds(value)
   }, [])
 
   const handleSearchKeyDown = useCallback(
@@ -158,18 +201,85 @@ export function ApiCredentialProfilesListView({
   const isInitialLoading =
     controller.isLoading && controller.profiles.length === 0
 
+  const activeFilterCount = useMemo(() => {
+    let count = 0
+    if (searchTerm.trim()) count += 1
+    if (apiTypeFilter.trim()) count += 1
+    if (selectedTagIds.length > 0) count += 1
+    return count
+  }, [apiTypeFilter, searchTerm, selectedTagIds.length])
+
+  const analyticsMode = useMemo(() => {
+    if (activeFilterCount === 0) return null
+    if (lastFilterMode) return lastFilterMode
+    if (searchTerm.trim()) return PRODUCT_ANALYTICS_MODE_IDS.SearchFilter
+    if (apiTypeFilter.trim()) return PRODUCT_ANALYTICS_MODE_IDS.ProviderFilter
+    if (selectedTagIds.length > 0) return PRODUCT_ANALYTICS_MODE_IDS.GroupFilter
+    return null
+  }, [
+    activeFilterCount,
+    apiTypeFilter,
+    lastFilterMode,
+    searchTerm,
+    selectedTagIds.length,
+  ])
+
+  useEffect(() => {
+    if (!analyticsMode || activeFilterCount === 0) return
+
+    const timeoutId = window.setTimeout(() => {
+      void trackProductAnalyticsActionCompleted({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterApiCredentialProfiles,
+        surfaceId:
+          variant === "popup"
+            ? PRODUCT_ANALYTICS_SURFACE_IDS.PopupViewTabs
+            : PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesPage,
+        entrypoint:
+          variant === "popup"
+            ? PRODUCT_ANALYTICS_ENTRYPOINTS.Popup
+            : PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        insights: {
+          mode: analyticsMode,
+          ...(apiTypeFilter.trim()
+            ? {
+                apiType:
+                  analyticsApiTypeByVerificationApiType[
+                    apiTypeFilter.trim() as ApiVerificationApiType
+                  ],
+              }
+            : {}),
+          itemCount: filteredProfiles.length,
+          selectedCount: activeFilterCount,
+          usageDataPresent: filteredProfiles.length > 0,
+        },
+      })
+    }, 400)
+
+    return () => window.clearTimeout(timeoutId)
+  }, [
+    activeFilterCount,
+    analyticsMode,
+    apiTypeFilter,
+    filteredProfiles.length,
+    variant,
+  ])
+
   const emptyStateAddAnalyticsAction =
     variant === "popup"
       ? {
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
-          actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+          actionId:
+            PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateApiCredentialProfileDialog,
           surfaceId:
             PRODUCT_ANALYTICS_SURFACE_IDS.PopupApiCredentialProfilesEmptyState,
           entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
         }
       : {
           featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
-          actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+          actionId:
+            PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateApiCredentialProfileDialog,
           surfaceId:
             PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesEmptyState,
           entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
@@ -185,7 +295,7 @@ export function ApiCredentialProfilesListView({
             autoFocus={autoFocusSearch}
             size={searchInputSize}
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={handleSearchChange}
             onKeyDown={handleSearchKeyDown}
             placeholder={t("apiCredentialProfiles:controls.searchPlaceholder")}
             leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
@@ -220,7 +330,7 @@ export function ApiCredentialProfilesListView({
             },
           ]}
           value={apiTypeFilter}
-          onChange={setApiTypeFilter}
+          onChange={handleApiTypeFilterChange}
           placeholder={t("apiCredentialProfiles:controls.apiTypePlaceholder")}
           className={cn(variant === "popup" && "h-8 px-2 text-xs")}
         />
@@ -229,7 +339,7 @@ export function ApiCredentialProfilesListView({
       <TagFilter
         options={tagFilterOptions}
         value={selectedTagIds}
-        onChange={setSelectedTagIds}
+        onChange={handleTagFilterChange}
         maxVisibleLines={maxTagFilterLines}
         allLabel={t("apiCredentialProfiles:filter.tagsAllLabel")}
         allCount={controller.profiles.length}

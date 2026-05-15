@@ -1,13 +1,24 @@
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ApiCredentialProfilesListView } from "~/features/ApiCredentialProfiles/components/ApiCredentialProfilesListView"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
-import { fireEvent, render, screen } from "~~/tests/test-utils/render"
+import { act, fireEvent, render, screen } from "~~/tests/test-utils/render"
+
+const { trackProductAnalyticsActionCompletedMock } = vi.hoisted(() => ({
+  trackProductAnalyticsActionCompletedMock: vi.fn(),
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionCompleted: (...args: any[]) =>
+    trackProductAnalyticsActionCompletedMock(...args),
+}))
 
 vi.mock("~/hooks/useMediaQuery", () => ({
   useIsDesktop: () => true,
@@ -37,7 +48,19 @@ vi.mock("~/components/ui", () => ({
       onChange={(event) => onChange(event.target.value)}
     />
   ),
-  TagFilter: () => <div data-testid="tag-filter" />,
+  TagFilter: ({ options, onChange }: any) => (
+    <div data-testid="tag-filter">
+      {options.map((option: any) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onChange([option.value])}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  ),
   EmptyState: ({ title, description, action }: any) => (
     <div>
       <div>{title}</div>
@@ -81,6 +104,14 @@ vi.mock(
 )
 
 describe("ApiCredentialProfilesListView", () => {
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
+  beforeEach(() => {
+    trackProductAnalyticsActionCompletedMock.mockReset()
+  })
+
   it("declares options empty-state add action analytics metadata", async () => {
     const controller = {
       profiles: [],
@@ -100,7 +131,7 @@ describe("ApiCredentialProfilesListView", () => {
       "data-analytics-action",
       [
         PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
-        PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+        PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateApiCredentialProfileDialog,
         PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesEmptyState,
         PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       ].join(":"),
@@ -128,7 +159,7 @@ describe("ApiCredentialProfilesListView", () => {
       "data-analytics-action",
       [
         PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
-        PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+        PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateApiCredentialProfileDialog,
         PRODUCT_ANALYTICS_SURFACE_IDS.PopupApiCredentialProfilesEmptyState,
         PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
       ].join(":"),
@@ -207,5 +238,132 @@ describe("ApiCredentialProfilesListView", () => {
 
     expect(screen.getByText("OpenAI Profile")).toBeInTheDocument()
     expect(screen.getByText("Anthropic Profile")).toBeInTheDocument()
+  })
+
+  it("debounces search analytics with coarse filter and result counts only", async () => {
+    const controller = {
+      profiles: [
+        {
+          id: "profile-1",
+          name: "Private Production Profile",
+          apiType: "openai",
+          baseUrl: "https://private.example.com",
+          apiKey: "sk-test",
+          tagIds: ["secret-tag"],
+          notes: "sensitive notes",
+        },
+        {
+          id: "profile-2",
+          name: "Other Profile",
+          apiType: "anthropic",
+          baseUrl: "https://other.example.com",
+          apiKey: "sk-test",
+          tagIds: [],
+          notes: "",
+        },
+      ],
+      isLoading: false,
+      tags: [{ id: "secret-tag", name: "Confidential Team" }],
+      tagNameById: new Map<string, string>([
+        ["secret-tag", "Confidential Team"],
+      ]),
+      openAddDialog: vi.fn(),
+    } as any
+
+    render(<ApiCredentialProfilesListView controller={controller} />)
+
+    const searchInput = await screen.findByPlaceholderText(
+      "apiCredentialProfiles:controls.searchPlaceholder",
+    )
+
+    vi.useFakeTimers()
+    fireEvent.change(searchInput, { target: { value: "private.example.com" } })
+
+    expect(trackProductAnalyticsActionCompletedMock).not.toHaveBeenCalled()
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600)
+    })
+
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterApiCredentialProfiles,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        mode: PRODUCT_ANALYTICS_MODE_IDS.SearchFilter,
+        itemCount: 1,
+        selectedCount: 1,
+        usageDataPresent: true,
+      },
+    })
+
+    const payloadText = JSON.stringify(
+      trackProductAnalyticsActionCompletedMock.mock.calls,
+    )
+    expect(payloadText).not.toContain("private.example.com")
+    expect(payloadText).not.toContain("Confidential Team")
+    expect(payloadText).not.toContain("Private Production Profile")
+  })
+
+  it("tracks filtered-empty impressions without raw filter values", async () => {
+    const controller = {
+      profiles: [
+        {
+          id: "profile-1",
+          name: "Private Production Profile",
+          apiType: "openai",
+          baseUrl: "https://private.example.com",
+          apiKey: "sk-test",
+          tagIds: ["secret-tag"],
+          notes: "",
+        },
+      ],
+      isLoading: false,
+      tags: [{ id: "secret-tag", name: "Confidential Team" }],
+      tagNameById: new Map<string, string>([
+        ["secret-tag", "Confidential Team"],
+      ]),
+      openAddDialog: vi.fn(),
+    } as any
+
+    render(<ApiCredentialProfilesListView controller={controller} />)
+
+    const searchInput = await screen.findByPlaceholderText(
+      "apiCredentialProfiles:controls.searchPlaceholder",
+    )
+
+    vi.useFakeTimers()
+    fireEvent.change(searchInput, {
+      target: { value: "missing-private-profile" },
+    })
+    fireEvent.click(screen.getByRole("button", { name: "Confidential Team" }))
+
+    await act(async () => {
+      await vi.advanceTimersByTimeAsync(600)
+    })
+
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterApiCredentialProfiles,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        mode: PRODUCT_ANALYTICS_MODE_IDS.GroupFilter,
+        itemCount: 0,
+        selectedCount: 2,
+        usageDataPresent: false,
+      },
+    })
+
+    const payloadText = JSON.stringify(
+      trackProductAnalyticsActionCompletedMock.mock.calls,
+    )
+    expect(payloadText).not.toContain("missing-private-profile")
+    expect(payloadText).not.toContain("secret-tag")
+    expect(payloadText).not.toContain("Confidential Team")
+    expect(payloadText).not.toContain("private.example.com")
   })
 })

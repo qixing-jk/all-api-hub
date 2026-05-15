@@ -5,6 +5,7 @@ import {
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_RESULTS,
   trackProductAnalyticsEvent,
+  type ProductAnalyticsApiType,
   type ProductAnalyticsErrorCategory,
   type ProductAnalyticsModeId,
   type ProductAnalyticsResult,
@@ -29,6 +30,7 @@ type ProductAnalyticsActionCompletion = ProductAnalyticsActionContext & {
 }
 
 export type ProductAnalyticsActionInsights = {
+  apiType?: ProductAnalyticsApiType
   sourceKind?: ProductAnalyticsSourceKind
   mode?: ProductAnalyticsModeId
   statusKind?: ProductAnalyticsStatusKind
@@ -56,6 +58,7 @@ function mapProductAnalyticsActionInsights(
   if (!insights) return {}
 
   return {
+    ...(insights.apiType ? { api_type: insights.apiType } : {}),
     ...(insights.sourceKind ? { source_kind: insights.sourceKind } : {}),
     ...(insights.mode ? { mode: insights.mode } : {}),
     ...(insights.statusKind ? { status_kind: insights.statusKind } : {}),

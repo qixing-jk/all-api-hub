@@ -4,6 +4,7 @@ import {
   MANAGED_SITE_TYPES,
   type ManagedSiteType,
 } from "~/constants/siteType"
+import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 
 export const PRODUCT_ANALYTICS_EVENTS = {
@@ -82,6 +83,11 @@ export const PRODUCT_ANALYTICS_SOURCE_KINDS = {
   Manual: "manual",
   Row: "row",
   Auto: "auto",
+  ApiCredentialProfileManualOptions: "api_credential_profile_manual_options",
+  ApiCredentialProfileManualPopup: "api_credential_profile_manual_popup",
+  ApiCredentialProfileContentApiCheck:
+    "api_credential_profile_content_api_check",
+  ApiCredentialProfileAccountToken: "api_credential_profile_account_token",
   ModelAllAccounts: "model_all_accounts",
   ModelAccount: "model_account",
   ModelProfile: "model_profile",
@@ -97,6 +103,12 @@ export const PRODUCT_ANALYTICS_MODE_IDS = {
   Selected: "selected",
   Single: "single",
   RetryFailed: "retry_failed",
+  TelemetryAuto: "telemetry_auto",
+  TelemetryDisabled: "telemetry_disabled",
+  TelemetryNewApiTokenUsage: "telemetry_new_api_token_usage",
+  TelemetrySub2ApiUsage: "telemetry_sub2api_usage",
+  TelemetryOpenAiBilling: "telemetry_openai_billing",
+  TelemetryCustomReadOnlyEndpoint: "telemetry_custom_read_only_endpoint",
   Export: "export",
   SearchFilter: "search_filter",
   ProviderFilter: "provider_filter",
@@ -133,6 +145,16 @@ export const PRODUCT_ANALYTICS_TELEMETRY_SOURCES = {
 
 export type ProductAnalyticsTelemetrySource =
   (typeof PRODUCT_ANALYTICS_TELEMETRY_SOURCES)[keyof typeof PRODUCT_ANALYTICS_TELEMETRY_SOURCES]
+
+export const PRODUCT_ANALYTICS_API_TYPES = {
+  OpenAiCompatible: API_TYPES.OPENAI_COMPATIBLE,
+  OpenAi: API_TYPES.OPENAI,
+  Anthropic: API_TYPES.ANTHROPIC,
+  Google: API_TYPES.GOOGLE,
+} as const
+
+export type ProductAnalyticsApiType =
+  (typeof PRODUCT_ANALYTICS_API_TYPES)[keyof typeof PRODUCT_ANALYTICS_API_TYPES]
 
 export const PRODUCT_ANALYTICS_PAGE_IDS = {
   PopupAccounts: "popup_accounts",
@@ -275,6 +297,8 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   OpenAutoCheckinManualSignIn: "open_auto_checkin_manual_sign_in",
   OpenBookmark: "open_bookmark",
   OpenBatchModelVerifyDialog: "open_batch_model_verify_dialog",
+  OpenCreateApiCredentialProfileDialog:
+    "open_create_api_credential_profile_dialog",
   OpenAccountKeyManagementFromModel: "open_account_key_management_from_model",
   OpenFailedAutoCheckinManualSignIns:
     "open_failed_auto_checkin_manual_sign_ins",
@@ -282,6 +306,8 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
     "open_filtered_managed_site_channel_migration",
   OpenKeyList: "open_key_list",
   OpenKeyManagement: "open_key_management",
+  OpenUpdateApiCredentialProfileDialog:
+    "open_update_api_credential_profile_dialog",
   OpenManagedSiteChannelFilters: "open_managed_site_channel_filters",
   OpenManagedSiteChannelMigration: "open_managed_site_channel_migration",
   OpenManagedSiteChannelModelSync: "open_managed_site_channel_model_sync",
@@ -296,6 +322,8 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   OpenPopupSettingsPage: "open_popup_settings_page",
   OpenSidepanelFromPopup: "open_sidepanel_from_popup",
   OpenSidepanelFromToolbarAction: "open_sidepanel_from_toolbar_action",
+  ClearApiCredentialProfileFilters: "clear_api_credential_profile_filters",
+  FilterApiCredentialProfiles: "filter_api_credential_profiles",
   OpenUpdateAccountDialog: "open_update_account_dialog",
   OpenBalanceHistorySettings: "open_balance_history_settings",
   OpenRedeemPage: "open_redeem_page",
@@ -340,6 +368,9 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   SearchAccounts: "search_accounts",
   SelectModelSource: "select_model_source",
   FilterModelList: "filter_model_list",
+  SelectApiCredentialProfileExportDestination:
+    "select_api_credential_profile_export_destination",
+  SnapshotApiCredentialProfiles: "snapshot_api_credential_profiles",
   ToggleModelDetails: "toggle_model_details",
   SelectApiCredentialProfilesView: "select_api_credential_profiles_view",
   SelectBookmarksView: "select_bookmarks_view",
@@ -463,6 +494,7 @@ export const PRODUCT_ANALYTICS_SURFACE_IDS = {
   PopupActionBar: "popup_action_bar",
   PopupApiCredentialProfilesEmptyState:
     "popup_api_credential_profiles_empty_state",
+  PopupApiCredentialProfilesStats: "popup_api_credential_profiles_stats",
   PopupHeader: "popup_header",
   PopupViewTabs: "popup_view_tabs",
   SidepanelActionBar: "sidepanel_action_bar",
@@ -519,6 +551,7 @@ export type ProductAnalyticsEventPayloadMap = {
     result: ProductAnalyticsResult
     error_category?: ProductAnalyticsErrorCategory
     duration_bucket?: ProductAnalyticsDurationBucket
+    api_type?: ProductAnalyticsApiType
     source_kind?: ProductAnalyticsSourceKind
     mode?: ProductAnalyticsModeId
     status_kind?: ProductAnalyticsStatusKind

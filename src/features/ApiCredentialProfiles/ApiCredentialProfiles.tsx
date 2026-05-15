@@ -41,7 +41,7 @@ export default function ApiCredentialProfiles() {
             <Button
               onClick={controller.openAddDialog}
               analyticsAction={
-                PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile
+                PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateApiCredentialProfileDialog
               }
             >
               {t("apiCredentialProfiles:actions.add")}

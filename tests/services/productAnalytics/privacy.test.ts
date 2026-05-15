@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_API_TYPES,
   PRODUCT_ANALYTICS_COUNT_BUCKETS,
   PRODUCT_ANALYTICS_DURATION_BUCKETS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -276,6 +277,76 @@ describe("product analytics privacy filtering", () => {
       source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile,
       mode: PRODUCT_ANALYTICS_MODE_IDS.ProviderFilter,
       model_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+    })
+  })
+
+  it("keeps API credential profile profile-source and telemetry mode enums without raw details", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+        action_id:
+          PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateApiCredentialProfileDialog,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesDialog,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        source_kind:
+          PRODUCT_ANALYTICS_SOURCE_KINDS.ApiCredentialProfileManualOptions,
+        api_type: PRODUCT_ANALYTICS_API_TYPES.OpenAiCompatible,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.TelemetryCustomReadOnlyEndpoint,
+        telemetry_source:
+          PRODUCT_ANALYTICS_TELEMETRY_SOURCES.CustomReadOnlyEndpoint,
+        profileName: "Production profile",
+        baseUrl: "https://private.example",
+        apiKey: "sk-secret",
+        telemetryEndpoint: "/private/usage?token=secret",
+        customJsonPath: "data.private.balance",
+        errorMessage: "backend returned sk-secret",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+      action_id:
+        PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateApiCredentialProfileDialog,
+      surface_id:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      source_kind:
+        PRODUCT_ANALYTICS_SOURCE_KINDS.ApiCredentialProfileManualOptions,
+      api_type: PRODUCT_ANALYTICS_API_TYPES.OpenAiCompatible,
+      mode: PRODUCT_ANALYTICS_MODE_IDS.TelemetryCustomReadOnlyEndpoint,
+      telemetry_source:
+        PRODUCT_ANALYTICS_TELEMETRY_SOURCES.CustomReadOnlyEndpoint,
+    })
+  })
+
+  it("drops uncontrolled API credential profile dimensions", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+        action_id: "open_profile_named_production",
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesDialog,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        source_kind: "manual:production",
+        mode: "https://private.example/usage",
+        telemetry_source: "privateUsageEndpoint",
+        apiKey: "sk-secret",
+        profileId: "profile-private-id",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+      surface_id:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
     })
   })
 

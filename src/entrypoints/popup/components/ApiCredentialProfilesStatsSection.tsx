@@ -4,6 +4,16 @@ import { useTranslation } from "react-i18next"
 import { BodySmall, Caption } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfiles"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  trackProductAnalyticsEvent,
+} from "~/services/productAnalytics/events"
+import { bucketCount } from "~/services/productAnalytics/privacy"
 import { SiteHealthStatus } from "~/types"
 import { formatTelemetryMoney } from "~/utils/core/money"
 
@@ -80,6 +90,31 @@ export default function ApiCredentialProfilesStatsSection() {
         stats.profileTelemetryCount > 0 ? stats.todayUsageUsd : undefined,
     }
   }, [profiles])
+
+  useEffect(() => {
+    void trackProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.SnapshotApiCredentialProfiles,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.PopupApiCredentialProfilesStats,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        item_count_bucket: bucketCount(profiles.length),
+        selected_count_bucket: bucketCount(usedTagsCount),
+        success_count_bucket: bucketCount(telemetryStats.healthyCount),
+        failure_count_bucket: bucketCount(telemetryStats.profileTelemetryCount),
+        model_count_bucket: bucketCount(uniqueBaseUrlsCount),
+      },
+    )
+  }, [
+    profiles.length,
+    telemetryStats.healthyCount,
+    telemetryStats.profileTelemetryCount,
+    uniqueBaseUrlsCount,
+    usedTagsCount,
+  ])
 
   return (
     <div className="space-y-3">

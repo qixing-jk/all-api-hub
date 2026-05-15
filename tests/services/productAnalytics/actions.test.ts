@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_API_TYPES,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_EVENTS,
@@ -222,6 +223,7 @@ describe("product analytics action helpers", () => {
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       durationMs: 2_000,
       insights: {
+        apiType: PRODUCT_ANALYTICS_API_TYPES.OpenAiCompatible,
         sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.History,
         mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
         statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
@@ -245,6 +247,7 @@ describe("product analytics action helpers", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         result: PRODUCT_ANALYTICS_RESULTS.Success,
         duration_bucket: "1_5s",
+        api_type: PRODUCT_ANALYTICS_API_TYPES.OpenAiCompatible,
         source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.History,
         mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
         status_kind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
@@ -345,6 +348,7 @@ describe("product analytics action helpers", () => {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         durationMs: 2_000,
         insights: {
+          apiType: PRODUCT_ANALYTICS_API_TYPES.OpenAiCompatible,
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.History,
           mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
           statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
@@ -371,6 +375,7 @@ describe("product analytics action helpers", () => {
           entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
           result: PRODUCT_ANALYTICS_RESULTS.Success,
           duration_bucket: "1_5s",
+          api_type: PRODUCT_ANALYTICS_API_TYPES.OpenAiCompatible,
           source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.History,
           mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
           status_kind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,

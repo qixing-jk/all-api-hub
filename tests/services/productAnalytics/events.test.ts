@@ -2,7 +2,10 @@ import { describe, expect, it } from "vitest"
 
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_API_TYPES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 
@@ -88,6 +91,47 @@ describe("product analytics event enums", () => {
       OptionsKeyManagementRowActions: "options_key_management_row_actions",
       OptionsKeyManagementDialog: "options_key_management_dialog",
       OptionsKeyManagementRepairDialog: "options_key_management_repair_dialog",
+    })
+  })
+
+  it("defines fixed API credential profile analytics action ids", () => {
+    expect(PRODUCT_ANALYTICS_ACTION_IDS).toMatchObject({
+      OpenCreateApiCredentialProfileDialog:
+        "open_create_api_credential_profile_dialog",
+      OpenUpdateApiCredentialProfileDialog:
+        "open_update_api_credential_profile_dialog",
+      FilterApiCredentialProfiles: "filter_api_credential_profiles",
+      ClearApiCredentialProfileFilters: "clear_api_credential_profile_filters",
+      SelectApiCredentialProfileExportDestination:
+        "select_api_credential_profile_export_destination",
+      SnapshotApiCredentialProfiles: "snapshot_api_credential_profiles",
+    })
+  })
+
+  it("defines fixed API credential profile source and telemetry mode dimensions", () => {
+    expect(PRODUCT_ANALYTICS_SOURCE_KINDS).toMatchObject({
+      ApiCredentialProfileManualOptions:
+        "api_credential_profile_manual_options",
+      ApiCredentialProfileManualPopup: "api_credential_profile_manual_popup",
+      ApiCredentialProfileContentApiCheck:
+        "api_credential_profile_content_api_check",
+      ApiCredentialProfileAccountToken: "api_credential_profile_account_token",
+    })
+
+    expect(PRODUCT_ANALYTICS_MODE_IDS).toMatchObject({
+      TelemetryAuto: "telemetry_auto",
+      TelemetryDisabled: "telemetry_disabled",
+      TelemetryNewApiTokenUsage: "telemetry_new_api_token_usage",
+      TelemetrySub2ApiUsage: "telemetry_sub2api_usage",
+      TelemetryOpenAiBilling: "telemetry_openai_billing",
+      TelemetryCustomReadOnlyEndpoint: "telemetry_custom_read_only_endpoint",
+    })
+
+    expect(PRODUCT_ANALYTICS_API_TYPES).toMatchObject({
+      OpenAiCompatible: "openai-compatible",
+      OpenAi: "openai",
+      Anthropic: "anthropic",
+      Google: "google",
     })
   })
 })

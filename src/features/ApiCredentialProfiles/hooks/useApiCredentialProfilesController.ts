@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import { RuntimeMessageTypes } from "~/constants/runtimeActions"
+import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { refreshApiCredentialProfileTelemetry } from "~/services/apiCredentialProfiles/telemetry"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
@@ -15,18 +16,27 @@ import {
 } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_API_TYPES,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_STATUS_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TELEMETRY_SOURCES,
+  type ProductAnalyticsApiType,
+  type ProductAnalyticsModeId,
+  type ProductAnalyticsSourceKind,
   type ProductAnalyticsStatusKind,
   type ProductAnalyticsTelemetrySource,
 } from "~/services/productAnalytics/events"
 import { tagStorage } from "~/services/tags/tagStorage"
-import type { ApiVerificationApiType } from "~/services/verification/aiApiVerification"
+import {
+  API_TYPES,
+  type ApiVerificationApiType,
+} from "~/services/verification/aiApiVerification"
 import {
   createProfileVerificationHistoryTarget,
   serializeVerificationHistoryTarget,
@@ -73,6 +83,29 @@ const apiCredentialProfilesRefreshSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions
 const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
 
+const analyticsApiTypeByVerificationApiType: Record<
+  ApiVerificationApiType,
+  ProductAnalyticsApiType
+> = {
+  [API_TYPES.OPENAI_COMPATIBLE]: PRODUCT_ANALYTICS_API_TYPES.OpenAiCompatible,
+  [API_TYPES.OPENAI]: PRODUCT_ANALYTICS_API_TYPES.OpenAi,
+  [API_TYPES.ANTHROPIC]: PRODUCT_ANALYTICS_API_TYPES.Anthropic,
+  [API_TYPES.GOOGLE]: PRODUCT_ANALYTICS_API_TYPES.Google,
+}
+
+const telemetryModeByConfigMode: Record<
+  ApiCredentialTelemetryConfig["mode"],
+  ProductAnalyticsModeId
+> = {
+  auto: PRODUCT_ANALYTICS_MODE_IDS.TelemetryAuto,
+  disabled: PRODUCT_ANALYTICS_MODE_IDS.TelemetryDisabled,
+  newApiTokenUsage: PRODUCT_ANALYTICS_MODE_IDS.TelemetryNewApiTokenUsage,
+  sub2apiUsage: PRODUCT_ANALYTICS_MODE_IDS.TelemetrySub2ApiUsage,
+  openaiBilling: PRODUCT_ANALYTICS_MODE_IDS.TelemetryOpenAiBilling,
+  customReadOnlyEndpoint:
+    PRODUCT_ANALYTICS_MODE_IDS.TelemetryCustomReadOnlyEndpoint,
+}
+
 const telemetrySourceBySnapshotSource: Partial<
   Record<
     NonNullable<ApiCredentialTelemetrySnapshot["source"]>,
@@ -115,21 +148,60 @@ function hasTelemetryUsageData(snapshot: ApiCredentialTelemetrySnapshot) {
 }
 
 /**
+ * Maps the current UI entrypoint to a coarse, privacy-safe profile creation source.
+ */
+function getAnalyticsSourceKindForEntrypoint(
+  entrypoint: (typeof PRODUCT_ANALYTICS_ENTRYPOINTS)[keyof typeof PRODUCT_ANALYTICS_ENTRYPOINTS],
+): ProductAnalyticsSourceKind {
+  if (entrypoint === PRODUCT_ANALYTICS_ENTRYPOINTS.Popup) {
+    return PRODUCT_ANALYTICS_SOURCE_KINDS.ApiCredentialProfileManualPopup
+  }
+  return PRODUCT_ANALYTICS_SOURCE_KINDS.ApiCredentialProfileManualOptions
+}
+
+/**
+ * Builds save completion insights from fixed enums and counts only.
+ */
+function getApiCredentialProfileSaveAnalyticsInsights(
+  input: SaveApiCredentialProfileInput,
+  sourceKind: ProductAnalyticsSourceKind,
+): ProductAnalyticsActionInsights {
+  return {
+    apiType: analyticsApiTypeByVerificationApiType[input.apiType],
+    sourceKind,
+    mode: telemetryModeByConfigMode[input.telemetryConfig?.mode ?? "auto"],
+    selectedCount: input.tagIds.length,
+    usageDataPresent: input.telemetryConfig?.mode === "customReadOnlyEndpoint",
+  }
+}
+
+/**
  * Converts telemetry snapshot metadata into privacy-safe analytics insights.
  */
 function getApiCredentialTelemetryAnalyticsInsights(
   snapshot: ApiCredentialTelemetrySnapshot,
+  telemetryConfig?: ApiCredentialTelemetryConfig,
 ): ProductAnalyticsActionInsights {
+  const successCount = Array.isArray(snapshot.attempts)
+    ? snapshot.attempts.filter((attempt) => attempt.status === "success").length
+    : undefined
+  const failureCount = Array.isArray(snapshot.attempts)
+    ? snapshot.attempts.length - (successCount ?? 0)
+    : undefined
+
   return {
     ...(snapshot.source && telemetrySourceBySnapshotSource[snapshot.source]
       ? { telemetrySource: telemetrySourceBySnapshotSource[snapshot.source] }
       : {}),
+    mode: telemetryModeByConfigMode[telemetryConfig?.mode ?? "auto"],
     statusKind:
       analyticsStatusByHealthStatus[snapshot.health.status] ??
       PRODUCT_ANALYTICS_STATUS_KINDS.Unknown,
     ...(Array.isArray(snapshot.attempts)
       ? { itemCount: snapshot.attempts.length }
       : {}),
+    ...(typeof successCount === "number" ? { successCount } : {}),
+    ...(typeof failureCount === "number" ? { failureCount } : {}),
     ...(typeof snapshot.models?.count === "number"
       ? { modelCount: snapshot.models.count }
       : {}),
@@ -155,6 +227,7 @@ export function useApiCredentialProfilesController() {
     cliProxyBaseUrl,
     cliProxyManagementKey,
   } = useUserPreferencesContext()
+  const analyticsScope = useProductAnalyticsScope()
   const { openWithCredentials } = useChannelDialog()
 
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
@@ -245,14 +318,33 @@ export function useApiCredentialProfilesController() {
     useState<ApiCredentialProfile | null>(null)
 
   const openAddDialog = useCallback(() => {
+    startProductAnalyticsAction({
+      featureId: apiCredentialProfilesFeature,
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateApiCredentialProfileDialog,
+      surfaceId:
+        analyticsScope.surfaceId ??
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesPage,
+      entrypoint: analyticsScope.entrypoint ?? optionsEntrypoint,
+    })
     setEditingProfile(null)
     setIsEditorOpen(true)
-  }, [])
+  }, [analyticsScope.entrypoint, analyticsScope.surfaceId])
 
-  const openEditDialog = useCallback((profile: ApiCredentialProfile) => {
-    setEditingProfile(profile)
-    setIsEditorOpen(true)
-  }, [])
+  const openEditDialog = useCallback(
+    (profile: ApiCredentialProfile) => {
+      startProductAnalyticsAction({
+        featureId: apiCredentialProfilesFeature,
+        actionId:
+          PRODUCT_ANALYTICS_ACTION_IDS.OpenUpdateApiCredentialProfileDialog,
+        surfaceId: apiCredentialProfilesRefreshSurface,
+        entrypoint: analyticsScope.entrypoint ?? optionsEntrypoint,
+      })
+      setEditingProfile(profile)
+      setIsEditorOpen(true)
+    },
+    [analyticsScope.entrypoint],
+  )
 
   const handleSave = useCallback(
     async (input: SaveApiCredentialProfileInput) => {
@@ -260,6 +352,12 @@ export function useApiCredentialProfilesController() {
         ? PRODUCT_ANALYTICS_ACTION_IDS.UpdateApiCredentialProfile
         : PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile
       const startedAt = Date.now()
+      const insights = getApiCredentialProfileSaveAnalyticsInsights(
+        input,
+        getAnalyticsSourceKindForEntrypoint(
+          analyticsScope.entrypoint ?? optionsEntrypoint,
+        ),
+      )
 
       try {
         if (input.id) {
@@ -290,6 +388,7 @@ export function useApiCredentialProfilesController() {
           entrypoint: optionsEntrypoint,
           result: PRODUCT_ANALYTICS_RESULTS.Success,
           durationMs: Date.now() - startedAt,
+          insights,
         })
       } catch (error) {
         void trackProductAnalyticsActionCompleted({
@@ -300,11 +399,12 @@ export function useApiCredentialProfilesController() {
           result: PRODUCT_ANALYTICS_RESULTS.Failure,
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           durationMs: Date.now() - startedAt,
+          insights,
         })
         throw error
       }
     },
-    [createProfile, updateProfile],
+    [analyticsScope.entrypoint, createProfile, updateProfile],
   )
 
   const copyToClipboard = useCallback(
@@ -529,7 +629,10 @@ export function useApiCredentialProfilesController() {
           },
         })
         const snapshot = await refreshPromise
-        const insights = getApiCredentialTelemetryAnalyticsInsights(snapshot)
+        const insights = getApiCredentialTelemetryAnalyticsInsights(
+          snapshot,
+          profile.telemetryConfig,
+        )
         if (snapshot.health.status === SiteHealthStatus.Healthy) {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
             insights,

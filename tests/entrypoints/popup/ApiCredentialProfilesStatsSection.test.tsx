@@ -1,6 +1,13 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import ApiCredentialProfilesStatsSection from "~/entrypoints/popup/components/ApiCredentialProfilesStatsSection"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_COUNT_BUCKETS,
+  PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { SiteHealthStatus } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { render, screen } from "~~/tests/test-utils/render"
@@ -10,6 +17,10 @@ const { mockUseApiCredentialProfiles, mockUseUserPreferencesContext } =
     mockUseApiCredentialProfiles: vi.fn(),
     mockUseUserPreferencesContext: vi.fn(),
   }))
+
+const { trackProductAnalyticsEventMock } = vi.hoisted(() => ({
+  trackProductAnalyticsEventMock: vi.fn(),
+}))
 
 vi.mock("react-countup", () => ({
   default: ({ end }: { end: number }) => <span>{end}</span>,
@@ -25,6 +36,17 @@ vi.mock(
     useApiCredentialProfiles: () => mockUseApiCredentialProfiles(),
   }),
 )
+
+vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+
+  return {
+    ...actual,
+    trackProductAnalyticsEvent: (...args: any[]) =>
+      trackProductAnalyticsEventMock(...args),
+  }
+})
 
 function buildProfile(
   overrides: Partial<ApiCredentialProfile> = {},
@@ -44,6 +66,10 @@ function buildProfile(
 }
 
 describe("ApiCredentialProfilesStatsSection", () => {
+  beforeEach(() => {
+    trackProductAnalyticsEventMock.mockReset()
+  })
+
   it("shows telemetry totals when refreshed snapshots are available", () => {
     mockUseUserPreferencesContext.mockReturnValue({ currencyType: "USD" })
     mockUseApiCredentialProfiles.mockReturnValue({
@@ -128,5 +154,65 @@ describe("ApiCredentialProfilesStatsSection", () => {
     expect(
       screen.getAllByText("apiCredentialProfiles:telemetry.notProvided"),
     ).toHaveLength(2)
+  })
+
+  it("tracks anonymous inventory buckets without raw counts", () => {
+    mockUseUserPreferencesContext.mockReturnValue({ currencyType: "USD" })
+    mockUseApiCredentialProfiles.mockReturnValue({
+      isLoading: false,
+      profiles: [
+        buildProfile({
+          id: "profile-1",
+          baseUrl: "https://alpha.example.com",
+          tagIds: ["tag-a"],
+        }),
+        buildProfile({
+          id: "profile-2",
+          baseUrl: "https://beta.example.com",
+          tagIds: ["tag-a", "tag-b"],
+        }),
+        buildProfile({
+          id: "profile-3",
+          baseUrl: "https://gamma.example.com",
+          tagIds: ["tag-c"],
+        }),
+      ],
+    })
+
+    render(<ApiCredentialProfilesStatsSection />, {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.SnapshotApiCredentialProfiles,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.PopupApiCredentialProfilesStats,
+        entrypoint: "popup",
+        result: "success",
+        item_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+        selected_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+        success_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero,
+        failure_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero,
+        model_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+      },
+    )
+
+    const payloadText = JSON.stringify(
+      trackProductAnalyticsEventMock.mock.calls,
+    )
+    expect(payloadText).not.toContain("alpha.example.com")
+    expect(payloadText).not.toContain("beta.example.com")
+    expect(payloadText).not.toContain("gamma.example.com")
+    expect(payloadText).not.toContain("tag-a")
+    expect(payloadText).not.toContain("tag-b")
+    expect(payloadText).not.toContain("tag-c")
+    expect(payloadText).not.toContain('"item_count":3')
+    expect(payloadText).not.toContain('"selected_count":3')
+    expect(payloadText).not.toContain('"model_count":3')
   })
 })

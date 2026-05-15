@@ -162,7 +162,8 @@ export function usePopupViewRegistry(): Record<PopupViewType, PopupViewConfig> {
       },
       primaryAnalyticsAction: {
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
-        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+        actionId:
+          PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateApiCredentialProfileDialog,
       },
       content: (
         <Suspense fallback={<PopupContentFallback />}>

@@ -4,10 +4,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { useApiCredentialProfilesController } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfilesController"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_API_TYPES,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_STATUS_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TELEMETRY_SOURCES,
@@ -263,6 +266,14 @@ describe("useApiCredentialProfilesController", () => {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       durationMs: expect.any(Number),
+      insights: {
+        sourceKind:
+          PRODUCT_ANALYTICS_SOURCE_KINDS.ApiCredentialProfileManualOptions,
+        apiType: PRODUCT_ANALYTICS_API_TYPES.OpenAiCompatible,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.TelemetryAuto,
+        selectedCount: 0,
+        usageDataPresent: false,
+      },
     })
     expect(createProfileMock).toHaveBeenCalledTimes(1)
   })
@@ -294,6 +305,14 @@ describe("useApiCredentialProfilesController", () => {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       durationMs: expect.any(Number),
+      insights: {
+        sourceKind:
+          PRODUCT_ANALYTICS_SOURCE_KINDS.ApiCredentialProfileManualOptions,
+        apiType: PRODUCT_ANALYTICS_API_TYPES.OpenAiCompatible,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.TelemetryDisabled,
+        selectedCount: 0,
+        usageDataPresent: false,
+      },
     })
     expect(updateProfileMock).toHaveBeenCalledTimes(1)
   })
@@ -353,6 +372,42 @@ describe("useApiCredentialProfilesController", () => {
       result: PRODUCT_ANALYTICS_RESULTS.Failure,
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       durationMs: expect.any(Number),
+      insights: {
+        sourceKind:
+          PRODUCT_ANALYTICS_SOURCE_KINDS.ApiCredentialProfileManualOptions,
+        apiType: PRODUCT_ANALYTICS_API_TYPES.OpenAiCompatible,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.TelemetryAuto,
+        selectedCount: 0,
+        usageDataPresent: false,
+      },
+    })
+  })
+
+  it("tracks profile dialog open intent separately from save completion", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+
+    const { result } = renderController()
+    const profile = buildProfile()
+
+    await act(async () => {
+      result.current.openAddDialog()
+      result.current.openEditDialog(profile)
+    })
+
+    expect(startProductAnalyticsActionMock).toHaveBeenNthCalledWith(1, {
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateApiCredentialProfileDialog,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(startProductAnalyticsActionMock).toHaveBeenNthCalledWith(2, {
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.OpenUpdateApiCredentialProfileDialog,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
   })
 
@@ -554,8 +609,11 @@ describe("useApiCredentialProfilesController", () => {
       {
         insights: {
           telemetrySource: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.NewApiTokenUsage,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.TelemetryAuto,
           statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
           itemCount: 2,
+          successCount: 2,
+          failureCount: 0,
           modelCount: 14,
           usageDataPresent: true,
         },
@@ -613,6 +671,7 @@ describe("useApiCredentialProfilesController", () => {
       {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.TelemetryAuto,
           statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Warning,
           usageDataPresent: false,
         },

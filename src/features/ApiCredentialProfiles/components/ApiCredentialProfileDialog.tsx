@@ -21,7 +21,6 @@ import {
   type ApiCredentialTelemetryJsonPathField,
 } from "~/services/apiCredentialProfiles/telemetryConfig"
 import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -402,16 +401,7 @@ export function ApiCredentialProfileDialog({
             >
               {t("common:actions.cancel")}
             </Button>
-            <Button
-              onClick={handleSave}
-              loading={isSaving}
-              disabled={isSaving}
-              analyticsAction={
-                isEditMode
-                  ? PRODUCT_ANALYTICS_ACTION_IDS.UpdateApiCredentialProfile
-                  : PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile
-              }
-            >
+            <Button onClick={handleSave} loading={isSaving} disabled={isSaving}>
               {t("common:actions.save")}
             </Button>
           </div>

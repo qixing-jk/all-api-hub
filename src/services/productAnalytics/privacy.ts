@@ -1,5 +1,6 @@
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_API_TYPES,
   PRODUCT_ANALYTICS_COUNT_BUCKETS,
   PRODUCT_ANALYTICS_DURATION_BUCKETS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -40,6 +41,7 @@ const EVENT_ALLOWED_KEYS = {
     "result",
     "error_category",
     "duration_bucket",
+    "api_type",
     "source_kind",
     "mode",
     "status_kind",
@@ -77,6 +79,7 @@ const EVENT_ALLOWED_KEYS = {
 
 const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   action_id: Object.values(PRODUCT_ANALYTICS_ACTION_IDS),
+  api_type: Object.values(PRODUCT_ANALYTICS_API_TYPES),
   account_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   distinct_site_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   duration_bucket: Object.values(PRODUCT_ANALYTICS_DURATION_BUCKETS),

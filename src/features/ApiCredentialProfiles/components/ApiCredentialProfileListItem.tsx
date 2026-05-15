@@ -466,7 +466,7 @@ export function ApiCredentialProfileListItem({
                 variant="ghost"
                 onClick={() => onEdit(profile)}
                 analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.UpdateApiCredentialProfile
+                  PRODUCT_ANALYTICS_ACTION_IDS.OpenUpdateApiCredentialProfileDialog
                 }
               >
                 <PencilIcon className="h-4 w-4 text-blue-500 dark:text-blue-400" />
