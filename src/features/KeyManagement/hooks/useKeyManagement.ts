@@ -52,6 +52,17 @@ const keyManagementAnalyticsContext = (
   entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
 })
 
+const completeKeyManagementAnalytics = (
+  tracker: ReturnType<typeof startProductAnalyticsAction>,
+  ...args: Parameters<
+    ReturnType<typeof startProductAnalyticsAction>["complete"]
+  >
+) => {
+  void Promise.resolve(tracker.complete(...args)).catch((error) => {
+    logger.warn("Key Management analytics completion failed", error)
+  })
+}
+
 const managedSiteTokenStatusKindByStatus = (
   status: ManagedSiteTokenChannelStatusResult["status"],
 ) => {
@@ -716,6 +727,15 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           accountIds: targetAccountIds,
           loadEpoch,
         })
+        if (!isEpochActive(loadEpoch)) {
+          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+            insights: {
+              mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+              itemCount: targetAccountIds.length,
+            },
+          })
+          return
+        }
         const successCount = loadResult.successCount
         const failureCount = loadResult.failureCount
         await tracker.complete(
@@ -782,6 +802,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       loadTokensForAccount,
       loadTokensForAccounts,
       startNewLoadEpoch,
+      isEpochActive,
     ],
   )
 
@@ -1214,15 +1235,19 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         newSet.add(tokenIdentityKey)
         return newSet
       })
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      completeKeyManagementAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       toast.error(
         getErrorMessage(error, t("keyManagement:messages.revealFailed")),
       )
       logger.warn("Failed to resolve key for visibility", error)
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
+      completeKeyManagementAnalytics(
+        tracker,
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        },
+      )
     } finally {
       if (isMountedRef.current) {
         setResolvingVisibleKeys((prev) => {
@@ -1309,9 +1334,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       )
       if (!account) {
         toast.error(t("keyManagement:messages.accountNotFound"))
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        })
+        completeKeyManagementAnalytics(
+          tracker,
+          PRODUCT_ANALYTICS_RESULTS.Failure,
+          {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          },
+        )
         return
       }
 
@@ -1322,7 +1351,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       toast.success(
         t("keyManagement:messages.deleteSuccess", { name: token.name }),
       )
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      completeKeyManagementAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Success)
 
       if (selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE) {
         void loadTokensForAccount({
@@ -1337,9 +1366,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       const errorMessage = getErrorMessage(error) || String(error)
       logger.error("删除密钥失败", errorMessage)
       toast.error(errorMessage)
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
+      completeKeyManagementAnalytics(
+        tracker,
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        },
+      )
     }
   }
 

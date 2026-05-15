@@ -538,6 +538,88 @@ describe("useKeyManagement enabled account filtering", () => {
     )
   })
 
+  it("marks superseded all-account token refresh analytics as skipped", async () => {
+    const account = createDisplayAccount({
+      id: "superseded-refresh-acc",
+      name: "Superseded Refresh Account",
+      baseUrl: "https://superseded.example/v1",
+    })
+
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    let resolveInitialLoad!: (tokens: any[]) => void
+    const fetchAccountTokens = vi
+      .fn()
+      .mockImplementationOnce(
+        () =>
+          new Promise((resolve) => {
+            resolveInitialLoad = resolve
+          }),
+      )
+      .mockResolvedValue([])
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const allAccountsComplete = vi.fn().mockResolvedValue(undefined)
+    const singleAccountComplete = vi.fn().mockResolvedValue(undefined)
+    startProductAnalyticsActionMock
+      .mockReturnValueOnce({ complete: allAccountsComplete })
+      .mockReturnValueOnce({ complete: singleAccountComplete })
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE)
+    })
+
+    await waitFor(() => expect(fetchAccountTokens).toHaveBeenCalledTimes(1))
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() =>
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledTimes(2),
+    )
+
+    await act(async () => {
+      resolveInitialLoad([
+        createToken({
+          id: 309,
+          key: "sk-superseded",
+          name: "Superseded Token",
+          accountId: account.id,
+          accountName: account.name,
+          expired_time: 0,
+        }),
+      ])
+    })
+
+    await waitFor(() =>
+      expect(allAccountsComplete).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+        {
+          insights: {
+            mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+            itemCount: 1,
+          },
+        },
+      ),
+    )
+    expect(allAccountsComplete).not.toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      expect.objectContaining({
+        insights: expect.objectContaining({
+          successCount: expect.any(Number),
+          failureCount: expect.any(Number),
+        }),
+      }),
+    )
+  })
+
   it("tracks retry-failed token refresh with retry_failed mode and aggregate counts", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)
 
@@ -2250,6 +2332,53 @@ describe("useKeyManagement enabled account filtering", () => {
     )
   })
 
+  it("does not show reveal failure feedback when analytics completion rejects after a successful reveal", async () => {
+    const account = createDisplayAccount({
+      id: "reveal-analytics-fail-acc",
+      name: "Reveal Analytics Failure Account",
+    })
+    const token = createToken({
+      id: 915,
+      key: "sk-reveal************mask",
+      name: "Reveal Analytics Failure Token",
+      accountId: account.id,
+      accountName: account.name,
+      expired_time: 0,
+    })
+
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    const resolveApiTokenKey = vi.fn().mockResolvedValue("resolved-token-key")
+    vi.mocked(getApiService).mockReturnValue({
+      fetchAccountTokens: vi.fn().mockResolvedValue([token]),
+      resolveApiTokenKey,
+    } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() => expect(result.current.tokens).toHaveLength(1))
+    trackerCompleteMock.mockRejectedValueOnce(new Error("analytics down"))
+
+    await act(async () => {
+      await result.current.toggleKeyVisibility(account, token)
+    })
+
+    expect(resolveApiTokenKey).toHaveBeenCalledTimes(1)
+    expect(result.current.getVisibleTokenKey(token)).toBe("resolved-token-key")
+    expect(vi.mocked(toast.error)).not.toHaveBeenCalled()
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+  })
+
   it("opens add-token state, edits a token, and reloads the current inventory on close", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)
     const account = createDisplayAccount({
@@ -2530,6 +2659,60 @@ describe("useKeyManagement enabled account filtering", () => {
     )
     expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
       "Raw Delete",
+    )
+
+    confirmSpy.mockRestore()
+  })
+
+  it("does not show delete failure feedback when analytics completion rejects after a successful delete", async () => {
+    const account = createDisplayAccount({
+      id: "delete-analytics-fail-acc",
+      name: "Delete Analytics Failure Account",
+    })
+    const token = createToken({
+      id: 910,
+      key: "sk-delete-analytics-failure",
+      name: "Delete Analytics Failure Token",
+      accountId: account.id,
+      accountName: account.name,
+      expired_time: 0,
+    })
+
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    const fetchAccountTokens = vi.fn().mockResolvedValue([token])
+    const deleteApiToken = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(getApiService).mockReturnValue({
+      fetchAccountTokens,
+      deleteApiToken,
+    } as any)
+
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() => expect(result.current.tokens).toHaveLength(1))
+    trackerCompleteMock.mockRejectedValueOnce(new Error("analytics down"))
+
+    await act(async () => {
+      await result.current.handleDeleteToken(token)
+    })
+
+    expect(deleteApiToken).toHaveBeenCalledWith(expect.anything(), token.id)
+    expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
+      "keyManagement:messages.deleteSuccess",
+    )
+    expect(vi.mocked(toast.error)).not.toHaveBeenCalled()
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
     )
 
     confirmSpy.mockRestore()
