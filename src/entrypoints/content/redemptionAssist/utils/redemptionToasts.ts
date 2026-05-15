@@ -1,5 +1,13 @@
 import toast from "react-hot-toast/headless"
 
+import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { DisplaySiteData } from "~/types"
 
 import { ensureRedemptionToastUi } from "../../shared/uiRoot"
@@ -91,6 +99,18 @@ export async function showAccountSelectToast(
   const { createElement, RedemptionAccountSelectToast } =
     await loadRedemptionToastModules()
 
+  void trackProductAnalyticsActionCompleted({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+    actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShowRedemptionAccountSelect,
+    surfaceId:
+      PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionAccountSelectToast,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+    result: PRODUCT_ANALYTICS_RESULTS.Success,
+    insights: {
+      itemCount: accounts.length,
+    },
+  })
+
   return new Promise((resolve) => {
     let resolved = false
 
@@ -135,6 +155,17 @@ export async function showRedemptionPromptToast(
   await ensureRedemptionToastUi()
   const { createElement, RedemptionPromptToast } =
     await loadRedemptionToastModules()
+
+  void trackProductAnalyticsActionCompleted({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+    actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShowRedemptionPrompt,
+    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionPromptToast,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+    result: PRODUCT_ANALYTICS_RESULTS.Success,
+    insights: {
+      itemCount: codes.length,
+    },
+  })
 
   return new Promise((resolve) => {
     let resolved = false
@@ -188,6 +219,22 @@ export async function showRedeemBatchResultToast(
   await ensureRedemptionToastUi()
   const { createElement, RedemptionBatchResultToast } =
     await loadRedemptionToastModules()
+  const successCount = results.filter((item) => item.success).length
+  const failureCount = results.length - successCount
+
+  void trackProductAnalyticsActionCompleted({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+    actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShowRedemptionBatchResult,
+    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionBatchResultToast,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+    result: PRODUCT_ANALYTICS_RESULTS.Success,
+    insights: {
+      itemCount: results.length,
+      successCount,
+      failureCount,
+      skippedCount: 0,
+    },
+  })
 
   return toast.custom(
     (toastInstance) =>

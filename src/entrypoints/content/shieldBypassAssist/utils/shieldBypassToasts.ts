@@ -3,6 +3,14 @@ import toast from "react-hot-toast/headless"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
+import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 
@@ -20,6 +28,14 @@ const logger = createLogger("ShieldBypassToasts")
  */
 export async function showShieldBypassPromptToast() {
   await ensureRedemptionToastUi()
+
+  void trackProductAnalyticsActionCompleted({
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
+    actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShowShieldBypassPrompt,
+    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentShieldBypassPromptToast,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+    result: PRODUCT_ANALYTICS_RESULTS.Success,
+  })
 
   toast.custom(
     () =>

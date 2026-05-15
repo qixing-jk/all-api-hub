@@ -243,6 +243,7 @@ describe("setupRedemptionAssistContent", () => {
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       insights: {
         itemCount: 1,
+        selectedCount: 1,
         successCount: 1,
         failureCount: 0,
       },
@@ -788,6 +789,7 @@ describe("setupRedemptionAssistContent", () => {
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       insights: {
         itemCount: 1,
+        selectedCount: 1,
         successCount: 0,
         failureCount: 1,
       },
@@ -1065,10 +1067,19 @@ describe("setupRedemptionAssistContent", () => {
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       insights: {
         itemCount: 2,
+        selectedCount: 2,
         successCount: 2,
         failureCount: 0,
       },
     })
+
+    const analyticsPayloads = JSON.stringify(
+      mockTrackProductAnalyticsActionCompleted.mock.calls,
+    )
+    expect(analyticsPayloads).not.toContain(codeA)
+    expect(analyticsPayloads).not.toContain(codeB)
+    expect(analyticsPayloads).not.toContain("selected-account")
+    expect(analyticsPayloads).not.toContain("https://example.com/redeem")
 
     cleanup()
   })

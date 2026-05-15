@@ -14,7 +14,10 @@ import {
 import { inputVariants } from "~/components/ui/input"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { cn } from "~/lib/utils"
-import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  startProductAnalyticsAction,
+  type ProductAnalyticsActionInsights,
+} from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -72,9 +75,34 @@ const contentApiCheckAnalyticsScope = {
 function getApiCheckSourceKind(
   trigger: ApiCheckOpenModalDetail["trigger"],
 ): ProductAnalyticsSourceKind {
+  if (trigger === "autoDetect") return PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
+  return PRODUCT_ANALYTICS_SOURCE_KINDS.ContextMenu
+}
+
+/**
+ * Classifies in-modal actions separately from modal launch sources.
+ */
+function getApiCheckActionSourceKind(
+  trigger: ApiCheckOpenModalDetail["trigger"],
+): ProductAnalyticsSourceKind {
   return trigger === "autoDetect"
     ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
     : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual
+}
+
+/**
+ * Adds common safe dimensions to API check action completions.
+ */
+function buildApiCheckAnalyticsInsights(
+  apiType: ApiVerificationApiType,
+  trigger: ApiCheckOpenModalDetail["trigger"],
+  insights: ProductAnalyticsActionInsights = {},
+): ProductAnalyticsActionInsights {
+  return {
+    sourceKind: getApiCheckActionSourceKind(trigger),
+    apiType,
+    ...insights,
+  }
 }
 
 /**
@@ -229,6 +257,20 @@ export function ApiCheckModalHost() {
       resetProbeState(apiType)
 
       setIsOpen(true)
+
+      const tracker = startProductAnalyticsAction({
+        ...contentApiCheckAnalyticsScope,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShowApiCredentialCheckModal,
+      })
+      const hasUsableCredentials = !!extracted.baseUrl && !!extracted.apiKey
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        insights: {
+          sourceKind: getApiCheckSourceKind(detail.trigger),
+          apiType,
+          readyCount: hasUsableCredentials ? 1 : 0,
+          blockedCount: hasUsableCredentials ? 0 : 1,
+        },
+      })
     }
 
     window.addEventListener(API_CHECK_OPEN_MODAL_EVENT, handleOpen as any)
@@ -251,7 +293,7 @@ export function ApiCheckModalHost() {
       })
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
         insights: {
-          sourceKind: getApiCheckSourceKind(trigger),
+          sourceKind: getApiCheckActionSourceKind(trigger),
         },
       })
     }
@@ -280,14 +322,13 @@ export function ApiCheckModalHost() {
 
       if (!modelListSupported) return
 
-      const tracker =
-        origin === "manual"
-          ? startProductAnalyticsAction({
-              ...contentApiCheckAnalyticsScope,
-              actionId:
-                PRODUCT_ANALYTICS_ACTION_IDS.FetchApiCredentialModelList,
-            })
-          : null
+      const tracker = startProductAnalyticsAction({
+        ...contentApiCheckAnalyticsScope,
+        actionId:
+          origin === "auto"
+            ? PRODUCT_ANALYTICS_ACTION_IDS.AutoFetchApiCredentialModelList
+            : PRODUCT_ANALYTICS_ACTION_IDS.FetchApiCredentialModelList,
+      })
 
       const trimmedBaseUrl = baseUrl.trim()
       const trimmedApiKey = apiKey.trim()
@@ -297,12 +338,14 @@ export function ApiCheckModalHost() {
             t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"),
           )
         }
-        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
           insights: {
             sourceKind:
               origin === "auto"
                 ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
                 : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            apiType,
             modelCount: 0,
           },
         })
@@ -321,12 +364,13 @@ export function ApiCheckModalHost() {
 
         // Ignore stale responses when a newer request is already in-flight.
         if (fetchModelsRequestIdRef.current !== requestId) {
-          tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
             insights: {
               sourceKind:
                 origin === "auto"
                   ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
                   : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+              apiType,
               modelCount: 0,
             },
           })
@@ -340,12 +384,13 @@ export function ApiCheckModalHost() {
             // Provide a helpful default to reduce friction.
             setModelId(ids[0] ?? "")
           }
-          tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
             insights: {
               sourceKind:
                 origin === "auto"
                   ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
                   : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+              apiType,
               modelCount: ids.length,
             },
           })
@@ -354,25 +399,27 @@ export function ApiCheckModalHost() {
             response?.error ||
               t("webAiApiCheck:modal.errors.fetchModelsFailed"),
           )
-          tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
             errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
             insights: {
               sourceKind:
                 origin === "auto"
                   ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
                   : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+              apiType,
               modelCount: 0,
             },
           })
         }
       } catch (error) {
-        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             sourceKind:
               origin === "auto"
                 ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
                 : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            apiType,
             modelCount: 0,
           },
         })
@@ -457,10 +504,10 @@ export function ApiCheckModalHost() {
     if (!trimmedBaseUrl || !trimmedApiKey) {
       setValidationError(t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"))
       tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-        insights: {
-          sourceKind: getApiCheckSourceKind(trigger),
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
           mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
-        },
+        }),
       })
       return null
     }
@@ -501,10 +548,9 @@ export function ApiCheckModalHost() {
           ...(analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure
             ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
             : {}),
-          insights: {
-            sourceKind: getApiCheckSourceKind(trigger),
+          insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
             mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
-          },
+          }),
         })
         return result
       }
@@ -532,10 +578,9 @@ export function ApiCheckModalHost() {
       )
       tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: {
-          sourceKind: getApiCheckSourceKind(trigger),
+        insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
           mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
-        },
+        }),
       })
       return fallback
     } catch {
@@ -562,10 +607,9 @@ export function ApiCheckModalHost() {
       )
       tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: {
-          sourceKind: getApiCheckSourceKind(trigger),
+        insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
           mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
-        },
+        }),
       })
       return fallback
     }
@@ -582,13 +626,14 @@ export function ApiCheckModalHost() {
     if (!trimmedBaseUrl || !trimmedApiKey) {
       setValidationError(t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-        insights: {
-          sourceKind: getApiCheckSourceKind(trigger),
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
           mode: PRODUCT_ANALYTICS_MODE_IDS.All,
           itemCount: probeDefinitions.length,
           successCount: 0,
           failureCount: 0,
-        },
+          skippedCount: probeDefinitions.length,
+        }),
       })
       return
     }
@@ -607,6 +652,9 @@ export function ApiCheckModalHost() {
       const failureCount = results.filter(
         (result) => result.status === "fail",
       ).length
+      const skippedCount = results.filter(
+        (result) => result.status === "unsupported",
+      ).length
       const analyticsResult =
         failureCount > 0
           ? PRODUCT_ANALYTICS_RESULTS.Failure
@@ -618,13 +666,13 @@ export function ApiCheckModalHost() {
         ...(analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure
           ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
           : {}),
-        insights: {
-          sourceKind: getApiCheckSourceKind(trigger),
+        insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
           mode: PRODUCT_ANALYTICS_MODE_IDS.All,
           itemCount: results.length || probeDefinitions.length,
           successCount,
           failureCount,
-        },
+          skippedCount,
+        }),
       })
     } finally {
       setIsRunningAll(false)
@@ -648,9 +696,8 @@ export function ApiCheckModalHost() {
     if (!trimmedBaseUrl || !trimmedApiKey) {
       setValidationError(t("webAiApiCheck:modal.errors.missingBaseUrlOrKey"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-        insights: {
-          sourceKind: getApiCheckSourceKind(trigger),
-        },
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        insights: buildApiCheckAnalyticsInsights(apiType, trigger),
       })
       return
     }
@@ -691,9 +738,7 @@ export function ApiCheckModalHost() {
           { duration: 8000 },
         )
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-          insights: {
-            sourceKind: getApiCheckSourceKind(trigger),
-          },
+          insights: buildApiCheckAnalyticsInsights(apiType, trigger),
         })
       } else {
         toast.error(
@@ -702,18 +747,14 @@ export function ApiCheckModalHost() {
         )
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          insights: {
-            sourceKind: getApiCheckSourceKind(trigger),
-          },
+          insights: buildApiCheckAnalyticsInsights(apiType, trigger),
         })
       }
     } catch {
       toast.error(t("webAiApiCheck:modal.errors.saveToProfilesFailed"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: {
-          sourceKind: getApiCheckSourceKind(trigger),
-        },
+        insights: buildApiCheckAnalyticsInsights(apiType, trigger),
       })
     } finally {
       setIsSavingProfile(false)

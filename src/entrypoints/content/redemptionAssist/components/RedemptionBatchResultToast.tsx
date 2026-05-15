@@ -26,6 +26,24 @@ import { createLogger } from "~/utils/core/logger"
  */
 const logger = createLogger("RedemptionBatchResultToast")
 
+/**
+ * Maps retry result text into a coarse analytics error category.
+ */
+function getRetryErrorCategory(item?: RedemptionBatchResultItem) {
+  const message = `${item?.message ?? ""} ${item?.errorMessage ?? ""}`
+    .trim()
+    .toLowerCase()
+
+  if (
+    item?.success === false &&
+    /\b(invalid|validation|malformed|format)\b/.test(message)
+  ) {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
+  }
+
+  return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+}
+
 export interface RedemptionBatchResultItem {
   code: string
   preview: string
@@ -80,7 +98,7 @@ export const RedemptionBatchResultToast: React.FC<
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       } else {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          errorCategory: getRetryErrorCategory(updated),
         })
       }
     } catch (error) {

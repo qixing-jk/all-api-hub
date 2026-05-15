@@ -241,7 +241,7 @@ async function handleContextMenuRedemption(
         dismissOuterLoading: dismissLoadingToast,
       })
       if (confirmedPrompt) {
-        trackConfirmRedemptionPromptCompleted(results)
+        trackConfirmRedemptionPromptCompleted(results, selectedCodes.length)
       }
 
       if (results.length === 1 && results[0]?.success) {
@@ -368,7 +368,7 @@ async function scanForRedemptionCodes(sourceText?: string) {
         codes: selectedCodes,
         dismissOuterLoading: dismissLoadingToast,
       })
-      trackConfirmRedemptionPromptCompleted(results)
+      trackConfirmRedemptionPromptCompleted(results, selectedCodes.length)
 
       if (results.length === 1 && results[0]?.success) {
         await showRedeemResultToast(true, results[0].message)
@@ -420,7 +420,10 @@ type RedeemBatchItem = {
 /**
  * Completes the prompt-confirm action using only aggregate success/failure state.
  */
-function trackConfirmRedemptionPromptCompleted(results: RedeemBatchItem[]) {
+function trackConfirmRedemptionPromptCompleted(
+  results: RedeemBatchItem[],
+  selectedCount?: number,
+) {
   const successCount = results.filter((item) => item.success).length
   const failureCount = results.length - successCount
   const result =
@@ -441,6 +444,7 @@ function trackConfirmRedemptionPromptCompleted(results: RedeemBatchItem[]) {
       : {}),
     insights: {
       itemCount: results.length,
+      ...(typeof selectedCount === "number" ? { selectedCount } : {}),
       successCount,
       failureCount,
     },

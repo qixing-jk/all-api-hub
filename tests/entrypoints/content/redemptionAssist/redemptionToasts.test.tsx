@@ -11,6 +11,13 @@ import type {
   RedemptionPromptCodeItem,
   RedemptionPromptResult,
 } from "~/entrypoints/content/redemptionAssist/components/RedemptionPromptToast"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 
 type LoadingToastProps = {
   message: string
@@ -32,12 +39,14 @@ const {
   toastErrorMock,
   toastDismissMock,
   ensureRedemptionToastUiMock,
+  trackCompletedMock,
 } = vi.hoisted(() => ({
   toastCustomMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
   toastDismissMock: vi.fn(),
   ensureRedemptionToastUiMock: vi.fn(),
+  trackCompletedMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast/headless", () => ({
@@ -51,6 +60,10 @@ vi.mock("react-hot-toast/headless", () => ({
 
 vi.mock("~/entrypoints/content/shared/uiRoot", () => ({
   ensureRedemptionToastUi: ensureRedemptionToastUiMock,
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionCompleted: trackCompletedMock,
 }))
 
 vi.mock(
@@ -191,6 +204,46 @@ describe("redemptionToasts", () => {
     expect(toastDismissMock).toHaveBeenCalledWith("account-toast-id")
   })
 
+  it("tracks account-select exposure with only account count insight", async () => {
+    toastCustomMock.mockReturnValue("account-toast-return")
+
+    const { showAccountSelectToast } = await import(
+      "~/entrypoints/content/redemptionAssist/utils/redemptionToasts"
+    )
+
+    void showAccountSelectToast(
+      [
+        {
+          id: "secret-account-id",
+          name: "Private Account",
+          siteName: "Private Site",
+          baseUrl: "https://private.example.com",
+        } as any,
+      ],
+      { title: "Pick account" },
+    )
+
+    await waitFor(() => {
+      expect(trackCompletedMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShowRedemptionAccountSelect,
+        surfaceId:
+          PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionAccountSelectToast,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        insights: {
+          itemCount: 1,
+        },
+      })
+    })
+
+    const analyticsPayloads = JSON.stringify(trackCompletedMock.mock.calls)
+    expect(analyticsPayloads).not.toContain("secret-account-id")
+    expect(analyticsPayloads).not.toContain("Private Account")
+    expect(analyticsPayloads).not.toContain("Private Site")
+    expect(analyticsPayloads).not.toContain("https://private.example.com")
+  })
+
   it("resolves the redemption prompt exactly once and preserves the first action payload", async () => {
     toastCustomMock.mockReturnValue("prompt-toast-return")
 
@@ -230,6 +283,38 @@ describe("redemptionToasts", () => {
     await expect(promptPromise).resolves.toEqual(firstResult)
     expect(toastDismissMock).toHaveBeenCalledTimes(1)
     expect(toastDismissMock).toHaveBeenCalledWith("prompt-toast-id")
+  })
+
+  it("tracks redemption prompt exposure with item count only", async () => {
+    toastCustomMock.mockReturnValue("prompt-toast-return")
+
+    const { showRedemptionPromptToast } = await import(
+      "~/entrypoints/content/redemptionAssist/utils/redemptionToasts"
+    )
+
+    void showRedemptionPromptToast("Prompt message", [
+      { code: "secret-code-a", preview: "AA**" },
+      { code: "secret-code-b", preview: "BB**" },
+    ])
+
+    await waitFor(() => {
+      expect(trackCompletedMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShowRedemptionPrompt,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionPromptToast,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        insights: {
+          itemCount: 2,
+        },
+      })
+    })
+
+    const analyticsPayloads = JSON.stringify(trackCompletedMock.mock.calls)
+    expect(analyticsPayloads).not.toContain("secret-code-a")
+    expect(analyticsPayloads).not.toContain("secret-code-b")
+    expect(analyticsPayloads).not.toContain("AA**")
+    expect(analyticsPayloads).not.toContain("BB**")
   })
 
   it("renders the batch result toast with an indefinite duration and dismisses on close", async () => {
@@ -273,5 +358,54 @@ describe("redemptionToasts", () => {
     batchElement.props.onClose()
 
     expect(toastDismissMock).toHaveBeenCalledWith("batch-toast-id")
+  })
+
+  it("tracks batch-result exposure with aggregate result counts only", async () => {
+    toastCustomMock.mockReturnValue("batch-toast-return")
+
+    const { showRedeemBatchResultToast } = await import(
+      "~/entrypoints/content/redemptionAssist/utils/redemptionToasts"
+    )
+
+    await showRedeemBatchResultToast(
+      [
+        {
+          code: "secret-code-a",
+          preview: "AA**",
+          success: true,
+          message: "Redeemed at https://private.example.com",
+        },
+        {
+          code: "secret-code-b",
+          preview: "BB**",
+          success: false,
+          message: "Failed for Private Account",
+        },
+      ],
+      vi.fn(),
+    )
+
+    expect(trackCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShowRedemptionBatchResult,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionBatchResultToast,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        itemCount: 2,
+        successCount: 1,
+        failureCount: 1,
+        skippedCount: 0,
+      },
+    })
+
+    const analyticsPayloads = JSON.stringify(trackCompletedMock.mock.calls)
+    expect(analyticsPayloads).not.toContain("secret-code-a")
+    expect(analyticsPayloads).not.toContain("secret-code-b")
+    expect(analyticsPayloads).not.toContain("AA**")
+    expect(analyticsPayloads).not.toContain("BB**")
+    expect(analyticsPayloads).not.toContain("https://private.example.com")
+    expect(analyticsPayloads).not.toContain("Private Account")
   })
 })

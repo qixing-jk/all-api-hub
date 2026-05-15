@@ -89,10 +89,14 @@ export const PRODUCT_ANALYTICS_SOURCE_KINDS = {
   ApiCredentialProfileContentApiCheck:
     "api_credential_profile_content_api_check",
   ApiCredentialProfileAccountToken: "api_credential_profile_account_token",
+  ClipboardEvent: "clipboard_event",
+  ContextMenu: "context_menu",
+  CopyTargetClipboard: "copy_target_clipboard",
   ModelAllAccounts: "model_all_accounts",
   ModelAccount: "model_account",
   ModelProfile: "model_profile",
   ModelFallbackCatalog: "model_fallback_catalog",
+  Selection: "selection",
   Unknown: "unknown",
 } as const
 
@@ -276,6 +280,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
     "detected_api_credential_check_dismissed",
   DetectedApiCredentialReviewStarted: "detected_api_credential_review_started",
   DismissDetectedApiCredentialCheck: "dismiss_detected_api_credential_check",
+  AutoFetchApiCredentialModelList: "auto_fetch_api_credential_model_list",
   FetchApiCredentialModelList: "fetch_api_credential_model_list",
   FilterAutoCheckinResults: "filter_auto_checkin_results",
   FilterAccounts: "filter_accounts",
@@ -395,6 +400,11 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   ShareOverviewSnapshot: "share_overview_snapshot",
   ShieldBypassPromptDismissed: "shield_bypass_prompt_dismissed",
   ShieldBypassSettingsVisited: "shield_bypass_settings_visited",
+  ShowApiCredentialCheckModal: "show_api_credential_check_modal",
+  ShowRedemptionAccountSelect: "show_redemption_account_select",
+  ShowRedemptionBatchResult: "show_redemption_batch_result",
+  ShowRedemptionPrompt: "show_redemption_prompt",
+  ShowShieldBypassPrompt: "show_shield_bypass_prompt",
   StartBatchModelVerify: "start_batch_model_verify",
   StopBatchModelVerify: "stop_batch_model_verify",
   ScheduledManagedSiteModelSync: "scheduled_managed_site_model_sync",
@@ -626,8 +636,11 @@ export type ProductAnalyticsManagedSiteType =
   (typeof PRODUCT_ANALYTICS_MANAGED_SITE_TYPES)[keyof typeof PRODUCT_ANALYTICS_MANAGED_SITE_TYPES]
 
 export const PRODUCT_ANALYTICS_FAILURE_STAGES = {
+  Detection: "detection",
   Parse: "parse",
+  Permission: "permission",
   Validation: "validation",
+  Prompt: "prompt",
   Persist: "persist",
   Preview: "preview",
   Execute: "execute",

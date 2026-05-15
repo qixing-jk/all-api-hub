@@ -247,4 +247,28 @@ describe("product analytics event enums", () => {
       Unset: "unset",
     })
   })
+
+  it("defines fixed content-script analytics actions and dimensions", () => {
+    expect(PRODUCT_ANALYTICS_ACTION_IDS).toMatchObject({
+      ShowApiCredentialCheckModal: "show_api_credential_check_modal",
+      AutoFetchApiCredentialModelList: "auto_fetch_api_credential_model_list",
+      ShowRedemptionPrompt: "show_redemption_prompt",
+      ShowRedemptionAccountSelect: "show_redemption_account_select",
+      ShowRedemptionBatchResult: "show_redemption_batch_result",
+      ShowShieldBypassPrompt: "show_shield_bypass_prompt",
+    })
+
+    expect(PRODUCT_ANALYTICS_SOURCE_KINDS).toMatchObject({
+      ContextMenu: "context_menu",
+      ClipboardEvent: "clipboard_event",
+      CopyTargetClipboard: "copy_target_clipboard",
+      Selection: "selection",
+    })
+
+    expect(PRODUCT_ANALYTICS_FAILURE_STAGES).toMatchObject({
+      Detection: "detection",
+      Prompt: "prompt",
+      Permission: "permission",
+    })
+  })
 })

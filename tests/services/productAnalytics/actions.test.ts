@@ -283,6 +283,43 @@ describe("product analytics action helpers", () => {
     )
   })
 
+  it("maps content-script detection insights to sanitized action completion fields", async () => {
+    const { trackProductAnalyticsActionCompleted } = await import(
+      "~/services/productAnalytics/actions"
+    )
+
+    await trackProductAnalyticsActionCompleted({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShowApiCredentialCheckModal,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        apiType: PRODUCT_ANALYTICS_API_TYPES.OpenAiCompatible,
+        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ContextMenu,
+        failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+        readyCount: 2,
+        blockedCount: 0,
+      },
+    })
+
+    expect(trackMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.ShowApiCredentialCheckModal,
+        surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        api_type: PRODUCT_ANALYTICS_API_TYPES.OpenAiCompatible,
+        source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.ContextMenu,
+        failure_stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+        ready_count_bucket: "2_3",
+        blocked_count_bucket: "0",
+      },
+    )
+  })
+
   it("omits absent optional completion metadata fields", async () => {
     const { trackProductAnalyticsActionCompleted } = await import(
       "~/services/productAnalytics/actions"

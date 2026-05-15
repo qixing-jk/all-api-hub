@@ -6,6 +6,7 @@ import { RedemptionBatchResultToast } from "~/entrypoints/content/redemptionAssi
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -80,5 +81,48 @@ describe("RedemptionBatchResultToast", () => {
     expect(completeActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
     )
+  })
+
+  it("tracks failed retry completion as validation when the retry returns an invalid-code result without leaking raw code", async () => {
+    const user = userEvent.setup()
+
+    render(
+      <RedemptionBatchResultToast
+        results={[
+          {
+            code: "raw-secret-code",
+            preview: "RA**",
+            success: false,
+            message: "Failed",
+          },
+        ]}
+        onRetry={vi.fn().mockResolvedValue({
+          code: "raw-secret-code",
+          preview: "RA**",
+          success: false,
+          message: "Invalid redemption code",
+          errorMessage: "Invalid redemption code",
+        })}
+        onClose={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.retry" }),
+    )
+
+    expect(completeActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      },
+    )
+
+    const analyticsPayloads = JSON.stringify([
+      startActionMock.mock.calls,
+      completeActionMock.mock.calls,
+    ])
+    expect(analyticsPayloads).not.toContain("raw-secret-code")
+    expect(analyticsPayloads).not.toContain("RA**")
   })
 })
