@@ -118,7 +118,7 @@ describe("siteEcosystem analytics", () => {
     expect(serialized).not.toContain("private notes")
   })
 
-  it("decides whether the site ecosystem snapshot interval has elapsed", () => {
+  it("decides whether the three-day site ecosystem snapshot interval has elapsed", () => {
     const now = Date.parse("2026-05-12T00:00:00.000Z")
 
     expect(shouldSendSiteEcosystemSnapshot(undefined, now)).toBe(true)
@@ -134,6 +134,9 @@ describe("siteEcosystem analytics", () => {
         now - SITE_ECOSYSTEM_SNAPSHOT_INTERVAL_MS,
         now,
       ),
+    ).toBe(true)
+    expect(
+      shouldSendSiteEcosystemSnapshot(now - 3 * 24 * 60 * 60 * 1000, now),
     ).toBe(true)
   })
 })

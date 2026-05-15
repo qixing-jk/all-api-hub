@@ -13,7 +13,7 @@ import {
 } from "./events"
 import { bucketCount } from "./privacy"
 
-export const SITE_ECOSYSTEM_SNAPSHOT_INTERVAL_MS = 7 * 24 * 60 * 60 * 1000
+export const SITE_ECOSYSTEM_SNAPSHOT_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000
 
 type SiteEcosystemSnapshotEvent = {
   eventName: typeof PRODUCT_ANALYTICS_EVENTS.SiteEcosystemSnapshot
@@ -55,7 +55,7 @@ function getSiteKeyWithoutExportingIt(account: SiteAccount): string {
 }
 
 /**
- * Checks whether the seven-day ecosystem snapshot cadence has elapsed.
+ * Checks whether the three-day ecosystem snapshot cadence has elapsed.
  */
 export function shouldSendSiteEcosystemSnapshot(
   lastSentAt: number | undefined,

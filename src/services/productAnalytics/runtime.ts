@@ -1,6 +1,10 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { ACCOUNT_STORAGE_KEYS } from "~/services/core/storageKeys"
+import {
+  ACCOUNT_STORAGE_KEYS,
+  USER_PREFERENCES_STORAGE_KEYS,
+} from "~/services/core/storageKeys"
+import { userPreferences } from "~/services/preferences/userPreferences"
 import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -12,6 +16,8 @@ import {
   type ProductAnalyticsRuntimeRequest,
 } from "./events"
 import { productAnalyticsPreferences } from "./preferences"
+import { buildSettingsSnapshotEvents } from "./settings"
+import { shouldSendSettingsSnapshot } from "./settingsSnapshot"
 import {
   buildSiteEcosystemAnalyticsEvents,
   shouldSendSiteEcosystemSnapshot,
@@ -19,7 +25,9 @@ import {
 
 const logger = createLogger("ProductAnalyticsRuntime")
 const ACCOUNT_CHANGE_SNAPSHOT_DEBOUNCE_MS = 2_000
+const PREFERENCES_CHANGE_SNAPSHOT_DEBOUNCE_MS = 2_000
 let cleanupAccountChangeListener: (() => void) | null = null
+let cleanupPreferencesChangeListener: (() => void) | null = null
 
 /**
  * Checks whether an incoming runtime event name is one of the fixed analytics enums.
@@ -63,6 +71,33 @@ async function captureSiteEcosystemSnapshot(): Promise<boolean> {
 }
 
 /**
+ * Captures the coarse settings snapshots when analytics is enabled and cadence allows it.
+ */
+async function captureSettingsSnapshot(): Promise<boolean> {
+  if (!(await productAnalyticsPreferences.isEnabled())) return false
+
+  const state = await productAnalyticsPreferences.getState()
+  const now = Date.now()
+  if (!shouldSendSettingsSnapshot(state.lastSettingsSnapshotAt, now)) {
+    return false
+  }
+
+  const preferences = await userPreferences.getPreferences()
+  const events = buildSettingsSnapshotEvents(preferences, "background")
+
+  for (const properties of events) {
+    const captured = await productAnalyticsClient.capture(
+      PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      properties,
+    )
+    if (!captured) return false
+  }
+
+  await productAnalyticsPreferences.setLastSettingsSnapshotAt(now)
+  return true
+}
+
+/**
  * Validates and forwards a single typed analytics event request.
  */
 async function handleTrackEventRequest(
@@ -86,6 +121,14 @@ async function handleSiteEcosystemSnapshotRequest() {
 }
 
 /**
+ * Captures a cadence-limited settings snapshot request.
+ */
+async function handleSettingsSnapshotRequest() {
+  const success = await captureSettingsSnapshot()
+  return { success }
+}
+
+/**
  * Routes product analytics runtime actions to their focused handlers.
  */
 async function resolveProductAnalyticsResponse(
@@ -99,6 +142,8 @@ async function resolveProductAnalyticsResponse(
       )
     case RuntimeActionIds.ProductAnalyticsTrackSiteEcosystemSnapshot:
       return await handleSiteEcosystemSnapshotRequest()
+    case RuntimeActionIds.ProductAnalyticsTrackSettingsSnapshot:
+      return await handleSettingsSnapshotRequest()
     default:
       return { success: false }
   }
@@ -128,6 +173,17 @@ function captureSiteEcosystemSnapshotBestEffort() {
   void captureSiteEcosystemSnapshot().catch((error) => {
     if (isDevelopmentMode()) {
       logger.debug("Product analytics snapshot failed", error)
+    }
+  })
+}
+
+/**
+ * Starts settings snapshot capture without letting background lifecycle hooks fail on analytics errors.
+ */
+function captureSettingsSnapshotBestEffort() {
+  void captureSettingsSnapshot().catch((error) => {
+    if (isDevelopmentMode()) {
+      logger.debug("Product analytics settings snapshot failed", error)
     }
   })
 }
@@ -185,8 +241,67 @@ export function setupProductAnalyticsAccountChangeListener() {
 }
 
 /**
+ * Watches local preference storage changes and debounces settings snapshot capture.
+ */
+export function setupProductAnalyticsPreferencesChangeListener() {
+  if (cleanupPreferencesChangeListener) {
+    return cleanupPreferencesChangeListener
+  }
+
+  if (!browser.storage?.onChanged) {
+    return () => {}
+  }
+
+  let timer: ReturnType<typeof setTimeout> | null = null
+  let isListening = true
+
+  const schedule = () => {
+    if (timer) clearTimeout(timer)
+    timer = setTimeout(() => {
+      timer = null
+      captureSettingsSnapshotBestEffort()
+    }, PREFERENCES_CHANGE_SNAPSHOT_DEBOUNCE_MS)
+  }
+
+  const handleStorageChanged = (
+    changes: Record<string, browser.storage.StorageChange>,
+    areaName: string,
+  ) => {
+    if (!isListening) return
+    if (areaName !== "local") return
+    if (!(USER_PREFERENCES_STORAGE_KEYS.USER_PREFERENCES in changes)) return
+    schedule()
+  }
+
+  browser.storage.onChanged.addListener(handleStorageChanged)
+
+  cleanupPreferencesChangeListener = () => {
+    if (!cleanupPreferencesChangeListener) {
+      return
+    }
+
+    isListening = false
+    if (timer) {
+      clearTimeout(timer)
+      timer = null
+    }
+    browser.storage.onChanged.removeListener(handleStorageChanged)
+    cleanupPreferencesChangeListener = null
+  }
+
+  return cleanupPreferencesChangeListener
+}
+
+/**
  * Triggers the startup site ecosystem snapshot in the background worker.
  */
 export function triggerStartupSiteEcosystemSnapshot() {
   captureSiteEcosystemSnapshotBestEffort()
+}
+
+/**
+ * Triggers the startup settings snapshot in the background worker.
+ */
+export function triggerStartupSettingsSnapshot() {
+  captureSettingsSnapshotBestEffort()
 }

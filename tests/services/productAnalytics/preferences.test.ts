@@ -141,9 +141,27 @@ describe("productAnalyticsPreferences", () => {
     )
   })
 
+  it("persists settings snapshot timestamp", async () => {
+    await expect(
+      productAnalyticsPreferences.setLastSettingsSnapshotAt(67890),
+    ).resolves.toBe(true)
+
+    await expect(productAnalyticsPreferences.getState()).resolves.toEqual(
+      expect.objectContaining({
+        lastSettingsSnapshotAt: 67890,
+      }),
+    )
+  })
+
   it("normalizes persisted anonymous id whitespace", () => {
     expect(normalizeState({ anonymousId: "  analytics-existing  " })).toEqual({
       anonymousId: "analytics-existing",
+    })
+  })
+
+  it("normalizes persisted settings snapshot timestamp", () => {
+    expect(normalizeState({ lastSettingsSnapshotAt: 67890 })).toEqual({
+      lastSettingsSnapshotAt: 67890,
     })
   })
 })

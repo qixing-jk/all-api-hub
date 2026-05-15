@@ -17,6 +17,8 @@ import {
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   setupProductAnalyticsAccountChangeListener,
+  setupProductAnalyticsPreferencesChangeListener,
+  triggerStartupSettingsSnapshot,
   triggerStartupSiteEcosystemSnapshot,
 } from "~/services/productAnalytics/runtime"
 import { tagStorage } from "~/services/tags/tagStorage"
@@ -67,6 +69,7 @@ export default defineBackground(() => {
   setupCookieInterceptorListeners()
   setupContextMenus()
   setupProductAnalyticsAccountChangeListener()
+  setupProductAnalyticsPreferencesChangeListener()
 
   /**
    * 监听插件安装/更新事件
@@ -205,4 +208,5 @@ async function main() {
 
   await initializeCookieInterceptors()
   triggerStartupSiteEcosystemSnapshot()
+  triggerStartupSettingsSnapshot()
 }

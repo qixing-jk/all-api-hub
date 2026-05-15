@@ -815,9 +815,15 @@ export type ProductAnalyticsTrackSiteEcosystemRequest = {
   reason: "startup" | "account_changed" | "manual"
 }
 
+export type ProductAnalyticsTrackSettingsSnapshotRequest = {
+  action: typeof RuntimeActionIds.ProductAnalyticsTrackSettingsSnapshot
+  reason: "startup" | "preferences_changed" | "manual"
+}
+
 export type ProductAnalyticsRuntimeRequest =
   | ProductAnalyticsTrackRequest
   | ProductAnalyticsTrackSiteEcosystemRequest
+  | ProductAnalyticsTrackSettingsSnapshotRequest
 
 /**
  * Sends a typed product analytics event to the background runtime handler.

@@ -134,6 +134,10 @@ export const RuntimeActionIds = {
     RuntimeActionPrefixes.ProductAnalytics,
     "trackSiteEcosystemSnapshot",
   ),
+  ProductAnalyticsTrackSettingsSnapshot: composeRuntimeAction(
+    RuntimeActionPrefixes.ProductAnalytics,
+    "trackSettingsSnapshot",
+  ),
 
   ReleaseUpdateGetStatus: composeRuntimeAction(
     RuntimeActionPrefixes.ReleaseUpdate,

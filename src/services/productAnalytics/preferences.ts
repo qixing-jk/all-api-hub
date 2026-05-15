@@ -16,6 +16,7 @@ interface ProductAnalyticsPreferenceState {
   enabled?: boolean
   anonymousId?: string
   lastSiteEcosystemSnapshotAt?: number
+  lastSettingsSnapshotAt?: number
   updatedAt?: number
 }
 
@@ -49,6 +50,13 @@ export function normalizeState(
     Number.isFinite(state.lastSiteEcosystemSnapshotAt)
   ) {
     normalized.lastSiteEcosystemSnapshotAt = state.lastSiteEcosystemSnapshotAt
+  }
+
+  if (
+    typeof state.lastSettingsSnapshotAt === "number" &&
+    Number.isFinite(state.lastSettingsSnapshotAt)
+  ) {
+    normalized.lastSettingsSnapshotAt = state.lastSettingsSnapshotAt
   }
 
   if (typeof state.updatedAt === "number" && Number.isFinite(state.updatedAt)) {
@@ -160,6 +168,23 @@ class ProductAnalyticsPreferencesService {
       return true
     } catch (error) {
       logger.warn("Failed to update site ecosystem snapshot timestamp", error)
+      return false
+    }
+  }
+
+  async setLastSettingsSnapshotAt(timestamp: number): Promise<boolean> {
+    if (!Number.isFinite(timestamp)) {
+      return false
+    }
+
+    try {
+      await this.withStorageWriteLock(async () => {
+        const state = await this.getState()
+        await this.saveState(state, { lastSettingsSnapshotAt: timestamp })
+      })
+      return true
+    } catch (error) {
+      logger.warn("Failed to update settings snapshot timestamp", error)
       return false
     }
   }
