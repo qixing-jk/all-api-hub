@@ -406,7 +406,7 @@ export default function ManagedSiteModelSync({
     entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
   }
 
-  const completeModelSyncExecutionAnalytics = async (
+  const completeModelSyncExecutionAnalytics = (
     tracker: ReturnType<typeof startProductAnalyticsAction>,
     execution: ExecutionResult,
     insights?: ProductAnalyticsActionInsights,
@@ -420,14 +420,6 @@ export default function ManagedSiteModelSync({
         ...options.insights,
         ...insights,
       },
-    })
-  }
-
-  const completeModelSyncFailureAnalytics = async (
-    tracker: ReturnType<typeof startProductAnalyticsAction>,
-  ) => {
-    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
     })
   }
 
@@ -480,16 +472,20 @@ export default function ManagedSiteModelSync({
       if (response.success) {
         notifySyncCompletion(response.data)
         setLastExecution(response.data)
-        await completeModelSyncExecutionAnalytics(tracker, response.data, {
+        completeModelSyncExecutionAnalytics(tracker, response.data, {
           mode: PRODUCT_ANALYTICS_MODE_IDS.RetryFailed,
         })
       } else {
         toast.error(t("messages.error.syncFailed", { error: response.error }))
-        await completeModelSyncFailureAnalytics(tracker)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
       }
     } catch (error: any) {
       toast.error(t("messages.error.syncFailed", { error: error.message }))
-      await completeModelSyncFailureAnalytics(tracker)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
   }
 
@@ -507,16 +503,20 @@ export default function ManagedSiteModelSync({
       if (response.success) {
         notifySyncCompletion(response.data)
         setLastExecution(response.data)
-        await completeModelSyncExecutionAnalytics(tracker, response.data, {
+        completeModelSyncExecutionAnalytics(tracker, response.data, {
           mode: PRODUCT_ANALYTICS_MODE_IDS.All,
         })
       } else {
         toast.error(t("messages.error.syncFailed", { error: response.error }))
-        await completeModelSyncFailureAnalytics(tracker)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
       }
     } catch (error: any) {
       toast.error(t("messages.error.syncFailed", { error: error.message }))
-      await completeModelSyncFailureAnalytics(tracker)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
   }
 
@@ -560,7 +560,7 @@ export default function ManagedSiteModelSync({
         } else {
           setManualSelectedIds(new Set())
         }
-        await completeModelSyncExecutionAnalytics(tracker, response.data, {
+        completeModelSyncExecutionAnalytics(tracker, response.data, {
           mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
           sourceKind:
             source === "history"
@@ -570,11 +570,15 @@ export default function ManagedSiteModelSync({
         })
       } else {
         toast.error(t("messages.error.syncFailed", { error: response.error }))
-        await completeModelSyncFailureAnalytics(tracker)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
       }
     } catch (error: any) {
       toast.error(t("messages.error.syncFailed", { error: error.message }))
-      await completeModelSyncFailureAnalytics(tracker)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
   }
 
@@ -640,18 +644,22 @@ export default function ManagedSiteModelSync({
             }
           })
         }
-        await completeModelSyncExecutionAnalytics(tracker, response.data, {
+        completeModelSyncExecutionAnalytics(tracker, response.data, {
           mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
           selectedCount: 1,
         })
       } else {
         toast.error(t("messages.error.syncFailed", { error: response.error }))
-        await completeModelSyncFailureAnalytics(tracker)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
       }
     } catch (error: any) {
       toast.error(t("messages.error.syncFailed", { error: error.message }))
-      await completeModelSyncFailureAnalytics(tracker)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     } finally {
       setRunningChannelId(null)
     }

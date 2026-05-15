@@ -21,7 +21,6 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-  type ProductAnalyticsResult,
 } from "~/services/productAnalytics/events"
 import type { DisplaySiteData } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
@@ -35,21 +34,6 @@ import { useAccountDataContext } from "./AccountDataContext"
  * Unified logger scoped to account action handlers (refresh, check-in, external flows).
  */
 const logger = createLogger("AccountActionsContext")
-type AccountActionTracker = ReturnType<typeof startProductAnalyticsAction>
-
-/**
- * Starts account-action analytics without letting telemetry initialization abort the user flow.
- */
-function startAccountActionTrackerBestEffort(
-  context: ProductAnalyticsActionContext,
-): AccountActionTracker | null {
-  try {
-    return startProductAnalyticsAction(context)
-  } catch (error) {
-    logger.warn("Failed to start product analytics action", error)
-    return null
-  }
-}
 
 // 1. 定义 Context 的值类型
 interface AccountActionsContextType {
@@ -106,7 +90,7 @@ export const AccountActionsProvider = ({
       if (account.disabled === true) return
 
       setRefreshingAccountId(account.id)
-      const tracker = startAccountActionTrackerBestEffort({
+      const tracker = startProductAnalyticsAction({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccount,
         surfaceId:
@@ -114,23 +98,6 @@ export const AccountActionsProvider = ({
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       })
       let analyticsCompleted = false
-      const completeRefreshAnalytics = async (
-        result: ProductAnalyticsResult,
-        options?: Parameters<AccountActionTracker["complete"]>[1],
-      ) => {
-        if (!tracker) return
-
-        analyticsCompleted = true
-        try {
-          if (options) {
-            tracker.complete(result, options)
-            return
-          }
-          tracker.complete(result)
-        } catch {
-          // Product analytics must never block or alter the refresh action.
-        }
-      }
 
       const refreshPromise = async () => {
         const result = await accountStorage.refreshAccount(account.id, force)
@@ -150,10 +117,12 @@ export const AccountActionsProvider = ({
         await toast.promise(
           refreshPromise().then(async (result) => {
             if (!result.refreshed) {
-              await completeRefreshAnalytics(PRODUCT_ANALYTICS_RESULTS.Skipped)
+              analyticsCompleted = true
+              tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
               return t("messages:toast.success.refreshSkipped")
             }
-            await completeRefreshAnalytics(PRODUCT_ANALYTICS_RESULTS.Success)
+            analyticsCompleted = true
+            tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
             return t("messages:toast.success.refreshAccount", {
               accountName: account.name,
             })
@@ -170,7 +139,8 @@ export const AccountActionsProvider = ({
         )
       } catch (error) {
         if (!analyticsCompleted) {
-          await completeRefreshAnalytics(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          analyticsCompleted = true
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
             errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           })
         }
@@ -341,28 +311,9 @@ export const AccountActionsProvider = ({
       },
     ) => {
       const tracker = options?.analyticsContext
-        ? startAccountActionTrackerBestEffort(options.analyticsContext)
+        ? startProductAnalyticsAction(options.analyticsContext)
         : undefined
       let analyticsCompleted = false
-      const completeExternalCheckInAnalytics = async (
-        result: ProductAnalyticsResult,
-        completeOptions?: Parameters<
-          NonNullable<typeof tracker>["complete"]
-        >[1],
-      ) => {
-        if (!tracker) return
-
-        analyticsCompleted = true
-        try {
-          if (completeOptions) {
-            tracker.complete(result, completeOptions)
-            return
-          }
-          tracker.complete(result)
-        } catch {
-          // Product analytics must never block or alter external check-in behavior.
-        }
-      }
 
       const enabledAccounts = accounts.filter((account) => !account.disabled)
       const accountsToOpen = options?.openAll
@@ -372,9 +323,8 @@ export const AccountActionsProvider = ({
           )
 
       if (!accountsToOpen.length) {
-        await completeExternalCheckInAnalytics(
-          PRODUCT_ANALYTICS_RESULTS.Skipped,
-        )
+        analyticsCompleted = true
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
         toast.error(t("messages:toast.error.externalCheckInNonePending"))
         return
       }
@@ -387,24 +337,20 @@ export const AccountActionsProvider = ({
         })
 
         if (!response?.success || !response.data) {
-          await completeExternalCheckInAnalytics(
-            PRODUCT_ANALYTICS_RESULTS.Failure,
-            {
-              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            },
-          )
+          analyticsCompleted = true
+          tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          })
           throw new Error(response?.error || "Empty response")
         }
 
         await loadAccountData()
 
         if (response.data.failedCount > 0) {
-          await completeExternalCheckInAnalytics(
-            PRODUCT_ANALYTICS_RESULTS.Failure,
-            {
-              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            },
-          )
+          analyticsCompleted = true
+          tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          })
           toast.error(
             t("messages:errors.operation.failed", {
               error: `${response.data.failedCount}/${response.data.totalCount} failed`,
@@ -412,18 +358,15 @@ export const AccountActionsProvider = ({
           )
           return
         }
-        await completeExternalCheckInAnalytics(
-          PRODUCT_ANALYTICS_RESULTS.Success,
-        )
+        analyticsCompleted = true
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       } catch (error) {
         logger.error("Error opening external check-ins", error)
         if (!analyticsCompleted) {
-          await completeExternalCheckInAnalytics(
-            PRODUCT_ANALYTICS_RESULTS.Failure,
-            {
-              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            },
-          )
+          analyticsCompleted = true
+          tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          })
         }
         toast.error(
           t("messages:errors.operation.failed", {

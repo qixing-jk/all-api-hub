@@ -834,12 +834,12 @@ export function useAccountDialog({
   )
 
   const handleImportCookieAuthSessionCookie = async () => {
-    const analyticsAction = startAccountDialogAnalyticsActionBestEffort(
+    const analyticsAction = startAccountDialogAnalyticsAction(
       PRODUCT_ANALYTICS_ACTION_IDS.ImportAccountCookies,
     )
 
     if (!url.trim()) {
-      analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
       })
       toast.error(t("messages.urlRequired"))
@@ -858,12 +858,12 @@ export function useAccountDialog({
         setCookieAuthSessionCookie(response.data)
         setShowCookiePermissionWarning(false)
         toast.success(t("messages.importCookiesSuccess"))
-        analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       } else {
         setShowCookiePermissionWarning(false)
 
         if (!response?.errorCode) {
-          analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
             errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           })
           toast.error(
@@ -877,13 +877,13 @@ export function useAccountDialog({
         switch (response.errorCode) {
           case COOKIE_IMPORT_FAILURE_REASONS.PermissionDenied:
             setShowCookiePermissionWarning(true)
-            analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+            analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
               errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
             })
             toast.error(t("messages.importCookiesPermissionDenied"))
             break
           case COOKIE_IMPORT_FAILURE_REASONS.ReadFailed:
-            analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+            analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
               errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
             })
             toast.error(
@@ -894,7 +894,7 @@ export function useAccountDialog({
             break
           case COOKIE_IMPORT_FAILURE_REASONS.NoCookiesFound:
           default:
-            analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+            analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
             toast.error(t("messages.importCookiesEmpty"))
             break
         }
@@ -904,7 +904,7 @@ export function useAccountDialog({
       toast.error(
         t("messages.importCookiesFailed", { error: getErrorMessage(error) }),
       )
-      analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     } finally {
@@ -964,12 +964,12 @@ export function useAccountDialog({
    * 2) Fall back to the background temp-window auto-detect flow.
    */
   const handleImportSub2apiSession = async () => {
-    const analyticsAction = startAccountDialogAnalyticsActionBestEffort(
+    const analyticsAction = startAccountDialogAnalyticsAction(
       PRODUCT_ANALYTICS_ACTION_IDS.ImportSub2apiSession,
     )
 
     if (!url.trim()) {
-      analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
       })
       toast.error(t("messages.urlRequired"))
@@ -1027,7 +1027,7 @@ export function useAccountDialog({
           ? imported.sub2apiAuth.refreshToken.trim()
           : ""
       if (!refreshToken) {
-        analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
         toast.error(t("messages.importSub2apiSessionMissing"))
         return
       }
@@ -1061,12 +1061,12 @@ export function useAccountDialog({
       }))
 
       toast.success(t("messages.importSub2apiSessionSuccess"))
-      analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       toast.error(
         t("messages.operationFailed", { error: getErrorMessage(error) }),
       )
-      analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     } finally {
@@ -1075,12 +1075,12 @@ export function useAccountDialog({
   }
 
   const handleAutoDetect = async () => {
-    const analyticsAction = startAccountDialogAnalyticsActionBestEffort(
+    const analyticsAction = startAccountDialogAnalyticsAction(
       PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
     )
 
     if (!url.trim()) {
-      analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
       })
       return
@@ -1089,7 +1089,7 @@ export function useAccountDialog({
     try {
       const shouldContinue = await ensureDuplicateAccountAddConfirmation()
       if (!shouldContinue) {
-        analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
         return
       }
     } catch (error) {
@@ -1098,7 +1098,7 @@ export function useAccountDialog({
           error: getErrorMessage(error),
         }),
       )
-      analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
       return
@@ -1114,7 +1114,7 @@ export function useAccountDialog({
       if (!result.success) {
         setDetectionError(result.detailedError || null)
         enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
-        analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: getAutoDetectAnalyticsErrorCategory(
             result.detailedError?.type,
           ),
@@ -1227,14 +1227,14 @@ export function useAccountDialog({
         if (mode === DIALOG_MODES.EDIT) {
           toast.success(t("messages.autoDetectSuccess"))
         }
-        analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       }
     } catch (error) {
       logger.error("Auto-detect failed", { error, url: url.trim(), authType })
       const detectionError = analyzeAutoDetectError(error)
       setDetectionError(detectionError)
       enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
-      analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: getAutoDetectAnalyticsErrorCategory(detectionError.type),
       })
     } finally {
@@ -1262,7 +1262,7 @@ export function useAccountDialog({
     skipSub2ApiKeyPrompt?: boolean
     skipAutoProvisionKeyOnAccountAdd?: boolean
   }) => {
-    const analyticsAction = startAccountAnalyticsActionBestEffort({
+    const analyticsAction = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
       actionId:
         mode === DIALOG_MODES.ADD
@@ -1331,14 +1331,14 @@ export function useAccountDialog({
             )
 
       if (!result.success) {
-        analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
         isAnalyticsActionCompleted = true
         throw new Error(result.message || t("messages.saveFailed"))
       }
 
-      analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       isAnalyticsActionCompleted = true
 
       const feedbackMessage =
@@ -1454,7 +1454,7 @@ export function useAccountDialog({
       return result
     } catch (error: any) {
       if (!isAnalyticsActionCompleted) {
-        analyticsAction?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
       }
@@ -2165,30 +2165,13 @@ function normalizeSiteUrlForDuplicateCheck(params: {
  * Starts account-dialog analytics without letting telemetry initialization abort
  * the user flow.
  */
-function startAccountDialogAnalyticsActionBestEffort(
-  actionId: ProductAnalyticsActionId,
-) {
-  return startAccountAnalyticsActionBestEffort({
+function startAccountDialogAnalyticsAction(actionId: ProductAnalyticsActionId) {
+  return startProductAnalyticsAction({
     featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
     actionId,
     surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
     entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
   })
-}
-
-/**
- * Starts account analytics without letting telemetry initialization abort the
- * user flow.
- */
-function startAccountAnalyticsActionBestEffort(
-  context: Parameters<typeof startProductAnalyticsAction>[0],
-) {
-  try {
-    return startProductAnalyticsAction(context)
-  } catch (error) {
-    logger.warn("Failed to start product analytics action", error)
-    return null
-  }
 }
 
 /**

@@ -14,15 +14,8 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import type { DisplaySiteData } from "~/types"
-import { createLogger } from "~/utils/core/logger"
 
 import { AccountInfo } from "./AccountInfo"
-
-/**
- * Logger scoped to account deletion flows so unexpected failures can be inspected without leaking secrets.
- */
-const logger = createLogger("DelAccountDialog")
-type DeleteAccountTracker = ReturnType<typeof startProductAnalyticsAction>
 
 interface DelAccountDialogProps {
   isOpen: boolean
@@ -46,35 +39,13 @@ export default function DelAccountDialog({
   const handleDelete = async () => {
     if (!account) return
 
-    let tracker: DeleteAccountTracker | null = null
-    try {
-      tracker = startProductAnalyticsAction({
-        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
-        actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccount,
-        surfaceId:
-          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
-        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-      })
-    } catch (error) {
-      logger.warn("Failed to start product analytics action", error)
-    }
-    const completeDeleteAnalytics = async (
-      result: (typeof PRODUCT_ANALYTICS_RESULTS)[keyof typeof PRODUCT_ANALYTICS_RESULTS],
-      options?: Parameters<DeleteAccountTracker["complete"]>[1],
-    ) => {
-      if (!tracker) return
-
-      try {
-        if (options) {
-          tracker.complete(result, options)
-          return
-        }
-
-        tracker.complete(result)
-      } catch (error) {
-        logger.warn("Failed to complete product analytics action", error)
-      }
-    }
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccount,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
 
     setIsDeleting(true)
     const deletePromise = accountStorage.deleteAccount(account.id)
@@ -96,20 +67,15 @@ export default function DelAccountDialog({
       })
       const isDeleted = await deletePromise
       if (isDeleted) {
-        await completeDeleteAnalytics(PRODUCT_ANALYTICS_RESULTS.Success)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       } else {
-        await completeDeleteAnalytics(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
       }
     } catch (error) {
       // toast.promise already handles showing the error toast
-      logger.error("Failed to delete account", {
-        error,
-        accountId: account.id,
-        accountName: account.name,
-      })
-      await completeDeleteAnalytics(PRODUCT_ANALYTICS_RESULTS.Failure, {
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       })
     } finally {

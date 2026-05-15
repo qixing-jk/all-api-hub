@@ -151,10 +151,6 @@ const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
 const rowActionsSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions
 
-type ProductAnalyticsActionTracker = ReturnType<
-  typeof startProductAnalyticsAction
->
-
 const quickCheckinAnalyticsContext: ProductAnalyticsActionContext = {
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
   actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunQuickCheckin,
@@ -174,41 +170,6 @@ const getQuickCheckinAnalyticsResult = (
   }
 
   return PRODUCT_ANALYTICS_RESULTS.Success
-}
-
-const completeQuickCheckinAnalytics = async (
-  tracker: ProductAnalyticsActionTracker,
-  result: ProductAnalyticsResult,
-) => {
-  try {
-    if (result === PRODUCT_ANALYTICS_RESULTS.Failure) {
-      tracker.complete(result, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
-      return
-    }
-
-    tracker.complete(result)
-  } catch {
-    // Product analytics must not block the user-triggered quick check-in.
-  }
-}
-
-const completeProductAnalyticsBestEffort = async (
-  tracker: ProductAnalyticsActionTracker,
-  result: ProductAnalyticsResult,
-  options?: Parameters<ProductAnalyticsActionTracker["complete"]>[1],
-) => {
-  try {
-    if (options) {
-      tracker.complete(result, options)
-      return
-    }
-
-    tracker.complete(result)
-  } catch {
-    // Product analytics must not block account row actions.
-  }
 }
 
 const getLocateManagedSiteChannelToastMessage = (
@@ -312,31 +273,21 @@ export default function AccountActionButtons({
               accountName: site.name,
             })
         toast.success(message)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      } else {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
       }
-      await completeProductAnalyticsBestEffort(
-        tracker,
-        success
-          ? PRODUCT_ANALYTICS_RESULTS.Success
-          : PRODUCT_ANALYTICS_RESULTS.Failure,
-        success
-          ? undefined
-          : {
-              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            },
-      )
     } catch (error) {
       logger.error("Failed to toggle account pin", {
         error,
         siteId: site.id,
         siteType: site.siteType,
       })
-      await completeProductAnalyticsBestEffort(
-        tracker,
-        PRODUCT_ANALYTICS_RESULTS.Failure,
-        {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        },
-      )
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
   }
 
@@ -379,39 +330,27 @@ export default function AccountActionButtons({
           )
           await navigator.clipboard.writeText(resolvedToken.key)
           toast.success(t("actions.keyCopied"))
-          await completeProductAnalyticsBestEffort(
-            tracker,
-            PRODUCT_ANALYTICS_RESULTS.Success,
-            {
-              insights: {
-                itemCount: tokensResponse.length,
-              },
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+            insights: {
+              itemCount: tokensResponse.length,
             },
-          )
+          })
         } else if (tokensResponse.length > 1) {
           // Multiple tokens - open dialog
           onCopyKey(site)
-          await completeProductAnalyticsBestEffort(
-            tracker,
-            PRODUCT_ANALYTICS_RESULTS.Skipped,
-            {
-              insights: {
-                itemCount: tokensResponse.length,
-              },
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+            insights: {
+              itemCount: tokensResponse.length,
             },
-          )
+          })
         } else {
           // No tokens found - open dialog for actionable empty state
           onCopyKey(site)
-          await completeProductAnalyticsBestEffort(
-            tracker,
-            PRODUCT_ANALYTICS_RESULTS.Skipped,
-            {
-              insights: {
-                itemCount: tokensResponse.length,
-              },
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+            insights: {
+              itemCount: tokensResponse.length,
             },
-          )
+          })
         }
       } else {
         logger.warn("Token response is not an array", {
@@ -421,13 +360,9 @@ export default function AccountActionButtons({
           siteType: site.siteType,
         })
         toast.error(t("actions.fetchKeyInfoFailed"))
-        await completeProductAnalyticsBestEffort(
-          tracker,
-          PRODUCT_ANALYTICS_RESULTS.Failure,
-          {
-            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          },
-        )
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
       }
     } catch (error) {
       logger.error("Failed to fetch key list", {
@@ -440,13 +375,9 @@ export default function AccountActionButtons({
       toast.error(t("actions.fetchKeyListFailed", { errorMessage }))
       // Fallback to opening dialog
       onCopyKey(site)
-      await completeProductAnalyticsBestEffort(
-        tracker,
-        PRODUCT_ANALYTICS_RESULTS.Failure,
-        {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        },
-      )
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     } finally {
       setIsCheckingTokens(false)
     }
@@ -646,30 +577,22 @@ export default function AccountActionButtons({
 
     try {
       const success = await handleSetAccountDisabled(site, !isAccountDisabled)
-      await completeProductAnalyticsBestEffort(
-        tracker,
-        success
-          ? PRODUCT_ANALYTICS_RESULTS.Success
-          : PRODUCT_ANALYTICS_RESULTS.Failure,
-        success
-          ? undefined
-          : {
-              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            },
-      )
+      if (success) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      } else {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
+      }
     } catch (error) {
       logger.error("Failed to toggle account disabled state", {
         error,
         siteId: site.id,
         siteType: site.siteType,
       })
-      await completeProductAnalyticsBestEffort(
-        tracker,
-        PRODUCT_ANALYTICS_RESULTS.Failure,
-        {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        },
-      )
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
   }
 
@@ -683,10 +606,7 @@ export default function AccountActionButtons({
 
     if (isAccountDisabled) {
       toast.error(t("messages:toast.error.shareSnapshotAccountDisabled"))
-      await completeProductAnalyticsBestEffort(
-        tracker,
-        PRODUCT_ANALYTICS_RESULTS.Skipped,
-      )
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
       return
     }
 
@@ -713,10 +633,7 @@ export default function AccountActionButtons({
 
     try {
       await exportShareSnapshotWithToast({ payload })
-      await completeProductAnalyticsBestEffort(
-        tracker,
-        PRODUCT_ANALYTICS_RESULTS.Success,
-      )
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       logger.error("Failed to export account share snapshot", {
         diagnostic: toSanitizedErrorSummary(
@@ -733,13 +650,9 @@ export default function AccountActionButtons({
           error: getErrorMessage(error),
         }),
       )
-      await completeProductAnalyticsBestEffort(
-        tracker,
-        PRODUCT_ANALYTICS_RESULTS.Failure,
-        {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        },
-      )
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
   }
 
@@ -752,10 +665,7 @@ export default function AccountActionButtons({
 
     if (isAccountDisabled) {
       toast.error(t("autoCheckin:messages.error.accountDisabled"))
-      await completeQuickCheckinAnalytics(
-        tracker,
-        PRODUCT_ANALYTICS_RESULTS.Skipped,
-      )
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
       return
     }
 
@@ -776,10 +686,9 @@ export default function AccountActionButtons({
             error: response?.error ?? "",
           }),
         )
-        await completeQuickCheckinAnalytics(
-          tracker,
-          PRODUCT_ANALYTICS_RESULTS.Failure,
-        )
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
         return
       }
 
@@ -816,10 +725,14 @@ export default function AccountActionButtons({
         toast.success(t("autoCheckin:messages.success.runCompleted"))
       }
 
-      await completeQuickCheckinAnalytics(
-        tracker,
-        getQuickCheckinAnalyticsResult(status),
-      )
+      const analyticsResult = getQuickCheckinAnalyticsResult(status)
+      if (analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure) {
+        tracker.complete(analyticsResult, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
+      } else {
+        tracker.complete(analyticsResult)
+      }
       void loadAccountData()
     } catch (error) {
       if (toastId) toast.dismiss(toastId)
@@ -828,10 +741,9 @@ export default function AccountActionButtons({
           error: getErrorMessage(error),
         }),
       )
-      await completeQuickCheckinAnalytics(
-        tracker,
-        PRODUCT_ANALYTICS_RESULTS.Failure,
-      )
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
   }
 

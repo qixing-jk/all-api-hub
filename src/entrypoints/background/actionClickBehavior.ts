@@ -7,8 +7,6 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-  type ProductAnalyticsErrorCategory,
-  type ProductAnalyticsResult,
 } from "~/services/productAnalytics/events"
 import {
   addActionClickListener,
@@ -40,32 +38,12 @@ const handleActionClick = async (tab: browser.tabs.Tab) => {
     surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundToolbarAction,
     entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
   })
-  const completeTracker = async (
-    result?: ProductAnalyticsResult,
-    options?: { errorCategory?: ProductAnalyticsErrorCategory },
-  ) => {
-    try {
-      if (options) {
-        tracker.complete(result, options)
-        return
-      }
-
-      if (result) {
-        tracker.complete(result)
-        return
-      }
-
-      tracker.complete()
-    } catch (error) {
-      logger.warn("Failed to complete product analytics action", error)
-    }
-  }
 
   try {
     await openSidePanelWithFallback(tab)
-    await completeTracker()
+    tracker.complete()
   } catch (error) {
-    await completeTracker(PRODUCT_ANALYTICS_RESULTS.Failure, {
+    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
     })
     throw error
