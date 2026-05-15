@@ -1047,6 +1047,51 @@ describe("AccountActionButtons", () => {
     })
   })
 
+  it("tracks quick-checkin failure analytics when the run request throws", async () => {
+    toastLoadingMock.mockReturnValue("toast-quick-checkin-throw")
+    sendRuntimeMessageMock.mockRejectedValueOnce(
+      new Error("background blew up"),
+    )
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-quick-throw",
+          disabled: false,
+          name: "Thrown Site",
+          checkIn: { enableDetection: true },
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText("account:actions.quickCheckin")
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(toastDismissMock).toHaveBeenCalledWith("toast-quick-checkin-throw")
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "autoCheckin:messages.error.runFailed",
+      )
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      )
+    })
+    expect(loadAccountDataMock).not.toHaveBeenCalled()
+  })
+
   it("tracks skipped quick-checkin completion when the account result is skipped", async () => {
     toastLoadingMock.mockReturnValue("toast-quick-checkin-skipped")
     sendRuntimeMessageMock
@@ -1132,6 +1177,48 @@ describe("AccountActionButtons", () => {
         "messages:toast.success.accountPinned",
       )
     })
+  })
+
+  it("tracks an unknown failure when pinning does not change state", async () => {
+    accountDataContextValue.isPinFeatureEnabled = true
+    accountDataContextValue.isAccountPinned.mockReturnValue(false)
+    mockTogglePinAccount.mockResolvedValueOnce(false)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-pin-false",
+          disabled: false,
+          name: "Pin Failure Site",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText("account:actions.pin")
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(mockTogglePinAccount).toHaveBeenCalledWith("acc-pin-false")
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      )
+    })
+    expect(toastSuccessMock).not.toHaveBeenCalledWith(
+      "messages:toast.success.accountPinned",
+    )
   })
 
   it("shares a sanitized snapshot using only visible cashflow data", async () => {

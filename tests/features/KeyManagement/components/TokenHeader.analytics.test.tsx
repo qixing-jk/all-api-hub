@@ -28,6 +28,7 @@ const {
   openInCherryStudioMock,
   openWithAccountMock,
   resolveDisplayAccountTokenForSecretMock,
+  showResultToastMock,
   startProductAnalyticsActionMock,
 } = vi.hoisted(() => ({
   completeProductAnalyticsActionMock: vi.fn(),
@@ -35,6 +36,7 @@ const {
   openInCherryStudioMock: vi.fn(),
   openWithAccountMock: vi.fn(),
   resolveDisplayAccountTokenForSecretMock: vi.fn(),
+  showResultToastMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
 }))
 
@@ -88,6 +90,10 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     startProductAnalyticsActionMock(...args),
 }))
 
+vi.mock("~/utils/core/toastHelpers", () => ({
+  showResultToast: (...args: unknown[]) => showResultToastMock(...args),
+}))
+
 vi.mock("react-hot-toast", () => ({
   default: {
     dismiss: vi.fn(),
@@ -137,6 +143,7 @@ describe("TokenHeader analytics", () => {
     openInCherryStudioMock.mockReset()
     openWithAccountMock.mockReset()
     resolveDisplayAccountTokenForSecretMock.mockReset()
+    showResultToastMock.mockReset()
     startProductAnalyticsActionMock.mockReset()
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
@@ -419,6 +426,30 @@ describe("TokenHeader analytics", () => {
         PRODUCT_ANALYTICS_RESULTS.Skipped,
         { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
       )
+    })
+  })
+
+  it("tracks managed-site single token import as failure and shows fallback toast when preparation rejects", async () => {
+    openWithAccountMock.mockRejectedValueOnce(new Error("prepare failed"))
+
+    const user = userEvent.setup()
+    renderTokenHeader()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:actions.importToManagedSite",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      )
+      expect(showResultToastMock).toHaveBeenCalledWith({
+        success: false,
+        message: "messages:errors.operation.failed",
+      })
     })
   })
 })

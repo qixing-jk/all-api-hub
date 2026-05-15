@@ -73,7 +73,7 @@ export default function DelAccountDialog({
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
       }
-    } catch (error) {
+    } catch (_error) {
       // toast.promise already handles showing the error toast
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
