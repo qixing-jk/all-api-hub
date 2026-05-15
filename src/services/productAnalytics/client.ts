@@ -5,6 +5,7 @@ import { getManifest } from "~/utils/browser/browserApi"
 import { detectBrowserFamily } from "~/utils/browser/userAgent"
 import { isDevelopmentMode } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
+import i18n from "~/utils/i18n/core"
 
 import {
   PRODUCT_ANALYTICS_EVENTS,
@@ -62,10 +63,16 @@ function initializePostHog(config: PostHogConfig, distinctId: string) {
 }
 
 /**
- * Resolves the current UI language without exposing locale fallbacks elsewhere.
+ * Resolves the current UI language; PostHog already sends browser language as
+ * $browser_language, so this custom field tracks the app interface language.
  */
 function resolveLanguage(): string {
-  return globalThis.navigator?.language || "unknown"
+  return (
+    i18n.resolvedLanguage ||
+    i18n.language ||
+    globalThis.navigator?.language ||
+    "unknown"
+  )
 }
 
 /**

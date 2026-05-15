@@ -7,19 +7,24 @@ import {
   PRODUCT_ANALYTICS_PAGE_IDS,
 } from "~/services/productAnalytics/events"
 
-const { posthogMocks, preferenceMocks, getManifestMock } = vi.hoisted(() => ({
-  posthogMocks: {
-    init: vi.fn(),
-    capture: vi.fn(),
-  },
-  preferenceMocks: {
-    isEnabled: vi.fn(),
-    getOrCreateAnonymousId: vi.fn(),
-    getAnonymousIdIfEnabled: vi.fn(),
-    withAnonymousIdIfEnabled: vi.fn(),
-  },
-  getManifestMock: vi.fn(() => ({ version: "3.37.0" })),
-}))
+const { posthogMocks, preferenceMocks, getManifestMock, i18nCoreMock } =
+  vi.hoisted(() => ({
+    posthogMocks: {
+      init: vi.fn(),
+      capture: vi.fn(),
+    },
+    preferenceMocks: {
+      isEnabled: vi.fn(),
+      getOrCreateAnonymousId: vi.fn(),
+      getAnonymousIdIfEnabled: vi.fn(),
+      withAnonymousIdIfEnabled: vi.fn(),
+    },
+    getManifestMock: vi.fn(() => ({ version: "3.37.0" })),
+    i18nCoreMock: {
+      resolvedLanguage: "en" as string | undefined,
+      language: "en",
+    },
+  }))
 
 vi.mock("posthog-js/dist/module.no-external", () => ({
   default: posthogMocks,
@@ -31,6 +36,10 @@ vi.mock("~/services/productAnalytics/preferences", () => ({
 
 vi.mock("~/utils/browser/browserApi", () => ({
   getManifest: getManifestMock,
+}))
+
+vi.mock("~/utils/i18n/core", () => ({
+  default: i18nCoreMock,
 }))
 
 async function importClient() {
@@ -56,6 +65,8 @@ describe("productAnalyticsClient", () => {
         await work("analytics-123"),
     )
     getManifestMock.mockReturnValue({ version: "3.37.0" })
+    i18nCoreMock.resolvedLanguage = "en"
+    i18nCoreMock.language = "en"
     vi.stubGlobal("navigator", {
       language: "en-US",
       userAgent:
@@ -167,9 +178,31 @@ describe("productAnalyticsClient", () => {
     expect(posthogMocks.capture).toHaveBeenCalledWith("page_viewed", {
       app_version: "3.37.0",
       browser_family: "chromium",
-      ui_language: "en-US",
+      ui_language: "en",
       page_id: PRODUCT_ANALYTICS_PAGE_IDS.OptionsBasicSettings,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+  })
+
+  it("uses the current interface language instead of the browser language", async () => {
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")
+    i18nCoreMock.resolvedLanguage = "ja"
+    i18nCoreMock.language = "ja"
+
+    const client = await importClient()
+
+    await expect(
+      client.capture(PRODUCT_ANALYTICS_EVENTS.AppOpened, {
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+      }),
+    ).resolves.toBe(true)
+
+    expect(posthogMocks.capture).toHaveBeenCalledWith("app_opened", {
+      app_version: "3.37.0",
+      browser_family: "chromium",
+      ui_language: "ja",
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
     })
   })
 
@@ -189,7 +222,7 @@ describe("productAnalyticsClient", () => {
     expect(posthogMocks.capture).toHaveBeenCalledWith("app_opened", {
       app_version: "3.37.0",
       browser_family: "chromium",
-      ui_language: "en-US",
+      ui_language: "en",
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
     })
     expect(posthogMocks.init).toHaveBeenCalledWith(
@@ -219,7 +252,7 @@ describe("productAnalyticsClient", () => {
       {
         app_version: "3.37.0",
         browser_family: "chromium",
-        ui_language: "en-US",
+        ui_language: "en",
       },
     )
   })
@@ -288,7 +321,7 @@ describe("productAnalyticsClient", () => {
     expect(posthogMocks.capture).toHaveBeenCalledWith("app_opened", {
       app_version: "3.37.0",
       browser_family: "chromium",
-      ui_language: "en-US",
+      ui_language: "en",
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
     })
   })
@@ -312,7 +345,7 @@ describe("productAnalyticsClient", () => {
     expect(posthogMocks.capture).toHaveBeenCalledWith("page_viewed", {
       app_version: "3.37.0",
       browser_family: "chromium",
-      ui_language: "en-US",
+      ui_language: "en",
       page_id: PRODUCT_ANALYTICS_PAGE_IDS.OptionsBasicSettings,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })

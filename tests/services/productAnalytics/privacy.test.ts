@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_COUNT_BUCKETS,
+  PRODUCT_ANALYTICS_DURATION_BUCKETS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_EVENTS,
@@ -112,6 +113,92 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
+  it("keeps Key Management action enums without leaking account token details", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.RevealAccountTokenKey,
+        surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementDialog,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        duration_bucket: "lt_1s",
+        accountName: "Secret Account",
+        tokenName: "Production token",
+        tokenKey: "sk-secret",
+        apiKey: "sk-secret",
+        account_id: "private-account-id",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.RevealAccountTokenKey,
+      surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      duration_bucket: "lt_1s",
+    })
+  })
+
+  it.each([
+    {
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.SaveAccountTokenToApiCredentialProfile,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      errorCategory: undefined,
+    },
+    {
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteTokenStatus,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementHeader,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      errorCategory: undefined,
+    },
+    {
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RetryManagedSiteTokenVerification,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementDialog,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network,
+    },
+  ])(
+    "keeps second-round Key Management completion enums without leaking raw details for $actionId",
+    ({ actionId, surfaceId, result, errorCategory }) => {
+      const sanitized = sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        {
+          feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+          action_id: actionId,
+          surface_id: surfaceId,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+          result,
+          error_category: errorCategory,
+          duration_bucket: PRODUCT_ANALYTICS_DURATION_BUCKETS.OneTo5s,
+          accountName: "Secret Account",
+          accountId: "private-account-id",
+          accountUrl: "https://private.example/account",
+          baseUrl: "https://private.example",
+          accessToken: "sk-secret",
+          tokenKey: "sk-secret",
+          apiKey: "sk-secret",
+          rawToken: "sk-secret",
+          errorMessage: "backend returned token sk-secret",
+          errorStack: "Error: backend returned token sk-secret",
+        },
+      )
+
+      expect(sanitized).toEqual({
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+        action_id: actionId,
+        surface_id: surfaceId,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result,
+        ...(errorCategory ? { error_category: errorCategory } : {}),
+        duration_bucket: PRODUCT_ANALYTICS_DURATION_BUCKETS.OneTo5s,
+      })
+    },
+  )
+
   it("keeps controlled action insight buckets while dropping sensitive source values", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
@@ -152,6 +239,43 @@ describe("product analytics privacy filtering", () => {
       failure_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
       telemetry_source: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.NewApiTokenUsage,
       usage_data_present: true,
+    })
+  })
+
+  it("keeps model-list source and filter analytics enums without raw identifiers", () => {
+    expect(PRODUCT_ANALYTICS_ACTION_IDS.SelectModelSource).toBe(
+      "select_model_source",
+    )
+    expect(PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile).toBe("model_profile")
+    expect(PRODUCT_ANALYTICS_MODE_IDS.ProviderFilter).toBe("provider_filter")
+
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.SelectModelSource,
+        surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.ProviderFilter,
+        model_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+        accountId: "private-account-id",
+        profileName: "Private profile",
+        modelName: "private-model",
+        baseUrl: "https://private.example",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.SelectModelSource,
+      surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile,
+      mode: PRODUCT_ANALYTICS_MODE_IDS.ProviderFilter,
+      model_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
     })
   })
 
