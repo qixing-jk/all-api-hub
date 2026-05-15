@@ -110,12 +110,20 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
         },
         error: t("account:refresh.refreshFailed"),
       })
+      const refreshInsights = {
+        itemCount: result.success + result.failed,
+        successCount: result.success,
+        failureCount: result.failed,
+      }
       if (result.failed > 0) {
         await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: refreshInsights,
         })
       } else {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          insights: refreshInsights,
+        })
       }
     } catch (error) {
       logger.error("Error during global refresh", error)
@@ -154,12 +162,20 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
           ),
         error: t("account:refresh.refreshDisabledFailed"),
       })
+      const refreshInsights = {
+        itemCount: result.processedCount,
+        successCount: Math.max(result.processedCount - result.failedCount, 0),
+        failureCount: result.failedCount,
+      }
       if (result.failedCount > 0) {
         await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: refreshInsights,
         })
       } else {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          insights: refreshInsights,
+        })
       }
     } catch (error) {
       logger.error("Error during disabled account refresh", error)

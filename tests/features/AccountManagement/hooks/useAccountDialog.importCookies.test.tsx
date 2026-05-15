@@ -41,6 +41,12 @@ vi.mock("~/utils/navigation", () => ({
   openSettingsTab: mockOpenSettingsTab,
 }))
 
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: vi.fn(() => ({
+    complete: vi.fn(),
+  })),
+}))
+
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/utils/browser/browserApi")>()

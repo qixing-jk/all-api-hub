@@ -2,6 +2,14 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import DedupeAccountsDialog from "~/features/AccountManagement/components/DedupeAccountsDialog"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
@@ -59,13 +67,19 @@ const accounts = [
   }),
 ]
 
-const { deleteAccountsMock, loadAccountDataMock, onCloseMock } = vi.hoisted(
-  () => ({
-    deleteAccountsMock: vi.fn(),
-    loadAccountDataMock: vi.fn(),
-    onCloseMock: vi.fn(),
-  }),
-)
+const {
+  deleteAccountsMock,
+  loadAccountDataMock,
+  onCloseMock,
+  startProductAnalyticsActionMock,
+  completeProductAnalyticsActionMock,
+} = vi.hoisted(() => ({
+  deleteAccountsMock: vi.fn(),
+  loadAccountDataMock: vi.fn(),
+  onCloseMock: vi.fn(),
+  startProductAnalyticsActionMock: vi.fn(),
+  completeProductAnalyticsActionMock: vi.fn(),
+}))
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -78,6 +92,11 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     deleteAccounts: (...args: any[]) => deleteAccountsMock(...args),
   },
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: any[]) =>
+    startProductAnalyticsActionMock(...args),
 }))
 
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
@@ -94,9 +113,15 @@ describe("DedupeAccountsDialog", () => {
     deleteAccountsMock.mockReset()
     loadAccountDataMock.mockReset()
     onCloseMock.mockReset()
+    startProductAnalyticsActionMock.mockReset()
+    completeProductAnalyticsActionMock.mockReset()
 
     deleteAccountsMock.mockResolvedValue({ deletedCount: 1 })
     loadAccountDataMock.mockResolvedValue(undefined)
+    completeProductAnalyticsActionMock.mockResolvedValue(undefined)
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: completeProductAnalyticsActionMock,
+    })
   })
 
   it("runs scan and deletes duplicates after preview confirmation", async () => {
@@ -120,6 +145,78 @@ describe("DedupeAccountsDialog", () => {
       expect(deleteAccountsMock).toHaveBeenCalledWith(["acc-del"])
       expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
       expect(onCloseMock).toHaveBeenCalledTimes(1)
+    })
+  })
+
+  it("completes duplicate cleanup analytics after confirmed deletion succeeds", async () => {
+    const user = userEvent.setup()
+
+    render(<DedupeAccountsDialog isOpen={true} onClose={onCloseMock} />)
+
+    expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.dedupeAccounts.previewDelete",
+      }),
+    )
+
+    expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.dedupeAccounts.confirm.confirmDelete",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccount,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            itemCount: 1,
+            selectedCount: 1,
+            successCount: 1,
+          },
+        },
+      )
+    })
+  })
+
+  it("completes duplicate cleanup analytics with a broad failure category", async () => {
+    const user = userEvent.setup()
+    deleteAccountsMock.mockRejectedValueOnce(new Error("raw backend detail"))
+
+    render(<DedupeAccountsDialog isOpen={true} onClose={onCloseMock} />)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.dedupeAccounts.previewDelete",
+      }),
+    )
+    await user.click(
+      await screen.findByRole("button", {
+        name: "ui:dialog.dedupeAccounts.confirm.confirmDelete",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            itemCount: 1,
+            selectedCount: 1,
+          },
+        },
+      )
     })
   })
 

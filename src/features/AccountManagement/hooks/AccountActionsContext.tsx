@@ -61,7 +61,7 @@ interface AccountActionsContextType {
   handleSetAccountDisabled: (
     account: DisplaySiteData,
     disabled: boolean,
-  ) => Promise<void>
+  ) => Promise<boolean>
   handleSetAccountsDisabled: (
     accounts: DisplaySiteData[],
     disabled: boolean,
@@ -194,7 +194,7 @@ export const AccountActionsProvider = ({
             error: t("messages:storage.updateFailed", { error: "" }),
           }),
         )
-        return
+        return false
       }
 
       await loadAccountData()
@@ -208,6 +208,7 @@ export const AccountActionsProvider = ({
               accountName: account.name,
             }),
       )
+      return true
     },
     [loadAccountData],
   )

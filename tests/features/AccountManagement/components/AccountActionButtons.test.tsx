@@ -237,7 +237,7 @@ describe("AccountActionButtons", () => {
           PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       })
-      expect(trackStartedMock).toHaveBeenCalledWith({
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyApiKey,
         surfaceId:
@@ -245,6 +245,13 @@ describe("AccountActionButtons", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       })
       expect(trackStartedMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenUpdateAccountDialog,
+        surfaceId:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+      expect(trackStartedMock).not.toHaveBeenCalledWith({
         featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccount,
         surfaceId:
@@ -584,6 +591,14 @@ describe("AccountActionButtons", () => {
     expect(toastErrorMock).not.toHaveBeenCalledWith(
       "account:actions.noKeyFound",
     )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+      {
+        insights: {
+          itemCount: 0,
+        },
+      },
+    )
   })
 
   it("copies a single token directly when smart copy finds exactly one key", async () => {
@@ -617,6 +632,14 @@ describe("AccountActionButtons", () => {
       expect(toastSuccessMock).toHaveBeenCalledWith("account:actions.keyCopied")
     })
     expect(onCopyKey).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          itemCount: 1,
+        },
+      },
+    )
   })
 
   it("shows a fetch-info error when the token probe returns a non-array payload", async () => {
@@ -646,6 +669,12 @@ describe("AccountActionButtons", () => {
       )
     })
     expect(clipboardWriteTextMock).not.toHaveBeenCalled()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
   })
 
   it("falls back to the copy dialog when the token probe throws", async () => {
@@ -676,6 +705,184 @@ describe("AccountActionButtons", () => {
       )
       expect(onCopyKey).toHaveBeenCalledWith(
         expect.objectContaining({ id: "acc-probe-failed" }),
+      )
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
+  })
+
+  it("tracks completion when toggling account disabled succeeds", async () => {
+    mockHandleSetAccountDisabled.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-disable-success",
+          disabled: false,
+          name: "Site",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const disableButton = (
+      await within(menu).findByText("account:actions.disableAccount")
+    ).closest("button")
+    expect(disableButton).not.toBeNull()
+
+    await user.click(disableButton!)
+
+    await waitFor(() => {
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.ToggleAccountDisabled,
+        surfaceId:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+      )
+    })
+  })
+
+  it("tracks completion when toggling account disabled fails", async () => {
+    mockHandleSetAccountDisabled.mockRejectedValueOnce(new Error("failed"))
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-disable-failure",
+          disabled: false,
+          name: "Site",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const disableButton = (
+      await within(menu).findByText("account:actions.disableAccount")
+    ).closest("button")
+    expect(disableButton).not.toBeNull()
+
+    await user.click(disableButton!)
+
+    await waitFor(() => {
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.ToggleAccountDisabled,
+        surfaceId:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        },
+      )
+    })
+  })
+
+  it("tracks failure when toggling account disabled is rejected by storage", async () => {
+    mockHandleSetAccountDisabled.mockResolvedValueOnce(false)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-disable-storage-failure",
+          disabled: false,
+          name: "Site",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const disableButton = (
+      await within(menu).findByText("account:actions.disableAccount")
+    ).closest("button")
+    expect(disableButton).not.toBeNull()
+
+    await user.click(disableButton!)
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        },
+      )
+    })
+  })
+
+  it("tracks completion when toggling account pin succeeds", async () => {
+    accountDataContextValue.isPinFeatureEnabled = true
+    mockTogglePinAccount.mockResolvedValueOnce(true)
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-pin-success",
+          disabled: false,
+          name: "Site",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const pinButton = (
+      await within(menu).findByText("account:actions.pin")
+    ).closest("button")
+    expect(pinButton).not.toBeNull()
+
+    await user.click(pinButton!)
+
+    await waitFor(() => {
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.ToggleAccountPin,
+        surfaceId:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      })
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
       )
     })
   })

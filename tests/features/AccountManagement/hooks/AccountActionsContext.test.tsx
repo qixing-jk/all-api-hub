@@ -477,13 +477,17 @@ describe("AccountActionsContext", () => {
       .mockResolvedValueOnce(true)
       .mockResolvedValueOnce(true)
 
+    let disableResult: boolean | undefined
+    let enableResult: boolean | undefined
     await act(async () => {
-      await getContext().handleSetAccountDisabled(account, true)
-      await getContext().handleSetAccountDisabled(account, false)
+      disableResult = await getContext().handleSetAccountDisabled(account, true)
+      enableResult = await getContext().handleSetAccountDisabled(account, false)
     })
 
     expect(mockSetAccountDisabled).toHaveBeenNthCalledWith(1, "toggle-1", true)
     expect(mockSetAccountDisabled).toHaveBeenNthCalledWith(2, "toggle-1", false)
+    expect(disableResult).toBe(true)
+    expect(enableResult).toBe(true)
     expect(mockLoadAccountData).toHaveBeenCalledTimes(2)
     expect(mockToast.success).toHaveBeenNthCalledWith(
       1,
@@ -500,13 +504,15 @@ describe("AccountActionsContext", () => {
 
     mockSetAccountDisabled.mockResolvedValueOnce(false)
 
+    let result: boolean | undefined
     await act(async () => {
-      await getContext().handleSetAccountDisabled(
+      result = await getContext().handleSetAccountDisabled(
         createAccount({ id: "toggle-fail" }),
         true,
       )
     })
 
+    expect(result).toBe(false)
     expect(mockLoadAccountData).not.toHaveBeenCalled()
     expect(mockToast.error).toHaveBeenCalledWith(
       "messages:toast.error.operationFailed",

@@ -18,6 +18,15 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import {
@@ -68,6 +77,13 @@ export function TokenDetails({
 
   const handleUseInCherry = async (event: MouseEvent) => {
     event.stopPropagation()
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportAccountTokenToCherryStudio,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
 
     try {
       const resolvedToken = await resolveDisplayAccountTokenForSecret(
@@ -75,7 +91,11 @@ export function TokenDetails({
         token,
       )
       OpenInCherryStudio(account, resolvedToken)
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
       showResultToast({
         success: false,
         message: t("messages:errors.operation.failed", {
@@ -92,8 +112,25 @@ export function TokenDetails({
 
   const handleImportToManagedSite = async (event: MouseEvent) => {
     event.stopPropagation()
-    await openWithAccount(account, token, (result) => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ImportManagedSiteSingleToken,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
+    const result = await openWithAccount(account, token, (result) => {
       showResultToast(result)
+    })
+
+    if (result.opened || result.deferred) {
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      return
+    }
+
+    await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
     })
   }
 

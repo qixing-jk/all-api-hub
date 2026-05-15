@@ -9,6 +9,15 @@ import {
   createDisplayAccountApiContext,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -17,6 +26,12 @@ import { createLogger } from "~/utils/core/logger"
  * Logger scoped to the "copy key" dialog so token-loading and clipboard failures can be diagnosed safely.
  */
 const logger = createLogger("CopyKeyDialogHook")
+const copyKeyAnalyticsContext = {
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+  actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyApiKey,
+  surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+}
 
 const isCreatedApiToken = (value: unknown): value is ApiToken =>
   !!value &&
@@ -134,6 +149,8 @@ export function useCopyKeyDialog(
     async (token: ApiToken) => {
       if (!account) return
 
+      const tracker = startProductAnalyticsAction(copyKeyAnalyticsContext)
+
       try {
         const resolvedToken = await resolveDisplayAccountTokenForSecret(
           account,
@@ -142,6 +159,7 @@ export function useCopyKeyDialog(
         await navigator.clipboard.writeText(resolvedToken.key)
         setCopiedTokenId(token.id)
         toast.success(t("ui:dialog.copyKey.keyCopied"))
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
 
         clearCopiedTokenResetTimeout()
         copiedTokenResetTimeoutRef.current = setTimeout(() => {
@@ -153,6 +171,9 @@ export function useCopyKeyDialog(
         toast.error(
           getErrorMessage(error, t("ui:dialog.copyKey.copyFailedManual")),
         )
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
       }
     },
     [account, clearCopiedTokenResetTimeout, t],

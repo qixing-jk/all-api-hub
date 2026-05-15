@@ -4,6 +4,15 @@ import React from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import AccountList from "~/features/AccountManagement/components/AccountList"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { SiteHealthStatus } from "~/types"
 import { buildDisplaySiteData, buildTag } from "~~/tests/test-utils/factories"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -25,6 +34,8 @@ const {
   handleDeleteAccountMock,
   handleDeleteAccountsMock,
   handleSetAccountsDisabledMock,
+  trackProductAnalyticsActionStartedMock,
+  trackProductAnalyticsActionCompletedMock,
   dndState,
   sortableKeyboardCoordinatesMock,
   sortableReturnState,
@@ -37,6 +48,8 @@ const {
   handleDeleteAccountMock: vi.fn(),
   handleDeleteAccountsMock: vi.fn(),
   handleSetAccountsDisabledMock: vi.fn(),
+  trackProductAnalyticsActionStartedMock: vi.fn(),
+  trackProductAnalyticsActionCompletedMock: vi.fn(),
   dndState: {
     onDragEnd: undefined as ((event: any) => void) | undefined,
   },
@@ -197,7 +210,16 @@ vi.mock("~/components/ui", () => {
           </button>
         </div>
       ) : null,
-    EmptyState: ({ title }: any) => <div>{title}</div>,
+    EmptyState: ({ title, action }: any) => (
+      <div>
+        <div>{title}</div>
+        {action ? (
+          <button type="button" onClick={action.onClick}>
+            {action.label}
+          </button>
+        ) : null}
+      </div>
+    ),
     IconButton: ({ children, ...props }: any) => (
       <button type="button" {...props}>
         {children}
@@ -231,6 +253,17 @@ vi.mock("~/hooks/useAddAccountHandler", () => ({
     handleAddAccountClick: handleAddAccountClickMock,
   }),
 }))
+
+vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/productAnalytics/actions")>()
+  return {
+    ...actual,
+    trackProductAnalyticsActionStarted: trackProductAnalyticsActionStartedMock,
+    trackProductAnalyticsActionCompleted:
+      trackProductAnalyticsActionCompletedMock,
+  }
+})
 
 vi.mock("~/hooks/useMediaQuery", () => ({
   useIsDesktop: () => false,
@@ -474,6 +507,30 @@ describe("AccountList", () => {
     expect(screen.queryByText("account:emptyState")).not.toBeInTheDocument()
   })
 
+  it("tracks the empty-state create-account action before opening the dialog", async () => {
+    const user = userEvent.setup()
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        sortedData: [],
+        displayData: [],
+      }),
+    )
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:addFirstAccount" }),
+    )
+
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateAccountDialog,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(handleAddAccountClickMock).toHaveBeenCalledTimes(1)
+  })
+
   it("renders the created-time sort control", () => {
     render(<AccountList />)
 
@@ -648,6 +705,53 @@ describe("AccountList", () => {
       "enabled-alpha",
       "unsynced-delta",
     ])
+  })
+
+  it("tracks completed manual reorder with aggregate metadata only", async () => {
+    const user = userEvent.setup()
+    const handleReorder = vi.fn().mockResolvedValue(undefined)
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        isManualSortFeatureEnabled: true,
+        handleReorder,
+      }),
+    )
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "account:list.dragHandle",
+      })[0],
+    )
+
+    expect(await screen.findByTestId("dnd-context")).toBeInTheDocument()
+    expect(dndState.onDragEnd).toBeTypeOf("function")
+
+    dndState.onDragEnd?.({
+      active: { id: "enabled-alpha" },
+      over: { id: "enabled-gamma" },
+    })
+
+    await waitFor(() => {
+      expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.ReorderAccounts,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        insights: {
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          itemCount: 4,
+        },
+      })
+    })
+    const completionPayload =
+      trackProductAnalyticsActionCompletedMock.mock.calls[0][0]
+    expect(completionPayload).not.toHaveProperty("accountIds")
+    expect(completionPayload).not.toHaveProperty("fromAccountId")
+    expect(completionPayload).not.toHaveProperty("toAccountId")
   })
 
   it("does not activate dnd from disabled search handles or bulk mode", async () => {
@@ -966,6 +1070,40 @@ describe("AccountList", () => {
     )
   })
 
+  it("tracks entering and exiting bulk mode without per-selection telemetry", async () => {
+    const user = userEvent.setup()
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.EnterAccountBulkMode,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
+    trackProductAnalyticsActionStartedMock.mockClear()
+    trackProductAnalyticsActionCompletedMock.mockClear()
+
+    await user.click(screen.getAllByRole("checkbox")[0])
+    await user.click(
+      screen.getAllByRole("button", { name: "account:bulk.exit" })[0],
+    )
+
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExitAccountBulkMode,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledTimes(1)
+    expect(trackProductAnalyticsActionCompletedMock).not.toHaveBeenCalled()
+  })
+
   it("keeps selections across search changes for bulk disable", async () => {
     const user = userEvent.setup()
     handleSetAccountsDisabledMock.mockResolvedValueOnce({
@@ -1185,5 +1323,112 @@ describe("AccountList", () => {
     expect(handleDeleteAccountsMock).toHaveBeenNthCalledWith(2, [
       expect.objectContaining({ id: "enabled-gamma" }),
     ])
+  })
+
+  it("tracks confirmed bulk delete with aggregate counts only", async () => {
+    const user = userEvent.setup()
+    handleDeleteAccountsMock.mockResolvedValueOnce({
+      deletedCount: 1,
+      deletedIds: ["enabled-alpha"],
+    })
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+    await user.click(screen.getAllByRole("checkbox")[0])
+
+    const searchInput = screen.getByPlaceholderText(
+      "account:search.placeholder",
+    )
+    await user.clear(searchInput)
+    await user.type(searchInput, "Gamma")
+    await user.click(await screen.findByRole("checkbox"))
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.deleteSelected" }),
+    )
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.deleteConfirmAction" }),
+    )
+
+    const expectedContext = {
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccount,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    }
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith(
+      expectedContext,
+    )
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      ...expectedContext,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      insights: {
+        itemCount: 2,
+        selectedCount: 2,
+        successCount: 1,
+        failureCount: 1,
+      },
+    })
+    const completionPayload =
+      trackProductAnalyticsActionCompletedMock.mock.calls[0][0]
+    expect(completionPayload).not.toHaveProperty("durationMs")
+    expect(completionPayload).not.toHaveProperty("error")
+    expect(completionPayload).not.toHaveProperty("message")
+    expect(completionPayload).not.toHaveProperty("accountIds")
+  })
+
+  it("tracks bulk disable persistence with aggregate counts only", async () => {
+    const user = userEvent.setup()
+    handleSetAccountsDisabledMock.mockResolvedValueOnce({
+      updatedCount: 1,
+      updatedIds: ["enabled-alpha"],
+    })
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.manage" }),
+    )
+    await user.click(screen.getAllByRole("checkbox")[0])
+
+    const searchInput = screen.getByPlaceholderText(
+      "account:search.placeholder",
+    )
+    await user.clear(searchInput)
+    await user.type(searchInput, "Gamma")
+    await user.click(await screen.findByRole("checkbox"))
+    await user.click(
+      screen.getByRole("button", { name: "account:bulk.disableSelected" }),
+    )
+
+    const expectedContext = {
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DisableSelectedAccounts,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    }
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith(
+      expectedContext,
+    )
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      ...expectedContext,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      insights: {
+        itemCount: 2,
+        selectedCount: 2,
+        successCount: 1,
+        failureCount: 1,
+      },
+    })
+    const completionPayload =
+      trackProductAnalyticsActionCompletedMock.mock.calls[0][0]
+    expect(completionPayload).not.toHaveProperty("durationMs")
+    expect(completionPayload).not.toHaveProperty("error")
+    expect(completionPayload).not.toHaveProperty("message")
+    expect(completionPayload).not.toHaveProperty("accountIds")
   })
 })

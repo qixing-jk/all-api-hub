@@ -294,16 +294,49 @@ export default function AccountActionButtons({
 
   const handleTogglePin = async (e?: React.MouseEvent) => {
     e?.stopPropagation()
-    const success = await togglePinAccount(site.id)
-    if (success) {
-      const message = isPinned
-        ? t("messages:toast.success.accountUnpinned", {
-            accountName: site.name,
-          })
-        : t("messages:toast.success.accountPinned", {
-            accountName: site.name,
-          })
-      toast.success(message)
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ToggleAccountPin,
+      surfaceId: rowActionsSurface,
+      entrypoint: optionsEntrypoint,
+    })
+
+    try {
+      const success = await togglePinAccount(site.id)
+      if (success) {
+        const message = isPinned
+          ? t("messages:toast.success.accountUnpinned", {
+              accountName: site.name,
+            })
+          : t("messages:toast.success.accountPinned", {
+              accountName: site.name,
+            })
+        toast.success(message)
+      }
+      await completeProductAnalyticsBestEffort(
+        tracker,
+        success
+          ? PRODUCT_ANALYTICS_RESULTS.Success
+          : PRODUCT_ANALYTICS_RESULTS.Failure,
+        success
+          ? undefined
+          : {
+              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            },
+      )
+    } catch (error) {
+      logger.error("Failed to toggle account pin", {
+        error,
+        siteId: site.id,
+        siteType: site.siteType,
+      })
+      await completeProductAnalyticsBestEffort(
+        tracker,
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        },
+      )
     }
   }
 
@@ -313,6 +346,12 @@ export default function AccountActionButtons({
 
     if (isCheckingTokens) return
 
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyApiKey,
+      surfaceId: rowActionsSurface,
+      entrypoint: optionsEntrypoint,
+    })
     setIsCheckingTokens(true)
 
     try {
@@ -340,12 +379,39 @@ export default function AccountActionButtons({
           )
           await navigator.clipboard.writeText(resolvedToken.key)
           toast.success(t("actions.keyCopied"))
+          await completeProductAnalyticsBestEffort(
+            tracker,
+            PRODUCT_ANALYTICS_RESULTS.Success,
+            {
+              insights: {
+                itemCount: tokensResponse.length,
+              },
+            },
+          )
         } else if (tokensResponse.length > 1) {
           // Multiple tokens - open dialog
           onCopyKey(site)
+          await completeProductAnalyticsBestEffort(
+            tracker,
+            PRODUCT_ANALYTICS_RESULTS.Skipped,
+            {
+              insights: {
+                itemCount: tokensResponse.length,
+              },
+            },
+          )
         } else {
           // No tokens found - open dialog for actionable empty state
           onCopyKey(site)
+          await completeProductAnalyticsBestEffort(
+            tracker,
+            PRODUCT_ANALYTICS_RESULTS.Skipped,
+            {
+              insights: {
+                itemCount: tokensResponse.length,
+              },
+            },
+          )
         }
       } else {
         logger.warn("Token response is not an array", {
@@ -355,6 +421,13 @@ export default function AccountActionButtons({
           siteType: site.siteType,
         })
         toast.error(t("actions.fetchKeyInfoFailed"))
+        await completeProductAnalyticsBestEffort(
+          tracker,
+          PRODUCT_ANALYTICS_RESULTS.Failure,
+          {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          },
+        )
       }
     } catch (error) {
       logger.error("Failed to fetch key list", {
@@ -367,6 +440,13 @@ export default function AccountActionButtons({
       toast.error(t("actions.fetchKeyListFailed", { errorMessage }))
       // Fallback to opening dialog
       onCopyKey(site)
+      await completeProductAnalyticsBestEffort(
+        tracker,
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        },
+      )
     } finally {
       setIsCheckingTokens(false)
     }
@@ -556,8 +636,41 @@ export default function AccountActionButtons({
     onDeleteAccount(site)
   }
 
-  const handleDisableToggle = () => {
-    void handleSetAccountDisabled(site, !isAccountDisabled)
+  const handleDisableToggle = async () => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ToggleAccountDisabled,
+      surfaceId: rowActionsSurface,
+      entrypoint: optionsEntrypoint,
+    })
+
+    try {
+      const success = await handleSetAccountDisabled(site, !isAccountDisabled)
+      await completeProductAnalyticsBestEffort(
+        tracker,
+        success
+          ? PRODUCT_ANALYTICS_RESULTS.Success
+          : PRODUCT_ANALYTICS_RESULTS.Failure,
+        success
+          ? undefined
+          : {
+              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            },
+      )
+    } catch (error) {
+      logger.error("Failed to toggle account disabled state", {
+        error,
+        siteId: site.id,
+        siteType: site.siteType,
+      })
+      await completeProductAnalyticsBestEffort(
+        tracker,
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        },
+      )
+    }
   }
 
   const handleShareSnapshot = async () => {
@@ -751,7 +864,6 @@ export default function AccountActionButtons({
           disabled={isCheckingTokens || isAccountDisabled}
           aria-label={t("actions.copyKey")}
           title={t("actions.copyKey")}
-          analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.CopyApiKey}
         >
           <KeyIcon className="h-4 w-4" />
         </IconButton>
@@ -767,7 +879,7 @@ export default function AccountActionButtons({
           disabled={isAccountDisabled}
           aria-label={t("actions.edit")}
           title={t("actions.edit")}
-          analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccount}
+          analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.OpenUpdateAccountDialog}
         >
           <PencilIcon className="h-4 w-4" />
         </IconButton>
@@ -794,9 +906,6 @@ export default function AccountActionButtons({
                   icon={CheckCircleIcon}
                   label={t("actions.enableAccount")}
                   tone="success"
-                  analyticsAction={
-                    PRODUCT_ANALYTICS_ACTION_IDS.ToggleAccountDisabled
-                  }
                 />
 
                 <hr className="dark:border-dark-bg-tertiary my-1 border-gray-200" />
@@ -898,9 +1007,6 @@ export default function AccountActionButtons({
                     onClick={handleTogglePin}
                     icon={PinToggleIcon}
                     label={pinLabel}
-                    analyticsAction={
-                      PRODUCT_ANALYTICS_ACTION_IDS.ToggleAccountPin
-                    }
                   />
                 )}
 
@@ -937,9 +1043,6 @@ export default function AccountActionButtons({
                   icon={NoSymbolIcon}
                   label={t("actions.disableAccount")}
                   tone="warning"
-                  analyticsAction={
-                    PRODUCT_ANALYTICS_ACTION_IDS.ToggleAccountDisabled
-                  }
                 />
 
                 <AccountActionMenuItem
