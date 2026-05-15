@@ -13,6 +13,14 @@ import {
   type ModelProviderFilterValue,
   type ProviderType,
 } from "~/services/models/utils/modelProviders"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 
 interface ProviderTabsProps {
   providers: ProviderType[]
@@ -174,7 +182,14 @@ export function ProviderTabs({
           index === 0
             ? MODEL_PROVIDER_FILTER_VALUES.ALL
             : filteredProviders[index - 1]
+        const tracker = startProductAnalyticsAction({
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
+          surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        })
         setSelectedProvider(newProvider)
+        void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       }}
     >
       <ProviderTabList

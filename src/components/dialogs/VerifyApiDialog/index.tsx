@@ -16,6 +16,14 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { getApiService } from "~/services/apiService"
 import { identifyProvider } from "~/services/models/utils/modelProviders"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import {
   API_TYPES,
   getApiVerificationProbeDefinitions,
@@ -98,6 +106,12 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   const canClose = !isRunning && !isAnyProbeRunning
 
   const hasAnyResult = probes.some((p) => p.result !== null)
+  const analyticsContext = {
+    featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+    actionId: PRODUCT_ANALYTICS_ACTION_IDS.VerifyModelApi,
+    surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListRowActions,
+    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  } as const
 
   const header = useMemo(() => {
     return (
@@ -154,7 +168,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   }
 
   const runProbe = async (probeId: ApiVerificationProbeId) => {
-    if (!selectedToken) return
+    if (!selectedToken) return null
     let resolvedToken = selectedToken
 
     const pendingProbes = probesRef.current.map((probe) =>
@@ -194,6 +208,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         nextProbes,
         modelId.trim() || tokenModelHint || initialModelId?.trim(),
       )
+      return result
     } catch (error) {
       logger.error("Probe failed", {
         probeId,
@@ -229,6 +244,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         nextProbes,
         modelId.trim() || tokenModelHint || initialModelId?.trim(),
       )
+      return fallback
     }
   }
 
@@ -245,6 +261,10 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
   const runAll = async () => {
     if (!canRunAll) return
 
+    const tracker = startProductAnalyticsAction(analyticsContext)
+    let successCount = 0
+    let failureCount = 0
+    let hasExecutedProbe = false
     setIsRunning(true)
     replaceProbes(buildProbeState(apiType))
     try {
@@ -254,8 +274,38 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         if (probe.requiresModelId && !modelId.trim() && !tokenModelHint)
           continue
 
-        await runProbe(probe.id)
+        const result = await runProbe(probe.id)
+        if (!result) continue
+        if (result.status === "pass") {
+          hasExecutedProbe = true
+          successCount += 1
+        } else if (result.status === "fail") {
+          hasExecutedProbe = true
+          failureCount += 1
+        }
       }
+      const completionResult =
+        failureCount > 0
+          ? PRODUCT_ANALYTICS_RESULTS.Failure
+          : hasExecutedProbe
+            ? PRODUCT_ANALYTICS_RESULTS.Success
+            : PRODUCT_ANALYTICS_RESULTS.Skipped
+      await tracker.complete(completionResult, {
+        insights: {
+          successCount,
+          failureCount,
+        },
+      })
+    } catch (error) {
+      logger.error("Model verification run failed", {
+        message: toSanitizedErrorSummary(error, []),
+      })
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        insights: {
+          successCount,
+          failureCount,
+        },
+      })
     } finally {
       setIsRunning(false)
     }

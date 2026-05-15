@@ -13,11 +13,18 @@ import AccountLinkButton from "~/components/AccountLinkButton"
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Button, Card } from "~/components/ui"
 import { Z_INDEX } from "~/constants/designTokens"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import {
   resolveAutoCheckinTroubleshootingHintKey,
   translateAutoCheckinMessageKey,
 } from "~/features/AutoCheckin/utils/autoCheckin"
 import { cn } from "~/lib/utils"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import {
   CHECKIN_RESULT_STATUS,
   CheckinAccountResult,
@@ -39,6 +46,10 @@ interface ResultsTableProps {
   onDisableAccount?: (accountId: string) => void | Promise<void>
   onDeleteAccount?: (accountId: string) => void | Promise<void>
 }
+
+const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
+const resultsTableSurface =
+  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable
 
 /**
  * Renders auto-checkin execution results with status badges, timestamps, and action buttons.
@@ -220,78 +231,115 @@ export default function ResultsTable({
                       Z_INDEX.tableStickyCell,
                     )}
                   >
-                    <div className="flex flex-wrap gap-2">
-                      {onRetryAccount &&
-                        (forceShowActions || isFailedResult) && (
-                          <Button
-                            size="sm"
-                            variant="secondary"
-                            loading={retryingAccountId === result.accountId}
-                            disabled={retryingAccountId === result.accountId}
-                            onClick={() => onRetryAccount(result.accountId)}
-                            leftIcon={<ArrowPathIcon className="h-3.5 w-3.5" />}
-                          >
-                            {t("execution.actions.retryAccount")}
-                          </Button>
-                        )}
-                      {onOpenManualSignIn &&
-                        (forceShowActions || isFailedResult) && (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            loading={
-                              openingManualAccountId === result.accountId
-                            }
-                            disabled={
-                              openingManualAccountId === result.accountId
-                            }
-                            onClick={() => onOpenManualSignIn(result.accountId)}
-                            leftIcon={
-                              <WorkflowTransitionIcon className="h-3.5 w-3.5" />
-                            }
-                          >
-                            {t("execution.actions.openManual")}
-                          </Button>
-                        )}
-                      {onDisableAccount && isFailedResult && (
-                        <Button
-                          size="sm"
-                          variant="warning"
-                          loading={disablingAccountId === result.accountId}
-                          disabled={disablingAccountId === result.accountId}
-                          onClick={() => onDisableAccount(result.accountId)}
-                          leftIcon={<NoSymbolIcon className="h-3.5 w-3.5" />}
+                    <ProductAnalyticsScope
+                      entrypoint={optionsEntrypoint}
+                      surfaceId={resultsTableSurface}
+                    >
+                      <div className="flex flex-wrap gap-2">
+                        <ProductAnalyticsScope
+                          featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin}
                         >
-                          {t("account:actions.disableAccount")}
-                        </Button>
-                      )}
-                      {onDeleteAccount && isFailedResult && (
-                        <Button
-                          size="sm"
-                          variant="destructive"
-                          loading={deletingAccountId === result.accountId}
-                          disabled={deletingAccountId === result.accountId}
-                          onClick={() => onDeleteAccount(result.accountId)}
-                          leftIcon={<TrashIcon className="h-3.5 w-3.5" />}
-                        >
-                          {t("account:actions.delete")}
-                        </Button>
-                      )}
-                      {onOpenAccountSite && (
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          loading={isOpeningSite}
-                          disabled={isOpeningSite}
-                          onClick={() => onOpenAccountSite(result.accountId)}
-                          leftIcon={
-                            <WorkflowTransitionIcon className="h-3.5 w-3.5" />
+                          {onRetryAccount &&
+                            (forceShowActions || isFailedResult) && (
+                              <Button
+                                size="sm"
+                                variant="secondary"
+                                loading={retryingAccountId === result.accountId}
+                                disabled={
+                                  retryingAccountId === result.accountId
+                                }
+                                onClick={() => onRetryAccount(result.accountId)}
+                                leftIcon={
+                                  <ArrowPathIcon className="h-3.5 w-3.5" />
+                                }
+                              >
+                                {t("execution.actions.retryAccount")}
+                              </Button>
+                            )}
+                          {onOpenManualSignIn &&
+                            (forceShowActions || isFailedResult) && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                loading={
+                                  openingManualAccountId === result.accountId
+                                }
+                                disabled={
+                                  openingManualAccountId === result.accountId
+                                }
+                                onClick={() =>
+                                  onOpenManualSignIn(result.accountId)
+                                }
+                                leftIcon={
+                                  <WorkflowTransitionIcon className="h-3.5 w-3.5" />
+                                }
+                                analyticsAction={
+                                  PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinManualSignIn
+                                }
+                              >
+                                {t("execution.actions.openManual")}
+                              </Button>
+                            )}
+                        </ProductAnalyticsScope>
+                        <ProductAnalyticsScope
+                          featureId={
+                            PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement
                           }
                         >
-                          {t("execution.actions.openSite")}
-                        </Button>
-                      )}
-                    </div>
+                          {onDisableAccount && isFailedResult && (
+                            <Button
+                              size="sm"
+                              variant="warning"
+                              loading={disablingAccountId === result.accountId}
+                              disabled={disablingAccountId === result.accountId}
+                              onClick={() => onDisableAccount(result.accountId)}
+                              leftIcon={
+                                <NoSymbolIcon className="h-3.5 w-3.5" />
+                              }
+                              analyticsAction={
+                                PRODUCT_ANALYTICS_ACTION_IDS.DisableAutoCheckinAccount
+                              }
+                            >
+                              {t("account:actions.disableAccount")}
+                            </Button>
+                          )}
+                          {onDeleteAccount && isFailedResult && (
+                            <Button
+                              size="sm"
+                              variant="destructive"
+                              loading={deletingAccountId === result.accountId}
+                              disabled={deletingAccountId === result.accountId}
+                              onClick={() => onDeleteAccount(result.accountId)}
+                              leftIcon={<TrashIcon className="h-3.5 w-3.5" />}
+                              analyticsAction={
+                                PRODUCT_ANALYTICS_ACTION_IDS.DeleteAutoCheckinAccount
+                              }
+                            >
+                              {t("account:actions.delete")}
+                            </Button>
+                          )}
+                          {onOpenAccountSite && (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              loading={isOpeningSite}
+                              disabled={isOpeningSite}
+                              onClick={() =>
+                                onOpenAccountSite(result.accountId)
+                              }
+                              leftIcon={
+                                <WorkflowTransitionIcon className="h-3.5 w-3.5" />
+                              }
+                              analyticsAction={
+                                PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountSite
+                              }
+                            >
+                              {t("execution.actions.openSite")}
+                            </Button>
+                          )}
+                        </ProductAnalyticsScope>
+                      </div>
+                    </ProductAnalyticsScope>
                   </td>
                 </tr>
               )

@@ -1,9 +1,27 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AccountSelector } from "~/features/ModelList/components/AccountSelector"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
+const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
+  vi.hoisted(() => ({
+    startProductAnalyticsActionMock: vi.fn(),
+    completeProductAnalyticsActionMock: vi.fn(),
+  }))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: any[]) =>
+    startProductAnalyticsActionMock(...args),
+}))
+
 describe("AccountSelector", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: completeProductAnalyticsActionMock,
+    })
+  })
+
   it("includes the profile hostname in the selector label", async () => {
     render(
       <AccountSelector
@@ -210,5 +228,64 @@ describe("AccountSelector", () => {
     expect(comboboxes[1]).toHaveTextContent(
       "modelList:accountGroupFilterNoGroupsIncluded",
     )
+  })
+
+  it("tracks source selection intent and completion without raw source labels", async () => {
+    const setSelectedSourceValue = vi.fn()
+
+    render(
+      <AccountSelector
+        selectedSourceValue=""
+        setSelectedSourceValue={setSelectedSourceValue}
+        accounts={[
+          {
+            id: "account-1",
+            name: "Private Account Name",
+            url: "https://private.example.com",
+          } as any,
+        ]}
+        profiles={[
+          {
+            id: "profile-1",
+            name: "Private Profile",
+            apiType: "openai-compatible",
+            baseUrl: "https://profile.example.com/v1",
+            apiKey: "sk-secret",
+            tagIds: [],
+            notes: "",
+            createdAt: 1,
+            updatedAt: 1,
+          },
+        ]}
+      />,
+    )
+
+    const combobox = await screen.findByRole("combobox")
+    fireEvent.click(combobox)
+    fireEvent.click(await screen.findByText("Private Account Name"))
+
+    expect(setSelectedSourceValue).toHaveBeenCalledWith("account:account-1")
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: "model_list",
+      actionId: "select_model_source",
+      surfaceId: "options_model_list_page",
+      entrypoint: "options",
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith("success", {
+      insights: {
+        sourceKind: "model_account",
+      },
+    })
+
+    const serializedCalls = JSON.stringify([
+      startProductAnalyticsActionMock.mock.calls,
+      completeProductAnalyticsActionMock.mock.calls,
+    ])
+    expect(serializedCalls).not.toContain("Private Account Name")
+    expect(serializedCalls).not.toContain("Private Profile")
+    expect(serializedCalls).not.toContain("private.example.com")
+    expect(serializedCalls).not.toContain("profile.example.com")
+    expect(serializedCalls).not.toContain("account-1")
+    expect(serializedCalls).not.toContain("profile-1")
   })
 })

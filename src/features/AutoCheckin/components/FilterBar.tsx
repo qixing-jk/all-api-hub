@@ -8,6 +8,13 @@ import { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Input } from "~/components/ui"
+import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import {
   CHECKIN_RESULT_STATUS,
   type CheckinAccountResult,
@@ -60,6 +67,14 @@ export default function FilterBar({
   const skippedCount = accountResults.filter(
     (r) => r.status === CHECKIN_RESULT_STATUS.SKIPPED,
   ).length
+  const trackStatusFilterSelection = () => {
+    void trackProductAnalyticsActionStarted({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterAutoCheckinResults,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinFilterBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+  }
 
   const renderFilterButton = (
     value: FilterStatus,
@@ -69,7 +84,10 @@ export default function FilterBar({
     count?: number,
   ) => (
     <button
-      onClick={() => onStatusChange(value)}
+      onClick={() => {
+        onStatusChange(value)
+        trackStatusFilterSelection()
+      }}
       className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
         status === value
           ? `${color} text-white`

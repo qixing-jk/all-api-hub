@@ -1,12 +1,29 @@
 import { Tab } from "@headlessui/react"
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { ProviderTabs } from "~/features/ModelList/components/ProviderTabs"
 import {
   MODEL_PROVIDER_FILTER_VALUES,
   type ModelProviderFilterValue,
 } from "~/services/models/utils/modelProviders"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+
+const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
+  vi.hoisted(() => ({
+    startProductAnalyticsActionMock: vi.fn(),
+    completeProductAnalyticsActionMock: vi.fn(),
+  }))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: any[]) =>
+    startProductAnalyticsActionMock(...args),
+}))
 
 const createProviders = () => ["OpenAI", "Claude", "Gemini"] as any
 const TABLIST_CLIENT_WIDTH_PX = 100
@@ -51,6 +68,13 @@ const renderProviderTabs = ({
 }
 
 describe("ProviderTabs scroll arrows", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: completeProductAnalyticsActionMock,
+    })
+  })
+
   it("enables right arrow when tab list overflows", async () => {
     renderProviderTabs({
       providerCounts: {
@@ -167,6 +191,13 @@ describe("ProviderTabs selection", () => {
     fireEvent.click(await screen.findByRole("tab", { name: /Claude \(1\)/ }))
 
     expect(setSelectedProvider).toHaveBeenCalledWith("Claude")
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith("success")
   })
 
   it("keeps a provider tab selected when a non-all provider is active and lets users switch back to all", async () => {

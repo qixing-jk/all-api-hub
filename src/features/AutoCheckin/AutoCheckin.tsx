@@ -20,6 +20,19 @@ import DelAccountDialog from "~/features/AccountManagement/components/DelAccount
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import {
+  startProductAnalyticsAction,
+  trackProductAnalyticsActionCompleted,
+} from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsResult,
+} from "~/services/productAnalytics/events"
 import type { DisplaySiteData } from "~/types"
 import {
   AutoCheckinRunSummary,
@@ -56,6 +69,90 @@ import StatusCard from "./components/StatusCard"
  * Unified logger scoped to the Auto Check-in options page.
  */
 const logger = createLogger("AutoCheckinOptionsPage")
+
+type ProductAnalyticsActionTracker = ReturnType<
+  typeof startProductAnalyticsAction
+>
+
+const getAutoCheckinSummaryAnalyticsInsights = (
+  summary?: AutoCheckinRunSummary | null,
+) => {
+  if (!summary) return undefined
+
+  return {
+    itemCount: summary.executed,
+    successCount: summary.successCount,
+    failureCount: summary.failedCount,
+  }
+}
+
+const getAutoCheckinStatusAnalyticsInsights = (
+  status?: AutoCheckinStatus | null,
+) => {
+  const summaryInsights = getAutoCheckinSummaryAnalyticsInsights(
+    status?.summary,
+  )
+
+  if (summaryInsights) return summaryInsights
+
+  const results = status?.perAccount ? Object.values(status.perAccount) : []
+  if (results.length === 0) return undefined
+
+  const successCount = results.filter(
+    (result) =>
+      result.status === CHECKIN_RESULT_STATUS.SUCCESS ||
+      result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED,
+  ).length
+  const failureCount = results.filter(
+    (result) => result.status === CHECKIN_RESULT_STATUS.FAILED,
+  ).length
+
+  return {
+    itemCount: successCount + failureCount,
+    successCount,
+    failureCount,
+  }
+}
+
+const isNoRunnableAutoCheckinResponse = (response: any): boolean => {
+  const summary = response?.summary
+
+  return (
+    response?.success === true &&
+    summary &&
+    summary.executed === 0 &&
+    summary.totalEligible === 0
+  )
+}
+
+const getRetryAnalyticsResult = (response: any): ProductAnalyticsResult => {
+  if (!response?.success) {
+    return PRODUCT_ANALYTICS_RESULTS.Failure
+  }
+
+  if (response?.result?.status === CHECKIN_RESULT_STATUS.SKIPPED) {
+    return PRODUCT_ANALYTICS_RESULTS.Skipped
+  }
+
+  return PRODUCT_ANALYTICS_RESULTS.Success
+}
+
+const completeAutoCheckinAnalytics = async (
+  tracker: ProductAnalyticsActionTracker,
+  result: ProductAnalyticsResult,
+  options?: Parameters<ProductAnalyticsActionTracker["complete"]>[1],
+) => {
+  try {
+    if (options) {
+      await tracker.complete(result, options)
+      return
+    }
+
+    await tracker.complete(result)
+  } catch {
+    // Product analytics must not block user-triggered check-in actions.
+  }
+}
 
 /**
  * Auto Check-in dashboard page: fetches status, runs jobs, filters/searches results, and shows snapshots.
@@ -126,12 +223,15 @@ export default function AutoCheckin(props: {
 
       if (response.success) {
         setStatus(response.data)
+        return response.data as AutoCheckinStatus
       }
     } catch (error) {
       logger.error("Failed to load status", error)
     } finally {
       setIsLoading(false)
     }
+
+    return null
   }, [])
 
   useEffect(() => {
@@ -147,6 +247,13 @@ export default function AutoCheckin(props: {
   }, [loadStatus])
 
   const handleRunNow = useCallback(async () => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
     try {
       setIsRunning(true)
       toast.loading(t("messages.loading.running"))
@@ -159,14 +266,39 @@ export default function AutoCheckin(props: {
 
       if (response.success) {
         toast.success(t("messages.success.runCompleted"))
-        await loadStatus()
+        const updatedStatus = await loadStatus()
+        await completeAutoCheckinAnalytics(
+          tracker,
+          isNoRunnableAutoCheckinResponse(response)
+            ? PRODUCT_ANALYTICS_RESULTS.Skipped
+            : PRODUCT_ANALYTICS_RESULTS.Success,
+          {
+            insights:
+              getAutoCheckinSummaryAnalyticsInsights(response.summary) ??
+              getAutoCheckinStatusAnalyticsInsights(updatedStatus),
+          },
+        )
       } else {
         toast.error(t("messages.error.runFailed", { error: response.error }))
+        await completeAutoCheckinAnalytics(
+          tracker,
+          PRODUCT_ANALYTICS_RESULTS.Failure,
+          {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          },
+        )
       }
     } catch (error: unknown) {
       toast.dismiss()
       toast.error(
         t("messages.error.runFailed", { error: getErrorMessage(error) }),
+      )
+      await completeAutoCheckinAnalytics(
+        tracker,
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        },
       )
     } finally {
       setIsRunning(false)
@@ -456,6 +588,13 @@ export default function AutoCheckin(props: {
   }
 
   const handleRetryAccount = async (accountId: string) => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RetryAutoCheckinAccount,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
     try {
       setRetryingAccountId(accountId)
       const response = await sendRuntimeMessage({
@@ -465,15 +604,38 @@ export default function AutoCheckin(props: {
 
       if (response.success) {
         toast.success(t("messages.success.retryCompleted"))
-        await loadStatus()
+        const updatedStatus = await loadStatus()
+        await completeAutoCheckinAnalytics(
+          tracker,
+          getRetryAnalyticsResult(response),
+          {
+            insights:
+              getAutoCheckinSummaryAnalyticsInsights(response.summary) ??
+              getAutoCheckinStatusAnalyticsInsights(updatedStatus),
+          },
+        )
       } else {
         toast.error(
           t("messages.error.retryFailed", { error: response.error ?? "" }),
+        )
+        await completeAutoCheckinAnalytics(
+          tracker,
+          PRODUCT_ANALYTICS_RESULTS.Failure,
+          {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          },
         )
       }
     } catch (error: unknown) {
       toast.error(
         t("messages.error.retryFailed", { error: getErrorMessage(error) }),
+      )
+      await completeAutoCheckinAnalytics(
+        tracker,
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        },
       )
     } finally {
       setRetryingAccountId(null)
@@ -562,6 +724,31 @@ export default function AutoCheckin(props: {
   }
 
   const handleDisableAccount = async (accountId: string) => {
+    const startedAt = Date.now()
+    const completeDisableAnalytics = async (
+      result: ProductAnalyticsResult,
+      options?: {
+        errorCategory?: typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+      },
+    ) => {
+      try {
+        await trackProductAnalyticsActionCompleted({
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.DisableAutoCheckinAccount,
+          surfaceId:
+            PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+          result,
+          ...(options?.errorCategory
+            ? { errorCategory: options.errorCategory }
+            : {}),
+          durationMs: Date.now() - startedAt,
+        })
+      } catch {
+        // Product analytics must not block disabling failed check-in accounts.
+      }
+    }
+
     try {
       setDisablingAccountId(accountId)
       const displayData = await resolveAutoCheckinAccount(accountId, {
@@ -571,6 +758,9 @@ export default function AutoCheckin(props: {
 
       if (!success) {
         toast.error(t("messages:toast.error.operationFailedGeneric"))
+        await completeDisableAnalytics(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
         return
       }
 
@@ -580,12 +770,16 @@ export default function AutoCheckin(props: {
           accountName: displayData.name,
         }),
       )
+      await completeDisableAnalytics(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error: unknown) {
       toast.error(
         t("messages:toast.error.operationFailed", {
           error: getErrorMessage(error),
         }),
       )
+      await completeDisableAnalytics(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     } finally {
       setDisablingAccountId(null)
     }

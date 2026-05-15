@@ -2,6 +2,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { VerifyApiDialog } from "~/components/dialogs/VerifyApiDialog"
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import {
   createAccountModelVerificationHistoryTarget,
@@ -18,6 +25,8 @@ import {
 } from "~~/tests/test-utils/render"
 
 const mockFetchAccountTokens = vi.fn()
+const mockStartProductAnalyticsAction = vi.fn()
+const mockCompleteProductAnalyticsAction = vi.fn()
 
 vi.mock("~/services/apiService", () => ({
   getApiService: () => ({
@@ -27,7 +36,13 @@ vi.mock("~/services/apiService", () => ({
   }),
 }))
 
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: any[]) =>
+    mockStartProductAnalyticsAction(...args),
+}))
+
 const mockRunApiVerificationProbe = vi.fn()
+const mockGetApiVerificationProbeDefinitions = vi.fn()
 
 vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
   const original =
@@ -36,6 +51,13 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
     >()
   return {
     ...original,
+    getApiVerificationProbeDefinitions: (
+      apiType: Parameters<
+        typeof original.getApiVerificationProbeDefinitions
+      >[0],
+    ) =>
+      mockGetApiVerificationProbeDefinitions(apiType) ??
+      original.getApiVerificationProbeDefinitions(apiType),
     runApiVerificationProbe: (...args: any[]) =>
       mockRunApiVerificationProbe(...args),
   }
@@ -46,6 +68,12 @@ describe("VerifyApiDialog", () => {
     // Prevent cross-test leakage from `mockResolvedValueOnce` and call counts.
     mockFetchAccountTokens.mockReset()
     mockRunApiVerificationProbe.mockReset()
+    mockGetApiVerificationProbeDefinitions.mockReset()
+    mockStartProductAnalyticsAction.mockReset()
+    mockCompleteProductAnalyticsAction.mockReset()
+    mockStartProductAnalyticsAction.mockReturnValue({
+      complete: mockCompleteProductAnalyticsAction,
+    })
     await verificationResultHistoryStorage.clearAllData()
   })
 
@@ -347,5 +375,231 @@ describe("VerifyApiDialog", () => {
         screen.getByText("aiApiVerification:verifyDialog.status.unverified"),
       ).toBeInTheDocument()
     })
+  })
+
+  it("completes run-all analytics as success when probes pass", async () => {
+    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+      { id: "models", requiresModelId: false },
+      { id: "text-generation", requiresModelId: true },
+    ])
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        user_id: 1,
+        key: "secret",
+        status: 1,
+        name: "token-1",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+    mockRunApiVerificationProbe
+      .mockResolvedValueOnce({
+        id: "models",
+        status: "pass",
+        latencyMs: 8,
+        summary: "Models listed",
+      })
+      .mockResolvedValueOnce({
+        id: "text-generation",
+        status: "pass",
+        latencyMs: 12,
+        summary: "Text generation succeeded",
+      })
+
+    render(
+      <VerifyApiDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          id: "a1",
+          name: "Account",
+          username: "u",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+          todayTokens: { upload: 0, download: 0 },
+          health: { status: "healthy" as any },
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://example.com",
+          token: "t",
+          userId: 1,
+          authType: "access_token" as any,
+          checkIn: { enableDetection: false } as any,
+        }}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    const runAllButton = await screen.findByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.run",
+    })
+    await waitFor(() => expect(runAllButton).toBeEnabled())
+    fireEvent.click(runAllButton)
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            successCount: 2,
+            failureCount: 0,
+          },
+        },
+      )
+    })
+    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.VerifyModelApi,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+  })
+
+  it("completes run-all analytics as failure when any probe fails", async () => {
+    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+      { id: "models", requiresModelId: false },
+      { id: "text-generation", requiresModelId: true },
+    ])
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        user_id: 1,
+        key: "secret",
+        status: 1,
+        name: "token-1",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+    mockRunApiVerificationProbe
+      .mockResolvedValueOnce({
+        id: "models",
+        status: "pass",
+        latencyMs: 8,
+        summary: "Models listed",
+      })
+      .mockResolvedValueOnce({
+        id: "text-generation",
+        status: "fail",
+        latencyMs: 12,
+        summary: "Request failed",
+      })
+
+    render(
+      <VerifyApiDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          id: "a1",
+          name: "Account",
+          username: "u",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+          todayTokens: { upload: 0, download: 0 },
+          health: { status: "healthy" as any },
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://example.com",
+          token: "t",
+          userId: 1,
+          authType: "access_token" as any,
+          checkIn: { enableDetection: false } as any,
+        }}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    const runAllButton = await screen.findByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.run",
+    })
+    await waitFor(() => expect(runAllButton).toBeEnabled())
+    fireEvent.click(runAllButton)
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          insights: {
+            successCount: 1,
+            failureCount: 1,
+          },
+        },
+      )
+    })
+  })
+
+  it("completes run-all analytics as skipped when no probes execute", async () => {
+    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+      { id: "text-generation", requiresModelId: true },
+    ])
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        user_id: 1,
+        key: "secret",
+        status: 1,
+        name: "token-1",
+        models: "",
+        model_limits: "",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+
+    render(
+      <VerifyApiDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          id: "a1",
+          name: "Account",
+          username: "u",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+          todayTokens: { upload: 0, download: 0 },
+          health: { status: "healthy" as any },
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://example.com",
+          token: "t",
+          userId: 1,
+          authType: "access_token" as any,
+          checkIn: { enableDetection: false } as any,
+        }}
+        initialModelId=""
+      />,
+    )
+
+    const runAllButton = await screen.findByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.run",
+    })
+    await waitFor(() => expect(runAllButton).toBeEnabled())
+    fireEvent.click(runAllButton)
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+        {
+          insights: {
+            successCount: 0,
+            failureCount: 0,
+          },
+        },
+      )
+    })
+    expect(mockRunApiVerificationProbe).not.toHaveBeenCalled()
   })
 })

@@ -615,6 +615,13 @@ describe("BatchVerifyModelsDialog", () => {
     await waitFor(() => {
       expect(mockCompleteStartProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            itemCount: 1,
+            successCount: 1,
+            failureCount: 0,
+          },
+        },
       )
     })
   })
@@ -667,7 +674,14 @@ describe("BatchVerifyModelsDialog", () => {
     await waitFor(() => {
       expect(mockCompleteStartProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
-        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 1,
+          },
+        },
       )
     })
   })

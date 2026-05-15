@@ -7,9 +7,19 @@ import ModelItem from "~/features/ModelList/components/ModelItem"
 import { MODEL_LIST_GROUP_SELECTION_SCOPES } from "~/features/ModelList/groupSelectionScopes"
 import type { ModelPricing } from "~/services/apiService/common/type"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 
 const { loggerWarnSpy } = vi.hoisted(() => ({
   loggerWarnSpy: vi.fn(),
+}))
+
+const { trackProductAnalyticsActionStartedMock } = vi.hoisted(() => ({
+  trackProductAnalyticsActionStartedMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -26,6 +36,11 @@ vi.mock("~/utils/core/logger", () => ({
     warn: loggerWarnSpy,
     error: vi.fn(),
   }),
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionStarted: (...args: any[]) =>
+    trackProductAnalyticsActionStartedMock(...args),
 }))
 
 vi.mock("react-i18next", async (importOriginal) => {
@@ -87,14 +102,17 @@ vi.mock(
     ModelItemExpandButton: ({
       isExpanded,
       onToggleExpand,
+      analyticsAction,
     }: {
       isExpanded: boolean
       onToggleExpand: () => void
+      analyticsAction?: unknown
     }) => (
       <button
         type="button"
         data-testid="expand-button"
         data-expanded={String(isExpanded)}
+        data-analytics-action={JSON.stringify(analyticsAction)}
         onClick={onToggleExpand}
       >
         expand
@@ -199,6 +217,15 @@ describe("ModelItem", () => {
     expect(screen.getByTestId("expand-button")).toHaveAttribute(
       "data-expanded",
       "true",
+    )
+    expect(screen.getByTestId("expand-button")).toHaveAttribute(
+      "data-analytics-action",
+      JSON.stringify({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.ToggleModelDetails,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListRowActions,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      }),
     )
   })
 

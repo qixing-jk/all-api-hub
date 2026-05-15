@@ -38,6 +38,7 @@ import {
   MODEL_LIST_SORT_MODES,
   type ModelListSortMode,
 } from "~/features/ModelList/sortModes"
+import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -179,6 +180,30 @@ export function ControlPanel({
     navigator.clipboard.writeText(modelNames)
     toast.success(t("messages.modelNamesCopied"))
   }
+  const trackFilterChange = () => {
+    void trackProductAnalyticsActionStarted({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+  }
+  const handleClearSearch = () => {
+    setSearchTerm("")
+    trackFilterChange()
+  }
+  const handleSortModeChange = (value: string) => {
+    setSortMode(value as ModelListSortMode)
+    trackFilterChange()
+  }
+  const handleBillingModeChange = (value: string) => {
+    setSelectedBillingMode(value as ModelListBillingMode)
+    trackFilterChange()
+  }
+  const handleGroupSelectionChange = (groups: string[]) => {
+    setSelectedGroups(groups)
+    trackFilterChange()
+  }
 
   return (
     <Card className="mb-6">
@@ -200,7 +225,7 @@ export function ControlPanel({
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
-              onClear={() => setSearchTerm("")}
+              onClear={handleClearSearch}
               clearButtonLabel={t("common:actions.clear")}
             />
           </FormField>
@@ -210,7 +235,7 @@ export function ControlPanel({
               <SearchableSelect
                 options={sortOptions}
                 value={sortMode}
-                onChange={(value) => setSortMode(value as ModelListSortMode)}
+                onChange={handleSortModeChange}
                 placeholder={t("sortBy")}
               />
             </FormField>
@@ -221,9 +246,7 @@ export function ControlPanel({
               <SearchableSelect
                 options={billingModeOptions}
                 value={selectedBillingMode}
-                onChange={(value) =>
-                  setSelectedBillingMode(value as ModelListBillingMode)
-                }
+                onChange={handleBillingModeChange}
                 placeholder={t("allBillingModes")}
               />
             </FormField>
@@ -235,7 +258,7 @@ export function ControlPanel({
                 <CompactMultiSelect
                   options={groupOptions}
                   selected={selectedGroups}
-                  onChange={setSelectedGroups}
+                  onChange={handleGroupSelectionChange}
                   displayMode="summary"
                   placeholder={t("allGroups")}
                   emptyMessage={t("allGroups")}

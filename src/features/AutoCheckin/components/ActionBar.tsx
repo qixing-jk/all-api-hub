@@ -8,6 +8,13 @@ import { useTranslation } from "react-i18next"
 
 import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { Button } from "~/components/ui"
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 
 interface ActionBarProps {
   isRunning: boolean
@@ -69,94 +76,110 @@ export default function ActionBar({
     isDebugTriggering === true ||
     isOpeningFailedManualSignIns === true
   const bulkManualHint = t("execution.hints.openFailedManualNewWindow")
+  const toolbarSurface =
+    PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar
 
   return (
-    <div className="space-y-1.5">
-      <div className="flex flex-wrap gap-2">
-        <Button
-          onClick={onRunNow}
-          disabled={isBusy}
-          leftIcon={<PlayIcon className="h-4 w-4" />}
-        >
-          {t("execution.runNow")}
-        </Button>
-        <Button
-          onClick={onRefresh}
-          variant="secondary"
-          disabled={isBusy || isRefreshing === true}
-          loading={isRefreshing}
-          leftIcon={<ArrowPathIcon className="h-4 w-4" />}
-        >
-          {t("execution.refresh")}
-        </Button>
-        <Button
-          onClick={onOpenFailedManualSignIns}
-          variant="outline"
-          disabled={
-            isBusy || !canOpenFailedManualSignIns || !onOpenFailedManualSignIns
-          }
-          loading={isOpeningFailedManualSignIns}
-          leftIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
-          title={bulkManualHint}
-        >
-          {t("execution.actions.openFailedManual")}
-        </Button>
-        {showDebugButtons && (
-          <>
-            <Button
-              onClick={onDebugTriggerDailyAlarmNow}
-              variant="outline"
-              disabled={isBusy || !onDebugTriggerDailyAlarmNow}
-              leftIcon={<BugAntIcon className="h-4 w-4" />}
-            >
-              {t("execution.debug.triggerDailyAlarmNow")}
-            </Button>
-            <Button
-              onClick={onDebugTriggerRetryAlarmNow}
-              variant="outline"
-              disabled={isBusy || !onDebugTriggerRetryAlarmNow}
-              leftIcon={<BugAntIcon className="h-4 w-4" />}
-            >
-              {t("execution.debug.triggerRetryAlarmNow")}
-            </Button>
-            <Button
-              onClick={onDebugScheduleDailyAlarmForToday}
-              variant="outline"
-              disabled={isBusy || !onDebugScheduleDailyAlarmForToday}
-              leftIcon={<BugAntIcon className="h-4 w-4" />}
-            >
-              {t("execution.debug.scheduleDailyAlarmForToday")}
-            </Button>
-            <Button
-              onClick={onDebugEvaluateUiOpenPretrigger}
-              variant="outline"
-              disabled={isBusy || !onDebugEvaluateUiOpenPretrigger}
-              leftIcon={<BugAntIcon className="h-4 w-4" />}
-            >
-              {t("execution.debug.evaluateUiOpenPretrigger")}
-            </Button>
-            <Button
-              onClick={onDebugTriggerUiOpenPretrigger}
-              variant="outline"
-              disabled={isBusy || !onDebugTriggerUiOpenPretrigger}
-              leftIcon={<BugAntIcon className="h-4 w-4" />}
-            >
-              {t("execution.debug.triggerUiOpenPretrigger")}
-            </Button>
-            <Button
-              onClick={onDebugResetLastDailyRunDay}
-              variant="outline"
-              disabled={isBusy || !onDebugResetLastDailyRunDay}
-              leftIcon={<BugAntIcon className="h-4 w-4" />}
-            >
-              {t("execution.debug.resetLastDailyRunDay")}
-            </Button>
-          </>
-        )}
+    <ProductAnalyticsScope
+      entrypoint={PRODUCT_ANALYTICS_ENTRYPOINTS.Options}
+      featureId={PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin}
+      surfaceId={toolbarSurface}
+    >
+      <div className="space-y-1.5">
+        <div className="flex flex-wrap gap-2">
+          <Button
+            onClick={onRunNow}
+            disabled={isBusy}
+            leftIcon={<PlayIcon className="h-4 w-4" />}
+          >
+            {t("execution.runNow")}
+          </Button>
+          <Button
+            onClick={onRefresh}
+            variant="secondary"
+            disabled={isBusy || isRefreshing === true}
+            loading={isRefreshing}
+            leftIcon={<ArrowPathIcon className="h-4 w-4" />}
+            analyticsAction={
+              PRODUCT_ANALYTICS_ACTION_IDS.RefreshAutoCheckinStatus
+            }
+          >
+            {t("execution.refresh")}
+          </Button>
+          <Button
+            onClick={onOpenFailedManualSignIns}
+            variant="outline"
+            disabled={
+              isBusy ||
+              !canOpenFailedManualSignIns ||
+              !onOpenFailedManualSignIns
+            }
+            loading={isOpeningFailedManualSignIns}
+            leftIcon={<WorkflowTransitionIcon className="h-4 w-4" />}
+            title={bulkManualHint}
+            analyticsAction={
+              PRODUCT_ANALYTICS_ACTION_IDS.OpenFailedAutoCheckinManualSignIns
+            }
+          >
+            {t("execution.actions.openFailedManual")}
+          </Button>
+          {showDebugButtons && (
+            <>
+              <Button
+                onClick={onDebugTriggerDailyAlarmNow}
+                variant="outline"
+                disabled={isBusy || !onDebugTriggerDailyAlarmNow}
+                leftIcon={<BugAntIcon className="h-4 w-4" />}
+              >
+                {t("execution.debug.triggerDailyAlarmNow")}
+              </Button>
+              <Button
+                onClick={onDebugTriggerRetryAlarmNow}
+                variant="outline"
+                disabled={isBusy || !onDebugTriggerRetryAlarmNow}
+                leftIcon={<BugAntIcon className="h-4 w-4" />}
+              >
+                {t("execution.debug.triggerRetryAlarmNow")}
+              </Button>
+              <Button
+                onClick={onDebugScheduleDailyAlarmForToday}
+                variant="outline"
+                disabled={isBusy || !onDebugScheduleDailyAlarmForToday}
+                leftIcon={<BugAntIcon className="h-4 w-4" />}
+              >
+                {t("execution.debug.scheduleDailyAlarmForToday")}
+              </Button>
+              <Button
+                onClick={onDebugEvaluateUiOpenPretrigger}
+                variant="outline"
+                disabled={isBusy || !onDebugEvaluateUiOpenPretrigger}
+                leftIcon={<BugAntIcon className="h-4 w-4" />}
+              >
+                {t("execution.debug.evaluateUiOpenPretrigger")}
+              </Button>
+              <Button
+                onClick={onDebugTriggerUiOpenPretrigger}
+                variant="outline"
+                disabled={isBusy || !onDebugTriggerUiOpenPretrigger}
+                leftIcon={<BugAntIcon className="h-4 w-4" />}
+              >
+                {t("execution.debug.triggerUiOpenPretrigger")}
+              </Button>
+              <Button
+                onClick={onDebugResetLastDailyRunDay}
+                variant="outline"
+                disabled={isBusy || !onDebugResetLastDailyRunDay}
+                leftIcon={<BugAntIcon className="h-4 w-4" />}
+              >
+                {t("execution.debug.resetLastDailyRunDay")}
+              </Button>
+            </>
+          )}
+        </div>
+        {canOpenFailedManualSignIns && onOpenFailedManualSignIns ? (
+          <p className="text-muted-foreground text-xs">{bulkManualHint}</p>
+        ) : null}
       </div>
-      {canOpenFailedManualSignIns && onOpenFailedManualSignIns ? (
-        <p className="text-muted-foreground text-xs">{bulkManualHint}</p>
-      ) : null}
-    </div>
+    </ProductAnalyticsScope>
   )
 }

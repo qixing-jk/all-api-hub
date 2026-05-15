@@ -773,6 +773,15 @@ export function BatchVerifyModelsDialog({
         batchAbortControllerRef.current = null
       }
       setIsRunning(false)
+      const completionInsights = {
+        itemCount: selectedItems.length,
+        successCount: selectedOutcomes.filter(
+          (outcome) => outcome === BATCH_VERIFY_ROW_STATUSES.PASS,
+        ).length,
+        failureCount: selectedOutcomes.filter(
+          (outcome) => outcome === BATCH_VERIFY_ROW_STATUSES.FAIL,
+        ).length,
+      }
       if (shouldStopRef.current) {
         await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
       } else if (
@@ -782,6 +791,7 @@ export function BatchVerifyModelsDialog({
       ) {
         await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: completionInsights,
         })
       } else if (
         selectedOutcomes.every(
@@ -790,7 +800,9 @@ export function BatchVerifyModelsDialog({
       ) {
         await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
       } else {
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          insights: completionInsights,
+        })
       }
     }
   }

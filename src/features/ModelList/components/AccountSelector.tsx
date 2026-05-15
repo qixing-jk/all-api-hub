@@ -9,6 +9,15 @@ import {
   toAccountSourceValue,
   toProfileSourceValue,
 } from "~/features/ModelList/modelManagementSources"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { tryParseUrl } from "~/utils/core/urlParsing"
@@ -30,6 +39,25 @@ interface AccountSelectorProps {
   selectorOpen?: boolean
   onSelectorOpenChange?: (open: boolean) => void
   selectorTriggerRef?: Ref<HTMLButtonElement>
+}
+
+/**
+ * Maps a source selector value to the coarse analytics source kind.
+ */
+function resolveAnalyticsSourceKind(sourceValue: string) {
+  if (sourceValue === ALL_ACCOUNTS_SOURCE_VALUE) {
+    return PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAllAccounts
+  }
+
+  if (sourceValue.startsWith("account:")) {
+    return PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount
+  }
+
+  if (sourceValue.startsWith("profile:")) {
+    return PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile
+  }
+
+  return PRODUCT_ANALYTICS_SOURCE_KINDS.Unknown
 }
 
 /**
@@ -66,6 +94,21 @@ export function AccountSelector({
   const { t } = useTranslation("modelList")
   const [isAccountGroupFilterOpen, setIsAccountGroupFilterOpen] =
     useState(false)
+  const handleSourceChange = (sourceValue: string) => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SelectModelSource,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
+    setSelectedSourceValue(sourceValue)
+    void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+      insights: {
+        sourceKind: resolveAnalyticsSourceKind(sourceValue),
+      },
+    })
+  }
 
   return (
     <div className="mb-6">
@@ -100,7 +143,7 @@ export function AccountSelector({
               })),
             ]}
             value={selectedSourceValue ?? ""}
-            onChange={setSelectedSourceValue}
+            onChange={handleSourceChange}
             open={selectorOpen}
             onOpenChange={onSelectorOpenChange}
             placeholder={t("pleaseSelectSource")}

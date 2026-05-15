@@ -1,8 +1,16 @@
 import userEvent from "@testing-library/user-event"
-import { afterEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
@@ -50,11 +58,30 @@ const { setAccountDisabledMock, deleteAccountMock } = vi.hoisted(() => ({
   deleteAccountMock: vi.fn(),
 }))
 
+const {
+  startProductAnalyticsActionMock,
+  completeProductAnalyticsActionMock,
+  trackProductAnalyticsActionCompletedMock,
+  trackProductAnalyticsActionStartedMock,
+} = vi.hoisted(() => ({
+  startProductAnalyticsActionMock: vi.fn(),
+  completeProductAnalyticsActionMock: vi.fn(),
+  trackProductAnalyticsActionCompletedMock: vi.fn(),
+  trackProductAnalyticsActionStartedMock: vi.fn(),
+}))
+
 vi.mock("~/services/accounts/accountStorage", () => ({
   accountStorage: {
     setAccountDisabled: (...args: any[]) => setAccountDisabledMock(...args),
     deleteAccount: (...args: any[]) => deleteAccountMock(...args),
   },
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: startProductAnalyticsActionMock,
+  trackProductAnalyticsActionCompleted:
+    trackProductAnalyticsActionCompletedMock,
+  trackProductAnalyticsActionStarted: trackProductAnalyticsActionStartedMock,
 }))
 
 afterEach(() => {
@@ -63,6 +90,13 @@ afterEach(() => {
 })
 
 describe("AutoCheckin account actions", () => {
+  beforeEach(() => {
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: completeProductAnalyticsActionMock,
+    })
+    trackProductAnalyticsActionCompletedMock.mockReset()
+  })
+
   it("retries a failed account, reloads status, and hides row actions after success", async () => {
     const user = userEvent.setup()
     const browserApi = await import("~/utils/browser/browserApi")
@@ -128,6 +162,22 @@ describe("AutoCheckin account actions", () => {
     })
 
     expect(statusCalls).toBeGreaterThanOrEqual(2)
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RetryAutoCheckinAccount,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          itemCount: 1,
+          successCount: 1,
+          failureCount: 0,
+        },
+      },
+    )
   })
 
   it("shows a retry failure toast and restores the retry button after the request settles", async () => {
@@ -189,6 +239,12 @@ describe("AutoCheckin account actions", () => {
     await waitFor(() => {
       expect(retryButton).not.toBeDisabled()
     })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
   })
 
   it("shows an error when manual sign-in page opening fails and restores the button state", async () => {
@@ -551,6 +607,14 @@ describe("AutoCheckin account actions", () => {
       }),
     ).not.toBeInTheDocument()
     expect(statusCalls).toBeGreaterThanOrEqual(2)
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DisableAutoCheckinAccount,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      durationMs: expect.any(Number),
+    })
   })
 
   it("shows a generic error when disabling a failed account does not persist", async () => {
@@ -605,6 +669,15 @@ describe("AutoCheckin account actions", () => {
       expect(toast.error).toHaveBeenCalledWith(
         "messages:toast.error.operationFailedGeneric",
       )
+    })
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DisableAutoCheckinAccount,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      durationMs: expect.any(Number),
     })
   })
 
@@ -677,6 +750,23 @@ describe("AutoCheckin account actions", () => {
     await waitFor(() => {
       expect(deleteAccountMock).toHaveBeenCalledWith("alpha")
     })
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccount,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(trackProductAnalyticsActionStartedMock).not.toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccount,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
     expect(statusCalls).toBeGreaterThanOrEqual(2)
   })
 
@@ -739,6 +829,17 @@ describe("AutoCheckin account actions", () => {
     await waitFor(() => {
       expect(deleteAccountMock).toHaveBeenCalledWith("alpha")
     })
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccount,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+    )
     expect(screen.getByText("ui:dialog.delete.title")).toBeInTheDocument()
     expect(statusCalls).toBe(1)
   })

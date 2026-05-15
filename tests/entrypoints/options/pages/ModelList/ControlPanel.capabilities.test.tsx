@@ -398,4 +398,80 @@ describe("ControlPanel profile capabilities", () => {
       MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
     )
   })
+
+  it("tracks stable filter and exploration actions without exposing raw terms or model IDs", async () => {
+    const setSearchTerm = vi.fn()
+    const setSortMode = vi.fn()
+    const setSelectedBillingMode = vi.fn()
+    const setSelectedGroups = vi.fn()
+    const setShowRealPrice = vi.fn()
+    const setShowRatioColumn = vi.fn()
+    const setShowEndpointTypes = vi.fn()
+
+    render(
+      <ControlPanel
+        selectedSource={{ kind: "account" } as any}
+        sourceCapabilities={
+          {
+            supportsGroupFiltering: true,
+            supportsPricing: true,
+          } as any
+        }
+        searchTerm="private-search"
+        setSearchTerm={setSearchTerm}
+        sortMode={MODEL_LIST_SORT_MODES.DEFAULT}
+        setSortMode={setSortMode}
+        selectedBillingMode={MODEL_LIST_BILLING_MODES.ALL}
+        setSelectedBillingMode={setSelectedBillingMode}
+        selectedGroups={[]}
+        setSelectedGroups={setSelectedGroups}
+        availableGroups={["private-group", "default"]}
+        pricingData={{ group_ratio: { "private-group": 2 } }}
+        showRealPrice={false}
+        setShowRealPrice={setShowRealPrice}
+        showRatioColumn={true}
+        setShowRatioColumn={setShowRatioColumn}
+        showEndpointTypes={true}
+        setShowEndpointTypes={setShowEndpointTypes}
+        totalModels={5}
+        filteredModels={[{ model: { model_name: "private-model-id" } }]}
+      />,
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", { name: "common:actions.clear" }),
+    )
+
+    const comboboxes = await screen.findAllByRole("combobox")
+    const [, billingModeSelect, groupSelect] = comboboxes
+
+    expect(billingModeSelect).toHaveTextContent("modelList:allBillingModes")
+    fireEvent.click(billingModeSelect)
+    fireEvent.click(await screen.findByText("ui:billing.perCall"))
+    expect(setSelectedBillingMode).toHaveBeenCalledWith(
+      MODEL_LIST_BILLING_MODES.PER_CALL,
+    )
+
+    expect(groupSelect).toHaveTextContent("modelList:allGroups")
+    fireEvent.click(groupSelect)
+    fireEvent.click(await screen.findByText("private-group (2x)"))
+    expect(setSelectedGroups).toHaveBeenCalledWith(["private-group"])
+
+    expect(setSearchTerm).toHaveBeenCalledWith("")
+
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledTimes(3)
+
+    const analyticsCalls = JSON.stringify(
+      trackProductAnalyticsActionStartedMock.mock.calls,
+    )
+    expect(analyticsCalls).not.toContain("private-search")
+    expect(analyticsCalls).not.toContain("private-group")
+    expect(analyticsCalls).not.toContain("private-model-id")
+  })
 })

@@ -19,11 +19,25 @@ import {
   loadAccountTokenFallbackPricingResponse,
 } from "~/services/apiCredentialProfiles/modelCatalog"
 import { getApiService } from "~/services/apiService"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import type { PricingResponse } from "~/services/apiService/common/type"
 import {
   MODEL_PRICING_CACHE_TTL_MS,
   modelPricingCache,
 } from "~/services/models/modelPricingCache"
+import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsErrorCategory,
+  type ProductAnalyticsResult,
+  type ProductAnalyticsSourceKind,
+} from "~/services/productAnalytics/events"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
@@ -87,6 +101,93 @@ function createInvalidFormatError() {
   ;(error as { code?: string }).code =
     MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT
   return error
+}
+
+/** Counts only valid model rows so analytics never includes raw model ids. */
+function getPricingModelCount(pricing: PricingResponse | null | undefined) {
+  return Array.isArray(pricing?.data) ? pricing.data.length : 0
+}
+
+/**
+ * Maps known loader failures into coarse analytics buckets for telemetry.
+ * Unknown is intentionally the fallback to avoid guessing from raw messages.
+ */
+function getModelDataErrorCategory(
+  error: unknown,
+): ProductAnalyticsErrorCategory {
+  const code =
+    error && typeof error === "object"
+      ? (error as { code?: unknown; originalCode?: unknown }).code
+      : undefined
+  const originalCode =
+    error && typeof error === "object"
+      ? (error as { originalCode?: unknown }).originalCode
+      : undefined
+
+  if (code === MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT) {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
+  }
+
+  if (error instanceof ApiError) {
+    if (
+      error.statusCode === 401 ||
+      error.statusCode === 403 ||
+      code === API_ERROR_CODES.HTTP_401 ||
+      code === API_ERROR_CODES.HTTP_403 ||
+      originalCode === API_ERROR_CODES.HTTP_401 ||
+      originalCode === API_ERROR_CODES.HTTP_403
+    ) {
+      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
+    }
+
+    if (code === API_ERROR_CODES.NETWORK_ERROR) {
+      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network
+    }
+  }
+
+  if (error instanceof TypeError && error.message.includes("fetch")) {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network
+  }
+
+  return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+}
+
+const MODEL_DATA_ANALYTICS_CONTEXT = {
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+  actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshModelPricingData,
+  surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+} as const
+
+/**
+ * Tracks a coarse, sanitized model-data load completion outcome.
+ * @param params Completion metadata to bucket and forward to analytics.
+ */
+function trackModelDataLoadCompletion(params: {
+  result: ProductAnalyticsResult
+  sourceKind: ProductAnalyticsSourceKind
+  errorCategory?: ProductAnalyticsErrorCategory
+  modelCount?: number
+  successCount?: number
+  failureCount?: number
+}) {
+  void trackProductAnalyticsActionCompleted({
+    ...MODEL_DATA_ANALYTICS_CONTEXT,
+    result: params.result,
+    errorCategory: params.errorCategory,
+    insights: {
+      sourceKind: params.sourceKind,
+      ...(typeof params.modelCount === "number"
+        ? { modelCount: params.modelCount }
+        : {}),
+      ...(typeof params.successCount === "number"
+        ? { successCount: params.successCount }
+        : {}),
+      ...(typeof params.failureCount === "number"
+        ? { failureCount: params.failureCount }
+        : {}),
+    },
+  })
 }
 
 /** Builds the pricing query key from non-secret account identity fields. */
@@ -302,6 +403,7 @@ function useSingleAccountModelData(params: {
     () => createModelPricingQueryKey(currentAccount),
     [currentAccount],
   )
+  const trackedDirectLoadKeyRef = useRef<string | null>(null)
 
   const query = useQuery<PricingResponse, Error>({
     queryKey,
@@ -450,6 +552,11 @@ function useSingleAccountModelData(params: {
       setLoadErrorMessage(null)
       setDataFormatError(false)
       toast.success(t("status.dataLoaded"))
+      trackModelDataLoadCompletion({
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelFallbackCatalog,
+        modelCount: getPricingModelCount(pricing),
+      })
     } catch (error) {
       if (!isActiveFallbackCatalogRequest(requestScopeKey, requestId)) {
         return
@@ -464,6 +571,11 @@ function useSingleAccountModelData(params: {
       setFallbackStateScopeKey(requestScopeKey)
       setFallbackCatalogLoadErrorMessage(sanitizedMessage)
       toast.error(sanitizedMessage)
+      trackModelDataLoadCompletion({
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelFallbackCatalog,
+        errorCategory: getModelDataErrorCategory(error),
+      })
     } finally {
       if (isActiveFallbackCatalogRequest(requestScopeKey, requestId)) {
         setIsLoadingFallbackCatalog(false)
@@ -529,6 +641,15 @@ function useSingleAccountModelData(params: {
       setLoadErrorMessage(null)
       resetFallbackState()
       toast.success(t("status.dataLoaded"))
+      const trackingKey = `${currentAccountScopeKey}:success:${query.dataUpdatedAt}`
+      if (trackedDirectLoadKeyRef.current !== trackingKey) {
+        trackedDirectLoadKeyRef.current = trackingKey
+        trackModelDataLoadCompletion({
+          result: PRODUCT_ANALYTICS_RESULTS.Success,
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
+          modelCount: getPricingModelCount(query.data),
+        })
+      }
       return
     }
 
@@ -541,6 +662,15 @@ function useSingleAccountModelData(params: {
         setDataFormatError(true)
         setLoadErrorMessage(null)
         toast.error(t("status.formatNotStandard"))
+        const trackingKey = `${currentAccountScopeKey}:invalid-format:${query.errorUpdatedAt}`
+        if (trackedDirectLoadKeyRef.current !== trackingKey) {
+          trackedDirectLoadKeyRef.current = trackingKey
+          trackModelDataLoadCompletion({
+            result: PRODUCT_ANALYTICS_RESULTS.Failure,
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          })
+        }
         return
       }
 
@@ -548,6 +678,15 @@ function useSingleAccountModelData(params: {
       const message = t("status.loadFailed")
       setLoadErrorMessage(message)
       toast.error(message)
+      const trackingKey = `${currentAccountScopeKey}:failure:${query.errorUpdatedAt}`
+      if (trackedDirectLoadKeyRef.current !== trackingKey) {
+        trackedDirectLoadKeyRef.current = trackingKey
+        trackModelDataLoadCompletion({
+          result: PRODUCT_ANALYTICS_RESULTS.Failure,
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
+          errorCategory: getModelDataErrorCategory(query.error),
+        })
+      }
     }
   }, [
     query.data,
@@ -555,7 +694,10 @@ function useSingleAccountModelData(params: {
     query.isFetching,
     query.isSuccess,
     query.error,
+    query.dataUpdatedAt,
+    query.errorUpdatedAt,
     currentAccount,
+    currentAccountScopeKey,
     selectedSource?.kind,
     t,
     resetFallbackState,
@@ -686,6 +828,66 @@ function useAllAccountsModelData(
       },
     })),
   })
+  const trackedAggregateLoadKeyRef = useRef<string | null>(null)
+
+  useEffect(() => {
+    if (!enabled) return
+
+    if (safeDisplayData.length === 0) {
+      const trackingKey = `${MODEL_LIST_QUERY_SCOPE_VALUES.NONE}:skipped`
+      if (trackedAggregateLoadKeyRef.current !== trackingKey) {
+        trackedAggregateLoadKeyRef.current = trackingKey
+        trackModelDataLoadCompletion({
+          result: PRODUCT_ANALYTICS_RESULTS.Skipped,
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAllAccounts,
+          modelCount: 0,
+          successCount: 0,
+          failureCount: 0,
+        })
+      }
+      return
+    }
+
+    if (queries.length !== safeDisplayData.length) return
+    if (queries.some((query) => query.isPending || query.isFetching)) return
+    if (!queries.every((query) => query.isSuccess || query.isError)) return
+
+    const successCount = queries.filter((query) => query.isSuccess).length
+    const failureCount = queries.filter((query) => query.isError).length
+    const modelCount = queries.reduce(
+      (count, query) => count + getPricingModelCount(query.data),
+      0,
+    )
+    const trackingKey = queries
+      .map((query, index) =>
+        [
+          safeDisplayData[index]?.id,
+          query.isSuccess ? "success" : "failure",
+          query.dataUpdatedAt,
+          query.errorUpdatedAt,
+        ].join(":"),
+      )
+      .join("|")
+
+    if (trackedAggregateLoadKeyRef.current === trackingKey) return
+    trackedAggregateLoadKeyRef.current = trackingKey
+
+    // Conservative aggregate semantics: any account failure makes the overall
+    // load a failure, because the rendered catalog is incomplete.
+    trackModelDataLoadCompletion({
+      result:
+        failureCount > 0
+          ? PRODUCT_ANALYTICS_RESULTS.Failure
+          : PRODUCT_ANALYTICS_RESULTS.Success,
+      sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAllAccounts,
+      ...(failureCount > 0
+        ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
+        : {}),
+      modelCount,
+      successCount,
+      failureCount,
+    })
+  }, [enabled, queries, safeDisplayData])
 
   const pricingContexts: AccountPricingContext[] = useMemo(() => {
     return safeDisplayData
@@ -796,6 +998,7 @@ function useProfileModelData(
       return buildApiCredentialProfilePricingResponse(modelIds)
     },
   })
+  const trackedProfileLoadKeyRef = useRef<string | null>(null)
 
   const loadErrorMessage = useMemo(() => {
     if (!currentProfile || !query.isError) {
@@ -822,6 +1025,15 @@ function useProfileModelData(
 
     if (query.isSuccess) {
       toast.success(t("status.dataLoaded"))
+      const trackingKey = `${currentProfile.id}:success:${query.dataUpdatedAt}`
+      if (trackedProfileLoadKeyRef.current !== trackingKey) {
+        trackedProfileLoadKeyRef.current = trackingKey
+        trackModelDataLoadCompletion({
+          result: PRODUCT_ANALYTICS_RESULTS.Success,
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile,
+          modelCount: getPricingModelCount(query.data),
+        })
+      }
       return
     }
 
@@ -831,8 +1043,27 @@ function useProfileModelData(
           errorMessage: loadErrorMessage,
         }),
       )
+      const trackingKey = `${currentProfile.id}:failure:${query.errorUpdatedAt}`
+      if (trackedProfileLoadKeyRef.current !== trackingKey) {
+        trackedProfileLoadKeyRef.current = trackingKey
+        trackModelDataLoadCompletion({
+          result: PRODUCT_ANALYTICS_RESULTS.Failure,
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile,
+          errorCategory: getModelDataErrorCategory(query.error),
+        })
+      }
     }
-  }, [currentProfile, loadErrorMessage, query.isFetching, query.isSuccess, t])
+  }, [
+    currentProfile,
+    loadErrorMessage,
+    query.data,
+    query.dataUpdatedAt,
+    query.error,
+    query.errorUpdatedAt,
+    query.isFetching,
+    query.isSuccess,
+    t,
+  ])
 
   const loadPricingData = useCallback(async () => {
     if (!currentProfile) return

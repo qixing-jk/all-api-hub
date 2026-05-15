@@ -15,6 +15,12 @@ import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagem
 import type { ModelPricing } from "~/services/apiService/common/type"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import type { CalculatedPrice } from "~/services/models/utils/modelPricing"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import { createLogger } from "~/utils/core/logger"
 import { tryParseUrl } from "~/utils/core/urlParsing"
@@ -250,6 +256,14 @@ export default function ModelItem(props: ModelItemProps) {
                     <ModelItemExpandButton
                       isExpanded={isExpanded}
                       onToggleExpand={handleToggleExpand}
+                      analyticsAction={{
+                        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+                        actionId:
+                          PRODUCT_ANALYTICS_ACTION_IDS.ToggleModelDetails,
+                        surfaceId:
+                          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListRowActions,
+                        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+                      }}
                     />
                   )}
                 </>
