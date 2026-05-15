@@ -292,8 +292,16 @@ describe("product analytics privacy filtering", () => {
       PRODUCT_ANALYTICS_EVENTS.SettingChanged,
       {
         setting_id:
-          PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncConcurrency,
+          PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncConfigSnapshot,
         enabled: true,
+        sync_interval_bucket: PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
+        concurrency_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+        retry_max_attempts_bucket:
+          PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.FourPlus,
+        rate_limit_rpm_bucket: PRODUCT_ANALYTICS_MODE_IDS.RateLimitSixtyPlus,
+        rate_limit_burst_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TenPlus,
+        allowed_models_configured: true,
+        global_filters_configured: true,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         value: 6,
         rawSettingValue: "private-model-a,private-model-b",
@@ -303,9 +311,55 @@ describe("product analytics privacy filtering", () => {
     )
 
     expect(sanitized).toEqual({
-      setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncConcurrency,
+      setting_id:
+        PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncConfigSnapshot,
       enabled: true,
+      sync_interval_bucket: PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
+      concurrency_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+      retry_max_attempts_bucket:
+        PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.FourPlus,
+      rate_limit_rpm_bucket: PRODUCT_ANALYTICS_MODE_IDS.RateLimitSixtyPlus,
+      rate_limit_burst_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TenPlus,
+      allowed_models_configured: true,
+      global_filters_configured: true,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+  })
+
+  it("keeps broad settings snapshot dimensions and strips configured secrets", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      {
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebDavConfigSnapshot,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        configured: true,
+        auto_sync_enabled: true,
+        backup_encryption_enabled: true,
+        sync_strategy: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
+        sync_interval_bucket: PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
+        sync_accounts_enabled: true,
+        sync_bookmarks_enabled: false,
+        sync_api_profiles_enabled: true,
+        sync_preferences_enabled: false,
+        url: "https://dav.example/private",
+        username: "private-user",
+        password: "private-password",
+        backupEncryptionPassword: "private-encryption-password",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebDavConfigSnapshot,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      configured: true,
+      auto_sync_enabled: true,
+      backup_encryption_enabled: true,
+      sync_strategy: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
+      sync_interval_bucket: PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
+      sync_accounts_enabled: true,
+      sync_bookmarks_enabled: false,
+      sync_api_profiles_enabled: true,
+      sync_preferences_enabled: false,
     })
   })
 

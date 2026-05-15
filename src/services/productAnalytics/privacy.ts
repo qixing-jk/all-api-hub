@@ -74,6 +74,60 @@ const EVENT_ALLOWED_KEYS = {
   [PRODUCT_ANALYTICS_EVENTS.SettingChanged]: [
     "setting_id",
     "enabled",
+    "configured",
+    "auto_provision_key_on_account_add_enabled",
+    "auto_fill_current_site_url_on_account_add_enabled",
+    "warn_on_duplicate_account_add_enabled",
+    "show_today_cashflow_enabled",
+    "show_health_status_enabled",
+    "refresh_on_open_enabled",
+    "refresh_interval_bucket",
+    "min_refresh_interval_bucket",
+    "sync_interval_bucket",
+    "polling_interval_bucket",
+    "retention_days_bucket",
+    "end_of_day_capture_enabled",
+    "managed_site_type",
+    "new_api_configured",
+    "done_hub_configured",
+    "veloera_configured",
+    "octopus_configured",
+    "axon_hub_configured",
+    "claude_code_hub_configured",
+    "cli_proxy_configured",
+    "claude_code_router_configured",
+    "concurrency_bucket",
+    "rate_limit_rpm_bucket",
+    "rate_limit_burst_bucket",
+    "allowed_models_configured",
+    "global_filters_configured",
+    "standard_models_configured",
+    "prune_missing_targets_on_model_sync_enabled",
+    "context_menu_enabled",
+    "relaxed_code_validation_enabled",
+    "url_whitelist_enabled",
+    "url_whitelist_patterns_configured",
+    "url_whitelist_account_urls_enabled",
+    "url_whitelist_checkin_redeem_urls_enabled",
+    "auto_detect_enabled",
+    "auto_detect_url_patterns_configured",
+    "popup_enabled",
+    "sidepanel_enabled",
+    "options_enabled",
+    "auto_refresh_enabled",
+    "manual_refresh_enabled",
+    "mode",
+    "auto_sync_enabled",
+    "backup_encryption_enabled",
+    "sync_strategy",
+    "sync_accounts_enabled",
+    "sync_bookmarks_enabled",
+    "sync_api_profiles_enabled",
+    "sync_preferences_enabled",
+    "browser_channel_enabled",
+    "third_party_channel_count_bucket",
+    "task_enabled_count_bucket",
+    "notification_enabled",
     "global_enabled",
     "ui_pretrigger_enabled",
     "notify_completion_enabled",
@@ -124,6 +178,11 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   managed_site_type: Object.values(PRODUCT_ANALYTICS_MANAGED_SITE_TYPES),
   managed_site_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   mode: Object.values(PRODUCT_ANALYTICS_MODE_IDS),
+  refresh_interval_bucket: Object.values(PRODUCT_ANALYTICS_MODE_IDS),
+  min_refresh_interval_bucket: Object.values(PRODUCT_ANALYTICS_MODE_IDS),
+  sync_interval_bucket: Object.values(PRODUCT_ANALYTICS_MODE_IDS),
+  polling_interval_bucket: Object.values(PRODUCT_ANALYTICS_MODE_IDS),
+  retention_days_bucket: Object.values(PRODUCT_ANALYTICS_MODE_IDS),
   model_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   page_id: Object.values(PRODUCT_ANALYTICS_PAGE_IDS),
   permission_id: Object.values(PRODUCT_ANALYTICS_PERMISSION_IDS),
@@ -135,6 +194,9 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   retry_max_attempts_bucket: Object.values(
     PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS,
   ),
+  concurrency_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
+  rate_limit_rpm_bucket: Object.values(PRODUCT_ANALYTICS_MODE_IDS),
+  rate_limit_burst_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   schedule_mode: Object.values(PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES),
   selected_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   setting_id: Object.values(PRODUCT_ANALYTICS_SETTING_IDS),
@@ -153,11 +215,18 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   window_length_bucket: Object.values(
     PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS,
   ),
+  sync_strategy: Object.values(PRODUCT_ANALYTICS_MODE_IDS),
+  third_party_channel_count_bucket: Object.values(
+    PRODUCT_ANALYTICS_COUNT_BUCKETS,
+  ),
+  task_enabled_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
 }
 
 const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "account_count_bucket",
   "managed_site_type",
+  "new_api_configured",
+  "sync_accounts_enabled",
   "source_managed_site_type",
   "target_managed_site_type",
   "total_account_count_bucket",
@@ -177,11 +246,10 @@ function isAllowedFieldValue(key: string, value: string | boolean): boolean {
   if (typeof value === "boolean") {
     return (
       key === "enabled" ||
+      key === "configured" ||
       key === "usage_data_present" ||
-      key === "global_enabled" ||
-      key === "ui_pretrigger_enabled" ||
-      key === "notify_completion_enabled" ||
-      key === "retry_enabled"
+      key.endsWith("_enabled") ||
+      key.endsWith("_configured")
     )
   }
 

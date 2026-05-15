@@ -47,6 +47,10 @@ const { loggerMocks } = vi.hoisted(() => ({
   },
 }))
 
+const { trackSettingsSnapshotEventsMock } = vi.hoisted(() => ({
+  trackSettingsSnapshotEventsMock: vi.fn(),
+}))
+
 vi.mock("~/utils/core/logger", () => ({
   createLogger: () => loggerMocks,
 }))
@@ -60,6 +64,11 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
     sendRuntimeMessage: vi.fn(),
   }
 })
+
+vi.mock("~/services/productAnalytics/settings", () => ({
+  trackSettingsSnapshotEvents: (...args: unknown[]) =>
+    trackSettingsSnapshotEventsMock(...args),
+}))
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
@@ -582,16 +591,13 @@ describe("UserPreferencesContext", () => {
     })
     expect(
       mockedUserPreferences.savePreferencesWithResult,
-    ).toHaveBeenCalledWith(
-      {
-        managedSiteModelSync: {
-          enabled: false,
-          allowedModels: ["gpt-4o"],
-          rateLimit: { requestsPerMinute: 15, burst: 3 },
-        },
+    ).toHaveBeenCalledWith({
+      managedSiteModelSync: {
+        enabled: false,
+        allowedModels: ["gpt-4o"],
+        rateLimit: { requestsPerMinute: 15, burst: 3 },
       },
-      undefined,
-    )
+    })
 
     expect((latestContext as any)?.currencyType).toBe("CNY")
     expect((latestContext as any)?.sortField).toBe(DATA_TYPE_INCOME)
@@ -1061,6 +1067,44 @@ describe("UserPreferencesContext", () => {
       action: RuntimeActionIds.RedemptionAssistUpdateSettings,
       settings: DEFAULT_PREFERENCES.redemptionAssist,
     })
+  })
+
+  it("tracks settings snapshots after reset paths that reload persisted preferences", async () => {
+    const preferences = clonePreferences()
+    preferences.newApi = {
+      ...preferences.newApi,
+      baseUrl: "https://new-api.example",
+      adminToken: "new-api-token",
+    }
+    preferences.webdav = {
+      ...preferences.webdav,
+      url: "https://dav.example",
+      username: "dav-user",
+      password: "dav-pass",
+    }
+
+    const context = await renderProvider(preferences)
+    trackSettingsSnapshotEventsMock.mockClear()
+
+    await act(async () => {
+      await context.resetNewApiConfig()
+      await context.resetWebdavConfig()
+    })
+
+    expect(trackSettingsSnapshotEventsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        newApi: DEFAULT_PREFERENCES.newApi,
+      }),
+      "options",
+      { newApi: DEFAULT_PREFERENCES.newApi },
+    )
+    expect(trackSettingsSnapshotEventsMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        webdav: expect.objectContaining(DEFAULT_PREFERENCES.webdav),
+      }),
+      "options",
+      { webdav: DEFAULT_PREFERENCES.webdav },
+    )
   })
 
   it("reloads defaults through resetToDefaults and broadcasts the reset to background services", async () => {

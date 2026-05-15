@@ -125,6 +125,28 @@ export const PRODUCT_ANALYTICS_MODE_IDS = {
   CollapseDetails: "collapse_details",
   ApiVerification: "api_verification",
   CliVerification: "cli_verification",
+  RefreshIntervalLessThan10m: "refresh_interval_lt_10m",
+  RefreshIntervalOneTo10m: "refresh_interval_1_10m",
+  RefreshIntervalTenTo60m: "refresh_interval_10_60m",
+  RefreshIntervalOneTo6h: "refresh_interval_1_6h",
+  RefreshIntervalSixTo24h: "refresh_interval_6_24h",
+  RefreshIntervalGreaterThan24h: "refresh_interval_gt_24h",
+  RetentionDaysSevenOrLess: "retention_days_le_7",
+  RetentionDaysEightTo30: "retention_days_8_30",
+  RetentionDaysThirtyOneTo365: "retention_days_31_365",
+  RetentionDaysGreaterThan365: "retention_days_gt_365",
+  UsageHistoryManual: "usage_history_manual",
+  UsageHistoryAfterRefresh: "usage_history_after_refresh",
+  UsageHistoryAlarm: "usage_history_alarm",
+  RateLimitLessThan20: "rate_limit_lt_20",
+  RateLimitTwentyTo60: "rate_limit_20_60",
+  RateLimitSixtyPlus: "rate_limit_60_plus",
+  TempWindowModeTab: "temp_window_mode_tab",
+  TempWindowModeWindow: "temp_window_mode_window",
+  TempWindowModeComposite: "temp_window_mode_composite",
+  WebDavMerge: "webdav_merge",
+  WebDavUploadOnly: "webdav_upload_only",
+  WebDavDownloadOnly: "webdav_download_only",
 } as const
 
 export type ProductAnalyticsModeId =
@@ -536,22 +558,20 @@ export type ProductAnalyticsSurfaceId =
 
 export const PRODUCT_ANALYTICS_SETTING_IDS = {
   ProductAnalyticsEnabled: "product_analytics_enabled",
+  AccountBehaviorSnapshot: "account_behavior_snapshot",
+  AutoRefreshConfigSnapshot: "auto_refresh_config_snapshot",
+  UsageHistoryConfigSnapshot: "usage_history_config_snapshot",
+  BalanceHistoryConfigSnapshot: "balance_history_config_snapshot",
+  ManagedSiteConfigSnapshot: "managed_site_config_snapshot",
   AutoCheckinConfigSnapshot: "auto_checkin_config_snapshot",
-  AutoCheckinGlobalEnabled: "auto_checkin_global_enabled",
-  AutoCheckinUiPretriggerEnabled: "auto_checkin_ui_pretrigger_enabled",
-  AutoCheckinNotifyCompletionEnabled: "auto_checkin_notify_completion_enabled",
-  AutoCheckinScheduleMode: "auto_checkin_schedule_mode",
-  AutoCheckinRetryEnabled: "auto_checkin_retry_enabled",
-  AutoCheckinConfigReset: "auto_checkin_config_reset",
-  ManagedSiteModelSyncEnabled: "managed_site_model_sync_enabled",
-  ManagedSiteModelSyncInterval: "managed_site_model_sync_interval",
-  ManagedSiteModelSyncConcurrency: "managed_site_model_sync_concurrency",
-  ManagedSiteModelSyncMaxRetries: "managed_site_model_sync_max_retries",
-  ManagedSiteModelSyncRpm: "managed_site_model_sync_rpm",
-  ManagedSiteModelSyncBurst: "managed_site_model_sync_burst",
-  ManagedSiteModelSyncAllowedModels: "managed_site_model_sync_allowed_models",
-  ManagedSiteModelSyncGlobalFilters: "managed_site_model_sync_global_filters",
-  ManagedSiteModelSyncReset: "managed_site_model_sync_reset",
+  ManagedSiteModelSyncConfigSnapshot: "managed_site_model_sync_config_snapshot",
+  ModelRedirectConfigSnapshot: "model_redirect_config_snapshot",
+  RedemptionAssistConfigSnapshot: "redemption_assist_config_snapshot",
+  WebAiApiCheckConfigSnapshot: "web_ai_api_check_config_snapshot",
+  TempWindowFallbackConfigSnapshot: "temp_window_fallback_config_snapshot",
+  WebDavConfigSnapshot: "webdav_config_snapshot",
+  TaskNotificationsConfigSnapshot: "task_notifications_config_snapshot",
+  SiteAnnouncementsConfigSnapshot: "site_announcements_config_snapshot",
 } as const
 
 export type ProductAnalyticsSettingId =
@@ -695,6 +715,60 @@ export type ProductAnalyticsEventPayloadMap = {
   [PRODUCT_ANALYTICS_EVENTS.SettingChanged]: {
     setting_id: ProductAnalyticsSettingId
     enabled?: boolean
+    configured?: boolean
+    auto_provision_key_on_account_add_enabled?: boolean
+    auto_fill_current_site_url_on_account_add_enabled?: boolean
+    warn_on_duplicate_account_add_enabled?: boolean
+    show_today_cashflow_enabled?: boolean
+    show_health_status_enabled?: boolean
+    refresh_on_open_enabled?: boolean
+    refresh_interval_bucket?: ProductAnalyticsModeId
+    min_refresh_interval_bucket?: ProductAnalyticsModeId
+    sync_interval_bucket?: ProductAnalyticsModeId
+    polling_interval_bucket?: ProductAnalyticsModeId
+    retention_days_bucket?: ProductAnalyticsModeId
+    end_of_day_capture_enabled?: boolean
+    managed_site_type?: ProductAnalyticsManagedSiteType
+    new_api_configured?: boolean
+    done_hub_configured?: boolean
+    veloera_configured?: boolean
+    octopus_configured?: boolean
+    axon_hub_configured?: boolean
+    claude_code_hub_configured?: boolean
+    cli_proxy_configured?: boolean
+    claude_code_router_configured?: boolean
+    concurrency_bucket?: ProductAnalyticsCountBucket
+    rate_limit_rpm_bucket?: ProductAnalyticsModeId
+    rate_limit_burst_bucket?: ProductAnalyticsCountBucket
+    allowed_models_configured?: boolean
+    global_filters_configured?: boolean
+    standard_models_configured?: boolean
+    prune_missing_targets_on_model_sync_enabled?: boolean
+    context_menu_enabled?: boolean
+    relaxed_code_validation_enabled?: boolean
+    url_whitelist_enabled?: boolean
+    url_whitelist_patterns_configured?: boolean
+    url_whitelist_account_urls_enabled?: boolean
+    url_whitelist_checkin_redeem_urls_enabled?: boolean
+    auto_detect_enabled?: boolean
+    auto_detect_url_patterns_configured?: boolean
+    popup_enabled?: boolean
+    sidepanel_enabled?: boolean
+    options_enabled?: boolean
+    auto_refresh_enabled?: boolean
+    manual_refresh_enabled?: boolean
+    mode?: ProductAnalyticsModeId
+    auto_sync_enabled?: boolean
+    backup_encryption_enabled?: boolean
+    sync_strategy?: ProductAnalyticsModeId
+    sync_accounts_enabled?: boolean
+    sync_bookmarks_enabled?: boolean
+    sync_api_profiles_enabled?: boolean
+    sync_preferences_enabled?: boolean
+    browser_channel_enabled?: boolean
+    third_party_channel_count_bucket?: ProductAnalyticsCountBucket
+    task_enabled_count_bucket?: ProductAnalyticsCountBucket
+    notification_enabled?: boolean
     global_enabled?: boolean
     ui_pretrigger_enabled?: boolean
     notify_completion_enabled?: boolean

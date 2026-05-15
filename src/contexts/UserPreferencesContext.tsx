@@ -17,6 +17,10 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
+  DEFAULT_REDEMPTION_ASSIST_PREFERENCES,
+  DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
+} from "~/services/preferences/contentScriptFeatureDefaults"
+import {
   DEFAULT_PREFERENCES,
   userPreferences,
   type RedemptionAssistPreferences,
@@ -26,6 +30,8 @@ import {
   type WebAiApiCheckPreferences,
 } from "~/services/preferences/userPreferences"
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
+import { PRODUCT_ANALYTICS_ENTRYPOINTS } from "~/services/productAnalytics/events"
+import { trackSettingsSnapshotEvents } from "~/services/productAnalytics/settings"
 import type {
   CurrencyType,
   DashboardTabType,
@@ -60,6 +66,7 @@ import {
   type TaskNotificationPreferences,
 } from "~/types/taskNotifications"
 import type { ThemeMode } from "~/types/theme"
+import type { DeepPartial } from "~/types/utils"
 import type { WebDAVSettings } from "~/types/webdav"
 import { deepOverride } from "~/utils"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
@@ -70,6 +77,12 @@ const logger = createLogger("UserPreferencesContext")
 type UserManagedSiteModelSyncConfig = NonNullable<
   UserPreferences["managedSiteModelSync"]
 >
+
+const DEFAULT_MANAGED_SITE_MODEL_SYNC_CONFIG =
+  DEFAULT_PREFERENCES.managedSiteModelSync!
+
+const DEFAULT_TEMP_WINDOW_FALLBACK_CONFIG =
+  DEFAULT_PREFERENCES.tempWindowFallback!
 
 type RuntimeMutationResponse = {
   success: boolean
@@ -138,6 +151,66 @@ function isUserPreferencesSnapshot(value: unknown): value is UserPreferences {
     typeof value === "object" &&
     typeof (value as UserPreferences).lastUpdated === "number"
   )
+}
+
+/**
+ * Emits option-page settings snapshots with the current persisted preferences.
+ */
+function trackOptionsSettingsSnapshots(
+  preferences: UserPreferences,
+  updates?: DeepPartial<UserPreferences>,
+) {
+  trackSettingsSnapshotEvents(
+    preferences,
+    PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    updates,
+  )
+}
+
+/**
+ * Fills legacy or partial preference snapshots before exposing them to UI and analytics.
+ */
+function normalizeContextPreferenceSnapshot(
+  preferences: UserPreferences,
+): UserPreferences {
+  return {
+    ...preferences,
+    autoCheckin: deepOverride(
+      DEFAULT_PREFERENCES.autoCheckin,
+      preferences.autoCheckin ?? {},
+    ),
+    balanceHistory: deepOverride(
+      DEFAULT_PREFERENCES.balanceHistory ?? DEFAULT_BALANCE_HISTORY_PREFERENCES,
+      preferences.balanceHistory ?? {},
+    ),
+    managedSiteModelSync: deepOverride(
+      DEFAULT_MANAGED_SITE_MODEL_SYNC_CONFIG,
+      preferences.managedSiteModelSync ?? preferences.newApiModelSync ?? {},
+    ) as UserManagedSiteModelSyncConfig,
+    modelRedirect: deepOverride(
+      DEFAULT_PREFERENCES.modelRedirect,
+      preferences.modelRedirect ?? {},
+    ),
+    redemptionAssist: deepOverride(
+      DEFAULT_PREFERENCES.redemptionAssist ??
+        DEFAULT_REDEMPTION_ASSIST_PREFERENCES,
+      preferences.redemptionAssist ?? {},
+    ),
+    webAiApiCheck: deepOverride(
+      DEFAULT_PREFERENCES.webAiApiCheck ?? DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
+      preferences.webAiApiCheck ?? {},
+    ),
+    tempWindowFallback: deepOverride(
+      DEFAULT_TEMP_WINDOW_FALLBACK_CONFIG,
+      preferences.tempWindowFallback ?? {},
+    ) as TempWindowFallbackPreferences,
+    taskNotifications: normalizeTaskNotificationPreferences(
+      preferences.taskNotifications,
+    ),
+    siteAnnouncementNotifications: normalizeSiteAnnouncementPreferences(
+      preferences.siteAnnouncementNotifications,
+    ),
+  }
 }
 
 // 1. 定义 Context 的值类型
@@ -430,6 +503,23 @@ export const UserPreferencesProvider = ({
     }
   }, [])
 
+  const reloadPreferencesAndTrackSnapshots = useCallback(
+    async (updates: DeepPartial<UserPreferences>) => {
+      try {
+        setIsLoading(true)
+        const prefs = await userPreferences.getPreferences()
+        const nextPreferences = normalizeContextPreferenceSnapshot(prefs)
+        setPreferences(nextPreferences)
+        trackOptionsSettingsSnapshots(nextPreferences, updates)
+      } catch (error) {
+        logger.error("加载用户偏好设置失败", error)
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [],
+  )
+
   useEffect(() => {
     void loadPreferences()
   }, [loadPreferences])
@@ -444,7 +534,13 @@ export const UserPreferencesProvider = ({
         options,
       )
       if (savedPreferences) {
-        setPreferences(savedPreferences)
+        const nextPreferences =
+          normalizeContextPreferenceSnapshot(savedPreferences)
+        setPreferences(nextPreferences)
+        trackOptionsSettingsSnapshots(
+          nextPreferences,
+          updates as DeepPartial<UserPreferences>,
+        )
         return true
       }
       return false
@@ -513,9 +609,15 @@ export const UserPreferencesProvider = ({
       const success =
         await userPreferences.updateAutoProvisionKeyOnAccountAdd(enabled)
       if (success) {
-        setPreferences((prev) =>
-          prev ? { ...prev, autoProvisionKeyOnAccountAdd: enabled } : prev,
-        )
+        const updates: Partial<UserPreferences> = {
+          autoProvisionKeyOnAccountAdd: enabled,
+        }
+        setPreferences((prev) => {
+          if (!prev) return prev
+          const next = { ...prev, ...updates }
+          trackOptionsSettingsSnapshots(next, updates)
+          return next
+        })
       }
       return success
     },
@@ -532,11 +634,15 @@ export const UserPreferencesProvider = ({
       const success =
         await userPreferences.updateAutoFillCurrentSiteUrlOnAccountAdd(enabled)
       if (success) {
-        setPreferences((prev) =>
-          prev
-            ? { ...prev, autoFillCurrentSiteUrlOnAccountAdd: enabled }
-            : prev,
-        )
+        const updates: Partial<UserPreferences> = {
+          autoFillCurrentSiteUrlOnAccountAdd: enabled,
+        }
+        setPreferences((prev) => {
+          if (!prev) return prev
+          const next = { ...prev, ...updates }
+          trackOptionsSettingsSnapshots(next, updates)
+          return next
+        })
       }
       return success
     },
@@ -552,9 +658,15 @@ export const UserPreferencesProvider = ({
       const success =
         await userPreferences.updateWarnOnDuplicateAccountAdd(enabled)
       if (success) {
-        setPreferences((prev) =>
-          prev ? { ...prev, warnOnDuplicateAccountAdd: enabled } : prev,
-        )
+        const updates: Partial<UserPreferences> = {
+          warnOnDuplicateAccountAdd: enabled,
+        }
+        setPreferences((prev) => {
+          if (!prev) return prev
+          const next = { ...prev, ...updates }
+          trackOptionsSettingsSnapshots(next, updates)
+          return next
+        })
       }
       return success
     },
@@ -704,7 +816,12 @@ export const UserPreferencesProvider = ({
 
       const success = await userPreferences.savePreferences(updates)
       if (success) {
-        setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+        setPreferences((prev) => {
+          if (!prev) return null
+          const next = deepOverride(prev, updates)
+          trackOptionsSettingsSnapshots(next, updates)
+          return next
+        })
       }
       return success
     },
@@ -750,60 +867,76 @@ export const UserPreferencesProvider = ({
     const updates = {
       accountAutoRefresh: { enabled: enabled },
     }
-    const success = await userPreferences.savePreferences(updates)
-    if (success) {
-      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    const savedPreferences =
+      await userPreferences.savePreferencesWithResult(updates)
+    if (savedPreferences) {
+      const nextPreferences =
+        normalizeContextPreferenceSnapshot(savedPreferences)
+      setPreferences(nextPreferences)
+      trackOptionsSettingsSnapshots(nextPreferences, updates)
       sendRuntimeMessage({
         action: RuntimeActionIds.AutoRefreshUpdateSettings,
         settings: updates,
       })
     }
-    return success
+    return savedPreferences !== null
   }, [])
 
   const updateRefreshInterval = useCallback(async (interval: number) => {
     const updates = {
       accountAutoRefresh: { interval: interval },
     }
-    const success = await userPreferences.savePreferences(updates)
-    if (success) {
-      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    const savedPreferences =
+      await userPreferences.savePreferencesWithResult(updates)
+    if (savedPreferences) {
+      const nextPreferences =
+        normalizeContextPreferenceSnapshot(savedPreferences)
+      setPreferences(nextPreferences)
+      trackOptionsSettingsSnapshots(nextPreferences, updates)
       sendRuntimeMessage({
         action: RuntimeActionIds.AutoRefreshUpdateSettings,
         settings: updates,
       })
     }
-    return success
+    return savedPreferences !== null
   }, [])
 
   const updateMinRefreshInterval = useCallback(async (minInterval: number) => {
     const updates = {
       accountAutoRefresh: { minInterval: minInterval },
     }
-    const success = await userPreferences.savePreferences(updates)
-    if (success) {
-      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    const savedPreferences =
+      await userPreferences.savePreferencesWithResult(updates)
+    if (savedPreferences) {
+      const nextPreferences =
+        normalizeContextPreferenceSnapshot(savedPreferences)
+      setPreferences(nextPreferences)
+      trackOptionsSettingsSnapshots(nextPreferences, updates)
       sendRuntimeMessage({
         action: RuntimeActionIds.AutoRefreshUpdateSettings,
         settings: updates,
       })
     }
-    return success
+    return savedPreferences !== null
   }, [])
 
   const updateRefreshOnOpen = useCallback(async (refreshOnOpen: boolean) => {
     const updates = {
       accountAutoRefresh: { refreshOnOpen: refreshOnOpen },
     }
-    const success = await userPreferences.savePreferences(updates)
-    if (success) {
-      setPreferences((prev) => (prev ? deepOverride(prev, updates) : null))
+    const savedPreferences =
+      await userPreferences.savePreferencesWithResult(updates)
+    if (savedPreferences) {
+      const nextPreferences =
+        normalizeContextPreferenceSnapshot(savedPreferences)
+      setPreferences(nextPreferences)
+      trackOptionsSettingsSnapshots(nextPreferences, updates)
       sendRuntimeMessage({
         action: RuntimeActionIds.AutoRefreshUpdateSettings,
         settings: updates,
       })
     }
-    return success
+    return savedPreferences !== null
   }, [])
 
   const updateNewApiBaseUrl = useCallback(
@@ -1134,22 +1267,22 @@ export const UserPreferencesProvider = ({
 
   const updateAutoCheckin = useCallback(
     async (updates: Partial<AutoCheckinPreferences>) => {
-      const success = await userPreferences.savePreferences({
+      const preferenceUpdates = {
         autoCheckin: updates,
-      })
+      }
+      const savedPreferences =
+        await userPreferences.savePreferencesWithResult(preferenceUpdates)
 
-      if (success) {
-        setPreferences((prev) => {
-          if (!prev) return null
-          const merged = deepOverride(
-            prev.autoCheckin ?? DEFAULT_PREFERENCES.autoCheckin,
-            updates,
-          )
-          return {
-            ...prev,
-            autoCheckin: merged,
-          }
+      if (savedPreferences) {
+        const nextPreferences = normalizeContextPreferenceSnapshot({
+          ...savedPreferences,
+          autoCheckin: deepOverride(
+            DEFAULT_PREFERENCES.autoCheckin,
+            savedPreferences.autoCheckin ?? updates,
+          ),
         })
+        setPreferences(nextPreferences)
+        trackOptionsSettingsSnapshots(nextPreferences, preferenceUpdates)
 
         // Notify background to update alarm
         await sendRuntimeMessage({
@@ -1157,30 +1290,30 @@ export const UserPreferencesProvider = ({
           settings: updates,
         })
       }
-      return success
+      return savedPreferences !== null
     },
     [],
   )
 
   const updateBalanceHistory = useCallback(
     async (updates: Partial<BalanceHistoryPreferences>) => {
-      const success = await userPreferences.savePreferences({
+      const preferenceUpdates = {
         balanceHistory: updates,
-      })
+      }
+      const savedPreferences =
+        await userPreferences.savePreferencesWithResult(preferenceUpdates)
 
-      if (success) {
-        setPreferences((prev) => {
-          if (!prev) return null
-          const base =
-            prev.balanceHistory ??
+      if (savedPreferences) {
+        const nextPreferences = normalizeContextPreferenceSnapshot({
+          ...savedPreferences,
+          balanceHistory: deepOverride(
             DEFAULT_PREFERENCES.balanceHistory ??
-            DEFAULT_BALANCE_HISTORY_PREFERENCES
-          const merged = deepOverride(base, updates)
-          return {
-            ...prev,
-            balanceHistory: merged,
-          }
+              DEFAULT_BALANCE_HISTORY_PREFERENCES,
+            savedPreferences.balanceHistory ?? updates,
+          ),
         })
+        setPreferences(nextPreferences)
+        trackOptionsSettingsSnapshots(nextPreferences, preferenceUpdates)
 
         await sendRuntimeMessage({
           action: RuntimeActionIds.BalanceHistoryUpdateSettings,
@@ -1188,41 +1321,29 @@ export const UserPreferencesProvider = ({
         })
       }
 
-      return success
+      return savedPreferences !== null
     },
     [],
   )
 
   const updateNewApiModelSync = useCallback(
     async (updates: Partial<UserManagedSiteModelSyncConfig>) => {
-      const success = await userPreferences.savePreferences({
+      const preferenceUpdates = {
         managedSiteModelSync: updates,
-      })
-      if (success) {
-        setPreferences((prev) => {
-          if (!prev) return null
-          const base = prev.managedSiteModelSync ??
-            DEFAULT_PREFERENCES.managedSiteModelSync ?? {
-              enabled: false,
-              interval: 24 * 60 * 60 * 1000,
-              concurrency: 2,
-              maxRetries: 2,
-              rateLimit: {
-                requestsPerMinute: 20,
-                burst: 5,
-              },
-              allowedModels: [],
-              globalChannelModelFilters: [],
-            }
-          const merged = deepOverride(
-            base,
-            updates,
-          ) as UserManagedSiteModelSyncConfig
-          return {
-            ...prev,
-            managedSiteModelSync: merged,
-          }
+      }
+      const savedPreferences =
+        await userPreferences.savePreferencesWithResult(preferenceUpdates)
+
+      if (savedPreferences) {
+        const nextPreferences = normalizeContextPreferenceSnapshot({
+          ...savedPreferences,
+          managedSiteModelSync: deepOverride(
+            DEFAULT_MANAGED_SITE_MODEL_SYNC_CONFIG,
+            savedPreferences.managedSiteModelSync ?? updates,
+          ) as UserManagedSiteModelSyncConfig,
         })
+        setPreferences(nextPreferences)
+        trackOptionsSettingsSnapshots(nextPreferences, preferenceUpdates)
 
         // Notify background to update alarm
         await sendRuntimeMessage({
@@ -1230,67 +1351,53 @@ export const UserPreferencesProvider = ({
           settings: updates,
         })
       }
-      return success
+      return savedPreferences !== null
     },
     [],
   )
 
   const updateModelRedirect = useCallback(
     async (updates: Partial<ModelRedirectPreferences>) => {
-      const success = await userPreferences.savePreferences({
+      const preferenceUpdates = {
         modelRedirect: updates,
-      })
-      if (success) {
-        setPreferences((prev) => {
-          if (!prev) return null
-          const merged = deepOverride(
-            prev.modelRedirect ?? DEFAULT_PREFERENCES.modelRedirect,
-            updates,
-          )
-          return {
-            ...prev,
-            modelRedirect: merged,
-          }
-        })
       }
-      return success
+      const savedPreferences =
+        await userPreferences.savePreferencesWithResult(preferenceUpdates)
+      if (savedPreferences) {
+        const nextPreferences = normalizeContextPreferenceSnapshot({
+          ...savedPreferences,
+          modelRedirect: deepOverride(
+            DEFAULT_PREFERENCES.modelRedirect,
+            savedPreferences.modelRedirect ?? updates,
+          ),
+        })
+        setPreferences(nextPreferences)
+        trackOptionsSettingsSnapshots(nextPreferences, preferenceUpdates)
+      }
+      return savedPreferences !== null
     },
     [],
   )
 
   const updateRedemptionAssist = useCallback(
     async (updates: Partial<RedemptionAssistPreferences>) => {
-      const success = await userPreferences.savePreferences({
+      const preferenceUpdates = {
         redemptionAssist: updates,
-      })
+      }
+      const savedPreferences =
+        await userPreferences.savePreferencesWithResult(preferenceUpdates)
 
-      if (success) {
-        setPreferences((prev) => {
-          if (!prev) return null
-          const base =
-            prev.redemptionAssist ??
+      if (savedPreferences) {
+        const nextPreferences = normalizeContextPreferenceSnapshot({
+          ...savedPreferences,
+          redemptionAssist: deepOverride(
             DEFAULT_PREFERENCES.redemptionAssist ??
-            ({
-              enabled: true,
-              contextMenu: {
-                enabled: true,
-              },
-              relaxedCodeValidation: true,
-              urlWhitelist: {
-                enabled: true,
-                patterns: [],
-                includeAccountSiteUrls: true,
-                includeCheckInAndRedeemUrls: true,
-              },
-            } satisfies RedemptionAssistPreferences)
-
-          const merged = deepOverride(base, updates)
-          return {
-            ...prev,
-            redemptionAssist: merged,
-            lastUpdated: Date.now(),
-          }
+              DEFAULT_REDEMPTION_ASSIST_PREFERENCES,
+            savedPreferences.redemptionAssist ?? updates,
+          ),
         })
+        setPreferences(nextPreferences)
+        trackOptionsSettingsSnapshots(nextPreferences, preferenceUpdates)
 
         await sendRuntimeMessage({
           action: RuntimeActionIds.RedemptionAssistUpdateSettings,
@@ -1308,44 +1415,30 @@ export const UserPreferencesProvider = ({
         }
       }
 
-      return success
+      return savedPreferences !== null
     },
     [],
   )
 
   const updateWebAiApiCheck = useCallback(
     async (updates: Partial<WebAiApiCheckPreferences>) => {
-      const success = await userPreferences.savePreferences({
+      const preferenceUpdates = {
         webAiApiCheck: updates,
-      })
+      }
+      const savedPreferences =
+        await userPreferences.savePreferencesWithResult(preferenceUpdates)
 
-      if (success) {
-        setPreferences((prev) => {
-          if (!prev) return null
-
-          const base =
-            prev.webAiApiCheck ??
+      if (savedPreferences) {
+        const nextPreferences = normalizeContextPreferenceSnapshot({
+          ...savedPreferences,
+          webAiApiCheck: deepOverride(
             DEFAULT_PREFERENCES.webAiApiCheck ??
-            ({
-              enabled: true,
-              contextMenu: {
-                enabled: true,
-              },
-              autoDetect: {
-                enabled: false,
-                urlWhitelist: {
-                  patterns: [],
-                },
-              },
-            } satisfies WebAiApiCheckPreferences)
-
-          const merged = deepOverride(base, updates)
-          return {
-            ...prev,
-            webAiApiCheck: merged,
-            lastUpdated: Date.now(),
-          }
+              DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
+            savedPreferences.webAiApiCheck ?? updates,
+          ),
         })
+        setPreferences(nextPreferences)
+        trackOptionsSettingsSnapshots(nextPreferences, preferenceUpdates)
 
         const shouldRefreshContextMenus =
           typeof updates.contextMenu?.enabled === "boolean" ||
@@ -1358,7 +1451,7 @@ export const UserPreferencesProvider = ({
         }
       }
 
-      return success
+      return savedPreferences !== null
     },
     [],
   )
@@ -1403,17 +1496,13 @@ export const UserPreferencesProvider = ({
 
       if (response.success && isUserPreferencesSnapshot(response.data)) {
         setPreferences(response.data)
+        trackOptionsSettingsSnapshots(response.data, { webdav: updates })
       } else if (response.success) {
         setPreferences((prev) => {
           if (!prev) return null
-          const merged = deepOverride(
-            prev.webdav ?? DEFAULT_PREFERENCES.webdav,
-            updates,
-          )
-          return {
-            ...prev,
-            webdav: merged,
-          }
+          const next = deepOverride(prev, { webdav: updates })
+          trackOptionsSettingsSnapshots(next, { webdav: updates })
+          return next
         })
       }
 
@@ -1424,55 +1513,48 @@ export const UserPreferencesProvider = ({
 
   const updateTempWindowFallback = useCallback(
     async (updates: Partial<TempWindowFallbackPreferences>) => {
-      const success = await userPreferences.savePreferences({
+      const preferenceUpdates = {
         tempWindowFallback: updates,
-      })
-      if (success) {
-        setPreferences((prev) => {
-          if (!prev) return null
-          const merged: TempWindowFallbackPreferences = {
-            ...(DEFAULT_PREFERENCES.tempWindowFallback ?? {
-              enabled: true,
-              useInPopup: true,
-              useInSidePanel: true,
-              useInOptions: true,
-              useForAutoRefresh: true,
-              useForManualRefresh: true,
-              tempContextMode: "composite",
-            }),
-            ...(prev.tempWindowFallback ?? {}),
-            ...updates,
-          }
-          return {
-            ...prev,
-            tempWindowFallback: merged,
-            lastUpdated: Date.now(),
-          }
-        })
       }
-      return success
+      const savedPreferences =
+        await userPreferences.savePreferencesWithResult(preferenceUpdates)
+      if (savedPreferences) {
+        const nextPreferences = normalizeContextPreferenceSnapshot({
+          ...savedPreferences,
+          tempWindowFallback: deepOverride(
+            DEFAULT_TEMP_WINDOW_FALLBACK_CONFIG,
+            savedPreferences.tempWindowFallback ?? updates,
+          ) as TempWindowFallbackPreferences,
+        })
+        setPreferences(nextPreferences)
+        trackOptionsSettingsSnapshots(nextPreferences, preferenceUpdates)
+      }
+      return savedPreferences !== null
     },
     [],
   )
 
   const updateTaskNotifications = useCallback(
     async (updates: Partial<TaskNotificationPreferences>) => {
-      const success = await userPreferences.updateTaskNotifications(updates)
-      if (success) {
-        setPreferences((prev) =>
-          prev
-            ? deepOverride(prev, {
-                taskNotifications: deepOverride(
-                  prev.taskNotifications ??
-                    DEFAULT_TASK_NOTIFICATION_PREFERENCES,
-                  updates,
-                ),
-                lastUpdated: Date.now(),
-              })
-            : prev,
-        )
+      const preferenceUpdates = {
+        taskNotifications: updates,
       }
-      return success
+      const savedPreferences =
+        await userPreferences.savePreferencesWithResult(preferenceUpdates)
+      if (savedPreferences) {
+        const nextPreferences = normalizeContextPreferenceSnapshot({
+          ...savedPreferences,
+          taskNotifications: normalizeTaskNotificationPreferences(
+            deepOverride(
+              DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+              savedPreferences.taskNotifications ?? updates,
+            ),
+          ),
+        })
+        setPreferences(nextPreferences)
+        trackOptionsSettingsSnapshots(nextPreferences, preferenceUpdates)
+      }
+      return savedPreferences !== null
     },
     [],
   )
@@ -1487,29 +1569,35 @@ export const UserPreferencesProvider = ({
       )
 
       if (response.success && isUserPreferencesSnapshot(response.data)) {
-        setPreferences({
+        const nextPreferences = {
           ...response.data,
           siteAnnouncementNotifications: normalizeSiteAnnouncementPreferences(
             response.data.siteAnnouncementNotifications,
           ),
+        }
+        setPreferences(nextPreferences)
+        trackOptionsSettingsSnapshots(nextPreferences, {
+          siteAnnouncementNotifications: updates,
         })
       } else if (response.success) {
-        setPreferences((prev) =>
-          prev
-            ? {
-                ...prev,
-                siteAnnouncementNotifications:
-                  normalizeSiteAnnouncementPreferences(
-                    deepOverride(
-                      prev.siteAnnouncementNotifications ??
-                        DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
-                      updates,
-                    ),
-                  ),
-                lastUpdated: Date.now(),
-              }
-            : prev,
-        )
+        setPreferences((prev) => {
+          if (!prev) return prev
+          const next = {
+            ...prev,
+            siteAnnouncementNotifications: normalizeSiteAnnouncementPreferences(
+              deepOverride(
+                prev.siteAnnouncementNotifications ??
+                  DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
+                updates,
+              ),
+            ),
+            lastUpdated: Date.now(),
+          }
+          trackOptionsSettingsSnapshots(next, {
+            siteAnnouncementNotifications: updates,
+          })
+          return next
+        })
       }
 
       return response.success
@@ -1523,6 +1611,7 @@ export const UserPreferencesProvider = ({
 
       // Notify all background services about the reset
       const defaults = DEFAULT_PREFERENCES
+      trackOptionsSettingsSnapshots(defaults)
 
       // Notify auto-refresh service
       sendRuntimeMessage({
@@ -1563,6 +1652,14 @@ export const UserPreferencesProvider = ({
             }
           : prev,
       )
+      trackOptionsSettingsSnapshots(
+        { ...DEFAULT_PREFERENCES, lastUpdated: now },
+        {
+          activeTab: DEFAULT_PREFERENCES.activeTab,
+          currencyType: DEFAULT_PREFERENCES.currencyType,
+          showTodayCashflow: DEFAULT_PREFERENCES.showTodayCashflow,
+        },
+      )
     }
     return success
   }, [])
@@ -1584,6 +1681,10 @@ export const UserPreferencesProvider = ({
         action: RuntimeActionIds.AutoRefreshUpdateSettings,
         settings: { accountAutoRefresh: defaults },
       })
+      trackOptionsSettingsSnapshots(
+        deepOverride(DEFAULT_PREFERENCES, { accountAutoRefresh: defaults }),
+        { accountAutoRefresh: defaults },
+      )
     }
     return success
   }, [])
@@ -1591,50 +1692,62 @@ export const UserPreferencesProvider = ({
   const resetNewApiConfig = useCallback(async () => {
     const success = await userPreferences.resetNewApiConfig()
     if (success) {
-      await loadPreferences()
+      await reloadPreferencesAndTrackSnapshots({
+        newApi: DEFAULT_PREFERENCES.newApi,
+      })
     }
     return success
-  }, [loadPreferences])
+  }, [reloadPreferencesAndTrackSnapshots])
 
   const resetDoneHubConfig = useCallback(async () => {
     const success = await userPreferences.resetDoneHubConfig()
     if (success) {
-      await loadPreferences()
+      await reloadPreferencesAndTrackSnapshots({
+        doneHub: DEFAULT_PREFERENCES.doneHub,
+      })
     }
     return success
-  }, [loadPreferences])
+  }, [reloadPreferencesAndTrackSnapshots])
 
   const resetVeloeraConfig = useCallback(async () => {
     const success = await userPreferences.resetVeloeraConfig()
     if (success) {
-      await loadPreferences()
+      await reloadPreferencesAndTrackSnapshots({
+        veloera: DEFAULT_PREFERENCES.veloera,
+      })
     }
     return success
-  }, [loadPreferences])
+  }, [reloadPreferencesAndTrackSnapshots])
 
   const resetOctopusConfig = useCallback(async () => {
     const success = await userPreferences.resetOctopusConfig()
     if (success) {
-      await loadPreferences()
+      await reloadPreferencesAndTrackSnapshots({
+        octopus: DEFAULT_PREFERENCES.octopus,
+      })
     }
     return success
-  }, [loadPreferences])
+  }, [reloadPreferencesAndTrackSnapshots])
 
   const resetAxonHubConfig = useCallback(async () => {
     const success = await userPreferences.resetAxonHubConfig()
     if (success) {
-      await loadPreferences()
+      await reloadPreferencesAndTrackSnapshots({
+        axonHub: DEFAULT_PREFERENCES.axonHub,
+      })
     }
     return success
-  }, [loadPreferences])
+  }, [reloadPreferencesAndTrackSnapshots])
 
   const resetClaudeCodeHubConfig = useCallback(async () => {
     const success = await userPreferences.resetClaudeCodeHubConfig()
     if (success) {
-      await loadPreferences()
+      await reloadPreferencesAndTrackSnapshots({
+        claudeCodeHub: DEFAULT_PREFERENCES.claudeCodeHub,
+      })
     }
     return success
-  }, [loadPreferences])
+  }, [reloadPreferencesAndTrackSnapshots])
 
   const resetNewApiModelSyncConfig = useCallback(async () => {
     const success = await userPreferences.resetNewApiModelSyncConfig()
@@ -1654,6 +1767,10 @@ export const UserPreferencesProvider = ({
           settings: defaults,
         })
       }
+      trackOptionsSettingsSnapshots(
+        deepOverride(DEFAULT_PREFERENCES, { managedSiteModelSync: defaults }),
+        { managedSiteModelSync: defaults },
+      )
     }
     return success
   }, [])
@@ -1661,10 +1778,12 @@ export const UserPreferencesProvider = ({
   const resetCliProxyConfig = useCallback(async () => {
     const success = await userPreferences.resetCliProxyConfig()
     if (success) {
-      await loadPreferences()
+      await reloadPreferencesAndTrackSnapshots({
+        cliProxy: DEFAULT_PREFERENCES.cliProxy,
+      })
     }
     return success
-  }, [loadPreferences])
+  }, [reloadPreferencesAndTrackSnapshots])
 
   const resetAutoCheckinConfig = useCallback(async () => {
     const success = await userPreferences.resetAutoCheckinConfig()
@@ -1684,6 +1803,10 @@ export const UserPreferencesProvider = ({
           settings: defaults,
         })
       }
+      trackOptionsSettingsSnapshots(
+        deepOverride(DEFAULT_PREFERENCES, { autoCheckin: defaults }),
+        { autoCheckin: defaults },
+      )
     }
     return success
   }, [])
@@ -1706,6 +1829,10 @@ export const UserPreferencesProvider = ({
           settings: defaults,
         })
       }
+      trackOptionsSettingsSnapshots(
+        deepOverride(DEFAULT_PREFERENCES, { redemptionAssist: defaults }),
+        { redemptionAssist: defaults },
+      )
     }
     return success
   }, [])
@@ -1721,6 +1848,10 @@ export const UserPreferencesProvider = ({
               lastUpdated: Date.now(),
             })
           : prev,
+      )
+      trackOptionsSettingsSnapshots(
+        deepOverride(DEFAULT_PREFERENCES, { webAiApiCheck: defaults }),
+        { webAiApiCheck: defaults },
       )
     }
     return success
@@ -1738,6 +1869,10 @@ export const UserPreferencesProvider = ({
             })
           : prev,
       )
+      trackOptionsSettingsSnapshots(
+        deepOverride(DEFAULT_PREFERENCES, { modelRedirect: defaults }),
+        { modelRedirect: defaults },
+      )
     }
     return success
   }, [])
@@ -1745,10 +1880,12 @@ export const UserPreferencesProvider = ({
   const resetWebdavConfig = useCallback(async () => {
     const success = await userPreferences.resetWebdavConfig()
     if (success) {
-      await loadPreferences()
+      await reloadPreferencesAndTrackSnapshots({
+        webdav: DEFAULT_PREFERENCES.webdav,
+      })
     }
     return success
-  }, [loadPreferences])
+  }, [reloadPreferencesAndTrackSnapshots])
 
   const resetLoggingSettings = useCallback(async () => {
     const defaults = DEFAULT_PREFERENCES.logging
@@ -1789,6 +1926,12 @@ export const UserPreferencesProvider = ({
               lastUpdated: Date.now(),
             })
           : prev,
+      )
+      trackOptionsSettingsSnapshots(
+        deepOverride(DEFAULT_PREFERENCES, {
+          taskNotifications: DEFAULT_PREFERENCES.taskNotifications,
+        }),
+        { taskNotifications: DEFAULT_PREFERENCES.taskNotifications },
       )
     }
     return success

@@ -15,16 +15,11 @@ import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
-import { trackAutoCheckinConfigSnapshot } from "~/services/productAnalytics/autoCheckin"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-  trackProductAnalyticsEvent,
-  type ProductAnalyticsSettingId,
 } from "~/services/productAnalytics/events"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
@@ -48,76 +43,6 @@ const AUTO_CHECKIN_SETTINGS_ANALYTICS_CONTEXT = {
 /**
  * Applies partial preference updates before reporting the resulting strategy.
  */
-function mergeAutoCheckinPreferences(
-  current: AutoCheckinPreferences,
-  updates: Partial<AutoCheckinPreferences>,
-): AutoCheckinPreferences {
-  return {
-    ...current,
-    ...updates,
-    retryStrategy: updates.retryStrategy
-      ? {
-          ...current.retryStrategy,
-          ...updates.retryStrategy,
-        }
-      : current.retryStrategy,
-  }
-}
-
-/**
- * Maps preference edits to the fixed setting id that changed.
- */
-function resolveAutoCheckinSettingChange(
-  updates: Partial<AutoCheckinPreferences>,
-): { settingId: ProductAnalyticsSettingId; enabled?: boolean } | null {
-  if (updates.globalEnabled !== undefined) {
-    return {
-      settingId: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinGlobalEnabled,
-      enabled: updates.globalEnabled,
-    }
-  }
-  if (updates.pretriggerDailyOnUiOpen !== undefined) {
-    return {
-      settingId: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinUiPretriggerEnabled,
-      enabled: updates.pretriggerDailyOnUiOpen,
-    }
-  }
-  if (updates.notifyUiOnCompletion !== undefined) {
-    return {
-      settingId:
-        PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinNotifyCompletionEnabled,
-      enabled: updates.notifyUiOnCompletion,
-    }
-  }
-  if (updates.scheduleMode !== undefined) {
-    return {
-      settingId: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinScheduleMode,
-    }
-  }
-  if (updates.retryStrategy?.enabled !== undefined) {
-    return {
-      settingId: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinRetryEnabled,
-      enabled: updates.retryStrategy.enabled,
-    }
-  }
-
-  return null
-}
-
-/**
- * Tracks a single Auto Check-in setting edit with fixed ids only.
- */
-function trackAutoCheckinSettingChanged(
-  settingId: ProductAnalyticsSettingId,
-  enabled?: boolean,
-) {
-  void trackProductAnalyticsEvent(PRODUCT_ANALYTICS_EVENTS.SettingChanged, {
-    setting_id: settingId,
-    ...(typeof enabled === "boolean" ? { enabled } : {}),
-    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-  })
-}
-
 /**
  * Basic settings panel for configuring auto check-in (window, schedule, retries, navigation).
  */
@@ -157,21 +82,6 @@ export default function AutoCheckinSettings() {
       const success = await updateAutoCheckin(updates)
 
       if (success) {
-        const nextPreferences = mergeAutoCheckinPreferences(
-          preferences,
-          updates,
-        )
-        const settingChange = resolveAutoCheckinSettingChange(updates)
-        if (settingChange) {
-          trackAutoCheckinSettingChanged(
-            settingChange.settingId,
-            settingChange.enabled,
-          )
-        }
-        trackAutoCheckinConfigSnapshot(
-          nextPreferences,
-          PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-        )
         toast.success(t("autoCheckin:messages.success.settingsSaved"))
       } else {
         toast.error(t("settings:messages.saveSettingsFailed"))
@@ -261,13 +171,6 @@ export default function AutoCheckinSettings() {
       onReset={async () => {
         const result = await resetAutoCheckinConfig()
         if (result) {
-          trackAutoCheckinSettingChanged(
-            PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigReset,
-          )
-          trackAutoCheckinConfigSnapshot(
-            DEFAULT_PREFERENCES.autoCheckin!,
-            PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-          )
           setIsSaving(false)
         }
         return result

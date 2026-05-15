@@ -188,30 +188,26 @@ describe("product analytics event enums", () => {
 
   it("defines fixed Managed Site Model Sync setting ids", () => {
     expect(PRODUCT_ANALYTICS_SETTING_IDS).toMatchObject({
-      ManagedSiteModelSyncEnabled: "managed_site_model_sync_enabled",
-      ManagedSiteModelSyncInterval: "managed_site_model_sync_interval",
-      ManagedSiteModelSyncConcurrency: "managed_site_model_sync_concurrency",
-      ManagedSiteModelSyncMaxRetries: "managed_site_model_sync_max_retries",
-      ManagedSiteModelSyncRpm: "managed_site_model_sync_rpm",
-      ManagedSiteModelSyncBurst: "managed_site_model_sync_burst",
-      ManagedSiteModelSyncAllowedModels:
-        "managed_site_model_sync_allowed_models",
-      ManagedSiteModelSyncGlobalFilters:
-        "managed_site_model_sync_global_filters",
-      ManagedSiteModelSyncReset: "managed_site_model_sync_reset",
+      AccountBehaviorSnapshot: "account_behavior_snapshot",
+      AutoRefreshConfigSnapshot: "auto_refresh_config_snapshot",
+      UsageHistoryConfigSnapshot: "usage_history_config_snapshot",
+      BalanceHistoryConfigSnapshot: "balance_history_config_snapshot",
+      ManagedSiteConfigSnapshot: "managed_site_config_snapshot",
+      ManagedSiteModelSyncConfigSnapshot:
+        "managed_site_model_sync_config_snapshot",
+      ModelRedirectConfigSnapshot: "model_redirect_config_snapshot",
+      RedemptionAssistConfigSnapshot: "redemption_assist_config_snapshot",
+      WebAiApiCheckConfigSnapshot: "web_ai_api_check_config_snapshot",
+      TempWindowFallbackConfigSnapshot: "temp_window_fallback_config_snapshot",
+      WebDavConfigSnapshot: "webdav_config_snapshot",
+      TaskNotificationsConfigSnapshot: "task_notifications_config_snapshot",
+      SiteAnnouncementsConfigSnapshot: "site_announcements_config_snapshot",
     })
   })
 
   it("defines fixed Auto Check-in setting ids and strategy dimensions", () => {
     expect(PRODUCT_ANALYTICS_SETTING_IDS).toMatchObject({
       AutoCheckinConfigSnapshot: "auto_checkin_config_snapshot",
-      AutoCheckinGlobalEnabled: "auto_checkin_global_enabled",
-      AutoCheckinUiPretriggerEnabled: "auto_checkin_ui_pretrigger_enabled",
-      AutoCheckinNotifyCompletionEnabled:
-        "auto_checkin_notify_completion_enabled",
-      AutoCheckinScheduleMode: "auto_checkin_schedule_mode",
-      AutoCheckinRetryEnabled: "auto_checkin_retry_enabled",
-      AutoCheckinConfigReset: "auto_checkin_config_reset",
     })
 
     expect(PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES).toMatchObject({

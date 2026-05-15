@@ -30,14 +30,10 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_EDITOR_MODES,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
-  PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-  trackProductAnalyticsEvent,
   type ProductAnalyticsActionId,
-  type ProductAnalyticsSettingId,
 } from "~/services/productAnalytics/events"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {
@@ -98,54 +94,6 @@ function startSettingsAnalyticsAction(actionId: ProductAnalyticsActionId) {
   return startProductAnalyticsAction({
     ...MODEL_SYNC_SETTINGS_ANALYTICS_CONTEXT,
     actionId,
-  })
-}
-
-/**
- * Maps one model-sync preference update to its fixed settings analytics id.
- */
-function resolveModelSyncSettingId(
-  updates: Partial<ManagedSiteModelSyncPreferences>,
-): ProductAnalyticsSettingId {
-  if (updates.enableSync !== undefined) {
-    return PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncEnabled
-  }
-  if (updates.intervalMs !== undefined) {
-    return PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncInterval
-  }
-  if (updates.concurrency !== undefined) {
-    return PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncConcurrency
-  }
-  if (updates.maxRetries !== undefined) {
-    return PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncMaxRetries
-  }
-  if (updates.rateLimit?.requestsPerMinute !== undefined) {
-    return PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncRpm
-  }
-  if (updates.rateLimit?.burst !== undefined) {
-    return PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncBurst
-  }
-  if (updates.allowedModels !== undefined) {
-    return PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncAllowedModels
-  }
-  if (updates.globalChannelModelFilters !== undefined) {
-    return PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncGlobalFilters
-  }
-
-  return PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncReset
-}
-
-/**
- * Emits privacy-safe settings analytics without numeric values or model names.
- */
-function trackModelSyncSettingChanged(
-  settingId: ProductAnalyticsSettingId,
-  enabled?: boolean,
-) {
-  void trackProductAnalyticsEvent(PRODUCT_ANALYTICS_EVENTS.SettingChanged, {
-    setting_id: settingId,
-    ...(typeof enabled === "boolean" ? { enabled } : {}),
-    entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
   })
 }
 
@@ -271,12 +219,11 @@ export default function ManagedSiteModelSyncSettings() {
   ) => {
     const isGlobalFiltersUpdate =
       updates.globalChannelModelFilters !== undefined
-    const settingId = resolveModelSyncSettingId(updates)
-    const tracker = startSettingsAnalyticsAction(
-      isGlobalFiltersUpdate
-        ? PRODUCT_ANALYTICS_ACTION_IDS.SaveManagedSiteChannelModelFilters
-        : PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteModelSyncSettings,
-    )
+    const tracker = isGlobalFiltersUpdate
+      ? startSettingsAnalyticsAction(
+          PRODUCT_ANALYTICS_ACTION_IDS.SaveManagedSiteChannelModelFilters,
+        )
+      : null
 
     try {
       setIsSaving(true)
@@ -309,7 +256,7 @@ export default function ManagedSiteModelSyncSettings() {
       const success = await updateNewApiModelSync(userPrefsUpdate)
 
       if (!success) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
         toast.error(t("settings:messages.saveSettingsFailed"))
         return false
       } else if (!updates.globalChannelModelFilters) {
@@ -318,7 +265,7 @@ export default function ManagedSiteModelSyncSettings() {
         toast.success(t("managedSiteModelSync:messages.success.settingsSaved"))
       }
       if (isGlobalFiltersUpdate) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
             editorMode:
               viewMode === "json"
@@ -326,14 +273,11 @@ export default function ManagedSiteModelSyncSettings() {
                 : PRODUCT_ANALYTICS_EDITOR_MODES.Visual,
           },
         })
-      } else {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       }
-      trackModelSyncSettingChanged(settingId, updates.enableSync)
       return true
     } catch (error) {
       logger.error("Failed to save preferences", error)
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
+      tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
       toast.error(t("settings:messages.saveSettingsFailed"))
       return false
     } finally {
@@ -572,12 +516,7 @@ export default function ManagedSiteModelSyncSettings() {
             ? PRODUCT_ANALYTICS_RESULTS.Success
             : PRODUCT_ANALYTICS_RESULTS.Failure,
         )
-        if (result) {
-          trackModelSyncSettingChanged(
-            PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncReset,
-          )
-          setIsSaving(false)
-        }
+        if (result) setIsSaving(false)
         return result
       }}
     >
