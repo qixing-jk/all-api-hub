@@ -142,6 +142,87 @@ describe("AddTokenDialog prefill", () => {
     )
   })
 
+  it("keeps a successful create flow successful when analytics completion rejects", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    createApiTokenMock.mockResolvedValueOnce(true)
+    trackerCompleteMock.mockRejectedValueOnce(new Error("analytics offline"))
+    const onClose = vi.fn()
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={onClose}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+      />,
+    )
+
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "Analytics best effort",
+    )
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(createApiTokenMock).toHaveBeenCalledTimes(1)
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "keyManagement:dialog.createSuccess",
+      )
+      expect(onClose).toHaveBeenCalled()
+    })
+    expect(toastErrorMock).not.toHaveBeenCalled()
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+  })
+
+  it("keeps a successful create flow successful when analytics start throws", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    createApiTokenMock.mockResolvedValueOnce(true)
+    startProductAnalyticsActionMock.mockImplementationOnce(() => {
+      throw new Error("analytics unavailable")
+    })
+    const onClose = vi.fn()
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={onClose}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+      />,
+    )
+
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "Analytics start best effort",
+    )
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(createApiTokenMock).toHaveBeenCalledTimes(1)
+      expect(toastSuccessMock).toHaveBeenCalledWith(
+        "keyManagement:dialog.createSuccess",
+      )
+      expect(onClose).toHaveBeenCalled()
+    })
+    expect(toastErrorMock).not.toHaveBeenCalled()
+  })
+
   it("does not apply prefill when editing a token", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValueOnce(["gpt-4", "gpt-3.5"])
     fetchUserGroupsMock.mockResolvedValueOnce({

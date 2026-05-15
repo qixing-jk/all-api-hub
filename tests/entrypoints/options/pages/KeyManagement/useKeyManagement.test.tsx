@@ -692,6 +692,71 @@ describe("useKeyManagement enabled account filtering", () => {
     )
   })
 
+  it("keeps retry-failed refresh successful when analytics completion rejects", async () => {
+    const accountA = createDisplayAccount({
+      id: "best-effort-retry-a",
+      name: "Best Effort Retry A",
+      baseUrl: "https://retry-a.example/v1",
+    })
+    const accountB = createDisplayAccount({
+      id: "best-effort-retry-b",
+      name: "Best Effort Retry B",
+      baseUrl: "https://retry-b.example/v1",
+    })
+
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [accountA, accountB],
+    } as any)
+
+    let accountBCalls = 0
+    const fetchAccountTokens = vi.fn(async (request: any) => {
+      if (request?.accountId === accountB.id) {
+        accountBCalls += 1
+        if (accountBCalls === 1) {
+          throw new Error("initial retry target failure")
+        }
+      }
+
+      return []
+    })
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const initialRefreshComplete = vi.fn().mockResolvedValue(undefined)
+    const retryComplete = vi.fn().mockRejectedValue(new Error("analytics down"))
+    startProductAnalyticsActionMock
+      .mockReturnValueOnce({ complete: initialRefreshComplete })
+      .mockReturnValueOnce({ complete: retryComplete })
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE)
+    })
+
+    await waitFor(() => expect(result.current.failedAccounts).toHaveLength(1))
+
+    await expect(
+      act(async () => {
+        await result.current.retryFailedAccounts()
+      }),
+    ).resolves.toBeUndefined()
+
+    await waitFor(() => expect(result.current.failedAccounts).toHaveLength(0))
+    expect(retryComplete).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.RetryFailed,
+          itemCount: 1,
+          successCount: 1,
+          failureCount: 0,
+        },
+      },
+    )
+  })
+
   it("supports account filtering in all mode while keeping per-account summary counts", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)
 
@@ -1097,6 +1162,77 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
       "Private Managed Channel",
     )
+  })
+
+  it("keeps manual managed-site status refresh successful when analytics completion rejects", async () => {
+    const account = createDisplayAccount({
+      id: "manual-status-best-effort-acc",
+      name: "Manual Status Best Effort Account",
+    })
+
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    getManagedSiteTokenChannelStatusMock
+      .mockResolvedValueOnce({
+        status: managedSiteTokenChannelStatuses.NOT_ADDED,
+      })
+      .mockResolvedValueOnce({
+        status: managedSiteTokenChannelStatuses.ADDED,
+      })
+
+    const fetchAccountTokens = vi.fn().mockResolvedValue([
+      createToken({
+        id: 206,
+        key: "token-206",
+        name: "Token 206",
+        expired_time: 0,
+      }),
+    ])
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const initialLoadComplete = vi.fn().mockResolvedValue(undefined)
+    const manualRefreshComplete = vi
+      .fn()
+      .mockRejectedValue(new Error("analytics down"))
+    startProductAnalyticsActionMock
+      .mockReturnValueOnce({ complete: initialLoadComplete })
+      .mockReturnValueOnce({ complete: manualRefreshComplete })
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
+    )
+
+    await expect(
+      act(async () => {
+        await result.current.refreshManagedSiteTokenStatuses()
+      }),
+    ).resolves.toBeUndefined()
+
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(2),
+    )
+    expect(manualRefreshComplete).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          itemCount: 1,
+          successCount: 1,
+          failureCount: 0,
+          statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
+        },
+      },
+    )
+    expect(result.current.isManagedSiteStatusRefreshing).toBe(false)
   })
 
   it("does not track automatic managed-site status checks as manual refresh", async () => {

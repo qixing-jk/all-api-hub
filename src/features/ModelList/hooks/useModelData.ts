@@ -162,6 +162,12 @@ const MODEL_DATA_ANALYTICS_CONTEXT = {
 /**
  * Tracks a coarse, sanitized model-data load completion outcome.
  * @param params Completion metadata to bucket and forward to analytics.
+ * @param params.result Coarse load outcome.
+ * @param params.sourceKind Selected model source kind.
+ * @param params.errorCategory Optional sanitized failure category.
+ * @param params.modelCount Number of models loaded, when available.
+ * @param params.successCount Number of successful account loads, when available.
+ * @param params.failureCount Number of failed account loads, when available.
  */
 function trackModelDataLoadCompletion(params: {
   result: ProductAnalyticsResult

@@ -51,6 +51,38 @@ const keyManagementDialogAnalyticsContext = (
   entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
 })
 
+const startKeyManagementDialogAnalytics = (
+  actionId:
+    | typeof PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken
+    | typeof PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken,
+) => {
+  try {
+    return startProductAnalyticsAction(
+      keyManagementDialogAnalyticsContext(actionId),
+    )
+  } catch (error) {
+    logger.warn("Add token dialog analytics start failed", error)
+    return {
+      complete: async () => undefined,
+    }
+  }
+}
+
+const completeKeyManagementDialogAnalytics = (
+  tracker: ReturnType<typeof startProductAnalyticsAction>,
+  ...args: Parameters<
+    ReturnType<typeof startProductAnalyticsAction>["complete"]
+  >
+) => {
+  try {
+    void Promise.resolve(tracker.complete(...args)).catch((error) => {
+      logger.warn("Add token dialog analytics completion failed", error)
+    })
+  } catch (error) {
+    logger.warn("Add token dialog analytics completion failed", error)
+  }
+}
+
 interface AddTokenDialogProps {
   isOpen: boolean
   onClose: () => void
@@ -121,12 +153,10 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
       return
     }
 
-    const tracker = startProductAnalyticsAction(
-      keyManagementDialogAnalyticsContext(
-        isEditMode
-          ? PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken
-          : PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken,
-      ),
+    const tracker = startKeyManagementDialogAnalytics(
+      isEditMode
+        ? PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken
+        : PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken,
     )
     setIsSubmitting(true)
     try {
@@ -156,7 +186,10 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
       } else {
         const created = await service.createApiToken(request, tokenData)
         const createdToken = isCreatedApiToken(created) ? created : undefined
-        void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        completeKeyManagementDialogAnalytics(
+          tracker,
+          PRODUCT_ANALYTICS_RESULTS.Success,
+        )
         if (createdToken && showOneTimeKeyDialog) {
           setOneTimeToken(createdToken)
         } else {
@@ -174,7 +207,10 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
       }
 
       if (isEditMode) {
-        void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        completeKeyManagementDialogAnalytics(
+          tracker,
+          PRODUCT_ANALYTICS_RESULTS.Success,
+        )
       }
       handleClose()
       if (isEditMode && onSuccess) {
@@ -192,9 +228,13 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
         message && message.trim() ? message : fallbackMessage
 
       toast.error(displayMessage)
-      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
+      completeKeyManagementDialogAnalytics(
+        tracker,
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        },
+      )
     } finally {
       setIsSubmitting(false)
     }

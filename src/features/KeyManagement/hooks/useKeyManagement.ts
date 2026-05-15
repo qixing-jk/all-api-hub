@@ -58,9 +58,13 @@ const completeKeyManagementAnalytics = (
     ReturnType<typeof startProductAnalyticsAction>["complete"]
   >
 ) => {
-  void Promise.resolve(tracker.complete(...args)).catch((error) => {
+  try {
+    void Promise.resolve(tracker.complete(...args)).catch((error) => {
+      logger.warn("Key Management analytics completion failed", error)
+    })
+  } catch (error) {
     logger.warn("Key Management analytics completion failed", error)
-  })
+  }
 }
 
 const managedSiteTokenStatusKindByStatus = (
@@ -728,17 +732,22 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           loadEpoch,
         })
         if (!isEpochActive(loadEpoch)) {
-          await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-            insights: {
-              mode: PRODUCT_ANALYTICS_MODE_IDS.All,
-              itemCount: targetAccountIds.length,
+          completeKeyManagementAnalytics(
+            tracker,
+            PRODUCT_ANALYTICS_RESULTS.Skipped,
+            {
+              insights: {
+                mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+                itemCount: targetAccountIds.length,
+              },
             },
-          })
+          )
           return
         }
         const successCount = loadResult.successCount
         const failureCount = loadResult.failureCount
-        await tracker.complete(
+        completeKeyManagementAnalytics(
+          tracker,
           failureCount > 0
             ? PRODUCT_ANALYTICS_RESULTS.Failure
             : PRODUCT_ANALYTICS_RESULTS.Success,
@@ -756,12 +765,16 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
       if (!accountById.get(targetAccountId)) {
         setTokenInventories({})
-        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-          insights: {
-            mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+        completeKeyManagementAnalytics(
+          tracker,
+          PRODUCT_ANALYTICS_RESULTS.Failure,
+          {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            insights: {
+              mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+            },
           },
-        })
+        )
         return
       }
 
@@ -784,7 +797,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           : status === null
             ? PRODUCT_ANALYTICS_RESULTS.Skipped
             : PRODUCT_ANALYTICS_RESULTS.Failure
-      await tracker.complete(result, {
+      completeKeyManagementAnalytics(tracker, result, {
         ...(result !== PRODUCT_ANALYTICS_RESULTS.Failure
           ? {}
           : {
@@ -832,7 +845,8 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     })
     const successCount = loadResult.successCount
     const failureCount = loadResult.failureCount
-    await tracker.complete(
+    completeKeyManagementAnalytics(
+      tracker,
       failureCount > 0
         ? PRODUCT_ANALYTICS_RESULTS.Failure
         : PRODUCT_ANALYTICS_RESULTS.Success,
@@ -1040,21 +1054,32 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         tokens: statusCheckTokens,
         force: true,
       })
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-        insights: {
-          itemCount: targetTokenCount,
-          ...summarizeManagedSiteTokenStatusResults(results, targetTokenCount),
+      completeKeyManagementAnalytics(
+        tracker,
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            itemCount: targetTokenCount,
+            ...summarizeManagedSiteTokenStatusResults(
+              results,
+              targetTokenCount,
+            ),
+          },
         },
-      })
+      )
     } catch (error) {
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: {
-          itemCount: targetTokenCount,
-          failureCount: targetTokenCount,
-          statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
+      completeKeyManagementAnalytics(
+        tracker,
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            itemCount: targetTokenCount,
+            failureCount: targetTokenCount,
+            statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
+          },
         },
-      })
+      )
       throw error
     } finally {
       if (isMountedRef.current) {
@@ -1153,17 +1178,21 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       )
       await navigator.clipboard.writeText(resolvedToken.key)
       toast.success(t("keyManagement:messages.keyCopied", { name: token.name }))
-      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      completeKeyManagementAnalytics(tracker, PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       toast.error(
         getErrorMessage(error, t("keyManagement:messages.copyFailed")),
       )
       logger.warn("Failed to copy key to clipboard", error)
-      void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: isClipboardPermissionError(error)
-          ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission
-          : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
+      completeKeyManagementAnalytics(
+        tracker,
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: isClipboardPermissionError(error)
+            ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission
+            : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        },
+      )
     }
   }
 
