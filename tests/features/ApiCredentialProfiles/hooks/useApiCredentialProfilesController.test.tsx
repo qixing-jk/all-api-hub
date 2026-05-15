@@ -20,18 +20,24 @@ const {
   completeProductAnalyticsActionMock,
   createProfileMock,
   deleteProfileMock,
+  openInCherryStudioMock,
+  openWithCredentialsMock,
   refreshTelemetryMock,
   startProductAnalyticsActionMock,
   tagStorageListTagsMock,
+  trackProductAnalyticsActionCompletedMock,
   toastPromiseMock,
   updateProfileMock,
 } = vi.hoisted(() => ({
   completeProductAnalyticsActionMock: vi.fn(),
   createProfileMock: vi.fn(),
   deleteProfileMock: vi.fn(),
+  openInCherryStudioMock: vi.fn(),
+  openWithCredentialsMock: vi.fn(),
   refreshTelemetryMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
   tagStorageListTagsMock: vi.fn(),
+  trackProductAnalyticsActionCompletedMock: vi.fn(),
   toastPromiseMock: vi.fn(),
   updateProfileMock: vi.fn(),
 }))
@@ -46,7 +52,7 @@ vi.mock("react-hot-toast", () => ({
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
-  useChannelDialog: () => ({ openWithCredentials: vi.fn() }),
+  useChannelDialog: () => ({ openWithCredentials: openWithCredentialsMock }),
 }))
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
@@ -64,9 +70,15 @@ vi.mock("~/services/apiCredentialProfiles/telemetry", () => ({
     refreshTelemetryMock(...args),
 }))
 
+vi.mock("~/services/integrations/cherryStudio", () => ({
+  OpenInCherryStudio: (...args: unknown[]) => openInCherryStudioMock(...args),
+}))
+
 vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: (...args: unknown[]) =>
     startProductAnalyticsActionMock(...args),
+  trackProductAnalyticsActionCompleted: (...args: unknown[]) =>
+    trackProductAnalyticsActionCompletedMock(...args),
 }))
 
 vi.mock("~/services/managedSites/utils/managedSite", () => ({
@@ -133,17 +145,28 @@ function buildProfile(): ApiCredentialProfile {
   }
 }
 
+function renderController() {
+  return renderHook(() => useApiCredentialProfilesController(), {
+    withReleaseUpdateStatusProvider: false,
+    withThemeProvider: false,
+    withUserPreferencesProvider: false,
+  })
+}
+
 describe("useApiCredentialProfilesController", () => {
   beforeEach(() => {
     completeProductAnalyticsActionMock.mockReset()
     createProfileMock.mockReset()
     deleteProfileMock.mockReset()
+    openInCherryStudioMock.mockReset()
+    openWithCredentialsMock.mockReset()
     refreshTelemetryMock.mockReset()
     startProductAnalyticsActionMock.mockReset()
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
     tagStorageListTagsMock.mockReset()
+    trackProductAnalyticsActionCompletedMock.mockReset()
     toastPromiseMock.mockReset()
     updateProfileMock.mockReset()
   })
@@ -211,6 +234,208 @@ describe("useApiCredentialProfilesController", () => {
       expect.objectContaining({
         telemetryConfig: { mode: "disabled" },
       }),
+    )
+  })
+
+  it("completes create profile analytics after profile persistence succeeds", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+    createProfileMock.mockResolvedValue(buildProfile())
+
+    const { result } = renderController()
+
+    await act(async () => {
+      await result.current.handleSave({
+        name: "Custom",
+        apiType: "openai-compatible",
+        baseUrl: "https://custom.example.com",
+        apiKey: "sk-custom",
+        tagIds: [],
+        notes: "",
+        telemetryConfig: { mode: "auto" },
+      })
+    })
+
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      durationMs: expect.any(Number),
+    })
+    expect(createProfileMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("completes update profile analytics after profile persistence succeeds", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+    updateProfileMock.mockResolvedValue(buildProfile())
+
+    const { result } = renderController()
+
+    await act(async () => {
+      await result.current.handleSave({
+        id: "profile-1",
+        name: "Custom",
+        apiType: "openai-compatible",
+        baseUrl: "https://custom.example.com",
+        apiKey: "sk-custom",
+        tagIds: [],
+        notes: "",
+        telemetryConfig: { mode: "disabled" },
+      })
+    })
+
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateApiCredentialProfile,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      durationMs: expect.any(Number),
+    })
+    expect(updateProfileMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("completes delete profile analytics after delete persistence succeeds", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+    deleteProfileMock.mockResolvedValue(true)
+
+    const { result } = renderController()
+
+    act(() => {
+      result.current.handleRequestDelete(buildProfile())
+    })
+
+    await act(async () => {
+      await result.current.handleConfirmDelete()
+    })
+
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      durationMs: expect.any(Number),
+    })
+    expect(deleteProfileMock).toHaveBeenCalledWith("profile-1")
+  })
+
+  it("completes profile persistence analytics as unknown failure when save throws", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+    createProfileMock.mockRejectedValue(new Error("storage failure"))
+
+    const { result } = renderController()
+
+    await act(async () => {
+      await expect(
+        result.current.handleSave({
+          name: "Custom",
+          apiType: "openai-compatible",
+          baseUrl: "https://custom.example.com",
+          apiKey: "sk-custom",
+          tagIds: [],
+          notes: "",
+          telemetryConfig: { mode: "auto" },
+        }),
+      ).rejects.toThrow("storage failure")
+    })
+
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      durationMs: expect.any(Number),
+    })
+  })
+
+  it("completes delete profile analytics as unknown failure when storage reports no delete", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+    deleteProfileMock.mockResolvedValue(false)
+
+    const { result } = renderController()
+
+    act(() => {
+      result.current.handleRequestDelete(buildProfile())
+    })
+
+    await act(async () => {
+      await result.current.handleConfirmDelete()
+    })
+
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      durationMs: expect.any(Number),
+    })
+  })
+
+  it("tracks Cherry Studio export success after opening a profile", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+
+    const { result } = renderController()
+    await act(async () => {
+      await Promise.resolve()
+    })
+
+    act(() => {
+      result.current.handleExport(buildProfile(), "cherryStudio")
+    })
+
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCherryStudio,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(openInCherryStudioMock).toHaveBeenCalledTimes(1)
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+  })
+
+  it("tracks managed-site profile import as skipped when preparation does not open", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+    openWithCredentialsMock.mockResolvedValueOnce({ opened: false })
+
+    const { result } = renderController()
+
+    await act(async () => {
+      result.current.handleExport(buildProfile(), "managedSite")
+    })
+
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ImportManagedSiteSingleToken,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(openWithCredentialsMock).toHaveBeenCalledWith(
+      {
+        name: "Profile",
+        baseUrl: "https://api.example.com",
+        apiKey: "sk-profile",
+      },
+      expect.any(Function),
+    )
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Skipped,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
     )
   })
 

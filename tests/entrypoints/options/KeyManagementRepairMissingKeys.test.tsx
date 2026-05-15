@@ -6,6 +6,11 @@ import {
   RuntimeMessageTypes,
 } from "~/constants/runtimeActions"
 import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
+import {
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_STATUS_KINDS,
+} from "~/services/productAnalytics/events"
 import type { AccountKeyRepairProgress } from "~/types/accountKeyAutoProvisioning"
 import {
   act,
@@ -25,6 +30,13 @@ const { sendRuntimeActionMessageMock, runtimeMessageState } = vi.hoisted(
 )
 const { mockOpenSub2ApiTokenCreationDialog } = vi.hoisted(() => ({
   mockOpenSub2ApiTokenCreationDialog: vi.fn(),
+}))
+const {
+  mockTrackProductAnalyticsActionCompleted,
+  mockTrackProductAnalyticsActionStarted,
+} = vi.hoisted(() => ({
+  mockTrackProductAnalyticsActionCompleted: vi.fn(),
+  mockTrackProductAnalyticsActionStarted: vi.fn(),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -49,6 +61,12 @@ vi.mock("~/components/dialogs/ChannelDialog", () => ({
   useChannelDialog: () => ({
     openSub2ApiTokenCreationDialog: mockOpenSub2ApiTokenCreationDialog,
   }),
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionStarted: mockTrackProductAnalyticsActionStarted,
+  trackProductAnalyticsActionCompleted:
+    mockTrackProductAnalyticsActionCompleted,
 }))
 
 vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
@@ -182,6 +200,43 @@ const startProgress: AccountKeyRepairProgress = {
   ],
 }
 
+const completedProgress: AccountKeyRepairProgress = {
+  ...startProgress,
+  jobId: "job-1",
+  state: "completed",
+  finishedAt: 2,
+  totals: {
+    enabledAccounts: 2,
+    eligibleAccounts: 2,
+    processedAccounts: 2,
+    processedEligibleAccounts: 2,
+  },
+  summary: {
+    created: 2,
+    alreadyHad: 0,
+    skipped: 0,
+    failed: 0,
+  },
+  results: [
+    {
+      accountId: "account-enabled",
+      accountName: "Enabled Site",
+      siteType: "unknown",
+      siteUrlOrigin: "https://enabled.example.com",
+      outcome: "created",
+      finishedAt: 1,
+    },
+    {
+      accountId: "account-enabled-2",
+      accountName: "Another Site",
+      siteType: "unknown",
+      siteUrlOrigin: "https://another.example.com",
+      outcome: "created",
+      finishedAt: 2,
+    },
+  ],
+}
+
 const multiOutcomeProgress: AccountKeyRepairProgress = {
   jobId: "job-2",
   state: "running",
@@ -217,6 +272,14 @@ const multiOutcomeProgress: AccountKeyRepairProgress = {
       finishedAt: 2,
     },
   ],
+}
+
+const failedProgress: AccountKeyRepairProgress = {
+  ...multiOutcomeProgress,
+  jobId: "job-1",
+  state: "failed",
+  finishedAt: 2,
+  lastError: "raw backend detail",
 }
 
 const inflatedProgress: AccountKeyRepairProgress = {
@@ -347,6 +410,8 @@ const aihubmixSkippedProgress: AccountKeyRepairProgress = {
 describe("KeyManagement repair missing keys entry point", () => {
   beforeEach(() => {
     mockOpenSub2ApiTokenCreationDialog.mockReset()
+    mockTrackProductAnalyticsActionCompleted.mockReset()
+    mockTrackProductAnalyticsActionStarted.mockReset()
   })
 
   it("opens dialog, subscribes to progress, and hides disabled accounts", async () => {
@@ -591,5 +656,162 @@ describe("KeyManagement repair missing keys entry point", () => {
       }),
     ).not.toBeInTheDocument()
     expect(mockOpenSub2ApiTokenCreationDialog).not.toHaveBeenCalled()
+  })
+
+  it("tracks started and successful completion analytics for start-on-open repair", async () => {
+    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+      if (message?.action === RuntimeActionIds.AccountKeyRepairGetProgress) {
+        return { success: true, data: idleProgress }
+      }
+      if (message?.action === RuntimeActionIds.AccountKeyRepairStart) {
+        return { success: true, data: startProgress }
+      }
+      return { success: false }
+    })
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledWith({
+        featureId: "key_management",
+        actionId: "repair_missing_account_keys",
+        surfaceId: "options_key_management_repair_dialog",
+        entrypoint: "options",
+      })
+    })
+
+    await act(async () => {
+      runtimeMessageState.listener?.({
+        type: RuntimeMessageTypes.AccountKeyRepairProgress,
+        payload: completedProgress,
+      })
+      runtimeMessageState.listener?.({
+        type: RuntimeMessageTypes.AccountKeyRepairProgress,
+        payload: completedProgress,
+      })
+    })
+
+    await waitFor(() => {
+      expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledTimes(1)
+    })
+    expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith({
+      featureId: "key_management",
+      actionId: "repair_missing_account_keys",
+      surfaceId: "options_key_management_repair_dialog",
+      entrypoint: "options",
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        itemCount: 2,
+        selectedCount: 2,
+        successCount: 2,
+        failureCount: 0,
+        statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
+      },
+    })
+  })
+
+  it("tracks immediate start failure without raw error details", async () => {
+    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+      if (message?.action === RuntimeActionIds.AccountKeyRepairGetProgress) {
+        return { success: true, data: idleProgress }
+      }
+      if (message?.action === RuntimeActionIds.AccountKeyRepairStart) {
+        return { success: false, error: "raw backend detail" }
+      }
+      return { success: false }
+    })
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith({
+        featureId: "key_management",
+        actionId: "repair_missing_account_keys",
+        surfaceId: "options_key_management_repair_dialog",
+        entrypoint: "options",
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          itemCount: 2,
+          selectedCount: 0,
+          successCount: 0,
+          failureCount: 0,
+          statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
+        },
+      })
+    })
+    expect(mockTrackProductAnalyticsActionStarted).not.toHaveBeenCalled()
+    expect(
+      mockTrackProductAnalyticsActionCompleted.mock.calls[0]?.[0],
+    ).not.toHaveProperty("error")
+  })
+
+  it("tracks failed progress completion once without raw progress errors", async () => {
+    sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
+      if (message?.action === RuntimeActionIds.AccountKeyRepairGetProgress) {
+        return { success: true, data: idleProgress }
+      }
+      if (message?.action === RuntimeActionIds.AccountKeyRepairStart) {
+        return { success: true, data: startProgress }
+      }
+      return { success: false }
+    })
+
+    render(<KeyManagement />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:repairMissingKeys.action",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledTimes(1)
+    })
+
+    await act(async () => {
+      runtimeMessageState.listener?.({
+        type: RuntimeMessageTypes.AccountKeyRepairProgress,
+        payload: failedProgress,
+      })
+      runtimeMessageState.listener?.({
+        type: RuntimeMessageTypes.AccountKeyRepairProgress,
+        payload: failedProgress,
+      })
+    })
+
+    await waitFor(() => {
+      expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledTimes(1)
+    })
+    expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith({
+      featureId: "key_management",
+      actionId: "repair_missing_account_keys",
+      surfaceId: "options_key_management_repair_dialog",
+      entrypoint: "options",
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      insights: {
+        itemCount: 2,
+        selectedCount: 2,
+        successCount: 1,
+        failureCount: 1,
+        statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
+      },
+    })
+    expect(
+      mockTrackProductAnalyticsActionCompleted.mock.calls[0]?.[0],
+    ).not.toHaveProperty("lastError")
   })
 })

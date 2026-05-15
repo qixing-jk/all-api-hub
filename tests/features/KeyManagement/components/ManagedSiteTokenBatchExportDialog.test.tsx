@@ -5,6 +5,13 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ManagedSiteTokenBatchExportDialog } from "~/features/KeyManagement/components/ManagedSiteTokenBatchExportDialog"
 import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+} from "~/services/productAnalytics/events"
+import {
   MANAGED_SITE_TOKEN_BATCH_EXPORT_BLOCKED_REASON_CODES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES,
   MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES,
@@ -16,16 +23,29 @@ import {
 } from "~~/tests/test-utils/factories"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
-const { mockExecuteBatchExport, mockPreparePreview, mockToastSuccess } =
-  vi.hoisted(() => ({
-    mockExecuteBatchExport: vi.fn(),
-    mockPreparePreview: vi.fn(),
-    mockToastSuccess: vi.fn(),
-  }))
+const {
+  mockExecuteBatchExport,
+  mockPreparePreview,
+  mockTrackProductAnalyticsActionCompleted,
+  mockTrackProductAnalyticsActionStarted,
+  mockToastSuccess,
+} = vi.hoisted(() => ({
+  mockExecuteBatchExport: vi.fn(),
+  mockPreparePreview: vi.fn(),
+  mockTrackProductAnalyticsActionCompleted: vi.fn(),
+  mockTrackProductAnalyticsActionStarted: vi.fn(),
+  mockToastSuccess: vi.fn(),
+}))
 
 vi.mock("~/services/managedSites/tokenBatchExport", () => ({
   prepareManagedSiteTokenBatchExportPreview: mockPreparePreview,
   executeManagedSiteTokenBatchExport: mockExecuteBatchExport,
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  trackProductAnalyticsActionStarted: mockTrackProductAnalyticsActionStarted,
+  trackProductAnalyticsActionCompleted:
+    mockTrackProductAnalyticsActionCompleted,
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -537,6 +557,125 @@ describe("ManagedSiteTokenBatchExportDialog", () => {
         "keyManagement:batchManagedSiteExport.results.summary",
       ),
     ).toBeInTheDocument()
+  })
+
+  it("tracks analytics only around confirmed batch export execution success", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview.mockResolvedValue(preview)
+    mockExecuteBatchExport.mockResolvedValue({
+      totalSelected: 2,
+      attemptedCount: 2,
+      createdCount: 1,
+      failedCount: 1,
+      skippedCount: 0,
+      items: [
+        {
+          id: "account-1:1",
+          accountName: "Account 1",
+          tokenName: "Token 1",
+          success: true,
+          skipped: false,
+        },
+        {
+          id: "account-1:2",
+          accountName: "Account 1",
+          tokenName: "Token 2",
+          success: false,
+          skipped: false,
+          error: "backend detail",
+        },
+      ],
+    })
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+
+    expect(mockTrackProductAnalyticsActionStarted).not.toHaveBeenCalled()
+
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      })[1],
+    )
+
+    await waitFor(() => {
+      expect(mockExecuteBatchExport).toHaveBeenCalledTimes(1)
+    })
+    expect(mockTrackProductAnalyticsActionStarted).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportManagedSiteTokenChannels,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportManagedSiteTokenChannels,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        selectedCount: 2,
+        itemCount: 2,
+        successCount: 1,
+        failureCount: 1,
+      },
+    })
+    expect(
+      mockTrackProductAnalyticsActionCompleted.mock.calls[0]?.[0],
+    ).not.toHaveProperty("durationMs")
+  })
+
+  it("tracks failed confirmed batch export execution without raw error details", async () => {
+    const user = userEvent.setup()
+    mockPreparePreview.mockResolvedValue(preview)
+    mockExecuteBatchExport.mockRejectedValue(new Error("execute failed"))
+
+    renderDialog()
+
+    expect(await screen.findByText("Account 1 / Token 1")).toBeInTheDocument()
+    await user.click(
+      screen.getByRole("checkbox", {
+        name: "Account 1 / Token 2",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      }),
+    )
+    await user.click(
+      screen.getAllByRole("button", {
+        name: "keyManagement:batchManagedSiteExport.actions.start",
+      })[1],
+    )
+
+    await waitFor(() => {
+      expect(mockExecuteBatchExport).toHaveBeenCalledTimes(1)
+    })
+    expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportManagedSiteTokenChannels,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      insights: {
+        selectedCount: 1,
+        itemCount: 1,
+      },
+    })
+    expect(mockTrackProductAnalyticsActionCompleted).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        error: expect.anything(),
+        message: expect.anything(),
+      }),
+    )
+    expect(
+      mockTrackProductAnalyticsActionCompleted.mock.calls[0]?.[0],
+    ).not.toHaveProperty("durationMs")
   })
 
   it("passes edited models to batch execution", async () => {

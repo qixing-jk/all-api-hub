@@ -5,7 +5,9 @@ import { KiloCodeProfileExportDialog } from "~/features/ApiCredentialProfiles/co
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
@@ -16,7 +18,8 @@ const mockBuildKiloCodeApiConfigs = vi.fn()
 const mockBuildKiloCodeSettingsFile = vi.fn()
 const toastSuccessMock = vi.fn()
 const toastErrorMock = vi.fn()
-const trackProductAnalyticsActionStartedMock = vi.fn()
+const completeProductAnalyticsActionMock = vi.fn()
+const startProductAnalyticsActionMock = vi.fn()
 
 vi.mock("~/services/apiService/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: (...args: any[]) =>
@@ -38,14 +41,14 @@ vi.mock("react-hot-toast", () => ({
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
-  trackProductAnalyticsActionStarted: (...args: any[]) =>
-    trackProductAnalyticsActionStartedMock(...args),
+  startProductAnalyticsAction: (...args: any[]) =>
+    startProductAnalyticsActionMock(...args),
 }))
 
-const expectApiCredentialProfileActionTracked = (
+const expectApiCredentialProfileActionStarted = (
   actionId: (typeof PRODUCT_ANALYTICS_ACTION_IDS)[keyof typeof PRODUCT_ANALYTICS_ACTION_IDS],
 ) => {
-  expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+  expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
     featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
     actionId,
     surfaceId:
@@ -73,7 +76,11 @@ describe("KiloCodeProfileExportDialog", () => {
     mockBuildKiloCodeSettingsFile.mockReset()
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
-    trackProductAnalyticsActionStartedMock.mockReset()
+    completeProductAnalyticsActionMock.mockReset()
+    startProductAnalyticsActionMock.mockReset()
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: completeProductAnalyticsActionMock,
+    })
 
     mockBuildKiloCodeApiConfigs.mockImplementation(({ selections }: any) => ({
       apiConfigs: [
@@ -140,7 +147,7 @@ describe("KiloCodeProfileExportDialog", () => {
 
     await user.click(copyButton)
 
-    expectApiCredentialProfileActionTracked(
+    expectApiCredentialProfileActionStarted(
       PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialExportConfig,
     )
     await waitFor(() => {
@@ -150,6 +157,12 @@ describe("KiloCodeProfileExportDialog", () => {
     expect(toastSuccessMock).toHaveBeenCalledWith(
       "ui:dialog.kiloCode.messages.copiedApiConfigs",
     )
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        { insights: { itemCount: 1, modelCount: 1, selectedCount: 1 } },
+      )
+    })
   })
 
   it("shows the no-model notice and keeps export actions disabled when the upstream list is empty", async () => {
@@ -200,7 +213,7 @@ describe("KiloCodeProfileExportDialog", () => {
 
     await user.click(copyButton)
 
-    expectApiCredentialProfileActionTracked(
+    expectApiCredentialProfileActionStarted(
       PRODUCT_ANALYTICS_ACTION_IDS.CopyApiCredentialExportConfig,
     )
     await waitFor(() => {
@@ -208,6 +221,13 @@ describe("KiloCodeProfileExportDialog", () => {
         "ui:dialog.kiloCode.messages.copyFailed",
       )
     })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: { itemCount: 1, modelCount: 1, selectedCount: 1 },
+      },
+    )
   })
 
   it("downloads a settings file and revokes the temporary object url", async () => {
@@ -239,7 +259,7 @@ describe("KiloCodeProfileExportDialog", () => {
 
     await user.click(downloadButton)
 
-    expectApiCredentialProfileActionTracked(
+    expectApiCredentialProfileActionStarted(
       PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialSettingsFile,
     )
     await waitFor(() => {
@@ -258,6 +278,12 @@ describe("KiloCodeProfileExportDialog", () => {
     expect(toastSuccessMock).toHaveBeenCalledWith(
       "ui:dialog.kiloCode.messages.downloadedSettings",
     )
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        { insights: { itemCount: 1, modelCount: 1, selectedCount: 1 } },
+      )
+    })
   })
 
   it("shows a download-failed toast when building the settings file throws", async () => {
@@ -282,7 +308,7 @@ describe("KiloCodeProfileExportDialog", () => {
 
     await user.click(downloadButton)
 
-    expectApiCredentialProfileActionTracked(
+    expectApiCredentialProfileActionStarted(
       PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialSettingsFile,
     )
     await waitFor(() => {
@@ -290,5 +316,12 @@ describe("KiloCodeProfileExportDialog", () => {
         "ui:dialog.kiloCode.messages.downloadFailed",
       )
     })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: { itemCount: 1, modelCount: 1, selectedCount: 1 },
+      },
+    )
   })
 })

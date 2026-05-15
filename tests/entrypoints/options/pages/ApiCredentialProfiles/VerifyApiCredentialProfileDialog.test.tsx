@@ -624,6 +624,13 @@ describe("VerifyApiCredentialProfileDialog", () => {
     await waitFor(() =>
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            itemCount: 5,
+            successCount: 5,
+            failureCount: 0,
+          },
+        },
       ),
     )
 
@@ -682,6 +689,11 @@ describe("VerifyApiCredentialProfileDialog", () => {
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 1,
+          },
         },
       ),
     )

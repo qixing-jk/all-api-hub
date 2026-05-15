@@ -11,6 +11,16 @@ import { buildTokenIdentityKey } from "~/features/KeyManagement/utils"
 import { useAccountData } from "~/hooks/useAccountData"
 import { getApiService } from "~/services/apiService"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_STATUS_KINDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import { createToken } from "~~/tests/utils/keyManagementFactories"
@@ -19,6 +29,8 @@ const {
   getManagedSiteTokenChannelStatusMock,
   managedSiteTokenChannelStatuses,
   mockedUseUserPreferencesContext,
+  startProductAnalyticsActionMock,
+  trackerCompleteMock,
 } = vi.hoisted(() => ({
   getManagedSiteTokenChannelStatusMock: vi.fn(),
   managedSiteTokenChannelStatuses: {
@@ -27,6 +39,8 @@ const {
     UNKNOWN: "unknown",
   },
   mockedUseUserPreferencesContext: vi.fn(),
+  startProductAnalyticsActionMock: vi.fn(),
+  trackerCompleteMock: vi.fn(),
 }))
 
 vi.mock("~/hooks/useAccountData", () => ({
@@ -45,6 +59,11 @@ vi.mock("~/services/managedSites/tokenChannelStatus", () => ({
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => mockedUseUserPreferencesContext(),
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: unknown[]) =>
+    startProductAnalyticsActionMock(...args),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -106,6 +125,11 @@ describe("useKeyManagement enabled account filtering", () => {
     getManagedSiteTokenChannelStatusMock.mockReset()
     getManagedSiteTokenChannelStatusMock.mockResolvedValue({
       status: managedSiteTokenChannelStatuses.NOT_ADDED,
+    })
+    startProductAnalyticsActionMock.mockReset()
+    trackerCompleteMock.mockReset()
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: trackerCompleteMock,
     })
     mockedUseUserPreferencesContext.mockReset()
     mockedUseUserPreferencesContext.mockReturnValue({
@@ -441,6 +465,151 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(vi.mocked(toast.error)).not.toHaveBeenCalled()
   })
 
+  it("tracks all-account token refresh with sanitized aggregate buckets", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+
+    const accountA = createDisplayAccount({
+      id: "analytics-refresh-a",
+      name: "Secret Account A",
+      baseUrl: "https://secret-a.example/v1",
+    })
+    const accountB = createDisplayAccount({
+      id: "analytics-refresh-b",
+      name: "Secret Account B",
+      baseUrl: "https://secret-b.example/v1",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [accountA, accountB],
+    } as any)
+
+    const fetchAccountTokens = vi.fn(async (request: any) => {
+      if (request?.accountId === accountA.id) {
+        return [
+          createToken({
+            id: 301,
+            key: "sk-raw-refresh-secret-a",
+            name: "Sensitive Token A",
+            expired_time: 0,
+          }),
+        ]
+      }
+
+      throw new Error(`raw failure for ${request?.accountId}`)
+    })
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE)
+    })
+
+    await waitFor(() =>
+      expect(trackerCompleteMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          insights: {
+            mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+            itemCount: 2,
+            successCount: 1,
+            failureCount: 1,
+          },
+        },
+      ),
+    )
+
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccountTokens,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementHeader,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      "sk-raw-refresh-secret-a",
+    )
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      "Secret Account",
+    )
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      "raw failure",
+    )
+  })
+
+  it("tracks retry-failed token refresh with retry_failed mode and aggregate counts", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+
+    const accountA = createDisplayAccount({
+      id: "analytics-retry-a",
+      name: "Retry Account A",
+      baseUrl: "https://retry-a.example/v1",
+    })
+    const accountB = createDisplayAccount({
+      id: "analytics-retry-b",
+      name: "Retry Account B",
+      baseUrl: "https://retry-b.example/v1",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [accountA, accountB],
+    } as any)
+
+    let accountBCalls = 0
+    const fetchAccountTokens = vi.fn(async (request: any) => {
+      if (request?.accountId === accountA.id) return []
+      if (request?.accountId === accountB.id) {
+        accountBCalls += 1
+        if (accountBCalls === 1) {
+          throw new Error("first raw retry failure")
+        }
+        return []
+      }
+      return []
+    })
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE)
+    })
+
+    await waitFor(() => expect(result.current.failedAccounts).toHaveLength(1))
+    trackerCompleteMock.mockClear()
+    startProductAnalyticsActionMock.mockClear()
+
+    await act(async () => {
+      await result.current.retryFailedAccounts()
+    })
+
+    await waitFor(() =>
+      expect(trackerCompleteMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            mode: PRODUCT_ANALYTICS_MODE_IDS.RetryFailed,
+            itemCount: 1,
+            successCount: 1,
+            failureCount: 0,
+          },
+        },
+      ),
+    )
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccountTokens,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementHeader,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      "first raw retry failure",
+    )
+  })
+
   it("supports account filtering in all mode while keeping per-account summary counts", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)
 
@@ -675,11 +844,25 @@ describe("useKeyManagement enabled account filtering", () => {
     )
     expect(resolveApiTokenKey).toHaveBeenCalledTimes(1)
     expect(result.current.getVisibleTokenKey(token)).toBe(resolvedKey)
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RevealAccountTokenKey,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      resolvedKey,
+    )
 
+    trackerCompleteMock.mockClear()
     await act(async () => {
       await result.current.toggleKeyVisibility(account, token)
     })
     expect(result.current.visibleKeys.has(tokenIdentityKey)).toBe(false)
+    expect(trackerCompleteMock).not.toHaveBeenCalled()
 
     await act(async () => {
       await result.current.toggleKeyVisibility(account, token)
@@ -753,6 +936,132 @@ describe("useKeyManagement enabled account filtering", () => {
         name: "Managed Channel 55",
       },
     })
+  })
+
+  it("tracks manual managed-site status refresh with sanitized aggregate counts", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "manual-status-analytics-acc",
+      name: "Manual Status Analytics Account",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    getManagedSiteTokenChannelStatusMock
+      .mockResolvedValueOnce({
+        status: managedSiteTokenChannelStatuses.NOT_ADDED,
+      })
+      .mockResolvedValueOnce({
+        status: managedSiteTokenChannelStatuses.ADDED,
+        matchedChannel: {
+          id: 77,
+          name: "Private Managed Channel",
+        },
+      })
+
+    const fetchAccountTokens = vi.fn().mockResolvedValue([
+      createToken({
+        id: 204,
+        key: "sk-manual-refresh-secret",
+        name: "Manual Refresh Secret Token",
+        expired_time: 0,
+      }),
+    ])
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
+    )
+    startProductAnalyticsActionMock.mockClear()
+    trackerCompleteMock.mockClear()
+
+    await act(async () => {
+      await result.current.refreshManagedSiteTokenStatuses()
+    })
+
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteTokenStatus,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementHeader,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          itemCount: 1,
+          successCount: 1,
+          failureCount: 0,
+          statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
+        },
+      },
+    )
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      "sk-manual-refresh-secret",
+    )
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      "Manual Refresh Secret Token",
+    )
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      "Private Managed Channel",
+    )
+  })
+
+  it("does not track automatic managed-site status checks as manual refresh", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "auto-status-analytics-acc",
+      name: "Auto Status Analytics Account",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    const fetchAccountTokens = vi.fn().mockResolvedValue([
+      createToken({
+        id: 205,
+        key: "token-205",
+        name: "Token 205",
+        expired_time: 0,
+      }),
+    ])
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
+    )
+
+    expect(result.current.managedSiteTokenStatuses).toMatchObject({
+      "auto-status-analytics-acc:205": {
+        result: {
+          status: managedSiteTokenChannelStatuses.NOT_ADDED,
+        },
+      },
+    })
+    expect(startProductAnalyticsActionMock).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteTokenStatus,
+      }),
+    )
   })
 
   it("skips automatic and manual managed-site status checks when Veloera is selected", async () => {
@@ -1688,6 +1997,18 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(vi.mocked(toast.success)).toHaveBeenCalledWith(
       "keyManagement:messages.keyCopied",
     )
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKey,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      "resolved-token-secret",
+    )
   })
 
   it("shows the clipboard error message when writing to the clipboard fails", async () => {
@@ -1723,6 +2044,15 @@ describe("useKeyManagement enabled account filtering", () => {
 
     expect(writeText).toHaveBeenCalledWith("resolved-token-secret")
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith("denied")
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission,
+      },
+    )
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      "resolved-token-secret",
+    )
   })
 
   it("shows the resolver error message when a saved masked key cannot be copied", async () => {
@@ -1768,6 +2098,12 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(writeText).not.toHaveBeenCalled()
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
       "messages:errors.tokenSecretUnavailable",
+    )
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
     )
   })
 
@@ -1899,6 +2235,18 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(resolveApiTokenKey).toHaveBeenCalledTimes(1)
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
       "messages:errors.tokenSecretUnavailable",
+    )
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RevealAccountTokenKey,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
     )
   })
 
@@ -2108,6 +2456,81 @@ describe("useKeyManagement enabled account filtering", () => {
     })
 
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith("delete boom")
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccountToken,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
+
+    confirmSpy.mockRestore()
+  })
+
+  it("tracks confirmed token deletion without raw token metadata", async () => {
+    const account = createDisplayAccount({
+      id: "delete-analytics-acc",
+      name: "Raw Delete Account",
+    })
+    const token = createToken({
+      id: 909,
+      key: "sk-delete-secret",
+      name: "Raw Delete Token",
+      accountId: account.id,
+      accountName: account.name,
+      expired_time: 0,
+    })
+
+    vi.mocked(useAccountData).mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    const fetchAccountTokens = vi.fn().mockResolvedValue([token])
+    const deleteApiToken = vi.fn().mockResolvedValue(undefined)
+    vi.mocked(getApiService).mockReturnValue({
+      fetchAccountTokens,
+      deleteApiToken,
+    } as any)
+
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() => expect(result.current.tokens).toHaveLength(1))
+    trackerCompleteMock.mockClear()
+    startProductAnalyticsActionMock.mockClear()
+
+    await act(async () => {
+      await result.current.handleDeleteToken(token)
+    })
+
+    expect(deleteApiToken).toHaveBeenCalledWith(expect.anything(), token.id)
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccountToken,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      "sk-delete-secret",
+    )
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      "Raw Delete",
+    )
 
     confirmSpy.mockRestore()
   })

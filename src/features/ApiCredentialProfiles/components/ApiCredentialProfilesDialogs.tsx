@@ -5,6 +5,12 @@ import { ClaudeCodeRouterImportDialog } from "~/components/ClaudeCodeRouterImpor
 import { CliProxyExportDialog } from "~/components/CliProxyExportDialog"
 import { VerifyCliSupportDialog } from "~/components/dialogs/VerifyCliSupportDialog"
 import { DestructiveConfirmDialog } from "~/components/ui"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { getApiVerificationApiTypeLabel } from "~/services/verification/aiApiVerification/i18n"
 
 import type { ApiCredentialProfilesController } from "../hooks/useApiCredentialProfilesController"
@@ -20,6 +26,13 @@ import { VerifyApiCredentialProfileDialog } from "./VerifyApiCredentialProfileDi
 interface ApiCredentialProfilesDialogsProps {
   controller: ApiCredentialProfilesController
 }
+
+const apiCredentialProfileThirdPartyExportContext = {
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+  surfaceId:
+    PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+} as const
 
 /**
  * Dialog layer for API credential profile actions (edit, verify, export, delete).
@@ -70,6 +83,11 @@ export function ApiCredentialProfilesDialogs({
           onClose={() => controller.setCCSwitchProfile(null)}
           account={createExportAccount(controller.ccSwitchProfile)}
           token={createExportToken(controller.ccSwitchProfile)}
+          analyticsContext={{
+            ...apiCredentialProfileThirdPartyExportContext,
+            actionId:
+              PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCCSwitch,
+          }}
         />
       ) : null}
 
@@ -88,6 +106,11 @@ export function ApiCredentialProfilesDialogs({
           account={cliProxyPayload.account}
           token={cliProxyPayload.token}
           apiTypeHint={cliProxyPayload.apiTypeHint}
+          analyticsContext={{
+            ...apiCredentialProfileThirdPartyExportContext,
+            actionId:
+              PRODUCT_ANALYTICS_ACTION_IDS.ImportApiCredentialProfileToCliProxy,
+          }}
         />
       ) : null}
 
@@ -99,6 +122,11 @@ export function ApiCredentialProfilesDialogs({
           token={createExportToken(controller.claudeCodeRouterProfile)}
           routerBaseUrl={controller.claudeCodeRouterBaseUrl}
           routerApiKey={controller.claudeCodeRouterApiKey}
+          analyticsContext={{
+            ...apiCredentialProfileThirdPartyExportContext,
+            actionId:
+              PRODUCT_ANALYTICS_ACTION_IDS.ImportApiCredentialProfileToClaudeCodeRouter,
+          }}
         />
       ) : null}
 

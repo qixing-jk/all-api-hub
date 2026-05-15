@@ -51,6 +51,15 @@ import {
   getManagedSiteLabel,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import {
   API_TYPES,
   type ApiVerificationApiType,
@@ -260,7 +269,15 @@ function TokenActionButtons({
   const managedSiteLabel = getManagedSiteLabel(t, managedSiteType)
 
   const handleImportToManagedSite = async () => {
-    await openWithAccount(
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ImportManagedSiteSingleToken,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
+    const result = await openWithAccount(
       account,
       token,
       (result) => {
@@ -280,6 +297,15 @@ function TokenActionButtons({
         managedSiteStatus,
       },
     )
+
+    if (result.opened || result.deferred) {
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      return
+    }
+
+    await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+    })
   }
 
   const handleOpenCliProxyDialog = () => {
@@ -305,13 +331,25 @@ function TokenActionButtons({
   }
 
   const handleUseInCherry = async () => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportAccountTokenToCherryStudio,
+      surfaceId:
+        PRODUCT_ANALYTICS_SURFACE_IDS.AccountTokenThirdPartyExportDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
     try {
       const resolvedToken = await resolveDisplayAccountTokenForSecret(
         account,
         token,
       )
       OpenInCherryStudio(account, resolvedToken)
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
       showResultToast({
         success: false,
         message: t("messages:errors.operation.failed", {
@@ -322,6 +360,13 @@ function TokenActionButtons({
   }
 
   const handleSaveToApiCredentialProfiles = async () => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.SaveAccountTokenToApiCredentialProfile,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
     const apiType: ApiVerificationApiType = API_TYPES.OPENAI_COMPATIBLE
     const profileName = buildApiCredentialProfileName({
       accountName: account.name,
@@ -361,7 +406,11 @@ function TokenActionButtons({
         ),
         { duration: 8000 },
       )
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
       logger.error("Failed to save token to API profiles", {
         message: toSanitizedErrorSummary(
           error,
@@ -562,11 +611,23 @@ export function TokenHeader({
       return
     }
 
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RetryManagedSiteTokenVerification,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
     void Promise.resolve(
       onManagedSiteVerificationRetry(token, managedSiteStatus),
-    ).catch((error) =>
-      logger.error("Managed-site verification retry callback failed", error),
     )
+      .then(() => tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success))
+      .catch((error) => {
+        logger.error("Managed-site verification retry callback failed", error)
+        return tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
+      })
   }
 
   const handleOpenManagedSiteSettings = () => {

@@ -7,6 +7,15 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -30,6 +39,17 @@ const isCreatedApiToken = (value: unknown): value is ApiToken =>
   typeof value === "object" &&
   typeof (value as Partial<ApiToken>).id === "number" &&
   typeof (value as Partial<ApiToken>).key === "string"
+
+const keyManagementDialogAnalyticsContext = (
+  actionId:
+    | typeof PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken
+    | typeof PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken,
+) => ({
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+  actionId,
+  surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementDialog,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+})
 
 interface AddTokenDialogProps {
   isOpen: boolean
@@ -101,6 +121,13 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
       return
     }
 
+    const tracker = startProductAnalyticsAction(
+      keyManagementDialogAnalyticsContext(
+        isEditMode
+          ? PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken
+          : PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken,
+      ),
+    )
     setIsSubmitting(true)
     try {
       const tokenData: CreateTokenRequest = {
@@ -129,6 +156,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
       } else {
         const created = await service.createApiToken(request, tokenData)
         const createdToken = isCreatedApiToken(created) ? created : undefined
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         if (createdToken && showOneTimeKeyDialog) {
           setOneTimeToken(createdToken)
         } else {
@@ -145,6 +173,9 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
         }
       }
 
+      if (isEditMode) {
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      }
       handleClose()
       if (isEditMode && onSuccess) {
         void Promise.resolve(onSuccess()).catch((error) => {
@@ -161,6 +192,9 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
         message && message.trim() ? message : fallbackMessage
 
       toast.error(displayMessage)
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     } finally {
       setIsSubmitting(false)
     }

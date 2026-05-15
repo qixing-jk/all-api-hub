@@ -570,15 +570,26 @@ export function VerifyApiCredentialProfileDialog({
         return
       }
 
-      const hasFailedProbe = results.some((result) => result.status !== "pass")
+      const successCount = results.filter(
+        (result) => result.status === "pass",
+      ).length
+      const failureCount = results.length - successCount
+      const insights = {
+        itemCount: results.length,
+        successCount,
+        failureCount,
+      }
+
+      const hasFailedProbe = failureCount > 0
       if (hasFailedProbe) {
         await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights,
         })
         return
       }
 
-      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, { insights })
     } catch (error) {
       logger.error("Probe suite failed", {
         message: toSanitizedErrorSummary(error, [

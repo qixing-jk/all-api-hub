@@ -17,6 +17,17 @@ import {
   prepareManagedSiteTokenBatchExportPreview,
 } from "~/services/managedSites/tokenBatchExport"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
+import {
+  trackProductAnalyticsActionCompleted,
+  trackProductAnalyticsActionStarted,
+} from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+} from "~/services/productAnalytics/events"
 import type {
   ManagedSiteTokenBatchExportExecutionResult,
   ManagedSiteTokenBatchExportItemInput,
@@ -425,10 +436,26 @@ export function ManagedSiteTokenBatchExportDialog({
     setIsConfirmOpen(false)
     setIsRunning(true)
     setExecutionError(null)
+    const analyticsContext = {
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportManagedSiteTokenChannels,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    }
+    void trackProductAnalyticsActionStarted(analyticsContext)
     try {
       const result = await executeManagedSiteTokenBatchExport({
         preview,
         selectedItemIds: selectedExecutionIds,
+      })
+      void trackProductAnalyticsActionCompleted({
+        ...analyticsContext,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        insights: {
+          selectedCount: result.totalSelected,
+          itemCount: result.attemptedCount,
+          successCount: result.createdCount,
+          failureCount: result.failedCount,
+        },
       })
       setExecutionResult(result)
       onCompleted?.(result)
@@ -440,6 +467,15 @@ export function ManagedSiteTokenBatchExportDialog({
         }),
       )
     } catch (error) {
+      void trackProductAnalyticsActionCompleted({
+        ...analyticsContext,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          selectedCount: selectedExecutionIds.length,
+          itemCount: selectedExecutionIds.length,
+        },
+      })
       setExecutionError(getErrorMessage(error))
     } finally {
       setIsRunning(false)

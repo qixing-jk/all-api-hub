@@ -5,6 +5,14 @@ import { Z_INDEX } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import { AuthTypeEnum } from "~/types"
 import {
   fireEvent,
@@ -19,15 +27,19 @@ const {
   updateApiTokenMock,
   fetchAccountAvailableModelsMock,
   fetchUserGroupsMock,
+  startProductAnalyticsActionMock,
   toastSuccessMock,
   toastErrorMock,
+  trackerCompleteMock,
 } = vi.hoisted(() => ({
   createApiTokenMock: vi.fn(),
   updateApiTokenMock: vi.fn(),
   fetchAccountAvailableModelsMock: vi.fn(),
   fetchUserGroupsMock: vi.fn(),
+  startProductAnalyticsActionMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
+  trackerCompleteMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -45,6 +57,11 @@ vi.mock("~/services/apiService", () => ({
       fetchAccountAvailableModelsMock(...args),
     fetchUserGroups: (...args: any[]) => fetchUserGroupsMock(...args),
   }),
+}))
+
+vi.mock("~/services/productAnalytics/actions", () => ({
+  startProductAnalyticsAction: (...args: unknown[]) =>
+    startProductAnalyticsActionMock(...args),
 }))
 
 const ACCOUNT = {
@@ -65,6 +82,11 @@ describe("AddTokenDialog prefill", () => {
     updateApiTokenMock.mockReset()
     fetchAccountAvailableModelsMock.mockReset()
     fetchUserGroupsMock.mockReset()
+    startProductAnalyticsActionMock.mockReset()
+    trackerCompleteMock.mockReset()
+    startProductAnalyticsActionMock.mockReturnValue({
+      complete: trackerCompleteMock,
+    })
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
   })
@@ -106,6 +128,18 @@ describe("AddTokenDialog prefill", () => {
       model_limits_enabled: true,
       model_limits: "gpt-4",
     })
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      "model gpt-4",
+    )
   })
 
   it("does not apply prefill when editing a token", async () => {
@@ -160,6 +194,18 @@ describe("AddTokenDialog prefill", () => {
       model_limits_enabled: false,
       model_limits: "",
     })
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      "Existing key",
+    )
   })
 
   it("falls back to the localized create failure message when the error is blank", async () => {
@@ -192,6 +238,18 @@ describe("AddTokenDialog prefill", () => {
         "keyManagement:dialog.createFailed",
       )
     })
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateAccountToken,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
   })
 
   it("falls back to the localized update failure message when the error is blank", async () => {
@@ -238,6 +296,18 @@ describe("AddTokenDialog prefill", () => {
         "keyManagement:dialog.updateFailed",
       )
     })
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.UpdateAccountToken,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementDialog,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
   })
 
   it("shows a one-time key dialog when create returns a full token", async () => {

@@ -11,6 +11,17 @@ import {
 } from "~/services/accounts/utils/apiServiceRequest"
 import { getManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
+import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_STATUS_KINDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { AccountToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -23,6 +34,80 @@ import { buildTokenIdentityKey } from "../utils"
  * Unified logger scoped to the Key Management options page hooks.
  */
 const logger = createLogger("KeyManagementHook")
+
+const keyManagementAnalyticsContext = (
+  actionId:
+    | typeof PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccountTokens
+    | typeof PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteTokenStatus
+    | typeof PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKey
+    | typeof PRODUCT_ANALYTICS_ACTION_IDS.RevealAccountTokenKey
+    | typeof PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccountToken,
+  surfaceId:
+    | typeof PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementHeader
+    | typeof PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+) => ({
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+  actionId,
+  surfaceId,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+})
+
+const managedSiteTokenStatusKindByStatus = (
+  status: ManagedSiteTokenChannelStatusResult["status"],
+) => {
+  switch (status) {
+    case "added":
+      return PRODUCT_ANALYTICS_STATUS_KINDS.Healthy
+    case "not-added":
+      return PRODUCT_ANALYTICS_STATUS_KINDS.Warning
+    default:
+      return PRODUCT_ANALYTICS_STATUS_KINDS.Unknown
+  }
+}
+
+const summarizeManagedSiteTokenStatusResults = (
+  resultsByIdentityKey: Record<string, ManagedSiteTokenChannelStatusResult>,
+  itemCount: number,
+) => {
+  const results = Object.values(resultsByIdentityKey)
+  const failureCount = Math.max(itemCount - results.length, 0)
+  const hasWarning = results.some((result) => result.status !== "added")
+
+  if (failureCount > 0 || hasWarning) {
+    return {
+      successCount: results.length,
+      failureCount,
+      statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Warning,
+    }
+  }
+
+  return {
+    successCount: results.length,
+    failureCount: 0,
+    statusKind:
+      results[0] !== undefined
+        ? managedSiteTokenStatusKindByStatus(results[0].status)
+        : undefined,
+  }
+}
+
+const isClipboardPermissionError = (error: unknown) => {
+  if (error instanceof DOMException) {
+    return (
+      error.name === "NotAllowedError" ||
+      error.name === "SecurityError" ||
+      error.name === "NotFoundError"
+    )
+  }
+
+  if (error instanceof Error) {
+    return /clipboard|denied|permission|notallowed|security/i.test(
+      `${error.name} ${error.message}`,
+    )
+  }
+
+  return false
+}
 
 type TokenLoadStatus = "idle" | "loading" | "loaded" | "error"
 
@@ -444,14 +529,14 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       accountId: string
       loadEpoch: number
       toastOnError: boolean
-    }) => {
+    }): Promise<TokenLoadStatus | null> => {
       const { accountId, loadEpoch, toastOnError } = params
       const account = accountById.get(accountId)
-      if (!account) return
+      if (!account) return null
 
       const requestEpoch = getNextAccountRequestEpoch(accountId)
 
-      if (!isEpochActive(loadEpoch)) return
+      if (!isEpochActive(loadEpoch)) return null
       invalidateManagedSiteStatusesForAccount(accountId)
       setTokenInventories((prev) => ({
         ...prev,
@@ -466,8 +551,8 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         const { service, request } = createDisplayAccountApiContext(account)
         const tokens = await service.fetchAccountTokens(request)
 
-        if (!isEpochActive(loadEpoch)) return
-        if (!isLatestAccountRequest(accountId, requestEpoch)) return
+        if (!isEpochActive(loadEpoch)) return null
+        if (!isLatestAccountRequest(accountId, requestEpoch)) return null
 
         if (!Array.isArray(tokens)) {
           const errorMessage = loadFailedMessageRef.current
@@ -482,7 +567,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           if (toastOnError) {
             toast.error(errorMessage)
           }
-          return
+          return "error"
         }
 
         const tokensWithAccount = tokens.map((token) => ({
@@ -499,9 +584,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             errorMessage: undefined,
           },
         }))
+        return "loaded"
       } catch (error) {
-        if (!isEpochActive(loadEpoch)) return
-        if (!isLatestAccountRequest(accountId, requestEpoch)) return
+        if (!isEpochActive(loadEpoch)) return null
+        if (!isLatestAccountRequest(accountId, requestEpoch)) return null
 
         const errorMessage =
           getErrorMessage(error) || loadFailedMessageRef.current
@@ -517,6 +603,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         if (toastOnError) {
           toast.error(errorMessage)
         }
+        return "error"
       }
     },
     [
@@ -552,24 +639,42 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       const originEntries = Array.from(accountsByOrigin.entries())
       const results = await Promise.allSettled(
         originEntries.map(async ([, originAccountIds]) => {
+          const statuses: TokenLoadStatus[] = []
           for (const accountId of originAccountIds) {
-            if (!isEpochActive(loadEpoch)) return
-            await loadTokensForAccount({
+            if (!isEpochActive(loadEpoch)) return statuses
+            const status = await loadTokensForAccount({
               accountId,
               loadEpoch,
               toastOnError: false,
             })
+            if (status === "loaded" || status === "error") {
+              statuses.push(status)
+            }
           }
+          return statuses
         }),
       )
 
+      let successCount = 0
+      let failureCount = 0
       results.forEach((result, index) => {
-        if (result.status !== "rejected") return
+        if (result.status === "fulfilled") {
+          successCount += result.value.filter(
+            (status) => status === "loaded",
+          ).length
+          failureCount += result.value.filter(
+            (status) => status === "error",
+          ).length
+          return
+        }
         logger.error("All-accounts token load worker failed unexpectedly", {
           origin: originEntries[index]?.[0] ?? "unknown",
           error: result.reason,
         })
+        failureCount +=
+          accountsByOrigin.get(originEntries[index]?.[0] ?? "")?.length ?? 0
       })
+      return { successCount, failureCount }
     },
     [accountById, isEpochActive, loadTokensForAccount],
   )
@@ -584,12 +689,19 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       const targetAccountId = accountId ?? selectedAccount
       if (!targetAccountId || enabledDisplayData.length === 0) return
 
+      const tracker = startProductAnalyticsAction(
+        keyManagementAnalyticsContext(
+          PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccountTokens,
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementHeader,
+        ),
+      )
       const loadEpoch = startNewLoadEpoch()
       setVisibleKeys(new Set())
       setResolvedVisibleKeys({})
       setResolvingVisibleKeys(new Set())
 
       if (targetAccountId === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE) {
+        const targetAccountIds = enabledDisplayData.map((account) => account.id)
         setTokenInventories((prev) => {
           const next: Record<string, TokenInventoryState> = {}
           for (const account of enabledDisplayData) {
@@ -600,15 +712,36 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           }
           return next
         })
-        await loadTokensForAccounts({
-          accountIds: enabledDisplayData.map((account) => account.id),
+        const loadResult = await loadTokensForAccounts({
+          accountIds: targetAccountIds,
           loadEpoch,
         })
+        const successCount = loadResult.successCount
+        const failureCount = loadResult.failureCount
+        await tracker.complete(
+          failureCount > 0
+            ? PRODUCT_ANALYTICS_RESULTS.Failure
+            : PRODUCT_ANALYTICS_RESULTS.Success,
+          {
+            insights: {
+              mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+              itemCount: targetAccountIds.length,
+              successCount,
+              failureCount,
+            },
+          },
+        )
         return
       }
 
       if (!accountById.get(targetAccountId)) {
         setTokenInventories({})
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+          },
+        })
         return
       }
 
@@ -620,11 +753,26 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         },
       }))
 
-      await loadTokensForAccount({
+      const status = await loadTokensForAccount({
         accountId: targetAccountId,
         loadEpoch,
         toastOnError: true,
       })
+      await tracker.complete(
+        status === "loaded"
+          ? PRODUCT_ANALYTICS_RESULTS.Success
+          : PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          ...(status === "loaded"
+            ? {}
+            : {
+                errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+              }),
+          insights: {
+            mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+          },
+        },
+      )
     },
     [
       accountById,
@@ -650,10 +798,31 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       .map((account) => account.id)
 
     if (failedAccountIds.length === 0) return
-    await loadTokensForAccounts({
+    const tracker = startProductAnalyticsAction(
+      keyManagementAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccountTokens,
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementHeader,
+      ),
+    )
+    const loadResult = await loadTokensForAccounts({
       accountIds: failedAccountIds,
       loadEpoch: selectionEpochRef.current,
     })
+    const successCount = loadResult.successCount
+    const failureCount = loadResult.failureCount
+    await tracker.complete(
+      failureCount > 0
+        ? PRODUCT_ANALYTICS_RESULTS.Failure
+        : PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.RetryFailed,
+          itemCount: failedAccountIds.length,
+          successCount,
+          failureCount,
+        },
+      },
+    )
   }, [enabledDisplayData, isAllAccountsMode, loadTokensForAccounts])
 
   useEffect(() => {
@@ -836,12 +1005,35 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     }
 
     setIsManagedSiteStatusRefreshing(true)
+    const targetTokenCount = statusCheckTokens.length
+    const tracker = startProductAnalyticsAction(
+      keyManagementAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.RefreshManagedSiteTokenStatus,
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementHeader,
+      ),
+    )
 
     try {
-      await runManagedSiteStatusChecks({
+      const results = await runManagedSiteStatusChecks({
         tokens: statusCheckTokens,
         force: true,
       })
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        insights: {
+          itemCount: targetTokenCount,
+          ...summarizeManagedSiteTokenStatusResults(results, targetTokenCount),
+        },
+      })
+    } catch (error) {
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          itemCount: targetTokenCount,
+          failureCount: targetTokenCount,
+          statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
+        },
+      })
+      throw error
     } finally {
       if (isMountedRef.current) {
         setIsManagedSiteStatusRefreshing(false)
@@ -926,6 +1118,12 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   }, [isManagedSiteChannelStatusSupported])
 
   const copyKey = async (account: DisplaySiteData, token: AccountToken) => {
+    const tracker = startProductAnalyticsAction(
+      keyManagementAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.CopyAccountTokenKey,
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+      ),
+    )
     try {
       const resolvedToken = await resolveDisplayAccountTokenForSecret(
         account,
@@ -933,11 +1131,17 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       )
       await navigator.clipboard.writeText(resolvedToken.key)
       toast.success(t("keyManagement:messages.keyCopied", { name: token.name }))
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       toast.error(
         getErrorMessage(error, t("keyManagement:messages.copyFailed")),
       )
       logger.warn("Failed to copy key to clipboard", error)
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: isClipboardPermissionError(error)
+          ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission
+          : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
   }
 
@@ -978,6 +1182,12 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
     }
 
     const visibilityRequestEpoch = selectionEpochRef.current
+    const tracker = startProductAnalyticsAction(
+      keyManagementAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.RevealAccountTokenKey,
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+      ),
+    )
     setResolvingVisibleKeys((prev) => {
       const next = new Set(prev)
       next.add(tokenIdentityKey)
@@ -1003,11 +1213,15 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         newSet.add(tokenIdentityKey)
         return newSet
       })
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error) {
       toast.error(
         getErrorMessage(error, t("keyManagement:messages.revealFailed")),
       )
       logger.warn("Failed to resolve key for visibility", error)
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     } finally {
       if (isMountedRef.current) {
         setResolvingVisibleKeys((prev) => {
@@ -1082,12 +1296,21 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       return
     }
 
+    const tracker = startProductAnalyticsAction(
+      keyManagementAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccountToken,
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRowActions,
+      ),
+    )
     try {
       const account = enabledDisplayData.find(
         (acc) => acc.id === token.accountId,
       )
       if (!account) {
         toast.error(t("keyManagement:messages.accountNotFound"))
+        await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        })
         return
       }
 
@@ -1098,6 +1321,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       toast.success(
         t("keyManagement:messages.deleteSuccess", { name: token.name }),
       )
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
 
       if (selectedAccount === KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE) {
         void loadTokensForAccount({
@@ -1112,6 +1336,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       const errorMessage = getErrorMessage(error) || String(error)
       logger.error("删除密钥失败", errorMessage)
       toast.error(errorMessage)
+      await tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
     }
   }
 

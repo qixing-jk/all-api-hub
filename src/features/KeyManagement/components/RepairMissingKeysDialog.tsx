@@ -1,6 +1,6 @@
 import { MagnifyingGlassIcon, XMarkIcon } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
-import { useEffect, useMemo, useState } from "react"
+import { useEffect, useMemo, useRef, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
@@ -23,6 +23,19 @@ import {
   RuntimeActionIds,
   RuntimeMessageTypes,
 } from "~/constants/runtimeActions"
+import {
+  trackProductAnalyticsActionCompleted,
+  trackProductAnalyticsActionStarted,
+} from "~/services/productAnalytics/actions"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_STATUS_KINDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+} from "~/services/productAnalytics/events"
 import type { DisplaySiteData } from "~/types"
 import type {
   AccountKeyRepairOutcome,
@@ -33,6 +46,38 @@ import {
   onRuntimeMessage,
   sendRuntimeActionMessage,
 } from "~/utils/browser/browserApi"
+
+const repairMissingKeysAnalyticsContext = {
+  featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+  actionId: PRODUCT_ANALYTICS_ACTION_IDS.RepairMissingAccountKeys,
+  surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementRepairDialog,
+  entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+}
+
+/**
+ * Counts accounts that are eligible for the repair attempt at the dialog boundary.
+ */
+function getEligibleAccountCountFromAccounts(accounts: DisplaySiteData[]) {
+  return accounts.filter((account) => !account.disabled).length
+}
+
+/**
+ * Builds sanitized analytics insights when the repair job cannot start.
+ */
+function getRepairStartFailureInsights(
+  progress: AccountKeyRepairProgress | null,
+  accounts: DisplaySiteData[],
+) {
+  return {
+    itemCount:
+      progress?.totals.eligibleAccounts ??
+      getEligibleAccountCountFromAccounts(accounts),
+    selectedCount: 0,
+    successCount: 0,
+    failureCount: progress?.summary.failed ?? 0,
+    statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
+  }
+}
 
 interface RepairMissingKeysDialogProps {
   isOpen: boolean
@@ -85,6 +130,46 @@ function getRepairOutcomeLabel(t: TFunction, outcome: AccountKeyRepairOutcome) {
 }
 
 /**
+ * Extracts privacy-safe count metrics from repair progress.
+ */
+function getRepairProgressInsightCounts(progress: AccountKeyRepairProgress) {
+  return {
+    itemCount: progress.totals.eligibleAccounts,
+    selectedCount:
+      progress.totals.processedEligibleAccounts ??
+      progress.totals.processedAccounts,
+    successCount: progress.summary.created,
+    failureCount: progress.summary.failed,
+  }
+}
+
+/**
+ * Maps terminal repair progress into a coarse health status.
+ */
+function getRepairProgressStatusKind(progress: AccountKeyRepairProgress) {
+  if (progress.state === "failed") {
+    return PRODUCT_ANALYTICS_STATUS_KINDS.Error
+  }
+  if (progress.summary.failed > 0) {
+    return PRODUCT_ANALYTICS_STATUS_KINDS.Warning
+  }
+  return PRODUCT_ANALYTICS_STATUS_KINDS.Healthy
+}
+
+/**
+ * Maps terminal repair progress into the product analytics result enum.
+ */
+function getRepairProgressResult(progress: AccountKeyRepairProgress) {
+  if (progress.state === "failed") {
+    return PRODUCT_ANALYTICS_RESULTS.Failure
+  }
+  if (progress.summary.failed > 0) {
+    return PRODUCT_ANALYTICS_RESULTS.Failure
+  }
+  return PRODUCT_ANALYTICS_RESULTS.Success
+}
+
+/**
  * Modal dialog showing the background progress of the "ensure at least one key" job.
  */
 export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
@@ -102,6 +187,10 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
   const [openingSub2ApiAccountId, setOpeningSub2ApiAccountId] = useState<
     string | null
   >(null)
+  const startedAnalyticsJobIdRef = useRef<string | null>(null)
+  const completedAnalyticsJobIdRef = useRef<string | null>(null)
+  const progressRef = useRef<AccountKeyRepairProgress | null>(null)
+  const accountsRef = useRef(accounts)
 
   const disabledAccountIds = useMemo(() => {
     return new Set(
@@ -207,10 +296,25 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
 
   useEffect(() => {
     if (!isOpen) {
+      startedAnalyticsJobIdRef.current = null
+      completedAnalyticsJobIdRef.current = null
+    }
+  }, [isOpen])
+
+  useEffect(() => {
+    if (!isOpen) {
       setSearchTerm("")
       setOutcomeFilter(null)
     }
   }, [isOpen])
+
+  useEffect(() => {
+    progressRef.current = progress
+  }, [progress])
+
+  useEffect(() => {
+    accountsRef.current = accounts
+  }, [accounts])
 
   useEffect(() => {
     if (!isOpen) return
@@ -263,12 +367,34 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
         })
         if (cancelled) return
         if (response?.success && response.data) {
+          startedAnalyticsJobIdRef.current = response.data.jobId
+          void trackProductAnalyticsActionStarted(
+            repairMissingKeysAnalyticsContext,
+          )
           setProgress(response.data)
         } else {
+          void trackProductAnalyticsActionCompleted({
+            ...repairMissingKeysAnalyticsContext,
+            result: PRODUCT_ANALYTICS_RESULTS.Failure,
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            insights: getRepairStartFailureInsights(
+              progressRef.current,
+              accountsRef.current,
+            ),
+          })
           setError(t("repairMissingKeys.messages.startFailed"))
         }
       } catch {
         if (!cancelled) {
+          void trackProductAnalyticsActionCompleted({
+            ...repairMissingKeysAnalyticsContext,
+            result: PRODUCT_ANALYTICS_RESULTS.Failure,
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            insights: getRepairStartFailureInsights(
+              progressRef.current,
+              accountsRef.current,
+            ),
+          })
           setError(t("repairMissingKeys.messages.startFailed"))
         }
       }
@@ -278,6 +404,27 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
       cancelled = true
     }
   }, [isOpen, startOnOpen, t])
+
+  useEffect(() => {
+    if (!progress) return
+    if (progress.state !== "completed" && progress.state !== "failed") return
+    if (startedAnalyticsJobIdRef.current !== progress.jobId) return
+    if (completedAnalyticsJobIdRef.current === progress.jobId) return
+
+    completedAnalyticsJobIdRef.current = progress.jobId
+
+    void trackProductAnalyticsActionCompleted({
+      ...repairMissingKeysAnalyticsContext,
+      result: getRepairProgressResult(progress),
+      ...(progress.state === "failed"
+        ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
+        : {}),
+      insights: {
+        ...getRepairProgressInsightCounts(progress),
+        statusKind: getRepairProgressStatusKind(progress),
+      },
+    })
+  }, [progress])
 
   return (
     <Modal

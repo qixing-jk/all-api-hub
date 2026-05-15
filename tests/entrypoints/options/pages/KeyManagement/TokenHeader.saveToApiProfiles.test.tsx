@@ -1109,6 +1109,7 @@ describe("TokenHeader save to API profiles", () => {
         onSuccess?: (result: { success: boolean; message: string }) => void,
       ) => {
         onSuccess?.({ success: true, message: "imported" })
+        return { opened: true }
       },
     )
 

@@ -10,6 +10,7 @@ import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
 import { getManagedSiteLabel } from "~/services/managedSites/utils/managedSite"
 import {
   startProductAnalyticsAction,
+  trackProductAnalyticsActionCompleted,
   type ProductAnalyticsActionInsights,
 } from "~/services/productAnalytics/actions"
 import {
@@ -65,6 +66,8 @@ type RuntimeBroadcastMessage = {
 const logger = createLogger("ApiCredentialProfilesController")
 const apiCredentialProfilesFeature =
   PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles
+const apiCredentialProfilesDialogSurface =
+  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesDialog
 const apiCredentialProfilesRefreshSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions
 const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
@@ -252,28 +255,53 @@ export function useApiCredentialProfilesController() {
 
   const handleSave = useCallback(
     async (input: SaveApiCredentialProfileInput) => {
-      if (input.id) {
-        await updateProfile(input.id, {
-          name: input.name,
-          apiType: input.apiType,
-          baseUrl: input.baseUrl,
-          apiKey: input.apiKey,
-          tagIds: input.tagIds,
-          notes: input.notes,
-          telemetryConfig: input.telemetryConfig,
-        })
-        return
-      }
+      const actionId = input.id
+        ? PRODUCT_ANALYTICS_ACTION_IDS.UpdateApiCredentialProfile
+        : PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile
+      const startedAt = Date.now()
 
-      await createProfile({
-        name: input.name,
-        apiType: input.apiType,
-        baseUrl: input.baseUrl,
-        apiKey: input.apiKey,
-        tagIds: input.tagIds,
-        notes: input.notes,
-        telemetryConfig: input.telemetryConfig,
-      })
+      try {
+        if (input.id) {
+          await updateProfile(input.id, {
+            name: input.name,
+            apiType: input.apiType,
+            baseUrl: input.baseUrl,
+            apiKey: input.apiKey,
+            tagIds: input.tagIds,
+            notes: input.notes,
+            telemetryConfig: input.telemetryConfig,
+          })
+        } else {
+          await createProfile({
+            name: input.name,
+            apiType: input.apiType,
+            baseUrl: input.baseUrl,
+            apiKey: input.apiKey,
+            tagIds: input.tagIds,
+            notes: input.notes,
+            telemetryConfig: input.telemetryConfig,
+          })
+        }
+        await trackProductAnalyticsActionCompleted({
+          featureId: apiCredentialProfilesFeature,
+          actionId,
+          surfaceId: apiCredentialProfilesDialogSurface,
+          entrypoint: optionsEntrypoint,
+          result: PRODUCT_ANALYTICS_RESULTS.Success,
+          durationMs: Date.now() - startedAt,
+        })
+      } catch (error) {
+        await trackProductAnalyticsActionCompleted({
+          featureId: apiCredentialProfilesFeature,
+          actionId,
+          surfaceId: apiCredentialProfilesDialogSurface,
+          entrypoint: optionsEntrypoint,
+          result: PRODUCT_ANALYTICS_RESULTS.Failure,
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          durationMs: Date.now() - startedAt,
+        })
+        throw error
+      }
     },
     [createProfile, updateProfile],
   )
@@ -363,10 +391,26 @@ export function useApiCredentialProfilesController() {
       action: ApiCredentialProfileExportAction,
     ) => {
       if (action === "cherryStudio") {
-        OpenInCherryStudio(
-          createExportAccount(profile),
-          createExportToken(profile),
-        )
+        const tracker = startProductAnalyticsAction({
+          featureId: apiCredentialProfilesFeature,
+          actionId:
+            PRODUCT_ANALYTICS_ACTION_IDS.ExportApiCredentialProfileToCherryStudio,
+          surfaceId: apiCredentialProfilesRefreshSurface,
+          entrypoint: optionsEntrypoint,
+        })
+
+        try {
+          OpenInCherryStudio(
+            createExportAccount(profile),
+            createExportToken(profile),
+          )
+          void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        } catch (error) {
+          void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          })
+          throw error
+        }
         return
       }
 
@@ -405,6 +449,13 @@ export function useApiCredentialProfilesController() {
       }
 
       if (action === "managedSite") {
+        const tracker = startProductAnalyticsAction({
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteChannels,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.ImportManagedSiteSingleToken,
+          surfaceId: apiCredentialProfilesRefreshSurface,
+          entrypoint: optionsEntrypoint,
+        })
+
         void openWithCredentials(
           {
             name: profile.name,
@@ -415,6 +466,27 @@ export function useApiCredentialProfilesController() {
             showResultToast(result)
           },
         )
+          .then((result) =>
+            tracker.complete(
+              result?.opened || result?.deferred
+                ? PRODUCT_ANALYTICS_RESULTS.Success
+                : PRODUCT_ANALYTICS_RESULTS.Skipped,
+              result?.opened || result?.deferred
+                ? undefined
+                : {
+                    errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+                  },
+            ),
+          )
+          .catch((error) => {
+            void tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            })
+            logger.warn(
+              "Failed to complete managed site import analytics.",
+              error,
+            )
+          })
       }
     },
     [
@@ -495,17 +567,44 @@ export function useApiCredentialProfilesController() {
 
   const handleConfirmDelete = useCallback(async () => {
     if (!deletingProfile) return
+    const startedAt = Date.now()
     setIsDeleting(true)
     try {
       const deleted = await deleteProfile(deletingProfile.id)
       if (deleted) {
         toast.success(t("apiCredentialProfiles:messages.deleted"))
+        await trackProductAnalyticsActionCompleted({
+          featureId: apiCredentialProfilesFeature,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile,
+          surfaceId: apiCredentialProfilesRefreshSurface,
+          entrypoint: optionsEntrypoint,
+          result: PRODUCT_ANALYTICS_RESULTS.Success,
+          durationMs: Date.now() - startedAt,
+        })
       } else {
         toast.error(t("apiCredentialProfiles:messages.deleteFailed"))
+        await trackProductAnalyticsActionCompleted({
+          featureId: apiCredentialProfilesFeature,
+          actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile,
+          surfaceId: apiCredentialProfilesRefreshSurface,
+          entrypoint: optionsEntrypoint,
+          result: PRODUCT_ANALYTICS_RESULTS.Failure,
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          durationMs: Date.now() - startedAt,
+        })
       }
       setDeletingProfile(null)
     } catch {
       toast.error(t("apiCredentialProfiles:messages.deleteFailed"))
+      await trackProductAnalyticsActionCompleted({
+        featureId: apiCredentialProfilesFeature,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteApiCredentialProfile,
+        surfaceId: apiCredentialProfilesRefreshSurface,
+        entrypoint: optionsEntrypoint,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        durationMs: Date.now() - startedAt,
+      })
     } finally {
       setIsDeleting(false)
     }
