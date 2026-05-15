@@ -40,7 +40,7 @@ import { useIsDesktop, useIsSmallScreen } from "~/hooks/useMediaQuery"
 import { cn } from "~/lib/utils"
 import { getDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import {
-  trackProductAnalyticsActionCompleted,
+  startProductAnalyticsAction,
   trackProductAnalyticsActionStarted,
 } from "~/services/productAnalytics/actions"
 import {
@@ -730,33 +730,33 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
       ...accountListAnalyticsBaseContext,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.DisableSelectedAccounts,
     }
+    const tracker = startProductAnalyticsAction(analyticsContext)
 
     setIsBulkDisabling(true)
-    await trackProductAnalyticsActionStarted(analyticsContext)
     try {
       const { updatedCount, updatedIds } = await handleSetAccountsDisabled(
         selectedEnabledAccounts,
         true,
       )
       const failureCount = Math.max(0, itemCount - updatedCount)
-      await trackProductAnalyticsActionCompleted({
-        ...analyticsContext,
-        result:
-          failureCount > 0
-            ? PRODUCT_ANALYTICS_RESULTS.Failure
-            : PRODUCT_ANALYTICS_RESULTS.Success,
-        ...(failureCount > 0
-          ? {
-              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            }
-          : {}),
-        insights: {
-          itemCount,
-          selectedCount,
-          successCount: updatedCount,
-          failureCount,
+      tracker.complete(
+        failureCount > 0
+          ? PRODUCT_ANALYTICS_RESULTS.Failure
+          : PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          ...(failureCount > 0
+            ? {
+                errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+              }
+            : {}),
+          insights: {
+            itemCount,
+            selectedCount,
+            successCount: updatedCount,
+            failureCount,
+          },
         },
-      })
+      )
       if (updatedIds.length > 0) {
         const updatedIdSet = new Set(updatedIds)
         setSelectedAccountIds((previous) =>
@@ -764,9 +764,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
         )
       }
     } catch (error) {
-      await trackProductAnalyticsActionCompleted({
-        ...analyticsContext,
-        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
           itemCount,
@@ -792,31 +790,31 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
       ...accountListAnalyticsBaseContext,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.DeleteAccount,
     }
+    const tracker = startProductAnalyticsAction(analyticsContext)
 
     setIsBulkDeleting(true)
-    await trackProductAnalyticsActionStarted(analyticsContext)
     try {
       const { deletedCount, deletedIds } =
         await handleDeleteAccounts(selectedAccounts)
       const failureCount = Math.max(0, itemCount - deletedCount)
-      await trackProductAnalyticsActionCompleted({
-        ...analyticsContext,
-        result:
-          failureCount > 0
-            ? PRODUCT_ANALYTICS_RESULTS.Failure
-            : PRODUCT_ANALYTICS_RESULTS.Success,
-        ...(failureCount > 0
-          ? {
-              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            }
-          : {}),
-        insights: {
-          itemCount,
-          selectedCount,
-          successCount: deletedCount,
-          failureCount,
+      tracker.complete(
+        failureCount > 0
+          ? PRODUCT_ANALYTICS_RESULTS.Failure
+          : PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          ...(failureCount > 0
+            ? {
+                errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+              }
+            : {}),
+          insights: {
+            itemCount,
+            selectedCount,
+            successCount: deletedCount,
+            failureCount,
+          },
         },
-      })
+      )
       if (deletedIds.length > 0) {
         const deletedIdSet = new Set(deletedIds)
         setSelectedAccountIds((previous) =>
@@ -829,9 +827,7 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
         setIsBulkMode(false)
       }
     } catch (error) {
-      await trackProductAnalyticsActionCompleted({
-        ...analyticsContext,
-        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
           itemCount,
@@ -860,29 +856,26 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
       ...accountListAnalyticsBaseContext,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.ReorderAccounts,
     }
+    const tracker = startProductAnalyticsAction(analyticsContext)
     const newOrder = moveAccountId(sortedIds, oldIndex, newIndex)
     void Promise.resolve(handleReorder(newOrder))
-      .then(() =>
-        trackProductAnalyticsActionCompleted({
-          ...analyticsContext,
-          result: PRODUCT_ANALYTICS_RESULTS.Success,
+      .then(() => {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
             sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
             itemCount,
           },
-        }),
-      )
-      .catch(() =>
-        trackProductAnalyticsActionCompleted({
-          ...analyticsContext,
-          result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        })
+      })
+      .catch(() => {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
             itemCount,
           },
-        }),
-      )
+        })
+      })
   }
 
   const ensureDndReady = useCallback(() => {

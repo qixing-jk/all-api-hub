@@ -241,7 +241,7 @@ async function handleContextMenuRedemption(
         dismissOuterLoading: dismissLoadingToast,
       })
       if (confirmedPrompt) {
-        await trackConfirmRedemptionPromptCompleted(results)
+        trackConfirmRedemptionPromptCompleted(results)
       }
 
       if (results.length === 1 && results[0]?.success) {
@@ -368,7 +368,7 @@ async function scanForRedemptionCodes(sourceText?: string) {
         codes: selectedCodes,
         dismissOuterLoading: dismissLoadingToast,
       })
-      await trackConfirmRedemptionPromptCompleted(results)
+      trackConfirmRedemptionPromptCompleted(results)
 
       if (results.length === 1 && results[0]?.success) {
         await showRedeemResultToast(true, results[0].message)
@@ -420,9 +420,7 @@ type RedeemBatchItem = {
 /**
  * Completes the prompt-confirm action using only aggregate success/failure state.
  */
-async function trackConfirmRedemptionPromptCompleted(
-  results: RedeemBatchItem[],
-) {
+function trackConfirmRedemptionPromptCompleted(results: RedeemBatchItem[]) {
   const successCount = results.filter((item) => item.success).length
   const failureCount = results.length - successCount
   const result =
@@ -432,7 +430,7 @@ async function trackConfirmRedemptionPromptCompleted(
         ? PRODUCT_ANALYTICS_RESULTS.Success
         : PRODUCT_ANALYTICS_RESULTS.Failure
 
-  await trackProductAnalyticsActionCompleted({
+  void trackProductAnalyticsActionCompleted({
     featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
     actionId: PRODUCT_ANALYTICS_ACTION_IDS.ConfirmRedemptionPrompt,
     surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionPromptToast,

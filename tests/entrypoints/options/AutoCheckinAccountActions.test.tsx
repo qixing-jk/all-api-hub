@@ -607,14 +607,15 @@ describe("AutoCheckin account actions", () => {
       }),
     ).not.toBeInTheDocument()
     expect(statusCalls).toBeGreaterThanOrEqual(2)
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.DisableAutoCheckinAccount,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-      result: PRODUCT_ANALYTICS_RESULTS.Success,
-      durationMs: expect.any(Number),
     })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
   })
 
   it("shows a generic error when disabling a failed account does not persist", async () => {
@@ -670,15 +671,18 @@ describe("AutoCheckin account actions", () => {
         "messages:toast.error.operationFailedGeneric",
       )
     })
-    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.DisableAutoCheckinAccount,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-      result: PRODUCT_ANALYTICS_RESULTS.Failure,
-      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      durationMs: expect.any(Number),
     })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      },
+    )
   })
 
   it("deletes a failed account from the row action and reloads status after confirmation", async () => {

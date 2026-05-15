@@ -34,6 +34,7 @@ const {
   handleDeleteAccountMock,
   handleDeleteAccountsMock,
   handleSetAccountsDisabledMock,
+  startProductAnalyticsActionMock,
   trackProductAnalyticsActionStartedMock,
   trackProductAnalyticsActionCompletedMock,
   dndState,
@@ -48,6 +49,7 @@ const {
   handleDeleteAccountMock: vi.fn(),
   handleDeleteAccountsMock: vi.fn(),
   handleSetAccountsDisabledMock: vi.fn(),
+  startProductAnalyticsActionMock: vi.fn(),
   trackProductAnalyticsActionStartedMock: vi.fn(),
   trackProductAnalyticsActionCompletedMock: vi.fn(),
   dndState: {
@@ -259,6 +261,7 @@ vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
     await importOriginal<typeof import("~/services/productAnalytics/actions")>()
   return {
     ...actual,
+    startProductAnalyticsAction: startProductAnalyticsActionMock,
     trackProductAnalyticsActionStarted: trackProductAnalyticsActionStartedMock,
     trackProductAnalyticsActionCompleted:
       trackProductAnalyticsActionCompletedMock,
@@ -487,6 +490,21 @@ describe("AccountList", () => {
       showTodayCashflow: true,
     })
     mockUseAccountDataContext.mockReturnValue(createAccountDataContextValue())
+    startProductAnalyticsActionMock.mockImplementation((context) => {
+      trackProductAnalyticsActionStartedMock(context)
+      return {
+        complete: (
+          result: unknown = PRODUCT_ANALYTICS_RESULTS.Success,
+          options: Record<string, unknown> = {},
+        ) => {
+          trackProductAnalyticsActionCompletedMock({
+            ...context,
+            result,
+            ...options,
+          })
+        },
+      }
+    })
   })
 
   afterEach(() => {
