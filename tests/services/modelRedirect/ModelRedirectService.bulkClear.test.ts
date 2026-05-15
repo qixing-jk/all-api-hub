@@ -22,11 +22,19 @@ vi.mock("~/services/models/modelSync", () => {
   }
 })
 
-vi.mock("~/services/preferences/userPreferences", () => ({
-  userPreferences: {
-    getPreferences: vi.fn(),
-  },
-}))
+vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/preferences/userPreferences")
+    >()
+  return {
+    ...actual,
+    userPreferences: {
+      ...actual.userPreferences,
+      getPreferences: vi.fn(),
+    },
+  }
+})
 
 vi.mock("~/services/managedSites/utils/managedSite", () => ({
   getManagedSiteAdminConfig: vi.fn(),

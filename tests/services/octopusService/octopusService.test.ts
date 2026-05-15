@@ -8,11 +8,19 @@ import {
 
 const mockGetPreferences = vi.fn()
 
-vi.mock("~/services/preferences/userPreferences", () => ({
-  userPreferences: {
-    getPreferences: mockGetPreferences,
-  },
-}))
+vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/preferences/userPreferences")
+    >()
+  return {
+    ...actual,
+    userPreferences: {
+      ...actual.userPreferences,
+      getPreferences: mockGetPreferences,
+    },
+  }
+})
 
 const mockListChannels = vi.fn()
 

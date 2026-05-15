@@ -192,9 +192,11 @@ describe("ApiCredentialProfileDialog", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
 
-    expectApiCredentialProfileActionTracked(
-      PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
-    )
+    await waitFor(() => {
+      expectApiCredentialProfileActionTracked(
+        PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+      )
+    })
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledWith({
         id: undefined,
@@ -311,9 +313,11 @@ describe("ApiCredentialProfileDialog", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
 
-    expectApiCredentialProfileActionTracked(
-      PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
-    )
+    await waitFor(() => {
+      expectApiCredentialProfileActionTracked(
+        PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+      )
+    })
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -378,9 +382,11 @@ describe("ApiCredentialProfileDialog", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "common:actions.save" }))
 
-    expectApiCredentialProfileActionTracked(
-      PRODUCT_ANALYTICS_ACTION_IDS.UpdateApiCredentialProfile,
-    )
+    await waitFor(() => {
+      expectApiCredentialProfileActionTracked(
+        PRODUCT_ANALYTICS_ACTION_IDS.UpdateApiCredentialProfile,
+      )
+    })
     await waitFor(() => {
       expect(onSave).toHaveBeenCalledWith(
         expect.objectContaining({

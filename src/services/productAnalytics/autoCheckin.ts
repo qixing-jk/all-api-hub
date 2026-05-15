@@ -17,6 +17,10 @@ import {
  * Parses a local HH:mm value so analytics can bucket time without exposing it.
  */
 function parseTimeToMinutes(time: string): number | null {
+  if (!/^\d{2}:\d{2}$/.test(time)) {
+    return null
+  }
+
   const [hour, minute] = time.split(":").map(Number)
   if (
     !Number.isInteger(hour) ||

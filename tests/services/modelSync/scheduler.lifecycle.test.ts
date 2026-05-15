@@ -315,6 +315,28 @@ describe("modelSyncScheduler lifecycle and edge flows", () => {
     })
   })
 
+  it("classifies invalid token model sync failures as auth errors", async () => {
+    let alarmHandler: ((alarm: { name: string }) => Promise<void>) | undefined
+    mocks.onAlarm.mockImplementation((handler) => {
+      alarmHandler = handler
+    })
+
+    vi.spyOn(modelSyncScheduler, "setupAlarm").mockResolvedValue(undefined)
+    vi.spyOn(modelSyncScheduler, "executeSync").mockRejectedValue(
+      new Error("invalid token"),
+    )
+
+    await modelSyncScheduler.initialize()
+    await alarmHandler?.({ name: "managedSiteModelSync" })
+
+    expect(mocks.completeProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+      }),
+    )
+  })
+
   it("lists Octopus channels through the Octopus adapter and validates config", async () => {
     mocks.getPreferences.mockResolvedValueOnce({
       managedSiteType: SITE_TYPES.OCTOPUS,

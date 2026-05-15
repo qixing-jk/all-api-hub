@@ -923,6 +923,39 @@ describe("ManagedSiteModelSync page", () => {
     )
   })
 
+  it("tracks history search again when a different keyword has the same result count", async () => {
+    render(<ManagedSiteModelSync />)
+
+    const searchInput = (await screen.findByPlaceholderText(
+      "managedSiteModelSync:execution.filters.searchPlaceholder",
+    )) as HTMLInputElement
+
+    fireEvent.change(searchInput, { target: { value: "102" } })
+    await waitFor(() => {
+      expect(screen.getByText("Beta#102")).toBeInTheDocument()
+      expect(screen.queryByText("Alpha#101")).not.toBeInTheDocument()
+    })
+
+    fireEvent.change(searchInput, { target: { value: "failed" } })
+    await waitFor(() => {
+      expect(screen.getByText("Alpha#101")).toBeInTheDocument()
+      expect(screen.queryByText("Beta#102")).not.toBeInTheDocument()
+    })
+
+    await waitFor(() => {
+      const searchCompletions = mockCompleteProductAnalyticsAction.mock.calls
+        .map(([, options]) => options)
+        .filter(
+          (options: any) =>
+            options?.insights?.sourceKind ===
+              PRODUCT_ANALYTICS_SOURCE_KINDS.History &&
+            options.insights.itemCount === 1,
+        )
+
+      expect(searchCompletions).toHaveLength(2)
+    })
+  })
+
   it("updates a single channel row with an inline failure result", async () => {
     mockSendRuntimeMessage.mockImplementation(async (message: any) => {
       switch (message.action) {

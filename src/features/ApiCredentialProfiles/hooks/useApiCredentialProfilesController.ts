@@ -318,33 +318,14 @@ export function useApiCredentialProfilesController() {
     useState<ApiCredentialProfile | null>(null)
 
   const openAddDialog = useCallback(() => {
-    startProductAnalyticsAction({
-      featureId: apiCredentialProfilesFeature,
-      actionId:
-        PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateApiCredentialProfileDialog,
-      surfaceId:
-        analyticsScope.surfaceId ??
-        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesPage,
-      entrypoint: analyticsScope.entrypoint ?? optionsEntrypoint,
-    })
     setEditingProfile(null)
     setIsEditorOpen(true)
-  }, [analyticsScope.entrypoint, analyticsScope.surfaceId])
+  }, [])
 
-  const openEditDialog = useCallback(
-    (profile: ApiCredentialProfile) => {
-      startProductAnalyticsAction({
-        featureId: apiCredentialProfilesFeature,
-        actionId:
-          PRODUCT_ANALYTICS_ACTION_IDS.OpenUpdateApiCredentialProfileDialog,
-        surfaceId: apiCredentialProfilesRefreshSurface,
-        entrypoint: analyticsScope.entrypoint ?? optionsEntrypoint,
-      })
-      setEditingProfile(profile)
-      setIsEditorOpen(true)
-    },
-    [analyticsScope.entrypoint],
-  )
+  const openEditDialog = useCallback((profile: ApiCredentialProfile) => {
+    setEditingProfile(profile)
+    setIsEditorOpen(true)
+  }, [])
 
   const handleSave = useCallback(
     async (input: SaveApiCredentialProfileInput) => {

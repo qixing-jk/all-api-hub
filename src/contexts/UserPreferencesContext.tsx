@@ -612,16 +612,15 @@ export const UserPreferencesProvider = ({
         const updates: Partial<UserPreferences> = {
           autoProvisionKeyOnAccountAdd: enabled,
         }
-        setPreferences((prev) => {
-          if (!prev) return prev
-          const next = { ...prev, ...updates }
+        if (preferences) {
+          const next = { ...preferences, ...updates }
+          setPreferences(next)
           trackOptionsSettingsSnapshots(next, updates)
-          return next
-        })
+        }
       }
       return success
     },
-    [],
+    [preferences],
   )
 
   /**
@@ -637,16 +636,15 @@ export const UserPreferencesProvider = ({
         const updates: Partial<UserPreferences> = {
           autoFillCurrentSiteUrlOnAccountAdd: enabled,
         }
-        setPreferences((prev) => {
-          if (!prev) return prev
-          const next = { ...prev, ...updates }
+        if (preferences) {
+          const next = { ...preferences, ...updates }
+          setPreferences(next)
           trackOptionsSettingsSnapshots(next, updates)
-          return next
-        })
+        }
       }
       return success
     },
-    [],
+    [preferences],
   )
 
   /**
@@ -661,16 +659,15 @@ export const UserPreferencesProvider = ({
         const updates: Partial<UserPreferences> = {
           warnOnDuplicateAccountAdd: enabled,
         }
-        setPreferences((prev) => {
-          if (!prev) return prev
-          const next = { ...prev, ...updates }
+        if (preferences) {
+          const next = { ...preferences, ...updates }
+          setPreferences(next)
           trackOptionsSettingsSnapshots(next, updates)
-          return next
-        })
+        }
       }
       return success
     },
-    [],
+    [preferences],
   )
 
   const resetClaudeCodeRouterConfig = useCallback(async () => {
@@ -815,13 +812,10 @@ export const UserPreferencesProvider = ({
       }
 
       const success = await userPreferences.savePreferences(updates)
-      if (success) {
-        setPreferences((prev) => {
-          if (!prev) return null
-          const next = deepOverride(prev, updates)
-          trackOptionsSettingsSnapshots(next, updates)
-          return next
-        })
+      if (success && preferences) {
+        const next = deepOverride(preferences, updates)
+        setPreferences(next)
+        trackOptionsSettingsSnapshots(next, updates)
       }
       return success
     },
@@ -1497,18 +1491,15 @@ export const UserPreferencesProvider = ({
       if (response.success && isUserPreferencesSnapshot(response.data)) {
         setPreferences(response.data)
         trackOptionsSettingsSnapshots(response.data, { webdav: updates })
-      } else if (response.success) {
-        setPreferences((prev) => {
-          if (!prev) return null
-          const next = deepOverride(prev, { webdav: updates })
-          trackOptionsSettingsSnapshots(next, { webdav: updates })
-          return next
-        })
+      } else if (response.success && preferences) {
+        const next = deepOverride(preferences, { webdav: updates })
+        setPreferences(next)
+        trackOptionsSettingsSnapshots(next, { webdav: updates })
       }
 
       return response
     },
-    [],
+    [preferences],
   )
 
   const updateTempWindowFallback = useCallback(
@@ -1580,29 +1571,28 @@ export const UserPreferencesProvider = ({
           siteAnnouncementNotifications: updates,
         })
       } else if (response.success) {
-        setPreferences((prev) => {
-          if (!prev) return prev
+        if (preferences) {
           const next = {
-            ...prev,
+            ...preferences,
             siteAnnouncementNotifications: normalizeSiteAnnouncementPreferences(
               deepOverride(
-                prev.siteAnnouncementNotifications ??
+                preferences.siteAnnouncementNotifications ??
                   DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
                 updates,
               ),
             ),
             lastUpdated: Date.now(),
           }
+          setPreferences(next)
           trackOptionsSettingsSnapshots(next, {
             siteAnnouncementNotifications: updates,
           })
-          return next
-        })
+        }
       }
 
       return response.success
     },
-    [],
+    [preferences],
   )
   const resetToDefaults = useCallback(async () => {
     const success = await userPreferences.resetToDefaults()

@@ -85,18 +85,6 @@ function classifyModelSyncError(error: unknown): ProductAnalyticsErrorCategory {
     return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
   }
   if (
-    message.includes("config") ||
-    message.includes("validation") ||
-    message.includes("invalid") ||
-    message.includes("missing") ||
-    message.includes("no channels") ||
-    message.includes("配置") ||
-    message.includes("无可同步") ||
-    message.includes("沒有可同步")
-  ) {
-    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
-  }
-  if (
     message.includes("401") ||
     message.includes("403") ||
     message.includes("unauthorized") ||
@@ -107,6 +95,18 @@ function classifyModelSyncError(error: unknown): ProductAnalyticsErrorCategory {
     message.includes("认证")
   ) {
     return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
+  }
+  if (
+    message.includes("config") ||
+    message.includes("validation") ||
+    message.includes("invalid") ||
+    message.includes("missing") ||
+    message.includes("no channels") ||
+    message.includes("配置") ||
+    message.includes("无可同步") ||
+    message.includes("沒有可同步")
+  ) {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
   }
   if (
     message.includes("429") ||

@@ -40,10 +40,9 @@ import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_RESULTS,
-  type ProductAnalyticsManagedSiteType,
 } from "~/services/productAnalytics/events"
+import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
 import {
   MANAGED_SITE_CHANNEL_MIGRATION_BLOCKED_REASON_CODES,
   MANAGED_SITE_CHANNEL_MIGRATION_GENERAL_WARNING_CODES,
@@ -70,25 +69,6 @@ interface ManagedSiteChannelMigrationDialogProps {
     channelId: number
     channelName: string
   }) => Promise<string>
-}
-
-const managedSiteAnalyticsTypeBySiteType: Partial<
-  Record<string, ProductAnalyticsManagedSiteType>
-> = {
-  [SITE_TYPES.NEW_API]: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
-  [SITE_TYPES.VELOERA]: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.Veloera,
-  [SITE_TYPES.DONE_HUB]: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.DoneHub,
-  [SITE_TYPES.OCTOPUS]: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.Octopus,
-  [SITE_TYPES.AXON_HUB]: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.AxonHub,
-  [SITE_TYPES.CLAUDE_CODE_HUB]:
-    PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.ClaudeCodeHub,
-}
-
-/**
- * Maps a managed-site runtime site type to the fixed product analytics enum.
- */
-function resolveManagedSiteAnalyticsType(siteType: string) {
-  return managedSiteAnalyticsTypeBySiteType[siteType]
 }
 
 /**
@@ -427,8 +407,8 @@ export function ManagedSiteChannelMigrationDialog({
     setIsRunning(true)
     setIsConfirmOpen(false)
     const sourceManagedSiteType =
-      resolveManagedSiteAnalyticsType(sourceSiteType)
-    const targetManagedSiteType = resolveManagedSiteAnalyticsType(
+      resolveProductAnalyticsManagedSiteType(sourceSiteType)
+    const targetManagedSiteType = resolveProductAnalyticsManagedSiteType(
       preview.targetSiteType,
     )
     const warningCount = countPreviewWarnings(preview)

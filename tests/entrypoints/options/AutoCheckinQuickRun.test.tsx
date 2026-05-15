@@ -109,6 +109,7 @@ describe("AutoCheckin quick run", () => {
           itemCount: 3,
           successCount: 2,
           failureCount: 1,
+          skippedCount: 0,
         },
       },
     )
@@ -176,6 +177,7 @@ describe("AutoCheckin quick run", () => {
           itemCount: 0,
           successCount: 0,
           failureCount: 0,
+          skippedCount: 0,
         },
       },
     )

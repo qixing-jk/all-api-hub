@@ -55,8 +55,8 @@ describe("settings product analytics snapshots", () => {
       warnOnDuplicateAccountAdd: false,
       accountAutoRefresh: {
         enabled: true,
-        interval: 3_600,
-        minInterval: 300,
+        interval: 3_600_000,
+        minInterval: 300_000,
         refreshOnOpen: true,
       },
       usageHistory: {
@@ -408,6 +408,31 @@ describe("settings product analytics snapshots", () => {
       PRODUCT_ANALYTICS_EVENTS.SettingChanged,
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebDavConfigSnapshot,
+      }),
+    )
+  })
+
+  it("buckets millisecond auto-refresh intervals as minutes and seconds", () => {
+    const [autoRefreshSnapshot] = buildSettingsSnapshotEvents(
+      createPreferences({
+        accountAutoRefresh: {
+          enabled: true,
+          refreshOnOpen: false,
+          interval: 600_000,
+          minInterval: 5_000,
+        },
+      }),
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      { accountAutoRefresh: { interval: 600_000 } },
+    )
+
+    expect(autoRefreshSnapshot).toEqual(
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoRefreshConfigSnapshot,
+        refresh_interval_bucket:
+          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalTenTo60m,
+        min_refresh_interval_bucket:
+          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalLessThan10m,
       }),
     )
   })

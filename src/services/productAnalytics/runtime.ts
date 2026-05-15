@@ -11,6 +11,7 @@ import { createLogger } from "~/utils/core/logger"
 
 import { productAnalyticsClient } from "./client"
 import {
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
   type ProductAnalyticsEventName,
   type ProductAnalyticsRuntimeRequest,
@@ -83,7 +84,10 @@ async function captureSettingsSnapshot(): Promise<boolean> {
   }
 
   const preferences = await userPreferences.getPreferences()
-  const events = buildSettingsSnapshotEvents(preferences, "background")
+  const events = buildSettingsSnapshotEvents(
+    preferences,
+    PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+  )
 
   for (const properties of events) {
     const captured = await productAnalyticsClient.capture(

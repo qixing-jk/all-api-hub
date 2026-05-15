@@ -30,16 +30,31 @@ describe("Context menu visibility toggles", () => {
       .spyOn(browserApi, "sendRuntimeMessage")
       .mockResolvedValue({ success: true } as any)
 
-    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue(
-      structuredClone(DEFAULT_PREFERENCES) as any,
-    )
+    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
+      ...structuredClone(DEFAULT_PREFERENCES),
+      webAiApiCheck: {
+        ...structuredClone(DEFAULT_PREFERENCES.webAiApiCheck!),
+        contextMenu: { enabled: true },
+      },
+    } as any)
     const savePreferencesSpy = vi
-      .spyOn(userPreferences, "savePreferences")
-      .mockResolvedValue(true)
+      .spyOn(userPreferences, "savePreferencesWithResult")
+      .mockResolvedValue({
+        ...structuredClone(DEFAULT_PREFERENCES),
+        webAiApiCheck: {
+          ...structuredClone(DEFAULT_PREFERENCES.webAiApiCheck!),
+          contextMenu: { enabled: false },
+        },
+      } as any)
 
     render(<WebAiApiCheckSettings />)
 
-    await screen.findByText("webAiApiCheck:settings.title")
+    await waitFor(() => {
+      expect(screen.getAllByRole("switch")[0]).toHaveAttribute(
+        "aria-checked",
+        "true",
+      )
+    })
 
     const switches = screen.getAllByRole("switch")
     fireEvent.click(switches[0])
@@ -66,16 +81,31 @@ describe("Context menu visibility toggles", () => {
       .spyOn(browserApi, "sendRuntimeMessage")
       .mockResolvedValue({ success: true } as any)
 
-    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue(
-      structuredClone(DEFAULT_PREFERENCES) as any,
-    )
+    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
+      ...structuredClone(DEFAULT_PREFERENCES),
+      redemptionAssist: {
+        ...structuredClone(DEFAULT_PREFERENCES.redemptionAssist!),
+        contextMenu: { enabled: true },
+      },
+    } as any)
     const savePreferencesSpy = vi
-      .spyOn(userPreferences, "savePreferences")
-      .mockResolvedValue(true)
+      .spyOn(userPreferences, "savePreferencesWithResult")
+      .mockResolvedValue({
+        ...structuredClone(DEFAULT_PREFERENCES),
+        redemptionAssist: {
+          ...structuredClone(DEFAULT_PREFERENCES.redemptionAssist!),
+          contextMenu: { enabled: false },
+        },
+      } as any)
 
     render(<RedemptionAssistSettings />)
 
-    await screen.findByText("redemptionAssist:settings.title")
+    await waitFor(() => {
+      expect(screen.getAllByRole("switch")[1]).toHaveAttribute(
+        "aria-checked",
+        "true",
+      )
+    })
 
     const switches = screen.getAllByRole("switch")
     fireEvent.click(switches[1])

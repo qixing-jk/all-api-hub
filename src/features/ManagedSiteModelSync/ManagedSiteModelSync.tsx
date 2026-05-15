@@ -957,7 +957,9 @@ export default function ManagedSiteModelSync({
   useEffect(() => {
     const normalizedKeyword = searchKeyword.trim()
     const resultCount = filteredItems?.length ?? 0
-    const analyticsKey = normalizedKeyword ? `${resultCount}` : "empty"
+    const analyticsKey = normalizedKeyword
+      ? `history:${normalizedKeyword}:${resultCount}`
+      : "history:empty"
 
     if (historySearchAnalyticsKey.current === analyticsKey) {
       return
@@ -985,7 +987,9 @@ export default function ManagedSiteModelSync({
   useEffect(() => {
     const normalizedKeyword = manualSearchKeyword.trim()
     const resultCount = manualItems.length
-    const analyticsKey = normalizedKeyword ? `${resultCount}` : "empty"
+    const analyticsKey = normalizedKeyword
+      ? `manual:${normalizedKeyword}:${resultCount}`
+      : "manual:empty"
 
     if (manualSearchAnalyticsKey.current === analyticsKey) {
       return

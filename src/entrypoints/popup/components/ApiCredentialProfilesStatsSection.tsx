@@ -92,6 +92,8 @@ export default function ApiCredentialProfilesStatsSection() {
   }, [profiles])
 
   useEffect(() => {
+    if (isLoading) return
+
     void trackProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
       {
@@ -109,6 +111,7 @@ export default function ApiCredentialProfilesStatsSection() {
       },
     )
   }, [
+    isLoading,
     profiles.length,
     telemetryStats.healthyCount,
     telemetryStats.profileTelemetryCount,

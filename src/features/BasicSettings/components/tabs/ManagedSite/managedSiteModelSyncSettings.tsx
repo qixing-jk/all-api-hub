@@ -219,11 +219,11 @@ export default function ManagedSiteModelSyncSettings() {
   ) => {
     const isGlobalFiltersUpdate =
       updates.globalChannelModelFilters !== undefined
-    const tracker = isGlobalFiltersUpdate
-      ? startSettingsAnalyticsAction(
-          PRODUCT_ANALYTICS_ACTION_IDS.SaveManagedSiteChannelModelFilters,
-        )
-      : null
+    const tracker = startSettingsAnalyticsAction(
+      isGlobalFiltersUpdate
+        ? PRODUCT_ANALYTICS_ACTION_IDS.SaveManagedSiteChannelModelFilters
+        : PRODUCT_ANALYTICS_ACTION_IDS.UpdateManagedSiteModelSyncSettings,
+    )
 
     try {
       setIsSaving(true)
@@ -256,7 +256,7 @@ export default function ManagedSiteModelSyncSettings() {
       const success = await updateNewApiModelSync(userPrefsUpdate)
 
       if (!success) {
-        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
         toast.error(t("settings:messages.saveSettingsFailed"))
         return false
       } else if (!updates.globalChannelModelFilters) {
@@ -265,7 +265,7 @@ export default function ManagedSiteModelSyncSettings() {
         toast.success(t("managedSiteModelSync:messages.success.settingsSaved"))
       }
       if (isGlobalFiltersUpdate) {
-        tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: {
             editorMode:
               viewMode === "json"
@@ -273,11 +273,13 @@ export default function ManagedSiteModelSyncSettings() {
                 : PRODUCT_ANALYTICS_EDITOR_MODES.Visual,
           },
         })
+      } else {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       }
       return true
     } catch (error) {
       logger.error("Failed to save preferences", error)
-      tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure)
       toast.error(t("settings:messages.saveSettingsFailed"))
       return false
     } finally {

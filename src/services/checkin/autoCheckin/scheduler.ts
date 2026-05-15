@@ -364,6 +364,9 @@ class AutoCheckinScheduler {
     if (summary.executed === 0 && summary.skippedCount > 0) {
       return PRODUCT_ANALYTICS_RESULTS.Skipped
     }
+    if (summary.executed === 0) {
+      return PRODUCT_ANALYTICS_RESULTS.Skipped
+    }
     return PRODUCT_ANALYTICS_RESULTS.Success
   }
 

@@ -105,7 +105,7 @@ const getAutoCheckinStatusAnalyticsInsights = (
   ).length
 
   return {
-    itemCount: successCount + failureCount,
+    itemCount: successCount + failureCount + skippedCount,
     successCount,
     failureCount,
     skippedCount,

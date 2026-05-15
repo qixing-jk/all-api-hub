@@ -20,7 +20,9 @@ import {
   isSupportedApiCredentialTelemetryEndpoint,
   type ApiCredentialTelemetryJsonPathField,
 } from "~/services/apiCredentialProfiles/telemetryConfig"
+import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -337,6 +339,15 @@ export function ApiCredentialProfileDialog({
   const handleSave = async () => {
     const normalizedBaseUrl = validate()
     if (!normalizedBaseUrl) return
+
+    void trackProductAnalyticsActionStarted({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+      actionId: isEditMode
+        ? PRODUCT_ANALYTICS_ACTION_IDS.UpdateApiCredentialProfile
+        : PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+      surfaceId: dialogSurface,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
 
     setIsSaving(true)
     try {

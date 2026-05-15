@@ -326,6 +326,38 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
+  it("keeps privacy-reviewed boolean settings with sensitive-looking field names", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      {
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AccountBehaviorSnapshot,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        auto_provision_key_on_account_add_enabled: true,
+        auto_fill_current_site_url_on_account_add_enabled: false,
+        url_whitelist_enabled: true,
+        url_whitelist_patterns_configured: true,
+        url_whitelist_account_urls_enabled: false,
+        url_whitelist_checkin_redeem_urls_enabled: true,
+        auto_detect_url_patterns_configured: false,
+        rawUrlWhitelistPattern: "https://private.example/*",
+        accountUrl: "https://private.example/account",
+        apiKey: "private-api-key",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AccountBehaviorSnapshot,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      auto_provision_key_on_account_add_enabled: true,
+      auto_fill_current_site_url_on_account_add_enabled: false,
+      url_whitelist_enabled: true,
+      url_whitelist_patterns_configured: true,
+      url_whitelist_account_urls_enabled: false,
+      url_whitelist_checkin_redeem_urls_enabled: true,
+      auto_detect_url_patterns_configured: false,
+    })
+  })
+
   it("keeps broad settings snapshot dimensions and strips configured secrets", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.SettingChanged,

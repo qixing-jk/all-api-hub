@@ -91,4 +91,27 @@ describe("auto-checkin product analytics", () => {
       }),
     )
   })
+
+  it("treats malformed time strings as unset instead of truncating them", () => {
+    const snapshot = buildAutoCheckinConfigSnapshotProperties(
+      {
+        globalEnabled: true,
+        pretriggerDailyOnUiOpen: false,
+        notifyUiOnCompletion: true,
+        windowStart: "08:30:59",
+        windowEnd: "12:00",
+        scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC,
+        deterministicTime: "09:30:59",
+        retryStrategy: {
+          enabled: false,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 1,
+        },
+      },
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    )
+
+    expect(snapshot.window_length_bucket).toBe("lt_1h")
+    expect(snapshot.deterministic_time_bucket).toBe("unset")
+  })
 })

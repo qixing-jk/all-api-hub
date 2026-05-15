@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
+import { fakeBrowser } from "wxt/testing/fake-browser"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
@@ -329,16 +330,11 @@ describe("product analytics runtime", () => {
   })
 
   it("debounces local account storage changes and cleanup removes the listener", async () => {
-    const addListener = vi.fn()
-    const removeListener = vi.fn()
-    ;(globalThis as any).browser = {
-      storage: {
-        onChanged: {
-          addListener,
-          removeListener,
-        },
-      },
-    }
+    const addListener = vi.spyOn(fakeBrowser.storage.onChanged, "addListener")
+    const removeListener = vi.spyOn(
+      fakeBrowser.storage.onChanged,
+      "removeListener",
+    )
 
     const cleanup = setupProductAnalyticsAccountChangeListener()
     const handler = addListener.mock.calls[0][0]
@@ -365,16 +361,11 @@ describe("product analytics runtime", () => {
   })
 
   it("debounces local preference storage changes and cleanup removes the listener", async () => {
-    const addListener = vi.fn()
-    const removeListener = vi.fn()
-    ;(globalThis as any).browser = {
-      storage: {
-        onChanged: {
-          addListener,
-          removeListener,
-        },
-      },
-    }
+    const addListener = vi.spyOn(fakeBrowser.storage.onChanged, "addListener")
+    const removeListener = vi.spyOn(
+      fakeBrowser.storage.onChanged,
+      "removeListener",
+    )
 
     const cleanup = setupProductAnalyticsPreferencesChangeListener()
     const handler = addListener.mock.calls[0][0]
@@ -401,16 +392,11 @@ describe("product analytics runtime", () => {
   })
 
   it("keeps account change listener setup idempotent in one runtime context", async () => {
-    const addListener = vi.fn()
-    const removeListener = vi.fn()
-    ;(globalThis as any).browser = {
-      storage: {
-        onChanged: {
-          addListener,
-          removeListener,
-        },
-      },
-    }
+    const addListener = vi.spyOn(fakeBrowser.storage.onChanged, "addListener")
+    const removeListener = vi.spyOn(
+      fakeBrowser.storage.onChanged,
+      "removeListener",
+    )
 
     const firstCleanup = setupProductAnalyticsAccountChangeListener()
     const secondCleanup = setupProductAnalyticsAccountChangeListener()

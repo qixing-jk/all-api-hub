@@ -120,11 +120,10 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
-  PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
-  type ProductAnalyticsManagedSiteType,
 } from "~/services/productAnalytics/events"
+import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
@@ -149,25 +148,6 @@ const channelsToolbarSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar
 const channelsRowActionsSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions
-
-const managedSiteAnalyticsTypeBySiteType: Partial<
-  Record<string, ProductAnalyticsManagedSiteType>
-> = {
-  [SITE_TYPES.NEW_API]: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
-  [SITE_TYPES.VELOERA]: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.Veloera,
-  [SITE_TYPES.DONE_HUB]: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.DoneHub,
-  [SITE_TYPES.OCTOPUS]: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.Octopus,
-  [SITE_TYPES.AXON_HUB]: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.AxonHub,
-  [SITE_TYPES.CLAUDE_CODE_HUB]:
-    PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.ClaudeCodeHub,
-}
-
-/**
- * Maps a managed-site runtime site type to the fixed product analytics enum.
- */
-function resolveManagedSiteAnalyticsType(siteType: string) {
-  return managedSiteAnalyticsTypeBySiteType[siteType]
-}
 
 /**
  * Main management page for New API channels including table, filters, and dialogs.
@@ -257,7 +237,7 @@ export default function ManagedSiteChannels({
     managedSiteType,
   )
   const managedSiteAnalyticsType =
-    resolveManagedSiteAnalyticsType(managedSiteType)
+    resolveProductAnalyticsManagedSiteType(managedSiteType)
 
   const [channels, setChannels] = useState<ChannelRow[]>([])
   const [isLoading, setIsLoading] = useState(false)
@@ -412,7 +392,7 @@ export default function ManagedSiteChannels({
               : undefined,
           insights: {
             managedSiteType:
-              resolveManagedSiteAnalyticsType(outcome.siteType) ??
+              resolveProductAnalyticsManagedSiteType(outcome.siteType) ??
               managedSiteAnalyticsType,
           },
         })
@@ -534,8 +514,9 @@ export default function ManagedSiteChannels({
                       : undefined,
                   insights: {
                     managedSiteType:
-                      resolveManagedSiteAnalyticsType(outcome.siteType) ??
-                      managedSiteAnalyticsType,
+                      resolveProductAnalyticsManagedSiteType(
+                        outcome.siteType,
+                      ) ?? managedSiteAnalyticsType,
                   },
                 })
               }

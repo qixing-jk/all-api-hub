@@ -282,8 +282,10 @@ function buildAutoRefreshSnapshot(
     entrypoint,
     enabled: config.enabled === true,
     refresh_on_open_enabled: config.refreshOnOpen === true,
-    refresh_interval_bucket: bucketIntervalMinutes(config.interval / 60),
-    min_refresh_interval_bucket: bucketMinIntervalSeconds(config.minInterval),
+    refresh_interval_bucket: bucketIntervalMinutes(config.interval / 60_000),
+    min_refresh_interval_bucket: bucketMinIntervalSeconds(
+      config.minInterval / 1_000,
+    ),
   }
 }
 

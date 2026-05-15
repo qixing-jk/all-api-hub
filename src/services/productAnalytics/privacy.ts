@@ -224,12 +224,19 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
 
 const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "account_count_bucket",
+  "auto_detect_url_patterns_configured",
+  "auto_fill_current_site_url_on_account_add_enabled",
+  "auto_provision_key_on_account_add_enabled",
   "managed_site_type",
   "new_api_configured",
   "sync_accounts_enabled",
   "source_managed_site_type",
   "target_managed_site_type",
   "total_account_count_bucket",
+  "url_whitelist_account_urls_enabled",
+  "url_whitelist_checkin_redeem_urls_enabled",
+  "url_whitelist_enabled",
+  "url_whitelist_patterns_configured",
 ])
 
 /**
