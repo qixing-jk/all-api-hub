@@ -333,11 +333,10 @@ export function useApiCredentialProfilesController() {
         ? PRODUCT_ANALYTICS_ACTION_IDS.UpdateApiCredentialProfile
         : PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile
       const startedAt = Date.now()
+      const entrypoint = analyticsScope.entrypoint ?? optionsEntrypoint
       const insights = getApiCredentialProfileSaveAnalyticsInsights(
         input,
-        getAnalyticsSourceKindForEntrypoint(
-          analyticsScope.entrypoint ?? optionsEntrypoint,
-        ),
+        getAnalyticsSourceKindForEntrypoint(entrypoint),
       )
 
       try {
@@ -366,7 +365,7 @@ export function useApiCredentialProfilesController() {
           featureId: apiCredentialProfilesFeature,
           actionId,
           surfaceId: apiCredentialProfilesDialogSurface,
-          entrypoint: optionsEntrypoint,
+          entrypoint,
           result: PRODUCT_ANALYTICS_RESULTS.Success,
           durationMs: Date.now() - startedAt,
           insights,
@@ -376,7 +375,7 @@ export function useApiCredentialProfilesController() {
           featureId: apiCredentialProfilesFeature,
           actionId,
           surfaceId: apiCredentialProfilesDialogSurface,
-          entrypoint: optionsEntrypoint,
+          entrypoint,
           result: PRODUCT_ANALYTICS_RESULTS.Failure,
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           durationMs: Date.now() - startedAt,

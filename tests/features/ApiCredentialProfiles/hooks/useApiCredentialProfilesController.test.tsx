@@ -1,6 +1,7 @@
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useApiCredentialProfilesController } from "~/features/ApiCredentialProfiles/hooks/useApiCredentialProfilesController"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -14,10 +15,11 @@ import {
   PRODUCT_ANALYTICS_STATUS_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TELEMETRY_SOURCES,
+  type ProductAnalyticsEntrypoint,
 } from "~/services/productAnalytics/events"
 import { SiteHealthStatus } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
-import { act, renderHook } from "~~/tests/test-utils/render"
+import { act, render, renderHook } from "~~/tests/test-utils/render"
 
 const {
   completeProductAnalyticsActionMock,
@@ -154,6 +156,32 @@ function renderController() {
     withThemeProvider: false,
     withUserPreferencesProvider: false,
   })
+}
+
+function renderScopedController(entrypoint: ProductAnalyticsEntrypoint) {
+  let controller: ReturnType<typeof useApiCredentialProfilesController>
+
+  function ControllerProbe({ children }: { children?: ReactNode }) {
+    controller = useApiCredentialProfilesController()
+    return <>{children}</>
+  }
+
+  render(
+    <ProductAnalyticsScope entrypoint={entrypoint}>
+      <ControllerProbe />
+    </ProductAnalyticsScope>,
+    {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    },
+  )
+
+  return {
+    get current() {
+      return controller
+    },
+  }
 }
 
 describe("useApiCredentialProfilesController", () => {
@@ -383,7 +411,7 @@ describe("useApiCredentialProfilesController", () => {
     })
   })
 
-  it("tracks profile dialog open intent separately from save completion", async () => {
+  it("opens profile dialogs without double-emitting button analytics", async () => {
     tagStorageListTagsMock.mockResolvedValue([])
 
     const { result } = renderController()
@@ -394,21 +422,43 @@ describe("useApiCredentialProfilesController", () => {
       result.current.openEditDialog(profile)
     })
 
-    expect(startProductAnalyticsActionMock).toHaveBeenNthCalledWith(1, {
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
-      actionId:
-        PRODUCT_ANALYTICS_ACTION_IDS.OpenCreateApiCredentialProfileDialog,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesPage,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    expect(result.current.isEditorOpen).toBe(true)
+    expect(result.current.editingProfile).toEqual(profile)
+    expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
+  })
+
+  it("completes profile save analytics with the scoped entrypoint", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+    createProfileMock.mockResolvedValue(buildProfile())
+
+    const controller = renderScopedController(
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+    )
+
+    await act(async () => {
+      await controller.current.handleSave({
+        name: "Popup profile",
+        apiType: "openai-compatible",
+        baseUrl: "https://api.example.com",
+        apiKey: "sk-profile",
+        tagIds: [],
+        notes: "",
+        telemetryConfig: { mode: "auto" },
+      })
     })
-    expect(startProductAnalyticsActionMock).toHaveBeenNthCalledWith(2, {
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
-      actionId:
-        PRODUCT_ANALYTICS_ACTION_IDS.OpenUpdateApiCredentialProfileDialog,
-      surfaceId:
-        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsApiCredentialProfilesRowActions,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
+
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ApiCredentialProfiles,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.CreateApiCredentialProfile,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        insights: expect.objectContaining({
+          sourceKind:
+            PRODUCT_ANALYTICS_SOURCE_KINDS.ApiCredentialProfileManualPopup,
+        }),
+      }),
+    )
   })
 
   it("completes delete profile analytics as unknown failure when storage reports no delete", async () => {

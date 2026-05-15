@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
@@ -48,6 +48,10 @@ function createPreferences(
 }
 
 describe("settings product analytics snapshots", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
   it("builds broad privacy-safe settings snapshots for development insights", () => {
     const preferences = createPreferences({
       autoFillCurrentSiteUrlOnAccountAdd: true,

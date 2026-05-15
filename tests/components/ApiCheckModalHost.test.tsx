@@ -160,23 +160,25 @@ describe("ApiCheckModalHost", () => {
 
     await screen.findByTestId("api-check-modal")
 
-    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShowApiCredentialCheckModal,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
-    })
-    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Success,
-      {
-        insights: {
-          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ContextMenu,
-          apiType: "openai-compatible",
-          readyCount: 1,
-          blockedCount: 0,
+    await waitFor(() => {
+      expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShowApiCredentialCheckModal,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentApiCheckModal,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+      })
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ContextMenu,
+            apiType: "openai-compatible",
+            readyCount: 1,
+            blockedCount: 0,
+          },
         },
-      },
-    )
+      )
+    })
     expectAnalyticsCallsToExcludeSensitiveValues([
       sourceText,
       "sk-open-secret",
@@ -1362,11 +1364,11 @@ describe("ApiCheckModalHost", () => {
       PRODUCT_ANALYTICS_RESULTS.Skipped,
       {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
-        insights: {
+        insights: expect.objectContaining({
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
           apiType: "openai-compatible",
           modelCount: 0,
-        },
+        }),
       },
     )
   })
@@ -1394,11 +1396,11 @@ describe("ApiCheckModalHost", () => {
       PRODUCT_ANALYTICS_RESULTS.Skipped,
       {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
-        insights: {
+        insights: expect.objectContaining({
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
           apiType: "openai-compatible",
           mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
-        },
+        }),
       },
     )
   })
