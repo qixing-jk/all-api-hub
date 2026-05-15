@@ -134,6 +134,83 @@ describe("ApiCheckModalHost", () => {
     expect(apiKeyInput.value).toBe("")
   })
 
+  it("focuses the modal when opened so page shortcuts no longer use the previously focused page element", async () => {
+    const pageInput = document.createElement("input")
+    pageInput.setAttribute("aria-label", "Host page input")
+    document.body.appendChild(pageInput)
+    pageInput.focus()
+
+    await openModal()
+
+    const dialog = await screen.findByRole("dialog")
+
+    expect(dialog).toHaveFocus()
+    expect(document.activeElement).not.toBe(pageInput)
+
+    pageInput.remove()
+  })
+
+  it("contains keyboard and wheel events inside the open modal", async () => {
+    await openModal()
+
+    const dialog = await screen.findByRole("dialog")
+    const hostPageKeyDown = vi.fn()
+    const hostPageWheel = vi.fn()
+    window.addEventListener("keydown", hostPageKeyDown)
+    window.addEventListener("wheel", hostPageWheel)
+
+    dialog.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "j", bubbles: true }),
+    )
+    const wheelEvent = new WheelEvent("wheel", {
+      bubbles: true,
+      cancelable: true,
+      deltaY: 100,
+    })
+    dialog.dispatchEvent(wheelEvent)
+
+    expect(hostPageKeyDown).not.toHaveBeenCalled()
+    expect(hostPageWheel).not.toHaveBeenCalled()
+    expect(wheelEvent.defaultPrevented).toBe(true)
+
+    window.removeEventListener("keydown", hostPageKeyDown)
+    window.removeEventListener("wheel", hostPageWheel)
+  })
+
+  it("blocks host page capture-phase shortcuts while the modal itself is focused", async () => {
+    await openModal()
+
+    const dialog = await screen.findByRole("dialog")
+    const hostPageCaptureShortcut = vi.fn()
+    document.addEventListener("keydown", hostPageCaptureShortcut, true)
+
+    dialog.dispatchEvent(
+      new KeyboardEvent("keydown", { key: "k", bubbles: true }),
+    )
+
+    expect(hostPageCaptureShortcut).not.toHaveBeenCalled()
+
+    document.removeEventListener("keydown", hostPageCaptureShortcut, true)
+  })
+
+  it("locks host page scrolling while open and restores previous overflow styles after close", async () => {
+    const user = userEvent.setup()
+    document.documentElement.style.overflow = "visible"
+    document.body.style.overflow = "auto"
+
+    await openModal()
+
+    expect(document.documentElement.style.overflow).toBe("hidden")
+    expect(document.body.style.overflow).toBe("hidden")
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.close" }),
+    )
+
+    expect(document.documentElement.style.overflow).toBe("visible")
+    expect(document.body.style.overflow).toBe("auto")
+  })
+
   it("dispatches a dismissed close event when closed before any fetch or probe result", async () => {
     const user = userEvent.setup()
     const closedDetailPromise = new Promise<any>((resolve) => {
