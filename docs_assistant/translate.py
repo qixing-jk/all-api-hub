@@ -131,13 +131,14 @@ def get_translation_prompt(target_language: str, content: str) -> str:
 
 术语表（不要放在翻译内容中）：
 
-| 中文 | English | 说明 | Description |
-|------|---------|------|-------------|
-| 倍率 | Ratio | 用于计算价格的乘数因子 | Multiplier factor used for price calculation |
-| 令牌 | Token | API访问凭证，也指模型处理的文本单元 | API access credentials or text units processed by models |
-| 渠道 | Channel | API服务提供商的接入通道 | Access channel for API service providers |
-| 分组 | Group | 用户或令牌的分类，影响价格倍率 | Classification of users or tokens, affecting price ratios |
-| 额度 | Quota | 用户可用的服务额度 | Available service quota for users |
+| 中文 | English | 日本語 | 说明 |
+|------|---------|--------|------|
+| API 凭据库 | API Credential Library | API 認証情報庫 | 保存独立 Base URL + API Key 的功能名称 |
+| 倍率 | Ratio | 倍率 | 用于计算价格的乘数因子 |
+| 令牌 | Token | トークン | API访问凭证，也指模型处理的文本单元 |
+| 渠道 | Channel | チャネル | API服务提供商的接入通道 |
+| 分组 | Group | グループ | 用户或令牌的分类，影响价格倍率 |
+| 额度 | Quota | クォータ | 用户可用的服务额度 |
 
 请直接返回翻译后的内容，不要添加任何解释或说明。
 
@@ -182,13 +183,14 @@ def get_incremental_translation_prompt(
 
 术语表（不要放在翻译内容中）：
 
-| 中文 | English | 说明 | Description |
-|------|---------|------|-------------|
-| 倍率 | Ratio | 用于计算价格的乘数因子 | Multiplier factor used for price calculation |
-| 令牌 | Token | API访问凭证，也指模型处理的文本单元 | API access credentials or text units processed by models |
-| 渠道 | Channel | API服务提供商的接入通道 | Access channel for API service providers |
-| 分组 | Group | 用户或令牌的分类，影响价格倍率 | Classification of users or tokens, affecting price ratios |
-| 额度 | Quota | 用户可用的服务额度 | Available service quota for users |
+| 中文 | English | 日本語 | 说明 |
+|------|---------|--------|------|
+| API 凭据库 | API Credential Library | API 認証情報庫 | 保存独立 Base URL + API Key 的功能名称 |
+| 倍率 | Ratio | 倍率 | 用于计算价格的乘数因子 |
+| 令牌 | Token | トークン | API访问凭证，也指模型处理的文本单元 |
+| 渠道 | Channel | チャネル | API服务提供商的接入通道 |
+| 分组 | Group | グループ | 用户或令牌的分类，影响价格倍率 |
+| 额度 | Quota | クォータ | 用户可用的服务额度 |
 
 输入一：最新中文源文
 <latest_source_markdown>
