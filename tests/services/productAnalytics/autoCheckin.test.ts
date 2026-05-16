@@ -144,4 +144,33 @@ describe("auto-checkin product analytics", () => {
     )
     expect(JSON.stringify(snapshot)).not.toContain("18:45")
   })
+
+  it("buckets short overnight windows and afternoon deterministic times", () => {
+    const snapshot = buildAutoCheckinConfigSnapshotProperties(
+      {
+        globalEnabled: true,
+        pretriggerDailyOnUiOpen: true,
+        notifyUiOnCompletion: true,
+        windowStart: "23:45",
+        windowEnd: "00:15",
+        scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC,
+        deterministicTime: "13:30",
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 60,
+          maxAttemptsPerDay: 2,
+        },
+      },
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    )
+
+    expect(snapshot).toEqual(
+      expect.objectContaining({
+        retry_interval_bucket: "30_60m",
+        retry_max_attempts_bucket: "2_3",
+        window_length_bucket: "lt_1h",
+        deterministic_time_bucket: "afternoon",
+      }),
+    )
+  })
 })

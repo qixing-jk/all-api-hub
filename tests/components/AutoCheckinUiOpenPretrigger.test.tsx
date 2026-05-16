@@ -17,6 +17,7 @@ import {
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import { AUTO_CHECKIN_RUN_RESULT } from "~/types/autoCheckin"
 import { openAutoCheckinPage, pushWithinOptionsPage } from "~/utils/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -278,6 +279,43 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       expect(call[0]).not.toHaveProperty("error")
       expect(call[0]).not.toHaveProperty("reason")
     }
+  })
+
+  it("maps failed run results to failed analytics", async () => {
+    vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
+      ...DEFAULT_PREFERENCES,
+      autoCheckin: {
+        ...DEFAULT_PREFERENCES.autoCheckin!,
+        globalEnabled: true,
+        pretriggerDailyOnUiOpen: true,
+      },
+    })
+
+    const browserApi = await import("~/utils/browser/browserApi")
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockResolvedValue({
+      success: true,
+      started: true,
+      lastRunResult: AUTO_CHECKIN_RUN_RESULT.FAILED,
+      pendingRetry: false,
+      summary: {
+        totalEligible: 1,
+        executed: 1,
+        successCount: 0,
+        failedCount: 1,
+        skippedCount: 0,
+        needsRetry: false,
+      },
+    })
+
+    render(<AutoCheckinUiOpenPretrigger />)
+
+    await waitFor(() => {
+      expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
+        expect.objectContaining({
+          result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        }),
+      )
+    })
   })
 
   it("tracks completion dialog close clicks", async () => {

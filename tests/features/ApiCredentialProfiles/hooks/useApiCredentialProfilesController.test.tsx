@@ -420,6 +420,7 @@ describe("useApiCredentialProfilesController", () => {
     await act(async () => {
       result.current.openAddDialog()
       result.current.openEditDialog(profile)
+      await Promise.resolve()
     })
 
     expect(result.current.isEditorOpen).toBe(true)

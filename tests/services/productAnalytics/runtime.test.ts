@@ -6,6 +6,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { createDefaultPreferences } from "~/services/preferences/userPreferences"
 import {
   handleProductAnalyticsMessage,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
   setupProductAnalyticsAccountChangeListener,
   setupProductAnalyticsPreferencesChangeListener,
@@ -128,14 +129,14 @@ describe("product analytics runtime", () => {
       "setting_changed",
       expect.objectContaining({
         setting_id: "account_behavior_snapshot",
-        entrypoint: "background",
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
       }),
     )
     expect(captureMock).toHaveBeenCalledWith(
       "setting_changed",
       expect.objectContaining({
         setting_id: "webdav_config_snapshot",
-        entrypoint: "background",
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
       }),
     )
     expect(preferenceMocks.setLastSettingsSnapshotAt).toHaveBeenCalledWith(
@@ -388,6 +389,35 @@ describe("product analytics runtime", () => {
     await vi.advanceTimersByTimeAsync(2_000)
 
     expect(removeListener).toHaveBeenCalledWith(handler)
+    expect(captureMock).toHaveBeenCalledTimes(14)
+  })
+
+  it("keeps preference change listener setup idempotent in one runtime context", async () => {
+    const addListener = vi.spyOn(fakeBrowser.storage.onChanged, "addListener")
+    const removeListener = vi.spyOn(
+      fakeBrowser.storage.onChanged,
+      "removeListener",
+    )
+
+    const firstCleanup = setupProductAnalyticsPreferencesChangeListener()
+    const secondCleanup = setupProductAnalyticsPreferencesChangeListener()
+    const handler = addListener.mock.calls[0][0]
+
+    expect(addListener).toHaveBeenCalledTimes(1)
+
+    handler({ user_preferences: {} }, "local")
+    await vi.advanceTimersByTimeAsync(2_000)
+    expect(captureMock).toHaveBeenCalledTimes(14)
+
+    secondCleanup()
+    expect(removeListener).toHaveBeenCalledTimes(1)
+    expect(removeListener).toHaveBeenCalledWith(handler)
+
+    handler({ user_preferences: {} }, "local")
+    firstCleanup()
+    await vi.advanceTimersByTimeAsync(2_000)
+
+    expect(removeListener).toHaveBeenCalledTimes(1)
     expect(captureMock).toHaveBeenCalledTimes(14)
   })
 

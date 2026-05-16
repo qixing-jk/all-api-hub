@@ -7,6 +7,9 @@ import {
 } from "~/constants/siteType"
 import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
+
+const logger = createLogger("ProductAnalyticsEvents")
 
 export const PRODUCT_ANALYTICS_EVENTS = {
   AppOpened: "app_opened",
@@ -827,16 +830,28 @@ export type ProductAnalyticsRuntimeRequest =
 
 /**
  * Sends a typed product analytics event to the background runtime handler.
+ * Telemetry dispatch is best-effort and must not block product flows.
  */
-export function trackProductAnalyticsEvent<
+export async function trackProductAnalyticsEvent<
   TEventName extends ProductAnalyticsEventName,
 >(
   eventName: TEventName,
   properties: ProductAnalyticsEventPayload<TEventName>,
-): Promise<unknown> {
-  return sendRuntimeMessage({
-    action: RuntimeActionIds.ProductAnalyticsTrackEvent,
-    eventName,
-    properties,
-  } satisfies ProductAnalyticsTrackRequest<TEventName>)
+): Promise<boolean> {
+  try {
+    const response = await sendRuntimeMessage({
+      action: RuntimeActionIds.ProductAnalyticsTrackEvent,
+      eventName,
+      properties,
+    } satisfies ProductAnalyticsTrackRequest<TEventName>)
+    return !(
+      response &&
+      typeof response === "object" &&
+      "success" in response &&
+      response.success === false
+    )
+  } catch (error) {
+    logger.warn("Product analytics event dispatch failed", error)
+    return false
+  }
 }

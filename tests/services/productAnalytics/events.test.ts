@@ -1,5 +1,6 @@
-import { describe, expect, it } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_API_TYPES,
@@ -9,6 +10,8 @@ import {
   PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES,
   PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS,
   PRODUCT_ANALYTICS_EDITOR_MODES,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
@@ -16,7 +19,22 @@ import {
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  trackProductAnalyticsEvent,
 } from "~/services/productAnalytics/events"
+
+const { sendRuntimeMessageMock } = vi.hoisted(() => ({
+  sendRuntimeMessageMock: vi.fn(),
+}))
+
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
+  sendRuntimeMessage: sendRuntimeMessageMock,
+}))
+
+beforeEach(() => {
+  vi.clearAllMocks()
+  sendRuntimeMessageMock.mockResolvedValue({ success: true })
+})
 
 describe("product analytics event enums", () => {
   it("does not expose generic product action ids", () => {
@@ -266,5 +284,65 @@ describe("product analytics event enums", () => {
       Prompt: "prompt",
       Permission: "permission",
     })
+  })
+})
+
+describe("trackProductAnalyticsEvent", () => {
+  it("forwards typed analytics events to the background runtime handler", async () => {
+    await expect(
+      trackProductAnalyticsEvent(PRODUCT_ANALYTICS_EVENTS.SettingChanged, {
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ProductAnalyticsEnabled,
+        enabled: true,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      }),
+    ).resolves.toBe(true)
+
+    expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
+      action: RuntimeActionIds.ProductAnalyticsTrackEvent,
+      eventName: PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      properties: {
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ProductAnalyticsEnabled,
+        enabled: true,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    })
+  })
+
+  it("returns false instead of throwing when analytics dispatch rejects", async () => {
+    sendRuntimeMessageMock.mockRejectedValue(new Error("analytics unavailable"))
+
+    await expect(
+      trackProductAnalyticsEvent(PRODUCT_ANALYTICS_EVENTS.SettingChanged, {
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ProductAnalyticsEnabled,
+        enabled: true,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      }),
+    ).resolves.toBe(false)
+  })
+
+  it("returns false when the background runtime rejects the analytics event", async () => {
+    sendRuntimeMessageMock.mockResolvedValue({ success: false })
+
+    await expect(
+      trackProductAnalyticsEvent(PRODUCT_ANALYTICS_EVENTS.SettingChanged, {
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ProductAnalyticsEnabled,
+        enabled: true,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      }),
+    ).resolves.toBe(false)
+  })
+
+  it("returns false instead of throwing when analytics dispatch throws synchronously", async () => {
+    sendRuntimeMessageMock.mockImplementation(() => {
+      throw new Error("analytics unavailable")
+    })
+
+    await expect(
+      trackProductAnalyticsEvent(PRODUCT_ANALYTICS_EVENTS.SettingChanged, {
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ProductAnalyticsEnabled,
+        enabled: true,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      }),
+    ).resolves.toBe(false)
   })
 })

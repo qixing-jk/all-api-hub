@@ -387,6 +387,35 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
     vi.useRealTimers()
   })
 
+  it("still schedules alarms when background config snapshot tracking fails", async () => {
+    vi.useFakeTimers()
+    vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
+    mockedProductAnalytics.trackProductAnalyticsEvent.mockResolvedValue(false)
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      autoCheckin: {
+        ...(DEFAULT_PREFERENCES as any).autoCheckin,
+        globalEnabled: true,
+        windowStart: "08:00",
+        windowEnd: "10:00",
+        scheduleMode: "random",
+        retryStrategy: {
+          enabled: true,
+          intervalMinutes: 30,
+          maxAttemptsPerDay: 3,
+        },
+      },
+    })
+
+    await expect(
+      autoCheckinScheduler.scheduleNextRun(),
+    ).resolves.toBeUndefined()
+
+    expect(mockedBrowserApi.clearAlarm).toHaveBeenCalledWith("autoCheckin")
+    expect(alarmStore.autoCheckinDaily).toBeDefined()
+
+    vi.useRealTimers()
+  })
+
   it("returns without touching alarms when the alarms API is unavailable", async () => {
     mockedBrowserApi.hasAlarmsAPI.mockReturnValue(false)
 

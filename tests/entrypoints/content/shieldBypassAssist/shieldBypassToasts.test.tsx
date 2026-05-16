@@ -1,5 +1,5 @@
 import React from "react"
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
@@ -62,10 +62,20 @@ vi.mock("~/utils/core/logger", () => ({
 }))
 
 describe("shieldBypassToasts", () => {
+  const originalUrl = `${window.location.pathname}${window.location.search}`
+  const originalTitle = document.title
+
   beforeEach(() => {
     vi.resetModules()
     vi.resetAllMocks()
+    window.history.replaceState({}, "", originalUrl)
+    document.title = originalTitle
     ensureRedemptionToastUiMock.mockResolvedValue(undefined)
+  })
+
+  afterEach(() => {
+    window.history.replaceState({}, "", originalUrl)
+    document.title = originalTitle
   })
 
   it("renders the shield-bypass prompt toast with a fixed id and wires dismiss/settings actions", async () => {
@@ -104,35 +114,28 @@ describe("shieldBypassToasts", () => {
   })
 
   it("tracks shield prompt exposure without host-page details", async () => {
-    const previousUrl = `${window.location.pathname}${window.location.search}`
-    const previousTitle = document.title
     window.history.replaceState({}, "", "/private-shield?token=secret")
     document.title = "Private Challenge Title"
     toastCustomMock.mockReturnValue("shield-toast-id")
 
-    try {
-      const { showShieldBypassPromptToast } = await import(
-        "~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts"
-      )
+    const { showShieldBypassPromptToast } = await import(
+      "~/entrypoints/content/shieldBypassAssist/utils/shieldBypassToasts"
+    )
 
-      await showShieldBypassPromptToast()
+    await showShieldBypassPromptToast()
 
-      expect(trackCompletedMock).toHaveBeenCalledWith({
-        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-        actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShowShieldBypassPrompt,
-        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentShieldBypassPromptToast,
-        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
-        result: PRODUCT_ANALYTICS_RESULTS.Success,
-      })
+    expect(trackCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShowShieldBypassPrompt,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentShieldBypassPromptToast,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+    })
 
-      const analyticsPayloads = JSON.stringify(trackCompletedMock.mock.calls)
-      expect(analyticsPayloads).not.toContain("private-shield")
-      expect(analyticsPayloads).not.toContain("secret")
-      expect(analyticsPayloads).not.toContain("Private Challenge Title")
-    } finally {
-      window.history.replaceState({}, "", previousUrl)
-      document.title = previousTitle
-    }
+    const analyticsPayloads = JSON.stringify(trackCompletedMock.mock.calls)
+    expect(analyticsPayloads).not.toContain("private-shield")
+    expect(analyticsPayloads).not.toContain("secret")
+    expect(analyticsPayloads).not.toContain("Private Challenge Title")
   })
 
   it("logs a settings-open failure without throwing from the toast action", async () => {
