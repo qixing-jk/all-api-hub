@@ -1,5 +1,41 @@
 # Changelog
 
+## [3.38.0](https://github.com/qixing-jk/all-api-hub/compare/v3.37.0...v3.38.0) (2026-05-16)
+
+
+### Features
+
+* **accounts:** add foreground post-save token workflow for managed-site setup ([#812](https://github.com/qixing-jk/all-api-hub/issues/812)) ([58c8cb4](https://github.com/qixing-jk/all-api-hub/commit/58c8cb4220e2a33a7765396fc2773a01233870de))
+* **accounts:** prompt aihubmix one-time key after save ([#813](https://github.com/qixing-jk/all-api-hub/issues/813)) ([1e82427](https://github.com/qixing-jk/all-api-hub/commit/1e824270f9cbca7209bbea7aed285f6b3ee63c78))
+* **aihubmix:** support AIHubMix site ([#809](https://github.com/qixing-jk/all-api-hub/issues/809)) ([6bb9b13](https://github.com/qixing-jk/all-api-hub/commit/6bb9b13edc3a47350181d35e951d5d19ade8d355))
+* **analytics:** add privacy-preserving product analytics ([#817](https://github.com/qixing-jk/all-api-hub/issues/817)) ([3190f3b](https://github.com/qixing-jk/all-api-hub/commit/3190f3bff33cab5b4267df17a45f71b041a4d93c))
+* **analytics:** expand product analytics coverage for settings and workflows ([#823](https://github.com/qixing-jk/all-api-hub/issues/823)) ([a5c88c5](https://github.com/qixing-jk/all-api-hub/commit/a5c88c5ad828170bf3f74733cdda289c054aeba3))
+* expand product analytics coverage across core workflows ([#819](https://github.com/qixing-jk/all-api-hub/issues/819)) ([0d1b44f](https://github.com/qixing-jk/all-api-hub/commit/0d1b44f42e02b32f08d9ea4a45336091f4fcfe98))
+* **notifications:** add Feishu, WeCom, DingTalk, and NTFY task channels ([#803](https://github.com/qixing-jk/all-api-hub/issues/803)) ([dc2251d](https://github.com/qixing-jk/all-api-hub/commit/dc2251d48e8c31ea235a1ebe27e04b8c8d888900))
+* **notifications:** add Telegram and webhook notification channels ([#802](https://github.com/qixing-jk/all-api-hub/issues/802)) ([0eb8596](https://github.com/qixing-jk/all-api-hub/commit/0eb859672a27820350bf31c82d1beb4353db58b1))
+* Site announcements with polling and notifications ([#799](https://github.com/qixing-jk/all-api-hub/issues/799)) ([c3408ab](https://github.com/qixing-jk/all-api-hub/commit/c3408ab712bcd5423b237c8137b25bee672a1752))
+* **webdav:** add compact action status alerts ([4c4b535](https://github.com/qixing-jk/all-api-hub/commit/4c4b5357537a6fd3c209bc443b5d9df03b25aa53))
+* **webdav:** clarify draft save behavior ([dfa5be3](https://github.com/qixing-jk/all-api-hub/commit/dfa5be3dacc99306a5b8d1132ee82371f6b87d98))
+* **webhook:** add URL templating and save-before-test ([#804](https://github.com/qixing-jk/all-api-hub/issues/804)) ([3df7901](https://github.com/qixing-jk/all-api-hub/commit/3df7901997b14c5db315da90e5eaa360c4271993))
+
+
+### Bug Fixes
+
+* **account-dialog:** show auto-detect actions for invalid manual forms ([b88f6ae](https://github.com/qixing-jk/all-api-hub/commit/b88f6aeeca552553280ac38e643a8e110e790dd7))
+* **aihubmix:** canonicalize account URLs ([#811](https://github.com/qixing-jk/all-api-hub/issues/811)) ([fb87132](https://github.com/qixing-jk/all-api-hub/commit/fb87132c515f2b683c760db961af9f6377a80dc6))
+* **aihubmix:** normalize managed channel upstream URL ([#814](https://github.com/qixing-jk/all-api-hub/issues/814)) ([5b8cbe5](https://github.com/qixing-jk/all-api-hub/commit/5b8cbe51b5262f99753072e0dcfcdebd88f94211))
+* **aihubmix:** route login to console sign-in ([7680dd0](https://github.com/qixing-jk/all-api-hub/commit/7680dd092a4a7ded1e699b99642b39bd16bcea5b))
+* **analytics:** make product analytics action completion best effort ([#820](https://github.com/qixing-jk/all-api-hub/issues/820)) ([88bef3a](https://github.com/qixing-jk/all-api-hub/commit/88bef3a5292262e560b7a4c48faaaa936b518af9))
+* **auto-checkin:** clarify run result prompts ([130d5f9](https://github.com/qixing-jk/all-api-hub/commit/130d5f9cd750d71d31cfdd745f870e4d58ca09d6)), closes [#821](https://github.com/qixing-jk/all-api-hub/issues/821)
+* **content:** read feature preferences via storage wrapper ([3773ad8](https://github.com/qixing-jk/all-api-hub/commit/3773ad89f20b0f7156573faabb037322817e9881))
+* Fix AIHubMix console auto-detect origin and current-tab routing ([#815](https://github.com/qixing-jk/all-api-hub/issues/815)) ([3ef71a4](https://github.com/qixing-jk/all-api-hub/commit/3ef71a49d31dc46af75aabe8b9cc52f8a83937b3))
+* Fix incognito and current-tab auto-detect fetch context ([#816](https://github.com/qixing-jk/all-api-hub/issues/816)) ([1ea758c](https://github.com/qixing-jk/all-api-hub/commit/1ea758c44574cdd357f3e934e3b4e22b84d31917))
+* Prevent content API check UI from triggering page shortcuts ([#822](https://github.com/qixing-jk/all-api-hub/issues/822)) ([0dbde5d](https://github.com/qixing-jk/all-api-hub/commit/0dbde5d3297b9b2d9bb8a1ac1a8de1b4ee52b9a2))
+* **webdav:** handle empty backup reads before upload ([d1c0694](https://github.com/qixing-jk/all-api-hub/commit/d1c06944832e11f29024844e7837abaad64ef4e8))
+* **webdav:** keep manual actions working after sync now ([110cd08](https://github.com/qixing-jk/all-api-hub/commit/110cd0858e941279a6af1c9d36eb455aff20593c))
+* **webdav:** refine upload and import action copy ([06fbf74](https://github.com/qixing-jk/all-api-hub/commit/06fbf74abac14197a115377cec3dec5e569c63fb))
+* **webdav:** use setting-specific save toast ([a11660e](https://github.com/qixing-jk/all-api-hub/commit/a11660e97abb0120c2801d907b155d83e03644bd))
+
 ## [3.37.0](https://github.com/qixing-jk/all-api-hub/compare/v3.36.0...v3.37.0) (2026-05-07)
 
 
