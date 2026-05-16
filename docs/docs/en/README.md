@@ -79,7 +79,7 @@ In the AI era, many of us keep multiple relay-site accounts to save money or try
 All API Hub is deeply compatible with the following open-source and closed-source systems:
 
 - **Open-source architectures**: One API, New API, Sub2API, Veloera, AxonHub, One-Hub, Done-Hub, and more.
-- **Specialized architectures**: AIHubMix, AnyRouter, Neo-API, Super-API, VoAPI, and more.
+- **Specialized architectures and compatible platforms**: AIHubMix, AnyRouter, Neo-API, Super-API, VoAPI, v-api, and more.
 
 > If you use Safari on macOS, read the [Safari Installation Guide](./safari-install.md) first.
 > If you use QQ Browser, 360 Browser, Brave, or similar browsers, read the [Manual Installation Guide](./other-browser-install.md).
