@@ -47,7 +47,7 @@ Fill in the following fields:
 |------|------|
 | Name | For example, "Site Console", "Redemption Entry", "Official Docs" |
 | Link | Full URL, e.g., `https://example.com/console` |
-| Tag | Optional; shares global tags with accounts and API credentials |
+| Tag | Optional; shares global tags with accounts and API credential database |
 | Notes | Optional; record the purpose or any important notes for this entry point |
 
 ### 2. Search and Filter
@@ -86,7 +86,7 @@ This is particularly useful for users who "need management entry points for some
 
 Compared to ordinary browser bookmarks, `Bookmark Management` is more oriented towards the plugin workflow:
 
-- Shares the same tag system as accounts and API credentials.
+- Shares the same tag system as accounts and API credential database.
 - Can appear directly in the extension popup.
 - Will be included in the plugin's data import/export.
 - Can be used with WebDAV for multi-device synchronization.
