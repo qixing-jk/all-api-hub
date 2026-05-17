@@ -16,7 +16,12 @@ export default defineConfig({
   testDir: "./e2e",
   projects: [
     {
+      name: "build",
+      testMatch: /setup\/build\.setup\.ts/u,
+    },
+    {
       name: "chromium",
+      dependencies: ["build"],
       use: {
         browserName: "chromium",
       },

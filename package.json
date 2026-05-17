@@ -14,7 +14,7 @@
     "dev:firefox": "wxt -b firefox",
     "dev:mobile:firefox": "node scripts/android-dev.js",
     "build": "wxt build",
-    "build:e2e": "wxt build --mode test",
+    "build:e2e": "node scripts/e2e-build.mjs",
     "build:firefox": "wxt build -b firefox",
     "build:safari": "wxt build -b safari",
     "build:all": "pnpm run build && pnpm run build:firefox && pnpm run build:safari",

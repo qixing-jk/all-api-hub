@@ -2,12 +2,20 @@ import fs from "node:fs/promises"
 import path from "node:path"
 import type { BrowserContext } from "@playwright/test"
 
+import { assertE2eBuildMetadataCurrent } from "~~/e2e/utils/e2eBuildMetadata"
+
+const verifiedExtensionDirs = new Set<string>()
+
 /**
  * Ensures the built MV3 extension output exists before running E2E.
  */
 export async function assertBuiltExtensionExists(
   extensionDir: string,
 ): Promise<void> {
+  if (verifiedExtensionDirs.has(extensionDir)) {
+    return
+  }
+
   const manifestPath = path.join(extensionDir, "manifest.json")
 
   try {
@@ -20,6 +28,9 @@ export async function assertBuiltExtensionExists(
       ].join(" "),
     )
   }
+
+  await assertE2eBuildMetadataCurrent(extensionDir)
+  verifiedExtensionDirs.add(extensionDir)
 }
 
 /**

@@ -1,0 +1,16 @@
+[
+  "src",
+  "public",
+  "e2e/utils/e2eBuildMetadata.ts",
+  "e2e/utils/extension.ts",
+  "scripts/e2e-build.mjs",
+  "e2e/e2e-build-inputs.json",
+  "package.json",
+  "pnpm-lock.yaml",
+  "tsconfig.json",
+  "wxt.config.ts",
+  "postcss.config.js",
+  "tailwind.config.js",
+  ".env",
+  ".env.local"
+]

@@ -21,6 +21,9 @@ const config: KnipConfig = {
     "tests/setup.ts",
     "tests/setup.node.ts",
     "tests/setup.shared.ts",
+    // Playwright runs this through the build dependency project in
+    // playwright.config.ts, which Knip does not discover as a static import.
+    "e2e/setup/build.setup.ts",
   ],
   project: [
     "src/**/*.{ts,tsx}",
