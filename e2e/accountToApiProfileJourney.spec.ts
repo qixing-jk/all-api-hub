@@ -205,6 +205,9 @@ test("adds an account, creates a reusable API profile from its key, and verifies
   installExtensionPageGuards(keysPage)
   await waitForExtensionRoot(keysPage)
   await expect(keysPage).toHaveURL(new RegExp(`accountId=${accountId}#keys$`))
+  await expect(
+    keysPage.getByTestId(getKeyManagementTokenRowTestId(42)),
+  ).toBeVisible()
 
   await keysPage.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenButton).click()
   await expect(keysPage.locator("#tokenName")).toBeVisible()

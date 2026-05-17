@@ -169,9 +169,12 @@ async function readE2eBuildMetadata(
       parsed.version !== 1 ||
       typeof parsed.gitHead !== "string" ||
       typeof parsed.inputHash !== "string" ||
-      !Array.isArray(parsed.inputPaths)
+      !Array.isArray(parsed.inputPaths) ||
+      parsed.inputPaths.some((item) => typeof item !== "string")
     ) {
-      throw new Error("metadata is missing required fields")
+      throw new Error(
+        "metadata is missing required fields or inputPaths must contain only strings",
+      )
     }
 
     return parsed as E2eBuildMetadata

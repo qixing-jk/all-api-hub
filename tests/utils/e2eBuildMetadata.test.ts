@@ -74,6 +74,24 @@ describe("E2E build metadata", () => {
     ).rejects.toThrow("Build inputs have changed")
   })
 
+  it("rejects metadata with non-string input paths", async () => {
+    const cwd = await createTempDir()
+    const extensionDir = path.join(cwd, ".output", "chrome-mv3-test")
+    await writeE2eBuildMetadata(extensionDir, {
+      version: 1,
+      gitHead: "head",
+      inputHash: "hash",
+      inputPaths: ["source.txt", 42] as string[],
+      builtAt: "2026-05-18T00:00:00.000Z",
+    })
+
+    await expect(
+      assertE2eBuildMetadataCurrent(extensionDir, {
+        cwd,
+      }),
+    ).rejects.toThrow("inputPaths must contain only strings")
+  })
+
   it("returns false when checking stale metadata without throwing", async () => {
     const cwd = await createTempDir()
     const extensionDir = path.join(cwd, ".output", "chrome-mv3-test")
@@ -110,5 +128,65 @@ describe("E2E build metadata", () => {
         },
       ),
     ).toEqual(["Built from git HEAD old-head, current HEAD is new-head."])
+  })
+
+  it("reports input hash mismatches with matching commit metadata", () => {
+    expect(
+      getE2eBuildMetadataMismatches(
+        {
+          version: 1,
+          gitHead: "same-head",
+          inputHash: "old-hash",
+          inputPaths: ["src"],
+          builtAt: "2026-05-18T00:00:00.000Z",
+        },
+        {
+          gitHead: "same-head",
+          inputHash: "new-hash",
+          inputPaths: ["src"],
+        },
+      ),
+    ).toEqual(["Build inputs have changed since the extension was built."])
+  })
+
+  it("reports commit and input hash mismatches together", () => {
+    expect(
+      getE2eBuildMetadataMismatches(
+        {
+          version: 1,
+          gitHead: "old-head",
+          inputHash: "old-hash",
+          inputPaths: ["src"],
+          builtAt: "2026-05-18T00:00:00.000Z",
+        },
+        {
+          gitHead: "new-head",
+          inputHash: "new-hash",
+          inputPaths: ["src"],
+        },
+      ),
+    ).toEqual([
+      "Built from git HEAD old-head, current HEAD is new-head.",
+      "Build inputs have changed since the extension was built.",
+    ])
+  })
+
+  it("returns no mismatches for current metadata", () => {
+    expect(
+      getE2eBuildMetadataMismatches(
+        {
+          version: 1,
+          gitHead: "same-head",
+          inputHash: "same-hash",
+          inputPaths: ["src"],
+          builtAt: "2026-05-18T00:00:00.000Z",
+        },
+        {
+          gitHead: "same-head",
+          inputHash: "same-hash",
+          inputPaths: ["src"],
+        },
+      ),
+    ).toEqual([])
   })
 })

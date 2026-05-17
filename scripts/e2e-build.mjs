@@ -11,6 +11,13 @@ const inputPaths = JSON.parse(
   fs.readFileSync(path.join(rootDir, "e2e", "e2e-build-inputs.json"), "utf8"),
 )
 
+if (
+  !Array.isArray(inputPaths) ||
+  inputPaths.some((inputPath) => typeof inputPath !== "string")
+) {
+  throw new Error("e2e/e2e-build-inputs.json must be an array of strings")
+}
+
 run(process.execPath, [
   path.join(rootDir, "node_modules", "wxt", "bin", "wxt.mjs"),
   "build",
@@ -36,9 +43,9 @@ fs.writeFileSync(
 )
 
 /**
- *
- * @param command
- * @param args
+ * Runs a child process and exits with the same status when it fails.
+ * @param command Executable path or command name to run.
+ * @param args Command-line arguments passed to the executable.
  */
 function run(command, args) {
   const result = spawnSync(command, args, {
@@ -55,7 +62,8 @@ function run(command, args) {
 }
 
 /**
- *
+ * Reads the current Git commit hash for the repository.
+ * @returns The current HEAD hash, or "unknown" outside a Git checkout.
  */
 function getGitHead() {
   const result = spawnSync("git", ["rev-parse", "HEAD"], {
@@ -67,7 +75,8 @@ function getGitHead() {
 }
 
 /**
- *
+ * Hashes all existing E2E build inputs in deterministic path order.
+ * @returns SHA-256 digest for the files that feed the test extension build.
  */
 function createInputHash() {
   const hash = crypto.createHash("sha256")
@@ -87,8 +96,9 @@ function createInputHash() {
 }
 
 /**
- *
- * @param pathsToCollect
+ * Collects existing files under the configured input paths.
+ * @param pathsToCollect Repo-relative files or directories to include.
+ * @returns Sorted absolute file paths.
  */
 function collectExistingFiles(pathsToCollect) {
   const files = []
@@ -112,8 +122,9 @@ function collectExistingFiles(pathsToCollect) {
 }
 
 /**
- *
- * @param directoryPath
+ * Recursively collects files from a directory, ignoring generated dependencies.
+ * @param directoryPath Absolute directory path to scan.
+ * @returns Absolute file paths under the directory.
  */
 function collectDirectoryFiles(directoryPath) {
   const files = []
