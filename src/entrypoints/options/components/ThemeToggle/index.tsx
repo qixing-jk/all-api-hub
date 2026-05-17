@@ -6,7 +6,8 @@ import {
 import type { TFunction } from "i18next"
 import { useTranslation } from "react-i18next"
 
-import { Caption, CardItem, ToggleButton } from "~/components/ui"
+import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
+import { Caption, CardItem } from "~/components/ui"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { useTheme } from "~/contexts/ThemeContext"
 import type { ThemeMode } from "~/types/theme"
@@ -50,34 +51,35 @@ const ThemeToggle = () => {
       title={t("theme.appearance")}
       description={t("theme.selectTheme")}
       rightContent={
-        <div
-          className={`flex flex-col sm:flex-row ${COLORS.background.tertiary} rounded-lg p-1 shadow-sm ${ANIMATIONS.transition.base}`}
-        >
-          {themeOptions.map(({ mode, label, icon: Icon, description }) => {
-            const isActive = themeMode === mode
-            return (
-              <ToggleButton
-                key={mode}
-                onClick={() => handleThemeChange(mode)}
-                isActive={isActive}
-                showActiveIndicator
-                title={description}
-                aria-label={t("theme.switchTo", { theme: label, description })}
-              >
-                <span className="flex items-center">
-                  <Icon
-                    className={`mr-2 h-4 w-4 transition-colors ${
-                      isActive
-                        ? "text-blue-500 dark:text-blue-400"
-                        : "text-gray-500 dark:text-gray-400"
-                    } `}
-                  />
-                  {label}
-                </span>
-              </ToggleButton>
-            )
-          })}
-        </div>
+        <ResponsiveToggleGroup
+          aria-label={t("theme.appearance")}
+          value={themeMode}
+          onValueChange={handleThemeChange}
+          showActiveIndicator
+          options={themeOptions.map(
+            ({ mode, label, icon: Icon, description }) => {
+              const isActive = themeMode === mode
+
+              return {
+                value: mode,
+                title: description,
+                ariaLabel: t("theme.switchTo", { theme: label, description }),
+                label: (
+                  <span className="flex items-center">
+                    <Icon
+                      className={`mr-2 h-4 w-4 transition-colors ${
+                        isActive
+                          ? "text-blue-500 dark:text-blue-400"
+                          : "text-gray-500 dark:text-gray-400"
+                      } `}
+                    />
+                    {label}
+                  </span>
+                ),
+              }
+            },
+          )}
+        />
       }
       leftContent={
         <Caption

@@ -1,9 +1,9 @@
 import { CursorArrowRaysIcon } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
+import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
 import { SettingSection } from "~/components/SettingSection"
-import { Card, CardItem, CardList, ToggleButton } from "~/components/ui"
-import { COLORS } from "~/constants/designTokens"
+import { Card, CardItem, CardList } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { getSidePanelSupport } from "~/utils/browser/browserApi"
 import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
@@ -55,26 +55,23 @@ export default function ActionClickBehaviorSettings() {
                 : t("actionClick.sidepanelUnsupportedHelper")
             }
             rightContent={
-              <div
-                className={`${COLORS.background.tertiary} flex flex-col rounded-lg p-1 shadow-sm sm:flex-row`}
-              >
-                <ToggleButton
-                  onClick={() => handleChange("popup")}
-                  isActive={actionClickBehavior === "popup"}
-                  size="default"
-                  aria-label={t("actionClick.popupTitle")}
-                >
-                  {t("actionClick.popupLabel")}
-                </ToggleButton>
-                <ToggleButton
-                  onClick={() => handleChange("sidepanel")}
-                  isActive={actionClickBehavior === "sidepanel"}
-                  size="default"
-                  aria-label={t("actionClick.sidepanelTitle")}
-                >
-                  {t("actionClick.sidepanelLabel")}
-                </ToggleButton>
-              </div>
+              <ResponsiveToggleGroup
+                aria-label={t("actionClick.actionIconClickTitle")}
+                value={actionClickBehavior}
+                onValueChange={handleChange}
+                options={[
+                  {
+                    value: "popup",
+                    label: t("actionClick.popupLabel"),
+                    ariaLabel: t("actionClick.popupTitle"),
+                  },
+                  {
+                    value: "sidepanel",
+                    label: t("actionClick.sidepanelLabel"),
+                    ariaLabel: t("actionClick.sidepanelTitle"),
+                  },
+                ]}
+              />
             }
           />
         </CardList>

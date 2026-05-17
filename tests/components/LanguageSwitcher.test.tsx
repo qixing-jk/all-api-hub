@@ -189,7 +189,7 @@ describe("LanguageSwitcher", () => {
       name: "Switch to settings:appearanceLanguage.switcher.options.ja.name",
     })
 
-    expect(activeButton).toHaveAttribute("data-active", "true")
+    expect(activeButton).toHaveAttribute("aria-pressed", "true")
 
     fireEvent.click(activeButton)
 
@@ -206,6 +206,28 @@ describe("LanguageSwitcher", () => {
     })
     expect(setLanguageMock).toHaveBeenNthCalledWith(1, "zh-CN")
     expect(setLanguageMock).toHaveBeenNthCalledWith(2, "ja")
+  })
+
+  it("allows inline language options to wrap inside narrow settings cards", () => {
+    render(<LanguageSwitcher />)
+
+    const group = screen.getByRole("group", { name: "Language" })
+    const activeButton = screen.getByRole("button", {
+      name: "Current: settings:appearanceLanguage.switcher.options.en.name",
+    })
+
+    expect(group.parentElement).toHaveClass("w-full")
+    expect(group).toHaveClass(
+      "flex",
+      "w-full",
+      "flex-wrap",
+      "[@container(min-width:42rem)]:w-auto",
+    )
+    expect(activeButton).toHaveClass(
+      "min-w-[3rem]",
+      "flex-1",
+      "[@container(min-width:42rem)]:flex-none",
+    )
   })
 
   it("uses the select variant trigger label and persists the already-active language from pointer-up", () => {

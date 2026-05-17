@@ -106,4 +106,35 @@ describe("ActionClickBehaviorSettings (side panel fallback)", () => {
     )
     expect(vi.mocked(showUpdateToast)).not.toHaveBeenCalled()
   })
+
+  it("lets action behavior options wrap inside narrow settings cards", async () => {
+    vi.mocked(getSidePanelSupport).mockReturnValue({
+      supported: true,
+      kind: "chromium-side-panel",
+    } satisfies SidePanelSupport)
+
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      actionClickBehavior: "popup",
+      updateActionClickBehavior: vi.fn(),
+    } as unknown as ReturnType<typeof useUserPreferencesContext>)
+
+    renderSubject()
+
+    const popupButton = await screen.findByRole("button", {
+      name: "settings:actionClick.popupTitle",
+    })
+    const optionGroup = popupButton.parentElement
+
+    expect(optionGroup).toHaveClass(
+      "flex",
+      "w-full",
+      "flex-wrap",
+      "[@container(min-width:42rem)]:w-auto",
+    )
+    expect(popupButton).toHaveClass(
+      "min-w-fit",
+      "flex-1",
+      "[@container(min-width:42rem)]:flex-none",
+    )
+  })
 })

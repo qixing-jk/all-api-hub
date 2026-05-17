@@ -2,6 +2,7 @@ import type { TFunction } from "i18next"
 import { Languages } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
+import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
 import {
   IconButton,
   Select,
@@ -9,7 +10,6 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue,
-  ToggleButton,
 } from "~/components/ui"
 import {
   DropdownMenu,
@@ -20,7 +20,6 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { DEFAULT_LANG } from "~/constants"
 import type { SupportedUiLanguage } from "~/constants"
-import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { cn } from "~/lib/utils"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
@@ -205,7 +204,7 @@ export function LanguageSwitcher({
   return (
     <div
       className={cn(
-        "flex items-center gap-1.5 sm:gap-2",
+        "flex w-full items-center gap-1.5 sm:gap-2 [@container(min-width:42rem)]:w-auto",
         compact && "gap-1.5",
         className,
       )}
@@ -218,42 +217,37 @@ export function LanguageSwitcher({
           )}
         />
       )}
-      <div
-        role="group"
+      <ResponsiveToggleGroup
         aria-label={t("appearanceLanguage.switcher.groupLabel")}
-        className={cn(
-          `flex ${COLORS.background.tertiary} rounded-lg p-0.5 shadow-sm ${ANIMATIONS.transition.base}`,
-          !compact && "sm:p-1",
-        )}
-      >
-        {UI_LANGUAGE_OPTIONS.map(({ code }) => {
-          const isActive = activeLanguage === code
+        value={activeLanguage}
+        onValueChange={(code) => void handleLanguageChange(code)}
+        buttonSize="sm"
+        showActiveIndicator
+        className={cn("p-0.5", !compact && "sm:p-1")}
+        options={UI_LANGUAGE_OPTIONS.map(({ code }) => {
           const label = getLanguageOptionLabel(t, code)
           const languageName = getLanguageOptionName(t, code)
-          const accessibleLabel = isActive
-            ? t("appearanceLanguage.switcher.currentLanguage", {
-                language: languageName,
-              })
-            : t("appearanceLanguage.switcher.switchToLanguage", {
-                language: languageName,
-              })
+          const accessibleLabel =
+            activeLanguage === code
+              ? t("appearanceLanguage.switcher.currentLanguage", {
+                  language: languageName,
+                })
+              : t("appearanceLanguage.switcher.switchToLanguage", {
+                  language: languageName,
+                })
 
-          return (
-            <ToggleButton
-              key={code}
-              onClick={() => handleLanguageChange(code)}
-              isActive={isActive}
-              size="sm"
-              showActiveIndicator
-              title={accessibleLabel}
-              aria-label={accessibleLabel}
-              className={cn("min-w-[3rem]", !compact && "sm:min-w-[3.5rem]")}
-            >
-              {label}
-            </ToggleButton>
-          )
+          return {
+            value: code,
+            label,
+            ariaLabel: accessibleLabel,
+            title: accessibleLabel,
+            buttonClassName: cn(
+              "min-w-[3rem] flex-1 [@container(min-width:42rem)]:flex-none",
+              !compact && "sm:min-w-[3.5rem]",
+            ),
+          }
         })}
-      </div>
+      />
     </div>
   )
 }

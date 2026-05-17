@@ -62,6 +62,11 @@ export { IconButton, iconButtonVariants } from "./IconButton"
 export { Spinner, spinnerVariants } from "./spinner"
 export { FormField } from "./FormField"
 export { ToggleButton, toggleButtonVariants } from "./ToggleButton"
+export {
+  ResponsiveButtonGroup,
+  ResponsiveToggleGroup,
+  type ResponsiveToggleGroupOption,
+} from "../ResponsiveButtonGroup"
 export { Switch, switchVariants } from "./Switch"
 export { EmptyState } from "./EmptyState"
 export { Modal } from "./Dialog/Modal"

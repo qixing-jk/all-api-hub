@@ -5,10 +5,10 @@ import {
 } from "@heroicons/react/24/outline"
 import { useTranslation } from "react-i18next"
 
+import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
 import { SettingSection } from "~/components/SettingSection"
-import { Card, CardItem, CardList, Switch, ToggleButton } from "~/components/ui"
+import { Card, CardItem, CardList, Switch } from "~/components/ui"
 import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
-import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import type { CurrencyType, DashboardTabType } from "~/types"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
@@ -63,26 +63,23 @@ export default function DisplaySettings() {
             title={t("display.currencyUnit")}
             description={t("display.currencyDesc")}
             rightContent={
-              <div
-                className={`flex flex-col sm:flex-row ${COLORS.background.tertiary} rounded-lg p-1 shadow-sm ${ANIMATIONS.transition.base}`}
-              >
-                <ToggleButton
-                  onClick={() => handleCurrencyChange("USD")}
-                  isActive={currencyType === "USD"}
-                  size="default"
-                  aria-label={t("display.usd")}
-                >
-                  {t("display.usd")}
-                </ToggleButton>
-                <ToggleButton
-                  onClick={() => handleCurrencyChange("CNY")}
-                  isActive={currencyType === "CNY"}
-                  size="default"
-                  aria-label={t("display.cny")}
-                >
-                  {t("display.cny")}
-                </ToggleButton>
-              </div>
+              <ResponsiveToggleGroup
+                aria-label={t("display.currencyUnit")}
+                value={currencyType}
+                onValueChange={handleCurrencyChange}
+                options={[
+                  {
+                    value: "USD",
+                    label: t("display.usd"),
+                    ariaLabel: t("display.usd"),
+                  },
+                  {
+                    value: "CNY",
+                    label: t("display.cny"),
+                    ariaLabel: t("display.cny"),
+                  },
+                ]}
+              />
             }
           />
 
@@ -109,27 +106,24 @@ export default function DisplaySettings() {
             title={t("display.defaultTab")}
             description={t("display.defaultTabDesc")}
             rightContent={
-              <div
-                className={`flex flex-col sm:flex-row ${COLORS.background.tertiary} rounded-lg p-1 shadow-sm ${ANIMATIONS.transition.base}`}
-              >
-                <ToggleButton
-                  onClick={() => handleDefaultTabChange(DATA_TYPE_CASHFLOW)}
-                  isActive={activeTab === DATA_TYPE_CASHFLOW}
-                  disabled={!showTodayCashflow}
-                  size="default"
-                  aria-label={t("display.todayCashflow")}
-                >
-                  {t("display.todayCashflow")}
-                </ToggleButton>
-                <ToggleButton
-                  onClick={() => handleDefaultTabChange(DATA_TYPE_BALANCE)}
-                  isActive={activeTab === DATA_TYPE_BALANCE}
-                  size="default"
-                  aria-label={t("display.totalBalance")}
-                >
-                  {t("display.totalBalance")}
-                </ToggleButton>
-              </div>
+              <ResponsiveToggleGroup
+                aria-label={t("display.defaultTab")}
+                value={activeTab}
+                onValueChange={handleDefaultTabChange}
+                options={[
+                  {
+                    value: DATA_TYPE_CASHFLOW,
+                    label: t("display.todayCashflow"),
+                    ariaLabel: t("display.todayCashflow"),
+                    disabled: !showTodayCashflow,
+                  },
+                  {
+                    value: DATA_TYPE_BALANCE,
+                    label: t("display.totalBalance"),
+                    ariaLabel: t("display.totalBalance"),
+                  },
+                ]}
+              />
             }
           />
         </CardList>

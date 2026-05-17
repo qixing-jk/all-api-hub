@@ -151,4 +151,28 @@ describe("ShieldSettings", () => {
       useForAutoRefresh: false,
     })
   })
+
+  it("lets shield method buttons wrap inside narrow settings cards", async () => {
+    render(<ShieldSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const tabModeButton = await screen.findByRole("button", {
+      name: "settings:refresh.shieldMethodTab",
+    })
+    const methodGroup = tabModeButton.parentElement
+
+    expect(methodGroup).toHaveClass(
+      "flex",
+      "w-full",
+      "flex-wrap",
+      "[@container(min-width:42rem)]:w-auto",
+    )
+    expect(tabModeButton).toHaveClass(
+      "min-w-fit",
+      "flex-1",
+      "[@container(min-width:42rem)]:flex-none",
+    )
+  })
 })

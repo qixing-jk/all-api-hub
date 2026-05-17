@@ -56,11 +56,13 @@ vi.mock("~/components/ui", () => ({
   ),
   ToggleButton: ({
     children,
+    className,
     onClick,
     title,
     "aria-label": ariaLabel,
   }: {
     children: React.ReactNode
+    className?: string
     onClick: () => void
     title?: string
     "aria-label"?: string
@@ -70,6 +72,7 @@ vi.mock("~/components/ui", () => ({
       onClick={onClick}
       title={title}
       aria-label={ariaLabel}
+      className={className}
     >
       {children}
     </button>
@@ -139,5 +142,29 @@ describe("ThemeToggle", () => {
     fireEvent.click(lightButton)
 
     expect(themeState.current.setThemeMode).toHaveBeenCalledWith("light")
+  })
+
+  it("lets theme options wrap cleanly inside narrow settings cards", () => {
+    render(<ThemeToggle />)
+
+    const rightContent = screen.getByTestId("right-content")
+    const optionGroup = rightContent.firstElementChild
+
+    expect(optionGroup).toHaveClass(
+      "flex",
+      "w-full",
+      "flex-wrap",
+      "[@container(min-width:42rem)]:w-auto",
+    )
+
+    expect(
+      screen.getByRole("button", {
+        name: 'theme.switchTo:{"theme":"settings:theme.followSystem","description":"settings:theme.followSystemTheme"}',
+      }),
+    ).toHaveClass(
+      "min-w-fit",
+      "flex-1",
+      "[@container(min-width:42rem)]:flex-none",
+    )
   })
 })

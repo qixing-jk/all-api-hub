@@ -2,6 +2,10 @@ import { StarIcon } from "@heroicons/react/24/outline"
 import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import {
+  ResponsiveButtonGroup,
+  responsiveButtonGroupItemClassName,
+} from "~/components/ResponsiveButtonGroup"
 import { SettingSection } from "~/components/SettingSection"
 import {
   Alert,
@@ -134,7 +138,10 @@ export default function ShieldSettings() {
             description={t("refresh.shieldMethodDesc")}
             rightContent={
               <div className="flex flex-col space-y-2 text-left">
-                <div className="flex gap-2">
+                <ResponsiveButtonGroup
+                  variant="plain"
+                  aria-label={t("refresh.shieldMethodTitle")}
+                >
                   <Button
                     size="sm"
                     variant={
@@ -153,6 +160,7 @@ export default function ShieldSettings() {
                     leftIcon={
                       <StarIcon className="h-4 w-4 text-amber-500 dark:text-amber-400" />
                     }
+                    className={responsiveButtonGroupItemClassName}
                   >
                     {t("refresh.shieldMethodComposite")}
                   </Button>
@@ -165,6 +173,7 @@ export default function ShieldSettings() {
                     onClick={() =>
                       updateTempWindowFallback({ tempContextMode: "tab" })
                     }
+                    className={responsiveButtonGroupItemClassName}
                   >
                     {t("refresh.shieldMethodTab")}
                   </Button>
@@ -181,10 +190,11 @@ export default function ShieldSettings() {
                     onClick={() =>
                       updateTempWindowFallback({ tempContextMode: "window" })
                     }
+                    className={responsiveButtonGroupItemClassName}
                   >
                     {t("refresh.shieldMethodWindow")}
                   </Button>
-                </div>
+                </ResponsiveButtonGroup>
                 <Muted>{shieldMethodHint}</Muted>
               </div>
             }
