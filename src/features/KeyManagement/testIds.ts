@@ -2,6 +2,7 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   addTokenButton: "key-management-add-token-button",
   addTokenDialog: "key-management-add-token-dialog",
   saveToApiProfilesButton: "key-management-save-to-api-profiles-button",
+  tokenRowActions: "key-management-token-row-actions",
   openApiProfilesToastButton: "key-management-open-api-profiles-toast-button",
   addTokenSubmitButton: "key-management-add-token-submit-button",
   oneTimeKeyCloseButton: "key-management-one-time-key-close-button",

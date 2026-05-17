@@ -3,6 +3,7 @@ import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { TokenHeader } from "~/features/KeyManagement/components/TokenListItem/TokenHeader"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
   MANAGED_SITE_TOKEN_CHANNEL_STATUSES,
@@ -451,5 +452,34 @@ describe("TokenHeader analytics", () => {
         message: "messages:errors.operation.failed",
       })
     })
+  })
+})
+
+describe("TokenHeader responsive layout", () => {
+  it("lets token text take full width before actions on narrow screens", async () => {
+    renderTokenHeader({
+      token: createToken({
+        id: 1,
+        name: "Readable Key Card Name",
+        accountName: "Long Account Name",
+      }),
+    })
+
+    const title = await screen.findByRole("heading", {
+      name: "Readable Key Card Name",
+    })
+    const contentColumn = title.closest("div")?.parentElement
+    const header = contentColumn?.parentElement
+    const actions = screen.getByTestId(KEY_MANAGEMENT_TEST_IDS.tokenRowActions)
+
+    expect(header).toHaveClass("flex-col", "sm:flex-row", "sm:items-start")
+    expect(contentColumn).toHaveClass("w-full", "sm:w-auto")
+    expect(actions).toHaveClass(
+      "w-full",
+      "flex-wrap",
+      "justify-start",
+      "sm:w-auto",
+      "sm:justify-end",
+    )
   })
 })

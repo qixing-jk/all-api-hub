@@ -442,7 +442,10 @@ function TokenActionButtons({
   }
 
   return (
-    <div className="flex shrink-0 items-center gap-1 sm:gap-1.5">
+    <div
+      data-testid={KEY_MANAGEMENT_TEST_IDS.tokenRowActions}
+      className="flex w-full flex-wrap items-center justify-start gap-1 sm:w-auto sm:shrink-0 sm:justify-end sm:gap-1.5"
+    >
       <KiloCodeExportDialog
         isOpen={isKiloCodeDialogOpen}
         onClose={() => setIsKiloCodeDialogOpen(false)}
@@ -655,8 +658,8 @@ export function TokenHeader({
   }
 
   return (
-    <div className="flex min-w-0 items-start gap-2">
-      <div className="min-w-0 flex-1">
+    <div className="flex min-w-0 flex-col items-start gap-2 sm:flex-row sm:items-start">
+      <div className="w-full min-w-0 flex-1 sm:w-auto">
         <div className="flex min-w-0 flex-wrap items-center gap-1.5 sm:gap-2">
           <Heading6 className="truncate text-sm sm:text-base md:text-lg">
             {token.name}
