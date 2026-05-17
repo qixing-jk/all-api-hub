@@ -78,7 +78,7 @@
       "uiOpenPretriggerDidNotStart": "Kích hoạt trước khi mở giao diện chưa bắt đầu: {{reason}}",
       "uiOpenPretriggerEvaluationFailed": "Đánh giá kích hoạt trước khi mở giao diện thất bại: {{error}}",
       "uiOpenPretriggerIneligible": "Điều kiện kích hoạt trước khi mở giao diện không được đáp ứng: {{reason}}",
-      "uiOpenPretriggerTriggerFailed": "Kích hoạt kích hoạt trước khi mở giao diện thất bại: {{error}}"
+      "uiOpenPretriggerTriggerFailed": "Kích hoạt trước khi mở giao diện thất bại: {{error}}"
     },
     "loading": {
       "evaluatingUiOpenPretrigger": "Đang đánh giá kích hoạt trước khi mở giao diện...",
@@ -88,7 +88,7 @@
       "schedulingDailyAlarmForToday": "Đang lên lịch báo thức hàng ngày cho hôm nay...",
       "triggeringDailyAlarm": "Đang kích hoạt báo thức hàng ngày...",
       "triggeringRetryAlarm": "Đang kích hoạt báo thức thử lại...",
-      "triggeringUiOpenPretrigger": "Đang kích hoạt kích hoạt trước khi mở giao diện..."
+      "triggeringUiOpenPretrigger": "Đang kích hoạt trước khi mở giao diện..."
     },
     "success": {
       "dailyAlarmScheduledForToday": "Đã lên lịch báo thức hàng ngày cho hôm nay.",
