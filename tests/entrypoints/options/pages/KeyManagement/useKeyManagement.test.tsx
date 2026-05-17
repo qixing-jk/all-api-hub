@@ -1653,6 +1653,69 @@ describe("useKeyManagement enabled account filtering", () => {
     )
   })
 
+  it("reuses resolved channel keys from previous managed-site status checks", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+    const account = createDisplayAccount({
+      id: "resolved-cache-acc",
+      name: "Resolved Cache Account",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    const fetchAccountTokens = vi.fn().mockResolvedValue([
+      createToken({
+        id: 604,
+        key: "token-604",
+        name: "Token 604",
+        expired_time: 0,
+      }),
+    ])
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+    getManagedSiteTokenChannelStatusMock
+      .mockResolvedValueOnce({
+        status: managedSiteTokenChannelStatuses.ADDED,
+        matchedChannel: { id: 56, name: "Managed Channel 56" },
+        resolvedChannelKeysById: {
+          56: "resolved-channel-key",
+        },
+      })
+      .mockResolvedValueOnce({
+        status: managedSiteTokenChannelStatuses.ADDED,
+        matchedChannel: { id: 56, name: "Managed Channel 56" },
+      })
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(1),
+    )
+
+    await act(async () => {
+      await result.current.refreshManagedSiteTokenStatusForToken(
+        result.current.tokens[0]!,
+      )
+    })
+
+    await waitFor(() =>
+      expect(getManagedSiteTokenChannelStatusMock).toHaveBeenCalledTimes(2),
+    )
+    expect(getManagedSiteTokenChannelStatusMock).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        resolvedChannelKeysById: {
+          56: "resolved-channel-key",
+        },
+      }),
+    )
+  })
+
   it("invalidates managed-site status when a token is deleted", async () => {
     const mockedUseAccountData = vi.mocked(useAccountData)
     const account = createDisplayAccount({

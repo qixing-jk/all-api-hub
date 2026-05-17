@@ -82,37 +82,44 @@ export interface ManagedSiteTokenChannelRecovery {
   automaticCodeConfigured: boolean
 }
 
+interface ManagedSiteTokenChannelResolvedKeys {
+  resolvedChannelKeysById?: Record<number, string>
+}
+
 export type ManagedSiteTokenChannelStatus =
-  | {
-      status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
-      matchedChannel: ManagedSiteTokenChannelStatusMatchedChannel
-      assessment: ManagedSiteTokenChannelAssessment
-    }
-  | {
-      status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED
-      assessment: ManagedSiteTokenChannelAssessment
-    }
-  | {
-      status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
-      reason: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION
-      assessment: ManagedSiteTokenChannelAssessment
-    }
-  | {
-      status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
-      reason: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE
-      assessment?: ManagedSiteTokenChannelAssessment
-      diagnostic?: string
-      recovery?: ManagedSiteTokenChannelRecovery
-    }
-  | {
-      status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
-      reason: Exclude<
-        ManagedSiteTokenChannelStatusUnknownReason,
-        | typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION
-        | typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE
-      >
-      diagnostic?: string
-    }
+  ManagedSiteTokenChannelResolvedKeys &
+    (
+      | {
+          status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED
+          matchedChannel: ManagedSiteTokenChannelStatusMatchedChannel
+          assessment: ManagedSiteTokenChannelAssessment
+        }
+      | {
+          status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED
+          assessment: ManagedSiteTokenChannelAssessment
+        }
+      | {
+          status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
+          reason: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION
+          assessment: ManagedSiteTokenChannelAssessment
+        }
+      | {
+          status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
+          reason: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE
+          assessment?: ManagedSiteTokenChannelAssessment
+          diagnostic?: string
+          recovery?: ManagedSiteTokenChannelRecovery
+        }
+      | {
+          status: typeof MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
+          reason: Exclude<
+            ManagedSiteTokenChannelStatusUnknownReason,
+            | typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION
+            | typeof MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE
+          >
+          diagnostic?: string
+        }
+    )
 
 interface GetManagedSiteTokenChannelStatusParams {
   account: DisplaySiteData
@@ -272,15 +279,22 @@ export async function getManagedSiteTokenChannelStatus(
       models: formData.models,
       key: formData.key,
       resolvedChannelKeysById: params.resolvedChannelKeysById,
+      resolveHiddenKeys: true,
     })
     const assessment = toManagedSiteTokenChannelAssessment(resolution)
     const exactMatch = getManagedSiteChannelExactMatch(resolution)
+    const resolvedChannelKeys =
+      resolution.resolvedChannelKeysById &&
+      Object.keys(resolution.resolvedChannelKeysById).length > 0
+        ? { resolvedChannelKeysById: resolution.resolvedChannelKeysById }
+        : {}
 
     if (exactMatch) {
       return {
         status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
         matchedChannel: toMatchedChannelSummary(exactMatch),
         assessment,
+        ...resolvedChannelKeys,
       }
     }
 
@@ -327,6 +341,7 @@ export async function getManagedSiteTokenChannelStatus(
           MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE,
         assessment,
         ...(recovery ? { recovery } : {}),
+        ...resolvedChannelKeys,
       }
     }
 
@@ -340,12 +355,14 @@ export async function getManagedSiteTokenChannelStatus(
         reason:
           MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION,
         assessment,
+        ...resolvedChannelKeys,
       }
     }
 
     return {
       status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.NOT_ADDED,
       assessment,
+      ...resolvedChannelKeys,
     }
   } catch (error) {
     const diagnostic = toSanitizedErrorSummary(error, secretsToRedact)

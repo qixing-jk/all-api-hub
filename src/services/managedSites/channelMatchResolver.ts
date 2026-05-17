@@ -11,10 +11,12 @@ import type {
 } from "~/services/managedSites/managedSiteService"
 import {
   findManagedSiteChannelsByBaseUrl,
+  findManagedSiteChannelsByBaseUrlAndModels,
   inspectManagedSiteChannelKeyMatch,
   inspectManagedSiteChannelModelsMatch,
   normalizeManagedSiteChannelBaseUrl,
 } from "~/services/managedSites/utils/channelMatching"
+import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 
 interface ResolveManagedSiteChannelMatchParams {
   service: ManagedSiteService
@@ -24,6 +26,11 @@ interface ResolveManagedSiteChannelMatchParams {
   key?: string
   resolvedChannelKeysById?: Record<number, string>
   resolveHiddenKeys?: boolean
+}
+
+interface ManagedSiteChannelMatchResolution
+  extends ManagedSiteChannelMatchInspection {
+  resolvedChannelKeysById?: Record<number, string>
 }
 
 const applyResolvedChannelKeys = <T extends { id: number; key?: string }>(
@@ -80,7 +87,7 @@ const fetchRecoverableCandidateSecretKey = async (params: {
  */
 export async function resolveManagedSiteChannelMatch(
   params: ResolveManagedSiteChannelMatchParams,
-): Promise<ManagedSiteChannelMatchInspection> {
+): Promise<ManagedSiteChannelMatchResolution> {
   const {
     service,
     managedConfig,
@@ -148,30 +155,108 @@ export async function resolveManagedSiteChannelMatch(
     models,
   })
 
+  const refreshAssessmentsWithResolvedKeys = () => {
+    const channelsWithResolvedKeys = applyResolvedChannelKeys(
+      searchResultItems,
+      mergedResolvedChannelKeysById,
+    )
+
+    urlBucket = findManagedSiteChannelsByBaseUrl({
+      channels: channelsWithResolvedKeys,
+      accountBaseUrl: searchBaseUrl,
+    })
+    keyAssessment = inspectManagedSiteChannelKeyMatch({
+      channels: channelsWithResolvedKeys,
+      accountBaseUrl: searchBaseUrl,
+      key,
+    })
+    modelsAssessment = inspectManagedSiteChannelModelsMatch({
+      channels: channelsWithResolvedKeys,
+      accountBaseUrl: searchBaseUrl,
+      models,
+    })
+    if (keyAssessment.matched && keyAssessment.channel) {
+      const exactModelChannels = findManagedSiteChannelsByBaseUrlAndModels({
+        channels: channelsWithResolvedKeys,
+        accountBaseUrl: searchBaseUrl,
+        models,
+      })
+
+      if (
+        !exactModelChannels.some(
+          (channel) => channel.id === keyAssessment.channel?.id,
+        )
+      ) {
+        return channelsWithResolvedKeys
+      }
+
+      const keyedModelsAssessment = inspectManagedSiteChannelModelsMatch({
+        channels: channelsWithResolvedKeys,
+        accountBaseUrl: searchBaseUrl,
+        models,
+        exactChannel: keyAssessment.channel,
+      })
+
+      if (
+        keyedModelsAssessment.matched &&
+        keyedModelsAssessment.reason ===
+          MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT
+      ) {
+        modelsAssessment = keyedModelsAssessment
+      }
+    }
+
+    return channelsWithResolvedKeys
+  }
+
+  if (Object.keys(mergedResolvedChannelKeysById).length > 0) {
+    refreshAssessmentsWithResolvedKeys()
+  }
+
   if (
     resolveHiddenKeys &&
     typeof service.fetchChannelSecretKey === "function" &&
     key?.trim()
   ) {
+    const recoverableUrlCandidates = urlBucket.filter(
+      (channel) =>
+        !hasUsableManagedSiteChannelKey(channel.key) &&
+        typeof mergedResolvedChannelKeysById[channel.id] !== "string",
+    )
     const resolvedUrlChannel =
-      urlBucket[0] ?? keyAssessment.channel ?? modelsAssessment.channel
-    const recoverableCandidate = getRecoverableManagedSiteChannelCandidate({
-      url: {
-        channel: resolvedUrlChannel,
-        candidateCount:
-          urlBucket.length > 0 ? urlBucket.length : resolvedUrlChannel ? 1 : 0,
-      },
-      models: {
-        channel: modelsAssessment.channel,
-        reason: modelsAssessment.reason,
-      },
-    })
+      urlBucket.length === 1
+        ? urlBucket[0]
+        : keyAssessment.channel ?? modelsAssessment.channel
+    const rankedRecoverableCandidate =
+      getRecoverableManagedSiteChannelCandidate({
+        url: {
+          channel: resolvedUrlChannel,
+          candidateCount:
+            urlBucket.length > 0
+              ? urlBucket.length
+              : resolvedUrlChannel
+                ? 1
+                : 0,
+        },
+        models: {
+          channel: modelsAssessment.channel,
+          reason: modelsAssessment.reason,
+        },
+      })
+    const recoverableCandidates = [
+      ...recoverableUrlCandidates,
+      ...(rankedRecoverableCandidate &&
+      !recoverableUrlCandidates.some(
+        (channel) => channel.id === rankedRecoverableCandidate.id,
+      ) &&
+      !hasUsableManagedSiteChannelKey(rankedRecoverableCandidate.key) &&
+      typeof mergedResolvedChannelKeysById[rankedRecoverableCandidate.id] !==
+        "string"
+        ? [rankedRecoverableCandidate]
+        : []),
+    ]
 
-    if (
-      recoverableCandidate?.id != null &&
-      !recoverableCandidate.key?.trim() &&
-      typeof mergedResolvedChannelKeysById[recoverableCandidate.id] !== "string"
-    ) {
+    for (const recoverableCandidate of recoverableCandidates) {
       try {
         mergedResolvedChannelKeysById[recoverableCandidate.id] =
           await fetchRecoverableCandidateSecretKey({
@@ -179,31 +264,15 @@ export async function resolveManagedSiteChannelMatch(
             managedConfig,
             channelId: recoverableCandidate.id,
           })
-
-        const channelsWithResolvedKey = applyResolvedChannelKeys(
-          searchResultItems,
-          mergedResolvedChannelKeysById,
-        )
-
-        urlBucket = findManagedSiteChannelsByBaseUrl({
-          channels: channelsWithResolvedKey,
-          accountBaseUrl: searchBaseUrl,
-        })
-        keyAssessment = inspectManagedSiteChannelKeyMatch({
-          channels: channelsWithResolvedKey,
-          accountBaseUrl: searchBaseUrl,
-          key,
-        })
-        modelsAssessment = inspectManagedSiteChannelModelsMatch({
-          channels: channelsWithResolvedKey,
-          accountBaseUrl: searchBaseUrl,
-          models,
-        })
       } catch (error) {
         if (!(error instanceof MatchResolutionUnresolvedError)) {
           throw error
         }
       }
+    }
+
+    if (recoverableCandidates.length > 0) {
+      refreshAssessmentsWithResolvedKeys()
     }
   }
 
@@ -263,5 +332,8 @@ export async function resolveManagedSiteChannelMatch(
     },
     key: keyAssessment,
     models: modelsAssessment,
+    ...(Object.keys(mergedResolvedChannelKeysById).length > 0
+      ? { resolvedChannelKeysById: mergedResolvedChannelKeysById }
+      : {}),
   }
 }
