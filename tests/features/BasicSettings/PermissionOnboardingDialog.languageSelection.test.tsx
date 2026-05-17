@@ -1,4 +1,4 @@
-import { act, render, screen, waitFor, within } from "@testing-library/react"
+import { act, render, screen, waitFor } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { createInstance } from "i18next"
 import type { ReactNode } from "react"
@@ -285,18 +285,21 @@ describe("PermissionOnboardingDialog language selection", () => {
 
     expect(await screen.findByText("外观")).toBeInTheDocument()
 
-    const selectorGroup = screen.getByRole("group", {
-      name: "界面语言选择",
-    })
-
     expect(
-      within(selectorGroup).getByRole("button", {
+      screen.getByRole("combobox", {
         name: "当前界面语言：简体中文",
       }),
-    ).toHaveAttribute("aria-pressed", "true")
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "当前界面语言：简体中文",
+      }),
+    )
+
     expect(
-      within(selectorGroup).getByRole("button", {
-        name: "切换界面语言为英文",
+      await screen.findByRole("option", {
+        name: "英文",
       }),
     ).toBeInTheDocument()
   })

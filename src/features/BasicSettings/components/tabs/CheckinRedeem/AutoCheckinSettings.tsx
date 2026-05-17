@@ -285,13 +285,17 @@ export default function AutoCheckinSettings() {
               <ResponsiveToggleGroup
                 aria-label={t("autoCheckin:settings.scheduleModeTitle")}
                 value={preferences.scheduleMode}
-                onValueChange={(scheduleMode) =>
-                  savePreferences({ scheduleMode })
-                }
+                onValueChange={(scheduleMode) => {
+                  if (isSaving) {
+                    return
+                  }
+                  void savePreferences({ scheduleMode })
+                }}
                 options={scheduleModes.map((mode) => ({
                   value: mode.value,
                   label: mode.label,
                   ariaLabel: mode.label,
+                  disabled: isSaving,
                 }))}
               />
             }

@@ -1,7 +1,7 @@
-import { render, screen } from "@testing-library/react"
 import { describe, expect, it, vi } from "vitest"
 
 import AppearanceSettings from "~/features/BasicSettings/components/tabs/General/AppearanceSettings"
+import { render, screen } from "~~/tests/test-utils/render"
 
 const languageSwitcherMock = vi.fn()
 
@@ -18,9 +18,14 @@ vi.mock("~/entrypoints/options/components/ThemeToggle", () => ({
 
 describe("AppearanceSettings", () => {
   it("uses the select language switcher in the settings card", () => {
-    render(<AppearanceSettings />)
+    render(<AppearanceSettings />, {
+      withReleaseUpdateStatusProvider: false,
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
 
     expect(screen.getByTestId("language-switcher")).toBeInTheDocument()
+    expect(screen.getByTestId("theme-toggle")).toBeInTheDocument()
     expect(languageSwitcherMock).toHaveBeenCalledWith(
       expect.objectContaining({ variant: "select" }),
     )

@@ -898,7 +898,7 @@ export default function TaskNotificationSettings() {
               }
             >
               <div className="space-y-3">
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 [@container(min-width:42rem)]:grid-cols-2">
                   <FormField
                     label={t("taskNotifications.channels.dingtalk.webhookKey")}
                     htmlFor={
@@ -1059,7 +1059,7 @@ export default function TaskNotificationSettings() {
               }
             >
               <div className="space-y-3">
-                <div className="grid gap-3 sm:grid-cols-2">
+                <div className="grid gap-3 [@container(min-width:42rem)]:grid-cols-2">
                   <FormField
                     label={t("taskNotifications.channels.ntfy.topicUrl")}
                     htmlFor={SETTINGS_ANCHORS.TASK_NOTIFICATIONS_NTFY_TOPIC_URL}

@@ -202,6 +202,49 @@ describe("AutoCheckinSettings", () => {
     )
   })
 
+  it("disables schedule mode changes while preferences are saving", async () => {
+    let resolveSave: (value: boolean) => void
+    updateAutoCheckin.mockReturnValueOnce(
+      new Promise<boolean>((resolve) => {
+        resolveSave = resolve
+      }),
+    )
+
+    render(<AutoCheckinSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    fireEvent.click(screen.getAllByRole("switch")[0])
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "autoCheckin:settings.scheduleModeRandom",
+        }),
+      ).toBeDisabled()
+    })
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "autoCheckin:settings.scheduleModeRandom",
+      }),
+    )
+
+    expect(updateAutoCheckin).toHaveBeenCalledTimes(1)
+    expect(updateAutoCheckin).toHaveBeenCalledWith({ globalEnabled: false })
+
+    resolveSave!(true)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "autoCheckin:settings.scheduleModeRandom",
+        }),
+      ).toBeEnabled()
+    })
+  })
+
   it("leaves settings snapshot tracking to the preferences context", async () => {
     render(<AutoCheckinSettings />, {
       withUserPreferencesProvider: false,
