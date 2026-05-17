@@ -28,7 +28,7 @@ export default function AppearanceSettings() {
             }
             title={t("appearanceLanguage.language")}
             description={t("appearanceLanguage.languageDesc")}
-            rightContent={<LanguageSwitcher />}
+            rightContent={<LanguageSwitcher variant="select" />}
           />
         </CardList>
       </Card>

@@ -2,6 +2,7 @@ import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { ResponsiveToggleGroup } from "~/components/ResponsiveButtonGroup"
 import { SettingSection } from "~/components/SettingSection"
 import {
   Card,
@@ -24,7 +25,6 @@ import {
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
   AutoCheckinPreferences,
-  AutoCheckinScheduleMode,
 } from "~/types/autoCheckin"
 import { createLogger } from "~/utils/core/logger"
 import { pushWithinOptionsPage } from "~/utils/navigation"
@@ -282,27 +282,18 @@ export default function AutoCheckinSettings() {
             title={t("autoCheckin:settings.scheduleModeTitle")}
             description={t("autoCheckin:settings.scheduleModeDesc")}
             rightContent={
-              <div className="flex gap-2">
-                {scheduleModes.map((mode) => (
-                  <button
-                    key={mode.value}
-                    type="button"
-                    onClick={() =>
-                      savePreferences({
-                        scheduleMode: mode.value as AutoCheckinScheduleMode,
-                      })
-                    }
-                    disabled={isSaving}
-                    className={`rounded-lg border px-3 py-1.5 text-sm font-medium transition-colors ${
-                      preferences.scheduleMode === mode.value
-                        ? "border-blue-500 bg-blue-50 text-blue-600 dark:border-blue-400 dark:bg-blue-400/10 dark:text-blue-200"
-                        : "border-gray-300 text-gray-600 hover:border-gray-400 dark:border-gray-700 dark:text-gray-300"
-                    }`}
-                  >
-                    {mode.label}
-                  </button>
-                ))}
-              </div>
+              <ResponsiveToggleGroup
+                aria-label={t("autoCheckin:settings.scheduleModeTitle")}
+                value={preferences.scheduleMode}
+                onValueChange={(scheduleMode) =>
+                  savePreferences({ scheduleMode })
+                }
+                options={scheduleModes.map((mode) => ({
+                  value: mode.value,
+                  label: mode.label,
+                  ariaLabel: mode.label,
+                }))}
+              />
             }
           />
 

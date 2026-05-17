@@ -178,6 +178,30 @@ describe("AutoCheckinSettings", () => {
     )
   })
 
+  it("lets schedule mode options wrap inside narrow settings cards", () => {
+    render(<AutoCheckinSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const randomButton = screen.getByRole("button", {
+      name: "autoCheckin:settings.scheduleModeRandom",
+    })
+    const optionGroup = randomButton.parentElement
+
+    expect(optionGroup).toHaveClass(
+      "flex",
+      "w-full",
+      "flex-wrap",
+      "[@container(min-width:42rem)]:w-auto",
+    )
+    expect(randomButton).toHaveClass(
+      "min-w-fit",
+      "flex-1",
+      "[@container(min-width:42rem)]:flex-none",
+    )
+  })
+
   it("leaves settings snapshot tracking to the preferences context", async () => {
     render(<AutoCheckinSettings />, {
       withUserPreferencesProvider: false,

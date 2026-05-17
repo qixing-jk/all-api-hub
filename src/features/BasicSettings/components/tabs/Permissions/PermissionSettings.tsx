@@ -257,7 +257,7 @@ export default function PermissionSettings() {
               title: label,
               description: getPermissionDescription(t, permission.id),
               rightContent: (
-                <div className="flex flex-col items-start gap-3 sm:flex-row sm:items-center">
+                <div className="flex flex-col items-start gap-3 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center">
                   <Badge
                     variant={
                       granted

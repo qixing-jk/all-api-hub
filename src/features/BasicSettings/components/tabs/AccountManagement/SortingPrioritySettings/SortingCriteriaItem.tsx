@@ -43,26 +43,31 @@ export function SortingCriteriaItem({
       style={style}
       variant="default"
       padding="none"
-      className="dark:hover:bg-dark-bg-secondary mb-2 transition-colors hover:bg-gray-100"
+      className="dark:hover:bg-dark-bg-secondary [container-type:inline-size] mb-2 transition-colors hover:bg-gray-100"
     >
       <CardContent padding="sm">
-        <div className="flex items-center gap-2">
-          <div
-            {...attributes}
-            {...listeners}
-            className="dark:text-dark-text-tertiary dark:hover:text-dark-text-secondary mr-1 flex cursor-move touch-none items-center text-gray-400 hover:text-gray-600"
-          >
-            <Bars2Icon className="h-5 w-5" />
-          </div>
-          <div className="min-w-0 grow">
-            <div className="dark:text-dark-text-primary truncate text-sm font-medium text-gray-900">
-              {item.label}
+        <div
+          data-sorting-criteria-row
+          className="flex flex-col gap-3 [@container(min-width:42rem)]:flex-row [@container(min-width:42rem)]:items-center"
+        >
+          <div className="flex w-full min-w-0 items-start gap-2 [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:flex-1 [@container(min-width:42rem)]:items-center">
+            <div
+              {...attributes}
+              {...listeners}
+              className="dark:text-dark-text-tertiary dark:hover:text-dark-text-secondary mt-0.5 flex shrink-0 cursor-move touch-none items-center text-gray-400 hover:text-gray-600 [@container(min-width:42rem)]:mt-0"
+            >
+              <Bars2Icon className="h-5 w-5" />
             </div>
-            <div className="dark:text-dark-text-secondary truncate text-xs text-gray-500">
-              {item.description}
+            <div className="min-w-0 grow">
+              <div className="dark:text-dark-text-primary text-sm font-medium break-words text-gray-900">
+                {item.label}
+              </div>
+              <div className="dark:text-dark-text-secondary text-xs leading-relaxed break-words text-gray-500">
+                {item.description}
+              </div>
             </div>
           </div>
-          <div className="flex shrink-0 items-center gap-2">
+          <div className="flex w-full flex-wrap items-center justify-between gap-2 [@container(min-width:42rem)]:w-auto [@container(min-width:42rem)]:shrink-0 [@container(min-width:42rem)]:justify-end">
             <Badge variant="default" size="sm">
               {t("sorting.priority")}: {item.priority + 1}
             </Badge>

@@ -152,6 +152,32 @@ describe("TaskNotificationSettings", () => {
     )
   })
 
+  it("uses container-width responsive layout for notification row actions", async () => {
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const permissionRequestButton = await screen.findByRole("button", {
+      name: "settings:taskNotifications.permission.request",
+    })
+    const actionBar = permissionRequestButton.parentElement?.parentElement
+    const rowHeader = actionBar?.parentElement
+
+    expect(rowHeader).toHaveClass(
+      "flex-col",
+      "[@container(min-width:42rem)]:flex-row",
+      "[@container(min-width:42rem)]:items-center",
+      "[@container(min-width:42rem)]:justify-between",
+    )
+    expect(actionBar).toHaveClass(
+      "w-full",
+      "flex-wrap",
+      "[@container(min-width:42rem)]:w-auto",
+      "[@container(min-width:42rem)]:shrink-0",
+    )
+  })
+
   it("tracks denied notification permission requests as failures", async () => {
     requestPermissionMock.mockResolvedValueOnce(false)
 
@@ -500,6 +526,45 @@ describe("TaskNotificationSettings", () => {
         "settings:taskNotifications.channels.webhook.urlDescription",
       ),
     ).toBeInTheDocument()
+  })
+
+  it("keeps multi-field channel docs links inline while spacing helper copy from inputs", async () => {
+    hasPermissionMock.mockResolvedValue(true)
+
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const dingtalkChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_DINGTALK,
+    )
+    const ntfyChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_NTFY,
+    )
+    if (!dingtalkChannel || !ntfyChannel) {
+      throw new Error("Expected multi-field channel settings rows")
+    }
+
+    const dingtalkDocsLink = await within(dingtalkChannel).findByRole("link", {
+      name: "settings:taskNotifications.channels.dingtalk.docsLink",
+    })
+    const dingtalkHelperCopy = within(dingtalkChannel).getByText(
+      /settings:taskNotifications\.channels\.dingtalk\.webhookKeyDescription/,
+    )
+    const ntfyDocsLink = await within(ntfyChannel).findByRole("link", {
+      name: "settings:taskNotifications.channels.ntfy.docsLink",
+    })
+    const ntfyHelperCopy = within(ntfyChannel).getByText(
+      /settings:taskNotifications\.channels\.ntfy\.topicUrlDescription/,
+    )
+
+    expect(dingtalkHelperCopy.parentElement).toHaveClass("space-y-3")
+    expect(dingtalkHelperCopy).toHaveClass("leading-relaxed")
+    expect(dingtalkDocsLink.parentElement).toBe(dingtalkHelperCopy)
+    expect(ntfyHelperCopy.parentElement).toHaveClass("space-y-3")
+    expect(ntfyHelperCopy).toHaveClass("leading-relaxed")
+    expect(ntfyDocsLink.parentElement).toBe(ntfyHelperCopy)
   })
 
   it("updates channel switches and saves trimmed third-party channel drafts", async () => {

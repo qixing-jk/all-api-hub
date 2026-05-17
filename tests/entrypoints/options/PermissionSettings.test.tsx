@@ -175,6 +175,31 @@ describe("PermissionSettings", () => {
     )
   })
 
+  it("uses container-width responsive layout for permission row actions", async () => {
+    render(<PermissionSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await screen.findAllByText("settings:permissions.status.granted")
+
+    const cookiesRow = document.getElementById("cookies")
+    if (!cookiesRow) {
+      throw new Error("Expected permission row to be rendered")
+    }
+
+    const actionButton = within(cookiesRow).getByRole("button", {
+      name: "settings:permissions.actions.remove",
+    })
+    const actionGroup = actionButton.parentElement
+
+    expect(actionGroup).toHaveClass(
+      "flex-col",
+      "[@container(min-width:42rem)]:flex-row",
+      "[@container(min-width:42rem)]:items-center",
+    )
+  })
+
   it("reloads statuses on external permission change and unsubscribes on cleanup", async () => {
     const { unmount } = render(<PermissionSettings />, {
       withUserPreferencesProvider: false,
