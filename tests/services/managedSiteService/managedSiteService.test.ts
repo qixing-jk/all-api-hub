@@ -124,6 +124,7 @@ vi.mock("~/services/managedSites/providers/claudeCodeHub", () => ({
   prepareChannelFormData: vi.fn(),
   buildChannelPayload: vi.fn(),
   findMatchingChannel: vi.fn(),
+  fetchChannelSecretKey: vi.fn(),
   autoConfigToClaudeCodeHub: vi.fn(),
 }))
 
@@ -283,7 +284,7 @@ describe("managedSiteService", () => {
     })
   })
 
-  it("routes to Claude Code Hub service without key reveal support", async () => {
+  it("routes to Claude Code Hub service with key reveal support", async () => {
     const { getManagedSiteServiceForType } = await import(
       "~/services/managedSites/managedSiteService"
     )
@@ -291,7 +292,7 @@ describe("managedSiteService", () => {
     const service = getManagedSiteServiceForType(SITE_TYPES.CLAUDE_CODE_HUB)
     expect(service.siteType).toBe(SITE_TYPES.CLAUDE_CODE_HUB)
     expect(service.messagesKey).toBe("claudecodehub")
-    expect(service.fetchChannelSecretKey).toBeUndefined()
+    expect(service.fetchChannelSecretKey).toEqual(expect.any(Function))
 
     const config = await service.getConfig()
     expect(config).toEqual({

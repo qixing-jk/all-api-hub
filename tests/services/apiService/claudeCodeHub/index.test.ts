@@ -5,9 +5,11 @@ import {
   ClaudeCodeHubApiError,
   createProvider,
   deleteProvider,
+  getUnmaskedProviderKey,
   listProviders,
   normalizeClaudeCodeHubBaseUrl,
   redactClaudeCodeHubSecrets,
+  searchProviders,
   updateProvider,
   validateClaudeCodeHubConfig,
 } from "~/services/apiService/claudeCodeHub"
@@ -19,6 +21,7 @@ const config = {
 }
 
 const PROVIDER_ACTION_BASE = "https://cch.example.com/api/actions/providers"
+const PROVIDER_V1_BASE = "https://cch.example.com/api/v1/providers"
 
 function restoreAbortSignalStatic(
   key: "any" | "timeout",
@@ -118,6 +121,75 @@ describe("Claude Code Hub action API adapter", () => {
         providerId: 12,
       },
     ])
+  })
+
+  it("fetches an unmasked provider key from the provider v1 reveal API", async () => {
+    let capturedAuthorization: string | null = null
+
+    server.use(
+      http.get(`${PROVIDER_V1_BASE}/42/key:reveal`, ({ request }) => {
+        capturedAuthorization = request.headers.get("authorization")
+        return HttpResponse.json({
+          key: "sk-real-provider-key",
+        })
+      }),
+    )
+
+    await expect(getUnmaskedProviderKey(config, 42)).resolves.toBe(
+      "sk-real-provider-key",
+    )
+    expect(capturedAuthorization).toBe("Bearer admin-secret")
+  })
+
+  it("searches providers through the provider v1 list API", async () => {
+    let capturedAuthorization: string | null = null
+    let capturedQuery: string | null = null
+
+    server.use(
+      http.get(PROVIDER_V1_BASE, ({ request }) => {
+        const url = new URL(request.url)
+        capturedAuthorization = request.headers.get("authorization")
+        capturedQuery = url.searchParams.get("q")
+        return HttpResponse.json({
+          items: [
+            {
+              id: 9,
+              name: "Search Match",
+              url: "https://search.example.com",
+            },
+          ],
+        })
+      }),
+    )
+
+    await expect(searchProviders(config, "search match")).resolves.toEqual([
+      {
+        id: 9,
+        name: "Search Match",
+        url: "https://search.example.com",
+      },
+    ])
+    expect(capturedAuthorization).toBe("Bearer admin-secret")
+    expect(capturedQuery).toBe("search match")
+  })
+
+  it("throws redacted errors for provider v1 reveal failures", async () => {
+    server.use(
+      http.get(`${PROVIDER_V1_BASE}/42/key:reveal`, () =>
+        HttpResponse.json(
+          {
+            type: "about:blank",
+            title: "Admin access required",
+            detail: "bad token admin-secret",
+          },
+          { status: 403 },
+        ),
+      ),
+    )
+
+    await expect(getUnmaskedProviderKey(config, 42)).rejects.toThrow(
+      "bad token [REDACTED]",
+    )
   })
 
   it("supports provider arrays wrapped in an inner data field", async () => {

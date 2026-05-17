@@ -209,6 +209,7 @@ export function getManagedSiteServiceForType(
       prepareChannelFormData: claudeCodeHubService.prepareChannelFormData,
       buildChannelPayload: claudeCodeHubService.buildChannelPayload,
       findMatchingChannel: claudeCodeHubService.findMatchingChannel,
+      fetchChannelSecretKey: claudeCodeHubService.fetchChannelSecretKey,
       autoConfigToManagedSite: claudeCodeHubService.autoConfigToClaudeCodeHub,
     }
   }

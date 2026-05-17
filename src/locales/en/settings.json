@@ -112,7 +112,7 @@
     },
     "title": "Claude Code Hub Integration Settings",
     "unsupported": {
-      "description": "Channel migration, model sync, model redirect, and full key reveal are not available for Claude Code Hub in this version.",
+      "description": "Model sync and model redirect are not available for Claude Code Hub in this version.",
       "title": "Unsupported channel actions"
     },
     "validation": {

@@ -115,6 +115,47 @@ async function parseActionResponse<T>(
 }
 
 /**
+ * Parses a Claude Code Hub v1 JSON response and normalizes problem+json errors.
+ */
+async function parseV1JsonResponse<T>(
+  response: Response,
+  config: ClaudeCodeHubConfig,
+  extraSecrets: Array<string | undefined | null>,
+): Promise<T> {
+  let parsed: unknown
+  try {
+    parsed = await response.json()
+  } catch {
+    throw new ClaudeCodeHubApiError(
+      `Claude Code Hub returned a non-JSON response (${response.status})`,
+      response.status,
+    )
+  }
+
+  if (!response.ok) {
+    const fallbackMessage =
+      response.statusText ||
+      `Claude Code Hub request failed (${response.status})`
+    const problem =
+      parsed && typeof parsed === "object"
+        ? (parsed as { detail?: unknown; error?: unknown; title?: unknown })
+        : undefined
+    const message =
+      getErrorMessage(
+        problem?.detail ?? problem?.error ?? problem?.title,
+        fallbackMessage,
+      ) || fallbackMessage
+
+    throw new ClaudeCodeHubApiError(
+      redactClaudeCodeHubSecrets(message, [config.adminToken, ...extraSecrets]),
+      response.status,
+    )
+  }
+
+  return parsed as T
+}
+
+/**
  * Calls a Claude Code Hub provider action endpoint and normalizes failures.
  */
 function createTimeoutAbortSignal(timeoutMs: number): ActionSignalHandle {
@@ -306,6 +347,59 @@ export async function listProviders(
 }
 
 /**
+ * Searches Claude Code Hub providers through the admin v1 provider list API.
+ *
+ * Upstream contract: ding113/claude-code-hub
+ * `src/app/api/v1/resources/providers/router.ts` registers
+ * `GET /api/v1/providers` with optional `q` search text and returns
+ * `{ items: ProviderSummary[] }`.
+ */
+export async function searchProviders(
+  config: ClaudeCodeHubConfig,
+  keyword: string,
+  options?: {
+    signal?: AbortSignal
+    timeoutMs?: number
+  },
+): Promise<ClaudeCodeHubProviderDisplay[]> {
+  const baseUrl = normalizeClaudeCodeHubBaseUrl(config.baseUrl)
+  const searchParams = new URLSearchParams()
+  const trimmedKeyword = keyword.trim()
+  if (trimmedKeyword) {
+    searchParams.set("q", trimmedKeyword)
+  }
+
+  const query = searchParams.toString()
+  const actionSignal = buildActionSignal(options)
+  let response: Response | undefined
+
+  try {
+    response = await fetch(
+      `${baseUrl}/api/v1/providers${query ? `?${query}` : ""}`,
+      {
+        method: "GET",
+        signal: actionSignal.signal,
+        headers: {
+          Authorization: `Bearer ${config.adminToken}`,
+        },
+      },
+    )
+    const data = await parseV1JsonResponse<unknown>(response, config, [])
+    return extractProviderList(data)
+  } catch (error) {
+    if (error instanceof ClaudeCodeHubApiError) {
+      throw error
+    }
+    throw new ClaudeCodeHubApiError(
+      normalizeActionError(error, config),
+      response?.status,
+    )
+  } finally {
+    actionSignal.cleanup()
+  }
+}
+
+/**
  * Validates Claude Code Hub credentials by performing a provider list request.
  */
 export async function validateClaudeCodeHubConfig(
@@ -335,6 +429,63 @@ export async function createProvider(
     signal: options?.signal,
     timeoutMs: options?.timeoutMs,
   })
+}
+
+/**
+ * Fetches the real provider key through Claude Code Hub's admin v1 API.
+ *
+ * Upstream contract: ding113/claude-code-hub
+ * `src/app/api/v1/resources/providers/router.ts` registers
+ * `GET /api/v1/providers/{id}/key:reveal` and returns `{ key: string }`.
+ */
+export async function getUnmaskedProviderKey(
+  config: ClaudeCodeHubConfig,
+  providerId: number,
+  options?: {
+    signal?: AbortSignal
+    timeoutMs?: number
+  },
+): Promise<string> {
+  const baseUrl = normalizeClaudeCodeHubBaseUrl(config.baseUrl)
+  let response: Response | undefined
+  const actionSignal = buildActionSignal(options)
+
+  try {
+    response = await fetch(
+      `${baseUrl}/api/v1/providers/${providerId}/key:reveal`,
+      {
+        method: "GET",
+        signal: actionSignal.signal,
+        headers: {
+          Authorization: `Bearer ${config.adminToken}`,
+        },
+      },
+    )
+    const data = await parseV1JsonResponse<unknown>(response, config, [])
+
+    const key =
+      data && typeof data === "object"
+        ? (data as { key?: unknown }).key
+        : undefined
+    if (typeof key !== "string" || !key.trim()) {
+      throw new ClaudeCodeHubApiError(
+        "Claude Code Hub returned an invalid provider key response",
+        response.status,
+      )
+    }
+
+    return key
+  } catch (error) {
+    if (error instanceof ClaudeCodeHubApiError) {
+      throw error
+    }
+    throw new ClaudeCodeHubApiError(
+      normalizeActionError(error, config),
+      response?.status,
+    )
+  } finally {
+    actionSignal.cleanup()
+  }
 }
 
 /**

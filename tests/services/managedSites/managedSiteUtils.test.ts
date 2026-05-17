@@ -353,7 +353,7 @@ describe("managedSite utils", () => {
     )
     expect(
       supportsManagedSiteBaseUrlChannelLookup(SITE_TYPES.CLAUDE_CODE_HUB),
-    ).toBe(false)
+    ).toBe(true)
     expect(supportsManagedSiteBaseUrlChannelLookup(SITE_TYPES.NEW_API)).toBe(
       true,
     )

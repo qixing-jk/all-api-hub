@@ -112,7 +112,7 @@
     },
     "title": "Cài đặt tích hợp Claude Code Hub",
     "unsupported": {
-      "description": "Phiên bản hiện tại chưa hỗ trợ di chuyển kênh, đồng bộ mô hình, chuyển hướng mô hình và xem đầy đủ key của Claude Code Hub.",
+      "description": "Phiên bản hiện tại chưa hỗ trợ đồng bộ mô hình và chuyển hướng mô hình của Claude Code Hub.",
       "title": "Thao tác kênh chưa được hỗ trợ"
     },
     "validation": {

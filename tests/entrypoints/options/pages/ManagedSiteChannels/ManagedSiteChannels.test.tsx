@@ -2429,10 +2429,10 @@ describe("ManagedSiteChannels", () => {
     )
     const editDialog = await screen.findByRole("dialog")
     expect(
-      within(editDialog).queryByRole("button", {
+      within(editDialog).getByRole("button", {
         name: "channelDialog:actions.loadRealKey",
       }),
-    ).not.toBeInTheDocument()
+    ).toBeInTheDocument()
 
     await user.click(
       within(editDialog).getByText("common:actions.cancel", {

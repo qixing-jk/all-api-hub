@@ -232,29 +232,6 @@ export function providerToManagedSiteChannel(
 }
 
 /**
- * Filters provider channels with a case-insensitive keyword match.
- */
-function providerMatchesKeyword(
-  channel: ManagedSiteChannel,
-  keyword: string,
-): boolean {
-  const normalizedKeyword = keyword.trim().toLowerCase()
-  if (!normalizedKeyword) return true
-
-  const searchable = [
-    channel.name,
-    String(channel.type),
-    channel.base_url,
-    channel.models,
-    channel.group,
-  ]
-    .join(" ")
-    .toLowerCase()
-
-  return searchable.includes(normalizedKeyword)
-}
-
-/**
  * Lists Claude Code Hub providers and derives managed-site type counts.
  */
 async function listClaudeCodeHubChannels(
@@ -272,6 +249,60 @@ async function listClaudeCodeHubChannels(
     items,
     total: items.length,
     type_counts: typeCounts,
+  }
+}
+
+/**
+ * Searches Claude Code Hub providers through the upstream admin search API.
+ */
+async function searchClaudeCodeHubChannels(
+  config: ClaudeCodeHubConfig,
+  keyword: string,
+): Promise<ManagedSiteChannelListData> {
+  const providers = await claudeCodeHubApi.searchProviders(config, keyword)
+  const items = providers.map(providerToManagedSiteChannel)
+  const typeCounts = items.reduce<Record<string, number>>((acc, item) => {
+    const type = String(item.type)
+    acc[type] = (acc[type] ?? 0) + 1
+    return acc
+  }, {})
+
+  return {
+    items,
+    total: items.length,
+    type_counts: typeCounts,
+  }
+}
+
+/**
+ * Resolves a real provider key when list data only contains a masked key.
+ */
+async function hydrateComparableChannelKey(
+  config: ClaudeCodeHubConfig,
+  channel: ManagedSiteChannel,
+): Promise<ManagedSiteChannel | null> {
+  if (hasUsableManagedSiteChannelKey(channel.key)) {
+    return channel
+  }
+
+  try {
+    const key = await claudeCodeHubApi.getUnmaskedProviderKey(
+      config,
+      channel.id,
+    )
+    if (!hasUsableManagedSiteChannelKey(key)) {
+      return null
+    }
+    return {
+      ...channel,
+      key: key.trim(),
+    }
+  } catch (error) {
+    logger.warn("Failed to hydrate Claude Code Hub provider key", {
+      channelId: channel.id,
+      error: getErrorMessage(error),
+    })
+    return null
   }
 }
 
@@ -347,7 +378,7 @@ export function buildClaudeCodeHubUpdatePayloadFromChannelData(
 }
 
 /**
- * Searches Claude Code Hub channels by keyword within the local provider cache.
+ * Searches Claude Code Hub channels by keyword through the provider search API.
  */
 export async function searchChannel(
   _baseUrl: string,
@@ -359,16 +390,7 @@ export async function searchChannel(
     const config = await getFullClaudeCodeHubConfig()
     if (!config) return null
 
-    const allChannels = await listClaudeCodeHubChannels(config)
-    const items = allChannels.items.filter((channel) =>
-      providerMatchesKeyword(channel, keyword),
-    )
-
-    return {
-      items,
-      total: items.length,
-      type_counts: allChannels.type_counts,
-    }
+    return await searchClaudeCodeHubChannels(config, keyword)
   } catch (error) {
     logger.error("Failed to search Claude Code Hub providers", error)
     return null
@@ -491,6 +513,23 @@ export async function deleteChannel(
 }
 
 /**
+ * Fetches the real Claude Code Hub provider key for edit, comparison, and export flows.
+ */
+export async function fetchChannelSecretKey(
+  _baseUrl: string,
+  _adminToken: string,
+  _userId: number | string,
+  channelId: number,
+): Promise<string> {
+  const config = await getFullClaudeCodeHubConfig()
+  if (!config) {
+    throw new Error(t("messages:claudecodehub.configMissing"))
+  }
+
+  return await claudeCodeHubApi.getUnmaskedProviderKey(config, channelId)
+}
+
+/**
  * Fetches available models for a managed-site account token pair.
  */
 export async function fetchAvailableModels(
@@ -582,9 +621,14 @@ export async function findMatchingChannel(
     if (!config || !hasUsableManagedSiteChannelKey(key)) return null
 
     const channels = await listClaudeCodeHubChannels(config)
-    const comparableChannels = channels.items.filter((channel) =>
-      hasUsableManagedSiteChannelKey(channel.key),
-    )
+    const comparableChannels = (
+      await Promise.all(
+        channels.items.map((channel) =>
+          hydrateComparableChannelKey(config, channel),
+        ),
+      )
+    ).filter((channel): channel is ManagedSiteChannel => channel !== null)
+
     return findManagedSiteChannelByComparableInputs({
       channels: comparableChannels,
       accountBaseUrl,

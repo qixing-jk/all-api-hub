@@ -231,7 +231,8 @@ export default function ManagedSiteChannels({
   const isNewApiManagedSite = managedSiteType === SITE_TYPES.NEW_API
   const supportsDetailBackedRealKeyLoading =
     managedSiteType === SITE_TYPES.DONE_HUB ||
-    managedSiteType === SITE_TYPES.VELOERA
+    managedSiteType === SITE_TYPES.VELOERA ||
+    managedSiteType === SITE_TYPES.CLAUDE_CODE_HUB
   const isConfigMissing = !hasValidManagedSiteConfig(
     preferences,
     managedSiteType,

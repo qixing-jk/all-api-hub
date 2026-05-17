@@ -283,9 +283,7 @@ export function getManagedSiteType(prefs: UserPreferences): ManagedSiteType {
 export function supportsManagedSiteBaseUrlChannelLookup(
   siteType: ManagedSiteType,
 ): boolean {
-  return (
-    siteType !== SITE_TYPES.VELOERA && siteType !== SITE_TYPES.CLAUDE_CODE_HUB
-  )
+  return siteType !== SITE_TYPES.VELOERA
 }
 
 /**

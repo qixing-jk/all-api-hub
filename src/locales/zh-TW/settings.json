@@ -112,7 +112,7 @@
     },
     "title": "Claude Code Hub 整合設定",
     "unsupported": {
-      "description": "目前版本暫不支援 Claude Code Hub 的渠道遷移、模型同步、模型重定向和完整金鑰查看。",
+      "description": "目前版本暫不支援 Claude Code Hub 的模型同步和模型重定向。",
       "title": "不支援的渠道操作"
     },
     "validation": {

@@ -112,7 +112,7 @@
     },
     "title": "Claude Code Hub 統合設定",
     "unsupported": {
-      "description": "このバージョンでは、Claude Code Hub のチャネル移行、モデル同期、モデルリダイレクト、完全なキー表示は利用できません。",
+      "description": "このバージョンでは、Claude Code Hub のモデル同期とモデルリダイレクトは利用できません。",
       "title": "未対応のチャネル操作"
     },
     "validation": {

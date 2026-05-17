@@ -658,6 +658,45 @@ describe("getManagedSiteTokenChannelStatus", () => {
     expect(prepareChannelFormData).not.toHaveBeenCalled()
   })
 
+  it("checks Claude Code Hub token channel status through base URL search", async () => {
+    const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
+    const token = buildApiToken({ key: "test-token-key" })
+    const searchChannel = vi.fn().mockResolvedValue({
+      items: [
+        buildManagedSiteChannel({
+          id: 42,
+          name: "Claude Code Hub Provider",
+          base_url: "https://api.example.com",
+          key: "test-token-key",
+          models: "gpt-4o",
+        }),
+      ],
+      total: 1,
+      type_counts: {},
+    })
+    const service = createManagedSiteServiceStub({
+      siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      messagesKey: "claudecodehub",
+      searchChannel,
+    })
+
+    const result = await getManagedSiteTokenChannelStatus({
+      account,
+      token,
+      service,
+    })
+
+    expect(supportsManagedSiteBaseUrlChannelLookup(service.siteType)).toBe(true)
+    expect(result).toMatchObject({
+      status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.ADDED,
+      matchedChannel: {
+        id: 42,
+        name: "Claude Code Hub Provider",
+      },
+    })
+    expect(searchChannel).toHaveBeenCalled()
+  })
+
   it("returns backend-search-failed without assessment when the backend search cannot complete", async () => {
     const account = buildDisplaySiteData({ baseUrl: "https://api.example.com" })
     const token = buildApiToken({ key: "test-token-key" })
