@@ -286,9 +286,6 @@ export default function AutoCheckinSettings() {
                 aria-label={t("autoCheckin:settings.scheduleModeTitle")}
                 value={preferences.scheduleMode}
                 onValueChange={(scheduleMode) => {
-                  if (isSaving) {
-                    return
-                  }
                   void savePreferences({ scheduleMode })
                 }}
                 options={scheduleModes.map((mode) => ({

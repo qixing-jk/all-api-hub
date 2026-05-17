@@ -10,7 +10,13 @@ import {
   AUTO_CHECKIN_SCHEDULE_MODE,
   type AutoCheckinPreferences,
 } from "~/types/autoCheckin"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  act,
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from "~~/tests/test-utils/render"
 
 const {
   toastMocks,
@@ -178,7 +184,7 @@ describe("AutoCheckinSettings", () => {
     )
   })
 
-  it("lets schedule mode options wrap inside narrow settings cards", () => {
+  it("lets schedule mode options wrap inside narrow settings cards", async () => {
     render(<AutoCheckinSettings />, {
       withUserPreferencesProvider: false,
       withThemeProvider: false,
@@ -200,6 +206,14 @@ describe("AutoCheckinSettings", () => {
       "flex-1",
       "[@container(min-width:42rem)]:flex-none",
     )
+
+    await act(async () => {
+      fireEvent.click(randomButton)
+    })
+
+    expect(updateAutoCheckin).toHaveBeenCalledWith({
+      scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.RANDOM,
+    })
   })
 
   it("disables schedule mode changes while preferences are saving", async () => {
