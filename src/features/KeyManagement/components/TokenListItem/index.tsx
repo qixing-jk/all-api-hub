@@ -155,11 +155,11 @@ export function TokenListItem(props: TokenListItemProps) {
                   />
                   <TokenDetails token={token} />
                   {token.group && (
-                    <div>
-                      <span className="dark:text-dark-text-tertiary text-gray-500">
+                    <div className="flex min-w-0 flex-wrap items-baseline gap-x-2 break-words">
+                      <span className="dark:text-dark-text-tertiary shrink-0 text-gray-500">
                         {t("keyDetails.group")}
                       </span>
-                      <span className="dark:text-dark-text-primary ml-2 font-medium text-gray-900">
+                      <span className="dark:text-dark-text-primary min-w-0 font-medium break-words text-gray-900">
                         {token.group}
                       </span>
                     </div>

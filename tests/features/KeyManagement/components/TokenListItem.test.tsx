@@ -231,6 +231,16 @@ describe("TokenListItem batch selection", () => {
     })
 
     expect(await screen.findByText("Token 1")).toBeInTheDocument()
+    const groupLabel = screen.getByText("keyManagement:keyDetails.group")
+    const groupValue = screen.getByText("managed-sites")
+
+    expect(groupLabel.parentElement).toHaveClass(
+      "flex",
+      "flex-wrap",
+      "break-words",
+    )
+    expect(groupLabel).toHaveClass("shrink-0")
+    expect(groupValue).toHaveClass("min-w-0", "break-words")
     expect(
       screen.queryByRole("checkbox", {
         name: "keyManagement:batchManagedSiteExport.selection.rowLabel",
