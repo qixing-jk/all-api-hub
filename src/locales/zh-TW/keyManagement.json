@@ -165,10 +165,14 @@
       "verifyNow": "立即驗證"
     },
     "badges": {
-      "added": "管理站點：已新增",
-      "checking": "管理站點：檢查中",
-      "notAdded": "管理站點：未新增",
-      "unknown": "管理站點：未知"
+      "added": "已新增",
+      "checkFailed": "檢查失敗",
+      "checking": "檢查中",
+      "configMissing": "未設定",
+      "notAdded": "未新增",
+      "requiresConfirmation": "需確認",
+      "unknown": "未知",
+      "verificationUnavailable": "無法完整驗證"
     },
     "descriptions": {
       "backendSearchFailed": "管理站點校驗暫時無法完成。",

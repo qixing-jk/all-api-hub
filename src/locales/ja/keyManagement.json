@@ -165,10 +165,14 @@
       "verifyNow": "今すぐ検証"
     },
     "badges": {
-      "added": "管理対象サイト: 追加済み",
-      "checking": "管理対象サイト: 確認中",
-      "notAdded": "管理対象サイト: 未追加",
-      "unknown": "管理対象サイト: 不明"
+      "added": "追加済み",
+      "checkFailed": "確認失敗",
+      "checking": "確認中",
+      "configMissing": "未設定",
+      "notAdded": "未追加",
+      "requiresConfirmation": "確認が必要",
+      "unknown": "不明",
+      "verificationUnavailable": "完全確認不可"
     },
     "descriptions": {
       "backendSearchFailed": "管理対象サイトの確認を完了できませんでした。",

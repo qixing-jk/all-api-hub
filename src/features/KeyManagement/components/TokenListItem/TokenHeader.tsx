@@ -197,6 +197,26 @@ const getManagedSiteStatusLabel = (
     return t("keyManagement:managedSiteStatus.badges.notAdded")
   }
 
+  if (
+    params.managedSiteStatus?.status ===
+    MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN
+  ) {
+    switch (params.managedSiteStatus.reason) {
+      case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.MATCH_REQUIRES_CONFIRMATION:
+        return t("keyManagement:managedSiteStatus.badges.requiresConfirmation")
+      case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.EXACT_VERIFICATION_UNAVAILABLE:
+        return t(
+          "keyManagement:managedSiteStatus.badges.verificationUnavailable",
+        )
+      case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.BACKEND_SEARCH_FAILED:
+        return t("keyManagement:managedSiteStatus.badges.checkFailed")
+      case MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.CONFIG_MISSING:
+        return t("keyManagement:managedSiteStatus.badges.configMissing")
+      default:
+        break
+    }
+  }
+
   return t("keyManagement:managedSiteStatus.badges.unknown")
 }
 

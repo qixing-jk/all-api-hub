@@ -165,10 +165,14 @@
       "verifyNow": "Xác minh ngay"
     },
     "badges": {
-      "added": "Trang web quản lý: Đã thêm",
-      "checking": "Trang web quản lý: Đang kiểm tra",
-      "notAdded": "Trang web quản lý: Chưa thêm",
-      "unknown": "Trang web quản lý: Không rõ"
+      "added": "Đã thêm",
+      "checkFailed": "Kiểm tra lỗi",
+      "checking": "Đang kiểm tra",
+      "configMissing": "Chưa cấu hình",
+      "notAdded": "Chưa thêm",
+      "requiresConfirmation": "Cần xác nhận",
+      "unknown": "Không rõ",
+      "verificationUnavailable": "Không thể xác minh đầy đủ"
     },
     "descriptions": {
       "backendSearchFailed": "Kiểm tra trang web quản lý tạm thời không thể hoàn tất.",

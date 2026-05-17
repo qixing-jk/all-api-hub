@@ -170,10 +170,14 @@
       "verifyNow": "Verify now"
     },
     "badges": {
-      "added": "Managed site: added",
-      "checking": "Managed site: checking",
-      "notAdded": "Managed site: not added",
-      "unknown": "Managed site: unknown"
+      "added": "Added",
+      "checkFailed": "Check failed",
+      "checking": "Checking",
+      "configMissing": "Not configured",
+      "notAdded": "Not added",
+      "requiresConfirmation": "Needs confirmation",
+      "unknown": "Unknown",
+      "verificationUnavailable": "Cannot fully verify"
     },
     "descriptions": {
       "backendSearchFailed": "Managed-site checks could not be completed.",

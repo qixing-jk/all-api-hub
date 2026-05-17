@@ -364,7 +364,9 @@ describe("TokenHeader save to API profiles", () => {
     )
 
     expect(
-      screen.getByText("keyManagement:managedSiteStatus.badges.unknown"),
+      screen.getByText(
+        "keyManagement:managedSiteStatus.badges.requiresConfirmation",
+      ),
     ).toBeInTheDocument()
     expectNoVisibleManagedSiteDescription()
     expect(
@@ -441,7 +443,9 @@ describe("TokenHeader save to API profiles", () => {
     )
 
     expect(
-      screen.queryByText("keyManagement:managedSiteStatus.badges.unknown"),
+      screen.queryByText(
+        "keyManagement:managedSiteStatus.badges.requiresConfirmation",
+      ),
     ).toBeNull()
     expect(
       screen.queryByText("keyManagement:managedSiteStatus.signals.url.matched"),
@@ -590,6 +594,11 @@ describe("TokenHeader save to API profiles", () => {
       />,
     )
 
+    expect(
+      screen.getByText(
+        "keyManagement:managedSiteStatus.badges.verificationUnavailable",
+      ),
+    ).toBeInTheDocument()
     expectNoVisibleManagedSiteDescription()
     expect(
       screen.getByText(
