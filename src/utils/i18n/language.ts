@@ -86,7 +86,7 @@ export function isJapaneseLanguage(language?: string | null): boolean {
 /**
  * Return true when the language belongs to the Vietnamese locale family.
  */
-export function isVietnameseLanguage(language?: string | null): boolean {
+function isVietnameseLanguage(language?: string | null): boolean {
   return isLanguageFamily(normalizeLanguageTag(language), "vi")
 }
 
