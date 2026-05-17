@@ -1,0 +1,58 @@
+{
+  "verifyDialog": {
+    "actions": {
+      "close": "Đóng",
+      "retry": "Thử lại",
+      "run": "Bắt đầu xác thực",
+      "running": "Đang chạy...",
+      "runOne": "Chạy"
+    },
+    "details": {
+      "input": "Đầu vào",
+      "output": "Đầu ra"
+    },
+    "idleHint": "Vui lòng chọn API Key để bắt đầu xác thực. Nếu không thể suy đoán mô hình từ API Key, vui lòng nhập thủ công ID mô hình.",
+    "loadingModelsHint": "Đang tải mô hình...",
+    "loadingTokensHint": "Đang tải API Key...",
+    "meta": {
+      "model": "Mô hình",
+      "modelPlaceholder": "Nhập ID mô hình",
+      "token": "API Key",
+      "tokenPlaceholder": "Chọn API Key"
+    },
+    "modelHint": "Mô hình suy đoán từ API Key: {{modelId}}",
+    "modelPickerPlaceholder": "Chọn hoặc nhập ID mô hình",
+    "modelsFetchFailed": "Không lấy được danh sách mô hình",
+    "notRunYet": "Chưa chạy",
+    "profileIdleHint": "Vui lòng chọn mô hình để bắt đầu xác thực. Nếu danh sách lấy được không đầy đủ, bạn cũng có thể nhập thủ công ID mô hình.",
+    "requiresModelId": "Vui lòng nhập ID mô hình trước khi chạy bài kiểm tra này.",
+    "status": {
+      "fail": "Thất bại",
+      "pass": "Đạt",
+      "pending": "Chờ chạy",
+      "unsupported": "Không hỗ trợ"
+    },
+    "summaries": {
+      "endpointNotFound": "Endpoint không tồn tại (404): Có thể không hỗ trợ API này",
+      "forbidden": "Bị cấm truy cập (403)",
+      "httpError": "Lỗi HTTP ({{status}})",
+      "invalidResponse": "Định dạng phản hồi không như mong đợi",
+      "networkError": "Lỗi mạng / Yêu cầu bị chặn",
+      "noModelIdProvided": "Không có ID mô hình khả dụng",
+      "noToolCallDetected": "Không phát hiện gọi công cụ (có thể không hỗ trợ tool/function calling)",
+      "supported": "Hỗ trợ",
+      "supportedStreaming": "Hỗ trợ (truyền phát)",
+      "toolCallSucceeded": "Gọi công cụ thành công.",
+      "unauthorized": "Chưa xác thực (401): API Key không hợp lệ hoặc thiếu xác thực",
+      "unexpectedError": "Lỗi không xác định: {{message}}",
+      "unsupportedForApiType": "Không hỗ trợ loại API hiện tại ({{apiType}})"
+    },
+    "title": "Xác thực khả năng tương thích CLI",
+    "tools": {
+      "claude": "Claude Code",
+      "codex": "Codex (Codex CLI)",
+      "gemini": "Gemini CLI"
+    },
+    "warning": "Khi phát hiện đạt, xác suất cao là thực sự được hỗ trợ; khi phát hiện thất bại, nó vẫn có thể khả dụng trong thực tế. Kết quả chỉ mang tính tham khảo, vui lòng dựa vào tình trạng sử dụng thực tế của công cụ."
+  }
+}

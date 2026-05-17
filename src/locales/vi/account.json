@@ -1,0 +1,180 @@
+{
+  "actions": {
+    "channelLocateConfigMissing": "Cấu hình quản trị viên trang web được quản lý không khả dụng, danh sách kênh đã được lọc theo URL để bạn xác nhận.",
+    "channelLocateFailed": "Định vị kênh thất bại",
+    "channelLocateFuzzyUrlOnly": "Hiện tại chỉ có thể xác nhận khớp mờ ở cấp độ URL, danh sách kênh đã được lọc theo URL để bạn xác nhận.",
+    "channelLocateInputPreparationFallback": "Không thể chuẩn bị dữ liệu đầu vào cần thiết cho việc khớp thứ tự, danh sách kênh chỉ được lọc theo URL.",
+    "channelLocateKeyMatchedModelsDrifted": "Cùng một kênh đã khớp với key, nhưng tập hợp mô hình chỉ đạt mức khớp gần đúng, danh sách kênh đã được lọc theo URL để bạn xác nhận.",
+    "channelLocateKeyMatchOnly": "Đã tìm thấy kênh khớp với key trong cùng phạm vi URL, nhưng tập hợp mô hình không khớp, danh sách kênh đã được lọc theo URL để bạn xác nhận.",
+    "channelLocateMultipleKeysFallback": "Phát hiện nhiều API Key, danh sách kênh chỉ được lọc theo URL.",
+    "channelLocateNoKeyFallback": "Hiện không có API Key nào khả dụng cho việc khớp thứ tự, danh sách kênh chỉ được lọc theo URL.",
+    "channelLocateSecondaryExactModels": "Đã tìm thấy một kết quả khớp phụ hoàn toàn chính xác theo tập hợp mô hình, danh sách kênh đã được lọc theo URL để bạn xác nhận.",
+    "channelLocateSecondaryModelsContained": "Đã tìm thấy một kết quả khớp phụ dựa trên mối quan hệ bao hàm của mô hình, danh sách kênh đã được lọc theo URL để bạn xác nhận.",
+    "channelLocateSecondaryModelsSimilar": "Đã tìm thấy một kết quả khớp phụ dựa trên độ tương đồng của mô hình, danh sách kênh đã được lọc theo URL để bạn xác nhận.",
+    "channelLocateSignalsConflict": "Kiểm tra key và mô hình lần lượt chỉ đến các kênh ứng viên khác nhau, danh sách kênh đã được lọc theo URL để bạn xác nhận.",
+    "channelLocateUnresolved": "Tạm thời không thể xác nhận kênh có khả năng nhất, danh sách kênh chỉ được lọc theo URL.",
+    "copyKey": "Sao chép API Key",
+    "copyUrl": "Sao chép URL",
+    "delete": "Xóa",
+    "disableAccount": "Vô hiệu hóa tài khoản",
+    "edit": "Chỉnh sửa",
+    "enableAccount": "Kích hoạt tài khoản",
+    "fetchKeyInfoFailed": "Lấy thông tin API Key thất bại",
+    "fetchKeyListFailed": "Lấy danh sách API Key thất bại: {{errorMessage}}",
+    "keyCopied": "API Key đã được sao chép vào khay nhớ tạm",
+    "keyList": "Danh sách API Key",
+    "keyManagement": "Quản lý API Key",
+    "locateManagedSiteChannel": "Định vị kênh tương ứng",
+    "locateManagedSiteChannelUnsupported": "Do trang web được quản lý hiện tại tạm thời không hỗ trợ tìm kiếm kênh bằng URL, tính năng liên quan không thể hoạt động bình thường",
+    "locateManagedSiteChannelUnsupportedHint": "Không hỗ trợ",
+    "modelManagement": "Quản lý mô hình",
+    "openAllExternalCheckIn": "Mở điểm danh bên ngoài bằng một cú nhấp chuột",
+    "openAllExternalCheckInHint": "Mặc định chỉ mở những mục chưa điểm danh; Ctrl/Cmd để mở tất cả; Shift để mở trong cửa sổ mới; Ctrl/Cmd+Shift để áp dụng đồng thời.",
+    "pin": "Ghim tài khoản",
+    "pinned": "Đã ghim",
+    "quickCheckin": "Điểm danh nhanh",
+    "redeemPage": "Trang nạp tiền",
+    "refresh": "Làm mới",
+    "refreshDisabledAccounts": "Làm mới tài khoản đã vô hiệu hóa",
+    "scanDuplicates": "Quét tài khoản trùng lặp",
+    "scanDuplicatesHint": "Quét tài khoản trùng lặp theo URL trang gốc + ID người dùng và dọn dẹp an toàn.",
+    "unpin": "Bỏ ghim",
+    "urlCopied": "URL đã được sao chép vào khay nhớ tạm",
+    "usageLog": "Nhật ký sử dụng",
+    "viewOnLdoh": "Xem trên LDOH"
+  },
+  "addAccount": "Thêm tài khoản",
+  "addFirstAccount": "Thêm tài khoản trang web đầu tiên của bạn",
+  "bulk": {
+    "clearAll": "Xóa tất cả lựa chọn",
+    "clearVisible": "Hủy chọn kết quả hiện tại",
+    "deleteConfirmAction": "Xóa các tài khoản đã chọn",
+    "deleteConfirmDescription_other": "Bạn sẽ xóa {{count}} tài khoản đã chọn. Vui lòng kiểm tra kỹ các lựa chọn này trước khi xác nhận.",
+    "deleteConfirmTitle": "Xóa tài khoản đã chọn",
+    "deleteConfirmWarningTitle": "Xác nhận xóa hàng loạt",
+    "deleteHiddenSelectedHint_other": "Trong đó có {{count}} tài khoản đã chọn bị ẩn bởi tìm kiếm/bộ lọc hiện tại.",
+    "deletePreviewRemainder_other": "Và {{count}} tài khoản đã chọn khác.",
+    "deletePreviewTitle": "Các tài khoản sắp bị xóa",
+    "deleteSelected": "Xóa đã chọn",
+    "deleteSuccess_other": "Đã xóa {{count}} tài khoản đã chọn.",
+    "deleting_other": "Đang xóa {{count}} tài khoản đã chọn...",
+    "disableSelected": "Vô hiệu hóa đã chọn",
+    "exit": "Thoát chế độ hàng loạt",
+    "hiddenSelectedHint_other": "Có {{count}} tài khoản đã chọn bị ẩn bởi tìm kiếm/bộ lọc hiện tại; thao tác hàng loạt vẫn sẽ áp dụng cho chúng.",
+    "manage": "Thao tác hàng loạt",
+    "selectAccount": "Chọn {{accountName}}",
+    "selectedSummary_other": "Đã chọn {{selected}} tài khoản (hiện đang hiển thị {{visibleSelected}})",
+    "selectVisible": "Chọn kết quả hiện tại"
+  },
+  "currentLoginAdded": "⚠️Tài khoản đăng nhập hiện tại của {{siteName}} đã có trong danh sách",
+  "currentSiteAdded": "⚠️{{siteName}} đã có tài khoản",
+  "currentSiteAddedCount_other": "⚠️Trang hiện tại đã có {{count}} tài khoản",
+  "description": "Quản lý tất cả các trạm trung chuyển AI bằng một cú nhấp chuột",
+  "emptyState": "Chưa có tài khoản trang web",
+  "filter": {
+    "checkIn": {
+      "all": "Tất cả trạng thái điểm danh",
+      "checked-in": "Đã điểm danh",
+      "not-checked-in": "Chưa điểm danh",
+      "outdated": "Trạng thái hết hạn",
+      "placeholder": "Trạng thái điểm danh",
+      "unsupported": "Không hỗ trợ"
+    },
+    "disabled": {
+      "all": "Tất cả tài khoản",
+      "placeholder": "Trạng thái tài khoản"
+    },
+    "refresh": {
+      "all": "Tất cả trạng thái làm mới",
+      "neverSynced": "Chưa đồng bộ",
+      "placeholder": "Trạng thái làm mới"
+    },
+    "siteType": {
+      "all": "Tất cả loại trang web",
+      "placeholder": "Loại trang web"
+    },
+    "summary_other": "Tổng cộng {{count}} tài khoản",
+    "tagsAllLabel": "Tất cả"
+  },
+  "filteredTotals": {
+    "balance": "Số dư",
+    "consumption": "Tiêu hao hôm nay"
+  },
+  "healthStatus": {
+    "apiError": "Lỗi API",
+    "error": "Lỗi",
+    "healthy": "Khỏe mạnh",
+    "httpError": "Lỗi HTTP {{statusCode}}: {{message}}",
+    "networkFailed": "Kết nối mạng thất bại",
+    "normal": "Trạng thái tài khoản bình thường",
+    "tempWindowDisabled": "Tính năng vượt rào đã bị tắt, vui lòng bật trong Cài đặt > Làm mới dữ liệu",
+    "tempWindowPermissionRequired": "Tính năng vượt rào của Firefox yêu cầu quyền chặn Cookie, vui lòng cấp quyền trong Cài đặt > Quản lý quyền",
+    "unknown": "Không rõ",
+    "unknownError": "Lỗi không rõ",
+    "warning": "Cảnh báo"
+  },
+  "list": {
+    "balance": {
+      "refreshBalance": "Nhấp để làm mới số dư",
+      "refreshCashflow": "Nhấp để làm mới tiêu dùng hôm nay",
+      "refreshIncome": "Nhấp để làm mới thu nhập hôm nay"
+    },
+    "dragHandle": "Kéo để sắp xếp",
+    "header": {
+      "account": "Tài khoản",
+      "balance": "Số dư",
+      "createdAt": "Thời gian tạo",
+      "todayConsumption": "Tiêu dùng hôm nay",
+      "todayIncome": "Thu nhập hôm nay"
+    },
+    "site": {
+      "checkedInToday": "Hôm nay đã điểm danh, nhấp vào tôi để xem",
+      "checkInStatusOutdated": "Trạng thái điểm danh không phải là kiểm tra hôm nay (lần kiểm tra cuối: {{time}}), nhấp vào tôi để làm mới",
+      "checkInUnsupported": "Trang web có thể không hỗ trợ điểm danh",
+      "currentSite": "Trang web hiện tại",
+      "currentSiteExists": "Giống với trang web ở tab hiện tại",
+      "disabled": "Đã vô hiệu hóa",
+      "lastSync": "Đồng bộ lần cuối",
+      "notAvailable": "Không khả dụng",
+      "notCheckedInToday": "Hôm nay chưa điểm danh, nhấp vào tôi để điểm danh",
+      "reason": "Lý do",
+      "refreshHealthStatus": "Nhấp để làm mới trạng thái sức khỏe",
+      "status": "Trạng thái",
+      "unknown": "Không rõ"
+    },
+    "sort": "Sắp xếp"
+  },
+  "newcomerSupport": {
+    "actions": {
+      "about": "Truy cập trang chủ dự án",
+      "docs": "Mở hướng dẫn cho người mới",
+      "star": "Cho dự án một sao (Star)"
+    },
+    "description": "Bạn có thể cho dự án một sao (Star) trước, hoặc xem tài liệu trước để tìm hiểu cách quản lý các trạm trung chuyển và tài khoản New API",
+    "hint": "Trước khi thêm tài khoản, bạn cũng có thể tùy ý xem tài liệu và thông tin dự án",
+    "title": "Chào mừng đến với All API Hub"
+  },
+  "refresh": {
+    "refreshComplete": "Làm mới hoàn tất: {{success}} thành công, {{failed}} thất bại",
+    "refreshDisabledComplete": "Khám phá tài khoản đã vô hiệu hóa hoàn tất: khôi phục {{restored}}, vẫn vô hiệu hóa {{stillDisabled}}",
+    "refreshDisabledCompleteWithFailures": "Khám phá tài khoản đã vô hiệu hóa hoàn tất: khôi phục {{restored}}, vẫn vô hiệu hóa {{stillDisabled}}, thất bại {{failed}}",
+    "refreshDisabledFailed": "Làm mới tài khoản đã vô hiệu hóa thất bại, vui lòng thử lại sau",
+    "refreshFailed": "Làm mới thất bại, vui lòng thử lại sau",
+    "refreshingAll": "Đang làm mới tất cả tài khoản...",
+    "refreshingDisabled": "Đang làm mới các tài khoản đã vô hiệu hóa...",
+    "refreshPartialSkipped": "Làm mới hoàn tất: {{success}} thành công, {{skipped}} bỏ qua",
+    "refreshSuccess": "Tất cả tài khoản làm mới thành công!"
+  },
+  "search": {
+    "noResults": "Không tìm thấy tài khoản phù hợp",
+    "placeholder": "Nhập thông tin trang web hoặc thông tin tài khoản để tìm kiếm"
+  },
+  "stats": {
+    "completion": "Hoàn thành",
+    "prompt": "Nhắc nhở",
+    "todayConsumption": "Tiêu hao hôm nay",
+    "todayIncome": "Thu nhập hôm nay",
+    "totalBalance": "Tổng số dư"
+  },
+  "title": "Quản lý tài khoản"
+}

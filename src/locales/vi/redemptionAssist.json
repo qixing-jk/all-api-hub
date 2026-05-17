@@ -1,0 +1,53 @@
+{
+  "accountSelect": {
+    "confirm": "Xác nhận đổi mã",
+    "noResults": "Không tìm thấy tài khoản phù hợp, vui lòng điều chỉnh điều kiện tìm kiếm",
+    "title": "Chọn tài khoản để đổi mã",
+    "titleFallback": "Không tìm thấy tài khoản khớp với trang web hiện tại, vui lòng chọn thủ công một tài khoản",
+    "titleMultiple": "Phát hiện nhiều tài khoản khả dụng, vui lòng chọn một tài khoản để đổi mã"
+  },
+  "actions": {
+    "autoRedeem": "Tự động đổi mã"
+  },
+  "messages": {
+    "batchResultSummary": "Tổng cộng {{total}}, thành công {{success}}, thất bại {{failed}}.",
+    "batchResultTitle": "Kết quả đổi mã",
+    "cancelled": "Đã hủy",
+    "noAccountForUrl": "Trang web hiện tại chưa được cấu hình tài khoản trong All API Hub, vui lòng thêm trang web này vào tiện ích mở rộng trước rồi thử lại.",
+    "promptConfirm": "Phát hiện mã có thể là mã đổi thưởng {{code}}, bạn có muốn thử tự động đổi mã cho trang web hiện tại không?",
+    "promptConfirmBatch_other": "Phát hiện {{count}} mã có thể là mã đổi thưởng. Vui lòng chọn mã bạn muốn thử tự động đổi cho trang hiện tại.",
+    "promptSettingsLink": "Mở cài đặt Trợ lý đổi mã",
+    "promptSource": "Lời nhắc này đến từ tiện ích mở rộng trình duyệt All API Hub",
+    "promptTitle": "Trợ lý đổi mã",
+    "redeemFailed": "Đổi mã thất bại, vui lòng thử lại sau.",
+    "redeemLoading": "Đang thử đổi mã, vui lòng đợi…",
+    "redeemSuccess": "Đổi mã thành công, số dư nhận được: {{amount}}",
+    "selectAll": "Chọn tất cả",
+    "success": {
+      "settingsSaved": "Đã lưu cài đặt Trợ lý đổi mã"
+    }
+  },
+  "settings": {
+    "contextMenu": {
+      "enable": "Hiển thị trong menu chuột phải của trình duyệt",
+      "enableDesc": "Khi được bật, mục \"Trợ lý đổi mã\" sẽ hiển thị trong menu chuột phải khi bạn chọn văn bản."
+    },
+    "description": "Cấu hình cách tiện ích mở rộng phát hiện mã đổi thưởng trên các trang được hỗ trợ và hỗ trợ quá trình đổi mã",
+    "enable": "Bật Trợ lý đổi mã",
+    "enableDesc": "Tự động phát hiện mã đổi thưởng trên các trang được hỗ trợ và hiển thị lời nhắc đổi mã",
+    "relaxedCodeValidation": "Nới lỏng giới hạn định dạng mã đổi thưởng",
+    "relaxedCodeValidationDesc": "Khi được bật, bất kỳ nội dung nào có 32 ký tự sẽ được coi là một mã đổi thưởng có thể (không kiểm tra bộ ký tự).",
+    "title": "Trợ lý đổi mã",
+    "urlWhitelist": {
+      "enable": "Bật danh sách trắng URL",
+      "enableDesc": "Khi được bật, Trợ lý đổi mã sẽ chỉ hoạt động trên các URL trang được cho phép bởi các quy tắc bên dưới.",
+      "includeAccountSiteUrls": "Bao gồm URL của trang web tài khoản",
+      "includeAccountSiteUrlsDesc": "Cho phép tất cả các trang dưới URL của trang web của mỗi tài khoản (cùng nguồn gốc).",
+      "includeCheckInAndRedeemUrls": "Bao gồm URL điểm danh/đổi mã",
+      "includeCheckInAndRedeemUrlsDesc": "Cho phép trang điểm danh và đổi mã của mỗi tài khoản (tùy chỉnh hoặc mặc định).",
+      "patterns": "Quy tắc biểu thức chính quy tùy chỉnh",
+      "patternsDesc": "Mỗi dòng là một biểu thức chính quy theo cú pháp JavaScript RegExp (không phân biệt chữ hoa chữ thường khi khớp).",
+      "patternsPlaceholder": "^https://example\\.com/console/topup"
+    }
+  }
+}

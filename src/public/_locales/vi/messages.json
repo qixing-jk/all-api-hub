@@ -1,0 +1,20 @@
+{
+  "manifest_name": {
+    "message": "All API Hub - Trình quản lý tài sản AI tất cả trong một"
+  },
+  "manifest_description": {
+    "message": "Quản lý số dư/mức sử dụng, tự động điểm danh, xuất key một lần nhập cho các client phổ biến, kiểm tra API ngay trong trang, đồng bộ và chuyển hướng kênh/mô hình"
+  },
+  "manifest_commands_sidebar_action": {
+    "message": "Mở All API Hub trong thanh bên"
+  },
+  "manifest_commands_browser_action": {
+    "message": "Mở All API Hub trong popup"
+  },
+  "context_menu_redeem_selection": {
+    "message": "Đổi nội dung đã chọn bằng trợ lý đổi mã"
+  },
+  "context_menu_ai_api_check": {
+    "message": "Kiểm tra nhanh khả dụng chức năng của AI API"
+  }
+}

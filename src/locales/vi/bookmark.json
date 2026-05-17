@@ -1,0 +1,57 @@
+{
+  "actions": {
+    "add": "Thêm dấu trang",
+    "copyUrl": "Sao chép liên kết",
+    "open": "Mở",
+    "pin": "Ghim",
+    "unpin": "Bỏ ghim"
+  },
+  "addFirstBookmark": "Thêm dấu trang đầu tiên",
+  "delete": {
+    "description": "Sẽ xóa vĩnh viễn \"{{name}}\".",
+    "title": "Xóa dấu trang?"
+  },
+  "description": "Lưu các liên kết lối tắt đến bảng điều khiển/tài liệu/trang quản trị của trang web v.v. mà không cần tạo tài khoản đầy đủ.",
+  "dialog": {
+    "currentPageLabel": "Trang hiện tại",
+    "currentPageUnavailable": "Tạm thời không thể đọc trang hiện tại",
+    "description": "Dấu trang có thể là bất kỳ liên kết nào, ví dụ như bảng điều khiển của trang web, tài liệu, trang quản trị, v.v. Thích hợp cho các trường hợp không thể tạo tài khoản đầy đủ.",
+    "titleAdd": "Thêm dấu trang",
+    "titleEdit": "Chỉnh sửa dấu trang",
+    "useCurrentPage": "Điền trang hiện tại"
+  },
+  "emptyState": "Chưa có dấu trang",
+  "filter": {
+    "tagsAllLabel": "Tất cả thẻ"
+  },
+  "form": {
+    "nameLabel": "Tên",
+    "namePlaceholder": "Ví dụ: Bảng điều khiển trang web",
+    "notesLabel": "Ghi chú",
+    "notesPlaceholder": "Ghi chú tùy chọn...",
+    "tagsLabel": "Thẻ",
+    "tagsPlaceholder": "Chọn thẻ...",
+    "urlLabel": "Liên kết",
+    "urlPlaceholder": "https://example.com/..."
+  },
+  "list": {
+    "dragHandle": "Kéo để sắp xếp dấu trang"
+  },
+  "search": {
+    "placeholder": "Tìm kiếm dấu trang..."
+  },
+  "stats": {
+    "pinnedBookmarks": "Dấu trang đã ghim",
+    "totalBookmarks": "Tổng số dấu trang",
+    "usedTags": "Thẻ đã sử dụng"
+  },
+  "switch": {
+    "accounts": "Tài khoản",
+    "bookmarks": "Dấu trang"
+  },
+  "title": "Quản lý dấu trang",
+  "validation": {
+    "nameRequired": "Tên không được để trống",
+    "urlRequired": "Liên kết không được để trống"
+  }
+}

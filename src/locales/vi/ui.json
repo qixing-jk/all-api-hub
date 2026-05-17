@@ -1,0 +1,425 @@
+{
+  "app": {
+    "description": "Quản lý tập trung tài khoản và số dư của các trạm trung chuyển bên thứ ba và trang web tự lưu trữ",
+    "name": "All API Hub"
+  },
+  "billing": {
+    "notProvided": "Chưa cung cấp",
+    "perCall": "Tính phí theo lần",
+    "tokenBased": "Tính phí theo lượng"
+  },
+  "dialog": {
+    "ccswitch": {
+      "actions": {
+        "export": "Xuất"
+      },
+      "appOptions": {
+        "claude": "Claude",
+        "codex": "Codex",
+        "gemini": "Gemini",
+        "openclaw": "OpenClaw",
+        "opencode": "OpenCode"
+      },
+      "description": "Nhập cấu hình trang web hiện tại vào CC Switch bằng một cú nhấp chuột thông qua liên kết sâu",
+      "descriptions": {
+        "model": "Nếu khả dụng, danh sách mô hình sẽ tự động được lấy từ /v1/models để lựa chọn; bạn cũng có thể nhập trực tiếp tên mô hình tùy chỉnh."
+      },
+      "fields": {
+        "app": "Ứng dụng đích",
+        "endpoint": "Địa chỉ API",
+        "homepage": "Địa chỉ trang chủ",
+        "model": "Mô hình mặc định (tùy chọn)",
+        "name": "Tên nhà cung cấp",
+        "notes": "Ghi chú (tùy chọn)"
+      },
+      "modelOptions": {
+        "none": "Không đặt mô hình mặc định"
+      },
+      "notices": {
+        "openclaw": "CC Switch hiện không hỗ trợ định dạng API của dịch vụ OpenClaw AI thông qua nhập bên ngoài; nếu cần, vui lòng điều chỉnh thủ công trong CC Switch sau khi nhập.",
+        "opencode": "CC Switch hiện không hỗ trợ định dạng API của dịch vụ OpenCode AI thông qua nhập bên ngoài; nếu cần, vui lòng điều chỉnh thủ công trong CC Switch sau khi nhập."
+      },
+      "placeholders": {
+        "endpoint": "https://example.com",
+        "homepage": "https://example.com",
+        "model": "Ví dụ claude-3-opus",
+        "name": "Ví dụ Acme Relay",
+        "notes": "Thêm hướng dẫn nhập"
+      },
+      "title": "Xuất sang CC Switch"
+    },
+    "claudeCodeRouter": {
+      "description": "Tạo hoặc cập nhật Provider trong Claude Code Router (bắt buộc điền mô hình).",
+      "descriptions": {
+        "models": "Mỗi dòng một mô hình, hoặc phân tách bằng dấu phẩy.",
+        "providerApiBaseUrl": "Cần điền đầy đủ endpoint /v1/chat/completions.",
+        "restartAfterSave": "Trong một số trường hợp, cần khởi động lại để cấu hình có hiệu lực."
+      },
+      "fields": {
+        "models": "Danh sách mô hình",
+        "providerApiBaseUrl": "Địa chỉ API Provider",
+        "providerName": "Tên Provider",
+        "restartAfterSave": "Khởi động lại sau khi lưu"
+      },
+      "placeholders": {
+        "modelsPicker": "Nhập để thêm mô hình",
+        "providerApiBaseUrl": "https://example.com/v1/chat/completions",
+        "providerName": "Ví dụ Trạm trung chuyển của tôi"
+      },
+      "title": "Nhập vào Claude Code Router"
+    },
+    "cliproxy": {
+      "actions": {
+        "addModel": "Thêm mô hình",
+        "removeModel": "Xóa mô hình",
+        "reorderModel": "Điều chỉnh thứ tự mô hình"
+      },
+      "description": "Tạo hoặc cập nhật một mục Provider trong CLIProxyAPI.",
+      "descriptions": {
+        "baseUrlClaudeApiKey": "Thường điền địa chỉ gốc của Anthropic API mà không có /v1/messages.",
+        "baseUrlCodexApiKey": "Thường điền địa chỉ gốc của Provider, giá trị mặc định phổ biến như https://api.openai.com.",
+        "baseUrlGeminiApiKey": "Thường điền địa chỉ gốc của Gemini API mà không có /v1/models/...",
+        "baseUrlOpenAICompatibility": "Thường điền địa chỉ cơ sở tương thích OpenAI kết thúc bằng /v1 của upstream.",
+        "models": "Ánh xạ tên mô hình upstream sang bí danh tùy chọn (name -> alias). Nếu khả dụng, các mô hình upstream có sẵn sẽ được tải để lựa chọn.",
+        "modelsManual": "Ánh xạ tên mô hình upstream sang bí danh tùy chọn (name -> alias). Trong phiên bản hiện tại, loại Provider này yêu cầu nhập thủ công mô hình upstream.",
+        "providerType": "Chọn loại Provider CLIProxyAPI để nhập vào.",
+        "proxyUrl": "Tùy chọn. URL proxy dùng cho mục API Key này."
+      },
+      "fields": {
+        "baseUrl": "URL cơ sở Provider",
+        "models": "Ánh xạ mô hình (tùy chọn)",
+        "name": "Tên Provider",
+        "providerType": "Loại Provider",
+        "proxyUrl": "URL proxy (tùy chọn)"
+      },
+      "placeholders": {
+        "baseUrlClaudeApiKey": "https://api.anthropic.com",
+        "baseUrlCodexApiKey": "https://api.openai.com",
+        "baseUrlGeminiApiKey": "https://generativelanguage.googleapis.com",
+        "baseUrlOpenAICompatibility": "https://example.com/v1",
+        "modelAlias": "Bí danh mô hình (tùy chọn)",
+        "modelName": "Tên mô hình, ví dụ claude",
+        "name": "Ví dụ: Acme Relay",
+        "providerType": "Chọn loại Provider",
+        "proxyUrl": "http://localhost:3000"
+      },
+      "providerTypes": {
+        "claudeApiKey": {
+          "description": "Áp dụng cho mục Provider API Key theo kiểu Anthropic Claude.",
+          "label": "Claude API Key"
+        },
+        "codexApiKey": {
+          "description": "Áp dụng cho mục Provider API Key theo kiểu Codex / OpenAI.",
+          "label": "Codex API Key"
+        },
+        "geminiApiKey": {
+          "description": "Áp dụng cho mục Provider API Key theo kiểu Google Gemini.",
+          "label": "Gemini API Key"
+        },
+        "openaiCompatibility": {
+          "description": "Áp dụng cho Provider tương thích OpenAI tiêu chuẩn, có thể tùy chỉnh tên Provider.",
+          "label": "Tương thích OpenAI"
+        }
+      },
+      "title": "Nhập vào CLIProxyAPI"
+    },
+    "collapse": "Thu gọn",
+    "copyKey": {
+      "apiKey": "API Key",
+      "copied": "Đã sao chép",
+      "copy": "Sao chép",
+      "copyFailedManual": "Sao chép thất bại, vui lòng sao chép thủ công",
+      "createCustomKey": "Tạo API Key tùy chỉnh",
+      "createFailed": "Tạo API Key thất bại: {{error}}",
+      "createKey": "Tạo nhanh API Key mặc định",
+      "createNotSupported": "Tài khoản này hiện không hỗ trợ tạo API Key tại đây.",
+      "createSuccess": "Đã tạo API Key",
+      "creatingKey": "Đang tạo nhanh API Key mặc định...",
+      "defaultGroup": "Nhóm mặc định",
+      "disabled": "Vô hiệu hóa",
+      "enabled": "Kích hoạt",
+      "expireTime": "Thời gian hết hạn: {{time}}",
+      "exportToCCSwitch": "Xuất sang CC Switch",
+      "getFailed": "Lấy dữ liệu thất bại",
+      "keyCopied": "Đã sao chép API Key vào khay nhớ tạm",
+      "loadFailed": "Tải danh sách API Key thất bại: {{error}}",
+      "loading": "Đang lấy danh sách API Key...",
+      "noKeyFoundAfterCreate": "Tạo thành công nhưng không lấy được API Key, vui lòng thử lại.",
+      "noKeys": "Chưa có dữ liệu API Key",
+      "noKeysDescription": "Tài khoản này hiện không có API Key khả dụng, bạn có thể tạo nhanh API Key mặc định hoặc tạo tùy chỉnh rồi sao chép.",
+      "remainingQuota": "Hạn mức còn lại",
+      "retry": "Thử lại",
+      "title": "Danh sách API Key",
+      "totalKeys_other": "Tổng cộng {{count}} API Key",
+      "usedQuota": "Hạn mức đã dùng",
+      "useInCherry": "Sử dụng trong Cherry Studio"
+    },
+    "dedupeAccounts": {
+      "confirm": {
+        "confirmDelete": "Xác nhận xóa",
+        "description": "Sẽ xóa {{deleteCount}} tài khoản (tổng cộng {{groups}} nhóm trùng lặp).",
+        "title": "Xóa tài khoản trùng lặp",
+        "warningOrder": "Sắp xếp tùy chỉnh sẽ được điều chỉnh tự động.",
+        "warningPinned_other": "Sẽ xóa {{count}} tài khoản đã ghim."
+      },
+      "delete": "Xóa",
+      "deleting": "Đang xóa tài khoản trùng lặp...",
+      "description": "Quét tài khoản trùng lặp theo URL gốc + ID người dùng, và xóa các mục trùng lặp sau khi xem trước và xác nhận.",
+      "details": {
+        "accountId": "ID tài khoản",
+        "authType": "Phương thức xác thực",
+        "autoCheckin": "Tự động điểm danh",
+        "checkinDetection": "Phát hiện điểm danh",
+        "createdAt": "Thời gian tạo",
+        "customCheckinUrl": "URL điểm danh tùy chỉnh",
+        "excludeFromTotalBalance": "Loại trừ khỏi tổng số dư",
+        "health": "Trạng thái sức khỏe",
+        "healthReason": "Lý do",
+        "lastSync": "Đồng bộ lần cuối",
+        "notes": "Ghi chú",
+        "quota": "Điểm số dư",
+        "siteType": "Loại trang web",
+        "todayConsumption": "Điểm tiêu thụ hôm nay",
+        "todayRequests": "Số yêu cầu hôm nay",
+        "todayTokens": "Tokens hôm nay",
+        "updatedAt": "Thời gian cập nhật",
+        "userId": "ID người dùng"
+      },
+      "detailsToggle": {
+        "hide": "Thu gọn thông tin",
+        "show": "Thêm thông tin"
+      },
+      "duplicateCount_other": "{{count}} tài khoản",
+      "empty": "Không tìm thấy tài khoản trùng lặp.",
+      "keep": "Giữ lại",
+      "manualPickHint": "Bạn có thể chọn thủ công tài khoản muốn giữ lại trong mỗi nhóm (chọn thủ công sẽ ghi đè chính sách giữ lại).",
+      "previewDelete": "Xem trước xóa",
+      "recommended": "Đề xuất",
+      "strategy": {
+        "keepEnabled": "Ưu tiên giữ lại đã bật (nếu có)",
+        "keepMostRecentlyUpdated": "Ưu tiên giữ lại cập nhật gần nhất",
+        "keepPinned": "Ưu tiên giữ lại đã ghim (nếu có)"
+      },
+      "strategyLabel": "Chính sách giữ lại",
+      "summary": "{{groups}} nhóm trùng lặp · chờ xóa {{deleteCount}} tài khoản",
+      "title": "Dọn dẹp tài khoản trùng lặp",
+      "unscannableHint_other": "{{count}} tài khoản không thể quét, đã bỏ qua.",
+      "userId": "ID người dùng: {{userId}}"
+    },
+    "delete": {
+      "confirmDelete": "Xác nhận xóa",
+      "confirmDeletion": "Xác nhận xóa",
+      "deleteFailed": "Xóa thất bại: {{error}}",
+      "deleteSuccess": "Tài khoản {{name}} đã được xóa thành công!",
+      "deleting": "Đang xóa tài khoản {{name}}...",
+      "noResponse": "Thao tác xóa không trả về thành công",
+      "siteName": "Tên trang web",
+      "siteUrl": "Địa chỉ trang web",
+      "title": "Xóa tài khoản",
+      "username": "Tên người dùng",
+      "warning": "Bạn sắp xóa tài khoản {{accountName}}. Vui lòng kiểm tra và xác nhận có muốn xóa tài khoản này hay không"
+    },
+    "expand": "Mở rộng",
+    "firefox": {
+      "confirm": "Xác nhận",
+      "howOpenSidebar": "Cách mở thanh bên",
+      "limitation": "Giới hạn tính năng trên trình duyệt Firefox",
+      "openSidebar": "Mở thanh bên",
+      "popupLimitation": "Không thể sử dụng bình thường tính năng này trong cửa sổ bật lên của trình duyệt Firefox. Vui lòng sử dụng chế độ thanh bên để thêm tài khoản",
+      "sidebarInstruction": "Nhấp vào biểu tượng tiện ích trong thanh công cụ của trình duyệt, sau đó chọn \"Thanh bên\" để mở chế độ thanh bên",
+      "warningTitle": "Nhắc nhở giới hạn tính năng"
+    },
+    "kiloCode": {
+      "actions": {
+        "copyApiConfigs": "Sao chép apiConfigs",
+        "createDefaultToken": "Tạo API Key mặc định",
+        "downloadSettings": "Tải xuống cài đặt"
+      },
+      "description": "Tạo cấu hình providerProfiles cho Kilo Code / Roo Code dựa trên các trang web và API Key đã chọn.",
+      "descriptions": {
+        "currentApiConfigName": "Sẽ được dùng làm providerProfiles.currentApiConfigName trong tệp {{filename}} đã tải xuống.",
+        "modelId": "Đề xuất lựa chọn (theo API Key, việc sử dụng thực tế của Kilo Code thường yêu cầu ID mô hình). Mặc định sử dụng mô hình đầu tiên trong danh sách mô hình upstream của API Key đó.",
+        "selectedSites": "Trang web đã chọn: {{sites}}, API Key đã chọn: {{keys}}."
+      },
+      "help": {
+        "afterExportDescription": "Đề xuất hai cách:",
+        "afterExportTitle": "Cách sử dụng sau khi xuất",
+        "importDescription": "Nhấp vào \"Tải xuống cài đặt\" để lưu {{filename}}, sau đó nhập vào Kilo Code. Việc nhập là thêm nhà cung cấp theo kiểu gia tăng: sẽ không xóa các nhà cung cấp hiện có của bạn (các mục cùng tên có thể được cập nhật).",
+        "importTitle": "Cách 2: Nhập tệp (Tải xuống cài đặt)",
+        "manualDescription": "Nhấp vào \"Sao chép apiConfigs\", tìm providerProfiles.apiConfigs trong cấu hình đã xuất của Kilo Code / Roo Code và dán vào đó.",
+        "manualTitle": "Cách 1: Dán thủ công (Sao chép apiConfigs)",
+        "perSiteDescription": "Sau khi chọn trang web để xuất, các API Key sẽ tự động được tải, và API Key đầu tiên được chọn mặc định (hỗ trợ chọn nhiều cho mỗi trang web).",
+        "perSiteTitle": "Xuất theo trang web"
+      },
+      "labels": {
+        "currentApiConfigName": "Cấu hình hiện tại",
+        "modelId": "ID mô hình",
+        "selectedSites": "Các trang web đã chọn",
+        "selectedTokens": "Các API Key đã chọn"
+      },
+      "messages": {
+        "accountNotFound": "Không tìm thấy tài khoản.",
+        "copiedApiConfigs": "Đã sao chép apiConfigs",
+        "copyFailed": "Sao chép thất bại",
+        "createTokenFailed": "Tạo API Key thất bại.",
+        "downloadedSettings": "Đã tải xuống tệp cài đặt",
+        "downloadFailed": "Tải tệp cài đặt thất bại",
+        "loadingTokens": "Đang tải danh sách API Key...",
+        "loadModelsFailed": "Tải danh sách mô hình của API Key này thất bại.",
+        "loadTokensFailed": "Tải API Key thất bại.",
+        "modelIdRequiredDescription_other": "Vui lòng chọn hoặc nhập model ID cho tất cả API Key đã chọn trước khi xuất (còn thiếu {{count}}).",
+        "modelIdRequiredTitle": "Yêu cầu ID mô hình",
+        "noModelsDescription": "API Key này không trả về mô hình khả dụng. Kilo Code thực tế sử dụng thường yêu cầu ID mô hình, vui lòng nhập thủ công.",
+        "noModelsTitle": "Không có mô hình",
+        "nothingToExportDescription": "Vui lòng chọn ít nhất một trang web/API Key có thể xuất trước khi sao chép/tải xuống.",
+        "nothingToExportTitle": "Không có nội dung để xuất",
+        "noTokensDescription": "Trang web này sẽ bị bỏ qua cho đến khi tạo API Key.",
+        "noTokensTitle": "Chưa có API Key",
+        "tokenCreated": "Tạo API Key thành công"
+      },
+      "placeholders": {
+        "currentApiConfigName": "Vui lòng chọn cấu hình hiện tại",
+        "modelId": "Tìm kiếm hoặc nhập ID mô hình",
+        "selectSites": "Vui lòng chọn trang web",
+        "selectTokens": "Vui lòng chọn API Key"
+      },
+      "title": "Xuất JSON Kilo Code",
+      "warning": {
+        "description": "JSON được xuất chứa API Key dạng văn bản rõ, vui lòng lưu trữ cẩn thận và không làm rò rỉ.",
+        "title": "API Key văn bản rõ"
+      }
+    },
+    "tempWindowFallbackReminder": {
+      "actions": {
+        "neverRemind": "Không nhắc lại",
+        "notNow": "Để sau",
+        "openSettings": "Mở cài đặt"
+      },
+      "descriptionDisabledTempWindowOnly": "Các yêu cầu mạng của {{accountName}} cần bật cửa sổ tạm thời để vượt qua bảo vệ, nhằm đảm bảo yêu cầu hoàn thành thành công. Vui lòng kích hoạt trong Cài đặt > Làm mới dữ liệu",
+      "descriptionDisabledWithCookieInterceptor": "{{accountName}} cần bật quy trình vượt khiên trong Firefox. Tiện ích sẽ bật cửa sổ tạm thời để lấy Cookie và tự động đính kèm các Cookie này qua bộ chặn Cookie khi gửi yêu cầu, vui lòng kích hoạt trong Cài đặt > Làm mới dữ liệu",
+      "descriptionPermissionTempWindowOnly": "{{accountName}} cần quyền mở cửa sổ tạm thời để hoàn thành yêu cầu, vui lòng cấp quyền trong Cài đặt > Quyền",
+      "descriptionPermissionWithCookieInterceptor": "{{accountName}} cần quyền chặn Cookie trong Firefox. Tiện ích cần bật cửa sổ tạm thời để lấy Cookie và tự động đính kèm thông tin xác thực khi gửi yêu cầu, vui lòng cấp quyền trong Cài đặt > Quyền",
+      "titleTempWindowOnly": "Bật chế độ cửa sổ tạm thời để hoàn thành yêu cầu mạng",
+      "titleWithCookieInterceptor": "Bật quy trình vượt khiên để hoàn thành yêu cầu mạng"
+    },
+    "updateLog": {
+      "disableAutoOpen": "Không tự động mở nữa",
+      "enableAutoOpen": "Bật lại tự động mở",
+      "loading": "Đang tải nhật ký cập nhật...",
+      "missingSection": "Tải bản xem trước nhật ký cập nhật thất bại (v{{version}}). Bạn có thể mở toàn bộ nhật ký cập nhật để xem.",
+      "openFullChangelog": "Mở toàn bộ nhật ký cập nhật",
+      "title": "Nội dung cập nhật",
+      "updatedTo": "Đã cập nhật lên v{{version}}"
+    }
+  },
+  "feedback": {
+    "bugReport": "Báo cáo lỗi",
+    "community": "Nhóm cộng đồng",
+    "discussion": "Tham gia thảo luận",
+    "featureRequest": "Đề xuất tính năng",
+    "siteSupportRequest": "Phản hồi trang web chưa được hỗ trợ",
+    "trigger": "Phản hồi",
+    "triggerTooltip": "Mở lối tắt phản hồi"
+  },
+  "modelListInput": {
+    "actions": {
+      "add": "Thêm mô hình",
+      "remove": "Xóa mô hình",
+      "reorder": "Kéo để sắp xếp"
+    },
+    "description": "Ví dụ: gpt-4o-mini hoặc moonshotai/kimi-k2:free, kimi-k2",
+    "placeholders": {
+      "alias": "Bí danh mô hình (tùy chọn)",
+      "name": "Tên mô hình, ví dụ claude"
+    },
+    "title": "Danh sách mô hình (mỗi dòng một name[, alias]):"
+  },
+  "multiSelect": {
+    "cancelSelected": "Hủy chọn mục hiện tại",
+    "chipCopied": "Đã sao chép: {{value}}",
+    "clearInput": "Xóa dữ liệu nhập",
+    "clearSelected": "Xóa tất cả mục đã chọn",
+    "copyChipValue": "Sao chép {{value}}",
+    "copyError": "Sao chép thất bại, vui lòng thử lại",
+    "copySelectedValues": "Sao chép các mục đã chọn",
+    "copySuccess": "Đã sao chép nội dung đã chọn",
+    "emptyWithQueryAllowCustom": "Nhấn Enter để thêm \"{{value}}\"",
+    "noOptions": "Hiện không có tùy chọn nào",
+    "noOptionsAllowCustom": "Hiện không có tùy chọn, bạn có thể nhập để tạo",
+    "placeholder": "Vui lòng chọn...",
+    "removeValue": "Xóa {{value}}",
+    "selectAll": "Chọn tất cả",
+    "selected": "Đã chọn"
+  },
+  "navigation": {
+    "about": "Giới thiệu",
+    "account": "Quản lý tài khoản",
+    "apiCredentialProfiles": "Kho API Credentials",
+    "autoCheckin": "Tự động điểm danh",
+    "autoCheckinRunNow": "Điểm danh nhanh",
+    "balanceHistory": "Lịch sử số dư",
+    "basic": "Cài đặt cơ bản",
+    "bookmark": "Quản lý dấu trang",
+    "categories": {
+      "api": "API",
+      "automation": "Tự động hóa",
+      "general": "Chung",
+      "insights": "Thông tin chi tiết",
+      "siteManagement": "Quản lý trang web",
+      "system": "Hệ thống"
+    },
+    "collapseSidebar": "Thu gọn thanh bên",
+    "expandSidebar": "Mở rộng thanh bên",
+    "externalCheckinAll": "Mở điểm danh bên ngoài bằng một nhấp",
+    "externalCheckinAllHint": "Mặc định chỉ mở các mục chưa điểm danh; Ctrl/Cmd để mở tất cả; Shift để mở trong cửa sổ mới; Ctrl/Cmd+Shift có hiệu lực đồng thời.",
+    "importExport": "Nhập/Xuất",
+    "keys": "Quản lý API Key",
+    "managedSiteChannels": "Quản lý kênh",
+    "managedSiteModelSync": "Đồng bộ mô hình",
+    "meshGradientLab": "Mesh Gradient Lab (Dev)",
+    "models": "Danh sách mô hình",
+    "settings": "Cài đặt",
+    "settingsOptions": "Tùy chọn cài đặt",
+    "sidebarCollapsedHint": "Thanh bên đã được thu gọn, chỉ hiển thị biểu tượng",
+    "siteAnnouncements": "Thông báo trang web",
+    "toggleMenu": "Chuyển đổi menu",
+    "usageAnalytics": "Phân tích sử dụng"
+  },
+  "optionsSearch": {
+    "dialogDescription": "Tìm kiếm trang, nhãn cài đặt và mục cài đặt",
+    "dialogTitle": "Tìm kiếm cài đặt",
+    "emptyDescription": "Hãy thử tiêu đề, từ khóa hoặc bí danh kỹ thuật khác.",
+    "emptyTitle": "Không tìm thấy cài đặt phù hợp",
+    "groups": {
+      "control": "Mục cài đặt",
+      "page": "Trang",
+      "recent": "Truy cập gần đây",
+      "tab": "Nhãn cài đặt"
+    },
+    "idleDescription": "Nhập tên cài đặt, từ khóa hoặc bí danh kỹ thuật để bắt đầu tìm kiếm.",
+    "idleTitle": "Tìm kiếm tất cả cài đặt",
+    "open": "Mở tìm kiếm cài đặt",
+    "placeholder": "Tìm kiếm cài đặt..."
+  },
+  "pageTitle": {
+    "app": "All API Hub",
+    "options": "Cài đặt",
+    "popup": "Cửa sổ bật lên",
+    "sidepanel": "Thanh bên",
+    "template": "{{page}} | {{app}}"
+  },
+  "repeatableInput": {
+    "actions": {
+      "add": "Thêm",
+      "remove": "Xóa",
+      "reorder": "Kéo để sắp xếp"
+    }
+  },
+  "searchableSelect": {
+    "empty": "Không tìm thấy mục phù hợp",
+    "noOptions": "Hiện không có tùy chọn nào",
+    "noOptionsAllowCustom": "Hiện không có tùy chọn, bạn có thể nhập để tạo",
+    "searchPlaceholder": "Tìm kiếm...",
+    "useValue": "Sử dụng \"{{value}}\""
+  }
+}

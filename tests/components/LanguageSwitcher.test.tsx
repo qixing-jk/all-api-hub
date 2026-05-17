@@ -242,6 +242,21 @@ describe("LanguageSwitcher", () => {
     })
   })
 
+  it("shows and persists Vietnamese from the select variant", async () => {
+    render(<LanguageSwitcher variant="select" />)
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "settings:appearanceLanguage.switcher.options.vi.name",
+      }),
+    )
+
+    expect(changeLanguageMock).toHaveBeenCalledWith("vi")
+    await waitFor(() => {
+      expect(setLanguageMock).toHaveBeenCalledWith("vi")
+    })
+  })
+
   it("renders the icon-dropdown trigger label and changes language from the radio menu", () => {
     render(<LanguageSwitcher variant="icon-dropdown" />)
 

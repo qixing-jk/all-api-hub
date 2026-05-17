@@ -1,0 +1,243 @@
+{
+  "accountOperations": {
+    "autoProvisionAlreadyHad": "{{accountName}} đã có API Key, đã bỏ qua việc tạo tự động.",
+    "autoProvisionCreated": "Đã tự động tạo API Key mặc định cho {{accountName}}.",
+    "autoProvisionFailed": "Tài khoản đã được lưu, nhưng việc tự động tạo API Key thất bại. Bạn có thể sử dụng \"{{actionLabel}}\" trong phần quản lý khóa để thử lại.",
+    "checkingApiKeys": "Đang kiểm tra các API Key...",
+    "createTokenFailed": "Tạo API token thất bại",
+    "importingToAxonHub": "Đang nhập vào AxonHub...",
+    "importingToClaudeCodeHub": "Đang nhập vào Claude Code Hub...",
+    "importingToDoneHub": "Đang nhập vào Done Hub...",
+    "importingToNewApi": "Đang nhập vào New API...",
+    "importingToOctopus": "Đang nhập vào Octopus...",
+    "importingToVeloera": "Đang nhập vào Veloera...",
+    "retrying": "Đã xảy ra lỗi, đang thử lại lần thứ {{attempt}}",
+    "tokenNotFound": "Không thể tạo hoặc tìm thấy API token"
+  },
+  "aihubmix": {
+    "createRequiresOneTimeKeyDialog": "Khóa do AIHubMix tạo chỉ có thể xem một lần, vui lòng tạo thủ công trong phần quản lý khóa và lưu lại toàn bộ khóa ngay lập tức.",
+    "oneTimeKeyPromptCancelled": "Tài khoản đã được lưu. Bạn có thể tạo thủ công AIHubMix API Key trong phần quản lý khóa sau.",
+    "oneTimeKeyUnavailableAfterCreate": "Tài khoản đã được lưu, nhưng không thể lấy toàn bộ AIHubMix API Key. Khóa AIHubMix chỉ hiển thị một lần khi tạo, vui lòng tạo lại trong phần quản lý khóa và lưu lại toàn bộ khóa ngay lập tức."
+  },
+  "autodetect": {
+    "currentTabNeedsReload": "Trang hiện tại có thể đã được mở trước khi cài đặt hoặc cập nhật tiện ích, plugin tạm thời không thể đọc thông tin của thẻ này. Vui lòng làm mới trang hiện tại rồi thử lại tính năng nhận dạng tự động.",
+    "failed": "Nhận dạng tự động thất bại: {{error}}",
+    "forbidden": "Truy cập bị từ chối. Vui lòng kiểm tra xem tường lửa của trang web có chặn các yêu cầu liên quan hay không.",
+    "loginThisSite": "Đăng nhập vào trang web này",
+    "networkError": "Kết nối mạng thất bại, vui lòng kiểm tra lại kết nối mạng và thử lại.",
+    "notFound": "Không tìm thấy tài nguyên liên quan, vui lòng xác nhận địa chỉ trang web đã nhập là chính xác.",
+    "notLoggedIn": "Bạn chưa đăng nhập vào trang web hiện tại hoặc thông tin đăng nhập đã hết hạn, không thể thêm tự động. Vui lòng đăng nhập trước hoặc xem tài liệu hướng dẫn.",
+    "serverError": "Lỗi máy chủ, vui lòng thử lại sau.",
+    "timeout": "Nhận dạng tự động quá thời gian, vui lòng thử thêm thủ công.",
+    "unexpectedData": "Nhận dạng tự động thất bại, dữ liệu trang web trả về không như mong đợi. Vui lòng nhập thông tin thủ công hoặc đảm bảo đã đăng nhập vào trang web mục tiêu."
+  },
+  "axonhub": {
+    "channelExists": "Kênh {{channelName}} đã tồn tại, không cần nhập lại",
+    "configMissing": "Vui lòng cấu hình địa chỉ AxonHub, email quản trị viên và mật khẩu trong phần Cài đặt cơ bản trước",
+    "deleteFailed": "Xóa kênh AxonHub thất bại",
+    "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
+    "importSuccess": "Đã nhập thành công kênh mới {{channelName}}",
+    "modelsMissing": "Vui lòng điền ít nhất một mô hình",
+    "noChannelsToSync": "Không có kênh nào để đồng bộ"
+  },
+  "background": {
+    "cannotCreateWindow": "Không thể tạo cửa sổ",
+    "cannotCreateWindowOrTab": "Không thể tạo cửa sổ hoặc lấy thẻ",
+    "incognitoAccessRequired": "Cần cho phép tiện ích hoạt động trong chế độ ẩn danh để sử dụng cửa sổ tạm thời ẩn danh, vui lòng bật \"Cho phép trong chế độ ẩn danh\" trên trang quản lý tiện ích và thử lại",
+    "invalidFetchRequest": "Tham số yêu cầu không hợp lệ",
+    "pageLoadTimeout": "Tải trang quá thời gian",
+    "windowCreationUnavailable": "Quy trình hiện tại yêu cầu trình duyệt mở một cửa sổ tạm thời, nhưng việc tạo cửa sổ không khả dụng. Vui lòng cho phép tiện ích tạo cửa sổ hoặc chuyển sang sử dụng trình duyệt hỗ trợ tính năng này rồi thử lại.",
+    "windowNotFound": "Không tìm thấy cửa sổ hoặc thẻ tương ứng"
+  },
+  "ccswitch": {
+    "attemptingRedirect": "Đang thử chuyển hướng đến CC Switch",
+    "invalidApp": "Ứng dụng mục tiêu CC Switch không được hỗ trợ",
+    "invalidEndpoint": "Địa chỉ giao diện không hợp lệ hoặc chưa được điền",
+    "invalidHomepage": "Địa chỉ trang chủ không hợp lệ hoặc chưa được điền",
+    "missingCredentials": "Thiếu thông tin tài khoản hoặc khóa cần thiết",
+    "unableToOpen": "Không thể mở CC Switch, vui lòng đảm bảo đã cài đặt"
+  },
+  "cherryStudio": {
+    "attemptingRedirect": "Đang thử chuyển hướng đến Cherry Studio",
+    "missingCredentials": "Thiếu thông tin tài khoản hoặc khóa cần thiết",
+    "unableToOpen": "Không thể mở, vui lòng đảm bảo đã cài đặt Cherry Studio."
+  },
+  "claudecodehub": {
+    "channelExists": "Nhà cung cấp {{channelName}} đã tồn tại, không cần nhập lại",
+    "configMissing": "Vui lòng cấu hình địa chỉ Claude Code Hub và token quản trị viên trong phần Cài đặt cơ bản trước",
+    "deleteFailed": "Xóa nhà cung cấp Claude Code Hub thất bại",
+    "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
+    "importSuccess": "Đã nhập thành công nhà cung cấp mới {{channelName}}",
+    "modelsMissing": "Vui lòng điền ít nhất một mô hình",
+    "noChannelsToSync": "Không có nhà cung cấp nào để đồng bộ",
+    "realProviderKeyRequired": "Tạo nhà cung cấp trong Claude Code Hub yêu cầu khóa gốc thực, không thể sử dụng khóa trống hoặc khóa đã bị che để tạo.",
+    "unsupportedModelSync": "Phiên bản hiện tại không hỗ trợ đồng bộ mô hình trạm quản lý Claude Code Hub",
+    "updateFailed": "Cập nhật nhà cung cấp Claude Code Hub thất bại"
+  },
+  "claudeCodeRouter": {
+    "configMissing": "Vui lòng cấu hình URL cơ sở của Claude Code Router trong phần cài đặt trước",
+    "importFailed": "Nhập vào Claude Code Router thất bại",
+    "importSuccess": "Đã nhập thành công nhà cung cấp {{name}} vào Claude Code Router",
+    "modelsMissing": "Vui lòng điền ít nhất một mô hình",
+    "updateSuccess": "Đã cập nhật thành công nhà cung cấp Claude Code Router {{name}}"
+  },
+  "cliproxy": {
+    "configMissing": "Vui lòng cấu hình địa chỉ quản lý và khóa của CLIProxyAPI trong phần cài đặt trước",
+    "importFailed": "Nhập vào CLIProxyAPI thất bại",
+    "importSuccess": "Đã nhập thành công nhà cung cấp {{name}} vào CLIProxyAPI",
+    "managementApiConnectionSuccess": "Kết nối CLIProxyAPI Management API bình thường",
+    "managementApiForbidden": "CLIProxyAPI đã từ chối yêu cầu hiện tại. Vui lòng kiểm tra xem khóa quản lý có bị nhập sai nhiều lần hay không, hoặc truy cập hiện tại có bị máy chủ giới hạn hay không.",
+    "managementApiHttpError": "CLIProxyAPI Management API trả về mã trạng thái bất thường (HTTP {{status}})",
+    "managementApiInvalidKey": "Khóa quản lý (Management Key) của CLIProxyAPI không hợp lệ, vui lòng kiểm tra xem khóa quản lý trong phần cài đặt có chính xác không.",
+    "managementApiNotFound": "Không tìm thấy CLIProxyAPI Management API. Vui lòng xác nhận URL cơ sở kết thúc bằng /v0/management và CLIProxyAPI đã được cấu hình khóa quản lý.",
+    "managementApiRemoteAccessDisabled": "CLIProxyAPI đã từ chối quyền truy cập quản lý từ xa. Vui lòng kiểm tra cấu hình remote-management.allow-remote: true trong cài đặt của CLIProxyAPI đã được bật chưa, hoặc đã bật quản lý từ xa qua MANAGEMENT_PASSWORD chưa, sau đó thử lại.",
+    "managementApiServerError": "CLIProxyAPI Management API trả về lỗi máy chủ (HTTP {{status}})",
+    "managementApiUnreachable": "Không thể kết nối với CLIProxyAPI Management API. Vui lòng kiểm tra URL cơ sở, trạng thái dịch vụ và kết nối mạng từ trình duyệt đến địa chỉ đó.",
+    "updateSuccess": "Đã cập nhật thành công nhà cung cấp CLIProxy {{name}}"
+  },
+  "content": {
+    "userInfoNotFound": "Không tìm thấy thông tin người dùng, vui lòng đảm bảo đã đăng nhập",
+    "waitUserInfoTimeout": "Đợi thông tin người dùng quá thời gian, vui lòng đảm bảo đã đăng nhập"
+  },
+  "donehub": {
+    "channelExists": "Kênh {{channelName}} đã tồn tại, không cần nhập lại",
+    "configMissing": "Vui lòng cấu hình địa chỉ Done Hub, token quản trị viên và ID người dùng trong phần Cài đặt cơ bản trước",
+    "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
+    "importSuccess": "Đã nhập thành công kênh mới {{channelName}}",
+    "noChannelsToSync": "Không có kênh nào để đồng bộ"
+  },
+  "errors": {
+    "api": {
+      "invalidResponseFormat": "Định dạng dữ liệu phản hồi không hợp lệ",
+      "onlyJsonSupported": "Chỉ hỗ trợ dữ liệu phản hồi JSON",
+      "requestFailed": "Yêu cầu thất bại: {{status}}"
+    },
+    "operation": {
+      "accountDataFetchTimeout": "Lấy dữ liệu tài khoản quá thời gian ({{seconds}} giây)",
+      "failed": "Thao tác thất bại: {{error}}",
+      "saveFailed": "Lưu thất bại: {{error}}"
+    },
+    "tokenSecretUnavailable": "Nền tảng này không hỗ trợ xem lại toàn bộ khóa lần thứ hai. Vui lòng sao chép và lưu lại ngay khi tạo khóa.",
+    "unknown": "Lỗi không xác định",
+    "validation": {
+      "bookmarkNameRequired": "Tên dấu trang không được để trống",
+      "bookmarkUrlRequired": "Liên kết dấu trang không được để trống",
+      "doneHubAdminTokenRequired": "Chưa cấu hình token quản trị viên của Done Hub",
+      "doneHubBaseUrlRequired": "Chưa cấu hình URL cơ sở của Done Hub",
+      "doneHubUserIdRequired": "Chưa cấu hình ID người dùng của Done Hub",
+      "incompleteAccountInfo": "Vui lòng điền đầy đủ thông tin tài khoản",
+      "newApiAdminTokenRequired": "Chưa cấu hình token quản trị viên của New API",
+      "newApiBaseUrlRequired": "Chưa cấu hình URL cơ sở của New API",
+      "newApiUserIdRequired": "Chưa cấu hình ID người dùng của New API",
+      "updateAccountFailed": "Cập nhật tài khoản thất bại {{error}}",
+      "urlRequired": "Địa chỉ trang web không được để trống",
+      "userIdNumeric": "ID người dùng phải là số",
+      "veloeraAdminTokenRequired": "Chưa cấu hình token quản trị viên của Veloera",
+      "veloeraBaseUrlRequired": "Chưa cấu hình URL cơ sở của Veloera",
+      "veloeraUserIdRequired": "Chưa cấu hình ID người dùng của Veloera"
+    }
+  },
+  "newapi": {
+    "channelExists": "Kênh {{channelName}} đã tồn tại, không cần nhập lại",
+    "channelMatchUnresolved": "Có thể đã tồn tại kênh trùng lặp, nhưng hiện tại cần hoàn thành xác minh New API trước để xác nhận. Vui lòng hoàn thành xác minh trước khi thử nhập lại.",
+    "configMissing": "Vui lòng cấu hình địa chỉ New API, token quản trị viên và ID người dùng trong phần Cài đặt cơ bản trước",
+    "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
+    "importSuccess": "Đã nhập thành công kênh mới {{channelName}}",
+    "noChannelsToSync": "Không có kênh nào để đồng bộ"
+  },
+  "octopus": {
+    "channelExists": "Kênh {{channelName}} đã tồn tại, không cần nhập lại",
+    "configMissing": "Vui lòng cấu hình địa chỉ Octopus, tên người dùng và mật khẩu trong phần Cài đặt cơ bản trước",
+    "corsError": "Đây có thể là vấn đề cấu hình CORS. Vui lòng kiểm tra cấu hình danh sách trắng CORS trong phần cài đặt Octopus.",
+    "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
+    "importSuccess": "Đã nhập thành công kênh mới {{channelName}}",
+    "noChannelsToSync": "Không có kênh nào để đồng bộ"
+  },
+  "operations": {
+    "detection": {
+      "failed": "Phát hiện tự động thất bại, vui lòng nhập thông tin thủ công hoặc đảm bảo đã đăng nhập vào trang web mục tiêu",
+      "getInfoFailed": "Không thể lấy tên người dùng hoặc token truy cập",
+      "getUserIdFailed": "Không thể lấy ID người dùng"
+    }
+  },
+  "storage": {
+    "accountDisabled": "Tài khoản {{id}} đã bị vô hiệu hóa",
+    "accountNotFound": "Tài khoản {{id}} không tồn tại",
+    "updateFailed": "Cập nhật tài khoản thất bại"
+  },
+  "sub2api": {
+    "createRequiresAvailableGroup": "Tài khoản hiện tại không có nhóm khả dụng để tạo khóa, vui lòng kiểm tra tình trạng nhóm của tài khoản trước khi thử lại.",
+    "createRequiresGroup": "Cần xác định nhóm trước khi tạo khóa, vui lòng chọn một nhóm khả dụng trước khi tiếp tục.",
+    "createRequiresGroupSelection": "Tài khoản hiện tại có nhiều nhóm khả dụng, vui lòng chọn nhóm muốn sử dụng trước khi tạo khóa.",
+    "groupMissing": "Nhóm Sub2API \"{{group}}\" không còn khả dụng. Vui lòng làm mới danh sách nhóm rồi thử lại.",
+    "loginRequired": "Vui lòng đăng nhập vào bảng điều khiển Sub2API (tiện ích sẽ đọc auth_token/auth_user để nhập phiên) rồi thử lại.",
+    "refreshTokenInvalid": "refresh_token của Sub2API đã hết hạn/bị xoay vòng. Vui lòng nhập lại phiên từ bảng điều khiển (khuyến nghị dùng cửa sổ ẩn danh/riêng tư) hoặc dán refresh_token mới rồi thử lại."
+  },
+  "toast": {
+    "error": {
+      "copyFailed": "Sao chép thất bại",
+      "duplicateCleanupFailed": "Xóa tài khoản trùng lặp thất bại: {{error}}",
+      "externalCheckInNonePending": "Không có trang điểm danh bên ngoài nào chưa mở hôm nay.",
+      "findAccountDetailsFailed": "Không tìm thấy chi tiết tài khoản",
+      "operationFailed": "Thao tác thất bại: {{error}}",
+      "operationFailedGeneric": "Thao tác thất bại",
+      "refreshAccount": "Làm mới {{accountName}} thất bại",
+      "saveFailed": "Lưu thất bại",
+      "shareSnapshotAccountDisabled": "Tài khoản đã bị vô hiệu hóa",
+      "shareSnapshotNoEnabledAccounts": "Không có tài khoản nào đã bật để chia sẻ"
+    },
+    "loading": {
+      "refreshingAccount": "Đang làm mới {{accountName}}..."
+    },
+    "success": {
+      "accountDisabled": "Đã vô hiệu hóa {{accountName}}",
+      "accountEnabled": "Đã bật {{accountName}}",
+      "accountPinned": "Đã ghim {{accountName}}",
+      "accountSaveSuccess": "Lưu tài khoản thành công",
+      "accountsDisabled_other": "Đã vô hiệu hóa {{count}} tài khoản",
+      "accountsEnabled_other": "Đã bật {{count}} tài khoản",
+      "accountUnpinned": "Đã bỏ ghim {{accountName}}",
+      "accountUpdateSuccess": "Cập nhật tài khoản thành công",
+      "bookmarkAdded": "Thêm dấu trang {{name}} thành công!",
+      "bookmarkDeleted": "Dấu trang {{name}} đã bị xóa",
+      "bookmarkPinned": "Đã ghim {{name}}",
+      "bookmarkUnpinned": "Đã bỏ ghim {{name}}",
+      "bookmarkUpdated": "Cập nhật dấu trang {{name}} thành công!",
+      "bookmarkUrlCopied": "Đã sao chép liên kết của {{name}} vào khay nhớ tạm",
+      "duplicateCleanupSuccess_other": "Đã xóa {{count}} tài khoản khỏi {{groups}} nhóm trùng lặp.",
+      "externalCheckInModeAll": "Tất cả",
+      "externalCheckInModeUnchecked": "Chỉ chưa điểm danh",
+      "externalCheckInOpened_other": "Đã mở điểm danh bên ngoài cho {{count}} tài khoản ({{mode}}).",
+      "operationCompleted": "Thao tác thành công",
+      "refreshAccount": "Làm mới {{accountName}} thành công!",
+      "refreshSkipped": "Chưa đến thời gian làm mới, đã bỏ qua",
+      "shareSnapshotCaptionCopied": "Đã sao chép văn bản",
+      "shareSnapshotCopied": "Đã sao chép ảnh chụp nhanh vào khay nhớ tạm",
+      "shareSnapshotDownloaded": "Đã tải xuống ảnh chụp nhanh",
+      "urlCopied": "Đã sao chép URL của {{accountName}} vào khay nhớ tạm"
+    }
+  },
+  "veloera": {
+    "channelExists": "Kênh {{channelName}} đã tồn tại, không cần nhập lại",
+    "configMissing": "Vui lòng cấu hình địa chỉ Veloera, token quản trị viên và ID người dùng trong phần Cài đặt cơ bản trước",
+    "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
+    "importSuccess": "Đã nhập thành công kênh mới {{channelName}}",
+    "noChannelsToSync": "Không có kênh nào để đồng bộ"
+  },
+  "warnings": {
+    "accountSavedWithoutDataRefresh": "Tài khoản đã được lưu, nhưng không thể lấy số dư, hạn mức và lượng sử dụng hôm nay, các giá trị hiển thị hiện tại có thể là giá trị giữ chỗ. Vui lòng làm mới trong danh sách tài khoản sau.",
+    "accountUpdatedWithoutDataRefresh": "Cấu hình tài khoản đã được lưu, nhưng không thể làm mới số dư, hạn mức và lượng sử dụng hôm nay mới nhất, dữ liệu hiển thị hiện tại có thể vẫn là dữ liệu cũ. Vui lòng làm mới trong danh sách tài khoản sau."
+  },
+  "webdav": {
+    "authFailed": "Xác thực thất bại, vui lòng kiểm tra tên người dùng/mật khẩu",
+    "configIncomplete": "Vui lòng điền đầy đủ WebDAV URL, tên người dùng và mật khẩu trước",
+    "connectionFailed": "Kết nối thất bại, mã trạng thái: {{status}}",
+    "decryptFailed": "Giải mã bản sao lưu thất bại, vui lòng kiểm tra mật khẩu",
+    "decryptFailedNoPassword": "Bản sao lưu đã được mã hóa, nhưng chưa thiết lập mật khẩu",
+    "downloadFailed": "Tải xuống thất bại, mã trạng thái: {{status}}",
+    "encryptFailedNoPassword": "Đã bật mã hóa, nhưng chưa thiết lập mật khẩu",
+    "fileNotFound": "Tệp sao lưu từ xa không tồn tại",
+    "syncDataSelectionRequired": "Vui lòng chọn ít nhất một loại dữ liệu để đồng bộ",
+    "uploadFailed": "Tải lên thất bại, mã trạng thái: {{status}}"
+  }
+}

@@ -1,0 +1,159 @@
+{
+  "actions": {
+    "applySettings": "Áp dụng cài đặt",
+    "prune": "Dọn dẹp ngay",
+    "refreshNow": "Làm mới ngay"
+  },
+  "breakdown": {
+    "chartTypes": {
+      "histogram": "Biểu đồ tần suất",
+      "pie": "Biểu đồ tròn"
+    },
+    "controls": {
+      "chartType": "Loại biểu đồ",
+      "reference": "Tham chiếu"
+    },
+    "coverage": "{{covered}}/{{total}} tài khoản có dữ liệu",
+    "empty": "Không có dữ liệu để hiển thị cho phân bổ này.",
+    "hints": {
+      "pieDisabledForNegative": "Không thể sử dụng biểu đồ tròn khi có giá trị âm."
+    },
+    "title": "Phân bổ tài khoản"
+  },
+  "description": "Ghi lại số dư hàng ngày và ảnh chụp nhanh thu chi, đồng thời trực quan hóa xu hướng.",
+  "empty": {
+    "description": "Bật lịch sử số dư và làm mới bất kỳ tài khoản nào để ghi lại ảnh chụp nhanh đầu tiên.",
+    "title": "Chưa có ảnh chụp nhanh"
+  },
+  "emptyRange": {
+    "description": "Đã có dữ liệu ảnh chụp nhanh, nhưng không có bản ghi nào trong khoảng thời gian được chọn hiện tại. Vui lòng mở rộng khoảng thời gian hoặc làm mới bất kỳ tài khoản nào để tạo ảnh chụp nhanh.",
+    "title": "Chưa có ảnh chụp nhanh trong khoảng thời gian này"
+  },
+  "filters": {
+    "accounts": "Tài khoản",
+    "accountsHint": "Chọn các tài khoản để đưa vào biểu đồ.",
+    "allAccounts": "Tất cả tài khoản",
+    "allTags": "Tất cả thẻ",
+    "endDay": "Thời gian kết thúc",
+    "noDataInRange": "Không có ảnh chụp nhanh trong khoảng thời gian này",
+    "quickRanges": {
+      "180d": "180 ngày qua",
+      "30d": "30 ngày qua",
+      "365d": "1 năm qua",
+      "7d": "7 ngày qua",
+      "90d": "90 ngày qua"
+    },
+    "range": "Khoảng thời gian",
+    "rangeHint": "Bị giới hạn bởi khoảng thời gian lưu giữ ({{days}} ngày).",
+    "startDay": "Thời gian bắt đầu",
+    "tags": "Thẻ",
+    "tagsHint": "Lọc tài khoản theo thẻ."
+  },
+  "hints": {
+    "disabled": {
+      "actions": {
+        "openSettings": "Mở cài đặt"
+      },
+      "description": "Vui lòng bật \"Lịch sử số dư\" trong cài đặt để bắt đầu ghi lại ảnh chụp nhanh.",
+      "title": "Lịch sử số dư đã bị vô hiệu hóa"
+    },
+    "incompleteSelection": {
+      "description": "Đường tổng hợp cố gắng tính tổng các tài khoản có dữ liệu vào ngày đó; nó có thể bị ước tính thấp khi độ bao phủ không đủ ({{minCovered}}–{{maxCovered}}/{{totalAccounts}} tài khoản).",
+      "title": "Tổng hợp có thể không đầy đủ"
+    }
+  },
+  "messages": {
+    "error": {
+      "pruneFailed": "Dọn dẹp thất bại: {{error}}",
+      "refreshFailed": "Làm mới thất bại: {{error}}",
+      "settingsSaveFailed": "Lưu cài đặt thất bại: {{error}}"
+    },
+    "loading": {
+      "loadingData": "Đang tải…",
+      "pruning": "Đang dọn dẹp…",
+      "refreshing": "Đang làm mới…",
+      "savingSettings": "Đang lưu cài đặt…"
+    },
+    "success": {
+      "pruneCompleted": "Dọn dẹp hoàn tất",
+      "refreshCompleted": "Làm mới hoàn tất",
+      "settingsSaved": "Đã lưu cài đặt"
+    }
+  },
+  "metrics": {
+    "balance": "Số dư",
+    "income": "Thu nhập",
+    "net": "Thay đổi ròng",
+    "outcome": "Chi phí"
+  },
+  "overview": {
+    "kpis": {
+      "coverageAccounts": "{{covered}}/{{total}} tài khoản",
+      "endBalance": {
+        "label": "Số dư cuối kỳ"
+      },
+      "incomeTotal": {
+        "label": "Thu nhập trong kỳ"
+      },
+      "outcomeTotal": {
+        "label": "Chi phí trong kỳ"
+      },
+      "rangeNet": {
+        "label": "Thay đổi ròng trong kỳ"
+      }
+    },
+    "title": "Tổng quan"
+  },
+  "settings": {
+    "alarmUnsupported": "Trình duyệt hiện tại không hỗ trợ Alarms API, không thể bật thu thập cuối ngày.",
+    "enabled": "Bật lịch sử số dư",
+    "enabledHint": "Sau khi đóng, sẽ không ghi lại ảnh chụp nhanh và cũng không lên lịch thu thập cuối ngày.",
+    "endOfDayCapture": "Thu thập cuối ngày",
+    "endOfDayCaptureHint": "Cố gắng thu thập một lần mỗi ngày vào khoảng {{time}} (yêu cầu trình duyệt hỗ trợ Alarms API).",
+    "retentionDays": "Số ngày lưu giữ"
+  },
+  "summary": {
+    "coverage": "Số ngày có dữ liệu: số dư {{snapshotAvailableDays}}/{{totalDays}} (đầy đủ {{snapshotCompleteDays}}/{{totalDays}}), thu chi {{cashflowAvailableDays}}/{{totalDays}} (đầy đủ {{cashflowCompleteDays}}/{{totalDays}})."
+  },
+  "table": {
+    "columns": {
+      "account": "Tài khoản",
+      "cashflowCoverage": "Độ bao phủ thu chi",
+      "endBalance": "Số dư cuối kỳ",
+      "incomeTotal": "Thu nhập trong kỳ",
+      "outcomeTotal": "Chi phí trong kỳ",
+      "rangeNet": "Thay đổi ròng trong kỳ",
+      "snapshotCoverage": "Độ bao phủ ảnh chụp nhanh",
+      "startBalance": "Số dư đầu kỳ"
+    },
+    "coverageFormat": "{{covered}}/{{total}}",
+    "empty": "Không có tóm tắt tài khoản nào để hiển thị.",
+    "loading": "Đang tải…",
+    "title": "Tóm tắt tài khoản"
+  },
+  "title": "Lịch sử số dư",
+  "trend": {
+    "chartTypes": {
+      "bar": "Biểu đồ cột",
+      "line": "Biểu đồ đường"
+    },
+    "controls": {
+      "chartType": "Loại biểu đồ",
+      "scope": "Chế độ xem"
+    },
+    "emptyMetric": "Không có dữ liệu {{metric}} trong khoảng thời gian này.",
+    "scopes": {
+      "accounts": "Theo tài khoản",
+      "total": "Tổng hợp"
+    },
+    "subtitle": "Hiển thị theo tài khoản, các ngày bị thiếu được biểu thị bằng các điểm ngắt trống.",
+    "subtitleTotal": "Hiển thị tổng hợp (tính tổng) cho các tài khoản đã chọn; các ngày thiếu độ bao phủ có thể bị ước tính thấp.",
+    "title": "Xu hướng"
+  },
+  "warnings": {
+    "cashflowDisabled": {
+      "description": "Đã tắt \"Hiển thị thu chi hôm nay\" và chưa bật \"Thu thập cuối ngày\". Vui lòng bật một trong hai để ghi lại thu nhập/chi phí.",
+      "title": "Lịch sử thu nhập/chi phí sẽ trống"
+    }
+  }
+}

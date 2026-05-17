@@ -44,6 +44,8 @@ function getLanguageOptionLabel(t: TFunction, language: SupportedUiLanguage) {
       return t("settings:appearanceLanguage.switcher.options.en.label")
     case "ja":
       return t("settings:appearanceLanguage.switcher.options.ja.label")
+    case "vi":
+      return t("settings:appearanceLanguage.switcher.options.vi.label")
     case "zh-CN":
       return t("settings:appearanceLanguage.switcher.options.zh-CN.label")
     case "zh-TW":
@@ -60,6 +62,8 @@ function getLanguageOptionName(t: TFunction, language: SupportedUiLanguage) {
       return t("settings:appearanceLanguage.switcher.options.en.name")
     case "ja":
       return t("settings:appearanceLanguage.switcher.options.ja.name")
+    case "vi":
+      return t("settings:appearanceLanguage.switcher.options.vi.name")
     case "zh-CN":
       return t("settings:appearanceLanguage.switcher.options.zh-CN.name")
     case "zh-TW":

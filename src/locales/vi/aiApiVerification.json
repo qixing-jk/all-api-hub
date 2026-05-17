@@ -1,0 +1,83 @@
+{
+  "verifyDialog": {
+    "actions": {
+      "close": "Đóng",
+      "retry": "Thử lại",
+      "run": "Bắt đầu xác minh",
+      "running": "Đang chạy...",
+      "runOne": "Chạy"
+    },
+    "apiTypes": {
+      "anthropic": "Anthropic",
+      "google": "Google/Gemini",
+      "openai": "OpenAI",
+      "openaiCompatible": "Tương thích OpenAI"
+    },
+    "details": {
+      "input": "Đầu vào",
+      "output": "Đầu ra"
+    },
+    "errors": {
+      "unexpected": "Đã xảy ra lỗi không xác định"
+    },
+    "history": {
+      "clear": "Xóa lịch sử",
+      "lastVerified": "Lần xác minh gần nhất"
+    },
+    "idleHint": "Vui lòng chọn khóa để bắt đầu xác minh; thăm dò liên quan đến mô hình cần điền ID mô hình.",
+    "loadingTokensHint": "Đang tải khóa...",
+    "meta": {
+      "apiType": "Loại API",
+      "apiTypePlaceholder": "Chọn loại API",
+      "model": "Mô hình",
+      "modelPlaceholder": "Nhập ID mô hình",
+      "token": "Khóa",
+      "tokenPlaceholder": "Chọn khóa"
+    },
+    "notRunYet": "Chưa chạy",
+    "probes": {
+      "models": "API danh sách mô hình (/v1/models)",
+      "structured-output": "Đầu ra có cấu trúc (JSON Schema)",
+      "text-generation": "Tạo văn bản",
+      "tool-calling": "Gọi công cụ/hàm",
+      "web-search": "Tìm kiếm web / Grounding"
+    },
+    "requiresModelId": "Vui lòng nhập ID mô hình trước khi chạy bài kiểm tra này.",
+    "status": {
+      "fail": "Thất bại",
+      "pass": "Thành công",
+      "pending": "Đang chờ chạy",
+      "unsupported": "Không hỗ trợ",
+      "unverified": "Chưa xác minh"
+    },
+    "summaries": {
+      "endpointNotFound": "Endpoint không tồn tại (404): API này có thể không được hỗ trợ",
+      "forbidden": "Cấm truy cập (403): Truy cập bị từ chối",
+      "httpError": "Lỗi HTTP ({{status}})",
+      "modelsFetched": "Lấy thành công {{count}} mô hình.",
+      "modelsProbeUnsupportedForApiType": "Loại API hiện tại không hỗ trợ thăm dò danh sách mô hình.",
+      "noModelAvailableToRunProbes": "Không có mô hình khả dụng, không thể chạy thăm dò.",
+      "noModelIdProvided": "Chưa cung cấp ID mô hình, không thể chạy thăm dò.",
+      "noModelIdProvidedToRunProbe": "Chưa cung cấp ID mô hình, không thể chạy thăm dò.",
+      "noModelIdProvidedToRunProbes": "Chưa cung cấp ID mô hình, không thể chạy thăm dò.",
+      "noModelsReturned": "Không trả về mô hình nào.",
+      "noToolCallDetected": "Không phát hiện thấy lệnh gọi công cụ (mô hình có thể không hỗ trợ công cụ).",
+      "structuredOutputInvalid": "Nội dung đầu ra không hợp lệ.",
+      "structuredOutputSucceeded": "Đầu ra có cấu trúc thành công.",
+      "textGenerationSucceeded": "Tạo văn bản thành công.",
+      "textGenerationUnexpectedResponse": "Nội dung trả về không như mong đợi.",
+      "toolCallSucceeded": "Gọi công cụ thành công.",
+      "unauthorized": "Không có quyền (401): Khóa không hợp lệ hoặc thiếu xác thực",
+      "webSearchGroundingNoResults": "Không nhận được kết quả Tìm kiếm web / Grounding.",
+      "webSearchGroundingSucceeded": "Tìm kiếm web / Grounding thành công.",
+      "webSearchNoResults": "Không nhận được kết quả tìm kiếm web.",
+      "webSearchRequiresExplicitSupport": "Thăm dò tìm kiếm web cần được hỗ trợ loại API rõ ràng.",
+      "webSearchSucceeded": "Tìm kiếm web thành công.",
+      "webSearchUnsupportedAnthropic": "API Anthropic không hỗ trợ thăm dò tìm kiếm web.",
+      "webSearchUnsupportedForApiType": "Loại API hiện tại không hỗ trợ thăm dò tìm kiếm web."
+    },
+    "title": "Xác minh API",
+    "unsupportedProbeForApiType": "Loại API hiện tại không hỗ trợ thăm dò {{probe}}.",
+    "warning": "Khi phát hiện có hỗ trợ, xác suất cao là hỗ trợ thực sự; khi không phát hiện thấy hỗ trợ, cũng có thể thực tế được hỗ trợ. Kết quả chỉ mang tính tham khảo, vui lòng dựa vào tình hình sử dụng thực tế của công cụ."
+  }
+}

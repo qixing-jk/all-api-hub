@@ -1,0 +1,11 @@
+{
+  "titlePrefix": "All API Hub · Trợ lý Vượt Rào",
+  "toast": {
+    "actions": {
+      "dismiss": "Đóng thông báo",
+      "openSettings": "Mở cài đặt vượt rào"
+    },
+    "body": "Trang này được tự động mở bởi All API Hub để vượt qua các trang bảo vệ (như Cloudflare 5 giây) nhằm thu thập thông tin Cookie/phiên cần thiết.\n\nĐây là bước bắt buộc để All API Hub có thể gửi yêu cầu và nhận diện dữ liệu bình thường trên các trang web có lớp bảo vệ.\n\nNếu có xác minh CAPTCHA, vui lòng hoàn thành trong cửa sổ này; sau khi vượt qua, All API Hub sẽ tiếp tục quá trình và tự động đóng cửa sổ này.",
+    "title": "All API Hub Trợ lý Vượt Rào (Cửa sổ tạm thời)"
+  }
+}

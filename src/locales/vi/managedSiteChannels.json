@@ -1,0 +1,242 @@
+{
+  "alerts": {
+    "loadError": {
+      "description": "{{error}}",
+      "title": "Không thể tải kênh"
+    }
+  },
+  "description": "Tìm kiếm, chỉnh sửa, xóa hoặc đồng bộ thủ công tất cả các kênh được kết nối với trang web lưu trữ của bạn tại đây.",
+  "dialog": {
+    "cancel": "Hủy",
+    "confirm": "Xóa",
+    "deleteDescription": "Hành động này không thể hoàn tác, cấu hình đã chọn sẽ bị xóa vĩnh viễn.",
+    "deleteTitle": "Xóa kênh?",
+    "deleteTitlePlural": "Xóa các kênh này?"
+  },
+  "filter": {
+    "statusLabel": "Lọc theo trạng thái"
+  },
+  "filters": {
+    "actionOptions": {
+      "exclude": "Loại trừ các mô hình khớp",
+      "include": "Bao gồm các mô hình khớp"
+    },
+    "actions": {
+      "cancel": "Hủy",
+      "moveDown": "Di chuyển quy tắc xuống",
+      "moveUp": "Di chuyển quy tắc lên",
+      "save": "Lưu quy tắc"
+    },
+    "addPatternRule": "Thêm quy tắc mẫu",
+    "addProbeRule": "Thêm quy tắc thăm dò",
+    "empty": {
+      "description": "Thêm quy tắc bao gồm hoặc loại trừ (regex tùy chọn) để kiểm soát các mô hình được đồng bộ với kênh này.",
+      "title": "Chưa thêm quy tắc nào"
+    },
+    "hints": {
+      "probesAllPass": "Mô hình sẽ chỉ khớp với quy tắc này khi tất cả các thăm dò đã chọn đều vượt qua. Thăm dò sẽ sử dụng URL cơ sở của kênh và key của kênh đã được phân tích.",
+      "regex": "Mẫu regex sử dụng cú pháp JavaScript để đối khớp linh hoạt hơn.",
+      "substring": "Mẫu thông thường sẽ thực hiện đối khớp chuỗi con phân biệt chữ hoa chữ thường.",
+      "unsupportedChannelType": "Loại kênh này không thể ánh xạ tới API xác thực được hỗ trợ, hiện chưa thể sử dụng quy tắc thăm dò."
+    },
+    "jsonEditor": {
+      "hint": "JSON phải là một mảng các đối tượng quy tắc mẫu hoặc quy tắc thăm dò. Quy tắc mẫu sử dụng kind: 'pattern', name và pattern; quy tắc thăm dò sử dụng kind: 'probe', name và probeIds. Các trường thông tin xác thực như apiKey, key, baseUrl sẽ bị bỏ qua.",
+      "label": "Trình chỉnh sửa JSON nâng cao",
+      "placeholder": "Dán hoặc chỉnh sửa mảng đối tượng quy tắc lọc tại đây để nhanh chóng sử dụng lại cùng một bộ cấu hình trên nhiều kênh."
+    },
+    "labels": {
+      "action": "Thực hiện hành động",
+      "delete": "Xóa quy tắc",
+      "description": "Mô tả",
+      "enabled": "Bật",
+      "name": "Tên quy tắc",
+      "pattern": "Mẫu đối khớp",
+      "probes": "Thăm dò xác thực",
+      "regex": "Sử dụng regex",
+      "ruleType": "Loại quy tắc"
+    },
+    "loading": "Đang tải các quy tắc lọc của kênh…",
+    "messages": {
+      "jsonArrayRequired": "JSON phải là một mảng các quy tắc lọc.",
+      "jsonInvalid": "JSON quy tắc lọc không hợp lệ: {{error}}",
+      "jsonItemNotObject": "Quy tắc lọc tại chỉ mục {{index}} phải là một đối tượng.",
+      "loadFailed": "Tải quy tắc lọc thất bại: {{error}}",
+      "saved": "Đã lưu các quy tắc lọc",
+      "saveFailed": "Lưu quy tắc lọc thất bại: {{error}}",
+      "validationName": "Vui lòng điền tên cho từng quy tắc.",
+      "validationPattern": "Mẫu đối khớp không được để trống.",
+      "validationProbeIds": "Vui lòng chọn ít nhất một thăm dò xác thực cho mỗi quy tắc thăm dò.",
+      "validationRegex": "Biểu thức chính quy không hợp lệ: {{error}}"
+    },
+    "placeholders": {
+      "description": "Ghi chú tùy chọn",
+      "name": "Ví dụ: Chỉ cho phép GPT-4",
+      "pattern": "Chuỗi chính xác hoặc biểu thức chính quy",
+      "probes": "Chọn thăm dò",
+      "probeSearch": "Tìm kiếm thăm dò"
+    },
+    "probes": {
+      "empty": "Không tìm thấy thăm dò",
+      "options": {
+        "structured-output": "Đầu ra có cấu trúc",
+        "text-generation": "Tạo văn bản",
+        "tool-calling": "Gọi công cụ",
+        "web-search": "Tìm kiếm trên web"
+      }
+    },
+    "ruleTypeOptions": {
+      "pattern": "Mẫu",
+      "probe": "Thăm dò"
+    },
+    "subtitle": "Cấu hình quy tắc bao gồm/loại trừ cho {{channel}}",
+    "title": "Quy tắc lọc kênh",
+    "viewMode": {
+      "json": "Chỉnh sửa JSON",
+      "label": "Chế độ chỉnh sửa",
+      "visual": "Chỉnh sửa trực quan"
+    }
+  },
+  "migration": {
+    "actions": {
+      "cancel": "Hủy",
+      "close": "Đóng",
+      "refreshPreview": "Làm mới bản xem trước",
+      "running": "Đang di chuyển…",
+      "start": "Bắt đầu di chuyển"
+    },
+    "alerts": {
+      "noTargets": {
+        "description": "Vui lòng cấu hình một trang web lưu trữ mục tiêu khả dụng khác trong phần cài đặt trước khi bật tính năng di chuyển kênh."
+      }
+    },
+    "betaBadge": "Beta",
+    "blockedReasons": {
+      "sourceKeyMissing": "Thiếu khóa kênh nguồn, hiện không thể di chuyển.",
+      "sourceKeyResolutionFailed": "Không thể lấy khóa kênh nguồn. Nếu bạn vừa hoàn tất xác thực, hãy làm mới bản xem trước và thử lại."
+    },
+    "confirm": {
+      "confirm": "Xác nhận di chuyển",
+      "description": "Sẽ tạo kênh mới trên trang web mục tiêu cho {{ready}} kênh có thể di chuyển; đã chọn tổng cộng {{total}} kênh.",
+      "title": "Bắt đầu di chuyển kênh?",
+      "warningTitle": "Quá trình này sẽ chỉ tạo các kênh mới và sẽ không đồng bộ, loại bỏ trùng lặp hoặc hoàn tác."
+    },
+    "description": "Sao chép {{selectedCount}} kênh từ trang web lưu trữ hiện tại sang một trang web lưu trữ đã cấu hình khác.",
+    "generalWarnings": {
+      "compactSummary": "Chỉ tạo, không kiểm tra trùng lặp. Di chuột để xem chi tiết.",
+      "createOnly": "Lần di chuyển này chỉ tạo các kênh mới trên trang web mục tiêu và sẽ không sửa đổi các kênh nguồn.",
+      "noDedupeOrSync": "Lần di chuyển này sẽ không kiểm tra trùng lặp, ghi đè hoặc đồng bộ các kênh đã tồn tại trên trang web mục tiêu.",
+      "noRollback": "Lần di chuyển này không cung cấp tính năng tự động hoàn tác, vui lòng xử lý thủ công các công việc tiếp theo dựa trên danh sách kết quả.",
+      "title": "Hạn chế di chuyển"
+    },
+    "itemWarnings": {
+      "dropsAdvancedSettings": "Cài đặt kênh nâng cao không thể di chuyển trực tiếp đến trang web mục tiêu và sẽ bị bỏ qua.",
+      "dropsModelMapping": "Cấu hình ánh xạ mô hình sẽ không được di chuyển cùng.",
+      "dropsMultiKeyState": "Thông tin vòng lặp hoặc trạng thái nhiều khóa sẽ không được di chuyển cùng.",
+      "dropsStatusCodeMapping": "Cấu hình ánh xạ mã trạng thái sẽ không được di chuyển cùng.",
+      "targetForcesDefaultGroup": "Trang web mục tiêu sẽ chuyển sang sử dụng nhóm mặc định.",
+      "targetIgnoresPriority": "Trang web mục tiêu không giữ lại mức độ ưu tiên của kênh nguồn.",
+      "targetIgnoresWeight": "Trang web mục tiêu không giữ lại trọng số của kênh nguồn.",
+      "targetNormalizesBaseUrl": "Trang web mục tiêu sẽ chuẩn hóa URL cơ sở.",
+      "targetRemapsChannelType": "Trang web mục tiêu sẽ ánh xạ loại kênh sang loại tương thích gần nhất.",
+      "targetSimplifiesStatus": "Trang web mục tiêu sẽ đơn giản hóa trạng thái kênh nguồn thành bật hoặc tắt."
+    },
+    "preview": {
+      "badges": {
+        "limitsLabel": "hạn chế",
+        "warningsLabel": "cảnh báo"
+      },
+      "compare": {
+        "fieldLabel": "Trường"
+      },
+      "loadFailed": "Tải bản xem trước di chuyển thất bại: {{error}}",
+      "loading": "Đang tạo bản xem trước di chuyển…",
+      "selectedCount": "Đã chọn {{selectedCount}} kênh",
+      "status": {
+        "blocked": "Đã chặn",
+        "ready": "Sẵn sàng"
+      },
+      "summary": "Kết quả xem trước: {{ready}} kênh sẵn sàng, {{blocked}} kênh bị chặn, tổng cộng {{total}} kênh."
+    },
+    "results": {
+      "status": {
+        "failed": "Thất bại",
+        "skipped": "Đã bỏ qua",
+        "success": "Đã tạo"
+      },
+      "summary": "Kết quả di chuyển: Thành công {{created}}, Thất bại {{failed}}, Bỏ qua {{skipped}}, tổng cộng {{total}}.",
+      "title": "Kết quả di chuyển"
+    },
+    "target": {
+      "destinationLabel": "Trang web mục tiêu",
+      "label": "Mục tiêu di chuyển",
+      "placeholder": "Chọn trang web lưu trữ mục tiêu",
+      "sourceLabel": "Trang web nguồn",
+      "unselected": "Chưa chọn"
+    },
+    "title": "Di chuyển kênh"
+  },
+  "statusLabels": {
+    "autoDisabled": "Tự động tắt",
+    "enabled": "Bật",
+    "manualPause": "Tạm dừng thủ công",
+    "unknown": "Không rõ"
+  },
+  "table": {
+    "columns": {
+      "actions": "Hành động",
+      "group": "Nhóm khả dụng",
+      "id": "ID",
+      "models": "Số lượng mô hình",
+      "name": "Kênh",
+      "priority": "Mức độ ưu tiên",
+      "status": "Trạng thái",
+      "type": "Loại",
+      "weight": "Trọng số"
+    },
+    "empty": "Không tìm thấy kênh, vui lòng thử điều chỉnh điều kiện lọc.",
+    "loading": "Đang tải kênh…",
+    "noEntries": "Không có dữ liệu",
+    "paginationNext": "Trang tiếp",
+    "paginationPrev": "Trang trước",
+    "paginationSummary": "{{start}} - {{end}} / Tổng {{total}}",
+    "rowActions": {
+      "delete": "Xóa",
+      "edit": "Chỉnh sửa",
+      "filters": "Chỉnh sửa quy tắc lọc kênh",
+      "migrate": "Di chuyển đến trang web khác",
+      "openSync": "Mở giao diện đồng bộ mô hình",
+      "sync": "Đồng bộ danh sách mô hình ngay",
+      "syncing": "Đang đồng bộ…",
+      "view": "Xem kênh"
+    },
+    "rowsPerPage": "Số hàng mỗi trang",
+    "selectAll": "Chọn tất cả",
+    "selectRow": "Chọn hàng"
+  },
+  "title": "Quản lý kênh",
+  "toasts": {
+    "channelDeleted": "Đã xóa 1 kênh",
+    "channelSaved": "Đã lưu kênh",
+    "channelsDeleted_other": "Đã xóa {{count}} kênh",
+    "channelUpdated": "Đã cập nhật kênh",
+    "revealKeyFailed": "Tải key của kênh thật thất bại: {{error}}",
+    "someDeletesFailed_other": "Xóa {{count}} kênh thất bại: {{error}}",
+    "syncCompleted": "Đồng bộ mô hình hoàn tất ({{success}}/{{total}})",
+    "syncFailed": "Đồng bộ mô hình thất bại: {{error}}"
+  },
+  "toolbar": {
+    "addChannel": "Thêm kênh",
+    "clearSearch": "Xóa tìm kiếm",
+    "columns": "Hiển thị cột",
+    "deleteSelected": "Xóa mục đã chọn",
+    "enterMigrationMode": "Di chuyển kênh",
+    "exitMigrationMode": "Thoát chế độ di chuyển",
+    "migrateFiltered": "Di chuyển tất cả các kênh được lọc hiện tại",
+    "migrateSelected": "Di chuyển mục đã chọn",
+    "refresh": "Làm mới",
+    "searchPlaceholder": "Tìm kiếm theo tên, URL hoặc nhóm",
+    "status": "Trạng thái",
+    "syncSelected": "Đồng bộ mô hình kênh đã chọn",
+    "toggleColumns": "Chuyển đổi cột"
+  }
+}

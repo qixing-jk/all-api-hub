@@ -1,0 +1,218 @@
+{
+  "accountGroupFilterAllIncluded": "Giữ lại tất cả các nhóm của tài khoản này",
+  "accountGroupFilterClearAll": "Xóa hết",
+  "accountGroupFilterDescription": "Loại trừ các nhóm không tham gia so sánh giá theo từng tài khoản; mặc định sẽ giữ lại tất cả các nhóm khả dụng của mỗi tài khoản.",
+  "accountGroupFilterNoGroups": "Hiện không có nhóm tài khoản nào để lọc.",
+  "accountGroupFilterNoGroupsIncluded": "Tài khoản này hiện không có nhóm nào được giữ lại",
+  "accountGroupFilterResetAll": "Khôi phục tất cả",
+  "accountGroupFilterSelectAll": "Chọn tất cả",
+  "accountGroupFilterSelectedSummary": "Đã chọn {{selected}} / {{total}}",
+  "accountGroupFilterTitle": "Lọc nhóm tài khoản",
+  "accountGroupFilterTrigger": "Lọc nhóm tài khoản",
+  "accountGroupFilterTriggerCount_other": "{{count}} tài khoản",
+  "accountSummary": {
+    "incompatible": "Định dạng không tương thích",
+    "loadFailed": "Tải thất bại",
+    "loading": "Đang tải",
+    "models_other": "{{count}} mô hình",
+    "title": "Tổng quan tài khoản"
+  },
+  "actions": {
+    "copyModelName": "Sao chép tên mô hình",
+    "keyForModel": "Khóa tương ứng với mô hình",
+    "verifyApi": "Xác minh API",
+    "verifyCliSupport": "Xác minh khả năng tương thích CLI"
+  },
+  "allAccounts": "Tất cả tài khoản",
+  "allBillingModes": "Tất cả phương thức tính phí",
+  "allGroups": "Tất cả các nhóm",
+  "allProviders": "Tất cả nhà cung cấp",
+  "available": "Khả dụng",
+  "availableGroups": "Nhóm khả dụng",
+  "batchVerify": {
+    "actions": {
+      "open": "Kiểm tra hàng loạt",
+      "rerun": "Kiểm tra lại hàng loạt",
+      "start": "Bắt đầu kiểm tra hàng loạt",
+      "stop": "Dừng kiểm tra"
+    },
+    "apiType": {
+      "auto": "Tự động nhận diện",
+      "label": "Loại API"
+    },
+    "counts": {
+      "fail": "Thất bại {{value}}",
+      "pass": "Thành công {{value}}",
+      "skipped": "Bỏ qua {{value}}",
+      "total": "Tổng cộng {{value}}"
+    },
+    "idleHint": "Sẽ kiểm tra hàng loạt các mô hình đã lọc theo mục kiểm tra đã chọn.",
+    "messages": {
+      "noApplicableProbes": "Mục kiểm tra hiện tại không áp dụng cho mô hình này.",
+      "noCompatibleToken": "Không tìm thấy khóa khả dụng tương thích với mô hình này.",
+      "notSelected": "Chưa chọn mô hình này, đã bỏ qua trong lần kiểm tra hàng loạt này.",
+      "pending": "Đang chờ kiểm tra",
+      "probeSummary_other": "Đã chạy {{count}} mục, thành công {{pass}}, thất bại {{fail}}, không hỗ trợ {{unsupported}}",
+      "stopped": "Đã dừng, chưa bắt đầu kiểm tra mô hình này.",
+      "unexpected": "Kiểm tra thất bại"
+    },
+    "modelSelection": {
+      "clearAll": "Xóa lựa chọn",
+      "label": "Mô hình thực thi",
+      "noneSelected": "Vui lòng chọn ít nhất một mô hình để kiểm tra.",
+      "selectAll": "Chọn tất cả mô hình",
+      "selectedSummary_other": "Đã chọn {{selected}} / {{total}}",
+      "toggle": "Chọn mô hình {{model}}"
+    },
+    "probes": {
+      "label": "Mục kiểm tra",
+      "noneSelected": "Vui lòng chọn ít nhất một mục kiểm tra."
+    },
+    "status": {
+      "fail": "Thất bại",
+      "pass": "Thành công",
+      "pending": "Chờ chạy",
+      "running": "Đang kiểm tra",
+      "skipped": "Bỏ qua"
+    },
+    "subtitle_other": "Hiện đang lọc {{count}} mô hình",
+    "summary_other": "Đã hoàn thành {{completed}} / {{count}}, thành công {{pass}}, thất bại {{fail}}, bỏ qua {{skipped}}",
+    "title": "Kiểm tra hàng loạt mô hình",
+    "tokenUsed": "Khóa: {{name}}",
+    "warning": "Kiểm tra hàng loạt sẽ thực hiện các mục đã chọn theo loại API đã phân tích cho từng mô hình; các mục không áp dụng sẽ tự động bị bỏ qua. Kết quả kiểm tra chỉ mang tính tham khảo, vui lòng dựa trên tình hình gọi thực tế của công cụ."
+  },
+  "billingMode": "Phương thức tính phí",
+  "clickSwitchGroup": "Nhấp để chuyển sang nhóm {{group}}",
+  "collapseDetails": "Thu gọn chi tiết",
+  "copyAllNames": "Sao chép tất cả tên mô hình",
+  "description": "Xem và quản lý các mô hình AI khả dụng",
+  "detailedPricing": "Định giá chi tiết",
+  "displayOptions": "Tùy chọn hiển thị:",
+  "endpointType": "Loại endpoint",
+  "endpointTypes": "Loại endpoint",
+  "expandDetails": "Mở rộng chi tiết",
+  "fallbackSourceNotice": {
+    "description": "Thư mục mô hình hiện tại được tải dự phòng thông qua khóa tài khoản, chỉ hỗ trợ phát hiện và xác minh mô hình. Nhấp vào làm mới dữ liệu sẽ thử lại API của tài khoản.",
+    "title": "Thư mục dự phòng khóa tài khoản"
+  },
+  "groupRatioTooltip": "Tỷ lệ nhóm {{group}}: {{ratio}}x",
+  "groupSelectionHint": "Để trống biểu thị tất cả các nhóm; việc sắp xếp giá sẽ tự động lấy mức giá tốt nhất trong phạm vi các nhóm đã chọn",
+  "input": "Đầu vào:",
+  "input1MTokens": "Đầu vào (1M tokens)",
+  "keyDialog": {
+    "copyFailed": "Sao chép thất bại",
+    "createAnotherKey": "Tạo thêm một khóa khác",
+    "createCustomKey": "Tạo tùy chỉnh",
+    "createDisabledTitle": "Không thể tạo khóa",
+    "createErrorTitle": "Tạo khóa thất bại",
+    "createFailed": "Tạo thất bại: {{error}}",
+    "createGroupHint": "Vui lòng chọn nhóm (chỉ liệt kê các nhóm khả dụng cho mô hình này).",
+    "createGroupLabel": "Nhóm khóa mới",
+    "createGroupPlaceholder": "Vui lòng chọn nhóm",
+    "createGroupRequired": "Vui lòng chọn nhóm trước khi tạo khóa.",
+    "createKey": "Tạo khóa",
+    "createNotSupported": "Tài khoản này hiện không hỗ trợ tạo khóa.",
+    "createSuccess": "Tạo khóa thành công",
+    "getFailed": "Tải khóa thất bại",
+    "ineligible": {
+      "accountDisabled": "Tài khoản này đã bị vô hiệu hóa.",
+      "missingAuth": "Tài khoản này chưa được cấu hình thông tin xác thực.",
+      "missingCredentials": "Tài khoản này thiếu các thông tin xác thực cần thiết."
+    },
+    "keyCopied": "Đã sao chép khóa",
+    "loadFailed": "Tải khóa thất bại: {{error}}",
+    "loading": "Đang tải khóa...",
+    "noCompatibleDescription": "Tạo một khóa cho mô hình này hoặc điều chỉnh giới hạn mô hình của khóa hiện có.",
+    "noCompatibleFoundAfterCreate": "Tạo khóa thành công, nhưng vẫn không tìm thấy khóa nào khả dụng cho {{modelId}}.",
+    "noCompatibleTitle": "{{modelId}} không có khóa khả dụng",
+    "openKeyManagement": "Đi đến quản lý khóa của {{accountName}}",
+    "selectHint": "Vui lòng chọn khóa muốn sử dụng cho mô hình này.",
+    "selectLabel": "Khóa khả dụng",
+    "selectPlaceholder": "Vui lòng chọn khóa",
+    "subtitle": "Tài khoản: {{accountName}} · Mô hình: {{modelId}}",
+    "title": "Khóa tương ứng với mô hình"
+  },
+  "messages": {
+    "copyFailed": "Sao chép thất bại",
+    "modelNameCopied": "Đã sao chép tên mô hình",
+    "modelNamesCopied": "Đã sao chép tên các mô hình"
+  },
+  "noMatchingModels": "Không tìm thấy mô hình nào phù hợp",
+  "noSourcesDescription": "Vui lòng thêm tài khoản trang web hoặc thông tin xác thực API trước, sau đó xem danh sách mô hình.",
+  "noSourcesTitle": "Hiện chưa có nguồn dữ liệu khả dụng",
+  "optimalGroup": "Nhóm tối ưu: {{group}}",
+  "optimalGroupLowestPriceWithinAccountFilters": "Đã tự động chọn nhóm tối ưu trong phạm vi bộ lọc nhóm tài khoản hiện tại: {{group}}; và có mức giá thấp nhất trong cùng phương thức tính phí",
+  "optimalGroupLowestPriceWithinBillingMode": "Đã tự động chọn nhóm tối ưu trong phạm vi các nhóm được lọc hiện tại: {{group}}; và có mức giá thấp nhất trong cùng phương thức tính phí",
+  "optimalGroupWithinAccountFilters": "Đã tự động chọn nhóm tối ưu trong phạm vi bộ lọc nhóm tài khoản hiện tại: {{group}}",
+  "optimalGroupWithinSelectedGroups": "Đã tự động chọn nhóm tối ưu trong phạm vi các nhóm được lọc hiện tại: {{group}}",
+  "output": "Đầu ra:",
+  "output1MTokens": "Đầu ra (1M tokens)",
+  "perCall": "Mỗi lần gọi:",
+  "pleaseSelectFirst": "Vui lòng chọn một tài khoản hoặc thông tin xác thực API trước để xem danh sách mô hình",
+  "pleaseSelectSource": "Vui lòng chọn nguồn dữ liệu",
+  "pricingDescription": "Thông tin giá được lấy từ API do trang web cung cấp, chi phí thực tế tùy thuộc vào mức giá được công bố bởi mỗi trang web. Giá của mô hình tính phí theo lượng là chi phí cho mỗi 1M tokens, mô hình tính phí theo lần hiển thị chi phí cho mỗi lần gọi",
+  "pricingNote": "Ghi chú định giá mô hình",
+  "profileSourceNotice": {
+    "description": "Thông tin xác thực API đã lưu chỉ hỗ trợ phát hiện và xác minh mô hình, không cung cấp định giá, bộ lọc nhóm, tổng quan tài khoản hoặc khả năng tương thích của khóa.",
+    "title": "Thư mục mô hình thông tin xác thực API"
+  },
+  "providerTabs": {
+    "scrollLeft": "Cuộn thẻ nhà cung cấp sang trái",
+    "scrollRight": "Cuộn thẻ nhà cung cấp sang phải"
+  },
+  "ratio": "Tỷ lệ:",
+  "realAmount": "Số tiền nạp thực tế",
+  "refreshData": "Làm mới dữ liệu",
+  "searchModels": "Tìm kiếm mô hình",
+  "searchPlaceholder": "Nhập tên hoặc mô tả mô hình...",
+  "selectSource": "Chọn nguồn dữ liệu",
+  "selectSourceToContinue": "Vui lòng chọn một nguồn dữ liệu ở trên trước, sau đó xem danh sách mô hình.",
+  "showing_other": "Đang hiển thị {{count}} mô hình",
+  "showRatio": "Hiển thị tỷ lệ",
+  "sortBy": "Sắp xếp theo",
+  "sortOptions": {
+    "default": "Thứ tự mặc định",
+    "modelCheapestFirst": "Ưu tiên giá thấp nhất của cùng mô hình",
+    "priceAsc": "Giá từ thấp đến cao",
+    "priceDesc": "Giá từ cao xuống thấp"
+  },
+  "sourceLabels": {
+    "profileBadge": "Thông tin xác thực: {{name}} · {{host}}",
+    "profileOption": "Thông tin xác thực API: {{name}} · {{host}}"
+  },
+  "status": {
+    "dataLoaded": "Tải dữ liệu mô hình thành công",
+    "fallback": {
+      "catalogLoadFailedTitle": "Tải mô hình bằng khóa thất bại",
+      "description": "Nếu API định giá của tài khoản tạm thời không khả dụng, bạn có thể chuyển sang sử dụng khóa thuộc tài khoản đó để tải thư mục mô hình chỉ để xem.",
+      "loadingKeys": "Đang tải khóa tài khoản...",
+      "loadKeysFailed": "Tải khóa tài khoản thất bại: {{errorMessage}}",
+      "loadKeysFailedFallback": "Tải khóa tài khoản thất bại, vui lòng thử lại sau.",
+      "loadModelsFailedFallback": "Tải mô hình bằng khóa đã chọn thất bại, vui lòng thử lại sau.",
+      "loadWithKey": "Tải bằng khóa đã chọn",
+      "noKeysDescription": "Tài khoản hiện tại không có khóa khả dụng để tải dự phòng.",
+      "noKeysTitle": "Không tìm thấy khóa khả dụng",
+      "reloadKeys": "Tải lại khóa",
+      "retryLoadWithKey": "Thử lại khóa đã chọn",
+      "selectHint": "Tài khoản này có nhiều khóa khả dụng, vui lòng chọn rõ ràng khóa bạn muốn sử dụng trước.",
+      "selectLabel": "Khóa dùng để tải dự phòng",
+      "selectPlaceholder": "Vui lòng chọn khóa",
+      "title": "Chuyển sang sử dụng khóa tài khoản để tải mô hình",
+      "tokensLoadFailedTitle": "Tải khóa tài khoản thất bại"
+    },
+    "formatNotStandard": "Định dạng dữ liệu mô hình của trang web hiện tại không đạt chuẩn, vui lòng xem trang định giá của trang web theo cách thủ công",
+    "genericLoadFailedTitle": "Tải dữ liệu mô hình thất bại",
+    "goToSitePricing": "Đi đến trang web để xem thông tin định giá",
+    "incompatibleDesc": "Định dạng trả về từ API dữ liệu mô hình của trang web hiện tại không tuân thủ tiêu chuẩn, có thể đây là một trang web đã được phát triển thứ cấp. Tiện ích mở rộng tạm thời không thể phân tích thông tin định giá mô hình của trang web này",
+    "incompatibleFormat": "Định dạng dữ liệu không tương thích",
+    "loadFailed": "Tải dữ liệu mô hình thất bại, vui lòng thử lại sau",
+    "loading": "Đang tải dữ liệu mô hình...",
+    "profileLoadFailed": "Tải mô hình của thông tin xác thực API này thất bại: {{errorMessage}}",
+    "profileLoadFailedTitle": "Tải mô hình của thông tin xác thực API này thất bại",
+    "retryLoad": "Thử tải lại"
+  },
+  "title": "Danh sách mô hình",
+  "totalModels_other": "Tổng cộng {{count}} mô hình",
+  "unavailable": "Không khả dụng",
+  "userGroup": "Nhóm người dùng"
+}

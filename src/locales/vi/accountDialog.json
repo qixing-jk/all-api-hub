@@ -1,0 +1,196 @@
+{
+  "actions": {
+    "autoConfigAriaLabel": "Lưu tài khoản và đi đến cấu hình kênh {{managedSite}}",
+    "autoConfigRequiresValidAccount": "Vui lòng hoàn thành thông tin tài khoản hiện tại trước",
+    "autoConfigTitle": "Lưu tài khoản hiện tại và mở cấu hình kênh điền sẵn của {{managedSite}}",
+    "configToManagedSite": "Lưu và cấu hình vào {{managedSite}}",
+    "configuring": "Đang cấu hình...",
+    "confirmAdd": "Xác nhận thêm",
+    "helpDocument": "Tài liệu hướng dẫn",
+    "reloadCurrentPage": "Làm mới trang hiện tại",
+    "reportUnsupportedSite": "Báo cáo trang web chưa được hỗ trợ",
+    "saveAccount": "Lưu tài khoản",
+    "saveChanges": "Lưu thay đổi",
+    "workflow": {
+      "checkingToken": "Đang kiểm tra API Key...",
+      "creatingToken": "Đang tạo API Key mặc định...",
+      "loadingSavedAccount": "Đang tải tài khoản đã lưu...",
+      "openingManagedSiteDialog": "Đang mở cấu hình kênh...",
+      "savingAccount": "Đang lưu tài khoản...",
+      "waitingForOneTimeKey": "Vui lòng lưu khóa một lần trước...",
+      "waitingForSub2ApiGroup": "Vui lòng chọn nhóm Sub2API..."
+    }
+  },
+  "aihubmixDefaultKeyPrompt": {
+    "cancel": "Tạo thủ công sau",
+    "cancelHint": "Việc hủy sẽ không ảnh hưởng đến quá trình lưu tài khoản. Bạn có thể tạo thủ công AIHubMix API Key trong phần quản lý API Key sau.",
+    "confirm": "Tạo và xem ngay bây giờ",
+    "creating": "Đang tạo...",
+    "description": "{{accountName}} đã được lưu. AIHubMix API Key sẽ chỉ hiển thị một lần sau khi tạo, vui lòng xác nhận bạn có thể sao chép và lưu toàn bộ API Key ngay bây giờ.",
+    "title": "Tạo AIHubMix API Key mặc định?",
+    "warningTitle": "Toàn bộ API Key chỉ hiển thị một lần"
+  },
+  "form": {
+    "accessToken": "Access Token",
+    "autoCheckInEnabled": "Bật tự động điểm danh hàng ngày",
+    "autoCheckInEnabledDesc": "Khi tính năng tự động điểm danh toàn cầu được bật, tài khoản này có tham gia điểm danh hàng ngày hay không",
+    "checkInStatus": "Kiểm tra trạng thái điểm danh (yêu cầu trang web phải bật tính năng điểm danh)",
+    "cookieAuthSessionCookie": "Session Cookie",
+    "cookieAuthSessionCookieDesc": "Nhập Session Cookie của tài khoản này từ tab trình duyệt đã đăng nhập hiện tại (nhiều tài khoản trên cùng một trang web cần được nhập riêng)",
+    "cookieAuthSessionCookiePlaceholder": "Dán giá trị header Cookie",
+    "cookiePermissionHelpAction": "Đi đến cài đặt quyền",
+    "customCheckInDesc": "Địa chỉ của trang web điểm danh bên ngoài, trang phúc lợi, v.v., nơi bạn có thể nhận số dư tài khoản hoặc mã quy đổi",
+    "customCheckInUrl": "URL trang web điểm danh bên ngoài (tùy chọn)",
+    "customRedeemUrl": "URL trang nạp tiền/quy đổi tùy chỉnh (tùy chọn)",
+    "customRedeemUrlDesc": "URL của trang nạp tiền/quy đổi",
+    "exchangeRate": "Tỷ giá nạp (CNY/USD)",
+    "exchangeRateDesc": "Biểu thị cần bao nhiêu Nhân dân tệ (CNY) để nạp 1 đô la Mỹ (USD). Hệ thống sẽ cố gắng tự động lấy, nếu không lấy được, vui lòng điền thủ công",
+    "exchangeRatePlaceholder": "Vui lòng nhập tỷ giá nạp",
+    "excludeFromTotalBalance": "Không tính vào tổng số dư",
+    "excludeFromTotalBalanceDesc": "Chỉ ảnh hưởng đến thống kê \"Tổng số dư\", sẽ không vô hiệu hóa các chức năng như làm mới, điểm danh, v.v.",
+    "hideAccessToken": "Ẩn Access Token",
+    "hideRefreshToken": "Ẩn Refresh Token",
+    "importCookieAuthSessionCookie": "Nhập từ phiên đăng nhập hiện tại",
+    "manualBalanceUsd": "Số dư thủ công (USD)",
+    "manualBalanceUsdDesc": "Khi trang web không thể tự động lấy số dư/hạn mức, bạn có thể điền thủ công",
+    "manualBalanceUsdError": "Vui lòng nhập số tiền hợp lệ (>= 0)",
+    "manualBalanceUsdPlaceholder": "Để trống để tự động lấy",
+    "notes": "Ghi chú",
+    "notesPlaceholder": "Tùy chọn, nhập thông tin ghi chú",
+    "openRedeemWithCheckIn": "Đồng thời mở trang nạp tiền khi sử dụng điểm danh bên ngoài",
+    "showAccessToken": "Hiển thị Access Token",
+    "showRefreshToken": "Hiển thị Refresh Token",
+    "siteName": "Tên trang web",
+    "siteType": "Loại trang web",
+    "sub2apiCheckInUnsupported": "Sub2API hiện không hỗ trợ chức năng điểm danh trên trang web (đã tự động tắt).",
+    "sub2apiImportRefreshToken": "Nhập từ tài khoản đăng nhập hiện tại",
+    "sub2apiRefreshToken": "Refresh Token",
+    "sub2apiRefreshTokenMode": "Phiên do tiện ích quản lý (Nhiều tài khoản)",
+    "sub2apiRefreshTokenModeDesc": "Tùy chọn. Lưu refresh_token của tài khoản đang đăng nhập hiện tại vào tiện ích mở rộng, để mỗi tài khoản có thể tự động làm mới và gia hạn xác thực độc lập trong nền, hỗ trợ nhiều tài khoản trên cùng một trang web.",
+    "sub2apiRefreshTokenPlaceholder": "Dán giá trị refresh_token",
+    "sub2apiRefreshTokenWarningDesc": "refresh_token được sử dụng để tiện ích mở rộng gia hạn trạng thái đăng nhập độc lập và sẽ được lưu cùng với bản sao lưu tài khoản. Để giảm thiểu xung đột luân phiên, bạn nên nhập sau khi đăng nhập trong cửa sổ ẩn danh/riêng tư, sau đó đóng cửa sổ đó để tránh làm mới cùng một phiên song song với bảng điều khiển sử dụng hàng ngày.",
+    "sub2apiRefreshTokenWarningTitle": "Mẹo",
+    "sub2apiTokenExpiresAt": "Thời gian hết hạn Access Token",
+    "tags": "Thẻ",
+    "tagsCreate": "Tạo \"{{name}}\"",
+    "tagsDelete": "Xóa",
+    "tagsDeleteCancel": "Hủy",
+    "tagsDeleteConfirm": "Xóa",
+    "tagsDeleteDescription": "Xóa \"{{name}}\" trên toàn cầu. Thao tác này sẽ xóa thẻ khỏi tất cả các tài khoản.",
+    "tagsDeleteTitle": "Xóa thẻ",
+    "tagsDescription": "Sử dụng thẻ để phân loại tài khoản, giúp việc lọc nhanh hơn",
+    "tagsNoResults": "Không tìm thấy thẻ",
+    "tagsPlaceholder": "Thêm hoặc chọn thẻ",
+    "tagsRemove": "Xóa bỏ {{name}}",
+    "tagsRename": "Đổi tên",
+    "tagsRenameCancel": "Hủy",
+    "tagsRenameSave": "Lưu",
+    "tagsSearchPlaceholder": "Tìm kiếm thẻ…",
+    "tagsSelectedCount_other": "Đã chọn {{count}} thẻ",
+    "userId": "User ID",
+    "userIdNumber": "User ID (Số)",
+    "username": "Tên người dùng",
+    "validRateError": "Vui lòng nhập tỷ giá hợp lệ, lớn hơn 0"
+  },
+  "infoPanel": {
+    "autoDetect": "Tự động nhận dạng",
+    "autoDetectInfo": "Vui lòng đăng nhập vào trang web đích trước, tiện ích mở rộng sẽ tự động nhận dạng và điền thông tin cần thiết để thêm tài khoản",
+    "confirmAddInfo": "Vui lòng xác nhận thông tin tài khoản chính xác và nhấp vào nút \"Xác nhận thêm\"",
+    "confirmation": "Xác nhận thông tin tài khoản",
+    "editInfo": "Chỉnh sửa thông tin tài khoản",
+    "editInfoDesc": "Sau khi sửa đổi thông tin tài khoản, hệ thống sẽ xác minh lại và lấy dữ liệu số dư mới nhất",
+    "ldohSiteListHint": "Không có trang web? LDOH cung cấp thư mục gồm một lượng lớn các trang web AI công ích trong cộng đồng Linux.do.",
+    "manualAdd": "Thêm thủ công",
+    "manualInfo": "Điền thông tin tài khoản theo cách thủ công. Tài khoản sẽ được lưu trữ an toàn trong bộ nhớ cục bộ",
+    "openLdohSiteList": "Mở danh sách trang web LDOH",
+    "reDetectInfo": "Nếu thông tin trang web thay đổi, bạn nên nhấp vào nút \"Nhận dạng lại\" (cần tự đăng nhập vào trang web đích trước)"
+  },
+  "messages": {
+    "addSuccess": "Thêm tài khoản {{name}} thành công!",
+    "autoDetectFailed": "Tự động nhận dạng thất bại: {{error}}",
+    "autoDetectSuccess": "Tự động nhận dạng thành công!",
+    "autoDetectTakingTooLong": "Tự động nhận dạng mất quá nhiều thời gian? Nhấp để mở tài liệu khắc phục sự cố",
+    "importCookiesEmpty": "Không tìm thấy Cookie trình duyệt cho trang web hiện tại, vui lòng xác nhận bạn đã đăng nhập vào trang web đó và thử lại",
+    "importCookiesFailed": "Nhập Cookie thất bại: {{error}}",
+    "importCookiesFailedUnknown": "Nhập Cookie thất bại, đã xảy ra lỗi không xác định",
+    "importCookiesLoading": "Đang nhập Cookie...",
+    "importCookiesPermissionDenied": "Tiện ích mở rộng không thể đọc Cookie của trang web này, vui lòng kiểm tra quyền truy cập trang web / Cookie cho trang web này trong trình duyệt của bạn và thử lại",
+    "importCookiesSuccess": "Nhập Cookie thành công",
+    "importSub2apiSessionMissing": "Không tìm thấy refresh_token. Vui lòng đăng nhập vào bảng điều khiển Sub2API và thử lại.",
+    "importSub2apiSessionSuccess": "Đã nhập phiên Sub2API",
+    "loadFailed": "Tải dữ liệu tài khoản thất bại",
+    "newApiConfigFailed": "Cấu hình tự động vào New API thất bại: {{error}}",
+    "operationFailed": "Thao tác thất bại: {{error}}",
+    "saveAccountFailed": "Lưu tài khoản thất bại",
+    "saveFailed": "Lưu thất bại",
+    "updateSuccess": "Cập nhật tài khoản {{name}} thành công!",
+    "urlRequired": "Vui lòng nhập URL trước"
+  },
+  "mode": {
+    "autoDetect": "Tự động nhận dạng",
+    "detecting": "Đang nhận dạng...",
+    "manualAdd": "Thêm thủ công",
+    "reDetect": "Nhận dạng lại"
+  },
+  "sections": {
+    "accountAuth": {
+      "title": "Xác thực tài khoản"
+    },
+    "balanceAndStats": {
+      "title": "Số dư và thống kê"
+    },
+    "checkInConfig": {
+      "title": "Cấu hình điểm danh"
+    },
+    "siteInfo": {
+      "title": "Thông tin trang web"
+    },
+    "tagsAndNotes": {
+      "description": "Thẻ được sử dụng để sắp xếp, lọc và nhận dạng nhanh tài khoản, còn ghi chú được sử dụng để bổ sung thêm ngữ cảnh.",
+      "title": "Thẻ và Ghi chú"
+    }
+  },
+  "siteInfo": {
+    "alreadyAdded": "Trang web này đã tồn tại tài khoản",
+    "authMethod": "Phương thức xác thực",
+    "authMethodPlaceholder": "Phương thức xác thực",
+    "authType": {
+      "accessToken": "Xác thực Access Token",
+      "cookieAuth": "Xác thực Cookie"
+    },
+    "cookieWarning": "Khuyến nghị ưu tiên sử dụng Access Token. Xác thực Cookie yêu cầu nhập Session Cookie và có thể không hợp lệ do hết hạn/gia hạn, bạn cần nhập lại sau khi không hợp lệ; nhiều tài khoản trên cùng một trang web cần được nhập riêng cho mỗi tài khoản, không khuyến nghị sử dụng trừ khi cần thiết.",
+    "currentLoginAlreadyAdded": "Tài khoản đăng nhập hiện tại đã được thêm",
+    "currentSite": "Trang web hiện tại",
+    "editNow": "Chỉnh sửa ngay",
+    "siteUrl": "URL trang web",
+    "sub2apiAuthOnly": "Sub2API chỉ hỗ trợ xác thực bằng Access Token (JWT)",
+    "sub2apiHint": "Sub2API sử dụng JWT ngắn hạn, khi hết hạn, tiện ích mở rộng sẽ tự động sử dụng cửa sổ tạm thời để thử lấy JWT mới (yêu cầu đã đăng nhập trên trang web đó). Sau khi bật \"Phiên do tiện ích quản lý\", mỗi tài khoản có thể tự động làm mới và gia hạn xác thực độc lập trong nền, hỗ trợ nhiều tài khoản trên cùng một trang web.",
+    "unknown": "Không thể lấy",
+    "useCurrent": "Sử dụng trang web hiện tại"
+  },
+  "title": {
+    "add": "Thêm tài khoản mới",
+    "edit": "Chỉnh sửa tài khoản"
+  },
+  "warnings": {
+    "duplicateAccount": {
+      "actions": {
+        "continue": "Tiếp tục"
+      },
+      "description_other": "Bạn đã thêm {{count}} tài khoản vào {{siteUrl}}. Tiếp tục thêm có thể gây trùng lặp. Bạn có muốn tiếp tục không?",
+      "descriptionExact": "Trên {{siteUrl}}, tài khoản có User ID {{userId}} đã tồn tại ({{username}}). Việc tiếp tục thêm có thể gây ra trùng lặp, bạn có muốn tiếp tục không?",
+      "title": "Tài khoản trùng lặp",
+      "warningTitle": "Tài khoản đã tồn tại cho trang web này"
+    },
+    "managedSiteConfig": {
+      "actions": {
+        "later": "Để sau",
+        "openSettings": "Đi đến cài đặt"
+      },
+      "description": "{{message}}",
+      "guide": "Tính năng này trước tiên sẽ lưu tài khoản hiện tại, sau đó tự động chuẩn bị API Key khả dụng và điền sẵn vào kênh mới của {{managedSite}}, giúp bạn hoàn thành việc tạo kênh nhanh hơn. Bạn có thể sử dụng tính năng này sau khi hoàn tất cấu hình trang web được quản lý.",
+      "title": "Cấu hình {{managedSite}} trước",
+      "warningTitle": "{{managedSite}} chưa hoàn tất cấu hình"
+    }
+  }
+}

@@ -33,6 +33,10 @@
           "label": "JA",
           "name": "Japanese"
         },
+        "vi": {
+          "label": "VI",
+          "name": "Vietnamese"
+        },
         "zh-CN": {
           "label": "SC",
           "name": "Simplified Chinese"

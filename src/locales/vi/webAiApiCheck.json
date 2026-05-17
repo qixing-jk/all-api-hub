@@ -1,0 +1,74 @@
+{
+  "confirmToast": {
+    "body": "Bạn có muốn mở bảng kiểm tra AI API để kiểm tra và dùng thử khả năng khả dụng của AI API không?",
+    "open": "Mở",
+    "title": "Đã phát hiện URL AI API và API Key hợp lệ"
+  },
+  "messages": {
+    "success": {
+      "settingsSaved": "Đã lưu cài đặt phát hiện AI API."
+    }
+  },
+  "modal": {
+    "actions": {
+      "fetchingModels": "Đang lấy...",
+      "fetchModels": "Lấy danh sách mô hình",
+      "hideKey": "Ẩn Key",
+      "openApiProfiles": "Mở API Profiles",
+      "retry": "Thử lại",
+      "running": "Đang chạy...",
+      "runOne": "Chạy",
+      "saveToProfiles": "Lưu vào API Profiles",
+      "saving": "Đang lưu...",
+      "showKey": "Hiện Key",
+      "test": "Kiểm tra",
+      "testing": "Đang kiểm tra..."
+    },
+    "errors": {
+      "fetchModelsFailed": "Lấy danh sách mô hình thất bại.",
+      "missingBaseUrlOrKey": "Vui lòng điền Base URL và API Key trước.",
+      "runProbeFailed": "Thăm dò thất bại.",
+      "saveToProfilesFailed": "Lưu vào API Profiles thất bại"
+    },
+    "fields": {
+      "apiKey": "API Key",
+      "apiType": "Loại API",
+      "baseUrl": "Base URL",
+      "modelId": "Model ID"
+    },
+    "hints": {
+      "saveWithoutTest": "Mẹo: Chỉ cần điền Base URL và API Key là có thể lưu vào API Profiles (không cần kiểm tra hoặc lấy danh sách mô hình trước). Kiểm tra chỉ được sử dụng để xác minh khả năng khả dụng."
+    },
+    "messages": {
+      "savedToProfiles": "Đã lưu {{name}} vào API Profiles"
+    },
+    "privacyHint": "API Key được coi là thông tin nhạy cảm: mặc định bị ẩn và trừ khi bạn chủ động lưu vào API Profiles, sẽ không có bất kỳ dữ liệu nào được lưu trữ liên tục.",
+    "probes": {
+      "notRunYet": "Chưa chạy"
+    },
+    "sourceText": {
+      "label": "Văn bản để trích xuất",
+      "placeholder": "Dán Base URL và API Key vào đây, hoặc sử dụng menu chuột phải để điền sẵn từ văn bản được chọn."
+    },
+    "title": "Kiểm tra khả năng khả dụng của AI API"
+  },
+  "settings": {
+    "autoDetect": {
+      "enable": "Bật tự động phát hiện",
+      "enableDesc": "Sau khi bật, tiện ích có thể nhận diện thông tin xác thực từ thao tác sao chép và yêu cầu xác nhận trước khi mở cửa sổ bật lên.",
+      "whitelist": {
+        "invalidMore": "...và nhiều hơn nữa",
+        "invalidTitle": "Quy tắc không hợp lệ",
+        "patterns": "Quy tắc danh sách trắng URL",
+        "patternsDesc": "Một JavaScript RegExp mỗi dòng. Mặc định không phân biệt chữ hoa chữ thường khi khớp. Các quy tắc không hợp lệ sẽ bị bỏ qua (coi như không khớp).",
+        "patternsPlaceholder": "^https://example\\.com/console"
+      }
+    },
+    "contextMenu": {
+      "enable": "Hiển thị trong menu chuột phải của trình duyệt",
+      "enableDesc": "Sau khi bật, mục \"Phát hiện AI API\" sẽ hiển thị trong menu chuột phải của trang web."
+    },
+    "description": "Menu chuột phải thủ công luôn khả dụng. Tự động phát hiện là một tính năng tùy chọn, chỉ chạy trên các trang trong danh sách trắng và yêu cầu xác nhận trước khi mở cửa sổ bật lên. API Key được trích xuất sẽ không được lưu theo mặc định.",
+    "title": "Kiểm tra khả năng khả dụng của AI API trên trang web"
+  }
+}

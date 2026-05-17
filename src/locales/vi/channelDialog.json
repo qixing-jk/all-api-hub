@@ -1,0 +1,111 @@
+{
+  "actions": {
+    "create": "Tạo kênh",
+    "deselectAll": "Bỏ chọn tất cả",
+    "hideKey": "Ẩn khóa",
+    "inverse": "Đảo ngược lựa chọn",
+    "loadingRealKey": "Đang tải khóa thực...",
+    "loadRealKey": "Tải khóa thực",
+    "selectAll": "Chọn tất cả",
+    "showKey": "Hiển thị khóa",
+    "update": "Lưu thay đổi"
+  },
+  "description": {
+    "add": "Cấu hình kênh chuyển tiếp mới cho trang web bạn quản lý",
+    "edit": "Cập nhật cài đặt kênh và thông tin định tuyến",
+    "view": "Xem cấu hình kênh và thông tin định tuyến hiện tại"
+  },
+  "fields": {
+    "baseUrl": {
+      "label": "URL cơ sở",
+      "placeholder": "https://api.example.com"
+    },
+    "groups": {
+      "hint": "Nhóm bắt nguồn từ các trang web bạn quản lý",
+      "label": "Nhóm kênh",
+      "loading": "Đang tải nhóm...",
+      "placeholder": "Chọn nhóm"
+    },
+    "key": {
+      "label": "Khóa API",
+      "placeholder": "Nhập khóa API của nhà cung cấp thượng nguồn",
+      "realKeyHint": "Khi giao diện danh sách không trả về khóa kênh đầy đủ, bạn có thể tải khóa thực tại đây; một số loại kênh cũng có thể yêu cầu xác minh bổ sung."
+    },
+    "models": {
+      "hint": "Nhập để tìm kiếm hoặc nhấn Enter để thêm tên mô hình tùy chỉnh",
+      "label": "Các mô hình khả dụng",
+      "loading": "Đang tải mô hình...",
+      "placeholder": "Chọn hoặc nhập tên mô hình"
+    },
+    "name": {
+      "label": "Tên kênh",
+      "placeholder": "Nhập một tên mô tả cho kênh"
+    },
+    "priority": {
+      "hint": "Số ưu tiên càng lớn thì kênh càng được ưu tiên sử dụng",
+      "label": "Độ ưu tiên"
+    },
+    "status": {
+      "disabled": "Vô hiệu hóa",
+      "enabled": "Kích hoạt",
+      "label": "Trạng thái"
+    },
+    "type": {
+      "hint": "Chọn nhà cung cấp thượng nguồn mà kênh này sẽ chuyển tiếp đến",
+      "label": "Loại kênh",
+      "placeholder": "Chọn loại kênh"
+    },
+    "weight": {
+      "hint": "Kiểm soát cân bằng tải trong cùng mức độ ưu tiên (0 = Phân phối đều)",
+      "label": "Trọng số"
+    }
+  },
+  "messages": {
+    "loadRealKeyFailed": "Tải khóa thực của kênh thất bại: {{error}}",
+    "missingChannelId": "Thiếu ID kênh hiện tại",
+    "saveFailed": "Lưu kênh thất bại: {{error}}"
+  },
+  "sections": {
+    "advanced": "Cài đặt nâng cao"
+  },
+  "title": {
+    "add": "Tạo kênh",
+    "edit": "Chỉnh sửa kênh",
+    "view": "Xem kênh"
+  },
+  "validation": {
+    "baseUrlRequired": "Loại kênh này yêu cầu URL cơ sở",
+    "keyRequired": "Khóa API là bắt buộc",
+    "modelsRequired": "Vui lòng nhập ít nhất một mô hình",
+    "nameRequired": "Tên kênh là bắt buộc"
+  },
+  "warnings": {
+    "channelExists": {
+      "actions": {
+        "continue": "Tiếp tục thêm"
+      },
+      "description": "Kênh {{channelName}} đã tồn tại trong trang web được quản lý. Bạn vẫn có thể tiếp tục tạo kênh mới, nhưng có thể gây ra định tuyến trùng lặp. Bạn có muốn tiếp tục không?",
+      "title": "Kênh đã tồn tại",
+      "warningTitle": "Có thể có các kênh trùng lặp"
+    },
+    "exactDuplicate": {
+      "description": "Đã xác nhận có kênh ứng viên trùng lặp {{channelName}} trong trang web được quản lý. Để tránh trùng lặp, vui lòng điều chỉnh tên, mô hình hoặc khóa trước; nếu bạn vẫn muốn giữ kênh trùng lặp, bạn có thể tiếp tục tạo.",
+      "title": "Đã xác nhận có kênh trùng lặp"
+    },
+    "modelsPrefillFailed": {
+      "description": "Không thể lấy danh sách mô hình thượng nguồn cho khóa này. Bạn vẫn có thể tiếp tục tạo kênh, nhưng vui lòng điền thủ công và xác nhận các mô hình trước khi lưu.",
+      "title": "Cần điền thủ công mô hình"
+    },
+    "reviewSuggested": {
+      "description": "Đã tìm thấy kênh ứng viên có địa chỉ thượng nguồn hoặc cấu hình mô hình gần giống, nhưng chưa thể tự động xác nhận xem đó có phải là kênh trùng lặp hay không. Bạn vẫn có thể tiếp tục tạo, vui lòng kiểm tra tên, mô hình và khóa trước khi lưu.",
+      "title": "Vui lòng kiểm tra các kênh có thể trùng lặp"
+    },
+    "verificationRequired": {
+      "actions": {
+        "verifyNow": "Xác minh ngay"
+      },
+      "description": "Đã tìm thấy kênh ứng viên, nhưng New API cần hoàn tất xác minh trước khi có thể đọc khóa thực của kênh, vì vậy tạm thời không thể tự động xác nhận trùng lặp. Bạn vẫn có thể tiếp tục tạo; để loại bỏ trùng lặp chính xác, vui lòng hoàn tất xác minh trước rồi thử lại.",
+      "title": "Có thể có các kênh trùng lặp, cần xác minh để xác nhận chính xác"
+    }
+  }
+}

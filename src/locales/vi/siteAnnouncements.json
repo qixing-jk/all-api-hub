@@ -1,0 +1,55 @@
+{
+  "actions": {
+    "checkNow": "Kiểm tra ngay",
+    "collapse": "Thu gọn",
+    "expand": "Mở rộng",
+    "markAllRead": "Đánh dấu tất cả đã đọc",
+    "markRead": "Đánh dấu đã đọc",
+    "viewSource": "Xem thông báo trang web"
+  },
+  "badges": {
+    "notified": "Đã thông báo",
+    "unread": "Chưa đọc"
+  },
+  "description": "Xem các bản ghi thông báo trang web được lấy về dưới nền, xử lý trạng thái chưa đọc và kích hoạt kiểm tra thủ công.",
+  "empty": {
+    "description": "Thông báo mới sẽ được hiển thị ở đây sau khi được kiểm tra dưới nền.",
+    "filtered": "Không có thông báo nào với các bộ lọc hiện tại",
+    "title": "Chưa có bản ghi thông báo nào"
+  },
+  "filters": {
+    "allReadStates": "Tất cả trạng thái",
+    "allSites": "Tất cả trang web",
+    "allSiteTypes": "Tất cả loại",
+    "read": "Đã đọc",
+    "readState": "Trạng thái đọc",
+    "site": "Trang web",
+    "siteType": "Loại trang web",
+    "unread": "Chưa đọc"
+  },
+  "loading": "Đang tải thông báo...",
+  "messages": {
+    "checkCompleted": "Kiểm tra thông báo đã hoàn tất",
+    "checkFailed": "Kiểm tra thông báo thất bại",
+    "loadFailed": "Tải thông báo thất bại"
+  },
+  "notification": {
+    "multipleUnread_other": "{{title}}, còn {{count}} thông báo chưa đọc",
+    "title": "{{site}} có thông báo mới"
+  },
+  "status": {
+    "failed": "Lần kiểm tra thông báo gần nhất của trang web này đã thất bại: {{error}}",
+    "failedTitle": "Kiểm tra thất bại",
+    "lastChecked": "Lần kiểm tra gần nhất: {{time}}",
+    "unsupported": "Lần kiểm tra gần nhất của trang web này không tìm thấy API thông báo khả dụng.",
+    "unsupportedTitle": "Tạm thời không hỗ trợ API thông báo"
+  },
+  "summary": {
+    "filtered_other": "Đang hiển thị {{count}} / {{total}} thông báo",
+    "notified_other": "{{count}} thông báo hệ thống đã được gửi",
+    "sites": "Trang web liên quan",
+    "total": "Tổng số thông báo",
+    "unread": "Thông báo chưa đọc"
+  },
+  "title": "Thông báo trang web"
+}

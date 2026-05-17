@@ -1,0 +1,71 @@
+{
+  "bulkClear": {
+    "action": "Xóa toàn bộ ánh xạ chuyển hướng mô hình",
+    "actionDesc": "Đặt model_mapping của các kênh đã chọn thành đối tượng trống ({}). Thao tác này không thể hoàn tác.",
+    "actions": {
+      "cancel": "Hủy",
+      "close": "Đóng",
+      "confirm": "Xóa",
+      "continue": "Tiếp tục",
+      "selectAll": "Chọn tất cả",
+      "selectNone": "Bỏ chọn tất cả"
+    },
+    "confirm": {
+      "description_other": "Sắp xóa toàn bộ ánh xạ chuyển hướng mô hình (model_mapping) của {{count}} kênh. Thao tác này không thể hoàn tác.",
+      "details_other": "Số kênh đã chọn: {{count}}",
+      "title": "Xác nhận xóa toàn bộ ánh xạ chuyển hướng mô hình?",
+      "warningTitle": "Thao tác nguy hiểm"
+    },
+    "messages": {
+      "allSuccess_other": "Đã xóa thành công ánh xạ chuyển hướng mô hình của {{count}} kênh",
+      "failed": "Không thể xóa ánh xạ chuyển hướng mô hình: {{error}}",
+      "nothingToClear": "Không cần xóa (model_mapping của các kênh đã chọn hiện đang trống)",
+      "partialFailure": "Đã xóa {{success}}/{{total}} kênh, {{failed}} kênh thất bại",
+      "successWithSkips": "Đã xóa {{cleared}} kênh, {{skipped}} kênh vốn đã trống"
+    },
+    "preview": {
+      "channelListLabel": "Danh sách kênh",
+      "description": "Vui lòng chọn các kênh cần xóa. Các kênh không được chọn sẽ không bị sửa đổi.",
+      "mappingCount_other": "Số ánh xạ: {{count}}",
+      "mappingEmptyInline": "model_mapping hiện tại đang trống ({})",
+      "mappingInvalid": "model_mapping hiện tại không phải là JSON hợp lệ, sẽ hiển thị văn bản gốc.",
+      "mappingInvalidBadge": "JSON không hợp lệ",
+      "mappingToggle": "Xem trước model_mapping hiện tại",
+      "selectedCount": "Đã chọn {{selected}}/{{total}}",
+      "title": "Xóa toàn bộ ánh xạ chuyển hướng mô hình"
+    },
+    "result": {
+      "title": "Chi tiết thất bại"
+    },
+    "search": {
+      "filteredCount": "Hiện đang hiển thị {{filtered}}/{{total}}",
+      "label": "Tìm kiếm kênh",
+      "noResults": "Không tìm thấy kênh nào phù hợp",
+      "placeholder": "Tìm kiếm kênh (tên hoặc ID)…"
+    },
+    "status": {
+      "clearing": "Đang xóa…",
+      "emptySelection": "Vui lòng chọn ít nhất một kênh để tiếp tục.",
+      "loadFailed": "Không thể tải kênh: {{error}}",
+      "loading": "Đang tải kênh…",
+      "noChannels": "Không tìm thấy kênh nào"
+    }
+  },
+  "description": "Tự động ánh xạ chuyển hướng mô hình, giải quyết vấn đề không thể gọi API đồng nhất do tên mô hình",
+  "enable": "Bật chuyển hướng mô hình",
+  "enableDesc": "Bật tính năng ánh xạ chuyển hướng mô hình, sẽ tự động chạy khi đồng bộ mô hình và cho phép chạy thủ công",
+  "messages": {
+    "regenerateFailed": "Tạo lại ánh xạ mô hình thất bại: {{error}}",
+    "regenerateSuccess": "Đã tạo lại ánh xạ mô hình thành công",
+    "updateFailed": "Cập nhật cài đặt chuyển hướng mô hình thất bại",
+    "updateSuccess": "Đã cập nhật cài đặt chuyển hướng mô hình"
+  },
+  "pruneMissingTargetsOnModelSync": "Dọn dẹp các mục tiêu chuyển hướng không hợp lệ sau khi đồng bộ",
+  "pruneMissingTargetsOnModelSyncDesc": "Thao tác nguy hiểm: Sau khi làm mới đồng bộ mô hình, sẽ xóa các ánh xạ trong model_mapping có mô hình mục tiêu không nằm trong danh sách mô hình mới nhất",
+  "regenerateButton": "Tạo lại ánh xạ ngay",
+  "regenerating": "Đang tạo lại…",
+  "standardModels": "Mô hình tiêu chuẩn",
+  "standardModelsDesc": "Chọn các mô hình tiêu chuẩn cần tạo ánh xạ chuyển hướng",
+  "standardModelsPlaceholder": "Vui lòng chọn mô hình…",
+  "title": "Chuyển hướng mô hình"
+}

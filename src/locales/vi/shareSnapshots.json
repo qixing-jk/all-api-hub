@@ -1,0 +1,22 @@
+{
+  "actions": {
+    "shareAccountSnapshot": "Chia sẻ ảnh chụp tài khoản",
+    "shareOverviewSnapshot": "Chia sẻ ảnh chụp tổng quan"
+  },
+  "labels": {
+    "accounts": "Số tài khoản",
+    "asOf": "Tính đến",
+    "balance": "Số dư",
+    "income": "Thu nhập",
+    "net": "Ròng",
+    "outcome": "Chi tiêu",
+    "overview": "Tổng quan",
+    "site": "Trang web",
+    "today": "Hôm nay",
+    "totalBalance": "Tổng số dư"
+  },
+  "toast": {
+    "captionHint": "Văn bản tiêu đề không được sao chép tự động. Việc sao chép văn bản có thể ghi đè lên hình ảnh trong khay nhớ tạm.",
+    "copyCaption": "Sao chép tiêu đề"
+  }
+}

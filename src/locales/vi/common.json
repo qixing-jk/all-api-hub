@@ -1,0 +1,59 @@
+{
+  "actions": {
+    "cancel": "Hủy",
+    "clear": "Xóa sạch",
+    "close": "Đóng",
+    "copyKey": "Sao chép khóa",
+    "delete": "Xóa",
+    "edit": "Chỉnh sửa",
+    "export": "Xuất",
+    "goToSettings": "Đi tới cài đặt",
+    "import": "Nhập",
+    "more": "Thêm",
+    "openSidePanel": "Mở trong bảng điều khiển bên",
+    "refresh": "Làm mới",
+    "reset": "Đặt lại",
+    "retry": "Thử lại",
+    "save": "Lưu"
+  },
+  "currency": {
+    "clickToSwitch": "Nhấn để chuyển sang {{currency}}",
+    "cny": "Nhân dân tệ",
+    "usd": "Đô la Mỹ"
+  },
+  "labels": {
+    "apiKey": "API Key",
+    "notAvailable": "N/A",
+    "settings": "Cài đặt",
+    "token": "Token",
+    "unknown": "Không xác định"
+  },
+  "quota": {
+    "unlimited": "Không giới hạn"
+  },
+  "status": {
+    "configurationRequired": "Yêu cầu cấu hình",
+    "creating": "Đang tạo...",
+    "disabled": "Đã vô hiệu hóa",
+    "enabled": "Đã kích hoạt",
+    "error": "Lỗi",
+    "exporting": "Đang xuất...",
+    "failed": "Thất bại",
+    "importing": "Đang nhập...",
+    "loading": "Đang tải...",
+    "processing": "Đang xử lý...",
+    "refreshing": "Đang làm mới...",
+    "resetting": "Đang đặt lại...",
+    "saving": "Đang lưu...",
+    "success": "Thành công",
+    "testing": "Đang kiểm tra...",
+    "updating": "Đang cập nhật...",
+    "uploading": "Đang tải lên..."
+  },
+  "time": {
+    "neverExpires": "Không bao giờ hết hạn",
+    "seconds": "giây",
+    "updatedAt": "Cập nhật lúc {{time}}"
+  },
+  "total": "Tổng số"
+}

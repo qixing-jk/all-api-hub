@@ -1,0 +1,202 @@
+{
+  "description": "Trong khoảng thời gian được chỉ định mỗi ngày, tự động thực hiện điểm danh cho các tài khoản đủ điều kiện; danh sách kết quả bên dưới hiển thị lịch sử điểm danh đã thực hiện, không phải là hàng đợi chờ điểm danh.",
+  "execution": {
+    "actions": {
+      "devModeHint": "Chế độ phát triển: Để thuận tiện cho việc kiểm tra, các nút thao tác sẽ luôn hiển thị.",
+      "openFailedManual": "Mở trang điểm danh thủ công cho tài khoản thất bại",
+      "openManual": "Điểm danh thủ công",
+      "openSite": "Mở trang web",
+      "retryAccount": "Thử lại"
+    },
+    "debug": {
+      "evaluateUiOpenPretrigger": "Phát triển: Giải thích xem \"Kích hoạt sớm điểm danh hôm nay khi mở giao diện\" có đáp ứng điều kiện không",
+      "resetLastDailyRunDay": "Phát triển: Xóa dấu \"Đã thực hiện điểm danh hàng ngày hôm nay\"",
+      "scheduleDailyAlarmForToday": "Phát triển: Đặt báo thức điểm danh hàng ngày vào thời gian muộn hơn trong hôm nay",
+      "triggerDailyAlarmNow": "Phát triển: Chạy ngay điểm danh tự động hàng ngày (mô phỏng gọi lại báo thức điểm danh hàng ngày)",
+      "triggerRetryAlarmNow": "Phát triển: Chạy ngay điểm danh thử lại (mô phỏng gọi lại báo thức thử lại điểm danh)",
+      "triggerUiOpenPretrigger": "Phát triển: Thử ngay \"Kích hoạt sớm điểm danh hôm nay khi mở giao diện\"",
+      "uiOpenPretriggerDiagnosticsDesc": "Hiển thị xem có đáp ứng điều kiện hay không và thông tin đầu vào được sử dụng để đánh giá.",
+      "uiOpenPretriggerDiagnosticsTitle": "Kích hoạt sớm điểm danh hôm nay khi mở giao diện"
+    },
+    "empty": {
+      "noHistory": "Chưa có lịch sử thực hiện",
+      "noHistoryDesc": "Hiện tại chưa có hồ sơ thực hiện điểm danh. Sau khi nhấp vào \"Thực hiện ngay\", các tài khoản đủ điều kiện sẽ bắt đầu điểm danh, và sẽ xuất hiện trong danh sách kết quả sau khi hoàn thành.",
+      "noResults": "Không có kết quả phù hợp",
+      "noResultsDesc": "Thử sửa đổi điều kiện lọc hoặc từ khóa tìm kiếm"
+    },
+    "filters": {
+      "all": "Tất cả",
+      "failed": "Thất bại",
+      "searchPlaceholder": "Tìm kiếm tên tài khoản hoặc tin nhắn...",
+      "skipped": "Đã bỏ qua",
+      "success": "Thành công"
+    },
+    "hints": {
+      "invalidAccessToken": "Giải pháp: Access Token có thể đã hết hạn. Vui lòng đăng nhập lại trang web này, sau đó tự động nhận diện/làm mới lại Access Token trong \"Quản lý tài khoản → Chỉnh sửa tài khoản\"; nếu sự cố này vẫn xảy ra sau khi nhận diện tự động, vui lòng lấy và sửa đổi Access Token theo cách thủ công.",
+      "noTabWithId": "Mẹo: Vui lòng không đóng thẻ/cửa sổ do tiện ích mở rộng tự động tạo, tiện ích mở rộng sẽ tự động đóng sau một khoảng thời gian. Nếu bạn cần đóng thủ công, vui lòng đợi ít nhất 1 phút trước khi đóng.",
+      "openFailedManualNewWindow": "Mẹo: Nhấn giữ Shift và nhấp vào \"Mở trang điểm danh thủ công cho tài khoản thất bại\" để mở trong cửa sổ mới.",
+      "siteTypeCheckinUnsupported": "Giải pháp: Trước tiên hãy kiểm tra xem \"Loại trang web\" trong \"Quản lý tài khoản → Chỉnh sửa tài khoản\" có khớp với trang web thực tế hay không; nếu đây là kết quả của việc nhận diện tự động trước đó, bạn có thể đăng nhập lại vào trang web đích và nhận diện lại. Nếu bạn xác nhận rằng loại trang web là chính xác nhưng hệ thống vẫn báo không hỗ trợ, điều đó có nghĩa là trang web này hiện có thể chưa được điều chỉnh cho điểm danh tự động, vui lòng chuyển sang sử dụng \"Mở trang web\" hoặc \"Điểm danh thủ công\" để xử lý."
+    },
+    "refresh": "Làm mới",
+    "runNow": "Thực hiện ngay",
+    "statistics": {
+      "result": "Kết quả thực hiện"
+    },
+    "status": {
+      "alreadyChecked": "Đã điểm danh",
+      "failed": "Thất bại",
+      "skipped": "Đã bỏ qua",
+      "success": "Thành công"
+    },
+    "table": {
+      "accountName": "Tên tài khoản",
+      "actions": "Thao tác",
+      "message": "Tin nhắn",
+      "status": "Trạng thái",
+      "time": "Thời gian"
+    },
+    "title": "Điểm danh tự động"
+  },
+  "messages": {
+    "error": {
+      "accountDisabled": "Tài khoản đã bị vô hiệu hóa",
+      "dailyAlarmScheduleForTodayFailed": "Lên lịch báo thức hàng ngày cho hôm nay thất bại: {{error}}",
+      "dailyAlarmTriggerFailed": "Kích hoạt báo thức hàng ngày thất bại: {{error}}",
+      "deterministicTimeOutsideWindow": "Thời gian cố định phải nằm trong khoảng thời gian được định cấu hình.",
+      "invalidDeterministicTime": "Vui lòng nhập định dạng thời gian HH:mm hợp lệ.",
+      "invalidNumber": "Vui lòng nhập một số dương hợp lệ.",
+      "invalidTimeWindow": "Khoảng thời gian không hợp lệ, thời gian bắt đầu và kết thúc không được giống nhau.",
+      "lastDailyRunDayResetFailed": "Đặt lại dấu thực hiện hàng ngày thất bại: {{error}}",
+      "openFailedManualFailed": "Không thể mở trang điểm danh thủ công cho {{failedCount}} tài khoản thất bại.",
+      "openFailedManualNone": "Không có tài khoản thất bại nào để mở trang điểm danh thủ công.",
+      "openFailedManualPartial": "Đã mở trang cho {{openedCount}} tài khoản thất bại, {{failedCount}} trang khác mở không thành công.",
+      "openManualFailed": "Mở trang điểm danh thủ công thất bại: {{error}}",
+      "openSiteFailed": "Mở trang web thất bại: {{error}}",
+      "retryAlarmTriggerFailed": "Kích hoạt báo thức thử lại thất bại: {{error}}",
+      "retryFailed": "Thử lại thất bại: {{error}}",
+      "runFailed": "Thực hiện điểm danh tự động thất bại: {{error}}",
+      "uiOpenPretriggerDidNotStart": "Kích hoạt trước khi mở giao diện chưa bắt đầu: {{reason}}",
+      "uiOpenPretriggerEvaluationFailed": "Đánh giá kích hoạt trước khi mở giao diện thất bại: {{error}}",
+      "uiOpenPretriggerIneligible": "Điều kiện kích hoạt trước khi mở giao diện không được đáp ứng: {{reason}}",
+      "uiOpenPretriggerTriggerFailed": "Kích hoạt kích hoạt trước khi mở giao diện thất bại: {{error}}"
+    },
+    "loading": {
+      "evaluatingUiOpenPretrigger": "Đang đánh giá kích hoạt trước khi mở giao diện...",
+      "openingFailedManual_other": "Đang mở trang điểm danh thủ công cho {{count}} tài khoản thất bại...",
+      "resettingLastDailyRunDay": "Đang đặt lại dấu thực hiện hàng ngày...",
+      "running": "Đang thực hiện điểm danh tự động...",
+      "schedulingDailyAlarmForToday": "Đang lên lịch báo thức hàng ngày cho hôm nay...",
+      "triggeringDailyAlarm": "Đang kích hoạt báo thức hàng ngày...",
+      "triggeringRetryAlarm": "Đang kích hoạt báo thức thử lại...",
+      "triggeringUiOpenPretrigger": "Đang kích hoạt kích hoạt trước khi mở giao diện..."
+    },
+    "success": {
+      "dailyAlarmScheduledForToday": "Đã lên lịch báo thức hàng ngày cho hôm nay.",
+      "dailyAlarmTriggered": "Đã kích hoạt thực hiện báo thức hàng ngày.",
+      "lastDailyRunDayReset": "Đã đặt lại dấu thực hiện hàng ngày.",
+      "openFailedManualCompleted_other": "Đã mở trang điểm danh thủ công cho {{count}} tài khoản thất bại.",
+      "pretriggerStarted": "Đã kích hoạt điểm danh tự động sớm.",
+      "retryAlarmTriggered": "Đã kích hoạt thực hiện báo thức thử lại.",
+      "retryCompleted": "Thử lại đã hoàn tất.",
+      "runCompleted": "Điểm danh tự động đã hoàn tất.",
+      "settingsSaved": "Đã lưu cài đặt điểm danh tự động.",
+      "uiOpenPretriggerEligible": "Điều kiện kích hoạt trước khi mở giao diện đã được đáp ứng."
+    }
+  },
+  "providerFallback": {
+    "alreadyCheckedToday": "Hôm nay đã điểm danh",
+    "checkinFailed": "Điểm danh thất bại",
+    "checkinSuccessful": "Điểm danh thành công",
+    "endpointNotSupported": "Giao diện điểm danh này không được hỗ trợ, vui lòng kiểm tra xem loại trang web của tài khoản có giống với trang web thực tế hay không",
+    "turnstileIncognitoAccessRequired": "Cần cho phép tiện ích mở rộng chạy ở chế độ ẩn danh để nhận Turnstile Token trên trang ẩn danh (kịch bản nhiều tài khoản). Vui lòng bật \"Cho phép chạy ở chế độ ẩn danh\" trong trang quản lý tiện ích mở rộng và thử lại; hoặc mở trang điểm danh theo cách thủ công để hoàn tất xác minh: {{checkInUrl}}",
+    "turnstileManualRequired": "Cần hoàn tất xác minh Cloudflare Turnstile, vui lòng mở trang điểm danh để hoàn tất xác minh: {{checkInUrl}}",
+    "unknownError": "Đã xảy ra lỗi không xác định"
+  },
+  "providerWong": {
+    "checkinDisabled": "Trang web này chưa bật chức năng điểm danh"
+  },
+  "settings": {
+    "deterministicTimeDesc": "Khi bật chế độ cố định, hãy chọn thời gian cụ thể (HH:mm) để bắt đầu điểm danh.",
+    "deterministicTimeTitle": "Thời gian cố định",
+    "enable": "Bật điểm danh tự động",
+    "enableDesc": "Kiểm soát công tắc chức năng điểm danh tự động toàn cầu, sau khi tắt, sẽ không có tác vụ điểm danh tự động nào được thực hiện.",
+    "notifyUiOnCompletion": "Làm mới dữ liệu và giao diện sau khi hoàn thành điểm danh tự động",
+    "notifyUiOnCompletionDesc": "Ngay lập tức làm mới dữ liệu của tài khoản điểm danh và các giao diện liên quan sau khi điểm danh tự động hoàn tất.",
+    "pretriggerDailyOnUiOpen": "Kích hoạt sớm điểm danh hôm nay khi mở giao diện",
+    "pretriggerDailyOnUiOpenDesc": "Khi bạn mở giao diện tiện ích mở rộng trong khoảng thời gian của ngày hôm nay và kế hoạch hàng ngày của hôm nay chưa được thực hiện, hãy kích hoạt ngay một lần điểm danh tự động hàng ngày.",
+    "retryDesc": "Tự động thử lại các tài khoản thất bại trong cùng một ngày.",
+    "retryInterval": "Khoảng thời gian thử lại (phút)",
+    "retryIntervalDesc": "Thời gian chờ giữa mỗi lần thử lại.",
+    "retryMaxAttempts": "Số lần thử tối đa hàng ngày",
+    "retryMaxAttemptsDesc": "Số lần thử tối đa cho phép mỗi ngày đối với mỗi tài khoản (lần đầu + thử lại).",
+    "retryTitle": "Chiến lược thử lại",
+    "scheduleModeDesc": "Chọn cách tính thời gian chạy tiếp theo trong khoảng thời gian.",
+    "scheduleModeDeterministic": "Thời gian cố định",
+    "scheduleModeRandom": "Ngẫu nhiên",
+    "scheduleModeTitle": "Chế độ kế hoạch",
+    "title": "Điểm danh tự động",
+    "viewExecution": "Xem lịch sử điểm danh",
+    "viewExecutionButton": "Mở hồ sơ",
+    "viewExecutionDesc": "Xem kết quả điểm danh tự động đã thực hiện, lý do bỏ qua và trạng thái sẵn sàng của tài khoản; đây không phải là danh sách tài khoản chờ điểm danh.",
+    "windowEnd": "Kết thúc khoảng thời gian",
+    "windowEndDesc": "Giờ địa phương muộn nhất cho phép bắt đầu điểm danh tự động hàng ngày.",
+    "windowStart": "Bắt đầu khoảng thời gian",
+    "windowStartDesc": "Giờ địa phương sớm nhất cho phép bắt đầu điểm danh tự động hàng ngày."
+  },
+  "skipReasons": {
+    "account_disabled": "Tài khoản đã bị vô hiệu hóa",
+    "already_checked_today": "Hôm nay đã điểm danh",
+    "auto_checkin_disabled": "Điểm danh tự động đã tắt",
+    "detection_disabled": "Phát hiện đã tắt",
+    "no_provider": "Loại trang web của tài khoản hiện không hỗ trợ điểm danh",
+    "provider_not_ready": "Cấu hình tài khoản hiện không hỗ trợ điểm danh"
+  },
+  "snapshot": {
+    "badges": {
+      "disabled": "Chưa bật",
+      "enabled": "Đã bật",
+      "pending": "Chờ thực hiện",
+      "providerAvailable": "Có sẵn",
+      "providerUnavailable": "Không có sẵn"
+    },
+    "description": "Liệt kê tất cả các tài khoản đã bật tính năng phát hiện và trạng thái chuẩn bị của chúng. Các tài khoản ở trạng thái chờ thực hiện sẽ tham gia điểm danh sau khi nhấp vào \"Thực hiện ngay\" hoặc đạt đến thời gian đã lên lịch.",
+    "table": {
+      "autoCheckin": "Điểm danh tự động",
+      "detection": "Phát hiện",
+      "lastResult": "Kết quả gần đây",
+      "provider": "Nhà cung cấp",
+      "skipReason": "Lý do bỏ qua",
+      "status": "Trạng thái"
+    },
+    "title": "Trạng thái phát hiện tài khoản"
+  },
+  "status": {
+    "disabled": "Đã vô hiệu hóa",
+    "lastRun": "Chạy gần nhất",
+    "nextDaily": "Kế hoạch hàng ngày tiếp theo",
+    "nextRetry": "Kế hoạch thử lại tiếp theo",
+    "noPendingRetry": "Không có chờ thử lại",
+    "notScheduled": "Chưa lên lịch",
+    "pendingRetry": "Đang chờ thử lại",
+    "result": {
+      "failed": "Thất bại",
+      "partial": "Thành công một phần",
+      "success": "Thành công"
+    },
+    "retryDisabled": "Thử lại chưa bật",
+    "summary": {
+      "eligible": "Đủ điều kiện",
+      "executed": "Đã thực hiện",
+      "failed": "Thất bại",
+      "skipped": "Bỏ qua",
+      "success": "Thành công",
+      "title": "Thống kê thực hiện"
+    }
+  },
+  "uiOpenPretrigger": {
+    "close": "Đóng",
+    "dialogDescription": "Đã kích hoạt điểm danh tự động được lên lịch hôm nay khi mở giao diện tiện ích mở rộng.",
+    "dialogTitle": "Điểm danh tự động đã hoàn tất",
+    "viewDetails": "Xem chi tiết"
+  }
+}

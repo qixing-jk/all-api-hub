@@ -1,0 +1,69 @@
+{
+  "copyrightAck": "Bản quyền và Lời cảm ơn",
+  "devMaintenance": "Phát triển và bảo trì",
+  "features": "Tính năng",
+  "feedbackSection": {
+    "bugReport": {
+      "button": "Mở báo cáo lỗi",
+      "description": "Sử dụng mẫu báo cáo lỗi để gửi các hành vi bất thường, lỗi hoặc kết quả không mong muốn."
+    },
+    "community": {
+      "button": "Xem các kênh giao tiếp",
+      "description": "Xem mã QR nhóm WeChat, cộng đồng đa ngôn ngữ Discord, nhóm Telegram và các cổng giao tiếp khác, phù hợp để đặt câu hỏi, chia sẻ kinh nghiệm sử dụng và khắc phục sự cố."
+    },
+    "discussion": {
+      "button": "Mở khu vực thảo luận",
+      "description": "Truy cập GitHub Discussions để đặt câu hỏi, trao đổi kinh nghiệm cấu hình hoặc bắt đầu các cuộc thảo luận cộng đồng rộng hơn."
+    },
+    "featureRequest": {
+      "button": "Mở yêu cầu tính năng",
+      "description": "Chia sẻ ý tưởng cải tiến hoặc nhu cầu sử dụng của bạn thông qua mẫu yêu cầu tính năng."
+    },
+    "title": "Phản hồi và hỗ trợ"
+  },
+  "githubDesc": "Xem mã nguồn, gửi vấn đề hoặc tham gia phát triển dự án",
+  "githubRepo": "Kho lưu trữ GitHub",
+  "homepage": "Trang web chính thức của dự án",
+  "homepageDesc": "Xem tài liệu chi tiết, hướng dẫn sử dụng và thông tin khác",
+  "implementedFeatures": "Tính năng đã triển khai",
+  "intro": "All API Hub là một tiện ích mở rộng trình duyệt dành cho cả các trạm trung chuyển thuộc sê-ri New API của bên thứ ba và các phiên bản New API tự xây dựng. Nó hiển thị tập trung tài khoản và số dư, phân loại thông minh và nhận biết trang web hiện tại, đồng thời cung cấp các khả năng tự động hóa như tự động làm mới và vượt tường lửa bằng cửa sổ tạm thời; đối với New API tự xây dựng, nó cũng hỗ trợ quản lý kênh và đồng bộ hóa danh sách mô hình, cũng như tích hợp CLIProxyAPI, sao lưu WebDAV và các công cụ xuất/nhập dữ liệu.",
+  "privacyText": "Các dữ liệu nhạy cảm như tài khoản, API Key, Cookie, số dư, nội dung yêu cầu và thông tin người dùng nhập mặc định chỉ được lưu trữ cục bộ. Số liệu thống kê sản phẩm ẩn danh có thể tắt được chỉ được sử dụng để ưu tiên khắc phục các sự cố phổ biến, cải thiện các luồng công việc thường dùng và tính tương thích, đồng thời giảm bớt sự can thiệp không cần thiết, và sẽ không thu thập các dữ liệu nhạy cảm nêu trên.",
+  "privacyTitle": "Bảo vệ quyền riêng tư",
+  "projectLinks": "Liên kết dự án",
+  "releaseUpdate": {
+    "currentVersion": "Phiên bản hiện tại: v{{version}}",
+    "latestVersion": "Phiên bản chính thức mới nhất: v{{version}}",
+    "title": "Cập nhật phiên bản"
+  },
+  "starRepo": "Cho một Star",
+  "stores": {
+    "chrome": "Cửa hàng Chrome trực tuyến",
+    "edge": "Cửa hàng tiện ích mở rộng Edge",
+    "firefox": "Tiện ích bổ sung Firefox"
+  },
+  "storesSection": {
+    "download": {
+      "button": "Mở cửa hàng",
+      "description": "Tải xuống/cài đặt từ {{store}}."
+    },
+    "review": {
+      "button": "Truy cập {{store}} để đánh giá",
+      "description": "Nếu All API Hub hữu ích với bạn, vui lòng để lại đánh giá tích cực trên {{store}} để hỗ trợ chúng tôi tiếp tục cập nhật.",
+      "title": "Cho chúng tôi một đánh giá tốt"
+    },
+    "title": "Đánh giá và tải xuống"
+  },
+  "techStack": {
+    "headlessui": "Thành phần UI không kiểu dáng",
+    "react": "Thư viện giao diện người dùng",
+    "tailwindcss": "Framework CSS nguyên tử",
+    "title": "Ngăn xếp công nghệ",
+    "typescript": "JavaScript kiểu an toàn",
+    "wxt": "Framework phát triển tiện ích mở rộng trình duyệt"
+  },
+  "thanksDesc": "Cảm ơn tất cả các nhà phát triển đã đóng góp cho cộng đồng nguồn mở, việc phát triển tiện ích mở rộng này được hưởng lợi từ các dự án và công cụ nguồn mở tuyệt vời này",
+  "title": "Giới thiệu",
+  "upcomingFeatures": "Tính năng sắp ra mắt",
+  "version": "Phiên bản:",
+  "visitHomepage": "Truy cập trang chủ"
+}

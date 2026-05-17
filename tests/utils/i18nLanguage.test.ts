@@ -12,6 +12,9 @@ describe("i18n language helpers", () => {
     expect(normalizeAppLanguage("ja")).toBe("ja")
     expect(normalizeAppLanguage("ja-JP")).toBe("ja")
     expect(normalizeAppLanguage("ja_JP")).toBe("ja")
+    expect(normalizeAppLanguage("vi")).toBe("vi")
+    expect(normalizeAppLanguage("vi-VN")).toBe("vi")
+    expect(normalizeAppLanguage("vi_VN")).toBe("vi")
     expect(normalizeAppLanguage("zh-CN")).toBe("zh-CN")
     expect(normalizeAppLanguage("zh_CN")).toBe("zh-CN")
     expect(normalizeAppLanguage("zh-SG")).toBe("zh-CN")
@@ -67,6 +70,14 @@ describe("i18n language helpers", () => {
         detectedLanguage: "ja-JP",
       }),
     ).toBe("ja")
+  })
+
+  it("keeps detected vietnamese when no explicit preference exists", () => {
+    expect(
+      resolveInitialAppLanguage({
+        detectedLanguage: "vi-VN",
+      }),
+    ).toBe("vi")
   })
 
   it("falls back to English when detection is unsupported", () => {

@@ -1,0 +1,48 @@
+{
+  "dialog": {
+    "actions": {
+      "close": "Đóng",
+      "openSite": "Mở trang web",
+      "retry": "Thử lại",
+      "retryAfterPasskey": "Thử lại sau khi hoàn thành Passkey",
+      "saveAndRetry": "Lưu và thử lại",
+      "submitLoginCode": "Gửi mã xác minh đăng nhập",
+      "submitVerificationCode": "Gửi mã xác minh bảo mật"
+    },
+    "body": {
+      "credentialsMissing": "Vui lòng điền tên người dùng và mật khẩu đăng nhập New API trong phần cài đặt trước khi chạy xác minh hỗ trợ phiên.",
+      "failure": "Quy trình xác minh New API không thể hoàn tất.",
+      "loggingIn": "Đang kiểm tra phiên New API hiện tại và chuẩn bị quy trình xác minh nếu cần.",
+      "loginTwoFactor": "Bước đăng nhập New API yêu cầu gửi mã xác minh trước khi phiên duyệt web có thể tiếp tục.",
+      "passkeyManual": "Tài khoản hiện tại sử dụng xác minh Passkey ở bước này. Vui lòng hoàn thành xác minh Passkey trên trang web trước, sau đó quay lại đây và thử lại.",
+      "secureVerification": "Phiên quản trị viên đã đăng nhập, nhưng trước khi đọc khóa kênh ẩn, New API vẫn cần xác minh mã bảo mật một lần.",
+      "successChannel": "Xác minh cho {{label}} đã thành công và key kênh thực đã được tải.",
+      "successSettings": "Quy trình đăng nhập và xác minh New API đã hoàn tất thành công. Bây giờ bạn có thể tiếp tục thực hiện các thao tác liên quan yêu cầu đăng nhập và xác minh.",
+      "successToken": "Xác minh cho {{label}} đã thành công và trạng thái trang web quản lý đã được làm mới."
+    },
+    "fields": {
+      "codeLabel": "Mã xác minh"
+    },
+    "hints": {
+      "manualFallback": "Ngay cả khi TOTP tự động đã được định cấu hình, bạn vẫn có thể nhập mã xác minh theo cách thủ công.",
+      "openSettingsShortcut": "Bạn có thể hoàn thành cấu hình cần thiết trực tiếp tại đây và sau đó tiếp tục xác minh.",
+      "passkey": "Vui lòng mở trang web, hoàn thành lời nhắc Passkey ở đó, sau đó quay lại đây và thử lại."
+    },
+    "messages": {
+      "completeRequiredConfig": "Vui lòng hoàn thành các mục cấu hình còn thiếu trước.",
+      "finishing": "Đang hoàn tất quá trình phát hiện phiên New API...",
+      "missingBaseUrl": "Vui lòng điền URL cơ sở của New API trước khi kiểm tra quy trình phiên.",
+      "missingCode": "Vui lòng nhập mã xác minh trước.",
+      "quickConfigSaveFailed": "Lưu cấu hình nhanh không thành công, vui lòng thử lại sau.",
+      "refreshingChannel": "Đang tải key kênh thực...",
+      "refreshingToken": "Đang làm mới trạng thái trang web quản lý cho khóa này...",
+      "starting": "Đang khởi chạy quy trình xác minh New API...",
+      "submitting": "Đang gửi mã xác minh..."
+    },
+    "title": {
+      "channel": "Xác minh key kênh New API",
+      "settings": "Phát hiện phiên New API",
+      "token": "Thử lại xác minh New API"
+    }
+  }
+}

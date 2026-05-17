@@ -2,6 +2,7 @@ import {
   DEFAULT_LANG,
   JAPANESE_LANG,
   TRADITIONAL_CHINESE_LANG,
+  VIETNAMESE_LANG,
   type SupportedUiLanguage,
 } from "~/constants"
 
@@ -21,6 +22,9 @@ export const UI_LANGUAGE_OPTIONS = [
   },
   {
     code: JAPANESE_LANG,
+  },
+  {
+    code: VIETNAMESE_LANG,
   },
   {
     code: DEFAULT_LANG,
@@ -80,6 +84,13 @@ export function isJapaneseLanguage(language?: string | null): boolean {
 }
 
 /**
+ * Return true when the language belongs to the Vietnamese locale family.
+ */
+export function isVietnameseLanguage(language?: string | null): boolean {
+  return isLanguageFamily(normalizeLanguageTag(language), "vi")
+}
+
+/**
  * Normalize runtime/browser language codes to the app's supported locale keys.
  */
 export function normalizeAppLanguage(
@@ -87,6 +98,7 @@ export function normalizeAppLanguage(
 ): SupportedUiLanguage | undefined {
   if (isEnglishLanguage(language)) return ENGLISH_LANG
   if (isJapaneseLanguage(language)) return JAPANESE_LANG
+  if (isVietnameseLanguage(language)) return VIETNAMESE_LANG
   if (isTraditionalChineseLanguage(language)) return TRADITIONAL_CHINESE_LANG
   if (isChineseLanguage(language)) return DEFAULT_LANG
 

@@ -1,0 +1,223 @@
+{
+  "actions": {
+    "applySettings": "Áp dụng Cài đặt",
+    "export": "Xuất",
+    "openAccountUsageSettings": "Cài đặt Sử dụng",
+    "refresh": "Làm mới",
+    "syncNow": "Đồng bộ Ngay"
+  },
+  "charts": {
+    "accountComparison": {
+      "description": "So sánh tổng lượng sử dụng của từng tài khoản trong mục chọn hiện tại.",
+      "series": {
+        "tokens": "Tổng Tokens"
+      },
+      "title": "So sánh Tài khoản"
+    },
+    "common": {
+      "chartType": {
+        "ariaLabel": "Loại biểu đồ",
+        "histogram": "Biểu đồ cột",
+        "pie": "Biểu đồ tròn"
+      }
+    },
+    "dailyOverview": {
+      "axes": {
+        "requests": "Số yêu cầu",
+        "tokens": "Tokens / Hạn mức"
+      },
+      "description": "Xu hướng đa chỉ số, hỗ trợ chú giải và thu phóng.",
+      "series": {
+        "completionTokens": "Completion Tokens",
+        "promptTokens": "Prompt Tokens",
+        "quota": "Hạn mức",
+        "requests": "Số yêu cầu",
+        "totalTokens": "Tổng Tokens"
+      },
+      "title": "Tổng quan Hàng ngày"
+    },
+    "latencyHistogram": {
+      "description": "Biểu đồ cột về độ trễ yêu cầu đơn (use_time) trong mục chọn hiện tại.",
+      "series": {
+        "count": "Số lượng"
+      },
+      "title": "Phân bổ Độ trễ"
+    },
+    "latencyTrend": {
+      "axes": {
+        "seconds": "Giây",
+        "slowCount": "Số yêu cầu chậm"
+      },
+      "description": "Độ trễ trung bình/tối đa hàng ngày và số lượng yêu cầu chậm.",
+      "series": {
+        "avg": "Trung bình",
+        "max": "Tối đa",
+        "slow": "Chậm"
+      },
+      "title": "Xu hướng Độ trễ"
+    },
+    "modelCostDistribution": {
+      "description": "Các mô hình Top theo tiêu hao hạn mức (quy đổi USD) trong phạm vi ngày đã chọn.",
+      "series": {
+        "usd": "Chi phí (USD)"
+      },
+      "title": "Phân bổ Chi phí Mô hình"
+    },
+    "modelDistribution": {
+      "description": "Các mô hình Top theo tổng Tokens trong phạm vi ngày đã chọn.",
+      "series": {
+        "tokens": "Tổng Tokens"
+      },
+      "title": "Phân bổ Mô hình"
+    },
+    "modelHeatmap": {
+      "description": "Cường độ Tokens theo thời gian của các mô hình Top (nhấp vào mô hình để tập trung).",
+      "series": {
+        "tokens": "Tổng Tokens"
+      },
+      "title": "Bản đồ nhiệt Mô hình × Ngày"
+    },
+    "other": "Khác",
+    "slowModels": {
+      "description": "Mô hình có nhiều yêu cầu chậm nhất trong mục chọn hiện tại.",
+      "series": {
+        "slowCount": "Số yêu cầu chậm"
+      },
+      "title": "Xếp hạng Mô hình Chậm"
+    },
+    "slowTokens": {
+      "description": "API Token có nhiều yêu cầu chậm nhất trong mục chọn hiện tại.",
+      "series": {
+        "slowCount": "Số yêu cầu chậm"
+      },
+      "title": "Xếp hạng Token Chậm"
+    },
+    "usageTimeHeatmap": {
+      "description": "Bản đồ nhiệt Tokens tổng hợp theo Tuần × Giờ (giờ địa phương).",
+      "series": {
+        "tokens": "Tổng Tokens"
+      },
+      "title": "Điểm nóng Thời gian Sử dụng"
+    }
+  },
+  "description": "Đồng bộ và trực quan hóa lịch sử sử dụng được tổng hợp cục bộ, hỗ trợ xuất.",
+  "empty": {
+    "description": "Vui lòng bật đồng bộ trong Cài đặt → Lượng dùng Tài khoản trước, sau đó nhấp vào \"Đồng bộ Ngay\" để lấy lịch sử sử dụng gần đây.",
+    "title": "Chưa có dữ liệu lịch sử sử dụng"
+  },
+  "filters": {
+    "accounts": "Tài khoản",
+    "accountsHint": "Có thể chọn một phần tài khoản (không chọn nghĩa là tất cả trong phạm vi trang web).",
+    "allAccounts": "Tất cả Tài khoản",
+    "allSites": "Tất cả Trang web",
+    "allTokens": "Tất cả Token",
+    "endDay": "Ngày kết thúc",
+    "sites": "Trang web",
+    "sitesHint": "Có thể chọn một phần trang web (không chọn nghĩa là tất cả).",
+    "startDay": "Ngày bắt đầu",
+    "tokens": "API Token",
+    "tokensHint": "Có thể lọc theo Token của tài khoản (không chọn nghĩa là tất cả trong phạm vi tài khoản).",
+    "unknownToken": "Token Không xác định"
+  },
+  "hover": {
+    "account": "Tài khoản",
+    "notes": "Ghi chú",
+    "owners": "Tài khoản Sở hữu",
+    "site": "Trang web",
+    "token": "Token",
+    "type": "Loại",
+    "url": "URL"
+  },
+  "messages": {
+    "error": {
+      "exportFailed": "Xuất thất bại: {{error}}",
+      "exportNoData": "Không có dữ liệu để xuất trong mục chọn hiện tại",
+      "settingsSaveFailed": "Lưu cài đặt thất bại: {{error}}",
+      "syncFailed": "Đồng bộ thất bại: {{error}}"
+    },
+    "loading": {
+      "syncing": "Đang đồng bộ lịch sử sử dụng..."
+    },
+    "success": {
+      "exported": "Đã xuất",
+      "settingsSaved": "Đã lưu cài đặt",
+      "syncCompleted": "Đồng bộ hoàn tất (Thành công: {{success}}, Bỏ qua: {{skipped}}, Thất bại: {{error}}, Không hỗ trợ: {{unsupported}})",
+      "syncCompletedNoSummary": "Đồng bộ hoàn tất"
+    },
+    "warning": {
+      "scheduleFallback": "Trình duyệt hiện tại không hỗ trợ lên lịch, đã tự động chuyển sang \"Đồng bộ sau khi làm mới tài khoản\": {{warning}}",
+      "syncCompletedWithIssues": "Đồng bộ hoàn tất, nhưng vẫn còn tài khoản chưa xong (Thành công: {{success}}, Bỏ qua: {{skipped}}, Thất bại: {{error}}, Không hỗ trợ: {{unsupported}})"
+    }
+  },
+  "settings": {
+    "alarmUnsupported": "Trình duyệt hiện tại không hỗ trợ Alarms API, không thể sử dụng lịch trình kiểu Cron.",
+    "enabled": "Đồng bộ Lịch sử Sử dụng",
+    "enabledHint": "Sau khi bật, chỉ lưu dữ liệu tổng hợp hàng ngày có giới hạn (không lưu nhật ký gốc).",
+    "retentionDays": "Số ngày giữ lại",
+    "scheduleMode": "Chế độ Đồng bộ Tự động",
+    "scheduleModePlaceholder": "Vui lòng chọn chế độ đồng bộ tự động",
+    "scheduleModes": {
+      "afterRefresh": "Sau khi làm mới tài khoản",
+      "alarm": "Kiểu Cron (cần Alarms API)",
+      "manual": "Chỉ thủ công"
+    },
+    "syncIntervalHours": "Khoảng thời gian đồng bộ tối thiểu (giờ)"
+  },
+  "status": {
+    "never": "Chưa bao giờ",
+    "states": {
+      "error": "Thất bại",
+      "never": "Chưa bao giờ",
+      "success": "Thành công",
+      "unsupported": "Không hỗ trợ"
+    }
+  },
+  "summary": {
+    "completionTokens": "Token Đầu ra",
+    "cost": "Chi phí",
+    "promptTokens": "Token Đầu vào",
+    "requests": "Số yêu cầu",
+    "totalTokens": "Tổng lượng Token"
+  },
+  "syncTab": {
+    "actions": {
+      "clearSelection": "Xóa lựa chọn",
+      "refreshStatus": "Làm mới trạng thái",
+      "syncAccount": "Đồng bộ tài khoản này",
+      "syncing": "Đang đồng bộ...",
+      "syncSelected": "Đồng bộ mục đã chọn",
+      "viewStatus": "Xem trạng thái đồng bộ"
+    },
+    "noAccounts": "Không tìm thấy tài khoản nào.",
+    "searchPlaceholder": "Nhập từ khóa tìm kiếm…",
+    "settingsDescription": "Cấu hình cách lưu trữ và lên lịch cho dữ liệu tổng hợp lịch sử sử dụng.",
+    "settingsTitle": "Cài đặt Đồng bộ Lịch sử Sử dụng",
+    "stateDescription": "Xem trạng thái đồng bộ và thời gian đồng bộ cuối cùng của từng tài khoản.",
+    "stateTitle": "Trạng thái Đồng bộ",
+    "table": {
+      "columns": {
+        "account": "Tài khoản",
+        "lastSyncAt": "Đồng bộ cuối",
+        "message": "Thông tin",
+        "state": "Trạng thái"
+      },
+      "empty": "Không có tài khoản nào khớp với tìm kiếm hiện tại.",
+      "loading": "Đang tải…",
+      "noMessage": "—",
+      "rowActions": "Hành động hàng",
+      "selectAll": "Chọn tất cả tài khoản",
+      "selectedCount_other": "Đã chọn: {{count}}",
+      "selectRow": "Chọn tài khoản: {{name}}"
+    }
+  },
+  "title": "Phân tích Lượng dùng",
+  "weekdays": {
+    "fri": "Thứ Sáu",
+    "mon": "Thứ Hai",
+    "sat": "Thứ Bảy",
+    "sun": "Chủ Nhật",
+    "thu": "Thứ Năm",
+    "tue": "Thứ Ba",
+    "wed": "Thứ Tư"
+  }
+}

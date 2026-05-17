@@ -1,0 +1,285 @@
+{
+  "accountSummary": {
+    "keys_other": "{{count}} key",
+    "loadFailed": "Tải thất bại",
+    "title": "Tổng quan tài khoản"
+  },
+  "actions": {
+    "collapseAll": "Thu gọn tất cả",
+    "deleteKey": "Xóa khóa",
+    "disable": "Vô hiệu hóa",
+    "editKey": "Chỉnh sửa khóa",
+    "enable": "Kích hoạt",
+    "expandAll": "Mở rộng tất cả",
+    "exportToCCSwitch": "Xuất sang CC Switch",
+    "exportToKiloCode": "Xuất sang Kilo Code",
+    "hideKey": "Ẩn khóa",
+    "importToClaudeCodeRouter": "Nhập vào Claude Code Router",
+    "importToCliProxy": "Nhập vào CLIProxyAPI",
+    "importToManagedSite": "Nhập vào {{site}}",
+    "openApiProfiles": "Mở Hồ sơ API",
+    "retryFailed": "Thử lại tài khoản thất bại",
+    "saveToApiProfiles": "Lưu vào Hồ sơ API",
+    "showKey": "Hiển thị khóa",
+    "useInCherry": "Sử dụng trong Cherry Studio"
+  },
+  "allAccounts": "Tất cả tài khoản",
+  "allAccountsFailed_other": "{{count}} thất bại",
+  "allAccountsLoading_other": "{{count}} đang tải",
+  "allAccountsProgress": "Đã tải {{loaded}}/{{total}} tài khoản",
+  "batchManagedSiteExport": {
+    "actions": {
+      "clearSelection": "Xóa lựa chọn",
+      "open": "Nhập hàng loạt vào {{site}} ({{selectedCount}})",
+      "refreshPreview": "Làm mới bản xem trước",
+      "running": "Đang nhập...",
+      "selectAll": "Đã chọn {{selected}}/{{total}}",
+      "start": "Bắt đầu nhập"
+    },
+    "blockedReasons": {
+      "baseUrlRequired": "Trang web tự quản lý mục tiêu yêu cầu Base URL.",
+      "configMissing": "Thiếu cấu hình quản trị viên trang web tự quản lý.",
+      "inputPreparationFailed": "Không thể chuẩn bị dữ liệu kênh cho khóa này.",
+      "keyRequired": "Key kênh được tạo bị trống.",
+      "modelsRequired": "Không thể phân tích các mô hình khả dụng.",
+      "nameRequired": "Tên kênh được tạo bị trống.",
+      "realKeyRequired": "Trang web tự quản lý mục tiêu yêu cầu Key nhà cung cấp thực.",
+      "secretResolutionFailed": "Không thể phân tích khóa thực."
+    },
+    "confirm": {
+      "description": "Sẽ tạo kênh cho {{selectedCount}} khóa đã chọn. Các mục trùng khớp chính xác và bị chặn sẽ không được tạo.",
+      "title": "Nhập các khóa đã chọn"
+    },
+    "description": "Trước khi tạo trên {{site}}, hãy kiểm tra {{selectedCount}} khóa đã chọn trước.",
+    "fields": {
+      "baseUrl": "Base URL",
+      "editModelsLabel": "Chỉnh sửa danh sách mô hình của {{name}}",
+      "groups": "Nhóm",
+      "models": "Mô hình"
+    },
+    "loadingDescription": "Đang chuẩn bị bản xem trước cho {{selectedCount}} khóa đã chọn.",
+    "messages": {
+      "completed": "Nhập hàng loạt hoàn tất: thành công {{created}}, thất bại {{failed}}, bỏ qua {{skipped}}.",
+      "duplicate": "Đã tồn tại kênh trùng khớp chính xác: {{channel}}",
+      "executionFailed": "Thực thi nhập hàng loạt thất bại: {{error}}"
+    },
+    "preview": {
+      "loadFailed": "Tải bản xem trước thất bại: {{error}}",
+      "loading": "Đang chuẩn bị xem trước kênh...",
+      "selected": "Đã chọn {{selectedCount}} khóa",
+      "summary": "Xem trước: Có thể tạo {{ready}}, cảnh báo {{warning}}, bỏ qua {{skipped}}, bị chặn {{blocked}}, tổng cộng {{total}}."
+    },
+    "results": {
+      "channelCreationFailed": "Tạo kênh thất bại.",
+      "status": {
+        "failed": "Thất bại",
+        "skipped": "Đã bỏ qua",
+        "success": "Đã tạo"
+      },
+      "summary": "Kết quả: Thành công {{created}}, thất bại {{failed}}, bỏ qua {{skipped}}, tổng cộng {{total}}."
+    },
+    "selection": {
+      "accountGroup": "Chọn khóa hiện đang hiển thị của tài khoản {{name}}",
+      "rowLabel": "Chọn {{name}} để nhập hàng loạt",
+      "visible": "Đã chọn trong số hiển thị hiện tại {{selected}}/{{total}}"
+    },
+    "status": {
+      "blocked": "Bị chặn",
+      "ready": "Có thể tạo",
+      "skipped": "Đã bỏ qua",
+      "warning": "Cần xác nhận"
+    },
+    "title": "Nhập hàng loạt vào trang web tự quản lý",
+    "warnings": {
+      "backendSearchFailed": "Kiểm tra trùng lặp tạm thời không thể kết nối với backend mục tiêu.",
+      "dedupeUnsupported": "Trang web tự quản lý hiện tại không thể kiểm tra kênh trùng lặp một cách đáng tin cậy bằng Base URL.",
+      "exactVerificationUnavailable": "Có thể đã có kênh khớp, nhưng hiện tại không thể hoàn tất xác minh Key chính xác.",
+      "matchRequiresConfirmation": "Đã phát hiện kênh tương tự, vui lòng xác nhận trước khi tạo.",
+      "modelPrefillFailed": "Điền sẵn mô hình thất bại, sẽ sử dụng danh sách mô hình khả dụng hiện tại."
+    }
+  },
+  "createFirstKey": "Tạo khóa đầu tiên",
+  "description": "Trang này hiển thị thông tin khóa API của tất cả tài khoản, bao gồm mức sử dụng và thời gian hết hạn. Bạn có thể tạo khóa mới cho một tài khoản cụ thể thông qua nút \"Thêm khóa API\" ở góc trên bên phải hoặc nhấp vào nút \"+\" bên cạnh mỗi mục khóa. Vui lòng bảo quản an toàn khóa API của bạn để tránh rò rỉ cho người khác.",
+  "dialog": {
+    "accountSelect": "Chọn tài khoản",
+    "addToken": "Thêm khóa API",
+    "advancedSettings": "Cài đặt nâng cao",
+    "availableModels": "Mô hình khả dụng",
+    "basicInfo": "Thông tin cơ bản",
+    "createFailed": "Tạo khóa thất bại, vui lòng thử lại sau",
+    "createSuccess": "Tạo khóa thành công",
+    "createToken": "Tạo khóa",
+    "editModeNoChange": "Không thể thay đổi tài khoản trong chế độ chỉnh sửa",
+    "editToken": "Chỉnh sửa khóa API",
+    "expiration": "Thời gian hết hạn",
+    "expirationPlaceholder": "Để trống nghĩa là không bao giờ hết hạn",
+    "groupLabel": "Nhóm",
+    "groupRate": "Hệ số: ",
+    "groupRestrictedNote": "Chỉ có thể chọn các nhóm khả dụng cho mô hình này, các nhóm khác đã bị vô hiệu hóa.",
+    "ipExample": "Ví dụ: 192.168.1.1,10.0.0.1 hoặc dùng * để không giới hạn",
+    "ipLimits": "Giới hạn IP",
+    "ipPlaceholder": "Để trống để không giới hạn, phân tách nhiều IP bằng dấu phẩy",
+    "loadDataFailed": "Tải dữ liệu thất bại, vui lòng thử lại sau",
+    "modelLimits": "Giới hạn mô hình",
+    "modelSelectHint_other": "Đã chọn {{count}} mô hình",
+    "nameRequired": "Tên khóa không được để trống",
+    "quotaPlaceholder": "Vui lòng nhập số tiền hạn ngạch (USD)",
+    "quotaRate": "1 USD = {{rate}} điểm hạn ngạch",
+    "quotaSettings": "Cài đặt hạn ngạch",
+    "selectAccountError": "Vui lòng chọn tài khoản",
+    "selectModels": "Chọn mô hình",
+    "subnetExample": "Ví dụ: 192.168.1.0/24",
+    "subnetLimits": "Giới hạn Subnet",
+    "subnetPlaceholder": "Để trống để không giới hạn, nhập subnet hoặc CIDR",
+    "tokenName": "Tên khóa",
+    "unlimitedQuota": "Hạn ngạch không giới hạn",
+    "updateFailed": "Cập nhật khóa thất bại, vui lòng thử lại sau",
+    "updateSuccess": "Cập nhật khóa thành công",
+    "updateToken": "Cập nhật khóa",
+    "validExpiration": "Thời gian hết hạn phải lớn hơn thời gian hiện tại",
+    "validIp": "Vui lòng nhập địa chỉ IP hợp lệ, phân tách nhiều IP bằng dấu phẩy",
+    "validQuota": "Vui lòng nhập số tiền hạn ngạch hợp lệ",
+    "warningText": "Vui lòng bảo quản an toàn khóa API, tránh để lộ",
+    "warningTitle": "Lưu ý"
+  },
+  "enabledCount_other": "Đã bật {{count}}",
+  "keyDetails": {
+    "createTime": "Thời gian tạo:",
+    "expireTime": "Thời gian hết hạn:",
+    "group": "Nhóm:",
+    "key": "Khóa:",
+    "neverExpires": "Không bao giờ hết hạn",
+    "remainingQuota": "Hạn ngạch còn lại:",
+    "usedQuota": "Hạn ngạch đã dùng:"
+  },
+  "loadError": {
+    "description": "Không thể đọc danh sách khóa của tài khoản hiện tại. Có thể phiên đăng nhập đã hết hạn, không đủ quyền hoặc trang web tạm thời không thể truy cập. Vui lòng đăng nhập lại vào trang web trước khi thử lại.\n\nThông báo lỗi: {{error}}",
+    "openSite": "Mở trang web",
+    "title": "Tải danh sách khóa thất bại"
+  },
+  "managedSiteStatus": {
+    "actions": {
+      "refresh": "Làm mới trạng thái kênh trang web quản lý",
+      "refreshing": "Đang làm mới trạng thái kênh trang web quản lý",
+      "reviewChannels": "Xem các kênh ứng viên",
+      "verifyNow": "Xác minh ngay"
+    },
+    "badges": {
+      "added": "Trang web quản lý: Đã thêm",
+      "checking": "Trang web quản lý: Đang kiểm tra",
+      "notAdded": "Trang web quản lý: Chưa thêm",
+      "unknown": "Trang web quản lý: Không rõ"
+    },
+    "descriptions": {
+      "backendSearchFailed": "Kiểm tra trang web quản lý tạm thời không thể hoàn tất.",
+      "baseUrlSearchUnsupported": "Tính năng này không được hỗ trợ trên trang web lưu trữ hiện tại vì trang web lưu trữ hiện tại không hỗ trợ tìm kiếm kênh theo địa chỉ cơ sở.",
+      "configMissing": "Vui lòng định cấu hình thông tin xác thực quản trị viên của trang web quản lý trước khi kiểm tra.",
+      "inputPreparationFailed": "Không thể chuẩn bị dữ liệu nhập kênh có thể so sánh, tạm thời không thể hoàn tất kiểm tra.",
+      "newApiRetrieveKeyHint": "Đối với New API, việc so sánh toàn bộ key phụ thuộc vào key kênh, và việc xem key kênh yêu cầu phải hoàn tất xác minh 2FA trước, do đó hiện tại chưa thể hoàn tất so sánh toàn bộ key."
+    },
+    "pageUnsupported": "Do trang web lưu trữ hiện tại tạm thời không hỗ trợ tìm kiếm kênh bằng URL, chức năng kiểm tra kênh trang web quản lý không khả dụng.",
+    "recovery": {
+      "configureLogin": "Vui lòng điền thông tin đăng nhập New API và thông tin hỗ trợ xác minh hai bước trong cài đặt trước, nếu không hiện tại không thể đọc key kênh, cũng như không thể hoàn tất so sánh toàn bộ key.",
+      "verificationRequired": "Việc so sánh toàn bộ key cần phải hoàn tất xác minh New API có hiệu lực ngắn hạn trước, vì bản thân việc xem key kênh New API cần xác minh 2FA."
+    },
+    "signals": {
+      "key": {
+        "matched": "Đã khớp Key",
+        "noMatch": "Không khớp Key",
+        "notProvided": "Thiếu Key",
+        "tooltipMatched": "Trong cùng một phạm vi URL được chuẩn hóa, có kênh đã khớp với key này: {{channelName}}.",
+        "tooltipNoMatch": "Tồn tại các key kênh có thể so sánh, nhưng không có key nào khớp với key hiện tại.",
+        "tooltipNotProvided": "Token hiện tại không có key nào để so sánh.",
+        "tooltipUnavailable": "Do backend không hiển thị key kênh có thể so sánh, hiện tại không thể hoàn tất so sánh key.",
+        "unavailable": "Không thể so sánh Key"
+      },
+      "models": {
+        "contained": "Mô hình khớp theo bao hàm",
+        "exact": "Mô hình khớp hoàn toàn",
+        "noMatch": "Mô hình không khớp",
+        "notProvided": "Thiếu mô hình",
+        "similar": "Mô hình khớp tương tự",
+        "tooltipContained": "Tập hợp mô hình được chuẩn hóa khớp với kênh {{channelName}} thông qua mối quan hệ bao hàm.",
+        "tooltipExact": "Tập hợp mô hình được chuẩn hóa hoàn toàn trùng khớp với kênh {{channelName}}.",
+        "tooltipNoMatch": "Trong phạm vi URL được chuẩn hóa hiện tại, không xác nhận được mô hình khớp nào.",
+        "tooltipNotProvided": "Token hiện tại không có danh sách mô hình nào để so sánh.",
+        "tooltipSimilar": "Tập hợp mô hình được chuẩn hóa khớp với kênh {{channelName}} dựa trên độ tương tự ({{score}}%).",
+        "tooltipUnavailable": "Do không có phạm vi URL nào để so sánh, hiện tại không thể hoàn tất so sánh mô hình.",
+        "unavailable": "Không thể so sánh mô hình"
+      },
+      "url": {
+        "matched": "Đã khớp URL",
+        "noMatch": "Không tìm thấy URL",
+        "tooltipMatched_other": "Đã tìm thấy {{count}} kênh ứng viên trong cùng phạm vi URL đã chuẩn hóa. Ví dụ ứng viên: {{channelName}}.",
+        "tooltipNoMatch": "Không tìm thấy kênh nào trong cùng một phạm vi URL được chuẩn hóa."
+      }
+    }
+  },
+  "messages": {
+    "accountNotFound": "Không tìm thấy thông tin tài khoản tương ứng",
+    "copyFailed": "Sao chép thất bại",
+    "deleteConfirm": "Bạn có chắc chắn muốn xóa khóa {{name}} không? Thao tác này không thể hoàn tác",
+    "deleteSuccess": "Đã xóa khóa {{name}} thành công",
+    "keyCopied": "Khóa {{name}} đã được sao chép vào clipboard",
+    "loadFailed": "Tải danh sách khóa thất bại",
+    "revealFailed": "Hiển thị khóa thất bại",
+    "savedToApiProfiles": "Đã lưu {{name}} vào Hồ sơ API",
+    "saveToApiProfilesFailed": "Lưu vào Hồ sơ API thất bại"
+  },
+  "noKeys": "Chưa có dữ liệu khóa",
+  "noMatchingKeys": "Không tìm thấy khóa khớp",
+  "oneTimeKey": {
+    "close": "Tôi đã lưu, đóng",
+    "copied": "Khóa đầy đủ đã được sao chép vào clipboard",
+    "copiedAction": "Đã sao chép",
+    "copy": "Sao chép khóa đầy đủ",
+    "copyFailed": "Sao chép khóa đầy đủ thất bại",
+    "keyLabel": "Khóa đầy đủ",
+    "subtitle": "Giá trị đầy đủ của khóa {{name}} sẽ chỉ hiển thị sau lần tạo này.",
+    "subtitleUnnamed": "Khóa đầy đủ sẽ chỉ hiển thị sau lần tạo này.",
+    "title": "Lưu khóa đầy đủ ngay lập tức",
+    "warningDescription": "AIHubMix không hỗ trợ xem lại khóa đầy đủ. Sau khi đóng cửa sổ này, các danh sách hoặc chi tiết sau này có thể chỉ hiển thị giá trị đã che đi.",
+    "warningTitle": "Khóa này chỉ có thể được xem một lần"
+  },
+  "pleaseAddAccount": "Vui lòng thêm tài khoản trước",
+  "pleaseSelectAccount": "Vui lòng chọn tài khoản",
+  "refreshTokenList": "Làm mới danh sách khóa",
+  "repairMissingKeys": {
+    "action": "Đảm bảo có ít nhất một khóa",
+    "description": "Quét các tài khoản đã lưu và tự động tạo một khóa mặc định cho các tài khoản đủ điều kiện và chưa có khóa, đảm bảo mỗi tài khoản đủ điều kiện có ít nhất một khóa.",
+    "messages": {
+      "loadFailed": "Tải tiến trình sửa chữa thất bại",
+      "startFailed": "Bắt đầu tác vụ sửa chữa thất bại"
+    },
+    "noMatchingResults": "Không có kết quả khớp",
+    "outcomeLabel": "Kết quả",
+    "outcomes": {
+      "alreadyHad": "Đã tồn tại",
+      "created": "Đã tạo",
+      "failed": "Thất bại",
+      "skipped": "Đã bỏ qua"
+    },
+    "progressLabel": "Tiến trình",
+    "resultsTitle": "Kết quả",
+    "runningNote": "Tác vụ đang chạy trong nền, việc đóng hộp thoại này sẽ không hủy tác vụ.",
+    "searchLabel": "Tìm kiếm",
+    "searchPlaceholder": "Tìm kiếm tài khoản, tên miền hoặc loại trang web...",
+    "skipReasons": {
+      "aihubmixOneTimeKey": "Khóa AIHubMix chỉ có thể xem một lần, vui lòng tạo thủ công và lưu ngay khóa đầy đủ",
+      "noneAuth": "Không có thông tin xác thực (Phương thức xác thực: Không có)",
+      "sub2api": "Loại trang web không được hỗ trợ (Sub2API)"
+    },
+    "title": "Đảm bảo có ít nhất một khóa",
+    "totalsLabels": {
+      "eligibleAccounts": "Tài khoản đủ điều kiện",
+      "enabledAccounts": "Tài khoản đã kích hoạt",
+      "processedAccounts": "Đã xử lý"
+    }
+  },
+  "searchPlaceholder": "Tìm kiếm tên khóa...",
+  "selectAccount": "Chọn tài khoản",
+  "selectAccountToContinue": "Vui lòng chọn một tài khoản ở trên trước, sau đó xem hoặc tạo khóa.",
+  "showingCount_other": "Đang hiển thị {{count}}",
+  "title": "Quản lý khóa",
+  "totalKeys_other": "Tổng cộng {{count}} key"
+}

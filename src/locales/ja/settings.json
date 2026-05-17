@@ -33,6 +33,10 @@
           "label": "JA",
           "name": "日本語"
         },
+        "vi": {
+          "label": "VI",
+          "name": "ベトナム語"
+        },
         "zh-CN": {
           "label": "SC",
           "name": "簡体字中国語"

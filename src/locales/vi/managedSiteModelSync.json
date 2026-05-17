@@ -1,0 +1,121 @@
+{
+  "description": "Tự động đồng bộ hóa danh sách mô hình cho tất cả các kênh trong trang web do bạn quản lý, đảm bảo nhất quán với thượng nguồn",
+  "execution": {
+    "actions": {
+      "refresh": "Làm mới kết quả",
+      "retryFailed": "Chỉ thử lại mục thất bại",
+      "runAll": "Chạy tất cả",
+      "runSelected": "Chạy mục đã chọn"
+    },
+    "empty": {
+      "noData": "Chưa có bản ghi thực thi",
+      "noDataDesc": "Nhấp vào \"Chạy tất cả\" để bắt đầu đồng bộ hóa tất cả các kênh",
+      "noResults": "Không có kết quả khớp",
+      "noResultsDesc": "Thử sửa đổi điều kiện lọc hoặc từ khóa tìm kiếm"
+    },
+    "filters": {
+      "all": "Tất cả",
+      "failed": "Thất bại",
+      "searchPlaceholder": "Tìm kiếm theo tên kênh, ID hoặc thông báo lỗi...",
+      "success": "Thành công"
+    },
+    "lastExecution": "Lần thực thi trước",
+    "manual": {
+      "description": "Chọn các kênh bên dưới để thực thi đồng bộ ngay lập tức, lựa chọn sẽ không được lưu.",
+      "empty": {
+        "description": "Vui lòng làm mới danh sách hoặc điều chỉnh điều kiện lọc rồi thử lại.",
+        "title": "Không có kênh khả dụng"
+      },
+      "loading": "Đang tải các kênh...",
+      "reload": "Tải lại các kênh",
+      "searchPlaceholder": "Tìm kiếm theo tên kênh hoặc ID..."
+    },
+    "overview": {
+      "autoSync": "Tự động đồng bộ hóa",
+      "disabled": "Đã tắt",
+      "enabled": "Đã bật",
+      "everyHours_other": "Mỗi {{count}} giờ",
+      "everyMinutes_other": "Mỗi {{count}} phút",
+      "lastRun": "Lần chạy trước",
+      "never": "Không bao giờ"
+    },
+    "progress": {
+      "running": "Đang tiến hành đồng bộ hóa... {{completed}}/{{total}}"
+    },
+    "statistics": {
+      "duration": "Thời gian",
+      "endTime": "Thời gian kết thúc",
+      "failed": "Số lượng thất bại",
+      "nextRun": "Thời gian đã lên lịch tiếp theo",
+      "notScheduled": "Chưa lên lịch",
+      "startTime": "Thời gian bắt đầu",
+      "success": "Số lượng thành công",
+      "total": "Tổng số kênh"
+    },
+    "status": {
+      "failed": "Thất bại",
+      "running": "Đang thực thi...",
+      "success": "Thành công"
+    },
+    "table": {
+      "actions": "Thao tác",
+      "attempts": "Số lần thử",
+      "channelId": "ID kênh",
+      "channelName": "Tên kênh",
+      "finishedAt": "Thời gian hoàn thành",
+      "manageChannel": "Quản lý kênh",
+      "message": "Thông báo lỗi",
+      "status": "Trạng thái",
+      "syncChannel": "Đồng bộ hóa kênh này"
+    },
+    "tabs": {
+      "history": "Lịch sử thực thi",
+      "manual": "Thực thi thủ công"
+    },
+    "title": "Thực thi đồng bộ hóa danh sách mô hình"
+  },
+  "messages": {
+    "error": {
+      "loadFailed": "Tải dữ liệu thất bại: {{error}}",
+      "noSelection": "Vui lòng chọn ít nhất một kênh",
+      "syncFailed": "Đồng bộ hóa thất bại: {{error}}"
+    },
+    "success": {
+      "settingsSaved": "Đã lưu cài đặt thành công",
+      "syncCompleted": "Đã hoàn thành đồng bộ hóa: {{success}}/{{total}} thành công"
+    },
+    "warning": {
+      "syncCompletedWithFailures": "Đồng bộ hóa đã hoàn tất, nhưng vẫn còn {{failed}} kênh thất bại (thành công: {{success}}/{{total}}). Bạn có thể trực tiếp thử lại các mục thất bại."
+    }
+  },
+  "settings": {
+    "allowedModels": "Danh sách mô hình được phép",
+    "allowedModelsDesc": "Danh sách trắng tùy chọn. Để trống sẽ đồng bộ hóa tất cả các mô hình thượng nguồn.",
+    "allowedModelsHint": "Khi đồng bộ hóa, chỉ các mô hình được liệt kê tại đây mới được ghi vào kênh.",
+    "allowedModelsLoadFailed": "Tải siêu dữ liệu mô hình thất bại: {{error}}",
+    "allowedModelsLoading": "Đang tải siêu dữ liệu mô hình...",
+    "allowedModelsPlaceholder": "Tìm kiếm và chọn mô hình, hoặc nhập trực tiếp để thêm",
+    "burst": "Giới hạn yêu cầu đột biến",
+    "burstDesc": "Dung lượng Token Bucket: cho phép số lượng yêu cầu đột biến trong thời gian ngắn",
+    "concurrency": "Số lượng đồng thời",
+    "concurrencyDesc": "Số lượng tác vụ kênh được xử lý đồng thời (khuyến nghị 1-3 để tránh kích hoạt giới hạn tốc độ)",
+    "enable": "Bật tự động đồng bộ hóa",
+    "enableDesc": "Tự động thực thi đồng bộ hóa danh sách mô hình theo khoảng thời gian đã đặt",
+    "globalChannelModelFilters": "Quy tắc lọc toàn cục",
+    "globalChannelModelFiltersButton": "Chỉnh sửa quy tắc toàn cục",
+    "globalChannelModelFiltersDesc": "Các quy tắc bao gồm/loại trừ được áp dụng trước các quy tắc cục bộ của tất cả các kênh.",
+    "globalChannelModelFiltersDialogSubtitle": "Các quy tắc được định cấu hình tại đây sẽ có hiệu lực trước các quy tắc lọc riêng của mỗi kênh và áp dụng cho tất cả các kênh.",
+    "globalChannelModelFiltersDialogTitle": "Quy tắc lọc mô hình toàn cục",
+    "interval": "Khoảng thời gian thực thi",
+    "intervalDesc": "Khoảng thời gian đồng bộ hóa tự động",
+    "intervalUnit": "Giờ",
+    "maxRetries": "Số lần thử lại tối đa",
+    "maxRetriesDesc": "Số lần thử lại tự động tối đa khi thất bại",
+    "requestsPerMinute": "Số yêu cầu mỗi phút",
+    "requestsPerMinuteDesc": "Giới hạn tốc độ: số lượng yêu cầu tối đa mỗi phút (khuyến nghị 10-30)",
+    "title": "Cài đặt đồng bộ hóa danh sách mô hình",
+    "viewExecution": "Xem thực thi và kết quả",
+    "viewExecutionButton": "Mở",
+    "viewExecutionDesc": "Xem kết quả thực thi chi tiết và kích hoạt đồng bộ hóa thủ công"
+  }
+}

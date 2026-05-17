@@ -1,0 +1,22 @@
+{
+  "actions": {
+    "shuffleSeed": "Xáo trộn hạt giống"
+  },
+  "captions": {
+    "layoutIndex": "Bố cục #{{index}}",
+    "paletteIndex": "Bảng màu #{{index}}"
+  },
+  "labels": {
+    "layout": "Bố cục",
+    "overlay": "Lớp phủ",
+    "palette": "Bảng màu",
+    "seed": "Hạt giống",
+    "view": "Chế độ xem"
+  },
+  "summary": "{{paletteCount}} bảng màu · {{layoutCount}} bố cục",
+  "title": "Phòng thí nghiệm Mesh Gradient (Dev)",
+  "view": {
+    "layouts": "Bố cục",
+    "palettes": "Bảng màu"
+  }
+}
