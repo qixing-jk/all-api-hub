@@ -200,19 +200,26 @@ export async function hydrateComparableChannelKeys(
     }
 
     try {
-      hydratedCandidates.push(
-        await fetchDoneHubChannel(
-          {
-            baseUrl,
-            auth: {
-              authType: AuthTypeEnum.AccessToken,
-              accessToken: adminToken,
-              userId,
-            },
+      const detail = await fetchDoneHubChannel(
+        {
+          baseUrl,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: adminToken,
+            userId,
           },
-          candidate.id,
-        ),
+        },
+        candidate.id,
       )
+      const key = detail.key?.trim()
+      if (!key) {
+        throw new Error("done_hub_channel_key_missing")
+      }
+
+      hydratedCandidates.push({
+        ...candidate,
+        key,
+      })
     } catch (error) {
       logger.warn("Failed to fetch Done Hub channel detail for key matching", {
         channelId: candidate.id,

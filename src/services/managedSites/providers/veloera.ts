@@ -171,7 +171,7 @@ export async function hydrateComparableChannelKeys(
   userId: number | string,
   candidates: ManagedSiteChannel[],
 ): Promise<ManagedSiteChannel[]> {
-  const hydratedCandidates: Array<ManagedSiteChannel | string> = []
+  const hydratedCandidates: ManagedSiteChannel[] = []
 
   for (const candidate of candidates) {
     if (candidate.key?.trim()) {
@@ -187,7 +187,10 @@ export async function hydrateComparableChannelKeys(
         candidate.id,
       )
 
-      hydratedCandidates.push(key)
+      hydratedCandidates.push({
+        ...candidate,
+        key,
+      })
     } catch (error) {
       logger.warn("Failed to hydrate Veloera channel key", {
         channelId: candidate.id,
@@ -200,14 +203,7 @@ export async function hydrateComparableChannelKeys(
     }
   }
 
-  return hydratedCandidates.map((item, index) =>
-    typeof item === "string"
-      ? {
-          ...candidates[index],
-          key: item,
-        }
-      : item,
-  )
+  return hydratedCandidates
 }
 
 /**

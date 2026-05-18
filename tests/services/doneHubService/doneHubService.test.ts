@@ -182,7 +182,7 @@ describe("doneHubService findMatchingChannel", () => {
     expect(result).toBe("sk-done-hub-channel-key")
   })
 
-  it("hydrates hidden keys only for provided Done Hub candidates", async () => {
+  it("hydrates hidden keys only for provided Done Hub candidates while preserving candidate data", async () => {
     const { hydrateComparableChannelKeys } = await import(
       "~/services/managedSites/providers/doneHubService"
     )
@@ -190,8 +190,10 @@ describe("doneHubService findMatchingChannel", () => {
     mockFetchDoneHubChannel.mockResolvedValueOnce(
       buildManagedSiteChannel({
         id: 20,
+        base_url: "https://detail.example.com",
         key: "sk-detail",
         name: "Detailed Done Hub Channel",
+        models: "detail-model",
       }),
     )
 
@@ -200,7 +202,13 @@ describe("doneHubService findMatchingChannel", () => {
       "admin-token",
       1,
       [
-        buildManagedSiteChannel({ id: 20, key: "" }),
+        buildManagedSiteChannel({
+          id: 20,
+          base_url: "https://candidate.example.com",
+          key: "",
+          name: "Candidate Done Hub Channel",
+          models: "candidate-model",
+        }),
         buildManagedSiteChannel({ id: 21, key: "sk-visible" }),
       ],
     )
@@ -210,10 +218,37 @@ describe("doneHubService findMatchingChannel", () => {
     expect(result).toEqual([
       expect.objectContaining({
         id: 20,
+        base_url: "https://candidate.example.com",
         key: "sk-detail",
-        name: "Detailed Done Hub Channel",
+        name: "Candidate Done Hub Channel",
+        models: "candidate-model",
       }),
       expect.objectContaining({ id: 21, key: "sk-visible" }),
     ])
+  })
+
+  it("maps Done Hub detail payloads without usable keys to unresolved key resolution", async () => {
+    const { hydrateComparableChannelKeys } = await import(
+      "~/services/managedSites/providers/doneHubService"
+    )
+    const { MatchResolutionUnresolvedError } = await import(
+      "~/services/managedSites/channelMatch"
+    )
+
+    mockFetchDoneHubChannel.mockResolvedValueOnce(
+      buildManagedSiteChannel({
+        id: 22,
+        key: "   ",
+      }),
+    )
+
+    await expect(
+      hydrateComparableChannelKeys(
+        "https://donehub.example.com",
+        "admin-token",
+        1,
+        [buildManagedSiteChannel({ id: 22, key: "" })],
+      ),
+    ).rejects.toBeInstanceOf(MatchResolutionUnresolvedError)
   })
 })

@@ -896,6 +896,36 @@ describe("newApiService", () => {
   })
 
   describe("hydrateComparableChannelKeys", () => {
+    it("should preserve visible New API candidate keys without fetching", async () => {
+      const { hydrateComparableChannelKeys } = await import(
+        "~/services/managedSites/providers/newApi"
+      )
+
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithNewApi(),
+      )
+
+      const result = await hydrateComparableChannelKeys(
+        "https://new-api.example.com",
+        "admin-token",
+        1,
+        [
+          createMockNewApiChannel({
+            id: 11,
+            key: "sk-visible",
+          }),
+        ],
+      )
+
+      expect(fetchNewApiChannelKeyMock).not.toHaveBeenCalled()
+      expect(result).toEqual([
+        expect.objectContaining({
+          id: 11,
+          key: "sk-visible",
+        }),
+      ])
+    })
+
     it("should hydrate hidden New API candidate keys for comparison", async () => {
       const { hydrateComparableChannelKeys } = await import(
         "~/services/managedSites/providers/newApi"
@@ -926,6 +956,62 @@ describe("newApiService", () => {
           key: "sk-revealed",
         }),
       ])
+    })
+
+    it("should map New API verification requirements during hydration", async () => {
+      const { hydrateComparableChannelKeys } = await import(
+        "~/services/managedSites/providers/newApi"
+      )
+      const { MatchResolutionUnresolvedError } = await import(
+        "~/services/managedSites/channelMatch"
+      )
+      const {
+        NEW_API_CHANNEL_KEY_ERROR_KINDS,
+        NewApiChannelKeyRequirementError,
+      } = await import("~/services/managedSites/providers/newApiSession")
+
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithNewApi(),
+      )
+      fetchNewApiChannelKeyMock.mockRejectedValueOnce(
+        new NewApiChannelKeyRequirementError(
+          NEW_API_CHANNEL_KEY_ERROR_KINDS.SECURE_VERIFICATION_REQUIRED,
+        ),
+      )
+
+      await expect(
+        hydrateComparableChannelKeys(
+          "https://new-api.example.com",
+          "admin-token",
+          1,
+          [createMockNewApiChannel({ id: 13, key: "" })],
+        ),
+      ).rejects.toBeInstanceOf(MatchResolutionUnresolvedError)
+    })
+
+    it("should map unexpected New API hydration failures to unresolved key resolution", async () => {
+      const { hydrateComparableChannelKeys } = await import(
+        "~/services/managedSites/providers/newApi"
+      )
+      const { MatchResolutionUnresolvedError } = await import(
+        "~/services/managedSites/channelMatch"
+      )
+
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithNewApi(),
+      )
+      fetchNewApiChannelKeyMock.mockRejectedValueOnce(
+        new Error("backend unavailable"),
+      )
+
+      await expect(
+        hydrateComparableChannelKeys(
+          "https://new-api.example.com",
+          "admin-token",
+          1,
+          [createMockNewApiChannel({ id: 14, key: "" })],
+        ),
+      ).rejects.toBeInstanceOf(MatchResolutionUnresolvedError)
     })
   })
 
