@@ -296,7 +296,15 @@ export async function resolveManagedSiteChannelMatch(
       keyAssessment.channel?.id === modelsAssessment.channel?.id
     )
   ) {
-    const recoverableUrlCandidates = urlBucket.filter(
+    const exactModelChannels = findManagedSiteChannelsByBaseUrlAndModels({
+      channels: applyResolvedChannelKeys(
+        searchResultItems,
+        mergedResolvedChannelKeysById,
+      ),
+      accountBaseUrl: searchBaseUrl,
+      models,
+    })
+    const recoverableExactModelCandidates = exactModelChannels.filter(
       (channel) =>
         !hasUsableManagedSiteChannelKey(channel.key) &&
         typeof mergedResolvedChannelKeysById[channel.id] !== "string",
@@ -316,9 +324,10 @@ export async function resolveManagedSiteChannelMatch(
         },
       })
     const recoverableCandidates = [
-      ...recoverableUrlCandidates,
+      ...recoverableExactModelCandidates,
       ...(rankedRecoverableCandidate &&
-      !recoverableUrlCandidates.some(
+      modelsAssessment.channel?.id === rankedRecoverableCandidate.id &&
+      !recoverableExactModelCandidates.some(
         (channel) => channel.id === rankedRecoverableCandidate.id,
       ) &&
       !hasUsableManagedSiteChannelKey(rankedRecoverableCandidate.key)
