@@ -89,6 +89,14 @@ export {
   resolveApiTokenKey,
 } from "~/services/apiService/common/tokenKeyResolver"
 
+export {
+  formatOptionalSkPrefixSiteToken,
+  formatOptionalSkPrefixSiteTokenAuthKey,
+  formatOptionalSkPrefixSiteTokenComparableKey,
+  formatOptionalSkPrefixTokenComparableKey,
+  hasOptionalSkPrefixSiteTokenSemantics,
+} from "~/services/apiService/common/apiKey"
+
 /**
  * 搜索指定关键词的渠道。
  * @param request ApiServiceRequest（包含 baseUrl + 认证信息）。

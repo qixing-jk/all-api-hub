@@ -6,6 +6,7 @@ import { Alert } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
+import { formatOptionalSkPrefixSiteToken } from "~/services/apiService/common/apiKey"
 import type { CreateTokenRequest } from "~/services/apiService/common/type"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -172,9 +173,15 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
       } else {
         const created = await service.createApiToken(request, tokenData)
         const createdToken = isCreatedApiToken(created) ? created : undefined
+        const displayCreatedToken = createdToken
+          ? formatOptionalSkPrefixSiteToken(
+              createdToken,
+              currentAccount.siteType,
+            )
+          : undefined
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         if (createdToken && showOneTimeKeyDialog) {
-          setOneTimeToken(createdToken)
+          setOneTimeToken(displayCreatedToken ?? createdToken)
         } else {
           toast.success(t("dialog.createSuccess"))
         }

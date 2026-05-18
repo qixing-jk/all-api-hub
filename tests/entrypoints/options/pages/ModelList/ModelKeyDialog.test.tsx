@@ -307,6 +307,48 @@ describe("ModelKeyDialog", () => {
     )
   })
 
+  it("formats optional-prefix compatible created keys before showing the one-time dialog", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    createApiTokenMock.mockResolvedValueOnce({
+      ...TOKEN,
+      id: 8,
+      key: "created-full-secret",
+      name: "model-key",
+    })
+
+    const user = userEvent.setup()
+    const writeText = vi
+      .spyOn(navigator.clipboard, "writeText")
+      .mockResolvedValue(undefined)
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{ ...ACCOUNT, siteType: "Veloera" }}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "modelList:keyDialog.createKey",
+      }),
+    )
+
+    expect(
+      await screen.findByText("keyManagement:oneTimeKey.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByLabelText("keyManagement:oneTimeKey.keyLabel"),
+    ).toHaveValue("sk-created-full-secret")
+
+    await waitFor(() => {
+      expect(writeText).toHaveBeenCalledWith("sk-created-full-secret")
+    })
+  })
+
   it("shows a compatibility error when default create returns an incompatible full token", async () => {
     fetchAccountTokensMock.mockResolvedValueOnce([])
     createApiTokenMock.mockResolvedValueOnce({

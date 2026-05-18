@@ -1,4 +1,20 @@
+import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
 import type { ApiToken } from "~/types"
+
+const OPTIONAL_SK_PREFIX_SITE_TYPES = new Set<string>([
+  SITE_TYPES.ONE_API,
+  SITE_TYPES.NEW_API,
+  SITE_TYPES.ANYROUTER,
+  SITE_TYPES.VELOERA,
+  SITE_TYPES.ONE_HUB,
+  SITE_TYPES.DONE_HUB,
+  SITE_TYPES.V_API,
+  SITE_TYPES.VO_API,
+  SITE_TYPES.SUPER_API,
+  SITE_TYPES.RIX_API,
+  SITE_TYPES.NEO_API,
+  SITE_TYPES.WONG_GONGYI,
+])
 
 /**
  * Normalizes a raw token key string without changing the backend-provided
@@ -18,6 +34,82 @@ function normalizeApiTokenKeyText(key: string): string {
  */
 export function normalizeApiTokenKeyValue(key: string): string {
   return normalizeApiTokenKeyText(key)
+}
+
+/**
+ * Returns true for One/New API-family site types whose token identity accepts
+ * either raw keys or a single `sk-` prefix, while user-facing auth/export
+ * values should be OpenAI-compatible `sk-...` keys.
+ */
+export function hasOptionalSkPrefixSiteTokenSemantics(
+  siteType?: AccountSiteType | string,
+): boolean {
+  return siteType ? OPTIONAL_SK_PREFIX_SITE_TYPES.has(siteType) : false
+}
+
+/**
+ * Formats a token key for auth/display/export boundaries for compatible site
+ * types without changing the backend-provided raw key stored in inventory.
+ */
+export function formatOptionalSkPrefixSiteTokenAuthKey(
+  key: string,
+  siteType?: AccountSiteType | string,
+): string {
+  const normalizedKey = normalizeApiTokenKeyValue(key)
+  if (!normalizedKey) return ""
+
+  if (
+    hasOptionalSkPrefixSiteTokenSemantics(siteType) &&
+    !normalizedKey.startsWith("sk-")
+  ) {
+    return `sk-${normalizedKey}`
+  }
+
+  return normalizedKey
+}
+
+/**
+ * Formats token identity when the caller already selected optional-`sk-`
+ * comparison semantics.
+ */
+export function formatOptionalSkPrefixTokenComparableKey(key: string): string {
+  const normalizedKey = normalizeApiTokenKeyValue(key)
+  return normalizedKey.startsWith("sk-")
+    ? normalizedKey.slice(3)
+    : normalizedKey
+}
+
+/**
+ * Formats token identity for compatible site-type comparisons where one
+ * leading `sk-` prefix is optional.
+ */
+export function formatOptionalSkPrefixSiteTokenComparableKey(
+  key: string,
+  siteType?: AccountSiteType | string,
+): string {
+  const normalizedKey = normalizeApiTokenKeyValue(key)
+  if (
+    hasOptionalSkPrefixSiteTokenSemantics(siteType) &&
+    normalizedKey.startsWith("sk-")
+  ) {
+    return formatOptionalSkPrefixTokenComparableKey(normalizedKey)
+  }
+  return normalizedKey
+}
+
+/**
+ * Returns a transient token clone with an auth/display key for compatible site
+ * types, preserving the caller's original token object when no change is
+ * needed.
+ */
+export function formatOptionalSkPrefixSiteToken<TToken extends ApiToken>(
+  token: TToken,
+  siteType?: AccountSiteType | string,
+): TToken {
+  if (!token || typeof token.key !== "string") return token
+
+  const authKey = formatOptionalSkPrefixSiteTokenAuthKey(token.key, siteType)
+  return authKey === token.key ? token : { ...token, key: authKey }
 }
 
 /**

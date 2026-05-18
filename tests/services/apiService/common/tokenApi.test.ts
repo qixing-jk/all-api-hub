@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   fetchAccountTokens,
   fetchTokenById,
+  formatOptionalSkPrefixSiteTokenAuthKey,
+  hasOptionalSkPrefixSiteTokenSemantics,
   resolveApiTokenKey,
 } from "~/services/apiService/common"
 import { normalizeApiTokenKeyValue } from "~/services/apiService/common/apiKey"
@@ -49,6 +52,37 @@ describe("apiService common token APIs", () => {
   it("normalizeApiTokenKeyValue trims whitespace without adding sk- prefixes", () => {
     expect(normalizeApiTokenKeyValue("  plain-key  ")).toBe("plain-key")
     expect(normalizeApiTokenKeyValue("sk-already")).toBe("sk-already")
+  })
+
+  it("formats auth/display keys for optional sk-prefix compatible site types only", () => {
+    expect(hasOptionalSkPrefixSiteTokenSemantics(SITE_TYPES.NEW_API)).toBe(true)
+    expect(hasOptionalSkPrefixSiteTokenSemantics(SITE_TYPES.VELOERA)).toBe(true)
+    expect(hasOptionalSkPrefixSiteTokenSemantics(SITE_TYPES.ONE_HUB)).toBe(true)
+    expect(hasOptionalSkPrefixSiteTokenSemantics(SITE_TYPES.DONE_HUB)).toBe(
+      true,
+    )
+    expect(hasOptionalSkPrefixSiteTokenSemantics(SITE_TYPES.ANYROUTER)).toBe(
+      true,
+    )
+    expect(hasOptionalSkPrefixSiteTokenSemantics(SITE_TYPES.SUB2API)).toBe(
+      false,
+    )
+    expect(hasOptionalSkPrefixSiteTokenSemantics(SITE_TYPES.AIHUBMIX)).toBe(
+      false,
+    )
+
+    expect(
+      formatOptionalSkPrefixSiteTokenAuthKey(" plain-key ", SITE_TYPES.VELOERA),
+    ).toBe("sk-plain-key")
+    expect(
+      formatOptionalSkPrefixSiteTokenAuthKey("sk-already", SITE_TYPES.DONE_HUB),
+    ).toBe("sk-already")
+    expect(
+      formatOptionalSkPrefixSiteTokenAuthKey("plain-key", SITE_TYPES.SUB2API),
+    ).toBe("plain-key")
+    expect(
+      formatOptionalSkPrefixSiteTokenAuthKey("   ", SITE_TYPES.NEW_API),
+    ).toBe("")
   })
 
   it("fetchAccountTokens trims token.key without forcing an sk- prefix (array response)", async () => {

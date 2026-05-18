@@ -9,6 +9,7 @@ import {
   createDisplayAccountApiContext,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { formatOptionalSkPrefixSiteTokenAuthKey } from "~/services/apiService/common/apiKey"
 import { getManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
@@ -1224,9 +1225,13 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   const getVisibleTokenKey = useCallback(
     (token: Pick<AccountToken, "accountId" | "id" | "key">) => {
       const tokenIdentityKey = buildTokenIdentityKey(token.accountId, token.id)
-      return resolvedVisibleKeys[tokenIdentityKey] ?? token.key
+      const account = accountById.get(token.accountId)
+      return formatOptionalSkPrefixSiteTokenAuthKey(
+        resolvedVisibleKeys[tokenIdentityKey] ?? token.key,
+        account?.siteType,
+      )
     },
-    [resolvedVisibleKeys],
+    [accountById, resolvedVisibleKeys],
   )
 
   const toggleKeyVisibility = async (

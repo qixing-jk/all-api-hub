@@ -10,6 +10,7 @@ import {
   InvalidTokenPayloadError,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { formatOptionalSkPrefixSiteToken } from "~/services/apiService/common/apiKey"
 import { isTokenCompatibleWithModel } from "~/services/models/utils/tokenModelCompatibility"
 import { AuthTypeEnum, type ApiToken, type DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
@@ -204,7 +205,9 @@ export function useModelKeyDialog(params: UseModelKeyDialogParams) {
           })
           if (isTokenCompatibleWithModel(createdToken, modelContext)) {
             setSelectedTokenId(createdToken.id)
-            setOneTimeToken(createdToken)
+            setOneTimeToken(
+              formatOptionalSkPrefixSiteToken(createdToken, account.siteType),
+            )
             toast.success(t("modelList:keyDialog.createSuccess"))
             return "success" as const
           } else {

@@ -1,8 +1,11 @@
 import {
-  SITE_TYPES,
   type AccountSiteType,
   type ManagedSiteType,
 } from "~/constants/siteType"
+import {
+  formatOptionalSkPrefixTokenComparableKey,
+  hasOptionalSkPrefixSiteTokenSemantics,
+} from "~/services/apiService/common/apiKey"
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
   MANAGED_SITE_CHANNEL_MATCH_LEVELS,
@@ -85,23 +88,8 @@ export const MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES = {
   OPTIONAL_SK_PREFIX: "optional-sk-prefix",
 } as const
 
-export type ManagedSiteChannelKeyComparisonMode =
+type ManagedSiteChannelKeyComparisonMode =
   (typeof MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES)[keyof typeof MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES]
-
-const OPTIONAL_SK_PREFIX_SITE_TYPES = new Set<string>([
-  SITE_TYPES.ONE_API,
-  SITE_TYPES.NEW_API,
-  SITE_TYPES.ANYROUTER,
-  SITE_TYPES.VELOERA,
-  SITE_TYPES.ONE_HUB,
-  SITE_TYPES.DONE_HUB,
-  SITE_TYPES.V_API,
-  SITE_TYPES.VO_API,
-  SITE_TYPES.SUPER_API,
-  SITE_TYPES.RIX_API,
-  SITE_TYPES.NEO_API,
-  SITE_TYPES.WONG_GONGYI,
-])
 
 /**
  * Selects channel-key identity comparison semantics from source-confirmed
@@ -111,7 +99,7 @@ const OPTIONAL_SK_PREFIX_SITE_TYPES = new Set<string>([
 export function getManagedSiteChannelKeyComparisonMode(
   siteType?: AccountSiteType | ManagedSiteType | string,
 ): ManagedSiteChannelKeyComparisonMode {
-  return siteType && OPTIONAL_SK_PREFIX_SITE_TYPES.has(siteType)
+  return hasOptionalSkPrefixSiteTokenSemantics(siteType)
     ? MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX
     : MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.EXACT
 }
@@ -125,7 +113,7 @@ const toComparableChannelKey = (
     mode === MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX &&
     trimmed.startsWith("sk-")
   ) {
-    return trimmed.slice(3)
+    return formatOptionalSkPrefixTokenComparableKey(trimmed)
   }
   return trimmed
 }

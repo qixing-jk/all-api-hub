@@ -9,6 +9,7 @@ import {
   createDisplayAccountApiContext,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
+import { formatOptionalSkPrefixSiteToken } from "~/services/apiService/common/apiKey"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -209,7 +210,9 @@ export function useCopyKeyDialog(
             )
             return [...withoutCreated, createdToken]
           })
-          setOneTimeToken(createdToken)
+          setOneTimeToken(
+            formatOptionalSkPrefixSiteToken(createdToken, account.siteType),
+          )
           await copyKey(createdToken)
           return
         }
