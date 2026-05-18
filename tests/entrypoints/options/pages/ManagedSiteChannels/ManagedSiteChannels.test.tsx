@@ -1201,11 +1201,7 @@ describe("ManagedSiteChannels", () => {
     const row = screen.getByText("Alpha").closest("tr")
     expect(row).toBeTruthy()
     expect(within(row!).getByText("2")).toBeInTheDocument()
-    await user.click(
-      within(row!).getByRole("button", {
-        name: "managedSiteChannels:table.columns.actions",
-      }),
-    )
+    await openRowActionsMenu(row!, user)
 
     expect(
       await screen.findByRole("menuitem", {
