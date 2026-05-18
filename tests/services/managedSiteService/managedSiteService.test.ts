@@ -18,11 +18,20 @@ const baseService = {
   autoConfigToManagedSite: expect.any(Function),
 }
 
-vi.mock("~/services/preferences/userPreferences", () => ({
-  userPreferences: {
-    getPreferences: mockGetPreferences,
-  },
-}))
+vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/preferences/userPreferences")
+    >()
+
+  return {
+    ...actual,
+    userPreferences: {
+      ...actual.userPreferences,
+      getPreferences: mockGetPreferences,
+    },
+  }
+})
 
 vi.mock("~/services/managedSites/providers/newApi", () => ({
   checkValidNewApiConfig: vi.fn(async () => true),
@@ -330,5 +339,29 @@ describe("managedSiteService", () => {
       token: "t",
       userId: "admin",
     })
+  })
+
+  it("exports real key hydration capabilities for hidden-key providers", async () => {
+    const [newApi, doneHub, veloera, claudeCodeHub] = await Promise.all([
+      vi.importActual<
+        typeof import("~/services/managedSites/providers/newApi")
+      >("~/services/managedSites/providers/newApi"),
+      vi.importActual<
+        typeof import("~/services/managedSites/providers/doneHubService")
+      >("~/services/managedSites/providers/doneHubService"),
+      vi.importActual<
+        typeof import("~/services/managedSites/providers/veloera")
+      >("~/services/managedSites/providers/veloera"),
+      vi.importActual<
+        typeof import("~/services/managedSites/providers/claudeCodeHub")
+      >("~/services/managedSites/providers/claudeCodeHub"),
+    ])
+
+    expect(newApi.hydrateComparableChannelKeys).toEqual(expect.any(Function))
+    expect(doneHub.hydrateComparableChannelKeys).toEqual(expect.any(Function))
+    expect(veloera.hydrateComparableChannelKeys).toEqual(expect.any(Function))
+    expect(claudeCodeHub.hydrateComparableChannelKeys).toEqual(
+      expect.any(Function),
+    )
   })
 })

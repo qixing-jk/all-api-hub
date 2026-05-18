@@ -117,16 +117,6 @@ export interface ManagedSiteService {
   ): Promise<unknown>
 }
 
-type ManagedSiteKeyHydrationCapability = Pick<
-  ManagedSiteService,
-  "hydrateComparableChannelKeys"
->
-
-const getHydrateComparableChannelKeys = (
-  service: unknown,
-): ManagedSiteService["hydrateComparableChannelKeys"] =>
-  (service as ManagedSiteKeyHydrationCapability).hydrateComparableChannelKeys
-
 /**
  * Check if preferences contain a valid managed site admin configuration.
  */
@@ -215,7 +205,7 @@ export function getManagedSiteServiceForType(
       prepareChannelFormData: claudeCodeHubService.prepareChannelFormData,
       buildChannelPayload: claudeCodeHubService.buildChannelPayload,
       hydrateComparableChannelKeys:
-        getHydrateComparableChannelKeys(claudeCodeHubService),
+        claudeCodeHubService.hydrateComparableChannelKeys,
       fetchChannelSecretKey: claudeCodeHubService.fetchChannelSecretKey,
       autoConfigToManagedSite: claudeCodeHubService.autoConfigToClaudeCodeHub,
     }
@@ -235,8 +225,7 @@ export function getManagedSiteServiceForType(
       buildChannelName: veloeraService.buildChannelName,
       prepareChannelFormData: veloeraService.prepareChannelFormData,
       buildChannelPayload: veloeraService.buildChannelPayload,
-      hydrateComparableChannelKeys:
-        getHydrateComparableChannelKeys(veloeraService),
+      hydrateComparableChannelKeys: veloeraService.hydrateComparableChannelKeys,
       fetchChannelSecretKey: veloeraService.fetchChannelSecretKey,
       autoConfigToManagedSite: veloeraService.autoConfigToVeloera,
     }
@@ -256,8 +245,7 @@ export function getManagedSiteServiceForType(
       buildChannelName: doneHubService.buildChannelName,
       prepareChannelFormData: doneHubService.prepareChannelFormData,
       buildChannelPayload: doneHubService.buildChannelPayload,
-      hydrateComparableChannelKeys:
-        getHydrateComparableChannelKeys(doneHubService),
+      hydrateComparableChannelKeys: doneHubService.hydrateComparableChannelKeys,
       fetchChannelSecretKey: doneHubService.fetchChannelSecretKey,
       autoConfigToManagedSite: doneHubService.autoConfigToDoneHub,
     }
@@ -276,8 +264,7 @@ export function getManagedSiteServiceForType(
     buildChannelName: newApiService.buildChannelName,
     prepareChannelFormData: newApiService.prepareChannelFormData,
     buildChannelPayload: newApiService.buildChannelPayload,
-    hydrateComparableChannelKeys:
-      getHydrateComparableChannelKeys(newApiService),
+    hydrateComparableChannelKeys: newApiService.hydrateComparableChannelKeys,
     fetchChannelSecretKey: newApiService.fetchChannelSecretKey,
     autoConfigToManagedSite: newApiService.autoConfigToNewApi,
   }

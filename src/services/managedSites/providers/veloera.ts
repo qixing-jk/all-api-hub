@@ -7,6 +7,10 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import { getApiService } from "~/services/apiService"
 import { fetchChannel as fetchVeloeraChannel } from "~/services/apiService/veloera"
+import {
+  MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
+  MatchResolutionUnresolvedError,
+} from "~/services/managedSites/channelMatch"
 import { findManagedSiteChannelByComparableInputs } from "~/services/managedSites/utils/channelMatching"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
@@ -156,6 +160,50 @@ export async function fetchChannelSecretKey(
   }
 
   return key
+}
+
+/**
+ * Hydrates Veloera channel keys from detail payloads for shared comparison.
+ */
+export async function hydrateComparableChannelKeys(
+  baseUrl: string,
+  adminToken: string,
+  userId: number | string,
+  candidates: ManagedSiteChannel[],
+): Promise<ManagedSiteChannel[]> {
+  const hydratedCandidates: ManagedSiteChannel[] = []
+
+  for (const candidate of candidates) {
+    if (candidate.key?.trim()) {
+      hydratedCandidates.push(candidate)
+      continue
+    }
+
+    try {
+      const key = await fetchChannelSecretKey(
+        baseUrl,
+        adminToken,
+        userId,
+        candidate.id,
+      )
+
+      hydratedCandidates.push({
+        ...candidate,
+        key,
+      })
+    } catch (error) {
+      logger.warn("Failed to hydrate Veloera channel key", {
+        channelId: candidate.id,
+        error: getErrorMessage(error),
+      })
+
+      throw new MatchResolutionUnresolvedError(
+        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
+      )
+    }
+  }
+
+  return hydratedCandidates
 }
 
 /**

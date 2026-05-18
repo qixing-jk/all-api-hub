@@ -171,6 +171,56 @@ export async function fetchChannelSecretKey(
 }
 
 /**
+ * Hydrates hidden New API channel keys so the shared resolver can compare them.
+ */
+export async function hydrateComparableChannelKeys(
+  baseUrl: string,
+  _adminToken: string,
+  userId: number | string,
+  candidates: ManagedSiteChannel[],
+): Promise<ManagedSiteChannel[]> {
+  const sessionConfig = await getNewApiManagedSessionConfig(baseUrl, userId)
+  const hydratedCandidates: ManagedSiteChannel[] = []
+
+  for (const candidate of candidates) {
+    if (candidate.key?.trim()) {
+      hydratedCandidates.push(candidate)
+      continue
+    }
+
+    try {
+      const resolvedKey = await fetchNewApiChannelKey({
+        ...sessionConfig,
+        channelId: candidate.id,
+      })
+
+      hydratedCandidates.push({
+        ...candidate,
+        key: resolvedKey,
+      })
+    } catch (error) {
+      if (error instanceof NewApiChannelKeyRequirementError) {
+        throw new MatchResolutionUnresolvedError(
+          MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+        )
+      }
+
+      logger.warn("Failed to hydrate hidden New API channel key", {
+        baseUrl,
+        channelId: candidate.id,
+        error: getErrorMessage(error),
+      })
+
+      throw new MatchResolutionUnresolvedError(
+        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
+      )
+    }
+  }
+
+  return hydratedCandidates
+}
+
+/**
  * Checks whether the given user preferences contain a complete New API config.
  */
 export function hasValidNewApiConfig(prefs: UserPreferences | null): boolean {
@@ -430,38 +480,12 @@ export async function findMatchingChannel(
     return null
   }
 
-  const sessionConfig = await getNewApiManagedSessionConfig(baseUrl, userId)
-  const resolvedCandidates: ManagedSiteChannel[] = []
-
-  for (const candidate of narrowedCandidates) {
-    try {
-      const resolvedKey = await fetchNewApiChannelKey({
-        ...sessionConfig,
-        channelId: candidate.id,
-      })
-
-      resolvedCandidates.push({
-        ...candidate,
-        key: resolvedKey,
-      })
-    } catch (error) {
-      if (error instanceof NewApiChannelKeyRequirementError) {
-        throw new MatchResolutionUnresolvedError(
-          MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
-        )
-      }
-
-      logger.warn("Failed to fetch hidden New API channel key", {
-        baseUrl,
-        channelId: candidate.id,
-        error: getErrorMessage(error),
-      })
-
-      throw new MatchResolutionUnresolvedError(
-        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
-      )
-    }
-  }
+  const resolvedCandidates = await hydrateComparableChannelKeys(
+    baseUrl,
+    adminToken,
+    userId,
+    narrowedCandidates,
+  )
 
   return findManagedSiteChannelByComparableInputs({
     channels: resolvedCandidates,

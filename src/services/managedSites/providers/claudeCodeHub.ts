@@ -10,6 +10,10 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import * as claudeCodeHubApi from "~/services/apiService/claudeCodeHub"
 import type { ApiResponse } from "~/services/apiService/common/type"
+import {
+  MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
+  MatchResolutionUnresolvedError,
+} from "~/services/managedSites/channelMatch"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import {
   findManagedSiteChannelByComparableInputs,
@@ -307,6 +311,38 @@ async function hydrateComparableChannelKey(
     })
     return null
   }
+}
+
+/**
+ * Hydrates Claude Code Hub provider keys for shared channel comparison.
+ */
+export async function hydrateComparableChannelKeys(
+  _baseUrl: string,
+  _adminToken: string,
+  _userId: number | string,
+  candidates: ManagedSiteChannel[],
+): Promise<ManagedSiteChannel[]> {
+  const config = await getFullClaudeCodeHubConfig()
+  if (!config) {
+    throw new MatchResolutionUnresolvedError(
+      MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
+    )
+  }
+
+  const hydratedCandidates: ManagedSiteChannel[] = []
+
+  for (const candidate of candidates) {
+    const hydratedChannel = await hydrateComparableChannelKey(config, candidate)
+    if (hydratedChannel) {
+      hydratedCandidates.push(hydratedChannel)
+    } else {
+      throw new MatchResolutionUnresolvedError(
+        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
+      )
+    }
+  }
+
+  return hydratedCandidates
 }
 
 /**

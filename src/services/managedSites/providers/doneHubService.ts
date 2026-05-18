@@ -8,6 +8,10 @@ import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/sit
 import { getApiService } from "~/services/apiService"
 import { fetchChannel as fetchDoneHubChannel } from "~/services/apiService/doneHub"
 import {
+  MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
+  MatchResolutionUnresolvedError,
+} from "~/services/managedSites/channelMatch"
+import {
   findManagedSiteChannelByComparableInputs,
   findManagedSiteChannelsByBaseUrlAndModels,
 } from "~/services/managedSites/utils/channelMatching"
@@ -176,6 +180,50 @@ export async function fetchChannelSecretKey(
   }
 
   return key
+}
+
+/**
+ * Hydrates Done Hub channel keys from detail payloads for shared comparison.
+ */
+export async function hydrateComparableChannelKeys(
+  baseUrl: string,
+  adminToken: string,
+  userId: number | string,
+  candidates: ManagedSiteChannel[],
+): Promise<ManagedSiteChannel[]> {
+  const hydratedCandidates: ManagedSiteChannel[] = []
+
+  for (const candidate of candidates) {
+    if (candidate.key?.trim()) {
+      hydratedCandidates.push(candidate)
+      continue
+    }
+
+    try {
+      const key = await fetchChannelSecretKey(
+        baseUrl,
+        adminToken,
+        userId,
+        candidate.id,
+      )
+
+      hydratedCandidates.push({
+        ...candidate,
+        key,
+      })
+    } catch (error) {
+      logger.warn("Failed to hydrate Done Hub channel key", {
+        channelId: candidate.id,
+        diagnostic: toSafeDoneHubChannelDetailDiagnostic(error),
+      })
+
+      throw new MatchResolutionUnresolvedError(
+        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
+      )
+    }
+  }
+
+  return hydratedCandidates
 }
 
 /**
