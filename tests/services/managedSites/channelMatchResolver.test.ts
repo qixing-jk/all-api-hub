@@ -558,6 +558,58 @@ describe("resolveManagedSiteChannelMatch", () => {
     expect(getManagedSiteChannelExactMatch(result)?.id).toBe(26)
   })
 
+  it("omits unresolved reason when a visible exact match remains after hidden-key recovery fails", async () => {
+    const exactVisibleCandidate = buildManagedSiteChannel({
+      id: 32,
+      name: "Exact Visible Candidate",
+      base_url: "https://api.example.com",
+      models: "gpt-4",
+      key: "sk-match",
+    })
+    const maskedSiblingCandidate = buildManagedSiteChannel({
+      id: 33,
+      name: "Masked Sibling Candidate",
+      base_url: "https://api.example.com",
+      models: "gpt-4",
+      key: "sk-***",
+    })
+    const fetchChannelSecretKey = vi
+      .fn()
+      .mockRejectedValue(
+        new MatchResolutionUnresolvedError(
+          MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+        ),
+      )
+    const service = createManagedSiteServiceStub({
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [exactVisibleCandidate, maskedSiblingCandidate],
+        total: 2,
+        type_counts: {},
+      }),
+      fetchChannelSecretKey,
+    })
+
+    const result = await resolveManagedSiteChannelMatch({
+      service,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com",
+      models: ["gpt-4"],
+      key: "sk-match",
+      resolveHiddenKeys: true,
+    })
+
+    expect(fetchChannelSecretKey).toHaveBeenCalledWith(
+      managedConfig.baseUrl,
+      managedConfig.token,
+      managedConfig.userId,
+      33,
+    )
+    expect(result.key.channel?.id).toBe(32)
+    expect(result.models.channel?.id).toBe(32)
+    expect(result.unresolvedReason).toBeUndefined()
+    expect(getManagedSiteChannelExactMatch(result)?.id).toBe(32)
+  })
+
   it("does not fetch usable out-of-bucket candidates when resolving hidden URL candidates", async () => {
     const hiddenUrlCandidate = buildManagedSiteChannel({
       id: 29,

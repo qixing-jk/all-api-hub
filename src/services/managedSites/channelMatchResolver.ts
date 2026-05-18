@@ -225,6 +225,13 @@ export async function resolveManagedSiteChannelMatch(
     return channelsWithResolvedKeys
   }
 
+  const hasExactKeyAndModelMatch = () =>
+    keyAssessment.matched &&
+    modelsAssessment.matched &&
+    modelsAssessment.reason ===
+      MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT &&
+    keyAssessment.channel?.id === modelsAssessment.channel?.id
+
   alignExactModelAssessmentWithMatchedKey(channels)
 
   if (Object.keys(mergedResolvedChannelKeysById).length > 0) {
@@ -298,13 +305,7 @@ export async function resolveManagedSiteChannelMatch(
   if (
     typeof service.hydrateComparableChannelKeys === "function" &&
     key?.trim() &&
-    !(
-      keyAssessment.matched &&
-      modelsAssessment.matched &&
-      modelsAssessment.reason ===
-        MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT &&
-      keyAssessment.channel?.id === modelsAssessment.channel?.id
-    )
+    !hasExactKeyAndModelMatch()
   ) {
     const exactModelChannels = findManagedSiteChannelsByBaseUrlAndModels({
       channels: applyResolvedChannelKeys(
@@ -387,6 +388,8 @@ export async function resolveManagedSiteChannelMatch(
     ...(Object.keys(mergedResolvedChannelKeysById).length > 0
       ? { resolvedChannelKeysById: mergedResolvedChannelKeysById }
       : {}),
-    ...(unresolvedReason ? { unresolvedReason } : {}),
+    ...(unresolvedReason && !hasExactKeyAndModelMatch()
+      ? { unresolvedReason }
+      : {}),
   }
 }
