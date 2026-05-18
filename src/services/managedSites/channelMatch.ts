@@ -48,6 +48,7 @@ export type ManagedSiteChannelModelsMatchReasonValue =
 
 export const MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS = {
   VERIFICATION_REQUIRED: "verification-required",
+  KEY_RESOLUTION_FAILED: "key-resolution-failed",
 } as const
 
 type ManagedSiteChannelMatchUnresolvedReason =

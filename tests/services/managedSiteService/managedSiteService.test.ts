@@ -4,6 +4,20 @@ import { SITE_TYPES } from "~/constants/siteType"
 
 const mockGetPreferences = vi.fn()
 
+const baseService = {
+  searchChannel: expect.any(Function),
+  createChannel: expect.any(Function),
+  updateChannel: expect.any(Function),
+  deleteChannel: expect.any(Function),
+  checkValidConfig: expect.any(Function),
+  getConfig: expect.any(Function),
+  fetchAvailableModels: expect.any(Function),
+  buildChannelName: expect.any(Function),
+  prepareChannelFormData: expect.any(Function),
+  buildChannelPayload: expect.any(Function),
+  autoConfigToManagedSite: expect.any(Function),
+}
+
 vi.mock("~/services/preferences/userPreferences", () => ({
   userPreferences: {
     getPreferences: mockGetPreferences,
@@ -25,7 +39,7 @@ vi.mock("~/services/managedSites/providers/newApi", () => ({
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
   buildChannelPayload: vi.fn(),
-  findMatchingChannel: vi.fn(),
+  hydrateComparableChannelKeys: vi.fn(),
   fetchChannelSecretKey: vi.fn(),
   autoConfigToNewApi: vi.fn(),
 }))
@@ -45,7 +59,7 @@ vi.mock("~/services/managedSites/providers/veloera", () => ({
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
   buildChannelPayload: vi.fn(),
-  findMatchingChannel: vi.fn(),
+  hydrateComparableChannelKeys: vi.fn(),
   fetchChannelSecretKey: vi.fn(),
   autoConfigToVeloera: vi.fn(),
 }))
@@ -65,7 +79,7 @@ vi.mock("~/services/managedSites/providers/doneHubService", () => ({
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
   buildChannelPayload: vi.fn(),
-  findMatchingChannel: vi.fn(),
+  hydrateComparableChannelKeys: vi.fn(),
   fetchChannelSecretKey: vi.fn(),
   autoConfigToDoneHub: vi.fn(),
 }))
@@ -85,7 +99,6 @@ vi.mock("~/services/managedSites/providers/octopus", () => ({
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
   buildChannelPayload: vi.fn(),
-  findMatchingChannel: vi.fn(),
   autoConfigToOctopus: vi.fn(),
 }))
 
@@ -104,7 +117,6 @@ vi.mock("~/services/managedSites/providers/axonHub", () => ({
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
   buildChannelPayload: vi.fn(),
-  findMatchingChannel: vi.fn(),
   autoConfigToAxonHub: vi.fn(),
 }))
 
@@ -123,7 +135,7 @@ vi.mock("~/services/managedSites/providers/claudeCodeHub", () => ({
   buildChannelName: vi.fn(),
   prepareChannelFormData: vi.fn(),
   buildChannelPayload: vi.fn(),
-  findMatchingChannel: vi.fn(),
+  hydrateComparableChannelKeys: vi.fn(),
   fetchChannelSecretKey: vi.fn(),
   autoConfigToClaudeCodeHub: vi.fn(),
 }))
@@ -219,6 +231,9 @@ describe("managedSiteService", () => {
     const service = await getManagedSiteService()
     expect(service.siteType).toBe(SITE_TYPES.NEW_API)
     expect(service.messagesKey).toBe("newapi")
+    expect(service).toMatchObject(baseService)
+    expect(service).not.toHaveProperty("findMatchingChannel")
+    expect(service.hydrateComparableChannelKeys).toEqual(expect.any(Function))
 
     const config = await service.getConfig()
     expect(config?.baseUrl).toBe("n")
@@ -236,6 +251,9 @@ describe("managedSiteService", () => {
     const service = await getManagedSiteService()
     expect(service.siteType).toBe(SITE_TYPES.VELOERA)
     expect(service.messagesKey).toBe("veloera")
+    expect(service).toMatchObject(baseService)
+    expect(service).not.toHaveProperty("findMatchingChannel")
+    expect(service.hydrateComparableChannelKeys).toEqual(expect.any(Function))
 
     const config = await service.getConfig()
     expect(config?.baseUrl).toBe("v")
@@ -249,6 +267,9 @@ describe("managedSiteService", () => {
     const service = getManagedSiteServiceForType(SITE_TYPES.DONE_HUB)
     expect(service.siteType).toBe(SITE_TYPES.DONE_HUB)
     expect(service.messagesKey).toBe("donehub")
+    expect(service).toMatchObject(baseService)
+    expect(service).not.toHaveProperty("findMatchingChannel")
+    expect(service.hydrateComparableChannelKeys).toEqual(expect.any(Function))
 
     const config = await service.getConfig()
     expect(config?.baseUrl).toBe("d")
@@ -262,6 +283,9 @@ describe("managedSiteService", () => {
     const service = getManagedSiteServiceForType(SITE_TYPES.OCTOPUS)
     expect(service.siteType).toBe(SITE_TYPES.OCTOPUS)
     expect(service.messagesKey).toBe("octopus")
+    expect(service).toMatchObject(baseService)
+    expect(service).not.toHaveProperty("findMatchingChannel")
+    expect(service.hydrateComparableChannelKeys).toBeUndefined()
 
     const config = await service.getConfig()
     expect(config?.baseUrl).toBe("o")
@@ -275,6 +299,9 @@ describe("managedSiteService", () => {
     const service = getManagedSiteServiceForType(SITE_TYPES.AXON_HUB)
     expect(service.siteType).toBe(SITE_TYPES.AXON_HUB)
     expect(service.messagesKey).toBe("axonhub")
+    expect(service).toMatchObject(baseService)
+    expect(service).not.toHaveProperty("findMatchingChannel")
+    expect(service.hydrateComparableChannelKeys).toBeUndefined()
 
     const config = await service.getConfig()
     expect(config).toEqual({
@@ -292,6 +319,9 @@ describe("managedSiteService", () => {
     const service = getManagedSiteServiceForType(SITE_TYPES.CLAUDE_CODE_HUB)
     expect(service.siteType).toBe(SITE_TYPES.CLAUDE_CODE_HUB)
     expect(service.messagesKey).toBe("claudecodehub")
+    expect(service).toMatchObject(baseService)
+    expect(service).not.toHaveProperty("findMatchingChannel")
+    expect(service.hydrateComparableChannelKeys).toEqual(expect.any(Function))
     expect(service.fetchChannelSecretKey).toEqual(expect.any(Function))
 
     const config = await service.getConfig()
