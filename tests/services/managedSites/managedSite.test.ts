@@ -14,14 +14,14 @@ describe("supportsManagedSiteBaseUrlChannelLookup", () => {
     expect(supportsManagedSiteBaseUrlChannelLookup(SITE_TYPES.OCTOPUS)).toBe(
       true,
     )
+    expect(
+      supportsManagedSiteBaseUrlChannelLookup(SITE_TYPES.CLAUDE_CODE_HUB),
+    ).toBe(true)
   })
 
   it("returns false for backends without reliable base-url lookup", () => {
     expect(supportsManagedSiteBaseUrlChannelLookup(SITE_TYPES.VELOERA)).toBe(
       false,
     )
-    expect(
-      supportsManagedSiteBaseUrlChannelLookup(SITE_TYPES.CLAUDE_CODE_HUB),
-    ).toBe(false)
   })
 })

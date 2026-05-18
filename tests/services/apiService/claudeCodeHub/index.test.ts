@@ -141,6 +141,20 @@ describe("Claude Code Hub action API adapter", () => {
     expect(capturedAuthorization).toBe("Bearer admin-secret")
   })
 
+  it("throws when the provider v1 reveal API omits a usable string key", async () => {
+    server.use(
+      http.get(`${PROVIDER_V1_BASE}/42/key:reveal`, () =>
+        HttpResponse.json({
+          key: null,
+        }),
+      ),
+    )
+
+    await expect(getUnmaskedProviderKey(config, 42)).rejects.toThrow(
+      "invalid provider key response",
+    )
+  })
+
   it("searches providers through the provider v1 list API", async () => {
     let capturedAuthorization: string | null = null
     let capturedQuery: string | null = null
@@ -171,6 +185,25 @@ describe("Claude Code Hub action API adapter", () => {
     ])
     expect(capturedAuthorization).toBe("Bearer admin-secret")
     expect(capturedQuery).toBe("search match")
+  })
+
+  it("throws redacted errors for provider v1 search failures", async () => {
+    server.use(
+      http.get(PROVIDER_V1_BASE, () =>
+        HttpResponse.json(
+          {
+            type: "about:blank",
+            title: "Provider search failed",
+            detail: "bad token admin-secret while searching",
+          },
+          { status: 500 },
+        ),
+      ),
+    )
+
+    await expect(searchProviders(config, "search match")).rejects.toThrow(
+      "bad token [REDACTED] while searching",
+    )
   })
 
   it("throws redacted errors for provider v1 reveal failures", async () => {

@@ -11,7 +11,10 @@ import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/sit
 import * as claudeCodeHubApi from "~/services/apiService/claudeCodeHub"
 import type { ApiResponse } from "~/services/apiService/common/type"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
-import { findManagedSiteChannelByComparableInputs } from "~/services/managedSites/utils/channelMatching"
+import {
+  findManagedSiteChannelByComparableInputs,
+  findManagedSiteChannelsByBaseUrlAndModels,
+} from "~/services/managedSites/utils/channelMatching"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
@@ -291,7 +294,7 @@ async function hydrateComparableChannelKey(
       channel.id,
     )
     if (!hasUsableManagedSiteChannelKey(key)) {
-      return null
+      throw new Error("Claude Code Hub returned an unusable provider key")
     }
     return {
       ...channel,
@@ -621,14 +624,34 @@ export async function findMatchingChannel(
     if (!config || !hasUsableManagedSiteChannelKey(key)) return null
 
     const channels = await listClaudeCodeHubChannels(config)
-    const comparableChannels = (
-      await Promise.all(
-        channels.items.map((channel) =>
-          hydrateComparableChannelKey(config, channel),
-        ),
-      )
-    ).filter((channel): channel is ManagedSiteChannel => channel !== null)
+    const exactMatch = findManagedSiteChannelByComparableInputs({
+      channels: channels.items,
+      accountBaseUrl,
+      models,
+      key,
+    })
 
+    if (exactMatch) {
+      return exactMatch
+    }
+
+    const narrowedCandidates = findManagedSiteChannelsByBaseUrlAndModels({
+      channels: channels.items,
+      accountBaseUrl,
+      models,
+    }).filter((channel) => !hasUsableManagedSiteChannelKey(channel.key))
+
+    if (narrowedCandidates.length === 0) {
+      return null
+    }
+
+    const comparableChannels = []
+    for (const channel of narrowedCandidates) {
+      const hydratedChannel = await hydrateComparableChannelKey(config, channel)
+      if (hydratedChannel) {
+        comparableChannels.push(hydratedChannel)
+      }
+    }
     return findManagedSiteChannelByComparableInputs({
       channels: comparableChannels,
       accountBaseUrl,

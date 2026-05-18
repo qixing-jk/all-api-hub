@@ -2054,17 +2054,6 @@ describe("AccountActionButtons", () => {
       },
       "Veloera Site",
     ],
-    [
-      "Claude Code Hub",
-      {
-        managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
-        claudeCodeHub: {
-          baseUrl: "https://cch-admin.example",
-          adminToken: "cch-admin-token",
-        },
-      },
-      "Claude Code Hub Site",
-    ],
   ])(
     "shows a disabled locate action with visible unsupported guidance for %s",
     async (_label, preferences, siteName) => {
@@ -2116,6 +2105,48 @@ describe("AccountActionButtons", () => {
       expect(openManagedSiteChannelsPageMock).not.toHaveBeenCalled()
     },
   )
+
+  it("shows an actionable locate action for Claude Code Hub", async () => {
+    userPreferencesContextValue.preferences = {
+      managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      claudeCodeHub: {
+        baseUrl: "https://cch-admin.example",
+        adminToken: "cch-admin-token",
+      },
+    } as Partial<UserPreferences>
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-8d",
+          disabled: false,
+          name: "Claude Code Hub Site",
+          baseUrl: "https://api.example.com/v1/",
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText(
+      "account:actions.locateManagedSiteChannel",
+    )
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+    expect(button!).toBeEnabled()
+    expect(
+      within(menu).queryByText(
+        "account:actions.locateManagedSiteChannelUnsupportedHint",
+      ),
+    ).toBeNull()
+  })
 
   it("hides the locate action when managed site config is missing", async () => {
     hasValidManagedSiteConfigMock.mockReturnValue(false)
