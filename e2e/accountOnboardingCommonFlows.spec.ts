@@ -230,7 +230,7 @@ async function stubAIHubMixRoutes(context: BrowserContext) {
             id: 501,
             user_id: 808,
             name: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
-            full_key: "aihubmix-created-one-time-key",
+            full_key: "sk-aihubmix-created-one-time-key",
             status: 1,
             unlimited_quota: true,
             remain_quota: -1,

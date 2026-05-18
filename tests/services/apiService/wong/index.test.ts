@@ -286,7 +286,7 @@ describe("apiService wong", () => {
         id: 7,
         key: "sk-abcd************wxyz",
       } as any),
-    ).resolves.toBe("sk-resolved-secret")
+    ).resolves.toBe("resolved-secret")
 
     expect(mockFetchApiData).toHaveBeenCalledWith(baseRequest, {
       endpoint: "/api/token/7/key",

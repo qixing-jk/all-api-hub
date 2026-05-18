@@ -1540,13 +1540,13 @@ describe("useChannelDialog", () => {
         id: "account-id",
       }),
       expect.objectContaining({
-        key: "ensured-token",
+        key: "sk-ensured-token",
       }),
     )
     expect(result.current.context.state).toMatchObject({
       isOpen: true,
       initialValues: {
-        key: "ensured-token",
+        key: "sk-ensured-token",
       },
     })
 

@@ -4,7 +4,10 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   fetchAccountTokens,
   fetchTokenById,
+  formatOptionalSkPrefixSiteToken,
   formatOptionalSkPrefixSiteTokenAuthKey,
+  formatOptionalSkPrefixSiteTokenComparableKey,
+  formatOptionalSkPrefixTokenComparableKey,
   hasOptionalSkPrefixSiteTokenSemantics,
   resolveApiTokenKey,
 } from "~/services/apiService/common"
@@ -83,6 +86,38 @@ describe("apiService common token APIs", () => {
     expect(
       formatOptionalSkPrefixSiteTokenAuthKey("   ", SITE_TYPES.NEW_API),
     ).toBe("")
+  })
+
+  it("formats comparable keys for optional sk-prefix semantics", () => {
+    expect(formatOptionalSkPrefixTokenComparableKey(" sk-abc ")).toBe("abc")
+    expect(
+      formatOptionalSkPrefixSiteTokenComparableKey(
+        "sk-abc",
+        SITE_TYPES.NEW_API,
+      ),
+    ).toBe("abc")
+    expect(
+      formatOptionalSkPrefixSiteTokenComparableKey(
+        "sk-abc",
+        SITE_TYPES.SUB2API,
+      ),
+    ).toBe("sk-abc")
+  })
+
+  it("formats token auth keys by site type and preserves identity when unchanged", () => {
+    const token = { id: 1, key: "plain-key" } as any
+    const formatted = formatOptionalSkPrefixSiteToken(token, SITE_TYPES.NEW_API)
+
+    expect(formatted.key).toBe("sk-plain-key")
+    expect(formatted).not.toBe(token)
+
+    const alreadyPrefixed = { id: 2, key: "sk-ready" } as any
+    const unchanged = formatOptionalSkPrefixSiteToken(
+      alreadyPrefixed,
+      SITE_TYPES.NEW_API,
+    )
+
+    expect(unchanged).toBe(alreadyPrefixed)
   })
 
   it("fetchAccountTokens trims token.key without forcing an sk- prefix (array response)", async () => {

@@ -325,7 +325,7 @@ describe("apiService sub2api parsing", () => {
     expect(token).toMatchObject({
       id: 7,
       user_id: 42,
-      key: "sk-sub2api-token",
+      key: "sub2api-token",
       status: 1,
       name: "Primary Key",
       remain_quota: 0,
@@ -869,7 +869,7 @@ describe("apiService sub2api refreshAccountData", () => {
     ).toBe("resynced-jwt")
     expect(tokens).toHaveLength(1)
     expect(tokens[0]).toMatchObject({
-      key: "sk-sub2api-token",
+      key: "sub2api-token",
       group: "default",
     })
   })

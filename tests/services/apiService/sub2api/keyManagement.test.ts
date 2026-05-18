@@ -95,7 +95,7 @@ describe("apiService sub2api key management parsing", () => {
 
     expect(token.id).toBe(7)
     expect(token.user_id).toBe(5)
-    expect(token.key).toBe("sk-test-key")
+    expect(token.key).toBe("test-key")
     expect(token.status).toBe(0)
     expect(token.remain_quota).toBe(Math.round(1.25 * 500000))
     expect(token.used_quota).toBe(Math.round(1.25 * 500000))
@@ -531,7 +531,7 @@ describe("apiService sub2api key management service", () => {
 
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(tokens).toHaveLength(1)
-    expect(tokens[0].key).toBe("sk-retried-key")
+    expect(tokens[0].key).toBe("retried-key")
     expect(updateAccountMock).toHaveBeenCalledWith(
       "acc-1",
       expect.objectContaining({

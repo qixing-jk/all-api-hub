@@ -122,7 +122,7 @@ describe("apiService AIHubMix", () => {
       expect.objectContaining({
         id: 0,
         user_id: 0,
-        key: "sk-direct-key",
+        key: "direct-key",
         status: 1,
         name: "",
         created_time: 0,
@@ -521,7 +521,7 @@ describe("apiService AIHubMix", () => {
     expect(tokens).toEqual([
       expect.objectContaining({
         id: 1,
-        key: "sk-plain-key",
+        key: "plain-key",
         name: "test-key",
         remain_quota: 500000,
         used_quota: 1000,
@@ -620,7 +620,7 @@ describe("apiService AIHubMix", () => {
     expect(tokens).toEqual([
       expect.objectContaining({
         id: 9,
-        key: "sk-searched-key",
+        key: "searched-key",
         name: "search match",
       }),
     ])
@@ -832,7 +832,7 @@ describe("apiService AIHubMix", () => {
 
     await expect(fetchTokenById(baseRequest, 12)).resolves.toMatchObject({
       id: 12,
-      key: "sk-detail-key",
+      key: "detail-key",
     })
     await expect(createApiToken(baseRequest, tokenRequest)).resolves.toEqual(
       expect.objectContaining({
@@ -1029,7 +1029,7 @@ describe("apiService AIHubMix", () => {
         id: 12,
         key: "plain-key",
       } as any),
-    ).resolves.toBe("sk-plain-key")
+    ).resolves.toBe("plain-key")
     expect(revealCalled).toBe(false)
     expect(detailCalled).toBe(false)
   })

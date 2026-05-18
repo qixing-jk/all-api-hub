@@ -76,6 +76,9 @@ describe("channelMatching", () => {
     expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.AIHUBMIX)).toBe(
       MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.EXACT,
     )
+    expect(
+      getManagedSiteChannelKeyComparisonMode("unknown-site-type" as any),
+    ).toBe(MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.EXACT)
   })
 
   it("normalizes OpenAI-family base URLs before filtering the URL bucket", () => {
