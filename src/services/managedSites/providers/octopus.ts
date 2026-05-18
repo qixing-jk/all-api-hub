@@ -6,6 +6,7 @@ import toast from "react-hot-toast"
 
 import { ChannelType } from "~/constants"
 import { DEFAULT_OCTOPUS_CHANNEL_FIELDS } from "~/constants/octopus"
+import { SITE_TYPES } from "~/constants/siteType"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
@@ -48,6 +49,7 @@ import { t } from "~/utils/i18n/core"
 const logger = createLogger("OctopusService")
 
 const octopusImportDuplicateService = {
+  siteType: SITE_TYPES.OCTOPUS,
   searchChannel,
 }
 

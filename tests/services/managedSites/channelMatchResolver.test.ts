@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   getManagedSiteChannelExactMatch,
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
@@ -80,6 +81,98 @@ describe("resolveManagedSiteChannelMatch", () => {
     expect(result.models.reason).toBe(
       MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
     )
+  })
+
+  it("matches optional sk- prefixes for New API compatible managed sites", async () => {
+    const channel = buildManagedSiteChannel({
+      id: 61,
+      key: "stored-key",
+      base_url: "https://api.example.com/v1",
+      models: "gpt-4o",
+    })
+    const service = createManagedSiteServiceStub({
+      siteType: SITE_TYPES.NEW_API,
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [channel],
+      }),
+    })
+
+    const result = await resolveManagedSiteChannelMatch({
+      service,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com/v1",
+      models: ["gpt-4o"],
+      key: "sk-stored-key",
+    })
+
+    expect(result.key).toEqual({
+      comparable: true,
+      matched: true,
+      reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
+      channel,
+    })
+  })
+
+  it("matches optional sk- prefixes for DoneHub managed sites", async () => {
+    const channel = buildManagedSiteChannel({
+      id: 63,
+      key: "stored-key",
+      base_url: "https://api.example.com/v1",
+      models: "gpt-4o",
+    })
+    const service = createManagedSiteServiceStub({
+      siteType: SITE_TYPES.DONE_HUB,
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [channel],
+      }),
+    })
+
+    const result = await resolveManagedSiteChannelMatch({
+      service,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com/v1",
+      models: ["gpt-4o"],
+      key: "sk-stored-key",
+    })
+
+    expect(result.key).toEqual({
+      comparable: true,
+      matched: true,
+      reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
+      channel,
+    })
+  })
+
+  it("keeps non-compatible managed-site key matching exact", async () => {
+    const service = createManagedSiteServiceStub({
+      siteType: SITE_TYPES.OCTOPUS,
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          buildManagedSiteChannel({
+            id: 62,
+            key: "stored-key",
+            base_url: "https://api.example.com/v1",
+            models: "gpt-4o",
+          }),
+        ],
+      }),
+    })
+
+    const result = await resolveManagedSiteChannelMatch({
+      service,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com/v1",
+      models: ["gpt-4o"],
+      key: "sk-stored-key",
+    })
+
+    expect(result.key).toEqual({
+      comparable: true,
+      matched: false,
+      reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.NO_MATCH,
+      channel: null,
+    })
+    expect(getManagedSiteChannelExactMatch(result)).toBeNull()
   })
 
   it("hydrates narrowed comparable candidates instead of calling provider duplicate search", async () => {

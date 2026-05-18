@@ -5,6 +5,7 @@ import {
   DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS,
   isClaudeCodeHubProviderType,
 } from "~/constants/claudeCodeHub"
+import { SITE_TYPES } from "~/constants/siteType"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
@@ -55,6 +56,7 @@ const logger = createLogger("ClaudeCodeHubService")
 const DEFAULT_GROUP_TAG = "default"
 
 const claudeCodeHubImportDuplicateService = {
+  siteType: SITE_TYPES.CLAUDE_CODE_HUB,
   searchChannel,
   hydrateComparableChannelKeys,
   fetchChannelSecretKey,

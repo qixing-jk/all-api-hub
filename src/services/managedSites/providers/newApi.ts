@@ -51,6 +51,7 @@ import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
 const logger = createLogger("NewApiService")
 
 const newApiImportDuplicateService = {
+  siteType: SITE_TYPES.NEW_API,
   searchChannel,
   hydrateComparableChannelKeys,
   fetchChannelSecretKey,

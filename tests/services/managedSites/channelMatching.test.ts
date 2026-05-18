@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS,
   MANAGED_SITE_CHANNEL_MATCH_LEVELS,
@@ -12,12 +13,71 @@ import {
   findManagedSiteChannelByComparableInputs,
   findManagedSiteChannelsByBaseUrl,
   findManagedSiteChannelsByBaseUrlAndModels,
+  getManagedSiteChannelKeyComparisonMode,
   inspectManagedSiteChannelKeyMatch,
   inspectManagedSiteChannelModelsMatch,
+  MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES,
 } from "~/services/managedSites/utils/channelMatching"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 
 describe("channelMatching", () => {
+  it("uses optional sk- prefix comparison for One/New API compatible gateways", () => {
+    expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.ONE_API)).toBe(
+      MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+    )
+    expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.NEW_API)).toBe(
+      MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+    )
+    expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.ANYROUTER)).toBe(
+      MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+    )
+    expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.VELOERA)).toBe(
+      MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+    )
+    expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.ONE_HUB)).toBe(
+      MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+    )
+    expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.DONE_HUB)).toBe(
+      MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+    )
+    expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.V_API)).toBe(
+      MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+    )
+    expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.VO_API)).toBe(
+      MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+    )
+    expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.SUPER_API)).toBe(
+      MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+    )
+    expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.RIX_API)).toBe(
+      MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+    )
+    expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.NEO_API)).toBe(
+      MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+    )
+    expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.WONG_GONGYI)).toBe(
+      MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+    )
+  })
+
+  it("keeps non-compatible and source-unknown gateways on exact key comparison", () => {
+    expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.SUB2API)).toBe(
+      MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.EXACT,
+    )
+    expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.OCTOPUS)).toBe(
+      MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.EXACT,
+    )
+    expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.AXON_HUB)).toBe(
+      MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.EXACT,
+    )
+    expect(
+      getManagedSiteChannelKeyComparisonMode(SITE_TYPES.CLAUDE_CODE_HUB),
+    ).toBe(MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.EXACT)
+    expect(getManagedSiteChannelKeyComparisonMode(SITE_TYPES.AIHUBMIX)).toBe(
+      MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.EXACT,
+    )
+  })
+
   it("normalizes OpenAI-family base URLs before filtering the URL bucket", () => {
     const matchingChannel = buildManagedSiteChannel({
       id: 0,
@@ -88,6 +148,76 @@ describe("channelMatching", () => {
     ).toBe(keyedComparableChannel)
   })
 
+  it("compares channel keys exactly by default", () => {
+    const channelWithoutPrefix = buildManagedSiteChannel({
+      id: 1_21,
+      base_url: "https://api.example.com",
+      models: "gpt-4",
+      key: "stored-key",
+    })
+    const channelWithPrefix = buildManagedSiteChannel({
+      id: 1_22,
+      base_url: "https://api.example.com",
+      models: "gpt-4",
+      key: "sk-stored-key",
+    })
+
+    expect(
+      findManagedSiteChannelByComparableInputs({
+        channels: [channelWithoutPrefix],
+        accountBaseUrl: "https://api.example.com",
+        models: ["gpt-4"],
+        key: "sk-stored-key",
+      }),
+    ).toBeNull()
+
+    expect(
+      findManagedSiteChannelByComparableInputs({
+        channels: [channelWithPrefix],
+        accountBaseUrl: "https://api.example.com",
+        models: ["gpt-4"],
+        key: "stored-key",
+      }),
+    ).toBeNull()
+  })
+
+  it("treats an optional sk- prefix as equivalent when that comparison mode is enabled", () => {
+    const channelWithoutPrefix = buildManagedSiteChannel({
+      id: 1_23,
+      base_url: "https://api.example.com",
+      models: "gpt-4",
+      key: "stored-key",
+    })
+    const channelWithPrefix = buildManagedSiteChannel({
+      id: 1_24,
+      base_url: "https://api.example.com",
+      models: "gpt-4",
+      key: "sk-stored-key",
+    })
+
+    expect(
+      findManagedSiteChannelByComparableInputs({
+        channels: [channelWithoutPrefix],
+        accountBaseUrl: "https://api.example.com",
+        models: ["gpt-4"],
+        key: "sk-stored-key",
+        keyComparisonMode:
+          MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+      }),
+    ).toBe(channelWithoutPrefix)
+
+    expect(
+      findManagedSiteChannelByComparableInputs({
+        channels: [channelWithPrefix],
+        accountBaseUrl: "https://api.example.com",
+        models: ["gpt-4"],
+        key: "stored-key",
+        keyComparisonMode:
+          MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+      }),
+    ).toBe(channelWithPrefix)
+  })
+
   it("reports key comparison as unavailable when no key is provided", () => {
     const result = inspectManagedSiteChannelKeyMatch({
       channels: [],
@@ -138,6 +268,50 @@ describe("channelMatching", () => {
       reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
       channel: exactChannel,
       similarityScore: 1,
+    })
+  })
+
+  it("matches managed-site channel keys exactly by default", () => {
+    const channel = buildManagedSiteChannel({
+      id: 1_31,
+      base_url: "https://api.example.com",
+      key: "stored-key",
+    })
+
+    expect(
+      inspectManagedSiteChannelKeyMatch({
+        channels: [channel],
+        accountBaseUrl: "https://api.example.com",
+        key: "sk-stored-key",
+      }),
+    ).toEqual({
+      comparable: true,
+      matched: false,
+      reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.NO_MATCH,
+      channel: null,
+    })
+  })
+
+  it("matches managed-site channel keys regardless of optional sk- prefix when enabled", () => {
+    const channel = buildManagedSiteChannel({
+      id: 1_32,
+      base_url: "https://api.example.com",
+      key: "stored-key",
+    })
+
+    expect(
+      inspectManagedSiteChannelKeyMatch({
+        channels: [channel],
+        accountBaseUrl: "https://api.example.com",
+        key: "sk-stored-key",
+        keyComparisonMode:
+          MANAGED_SITE_CHANNEL_KEY_COMPARISON_MODES.OPTIONAL_SK_PREFIX,
+      }),
+    ).toEqual({
+      comparable: true,
+      matched: true,
+      reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
+      channel,
     })
   })
 

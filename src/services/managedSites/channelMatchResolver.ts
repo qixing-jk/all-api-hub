@@ -13,6 +13,7 @@ import type {
 import {
   findManagedSiteChannelsByBaseUrl,
   findManagedSiteChannelsByBaseUrlAndModels,
+  getManagedSiteChannelKeyComparisonMode,
   inspectManagedSiteChannelKeyMatch,
   inspectManagedSiteChannelModelsMatch,
   normalizeManagedSiteChannelBaseUrl,
@@ -21,7 +22,10 @@ import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/ma
 
 export type ManagedSiteChannelMatchService = Pick<
   ManagedSiteService,
-  "searchChannel" | "hydrateComparableChannelKeys" | "fetchChannelSecretKey"
+  | "siteType"
+  | "searchChannel"
+  | "hydrateComparableChannelKeys"
+  | "fetchChannelSecretKey"
 >
 
 interface ResolveManagedSiteChannelMatchParams {
@@ -107,6 +111,9 @@ export async function resolveManagedSiteChannelMatch(
     params.accountBaseUrl,
   )
   let unresolvedReason: ManagedSiteChannelMatchUnresolvedReason | undefined
+  const keyComparisonMode = getManagedSiteChannelKeyComparisonMode(
+    service.siteType,
+  )
 
   const searchResults = await service.searchChannel(
     managedConfig.baseUrl,
@@ -128,6 +135,7 @@ export async function resolveManagedSiteChannelMatch(
         channels: [],
         accountBaseUrl: searchBaseUrl,
         key,
+        keyComparisonMode,
       }),
       models: inspectManagedSiteChannelModelsMatch({
         channels: [],
@@ -156,6 +164,7 @@ export async function resolveManagedSiteChannelMatch(
     channels,
     accountBaseUrl: searchBaseUrl,
     key,
+    keyComparisonMode,
   })
   let modelsAssessment = inspectManagedSiteChannelModelsMatch({
     channels,
@@ -214,6 +223,7 @@ export async function resolveManagedSiteChannelMatch(
       channels: channelsWithResolvedKeys,
       accountBaseUrl: searchBaseUrl,
       key,
+      keyComparisonMode,
     })
     modelsAssessment = inspectManagedSiteChannelModelsMatch({
       channels: channelsWithResolvedKeys,

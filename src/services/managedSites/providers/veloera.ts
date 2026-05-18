@@ -46,6 +46,7 @@ import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
 const logger = createLogger("VeloeraService")
 
 const veloeraImportDuplicateService = {
+  siteType: SITE_TYPES.VELOERA,
   searchChannel,
   hydrateComparableChannelKeys,
   fetchChannelSecretKey,

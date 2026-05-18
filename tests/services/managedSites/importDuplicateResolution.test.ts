@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
+import type { ManagedSiteChannelMatchService } from "~/services/managedSites/channelMatchResolver"
 import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
 import { CHANNEL_STATUS } from "~/types/managedSite"
 
@@ -25,9 +27,17 @@ const formData = {
   status: CHANNEL_STATUS.Enable,
 }
 
+const createService = (
+  overrides: Omit<ManagedSiteChannelMatchService, "siteType"> &
+    Partial<Pick<ManagedSiteChannelMatchService, "siteType">>,
+): ManagedSiteChannelMatchService => ({
+  siteType: SITE_TYPES.NEW_API,
+  ...overrides,
+})
+
 describe("resolveManagedSiteImportDuplicate", () => {
   it("defaults unresolved exact-model hidden-key duplicates to verification required", async () => {
-    const service = {
+    const service = createService({
       searchChannel: vi.fn().mockResolvedValue({
         items: [
           {
@@ -39,7 +49,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
           },
         ],
       }),
-    }
+    })
 
     await expect(
       resolveManagedSiteImportDuplicate({
@@ -55,7 +65,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
   })
 
   it("preserves provider unresolved reasons for exact-model hidden-key duplicates", async () => {
-    const service = {
+    const service = createService({
       searchChannel: vi.fn().mockResolvedValue({
         items: [
           {
@@ -72,7 +82,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
           MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
         )
       }),
-    }
+    })
 
     await expect(
       resolveManagedSiteImportDuplicate({
@@ -88,7 +98,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
   })
 
   it("returns null when hidden-key comparison is unavailable without an exact model match", async () => {
-    const service = {
+    const service = createService({
       searchChannel: vi.fn().mockResolvedValue({
         items: [
           {
@@ -100,7 +110,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
           },
         ],
       }),
-    }
+    })
 
     await expect(
       resolveManagedSiteImportDuplicate({
@@ -112,11 +122,11 @@ describe("resolveManagedSiteImportDuplicate", () => {
   })
 
   it("returns null when search finds no duplicate candidates", async () => {
-    const service = {
+    const service = createService({
       searchChannel: vi.fn().mockResolvedValue({
         items: [],
       }),
-    }
+    })
 
     await expect(
       resolveManagedSiteImportDuplicate({
@@ -129,9 +139,9 @@ describe("resolveManagedSiteImportDuplicate", () => {
 
   it("propagates search failures from duplicate lookup", async () => {
     const searchError = new Error("API unavailable")
-    const service = {
+    const service = createService({
       searchChannel: vi.fn().mockRejectedValue(searchError),
-    }
+    })
 
     await expect(
       resolveManagedSiteImportDuplicate({
@@ -143,7 +153,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
   })
 
   it("prefers the exact key and model duplicate from multiple candidates", async () => {
-    const service = {
+    const service = createService({
       searchChannel: vi.fn().mockResolvedValue({
         items: [
           {
@@ -162,7 +172,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
           },
         ],
       }),
-    }
+    })
 
     await expect(
       resolveManagedSiteImportDuplicate({
@@ -177,7 +187,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
   })
 
   it("ignores malformed candidates that cannot match comparable import inputs", async () => {
-    const service = {
+    const service = createService({
       searchChannel: vi.fn().mockResolvedValue({
         items: [
           {
@@ -194,7 +204,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
           },
         ],
       }),
-    }
+    })
 
     await expect(
       resolveManagedSiteImportDuplicate({
@@ -206,7 +216,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
   })
 
   it("matches duplicate candidates with the same multiple-model set", async () => {
-    const service = {
+    const service = createService({
       searchChannel: vi.fn().mockResolvedValue({
         items: [
           {
@@ -218,7 +228,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
           },
         ],
       }),
-    }
+    })
 
     await expect(
       resolveManagedSiteImportDuplicate({
@@ -236,7 +246,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
   })
 
   it("returns null when import form data has no models to compare", async () => {
-    const service = {
+    const service = createService({
       searchChannel: vi.fn().mockResolvedValue({
         items: [
           {
@@ -248,7 +258,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
           },
         ],
       }),
-    }
+    })
 
     await expect(
       resolveManagedSiteImportDuplicate({
@@ -263,7 +273,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
   })
 
   it("returns exact duplicate channels", async () => {
-    const service = {
+    const service = createService({
       searchChannel: vi.fn().mockResolvedValue({
         items: [
           {
@@ -275,7 +285,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
           },
         ],
       }),
-    }
+    })
 
     await expect(
       resolveManagedSiteImportDuplicate({
@@ -290,7 +300,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
   })
 
   it("passes through non-hidden-key non-matches", async () => {
-    const service = {
+    const service = createService({
       searchChannel: vi.fn().mockResolvedValue({
         items: [
           {
@@ -302,7 +312,7 @@ describe("resolveManagedSiteImportDuplicate", () => {
           },
         ],
       }),
-    }
+    })
 
     await expect(
       resolveManagedSiteImportDuplicate({

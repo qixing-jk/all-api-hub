@@ -47,6 +47,7 @@ import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
 const logger = createLogger("DoneHubService")
 
 const doneHubImportDuplicateService = {
+  siteType: SITE_TYPES.DONE_HUB,
   searchChannel,
   hydrateComparableChannelKeys,
   fetchChannelSecretKey,
