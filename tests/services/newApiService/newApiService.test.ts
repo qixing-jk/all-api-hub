@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS } from "~/services/managedSites/channelMatch"
 import type { ApiToken, DisplaySiteData, SiteAccount } from "~/types"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import type {
@@ -986,7 +987,11 @@ describe("newApiService", () => {
           1,
           [createMockNewApiChannel({ id: 13, key: "" })],
         ),
-      ).rejects.toBeInstanceOf(MatchResolutionUnresolvedError)
+      ).rejects.toMatchObject({
+        name: MatchResolutionUnresolvedError.name,
+        reason:
+          MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+      })
     })
 
     it("should map unexpected New API hydration failures to unresolved key resolution", async () => {
@@ -1011,7 +1016,11 @@ describe("newApiService", () => {
           1,
           [createMockNewApiChannel({ id: 14, key: "" })],
         ),
-      ).rejects.toBeInstanceOf(MatchResolutionUnresolvedError)
+      ).rejects.toMatchObject({
+        name: MatchResolutionUnresolvedError.name,
+        reason:
+          MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
+      })
     })
   })
 

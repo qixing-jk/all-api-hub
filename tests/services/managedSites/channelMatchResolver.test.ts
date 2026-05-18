@@ -155,6 +155,39 @@ describe("resolveManagedSiteChannelMatch", () => {
     expect(result.url.matched).toBe(true)
     expect(result.key.comparable).toBe(false)
     expect(result.key.matched).toBe(false)
+    expect(result.unresolvedReason).toBe(
+      MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+    )
+  })
+
+  it("rethrows unexpected candidate key hydration failures", async () => {
+    const hydrationError = new Error("hydration crashed")
+    const hydrateComparableChannelKeys = vi.fn(async () => {
+      throw hydrationError
+    })
+    const service = createManagedSiteServiceStub({
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          buildManagedSiteChannel({
+            id: 9,
+            key: "",
+            base_url: "https://api.example.com/v1",
+            models: "gpt-4o",
+          }),
+        ],
+      }),
+      hydrateComparableChannelKeys,
+    })
+
+    await expect(
+      resolveManagedSiteChannelMatch({
+        service,
+        managedConfig,
+        accountBaseUrl: "https://api.example.com/v1",
+        models: ["gpt-4o"],
+        key: "test-key",
+      }),
+    ).rejects.toBe(hydrationError)
   })
 
   it("does not hydrate hidden same-URL candidates with different models", async () => {
@@ -621,6 +654,9 @@ describe("resolveManagedSiteChannelMatch", () => {
     })
     expect(result.models.reason).toBe(
       MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.NO_MATCH,
+    )
+    expect(result.unresolvedReason).toBe(
+      MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
     )
   })
 })

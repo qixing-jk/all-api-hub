@@ -7,6 +7,10 @@ import {
 } from "~/constants/claudeCodeHub"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
+  MatchResolutionUnresolvedError,
+} from "~/services/managedSites/channelMatch"
+import {
   autoConfigToClaudeCodeHub,
   buildChannelPayload,
   buildClaudeCodeHubCreatePayloadFromFormData,
@@ -532,6 +536,48 @@ describe("Claude Code Hub managed-site provider", () => {
       },
       31,
     )
+  })
+
+  it("maps missing Claude Code Hub config to unresolved hydration errors", async () => {
+    mockGetPreferences.mockResolvedValueOnce({})
+
+    await expect(
+      hydrateComparableChannelKeys("", "", "", [
+        {
+          id: 32,
+          name: "Masked Provider",
+          key: "",
+        } as any,
+      ]),
+    ).rejects.toMatchObject({
+      name: MatchResolutionUnresolvedError.name,
+      reason:
+        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
+    })
+  })
+
+  it("maps Claude Code Hub provider key reveal failures to unresolved hydration errors", async () => {
+    mockGetPreferences.mockResolvedValue({
+      claudeCodeHub: {
+        baseUrl: "https://cch.example.com",
+        adminToken: "admin-token",
+      },
+    })
+    mockGetUnmaskedProviderKey.mockRejectedValueOnce(new Error("reveal failed"))
+
+    await expect(
+      hydrateComparableChannelKeys("", "", "", [
+        {
+          id: 33,
+          name: "Masked Provider",
+          key: "",
+        } as any,
+      ]),
+    ).rejects.toMatchObject({
+      name: MatchResolutionUnresolvedError.name,
+      reason:
+        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
+    })
   })
 
   it("surfaces config and API failures for CRUD-style operations", async () => {
