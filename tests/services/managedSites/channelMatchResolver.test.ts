@@ -45,6 +45,43 @@ const createManagedSiteServiceStub = (
   }) as any
 
 describe("resolveManagedSiteChannelMatch", () => {
+  it("skips candidate key hydration when a local exact match is already available", async () => {
+    const hydrateComparableChannelKeys = vi.fn().mockResolvedValue([])
+    const service = createManagedSiteServiceStub({
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          buildManagedSiteChannel({
+            id: 6,
+            key: "sk-match",
+            base_url: "https://api.example.com/v1",
+            models: "gpt-4o",
+          }),
+          buildManagedSiteChannel({
+            id: 7,
+            key: "",
+            base_url: "https://api.example.com/v1",
+            models: "gpt-4o-mini",
+          }),
+        ],
+      }),
+      hydrateComparableChannelKeys,
+    })
+
+    const result = await resolveManagedSiteChannelMatch({
+      service,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com/v1",
+      models: ["gpt-4o"],
+      key: "sk-match",
+    })
+
+    expect(hydrateComparableChannelKeys).not.toHaveBeenCalled()
+    expect(result.key.matched).toBe(true)
+    expect(result.models.reason).toBe(
+      MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
+    )
+  })
+
   it("hydrates narrowed comparable candidates instead of calling provider duplicate search", async () => {
     const searchChannel = vi.fn().mockResolvedValue({
       items: [

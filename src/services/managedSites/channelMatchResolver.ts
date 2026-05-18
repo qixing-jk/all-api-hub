@@ -82,8 +82,8 @@ const fetchRecoverableCandidateSecretKey = async (params: {
 }
 
 /**
- * Resolves the strongest available managed-site channel match while preserving
- * provider-specific exact-key checks before local ranked fallback.
+ * Resolves the strongest available managed-site channel match from local
+ * assessments, hydrating recoverable candidate keys when local data is hidden.
  */
 export async function resolveManagedSiteChannelMatch(
   params: ResolveManagedSiteChannelMatchParams,
@@ -278,7 +278,14 @@ export async function resolveManagedSiteChannelMatch(
 
   if (
     typeof service.hydrateComparableChannelKeys === "function" &&
-    key?.trim()
+    key?.trim() &&
+    !(
+      keyAssessment.matched &&
+      modelsAssessment.matched &&
+      modelsAssessment.reason ===
+        MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT &&
+      keyAssessment.channel?.id === modelsAssessment.channel?.id
+    )
   ) {
     const recoverableUrlCandidates = urlBucket.filter(
       (channel) =>
