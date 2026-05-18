@@ -16,10 +16,6 @@ import {
 } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
-import {
-  findManagedSiteChannelByComparableInputs,
-  findManagedSiteChannelsByBaseUrlAndModels,
-} from "~/services/managedSites/utils/channelMatching"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
@@ -242,27 +238,6 @@ export function providerToManagedSiteChannel(
     setting: "",
     settings: "",
     _claudeCodeHubData: provider,
-  }
-}
-
-/**
- * Lists Claude Code Hub providers and derives managed-site type counts.
- */
-async function listClaudeCodeHubChannels(
-  config: ClaudeCodeHubConfig,
-): Promise<ManagedSiteChannelListData> {
-  const providers = await claudeCodeHubApi.listProviders(config)
-  const items = providers.map(providerToManagedSiteChannel)
-  const typeCounts = items.reduce<Record<string, number>>((acc, item) => {
-    const type = String(item.type)
-    acc[type] = (acc[type] ?? 0) + 1
-    return acc
-  }, {})
-
-  return {
-    items,
-    total: items.length,
-    type_counts: typeCounts,
   }
 }
 
@@ -654,62 +629,6 @@ export function buildChannelPayload(
       weight: payload.weight ?? 1,
       status: formData.status,
     },
-  }
-}
-
-/**
- * Finds an existing Claude Code Hub channel matching comparable account inputs.
- */
-export async function findMatchingChannel(
-  _baseUrl: string,
-  _adminToken: string,
-  _userId: number | string,
-  accountBaseUrl: string,
-  models: string[],
-  key?: string,
-): Promise<ManagedSiteChannel | null> {
-  try {
-    const config = await getFullClaudeCodeHubConfig()
-    if (!config || !hasUsableManagedSiteChannelKey(key)) return null
-
-    const channels = await listClaudeCodeHubChannels(config)
-    const exactMatch = findManagedSiteChannelByComparableInputs({
-      channels: channels.items,
-      accountBaseUrl,
-      models,
-      key,
-    })
-
-    if (exactMatch) {
-      return exactMatch
-    }
-
-    const narrowedCandidates = findManagedSiteChannelsByBaseUrlAndModels({
-      channels: channels.items,
-      accountBaseUrl,
-      models,
-    }).filter((channel) => !hasUsableManagedSiteChannelKey(channel.key))
-
-    if (narrowedCandidates.length === 0) {
-      return null
-    }
-
-    const comparableChannels = []
-    for (const channel of narrowedCandidates) {
-      const hydratedChannel = await hydrateComparableChannelKey(config, channel)
-      if (hydratedChannel) {
-        comparableChannels.push(hydratedChannel)
-      }
-    }
-    return findManagedSiteChannelByComparableInputs({
-      channels: comparableChannels,
-      accountBaseUrl,
-      models,
-      key,
-    })
-  } catch (error) {
-    logger.error("Failed to find matching Claude Code Hub provider", error)
-    return null
   }
 }
 

@@ -454,52 +454,6 @@ describe("veloeraService additional flows", () => {
     )
   })
 
-  it("returns matched channels by comparable inputs and null when Veloera search cannot find any", async () => {
-    const { findMatchingChannel } = await import(
-      "~/services/managedSites/providers/veloera"
-    )
-
-    mockSearchChannel.mockResolvedValueOnce({
-      items: [
-        buildManagedSiteChannel({
-          id: 55,
-          name: "Existing Veloera Channel",
-          base_url: "https://proxy.example.com",
-          models: "gpt-4o",
-          key: "veloera-key",
-        }),
-      ],
-      total: 1,
-      type_counts: {},
-    })
-
-    await expect(
-      findMatchingChannel(
-        "https://veloera.example.com",
-        "veloera-token",
-        "200",
-        "https://proxy.example.com",
-        ["gpt-4o"],
-        "veloera-key",
-      ),
-    ).resolves.toMatchObject({
-      id: 55,
-      name: "Existing Veloera Channel",
-    })
-
-    mockSearchChannel.mockResolvedValueOnce(null)
-    await expect(
-      findMatchingChannel(
-        "https://veloera.example.com",
-        "veloera-token",
-        "200",
-        "https://proxy.example.com",
-        ["gpt-4o"],
-        "veloera-key",
-      ),
-    ).resolves.toBeNull()
-  })
-
   it("trims fetched Veloera channel keys and throws when the detail payload omits them", async () => {
     const { fetchChannelSecretKey } = await import(
       "~/services/managedSites/providers/veloera"

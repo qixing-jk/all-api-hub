@@ -241,7 +241,6 @@ describe("managedSiteService", () => {
     expect(service.siteType).toBe(SITE_TYPES.NEW_API)
     expect(service.messagesKey).toBe("newapi")
     expect(service).toMatchObject(baseService)
-    expect(service).not.toHaveProperty("findMatchingChannel")
     expect(service.hydrateComparableChannelKeys).toEqual(expect.any(Function))
 
     const config = await service.getConfig()
@@ -261,7 +260,6 @@ describe("managedSiteService", () => {
     expect(service.siteType).toBe(SITE_TYPES.VELOERA)
     expect(service.messagesKey).toBe("veloera")
     expect(service).toMatchObject(baseService)
-    expect(service).not.toHaveProperty("findMatchingChannel")
     expect(service.hydrateComparableChannelKeys).toEqual(expect.any(Function))
 
     const config = await service.getConfig()
@@ -277,7 +275,6 @@ describe("managedSiteService", () => {
     expect(service.siteType).toBe(SITE_TYPES.DONE_HUB)
     expect(service.messagesKey).toBe("donehub")
     expect(service).toMatchObject(baseService)
-    expect(service).not.toHaveProperty("findMatchingChannel")
     expect(service.hydrateComparableChannelKeys).toEqual(expect.any(Function))
 
     const config = await service.getConfig()
@@ -293,7 +290,6 @@ describe("managedSiteService", () => {
     expect(service.siteType).toBe(SITE_TYPES.OCTOPUS)
     expect(service.messagesKey).toBe("octopus")
     expect(service).toMatchObject(baseService)
-    expect(service).not.toHaveProperty("findMatchingChannel")
     expect(service.hydrateComparableChannelKeys).toBeUndefined()
 
     const config = await service.getConfig()
@@ -309,7 +305,6 @@ describe("managedSiteService", () => {
     expect(service.siteType).toBe(SITE_TYPES.AXON_HUB)
     expect(service.messagesKey).toBe("axonhub")
     expect(service).toMatchObject(baseService)
-    expect(service).not.toHaveProperty("findMatchingChannel")
     expect(service.hydrateComparableChannelKeys).toBeUndefined()
 
     const config = await service.getConfig()
@@ -329,7 +324,6 @@ describe("managedSiteService", () => {
     expect(service.siteType).toBe(SITE_TYPES.CLAUDE_CODE_HUB)
     expect(service.messagesKey).toBe("claudecodehub")
     expect(service).toMatchObject(baseService)
-    expect(service).not.toHaveProperty("findMatchingChannel")
     expect(service.hydrateComparableChannelKeys).toEqual(expect.any(Function))
     expect(service.fetchChannelSecretKey).toEqual(expect.any(Function))
 

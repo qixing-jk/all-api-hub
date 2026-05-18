@@ -198,7 +198,9 @@ vi.mock("~/services/managedSites/managedSiteService", () => ({
       type_counts: {},
     })),
     fetchChannelSecretKey: fetchChannelSecretKeyMock,
-    findMatchingChannel: vi.fn(),
+    hydrateComparableChannelKeys: vi.fn(
+      async (_baseUrl, _token, _userId, candidates) => candidates,
+    ),
   })),
 }))
 

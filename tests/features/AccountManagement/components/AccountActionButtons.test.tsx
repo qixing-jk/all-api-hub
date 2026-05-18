@@ -1343,12 +1343,17 @@ describe("AccountActionButtons", () => {
         models: ["gpt-4"],
         key: "sk-1",
       }),
-      findMatchingChannel: vi
-        .fn()
-        .mockResolvedValueOnce({ id: 123, key: "sk-1" }),
       searchChannel: vi.fn().mockResolvedValue({
-        items: [],
-        total: 0,
+        items: [
+          {
+            id: 123,
+            name: "Managed Channel 123",
+            base_url: "https://api.example.com",
+            models: "gpt-4",
+            key: "sk-1",
+          },
+        ],
+        total: 1,
         type_counts: {},
       }),
     }
@@ -1404,7 +1409,6 @@ describe("AccountActionButtons", () => {
         models: ["gpt-4"],
         key: "",
       }),
-      findMatchingChannel: vi.fn(),
       searchChannel: vi.fn().mockResolvedValue({
         items: [
           {
@@ -1462,7 +1466,6 @@ describe("AccountActionButtons", () => {
         baseUrl: "https://api.example.com/v1/openai",
       }),
     )
-    expect(managedService.findMatchingChannel).not.toHaveBeenCalled()
     expect(openManagedSiteChannelsForChannelMock).not.toHaveBeenCalled()
   })
 
@@ -1481,7 +1484,6 @@ describe("AccountActionButtons", () => {
         models: ["gpt-4"],
         key: "sk-1",
       }),
-      findMatchingChannel: vi.fn().mockResolvedValueOnce(null),
       searchChannel: vi.fn().mockResolvedValue({
         items: [
           {
@@ -1551,7 +1553,6 @@ describe("AccountActionButtons", () => {
         models: ["gpt-4"],
         key: "sk-1",
       }),
-      findMatchingChannel: vi.fn().mockResolvedValueOnce(null),
       searchChannel: vi.fn().mockResolvedValue({
         items: [
           {
@@ -1620,7 +1621,6 @@ describe("AccountActionButtons", () => {
         models: ["gpt-4", "gpt-4o"],
         key: "sk-1",
       }),
-      findMatchingChannel: vi.fn().mockResolvedValueOnce(null),
       searchChannel: vi.fn().mockResolvedValue({
         items: [
           {
@@ -1690,7 +1690,6 @@ describe("AccountActionButtons", () => {
         models: ["gpt-4", "gpt-4o"],
         key: "sk-1",
       }),
-      findMatchingChannel: vi.fn().mockResolvedValueOnce(null),
       searchChannel: vi.fn().mockResolvedValue({
         items: [
           {
@@ -1767,7 +1766,6 @@ describe("AccountActionButtons", () => {
         models: ["gpt-4", "gpt-4o", "gemini-2.0"],
         key: "sk-1",
       }),
-      findMatchingChannel: vi.fn().mockResolvedValueOnce(null),
       searchChannel: vi.fn().mockResolvedValue({
         items: [
           {
@@ -1832,7 +1830,6 @@ describe("AccountActionButtons", () => {
         userId: "1",
       }),
       prepareChannelFormData: vi.fn(),
-      findMatchingChannel: vi.fn(),
       searchChannel: vi.fn(),
     }
 
@@ -1896,7 +1893,6 @@ describe("AccountActionButtons", () => {
         models: ["gpt-4"],
         key: "sk-1",
       }),
-      findMatchingChannel: vi.fn().mockResolvedValueOnce(null),
       searchChannel: vi.fn().mockResolvedValue({
         items: [],
         total: 0,
@@ -1958,7 +1954,6 @@ describe("AccountActionButtons", () => {
         userId: "1",
       }),
       prepareChannelFormData: vi.fn(),
-      findMatchingChannel: vi.fn(),
     }
 
     getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
@@ -2004,7 +1999,6 @@ describe("AccountActionButtons", () => {
     })
     expect(toastSuccessMock).not.toHaveBeenCalled()
     expect(managedService.prepareChannelFormData).not.toHaveBeenCalled()
-    expect(managedService.findMatchingChannel).not.toHaveBeenCalled()
   })
 
   it("shows an actionable locate action for providers with reliable base-url lookup", async () => {
@@ -2186,7 +2180,6 @@ describe("AccountActionButtons", () => {
       messagesKey: "newapi",
       getConfig: vi.fn().mockResolvedValue(null),
       prepareChannelFormData: vi.fn(),
-      findMatchingChannel: vi.fn(),
       searchChannel: vi.fn(),
     }
 
@@ -2247,7 +2240,6 @@ describe("AccountActionButtons", () => {
         userId: "1",
       }),
       prepareChannelFormData: vi.fn(),
-      findMatchingChannel: vi.fn(),
     }
 
     getManagedSiteServiceMock.mockResolvedValueOnce(managedService as any)
@@ -2289,6 +2281,5 @@ describe("AccountActionButtons", () => {
       })
     })
     expect(managedService.prepareChannelFormData).not.toHaveBeenCalled()
-    expect(managedService.findMatchingChannel).not.toHaveBeenCalled()
   })
 })

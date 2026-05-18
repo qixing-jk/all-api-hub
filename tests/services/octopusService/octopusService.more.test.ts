@@ -536,37 +536,6 @@ describe("octopus additional flows", () => {
     })
   })
 
-  it("returns null when Octopus channel lookup cannot read config or list channels", async () => {
-    const { findMatchingChannel } = await import(
-      "~/services/managedSites/providers/octopus"
-    )
-
-    mockGetPreferences.mockResolvedValueOnce({
-      octopus: {
-        baseUrl: "",
-        username: "",
-        password: "",
-      },
-    })
-    await expect(
-      findMatchingChannel("ignored", "", "", "https://proxy.example.com", [
-        "gpt-4o",
-      ]),
-    ).resolves.toBeNull()
-
-    mockListChannels.mockRejectedValueOnce(new Error("list exploded"))
-    await expect(
-      findMatchingChannel(
-        "ignored",
-        "",
-        "",
-        "https://proxy.example.com",
-        ["gpt-4o"],
-        "octo-key",
-      ),
-    ).resolves.toBeNull()
-  })
-
   it("surfaces config-missing and unexpected import failures during Octopus auto-config", async () => {
     const { autoConfigToOctopus } = await import(
       "~/services/managedSites/providers/octopus"

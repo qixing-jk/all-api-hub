@@ -539,13 +539,19 @@ describe("doneHubService additional flows", () => {
     ).rejects.toThrow("done_hub_channel_key_missing")
   })
 
-  it("skips key-detail fetches for channels without ids and ignores detail fetch failures", async () => {
-    const { findMatchingChannel } = await import(
+  it("preserves channels without ids and maps detail fetch failures to unresolved hydration", async () => {
+    const { hydrateComparableChannelKeys } = await import(
       "~/services/managedSites/providers/doneHubService"
     )
+    const { MatchResolutionUnresolvedError } = await import(
+      "~/services/managedSites/channelMatch"
+    )
 
-    mockSearchChannel.mockResolvedValueOnce({
-      items: [
+    const result = await hydrateComparableChannelKeys(
+      "https://done-hub.example.com",
+      "done-hub-token",
+      "100",
+      [
         buildManagedSiteChannel({
           id: undefined as any,
           name: "No Id Channel",
@@ -553,31 +559,36 @@ describe("doneHubService additional flows", () => {
           models: "gpt-4o",
           key: "",
         }),
-        buildManagedSiteChannel({
-          id: 22,
-          name: "Broken Detail Channel",
-          base_url: "https://proxy.example.com",
-          models: "gpt-4o",
-          key: "",
-        }),
       ],
-      total: 2,
-      type_counts: {},
-    })
+    )
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        name: "No Id Channel",
+      }),
+    ])
+    expect(mockFetchDoneHubChannel).not.toHaveBeenCalled()
+
     mockFetchDoneHubChannel.mockRejectedValueOnce(
       Object.assign(new Error("detail request failed"), { code: "ECONNRESET" }),
     )
 
-    const result = await findMatchingChannel(
-      "https://done-hub.example.com",
-      "done-hub-token",
-      "100",
-      "https://proxy.example.com",
-      ["gpt-4o"],
-      "target-key",
-    )
-
-    expect(result).toBeNull()
+    await expect(
+      hydrateComparableChannelKeys(
+        "https://done-hub.example.com",
+        "done-hub-token",
+        "100",
+        [
+          buildManagedSiteChannel({
+            id: 22,
+            name: "Broken Detail Channel",
+            base_url: "https://proxy.example.com",
+            models: "gpt-4o",
+            key: "",
+          }),
+        ],
+      ),
+    ).rejects.toBeInstanceOf(MatchResolutionUnresolvedError)
     expect(mockFetchDoneHubChannel).toHaveBeenCalledTimes(1)
     expect(mockFetchDoneHubChannel).toHaveBeenCalledWith(
       {

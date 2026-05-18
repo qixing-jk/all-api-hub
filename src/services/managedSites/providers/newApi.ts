@@ -15,10 +15,6 @@ import {
   fetchNewApiChannelKey,
   NewApiChannelKeyRequirementError,
 } from "~/services/managedSites/providers/newApiSession"
-import {
-  findManagedSiteChannelByComparableInputs,
-  findManagedSiteChannelsByBaseUrlAndModels,
-} from "~/services/managedSites/utils/channelMatching"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import { ApiToken, AuthTypeEnum, DisplaySiteData, SiteAccount } from "~/types"
@@ -439,67 +435,6 @@ export function buildChannelPayload(
       status: formData.status,
     },
   }
-}
-
-/**
- * 查找是否存在匹配的渠道。
- *
- * 默认匹配条件为 base_url + models；当传入 key 时，会进一步按 key 精确匹配，
- * 避免把不同 key 的渠道误判为重复。
- */
-export async function findMatchingChannel(
-  baseUrl: string,
-  adminToken: string,
-  userId: number | string,
-  accountBaseUrl: string,
-  models: string[],
-  key?: string,
-): Promise<ManagedSiteChannel | null> {
-  const searchResults = await searchChannel(
-    baseUrl,
-    adminToken,
-    userId,
-    accountBaseUrl,
-  )
-
-  if (!searchResults) {
-    return null
-  }
-
-  const exactMatch = findManagedSiteChannelByComparableInputs({
-    channels: searchResults.items,
-    accountBaseUrl,
-    models,
-    key,
-  })
-
-  if (exactMatch || !key?.trim()) {
-    return exactMatch
-  }
-
-  const narrowedCandidates = findManagedSiteChannelsByBaseUrlAndModels({
-    channels: searchResults.items,
-    accountBaseUrl,
-    models,
-  }).filter((channel) => !channel.key?.trim())
-
-  if (narrowedCandidates.length === 0) {
-    return null
-  }
-
-  const resolvedCandidates = await hydrateComparableChannelKeys(
-    baseUrl,
-    adminToken,
-    userId,
-    narrowedCandidates,
-  )
-
-  return findManagedSiteChannelByComparableInputs({
-    channels: resolvedCandidates,
-    accountBaseUrl,
-    models,
-    key,
-  })
 }
 
 /**

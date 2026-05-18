@@ -12,7 +12,6 @@ import {
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
-import { findManagedSiteChannelByComparableInputs } from "~/services/managedSites/utils/channelMatching"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
 import { ApiToken, AuthTypeEnum, DisplaySiteData, SiteAccount } from "~/types"
@@ -363,44 +362,6 @@ export function buildChannelPayload(
       status: formData.status,
     },
   }
-}
-
-/**
- * Finds a channel that matches the account base URL and models.
- *
- * When `key` is provided, the match is refined to include the key to avoid treating
- * different keys as duplicates.
- *
- * Warning: this feature is not supported on Veloera for reliable absence
- * checks. The helper depends on Veloera's keyword search endpoint, which does
- * not reliably support base URL search, so negative results must not be treated
- * as conclusive proof that a channel is absent.
- */
-export async function findMatchingChannel(
-  baseUrl: string,
-  adminToken: string,
-  userId: number | string,
-  accountBaseUrl: string,
-  models: string[],
-  key?: string,
-): Promise<ManagedSiteChannel | null> {
-  const searchResults = await searchChannel(
-    baseUrl,
-    adminToken,
-    userId,
-    accountBaseUrl,
-  )
-
-  if (!searchResults) {
-    return null
-  }
-
-  return findManagedSiteChannelByComparableInputs({
-    channels: searchResults.items,
-    accountBaseUrl,
-    models,
-    key,
-  })
 }
 
 /**

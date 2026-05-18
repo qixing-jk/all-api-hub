@@ -130,7 +130,9 @@ const createManagedSiteServiceStub = (
       status: 1,
     }),
     buildChannelPayload: vi.fn(),
-    findMatchingChannel: vi.fn().mockResolvedValue(null),
+    hydrateComparableChannelKeys: vi.fn(
+      async (_baseUrl, _token, _userId, candidates) => candidates,
+    ),
     autoConfigToManagedSite: vi.fn(),
     ...overrides,
   }) as any
@@ -163,10 +165,9 @@ describe("getManagedSiteTokenChannelStatus", () => {
       key: "test-token-key",
     })
     const service = createManagedSiteServiceStub({
-      findMatchingChannel: vi.fn().mockResolvedValue(exactMatch),
       searchChannel: vi.fn().mockResolvedValue({
-        items: [],
-        total: 0,
+        items: [exactMatch],
+        total: 1,
         type_counts: {},
       }),
     })
@@ -376,7 +377,6 @@ describe("getManagedSiteTokenChannelStatus", () => {
         total: 1,
         type_counts: {},
       }),
-      findMatchingChannel: vi.fn().mockResolvedValue(null),
     })
 
     const result = await getManagedSiteTokenChannelStatus({
@@ -722,7 +722,6 @@ describe("getManagedSiteTokenChannelStatus", () => {
       messagesKey: "claudecodehub",
       searchChannel,
       fetchChannelSecretKey,
-      findMatchingChannel: vi.fn().mockResolvedValue(null),
     })
 
     const result = await getManagedSiteTokenChannelStatus({

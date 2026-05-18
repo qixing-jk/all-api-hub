@@ -110,7 +110,6 @@ const buildService = (
     checkValidConfig: vi.fn(),
     fetchAvailableModels: vi.fn(),
     buildChannelName: vi.fn(),
-    findMatchingChannel: vi.fn(),
     autoConfigToManagedSite: vi.fn(),
     ...overrides,
   }) as ManagedSiteService

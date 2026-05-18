@@ -214,7 +214,9 @@ const buildManagedSiteServiceMock = (
     total: 0,
     type_counts: {},
   })),
-  findMatchingChannel: vi.fn(async () => null),
+  hydrateComparableChannelKeys: vi.fn(
+    async (_baseUrl, _token, _userId, candidates) => candidates,
+  ),
   ...overrides,
 })
 
@@ -481,7 +483,7 @@ describe("useChannelDialog", () => {
         total: 1,
         type_counts: {},
       })),
-      findMatchingChannel: vi.fn(async () => {
+      hydrateComparableChannelKeys: vi.fn(async () => {
         throw new MatchResolutionUnresolvedError(
           MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
         )

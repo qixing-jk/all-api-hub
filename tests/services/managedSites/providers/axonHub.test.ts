@@ -541,7 +541,7 @@ describe("AxonHub managed-site provider", () => {
     ).not.toThrow()
   })
 
-  it("finds existing matching channels and imports only when no duplicate exists", async () => {
+  it("imports only when no duplicate exists", async () => {
     const provider = await import("~/services/managedSites/providers/axonHub")
     const account = buildDisplaySiteData({
       name: "Source Site",
@@ -558,24 +558,6 @@ describe("AxonHub managed-site provider", () => {
       base_url: "https://source.example",
       models: "gpt-4o,gpt-4.1",
     })
-
-    mockListChannels.mockResolvedValueOnce({
-      items: [matchingChannel],
-      total: 1,
-      page: 1,
-      pageSize: 100,
-    })
-
-    await expect(
-      provider.findMatchingChannel(
-        "",
-        "",
-        "",
-        "https://source.example/v1",
-        ["gpt-4o", "gpt-4.1"],
-        "test-source-key",
-      ),
-    ).resolves.toEqual(matchingChannel)
 
     mockSearchChannels.mockResolvedValueOnce({
       items: [matchingChannel],
@@ -610,23 +592,6 @@ describe("AxonHub managed-site provider", () => {
         supportedModels: ["gpt-4o", "gpt-4.1"],
       }),
     )
-  })
-
-  it("returns null when matching-channel lookup cannot list AxonHub channels", async () => {
-    const provider = await import("~/services/managedSites/providers/axonHub")
-
-    mockListChannels.mockRejectedValueOnce(new Error("list exploded"))
-
-    await expect(
-      provider.findMatchingChannel(
-        "",
-        "",
-        "",
-        "https://source.example/v1",
-        ["gpt-4o"],
-        "test-source-key",
-      ),
-    ).resolves.toBeNull()
   })
 
   it("returns config-missing and import-failed messages for AxonHub import fallbacks", async () => {
