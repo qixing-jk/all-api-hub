@@ -374,6 +374,53 @@ describe("resolveManagedSiteChannelMatch", () => {
     expect(getManagedSiteChannelExactMatch(result)?.id).toBe(26)
   })
 
+  it("does not fetch usable out-of-bucket candidates when resolving hidden URL candidates", async () => {
+    const hiddenUrlCandidate = buildManagedSiteChannel({
+      id: 29,
+      name: "Hidden URL Candidate",
+      base_url: "https://api.example.com",
+      models: "claude-3",
+      key: "sk-***",
+    })
+    const usableOutOfBucketCandidate = buildManagedSiteChannel({
+      id: 30,
+      name: "Usable Out-of-Bucket Candidate",
+      base_url: "https://other.example.com",
+      models: "gpt-4",
+      key: "sk-other",
+    })
+    const fetchChannelSecretKey = vi.fn().mockResolvedValue("sk-match")
+    const service = createManagedSiteServiceStub({
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [hiddenUrlCandidate, usableOutOfBucketCandidate],
+        total: 2,
+        type_counts: {},
+      }),
+      fetchChannelSecretKey,
+      findMatchingChannel: vi.fn().mockResolvedValue(null),
+    })
+
+    const result = await resolveManagedSiteChannelMatch({
+      service,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com",
+      models: ["gpt-4"],
+      key: "sk-match",
+      resolveHiddenKeys: true,
+    })
+
+    expect(fetchChannelSecretKey).toHaveBeenCalledTimes(1)
+    expect(fetchChannelSecretKey).toHaveBeenCalledWith(
+      managedConfig.baseUrl,
+      managedConfig.token,
+      managedConfig.userId,
+      29,
+    )
+    expect(result.key.channel?.id).toBe(29)
+    expect(result.models.channel).toBeNull()
+    expect(getManagedSiteChannelExactMatch(result)).toBeNull()
+  })
+
   it("keeps cached resolved keys aligned with model matching", async () => {
     const firstMaskedCandidate = buildManagedSiteChannel({
       id: 27,

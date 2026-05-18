@@ -510,10 +510,6 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
               token: target.token,
               resolvedChannelKeysById: target.resolvedChannelKeysById,
             })
-            mergeResolvedChannelKeysForIdentity(
-              target.identityKey,
-              result.resolvedChannelKeysById,
-            )
             const displayResult = toDisplayManagedSiteTokenStatusResult(result)
             resultsByIdentityKey[target.identityKey] = displayResult
 
@@ -531,6 +527,11 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
               ) {
                 return prev
               }
+
+              mergeResolvedChannelKeysForIdentity(
+                target.identityKey,
+                result.resolvedChannelKeysById,
+              )
 
               return {
                 ...prev,

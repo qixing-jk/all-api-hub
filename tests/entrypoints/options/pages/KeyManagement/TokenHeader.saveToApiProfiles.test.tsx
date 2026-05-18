@@ -457,6 +457,51 @@ describe("TokenHeader save to API profiles", () => {
     ).toBeNull()
   })
 
+  it.each([
+    [
+      MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.BACKEND_SEARCH_FAILED,
+      "keyManagement:managedSiteStatus.badges.checkFailed",
+    ],
+    [
+      MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS.CONFIG_MISSING,
+      "keyManagement:managedSiteStatus.badges.configMissing",
+    ],
+  ])("renders the %s managed-site unknown status badge", (reason, label) => {
+    const account = createAccountStub()
+
+    render(
+      <TokenHeader
+        token={
+          {
+            id: 9,
+            user_id: 1,
+            key: "sk-unknown",
+            status: 1,
+            name: "Unknown Status Token",
+            created_time: 0,
+            accessed_time: 0,
+            expired_time: 0,
+            remain_quota: 0,
+            unlimited_quota: false,
+            used_quota: 0,
+            accountId: account.id,
+            accountName: account.name,
+          } as any
+        }
+        copyKey={vi.fn()}
+        handleEditToken={vi.fn()}
+        handleDeleteToken={vi.fn()}
+        account={account}
+        managedSiteStatus={{
+          status: MANAGED_SITE_TOKEN_CHANNEL_STATUSES.UNKNOWN,
+          reason,
+        }}
+      />,
+    )
+
+    expect(screen.getByText(label)).toBeInTheDocument()
+  })
+
   it("renders the exact-match explanation when the token is already added", async () => {
     const account = createAccountStub()
 
