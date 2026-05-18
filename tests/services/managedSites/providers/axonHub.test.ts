@@ -577,7 +577,7 @@ describe("AxonHub managed-site provider", () => {
       ),
     ).resolves.toEqual(matchingChannel)
 
-    mockListChannels.mockResolvedValueOnce({
+    mockSearchChannels.mockResolvedValueOnce({
       items: [matchingChannel],
       total: 1,
       page: 1,
@@ -585,11 +585,12 @@ describe("AxonHub managed-site provider", () => {
     })
     await expect(provider.importToAxonHub(account, token)).resolves.toEqual({
       success: false,
-      message: 'messages:axonhub.channelExists:{"channelName":"Existing"}',
+      message: expect.stringContaining("channelExists"),
     })
+    expect(mockSearchChannels).toHaveBeenCalledTimes(1)
     expect(mockCreateAxonHubChannel).not.toHaveBeenCalled()
 
-    mockListChannels.mockResolvedValueOnce({
+    mockSearchChannels.mockResolvedValueOnce({
       items: [],
       total: 0,
       page: 1,
@@ -727,7 +728,7 @@ describe("AxonHub managed-site provider", () => {
 
     mockConvertToDisplayData.mockReturnValue(account)
     mockEnsureAccountApiToken.mockResolvedValue(token)
-    mockListChannels.mockResolvedValueOnce({
+    mockSearchChannels.mockResolvedValueOnce({
       items: [existingChannel],
       total: 1,
       page: 1,
@@ -738,16 +739,16 @@ describe("AxonHub managed-site provider", () => {
       provider.autoConfigToAxonHub(storedAccount, "toast-duplicate"),
     ).resolves.toEqual({
       success: false,
-      message:
-        'messages:axonhub.channelExists:{"channelName":"Existing Duplicate"}',
+      message: expect.stringContaining("channelExists"),
     })
+    expect(mockSearchChannels).toHaveBeenCalledTimes(1)
 
     expect(toast.loading).toHaveBeenCalledWith(
       "messages:accountOperations.importingToAxonHub",
       { id: "toast-duplicate" },
     )
     expect(toast.error).toHaveBeenCalledWith(
-      'messages:axonhub.channelExists:{"channelName":"Existing Duplicate"}',
+      expect.stringContaining("channelExists"),
       { id: "toast-duplicate" },
     )
   })

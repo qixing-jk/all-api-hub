@@ -344,14 +344,15 @@ describe("octopus additional flows", () => {
 
     mockConvertToDisplayData.mockReturnValue(displaySiteData)
     mockEnsureAccountApiToken.mockResolvedValueOnce(apiToken)
-    mockListChannels.mockResolvedValueOnce([existingChannel])
+    mockSearchChannels.mockResolvedValueOnce([existingChannel])
 
     const result = await autoConfigToOctopus(buildSiteAccount(), "toast-4")
 
     expect(result).toEqual({
       success: false,
-      message: "messages:octopus.channelExists",
+      message: expect.stringContaining("channelExists"),
     })
+    expect(mockSearchChannels).toHaveBeenCalledTimes(1)
     expect(mockCreateChannelApi).not.toHaveBeenCalled()
   })
 

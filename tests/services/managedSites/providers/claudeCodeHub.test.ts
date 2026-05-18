@@ -857,8 +857,8 @@ describe("Claude Code Hub managed-site provider", () => {
       models: ["gpt-4o"],
       fetchFailed: false,
     })
-    mockListProviders.mockResolvedValue([])
     mockFindManagedSiteChannelByComparableInputs.mockReturnValueOnce(null)
+    mockSearchProviders.mockResolvedValueOnce([])
     mockCreateProvider.mockResolvedValue({ ok: true })
 
     await expect(
@@ -876,17 +876,25 @@ describe("Claude Code Hub managed-site provider", () => {
       { id: "toast-id" },
     )
 
-    mockFindManagedSiteChannelByComparableInputs.mockReturnValueOnce({
-      name: "Existing Provider",
-    })
+    mockSearchProviders.mockResolvedValueOnce([
+      {
+        id: 2,
+        name: "Existing Provider",
+        providerType: "openai-compatible",
+        url: "https://api.example.com",
+        maskedKey: "sk-real-key",
+        allowedModels: ["gpt-4o"],
+      },
+    ])
     await expect(
       autoConfigToClaudeCodeHub({ id: "account-1" } as any, "toast-id"),
     ).resolves.toEqual({
       success: false,
-      message: "messages:claudecodehub.channelExists",
+      message: expect.stringContaining("channelExists"),
     })
+    expect(mockSearchProviders).toHaveBeenCalledTimes(2)
     expect(toastError).toHaveBeenCalledWith(
-      "messages:claudecodehub.channelExists",
+      expect.stringContaining("channelExists"),
       { id: "toast-id" },
     )
 

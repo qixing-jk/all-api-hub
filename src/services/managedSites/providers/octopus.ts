@@ -6,11 +6,13 @@ import toast from "react-hot-toast"
 
 import { ChannelType } from "~/constants"
 import { DEFAULT_OCTOPUS_CHANNEL_FIELDS } from "~/constants/octopus"
+import { SITE_TYPES } from "~/constants/siteType"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import type { ApiResponse } from "~/services/apiService/common/type"
 import * as octopusApi from "~/services/apiService/octopus"
+import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import { findManagedSiteChannelByComparableInputs } from "~/services/managedSites/utils/channelMatching"
 import { getNumericChannelType } from "~/services/managedSites/utils/channelType"
@@ -47,6 +49,22 @@ import { normalizeList } from "~/utils/core/string"
 import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("OctopusService")
+
+const octopusImportDuplicateService = {
+  siteType: SITE_TYPES.OCTOPUS,
+  messagesKey: "octopus" as const,
+  searchChannel,
+  createChannel,
+  updateChannel,
+  deleteChannel,
+  checkValidConfig: checkValidOctopusConfig,
+  getConfig: getOctopusConfig,
+  fetchAvailableModels,
+  buildChannelName,
+  prepareChannelFormData,
+  buildChannelPayload,
+  autoConfigToManagedSite: autoConfigToOctopus,
+}
 
 /**
  * 将 ChannelType (New API 渠道类型 0-55) 映射为 OctopusOutboundType (0-5)
@@ -523,15 +541,15 @@ export async function autoConfigToOctopus(
 
     const formData = await prepareChannelFormData(displaySiteData, apiToken)
 
-    // 检查是否已存在
-    const existingChannel = await findMatchingChannel(
-      config.baseUrl,
-      "",
-      "",
-      formData.base_url,
-      formData.models,
-      formData.key,
-    )
+    const existingChannel = await resolveManagedSiteImportDuplicate({
+      service: octopusImportDuplicateService,
+      managedConfig: {
+        baseUrl: config.baseUrl,
+        token: "",
+        userId: config.username,
+      },
+      formData,
+    })
 
     if (existingChannel) {
       return {

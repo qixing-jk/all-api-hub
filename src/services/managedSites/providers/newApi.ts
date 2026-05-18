@@ -10,6 +10,7 @@ import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
+import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
 import {
   fetchNewApiChannelKey,
   NewApiChannelKeyRequirementError,
@@ -52,6 +53,24 @@ import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
  * Unified logger scoped to the New API integration and auto-config flows.
  */
 const logger = createLogger("NewApiService")
+
+const newApiImportDuplicateService = {
+  siteType: SITE_TYPES.NEW_API,
+  messagesKey: "newapi" as const,
+  searchChannel,
+  createChannel,
+  updateChannel,
+  deleteChannel,
+  checkValidConfig: checkValidNewApiConfig,
+  getConfig: getNewApiConfig,
+  fetchAvailableModels,
+  buildChannelName,
+  prepareChannelFormData,
+  buildChannelPayload,
+  hydrateComparableChannelKeys,
+  fetchChannelSecretKey,
+  autoConfigToManagedSite: autoConfigToNewApi,
+}
 
 /**
  * 搜索指定关键词的渠道
@@ -523,14 +542,15 @@ export async function importToNewApi(
 
     const formData = await prepareChannelFormData(account, token)
 
-    const existingChannel = await findMatchingChannel(
-      newApiBaseUrl!,
-      newApiAdminToken!,
-      newApiUserId!,
-      formData.base_url,
-      formData.models,
-      formData.key,
-    )
+    const existingChannel = await resolveManagedSiteImportDuplicate({
+      service: newApiImportDuplicateService,
+      managedConfig: {
+        baseUrl: newApiBaseUrl!,
+        token: newApiAdminToken!,
+        userId: newApiUserId!,
+      },
+      formData,
+    })
 
     if (existingChannel) {
       return {

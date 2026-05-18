@@ -5,11 +5,13 @@ import {
   AXON_HUB_CHANNEL_TYPE,
   DEFAULT_AXON_HUB_CHANNEL_FIELDS,
 } from "~/constants/axonHub"
+import { SITE_TYPES } from "~/constants/siteType"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
 import * as axonHubApi from "~/services/apiService/axonHub"
 import type { ApiResponse } from "~/services/apiService/common/type"
+import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import { findManagedSiteChannelByComparableInputs } from "~/services/managedSites/utils/channelMatching"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
@@ -44,6 +46,22 @@ import { normalizeList } from "~/utils/core/string"
 import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("AxonHubService")
+
+const axonHubImportDuplicateService = {
+  siteType: SITE_TYPES.AXON_HUB,
+  messagesKey: "axonhub" as const,
+  searchChannel,
+  createChannel,
+  updateChannel,
+  deleteChannel,
+  checkValidConfig: checkValidAxonHubConfig,
+  getConfig: getAxonHubConfig,
+  fetchAvailableModels,
+  buildChannelName,
+  prepareChannelFormData,
+  buildChannelPayload,
+  autoConfigToManagedSite: autoConfigToAxonHub,
+}
 
 /**
  * Check whether preferences contain a complete AxonHub admin config.
@@ -440,14 +458,15 @@ export async function importToAxonHub(
     }
 
     const formData = await prepareChannelFormData(account, token)
-    const existingChannel = await findMatchingChannel(
-      config.baseUrl,
-      config.password,
-      config.email,
-      formData.base_url,
-      formData.models,
-      formData.key,
-    )
+    const existingChannel = await resolveManagedSiteImportDuplicate({
+      service: axonHubImportDuplicateService,
+      managedConfig: {
+        baseUrl: config.baseUrl,
+        token: config.password,
+        userId: config.email,
+      },
+      formData,
+    })
 
     if (existingChannel) {
       return {

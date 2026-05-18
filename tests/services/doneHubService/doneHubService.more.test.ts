@@ -346,9 +346,12 @@ describe("doneHubService additional flows", () => {
 
     const result = await autoConfigToDoneHub(buildSiteAccount(), "toast-3")
 
-    expect(result.success).toBe(false)
+    expect(result).toEqual({
+      success: false,
+      message: expect.stringContaining("channelExists"),
+    })
+    expect(mockSearchChannel).toHaveBeenCalledTimes(1)
     expect(mockCreateChannel).not.toHaveBeenCalled()
-    expect(result.message).toContain("messages:donehub.channelExists")
   })
 
   it("proxies search, create, update, delete, and available-model fetches with Done Hub auth", async () => {

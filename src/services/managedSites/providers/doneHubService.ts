@@ -11,6 +11,7 @@ import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
+import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
 import {
   findManagedSiteChannelByComparableInputs,
   findManagedSiteChannelsByBaseUrlAndModels,
@@ -48,6 +49,24 @@ import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
  * Unified logger scoped to the Done Hub integration and auto-config flows.
  */
 const logger = createLogger("DoneHubService")
+
+const doneHubImportDuplicateService = {
+  siteType: SITE_TYPES.DONE_HUB,
+  messagesKey: "donehub" as const,
+  searchChannel,
+  createChannel,
+  updateChannel,
+  deleteChannel,
+  checkValidConfig: checkValidDoneHubConfig,
+  getConfig: getDoneHubConfig,
+  fetchAvailableModels,
+  buildChannelName,
+  prepareChannelFormData,
+  buildChannelPayload,
+  hydrateComparableChannelKeys,
+  fetchChannelSecretKey,
+  autoConfigToManagedSite: autoConfigToDoneHub,
+}
 
 const toSafeDoneHubChannelDetailDiagnostic = (error: unknown): string => {
   const message = getErrorMessage(error) || "Unknown error"
@@ -501,14 +520,15 @@ async function importToDoneHub(
 
     const formData = await prepareChannelFormData(account, token)
 
-    const existingChannel = await findMatchingChannel(
-      doneHubBaseUrl!,
-      doneHubAdminToken!,
-      doneHubUserId!,
-      formData.base_url,
-      formData.models,
-      formData.key,
-    )
+    const existingChannel = await resolveManagedSiteImportDuplicate({
+      service: doneHubImportDuplicateService,
+      managedConfig: {
+        baseUrl: doneHubBaseUrl!,
+        token: doneHubAdminToken!,
+        userId: doneHubUserId!,
+      },
+      formData,
+    })
 
     if (existingChannel) {
       return {
@@ -542,6 +562,13 @@ async function importToDoneHub(
       message: createdChannelResponse.message,
     }
   } catch (error) {
+    if (error instanceof MatchResolutionUnresolvedError) {
+      return {
+        success: false,
+        message: getErrorMessage(error) || t("messages:donehub.importFailed"),
+      }
+    }
+
     return {
       success: false,
       message: getErrorMessage(error) || t("messages:donehub.importFailed"),

@@ -5,6 +5,7 @@ import {
   DEFAULT_CLAUDE_CODE_HUB_CHANNEL_FIELDS,
   isClaudeCodeHubProviderType,
 } from "~/constants/claudeCodeHub"
+import { SITE_TYPES } from "~/constants/siteType"
 import { ensureAccountApiToken } from "~/services/accounts/accountOperations"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { normalizeAccountForManagedChannel } from "~/services/accounts/utils/siteUrlNormalization"
@@ -14,6 +15,7 @@ import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
+import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
 import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import {
   findManagedSiteChannelByComparableInputs,
@@ -56,6 +58,24 @@ import { t } from "~/utils/i18n/core"
 
 const logger = createLogger("ClaudeCodeHubService")
 const DEFAULT_GROUP_TAG = "default"
+
+const claudeCodeHubImportDuplicateService = {
+  siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+  messagesKey: "claudecodehub" as const,
+  searchChannel,
+  createChannel,
+  updateChannel,
+  deleteChannel,
+  checkValidConfig: checkValidClaudeCodeHubConfig,
+  getConfig: getClaudeCodeHubConfig,
+  fetchAvailableModels,
+  buildChannelName,
+  prepareChannelFormData,
+  buildChannelPayload,
+  hydrateComparableChannelKeys,
+  fetchChannelSecretKey,
+  autoConfigToManagedSite: autoConfigToClaudeCodeHub,
+}
 
 /**
  * Checks whether preferences contain a usable Claude Code Hub admin config.
@@ -723,14 +743,15 @@ async function importToClaudeCodeHub(
     }
 
     const formData = await prepareChannelFormData(account, token)
-    const existingChannel = await findMatchingChannel(
-      config.baseUrl,
-      config.adminToken,
-      "admin",
-      formData.base_url,
-      formData.models,
-      formData.key,
-    )
+    const existingChannel = await resolveManagedSiteImportDuplicate({
+      service: claudeCodeHubImportDuplicateService,
+      managedConfig: {
+        baseUrl: config.baseUrl,
+        token: config.adminToken,
+        userId: "admin",
+      },
+      formData,
+    })
 
     if (existingChannel) {
       return {
@@ -757,6 +778,14 @@ async function importToClaudeCodeHub(
         }
       : { success: false, message: result.message }
   } catch (error) {
+    if (error instanceof MatchResolutionUnresolvedError) {
+      return {
+        success: false,
+        message:
+          getErrorMessage(error) || t("messages:claudecodehub.importFailed"),
+      }
+    }
+
     return {
       success: false,
       message:

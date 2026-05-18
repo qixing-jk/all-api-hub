@@ -11,6 +11,7 @@ import {
   MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
+import { resolveManagedSiteImportDuplicate } from "~/services/managedSites/importDuplicateResolution"
 import { findManagedSiteChannelByComparableInputs } from "~/services/managedSites/utils/channelMatching"
 import { fetchManagedSiteAvailableModels } from "~/services/managedSites/utils/fetchManagedSiteAvailableModels"
 import { fetchTokenScopedModels } from "~/services/managedSites/utils/fetchTokenScopedModels"
@@ -44,6 +45,24 @@ import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
  * Unified logger scoped to the Veloera integration and auto-config flows.
  */
 const logger = createLogger("VeloeraService")
+
+const veloeraImportDuplicateService = {
+  siteType: SITE_TYPES.VELOERA,
+  messagesKey: "veloera" as const,
+  searchChannel,
+  createChannel,
+  updateChannel,
+  deleteChannel,
+  checkValidConfig: checkValidVeloeraConfig,
+  getConfig: getVeloeraConfig,
+  fetchAvailableModels,
+  buildChannelName,
+  prepareChannelFormData,
+  buildChannelPayload,
+  hydrateComparableChannelKeys,
+  fetchChannelSecretKey,
+  autoConfigToManagedSite: autoConfigToVeloera,
+}
 
 /**
  * Searches channels matching the keyword.
@@ -422,14 +441,15 @@ async function importToVeloera(
 
     const formData = await prepareChannelFormData(account, token)
 
-    const existingChannel = await findMatchingChannel(
-      veloeraBaseUrl!,
-      veloeraAdminToken!,
-      veloeraUserId!,
-      formData.base_url,
-      formData.models,
-      formData.key,
-    )
+    const existingChannel = await resolveManagedSiteImportDuplicate({
+      service: veloeraImportDuplicateService,
+      managedConfig: {
+        baseUrl: veloeraBaseUrl!,
+        token: veloeraAdminToken!,
+        userId: veloeraUserId!,
+      },
+      formData,
+    })
 
     if (existingChannel) {
       return {
@@ -463,6 +483,13 @@ async function importToVeloera(
       message: createdChannelResponse.message,
     }
   } catch (error) {
+    if (error instanceof MatchResolutionUnresolvedError) {
+      return {
+        success: false,
+        message: getErrorMessage(error) || t("messages:veloera.importFailed"),
+      }
+    }
+
     return {
       success: false,
       message: getErrorMessage(error) || t("messages:veloera.importFailed"),

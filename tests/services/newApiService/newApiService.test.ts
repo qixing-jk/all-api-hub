@@ -1811,6 +1811,7 @@ describe("newApiService", () => {
         name: "Existing Channel",
         base_url: account.baseUrl,
         models: "gpt-4",
+        key: "sk-test-key-123",
       })
 
       mockGetPreferences.mockResolvedValueOnce(
@@ -1823,9 +1824,12 @@ describe("newApiService", () => {
 
       const result = await importToNewApi(account, token)
 
-      expect(result.success).toBe(false)
-      // The i18next mock returns the key, but we need to check if the message indicates a channel exists
-      expect(result.message).toBeTruthy()
+      expect(result).toEqual({
+        success: false,
+        message: expect.stringContaining("channelExists"),
+      })
+      expect(mockSearchChannel).toHaveBeenCalledTimes(1)
+      expect(mockCreateChannel).not.toHaveBeenCalled()
     })
 
     it("should import successfully when all conditions met", async () => {
@@ -1882,13 +1886,17 @@ describe("newApiService", () => {
 
       const result = await importToNewApi(account, token)
 
-      expect(result.success).toBe(false)
+      expect(result).toEqual({
+        success: false,
+        message: expect.stringContaining("channelExists"),
+      })
       expect(mockSearchChannel).toHaveBeenCalledWith(
         expect.objectContaining({
           baseUrl: "https://new-api.example.com",
         }),
         "https://aihubmix.com",
       )
+      expect(mockSearchChannel).toHaveBeenCalledTimes(1)
       expect(mockCreateChannel).not.toHaveBeenCalled()
     })
 
@@ -1927,7 +1935,7 @@ describe("newApiService", () => {
 
       expect(result).toEqual({
         success: false,
-        message: "messages:newapi.channelMatchUnresolved",
+        message: expect.stringContaining("channelMatchUnresolved"),
       })
       expect(mockCreateChannel).not.toHaveBeenCalled()
     })
@@ -1961,7 +1969,7 @@ describe("newApiService", () => {
 
       expect(result).toEqual({
         success: false,
-        message: "messages:newapi.channelMatchUnresolved",
+        message: expect.stringContaining("channelMatchUnresolved"),
       })
       expect(mockCreateChannel).not.toHaveBeenCalled()
     })
