@@ -1,23 +1,23 @@
 import type { ApiToken } from "~/types"
 
 /**
- * Ensures API keys are consistently represented with an `sk-` prefix.
+ * Normalizes a raw token key string without changing the backend-provided
+ * token shape.
  *
- * The application treats upstream API tokens as OpenAI-style keys. Normalizing
- * them at ingestion time keeps UI and integrations free from scattered `sk-`
- * prefix handling.
+ * Do not synthesize an `sk-` prefix here. Some backends store and return raw
+ * keys, and upstream `new-api` accepts an optional `sk-` prefix at auth time
+ * while persisting the underlying key without it
+ * (`controller/token.go:GetTokenUsage` trims `sk-` before lookup).
  */
-function ensureSkPrefixedKey(key: string): string {
-  const trimmed = key.trim()
-  if (!trimmed) return trimmed
-  return /^sk-/i.test(trimmed) ? trimmed : `sk-${trimmed}`
+function normalizeApiTokenKeyText(key: string): string {
+  return key.trim()
 }
 
 /**
- * Normalizes a raw token key string into the extension's canonical `sk-*` shape.
+ * Normalizes a raw token key string by trimming surrounding whitespace only.
  */
 export function normalizeApiTokenKeyValue(key: string): string {
-  return ensureSkPrefixedKey(key)
+  return normalizeApiTokenKeyText(key)
 }
 
 /**
@@ -41,7 +41,7 @@ export function hasUsableApiTokenKey(key: string): boolean {
 }
 
 /**
- * Normalizes an ApiToken so callers can safely assume `token.key` includes `sk-`.
+ * Normalizes an ApiToken so callers can rely on a trimmed key value.
  */
 export function normalizeApiTokenKey(token: ApiToken): ApiToken {
   if (!token || typeof token.key !== "string") return token

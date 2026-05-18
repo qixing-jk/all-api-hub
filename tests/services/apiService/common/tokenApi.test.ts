@@ -5,6 +5,7 @@ import {
   fetchTokenById,
   resolveApiTokenKey,
 } from "~/services/apiService/common"
+import { normalizeApiTokenKeyValue } from "~/services/apiService/common/apiKey"
 import {
   fetchTokenSecretKeyById,
   fetchTokenSecretKeyByIdWithMethod,
@@ -45,7 +46,12 @@ describe("apiService common token APIs", () => {
     mockFetchApi.mockReset()
   })
 
-  it("fetchAccountTokens normalizes token.key with sk- prefix (array response)", async () => {
+  it("normalizeApiTokenKeyValue trims whitespace without adding sk- prefixes", () => {
+    expect(normalizeApiTokenKeyValue("  plain-key  ")).toBe("plain-key")
+    expect(normalizeApiTokenKeyValue("sk-already")).toBe("sk-already")
+  })
+
+  it("fetchAccountTokens trims token.key without forcing an sk- prefix (array response)", async () => {
     mockedFetchApiData.mockResolvedValueOnce([
       { id: 1, key: "plain-key" },
       { id: 2, key: "sk-already" },
@@ -70,13 +76,13 @@ describe("apiService common token APIs", () => {
     expect(endpoint).toContain("size=100")
 
     expect(result.map((token: any) => token.key)).toEqual([
-      "sk-plain-key",
+      "plain-key",
       "sk-already",
       "sk-trim",
     ])
   })
 
-  it("fetchAccountTokens normalizes token.key with sk- prefix (paginated response)", async () => {
+  it("fetchAccountTokens trims token.key without forcing an sk- prefix (paginated response)", async () => {
     mockedFetchApiData.mockResolvedValueOnce({
       items: [{ id: 1, key: "plain" }],
     })
@@ -91,10 +97,10 @@ describe("apiService common token APIs", () => {
     }
 
     const result = await fetchAccountTokens(request as any)
-    expect(result.map((token: any) => token.key)).toEqual(["sk-plain"])
+    expect(result.map((token: any) => token.key)).toEqual(["plain"])
   })
 
-  it("fetchTokenById normalizes token.key with sk- prefix", async () => {
+  it("fetchTokenById trims token.key without forcing an sk- prefix", async () => {
     mockedFetchApiData.mockResolvedValueOnce({ id: 99, key: "abc" })
 
     const request = {
@@ -111,7 +117,7 @@ describe("apiService common token APIs", () => {
     expect(mockedFetchApiData).toHaveBeenCalledWith(request, {
       endpoint: "/api/token/99",
     })
-    expect((result as any).key).toBe("sk-abc")
+    expect((result as any).key).toBe("abc")
   })
 
   it("resolveApiTokenKey fetches the explicit secret when inventory key is masked", async () => {
@@ -141,7 +147,7 @@ describe("apiService common token APIs", () => {
         method: "POST",
       },
     })
-    expect(result).toBe("sk-resolved-secret")
+    expect(result).toBe("resolved-secret")
   })
 
   it("fetchTokenSecretKeyByIdWithMethod uses the caller-provided HTTP method", async () => {
@@ -159,7 +165,7 @@ describe("apiService common token APIs", () => {
 
     await expect(
       fetchTokenSecretKeyByIdWithMethod(request as any, 70, "GET"),
-    ).resolves.toBe("sk-resolved-via-get")
+    ).resolves.toBe("resolved-via-get")
 
     expect(mockedFetchApiData).toHaveBeenCalledWith(request, {
       endpoint: "/api/token/70/key",
@@ -221,15 +227,15 @@ describe("apiService common token APIs", () => {
     ])
 
     expect(mockedFetchApiData).toHaveBeenCalledTimes(1)
-    expect(first).toBe("sk-deduped-secret")
-    expect(second).toBe("sk-deduped-secret")
+    expect(first).toBe("deduped-secret")
+    expect(second).toBe("deduped-secret")
   })
 
   it("resolveApiTokenKeyWithFetcher reuses the shared dedupe/cache path for custom site fetchers", async () => {
     const fetchSecretKey = vi.fn().mockImplementationOnce(
       () =>
         new Promise((resolve) => {
-          setTimeout(() => resolve("sk-custom-secret"), 0)
+          setTimeout(() => resolve("custom-secret"), 0)
         }),
     )
 
@@ -263,8 +269,8 @@ describe("apiService common token APIs", () => {
 
     expect(fetchSecretKey).toHaveBeenCalledTimes(1)
     expect(fetchSecretKey).toHaveBeenCalledWith(request, 71)
-    expect(first).toBe("sk-custom-secret")
-    expect(second).toBe("sk-custom-secret")
+    expect(first).toBe("custom-secret")
+    expect(second).toBe("custom-secret")
   })
 
   it("resolveApiTokenKey returns an empty normalized key without fetching", async () => {
@@ -309,7 +315,7 @@ describe("apiService common token APIs", () => {
       } as any,
     )
 
-    expect(result).toBe("sk-plain-secret")
+    expect(result).toBe("plain-secret")
     expect(mockedFetchApiData).not.toHaveBeenCalled()
   })
 
@@ -394,13 +400,13 @@ describe("apiService common token APIs", () => {
 
     await expect(
       resolveApiTokenKey(request as any, token as any),
-    ).resolves.toBe("sk-first-secret")
+    ).resolves.toBe("first-secret")
 
     invalidateResolvedApiTokenKeyCache(request as any)
 
     await expect(
       resolveApiTokenKey(request as any, token as any),
-    ).resolves.toBe("sk-second-secret")
+    ).resolves.toBe("second-secret")
     expect(mockedFetchApiData).toHaveBeenCalledTimes(2)
   })
 
@@ -425,7 +431,7 @@ describe("apiService common token APIs", () => {
 
     await expect(
       resolveApiTokenKey(request as any, token as any),
-    ).resolves.toBe("sk-first-secret")
+    ).resolves.toBe("first-secret")
 
     syncResolvedApiTokenKeyCache(
       request as any,
@@ -439,7 +445,7 @@ describe("apiService common token APIs", () => {
 
     await expect(
       resolveApiTokenKey(request as any, token as any),
-    ).resolves.toBe("sk-refetched-secret")
+    ).resolves.toBe("refetched-secret")
     expect(mockedFetchApiData).toHaveBeenCalledTimes(2)
   })
 
@@ -477,19 +483,19 @@ describe("apiService common token APIs", () => {
 
     await expect(
       resolveApiTokenKey(scopedRequest as any, scopedToken as any),
-    ).resolves.toBe("sk-scoped-secret")
+    ).resolves.toBe("scoped-secret")
     await expect(
       resolveApiTokenKey(otherRequest as any, otherToken as any),
-    ).resolves.toBe("sk-other-secret")
+    ).resolves.toBe("other-secret")
 
     invalidateResolvedApiTokenKeyCache(scopedRequest as any)
 
     await expect(
       resolveApiTokenKey(scopedRequest as any, scopedToken as any),
-    ).resolves.toBe("sk-refetched-scoped-secret")
+    ).resolves.toBe("refetched-scoped-secret")
     await expect(
       resolveApiTokenKey(otherRequest as any, otherToken as any),
-    ).resolves.toBe("sk-other-secret")
+    ).resolves.toBe("other-secret")
 
     expect(mockedFetchApiData).toHaveBeenCalledTimes(3)
   })
@@ -514,7 +520,7 @@ describe("apiService common token APIs", () => {
 
     await expect(
       resolveApiTokenKey(request as any, token as any),
-    ).resolves.toBe("sk-stable-secret")
+    ).resolves.toBe("stable-secret")
 
     syncResolvedApiTokenKeyCache(
       request as any,
@@ -532,7 +538,7 @@ describe("apiService common token APIs", () => {
 
     await expect(
       resolveApiTokenKey(request as any, token as any),
-    ).resolves.toBe("sk-refetched-secret")
+    ).resolves.toBe("refetched-secret")
 
     expect(mockedFetchApiData).toHaveBeenCalledTimes(2)
   })
@@ -561,7 +567,7 @@ describe("apiService common token APIs", () => {
     ).rejects.toThrow("temporary failure")
     await expect(
       resolveApiTokenKey(request as any, token as any),
-    ).resolves.toBe("sk-retry-secret")
+    ).resolves.toBe("retry-secret")
 
     expect(mockedFetchApiData).toHaveBeenCalledTimes(2)
   })
