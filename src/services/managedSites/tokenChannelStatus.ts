@@ -171,6 +171,10 @@ const collectSecrets = (
   return [token.key, managedConfig?.token].filter(Boolean) as string[]
 }
 
+const isExactVerificationUnavailable = (
+  resolution: ManagedSiteChannelMatchInspection,
+) => resolution.url.matched && !resolution.key.comparable
+
 const buildNewApiRecoveryMetadata = async (params: {
   managedConfig: ManagedSiteConfig
   assessment?: ManagedSiteTokenChannelAssessment
@@ -306,16 +310,12 @@ export async function getManagedSiteTokenChannelStatus(
       }
     }
 
-    if (
-      !formData.key.trim() ||
-      (resolution.url.matched && !resolution.key.comparable)
-    ) {
+    if (!formData.key.trim() || isExactVerificationUnavailable(resolution)) {
       let recovery: ManagedSiteTokenChannelRecovery | undefined
 
       if (
         service.siteType === SITE_TYPES.NEW_API &&
-        resolution.url.matched &&
-        !resolution.key.comparable
+        isExactVerificationUnavailable(resolution)
       ) {
         try {
           recovery = await buildNewApiRecoveryMetadata({

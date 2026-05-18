@@ -544,6 +544,25 @@ describe("managed-site token batch export", () => {
         MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.EXACT_VERIFICATION_UNAVAILABLE,
     },
     {
+      label: "exact duplicate verification is unavailable",
+      resolution: buildMatchInspection({
+        url: {
+          matched: true,
+          channel: { id: 77, name: "Hidden key candidate" },
+          candidateCount: 1,
+        },
+        key: {
+          comparable: false,
+          matched: false,
+          reason: "comparison-unavailable",
+          channel: null,
+        },
+        unresolvedReason: "key-resolution-failed",
+      }),
+      expectedWarning:
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.EXACT_VERIFICATION_UNAVAILABLE,
+    },
+    {
       label: "partial match requires confirmation",
       resolution: buildMatchInspection({
         models: {

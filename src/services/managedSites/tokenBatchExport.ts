@@ -111,6 +111,10 @@ const uniqueWarningCodes = (
   warnings: ManagedSiteTokenBatchExportWarningCode[],
 ) => Array.from(new Set(warnings))
 
+const isExactVerificationUnavailable = (
+  resolution: Awaited<ReturnType<typeof resolveManagedSiteChannelMatch>>,
+) => resolution.url.matched && !resolution.key.comparable
+
 const getDraftBlockedReason = (
   service: ManagedSiteService,
   draft: ChannelFormData,
@@ -267,7 +271,7 @@ const preparePreviewItem = async (params: {
       warningCodes.push(
         MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.BACKEND_SEARCH_FAILED,
       )
-    } else if (resolution.url.matched && !resolution.key.comparable) {
+    } else if (isExactVerificationUnavailable(resolution)) {
       warningCodes.push(
         MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.EXACT_VERIFICATION_UNAVAILABLE,
       )
