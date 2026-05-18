@@ -651,7 +651,7 @@ describe("AxonHub managed-site provider", () => {
 
     mockConvertToDisplayData.mockReturnValue(account)
     mockEnsureAccountApiToken.mockResolvedValue(token)
-    mockListChannels.mockResolvedValueOnce({
+    mockSearchChannels.mockResolvedValueOnce({
       items: [],
       total: 0,
       page: 1,
@@ -665,6 +665,11 @@ describe("AxonHub managed-site provider", () => {
       message:
         'messages:axonhub.importSuccess:{"channelName":"Converted | Auto (auto)"}',
     })
+    expect(mockSearchChannels).toHaveBeenCalledWith(
+      axonHubConfig,
+      "https://converted.example",
+    )
+    expect(mockCreateAxonHubChannel).toHaveBeenCalled()
     expect(mockEnsureAccountApiToken).toHaveBeenCalledWith(
       storedAccount,
       account,

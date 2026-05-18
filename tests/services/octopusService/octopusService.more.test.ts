@@ -371,10 +371,18 @@ describe("octopus additional flows", () => {
 
     mockConvertToDisplayData.mockReturnValue(displaySiteData)
     mockEnsureAccountApiToken.mockResolvedValueOnce(apiToken)
-    mockListChannels.mockResolvedValueOnce([])
+    mockSearchChannels.mockResolvedValueOnce([])
 
     const result = await autoConfigToOctopus(buildSiteAccount(), "toast-5")
 
+    expect(mockSearchChannels).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://octopus.example.com",
+        username: "octo-user",
+        password: "octo-pass",
+      },
+      "https://proxy.example.com",
+    )
     expect(mockCreateChannelApi).toHaveBeenCalledWith(
       {
         baseUrl: "https://octopus.example.com",
@@ -567,7 +575,7 @@ describe("octopus additional flows", () => {
 
     mockConvertToDisplayData.mockReturnValue(displaySiteData)
     mockEnsureAccountApiToken.mockResolvedValueOnce(apiToken)
-    mockListChannels.mockResolvedValueOnce([])
+    mockSearchChannels.mockResolvedValueOnce([])
     mockCreateChannelApi.mockResolvedValueOnce({
       success: false,
       data: null,
@@ -576,6 +584,15 @@ describe("octopus additional flows", () => {
 
     const rejected = await autoConfigToOctopus(buildSiteAccount(), "toast-7")
 
+    expect(mockSearchChannels).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://octopus.example.com",
+        username: "octo-user",
+        password: "octo-pass",
+      },
+      "https://proxy.example.com",
+    )
+    expect(mockCreateChannelApi).toHaveBeenCalled()
     expect(rejected).toEqual({
       success: false,
       message: "octopus rejected channel",
