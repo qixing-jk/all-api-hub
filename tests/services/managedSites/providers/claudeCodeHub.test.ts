@@ -16,6 +16,7 @@ import {
   fetchAvailableModels,
   fetchChannelSecretKey,
   findMatchingChannel,
+  hydrateComparableChannelKeys,
   prepareChannelFormData,
   providerToManagedSiteChannel,
   searchChannel,
@@ -484,6 +485,34 @@ describe("Claude Code Hub managed-site provider", () => {
     await expect(fetchChannelSecretKey("", "", "", 42)).rejects.toThrow(
       "reveal failed",
     )
+  })
+
+  it("hydrates provided Claude Code Hub candidates through provider key reveal", async () => {
+    mockGetPreferences.mockResolvedValue({
+      claudeCodeHub: {
+        baseUrl: "https://cch.example.com",
+        adminToken: "admin-token",
+      },
+    })
+    mockGetUnmaskedProviderKey.mockResolvedValueOnce("sk-provider-secret")
+
+    const result = await hydrateComparableChannelKeys("", "", "", [
+      {
+        id: 30,
+        type: "openai-compatible",
+        key: "",
+        name: "Masked Provider",
+        base_url: "https://api.example.com",
+        models: "gpt-4o",
+      } as any,
+    ])
+
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: 30,
+        key: "sk-provider-secret",
+      }),
+    ])
   })
 
   it("hydrates masked provider keys before matching duplicate Claude Code Hub channels", async () => {

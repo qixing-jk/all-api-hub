@@ -895,6 +895,40 @@ describe("newApiService", () => {
     })
   })
 
+  describe("hydrateComparableChannelKeys", () => {
+    it("should hydrate hidden New API candidate keys for comparison", async () => {
+      const { hydrateComparableChannelKeys } = await import(
+        "~/services/managedSites/providers/newApi"
+      )
+
+      mockGetPreferences.mockResolvedValueOnce(
+        createMockUserPreferencesWithNewApi(),
+      )
+      fetchNewApiChannelKeyMock.mockResolvedValueOnce("sk-revealed")
+
+      const result = await hydrateComparableChannelKeys(
+        "https://new-api.example.com",
+        "admin-token",
+        1,
+        [
+          createMockNewApiChannel({
+            id: 12,
+            key: "",
+            base_url: "https://api.example.com/v1",
+            models: "gpt-4o",
+          }),
+        ],
+      )
+
+      expect(result).toEqual([
+        expect.objectContaining({
+          id: 12,
+          key: "sk-revealed",
+        }),
+      ])
+    })
+  })
+
   // ========================================================================
   // fetchAvailableModels
   // ========================================================================

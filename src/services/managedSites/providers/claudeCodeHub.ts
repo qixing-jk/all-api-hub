@@ -332,14 +332,20 @@ export async function hydrateComparableChannelKeys(
   const hydratedCandidates: ManagedSiteChannel[] = []
 
   for (const candidate of candidates) {
+    if (hasUsableManagedSiteChannelKey(candidate.key)) {
+      hydratedCandidates.push(candidate)
+      continue
+    }
+
     const hydratedChannel = await hydrateComparableChannelKey(config, candidate)
     if (hydratedChannel) {
       hydratedCandidates.push(hydratedChannel)
-    } else {
-      throw new MatchResolutionUnresolvedError(
-        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
-      )
+      continue
     }
+
+    throw new MatchResolutionUnresolvedError(
+      MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
+    )
   }
 
   return hydratedCandidates

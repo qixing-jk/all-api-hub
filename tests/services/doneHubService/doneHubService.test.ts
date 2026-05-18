@@ -181,4 +181,39 @@ describe("doneHubService findMatchingChannel", () => {
     )
     expect(result).toBe("sk-done-hub-channel-key")
   })
+
+  it("hydrates hidden keys only for provided Done Hub candidates", async () => {
+    const { hydrateComparableChannelKeys } = await import(
+      "~/services/managedSites/providers/doneHubService"
+    )
+
+    mockFetchDoneHubChannel.mockResolvedValueOnce(
+      buildManagedSiteChannel({
+        id: 20,
+        key: "sk-detail",
+        name: "Detailed Done Hub Channel",
+      }),
+    )
+
+    const result = await hydrateComparableChannelKeys(
+      "https://donehub.example.com",
+      "admin-token",
+      1,
+      [
+        buildManagedSiteChannel({ id: 20, key: "" }),
+        buildManagedSiteChannel({ id: 21, key: "sk-visible" }),
+      ],
+    )
+
+    expect(mockFetchDoneHubChannel).toHaveBeenCalledTimes(1)
+    expect(mockFetchDoneHubChannel).toHaveBeenCalledWith(expect.any(Object), 20)
+    expect(result).toEqual([
+      expect.objectContaining({
+        id: 20,
+        key: "sk-detail",
+        name: "Detailed Done Hub Channel",
+      }),
+      expect.objectContaining({ id: 21, key: "sk-visible" }),
+    ])
+  })
 })

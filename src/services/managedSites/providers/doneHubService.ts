@@ -194,25 +194,27 @@ export async function hydrateComparableChannelKeys(
   const hydratedCandidates: ManagedSiteChannel[] = []
 
   for (const candidate of candidates) {
-    if (candidate.key?.trim()) {
+    if (candidate.key?.trim() || !candidate.id) {
       hydratedCandidates.push(candidate)
       continue
     }
 
     try {
-      const key = await fetchChannelSecretKey(
-        baseUrl,
-        adminToken,
-        userId,
-        candidate.id,
+      hydratedCandidates.push(
+        await fetchDoneHubChannel(
+          {
+            baseUrl,
+            auth: {
+              authType: AuthTypeEnum.AccessToken,
+              accessToken: adminToken,
+              userId,
+            },
+          },
+          candidate.id,
+        ),
       )
-
-      hydratedCandidates.push({
-        ...candidate,
-        key,
-      })
     } catch (error) {
-      logger.warn("Failed to hydrate Done Hub channel key", {
+      logger.warn("Failed to fetch Done Hub channel detail for key matching", {
         channelId: candidate.id,
         diagnostic: toSafeDoneHubChannelDetailDiagnostic(error),
       })
