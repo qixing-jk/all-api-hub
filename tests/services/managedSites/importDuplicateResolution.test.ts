@@ -111,6 +111,157 @@ describe("resolveManagedSiteImportDuplicate", () => {
     ).resolves.toBeNull()
   })
 
+  it("returns null when search finds no duplicate candidates", async () => {
+    const service = {
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [],
+      }),
+    }
+
+    await expect(
+      resolveManagedSiteImportDuplicate({
+        service,
+        managedConfig,
+        formData,
+      }),
+    ).resolves.toBeNull()
+  })
+
+  it("propagates search failures from duplicate lookup", async () => {
+    const searchError = new Error("API unavailable")
+    const service = {
+      searchChannel: vi.fn().mockRejectedValue(searchError),
+    }
+
+    await expect(
+      resolveManagedSiteImportDuplicate({
+        service,
+        managedConfig,
+        formData,
+      }),
+    ).rejects.toBe(searchError)
+  })
+
+  it("prefers the exact key and model duplicate from multiple candidates", async () => {
+    const service = {
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          {
+            id: 47,
+            name: "Same Models Different Key",
+            key: "test-other-key",
+            base_url: "https://api.example.com",
+            models: "gpt-4o",
+          },
+          {
+            id: 48,
+            name: "Exact Duplicate",
+            key: "test-key",
+            base_url: "https://api.example.com",
+            models: "gpt-4o",
+          },
+        ],
+      }),
+    }
+
+    await expect(
+      resolveManagedSiteImportDuplicate({
+        service,
+        managedConfig,
+        formData,
+      }),
+    ).resolves.toMatchObject({
+      id: 48,
+      name: "Exact Duplicate",
+    })
+  })
+
+  it("ignores malformed candidates that cannot match comparable import inputs", async () => {
+    const service = {
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          {
+            name: "Missing Identifier",
+            key: "test-key",
+            base_url: "https://other.example.com",
+            models: "gpt-4o",
+          },
+          {
+            id: 49,
+            key: "test-key",
+            base_url: "",
+            models: "",
+          },
+        ],
+      }),
+    }
+
+    await expect(
+      resolveManagedSiteImportDuplicate({
+        service,
+        managedConfig,
+        formData,
+      }),
+    ).resolves.toBeNull()
+  })
+
+  it("matches duplicate candidates with the same multiple-model set", async () => {
+    const service = {
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          {
+            id: 50,
+            name: "Multiple Model Duplicate",
+            key: "test-key",
+            base_url: "https://api.example.com",
+            models: "gpt-4o,gpt-4o-mini",
+          },
+        ],
+      }),
+    }
+
+    await expect(
+      resolveManagedSiteImportDuplicate({
+        service,
+        managedConfig,
+        formData: {
+          ...formData,
+          models: ["gpt-4o", "gpt-4o-mini"],
+        },
+      }),
+    ).resolves.toMatchObject({
+      id: 50,
+      name: "Multiple Model Duplicate",
+    })
+  })
+
+  it("returns null when import form data has no models to compare", async () => {
+    const service = {
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          {
+            id: 51,
+            name: "No Model Candidate",
+            key: "test-key",
+            base_url: "https://api.example.com",
+            models: "",
+          },
+        ],
+      }),
+    }
+
+    await expect(
+      resolveManagedSiteImportDuplicate({
+        service,
+        managedConfig,
+        formData: {
+          ...formData,
+          models: [],
+        },
+      }),
+    ).resolves.toBeNull()
+  })
+
   it("returns exact duplicate channels", async () => {
     const service = {
       searchChannel: vi.fn().mockResolvedValue({

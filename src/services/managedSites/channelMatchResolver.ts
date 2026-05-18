@@ -163,6 +163,43 @@ export async function resolveManagedSiteChannelMatch(
     models,
   })
 
+  const alignExactModelAssessmentWithMatchedKey = (
+    assessmentChannels: typeof channels,
+  ) => {
+    if (!keyAssessment.matched || keyAssessment.channel?.id == null) {
+      return
+    }
+
+    const exactModelChannels = findManagedSiteChannelsByBaseUrlAndModels({
+      channels: assessmentChannels,
+      accountBaseUrl: searchBaseUrl,
+      models,
+    })
+
+    if (
+      !exactModelChannels.some(
+        (channel) => channel.id === keyAssessment.channel?.id,
+      )
+    ) {
+      return
+    }
+
+    const keyedModelsAssessment = inspectManagedSiteChannelModelsMatch({
+      channels: assessmentChannels,
+      accountBaseUrl: searchBaseUrl,
+      models,
+      exactChannel: keyAssessment.channel,
+    })
+
+    if (
+      keyedModelsAssessment.matched &&
+      keyedModelsAssessment.reason ===
+        MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT
+    ) {
+      modelsAssessment = keyedModelsAssessment
+    }
+  }
+
   const refreshAssessmentsWithResolvedKeys = () => {
     const channelsWithResolvedKeys = applyResolvedChannelKeys(
       searchResultItems,
@@ -183,39 +220,12 @@ export async function resolveManagedSiteChannelMatch(
       accountBaseUrl: searchBaseUrl,
       models,
     })
-    if (keyAssessment.matched && keyAssessment.channel) {
-      const exactModelChannels = findManagedSiteChannelsByBaseUrlAndModels({
-        channels: channelsWithResolvedKeys,
-        accountBaseUrl: searchBaseUrl,
-        models,
-      })
-
-      if (
-        !exactModelChannels.some(
-          (channel) => channel.id === keyAssessment.channel?.id,
-        )
-      ) {
-        return channelsWithResolvedKeys
-      }
-
-      const keyedModelsAssessment = inspectManagedSiteChannelModelsMatch({
-        channels: channelsWithResolvedKeys,
-        accountBaseUrl: searchBaseUrl,
-        models,
-        exactChannel: keyAssessment.channel,
-      })
-
-      if (
-        keyedModelsAssessment.matched &&
-        keyedModelsAssessment.reason ===
-          MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT
-      ) {
-        modelsAssessment = keyedModelsAssessment
-      }
-    }
+    alignExactModelAssessmentWithMatchedKey(channelsWithResolvedKeys)
 
     return channelsWithResolvedKeys
   }
+
+  alignExactModelAssessmentWithMatchedKey(channels)
 
   if (Object.keys(mergedResolvedChannelKeysById).length > 0) {
     refreshAssessmentsWithResolvedKeys()

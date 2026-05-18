@@ -232,6 +232,52 @@ describe("resolveManagedSiteChannelMatch", () => {
     expect(getManagedSiteChannelExactMatch(result)).toBeNull()
   })
 
+  it("hydrates a ranked contained-model candidate when no exact model candidate exists", async () => {
+    const containedModelCandidate = buildManagedSiteChannel({
+      id: 41,
+      key: "",
+      base_url: "https://api.example.com/v1",
+      models: "gpt-4o,gpt-4o-mini",
+    })
+    const hydrateComparableChannelKeys = vi.fn(
+      async (_baseUrl, _token, _userId, candidates) =>
+        candidates.map((channel: ManagedSiteChannel) => ({
+          ...channel,
+          key: "sk-match",
+        })),
+    )
+    const service = createManagedSiteServiceStub({
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [containedModelCandidate],
+      }),
+      hydrateComparableChannelKeys,
+    })
+
+    const result = await resolveManagedSiteChannelMatch({
+      service,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com/v1",
+      models: ["gpt-4o"],
+      key: "sk-match",
+    })
+
+    expect(hydrateComparableChannelKeys).toHaveBeenCalledWith(
+      managedConfig.baseUrl,
+      managedConfig.token,
+      managedConfig.userId,
+      [expect.objectContaining({ id: 41 })],
+    )
+    expect(result.key).toEqual({
+      comparable: true,
+      matched: true,
+      reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
+      channel: expect.objectContaining({ id: 41 }),
+    })
+    expect(result.models.reason).toBe(
+      MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.CONTAINED,
+    )
+  })
+
   it("returns a secondary exact-model match when key comparison is unavailable", async () => {
     const service = createManagedSiteServiceStub({
       searchChannel: vi.fn().mockResolvedValue({
