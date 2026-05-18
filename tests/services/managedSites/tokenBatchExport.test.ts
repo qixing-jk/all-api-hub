@@ -11,6 +11,7 @@ import {
 import {
   buildApiToken,
   buildDisplaySiteData,
+  buildManagedSiteChannel,
 } from "~~/tests/test-utils/factories"
 
 const mockResolveDisplayAccountTokenForSecret = vi.fn()
@@ -544,25 +545,6 @@ describe("managed-site token batch export", () => {
         MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.EXACT_VERIFICATION_UNAVAILABLE,
     },
     {
-      label: "exact duplicate verification is unavailable",
-      resolution: buildMatchInspection({
-        url: {
-          matched: true,
-          channel: { id: 77, name: "Hidden key candidate" },
-          candidateCount: 1,
-        },
-        key: {
-          comparable: false,
-          matched: false,
-          reason: "comparison-unavailable",
-          channel: null,
-        },
-        unresolvedReason: "key-resolution-failed",
-      }),
-      expectedWarning:
-        MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.EXACT_VERIFICATION_UNAVAILABLE,
-    },
-    {
       label: "partial match requires confirmation",
       resolution: buildMatchInspection({
         models: {
@@ -603,6 +585,60 @@ describe("managed-site token batch export", () => {
       expect(preview.items[0].warningCodes).toContain(expectedWarning)
     },
   )
+
+  it("warns instead of marking ready when exact duplicate verification is unavailable", async () => {
+    vi.resetModules()
+    vi.doUnmock("~/services/managedSites/channelMatchResolver")
+    const {
+      MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS,
+      MatchResolutionUnresolvedError,
+    } = await import("~/services/managedSites/channelMatch")
+
+    const hydrateComparableChannelKeys = vi.fn(async () => {
+      throw new MatchResolutionUnresolvedError(
+        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
+      )
+    })
+    const service = buildService({
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          buildManagedSiteChannel({
+            id: 77,
+            key: "",
+            base_url: "https://upstream.example.com/v1",
+            models: "gpt-4o",
+          }),
+        ],
+        total: 1,
+        type_counts: {},
+      }),
+      hydrateComparableChannelKeys,
+    })
+    mockGetManagedSiteService.mockResolvedValue(service)
+
+    const { prepareManagedSiteTokenBatchExportPreview } = await import(
+      "~/services/managedSites/tokenBatchExport"
+    )
+
+    const preview = await prepareManagedSiteTokenBatchExportPreview({
+      items: [
+        {
+          account: buildDisplaySiteData({
+            baseUrl: "https://upstream.example.com/",
+          }),
+          token: buildAccountToken(),
+        },
+      ],
+    })
+
+    expect(hydrateComparableChannelKeys).toHaveBeenCalled()
+    expect(preview.items[0]).toMatchObject({
+      status: MANAGED_SITE_TOKEN_BATCH_EXPORT_PREVIEW_STATUSES.WARNING,
+      warningCodes: [
+        MANAGED_SITE_TOKEN_BATCH_EXPORT_WARNING_CODES.EXACT_VERIFICATION_UNAVAILABLE,
+      ],
+    })
+  })
 
   it("blocks the preview when secret resolution fails", async () => {
     const service = buildService()
