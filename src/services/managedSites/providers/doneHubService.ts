@@ -51,21 +51,9 @@ import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
 const logger = createLogger("DoneHubService")
 
 const doneHubImportDuplicateService = {
-  siteType: SITE_TYPES.DONE_HUB,
-  messagesKey: "donehub" as const,
   searchChannel,
-  createChannel,
-  updateChannel,
-  deleteChannel,
-  checkValidConfig: checkValidDoneHubConfig,
-  getConfig: getDoneHubConfig,
-  fetchAvailableModels,
-  buildChannelName,
-  prepareChannelFormData,
-  buildChannelPayload,
   hydrateComparableChannelKeys,
   fetchChannelSecretKey,
-  autoConfigToManagedSite: autoConfigToDoneHub,
 }
 
 const toSafeDoneHubChannelDetailDiagnostic = (error: unknown): string => {
@@ -562,13 +550,6 @@ async function importToDoneHub(
       message: createdChannelResponse.message,
     }
   } catch (error) {
-    if (error instanceof MatchResolutionUnresolvedError) {
-      return {
-        success: false,
-        message: getErrorMessage(error) || t("messages:donehub.importFailed"),
-      }
-    }
-
     return {
       success: false,
       message: getErrorMessage(error) || t("messages:donehub.importFailed"),

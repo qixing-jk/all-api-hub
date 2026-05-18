@@ -4,6 +4,7 @@ import {
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
   MatchResolutionUnresolvedError,
   type ManagedSiteChannelMatchInspection,
+  type ManagedSiteChannelMatchUnresolvedReason,
 } from "~/services/managedSites/channelMatch"
 import type {
   ManagedSiteConfig,
@@ -18,8 +19,13 @@ import {
 } from "~/services/managedSites/utils/channelMatching"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 
+export type ManagedSiteChannelMatchService = Pick<
+  ManagedSiteService,
+  "searchChannel" | "hydrateComparableChannelKeys" | "fetchChannelSecretKey"
+>
+
 interface ResolveManagedSiteChannelMatchParams {
-  service: ManagedSiteService
+  service: ManagedSiteChannelMatchService
   managedConfig: ManagedSiteConfig
   accountBaseUrl: string
   models: string[]
@@ -31,6 +37,7 @@ interface ResolveManagedSiteChannelMatchParams {
 interface ManagedSiteChannelMatchResolution
   extends ManagedSiteChannelMatchInspection {
   resolvedChannelKeysById?: Record<number, string>
+  unresolvedReason?: ManagedSiteChannelMatchUnresolvedReason
 }
 
 const applyResolvedChannelKeys = <T extends { id: number; key?: string }>(
@@ -59,7 +66,7 @@ const applyResolvedChannelKeys = <T extends { id: number; key?: string }>(
 }
 
 const fetchRecoverableCandidateSecretKey = async (params: {
-  service: ManagedSiteService
+  service: ManagedSiteChannelMatchService
   managedConfig: ManagedSiteConfig
   channelId: number
 }) => {
@@ -99,6 +106,7 @@ export async function resolveManagedSiteChannelMatch(
   const searchBaseUrl = normalizeManagedSiteChannelBaseUrl(
     params.accountBaseUrl,
   )
+  let unresolvedReason: ManagedSiteChannelMatchUnresolvedReason | undefined
 
   const searchResults = await service.searchChannel(
     managedConfig.baseUrl,
@@ -268,6 +276,7 @@ export async function resolveManagedSiteChannelMatch(
         if (!(error instanceof MatchResolutionUnresolvedError)) {
           throw error
         }
+        unresolvedReason ??= error.reason
       }
     }
 
@@ -337,6 +346,7 @@ export async function resolveManagedSiteChannelMatch(
         if (!(error instanceof MatchResolutionUnresolvedError)) {
           throw error
         }
+        unresolvedReason ??= error.reason
       }
     }
   }
@@ -358,5 +368,6 @@ export async function resolveManagedSiteChannelMatch(
     ...(Object.keys(mergedResolvedChannelKeysById).length > 0
       ? { resolvedChannelKeysById: mergedResolvedChannelKeysById }
       : {}),
+    ...(unresolvedReason ? { unresolvedReason } : {}),
   }
 }

@@ -47,21 +47,9 @@ import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
 const logger = createLogger("VeloeraService")
 
 const veloeraImportDuplicateService = {
-  siteType: SITE_TYPES.VELOERA,
-  messagesKey: "veloera" as const,
   searchChannel,
-  createChannel,
-  updateChannel,
-  deleteChannel,
-  checkValidConfig: checkValidVeloeraConfig,
-  getConfig: getVeloeraConfig,
-  fetchAvailableModels,
-  buildChannelName,
-  prepareChannelFormData,
-  buildChannelPayload,
   hydrateComparableChannelKeys,
   fetchChannelSecretKey,
-  autoConfigToManagedSite: autoConfigToVeloera,
 }
 
 /**
@@ -483,13 +471,6 @@ async function importToVeloera(
       message: createdChannelResponse.message,
     }
   } catch (error) {
-    if (error instanceof MatchResolutionUnresolvedError) {
-      return {
-        success: false,
-        message: getErrorMessage(error) || t("messages:veloera.importFailed"),
-      }
-    }
-
     return {
       success: false,
       message: getErrorMessage(error) || t("messages:veloera.importFailed"),

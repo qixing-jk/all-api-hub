@@ -51,7 +51,7 @@ export const MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS = {
   KEY_RESOLUTION_FAILED: "key-resolution-failed",
 } as const
 
-type ManagedSiteChannelMatchUnresolvedReason =
+export type ManagedSiteChannelMatchUnresolvedReason =
   (typeof MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS)[keyof typeof MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS]
 
 export class MatchResolutionUnresolvedError extends Error {

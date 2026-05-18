@@ -5,17 +5,15 @@ import {
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
-import type {
-  ManagedSiteConfig,
-  ManagedSiteService,
-} from "~/services/managedSites/managedSiteService"
+import type { ManagedSiteChannelMatchService } from "~/services/managedSites/channelMatchResolver"
+import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import type { ChannelFormData } from "~/types/managedSite"
 
 /**
  * Resolves whether a direct managed-site import has an exact duplicate.
  */
 export async function resolveManagedSiteImportDuplicate(params: {
-  service: ManagedSiteService
+  service: ManagedSiteChannelMatchService
   managedConfig: ManagedSiteConfig
   formData: ChannelFormData
 }) {
@@ -25,7 +23,6 @@ export async function resolveManagedSiteImportDuplicate(params: {
     accountBaseUrl: params.formData.base_url,
     models: params.formData.models,
     key: params.formData.key,
-    resolveHiddenKeys: true,
   })
 
   const exactMatch = getManagedSiteChannelExactMatch(resolution)
@@ -41,7 +38,8 @@ export async function resolveManagedSiteImportDuplicate(params: {
     resolution.models.reason === MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT
   ) {
     throw new MatchResolutionUnresolvedError(
-      MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+      resolution.unresolvedReason ??
+        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
     )
   }
 

@@ -1940,7 +1940,7 @@ describe("newApiService", () => {
       expect(mockCreateChannel).not.toHaveBeenCalled()
     })
 
-    it("should stop importing when hidden-key lookup fails unexpectedly during duplicate resolution", async () => {
+    it("should return import failure when hidden-key lookup fails unexpectedly during duplicate resolution", async () => {
       const { importToNewApi } = await import(
         "~/services/managedSites/providers/newApi"
       )
@@ -1969,7 +1969,7 @@ describe("newApiService", () => {
 
       expect(result).toEqual({
         success: false,
-        message: expect.stringContaining("channelMatchUnresolved"),
+        message: "key-resolution-failed",
       })
       expect(mockCreateChannel).not.toHaveBeenCalled()
     })

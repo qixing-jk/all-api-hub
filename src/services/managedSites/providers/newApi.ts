@@ -55,21 +55,9 @@ import { resolveDefaultChannelGroups } from "./defaultChannelGroups"
 const logger = createLogger("NewApiService")
 
 const newApiImportDuplicateService = {
-  siteType: SITE_TYPES.NEW_API,
-  messagesKey: "newapi" as const,
   searchChannel,
-  createChannel,
-  updateChannel,
-  deleteChannel,
-  checkValidConfig: checkValidNewApiConfig,
-  getConfig: getNewApiConfig,
-  fetchAvailableModels,
-  buildChannelName,
-  prepareChannelFormData,
-  buildChannelPayload,
   hydrateComparableChannelKeys,
   fetchChannelSecretKey,
-  autoConfigToManagedSite: autoConfigToNewApi,
 }
 
 /**
@@ -584,7 +572,11 @@ export async function importToNewApi(
       message: createdChannelResponse.message,
     }
   } catch (error) {
-    if (error instanceof MatchResolutionUnresolvedError) {
+    if (
+      error instanceof MatchResolutionUnresolvedError &&
+      error.reason ===
+        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED
+    ) {
       return {
         success: false,
         message: t("messages:newapi.channelMatchUnresolved"),
