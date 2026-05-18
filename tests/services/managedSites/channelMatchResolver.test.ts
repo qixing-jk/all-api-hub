@@ -8,6 +8,7 @@ import {
   MatchResolutionUnresolvedError,
 } from "~/services/managedSites/channelMatch"
 import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelMatchResolver"
+import type { ManagedSiteChannel } from "~/types/managedSite"
 import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 
 const managedConfig = {
@@ -36,60 +37,87 @@ const createManagedSiteServiceStub = (
     buildChannelName: vi.fn(),
     prepareChannelFormData: vi.fn(),
     buildChannelPayload: vi.fn(),
-    findMatchingChannel: vi.fn().mockResolvedValue(null),
+    hydrateComparableChannelKeys: vi.fn(
+      async (_baseUrl, _token, _userId, candidates) => candidates,
+    ),
     autoConfigToManagedSite: vi.fn(),
     ...overrides,
   }) as any
 
 describe("resolveManagedSiteChannelMatch", () => {
-  it("prefers provider-aware exact key matching before local ranking", async () => {
-    const exactMatch = buildManagedSiteChannel({
-      id: 11,
-      name: "Exact Match",
-      base_url: "https://api.example.com",
-      models: "gpt-4",
-      key: "sk-match",
+  it("hydrates narrowed comparable candidates instead of calling provider duplicate search", async () => {
+    const searchChannel = vi.fn().mockResolvedValue({
+      items: [
+        buildManagedSiteChannel({
+          id: 7,
+          key: "",
+          base_url: "https://api.example.com/v1",
+          models: "gpt-4o",
+        }),
+      ],
     })
+    const hydrateComparableChannelKeys = vi.fn(
+      async (_baseUrl, _token, _userId, candidates) =>
+        candidates.map((channel: ManagedSiteChannel) => ({
+          ...channel,
+          key: "sk-match",
+        })),
+    )
     const service = createManagedSiteServiceStub({
-      findMatchingChannel: vi.fn().mockResolvedValue(exactMatch),
-      searchChannel: vi.fn().mockResolvedValue({
-        items: [],
-        total: 0,
-        type_counts: {},
-      }),
+      searchChannel,
+      hydrateComparableChannelKeys,
     })
 
     const result = await resolveManagedSiteChannelMatch({
       service,
       managedConfig,
       accountBaseUrl: "https://api.example.com/v1",
-      models: ["gpt-4"],
+      models: ["gpt-4o"],
       key: "sk-match",
     })
 
-    expect(result).toEqual({
-      searchBaseUrl: "https://api.example.com",
-      searchCompleted: true,
-      url: {
-        matched: true,
-        channel: exactMatch,
-        candidateCount: 1,
-      },
-      key: {
-        comparable: true,
-        matched: true,
-        reason: MANAGED_SITE_CHANNEL_KEY_MATCH_REASONS.MATCHED,
-        channel: exactMatch,
-      },
-      models: {
-        comparable: true,
-        matched: true,
-        reason: MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT,
-        channel: exactMatch,
-        similarityScore: 1,
-      },
+    expect(searchChannel).toHaveBeenCalledTimes(1)
+    expect(hydrateComparableChannelKeys).toHaveBeenCalledWith(
+      managedConfig.baseUrl,
+      managedConfig.token,
+      managedConfig.userId,
+      [expect.objectContaining({ id: 7 })],
+    )
+    expect(result.key.matched).toBe(true)
+    expect(result.models.matched).toBe(true)
+  })
+
+  it("marks key comparison unavailable when candidate key hydration requires verification", async () => {
+    const hydrateComparableChannelKeys = vi.fn(async () => {
+      throw new MatchResolutionUnresolvedError(
+        MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
+      )
     })
-    expect(service.searchChannel).toHaveBeenCalledTimes(1)
+    const service = createManagedSiteServiceStub({
+      searchChannel: vi.fn().mockResolvedValue({
+        items: [
+          buildManagedSiteChannel({
+            id: 8,
+            key: "",
+            base_url: "https://api.example.com/v1",
+            models: "gpt-4o",
+          }),
+        ],
+      }),
+      hydrateComparableChannelKeys,
+    })
+
+    const result = await resolveManagedSiteChannelMatch({
+      service,
+      managedConfig,
+      accountBaseUrl: "https://api.example.com/v1",
+      models: ["gpt-4o"],
+      key: "sk-match",
+    })
+
+    expect(result.url.matched).toBe(true)
+    expect(result.key.comparable).toBe(false)
+    expect(result.key.matched).toBe(false)
   })
 
   it("returns a secondary exact-model match when key comparison is unavailable", async () => {
@@ -276,7 +304,6 @@ describe("resolveManagedSiteChannelMatch", () => {
         type_counts: {},
       }),
       fetchChannelSecretKey,
-      findMatchingChannel: vi.fn().mockResolvedValue(null),
     })
 
     const result = await resolveManagedSiteChannelMatch({
@@ -331,7 +358,6 @@ describe("resolveManagedSiteChannelMatch", () => {
         type_counts: {},
       }),
       fetchChannelSecretKey,
-      findMatchingChannel: vi.fn().mockResolvedValue(null),
     })
 
     const result = await resolveManagedSiteChannelMatch({
@@ -397,7 +423,6 @@ describe("resolveManagedSiteChannelMatch", () => {
         type_counts: {},
       }),
       fetchChannelSecretKey,
-      findMatchingChannel: vi.fn().mockResolvedValue(null),
     })
 
     const result = await resolveManagedSiteChannelMatch({
@@ -444,7 +469,6 @@ describe("resolveManagedSiteChannelMatch", () => {
         type_counts: {},
       }),
       fetchChannelSecretKey,
-      findMatchingChannel: vi.fn().mockResolvedValue(null),
     })
 
     const result = await resolveManagedSiteChannelMatch({
@@ -488,13 +512,6 @@ describe("resolveManagedSiteChannelMatch", () => {
         type_counts: {},
       }),
       fetchChannelSecretKey,
-      findMatchingChannel: vi
-        .fn()
-        .mockRejectedValue(
-          new MatchResolutionUnresolvedError(
-            MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.VERIFICATION_REQUIRED,
-          ),
-        ),
     })
 
     const result = await resolveManagedSiteChannelMatch({

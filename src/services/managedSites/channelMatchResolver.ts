@@ -276,45 +276,61 @@ export async function resolveManagedSiteChannelMatch(
     }
   }
 
-  const hasLocalExactMatch =
-    keyAssessment.matched &&
-    modelsAssessment.matched &&
-    modelsAssessment.reason ===
-      MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS.EXACT &&
-    keyAssessment.channel?.id != null &&
-    keyAssessment.channel.id === modelsAssessment.channel?.id
+  if (
+    typeof service.hydrateComparableChannelKeys === "function" &&
+    key?.trim()
+  ) {
+    const recoverableUrlCandidates = urlBucket.filter(
+      (channel) =>
+        !hasUsableManagedSiteChannelKey(channel.key) &&
+        typeof mergedResolvedChannelKeysById[channel.id] !== "string",
+    )
+    const rankedRecoverableCandidate =
+      getRecoverableManagedSiteChannelCandidate({
+        url: {
+          channel:
+            urlBucket.length === 1
+              ? urlBucket[0]
+              : keyAssessment.channel ?? modelsAssessment.channel,
+          candidateCount: urlBucket.length,
+        },
+        models: {
+          channel: modelsAssessment.channel,
+          reason: modelsAssessment.reason,
+        },
+      })
+    const recoverableCandidates = [
+      ...recoverableUrlCandidates,
+      ...(rankedRecoverableCandidate &&
+      !recoverableUrlCandidates.some(
+        (channel) => channel.id === rankedRecoverableCandidate.id,
+      ) &&
+      !hasUsableManagedSiteChannelKey(rankedRecoverableCandidate.key)
+        ? [rankedRecoverableCandidate]
+        : []),
+    ]
 
-  if (key?.trim() && models.length > 0 && !hasLocalExactMatch) {
-    let exactMatch = null
+    if (recoverableCandidates.length > 0) {
+      try {
+        const hydratedCandidates = await service.hydrateComparableChannelKeys(
+          managedConfig.baseUrl,
+          managedConfig.token,
+          managedConfig.userId,
+          recoverableCandidates,
+        )
 
-    try {
-      exactMatch = await service.findMatchingChannel(
-        managedConfig.baseUrl,
-        managedConfig.token,
-        managedConfig.userId,
-        searchBaseUrl,
-        models,
-        key,
-      )
-    } catch (error) {
-      if (!(error instanceof MatchResolutionUnresolvedError)) {
-        throw error
+        for (const channel of hydratedCandidates) {
+          if (hasUsableManagedSiteChannelKey(channel.key)) {
+            mergedResolvedChannelKeysById[channel.id] = channel.key!.trim()
+          }
+        }
+
+        refreshAssessmentsWithResolvedKeys()
+      } catch (error) {
+        if (!(error instanceof MatchResolutionUnresolvedError)) {
+          throw error
+        }
       }
-    }
-
-    if (exactMatch) {
-      keyAssessment = inspectManagedSiteChannelKeyMatch({
-        channels,
-        accountBaseUrl: searchBaseUrl,
-        key,
-        exactChannel: exactMatch,
-      })
-      modelsAssessment = inspectManagedSiteChannelModelsMatch({
-        channels,
-        accountBaseUrl: searchBaseUrl,
-        models,
-        exactChannel: exactMatch,
-      })
     }
   }
 
