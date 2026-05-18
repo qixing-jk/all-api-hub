@@ -337,8 +337,11 @@ describe("veloeraService additional flows", () => {
 
     const result = await autoConfigToVeloera(buildSiteAccount(), "toast-8")
 
-    expect(result.success).toBe(false)
-    expect(result.message).toContain("messages:veloera.channelExists")
+    expect(result).toEqual({
+      success: false,
+      message: expect.stringContaining("channelExists"),
+    })
+    expect(mockSearchChannel).toHaveBeenCalledTimes(1)
     expect(mockCreateChannel).not.toHaveBeenCalled()
   })
 
