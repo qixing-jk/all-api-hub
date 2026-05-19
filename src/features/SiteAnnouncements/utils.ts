@@ -105,7 +105,7 @@ export function buildSiteOptions(
     const existing = map.get(item.siteKey)
     map.set(item.siteKey, {
       value: item.siteKey,
-      label: item.siteName || item.baseUrl,
+      label: item.siteName || existing?.label || item.baseUrl,
       announcementCount: (existing?.announcementCount ?? 0) + 1,
     })
   }

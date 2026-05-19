@@ -103,7 +103,7 @@ describe("SiteAnnouncements utils", () => {
             ...record,
             id: "record-2",
             siteKey: "site-2",
-            siteName: "",
+            siteName: "Beta",
             baseUrl: "https://beta.example.com",
             siteType: "sub2api",
             providerId: "sub2api",
@@ -131,7 +131,7 @@ describe("SiteAnnouncements utils", () => {
     ).toEqual([
       {
         value: "site-2",
-        label: "https://beta.example.com",
+        label: "Beta",
         announcementCount: 2,
       },
       { value: "site-1", label: "Example", announcementCount: 1 },
