@@ -292,7 +292,13 @@ describe("SiteAnnouncementsPage", () => {
       "Gamma API0",
     ])
     const commandList = document.querySelector('[data-slot="command-list"]')
-    expect(commandList).toHaveClass("max-h-none")
+    expect(document.querySelector('[data-slot="popover-content"]')).toHaveClass(
+      "max-h-(--radix-popover-content-available-height)",
+      "overflow-hidden",
+    )
+    expect(commandList).toHaveClass(
+      "max-h-[calc(var(--radix-popover-content-available-height)-2.25rem)]",
+    )
     expect(commandList).toHaveTextContent("2")
     expect(commandList).toHaveTextContent("1")
     expect(commandList).toHaveTextContent("0")

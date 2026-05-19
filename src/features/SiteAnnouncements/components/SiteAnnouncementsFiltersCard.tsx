@@ -71,7 +71,6 @@ export function SiteAnnouncementsFiltersCard({
           placeholder={t("filters.site")}
           searchPlaceholder={t("filters.searchSite")}
           aria-label={t("filters.site")}
-          listClassName="max-h-none"
         />
 
         <Select value={siteType} onValueChange={onSiteTypeChange}>

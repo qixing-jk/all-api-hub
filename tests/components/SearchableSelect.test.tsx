@@ -65,7 +65,7 @@ describe("SearchableSelect", () => {
     ).toBeVisible()
   })
 
-  it("supports custom list height and option suffix content", async () => {
+  it("uses default viewport-aware height constraints and supports option suffix content", async () => {
     render(
       <SearchableSelect
         options={[
@@ -79,7 +79,6 @@ describe("SearchableSelect", () => {
         onChange={() => {}}
         open={true}
         onOpenChange={() => {}}
-        listClassName="max-h-none"
       />,
     )
 
@@ -89,8 +88,12 @@ describe("SearchableSelect", () => {
     ) as HTMLElement
     expect(within(commandItem).getByTestId("site-1-count")).toBeInTheDocument()
     expect(screen.getByText("3")).toBeInTheDocument()
+    expect(document.querySelector('[data-slot="popover-content"]')).toHaveClass(
+      "max-h-(--radix-popover-content-available-height)",
+      "overflow-hidden",
+    )
     expect(document.querySelector('[data-slot="command-list"]')).toHaveClass(
-      "max-h-none",
+      "max-h-[calc(var(--radix-popover-content-available-height)-2.25rem)]",
     )
   })
 })
