@@ -119,7 +119,7 @@ export default function SiteAnnouncementsPage({
   )
   const shouldScopeManualCheck = records.length > 0
   const canRunManualCheck =
-    !shouldScopeManualCheck || manualCheckAccountIds.length > 0
+    !isLoading && (!shouldScopeManualCheck || manualCheckAccountIds.length > 0)
   const unreadCount = records.filter((record) => !record.read).length
   const notifiedCount = records.filter((record) => record.notifiedAt).length
   const affectedSiteCount = siteOptions.filter(
@@ -162,13 +162,6 @@ export default function SiteAnnouncementsPage({
     })
     setIsChecking(true)
     try {
-      if (!canRunManualCheck) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-          insights: { itemCount: 0 },
-        })
-        return
-      }
-
       const checkRequest = shouldScopeManualCheck
         ? {
             action: RuntimeActionIds.SiteAnnouncementsCheckNow,

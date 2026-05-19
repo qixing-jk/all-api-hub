@@ -464,6 +464,34 @@ describe("SiteAnnouncementsPage", () => {
     })
   })
 
+  it("disables manual checks while announcements are loading", async () => {
+    vi.mocked(sendRuntimeMessage).mockImplementation(
+      (message: any) =>
+        new Promise((resolve) => {
+          setTimeout(() => {
+            switch (message.action) {
+              case RuntimeActionIds.SiteAnnouncementsListRecords:
+                resolve({ success: true, data: records })
+                break
+              case RuntimeActionIds.SiteAnnouncementsGetStatus:
+                resolve({ success: true, data: status })
+                break
+              default:
+                resolve({ success: true })
+            }
+          }, 100)
+        }),
+    )
+
+    render(<SiteAnnouncementsPage />)
+
+    expect(
+      await screen.findByRole("button", {
+        name: "siteAnnouncements:actions.checkNow",
+      }),
+    ).toBeDisabled()
+  })
+
   it("shows success feedback and reloads after a manual check", async () => {
     const user = userEvent.setup()
 
