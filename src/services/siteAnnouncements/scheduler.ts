@@ -300,24 +300,27 @@ class SiteAnnouncementScheduler {
       return
     }
 
+    const siteStates = await siteAnnouncementStorage.getStatus()
+    const accounts = await accountStorage.getEnabledAccounts()
+    const delayInMinutes = getAnnouncementAlarmDelayMinutes({
+      intervalMinutes,
+      siteStates,
+      accounts,
+    })
     const existingAlarm = await getAlarm(SITE_ANNOUNCEMENTS_ALARM_NAME)
     if (
       existingAlarm &&
       existingAlarm.periodInMinutes != null &&
-      Math.abs(existingAlarm.periodInMinutes - intervalMinutes) < 0.001
+      Math.abs(existingAlarm.periodInMinutes - intervalMinutes) < 0.001 &&
+      existingAlarm.scheduledTime != null &&
+      existingAlarm.scheduledTime <= Date.now() + delayInMinutes * 60_000
     ) {
       return
     }
 
-    const siteStates = await siteAnnouncementStorage.getStatus()
-    const accounts = await accountStorage.getEnabledAccounts()
     await rescheduleAnnouncementAlarm({
       intervalMinutes,
-      delayInMinutes: getAnnouncementAlarmDelayMinutes({
-        intervalMinutes,
-        siteStates,
-        accounts,
-      }),
+      delayInMinutes,
     })
   }
 
