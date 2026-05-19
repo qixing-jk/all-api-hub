@@ -332,6 +332,7 @@ const _openFullBookmarkManagerPage = (params?: { search?: string }) => {
  * Navigates to the basic settings area, optionally focusing a sub-tab.
  * @param tabId Optional tab ID within settings.
  * @param options Optional in-page navigation behavior tweaks.
+ * @param options.anchor Optional element anchor within the selected settings tab.
  * @param options.preserveHistory When true and already inside options.html,
  * push a new history entry so users can return to the originating context.
  */

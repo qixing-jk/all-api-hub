@@ -124,12 +124,16 @@ describe("UsageAnalytics (settings moved)", () => {
     })
 
     const user = userEvent.setup()
-    await screen.findByText("usageAnalytics:title")
+    const pageTitle = await screen.findByRole("heading", {
+      name: "usageAnalytics:title",
+    })
+    const titleActionContainer = pageTitle.parentElement
+    expect(titleActionContainer).not.toBeNull()
 
     await user.click(
-      screen.getAllByRole("button", {
+      within(titleActionContainer as HTMLElement).getByRole("button", {
         name: "usageAnalytics:actions.openAccountUsageSettings",
-      })[0]!,
+      }),
     )
 
     expect(vi.mocked(openSettingsTab)).toHaveBeenCalledWith("accountUsage", {
