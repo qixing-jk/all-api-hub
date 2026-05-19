@@ -409,6 +409,46 @@ describe("ModelSyncService - siteType routing", () => {
       expect.anything(),
     )
   })
+
+  it("derives defensive Octopus and Claude Code Hub auth shapes", async () => {
+    listAllChannelsMock.mockResolvedValue({
+      items: [],
+      total: 0,
+      type_counts: {},
+    })
+    const octopusConfig = makeRuntimeConfig({ siteType: SITE_TYPES.OCTOPUS })
+    const cchConfig = makeRuntimeConfig({
+      siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+    })
+
+    await new ModelSyncService(octopusConfig).listChannels()
+    await new ModelSyncService(cchConfig).listChannels()
+
+    expect(listAllChannelsMock).toHaveBeenNthCalledWith(
+      1,
+      {
+        baseUrl: octopusConfig.config.baseUrl,
+        auth: {
+          authType: "access_token",
+          accessToken: "",
+          userId: octopusConfig.config.username,
+        },
+      },
+      expect.anything(),
+    )
+    expect(listAllChannelsMock).toHaveBeenNthCalledWith(
+      2,
+      {
+        baseUrl: cchConfig.config.baseUrl,
+        auth: {
+          authType: "access_token",
+          accessToken: cchConfig.config.adminToken,
+          userId: "admin",
+        },
+      },
+      expect.anything(),
+    )
+  })
 })
 
 describe("ModelSyncService - global and channel filters", () => {
@@ -974,6 +1014,90 @@ describe("ModelSyncService - probe-backed filters", () => {
     expect(result.message).not.toContain("sk-hidden-channel-key")
     expect(result.message).not.toContain("123456")
     expect(updateChannelModelsMock).not.toHaveBeenCalled()
+  })
+
+  it("redacts token-shaped runtime configs from key-resolution failures", async () => {
+    fetchChannelSecretKeyMock.mockRejectedValueOnce(
+      new Error("failed with runtime-token sk-hidden-channel-key 123456"),
+    )
+    const context = {
+      channel: makeChannel({
+        id: 83,
+        type: ChannelType.OpenAI,
+        base_url: "https://channel.example.com",
+        key: "",
+      }),
+      managedConfig: {
+        siteType: SITE_TYPES.NEW_API,
+        config: {
+          baseUrl: "https://managed.example.com",
+          token: "runtime-token",
+          userId: "1",
+        },
+      } as any,
+      cache: new Map<string, boolean>(),
+    }
+
+    await expect(
+      matchesProbeFilterRule(makeProbeRule(), "model-a", context),
+    ).rejects.toMatchObject({
+      reason: "key-unavailable",
+    })
+  })
+
+  it("redacts Octopus and AxonHub secrets from key-resolution failures", async () => {
+    const cases = [
+      {
+        runtimeConfig: makeRuntimeConfig({ siteType: SITE_TYPES.OCTOPUS }),
+        secret: "secret",
+      },
+      {
+        runtimeConfig: makeRuntimeConfig({ siteType: SITE_TYPES.AXON_HUB }),
+        secret: "secret",
+      },
+    ]
+
+    for (const item of cases) {
+      fetchChannelSecretKeyMock.mockRejectedValueOnce(
+        new Error(`failed with ${item.secret} sk-hidden-channel-key 123456`),
+      )
+      const context = {
+        channel: makeChannel({
+          id: 84,
+          type: ChannelType.OpenAI,
+          base_url: "https://channel.example.com",
+          key: "",
+        }),
+        managedConfig: item.runtimeConfig,
+        cache: new Map<string, boolean>(),
+      }
+
+      await expect(
+        matchesProbeFilterRule(makeProbeRule(), "model-a", context),
+      ).rejects.toMatchObject({
+        reason: "key-unavailable",
+      })
+    }
+  })
+
+  it("rejects unusable keys returned by the managed-site provider", async () => {
+    fetchChannelSecretKeyMock.mockResolvedValueOnce("sk-mask***")
+    const context = {
+      channel: makeChannel({
+        id: 85,
+        type: ChannelType.OpenAI,
+        base_url: "https://channel.example.com",
+        key: "",
+      }),
+      managedConfig: makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
+      cache: new Map<string, boolean>(),
+    }
+
+    await expect(
+      matchesProbeFilterRule(makeProbeRule(), "model-a", context),
+    ).rejects.toMatchObject({
+      reason: "key-unavailable",
+    })
   })
 
   it("resolves a hidden key only once across repeated probe evaluations", async () => {

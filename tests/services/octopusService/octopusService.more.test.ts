@@ -557,7 +557,11 @@ describe("octopus additional flows", () => {
     })
 
     mockGetPreferences.mockResolvedValueOnce({
-      octopus: passedOctopusConfig,
+      octopus: {
+        baseUrl: "",
+        username: "",
+        password: "",
+      },
     })
     mockConvertToDisplayData.mockReturnValue(displaySiteData)
     mockEnsureAccountApiToken.mockResolvedValueOnce(apiToken)

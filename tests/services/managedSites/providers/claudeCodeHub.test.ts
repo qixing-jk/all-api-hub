@@ -15,6 +15,7 @@ import {
   buildChannelPayload,
   buildClaudeCodeHubCreatePayloadFromFormData,
   buildClaudeCodeHubUpdatePayloadFromChannelData,
+  checkValidClaudeCodeHubConfig,
   createChannel,
   deleteChannel,
   fetchAvailableModels,
@@ -364,6 +365,32 @@ describe("Claude Code Hub managed-site provider", () => {
     await expect(getClaudeCodeHubConfig()).resolves.toEqual(
       storedClaudeCodeHubConfig,
     )
+  })
+
+  it("validates saved Claude Code Hub config only when required fields exist", async () => {
+    const claudeCodeHubApi = await import("~/services/apiService/claudeCodeHub")
+    vi.mocked(
+      claudeCodeHubApi.validateClaudeCodeHubConfig,
+    ).mockResolvedValueOnce(true)
+    mockGetPreferences.mockResolvedValueOnce({
+      claudeCodeHub: storedClaudeCodeHubConfig,
+    })
+
+    await expect(checkValidClaudeCodeHubConfig()).resolves.toBe(true)
+    expect(claudeCodeHubApi.validateClaudeCodeHubConfig).toHaveBeenCalledWith(
+      storedClaudeCodeHubConfig,
+    )
+
+    vi.mocked(claudeCodeHubApi.validateClaudeCodeHubConfig).mockClear()
+    mockGetPreferences.mockResolvedValueOnce({
+      claudeCodeHub: {
+        baseUrl: "https://cch.example.com",
+        adminToken: "",
+      },
+    })
+
+    await expect(checkValidClaudeCodeHubConfig()).resolves.toBe(false)
+    expect(claudeCodeHubApi.validateClaudeCodeHubConfig).not.toHaveBeenCalled()
   })
 
   it("searches, creates, updates, and deletes providers with passed admin config", async () => {

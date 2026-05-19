@@ -282,6 +282,19 @@ describe("managedSiteService", () => {
     await expect(service.getConfig()).resolves.toBeNull()
   })
 
+  it("falls back to New API service when preferences cannot be read", async () => {
+    const { getManagedSiteService } = await import(
+      "~/services/managedSites/managedSiteService"
+    )
+
+    mockGetPreferences.mockRejectedValueOnce(new Error("storage unavailable"))
+
+    const service = await getManagedSiteService()
+
+    expect(service.siteType).toBe(SITE_TYPES.NEW_API)
+    expect(service.messagesKey).toBe("newapi")
+  })
+
   it("can resolve an explicit target service without changing active preferences", async () => {
     const { getManagedSiteServiceForType } = await import(
       "~/services/managedSites/managedSiteService"

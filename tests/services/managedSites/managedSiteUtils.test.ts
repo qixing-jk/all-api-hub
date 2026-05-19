@@ -40,6 +40,14 @@ describe("managedSite utils", () => {
         userId: "1",
       } as any),
     ).toEqual(["runtime-token"])
+    expect(
+      collectManagedConfigSecrets({
+        baseUrl: "https://mixed-config.example.com",
+        token: "runtime-token",
+        adminToken: "admin-token",
+        userId: "1",
+      } as any),
+    ).toEqual(["runtime-token", "admin-token"])
   })
 
   it("defaults managed-site context to new-api when managedSiteType is missing", () => {

@@ -156,6 +156,17 @@ describe("managed-site runtime config resolver", () => {
     ).toBeNull()
   })
 
+  it("returns unknown managed-site values from the exhaustive fallback", () => {
+    const prefs = buildUserPreferences()
+
+    expect(
+      resolveManagedSiteRuntimeConfigForType(
+        prefs,
+        "future-managed-site" as any,
+      ),
+    ).toBe("future-managed-site")
+  })
+
   it("returns null for non-numeric access-token managed-site user IDs", () => {
     const prefs = buildUserPreferences({
       newApi: {

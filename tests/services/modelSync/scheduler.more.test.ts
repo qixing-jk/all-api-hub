@@ -223,6 +223,8 @@ describe("modelSyncScheduler additional scheduler flows", () => {
         }),
       ],
     )
+    const [, , , , sanitizedFilters] = mocks.modelSyncServiceCtor.mock.calls[0]
+    expect(sanitizedFilters[0]).not.toHaveProperty("apiKey")
   })
 })
 
