@@ -64,6 +64,65 @@ describe("site announcement text helpers", () => {
     })
   })
 
+  it("ignores dangling html tag fragments when an upstream title is malformed", () => {
+    expect(
+      buildAnnouncementDisplayText({
+        title: "<span",
+        content:
+          '<span style="font-size: 18px; color: red;">维护通知</span><p>今晚 1 点开始维护。</p>',
+      }),
+    ).toEqual({
+      title: "维护通知",
+      body: '<span style="font-size: 18px; color: red;">维护通知</span><p>今晚 1 点开始维护。</p>',
+      preview: "维护通知 今晚 1 点开始维护。",
+    })
+  })
+
+  it("ignores dangling html tag fragments when inline tags span multiple lines", () => {
+    expect(
+      buildAnnouncementDisplayText({
+        content:
+          '<span\n style="font-size: 18px; color: red;">维护通知</span><p>今晚 1 点开始维护。</p>',
+      }),
+    ).toEqual({
+      title: "维护通知",
+      body: '<span\n style="font-size: 18px; color: red;">维护通知</span><p>今晚 1 点开始维护。</p>',
+      preview: "维护通知 今晚 1 点开始维护。",
+    })
+  })
+
+  it("derives the visible badge text from a styled announcement template", () => {
+    expect(
+      buildAnnouncementDisplayText({
+        content: `<p style="text-align:center;margin:0 0 6px">
+    <span
+        style="display:inline-block;padding:5px 16px;border-radius:50px;font-size:12px;font-weight:600;letter-spacing:1px;background:rgba(99,102,241,.25);border:1px solid rgba(139,92,246,.4);color:#6366f1">📢
+        测试站点  公告中心</span>
+</p>
+
+<h1
+    style="text-align:center;font-size:36px;font-weight:800;background:linear-gradient(135deg,#c7d2fe,#a78bfa,#e879f9,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:6px 0 6px;line-height:1.2">
+    测试站点</h1>
+
+<p style="text-align:center;color:#6b7280;font-size:14px;margin:0 0 2px">用于功能测试  仅供接口调试与演示</p>`,
+      }),
+    ).toEqual({
+      title: "📢 测试站点 公告中心",
+      body: `<p style="text-align:center;margin:0 0 6px">
+    <span
+        style="display:inline-block;padding:5px 16px;border-radius:50px;font-size:12px;font-weight:600;letter-spacing:1px;background:rgba(99,102,241,.25);border:1px solid rgba(139,92,246,.4);color:#6366f1">📢
+        测试站点  公告中心</span>
+</p>
+
+<h1
+    style="text-align:center;font-size:36px;font-weight:800;background:linear-gradient(135deg,#c7d2fe,#a78bfa,#e879f9,#f472b6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:6px 0 6px;line-height:1.2">
+    测试站点</h1>
+
+<p style="text-align:center;color:#6b7280;font-size:14px;margin:0 0 2px">用于功能测试  仅供接口调试与演示</p>`,
+      preview: "📢 测试站点 公告中心 测试站点 用于功能测试 仅供接口调试与演示",
+    })
+  })
+
   it("derives a plain text leading topic without removing it from the body", () => {
     expect(
       buildAnnouncementDisplayText({

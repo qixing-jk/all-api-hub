@@ -9,9 +9,12 @@ const MARKDOWN_HEADING_LINE_PATTERN = /^\s*#{1,6}\s+/
 const HTML_BLOCK_BOUNDARY_PATTERN =
   /<\/?(?:address|article|aside|blockquote|br|center|dd|details|dialog|div|dl|dt|fieldset|figcaption|figure|footer|form|h[1-6]|header|hr|li|main|nav|ol|p|pre|section|table|tbody|td|tfoot|th|thead|tr|ul)\b[^>]*>/gi
 const HTML_TAG_PATTERN = /<[^>]+>/g
+const HTML_TAG_DETECTION_PATTERN = /<\/?[a-z][\s\S]*?>/i
+const DANGLING_HTML_TAG_FRAGMENT_PATTERN = /^<\/?[a-z][\w:-]*(?:\s+[^<>]*)?$/i
 const HTML_ENTITY_PATTERN = /&(?:nbsp|amp|lt|gt|quot|#39);/gi
 const WHITESPACE_PATTERN = /\s+/g
 const LINE_BREAK_PATTERN = /\r\n?/g
+const HTML_BLOCK_BOUNDARY_MARKER = "__SITE_ANNOUNCEMENT_BLOCK_BOUNDARY__"
 const TRAILING_TITLE_DELIMITER_PATTERN = /[。！？!?；;：:.]+$/
 const ANNOUNCEMENT_SHORT_TITLE_LENGTH = 80
 const ANNOUNCEMENT_PREVIEW_LENGTH = 120
@@ -74,13 +77,28 @@ function stripAnnouncementFormatting(value: string): string {
 }
 
 /**
+ * Drops standalone broken HTML tag fragments that can leak from upstream titles.
+ */
+function stripAnnouncementTitleFormatting(value: string): string {
+  const plain = stripAnnouncementFormatting(value)
+  return DANGLING_HTML_TAG_FRAGMENT_PATTERN.test(plain) ? "" : plain
+}
+
+/**
  * Splits announcement content into candidate display lines.
  */
 function splitAnnouncementCandidateLines(value: string): string[] {
-  return value
-    .replace(LINE_BREAK_PATTERN, "\n")
-    .replace(HTML_BLOCK_BOUNDARY_PATTERN, "\n")
-    .split("\n")
+  const normalized = value.replace(LINE_BREAK_PATTERN, "\n")
+
+  if (!HTML_TAG_DETECTION_PATTERN.test(normalized)) {
+    return normalized.split("\n")
+  }
+
+  return normalized
+    .replace(HTML_BLOCK_BOUNDARY_PATTERN, HTML_BLOCK_BOUNDARY_MARKER)
+    .replace(HTML_TAG_PATTERN, " ")
+    .replace(/\n+/g, " ")
+    .split(HTML_BLOCK_BOUNDARY_MARKER)
 }
 
 /**
@@ -216,7 +234,7 @@ export function buildAnnouncementDisplayText(
     previewLength?: number
   } = {},
 ): AnnouncementDisplayText {
-  const explicitTitle = stripAnnouncementFormatting(input.title ?? "")
+  const explicitTitle = stripAnnouncementTitleFormatting(input.title ?? "")
   const content = normalizeAnnouncementText(input.content)
   const previewLength = options.previewLength ?? ANNOUNCEMENT_PREVIEW_LENGTH
 
