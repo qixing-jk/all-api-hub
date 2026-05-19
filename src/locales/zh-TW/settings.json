@@ -465,13 +465,15 @@
   "siteAnnouncementNotifications": {
     "description": "控制是否在背景定時抓取已啟用帳號所屬站點的網站公告。",
     "page": {
-      "description": "預設每 {{intervalMinutes}} 分鐘於背景檢查一次，也可以手動立即檢查。",
+      "description": "目前每 {{intervalMinutes}} 分鐘於背景檢查一次，也可以手動立即檢查。",
       "open": "查看公告",
       "title": "公告頁面"
     },
     "polling": {
       "enable": "啟用網站公告抓取",
-      "enableDesc": "關閉後會停止背景定時抓取，已儲存的本機公告記錄仍會保留，公告頁面仍可手動檢查。"
+      "enableDesc": "關閉後會停止背景定時抓取，已儲存的本機公告記錄仍會保留，公告頁面仍可手動檢查。",
+      "interval": "抓取間隔",
+      "intervalDesc": "設定背景抓取網站公告的分鐘間隔，支援 15 到 1440 分鐘。"
     },
     "title": "網站公告"
   },

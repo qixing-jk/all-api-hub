@@ -35,5 +35,7 @@ export const SETTINGS_ANCHORS = {
   SITE_ANNOUNCEMENT_NOTIFICATIONS: "site-announcement-notifications",
   SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED:
     "site-announcement-notifications-enabled",
+  SITE_ANNOUNCEMENT_NOTIFICATIONS_INTERVAL:
+    "site-announcement-notifications-interval",
   SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE: "site-announcement-notifications-page",
 } as const

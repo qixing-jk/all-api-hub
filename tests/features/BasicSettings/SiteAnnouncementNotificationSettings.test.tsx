@@ -124,4 +124,29 @@ describe("SiteAnnouncementNotificationSettings", () => {
       MENU_ITEM_IDS.SITE_ANNOUNCEMENTS,
     )
   })
+
+  it("updates the polling interval through the preferences context", async () => {
+    render(<SiteAnnouncementNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const intervalInput = await screen.findByLabelText(
+      "settings:siteAnnouncementNotifications.polling.interval",
+    )
+
+    fireEvent.change(intervalInput, { target: { value: "120" } })
+    fireEvent.blur(intervalInput)
+
+    await waitFor(() => {
+      expect(updateSiteAnnouncementNotificationsMock).toHaveBeenCalledWith({
+        intervalMinutes: 120,
+      })
+    })
+
+    expect(showUpdateToastMock).toHaveBeenCalledWith(
+      true,
+      "settings:siteAnnouncementNotifications.polling.interval",
+    )
+  })
 })

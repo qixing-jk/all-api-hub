@@ -214,11 +214,30 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
+    "control:site-announcements-interval",
+    "general",
+    SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_INTERVAL,
+    "settings:siteAnnouncementNotifications.polling.interval",
+    508,
+    {
+      descriptionKey:
+        "settings:siteAnnouncementNotifications.polling.intervalDesc",
+      breadcrumbsKeys: SITE_ANNOUNCEMENT_BREADCRUMBS,
+      keywords: [
+        "announcement",
+        "notice",
+        "polling interval",
+        "background check interval",
+        "minutes",
+      ],
+    },
+  ),
+  buildControlDefinition(
     "control:site-announcements-page",
     "general",
     SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE,
     "settings:siteAnnouncementNotifications.page.title",
-    508,
+    509,
     {
       descriptionKey: "settings:siteAnnouncementNotifications.page.description",
       breadcrumbsKeys: SITE_ANNOUNCEMENT_BREADCRUMBS,
@@ -230,7 +249,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "changelog-on-update-toggle",
     "settings:changelogOnUpdate.toggleLabel",
-    509,
+    510,
     {
       descriptionKey: "settings:changelogOnUpdate.toggleDesc",
       breadcrumbsKeys: [
@@ -246,7 +265,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "logging-console-enabled",
     "settings:logging.consoleEnabled",
-    510,
+    511,
     {
       descriptionKey: "settings:logging.consoleEnabledDesc",
       breadcrumbsKeys: [
@@ -262,7 +281,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "logging-min-level",
     "settings:logging.minLevel",
-    511,
+    512,
     {
       descriptionKey: "settings:logging.minLevelDesc",
       breadcrumbsKeys: [
@@ -278,7 +297,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "product-analytics-enabled",
     "settings:productAnalytics.enableLabel",
-    512,
+    513,
     {
       descriptionKey: "settings:productAnalytics.enableDescription",
       breadcrumbsKeys: PRODUCT_ANALYTICS_BREADCRUMBS,

@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest"
 
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import {
   generalSearchControls,
   generalSearchSections,
@@ -46,5 +47,19 @@ describe("general settings search definitions", () => {
     expect(loggingIndex).toBeLessThan(productAnalyticsIndex)
     expect(productAnalyticsIndex).toBeLessThan(dangerResetIndex)
     expect(loggingIndex).toBeLessThan(dangerResetIndex)
+  })
+
+  it("registers all site announcement controls as searchable general settings", () => {
+    expect(
+      generalSearchControls
+        .filter((control) =>
+          control.id.startsWith("control:site-announcements"),
+        )
+        .map((control) => control.targetId),
+    ).toEqual([
+      SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
+      SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_INTERVAL,
+      SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE,
+    ])
   })
 })

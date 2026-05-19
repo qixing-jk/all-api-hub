@@ -465,13 +465,15 @@
   "siteAnnouncementNotifications": {
     "description": "控制是否在后台定时抓取已启用账号所属站点的网站公告。",
     "page": {
-      "description": "默认每 {{intervalMinutes}} 分钟后台检查一次，也可以手动立即检查。",
+      "description": "当前每 {{intervalMinutes}} 分钟后台检查一次，也可以手动立即检查。",
       "open": "查看公告",
       "title": "公告页面"
     },
     "polling": {
       "enable": "启用网站公告抓取",
-      "enableDesc": "关闭后会停止后台定时抓取，已保存的本地公告记录仍会保留，公告页面仍可手动检查。"
+      "enableDesc": "关闭后会停止后台定时抓取，已保存的本地公告记录仍会保留，公告页面仍可手动检查。",
+      "interval": "抓取间隔",
+      "intervalDesc": "设置后台抓取网站公告的分钟间隔，支持 15 到 1440 分钟。"
     },
     "title": "网站公告"
   },

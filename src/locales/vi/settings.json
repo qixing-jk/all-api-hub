@@ -465,13 +465,15 @@
   "siteAnnouncementNotifications": {
     "description": "Kiểm soát việc nền có định kỳ lấy thông báo website của các trang thuộc tài khoản đã bật hay không.",
     "page": {
-      "description": "Mặc định kiểm tra nền mỗi {{intervalMinutes}} phút, cũng có thể kiểm tra ngay thủ công.",
+      "description": "Kiểm tra nền mỗi {{intervalMinutes}} phút, cũng có thể kiểm tra ngay thủ công.",
       "open": "Xem thông báo",
       "title": "Trang thông báo"
     },
     "polling": {
       "enable": "Bật lấy thông báo website",
-      "enableDesc": "Sau khi tắt sẽ dừng lấy định kỳ trong nền. Bản ghi thông báo cục bộ đã lưu vẫn được giữ, và trang thông báo vẫn có thể kiểm tra thủ công."
+      "enableDesc": "Sau khi tắt sẽ dừng lấy định kỳ trong nền. Bản ghi thông báo cục bộ đã lưu vẫn được giữ, và trang thông báo vẫn có thể kiểm tra thủ công.",
+      "interval": "Khoảng thời gian lấy",
+      "intervalDesc": "Đặt khoảng thời gian lấy thông báo website trong nền theo phút, hỗ trợ từ 15 đến 1440 phút."
     },
     "title": "Thông báo website"
   },

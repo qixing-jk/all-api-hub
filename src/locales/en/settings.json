@@ -465,13 +465,15 @@
   "siteAnnouncementNotifications": {
     "description": "Controls whether enabled account sites are checked for site announcements in the background.",
     "page": {
-      "description": "Checks in the background every {{intervalMinutes}} minutes by default. You can also run a manual check.",
+      "description": "Checks in the background every {{intervalMinutes}} minutes. You can also run a manual check.",
       "open": "View announcements",
       "title": "Announcement page"
     },
     "polling": {
       "enable": "Enable site announcement polling",
-      "enableDesc": "When disabled, scheduled background polling stops. Existing local records are kept, and the announcement page can still run a manual check."
+      "enableDesc": "When disabled, scheduled background polling stops. Existing local records are kept, and the announcement page can still run a manual check.",
+      "interval": "Polling interval",
+      "intervalDesc": "Set the background site announcement polling interval in minutes, from 15 to 1440."
     },
     "title": "Site announcements"
   },
