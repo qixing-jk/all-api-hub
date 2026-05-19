@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.40.0](https://github.com/qixing-jk/all-api-hub/compare/v3.39.0...v3.40.0) (2026-05-19)
+
+
+### Features
+
+* Disable site announcement auto polling by default ([#842](https://github.com/qixing-jk/all-api-hub/issues/842)) ([a914cb8](https://github.com/qixing-jk/all-api-hub/commit/a914cb840b04545061db5aac54bfafe18659975c))
+* **options:** add settings shortcuts to standalone page headers ([#844](https://github.com/qixing-jk/all-api-hub/issues/844)) ([8b4cf19](https://github.com/qixing-jk/all-api-hub/commit/8b4cf19b6fe8455a42cc3c01ba1fa6645381370f))
+* **settings:** support custom site announcement polling interval ([#845](https://github.com/qixing-jk/all-api-hub/issues/845)) ([886d31e](https://github.com/qixing-jk/all-api-hub/commit/886d31ea084705ae7e55fc84789806dcd48370d4))
+* **site-announcements:** improve site filter sorting and search ([#839](https://github.com/qixing-jk/all-api-hub/issues/839)) ([06dde33](https://github.com/qixing-jk/all-api-hub/commit/06dde33eead84860480b43b5e883cade3126029b))
+* **site-announcements:** link polling settings from descriptions ([08e71fd](https://github.com/qixing-jk/all-api-hub/commit/08e71fdf451b305541be91348ccb29b3b0b404ea))
+
+
+### Bug Fixes
+
+* **settings:** correct usage sync interval search anchor ([edaf6d1](https://github.com/qixing-jk/all-api-hub/commit/edaf6d1a2eb7d46e0e581e7aa2226ba0ccd2262c))
+* **site-announcements:** preserve inline html title text ([#840](https://github.com/qixing-jk/all-api-hub/issues/840)) ([57247ea](https://github.com/qixing-jk/all-api-hub/commit/57247ea1b072de895cd17faa5b03bd11ebac276a))
+* **site-announcements:** realign polling cooldown after alarm restore ([#837](https://github.com/qixing-jk/all-api-hub/issues/837)) ([8a757e2](https://github.com/qixing-jk/all-api-hub/commit/8a757e242b81731e35e9df20099d27490f9dfe25))
+* **site-announcements:** Scope site announcement checks to visible results ([#843](https://github.com/qixing-jk/all-api-hub/issues/843)) ([2c2e940](https://github.com/qixing-jk/all-api-hub/commit/2c2e9408c4b8a684064bcc0b82408fbb8f4fba80))
+
 ## [3.39.0](https://github.com/qixing-jk/all-api-hub/compare/v3.38.0...v3.39.0) (2026-05-19)
 
 
