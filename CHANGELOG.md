@@ -1,5 +1,26 @@
 # Changelog
 
+## [3.39.0](https://github.com/qixing-jk/all-api-hub/compare/v3.38.0...v3.39.0) (2026-05-19)
+
+
+### Features
+
+* **claude-code-hub:** support provider channel lookup and key reveal ([#830](https://github.com/qixing-jk/all-api-hub/issues/830)) ([33e01a2](https://github.com/qixing-jk/all-api-hub/commit/33e01a281639cfde37a81eadc8fd391c6e577ea9))
+* **feedback:** add site support request flow ([6493f21](https://github.com/qixing-jk/all-api-hub/commit/6493f21354dea017638b8a7dc003199f714f124f))
+* **i18n:** add Vietnamese app locale support ([#827](https://github.com/qixing-jk/all-api-hub/issues/827)) ([1f5a21a](https://github.com/qixing-jk/all-api-hub/commit/1f5a21a98e11538e998c015a24f0501780179852))
+* **navigation:** reorder credential and activity views ([33818ad](https://github.com/qixing-jk/all-api-hub/commit/33818adf2f517beebed1cf948ed048d172daa3e5))
+* support v-api site type ([ba6b562](https://github.com/qixing-jk/all-api-hub/commit/ba6b562f8a99695a666f2542e5095f2126c431d8))
+
+
+### Bug Fixes
+
+* **eslint:** tolerate missing wxt generated config ([00b626e](https://github.com/qixing-jk/all-api-hub/commit/00b626eab3c446d1d1561c2147a13f31befd38d0))
+* improve managed-site channel check accuracy ([#832](https://github.com/qixing-jk/all-api-hub/issues/832)) ([e474781](https://github.com/qixing-jk/all-api-hub/commit/e474781a0685213053a659d457717f3ea98564a8))
+* **key-management:** improve mobile token card readability ([#831](https://github.com/qixing-jk/all-api-hub/issues/831)) ([379104b](https://github.com/qixing-jk/all-api-hub/commit/379104bc0020201cb736644cf917a6c9eb0eb570))
+* **settings:** improve narrow-screen settings controls ([#828](https://github.com/qixing-jk/all-api-hub/issues/828)) ([2ea94b2](https://github.com/qixing-jk/all-api-hub/commit/2ea94b2747bac4745e7788ffdbe76c3043d83f9b))
+* **settings:** restore wide card item rows and keep card actions compact on desktop ([38ce954](https://github.com/qixing-jk/all-api-hub/commit/38ce9548cc4e3808fffc6ab151f56f0b39d424a7))
+* **tokens:** align optional sk-prefix display and copy behavior ([#835](https://github.com/qixing-jk/all-api-hub/issues/835)) ([87dbabe](https://github.com/qixing-jk/all-api-hub/commit/87dbabefe57390635492f8de638f848b3b9e7348))
+
 ## [3.38.0](https://github.com/qixing-jk/all-api-hub/compare/v3.37.0...v3.38.0) (2026-05-16)
 
 
