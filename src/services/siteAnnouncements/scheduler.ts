@@ -196,9 +196,25 @@ async function rescheduleAnnouncementAlarm(params: {
 function getAnnouncementAlarmDelayMinutes(params: {
   intervalMinutes: number
   siteStates: SiteAnnouncementSiteState[]
+  accounts: SiteAccount[]
 }): number {
   const now = Date.now()
   let nextDelayMinutes = Number.POSITIVE_INFINITY
+  const siteKeysWithStatus = new Set(
+    params.siteStates.map((siteState) => siteState.siteKey),
+  )
+
+  for (const account of dedupeCommonAccounts(params.accounts)) {
+    const provider = getSiteAnnouncementProvider(account.site_type)
+    const siteKey = provider.createSiteKey({
+      accountId: account.id,
+      siteType: account.site_type,
+      baseUrl: account.site_url,
+    })
+    if (!siteKeysWithStatus.has(siteKey)) {
+      return 1
+    }
+  }
 
   for (const siteState of params.siteStates) {
     const expiresAt = getAnnouncementCooldownExpiresAt({
@@ -294,11 +310,13 @@ class SiteAnnouncementScheduler {
     }
 
     const siteStates = await siteAnnouncementStorage.getStatus()
+    const accounts = await accountStorage.getEnabledAccounts()
     await rescheduleAnnouncementAlarm({
       intervalMinutes,
       delayInMinutes: getAnnouncementAlarmDelayMinutes({
         intervalMinutes,
         siteStates,
+        accounts,
       }),
     })
   }

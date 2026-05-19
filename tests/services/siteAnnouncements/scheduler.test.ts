@@ -133,6 +133,7 @@ describe("siteAnnouncementScheduler", () => {
     savePreferencesMock.mockResolvedValue(true)
     notifySiteAnnouncementsMock.mockResolvedValue({ success: true })
     getAccountByIdMock.mockResolvedValue(null)
+    getEnabledAccountsMock.mockResolvedValue([])
   })
 
   it("initializes a six-hour alarm from preferences", async () => {
@@ -253,6 +254,52 @@ describe("siteAnnouncementScheduler", () => {
     nowSpy.mockRestore()
   })
 
+  it("recreates a missing announcement alarm with a short delay when an enabled site has no status", async () => {
+    const intervalMinutes = 360
+    const now = 1_800_000_000_000
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
+
+    getAlarmMock
+      .mockResolvedValueOnce({
+        name: "siteAnnouncementsCheck",
+        periodInMinutes: intervalMinutes,
+        scheduledTime: now + 60_000,
+      })
+      .mockResolvedValueOnce(undefined)
+    await siteAnnouncementStorage.upsertSiteStatus({
+      siteKey: "notice:new-api:https://removed.example.com",
+      siteName: "Removed",
+      siteType: "new-api",
+      baseUrl: "https://removed.example.com",
+      accountId: "removed-account",
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      status: "success",
+      lastCheckedAt: now - 10 * 60 * 1000,
+    })
+    getEnabledAccountsMock.mockResolvedValue([
+      createAccount({
+        id: "unchecked-account",
+        site_url: "https://unchecked.example.com",
+      }),
+    ])
+
+    await siteAnnouncementScheduler.initialize()
+    createAlarmMock.mockClear()
+    clearAlarmMock.mockClear()
+
+    const response = vi.fn()
+    await handleSiteAnnouncementMessage(
+      { action: RuntimeActionIds.SiteAnnouncementsGetStatus },
+      response,
+    )
+
+    expect(createAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck", {
+      periodInMinutes: intervalMinutes,
+      delayInMinutes: 1,
+    })
+    nowSpy.mockRestore()
+  })
+
   it("keeps announcement alarm cleared when status is queried while polling is disabled", async () => {
     getPreferencesMock.mockResolvedValue({
       siteAnnouncementNotifications: {
@@ -289,6 +336,7 @@ describe("siteAnnouncementScheduler", () => {
 
     const alarmHandler = onAlarmMock.mock.calls[0]?.[0]
     expect(alarmHandler).toBeTypeOf("function")
+    getEnabledAccountsMock.mockClear()
 
     await alarmHandler?.({ name: "other-alarm" })
 
@@ -339,6 +387,7 @@ describe("siteAnnouncementScheduler", () => {
 
     const alarmHandler = onAlarmMock.mock.calls[0]?.[0]
     expect(alarmHandler).toBeTypeOf("function")
+    getEnabledAccountsMock.mockClear()
 
     await alarmHandler?.({ name: "siteAnnouncementsCheck" })
 
@@ -366,6 +415,7 @@ describe("siteAnnouncementScheduler", () => {
 
     const alarmHandler = onAlarmMock.mock.calls[0]?.[0]
     expect(alarmHandler).toBeTypeOf("function")
+    getEnabledAccountsMock.mockClear()
 
     await alarmHandler?.({ name: "siteAnnouncementsCheck" })
 
