@@ -287,10 +287,15 @@ describe("SiteAnnouncementsPage", () => {
     const options = await screen.findAllByRole("option")
     expect(options.map((option) => option.textContent)).toEqual([
       "siteAnnouncements:filters.allSites",
-      "Beta API",
-      "Alpha API",
-      "Gamma API",
+      "Beta API2",
+      "Alpha API1",
+      "Gamma API0",
     ])
+    const commandList = document.querySelector('[data-slot="command-list"]')
+    expect(commandList).toHaveClass("max-h-none")
+    expect(commandList).toHaveTextContent("2")
+    expect(commandList).toHaveTextContent("1")
+    expect(commandList).toHaveTextContent("0")
 
     await user.type(
       screen.getByPlaceholderText("siteAnnouncements:filters.searchSite"),

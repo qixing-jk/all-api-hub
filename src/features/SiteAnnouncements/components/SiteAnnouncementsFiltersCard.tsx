@@ -55,11 +55,23 @@ export function SiteAnnouncementsFiltersCard({
               value: "all",
               label: t("filters.allSites"),
             },
-            ...siteOptions,
+            ...siteOptions.map((option) => ({
+              value: option.value,
+              label: option.label,
+              suffix: (
+                <span
+                  aria-hidden="true"
+                  className="text-muted-foreground text-xs tabular-nums"
+                >
+                  {option.announcementCount}
+                </span>
+              ),
+            })),
           ]}
           placeholder={t("filters.site")}
           searchPlaceholder={t("filters.searchSite")}
           aria-label={t("filters.site")}
+          listClassName="max-h-none"
         />
 
         <Select value={siteType} onValueChange={onSiteTypeChange}>

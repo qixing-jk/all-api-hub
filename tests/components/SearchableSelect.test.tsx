@@ -1,7 +1,13 @@
 import { describe, expect, it } from "vitest"
 
 import { SearchableSelect } from "~/components/ui"
-import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+  within,
+} from "~~/tests/test-utils/render"
 
 describe("SearchableSelect", () => {
   it("shows a custom-entry hint when options are empty and allowCustomValue is enabled", async () => {
@@ -57,5 +63,34 @@ describe("SearchableSelect", () => {
     expect(
       await screen.findByRole("option", { name: "Account 1" }),
     ).toBeVisible()
+  })
+
+  it("supports custom list height and option suffix content", async () => {
+    render(
+      <SearchableSelect
+        options={[
+          {
+            value: "site-1",
+            label: "Site 1",
+            suffix: <span data-testid="site-1-count">3</span>,
+          },
+        ]}
+        value=""
+        onChange={() => {}}
+        open={true}
+        onOpenChange={() => {}}
+        listClassName="max-h-none"
+      />,
+    )
+
+    expect(await screen.findByText("Site 1")).toBeInTheDocument()
+    const commandItem = document.querySelector(
+      '[data-slot="command-item"]',
+    ) as HTMLElement
+    expect(within(commandItem).getByTestId("site-1-count")).toBeInTheDocument()
+    expect(screen.getByText("3")).toBeInTheDocument()
+    expect(document.querySelector('[data-slot="command-list"]')).toHaveClass(
+      "max-h-none",
+    )
   })
 })

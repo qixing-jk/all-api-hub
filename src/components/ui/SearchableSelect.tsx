@@ -24,6 +24,7 @@ export interface SearchableSelectOption {
   value: string
   label: string
   disabled?: boolean
+  suffix?: React.ReactNode
 }
 
 /**
@@ -97,6 +98,11 @@ export interface SearchableSelectProps
    * `document.body` would escape styles and be hidden behind high z-index overlays.
    */
   portalContainer?: HTMLElement
+
+  /**
+   * Optional class applied to the internal option list.
+   */
+  listClassName?: string
 }
 
 /**
@@ -121,6 +127,7 @@ export const SearchableSelect = React.forwardRef<
     open,
     onOpenChange,
     portalContainer,
+    listClassName,
     className,
     disabled,
     ...buttonProps
@@ -204,7 +211,7 @@ export const SearchableSelect = React.forwardRef<
             value={searchTerm}
             onValueChange={setSearchTerm}
           />
-          <CommandList>
+          <CommandList className={listClassName}>
             {options.length === 0 && !canUseCustomValue ? (
               <div
                 data-slot="searchable-select-empty"
@@ -251,7 +258,10 @@ export const SearchableSelect = React.forwardRef<
                       value === option.value ? "opacity-100" : "opacity-0",
                     )}
                   />
-                  <span>{option.label}</span>
+                  <span className="min-w-0 flex-1 truncate">
+                    {option.label}
+                  </span>
+                  {option.suffix}
                 </CommandItem>
               ))}
             </CommandGroup>
