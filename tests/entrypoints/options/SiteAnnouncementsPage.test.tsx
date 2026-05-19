@@ -518,7 +518,9 @@ describe("SiteAnnouncementsPage", () => {
     const manualCheckButton = await screen.findByRole("button", {
       name: "siteAnnouncements:actions.checkNow",
     })
-    expect(manualCheckButton).toBeDisabled()
+    await waitFor(() => {
+      expect(manualCheckButton).toBeDisabled()
+    })
 
     resolveRecords({ success: true, data: records })
     resolveStatus({ success: true, data: status })
