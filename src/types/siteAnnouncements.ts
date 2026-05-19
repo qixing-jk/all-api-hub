@@ -34,7 +34,7 @@ export interface SiteAnnouncementPreferences {
 
 export const DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES: SiteAnnouncementPreferences =
   {
-    enabled: true,
+    enabled: false,
     notificationEnabled: true,
     intervalMinutes: 360,
   }

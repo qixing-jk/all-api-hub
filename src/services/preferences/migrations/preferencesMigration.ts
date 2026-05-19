@@ -18,6 +18,7 @@ import {
   type BalanceHistoryPreferences,
 } from "~/types/dailyBalanceHistory"
 import { DEFAULT_OCTOPUS_CONFIG } from "~/types/octopusConfig"
+import { normalizeSiteAnnouncementPreferences } from "~/types/siteAnnouncements"
 import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,
   normalizeTaskNotificationPreferences,
@@ -36,7 +37,7 @@ import { migrateSortingConfig } from "./sortingConfigMigration"
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 23
+export const CURRENT_PREFERENCES_VERSION = 24
 
 /**
  * Migration function type
@@ -504,6 +505,25 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
           ? normalizeTaskNotificationPreferences(stored)
           : DEFAULT_TASK_NOTIFICATION_PREFERENCES,
       preferencesVersion: 23,
+    }
+  },
+
+  // Version 23 -> 24: Disable automatic site-announcement polling by default
+  // and for existing users. Manual checks remain available from the page.
+  24: (prefs: UserPreferences): UserPreferences => {
+    logger.debug(
+      "Migrating preferences from v23 to v24 (disable site announcement polling)",
+    )
+
+    return {
+      ...prefs,
+      siteAnnouncementNotifications: {
+        ...normalizeSiteAnnouncementPreferences(
+          prefs.siteAnnouncementNotifications,
+        ),
+        enabled: false,
+      },
+      preferencesVersion: 24,
     }
   },
 }
