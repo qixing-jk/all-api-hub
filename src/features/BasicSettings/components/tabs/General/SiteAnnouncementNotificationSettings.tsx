@@ -129,7 +129,7 @@ export default function SiteAnnouncementNotificationSettings() {
                 type="number"
                 min={MIN_POLLING_INTERVAL_MINUTES}
                 max={MAX_POLLING_INTERVAL_MINUTES}
-                step={15}
+                step={1}
                 value={intervalInput}
                 onChange={(event) => setIntervalInput(event.target.value)}
                 onBlur={() => void handleIntervalBlur()}

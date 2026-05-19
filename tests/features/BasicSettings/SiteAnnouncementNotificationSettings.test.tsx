@@ -152,6 +152,19 @@ describe("SiteAnnouncementNotificationSettings", () => {
     )
   })
 
+  it("uses normal one-minute steps for polling interval input", async () => {
+    render(<SiteAnnouncementNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const intervalInput = await screen.findByLabelText(
+      "settings:siteAnnouncementNotifications.polling.interval",
+    )
+
+    expect(intervalInput).toHaveAttribute("step", "1")
+  })
+
   it("resets an invalid polling interval without saving", async () => {
     render(<SiteAnnouncementNotificationSettings />, {
       withUserPreferencesProvider: false,
@@ -278,5 +291,9 @@ describe("SiteAnnouncementNotificationSettings", () => {
 describe("normalizePollingIntervalInput", () => {
   it("rejects non-finite numeric values", () => {
     expect(normalizePollingIntervalInput("Infinity")).toBeNull()
+  })
+
+  it("keeps whole-minute values without snapping to 15-minute steps", () => {
+    expect(normalizePollingIntervalInput("16")).toBe(16)
   })
 })
