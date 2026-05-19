@@ -5,23 +5,9 @@ import { hasUsableApiTokenKey } from "~/services/apiService/common/apiKey"
 import {
   getManagedSiteLegacyAdminConfig,
   resolveManagedSiteRuntimeConfigForType,
+  type ManagedSiteRuntimeConfigValue,
 } from "~/services/managedSites/runtimeConfig"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
-import {
-  DEFAULT_AXON_HUB_CONFIG,
-  type AxonHubConfig,
-} from "~/types/axonHubConfig"
-import {
-  DEFAULT_CLAUDE_CODE_HUB_CONFIG,
-  type ClaudeCodeHubConfig,
-} from "~/types/claudeCodeHubConfig"
-import {
-  DEFAULT_DONE_HUB_CONFIG,
-  type DoneHubConfig,
-} from "~/types/doneHubConfig"
-import type { NewApiConfig } from "~/types/newApiConfig"
-import type { OctopusConfig } from "~/types/octopusConfig"
-import type { VeloeraConfig } from "~/types/veloeraConfig"
 
 export type ManagedSiteLabelKey =
   | "settings:managedSite.newApi"
@@ -55,73 +41,12 @@ export interface ManagedSiteTargetOption {
   config: ManagedSiteAdminConfig
 }
 
-type ManagedSiteConfig =
-  | NewApiConfig
-  | DoneHubConfig
-  | VeloeraConfig
-  | OctopusConfig
-  | AxonHubConfig
-  | ClaudeCodeHubConfig
-
 export const collectManagedConfigSecrets = (
-  managedConfig: ManagedSiteConfig,
+  managedConfig: ManagedSiteRuntimeConfigValue,
 ) => {
   if ("adminToken" in managedConfig) return [managedConfig.adminToken]
   if ("password" in managedConfig) return [managedConfig.password]
   return []
-}
-
-/**
- * Extracts the selected managed site type and its corresponding config from a
- * given preferences snapshot.
- */
-function getManagedSiteConfigFromPreferencesForType(
-  preferences: UserPreferences,
-  siteType: ManagedSiteType,
-): {
-  siteType: ManagedSiteType
-  config: ManagedSiteConfig
-} {
-  let config: ManagedSiteConfig
-  if (siteType === SITE_TYPES.AXON_HUB) {
-    config = preferences.axonHub || DEFAULT_AXON_HUB_CONFIG
-  } else if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-    config = preferences.claudeCodeHub || DEFAULT_CLAUDE_CODE_HUB_CONFIG
-  } else if (siteType === SITE_TYPES.OCTOPUS) {
-    config = preferences.octopus || { baseUrl: "", username: "", password: "" }
-  } else if (siteType === SITE_TYPES.DONE_HUB) {
-    config = preferences.doneHub ?? DEFAULT_DONE_HUB_CONFIG
-  } else if (siteType === SITE_TYPES.VELOERA) {
-    config = preferences.veloera
-  } else {
-    config = preferences.newApi
-  }
-  return { siteType, config }
-}
-
-/**
- * Extracts the selected managed site type and its corresponding config from a
- * given preferences snapshot.
- */
-export function getManagedSiteConfigFromPreferences(
-  preferences: UserPreferences,
-): {
-  siteType: ManagedSiteType
-  config: ManagedSiteConfig
-} {
-  const siteType: ManagedSiteType =
-    preferences.managedSiteType || SITE_TYPES.NEW_API
-  return getManagedSiteConfigFromPreferencesForType(preferences, siteType)
-}
-
-/**
- * Convenience wrapper for retrieving the managed site type + config.
- */
-export function getManagedSiteConfig(prefs: UserPreferences): {
-  siteType: ManagedSiteType
-  config: ManagedSiteConfig
-} {
-  return getManagedSiteConfigFromPreferences(prefs)
 }
 
 /**

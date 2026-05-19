@@ -4,7 +4,6 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   getManagedSiteAdminConfig,
   getManagedSiteAdminConfigForType,
-  getManagedSiteConfigFromPreferences,
   getManagedSiteContext,
   getManagedSiteContextForType,
   getManagedSiteLabelKey,
@@ -19,7 +18,7 @@ import {
 } from "~/services/preferences/userPreferences"
 
 describe("managedSite", () => {
-  it("resolves Done Hub config when selected", () => {
+  it("resolves Done Hub admin config when selected", () => {
     const prefs = {
       ...DEFAULT_PREFERENCES,
       managedSiteType: SITE_TYPES.DONE_HUB,
@@ -30,9 +29,11 @@ describe("managedSite", () => {
       },
     } satisfies UserPreferences
 
-    const { siteType, config } = getManagedSiteConfigFromPreferences(prefs)
-    expect(siteType).toBe(SITE_TYPES.DONE_HUB)
-    expect(config).toEqual(prefs.doneHub)
+    expect(getManagedSiteAdminConfig(prefs)).toEqual({
+      baseUrl: prefs.doneHub.baseUrl,
+      adminToken: prefs.doneHub.adminToken,
+      userId: prefs.doneHub.userId,
+    })
   })
 
   it("returns Done Hub messages key + label key", () => {

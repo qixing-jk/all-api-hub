@@ -3,7 +3,6 @@ import { describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   getManagedSiteAdminConfigForType,
-  getManagedSiteConfigFromPreferences,
   getManagedSiteConfigMissingMessage,
   getManagedSiteContext,
   getManagedSiteLabelKey,
@@ -18,7 +17,7 @@ import {
 const translate = (key: string) => key
 
 describe("managedSite utils", () => {
-  it("defaults to new-api when managedSiteType is missing", () => {
+  it("defaults managed-site context to new-api when managedSiteType is missing", () => {
     const prefs = {
       newApi: {
         baseUrl: "https://new-api.example.com",
@@ -27,10 +26,6 @@ describe("managedSite utils", () => {
       },
     }
 
-    expect(getManagedSiteConfigFromPreferences(prefs as any)).toEqual({
-      siteType: SITE_TYPES.NEW_API,
-      config: prefs.newApi,
-    })
     expect(getManagedSiteContext(prefs as any)).toEqual({
       siteType: SITE_TYPES.NEW_API,
       messagesKey: "newapi",
