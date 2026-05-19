@@ -191,6 +191,34 @@ async function rescheduleAnnouncementAlarm(params: {
 }
 
 /**
+ * Chooses the next alarm delay from persisted site cooldowns.
+ */
+function getAnnouncementAlarmDelayMinutes(params: {
+  intervalMinutes: number
+  siteStates: SiteAnnouncementSiteState[]
+}): number {
+  const now = Date.now()
+  let nextDelayMinutes = Number.POSITIVE_INFINITY
+
+  for (const siteState of params.siteStates) {
+    const expiresAt = getAnnouncementCooldownExpiresAt({
+      siteState,
+      intervalMinutes: params.intervalMinutes,
+    })
+    if (expiresAt == null) {
+      continue
+    }
+
+    nextDelayMinutes = Math.min(
+      nextDelayMinutes,
+      Math.max(1, Math.ceil((expiresAt - now) / 60_000)),
+    )
+  }
+
+  return Number.isFinite(nextDelayMinutes) ? nextDelayMinutes : 1
+}
+
+/**
  * Removes duplicate common-provider accounts that share one announcement source.
  */
 function dedupeCommonAccounts(accounts: SiteAccount[]): SiteAccount[] {
@@ -265,9 +293,13 @@ class SiteAnnouncementScheduler {
       return
     }
 
+    const siteStates = await siteAnnouncementStorage.getStatus()
     await rescheduleAnnouncementAlarm({
       intervalMinutes,
-      delayInMinutes: intervalMinutes,
+      delayInMinutes: getAnnouncementAlarmDelayMinutes({
+        intervalMinutes,
+        siteStates,
+      }),
     })
   }
 
@@ -480,7 +512,7 @@ class SiteAnnouncementScheduler {
         )
         const delayInMinutes = Math.max(
           1,
-          (nextCooldownExpiresAt - Date.now()) / 60_000,
+          Math.ceil((nextCooldownExpiresAt - Date.now()) / 60_000),
         )
         await rescheduleAnnouncementAlarm({
           intervalMinutes,

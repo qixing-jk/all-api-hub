@@ -141,7 +141,7 @@ describe("siteAnnouncementScheduler", () => {
     expect(onAlarmMock).toHaveBeenCalled()
     expect(createAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck", {
       periodInMinutes: 360,
-      delayInMinutes: 360,
+      delayInMinutes: 1,
     })
   })
 
@@ -158,7 +158,7 @@ describe("siteAnnouncementScheduler", () => {
 
     expect(createAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck", {
       periodInMinutes: 360,
-      delayInMinutes: 360,
+      delayInMinutes: 1,
     })
   })
 
@@ -195,12 +195,62 @@ describe("siteAnnouncementScheduler", () => {
 
     expect(createAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck", {
       periodInMinutes: 360,
-      delayInMinutes: 360,
+      delayInMinutes: 1,
     })
     expect(response.mock.calls[0][0]).toMatchObject({
       success: true,
       data: [],
     })
+  })
+
+  it("recreates a missing announcement alarm with a short delay when stored status is overdue", async () => {
+    const intervalMinutes = 360
+    const intervalMs = intervalMinutes * 60 * 1000
+    const lastCheckedAt = 1_800_000_000_000
+    const now = lastCheckedAt + intervalMs + 5 * 60 * 1000
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
+
+    getAlarmMock
+      .mockResolvedValueOnce({
+        name: "siteAnnouncementsCheck",
+        periodInMinutes: intervalMinutes,
+        scheduledTime: now + 60_000,
+      })
+      .mockResolvedValueOnce(undefined)
+    await siteAnnouncementStorage.upsertSiteStatus({
+      siteKey: "notice:new-api:https://example.com",
+      siteName: "Example",
+      siteType: "new-api",
+      baseUrl: "https://example.com",
+      accountId: "account-1",
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      status: "success",
+      lastCheckedAt,
+    })
+
+    await siteAnnouncementScheduler.initialize()
+    createAlarmMock.mockClear()
+    clearAlarmMock.mockClear()
+
+    const response = vi.fn()
+    await handleSiteAnnouncementMessage(
+      { action: RuntimeActionIds.SiteAnnouncementsGetStatus },
+      response,
+    )
+
+    expect(createAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck", {
+      periodInMinutes: intervalMinutes,
+      delayInMinutes: 1,
+    })
+    expect(response.mock.calls[0][0]).toMatchObject({
+      success: true,
+      data: [
+        expect.objectContaining({
+          siteKey: "notice:new-api:https://example.com",
+        }),
+      ],
+    })
+    nowSpy.mockRestore()
   })
 
   it("keeps announcement alarm cleared when status is queried while polling is disabled", async () => {
