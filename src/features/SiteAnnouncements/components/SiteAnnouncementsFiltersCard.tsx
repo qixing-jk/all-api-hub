@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next"
 
 import {
+  SearchableSelect,
   Select,
   SelectContent,
   SelectItem,
@@ -9,12 +10,13 @@ import {
 } from "~/components/ui"
 
 import type { UnreadFilter } from "../types"
+import type { SiteAnnouncementSiteOption } from "../utils"
 
 interface SiteAnnouncementsFiltersCardProps {
   siteKey: string
   siteType: string
   unreadFilter: UnreadFilter
-  siteOptions: Array<[string, string]>
+  siteOptions: SiteAnnouncementSiteOption[]
   siteTypeOptions: string[]
   filteredCount: number
   totalCount: number
@@ -45,19 +47,20 @@ export function SiteAnnouncementsFiltersCard({
   return (
     <div className="dark:bg-dark-bg-secondary mb-4 rounded-lg border border-gray-200 bg-white p-3 shadow-sm dark:border-white/10">
       <div className="grid gap-3 md:grid-cols-3">
-        <Select value={siteKey} onValueChange={onSiteKeyChange}>
-          <SelectTrigger>
-            <SelectValue placeholder={t("filters.site")} />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{t("filters.allSites")}</SelectItem>
-            {siteOptions.map(([value, label]) => (
-              <SelectItem key={value} value={value}>
-                {label}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <SearchableSelect
+          value={siteKey}
+          onChange={onSiteKeyChange}
+          options={[
+            {
+              value: "all",
+              label: t("filters.allSites"),
+            },
+            ...siteOptions,
+          ]}
+          placeholder={t("filters.site")}
+          searchPlaceholder={t("filters.searchSite")}
+          aria-label={t("filters.site")}
+        />
 
         <Select value={siteType} onValueChange={onSiteTypeChange}>
           <SelectTrigger>

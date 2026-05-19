@@ -241,6 +241,65 @@ describe("SiteAnnouncementsPage", () => {
     })
   })
 
+  it("sorts site filter options by announcement count and supports search", async () => {
+    const user = userEvent.setup()
+    const betaSecondRecord: SiteAnnouncementRecord = {
+      ...records[1]!,
+      id: "announcement-3",
+      fingerprint: "fp-3",
+      title: "Beta follow-up",
+    }
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      switch (message.action) {
+        case RuntimeActionIds.SiteAnnouncementsListRecords:
+          return { success: true, data: [...records, betaSecondRecord] }
+        case RuntimeActionIds.SiteAnnouncementsGetStatus:
+          return {
+            success: true,
+            data: [
+              ...status,
+              {
+                siteKey: "site-3",
+                siteName: "Gamma API",
+                siteType: "new-api",
+                baseUrl: "https://gamma.example.com",
+                accountId: "account-3",
+                providerId: "common",
+                status: "success",
+                records: [],
+              },
+            ],
+          }
+        default:
+          return { success: true }
+      }
+    })
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:title")
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "siteAnnouncements:filters.site",
+      }),
+    )
+
+    const options = await screen.findAllByRole("option")
+    expect(options.map((option) => option.textContent)).toEqual([
+      "siteAnnouncements:filters.allSites",
+      "Beta API",
+      "Alpha API",
+      "Gamma API",
+    ])
+
+    await user.type(
+      screen.getByPlaceholderText("siteAnnouncements:filters.searchSite"),
+      "gamma",
+    )
+    expect(screen.getByRole("option", { name: "Gamma API" })).toBeVisible()
+    expect(screen.queryByRole("option", { name: "Beta API" })).toBeNull()
+  })
+
   it("marks unread Sub2API announcements as read only when expanding details", async () => {
     const user = userEvent.setup()
     const unreadSub2ApiRecord = {

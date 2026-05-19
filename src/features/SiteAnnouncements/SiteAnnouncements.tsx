@@ -115,7 +115,9 @@ export default function SiteAnnouncementsPage({
   const selectedStatus = status.find((item) => item.siteKey === siteKey)
   const unreadCount = records.filter((record) => !record.read).length
   const notifiedCount = records.filter((record) => record.notifiedAt).length
-  const affectedSiteCount = siteOptions.length
+  const affectedSiteCount = siteOptions.filter(
+    (option) => option.announcementCount > 0,
+  ).length
 
   const metrics = useMemo<AnnouncementMetric[]>(
     () => [

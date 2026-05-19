@@ -8,6 +8,12 @@ import { joinUrl } from "~/utils/core/url"
 
 import type { UnreadFilter } from "./types"
 
+export interface SiteAnnouncementSiteOption {
+  value: string
+  label: string
+  announcementCount: number
+}
+
 /**
  * Formats an epoch timestamp for display in the current locale.
  */
@@ -85,17 +91,32 @@ export function buildSiteOptions(
     baseUrl: string
   }>,
 ) {
-  const map = new Map<string, string>()
+  const map = new Map<string, SiteAnnouncementSiteOption>()
 
   for (const item of status) {
-    map.set(item.siteKey, item.siteName || item.baseUrl)
+    map.set(item.siteKey, {
+      value: item.siteKey,
+      label: item.siteName || item.baseUrl,
+      announcementCount: 0,
+    })
   }
 
   for (const item of records) {
-    map.set(item.siteKey, item.siteName || item.baseUrl)
+    const existing = map.get(item.siteKey)
+    map.set(item.siteKey, {
+      value: item.siteKey,
+      label: item.siteName || item.baseUrl,
+      announcementCount: (existing?.announcementCount ?? 0) + 1,
+    })
   }
 
-  return [...map.entries()]
+  return [...map.values()].sort((a, b) => {
+    if (a.announcementCount !== b.announcementCount) {
+      return b.announcementCount - a.announcementCount
+    }
+
+    return a.label.localeCompare(b.label)
+  })
 }
 
 /**
