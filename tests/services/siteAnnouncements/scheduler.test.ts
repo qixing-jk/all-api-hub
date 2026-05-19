@@ -355,6 +355,67 @@ describe("siteAnnouncementScheduler", () => {
     nowSpy.mockRestore()
   })
 
+  it("ignores removed site cooldowns when realigning the next announcement alarm", async () => {
+    const intervalMinutes = 360
+    const now = 1_800_000_000_000
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
+
+    getAlarmMock
+      .mockResolvedValueOnce({
+        name: "siteAnnouncementsCheck",
+        periodInMinutes: intervalMinutes,
+        scheduledTime: now + intervalMinutes * 60 * 1000,
+      })
+      .mockResolvedValueOnce({
+        name: "siteAnnouncementsCheck",
+        periodInMinutes: intervalMinutes,
+        scheduledTime: now + intervalMinutes * 60 * 1000,
+      })
+    await siteAnnouncementStorage.upsertSiteStatus({
+      siteKey: "notice:new-api:https://active.example.com",
+      siteName: "Active",
+      siteType: "new-api",
+      baseUrl: "https://active.example.com",
+      accountId: "active-account",
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      status: "success",
+      lastCheckedAt: now,
+    })
+    await siteAnnouncementStorage.upsertSiteStatus({
+      siteKey: "notice:new-api:https://removed.example.com",
+      siteName: "Removed",
+      siteType: "new-api",
+      baseUrl: "https://removed.example.com",
+      accountId: "removed-account",
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      status: "success",
+      lastCheckedAt: now - intervalMinutes * 60 * 1000,
+    })
+    getEnabledAccountsMock.mockResolvedValue([
+      createAccount({
+        id: "active-account",
+        site_url: "https://active.example.com",
+      }),
+    ])
+
+    await siteAnnouncementScheduler.initialize()
+    createAlarmMock.mockClear()
+    clearAlarmMock.mockClear()
+
+    const response = vi.fn()
+    await handleSiteAnnouncementMessage(
+      { action: RuntimeActionIds.SiteAnnouncementsGetStatus },
+      response,
+    )
+
+    expect(clearAlarmMock).not.toHaveBeenCalled()
+    expect(createAlarmMock).not.toHaveBeenCalled()
+    expect(response.mock.calls[0][0]).toMatchObject({
+      success: true,
+    })
+    nowSpy.mockRestore()
+  })
+
   it("keeps announcement alarm cleared when status is queried while polling is disabled", async () => {
     getPreferencesMock.mockResolvedValue({
       siteAnnouncementNotifications: {
@@ -937,6 +998,34 @@ describe("siteAnnouncementScheduler", () => {
     expect(unknownResponse).toHaveBeenCalledWith({
       success: false,
       error: "Unknown action",
+    })
+  })
+
+  it("returns current status when schedule reconciliation fails", async () => {
+    await siteAnnouncementStorage.upsertSiteStatus({
+      siteKey: "notice:new-api:https://example.com",
+      siteName: "Example",
+      siteType: "new-api",
+      baseUrl: "https://example.com",
+      accountId: "account-1",
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      status: "success",
+    })
+    getPreferencesMock.mockRejectedValueOnce(new Error("prefs failed"))
+
+    const response = vi.fn()
+    await handleSiteAnnouncementMessage(
+      { action: RuntimeActionIds.SiteAnnouncementsGetStatus },
+      response,
+    )
+
+    expect(response.mock.calls[0][0]).toMatchObject({
+      success: true,
+      data: [
+        expect.objectContaining({
+          siteKey: "notice:new-api:https://example.com",
+        }),
+      ],
     })
   })
 

@@ -200,11 +200,24 @@ function getAnnouncementAlarmDelayMinutes(params: {
 }): number {
   const now = Date.now()
   let nextDelayMinutes = Number.POSITIVE_INFINITY
+  const accounts = dedupeCommonAccounts(params.accounts)
+  const enabledSiteKeys = new Set(
+    accounts.map((account) => {
+      const provider = getSiteAnnouncementProvider(account.site_type)
+      return provider.createSiteKey({
+        accountId: account.id,
+        siteType: account.site_type,
+        baseUrl: account.site_url,
+      })
+    }),
+  )
   const siteKeysWithStatus = new Set(
-    params.siteStates.map((siteState) => siteState.siteKey),
+    params.siteStates
+      .filter((siteState) => enabledSiteKeys.has(siteState.siteKey))
+      .map((siteState) => siteState.siteKey),
   )
 
-  for (const account of dedupeCommonAccounts(params.accounts)) {
+  for (const account of accounts) {
     const provider = getSiteAnnouncementProvider(account.site_type)
     const siteKey = provider.createSiteKey({
       accountId: account.id,
@@ -217,6 +230,10 @@ function getAnnouncementAlarmDelayMinutes(params: {
   }
 
   for (const siteState of params.siteStates) {
+    if (!enabledSiteKeys.has(siteState.siteKey)) {
+      continue
+    }
+
     const expiresAt = getAnnouncementCooldownExpiresAt({
       siteState,
       intervalMinutes: params.intervalMinutes,
@@ -594,7 +611,11 @@ export const handleSiteAnnouncementMessage = async (
   try {
     switch (request.action) {
       case RuntimeActionIds.SiteAnnouncementsGetStatus: {
-        await siteAnnouncementScheduler.reconcileScheduleFromPreferences()
+        try {
+          await siteAnnouncementScheduler.reconcileScheduleFromPreferences()
+        } catch (error) {
+          logger.warn("Failed to reconcile site announcement schedule", error)
+        }
         sendResponse({
           success: true,
           data: await siteAnnouncementStorage.getStatus(),
