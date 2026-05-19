@@ -2,7 +2,10 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import * as octopusApi from "~/services/apiService/octopus"
 import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
-import { resolveCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
+import {
+  resolveCurrentManagedSiteRuntimeConfig,
+  resolveManagedSiteRuntimeConfigForType,
+} from "~/services/managedSites/runtimeConfig"
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteContext,
@@ -394,7 +397,10 @@ class ModelSyncScheduler {
     }
 
     if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-      const managedConfig = resolveCurrentManagedSiteRuntimeConfig(userPrefs)
+      const managedConfig = resolveManagedSiteRuntimeConfigForType(
+        userPrefs,
+        SITE_TYPES.CLAUDE_CODE_HUB,
+      )
       if (!managedConfig) {
         throw new Error(getManagedSiteConfigMissingMessage(t, messagesKey))
       }

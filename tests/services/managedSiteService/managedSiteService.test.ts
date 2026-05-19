@@ -138,7 +138,7 @@ describe("managedSiteService", () => {
       newApi: {
         baseUrl: "https://new-api.example.com",
         adminToken: "admin-token",
-        userId: "admin",
+        userId: "1",
       },
       octopus: {
         baseUrl: "https://octopus.example.com",
@@ -208,7 +208,7 @@ describe("managedSiteService", () => {
       newApi: {
         baseUrl: "https://new-api.example.com",
         adminToken: "admin-token",
-        userId: "admin",
+        userId: "1",
       },
     }
     mockGetPreferences.mockResolvedValueOnce(prefs).mockResolvedValueOnce(prefs)
@@ -223,7 +223,7 @@ describe("managedSiteService", () => {
     expect(config).toEqual({
       baseUrl: "https://new-api.example.com",
       adminToken: "admin-token",
-      userId: "admin",
+      userId: "1",
     })
   })
 
@@ -316,21 +316,24 @@ describe("managedSiteService", () => {
 
     const service = getManagedSiteServiceForType(SITE_TYPES.NEW_API)
 
-    await service.searchChannel(
-      {
-        baseUrl: "https://new-api.example.com",
-        adminToken: "admin-token",
-        userId: "admin",
-      },
-      "alpha",
-    )
+    const newApiConfig = {
+      baseUrl: "https://new-api.example.com",
+      adminToken: "admin-token",
+      userId: "1",
+    }
+    const octopusConfig = {
+      baseUrl: "https://octopus.example.com",
+      username: "octo-admin",
+      password: "secret",
+    }
+
+    await service.searchChannel(newApiConfig, "alpha")
+
+    // @ts-expect-error New API services must reject other site config shapes.
+    service.searchChannel(octopusConfig, "alpha")
 
     expect(newApiProvider.searchChannel).toHaveBeenCalledWith(
-      {
-        baseUrl: "https://new-api.example.com",
-        adminToken: "admin-token",
-        userId: "admin",
-      },
+      newApiConfig,
       "alpha",
     )
   })

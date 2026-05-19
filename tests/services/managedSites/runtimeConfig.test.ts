@@ -156,6 +156,36 @@ describe("managed-site runtime config resolver", () => {
     ).toBeNull()
   })
 
+  it("returns null for non-numeric access-token managed-site user IDs", () => {
+    const prefs = buildUserPreferences({
+      newApi: {
+        baseUrl: "https://new-api.example.com",
+        adminToken: "new-token",
+        userId: "admin",
+      },
+      doneHub: {
+        baseUrl: "https://donehub.example.com",
+        adminToken: "done-token",
+        userId: "2a",
+      },
+      veloera: {
+        baseUrl: "https://veloera.example.com",
+        adminToken: "veloera-token",
+        userId: " root ",
+      },
+    })
+
+    expect(
+      resolveManagedSiteRuntimeConfigForType(prefs, SITE_TYPES.NEW_API),
+    ).toBeNull()
+    expect(
+      resolveManagedSiteRuntimeConfigForType(prefs, SITE_TYPES.DONE_HUB),
+    ).toBeNull()
+    expect(
+      resolveManagedSiteRuntimeConfigForType(prefs, SITE_TYPES.VELOERA),
+    ).toBeNull()
+  })
+
   it("resolves the current runtime config and falls back to New API when unset", () => {
     const prefs = buildUserPreferences({
       managedSiteType: undefined,

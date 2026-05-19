@@ -4,6 +4,7 @@ import {
   getCurrentManagedSiteRuntimeConfig,
   getManagedSiteRuntimeConfigForType,
   type ManagedSiteRuntimeConfigValue,
+  type ManagedSiteRuntimeConfigValueForType,
 } from "~/services/managedSites/runtimeConfig"
 import type { ManagedSiteMessagesKey } from "~/services/managedSites/utils/managedSite"
 import {
@@ -39,32 +40,35 @@ import * as veloeraService from "./providers/veloera"
 
 export type ManagedSiteConfig = ManagedSiteRuntimeConfigValue
 
-export interface ManagedSiteService {
-  siteType: ManagedSiteType
+export interface ManagedSiteService<
+  TConfig extends ManagedSiteConfig = ManagedSiteConfig,
+  TSiteType extends ManagedSiteType = ManagedSiteType,
+> {
+  siteType: TSiteType
   messagesKey: ManagedSiteMessagesKey
 
   searchChannel(
-    config: ManagedSiteRuntimeConfigValue,
+    config: TConfig,
     keyword: string,
   ): Promise<ManagedSiteChannelListData | null>
 
   createChannel(
-    config: ManagedSiteRuntimeConfigValue,
+    config: TConfig,
     channelData: CreateChannelPayload,
   ): Promise<ApiResponse<unknown>>
 
   updateChannel(
-    config: ManagedSiteRuntimeConfigValue,
+    config: TConfig,
     channelData: UpdateChannelPayload,
   ): Promise<ApiResponse<unknown>>
 
   deleteChannel(
-    config: ManagedSiteRuntimeConfigValue,
+    config: TConfig,
     channelId: number,
   ): Promise<ApiResponse<unknown>>
 
   checkValidConfig(): Promise<boolean>
-  getConfig(): Promise<ManagedSiteConfig | null>
+  getConfig(): Promise<TConfig | null>
 
   fetchAvailableModels(
     account: DisplaySiteData,
@@ -84,14 +88,11 @@ export interface ManagedSiteService {
   ): CreateChannelPayload
 
   hydrateComparableChannelKeys?(
-    config: ManagedSiteRuntimeConfigValue,
+    config: TConfig,
     candidates: ManagedSiteChannel[],
   ): Promise<ManagedSiteChannel[]>
 
-  fetchChannelSecretKey?(
-    config: ManagedSiteRuntimeConfigValue,
-    channelId: number,
-  ): Promise<string>
+  fetchChannelSecretKey?(config: TConfig, channelId: number): Promise<string>
 
   /**
    * Legacy direct-import entrypoint kept on the managed-site service contract.
@@ -104,6 +105,9 @@ export interface ManagedSiteService {
     toastId?: string,
   ): Promise<unknown>
 }
+
+export type TypedManagedSiteService<TSiteType extends ManagedSiteType> =
+  ManagedSiteService<ManagedSiteRuntimeConfigValueForType<TSiteType>, TSiteType>
 
 /**
  * Check if preferences contain a valid managed site admin configuration.
@@ -145,6 +149,27 @@ export async function getManagedSiteService(): Promise<ManagedSiteService> {
 /**
  * Resolve the managed site service implementation for an explicit site type.
  */
+export function getManagedSiteServiceForType(
+  siteType: typeof SITE_TYPES.OCTOPUS,
+): TypedManagedSiteService<typeof SITE_TYPES.OCTOPUS>
+export function getManagedSiteServiceForType(
+  siteType: typeof SITE_TYPES.AXON_HUB,
+): TypedManagedSiteService<typeof SITE_TYPES.AXON_HUB>
+export function getManagedSiteServiceForType(
+  siteType: typeof SITE_TYPES.CLAUDE_CODE_HUB,
+): TypedManagedSiteService<typeof SITE_TYPES.CLAUDE_CODE_HUB>
+export function getManagedSiteServiceForType(
+  siteType: typeof SITE_TYPES.VELOERA,
+): TypedManagedSiteService<typeof SITE_TYPES.VELOERA>
+export function getManagedSiteServiceForType(
+  siteType: typeof SITE_TYPES.DONE_HUB,
+): TypedManagedSiteService<typeof SITE_TYPES.DONE_HUB>
+export function getManagedSiteServiceForType(
+  siteType: typeof SITE_TYPES.NEW_API,
+): TypedManagedSiteService<typeof SITE_TYPES.NEW_API>
+export function getManagedSiteServiceForType(
+  siteType: ManagedSiteType,
+): ManagedSiteService
 export function getManagedSiteServiceForType(
   siteType: ManagedSiteType,
 ): ManagedSiteService {

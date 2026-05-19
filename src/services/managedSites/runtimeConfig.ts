@@ -1,4 +1,5 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import { isManagedSiteAdminUserId } from "~/services/managedSites/utils/adminUserId"
 import {
   userPreferences,
   type UserPreferences,
@@ -10,7 +11,7 @@ import type { NewApiConfig } from "~/types/newApiConfig"
 import type { OctopusConfig } from "~/types/octopusConfig"
 import type { VeloeraConfig } from "~/types/veloeraConfig"
 
-export interface ManagedSiteLegacyAdminConfig {
+interface ManagedSiteLegacyAdminConfig {
   baseUrl: string
   adminToken: string
   userId: string
@@ -28,6 +29,11 @@ export type ManagedSiteRuntimeConfig =
     }
 
 export type ManagedSiteRuntimeConfigValue = ManagedSiteRuntimeConfig["config"]
+export type ManagedSiteRuntimeConfigForType<TSiteType extends ManagedSiteType> =
+  Extract<ManagedSiteRuntimeConfig, { siteType: TSiteType }>
+export type ManagedSiteRuntimeConfigValueForType<
+  TSiteType extends ManagedSiteType,
+> = ManagedSiteRuntimeConfigForType<TSiteType>["config"]
 
 const hasText = (value: unknown): value is string =>
   typeof value === "string" && value.trim().length > 0
@@ -40,17 +46,19 @@ function resolveAccessTokenConfig(
 ) {
   if (!config) return null
   if (!hasText(config.baseUrl) || !hasText(config.adminToken)) return null
-  if (!hasText(config.userId)) return null
+  if (!isManagedSiteAdminUserId(config.userId)) return null
   return config
 }
 
 /**
  * Resolves the full runtime config for an explicit managed-site type.
  */
-export function resolveManagedSiteRuntimeConfigForType(
+export function resolveManagedSiteRuntimeConfigForType<
+  TSiteType extends ManagedSiteType,
+>(
   preferences: UserPreferences,
-  siteType: ManagedSiteType,
-): ManagedSiteRuntimeConfig | null {
+  siteType: TSiteType,
+): ManagedSiteRuntimeConfigForType<TSiteType> | null {
   if (siteType === SITE_TYPES.OCTOPUS) {
     const config = preferences.octopus
     if (
@@ -61,7 +69,7 @@ export function resolveManagedSiteRuntimeConfigForType(
     ) {
       return null
     }
-    return { siteType, config }
+    return { siteType, config } as ManagedSiteRuntimeConfigForType<TSiteType>
   }
 
   if (siteType === SITE_TYPES.AXON_HUB) {
@@ -74,7 +82,7 @@ export function resolveManagedSiteRuntimeConfigForType(
     ) {
       return null
     }
-    return { siteType, config }
+    return { siteType, config } as ManagedSiteRuntimeConfigForType<TSiteType>
   }
 
   if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
@@ -82,22 +90,28 @@ export function resolveManagedSiteRuntimeConfigForType(
     if (!config || !hasText(config.baseUrl) || !hasText(config.adminToken)) {
       return null
     }
-    return { siteType, config }
+    return { siteType, config } as ManagedSiteRuntimeConfigForType<TSiteType>
   }
 
   if (siteType === SITE_TYPES.DONE_HUB) {
     const config = resolveAccessTokenConfig(preferences.doneHub)
-    return config ? { siteType, config } : null
+    return config
+      ? ({ siteType, config } as ManagedSiteRuntimeConfigForType<TSiteType>)
+      : null
   }
 
   if (siteType === SITE_TYPES.VELOERA) {
     const config = resolveAccessTokenConfig(preferences.veloera)
-    return config ? { siteType, config } : null
+    return config
+      ? ({ siteType, config } as ManagedSiteRuntimeConfigForType<TSiteType>)
+      : null
   }
 
   if (siteType === SITE_TYPES.NEW_API) {
     const config = resolveAccessTokenConfig(preferences.newApi)
-    return config ? { siteType, config } : null
+    return config
+      ? ({ siteType, config } as ManagedSiteRuntimeConfigForType<TSiteType>)
+      : null
   }
 
   const exhaustiveSiteType: never = siteType
