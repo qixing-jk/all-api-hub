@@ -2,6 +2,10 @@ import type { TFunction } from "i18next"
 
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { hasUsableApiTokenKey } from "~/services/apiService/common/apiKey"
+import {
+  getManagedSiteLegacyAdminConfig,
+  resolveManagedSiteRuntimeConfigForType,
+} from "~/services/managedSites/runtimeConfig"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import {
   DEFAULT_AXON_HUB_CONFIG,
@@ -197,76 +201,11 @@ export function getManagedSiteAdminConfigForType(
   preferences: UserPreferences,
   siteType: ManagedSiteType,
 ): ManagedSiteAdminConfig | null {
-  const { config } = getManagedSiteConfigFromPreferencesForType(
+  const runtimeConfig = resolveManagedSiteRuntimeConfigForType(
     preferences,
     siteType,
   )
-
-  // Octopus 使用不同的配置结构
-  if (siteType === SITE_TYPES.OCTOPUS) {
-    const octopusConfig = config as OctopusConfig
-    if (
-      !octopusConfig?.baseUrl ||
-      !octopusConfig?.username ||
-      !octopusConfig?.password
-    ) {
-      return null
-    }
-    return {
-      baseUrl: octopusConfig.baseUrl,
-      adminToken: "", // Octopus 使用 JWT，动态获取
-      userId: octopusConfig.username,
-    }
-  }
-
-  if (siteType === SITE_TYPES.AXON_HUB) {
-    const axonHubConfig = config as AxonHubConfig
-    if (
-      !axonHubConfig?.baseUrl ||
-      !axonHubConfig?.email ||
-      !axonHubConfig?.password
-    ) {
-      return null
-    }
-    // AxonHub authenticates with admin email + password and obtains a session
-    // token per request. Keep the shared shape uniform, but treat adminToken as
-    // a password slot here, not a Bearer token, and never log or forward it.
-    return {
-      baseUrl: axonHubConfig.baseUrl,
-      adminToken: axonHubConfig.password,
-      userId: axonHubConfig.email,
-    }
-  }
-
-  if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-    const claudeCodeHubConfig = config as ClaudeCodeHubConfig
-    if (!claudeCodeHubConfig?.baseUrl || !claudeCodeHubConfig?.adminToken) {
-      return null
-    }
-    // Claude Code Hub authenticates with an admin token only and does not
-    // expose a meaningful per-user identifier through this shared contract.
-    return {
-      baseUrl: claudeCodeHubConfig.baseUrl,
-      adminToken: claudeCodeHubConfig.adminToken,
-      userId: "admin",
-    }
-  }
-
-  // New API / Done Hub / Veloera 使用 adminToken
-  const legacyConfig = config as NewApiConfig | DoneHubConfig | VeloeraConfig
-  if (
-    !legacyConfig?.baseUrl ||
-    !legacyConfig?.adminToken ||
-    !legacyConfig?.userId
-  ) {
-    return null
-  }
-
-  return {
-    baseUrl: legacyConfig.baseUrl,
-    adminToken: legacyConfig.adminToken,
-    userId: legacyConfig.userId,
-  }
+  return runtimeConfig ? getManagedSiteLegacyAdminConfig(runtimeConfig) : null
 }
 
 /**

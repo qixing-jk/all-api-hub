@@ -21,10 +21,42 @@ describe("doneHubService hydrateComparableChannelKeys", () => {
     mockSearchChannel.mockReset()
   })
 
+  it("searches channels from a runtime config object", async () => {
+    const { searchChannel } = await import(
+      "~/services/managedSites/providers/doneHubService"
+    )
+    const config = {
+      baseUrl: "https://donehub.example.com",
+      adminToken: "done-token",
+      userId: "9",
+    }
+
+    mockSearchChannel.mockResolvedValueOnce({ items: [] })
+
+    await searchChannel(config, "alpha")
+
+    expect(mockSearchChannel).toHaveBeenCalledWith(
+      {
+        baseUrl: config.baseUrl,
+        auth: {
+          authType: "access_token",
+          accessToken: config.adminToken,
+          userId: config.userId,
+        },
+      },
+      "alpha",
+    )
+  })
+
   it("fetches the full channel key from channel detail", async () => {
     const { fetchChannelSecretKey } = await import(
       "~/services/managedSites/providers/doneHubService"
     )
+    const config = {
+      baseUrl: "https://done-hub.example.com",
+      adminToken: "admin-token",
+      userId: "1",
+    }
 
     mockFetchDoneHubChannel.mockResolvedValueOnce(
       buildManagedSiteChannel({
@@ -33,20 +65,15 @@ describe("doneHubService hydrateComparableChannelKeys", () => {
       }),
     )
 
-    const result = await fetchChannelSecretKey(
-      "https://done-hub.example.com",
-      "admin-token",
-      "1",
-      21,
-    )
+    const result = await fetchChannelSecretKey(config, 21)
 
     expect(mockFetchDoneHubChannel).toHaveBeenCalledWith(
       {
-        baseUrl: "https://done-hub.example.com",
+        baseUrl: config.baseUrl,
         auth: {
           authType: "access_token",
-          accessToken: "admin-token",
-          userId: "1",
+          accessToken: config.adminToken,
+          userId: config.userId,
         },
       },
       21,
@@ -58,6 +85,11 @@ describe("doneHubService hydrateComparableChannelKeys", () => {
     const { hydrateComparableChannelKeys } = await import(
       "~/services/managedSites/providers/doneHubService"
     )
+    const config = {
+      baseUrl: "https://donehub.example.com",
+      adminToken: "admin-token",
+      userId: "1",
+    }
 
     mockFetchDoneHubChannel.mockResolvedValueOnce(
       buildManagedSiteChannel({
@@ -69,21 +101,16 @@ describe("doneHubService hydrateComparableChannelKeys", () => {
       }),
     )
 
-    const result = await hydrateComparableChannelKeys(
-      "https://donehub.example.com",
-      "admin-token",
-      1,
-      [
-        buildManagedSiteChannel({
-          id: 20,
-          base_url: "https://candidate.example.com",
-          key: "",
-          name: "Candidate Done Hub Channel",
-          models: "candidate-model",
-        }),
-        buildManagedSiteChannel({ id: 21, key: "sk-visible" }),
-      ],
-    )
+    const result = await hydrateComparableChannelKeys(config, [
+      buildManagedSiteChannel({
+        id: 20,
+        base_url: "https://candidate.example.com",
+        key: "",
+        name: "Candidate Done Hub Channel",
+        models: "candidate-model",
+      }),
+      buildManagedSiteChannel({ id: 21, key: "sk-visible" }),
+    ])
 
     expect(mockFetchDoneHubChannel).toHaveBeenCalledTimes(1)
     expect(mockFetchDoneHubChannel).toHaveBeenCalledWith(expect.any(Object), 20)
@@ -106,6 +133,11 @@ describe("doneHubService hydrateComparableChannelKeys", () => {
     const { MatchResolutionUnresolvedError } = await import(
       "~/services/managedSites/channelMatch"
     )
+    const config = {
+      baseUrl: "https://donehub.example.com",
+      adminToken: "admin-token",
+      userId: "1",
+    }
 
     mockFetchDoneHubChannel.mockResolvedValueOnce(
       buildManagedSiteChannel({
@@ -115,12 +147,9 @@ describe("doneHubService hydrateComparableChannelKeys", () => {
     )
 
     await expect(
-      hydrateComparableChannelKeys(
-        "https://donehub.example.com",
-        "admin-token",
-        1,
-        [buildManagedSiteChannel({ id: 22, key: "" })],
-      ),
+      hydrateComparableChannelKeys(config, [
+        buildManagedSiteChannel({ id: 22, key: "" }),
+      ]),
     ).rejects.toBeInstanceOf(MatchResolutionUnresolvedError)
   })
 })

@@ -160,8 +160,14 @@ const collectSecrets = (
     token.key,
     account.token,
     account.cookieAuthSessionCookie,
-    managedConfig.token,
+    ...collectManagedConfigSecrets(managedConfig),
   ].filter(Boolean) as string[]
+
+const collectManagedConfigSecrets = (managedConfig: ManagedSiteConfig) => {
+  if ("adminToken" in managedConfig) return [managedConfig.adminToken]
+  if ("password" in managedConfig) return [managedConfig.password]
+  return []
+}
 
 const preparePreviewItem = async (params: {
   input: ManagedSiteTokenBatchExportItemInput
@@ -455,12 +461,7 @@ export async function executeManagedSiteTokenBatchExport(params: {
     async (item): Promise<ManagedSiteTokenBatchExportExecutionItem> => {
       try {
         const payload = service.buildChannelPayload(item.draft!)
-        const response = await service.createChannel(
-          managedConfig.baseUrl,
-          managedConfig.token,
-          managedConfig.userId,
-          payload,
-        )
+        const response = await service.createChannel(managedConfig, payload)
 
         if (!response.success) {
           throw new Error(response.message || "Failed to create channel")

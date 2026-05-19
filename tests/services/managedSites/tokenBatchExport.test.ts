@@ -76,7 +76,7 @@ const buildService = (
     messagesKey: "newapi",
     getConfig: vi.fn().mockResolvedValue({
       baseUrl: "https://target.example.com",
-      token: "admin-token",
+      adminToken: "admin-token",
       userId: "1",
     }),
     prepareChannelFormData: vi.fn(async (account, token) => ({
@@ -184,6 +184,18 @@ describe("managed-site token batch export", () => {
       failedCount: 0,
     })
     expect(service.createChannel).toHaveBeenCalledTimes(1)
+    expect(service.createChannel).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://target.example.com",
+        adminToken: "admin-token",
+        userId: "1",
+      },
+      expect.objectContaining({
+        channel: expect.objectContaining({
+          key: "token-secret",
+        }),
+      }),
+    )
   })
 
   it("reports channel creation failures without marking the item created", async () => {

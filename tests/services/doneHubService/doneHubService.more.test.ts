@@ -371,15 +371,19 @@ describe("doneHubService additional flows", () => {
     })
 
     await searchChannel(
-      "https://done-hub.example.com",
-      "done-hub-token",
-      "100",
+      {
+        baseUrl: "https://done-hub.example.com",
+        adminToken: "done-hub-token",
+        userId: "100",
+      },
       "proxy",
     )
     await createChannel(
-      "https://done-hub.example.com",
-      "done-hub-token",
-      "100",
+      {
+        baseUrl: "https://done-hub.example.com",
+        adminToken: "done-hub-token",
+        userId: "100",
+      },
       {
         mode: "single",
         channel: {
@@ -396,9 +400,11 @@ describe("doneHubService additional flows", () => {
       } as any,
     )
     await updateChannel(
-      "https://done-hub.example.com",
-      "done-hub-token",
-      "100",
+      {
+        baseUrl: "https://done-hub.example.com",
+        adminToken: "done-hub-token",
+        userId: "100",
+      },
       {
         id: 7,
         name: "Updated Channel",
@@ -413,9 +419,11 @@ describe("doneHubService additional flows", () => {
       } as any,
     )
     await deleteChannel(
-      "https://done-hub.example.com",
-      "done-hub-token",
-      "100",
+      {
+        baseUrl: "https://done-hub.example.com",
+        adminToken: "done-hub-token",
+        userId: "100",
+      },
       7,
     )
     const models = await fetchAvailableModels(account, token)
@@ -531,9 +539,11 @@ describe("doneHubService additional flows", () => {
 
     await expect(
       fetchChannelSecretKey(
-        "https://done-hub.example.com",
-        "done-hub-token",
-        "100",
+        {
+          baseUrl: "https://done-hub.example.com",
+          adminToken: "done-hub-token",
+          userId: "100",
+        },
         42,
       ),
     ).rejects.toThrow("done_hub_channel_key_missing")
@@ -548,9 +558,11 @@ describe("doneHubService additional flows", () => {
     )
 
     const result = await hydrateComparableChannelKeys(
-      "https://done-hub.example.com",
-      "done-hub-token",
-      "100",
+      {
+        baseUrl: "https://done-hub.example.com",
+        adminToken: "done-hub-token",
+        userId: "100",
+      },
       [
         buildManagedSiteChannel({
           id: undefined as any,
@@ -575,9 +587,11 @@ describe("doneHubService additional flows", () => {
 
     await expect(
       hydrateComparableChannelKeys(
-        "https://done-hub.example.com",
-        "done-hub-token",
-        "100",
+        {
+          baseUrl: "https://done-hub.example.com",
+          adminToken: "done-hub-token",
+          userId: "100",
+        },
         [
           buildManagedSiteChannel({
             id: 22,

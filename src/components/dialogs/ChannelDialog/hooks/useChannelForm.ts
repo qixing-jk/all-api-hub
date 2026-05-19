@@ -10,6 +10,7 @@ import { ChannelType, DEFAULT_CHANNEL_FIELDS } from "~/constants/managedSite"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getApiService } from "~/services/apiService"
 import { getManagedSiteService } from "~/services/managedSites/managedSiteService"
+import type { ManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import {
   getManagedSiteConfigMissingMessage,
   hasUsableManagedSiteChannelKey,
@@ -27,6 +28,13 @@ import { createLogger } from "~/utils/core/logger"
  * Unified logger scoped to channel dialog form state and submissions.
  */
 const logger = createLogger("ChannelFormHook")
+
+const isAccessTokenManagedConfig = (
+  config: ManagedSiteConfig,
+): config is Extract<
+  ManagedSiteConfig,
+  { adminToken: string; userId: string }
+> => "adminToken" in config && "userId" in config
 
 export interface UseChannelFormProps {
   mode: DialogMode
@@ -256,8 +264,10 @@ export function useChannelForm({
         baseUrl: config.baseUrl,
         auth: {
           authType: AuthTypeEnum.AccessToken,
-          userId: config.userId,
-          accessToken: config.token,
+          userId: isAccessTokenManagedConfig(config) ? config.userId : "",
+          accessToken: isAccessTokenManagedConfig(config)
+            ? config.adminToken
+            : "",
         },
       })
 
@@ -408,20 +418,10 @@ export function useChannelForm({
             group: formData.groups.join(","),
           }
         })()
-        response = await service.updateChannel(
-          apiConfig.baseUrl,
-          apiConfig.token,
-          apiConfig.userId,
-          updatePayload,
-        )
+        response = await service.updateChannel(apiConfig, updatePayload)
       } else {
         const payload = service.buildChannelPayload(formData)
-        response = await service.createChannel(
-          apiConfig.baseUrl,
-          apiConfig.token,
-          apiConfig.userId,
-          payload,
-        )
+        response = await service.createChannel(apiConfig, payload)
       }
 
       if (response.success) {

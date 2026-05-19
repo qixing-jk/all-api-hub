@@ -72,23 +72,15 @@ function hasValidClaudeCodeHubConfig(prefs: UserPreferences | null): boolean {
 }
 
 /**
- * Loads the stored Claude Code Hub admin config when all required fields exist.
- */
-async function getFullClaudeCodeHubConfig(): Promise<ClaudeCodeHubConfig | null> {
-  const prefs = await userPreferences.getPreferences()
-  if (hasValidClaudeCodeHubConfig(prefs) && prefs.claudeCodeHub) {
-    return prefs.claudeCodeHub
-  }
-  return null
-}
-
-/**
  * Verifies the saved Claude Code Hub config can authenticate successfully.
  */
 export async function checkValidClaudeCodeHubConfig(): Promise<boolean> {
   try {
-    const config = await getFullClaudeCodeHubConfig()
-    if (!config) return false
+    const prefs = await userPreferences.getPreferences()
+    if (!hasValidClaudeCodeHubConfig(prefs) || !prefs.claudeCodeHub) {
+      return false
+    }
+    const config = prefs.claudeCodeHub
     return await claudeCodeHubApi.validateClaudeCodeHubConfig(config)
   } catch (error) {
     logger.warn("Claude Code Hub config validation failed", error)
@@ -103,11 +95,7 @@ export async function getClaudeCodeHubConfig(): Promise<ManagedSiteConfig | null
   try {
     const prefs = await userPreferences.getPreferences()
     if (hasValidClaudeCodeHubConfig(prefs) && prefs.claudeCodeHub) {
-      return {
-        baseUrl: prefs.claudeCodeHub.baseUrl,
-        token: prefs.claudeCodeHub.adminToken,
-        userId: "admin",
-      }
+      return prefs.claudeCodeHub
     }
     return null
   } catch (error) {
@@ -301,18 +289,9 @@ async function hydrateComparableChannelKey(
  * Hydrates Claude Code Hub provider keys for shared channel comparison.
  */
 export async function hydrateComparableChannelKeys(
-  _baseUrl: string,
-  _adminToken: string,
-  _userId: number | string,
+  config: ClaudeCodeHubConfig,
   candidates: ManagedSiteChannel[],
 ): Promise<ManagedSiteChannel[]> {
-  const config = await getFullClaudeCodeHubConfig()
-  if (!config) {
-    throw new MatchResolutionUnresolvedError(
-      MANAGED_SITE_CHANNEL_MATCH_UNRESOLVED_REASONS.KEY_RESOLUTION_FAILED,
-    )
-  }
-
   const hydratedCandidates: ManagedSiteChannel[] = []
 
   for (const candidate of candidates) {
@@ -410,15 +389,10 @@ export function buildClaudeCodeHubUpdatePayloadFromChannelData(
  * Searches Claude Code Hub channels by keyword through the provider search API.
  */
 export async function searchChannel(
-  _baseUrl: string,
-  _accessToken: string,
-  _userId: number | string,
+  config: ClaudeCodeHubConfig,
   keyword: string,
 ): Promise<ManagedSiteChannelListData | null> {
   try {
-    const config = await getFullClaudeCodeHubConfig()
-    if (!config) return null
-
     return await searchClaudeCodeHubChannels(config, keyword)
   } catch (error) {
     logger.error("Failed to search Claude Code Hub providers", error)
@@ -430,21 +404,10 @@ export async function searchChannel(
  * Creates a Claude Code Hub channel from managed-site channel input.
  */
 export async function createChannel(
-  _baseUrl: string,
-  _adminToken: string,
-  _userId: number | string,
+  config: ClaudeCodeHubConfig,
   channelData: CreateChannelPayload,
 ): Promise<ApiResponse<unknown>> {
   try {
-    const config = await getFullClaudeCodeHubConfig()
-    if (!config) {
-      return {
-        success: false,
-        data: null,
-        message: t("messages:claudecodehub.configMissing"),
-      }
-    }
-
     const created = await claudeCodeHubApi.createProvider(
       config,
       buildClaudeCodeHubCreatePayloadFromFormData({
@@ -479,21 +442,10 @@ export async function createChannel(
  * Updates a Claude Code Hub channel from managed-site channel input.
  */
 export async function updateChannel(
-  _baseUrl: string,
-  _adminToken: string,
-  _userId: number | string,
+  config: ClaudeCodeHubConfig,
   channelData: UpdateChannelPayload & { status?: number },
 ): Promise<ApiResponse<unknown>> {
   try {
-    const config = await getFullClaudeCodeHubConfig()
-    if (!config) {
-      return {
-        success: false,
-        data: null,
-        message: t("messages:claudecodehub.configMissing"),
-      }
-    }
-
     const updated = await claudeCodeHubApi.updateProvider(
       config,
       buildClaudeCodeHubUpdatePayloadFromChannelData(channelData),
@@ -514,21 +466,10 @@ export async function updateChannel(
  * Deletes a Claude Code Hub channel by provider id.
  */
 export async function deleteChannel(
-  _baseUrl: string,
-  _adminToken: string,
-  _userId: number | string,
+  config: ClaudeCodeHubConfig,
   channelId: number,
 ): Promise<ApiResponse<unknown>> {
   try {
-    const config = await getFullClaudeCodeHubConfig()
-    if (!config) {
-      return {
-        success: false,
-        data: null,
-        message: t("messages:claudecodehub.configMissing"),
-      }
-    }
-
     const deleted = await claudeCodeHubApi.deleteProvider(config, channelId)
     return { success: true, data: deleted, message: "success" }
   } catch (error) {
@@ -545,16 +486,9 @@ export async function deleteChannel(
  * Fetches the real Claude Code Hub provider key for edit, comparison, and export flows.
  */
 export async function fetchChannelSecretKey(
-  _baseUrl: string,
-  _adminToken: string,
-  _userId: number | string,
+  config: ClaudeCodeHubConfig,
   channelId: number,
 ): Promise<string> {
-  const config = await getFullClaudeCodeHubConfig()
-  if (!config) {
-    throw new Error(t("messages:claudecodehub.configMissing"))
-  }
-
   return await claudeCodeHubApi.getUnmaskedProviderKey(config, channelId)
 }
 
@@ -642,22 +576,19 @@ async function importToClaudeCodeHub(
   token: ApiToken,
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const config = await getFullClaudeCodeHubConfig()
-    if (!config) {
+    const prefs = await userPreferences.getPreferences()
+    if (!hasValidClaudeCodeHubConfig(prefs) || !prefs.claudeCodeHub) {
       return {
         success: false,
         message: t("messages:claudecodehub.configMissing"),
       }
     }
+    const config = prefs.claudeCodeHub
 
     const formData = await prepareChannelFormData(account, token)
     const existingChannel = await resolveManagedSiteImportDuplicate({
       service: claudeCodeHubImportDuplicateService,
-      managedConfig: {
-        baseUrl: config.baseUrl,
-        token: config.adminToken,
-        userId: "admin",
-      },
+      managedConfig: config,
       formData,
     })
 
@@ -670,12 +601,7 @@ async function importToClaudeCodeHub(
       }
     }
 
-    const result = await createChannel(
-      config.baseUrl,
-      config.adminToken,
-      "admin",
-      buildChannelPayload(formData),
-    )
+    const result = await createChannel(config, buildChannelPayload(formData))
 
     return result.success
       ? {
@@ -702,14 +628,13 @@ export async function autoConfigToClaudeCodeHub(
   toastId?: string,
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const config = await getFullClaudeCodeHubConfig()
-    if (!config) {
+    const prefs = await userPreferences.getPreferences()
+    if (!hasValidClaudeCodeHubConfig(prefs) || !prefs.claudeCodeHub) {
       return {
         success: false,
         message: t("messages:claudecodehub.configMissing"),
       }
     }
-
     const displaySiteData = accountStorage.convertToDisplayData(account)
     const apiToken = await ensureAccountApiToken(
       account,

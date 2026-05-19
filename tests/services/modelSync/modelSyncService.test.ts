@@ -3,13 +3,17 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ChannelType } from "~/constants/newApi"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getApiService } from "~/services/apiService"
+import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { matchesProbeFilterRule } from "~/services/models/modelSync/channelModelFilterEvaluator"
 import { ModelSyncService } from "~/services/models/modelSync/modelSyncService"
+import type { ChannelConfigMap } from "~/types/channelConfig"
 import type {
   ChannelModelFilterRule,
   ChannelModelPatternFilterRule,
   ChannelModelProbeFilterRule,
 } from "~/types/channelModelFilters"
+import type { ManagedSiteChannel } from "~/types/managedSite"
+import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
 
 const {
   listAllChannelsMock,
@@ -83,6 +87,207 @@ const makeProbeRule = (
   description: partial.description,
 })
 
+function makeRuntimeConfig(
+  partial: Partial<
+    Extract<ManagedSiteRuntimeConfig, { siteType: typeof SITE_TYPES.NEW_API }>
+  >,
+): Extract<ManagedSiteRuntimeConfig, { siteType: typeof SITE_TYPES.NEW_API }>
+function makeRuntimeConfig(
+  partial: Partial<
+    Extract<ManagedSiteRuntimeConfig, { siteType: typeof SITE_TYPES.OCTOPUS }>
+  >,
+): Extract<ManagedSiteRuntimeConfig, { siteType: typeof SITE_TYPES.OCTOPUS }>
+function makeRuntimeConfig(
+  partial: Partial<
+    Extract<ManagedSiteRuntimeConfig, { siteType: typeof SITE_TYPES.AXON_HUB }>
+  >,
+): Extract<ManagedSiteRuntimeConfig, { siteType: typeof SITE_TYPES.AXON_HUB }>
+function makeRuntimeConfig(
+  partial: Partial<
+    Extract<
+      ManagedSiteRuntimeConfig,
+      { siteType: typeof SITE_TYPES.CLAUDE_CODE_HUB }
+    >
+  >,
+): Extract<
+  ManagedSiteRuntimeConfig,
+  { siteType: typeof SITE_TYPES.CLAUDE_CODE_HUB }
+>
+function makeRuntimeConfig(
+  partial: Partial<
+    Extract<ManagedSiteRuntimeConfig, { siteType: typeof SITE_TYPES.DONE_HUB }>
+  >,
+): Extract<ManagedSiteRuntimeConfig, { siteType: typeof SITE_TYPES.DONE_HUB }>
+function makeRuntimeConfig(
+  partial: Partial<
+    Extract<ManagedSiteRuntimeConfig, { siteType: typeof SITE_TYPES.VELOERA }>
+  >,
+): Extract<ManagedSiteRuntimeConfig, { siteType: typeof SITE_TYPES.VELOERA }>
+function makeRuntimeConfig(
+  partial: Partial<ManagedSiteRuntimeConfig> = {},
+): ManagedSiteRuntimeConfig {
+  if (partial.siteType === SITE_TYPES.OCTOPUS) {
+    return {
+      siteType: SITE_TYPES.OCTOPUS,
+      config: {
+        baseUrl: "https://managed.example.com",
+        username: "admin",
+        password: "secret",
+        ...partial.config,
+      },
+    }
+  }
+
+  if (partial.siteType === SITE_TYPES.AXON_HUB) {
+    return {
+      siteType: SITE_TYPES.AXON_HUB,
+      config: {
+        baseUrl: "https://managed.example.com",
+        email: "admin@example.com",
+        password: "secret",
+        ...partial.config,
+      },
+    }
+  }
+
+  if (partial.siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
+    return {
+      siteType: SITE_TYPES.CLAUDE_CODE_HUB,
+      config: {
+        baseUrl: "https://managed.example.com",
+        adminToken: "admin-token",
+        ...partial.config,
+      },
+    }
+  }
+
+  if (partial.siteType === SITE_TYPES.DONE_HUB) {
+    return {
+      siteType: SITE_TYPES.DONE_HUB,
+      config: {
+        baseUrl: "https://managed.example.com",
+        adminToken: "admin-token",
+        userId: "1",
+        ...partial.config,
+      },
+    }
+  }
+
+  if (partial.siteType === SITE_TYPES.VELOERA) {
+    return {
+      siteType: SITE_TYPES.VELOERA,
+      config: {
+        baseUrl: "https://managed.example.com",
+        adminToken: "admin-token",
+        userId: "1",
+        ...partial.config,
+      },
+    }
+  }
+
+  return {
+    siteType: SITE_TYPES.NEW_API,
+    config: {
+      baseUrl: "https://managed.example.com",
+      adminToken: "admin-token",
+      userId: "1",
+      ...(partial.config as
+        | Partial<
+            Extract<
+              ManagedSiteRuntimeConfig,
+              { siteType: typeof SITE_TYPES.NEW_API }
+            >["config"]
+          >
+        | undefined),
+    },
+  }
+}
+
+const makeNewApiRuntimeConfig = (
+  config: Partial<{
+    baseUrl: string
+    adminToken: string
+    userId: string
+  }> = {},
+): ManagedSiteRuntimeConfig =>
+  makeRuntimeConfig({
+    siteType: SITE_TYPES.NEW_API,
+    config: {
+      baseUrl: config.baseUrl ?? "https://managed.example.com",
+      adminToken: config.adminToken ?? "admin-token",
+      userId: config.userId ?? "1",
+    },
+  })
+
+const makeExampleRuntimeConfig = (): ManagedSiteRuntimeConfig =>
+  makeNewApiRuntimeConfig({
+    baseUrl: "https://example.com",
+    adminToken: "token",
+    userId: "1",
+  })
+
+const makeChannel = (
+  partial: Partial<ManagedSiteChannel> & Pick<ManagedSiteChannel, "id">,
+): ManagedSiteChannel => ({
+  id: partial.id,
+  type: partial.type ?? ChannelType.OpenAI,
+  key: partial.key ?? "",
+  name: partial.name ?? `Channel ${partial.id}`,
+  base_url: partial.base_url ?? "https://channel.example.com",
+  models: partial.models ?? "",
+  status: partial.status ?? 1,
+  weight: partial.weight ?? 1,
+  priority: partial.priority ?? 0,
+  openai_organization: partial.openai_organization ?? null,
+  test_model: partial.test_model ?? null,
+  created_time: partial.created_time ?? 0,
+  test_time: partial.test_time ?? 0,
+  response_time: partial.response_time ?? 0,
+  other: partial.other ?? "",
+  balance: partial.balance ?? 0,
+  balance_updated_time: partial.balance_updated_time ?? 0,
+  group: partial.group ?? "",
+  used_quota: partial.used_quota ?? 0,
+  model_mapping: partial.model_mapping ?? "",
+  status_code_mapping: partial.status_code_mapping ?? "",
+  auto_ban: partial.auto_ban ?? 0,
+  other_info: partial.other_info ?? "",
+  tag: partial.tag ?? null,
+  param_override: partial.param_override ?? null,
+  header_override: partial.header_override ?? null,
+  remark: partial.remark ?? null,
+  channel_info: partial.channel_info ?? {
+    is_multi_key: false,
+    multi_key_size: 0,
+    multi_key_status_list: null,
+    multi_key_polling_index: 0,
+    multi_key_mode: "",
+  },
+  setting: partial.setting ?? "",
+  settings: partial.settings ?? "",
+})
+
+const makeChannelConfigs = (
+  rulesByChannelId: Record<number, ChannelModelFilterRule[]>,
+): ChannelConfigMap =>
+  Object.fromEntries(
+    Object.entries(rulesByChannelId).map(([channelId, rules]) => {
+      const numericChannelId = Number(channelId)
+      return [
+        numericChannelId,
+        {
+          channelId: numericChannelId,
+          modelFilterSettings: {
+            rules,
+            updatedAt: 0,
+          },
+          createdAt: 0,
+          updatedAt: 0,
+        },
+      ]
+    }),
+  )
+
 beforeEach(() => {
   vi.clearAllMocks()
   getManagedSiteServiceForTypeMock.mockReturnValue({
@@ -100,9 +305,11 @@ beforeEach(() => {
 describe("ModelSyncService - allowed model filtering", () => {
   const createService = (allowed?: string[]) =>
     new ModelSyncService(
-      "https://example.com",
-      "dummy-token",
-      "1",
+      makeNewApiRuntimeConfig({
+        baseUrl: "https://example.com",
+        adminToken: "dummy-token",
+        userId: "1",
+      }),
       undefined,
       allowed,
     )
@@ -146,7 +353,7 @@ describe("ModelSyncService - allowed model filtering", () => {
 })
 
 describe("ModelSyncService - siteType routing", () => {
-  it("forwards ManagedSiteType hint to apiService listAllChannels", async () => {
+  it("forwards runtime config site type to apiService listAllChannels", async () => {
     listAllChannelsMock.mockResolvedValue({
       items: [],
       total: 0,
@@ -154,20 +361,53 @@ describe("ModelSyncService - siteType routing", () => {
     })
 
     const service = new ModelSyncService(
-      "https://example.com",
-      "token",
-      "1",
-      undefined,
-      undefined,
-      undefined,
-      undefined,
-      SITE_TYPES.VELOERA,
+      makeRuntimeConfig({
+        siteType: SITE_TYPES.VELOERA,
+        config: {
+          baseUrl: "https://example.com",
+          adminToken: "token",
+          userId: "1",
+        },
+      }),
     )
 
     await service.listChannels()
 
     expect(getApiService).toHaveBeenCalledWith(SITE_TYPES.VELOERA)
     expect(listAllChannelsMock).toHaveBeenCalled()
+  })
+
+  it("derives api-service requests from the stored runtime config at the boundary", async () => {
+    const runtimeConfig = makeRuntimeConfig({
+      siteType: SITE_TYPES.AXON_HUB,
+      config: {
+        baseUrl: "https://axon.example.com",
+        email: "root@example.com",
+        password: "axon-password",
+      },
+    })
+    listAllChannelsMock.mockResolvedValue({
+      items: [],
+      total: 0,
+      type_counts: {},
+    })
+
+    const service = new ModelSyncService(runtimeConfig)
+
+    await service.listChannels()
+
+    expect(getApiService).toHaveBeenCalledWith(SITE_TYPES.AXON_HUB)
+    expect(listAllChannelsMock).toHaveBeenCalledWith(
+      {
+        baseUrl: runtimeConfig.config.baseUrl,
+        auth: {
+          authType: "access_token",
+          accessToken: runtimeConfig.config.password,
+          userId: runtimeConfig.config.email,
+        },
+      },
+      expect.anything(),
+    )
   })
 })
 
@@ -178,7 +418,12 @@ describe("ModelSyncService - global and channel filters", () => {
     rules: ChannelModelFilterRule[] | null | undefined,
     models: string[],
   ): Promise<string[]> => {
-    const service = new ModelSyncService("https://example.com", "token")
+    const service = new ModelSyncService(
+      makeNewApiRuntimeConfig({
+        baseUrl: "https://example.com",
+        adminToken: "token",
+      }),
+    )
     return (service as any).applyFilters(rules, models)
   }
 
@@ -251,7 +496,7 @@ describe("ModelSyncService - channel execution", () => {
       }
     })
 
-    const service = new ModelSyncService("https://example.com", "token", "1")
+    const service = new ModelSyncService(makeExampleRuntimeConfig())
     ;(service as any).rateLimiter = { acquire }
 
     await service.listChannels()
@@ -262,12 +507,12 @@ describe("ModelSyncService - channel execution", () => {
   it("skips channel updates when the normalized model set is unchanged", async () => {
     fetchChannelModelsMock.mockResolvedValueOnce([" model-b ", "model-a"])
 
-    const service = new ModelSyncService("https://example.com", "token", "1")
-    const channel = {
+    const service = new ModelSyncService(makeExampleRuntimeConfig())
+    const channel = makeChannel({
       id: 1,
       name: "Alpha",
       models: "model-a,model-b",
-    } as any
+    })
 
     const result = await service.runForChannel(channel, 0)
 
@@ -290,9 +535,7 @@ describe("ModelSyncService - channel execution", () => {
     ])
 
     const service = new ModelSyncService(
-      "https://example.com",
-      "token",
-      "1",
+      makeExampleRuntimeConfig(),
       undefined,
       undefined,
       undefined,
@@ -304,25 +547,23 @@ describe("ModelSyncService - channel execution", () => {
         }),
       ],
     )
-    service.setChannelConfigs({
-      7: {
-        modelFilterSettings: {
-          rules: [
-            makeFilterRule({
-              id: "include-claude",
-              action: "include",
-              pattern: "claude",
-            }),
-          ],
-        },
-      },
-    } as any)
+    service.setChannelConfigs(
+      makeChannelConfigs({
+        7: [
+          makeFilterRule({
+            id: "include-claude",
+            action: "include",
+            pattern: "claude",
+          }),
+        ],
+      }),
+    )
 
-    const channel = {
+    const channel = makeChannel({
       id: 7,
       name: "Scoped",
       models: "gpt-4o",
-    } as any
+    })
 
     const result = await service.runForChannel(channel, 0)
 
@@ -343,12 +584,12 @@ describe("ModelSyncService - channel execution", () => {
   it("clears stored models when the upstream response only contains blank entries", async () => {
     fetchChannelModelsMock.mockResolvedValueOnce([" ", "", "   "])
 
-    const service = new ModelSyncService("https://example.com", "token", "1")
-    const channel = {
+    const service = new ModelSyncService(makeExampleRuntimeConfig())
+    const channel = makeChannel({
       id: 8,
       name: "Blank Upstream",
       models: "gpt-4o",
-    } as any
+    })
 
     const result = await service.runForChannel(channel, 0)
 
@@ -370,12 +611,12 @@ describe("ModelSyncService - channel execution", () => {
     vi.useFakeTimers()
     fetchChannelModelsMock.mockRejectedValue(new Error("upstream failed"))
 
-    const service = new ModelSyncService("https://example.com", "token", "1")
-    const channel = {
+    const service = new ModelSyncService(makeExampleRuntimeConfig())
+    const channel = makeChannel({
       id: 2,
       name: "Beta",
       models: "gpt-4o",
-    } as any
+    })
 
     try {
       const resultPromise = service.runForChannel(channel, 1)
@@ -400,12 +641,12 @@ describe("ModelSyncService - channel execution", () => {
       httpStatus: 503,
     })
 
-    const service = new ModelSyncService("https://example.com", "token", "1")
-    const channel = {
+    const service = new ModelSyncService(makeExampleRuntimeConfig())
+    const channel = makeChannel({
       id: 9,
       name: "Status Only",
       models: "gpt-4o",
-    } as any
+    })
 
     const result = await service.runForChannel(channel, 0)
 
@@ -431,22 +672,20 @@ describe("ModelSyncService - probe-backed filters", () => {
     }))
 
     const service = new ModelSyncService(
-      "https://managed.example.com",
-      "admin-token",
-      "1",
+      makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
       undefined,
       undefined,
       undefined,
       [makeProbeRule()],
     )
-    const channel = {
+    const channel = makeChannel({
       id: 77,
       name: "Probe Channel",
       type: ChannelType.OpenAI,
       base_url: "https://channel.example.com",
       key: "sk-channel-key",
       models: "model-a,model-b",
-    } as any
+    })
 
     const result = await service.runForChannel(channel, 0)
 
@@ -479,31 +718,28 @@ describe("ModelSyncService - probe-backed filters", () => {
 
   it("resolves hidden channel keys through the managed-site provider", async () => {
     fetchChannelModelsMock.mockResolvedValueOnce(["model-a"])
+    const runtimeConfig = makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API })
 
     const service = new ModelSyncService(
-      "https://managed.example.com",
-      "admin-token",
-      "1",
+      runtimeConfig,
       undefined,
       undefined,
       undefined,
       [makeProbeRule()],
     )
-    const channel = {
+    const channel = makeChannel({
       id: 78,
       name: "Hidden Key",
       type: ChannelType.OpenAI,
       base_url: "https://channel.example.com",
       key: "",
       models: "",
-    } as any
+    })
 
     await service.runForChannel(channel, 0)
 
     expect(fetchChannelSecretKeyMock).toHaveBeenCalledWith(
-      "https://managed.example.com",
-      "admin-token",
-      "1",
+      runtimeConfig.config,
       78,
     )
     expect(runApiVerificationProbeMock).toHaveBeenCalledWith(
@@ -520,30 +756,26 @@ describe("ModelSyncService - probe-backed filters", () => {
 
     const duplicateRule = makeProbeRule({ id: "duplicate" })
     const service = new ModelSyncService(
-      "https://managed.example.com",
-      "admin-token",
-      "1",
+      makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
       undefined,
       undefined,
       undefined,
       [duplicateRule],
     )
-    service.setChannelConfigs({
-      79: {
-        modelFilterSettings: {
-          rules: [makeProbeRule({ id: "channel-duplicate" })],
-        },
-      },
-    } as any)
+    service.setChannelConfigs(
+      makeChannelConfigs({
+        79: [makeProbeRule({ id: "channel-duplicate" })],
+      }),
+    )
 
-    const channel = {
+    const channel = makeChannel({
       id: 79,
       name: "Cached",
       type: ChannelType.OpenAI,
       base_url: "https://channel.example.com",
       key: "sk-channel-key",
       models: "",
-    } as any
+    })
 
     await service.runForChannel(channel, 0)
 
@@ -562,9 +794,7 @@ describe("ModelSyncService - probe-backed filters", () => {
     )
 
     const service = new ModelSyncService(
-      "https://managed.example.com",
-      "admin-token",
-      "1",
+      makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
       undefined,
       undefined,
       undefined,
@@ -575,14 +805,14 @@ describe("ModelSyncService - probe-backed filters", () => {
         }),
       ],
     )
-    const channel = {
+    const channel = makeChannel({
       id: 99,
       name: "Any Mode",
       type: ChannelType.OpenAI,
       base_url: "https://channel.example.com",
       key: "sk-key",
       models: "",
-    } as any
+    })
 
     const result = await service.runForChannel(channel, 0)
 
@@ -599,17 +829,15 @@ describe("ModelSyncService - probe-backed filters", () => {
 
   it("marks a model as unmatched when probe execution throws", async () => {
     const context = {
-      channel: {
+      channel: makeChannel({
         id: 92,
         type: ChannelType.OpenAI,
         base_url: "https://channel.example.com",
         key: "sk-channel-key",
-      },
-      siteType: SITE_TYPES.VELOERA,
-      managedSiteBaseUrl: "https://managed.example.com",
-      adminToken: "admin-token",
+      }),
+      managedConfig: makeRuntimeConfig({ siteType: SITE_TYPES.VELOERA }),
       cache: new Map<string, boolean>(),
-    } as any
+    }
     runApiVerificationProbeMock.mockRejectedValueOnce(
       new Error("probe failed with sk-channel-key"),
     )
@@ -623,17 +851,15 @@ describe("ModelSyncService - probe-backed filters", () => {
 
   it("rejects probe filtering when the channel base URL is missing", async () => {
     const context = {
-      channel: {
+      channel: makeChannel({
         id: 93,
         type: ChannelType.OpenAI,
         base_url: "   ",
         key: "sk-channel-key",
-      },
-      siteType: SITE_TYPES.VELOERA,
-      managedSiteBaseUrl: "https://managed.example.com",
-      adminToken: "admin-token",
+      }),
+      managedConfig: makeRuntimeConfig({ siteType: SITE_TYPES.VELOERA }),
       cache: new Map<string, boolean>(),
-    } as any
+    }
 
     await expect(
       matchesProbeFilterRule(makeProbeRule(), "model-a", context),
@@ -666,22 +892,20 @@ describe("ModelSyncService - probe-backed filters", () => {
     getManagedSiteServiceForTypeMock.mockReturnValue({})
 
     const service = new ModelSyncService(
-      "https://managed.example.com",
-      "admin-token",
-      "1",
+      makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
       undefined,
       undefined,
       undefined,
       [makeProbeRule()],
     )
-    const channel = {
+    const channel = makeChannel({
       id: 80,
       name: "Unsupported Provider",
       type: ChannelType.OpenAI,
       base_url: "https://channel.example.com",
       key: "",
       models: "model-a",
-    } as any
+    })
 
     const result = await service.runForChannel(channel, 0)
 
@@ -697,22 +921,20 @@ describe("ModelSyncService - probe-backed filters", () => {
     fetchChannelModelsMock.mockResolvedValueOnce(["model-a"])
 
     const service = new ModelSyncService(
-      "https://managed.example.com",
-      "admin-token",
-      "1",
+      makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
       undefined,
       undefined,
       undefined,
       [makeProbeRule()],
     )
-    const channel = {
+    const channel = makeChannel({
       id: 81,
       name: "Unsupported Type",
       type: ChannelType.Midjourney,
       base_url: "https://channel.example.com",
       key: "sk-channel-key",
       models: "model-a",
-    } as any
+    })
 
     const result = await service.runForChannel(channel, 0)
 
@@ -731,22 +953,20 @@ describe("ModelSyncService - probe-backed filters", () => {
     )
 
     const service = new ModelSyncService(
-      "https://managed.example.com",
-      "admin-token",
-      "1",
+      makeRuntimeConfig({ siteType: SITE_TYPES.NEW_API }),
       undefined,
       undefined,
       undefined,
       [makeProbeRule()],
     )
-    const channel = {
+    const channel = makeChannel({
       id: 82,
       name: "Secret Safe",
       type: ChannelType.OpenAI,
       base_url: "https://channel.example.com",
       key: "",
       models: "model-a",
-    } as any
+    })
 
     const result = await service.runForChannel(channel, 0)
 
@@ -758,18 +978,15 @@ describe("ModelSyncService - probe-backed filters", () => {
 
   it("resolves a hidden key only once across repeated probe evaluations", async () => {
     const context = {
-      channel: {
+      channel: makeChannel({
         id: 90,
         type: ChannelType.OpenAI,
         base_url: "https://channel.example.com",
         key: "",
-      },
-      siteType: SITE_TYPES.VELOERA,
-      managedSiteBaseUrl: "https://managed.example.com",
-      adminToken: "admin-token",
-      userId: "1",
+      }),
+      managedConfig: makeRuntimeConfig({ siteType: SITE_TYPES.VELOERA }),
       cache: new Map<string, boolean>(),
-    } as any
+    }
 
     await matchesProbeFilterRule(makeProbeRule(), "model-a", context)
     await matchesProbeFilterRule(
@@ -783,17 +1000,15 @@ describe("ModelSyncService - probe-backed filters", () => {
 
   it("treats empty probe rules as non-matches", async () => {
     const context = {
-      channel: {
+      channel: makeChannel({
         id: 91,
         type: ChannelType.OpenAI,
         base_url: "https://channel.example.com",
         key: "sk-channel-key",
-      },
-      siteType: SITE_TYPES.VELOERA,
-      managedSiteBaseUrl: "https://managed.example.com",
-      adminToken: "admin-token",
+      }),
+      managedConfig: makeRuntimeConfig({ siteType: SITE_TYPES.VELOERA }),
       cache: new Map<string, boolean>(),
-    } as any
+    }
 
     await expect(
       matchesProbeFilterRule(
@@ -809,7 +1024,7 @@ describe("ModelSyncService - probe-backed filters", () => {
 
 describe("ModelSyncService - batching and mapping", () => {
   it("returns empty statistics without progress callbacks when no channels are provided", async () => {
-    const service = new ModelSyncService("https://example.com", "token", "1")
+    const service = new ModelSyncService(makeExampleRuntimeConfig())
     const onProgress = vi.fn()
 
     const result = await service.runBatch([], {
@@ -830,10 +1045,10 @@ describe("ModelSyncService - batching and mapping", () => {
   })
 
   it("records failures when a worker throws unexpectedly during batch execution", async () => {
-    const service = new ModelSyncService("https://example.com", "token", "1")
+    const service = new ModelSyncService(makeExampleRuntimeConfig())
     const runForChannelSpy = vi
       .spyOn(service, "runForChannel")
-      .mockImplementation(async (channel) => {
+      .mockImplementation(async (channel): Promise<ExecutionItemResult> => {
         if (channel.id === 2) {
           throw new Error("worker exploded")
         }
@@ -845,14 +1060,14 @@ describe("ModelSyncService - batching and mapping", () => {
           attempts: 0,
           finishedAt: 1,
           message: "Success",
-        } as any
+        }
       })
 
     const onProgress = vi.fn()
     const result = await service.runBatch(
       [
-        { id: 1, name: "Alpha", models: "" } as any,
-        { id: 2, name: "Beta", models: "" } as any,
+        makeChannel({ id: 1, name: "Alpha", models: "" }),
+        makeChannel({ id: 2, name: "Beta", models: "" }),
       ],
       {
         concurrency: 5,
@@ -883,14 +1098,14 @@ describe("ModelSyncService - batching and mapping", () => {
   })
 
   it("merges existing channel models with mapping keys before updating model_mapping", async () => {
-    const service = new ModelSyncService("https://example.com", "token", "1")
+    const service = new ModelSyncService(makeExampleRuntimeConfig())
 
     await service.updateChannelModelMapping(
-      {
+      makeChannel({
         id: 3,
         name: "Gamma",
         models: "gpt-4o,claude-3",
-      } as any,
+      }),
       {
         "gpt-4o": "gpt-4o",
         "deepseek-chat": "deepseek-chat",

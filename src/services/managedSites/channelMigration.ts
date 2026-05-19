@@ -11,10 +11,8 @@ import {
   mapChannelTypeToOctopusOutboundType,
   mapOctopusOutboundTypeToChannelType,
 } from "~/services/managedSites/providers/octopus"
-import {
-  getManagedSiteAdminConfigForType,
-  needsManagedSiteChannelKeyResolution,
-} from "~/services/managedSites/utils/managedSite"
+import { resolveManagedSiteRuntimeConfigForType } from "~/services/managedSites/runtimeConfig"
+import { needsManagedSiteChannelKeyResolution } from "~/services/managedSites/utils/managedSite"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import type { ChannelFormData, ManagedSiteChannel } from "~/types/managedSite"
 import {
@@ -499,11 +497,11 @@ const resolveSourceChannelKey = async (params: {
     }
   }
 
-  const sourceConfig = getManagedSiteAdminConfigForType(
+  const sourceRuntimeConfig = resolveManagedSiteRuntimeConfigForType(
     preferences,
     sourceSiteType,
   )
-  if (!sourceConfig) {
+  if (!sourceRuntimeConfig) {
     return {
       key: null,
       blockingReasonCode:
@@ -523,9 +521,7 @@ const resolveSourceChannelKey = async (params: {
 
   try {
     const key = await sourceService.fetchChannelSecretKey(
-      sourceConfig.baseUrl,
-      sourceConfig.adminToken,
-      sourceConfig.userId,
+      sourceRuntimeConfig.config,
       channel.id,
     )
     const resolvedKey = key.trim()
@@ -733,12 +729,7 @@ export async function executeManagedSiteChannelMigration(
 
     try {
       const payload = targetService.buildChannelPayload(item.draft)
-      const response = await targetService.createChannel(
-        targetConfig.baseUrl,
-        targetConfig.token,
-        targetConfig.userId,
-        payload,
-      )
+      const response = await targetService.createChannel(targetConfig, payload)
 
       if (!response.success) {
         failedCount += 1

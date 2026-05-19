@@ -1,8 +1,9 @@
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
 import { ChannelType } from "~/constants/newApi"
-import type { ManagedSiteType } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
+import type { ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { hasUsableManagedSiteChannelKey } from "~/services/managedSites/utils/managedSite"
 import {
   API_TYPES,
@@ -41,10 +42,7 @@ export class ProbeFilterUnavailableError extends Error {
  */
 export interface ProbeFilterContext {
   channel: ManagedSiteChannel
-  siteType: ManagedSiteType
-  managedSiteBaseUrl: string
-  adminToken: string
-  userId?: string
+  managedConfig: ManagedSiteRuntimeConfig
   cache: Map<string, boolean>
   resolvedKey?: string
   abortSignal?: AbortSignal
@@ -183,6 +181,21 @@ function hashSecret(value: string): string {
 }
 
 /**
+ * Extracts managed-site secrets that must be redacted from probe diagnostics.
+ */
+function getRuntimeConfigSecrets(config: ManagedSiteRuntimeConfig): string[] {
+  if (config.siteType === SITE_TYPES.OCTOPUS) {
+    return [config.config.password]
+  }
+
+  if (config.siteType === SITE_TYPES.AXON_HUB) {
+    return [config.config.password]
+  }
+
+  return [config.config.adminToken]
+}
+
+/**
  * Resolve the usable channel key from the channel row or provider capability.
  */
 async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
@@ -196,7 +209,7 @@ async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
     return directKey
   }
 
-  const service = getManagedSiteServiceForType(context.siteType)
+  const service = getManagedSiteServiceForType(context.managedConfig.siteType)
   if (!service.fetchChannelSecretKey) {
     throw new ProbeFilterUnavailableError(
       "provider-unsupported",
@@ -206,9 +219,7 @@ async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
 
   try {
     const key = await service.fetchChannelSecretKey(
-      context.managedSiteBaseUrl,
-      context.adminToken,
-      context.userId ?? "",
+      context.managedConfig.config,
       context.channel.id,
     )
     if (!hasUsableManagedSiteChannelKey(key)) {
@@ -218,7 +229,7 @@ async function resolveChannelKey(context: ProbeFilterContext): Promise<string> {
     return context.resolvedKey
   } catch (error) {
     const diagnostic = toSanitizedErrorSummary(error, [
-      context.adminToken,
+      ...getRuntimeConfigSecrets(context.managedConfig),
       directKey,
     ])
     logger.warn("Probe filter channel key resolution failed", {

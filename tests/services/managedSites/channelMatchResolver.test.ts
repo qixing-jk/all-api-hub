@@ -14,7 +14,7 @@ import { buildManagedSiteChannel } from "~~/tests/test-utils/factories"
 
 const managedConfig = {
   baseUrl: "https://managed.example",
-  token: "managed-token",
+  adminToken: "managed-token",
   userId: "1",
 }
 
@@ -39,7 +39,7 @@ const createManagedSiteServiceStub = (
     prepareChannelFormData: vi.fn(),
     buildChannelPayload: vi.fn(),
     hydrateComparableChannelKeys: vi.fn(
-      async (_baseUrl, _token, _userId, candidates) => candidates,
+      async (_config, candidates) => candidates,
     ),
     autoConfigToManagedSite: vi.fn(),
     ...overrides,
@@ -186,12 +186,11 @@ describe("resolveManagedSiteChannelMatch", () => {
         }),
       ],
     })
-    const hydrateComparableChannelKeys = vi.fn(
-      async (_baseUrl, _token, _userId, candidates) =>
-        candidates.map((channel: ManagedSiteChannel) => ({
-          ...channel,
-          key: "sk-match",
-        })),
+    const hydrateComparableChannelKeys = vi.fn(async (_config, candidates) =>
+      candidates.map((channel: ManagedSiteChannel) => ({
+        ...channel,
+        key: "sk-match",
+      })),
     )
     const service = createManagedSiteServiceStub({
       searchChannel,
@@ -207,12 +206,9 @@ describe("resolveManagedSiteChannelMatch", () => {
     })
 
     expect(searchChannel).toHaveBeenCalledTimes(1)
-    expect(hydrateComparableChannelKeys).toHaveBeenCalledWith(
-      managedConfig.baseUrl,
-      managedConfig.token,
-      managedConfig.userId,
-      [expect.objectContaining({ id: 7 })],
-    )
+    expect(hydrateComparableChannelKeys).toHaveBeenCalledWith(managedConfig, [
+      expect.objectContaining({ id: 7 }),
+    ])
     expect(result.key.matched).toBe(true)
     expect(result.models.matched).toBe(true)
   })
@@ -332,12 +328,11 @@ describe("resolveManagedSiteChannelMatch", () => {
       base_url: "https://api.example.com/v1",
       models: "gpt-4o,gpt-4o-mini",
     })
-    const hydrateComparableChannelKeys = vi.fn(
-      async (_baseUrl, _token, _userId, candidates) =>
-        candidates.map((channel: ManagedSiteChannel) => ({
-          ...channel,
-          key: "sk-match",
-        })),
+    const hydrateComparableChannelKeys = vi.fn(async (_config, candidates) =>
+      candidates.map((channel: ManagedSiteChannel) => ({
+        ...channel,
+        key: "sk-match",
+      })),
     )
     const service = createManagedSiteServiceStub({
       searchChannel: vi.fn().mockResolvedValue({
@@ -354,12 +349,9 @@ describe("resolveManagedSiteChannelMatch", () => {
       key: "sk-match",
     })
 
-    expect(hydrateComparableChannelKeys).toHaveBeenCalledWith(
-      managedConfig.baseUrl,
-      managedConfig.token,
-      managedConfig.userId,
-      [expect.objectContaining({ id: 41 })],
-    )
+    expect(hydrateComparableChannelKeys).toHaveBeenCalledWith(managedConfig, [
+      expect.objectContaining({ id: 41 }),
+    ])
     expect(result.key).toEqual({
       comparable: true,
       matched: true,
@@ -518,9 +510,7 @@ describe("resolveManagedSiteChannelMatch", () => {
     })
 
     expect(fetchChannelSecretKey).toHaveBeenCalledWith(
-      managedConfig.baseUrl,
-      managedConfig.token,
-      managedConfig.userId,
+      expect.objectContaining(managedConfig),
       21,
     )
     expect(result.url).toEqual({
@@ -567,9 +557,7 @@ describe("resolveManagedSiteChannelMatch", () => {
     })
 
     expect(fetchChannelSecretKey).toHaveBeenCalledWith(
-      managedConfig.baseUrl,
-      managedConfig.token,
-      managedConfig.userId,
+      expect.objectContaining(managedConfig),
       24,
     )
     expect(result.key).toEqual({
@@ -623,16 +611,12 @@ describe("resolveManagedSiteChannelMatch", () => {
     expect(fetchChannelSecretKey).toHaveBeenCalledTimes(2)
     expect(fetchChannelSecretKey).toHaveBeenNthCalledWith(
       1,
-      managedConfig.baseUrl,
-      managedConfig.token,
-      managedConfig.userId,
+      expect.objectContaining(managedConfig),
       25,
     )
     expect(fetchChannelSecretKey).toHaveBeenNthCalledWith(
       2,
-      managedConfig.baseUrl,
-      managedConfig.token,
-      managedConfig.userId,
+      expect.objectContaining(managedConfig),
       26,
     )
     expect(result.key).toEqual({
@@ -692,9 +676,7 @@ describe("resolveManagedSiteChannelMatch", () => {
     })
 
     expect(fetchChannelSecretKey).toHaveBeenCalledWith(
-      managedConfig.baseUrl,
-      managedConfig.token,
-      managedConfig.userId,
+      expect.objectContaining(managedConfig),
       33,
     )
     expect(result.key.channel?.id).toBe(32)
@@ -739,9 +721,7 @@ describe("resolveManagedSiteChannelMatch", () => {
 
     expect(fetchChannelSecretKey).toHaveBeenCalledTimes(1)
     expect(fetchChannelSecretKey).toHaveBeenCalledWith(
-      managedConfig.baseUrl,
-      managedConfig.token,
-      managedConfig.userId,
+      expect.objectContaining(managedConfig),
       29,
     )
     expect(result.key.channel?.id).toBe(29)
@@ -827,9 +807,7 @@ describe("resolveManagedSiteChannelMatch", () => {
     })
 
     expect(fetchChannelSecretKey).toHaveBeenCalledWith(
-      managedConfig.baseUrl,
-      managedConfig.token,
-      managedConfig.userId,
+      expect.objectContaining(managedConfig),
       31,
     )
     expect(result.url).toEqual({

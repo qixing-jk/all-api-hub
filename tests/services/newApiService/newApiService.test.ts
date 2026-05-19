@@ -825,6 +825,11 @@ describe("newApiService", () => {
       const { fetchChannelSecretKey } = await import(
         "~/services/managedSites/providers/newApi"
       )
+      const config = {
+        baseUrl: "https://new-api.example.com/api/v1",
+        adminToken: "ignored-admin-token",
+        userId: "managed-user",
+      }
 
       mockGetPreferences.mockResolvedValueOnce(
         createMockUserPreferencesWithNewApi({
@@ -840,14 +845,9 @@ describe("newApiService", () => {
       )
       fetchNewApiChannelKeyMock.mockResolvedValueOnce("resolved-secret")
 
-      await expect(
-        fetchChannelSecretKey(
-          "https://new-api.example.com/api/v1",
-          "ignored-admin-token",
-          "managed-user",
-          99,
-        ),
-      ).resolves.toBe("resolved-secret")
+      await expect(fetchChannelSecretKey(config, 99)).resolves.toBe(
+        "resolved-secret",
+      )
 
       expect(fetchNewApiChannelKeyMock).toHaveBeenCalledWith({
         baseUrl: "https://new-api.example.com/api/v1",
@@ -863,6 +863,11 @@ describe("newApiService", () => {
       const { fetchChannelSecretKey } = await import(
         "~/services/managedSites/providers/newApi"
       )
+      const config = {
+        baseUrl: "https://other.example.com/api/v1",
+        adminToken: "ignored-admin-token",
+        userId: "managed-user",
+      }
 
       mockGetPreferences.mockResolvedValueOnce(
         createMockUserPreferencesWithNewApi({
@@ -878,12 +883,7 @@ describe("newApiService", () => {
       )
       fetchNewApiChannelKeyMock.mockResolvedValueOnce("resolved-secret")
 
-      await fetchChannelSecretKey(
-        "https://other.example.com/api/v1",
-        "ignored-admin-token",
-        "managed-user",
-        100,
-      )
+      await fetchChannelSecretKey(config, 100)
 
       expect(fetchNewApiChannelKeyMock).toHaveBeenCalledWith({
         baseUrl: "https://other.example.com/api/v1",
@@ -901,22 +901,22 @@ describe("newApiService", () => {
       const { hydrateComparableChannelKeys } = await import(
         "~/services/managedSites/providers/newApi"
       )
+      const config = {
+        baseUrl: "https://new-api.example.com",
+        adminToken: "admin-token",
+        userId: "1",
+      }
 
       mockGetPreferences.mockResolvedValueOnce(
         createMockUserPreferencesWithNewApi(),
       )
 
-      const result = await hydrateComparableChannelKeys(
-        "https://new-api.example.com",
-        "admin-token",
-        1,
-        [
-          createMockNewApiChannel({
-            id: 11,
-            key: "sk-visible",
-          }),
-        ],
-      )
+      const result = await hydrateComparableChannelKeys(config, [
+        createMockNewApiChannel({
+          id: 11,
+          key: "sk-visible",
+        }),
+      ])
 
       expect(fetchNewApiChannelKeyMock).not.toHaveBeenCalled()
       expect(result).toEqual([
@@ -931,25 +931,25 @@ describe("newApiService", () => {
       const { hydrateComparableChannelKeys } = await import(
         "~/services/managedSites/providers/newApi"
       )
+      const config = {
+        baseUrl: "https://new-api.example.com",
+        adminToken: "admin-token",
+        userId: "1",
+      }
 
       mockGetPreferences.mockResolvedValueOnce(
         createMockUserPreferencesWithNewApi(),
       )
       fetchNewApiChannelKeyMock.mockResolvedValueOnce("sk-revealed")
 
-      const result = await hydrateComparableChannelKeys(
-        "https://new-api.example.com",
-        "admin-token",
-        1,
-        [
-          createMockNewApiChannel({
-            id: 12,
-            key: "",
-            base_url: "https://api.example.com/v1",
-            models: "gpt-4o",
-          }),
-        ],
-      )
+      const result = await hydrateComparableChannelKeys(config, [
+        createMockNewApiChannel({
+          id: 12,
+          key: "",
+          base_url: "https://api.example.com/v1",
+          models: "gpt-4o",
+        }),
+      ])
 
       expect(result).toEqual([
         expect.objectContaining({
@@ -970,6 +970,11 @@ describe("newApiService", () => {
         NEW_API_CHANNEL_KEY_ERROR_KINDS,
         NewApiChannelKeyRequirementError,
       } = await import("~/services/managedSites/providers/newApiSession")
+      const config = {
+        baseUrl: "https://new-api.example.com",
+        adminToken: "admin-token",
+        userId: "1",
+      }
 
       mockGetPreferences.mockResolvedValueOnce(
         createMockUserPreferencesWithNewApi(),
@@ -981,12 +986,9 @@ describe("newApiService", () => {
       )
 
       await expect(
-        hydrateComparableChannelKeys(
-          "https://new-api.example.com",
-          "admin-token",
-          1,
-          [createMockNewApiChannel({ id: 13, key: "" })],
-        ),
+        hydrateComparableChannelKeys(config, [
+          createMockNewApiChannel({ id: 13, key: "" }),
+        ]),
       ).rejects.toMatchObject({
         name: MatchResolutionUnresolvedError.name,
         reason:
@@ -1001,6 +1003,11 @@ describe("newApiService", () => {
       const { MatchResolutionUnresolvedError } = await import(
         "~/services/managedSites/channelMatch"
       )
+      const config = {
+        baseUrl: "https://new-api.example.com",
+        adminToken: "admin-token",
+        userId: "1",
+      }
 
       mockGetPreferences.mockResolvedValueOnce(
         createMockUserPreferencesWithNewApi(),
@@ -1010,12 +1017,9 @@ describe("newApiService", () => {
       )
 
       await expect(
-        hydrateComparableChannelKeys(
-          "https://new-api.example.com",
-          "admin-token",
-          1,
-          [createMockNewApiChannel({ id: 14, key: "" })],
-        ),
+        hydrateComparableChannelKeys(config, [
+          createMockNewApiChannel({ id: 14, key: "" }),
+        ]),
       ).rejects.toMatchObject({
         name: MatchResolutionUnresolvedError.name,
         reason:
@@ -1351,9 +1355,11 @@ describe("newApiService", () => {
     it("uses the New API site override for channel mutations", async () => {
       const { createChannel, deleteChannel, searchChannel, updateChannel } =
         await import("~/services/managedSites/providers/newApi")
-      const baseUrl = "https://new-api.example.com"
-      const adminToken = "admin-token"
-      const userId = 1
+      const config = {
+        baseUrl: "https://new-api.example.com",
+        adminToken: "admin-token",
+        userId: "1",
+      }
       const createChannelData: CreateChannelPayload = {
         mode: "single",
         channel: {
@@ -1376,25 +1382,53 @@ describe("newApiService", () => {
       mockUpdateChannel.mockResolvedValueOnce({ success: true })
       mockDeleteChannel.mockResolvedValueOnce({ success: true })
 
-      await searchChannel(baseUrl, adminToken, userId, "test")
-      await createChannel(baseUrl, adminToken, userId, createChannelData)
-      await updateChannel(baseUrl, adminToken, userId, updateChannelData)
-      await deleteChannel(baseUrl, adminToken, userId, 7)
+      await searchChannel(config, "test")
+      await createChannel(config, createChannelData)
+      await updateChannel(config, updateChannelData)
+      await deleteChannel(config, 7)
 
       expect(mockSearchChannel).toHaveBeenCalledWith(
-        expect.objectContaining({ baseUrl }),
+        expect.objectContaining({
+          baseUrl: config.baseUrl,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: config.adminToken,
+            userId: config.userId,
+          },
+        }),
         "test",
       )
       expect(mockCreateChannel).toHaveBeenCalledWith(
-        expect.objectContaining({ baseUrl }),
+        expect.objectContaining({
+          baseUrl: config.baseUrl,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: config.adminToken,
+            userId: config.userId,
+          },
+        }),
         createChannelData,
       )
       expect(mockUpdateChannel).toHaveBeenCalledWith(
-        expect.objectContaining({ baseUrl }),
+        expect.objectContaining({
+          baseUrl: config.baseUrl,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: config.adminToken,
+            userId: config.userId,
+          },
+        }),
         updateChannelData,
       )
       expect(mockDeleteChannel).toHaveBeenCalledWith(
-        expect.objectContaining({ baseUrl }),
+        expect.objectContaining({
+          baseUrl: config.baseUrl,
+          auth: {
+            authType: AuthTypeEnum.AccessToken,
+            accessToken: config.adminToken,
+            userId: config.userId,
+          },
+        }),
         7,
       )
     })

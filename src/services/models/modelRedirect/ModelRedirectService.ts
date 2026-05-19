@@ -5,10 +5,7 @@
  */
 
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
-import {
-  getManagedSiteAdminConfig,
-  getManagedSiteConfig,
-} from "~/services/managedSites/utils/managedSite"
+import { resolveCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { ModelSyncService } from "~/services/models/modelSync"
 import { toModelTokenKey } from "~/services/models/utils/modelName"
@@ -158,9 +155,9 @@ export class ModelRedirectService {
       }
     }
 
-    const { siteType } = getManagedSiteConfig(resolvedPrefs)
+    const runtimeConfig = resolveCurrentManagedSiteRuntimeConfig(resolvedPrefs)
 
-    if (siteType === SITE_TYPES.OCTOPUS) {
+    if (runtimeConfig?.siteType === SITE_TYPES.OCTOPUS) {
       return {
         ok: false,
         errors: ["Model redirect is not supported for Octopus sites"],
@@ -168,8 +165,7 @@ export class ModelRedirectService {
       }
     }
 
-    const adminConfig = getManagedSiteAdminConfig(resolvedPrefs)
-    if (!adminConfig) {
+    if (!runtimeConfig) {
       return {
         ok: false,
         errors: ["Managed site configuration is missing"],
@@ -179,16 +175,7 @@ export class ModelRedirectService {
 
     return {
       ok: true,
-      service: new ModelSyncService(
-        adminConfig.baseUrl,
-        adminConfig.adminToken,
-        adminConfig.userId,
-        undefined,
-        undefined,
-        undefined,
-        undefined,
-        siteType,
-      ),
+      service: new ModelSyncService(runtimeConfig),
     }
   }
 

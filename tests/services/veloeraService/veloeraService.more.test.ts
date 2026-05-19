@@ -362,15 +362,43 @@ describe("veloeraService additional flows", () => {
     })
 
     await searchChannel(
-      "https://veloera.example.com",
-      "veloera-token",
-      "200",
+      {
+        baseUrl: "https://veloera.example.com",
+        adminToken: "veloera-token",
+        userId: "200",
+      },
       "proxy",
     )
-    await createChannel("https://veloera.example.com", "veloera-token", "200", {
-      mode: "single",
-      channel: {
-        name: "Veloera Channel",
+    await createChannel(
+      {
+        baseUrl: "https://veloera.example.com",
+        adminToken: "veloera-token",
+        userId: "200",
+      },
+      {
+        mode: "single",
+        channel: {
+          name: "Veloera Channel",
+          type: 1,
+          key: "veloera-key",
+          base_url: "https://proxy.example.com",
+          models: "gpt-4o",
+          groups: ["default"],
+          priority: 0,
+          weight: 0,
+          status: 1,
+        },
+      } as any,
+    )
+    await updateChannel(
+      {
+        baseUrl: "https://veloera.example.com",
+        adminToken: "veloera-token",
+        userId: "200",
+      },
+      {
+        id: 7,
+        name: "Updated Veloera Channel",
         type: 1,
         key: "veloera-key",
         base_url: "https://proxy.example.com",
@@ -379,24 +407,14 @@ describe("veloeraService additional flows", () => {
         priority: 0,
         weight: 0,
         status: 1,
-      },
-    } as any)
-    await updateChannel("https://veloera.example.com", "veloera-token", "200", {
-      id: 7,
-      name: "Updated Veloera Channel",
-      type: 1,
-      key: "veloera-key",
-      base_url: "https://proxy.example.com",
-      models: "gpt-4o",
-      groups: ["default"],
-      priority: 0,
-      weight: 0,
-      status: 1,
-    } as any)
+      } as any,
+    )
     await deleteChannel(
-      "https://veloera.example.com",
-      "veloera-token",
-      "200",
+      {
+        baseUrl: "https://veloera.example.com",
+        adminToken: "veloera-token",
+        userId: "200",
+      },
       7,
     )
     const models = await fetchAvailableModels(account, token)
@@ -465,9 +483,11 @@ describe("veloeraService additional flows", () => {
     })
     await expect(
       fetchChannelSecretKey(
-        "https://veloera.example.com",
-        "veloera-token",
-        "200",
+        {
+          baseUrl: "https://veloera.example.com",
+          adminToken: "veloera-token",
+          userId: "200",
+        },
         42,
       ),
     ).resolves.toBe("veloera-secret")
@@ -478,9 +498,11 @@ describe("veloeraService additional flows", () => {
     })
     await expect(
       fetchChannelSecretKey(
-        "https://veloera.example.com",
-        "veloera-token",
-        "200",
+        {
+          baseUrl: "https://veloera.example.com",
+          adminToken: "veloera-token",
+          userId: "200",
+        },
         42,
       ),
     ).rejects.toThrow("veloera_channel_key_missing")

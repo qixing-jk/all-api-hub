@@ -205,7 +205,7 @@ const buildManagedSiteServiceMock = (
   messagesKey: "newapi",
   getConfig: vi.fn(async () => ({
     baseUrl: "https://managed.example.com",
-    token: "admin-token",
+    adminToken: "admin-token",
     userId: "1",
   })),
   prepareChannelFormData: vi.fn(async () => buildPreparedFormData()),
@@ -215,7 +215,7 @@ const buildManagedSiteServiceMock = (
     type_counts: {},
   })),
   hydrateComparableChannelKeys: vi.fn(
-    async (_baseUrl, _token, _userId, candidates) => candidates,
+    async (_config, candidates) => candidates,
   ),
   ...overrides,
 })
@@ -277,7 +277,7 @@ describe("useChannelDialog", () => {
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
-        token: "admin-token",
+        adminToken: "admin-token",
         userId: "1",
       })),
       prepareChannelFormData: vi.fn(
@@ -343,7 +343,7 @@ describe("useChannelDialog", () => {
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
-        token: "admin-token",
+        adminToken: "admin-token",
         userId: "1",
       })),
       prepareChannelFormData: vi.fn(
@@ -461,7 +461,7 @@ describe("useChannelDialog", () => {
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
-        token: "admin-token",
+        adminToken: "admin-token",
         userId: "1",
       })),
       prepareChannelFormData: vi.fn(
@@ -538,7 +538,7 @@ describe("useChannelDialog", () => {
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
-        token: "admin-token",
+        adminToken: "admin-token",
         userId: "1",
       })),
       prepareChannelFormData: vi.fn(
@@ -603,7 +603,7 @@ describe("useChannelDialog", () => {
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
-        token: "admin-token",
+        adminToken: "admin-token",
         userId: "1",
       })),
       prepareChannelFormData: vi.fn(
@@ -667,7 +667,7 @@ describe("useChannelDialog", () => {
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
-        token: "admin-token",
+        adminToken: "admin-token",
         userId: "1",
       })),
       prepareChannelFormData: vi.fn(),
@@ -714,7 +714,7 @@ describe("useChannelDialog", () => {
       messagesKey: "newapi",
       getConfig: vi.fn(async () => ({
         baseUrl: "https://managed.example.com",
-        token: "admin-token",
+        adminToken: "admin-token",
         userId: "1",
       })),
       prepareChannelFormData: vi.fn(

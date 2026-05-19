@@ -470,9 +470,7 @@ export default function ManagedSiteChannels({
                   }
 
                   const resolvedKey = await service.fetchChannelSecretKey(
-                    config.baseUrl,
-                    config.token,
-                    config.userId,
+                    config,
                     channel.id,
                   )
 
@@ -580,14 +578,7 @@ export default function ManagedSiteChannels({
       }
 
       const results = await Promise.allSettled(
-        pendingDeleteIds.map((id) =>
-          service.deleteChannel(
-            config.baseUrl,
-            config.token,
-            config.userId,
-            id,
-          ),
-        ),
+        pendingDeleteIds.map((id) => service.deleteChannel(config, id)),
       )
 
       const successIds: number[] = []

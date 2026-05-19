@@ -11,7 +11,7 @@ import { CHANNEL_STATUS } from "~/types/managedSite"
 
 const managedConfig = {
   baseUrl: "https://managed.example",
-  token: "managed-token",
+  adminToken: "managed-token",
   userId: "1",
 }
 

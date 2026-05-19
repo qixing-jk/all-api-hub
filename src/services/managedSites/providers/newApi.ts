@@ -57,80 +57,56 @@ const newApiImportDuplicateService = {
   fetchChannelSecretKey,
 }
 
+const toNewApiRequestConfig = (config: NewApiConfig) => ({
+  baseUrl: config.baseUrl,
+  auth: {
+    authType: AuthTypeEnum.AccessToken,
+    accessToken: config.adminToken,
+    userId: config.userId,
+  },
+})
+
 /**
  * 搜索指定关键词的渠道
- * @param baseUrl New API 的基础 URL
- * @param accessToken 管理员令牌
- * @param userId 用户 ID
+ * @param config New API runtime config
  * @param keyword 搜索关键词
  */
 export async function searchChannel(
-  baseUrl: string,
-  accessToken: string,
-  userId: number | string,
+  config: NewApiConfig,
   keyword: string,
 ): Promise<ManagedSiteChannelListData | null> {
   return await getApiService(SITE_TYPES.NEW_API).searchChannel(
-    {
-      baseUrl,
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        accessToken,
-        userId,
-      },
-    },
+    toNewApiRequestConfig(config),
     keyword,
   )
 }
 
 /**
  * 创建新渠道
- * @param baseUrl New API 的基础 URL
- * @param adminToken 管理员令牌
- * @param userId 用户 ID
+ * @param config New API runtime config
  * @param channelData 渠道数据
  */
 export async function createChannel(
-  baseUrl: string,
-  adminToken: string,
-  userId: number | string,
+  config: NewApiConfig,
   channelData: CreateChannelPayload,
 ) {
   return await getApiService(SITE_TYPES.NEW_API).createChannel(
-    {
-      baseUrl,
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        accessToken: adminToken,
-        userId,
-      },
-    },
+    toNewApiRequestConfig(config),
     channelData,
   )
 }
 
 /**
  * 更新新渠道
- * @param baseUrl New API 的基础 URL
- * @param adminToken 管理员令牌
- * @param userId 用户 ID
+ * @param config New API runtime config
  * @param channelData 渠道数据
  */
 export async function updateChannel(
-  baseUrl: string,
-  adminToken: string,
-  userId: number | string,
+  config: NewApiConfig,
   channelData: UpdateChannelPayload,
 ) {
   return await getApiService(SITE_TYPES.NEW_API).updateChannel(
-    {
-      baseUrl,
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        accessToken: adminToken,
-        userId,
-      },
-    },
+    toNewApiRequestConfig(config),
     channelData,
   )
 }
@@ -138,21 +114,9 @@ export async function updateChannel(
 /**
  * 删除渠道
  */
-export async function deleteChannel(
-  baseUrl: string,
-  adminToken: string,
-  userId: number | string,
-  channelId: number,
-) {
+export async function deleteChannel(config: NewApiConfig, channelId: number) {
   return await getApiService(SITE_TYPES.NEW_API).deleteChannel(
-    {
-      baseUrl,
-      auth: {
-        authType: AuthTypeEnum.AccessToken,
-        accessToken: adminToken,
-        userId,
-      },
-    },
+    toNewApiRequestConfig(config),
     channelId,
   )
 }
@@ -161,12 +125,10 @@ export async function deleteChannel(
  * Reads a single managed-site channel key using the New API verification flow.
  */
 export async function fetchChannelSecretKey(
-  baseUrl: string,
-  _adminToken: string,
-  userId: number | string,
+  config: NewApiConfig,
   channelId: number,
 ): Promise<string> {
-  const sessionConfig = await getNewApiManagedSessionConfig(baseUrl, userId)
+  const sessionConfig = await getNewApiManagedSessionConfig(config)
 
   return await fetchNewApiChannelKey({
     ...sessionConfig,
@@ -178,12 +140,10 @@ export async function fetchChannelSecretKey(
  * Hydrates hidden New API channel keys so the shared resolver can compare them.
  */
 export async function hydrateComparableChannelKeys(
-  baseUrl: string,
-  _adminToken: string,
-  userId: number | string,
+  config: NewApiConfig,
   candidates: ManagedSiteChannel[],
 ): Promise<ManagedSiteChannel[]> {
-  const sessionConfig = await getNewApiManagedSessionConfig(baseUrl, userId)
+  const sessionConfig = await getNewApiManagedSessionConfig(config)
   const hydratedCandidates: ManagedSiteChannel[] = []
 
   for (const candidate of candidates) {
@@ -210,7 +170,7 @@ export async function hydrateComparableChannelKeys(
       }
 
       logger.warn("Failed to hydrate hidden New API channel key", {
-        baseUrl,
+        baseUrl: config.baseUrl,
         channelId: candidate.id,
         error: getErrorMessage(error),
       })
@@ -323,8 +283,7 @@ const sharesNewApiOrigin = (leftBaseUrl: string, rightBaseUrl: string) => {
 }
 
 const getNewApiManagedSessionConfig = async (
-  baseUrl: string,
-  userId: number | string,
+  config: Pick<NewApiConfig, "baseUrl" | "userId">,
 ): Promise<
   Pick<
     NewApiConfig,
@@ -333,11 +292,12 @@ const getNewApiManagedSessionConfig = async (
 > => {
   const loginAssistConfig = await getNewApiLoginAssistConfig()
   const canReuseLoginAssist =
-    loginAssistConfig && sharesNewApiOrigin(loginAssistConfig.baseUrl, baseUrl)
+    loginAssistConfig &&
+    sharesNewApiOrigin(loginAssistConfig.baseUrl, config.baseUrl)
 
   return {
-    baseUrl,
-    userId: userId?.toString() ?? "",
+    baseUrl: config.baseUrl,
+    userId: config.userId?.toString() ?? "",
     username: canReuseLoginAssist ? loginAssistConfig.username ?? "" : "",
     password: canReuseLoginAssist ? loginAssistConfig.password ?? "" : "",
     totpSecret: canReuseLoginAssist ? loginAssistConfig.totpSecret ?? "" : "",
@@ -466,13 +426,15 @@ export async function importToNewApi(
 
     const formData = await prepareChannelFormData(account, token)
 
+    const managedConfig = {
+      baseUrl: newApiBaseUrl!,
+      adminToken: newApiAdminToken!,
+      userId: newApiUserId!,
+    }
+
     const existingChannel = await resolveManagedSiteImportDuplicate({
       service: newApiImportDuplicateService,
-      managedConfig: {
-        baseUrl: newApiBaseUrl!,
-        token: newApiAdminToken!,
-        userId: newApiUserId!,
-      },
+      managedConfig,
       formData,
     })
 
@@ -487,12 +449,7 @@ export async function importToNewApi(
 
     const payload = buildChannelPayload(formData)
 
-    const createdChannelResponse = await createChannel(
-      newApiBaseUrl!,
-      newApiAdminToken!,
-      newApiUserId!,
-      payload,
-    )
+    const createdChannelResponse = await createChannel(managedConfig, payload)
 
     if (createdChannelResponse.success) {
       return {

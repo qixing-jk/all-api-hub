@@ -44,6 +44,12 @@ const {
   mockFetchManagedSiteAvailableModels: vi.fn(),
 }))
 
+const passedOctopusConfig = {
+  baseUrl: "https://passed-octopus.example.com",
+  username: "passed-octo-user",
+  password: "passed-octo-pass",
+}
+
 vi.mock("react-hot-toast", () => ({
   default: mockToast,
 }))
@@ -156,7 +162,7 @@ describe("octopus additional flows", () => {
       "~/services/managedSites/providers/octopus"
     )
 
-    const created = await createChannel("ignored", "", "", {
+    const created = await createChannel(passedOctopusConfig, {
       mode: "single",
       channel: {
         name: " Octopus Channel ",
@@ -174,9 +180,9 @@ describe("octopus additional flows", () => {
     expect(created.success).toBe(true)
     expect(mockCreateChannelApi).toHaveBeenCalledWith(
       {
-        baseUrl: "https://octopus.example.com",
-        username: "octo-user",
-        password: "octo-pass",
+        baseUrl: "https://passed-octopus.example.com",
+        username: "passed-octo-user",
+        password: "passed-octo-pass",
       },
       {
         name: " Octopus Channel ",
@@ -190,7 +196,7 @@ describe("octopus additional flows", () => {
       },
     )
 
-    const updated = await updateChannel("ignored", "", "", {
+    const updated = await updateChannel(passedOctopusConfig, {
       id: 12,
       name: "Updated Octopus Channel",
       type: OctopusOutboundType.Anthropic,
@@ -202,9 +208,9 @@ describe("octopus additional flows", () => {
     expect(updated.success).toBe(true)
     expect(mockUpdateChannelApi).toHaveBeenCalledWith(
       {
-        baseUrl: "https://octopus.example.com",
-        username: "octo-user",
-        password: "octo-pass",
+        baseUrl: "https://passed-octopus.example.com",
+        username: "passed-octo-user",
+        password: "passed-octo-pass",
       },
       {
         id: 12,
@@ -215,38 +221,6 @@ describe("octopus additional flows", () => {
         model: "claude-3.7-sonnet",
       },
     )
-  })
-
-  it("returns a config-missing response when Octopus credentials are unavailable", async () => {
-    const { createChannel, deleteChannel } = await import(
-      "~/services/managedSites/providers/octopus"
-    )
-    mockGetPreferences.mockResolvedValue({
-      octopus: {
-        baseUrl: "",
-        username: "",
-        password: "",
-      },
-    })
-
-    const createResult = await createChannel("ignored", "", "", {
-      mode: "single",
-      channel: {},
-    } as any)
-    const deleteResult = await deleteChannel("ignored", "", "", 99)
-
-    expect(createResult).toEqual({
-      success: false,
-      data: null,
-      message: "Octopus config not found",
-    })
-    expect(deleteResult).toEqual({
-      success: false,
-      data: null,
-      message: "Octopus config not found",
-    })
-    expect(mockCreateChannelApi).not.toHaveBeenCalled()
-    expect(mockDeleteChannelApi).not.toHaveBeenCalled()
   })
 
   it("prepares Octopus channel form data with a normalized /v1 base URL", async () => {
@@ -414,6 +388,12 @@ describe("octopus additional flows", () => {
     const { checkValidOctopusConfig, getOctopusConfig, searchChannel } =
       await import("~/services/managedSites/providers/octopus")
 
+    await expect(getOctopusConfig()).resolves.toEqual({
+      baseUrl: "https://octopus.example.com",
+      username: "octo-user",
+      password: "octo-pass",
+    })
+
     mockGetPreferences.mockResolvedValueOnce(null)
     await expect(checkValidOctopusConfig()).resolves.toBe(false)
 
@@ -443,7 +423,10 @@ describe("octopus additional flows", () => {
         password: "",
       },
     })
-    await expect(searchChannel("ignored", "", "", "proxy")).resolves.toBeNull()
+    mockSearchChannels.mockRejectedValueOnce(new Error("search failed"))
+    await expect(
+      searchChannel(passedOctopusConfig, "proxy"),
+    ).resolves.toBeNull()
   })
 
   it("converts Octopus channels to managed-site data and searches channels through the provider config", async () => {
@@ -472,7 +455,7 @@ describe("octopus additional flows", () => {
     mockSearchChannels.mockResolvedValueOnce([apiChannel])
 
     const converted = octopusChannelToManagedSite(apiChannel)
-    const result = await searchChannel("ignored", "", "", "octopus")
+    const result = await searchChannel(passedOctopusConfig, "octopus")
     const models = await fetchAvailableModels(account, token)
 
     expect(converted).toMatchObject({
@@ -491,9 +474,9 @@ describe("octopus additional flows", () => {
     })
     expect(mockSearchChannels).toHaveBeenCalledWith(
       {
-        baseUrl: "https://octopus.example.com",
-        username: "octo-user",
-        password: "octo-pass",
+        baseUrl: "https://passed-octopus.example.com",
+        username: "passed-octo-user",
+        password: "passed-octo-pass",
       },
       "octopus",
     )
@@ -513,19 +496,19 @@ describe("octopus additional flows", () => {
     )
 
     mockCreateChannelApi.mockRejectedValueOnce(new Error("create exploded"))
-    const createResult = await createChannel("ignored", "", "", {
+    const createResult = await createChannel(passedOctopusConfig, {
       mode: "single",
       channel: {},
     } as any)
 
     mockUpdateChannelApi.mockRejectedValueOnce(new Error("update exploded"))
-    const updateResult = await updateChannel("ignored", "", "", {
+    const updateResult = await updateChannel(passedOctopusConfig, {
       id: 9,
       status: 1,
     } as any)
 
     mockDeleteChannelApi.mockRejectedValueOnce(new Error("delete exploded"))
-    const deleteResult = await deleteChannel("ignored", "", "", 9)
+    const deleteResult = await deleteChannel(passedOctopusConfig, 9)
 
     expect(createResult).toEqual({
       success: false,
@@ -584,21 +567,12 @@ describe("octopus additional flows", () => {
 
     const rejected = await autoConfigToOctopus(buildSiteAccount(), "toast-7")
 
-    expect(mockSearchChannels).toHaveBeenCalledWith(
-      {
-        baseUrl: "https://octopus.example.com",
-        username: "octo-user",
-        password: "octo-pass",
-      },
-      "https://proxy.example.com",
-    )
-    expect(mockCreateChannelApi).toHaveBeenCalled()
+    expect(mockSearchChannels).not.toHaveBeenCalled()
+    expect(mockCreateChannelApi).not.toHaveBeenCalled()
     expect(rejected).toEqual({
       success: false,
-      message: "octopus rejected channel",
+      message: "messages:octopus.configMissing",
     })
-    expect(mockToast.error).toHaveBeenCalledWith("octopus rejected channel", {
-      id: "toast-7",
-    })
+    expect(mockToast.error).not.toHaveBeenCalled()
   })
 })

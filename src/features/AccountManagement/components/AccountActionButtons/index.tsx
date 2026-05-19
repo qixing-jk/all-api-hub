@@ -42,6 +42,7 @@ import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelM
 import {
   getManagedSiteService,
   hasValidManagedSiteConfig,
+  type ManagedSiteConfig,
 } from "~/services/managedSites/managedSiteService"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import {
@@ -206,6 +207,12 @@ const getLocateManagedSiteChannelToastMessage = (
   }
 
   return t("account:actions.channelLocateUnresolved")
+}
+
+const collectManagedConfigSecrets = (managedConfig: ManagedSiteConfig) => {
+  if ("adminToken" in managedConfig) return [managedConfig.adminToken]
+  if ("password" in managedConfig) return [managedConfig.password]
+  return []
 }
 
 /**
@@ -436,9 +443,11 @@ export default function AccountActionButtons({
         )
       }
 
-      if (managedConfig.token) {
-        secretsToRedact.add(managedConfig.token)
-      }
+      collectManagedConfigSecrets(managedConfig).forEach((secret) => {
+        if (secret) {
+          secretsToRedact.add(secret)
+        }
+      })
 
       const tokensResponse = await getApiService(
         site.siteType,

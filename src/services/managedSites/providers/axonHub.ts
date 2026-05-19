@@ -64,8 +64,11 @@ function hasValidAxonHubConfig(prefs: UserPreferences | null): boolean {
  */
 export async function checkValidAxonHubConfig(): Promise<boolean> {
   try {
-    const config = await getFullAxonHubConfig()
-    if (!config) return false
+    const prefs = await userPreferences.getPreferences()
+    if (!hasValidAxonHubConfig(prefs) || !prefs.axonHub) {
+      return false
+    }
+    const config = prefs.axonHub
     await axonHubApi.signIn(config)
     return true
   } catch (error) {
@@ -81,28 +84,13 @@ export async function getAxonHubConfig(): Promise<ManagedSiteConfig | null> {
   try {
     const prefs = await userPreferences.getPreferences()
     if (hasValidAxonHubConfig(prefs) && prefs.axonHub) {
-      return {
-        baseUrl: prefs.axonHub.baseUrl,
-        token: prefs.axonHub.password,
-        userId: prefs.axonHub.email,
-      }
+      return prefs.axonHub
     }
     return null
   } catch (error) {
     logger.error("Error getting AxonHub config", error)
     return null
   }
-}
-
-/**
- * Return the full AxonHub credential config used by provider operations.
- */
-async function getFullAxonHubConfig(): Promise<AxonHubConfig | null> {
-  const prefs = await userPreferences.getPreferences()
-  if (hasValidAxonHubConfig(prefs) && prefs.axonHub) {
-    return prefs.axonHub
-  }
-  return null
 }
 
 const getFinalModels = (formData: ChannelFormData) =>
@@ -177,15 +165,10 @@ function buildAxonHubUpdateInputFromPayload(
  * Search AxonHub channels using the current saved admin credentials.
  */
 export async function searchChannel(
-  _baseUrl: string,
-  _accessToken: string,
-  _userId: number | string,
+  config: AxonHubConfig,
   keyword: string,
 ): Promise<ManagedSiteChannelListData | null> {
   try {
-    const config = await getFullAxonHubConfig()
-    if (!config) return null
-
     return await axonHubApi.searchChannels(config, keyword)
   } catch (error) {
     logger.error("Failed to search AxonHub channels", error)
@@ -197,21 +180,10 @@ export async function searchChannel(
  * Create an AxonHub channel through the managed-site service contract.
  */
 export async function createChannel(
-  _baseUrl: string,
-  _adminToken: string,
-  _userId: number | string,
+  config: AxonHubConfig,
   channelData: CreateChannelPayload,
 ): Promise<ApiResponse<unknown>> {
   try {
-    const config = await getFullAxonHubConfig()
-    if (!config) {
-      return {
-        success: false,
-        data: null,
-        message: t("messages:axonhub.configMissing"),
-      }
-    }
-
     const channel = channelData.channel
     const input = buildAxonHubInputFromFormData({
       name: channel.name ?? "",
@@ -251,21 +223,10 @@ export async function createChannel(
  * Update an AxonHub channel through the managed-site service contract.
  */
 export async function updateChannel(
-  _baseUrl: string,
-  _adminToken: string,
-  _userId: number | string,
+  config: AxonHubConfig,
   channelData: UpdateChannelPayload & { status?: number },
 ): Promise<ApiResponse<unknown>> {
   try {
-    const config = await getFullAxonHubConfig()
-    if (!config) {
-      return {
-        success: false,
-        data: null,
-        message: t("messages:axonhub.configMissing"),
-      }
-    }
-
     const graphqlId = axonHubApi.resolveAxonHubGraphqlId(channelData.id)
     const updated = await axonHubApi.updateAxonHubChannel(
       config,
@@ -295,21 +256,10 @@ export async function updateChannel(
  * Delete an AxonHub channel through the managed-site service contract.
  */
 export async function deleteChannel(
-  _baseUrl: string,
-  _adminToken: string,
-  _userId: number | string,
+  config: AxonHubConfig,
   channelId: number,
 ): Promise<ApiResponse<unknown>> {
   try {
-    const config = await getFullAxonHubConfig()
-    if (!config) {
-      return {
-        success: false,
-        data: null,
-        message: t("messages:axonhub.configMissing"),
-      }
-    }
-
     const deleted = await axonHubApi.deleteAxonHubChannel(
       config,
       axonHubApi.resolveAxonHubGraphqlId(channelId),
@@ -411,19 +361,16 @@ export async function importToAxonHub(
   token: ApiToken,
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const config = await getFullAxonHubConfig()
-    if (!config) {
+    const prefs = await userPreferences.getPreferences()
+    if (!hasValidAxonHubConfig(prefs) || !prefs.axonHub) {
       return { success: false, message: t("messages:axonhub.configMissing") }
     }
+    const config = prefs.axonHub
 
     const formData = await prepareChannelFormData(account, token)
     const existingChannel = await resolveManagedSiteImportDuplicate({
       service: axonHubImportDuplicateService,
-      managedConfig: {
-        baseUrl: config.baseUrl,
-        token: config.password,
-        userId: config.email,
-      },
+      managedConfig: config,
       formData,
     })
 
@@ -436,12 +383,7 @@ export async function importToAxonHub(
       }
     }
 
-    const result = await createChannel(
-      config.baseUrl,
-      config.password,
-      config.email,
-      buildChannelPayload(formData),
-    )
+    const result = await createChannel(config, buildChannelPayload(formData))
 
     return result.success
       ? {
@@ -467,11 +409,10 @@ export async function autoConfigToAxonHub(
   toastId?: string,
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const config = await getFullAxonHubConfig()
-    if (!config) {
+    const prefs = await userPreferences.getPreferences()
+    if (!hasValidAxonHubConfig(prefs) || !prefs.axonHub) {
       return { success: false, message: t("messages:axonhub.configMissing") }
     }
-
     const displaySiteData = accountStorage.convertToDisplayData(account)
     const apiToken = await ensureAccountApiToken(
       account,

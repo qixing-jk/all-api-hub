@@ -115,7 +115,7 @@ const createManagedSiteServiceStub = (
     checkValidConfig: vi.fn().mockResolvedValue(true),
     getConfig: vi.fn().mockResolvedValue({
       baseUrl: "https://managed.example",
-      token: "managed-admin-token",
+      adminToken: "managed-admin-token",
       userId: "1",
     }),
     fetchAvailableModels: vi.fn(),
@@ -133,7 +133,7 @@ const createManagedSiteServiceStub = (
     }),
     buildChannelPayload: vi.fn(),
     hydrateComparableChannelKeys: vi.fn(
-      async (_baseUrl, _token, _userId, candidates) => candidates,
+      async (_config, candidates) => candidates,
     ),
     autoConfigToManagedSite: vi.fn(),
     ...overrides,
@@ -769,9 +769,11 @@ describe("getManagedSiteTokenChannelStatus", () => {
     })
 
     expect(fetchChannelSecretKey).toHaveBeenCalledWith(
-      "https://managed.example",
-      "managed-admin-token",
-      "1",
+      {
+        baseUrl: "https://managed.example",
+        adminToken: "managed-admin-token",
+        userId: "1",
+      },
       43,
     )
     expect(result).toMatchObject({
@@ -810,7 +812,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     const service = createManagedSiteServiceStub({
       getConfig: vi.fn().mockResolvedValue({
         baseUrl: "https://managed.example",
-        token: "secret-admin-value",
+        adminToken: "secret-admin-value",
         userId: "1",
       }),
       prepareChannelFormData: vi
@@ -849,7 +851,7 @@ describe("getManagedSiteTokenChannelStatus", () => {
     const service = createManagedSiteServiceStub({
       getConfig: vi.fn().mockResolvedValue({
         baseUrl: "https://managed.example",
-        token: "secret-admin-value",
+        adminToken: "secret-admin-value",
         userId: "1",
       }),
     })

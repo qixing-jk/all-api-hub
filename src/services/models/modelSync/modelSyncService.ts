@@ -1,7 +1,9 @@
 import { union } from "lodash-es"
 
-import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { getApiService } from "~/services/apiService"
+import type { ApiServiceRequest } from "~/services/apiService/common/type"
+import { type ManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import { AuthTypeEnum } from "~/types"
 import type { ChannelConfigMap } from "~/types/channelConfig"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
@@ -40,20 +42,15 @@ const logger = createLogger("ManagedSiteModelSync")
  * Handles channel operations for model synchronization
  */
 export class ModelSyncService {
-  private baseUrl: string
-  private token: string
-  private userId?: string
-  private siteType: ManagedSiteType
+  private managedSiteConfig: ManagedSiteRuntimeConfig
   private rateLimiter: RateLimiter | null = null
   private allowedModelSet: Set<string> | null = null
   private channelConfigs: ChannelConfigMap | null = null
   private globalChannelModelFilters: ChannelModelFilterRule[] | null = null
 
   /**
-   * Create a model sync service bound to a specific New API instance.
-   * @param baseUrl New API base URL.
-   * @param token Admin token for channel operations.
-   * @param userId Optional user id for header injection.
+   * Create a model sync service bound to a specific managed-site runtime config.
+   * @param managedSiteConfig Managed-site runtime config object.
    * @param rateLimitConfig Optional RPM/burst limits for upstream calls.
    * @param rateLimitConfig.requestsPerMinute Maximum allowed requests per minute.
    * @param rateLimitConfig.burst Maximum burst size before throttling kicks in.
@@ -62,19 +59,13 @@ export class ModelSyncService {
    * @param globalChannelModelFilters Optional global include/exclude rules.
    */
   constructor(
-    baseUrl: string,
-    token: string,
-    userId?: string,
+    managedSiteConfig: ManagedSiteRuntimeConfig,
     rateLimitConfig?: { requestsPerMinute: number; burst: number },
     allowedModels?: string[],
     channelConfigs?: ChannelConfigMap | null,
     globalChannelModelFilters?: ChannelModelFilterRule[] | null,
-    siteType: ManagedSiteType = SITE_TYPES.NEW_API,
   ) {
-    this.baseUrl = baseUrl
-    this.token = token
-    this.userId = userId
-    this.siteType = siteType
+    this.managedSiteConfig = managedSiteConfig
     if (rateLimitConfig) {
       this.rateLimiter = new RateLimiter(
         rateLimitConfig.requestsPerMinute,
@@ -91,6 +82,33 @@ export class ModelSyncService {
     }
     if (globalChannelModelFilters && globalChannelModelFilters.length > 0) {
       this.globalChannelModelFilters = globalChannelModelFilters
+    }
+  }
+
+  private createApiServiceRequest(): ApiServiceRequest {
+    const { config, siteType } = this.managedSiteConfig
+    const auth = {
+      authType: AuthTypeEnum.AccessToken,
+      accessToken: "",
+      userId: "",
+    }
+
+    if (siteType === SITE_TYPES.OCTOPUS) {
+      auth.userId = config.username
+    } else if (siteType === SITE_TYPES.AXON_HUB) {
+      auth.accessToken = config.password
+      auth.userId = config.email
+    } else if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
+      auth.accessToken = config.adminToken
+      auth.userId = "admin"
+    } else {
+      auth.accessToken = config.adminToken
+      auth.userId = config.userId
+    }
+
+    return {
+      baseUrl: config.baseUrl,
+      auth,
     }
   }
 
@@ -146,21 +164,13 @@ export class ModelSyncService {
    */
   async listChannels(): Promise<ManagedSiteChannelListData> {
     try {
-      return await getApiService(this.siteType).listAllChannels(
-        {
-          baseUrl: this.baseUrl,
-          auth: {
-            authType: AuthTypeEnum.AccessToken,
-            accessToken: this.token,
-            userId: this.userId,
-          },
+      return await getApiService(
+        this.managedSiteConfig.siteType,
+      ).listAllChannels(this.createApiServiceRequest(), {
+        beforeRequest: async () => {
+          await this.throttle()
         },
-        {
-          beforeRequest: async () => {
-            await this.throttle()
-          },
-        },
-      )
+      })
     } catch (error) {
       logger.error("Failed to list channels", error)
       throw error
@@ -176,17 +186,9 @@ export class ModelSyncService {
     try {
       await this.throttle()
 
-      return await getApiService(this.siteType).fetchChannelModels(
-        {
-          baseUrl: this.baseUrl,
-          auth: {
-            authType: AuthTypeEnum.AccessToken,
-            accessToken: this.token,
-            userId: this.userId,
-          },
-        },
-        channelId,
-      )
+      return await getApiService(
+        this.managedSiteConfig.siteType,
+      ).fetchChannelModels(this.createApiServiceRequest(), channelId)
     } catch (error: any) {
       logger.error("Failed to fetch models", { channelId, error })
       throw error
@@ -205,15 +207,8 @@ export class ModelSyncService {
     try {
       await this.throttle()
 
-      await getApiService(this.siteType).updateChannelModels(
-        {
-          baseUrl: this.baseUrl,
-          auth: {
-            authType: AuthTypeEnum.AccessToken,
-            accessToken: this.token,
-            userId: this.userId,
-          },
-        },
+      await getApiService(this.managedSiteConfig.siteType).updateChannelModels(
+        this.createApiServiceRequest(),
         channel.id,
         models.join(","),
       )
@@ -239,15 +234,10 @@ export class ModelSyncService {
       ).join(",")
       await this.throttle()
 
-      await getApiService(this.siteType).updateChannelModelMapping(
-        {
-          baseUrl: this.baseUrl,
-          auth: {
-            authType: AuthTypeEnum.AccessToken,
-            accessToken: this.token,
-            userId: this.userId,
-          },
-        },
+      await getApiService(
+        this.managedSiteConfig.siteType,
+      ).updateChannelModelMapping(
+        this.createApiServiceRequest(),
         channel.id,
         updateModels,
         JSON.stringify(modelMapping),
@@ -289,10 +279,7 @@ export class ModelSyncService {
         const probeFilterAbort = this.createProbeFilterAbortSignal()
         const probeContext: ProbeFilterContext = {
           channel,
-          siteType: this.siteType,
-          managedSiteBaseUrl: this.baseUrl,
-          adminToken: this.token,
-          userId: this.userId,
+          managedConfig: this.managedSiteConfig,
           cache: probeFilterCache,
           abortSignal: probeFilterAbort.signal,
         }

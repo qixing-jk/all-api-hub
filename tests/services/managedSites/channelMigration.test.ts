@@ -94,7 +94,7 @@ describe("channelMigration", () => {
     vi.clearAllMocks()
     mockDoneHubGetConfig.mockResolvedValue({
       baseUrl: "https://donehub.example.com",
-      token: "donehub-token",
+      adminToken: "donehub-token",
       userId: "9",
     })
     mockDoneHubBuildChannelPayload.mockImplementation((draft: any) => ({
@@ -111,14 +111,14 @@ describe("channelMigration", () => {
     mockDoneHubFetchChannelSecretKey.mockResolvedValue("real-donehub-key")
     mockVeloeraGetConfig.mockResolvedValue({
       baseUrl: "https://veloera.example.com",
-      token: "veloera-token",
+      adminToken: "veloera-token",
       userId: "8",
     })
     mockVeloeraFetchChannelSecretKey.mockResolvedValue("real-veloera-key")
     mockAxonHubGetConfig.mockResolvedValue({
       baseUrl: "https://axonhub.example.com",
-      token: "axonhub-password",
-      userId: "admin@example.com",
+      email: "admin@example.com",
+      password: "axonhub-password",
     })
     mockAxonHubBuildChannelPayload.mockImplementation((draft: any) => ({
       mode: "single",
@@ -140,8 +140,7 @@ describe("channelMigration", () => {
     })
     mockClaudeCodeHubGetConfig.mockResolvedValue({
       baseUrl: "https://cch.example.com",
-      token: "cch-token",
-      userId: "admin",
+      adminToken: "cch-token",
     })
     mockClaudeCodeHubBuildChannelPayload.mockImplementation((draft: any) => ({
       mode: "single",
@@ -209,7 +208,7 @@ describe("channelMigration", () => {
       return {
         getConfig: vi.fn().mockResolvedValue({
           baseUrl: "https://target.example.com",
-          token: "target-token",
+          adminToken: "target-token",
           userId: "1",
         }),
         buildChannelPayload: vi.fn((draft: any) => ({
@@ -309,9 +308,11 @@ describe("channelMigration", () => {
     })
 
     expect(mockDoneHubFetchChannelSecretKey).toHaveBeenCalledWith(
-      "https://donehub.example.com",
-      "donehub-token",
-      "9",
+      {
+        baseUrl: "https://donehub.example.com",
+        adminToken: "donehub-token",
+        userId: "9",
+      },
       21,
     )
     expect(preview.readyCount).toBe(1)
@@ -361,9 +362,11 @@ describe("channelMigration", () => {
     })
 
     expect(mockVeloeraFetchChannelSecretKey).toHaveBeenCalledWith(
-      "https://veloera.example.com",
-      "veloera-token",
-      "8",
+      {
+        baseUrl: "https://veloera.example.com",
+        adminToken: "veloera-token",
+        userId: "8",
+      },
       22,
     )
     expect(preview.readyCount).toBe(1)
@@ -420,7 +423,7 @@ describe("channelMigration", () => {
       return {
         getConfig: vi.fn().mockResolvedValue({
           baseUrl: "https://target.example.com",
-          token: "target-token",
+          adminToken: "target-token",
           userId: "1",
         }),
         buildChannelPayload: vi.fn((draft: any) => ({
@@ -1196,9 +1199,11 @@ describe("channelMigration", () => {
     expect(mockAxonHubCreateChannel).toHaveBeenCalledTimes(2)
     expect(mockAxonHubCreateChannel).toHaveBeenNthCalledWith(
       1,
-      "https://axonhub.example.com",
-      "axonhub-password",
-      "admin@example.com",
+      {
+        baseUrl: "https://axonhub.example.com",
+        email: "admin@example.com",
+        password: "axonhub-password",
+      },
       expect.objectContaining({
         channel: expect.objectContaining({
           type: AXON_HUB_CHANNEL_TYPE.ANTHROPIC,
@@ -1299,9 +1304,10 @@ describe("channelMigration", () => {
     expect(mockClaudeCodeHubCreateChannel).toHaveBeenCalledTimes(2)
     expect(mockClaudeCodeHubCreateChannel).toHaveBeenNthCalledWith(
       1,
-      "https://cch.example.com",
-      "cch-token",
-      "admin",
+      {
+        baseUrl: "https://cch.example.com",
+        adminToken: "cch-token",
+      },
       expect.objectContaining({
         channel: expect.objectContaining({
           type: CLAUDE_CODE_HUB_PROVIDER_TYPE.CLAUDE,

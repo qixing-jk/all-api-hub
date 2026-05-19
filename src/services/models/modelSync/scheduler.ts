@@ -2,9 +2,8 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import * as octopusApi from "~/services/apiService/octopus"
 import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
+import { resolveCurrentManagedSiteRuntimeConfig } from "~/services/managedSites/runtimeConfig"
 import {
-  getManagedSiteAdminConfig,
-  getManagedSiteConfig,
   getManagedSiteConfigMissingMessage,
   getManagedSiteContext,
   getManagedSiteNoChannelsToSyncMessage,
@@ -37,7 +36,6 @@ import {
   ExecutionProgress,
   ExecutionResult,
 } from "~/types/managedSiteModelSync"
-import type { OctopusConfig } from "~/types/octopusConfig"
 import {
   getTaskNotificationStatusFromCounts,
   TASK_NOTIFICATION_STATUSES,
@@ -178,14 +176,12 @@ class ModelSyncScheduler {
   private async createService(): Promise<ModelSyncService> {
     const userPrefs = await userPreferences.getPreferences()
 
-    const { siteType, messagesKey } = getManagedSiteContext(userPrefs)
-    const managedConfig = getManagedSiteAdminConfig(userPrefs)
+    const { messagesKey } = getManagedSiteContext(userPrefs)
+    const managedConfig = resolveCurrentManagedSiteRuntimeConfig(userPrefs)
 
     if (!managedConfig) {
       throw new Error(getManagedSiteConfigMissingMessage(t, messagesKey))
     }
-
-    const { baseUrl, adminToken, userId } = managedConfig
 
     const config =
       userPrefs.managedSiteModelSync ??
@@ -194,16 +190,13 @@ class ModelSyncScheduler {
     const channelConfigs = await channelConfigStorage.getAllConfigs()
 
     return new ModelSyncService(
-      baseUrl,
-      adminToken,
-      userId,
+      managedConfig,
       config.rateLimit,
       config.allowedModels,
       channelConfigs,
       sanitizeChannelFiltersForStorage(config.globalChannelModelFilters, {
         idPrefix: "global-channel-filter",
       }),
-      siteType,
     )
   }
 
@@ -376,19 +369,23 @@ class ModelSyncScheduler {
 
     // Octopus 使用独立的 API 服务
     if (siteType === SITE_TYPES.OCTOPUS) {
-      const { config } = getManagedSiteConfig(userPrefs)
-      const octopusConfig = config as OctopusConfig
+      const octopusRuntimeConfig =
+        resolveCurrentManagedSiteRuntimeConfig(userPrefs)
 
       // Validate config like createService does
       if (
-        !octopusConfig?.baseUrl ||
-        !octopusConfig?.username ||
-        !octopusConfig?.password
+        !octopusRuntimeConfig ||
+        octopusRuntimeConfig.siteType !== SITE_TYPES.OCTOPUS ||
+        !octopusRuntimeConfig.config.baseUrl ||
+        !octopusRuntimeConfig.config.username ||
+        !octopusRuntimeConfig.config.password
       ) {
         throw new Error(getManagedSiteConfigMissingMessage(t, messagesKey))
       }
 
-      const channels = await octopusApi.listChannels(octopusConfig)
+      const channels = await octopusApi.listChannels(
+        octopusRuntimeConfig.config,
+      )
       return {
         items: channels.map(octopusChannelToManagedSite),
         total: channels.length,
@@ -397,18 +394,13 @@ class ModelSyncScheduler {
     }
 
     if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-      const managedConfig = getManagedSiteAdminConfig(userPrefs)
+      const managedConfig = resolveCurrentManagedSiteRuntimeConfig(userPrefs)
       if (!managedConfig) {
         throw new Error(getManagedSiteConfigMissingMessage(t, messagesKey))
       }
 
       const service = getManagedSiteServiceForType(siteType)
-      const channels = await service.searchChannel(
-        managedConfig.baseUrl,
-        managedConfig.adminToken,
-        managedConfig.userId,
-        "",
-      )
+      const channels = await service.searchChannel(managedConfig.config, "")
 
       return channels ?? { items: [], total: 0, type_counts: {} }
     }
@@ -641,20 +633,23 @@ class ModelSyncScheduler {
     concurrency: number,
     maxRetries: number,
   ): Promise<ExecutionResult> {
-    const { config } = getManagedSiteConfig(prefs)
-    const octopusConfig = config as OctopusConfig
+    const octopusRuntimeConfig = resolveCurrentManagedSiteRuntimeConfig(prefs)
 
     // Validate config like createService does
     if (
-      !octopusConfig?.baseUrl ||
-      !octopusConfig?.username ||
-      !octopusConfig?.password
+      !octopusRuntimeConfig ||
+      octopusRuntimeConfig.siteType !== SITE_TYPES.OCTOPUS ||
+      !octopusRuntimeConfig.config.baseUrl ||
+      !octopusRuntimeConfig.config.username ||
+      !octopusRuntimeConfig.config.password
     ) {
       throw new Error(getManagedSiteConfigMissingMessage(t, messagesKey))
     }
 
     // List channels using Octopus API
-    const octopusChannels = await octopusApi.listChannels(octopusConfig)
+    const octopusChannels = await octopusApi.listChannels(
+      octopusRuntimeConfig.config,
+    )
     const allChannels = octopusChannels.map(octopusChannelToManagedSite)
 
     // Filter channels if specific IDs provided
@@ -682,7 +677,7 @@ class ModelSyncScheduler {
     let result
     try {
       // Execute batch sync using Octopus-specific implementation
-      result = await runOctopusBatch(octopusConfig, channels, {
+      result = await runOctopusBatch(octopusRuntimeConfig.config, channels, {
         concurrency,
         maxRetries,
         onProgress: async (payload) => {

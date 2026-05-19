@@ -6,10 +6,8 @@ import {
   type ManagedSiteChannelMatchInspection,
   type ManagedSiteChannelMatchUnresolvedReason,
 } from "~/services/managedSites/channelMatch"
-import type {
-  ManagedSiteConfig,
-  ManagedSiteService,
-} from "~/services/managedSites/managedSiteService"
+import type { ManagedSiteService } from "~/services/managedSites/managedSiteService"
+import type { ManagedSiteRuntimeConfigValue } from "~/services/managedSites/runtimeConfig"
 import {
   findManagedSiteChannelsByBaseUrl,
   findManagedSiteChannelsByBaseUrlAndModels,
@@ -30,7 +28,7 @@ export type ManagedSiteChannelMatchService = Pick<
 
 interface ResolveManagedSiteChannelMatchParams {
   service: ManagedSiteChannelMatchService
-  managedConfig: ManagedSiteConfig
+  managedConfig: ManagedSiteRuntimeConfigValue
   accountBaseUrl: string
   models: string[]
   key?: string
@@ -71,14 +69,12 @@ const applyResolvedChannelKeys = <T extends { id: number; key?: string }>(
 
 const fetchRecoverableCandidateSecretKey = async (params: {
   service: ManagedSiteChannelMatchService
-  managedConfig: ManagedSiteConfig
+  managedConfig: ManagedSiteRuntimeConfigValue
   channelId: number
 }) => {
   try {
     return await params.service.fetchChannelSecretKey!(
-      params.managedConfig.baseUrl,
-      params.managedConfig.token,
-      params.managedConfig.userId,
+      params.managedConfig,
       params.channelId,
     )
   } catch (error) {
@@ -116,9 +112,7 @@ export async function resolveManagedSiteChannelMatch(
   )
 
   const searchResults = await service.searchChannel(
-    managedConfig.baseUrl,
-    managedConfig.token,
-    managedConfig.userId,
+    managedConfig,
     searchBaseUrl,
   )
 
@@ -359,9 +353,7 @@ export async function resolveManagedSiteChannelMatch(
     if (recoverableCandidates.length > 0) {
       try {
         const hydratedCandidates = await service.hydrateComparableChannelKeys(
-          managedConfig.baseUrl,
-          managedConfig.token,
-          managedConfig.userId,
+          managedConfig,
           recoverableCandidates,
         )
 

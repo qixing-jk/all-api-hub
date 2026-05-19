@@ -35,11 +35,6 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
 
 vi.mock("~/services/managedSites/providers/newApi", () => ({
   checkValidNewApiConfig: vi.fn(async () => true),
-  getNewApiConfig: vi.fn(async () => ({
-    baseUrl: "n",
-    token: "t",
-    userId: "u",
-  })),
   searchChannel: vi.fn(),
   createChannel: vi.fn(),
   updateChannel: vi.fn(),
@@ -55,11 +50,6 @@ vi.mock("~/services/managedSites/providers/newApi", () => ({
 
 vi.mock("~/services/managedSites/providers/veloera", () => ({
   checkValidVeloeraConfig: vi.fn(async () => true),
-  getVeloeraConfig: vi.fn(async () => ({
-    baseUrl: "v",
-    token: "t",
-    userId: "u",
-  })),
   searchChannel: vi.fn(),
   createChannel: vi.fn(),
   updateChannel: vi.fn(),
@@ -75,11 +65,6 @@ vi.mock("~/services/managedSites/providers/veloera", () => ({
 
 vi.mock("~/services/managedSites/providers/doneHubService", () => ({
   checkValidDoneHubConfig: vi.fn(async () => true),
-  getDoneHubConfig: vi.fn(async () => ({
-    baseUrl: "d",
-    token: "t",
-    userId: "u",
-  })),
   searchChannel: vi.fn(),
   createChannel: vi.fn(),
   updateChannel: vi.fn(),
@@ -95,11 +80,6 @@ vi.mock("~/services/managedSites/providers/doneHubService", () => ({
 
 vi.mock("~/services/managedSites/providers/octopus", () => ({
   checkValidOctopusConfig: vi.fn(async () => true),
-  getOctopusConfig: vi.fn(async () => ({
-    baseUrl: "o",
-    token: "",
-    userId: "admin",
-  })),
   searchChannel: vi.fn(),
   createChannel: vi.fn(),
   updateChannel: vi.fn(),
@@ -113,11 +93,6 @@ vi.mock("~/services/managedSites/providers/octopus", () => ({
 
 vi.mock("~/services/managedSites/providers/axonHub", () => ({
   checkValidAxonHubConfig: vi.fn(async () => true),
-  getAxonHubConfig: vi.fn(async () => ({
-    baseUrl: "a",
-    token: "p",
-    userId: "admin@example.com",
-  })),
   searchChannel: vi.fn(),
   createChannel: vi.fn(),
   updateChannel: vi.fn(),
@@ -131,11 +106,6 @@ vi.mock("~/services/managedSites/providers/axonHub", () => ({
 
 vi.mock("~/services/managedSites/providers/claudeCodeHub", () => ({
   checkValidClaudeCodeHubConfig: vi.fn(async () => true),
-  getClaudeCodeHubConfig: vi.fn(async () => ({
-    baseUrl: "c",
-    token: "t",
-    userId: "admin",
-  })),
   searchChannel: vi.fn(),
   createChannel: vi.fn(),
   updateChannel: vi.fn(),
@@ -233,9 +203,15 @@ describe("managedSiteService", () => {
       "~/services/managedSites/managedSiteService"
     )
 
-    mockGetPreferences.mockResolvedValueOnce({
+    const prefs = {
       managedSiteType: SITE_TYPES.NEW_API,
-    })
+      newApi: {
+        baseUrl: "https://new-api.example.com",
+        adminToken: "admin-token",
+        userId: "admin",
+      },
+    }
+    mockGetPreferences.mockResolvedValueOnce(prefs).mockResolvedValueOnce(prefs)
 
     const service = await getManagedSiteService()
     expect(service.siteType).toBe(SITE_TYPES.NEW_API)
@@ -244,7 +220,11 @@ describe("managedSiteService", () => {
     expect(service.hydrateComparableChannelKeys).toEqual(expect.any(Function))
 
     const config = await service.getConfig()
-    expect(config?.baseUrl).toBe("n")
+    expect(config).toEqual({
+      baseUrl: "https://new-api.example.com",
+      adminToken: "admin-token",
+      userId: "admin",
+    })
   })
 
   it("routes to Veloera service when selected", async () => {
@@ -252,9 +232,15 @@ describe("managedSiteService", () => {
       "~/services/managedSites/managedSiteService"
     )
 
-    mockGetPreferences.mockResolvedValueOnce({
+    const prefs = {
       managedSiteType: SITE_TYPES.VELOERA,
-    })
+      veloera: {
+        baseUrl: "https://veloera.example.com",
+        adminToken: "veloera-token",
+        userId: "3",
+      },
+    }
+    mockGetPreferences.mockResolvedValueOnce(prefs).mockResolvedValueOnce(prefs)
 
     const service = await getManagedSiteService()
     expect(service.siteType).toBe(SITE_TYPES.VELOERA)
@@ -263,7 +249,33 @@ describe("managedSiteService", () => {
     expect(service.hydrateComparableChannelKeys).toEqual(expect.any(Function))
 
     const config = await service.getConfig()
-    expect(config?.baseUrl).toBe("v")
+    expect(config).toEqual({
+      baseUrl: "https://veloera.example.com",
+      adminToken: "veloera-token",
+      userId: "3",
+    })
+  })
+
+  it("keeps selected provider identity when selected config is incomplete", async () => {
+    const { getManagedSiteService } = await import(
+      "~/services/managedSites/managedSiteService"
+    )
+
+    const prefs = {
+      managedSiteType: SITE_TYPES.AXON_HUB,
+      axonHub: {
+        baseUrl: "https://axonhub.example.com",
+        email: "admin@example.com",
+        password: "",
+      },
+    }
+    mockGetPreferences.mockResolvedValueOnce(prefs).mockResolvedValueOnce(prefs)
+
+    const service = await getManagedSiteService()
+    expect(service.siteType).toBe(SITE_TYPES.AXON_HUB)
+    expect(service.messagesKey).toBe("axonhub")
+
+    await expect(service.getConfig()).resolves.toBeNull()
   })
 
   it("can resolve an explicit target service without changing active preferences", async () => {
@@ -277,8 +289,50 @@ describe("managedSiteService", () => {
     expect(service).toMatchObject(baseService)
     expect(service.hydrateComparableChannelKeys).toEqual(expect.any(Function))
 
+    mockGetPreferences.mockResolvedValueOnce({
+      managedSiteType: SITE_TYPES.NEW_API,
+      doneHub: {
+        baseUrl: "https://donehub.example.com",
+        adminToken: "done-token",
+        userId: "2",
+      },
+    })
+
     const config = await service.getConfig()
-    expect(config?.baseUrl).toBe("d")
+    expect(config).toEqual({
+      baseUrl: "https://donehub.example.com",
+      adminToken: "done-token",
+      userId: "2",
+    })
+  })
+
+  it("passes runtime config objects directly to converted providers", async () => {
+    const { getManagedSiteServiceForType } = await import(
+      "~/services/managedSites/managedSiteService"
+    )
+    const newApiProvider = await import(
+      "~/services/managedSites/providers/newApi"
+    )
+
+    const service = getManagedSiteServiceForType(SITE_TYPES.NEW_API)
+
+    await service.searchChannel(
+      {
+        baseUrl: "https://new-api.example.com",
+        adminToken: "admin-token",
+        userId: "admin",
+      },
+      "alpha",
+    )
+
+    expect(newApiProvider.searchChannel).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://new-api.example.com",
+        adminToken: "admin-token",
+        userId: "admin",
+      },
+      "alpha",
+    )
   })
 
   it("routes to Octopus service when selected explicitly", async () => {
@@ -292,8 +346,21 @@ describe("managedSiteService", () => {
     expect(service).toMatchObject(baseService)
     expect(service.hydrateComparableChannelKeys).toBeUndefined()
 
+    mockGetPreferences.mockResolvedValueOnce({
+      managedSiteType: SITE_TYPES.NEW_API,
+      octopus: {
+        baseUrl: "https://octopus.example.com",
+        username: "octo-admin",
+        password: "secret",
+      },
+    })
+
     const config = await service.getConfig()
-    expect(config?.baseUrl).toBe("o")
+    expect(config).toEqual({
+      baseUrl: "https://octopus.example.com",
+      username: "octo-admin",
+      password: "secret",
+    })
   })
 
   it("routes to AxonHub service when selected explicitly", async () => {
@@ -307,11 +374,20 @@ describe("managedSiteService", () => {
     expect(service).toMatchObject(baseService)
     expect(service.hydrateComparableChannelKeys).toBeUndefined()
 
+    mockGetPreferences.mockResolvedValueOnce({
+      managedSiteType: SITE_TYPES.NEW_API,
+      axonHub: {
+        baseUrl: "https://axonhub.example.com",
+        email: "admin@example.com",
+        password: "secret",
+      },
+    })
+
     const config = await service.getConfig()
     expect(config).toEqual({
-      baseUrl: "a",
-      token: "p",
-      userId: "admin@example.com",
+      baseUrl: "https://axonhub.example.com",
+      email: "admin@example.com",
+      password: "secret",
     })
   })
 
@@ -327,11 +403,18 @@ describe("managedSiteService", () => {
     expect(service.hydrateComparableChannelKeys).toEqual(expect.any(Function))
     expect(service.fetchChannelSecretKey).toEqual(expect.any(Function))
 
+    mockGetPreferences.mockResolvedValueOnce({
+      managedSiteType: SITE_TYPES.NEW_API,
+      claudeCodeHub: {
+        baseUrl: "https://cch.example.com",
+        adminToken: "cch-token",
+      },
+    })
+
     const config = await service.getConfig()
     expect(config).toEqual({
-      baseUrl: "c",
-      token: "t",
-      userId: "admin",
+      baseUrl: "https://cch.example.com",
+      adminToken: "cch-token",
     })
   })
 

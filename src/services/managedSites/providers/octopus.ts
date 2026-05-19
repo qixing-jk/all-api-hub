@@ -169,28 +169,13 @@ export async function getOctopusConfig(): Promise<ManagedSiteConfig | null> {
   try {
     const prefs = await userPreferences.getPreferences()
     if (hasValidOctopusConfig(prefs) && prefs.octopus) {
-      return {
-        baseUrl: prefs.octopus.baseUrl,
-        token: "", // Octopus 使用 JWT，token 动态获取
-        userId: prefs.octopus.username,
-      }
+      return prefs.octopus
     }
     return null
   } catch (error) {
     logger.error("Error getting config", error)
     return null
   }
-}
-
-/**
- * 获取完整的 Octopus 配置（包含密码）
- */
-async function getFullOctopusConfig(): Promise<OctopusConfig | null> {
-  const prefs = await userPreferences.getPreferences()
-  if (hasValidOctopusConfig(prefs) && prefs.octopus) {
-    return prefs.octopus
-  }
-  return null
 }
 
 /**
@@ -246,15 +231,10 @@ export function octopusChannelToManagedSite(
  * 搜索渠道
  */
 export async function searchChannel(
-  _baseUrl: string,
-  _accessToken: string,
-  _userId: number | string,
+  config: OctopusConfig,
   keyword: string,
 ): Promise<ManagedSiteChannelListData | null> {
   try {
-    const config = await getFullOctopusConfig()
-    if (!config) return null
-
     const channels = await octopusApi.searchChannels(config, keyword)
     return {
       items: channels.map(octopusChannelToManagedSite),
@@ -271,17 +251,10 @@ export async function searchChannel(
  * 创建渠道
  */
 export async function createChannel(
-  _baseUrl: string,
-  _adminToken: string,
-  _userId: number | string,
+  config: OctopusConfig,
   channelData: CreateChannelPayload,
 ): Promise<ApiResponse<unknown>> {
   try {
-    const config = await getFullOctopusConfig()
-    if (!config) {
-      return { success: false, data: null, message: "Octopus config not found" }
-    }
-
     const channel = channelData.channel
     const request: OctopusCreateChannelRequest = {
       name: channel.name || "",
@@ -317,17 +290,10 @@ export async function createChannel(
  * 更新渠道
  */
 export async function updateChannel(
-  _baseUrl: string,
-  _adminToken: string,
-  _userId: number | string,
+  config: OctopusConfig,
   channelData: UpdateChannelPayload & { status?: number },
 ): Promise<ApiResponse<unknown>> {
   try {
-    const config = await getFullOctopusConfig()
-    if (!config) {
-      return { success: false, data: null, message: "Octopus config not found" }
-    }
-
     const result = await octopusApi.updateChannel(config, {
       id: channelData.id,
       name: channelData.name,
@@ -364,17 +330,10 @@ export async function updateChannel(
  * 删除渠道
  */
 export async function deleteChannel(
-  _baseUrl: string,
-  _adminToken: string,
-  _userId: number | string,
+  config: OctopusConfig,
   channelId: number,
 ): Promise<ApiResponse<unknown>> {
   try {
-    const config = await getFullOctopusConfig()
-    if (!config) {
-      return { success: false, data: null, message: "Octopus config not found" }
-    }
-
     const result = await octopusApi.deleteChannel(config, channelId)
     return {
       success: result.success,
@@ -477,10 +436,11 @@ export async function autoConfigToOctopus(
   toastId?: string,
 ): Promise<{ success: boolean; message: string }> {
   try {
-    const config = await getFullOctopusConfig()
-    if (!config) {
+    const prefs = await userPreferences.getPreferences()
+    if (!hasValidOctopusConfig(prefs) || !prefs.octopus) {
       return { success: false, message: t("messages:octopus.configMissing") }
     }
+    const config = prefs.octopus
 
     const displaySiteData = accountStorage.convertToDisplayData(account)
 
@@ -498,11 +458,7 @@ export async function autoConfigToOctopus(
 
     const existingChannel = await resolveManagedSiteImportDuplicate({
       service: octopusImportDuplicateService,
-      managedConfig: {
-        baseUrl: config.baseUrl,
-        token: "",
-        userId: config.username,
-      },
+      managedConfig: config,
       formData,
     })
 
@@ -516,7 +472,7 @@ export async function autoConfigToOctopus(
     }
 
     const payload = buildChannelPayload(formData)
-    const result = await createChannel(config.baseUrl, "", "", payload)
+    const result = await createChannel(config, payload)
 
     if (result.success) {
       toast.success(

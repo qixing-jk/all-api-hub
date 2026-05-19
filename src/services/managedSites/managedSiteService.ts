@@ -1,10 +1,14 @@
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import type { ApiResponse } from "~/services/apiService/common/type"
+import {
+  getCurrentManagedSiteRuntimeConfig,
+  getManagedSiteRuntimeConfigForType,
+  type ManagedSiteRuntimeConfigValue,
+} from "~/services/managedSites/runtimeConfig"
 import type { ManagedSiteMessagesKey } from "~/services/managedSites/utils/managedSite"
 import {
   getManagedSiteAdminConfig,
   getManagedSiteAdminConfigForType,
-  getManagedSiteContext,
   getManagedSiteMessagesKeyFromSiteType,
 } from "~/services/managedSites/utils/managedSite"
 import type {
@@ -33,41 +37,29 @@ import * as newApiService from "./providers/newApi"
 import * as octopusService from "./providers/octopus"
 import * as veloeraService from "./providers/veloera"
 
-export interface ManagedSiteConfig {
-  baseUrl: string
-  token: string
-  userId: string
-}
+export type ManagedSiteConfig = ManagedSiteRuntimeConfigValue
 
 export interface ManagedSiteService {
   siteType: ManagedSiteType
   messagesKey: ManagedSiteMessagesKey
 
   searchChannel(
-    baseUrl: string,
-    accessToken: string,
-    userId: number | string,
+    config: ManagedSiteRuntimeConfigValue,
     keyword: string,
   ): Promise<ManagedSiteChannelListData | null>
 
   createChannel(
-    baseUrl: string,
-    adminToken: string,
-    userId: number | string,
+    config: ManagedSiteRuntimeConfigValue,
     channelData: CreateChannelPayload,
   ): Promise<ApiResponse<unknown>>
 
   updateChannel(
-    baseUrl: string,
-    adminToken: string,
-    userId: number | string,
+    config: ManagedSiteRuntimeConfigValue,
     channelData: UpdateChannelPayload,
   ): Promise<ApiResponse<unknown>>
 
   deleteChannel(
-    baseUrl: string,
-    adminToken: string,
-    userId: number | string,
+    config: ManagedSiteRuntimeConfigValue,
     channelId: number,
   ): Promise<ApiResponse<unknown>>
 
@@ -92,16 +84,12 @@ export interface ManagedSiteService {
   ): CreateChannelPayload
 
   hydrateComparableChannelKeys?(
-    baseUrl: string,
-    adminToken: string,
-    userId: number | string,
+    config: ManagedSiteRuntimeConfigValue,
     candidates: ManagedSiteChannel[],
   ): Promise<ManagedSiteChannel[]>
 
   fetchChannelSecretKey?(
-    baseUrl: string,
-    adminToken: string,
-    userId: number | string,
+    config: ManagedSiteRuntimeConfigValue,
     channelId: number,
   ): Promise<string>
 
@@ -139,10 +127,19 @@ export function hasValidManagedSiteConfig(
  * Resolve the managed site service implementation based on preferences.
  */
 export async function getManagedSiteService(): Promise<ManagedSiteService> {
-  const prefs = await userPreferences.getPreferences()
-  const { siteType } = getManagedSiteContext(prefs)
+  const runtimeConfig = await getCurrentManagedSiteRuntimeConfig()
+  if (runtimeConfig) {
+    return getManagedSiteServiceForType(runtimeConfig.siteType)
+  }
 
-  return getManagedSiteServiceForType(siteType)
+  try {
+    const preferences = await userPreferences.getPreferences()
+    return getManagedSiteServiceForType(
+      preferences.managedSiteType || SITE_TYPES.NEW_API,
+    )
+  } catch {
+    return getManagedSiteServiceForType(SITE_TYPES.NEW_API)
+  }
 }
 
 /**
@@ -153,6 +150,10 @@ export function getManagedSiteServiceForType(
 ): ManagedSiteService {
   const messagesKey: ManagedSiteMessagesKey =
     getManagedSiteMessagesKeyFromSiteType(siteType)
+  const getConfig = async (): Promise<ManagedSiteConfig | null> => {
+    const runtimeConfig = await getManagedSiteRuntimeConfigForType(siteType)
+    return runtimeConfig?.config ?? null
+  }
 
   if (siteType === SITE_TYPES.OCTOPUS) {
     return {
@@ -163,7 +164,7 @@ export function getManagedSiteServiceForType(
       updateChannel: octopusService.updateChannel,
       deleteChannel: octopusService.deleteChannel,
       checkValidConfig: octopusService.checkValidOctopusConfig,
-      getConfig: octopusService.getOctopusConfig,
+      getConfig,
       fetchAvailableModels: octopusService.fetchAvailableModels,
       buildChannelName: octopusService.buildChannelName,
       prepareChannelFormData: octopusService.prepareChannelFormData,
@@ -181,7 +182,7 @@ export function getManagedSiteServiceForType(
       updateChannel: axonHubService.updateChannel,
       deleteChannel: axonHubService.deleteChannel,
       checkValidConfig: axonHubService.checkValidAxonHubConfig,
-      getConfig: axonHubService.getAxonHubConfig,
+      getConfig,
       fetchAvailableModels: axonHubService.fetchAvailableModels,
       buildChannelName: axonHubService.buildChannelName,
       prepareChannelFormData: axonHubService.prepareChannelFormData,
@@ -199,7 +200,7 @@ export function getManagedSiteServiceForType(
       updateChannel: claudeCodeHubService.updateChannel,
       deleteChannel: claudeCodeHubService.deleteChannel,
       checkValidConfig: claudeCodeHubService.checkValidClaudeCodeHubConfig,
-      getConfig: claudeCodeHubService.getClaudeCodeHubConfig,
+      getConfig,
       fetchAvailableModels: claudeCodeHubService.fetchAvailableModels,
       buildChannelName: claudeCodeHubService.buildChannelName,
       prepareChannelFormData: claudeCodeHubService.prepareChannelFormData,
@@ -220,7 +221,7 @@ export function getManagedSiteServiceForType(
       updateChannel: veloeraService.updateChannel,
       deleteChannel: veloeraService.deleteChannel,
       checkValidConfig: veloeraService.checkValidVeloeraConfig,
-      getConfig: veloeraService.getVeloeraConfig,
+      getConfig,
       fetchAvailableModels: veloeraService.fetchAvailableModels,
       buildChannelName: veloeraService.buildChannelName,
       prepareChannelFormData: veloeraService.prepareChannelFormData,
@@ -240,7 +241,7 @@ export function getManagedSiteServiceForType(
       updateChannel: doneHubService.updateChannel,
       deleteChannel: doneHubService.deleteChannel,
       checkValidConfig: doneHubService.checkValidDoneHubConfig,
-      getConfig: doneHubService.getDoneHubConfig,
+      getConfig,
       fetchAvailableModels: doneHubService.fetchAvailableModels,
       buildChannelName: doneHubService.buildChannelName,
       prepareChannelFormData: doneHubService.prepareChannelFormData,
@@ -259,7 +260,7 @@ export function getManagedSiteServiceForType(
     updateChannel: newApiService.updateChannel,
     deleteChannel: newApiService.deleteChannel,
     checkValidConfig: newApiService.checkValidNewApiConfig,
-    getConfig: newApiService.getNewApiConfig,
+    getConfig,
     fetchAvailableModels: newApiService.fetchAvailableModels,
     buildChannelName: newApiService.buildChannelName,
     prepareChannelFormData: newApiService.prepareChannelFormData,
