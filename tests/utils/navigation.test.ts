@@ -715,6 +715,13 @@ describe("navigation utilities", () => {
       `${OPTIONS_PAGE_URL}?tab=permissions#basic`,
       true,
     )
+    await openSettingsTab("general", {
+      anchor: "site-announcement-notifications-enabled",
+    })
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      `${OPTIONS_PAGE_URL}?tab=general&anchor=site-announcement-notifications-enabled#basic`,
+      true,
+    )
     expect(mockedCreateTab).toHaveBeenCalledWith(
       `${OPTIONS_PAGE_URL}?onboarding=permissions&reason=debug#basic`,
       true,

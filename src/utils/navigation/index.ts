@@ -337,10 +337,13 @@ const _openFullBookmarkManagerPage = (params?: { search?: string }) => {
  */
 const navigateToBasicSettings = (
   tabId?: string,
-  options?: { preserveHistory?: boolean },
+  options?: { preserveHistory?: boolean; anchor?: string },
 ) => {
   const targetHash = getBasicSettingsHash()
-  const searchParams = tabId ? { tab: tabId } : undefined
+  const searchParams =
+    tabId || options?.anchor
+      ? { tab: tabId, anchor: options?.anchor }
+      : undefined
 
   if (isOnOptionsPage()) {
     if (options?.preserveHistory) {
@@ -444,7 +447,7 @@ const _openPermissionsOnboardingPage = (params?: { reason?: string }) => {
  */
 const _openSettingsTab = (
   tabId: string,
-  options?: { preserveHistory?: boolean },
+  options?: { preserveHistory?: boolean; anchor?: string },
 ) => {
   return navigateToBasicSettings(tabId, options)
 }
