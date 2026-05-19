@@ -22,6 +22,7 @@ import {
 import {
   clearAlarm,
   createAlarm,
+  getAlarm,
   hasAlarmsAPI,
   onAlarm,
 } from "~/utils/browser/browserApi"
@@ -147,6 +148,25 @@ function createSiteState(params: {
 }
 
 /**
+ * Returns whether a site announcement check is still inside its cooldown window.
+ */
+function isWithinAnnouncementCooldown(params: {
+  siteState: Pick<SiteAnnouncementSiteState, "lastCheckedAt">
+  now: number
+  intervalMinutes: number
+}): boolean {
+  const lastCheckedAt = params.siteState.lastCheckedAt
+  if (typeof lastCheckedAt !== "number") {
+    return false
+  }
+
+  return (
+    params.now - lastCheckedAt <
+    clampIntervalMinutes(params.intervalMinutes) * 60 * 1000
+  )
+}
+
+/**
  * Removes duplicate common-provider accounts that share one announcement source.
  */
 function dedupeCommonAccounts(accounts: SiteAccount[]): SiteAccount[] {
@@ -174,17 +194,6 @@ function dedupeCommonAccounts(accounts: SiteAccount[]): SiteAccount[] {
   }
 
   return result
-}
-
-/**
- * Reads the master polling switch. Manual checks bypass this so users can
- * refresh the announcement page on demand even when automatic polling is off.
- */
-async function isAutomaticPollingEnabled(): Promise<boolean> {
-  const prefs = await userPreferences.getPreferences()
-  return normalizeSiteAnnouncementPreferences(
-    prefs.siteAnnouncementNotifications,
-  ).enabled
 }
 
 class SiteAnnouncementScheduler {
@@ -216,14 +225,26 @@ class SiteAnnouncementScheduler {
       return
     }
 
+    const intervalMinutes = clampIntervalMinutes(config.intervalMinutes)
+
     if (!config.enabled) {
       await clearAlarm(SITE_ANNOUNCEMENTS_ALARM_NAME)
       return
     }
 
+    const existingAlarm = await getAlarm(SITE_ANNOUNCEMENTS_ALARM_NAME)
+    if (
+      existingAlarm &&
+      existingAlarm.periodInMinutes != null &&
+      Math.abs(existingAlarm.periodInMinutes - intervalMinutes) < 0.001
+    ) {
+      return
+    }
+
+    await clearAlarm(SITE_ANNOUNCEMENTS_ALARM_NAME)
     await createAlarm(SITE_ANNOUNCEMENTS_ALARM_NAME, {
-      periodInMinutes: clampIntervalMinutes(config.intervalMinutes),
-      delayInMinutes: 1,
+      periodInMinutes: intervalMinutes,
+      delayInMinutes: intervalMinutes,
     })
   }
 
@@ -232,6 +253,10 @@ class SiteAnnouncementScheduler {
     await this.applySchedule(
       normalizeSiteAnnouncementPreferences(prefs.siteAnnouncementNotifications),
     )
+  }
+
+  async reconcileScheduleFromPreferences(): Promise<void> {
+    await this.applyScheduleFromPreferences()
   }
 
   async updateSettings(
@@ -279,9 +304,27 @@ class SiteAnnouncementScheduler {
     }
 
     try {
-      if (params.trigger === "alarm" && !(await isAutomaticPollingEnabled())) {
+      const automaticPollingPreferences =
+        params.trigger === "alarm"
+          ? normalizeSiteAnnouncementPreferences(
+              (await userPreferences.getPreferences())
+                .siteAnnouncementNotifications,
+            )
+          : undefined
+
+      if (params.trigger === "alarm" && !automaticPollingPreferences?.enabled) {
         return result
       }
+
+      const siteStatesByKey =
+        params.trigger === "alarm"
+          ? new Map(
+              (await siteAnnouncementStorage.getStatus()).map((site) => [
+                site.siteKey,
+                site,
+              ]),
+            )
+          : undefined
 
       const accounts = params.accountIds?.length
         ? await Promise.all(
@@ -302,6 +345,26 @@ class SiteAnnouncementScheduler {
           baseUrl: account.site_url,
         })
         const now = Date.now()
+        const existingSiteState = siteStatesByKey?.get(siteKey)
+
+        if (
+          params.trigger === "alarm" &&
+          automaticPollingPreferences &&
+          existingSiteState &&
+          isWithinAnnouncementCooldown({
+            siteState: existingSiteState,
+            now,
+            intervalMinutes: automaticPollingPreferences.intervalMinutes,
+          })
+        ) {
+          logger.debug("Skipping site announcement check within cooldown", {
+            siteKey,
+            intervalMinutes: automaticPollingPreferences.intervalMinutes,
+            lastCheckedAt: existingSiteState.lastCheckedAt ?? null,
+          })
+          continue
+        }
+
         result.checked += 1
 
         try {
@@ -425,6 +488,7 @@ export const handleSiteAnnouncementMessage = async (
   try {
     switch (request.action) {
       case RuntimeActionIds.SiteAnnouncementsGetStatus: {
+        await siteAnnouncementScheduler.reconcileScheduleFromPreferences()
         sendResponse({
           success: true,
           data: await siteAnnouncementStorage.getStatus(),

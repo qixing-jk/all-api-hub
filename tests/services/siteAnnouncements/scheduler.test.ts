@@ -15,6 +15,7 @@ import { SITE_ANNOUNCEMENT_PROVIDER_IDS } from "~/types/siteAnnouncements"
 const {
   clearAlarmMock,
   createAlarmMock,
+  getAlarmMock,
   getEnabledAccountsMock,
   getAccountByIdMock,
   hasAlarmsAPIMock,
@@ -27,6 +28,7 @@ const {
 } = vi.hoisted(() => ({
   clearAlarmMock: vi.fn(),
   createAlarmMock: vi.fn(),
+  getAlarmMock: vi.fn(),
   getEnabledAccountsMock: vi.fn(),
   getAccountByIdMock: vi.fn(),
   hasAlarmsAPIMock: vi.fn(() => true),
@@ -42,6 +44,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
   ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
   clearAlarm: clearAlarmMock,
   createAlarm: createAlarmMock,
+  getAlarm: getAlarmMock,
   hasAlarmsAPI: hasAlarmsAPIMock,
   onAlarm: onAlarmMock,
 }))
@@ -119,6 +122,7 @@ describe("siteAnnouncementScheduler", () => {
     ;(siteAnnouncementScheduler as any).isInitialized = false
     ;(siteAnnouncementScheduler as any).isRunning = false
     hasAlarmsAPIMock.mockReturnValue(true)
+    getAlarmMock.mockResolvedValue(undefined)
     getPreferencesMock.mockResolvedValue({
       siteAnnouncementNotifications: {
         enabled: true,
@@ -137,7 +141,7 @@ describe("siteAnnouncementScheduler", () => {
     expect(onAlarmMock).toHaveBeenCalled()
     expect(createAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck", {
       periodInMinutes: 360,
-      delayInMinutes: 1,
+      delayInMinutes: 360,
     })
   })
 
@@ -154,7 +158,71 @@ describe("siteAnnouncementScheduler", () => {
 
     expect(createAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck", {
       periodInMinutes: 360,
-      delayInMinutes: 1,
+      delayInMinutes: 360,
+    })
+  })
+
+  it("preserves an existing announcement alarm when the period already matches", async () => {
+    getAlarmMock.mockResolvedValueOnce({
+      name: "siteAnnouncementsCheck",
+      periodInMinutes: 360,
+      scheduledTime: Date.now() + 60_000,
+    })
+
+    await siteAnnouncementScheduler.initialize()
+
+    expect(clearAlarmMock).not.toHaveBeenCalled()
+    expect(createAlarmMock).not.toHaveBeenCalled()
+  })
+
+  it("recreates a missing announcement alarm when status is queried", async () => {
+    getAlarmMock
+      .mockResolvedValueOnce({
+        name: "siteAnnouncementsCheck",
+        periodInMinutes: 360,
+        scheduledTime: Date.now() + 60_000,
+      })
+      .mockResolvedValueOnce(undefined)
+
+    await siteAnnouncementScheduler.initialize()
+    expect(createAlarmMock).not.toHaveBeenCalled()
+
+    const response = vi.fn()
+    await handleSiteAnnouncementMessage(
+      { action: RuntimeActionIds.SiteAnnouncementsGetStatus },
+      response,
+    )
+
+    expect(createAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck", {
+      periodInMinutes: 360,
+      delayInMinutes: 360,
+    })
+    expect(response.mock.calls[0][0]).toMatchObject({
+      success: true,
+      data: [],
+    })
+  })
+
+  it("keeps announcement alarm cleared when status is queried while polling is disabled", async () => {
+    getPreferencesMock.mockResolvedValue({
+      siteAnnouncementNotifications: {
+        enabled: false,
+        notificationEnabled: true,
+        intervalMinutes: 360,
+      },
+    })
+
+    const response = vi.fn()
+    await handleSiteAnnouncementMessage(
+      { action: RuntimeActionIds.SiteAnnouncementsGetStatus },
+      response,
+    )
+
+    expect(clearAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck")
+    expect(createAlarmMock).not.toHaveBeenCalled()
+    expect(response.mock.calls[0][0]).toMatchObject({
+      success: true,
+      data: [],
     })
   })
 
@@ -226,6 +294,34 @@ describe("siteAnnouncementScheduler", () => {
 
     expect(getEnabledAccountsMock).not.toHaveBeenCalled()
     expect(providerFetchMock).not.toHaveBeenCalled()
+  })
+
+  it("skips alarm-triggered checks for sites checked within the configured interval", async () => {
+    const now = 1_800_000_000_000
+    const nowSpy = vi.spyOn(Date, "now").mockReturnValue(now)
+
+    await siteAnnouncementStorage.upsertSiteStatus({
+      siteKey: "notice:new-api:https://example.com",
+      siteName: "Example",
+      siteType: "new-api",
+      baseUrl: "https://example.com",
+      accountId: "account-1",
+      providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+      status: "success",
+      lastCheckedAt: now - 10 * 60 * 1000,
+    })
+    getEnabledAccountsMock.mockResolvedValue([createAccount()])
+
+    await siteAnnouncementScheduler.initialize()
+
+    const alarmHandler = onAlarmMock.mock.calls[0]?.[0]
+    expect(alarmHandler).toBeTypeOf("function")
+
+    await alarmHandler?.({ name: "siteAnnouncementsCheck" })
+
+    expect(getEnabledAccountsMock).toHaveBeenCalledTimes(1)
+    expect(providerFetchMock).not.toHaveBeenCalled()
+    nowSpy.mockRestore()
   })
 
   it("filters explicit account ids down to existing enabled accounts", async () => {
