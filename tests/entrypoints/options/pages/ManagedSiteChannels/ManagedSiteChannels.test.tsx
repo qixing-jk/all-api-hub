@@ -413,7 +413,7 @@ describe("ManagedSiteChannels", () => {
       messagesKey,
       getConfig: vi.fn().mockResolvedValue({
         baseUrl: "https://admin.example",
-        token: "t",
+        adminToken: "t",
         userId: "1",
       }),
       fetchChannelSecretKey: options?.fetchChannelSecretKey,
@@ -1505,7 +1505,7 @@ describe("ManagedSiteChannels", () => {
       messagesKey: "newapi",
       getConfig: vi.fn().mockResolvedValue({
         baseUrl: "https://admin.example",
-        token: "t",
+        adminToken: "t",
         userId: "1",
       }),
       deleteChannel,
@@ -1545,9 +1545,11 @@ describe("ManagedSiteChannels", () => {
 
     await waitFor(() => {
       expect(deleteChannel).toHaveBeenCalledWith(
-        "https://admin.example",
-        "t",
-        "1",
+        {
+          baseUrl: "https://admin.example",
+          adminToken: "t",
+          userId: "1",
+        },
         1,
       )
     })
@@ -1587,16 +1589,10 @@ describe("ManagedSiteChannels", () => {
 
     const deleteChannel = vi
       .fn()
-      .mockImplementation(
-        (
-          _baseUrl: string,
-          _token: string,
-          _userId: string,
-          channelId: number,
-        ) =>
-          channelId === 1
-            ? Promise.resolve({ success: true })
-            : Promise.reject(new Error("delete beta failed")),
+      .mockImplementation((_config: unknown, channelId: number) =>
+        channelId === 1
+          ? Promise.resolve({ success: true })
+          : Promise.reject(new Error("delete beta failed")),
       )
 
     vi.mocked(getManagedSiteService).mockResolvedValue({
@@ -1604,7 +1600,7 @@ describe("ManagedSiteChannels", () => {
       messagesKey: "newapi",
       getConfig: vi.fn().mockResolvedValue({
         baseUrl: "https://admin.example",
-        token: "t",
+        adminToken: "t",
         userId: "1",
       }),
       deleteChannel,
@@ -2122,9 +2118,11 @@ describe("ManagedSiteChannels", () => {
 
       await waitFor(() => {
         expect(fetchChannelSecretKey).toHaveBeenCalledWith(
-          "https://admin.example",
-          "t",
-          "1",
+          {
+            baseUrl: "https://admin.example",
+            adminToken: "t",
+            userId: "1",
+          },
           308,
         )
       })

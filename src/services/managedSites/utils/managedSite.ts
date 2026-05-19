@@ -43,7 +43,10 @@ export interface ManagedSiteTargetOption {
 
 export const collectManagedConfigSecrets = (
   managedConfig: ManagedSiteRuntimeConfigValue,
-) => {
+): string[] => {
+  if ("token" in managedConfig && typeof managedConfig.token === "string") {
+    return [managedConfig.token]
+  }
   if ("adminToken" in managedConfig) return [managedConfig.adminToken]
   if ("password" in managedConfig) return [managedConfig.password]
   return []

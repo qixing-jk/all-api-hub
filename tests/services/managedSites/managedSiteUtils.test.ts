@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  collectManagedConfigSecrets,
   getManagedSiteAdminConfigForType,
   getManagedSiteConfigMissingMessage,
   getManagedSiteContext,
@@ -17,6 +18,30 @@ import {
 const translate = (key: string) => key
 
 describe("managedSite utils", () => {
+  it("collects provider secrets from each runtime config shape", () => {
+    expect(
+      collectManagedConfigSecrets({
+        baseUrl: "https://new-api.example.com",
+        adminToken: "admin-token",
+        userId: "1",
+      }),
+    ).toEqual(["admin-token"])
+    expect(
+      collectManagedConfigSecrets({
+        baseUrl: "https://octopus.example.com",
+        username: "admin",
+        password: "octopus-password",
+      }),
+    ).toEqual(["octopus-password"])
+    expect(
+      collectManagedConfigSecrets({
+        baseUrl: "https://token-config.example.com",
+        token: "runtime-token",
+        userId: "1",
+      } as any),
+    ).toEqual(["runtime-token"])
+  })
+
   it("defaults managed-site context to new-api when managedSiteType is missing", () => {
     const prefs = {
       newApi: {
