@@ -507,6 +507,148 @@ describe("SiteAnnouncementsPage", () => {
     ).toHaveLength(2)
   })
 
+  it("checks all visible site accounts when no filters are selected", async () => {
+    const user = userEvent.setup()
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:title")
+    await user.click(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.checkNow",
+      }),
+    )
+
+    await waitFor(() => {
+      const checkNowMessages = vi
+        .mocked(sendRuntimeMessage)
+        .mock.calls.map((call) => call[0] as { action?: string })
+        .filter(
+          (message) =>
+            message.action === RuntimeActionIds.SiteAnnouncementsCheckNow,
+        )
+
+      expect(checkNowMessages.at(-1)).toEqual({
+        action: RuntimeActionIds.SiteAnnouncementsCheckNow,
+        accountIds: ["account-1", "account-2"],
+      })
+    })
+  })
+
+  it("checks the selected site scope when manually checking filtered announcements", async () => {
+    const user = userEvent.setup()
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:title")
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "siteAnnouncements:filters.site",
+      }),
+    )
+    await user.click(screen.getByRole("option", { name: "Alpha API" }))
+    await user.click(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.checkNow",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeMessage).toHaveBeenCalledWith({
+        action: RuntimeActionIds.SiteAnnouncementsCheckNow,
+        accountIds: ["account-1"],
+      })
+    })
+  })
+
+  it("checks the visible site scope when display filters are selected", async () => {
+    const user = userEvent.setup()
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:title")
+    await user.click(screen.getAllByRole("combobox")[1]!)
+    await user.click(screen.getByRole("option", { name: "sub2api" }))
+    await user.click(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.checkNow",
+      }),
+    )
+
+    await waitFor(() => {
+      const checkNowMessages = vi
+        .mocked(sendRuntimeMessage)
+        .mock.calls.map((call) => call[0] as { action?: string })
+        .filter(
+          (message) =>
+            message.action === RuntimeActionIds.SiteAnnouncementsCheckNow,
+        )
+
+      expect(checkNowMessages.at(-1)).toEqual({
+        action: RuntimeActionIds.SiteAnnouncementsCheckNow,
+        accountIds: ["account-2"],
+      })
+    })
+  })
+
+  it("disables manual checks when filters leave no visible announcements", async () => {
+    const user = userEvent.setup()
+
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      switch (message.action) {
+        case RuntimeActionIds.SiteAnnouncementsListRecords:
+          return { success: true, data: records }
+        case RuntimeActionIds.SiteAnnouncementsGetStatus:
+          return {
+            success: true,
+            data: [
+              ...status,
+              {
+                siteKey: "site-3",
+                siteName: "Gamma API",
+                siteType: "new-api",
+                baseUrl: "https://gamma.example.com",
+                accountId: "account-3",
+                providerId: "common",
+                status: "success",
+                records: [],
+              },
+            ],
+          }
+        default:
+          return { success: true }
+      }
+    })
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:title")
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "siteAnnouncements:filters.site",
+      }),
+    )
+    await user.click(screen.getByRole("option", { name: "Gamma API" }))
+
+    await waitFor(() => {
+      for (const button of screen.getAllByRole("button", {
+        name: "siteAnnouncements:actions.checkNow",
+      })) {
+        expect(button).toBeDisabled()
+      }
+    })
+
+    expect(
+      vi
+        .mocked(sendRuntimeMessage)
+        .mock.calls.some(
+          (call) =>
+            (call[0] as { action?: string }).action ===
+            RuntimeActionIds.SiteAnnouncementsCheckNow,
+        ),
+    ).toBe(false)
+  })
+
   it("shows failure feedback when the manual check throws", async () => {
     const user = userEvent.setup()
 

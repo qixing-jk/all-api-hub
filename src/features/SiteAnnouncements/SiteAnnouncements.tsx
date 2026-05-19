@@ -113,6 +113,13 @@ export default function SiteAnnouncementsPage({
   )
 
   const selectedStatus = status.find((item) => item.siteKey === siteKey)
+  const manualCheckAccountIds = useMemo(
+    () => [...new Set(filteredRecords.map((record) => record.accountId))],
+    [filteredRecords],
+  )
+  const shouldScopeManualCheck = records.length > 0
+  const canRunManualCheck =
+    !shouldScopeManualCheck || manualCheckAccountIds.length > 0
   const unreadCount = records.filter((record) => !record.read).length
   const notifiedCount = records.filter((record) => record.notifiedAt).length
   const affectedSiteCount = siteOptions.filter(
@@ -155,9 +162,22 @@ export default function SiteAnnouncementsPage({
     })
     setIsChecking(true)
     try {
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.SiteAnnouncementsCheckNow,
-      })
+      if (!canRunManualCheck) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          insights: { itemCount: 0 },
+        })
+        return
+      }
+
+      const checkRequest = shouldScopeManualCheck
+        ? {
+            action: RuntimeActionIds.SiteAnnouncementsCheckNow,
+            accountIds: manualCheckAccountIds,
+          }
+        : {
+            action: RuntimeActionIds.SiteAnnouncementsCheckNow,
+          }
+      const response = await sendRuntimeMessage(checkRequest)
       const success = response?.success === true
       const checkResult = response?.data as
         | SiteAnnouncementCheckResult
@@ -325,6 +345,7 @@ export default function SiteAnnouncementsPage({
             <Button
               type="button"
               loading={isChecking}
+              disabled={!canRunManualCheck}
               onClick={() =>
                 void handleCheckNow(
                   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementsPage,
@@ -383,6 +404,7 @@ export default function SiteAnnouncementsPage({
                 void handleCheckNow(
                   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementsEmptyState,
                 ),
+              disabled: !canRunManualCheck,
               loading: isChecking,
               leftIcon: <RefreshCcw className="h-4 w-4" />,
             }}
