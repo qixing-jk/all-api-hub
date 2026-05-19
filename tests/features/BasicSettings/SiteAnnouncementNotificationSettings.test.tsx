@@ -2,7 +2,9 @@ import { fireEvent } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import SiteAnnouncementNotificationSettings from "~/features/BasicSettings/components/tabs/General/SiteAnnouncementNotificationSettings"
+import SiteAnnouncementNotificationSettings, {
+  normalizePollingIntervalInput,
+} from "~/features/BasicSettings/components/tabs/General/SiteAnnouncementNotificationSettings"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -148,5 +150,133 @@ describe("SiteAnnouncementNotificationSettings", () => {
       true,
       "settings:siteAnnouncementNotifications.polling.interval",
     )
+  })
+
+  it("resets an invalid polling interval without saving", async () => {
+    render(<SiteAnnouncementNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const intervalInput = await screen.findByLabelText(
+      "settings:siteAnnouncementNotifications.polling.interval",
+    )
+
+    fireEvent.change(intervalInput, { target: { value: "" } })
+    fireEvent.blur(intervalInput)
+
+    await waitFor(() => {
+      expect(intervalInput).toHaveValue(360)
+    })
+
+    expect(updateSiteAnnouncementNotificationsMock).not.toHaveBeenCalled()
+    expect(showUpdateToastMock).not.toHaveBeenCalled()
+  })
+
+  it("keeps the persisted polling interval without saving", async () => {
+    render(<SiteAnnouncementNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const intervalInput = await screen.findByLabelText(
+      "settings:siteAnnouncementNotifications.polling.interval",
+    )
+
+    fireEvent.change(intervalInput, { target: { value: "360" } })
+    fireEvent.blur(intervalInput)
+
+    await waitFor(() => {
+      expect(intervalInput).toHaveValue(360)
+    })
+
+    expect(updateSiteAnnouncementNotificationsMock).not.toHaveBeenCalled()
+    expect(showUpdateToastMock).not.toHaveBeenCalled()
+  })
+
+  it("caps polling interval values above the supported maximum", async () => {
+    render(<SiteAnnouncementNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const intervalInput = await screen.findByLabelText(
+      "settings:siteAnnouncementNotifications.polling.interval",
+    )
+
+    fireEvent.change(intervalInput, { target: { value: "9999" } })
+    fireEvent.blur(intervalInput)
+
+    await waitFor(() => {
+      expect(updateSiteAnnouncementNotificationsMock).toHaveBeenCalledWith({
+        intervalMinutes: 1440,
+      })
+    })
+
+    expect(intervalInput).toHaveValue(1440)
+  })
+
+  it("resets the polling interval input when the update fails", async () => {
+    updateSiteAnnouncementNotificationsMock.mockResolvedValue(false)
+
+    render(<SiteAnnouncementNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const intervalInput = await screen.findByLabelText(
+      "settings:siteAnnouncementNotifications.polling.interval",
+    )
+
+    fireEvent.change(intervalInput, { target: { value: "120" } })
+    fireEvent.blur(intervalInput)
+
+    await waitFor(() => {
+      expect(updateSiteAnnouncementNotificationsMock).toHaveBeenCalledWith({
+        intervalMinutes: 120,
+      })
+    })
+
+    expect(showUpdateToastMock).toHaveBeenCalledWith(
+      false,
+      "settings:siteAnnouncementNotifications.polling.interval",
+    )
+    expect(intervalInput).toHaveValue(360)
+  })
+
+  it("resets the polling interval input when the update rejects", async () => {
+    updateSiteAnnouncementNotificationsMock.mockRejectedValue(
+      new Error("runtime failed"),
+    )
+
+    render(<SiteAnnouncementNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const intervalInput = await screen.findByLabelText(
+      "settings:siteAnnouncementNotifications.polling.interval",
+    )
+
+    fireEvent.change(intervalInput, { target: { value: "120" } })
+    fireEvent.blur(intervalInput)
+
+    await waitFor(() => {
+      expect(updateSiteAnnouncementNotificationsMock).toHaveBeenCalledWith({
+        intervalMinutes: 120,
+      })
+    })
+
+    expect(showUpdateToastMock).toHaveBeenCalledWith(
+      false,
+      "settings:siteAnnouncementNotifications.polling.interval",
+    )
+    expect(intervalInput).toHaveValue(360)
+  })
+})
+
+describe("normalizePollingIntervalInput", () => {
+  it("rejects non-finite numeric values", () => {
+    expect(normalizePollingIntervalInput("Infinity")).toBeNull()
   })
 })

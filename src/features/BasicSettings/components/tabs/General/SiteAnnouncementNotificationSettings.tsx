@@ -27,7 +27,11 @@ const MAX_POLLING_INTERVAL_MINUTES = 24 * 60
 /**
  * Normalizes user-entered announcement polling minutes to the supported range.
  */
-function normalizePollingIntervalInput(value: string): number | null {
+export function normalizePollingIntervalInput(value: string): number | null {
+  if (value.trim() === "") {
+    return null
+  }
+
   const parsed = Number(value)
   if (!Number.isFinite(parsed)) {
     return null
@@ -71,9 +75,17 @@ export default function SiteAnnouncementNotificationSettings() {
       return
     }
 
-    const success = await updateSiteAnnouncementNotifications({
-      intervalMinutes,
-    })
+    let success = false
+    try {
+      success = await updateSiteAnnouncementNotifications({
+        intervalMinutes,
+      })
+    } catch {
+      success = false
+    }
+    if (!success) {
+      setIntervalInput(String(siteAnnouncementNotifications.intervalMinutes))
+    }
     showUpdateToast(
       success,
       t("siteAnnouncementNotifications.polling.interval"),
