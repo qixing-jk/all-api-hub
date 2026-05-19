@@ -1,10 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  getManagedSiteAdminConfig,
-  getManagedSiteConfig,
-} from "~/services/managedSites/utils/managedSite"
 import { ModelRedirectService } from "~/services/models/modelRedirect/ModelRedirectService"
 import { userPreferences } from "~/services/preferences/userPreferences"
 
@@ -36,30 +32,16 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/managedSites/utils/managedSite", () => ({
-  getManagedSiteAdminConfig: vi.fn(),
-  getManagedSiteConfig: vi.fn(),
-}))
 const mockedUserPreferences = userPreferences as unknown as {
   getPreferences: ReturnType<typeof vi.fn>
 }
-const mockedGetManagedSiteAdminConfig =
-  getManagedSiteAdminConfig as unknown as ReturnType<typeof vi.fn>
-const mockedGetManagedSiteConfig =
-  getManagedSiteConfig as unknown as ReturnType<typeof vi.fn>
 
 describe("ModelRedirectService.clearChannelModelMappings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    mockedUserPreferences.getPreferences.mockResolvedValue({})
-    mockedGetManagedSiteAdminConfig.mockReturnValue({
-      baseUrl: "https://example.com",
-      adminToken: "token",
-      userId: "1",
-    })
-    mockedGetManagedSiteConfig.mockReturnValue({
-      siteType: SITE_TYPES.NEW_API,
-      config: {
+    mockedUserPreferences.getPreferences.mockResolvedValue({
+      managedSiteType: SITE_TYPES.NEW_API,
+      newApi: {
         baseUrl: "https://example.com",
         adminToken: "token",
         userId: "1",
@@ -68,7 +50,14 @@ describe("ModelRedirectService.clearChannelModelMappings", () => {
   })
 
   it("returns a clear error when managed site config is missing", async () => {
-    mockedGetManagedSiteAdminConfig.mockReturnValue(null)
+    mockedUserPreferences.getPreferences.mockResolvedValueOnce({
+      managedSiteType: SITE_TYPES.NEW_API,
+      newApi: {
+        baseUrl: "",
+        adminToken: "",
+        userId: "",
+      },
+    })
 
     const result = await ModelRedirectService.clearChannelModelMappings([1, 2])
 

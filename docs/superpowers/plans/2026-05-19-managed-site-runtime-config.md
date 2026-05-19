@@ -800,7 +800,7 @@ Then update calls:
 ```ts
 const searchResults = await service.searchChannel(
   managedConfig,
-  searchBaseUrl,
+  keyword,
 )
 ```
 

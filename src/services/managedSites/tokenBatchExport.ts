@@ -11,6 +11,7 @@ import {
 } from "~/services/managedSites/managedSiteService"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import {
+  collectManagedConfigSecrets,
   hasUsableManagedSiteChannelKey,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
@@ -162,12 +163,6 @@ const collectSecrets = (
     account.cookieAuthSessionCookie,
     ...collectManagedConfigSecrets(managedConfig),
   ].filter(Boolean) as string[]
-
-const collectManagedConfigSecrets = (managedConfig: ManagedSiteConfig) => {
-  if ("adminToken" in managedConfig) return [managedConfig.adminToken]
-  if ("password" in managedConfig) return [managedConfig.password]
-  return []
-}
 
 const preparePreviewItem = async (params: {
   input: ManagedSiteTokenBatchExportItemInput

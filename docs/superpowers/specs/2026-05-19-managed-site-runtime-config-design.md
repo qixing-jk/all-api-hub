@@ -108,7 +108,7 @@ Pseudo-code:
 type ManagedSiteRuntimeConfig =
   | { siteType: "new-api"; config: NewApiConfig }
   | { siteType: "done-hub"; config: DoneHubConfig }
-  | { siteType: "Veloera"; config: VeloeraConfig }
+  | { siteType: typeof SITE_TYPES.VELOERA; config: VeloeraConfig }
   | { siteType: "octopus"; config: OctopusConfig }
   | { siteType: "axonhub"; config: AxonHubConfig }
   | { siteType: "claude-code-hub"; config: ClaudeCodeHubConfig }

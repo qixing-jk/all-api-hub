@@ -19,7 +19,10 @@ import {
 } from "~/services/managedSites/providers/newApiSession"
 import { hasNewApiTotpSecret } from "~/services/managedSites/providers/newApiTotp"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
-import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
+import {
+  collectManagedConfigSecrets,
+  supportsManagedSiteBaseUrlChannelLookup,
+} from "~/services/managedSites/utils/managedSite"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import type { ManagedSiteChannel } from "~/types/managedSite"
@@ -173,12 +176,6 @@ const collectSecrets = (
     token.key,
     ...(managedConfig ? collectManagedConfigSecrets(managedConfig) : []),
   ].filter(Boolean) as string[]
-}
-
-const collectManagedConfigSecrets = (managedConfig: ManagedSiteConfig) => {
-  if ("adminToken" in managedConfig) return [managedConfig.adminToken]
-  if ("password" in managedConfig) return [managedConfig.password]
-  return []
 }
 
 const isNewApiConfig = (config: ManagedSiteConfig): config is NewApiConfig =>

@@ -94,6 +94,8 @@ export class ModelSyncService {
     }
 
     if (siteType === SITE_TYPES.OCTOPUS) {
+      // Octopus model sync is routed through its dedicated scheduler executor;
+      // this fallback shape is retained only for defensive request construction.
       auth.userId = config.username
     } else if (siteType === SITE_TYPES.AXON_HUB) {
       auth.accessToken = config.password

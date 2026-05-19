@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 
@@ -120,6 +120,10 @@ vi.mock("~/services/managedSites/providers/claudeCodeHub", () => ({
 }))
 
 describe("managedSiteService", () => {
+  beforeEach(() => {
+    mockGetPreferences.mockReset()
+  })
+
   it("reports invalid managed-site config when preferences are missing", async () => {
     const { hasValidManagedSiteConfig } = await import(
       "~/services/managedSites/managedSiteService"
@@ -329,8 +333,10 @@ describe("managedSiteService", () => {
 
     await service.searchChannel(newApiConfig, "alpha")
 
+    type SearchChannelConfig = Parameters<typeof service.searchChannel>[0]
     // @ts-expect-error New API services must reject other site config shapes.
-    service.searchChannel(octopusConfig, "alpha")
+    const invalidConfig: SearchChannelConfig = octopusConfig
+    void invalidConfig
 
     expect(newApiProvider.searchChannel).toHaveBeenCalledWith(
       newApiConfig,

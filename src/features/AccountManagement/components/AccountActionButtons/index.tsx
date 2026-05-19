@@ -42,10 +42,10 @@ import { resolveManagedSiteChannelMatch } from "~/services/managedSites/channelM
 import {
   getManagedSiteService,
   hasValidManagedSiteConfig,
-  type ManagedSiteConfig,
 } from "~/services/managedSites/managedSiteService"
 import { normalizeManagedSiteChannelBaseUrl } from "~/services/managedSites/utils/channelMatching"
 import {
+  collectManagedConfigSecrets,
   getManagedSiteType,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
@@ -207,12 +207,6 @@ const getLocateManagedSiteChannelToastMessage = (
   }
 
   return t("account:actions.channelLocateUnresolved")
-}
-
-const collectManagedConfigSecrets = (managedConfig: ManagedSiteConfig) => {
-  if ("adminToken" in managedConfig) return [managedConfig.adminToken]
-  if ("password" in managedConfig) return [managedConfig.password]
-  return []
 }
 
 /**

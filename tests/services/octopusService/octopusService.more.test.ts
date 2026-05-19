@@ -556,6 +556,13 @@ describe("octopus additional flows", () => {
       message: "messages:octopus.configMissing",
     })
 
+    mockGetPreferences.mockResolvedValueOnce({
+      octopus: {
+        baseUrl: "",
+        username: "",
+        password: "",
+      },
+    })
     mockConvertToDisplayData.mockReturnValue(displaySiteData)
     mockEnsureAccountApiToken.mockResolvedValueOnce(apiToken)
     mockSearchChannels.mockResolvedValueOnce([])

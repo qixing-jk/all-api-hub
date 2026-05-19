@@ -63,6 +63,14 @@ type ManagedSiteConfig =
   | AxonHubConfig
   | ClaudeCodeHubConfig
 
+export const collectManagedConfigSecrets = (
+  managedConfig: ManagedSiteConfig,
+) => {
+  if ("adminToken" in managedConfig) return [managedConfig.adminToken]
+  if ("password" in managedConfig) return [managedConfig.password]
+  return []
+}
+
 /**
  * Extracts the selected managed site type and its corresponding config from a
  * given preferences snapshot.

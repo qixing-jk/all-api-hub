@@ -33,6 +33,7 @@ import {
   type ManagedSiteTokenChannelStatus,
 } from "~/services/managedSites/tokenChannelStatus"
 import {
+  collectManagedConfigSecrets,
   getManagedSiteConfigMissingMessage,
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
@@ -53,12 +54,6 @@ import { createLogger } from "~/utils/core/logger"
  * Unified logger scoped to channel dialog open helpers.
  */
 const logger = createLogger("ChannelDialogHook")
-
-const collectManagedConfigSecrets = (managedConfig: ManagedSiteConfig) => {
-  if ("adminToken" in managedConfig) return [managedConfig.adminToken]
-  if ("password" in managedConfig) return [managedConfig.password]
-  return []
-}
 
 interface PrefilledChannelOpenOptions {
   managedSiteStatus?: ManagedSiteTokenChannelStatus
