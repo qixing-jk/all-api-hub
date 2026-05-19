@@ -2,6 +2,7 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import SiteAnnouncementsPage from "~/entrypoints/options/pages/SiteAnnouncements"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -17,6 +18,7 @@ import type {
 } from "~/types/siteAnnouncements"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { showResultToast } from "~/utils/core/toastHelpers"
+import { openSettingsTab } from "~/utils/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -40,6 +42,10 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 
 vi.mock("~/utils/core/toastHelpers", () => ({
   showResultToast: vi.fn(),
+}))
+
+vi.mock("~/utils/navigation", () => ({
+  openSettingsTab: vi.fn(),
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
@@ -238,6 +244,24 @@ describe("SiteAnnouncementsPage", () => {
     )
     await waitFor(() => {
       expect(screen.queryByText("Second line")).not.toBeInTheDocument()
+    })
+  })
+
+  it("shows an icon-only settings shortcut next to the title", async () => {
+    const user = userEvent.setup()
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:title")
+    await user.click(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.pollingSettings",
+      }),
+    )
+
+    expect(openSettingsTab).toHaveBeenCalledWith("general", {
+      anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
+      preserveHistory: true,
     })
   })
 
@@ -742,7 +766,9 @@ describe("SiteAnnouncementsPage", () => {
       await screen.findByText("siteAnnouncements:empty.title"),
     ).toBeInTheDocument()
     expect(
-      screen.getByText("siteAnnouncements:empty.description"),
+      screen.getByText(
+        "siteAnnouncements:empty.descriptionWhenPollingDisabled",
+      ),
     ).toBeInTheDocument()
 
     await user.click(

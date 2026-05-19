@@ -6,6 +6,7 @@ import { cn } from "~/lib/utils"
 interface PageHeaderProps {
   icon: ComponentType<{ className?: string }>
   title: ReactNode
+  titleActions?: ReactNode
   description?: ReactNode
   actions?: ReactNode
   spacing?: "default" | "compact"
@@ -18,6 +19,7 @@ interface PageHeaderProps {
  * @param props Component props bundle.
  * @param props.icon Icon component rendered next to the title.
  * @param props.title Header title node.
+ * @param props.titleActions Optional compact action elements rendered next to the title.
  * @param props.description Optional helper text shown below the title.
  * @param props.actions Optional action elements rendered on the right.
  * @param props.spacing Adjusts vertical spacing (default or compact).
@@ -27,6 +29,7 @@ interface PageHeaderProps {
 export function PageHeader({
   icon: Icon,
   title,
+  titleActions,
   description,
   actions,
   spacing = "default",
@@ -43,9 +46,12 @@ export function PageHeader({
               iconClassName,
             )}
           />
-          <Heading2 className="dark:text-dark-text-primary text-gray-900">
-            {title}
-          </Heading2>
+          <div className="flex min-w-0 items-center gap-2">
+            <Heading2 className="dark:text-dark-text-primary text-gray-900">
+              {title}
+            </Heading2>
+            {titleActions}
+          </div>
         </div>
         {actions && (
           <div className="flex shrink-0 flex-wrap items-center gap-3">

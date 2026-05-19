@@ -5,6 +5,7 @@
     "expand": "展開",
     "markAllRead": "すべて既読",
     "markRead": "既読にする",
+    "pollingSettings": "取得設定",
     "viewSource": "サイト公告を表示"
   },
   "badges": {
@@ -14,6 +15,7 @@
   "description": "バックグラウンドで取得したサイト公告を確認し、未読状態を管理して手動確認を実行できます。",
   "empty": {
     "description": "バックグラウンド確認で新しい公告が見つかるとここに表示されます。",
+    "descriptionWhenPollingDisabled": "今すぐ手動確認できます。自動取得は設定で管理できます。",
     "filtered": "現在のフィルターに一致する公告はありません",
     "title": "公告記録はありません"
   },

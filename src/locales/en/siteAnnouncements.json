@@ -5,6 +5,7 @@
     "expand": "Expand",
     "markAllRead": "Mark all read",
     "markRead": "Mark read",
+    "pollingSettings": "Polling settings",
     "viewSource": "View site announcement"
   },
   "badges": {
@@ -14,6 +15,7 @@
   "description": "Review announcements fetched in the background, manage unread state, and trigger a manual check.",
   "empty": {
     "description": "New announcements discovered by background checks will appear here.",
+    "descriptionWhenPollingDisabled": "You can check manually now; automatic polling can be managed in settings.",
     "filtered": "No announcements match the current filters",
     "title": "No announcement records"
   },

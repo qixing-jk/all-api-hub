@@ -5,6 +5,7 @@
     "expand": "展开",
     "markAllRead": "全部已读",
     "markRead": "标记已读",
+    "pollingSettings": "抓取设置",
     "viewSource": "查看站点公告"
   },
   "badges": {
@@ -14,6 +15,7 @@
   "description": "查看后台拉取到的网站公告记录，处理未读状态，并手动触发一次检查。",
   "empty": {
     "description": "后台检查到新公告后会显示在这里。",
+    "descriptionWhenPollingDisabled": "你可以立即手动检查；自动抓取可在设置中管理。",
     "filtered": "当前筛选条件下没有公告",
     "title": "暂无公告记录"
   },

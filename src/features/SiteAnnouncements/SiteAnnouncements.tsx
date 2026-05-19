@@ -1,12 +1,22 @@
-import { Bell, CheckCheck, Inbox, Megaphone, RefreshCcw } from "lucide-react"
+import {
+  Bell,
+  CheckCheck,
+  Inbox,
+  Megaphone,
+  RefreshCcw,
+  Settings,
+} from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/components/PageHeader"
-import { Button } from "~/components/ui"
+import Tooltip from "~/components/Tooltip"
+import { Button, IconButton } from "~/components/ui"
 import { EmptyState } from "~/components/ui/EmptyState"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
+import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -25,6 +35,7 @@ import type {
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { showResultToast } from "~/utils/core/toastHelpers"
+import { openSettingsTab } from "~/utils/navigation"
 
 import { SiteAnnouncementsFiltersCard } from "./components/SiteAnnouncementsFiltersCard"
 import { SiteAnnouncementsList } from "./components/SiteAnnouncementsList"
@@ -51,6 +62,7 @@ export default function SiteAnnouncementsPage({
   refreshKey,
 }: SiteAnnouncementsPageProps) {
   const { t } = useTranslation("siteAnnouncements")
+  const { siteAnnouncementNotifications } = useUserPreferencesContext()
   const [records, setRecords] = useState<SiteAnnouncementRecord[]>([])
   const [status, setStatus] = useState<SiteAnnouncementSiteState[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -118,6 +130,7 @@ export default function SiteAnnouncementsPage({
   const affectedSiteCount = siteOptions.filter(
     (option) => option.announcementCount > 0,
   ).length
+  const isPollingDisabled = !siteAnnouncementNotifications.enabled
 
   const metrics = useMemo<AnnouncementMetric[]>(
     () => [
@@ -220,6 +233,13 @@ export default function SiteAnnouncementsPage({
     }
   }
 
+  const handleOpenPollingSettings = useCallback(() => {
+    void openSettingsTab("general", {
+      anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
+      preserveHistory: true,
+    })
+  }, [])
+
   const handleMarkRead = async (recordId: string) => {
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.SiteAnnouncements,
@@ -303,6 +323,19 @@ export default function SiteAnnouncementsPage({
       <PageHeader
         icon={Megaphone}
         title={t("title")}
+        titleActions={
+          <Tooltip content={t("actions.pollingSettings")}>
+            <IconButton
+              type="button"
+              size="sm"
+              variant="outline"
+              aria-label={t("actions.pollingSettings")}
+              onClick={handleOpenPollingSettings}
+            >
+              <Settings className="h-4 w-4" />
+            </IconButton>
+          </Tooltip>
+        }
         description={t("description")}
         className="mb-5"
         actions={
@@ -376,7 +409,15 @@ export default function SiteAnnouncementsPage({
             title={
               records.length === 0 ? t("empty.title") : t("empty.filtered")
             }
-            description={records.length === 0 ? t("empty.description") : null}
+            description={
+              records.length === 0
+                ? t(
+                    isPollingDisabled
+                      ? "empty.descriptionWhenPollingDisabled"
+                      : "empty.description",
+                  )
+                : null
+            }
             action={{
               label: t("actions.checkNow"),
               onClick: () =>

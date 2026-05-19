@@ -5,6 +5,7 @@
     "expand": "展開",
     "markAllRead": "全部已讀",
     "markRead": "標記已讀",
+    "pollingSettings": "抓取設定",
     "viewSource": "查看網站公告"
   },
   "badges": {
@@ -14,6 +15,7 @@
   "description": "查看背景拉取到的網站公告記錄，處理未讀狀態，並手動觸發一次檢查。",
   "empty": {
     "description": "背景檢查到新公告後會顯示在這裡。",
+    "descriptionWhenPollingDisabled": "你可以立即手動檢查；自動抓取可在設定中管理。",
     "filtered": "目前篩選條件下沒有公告",
     "title": "暫無公告記錄"
   },

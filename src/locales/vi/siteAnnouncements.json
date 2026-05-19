@@ -5,6 +5,7 @@
     "expand": "Mở rộng",
     "markAllRead": "Đánh dấu tất cả đã đọc",
     "markRead": "Đánh dấu đã đọc",
+    "pollingSettings": "Cài đặt lấy tự động",
     "viewSource": "Xem thông báo trang web"
   },
   "badges": {
@@ -14,6 +15,7 @@
   "description": "Xem các bản ghi thông báo trang web được lấy về dưới nền, xử lý trạng thái chưa đọc và kích hoạt kiểm tra thủ công.",
   "empty": {
     "description": "Thông báo mới sẽ được hiển thị ở đây sau khi được kiểm tra dưới nền.",
+    "descriptionWhenPollingDisabled": "Bạn có thể kiểm tra thủ công ngay bây giờ; tự động lấy có thể được quản lý trong cài đặt.",
     "filtered": "Không có thông báo nào với các bộ lọc hiện tại",
     "title": "Chưa có bản ghi thông báo nào"
   },
