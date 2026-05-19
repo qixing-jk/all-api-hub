@@ -148,6 +148,23 @@ function createSiteState(params: {
 }
 
 /**
+ * Returns the timestamp when a site's cooldown expires, if it has been checked.
+ */
+function getAnnouncementCooldownExpiresAt(params: {
+  siteState: Pick<SiteAnnouncementSiteState, "lastCheckedAt">
+  intervalMinutes: number
+}): number | null {
+  const lastCheckedAt = params.siteState.lastCheckedAt
+  if (typeof lastCheckedAt !== "number") {
+    return null
+  }
+
+  return (
+    lastCheckedAt + clampIntervalMinutes(params.intervalMinutes) * 60 * 1000
+  )
+}
+
+/**
  * Returns whether a site announcement check is still inside its cooldown window.
  */
 function isWithinAnnouncementCooldown(params: {
@@ -155,15 +172,22 @@ function isWithinAnnouncementCooldown(params: {
   now: number
   intervalMinutes: number
 }): boolean {
-  const lastCheckedAt = params.siteState.lastCheckedAt
-  if (typeof lastCheckedAt !== "number") {
-    return false
-  }
+  const expiresAt = getAnnouncementCooldownExpiresAt(params)
+  return expiresAt != null && params.now < expiresAt
+}
 
-  return (
-    params.now - lastCheckedAt <
-    clampIntervalMinutes(params.intervalMinutes) * 60 * 1000
-  )
+/**
+ * Recreates the site announcement alarm with a specific first-run delay.
+ */
+async function rescheduleAnnouncementAlarm(params: {
+  intervalMinutes: number
+  delayInMinutes: number
+}): Promise<void> {
+  await clearAlarm(SITE_ANNOUNCEMENTS_ALARM_NAME)
+  await createAlarm(SITE_ANNOUNCEMENTS_ALARM_NAME, {
+    periodInMinutes: params.intervalMinutes,
+    delayInMinutes: params.delayInMinutes,
+  })
 }
 
 /**
@@ -241,9 +265,8 @@ class SiteAnnouncementScheduler {
       return
     }
 
-    await clearAlarm(SITE_ANNOUNCEMENTS_ALARM_NAME)
-    await createAlarm(SITE_ANNOUNCEMENTS_ALARM_NAME, {
-      periodInMinutes: intervalMinutes,
+    await rescheduleAnnouncementAlarm({
+      intervalMinutes,
       delayInMinutes: intervalMinutes,
     })
   }
@@ -335,6 +358,7 @@ class SiteAnnouncementScheduler {
               .filter((account) => account.disabled !== true),
           )
         : await accountStorage.getEnabledAccounts()
+      let nextCooldownExpiresAt: number | undefined
 
       for (const account of dedupeCommonAccounts(accounts)) {
         const provider = getSiteAnnouncementProvider(account.site_type)
@@ -357,6 +381,17 @@ class SiteAnnouncementScheduler {
             intervalMinutes: automaticPollingPreferences.intervalMinutes,
           })
         ) {
+          const cooldownExpiresAt = getAnnouncementCooldownExpiresAt({
+            siteState: existingSiteState,
+            intervalMinutes: automaticPollingPreferences.intervalMinutes,
+          })
+          if (cooldownExpiresAt != null) {
+            nextCooldownExpiresAt = Math.min(
+              nextCooldownExpiresAt ?? cooldownExpiresAt,
+              cooldownExpiresAt,
+            )
+          }
+
           logger.debug("Skipping site announcement check within cooldown", {
             siteKey,
             intervalMinutes: automaticPollingPreferences.intervalMinutes,
@@ -433,6 +468,24 @@ class SiteAnnouncementScheduler {
             now,
           })
         }
+      }
+
+      if (
+        params.trigger === "alarm" &&
+        automaticPollingPreferences?.enabled &&
+        nextCooldownExpiresAt != null
+      ) {
+        const intervalMinutes = clampIntervalMinutes(
+          automaticPollingPreferences.intervalMinutes,
+        )
+        const delayInMinutes = Math.max(
+          1,
+          (nextCooldownExpiresAt - Date.now()) / 60_000,
+        )
+        await rescheduleAnnouncementAlarm({
+          intervalMinutes,
+          delayInMinutes,
+        })
       }
 
       return result
