@@ -489,31 +489,42 @@ describe("SiteAnnouncementsPage", () => {
   })
 
   it("disables manual checks while announcements are loading", async () => {
-    vi.mocked(sendRuntimeMessage).mockImplementation(
-      (message: any) =>
-        new Promise((resolve) => {
-          setTimeout(() => {
-            switch (message.action) {
-              case RuntimeActionIds.SiteAnnouncementsListRecords:
-                resolve({ success: true, data: records })
-                break
-              case RuntimeActionIds.SiteAnnouncementsGetStatus:
-                resolve({ success: true, data: status })
-                break
-              default:
-                resolve({ success: true })
-            }
-          }, 100)
-        }),
-    )
+    let resolveRecords!: (response: {
+      success: true
+      data: typeof records
+    }) => void
+    let resolveStatus!: (response: {
+      success: true
+      data: typeof status
+    }) => void
+    vi.mocked(sendRuntimeMessage).mockImplementation((message: any) => {
+      switch (message.action) {
+        case RuntimeActionIds.SiteAnnouncementsListRecords:
+          return new Promise((resolve) => {
+            resolveRecords = resolve
+          })
+        case RuntimeActionIds.SiteAnnouncementsGetStatus:
+          return new Promise((resolve) => {
+            resolveStatus = resolve
+          })
+        default:
+          return Promise.resolve({ success: true })
+      }
+    })
 
     render(<SiteAnnouncementsPage />)
 
-    expect(
-      await screen.findByRole("button", {
-        name: "siteAnnouncements:actions.checkNow",
-      }),
-    ).toBeDisabled()
+    await screen.findByText("siteAnnouncements:title")
+    const manualCheckButton = await screen.findByRole("button", {
+      name: "siteAnnouncements:actions.checkNow",
+    })
+    expect(manualCheckButton).toBeDisabled()
+
+    resolveRecords({ success: true, data: records })
+    resolveStatus({ success: true, data: status })
+    await waitFor(() => {
+      expect(manualCheckButton).toBeEnabled()
+    })
   })
 
   it("shows success feedback and reloads after a manual check", async () => {
