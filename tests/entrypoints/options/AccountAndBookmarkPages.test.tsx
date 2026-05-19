@@ -13,6 +13,7 @@ import {
   type ProductAnalyticsActionId,
   type ProductAnalyticsFeatureId,
 } from "~/services/productAnalytics/events"
+import { openSettingsTab } from "~/utils/navigation"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const openAddAccountMock = vi.fn()
@@ -85,6 +86,15 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionStarted: (...args: any[]) =>
     trackProductAnalyticsActionStartedMock(...args),
 }))
+
+vi.mock("~/utils/navigation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+
+  return {
+    ...actual,
+    openSettingsTab: vi.fn(),
+  }
+})
 
 vi.mock("~/features/AccountManagement/components/AccountList", () => ({
   default: () => <div>AccountList</div>,
@@ -190,6 +200,21 @@ const expectAccountHeaderActionSpanStarted = ({
 }
 
 describe("options AccountManagement page", () => {
+  it("opens account management settings from the title shortcut", async () => {
+    render(<AccountManagement />)
+
+    await screen.findByText("AccountList")
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:labels.settings" }),
+    )
+
+    expect(openSettingsTab).toHaveBeenCalledWith("accountManagement", {
+      anchor: "account-management",
+      preserveHistory: true,
+    })
+  })
+
   it("renders accounts view and opens add account dialog", async () => {
     render(<AccountManagement />)
 

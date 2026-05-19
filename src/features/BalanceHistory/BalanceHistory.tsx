@@ -11,6 +11,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { EChart } from "~/components/charts/EChart"
+import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
 import {
   Alert,
@@ -941,6 +942,18 @@ export default function BalanceHistory() {
       <PageHeader
         icon={LineChart}
         title={t("title")}
+        titleActions={
+          <OptionsPageSettingsTitleAction
+            tabId="balanceHistory"
+            anchor="balance-history"
+            analyticsAction={{
+              featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
+              actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenBalanceHistorySettings,
+              surfaceId: balanceHistorySurface,
+              entrypoint: optionsEntrypoint,
+            }}
+          />
+        }
         description={t("description")}
         actions={
           <div className="flex flex-wrap items-center gap-2">
@@ -960,21 +973,6 @@ export default function BalanceHistory() {
             >
               {t("actions.prune")}
             </Button>
-            <WorkflowTransitionButton
-              size="sm"
-              variant="outline"
-              onClick={openBalanceHistorySettings}
-              leftIcon={<Settings className="h-4 w-4" />}
-              analyticsAction={{
-                featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
-                actionId:
-                  PRODUCT_ANALYTICS_ACTION_IDS.OpenBalanceHistorySettings,
-                surfaceId: balanceHistorySurface,
-                entrypoint: optionsEntrypoint,
-              }}
-            >
-              {t("common:labels.settings")}
-            </WorkflowTransitionButton>
           </div>
         }
       />

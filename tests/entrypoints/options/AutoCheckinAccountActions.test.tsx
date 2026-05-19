@@ -12,6 +12,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
+import { openSettingsTab } from "~/utils/navigation"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
 
 const { toast } = vi.hoisted(() => ({
@@ -84,6 +85,15 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionStarted: trackProductAnalyticsActionStartedMock,
 }))
 
+vi.mock("~/utils/navigation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+
+  return {
+    ...actual,
+    openSettingsTab: vi.fn(),
+  }
+})
+
 afterEach(() => {
   vi.restoreAllMocks()
   vi.clearAllMocks()
@@ -95,6 +105,36 @@ describe("AutoCheckin account actions", () => {
       complete: completeProductAnalyticsActionMock,
     })
     trackProductAnalyticsActionCompletedMock.mockReset()
+  })
+
+  it("opens auto check-in settings from the title shortcut", async () => {
+    const user = userEvent.setup()
+    const browserApi = await import("~/utils/browser/browserApi")
+
+    vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
+      async (message: any) => {
+        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+          return {
+            success: true,
+            data: { perAccount: {} },
+          }
+        }
+
+        return { success: true }
+      },
+    )
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    await screen.findByText("autoCheckin:execution.title")
+    await user.click(
+      screen.getByRole("button", { name: "common:labels.settings" }),
+    )
+
+    expect(openSettingsTab).toHaveBeenCalledWith("checkinRedeem", {
+      anchor: "auto-checkin",
+      preserveHistory: true,
+    })
   })
 
   it("retries a failed account, reloads status, and hides row actions after success", async () => {

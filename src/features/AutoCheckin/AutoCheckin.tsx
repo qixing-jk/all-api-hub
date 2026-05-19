@@ -10,6 +10,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { AutoCheckinPretriggerCompletionDialog } from "~/components/AutoCheckinPretriggerCompletionDialog"
+import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
 import { Modal } from "~/components/ui/Dialog/Modal"
@@ -985,6 +986,12 @@ export default function AutoCheckin(props: {
       <PageHeader
         icon={CalendarCheck2}
         title={t("execution.title")}
+        titleActions={
+          <OptionsPageSettingsTitleAction
+            tabId="checkinRedeem"
+            anchor="auto-checkin"
+          />
+        }
         description={t("description")}
         spacing="compact"
       />

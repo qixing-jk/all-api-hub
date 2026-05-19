@@ -46,6 +46,7 @@ import { useTranslation } from "react-i18next"
 import { useChannelDialog } from "~/components/dialogs/ChannelDialog"
 import ManagedSiteConfigRequiredState from "~/components/ManagedSiteConfigRequiredState"
 import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
+import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
 import {
   Badge,
@@ -1187,6 +1188,12 @@ export default function ManagedSiteChannels({
       <PageHeader
         icon={Layers}
         title={t("title")}
+        titleActions={
+          <OptionsPageSettingsTitleAction
+            tabId="managedSite"
+            anchor="managed-site-selector"
+          />
+        }
         description={t("description")}
         actions={
           <>

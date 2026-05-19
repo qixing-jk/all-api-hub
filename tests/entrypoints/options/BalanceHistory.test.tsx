@@ -25,7 +25,7 @@ import {
 import { tagStorage } from "~/services/tags/tagStorage"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const getMetricDropdownButtonName = (
@@ -104,6 +104,7 @@ vi.mock("~/utils/navigation", async () => {
   const actual = await vi.importActual<any>("~/utils/navigation")
   return {
     ...actual,
+    openSettingsTab: vi.fn(),
     pushWithinOptionsPage: vi.fn(),
   }
 })
@@ -1054,6 +1055,34 @@ describe("BalanceHistory options page", () => {
     expect(vi.mocked(pushWithinOptionsPage)).toHaveBeenCalledWith("#basic", {
       tab: "balanceHistory",
       anchor: "balance-history",
+    })
+  })
+
+  it("opens Balance History settings from the title shortcut", async () => {
+    vi.mocked(useUserPreferencesContext).mockReturnValue(
+      createMockUserPreferencesContext({ enabled: false }),
+    )
+
+    render(<BalanceHistory />)
+
+    expect(await screen.findByText(DISABLED_HINT_TITLE)).toBeInTheDocument()
+
+    const user = userEvent.setup()
+    await user.click(
+      screen.getByRole("button", {
+        name: "common:labels.settings",
+      }),
+    )
+
+    expect(vi.mocked(openSettingsTab)).toHaveBeenCalledWith("balanceHistory", {
+      anchor: "balance-history",
+      preserveHistory: true,
+    })
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.BalanceHistory,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenBalanceHistorySettings,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBalanceHistoryPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
   })
 

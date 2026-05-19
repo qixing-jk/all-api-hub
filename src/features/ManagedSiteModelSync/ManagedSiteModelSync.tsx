@@ -7,6 +7,7 @@ import { useTranslation } from "react-i18next"
 
 import ManagedSiteConfigRequiredState from "~/components/ManagedSiteConfigRequiredState"
 import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
+import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
 import { Button, EmptyState, Input } from "~/components/ui"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -1224,6 +1225,12 @@ export default function ManagedSiteModelSync({
       <PageHeader
         icon={RefreshCcw}
         title={t("execution.title")}
+        titleActions={
+          <OptionsPageSettingsTitleAction
+            tabId="managedSite"
+            anchor="managed-site-model-sync"
+          />
+        }
         description={t("description")}
         actions={
           <ManagedSiteTypeSwitcher

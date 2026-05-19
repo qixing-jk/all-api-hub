@@ -4,6 +4,7 @@ import { useCallback, useState, type MouseEvent } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
@@ -190,6 +191,12 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
       <PageHeader
         icon={UserRound}
         title={t("account:title")}
+        titleActions={
+          <OptionsPageSettingsTitleAction
+            tabId="accountManagement"
+            anchor="account-management"
+          />
+        }
         description={t("account:description")}
         actions={
           <ProductAnalyticsScope

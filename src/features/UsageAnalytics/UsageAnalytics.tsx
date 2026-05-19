@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { EChart } from "~/components/charts/EChart"
+import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
 import { Button, Card, WorkflowTransitionButton } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -574,6 +575,19 @@ export default function UsageAnalytics() {
       <PageHeader
         icon={BarChart3}
         title={t("title")}
+        titleActions={
+          <OptionsPageSettingsTitleAction
+            tabId="accountUsage"
+            anchor="usage-history-sync"
+            label={t("actions.openAccountUsageSettings")}
+            analyticsAction={{
+              featureId: PRODUCT_ANALYTICS_FEATURE_IDS.UsageAnalytics,
+              actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenUsageSyncSettings,
+              surfaceId: headerSurface,
+              entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+            }}
+          />
+        }
         description={t("description")}
         actions={
           <ProductAnalyticsScope
@@ -582,17 +596,6 @@ export default function UsageAnalytics() {
             surfaceId={headerSurface}
           >
             <div className="flex flex-wrap items-center gap-2">
-              <WorkflowTransitionButton
-                size="sm"
-                variant="outline"
-                onClick={handleOpenAccountUsageSettings}
-                leftIcon={<Settings className="h-4 w-4" />}
-                analyticsAction={
-                  PRODUCT_ANALYTICS_ACTION_IDS.OpenUsageSyncSettings
-                }
-              >
-                {t("actions.openAccountUsageSettings")}
-              </WorkflowTransitionButton>
               <Button
                 size="sm"
                 variant="secondary"

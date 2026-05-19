@@ -1,10 +1,11 @@
+import { within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import UsageAnalytics from "~/entrypoints/options/pages/UsageAnalytics"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const { useThemeMock, useUserPreferencesContextMock } = vi.hoisted(() => ({
@@ -30,6 +31,7 @@ vi.mock("~/utils/navigation", async () => {
   const actual = await vi.importActual<any>("~/utils/navigation")
   return {
     ...actual,
+    openSettingsTab: vi.fn(),
     pushWithinOptionsPage: vi.fn(),
   }
 })
@@ -93,16 +95,46 @@ describe("UsageAnalytics (settings moved)", () => {
     })
 
     const user = userEvent.setup()
-    await screen.findByText("usageAnalytics:empty.title")
+    const emptyCardTitle = await screen.findByText("usageAnalytics:empty.title")
+    const emptyCardContent = emptyCardTitle.parentElement
+    expect(emptyCardContent).not.toBeNull()
+
+    await user.click(
+      within(emptyCardContent as HTMLElement).getByRole("button", {
+        name: "usageAnalytics:actions.openAccountUsageSettings",
+      }),
+    )
+
+    expect(vi.mocked(pushWithinOptionsPage)).toHaveBeenCalledWith("#basic", {
+      tab: "accountUsage",
+      anchor: "usage-history-sync",
+    })
+  })
+
+  it("opens account usage settings from the title shortcut", async () => {
+    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+    vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({
+      schemaVersion: 2,
+      accounts: {},
+    } as any)
+
+    render(<UsageAnalytics />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    const user = userEvent.setup()
+    await screen.findByText("usageAnalytics:title")
+
     await user.click(
       screen.getAllByRole("button", {
         name: "usageAnalytics:actions.openAccountUsageSettings",
       })[0]!,
     )
 
-    expect(vi.mocked(pushWithinOptionsPage)).toHaveBeenCalledWith("#basic", {
-      tab: "accountUsage",
+    expect(vi.mocked(openSettingsTab)).toHaveBeenCalledWith("accountUsage", {
       anchor: "usage-history-sync",
+      preserveHistory: true,
     })
   })
 })

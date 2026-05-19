@@ -1,17 +1,10 @@
-import {
-  Bell,
-  CheckCheck,
-  Inbox,
-  Megaphone,
-  RefreshCcw,
-  Settings,
-} from "lucide-react"
+import { Bell, CheckCheck, Inbox, Megaphone, RefreshCcw } from "lucide-react"
 import { useCallback, useEffect, useMemo, useState } from "react"
 import { useTranslation } from "react-i18next"
 
+import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
-import Tooltip from "~/components/Tooltip"
-import { Button, IconButton } from "~/components/ui"
+import { Button } from "~/components/ui"
 import { EmptyState } from "~/components/ui/EmptyState"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
@@ -35,7 +28,6 @@ import type {
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { showResultToast } from "~/utils/core/toastHelpers"
-import { openSettingsTab } from "~/utils/navigation"
 
 import { SiteAnnouncementsFiltersCard } from "./components/SiteAnnouncementsFiltersCard"
 import { SiteAnnouncementsList } from "./components/SiteAnnouncementsList"
@@ -246,13 +238,6 @@ export default function SiteAnnouncementsPage({
     }
   }
 
-  const handleOpenPollingSettings = useCallback(() => {
-    void openSettingsTab("general", {
-      anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
-      preserveHistory: true,
-    })
-  }, [])
-
   const handleMarkRead = async (recordId: string) => {
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.SiteAnnouncements,
@@ -337,17 +322,11 @@ export default function SiteAnnouncementsPage({
         icon={Megaphone}
         title={t("title")}
         titleActions={
-          <Tooltip content={t("actions.pollingSettings")}>
-            <IconButton
-              type="button"
-              size="sm"
-              variant="outline"
-              aria-label={t("actions.pollingSettings")}
-              onClick={handleOpenPollingSettings}
-            >
-              <Settings className="h-4 w-4" />
-            </IconButton>
-          </Tooltip>
+          <OptionsPageSettingsTitleAction
+            tabId="general"
+            anchor={SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED}
+            label={t("actions.pollingSettings")}
+          />
         }
         description={t("description")}
         className="mb-5"

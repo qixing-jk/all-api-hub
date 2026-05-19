@@ -11,7 +11,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
 import { render, screen } from "~~/tests/test-utils/render"
 
 const { trackProductAnalyticsActionStartedMock } = vi.hoisted(() => ({
@@ -50,6 +50,7 @@ vi.mock("~/utils/navigation", async () => {
     )
   return {
     ...actual,
+    openSettingsTab: vi.fn(),
     pushWithinOptionsPage: vi.fn(),
   }
 })
@@ -83,6 +84,7 @@ describe("UsageAnalytics navigation", () => {
   })
 
   it("navigates to account usage settings from header", async () => {
+    vi.mocked(openSettingsTab).mockClear()
     vi.mocked(pushWithinOptionsPage).mockClear()
     vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
     const accountStore = createEmptyUsageHistoryAccountStore()
@@ -105,10 +107,11 @@ describe("UsageAnalytics navigation", () => {
     })
     fireEvent.click(settingsButton)
 
-    expect(pushWithinOptionsPage).toHaveBeenCalledWith("#basic", {
-      tab: "accountUsage",
+    expect(openSettingsTab).toHaveBeenCalledWith("accountUsage", {
       anchor: "usage-history-sync",
+      preserveHistory: true,
     })
+    expect(pushWithinOptionsPage).not.toHaveBeenCalled()
     expectUsageAnalyticsAction(
       PRODUCT_ANALYTICS_ACTION_IDS.OpenUsageSyncSettings,
       PRODUCT_ANALYTICS_SURFACE_IDS.OptionsUsageAnalyticsHeader,
@@ -116,6 +119,7 @@ describe("UsageAnalytics navigation", () => {
   })
 
   it("shows a settings shortcut in the empty reminder", async () => {
+    vi.mocked(openSettingsTab).mockClear()
     vi.mocked(pushWithinOptionsPage).mockClear()
     vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue({

@@ -321,6 +321,25 @@ describe("ManagedSiteModelSync page", () => {
     expect(toast.success).toHaveBeenCalled()
   })
 
+  it("opens managed-site model sync settings from the title shortcut", async () => {
+    render(<ManagedSiteModelSync />)
+
+    expect(
+      await screen.findByText(
+        "managedSiteModelSync:execution.overview.enabled",
+      ),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:labels.settings" }),
+    )
+
+    expect(mockOpenSettingsTab).toHaveBeenCalledWith("managedSite", {
+      anchor: "managed-site-model-sync",
+      preserveHistory: true,
+    })
+  })
+
   it("shows a configuration empty state and skips model-sync loading when managed-site config is missing", async () => {
     mockUseUserPreferencesContext.mockReturnValue({
       preferences: {

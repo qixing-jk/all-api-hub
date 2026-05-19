@@ -473,6 +473,23 @@ describe("ManagedSiteChannels", () => {
     })
   })
 
+  it("opens managed-site settings from the title shortcut", async () => {
+    mockChannels([{ id: 1, name: "Alpha", base_url: "https://site-a.example" }])
+
+    render(<ManagedSiteChannels />)
+
+    await waitForRowText("Alpha")
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:labels.settings" }),
+    )
+
+    expect(openSettingsTab).toHaveBeenCalledWith("managedSite", {
+      anchor: "managed-site-selector",
+      preserveHistory: true,
+    })
+  })
+
   it("uses routeParams.channelId to focus a channel and restores the full list when cleared", async () => {
     mockChannels([
       { id: 1, name: "Alpha", base_url: "https://site-a.example" },
