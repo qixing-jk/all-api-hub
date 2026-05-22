@@ -381,6 +381,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       "",
       "",
       false,
+      false,
       {
         refreshToken: "refresh-token",
         tokenExpiresAt: 123456789,
@@ -431,6 +432,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       "",
       "",
       false,
+      false,
       undefined,
       { skipAutoProvisionKeyOnAccountAdd: false },
     )
@@ -480,6 +482,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       "",
       "",
       true,
+      false,
       undefined,
     )
     expect(toast.success).toHaveBeenCalledWith(
@@ -920,6 +923,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       "",
       "",
       false,
+      false,
       undefined,
       { skipAutoProvisionKeyOnAccountAdd: true },
     )
@@ -954,6 +958,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       AuthTypeEnum.AccessToken,
       expect.any(String),
       expect.any(String),
+      expect.any(Boolean),
       expect.any(Boolean),
       undefined,
       { skipAutoProvisionKeyOnAccountAdd: false },
@@ -1486,6 +1491,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       AuthTypeEnum.AccessToken,
       "",
       "",
+      false,
       false,
       undefined,
       { skipAutoProvisionKeyOnAccountAdd: true },
