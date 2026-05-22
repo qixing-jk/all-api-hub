@@ -110,6 +110,8 @@
     "enabledHint": "Sau khi đóng, sẽ không ghi lại ảnh chụp nhanh và cũng không lên lịch thu thập cuối ngày.",
     "endOfDayCapture": "Thu thập cuối ngày",
     "endOfDayCaptureHint": "Cố gắng thu thập một lần mỗi ngày vào khoảng {{time}} (yêu cầu trình duyệt hỗ trợ Alarms API).",
+    "estimatedTodayIncome": "Hiển thị thu nhập hôm nay ước tính",
+    "estimatedTodayIncomeHint": "Dùng lịch sử số dư để ước tính phần thưởng không xuất hiện trong nhật ký thu nhập của trang. Không khả dụng khi thiếu ảnh chụp số dư chuẩn của ngày trước.",
     "retentionDays": "Số ngày lưu giữ"
   },
   "summary": {

@@ -110,6 +110,8 @@
     "enabledHint": "關閉後不會記錄快照，也不會安排日終抓取。",
     "endOfDayCapture": "日終抓取",
     "endOfDayCaptureHint": "在每天 {{time}} 左右盡力抓取一次（需要瀏覽器支援 Alarms API）。",
+    "estimatedTodayIncome": "顯示估算今日收入",
+    "estimatedTodayIncomeHint": "基於餘額歷史估算未進入站點收入記錄的獎勵；缺少前一日基準快照時不可用。",
     "retentionDays": "保留天數"
   },
   "summary": {

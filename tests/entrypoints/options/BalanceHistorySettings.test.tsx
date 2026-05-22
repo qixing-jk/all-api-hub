@@ -66,7 +66,43 @@ describe("BalanceHistorySettings", () => {
       expect(updateBalanceHistory).toHaveBeenCalledWith({
         enabled: true,
         endOfDayCapture: { enabled: true },
+        estimatedTodayIncome: { enabled: false },
         retentionDays: 14,
+      })
+    })
+  })
+
+  it("saves estimated today income display preference", async () => {
+    const updateBalanceHistory = vi.fn().mockResolvedValue(true)
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: {
+        balanceHistory: {
+          enabled: true,
+          endOfDayCapture: { enabled: false },
+          estimatedTodayIncome: { enabled: false },
+          retentionDays: 30,
+        },
+      },
+      updateBalanceHistory,
+    } as any)
+
+    renderSubject()
+
+    fireEvent.click(
+      await screen.findByRole("switch", {
+        name: "balanceHistory:settings.estimatedTodayIncome",
+      }),
+    )
+    fireEvent.click(
+      await screen.findByText("balanceHistory:actions.applySettings"),
+    )
+
+    await waitFor(() => {
+      expect(updateBalanceHistory).toHaveBeenCalledWith({
+        enabled: true,
+        endOfDayCapture: { enabled: false },
+        estimatedTodayIncome: { enabled: true },
+        retentionDays: 30,
       })
     })
   })
@@ -90,8 +126,15 @@ describe("BalanceHistorySettings", () => {
       await screen.findByText("balanceHistory:settings.alarmUnsupported"),
     ).toBeInTheDocument()
 
-    const switches = screen.getAllByRole("switch")
-    expect(switches).toHaveLength(2)
-    expect(switches[1]).toBeDisabled()
+    expect(
+      screen.getByRole("switch", {
+        name: "balanceHistory:settings.endOfDayCapture",
+      }),
+    ).toBeDisabled()
+    expect(
+      screen.getByRole("switch", {
+        name: "balanceHistory:settings.estimatedTodayIncome",
+      }),
+    ).not.toBeDisabled()
   })
 })

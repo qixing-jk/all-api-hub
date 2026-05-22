@@ -49,11 +49,33 @@ export const balanceHistorySearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
+    "control:balance-history-estimated-today-income",
+    "balanceHistory",
+    "balance-history-estimated-today-income",
+    "balanceHistory:settings.estimatedTodayIncome",
+    582,
+    {
+      descriptionKey: "balanceHistory:settings.estimatedTodayIncomeHint",
+      breadcrumbsKeys: [
+        ...DEFAULT_BREADCRUMBS,
+        "settings:tabs.balanceHistory",
+        "balanceHistory:title",
+      ],
+      keywords: [
+        "balance history",
+        "estimated today income",
+        "estimated income",
+        "today income",
+        "income",
+      ],
+    },
+  ),
+  buildControlDefinition(
     "control:balance-history-retention-days",
     "balanceHistory",
     "balance-history-retention-days",
     "balanceHistory:settings.retentionDays",
-    582,
+    583,
     {
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,

@@ -34,6 +34,10 @@ export default function BalanceHistorySettings() {
   const [endOfDayCaptureEnabled, setEndOfDayCaptureEnabled] = useState<boolean>(
     preferences.balanceHistory?.endOfDayCapture?.enabled ?? false,
   )
+  const [estimatedTodayIncomeEnabled, setEstimatedTodayIncomeEnabled] =
+    useState<boolean>(
+      preferences.balanceHistory?.estimatedTodayIncome?.enabled ?? false,
+    )
   const [retentionDays, setRetentionDays] = useState<number>(
     preferences.balanceHistory?.retentionDays ??
       DEFAULT_BALANCE_HISTORY_PREFERENCES.retentionDays,
@@ -43,6 +47,9 @@ export default function BalanceHistorySettings() {
     setEnabled(preferences.balanceHistory?.enabled ?? false)
     setEndOfDayCaptureEnabled(
       preferences.balanceHistory?.endOfDayCapture?.enabled ?? false,
+    )
+    setEstimatedTodayIncomeEnabled(
+      preferences.balanceHistory?.estimatedTodayIncome?.enabled ?? false,
     )
     setRetentionDays(
       preferences.balanceHistory?.retentionDays ??
@@ -64,6 +71,7 @@ export default function BalanceHistorySettings() {
       const success = await updateBalanceHistory({
         enabled,
         endOfDayCapture: { enabled: endOfDayCaptureEnabled },
+        estimatedTodayIncome: { enabled: estimatedTodayIncomeEnabled },
         retentionDays: safeRetentionDays,
       })
 
@@ -85,6 +93,7 @@ export default function BalanceHistorySettings() {
   }, [
     enabled,
     endOfDayCaptureEnabled,
+    estimatedTodayIncomeEnabled,
     safeRetentionDays,
     t,
     updateBalanceHistory,
@@ -110,7 +119,11 @@ export default function BalanceHistorySettings() {
                 {t("settings.enabledHint")}
               </div>
             </div>
-            <Switch checked={enabled} onChange={setEnabled} />
+            <Switch
+              aria-label={t("settings.enabled")}
+              checked={enabled}
+              onChange={setEnabled}
+            />
           </div>
 
           <div
@@ -126,9 +139,29 @@ export default function BalanceHistorySettings() {
               </div>
             </div>
             <Switch
+              aria-label={t("settings.endOfDayCapture")}
               checked={endOfDayCaptureEnabled}
               onChange={setEndOfDayCaptureEnabled}
               disabled={!alarmsSupported}
+            />
+          </div>
+
+          <div
+            id="balance-history-estimated-today-income"
+            className="flex items-center justify-between gap-3"
+          >
+            <div>
+              <Label className="text-sm font-medium">
+                {t("settings.estimatedTodayIncome")}
+              </Label>
+              <div className="dark:text-dark-text-tertiary text-xs text-gray-500">
+                {t("settings.estimatedTodayIncomeHint")}
+              </div>
+            </div>
+            <Switch
+              aria-label={t("settings.estimatedTodayIncome")}
+              checked={estimatedTodayIncomeEnabled}
+              onChange={setEstimatedTodayIncomeEnabled}
             />
           </div>
 

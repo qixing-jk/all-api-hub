@@ -110,6 +110,8 @@
     "enabledHint": "When disabled, no snapshots are recorded and scheduled capture is turned off.",
     "endOfDayCapture": "End-of-day capture",
     "endOfDayCaptureHint": "Best-effort daily capture near {{time}} (requires Alarms API).",
+    "estimatedTodayIncome": "Show estimated today income",
+    "estimatedTodayIncomeHint": "Uses balance history to estimate rewards that do not appear in site income logs. Unavailable when the previous-day baseline is missing.",
     "retentionDays": "Retention (days)"
   },
   "summary": {
