@@ -3,20 +3,28 @@ import type { CurrencyType } from "~/types"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
 
 import { listDayKeysInRange } from "./dayKeys"
+import { estimateTodayIncomeForAccount } from "./todayIncomeEstimate"
 
 interface DailyBalanceHistoryCoverage {
   totalAccounts: number
   snapshotAccounts: number
   cashflowAccounts: number
+  estimatedIncomeAccounts: number
 }
 
 type ExchangeRateLookup = Record<string, number> | Map<string, number>
 
-export type DailyBalanceHistoryMetric = "balance" | "income" | "outcome" | "net"
+export type DailyBalanceHistoryMetric =
+  | "balance"
+  | "income"
+  | "estimatedIncome"
+  | "outcome"
+  | "net"
 
 interface PerAccountDailyBalanceMoneySeries {
   balance: Array<number | null>
   income: Array<number | null>
+  estimatedIncome: Array<number | null>
   outcome: Array<number | null>
   net: Array<number | null>
 }
@@ -26,10 +34,12 @@ interface AccountRangeSummary {
   startBalance: number | null
   endBalance: number | null
   incomeTotal: number | null
+  estimatedIncomeTotal: number | null
   outcomeTotal: number | null
   netTotal: number | null
   snapshotDays: number
   cashflowDays: number
+  estimatedIncomeDays: number
   totalDays: number
 }
 
@@ -55,6 +65,38 @@ function resolveExchangeRate(params: {
   return typeof value === "number" && Number.isFinite(value) && value > 0
     ? value
     : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
+}
+
+/**
+ * Builds the minimal account shape required by the today-income estimate helper.
+ */
+function buildEstimateAccount(params: {
+  accountId: string
+  manualBalanceAccountIds?: Set<string>
+}): {
+  id: string
+  manualBalanceUsd?: string
+} {
+  const { accountId, manualBalanceAccountIds } = params
+
+  return {
+    id: accountId,
+    manualBalanceUsd:
+      manualBalanceAccountIds?.has(accountId) === true ? "manual" : undefined,
+  }
+}
+
+/**
+ * Converts a quota-unit value into the requested chart currency.
+ */
+function convertQuotaToSelectedMoney(params: {
+  quota: number
+  conversionFactor: number
+  exchangeRate: number
+}): number {
+  const { quota, conversionFactor, exchangeRate } = params
+
+  return (quota / conversionFactor) * exchangeRate
 }
 
 /**
@@ -90,6 +132,7 @@ export function buildAggregatedDailyBalanceSeries(params: {
         totalAccounts,
         snapshotAccounts: 0,
         cashflowAccounts: 0,
+        estimatedIncomeAccounts: 0,
       })),
     }
   }
@@ -129,6 +172,7 @@ export function buildAggregatedDailyBalanceSeries(params: {
       totalAccounts,
       snapshotAccounts,
       cashflowAccounts,
+      estimatedIncomeAccounts: 0,
     })
 
     quotaTotals.push(snapshotAccounts === totalAccounts ? quotaSum : null)
@@ -187,6 +231,7 @@ export function buildAggregatedDailyBalanceMoneySeries(params: {
         totalAccounts,
         snapshotAccounts: 0,
         cashflowAccounts: 0,
+        estimatedIncomeAccounts: 0,
       })),
     }
   }
@@ -235,6 +280,7 @@ export function buildAggregatedDailyBalanceMoneySeries(params: {
       totalAccounts,
       snapshotAccounts,
       cashflowAccounts,
+      estimatedIncomeAccounts: 0,
     })
 
     balanceTotals.push(snapshotAccounts === totalAccounts ? balanceSum : null)
@@ -258,6 +304,8 @@ export function buildPerAccountDailyBalanceMoneySeries(params: {
   endDayKey: string
   currencyType: CurrencyType
   exchangeRateByAccountId?: ExchangeRateLookup
+  estimatedTodayIncomeEnabled?: boolean
+  manualBalanceAccountIds?: Set<string>
 }): {
   dayKeys: string[]
   seriesByAccountId: Record<string, PerAccountDailyBalanceMoneySeries>
@@ -270,6 +318,8 @@ export function buildPerAccountDailyBalanceMoneySeries(params: {
     endDayKey,
     currencyType,
     exchangeRateByAccountId,
+    estimatedTodayIncomeEnabled = false,
+    manualBalanceAccountIds,
   } = params
 
   const dayKeys = listDayKeysInRange({ startDayKey, endDayKey })
@@ -279,6 +329,7 @@ export function buildPerAccountDailyBalanceMoneySeries(params: {
     totalAccounts,
     snapshotAccounts: 0,
     cashflowAccounts: 0,
+    estimatedIncomeAccounts: 0,
   }))
 
   const seriesByAccountId: Record<string, PerAccountDailyBalanceMoneySeries> =
@@ -299,6 +350,7 @@ export function buildPerAccountDailyBalanceMoneySeries(params: {
 
     const balance = dayKeys.map(() => null) as Array<number | null>
     const income = dayKeys.map(() => null) as Array<number | null>
+    const estimatedIncome = dayKeys.map(() => null) as Array<number | null>
     const outcome = dayKeys.map(() => null) as Array<number | null>
     const net = dayKeys.map(() => null) as Array<number | null>
 
@@ -330,7 +382,36 @@ export function buildPerAccountDailyBalanceMoneySeries(params: {
       }
     }
 
-    seriesByAccountId[accountId] = { balance, income, outcome, net }
+    for (let index = 0; index < dayKeys.length; index += 1) {
+      const estimate = estimateTodayIncomeForAccount({
+        enabled: estimatedTodayIncomeEnabled,
+        store,
+        account: buildEstimateAccount({ accountId, manualBalanceAccountIds }),
+        currentDayKey: dayKeys[index],
+      })
+
+      if (
+        estimate.status !== "available" ||
+        estimate.estimatedTodayIncome === null
+      ) {
+        continue
+      }
+
+      estimatedIncome[index] = convertQuotaToSelectedMoney({
+        quota: estimate.estimatedTodayIncome,
+        conversionFactor,
+        exchangeRate,
+      })
+      coverageByDay[index].estimatedIncomeAccounts += 1
+    }
+
+    seriesByAccountId[accountId] = {
+      balance,
+      income,
+      estimatedIncome,
+      outcome,
+      net,
+    }
   }
 
   return { dayKeys, seriesByAccountId, coverageByDay }
@@ -348,6 +429,8 @@ export function buildAccountRangeSummaries(params: {
   endDayKey: string
   currencyType: CurrencyType
   exchangeRateByAccountId?: ExchangeRateLookup
+  estimatedTodayIncomeEnabled?: boolean
+  manualBalanceAccountIds?: Set<string>
 }): {
   dayKeys: string[]
   summaries: AccountRangeSummary[]
@@ -359,6 +442,8 @@ export function buildAccountRangeSummaries(params: {
     endDayKey,
     currencyType,
     exchangeRateByAccountId,
+    estimatedTodayIncomeEnabled = false,
+    manualBalanceAccountIds,
   } = params
 
   const dayKeys = listDayKeysInRange({ startDayKey, endDayKey })
@@ -395,28 +480,56 @@ export function buildAccountRangeSummaries(params: {
 
     let snapshotDays = 0
     let cashflowDays = 0
+    let estimatedIncomeDays = 0
     let incomeSum = 0
+    let estimatedIncomeSum = 0
     let outcomeSum = 0
 
-    if (perDay) {
-      for (const dayKey of dayKeys) {
+    for (const dayKey of dayKeys) {
+      if (perDay) {
         const snapshot = perDay[dayKey]
-        if (!snapshot) continue
-        snapshotDays += 1
+        if (snapshot) {
+          snapshotDays += 1
 
-        if (
-          typeof snapshot.today_income === "number" &&
-          typeof snapshot.today_quota_consumption === "number"
-        ) {
-          cashflowDays += 1
-          incomeSum += (snapshot.today_income / conversionFactor) * exchangeRate
-          outcomeSum +=
-            (snapshot.today_quota_consumption / conversionFactor) * exchangeRate
+          if (
+            typeof snapshot.today_income === "number" &&
+            typeof snapshot.today_quota_consumption === "number"
+          ) {
+            cashflowDays += 1
+            incomeSum +=
+              (snapshot.today_income / conversionFactor) * exchangeRate
+            outcomeSum +=
+              (snapshot.today_quota_consumption / conversionFactor) *
+              exchangeRate
+          }
         }
       }
+
+      const estimate = estimateTodayIncomeForAccount({
+        enabled: estimatedTodayIncomeEnabled,
+        store,
+        account: buildEstimateAccount({ accountId, manualBalanceAccountIds }),
+        currentDayKey: dayKey,
+      })
+
+      if (
+        estimate.status !== "available" ||
+        estimate.estimatedTodayIncome === null
+      ) {
+        continue
+      }
+
+      estimatedIncomeDays += 1
+      estimatedIncomeSum += convertQuotaToSelectedMoney({
+        quota: estimate.estimatedTodayIncome,
+        conversionFactor,
+        exchangeRate,
+      })
     }
 
     const incomeTotal = cashflowDays > 0 ? incomeSum : null
+    const estimatedIncomeTotal =
+      estimatedIncomeDays > 0 ? estimatedIncomeSum : null
     const outcomeTotal = cashflowDays > 0 ? outcomeSum : null
     const netTotal =
       cashflowDays > 0 && incomeTotal !== null && outcomeTotal !== null
@@ -428,10 +541,12 @@ export function buildAccountRangeSummaries(params: {
       startBalance,
       endBalance,
       incomeTotal,
+      estimatedIncomeTotal,
       outcomeTotal,
       netTotal,
       snapshotDays,
       cashflowDays,
+      estimatedIncomeDays,
       totalDays,
     })
   }

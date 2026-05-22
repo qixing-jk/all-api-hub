@@ -73,6 +73,7 @@ describe("settings product analytics snapshots", () => {
         enabled: true,
         endOfDayCapture: { enabled: true },
         retentionDays: 730,
+        estimatedTodayIncome: { enabled: false },
       },
       newApi: {
         baseUrl: "https://private-new-api.example",
@@ -537,6 +538,7 @@ describe("settings product analytics snapshots", () => {
         enabled: true,
         endOfDayCapture: { enabled: false },
         retentionDays: 365,
+        estimatedTodayIncome: { enabled: false },
       },
       managedSiteModelSync: {
         enabled: true,

@@ -306,6 +306,7 @@ describe("preferencesMigration", () => {
           enabled: "yes" as any,
           endOfDayCapture: { enabled: "no" as any },
           retentionDays: "not-a-number" as any,
+          estimatedTodayIncome: { enabled: false },
         },
       })
 
@@ -322,6 +323,7 @@ describe("preferencesMigration", () => {
           enabled: true,
           endOfDayCapture: { enabled: true },
           retentionDays: 0,
+          estimatedTodayIncome: { enabled: false },
         },
       })
       const highPrefs = createV0Preferences({
@@ -330,6 +332,7 @@ describe("preferencesMigration", () => {
           enabled: true,
           endOfDayCapture: { enabled: false },
           retentionDays: 99999,
+          estimatedTodayIncome: { enabled: false },
         },
       })
 

@@ -101,13 +101,17 @@ const QUICK_RANGES = [
 type BalanceHistoryBreakdownChartType = "pie" | "bar"
 type BalanceHistoryTrendSeriesScope = "accounts" | "total"
 type BalanceHistoryQuickRangeId = (typeof QUICK_RANGES)[number]["id"]
+type BalanceHistoryVisibleMetric = Exclude<
+  DailyBalanceHistoryMetric,
+  "estimatedIncome"
+>
 
 /**
  * Returns the localized label for a supported balance-history metric.
  */
 function getBalanceHistoryMetricLabel(
   t: TFunction,
-  metric: DailyBalanceHistoryMetric,
+  metric: BalanceHistoryVisibleMetric,
 ) {
   switch (metric) {
     case "balance":
@@ -190,14 +194,14 @@ export default function BalanceHistory() {
   const [selectedAccountIds, setSelectedAccountIds] = useState<string[]>([])
 
   const [trendMetric, setTrendMetric] =
-    useState<DailyBalanceHistoryMetric>("balance")
+    useState<BalanceHistoryVisibleMetric>("balance")
   const [trendChartType, setTrendChartType] =
     useState<BalanceHistoryTrendChartType>("line")
   const [trendScope, setTrendScope] =
     useState<BalanceHistoryTrendSeriesScope>("accounts")
 
   const [breakdownMetric, setBreakdownMetric] =
-    useState<DailyBalanceHistoryMetric>("balance")
+    useState<BalanceHistoryVisibleMetric>("balance")
   const [breakdownChartType, setBreakdownChartType] =
     useState<BalanceHistoryBreakdownChartType>("pie")
   const [breakdownBalanceDayKey, setBreakdownBalanceDayKey] =
@@ -1282,7 +1286,7 @@ export default function BalanceHistory() {
                               value={breakdownMetric}
                               onValueChange={(value) =>
                                 setBreakdownMetric(
-                                  value as DailyBalanceHistoryMetric,
+                                  value as BalanceHistoryVisibleMetric,
                                 )
                               }
                             >
@@ -1399,7 +1403,7 @@ export default function BalanceHistory() {
                                 value={trendMetric}
                                 onValueChange={(value) =>
                                   setTrendMetric(
-                                    value as DailyBalanceHistoryMetric,
+                                    value as BalanceHistoryVisibleMetric,
                                   )
                                 }
                               >
