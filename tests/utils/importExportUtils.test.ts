@@ -304,6 +304,26 @@ describe("importFromBackupObject", () => {
     })
   })
 
+  it("imports legacy V2 account arrays without deletion marker metadata", async () => {
+    const backup: RawBackupData = {
+      version: BACKUP_VERSION,
+      timestamp: Date.now(),
+      accounts: [{ id: "legacy-a" } as any] as any,
+    }
+
+    const result = await importFromBackupObject(backup as BackupV2)
+
+    expect(mockAccountStorageImportData).toHaveBeenCalledWith({
+      accounts: [{ id: "legacy-a" }],
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+      deletedEntryRecords: undefined,
+    })
+    expect(mockEnsureLegacyMigration).toHaveBeenCalled()
+    expect(result.sections.accounts).toBe(true)
+  })
+
   it("merges API credential profiles when present in V2 backup", async () => {
     const backup: BackupFullV2 = {
       version: BACKUP_VERSION,
@@ -611,6 +631,16 @@ describe("normalizeBackupForMerge", () => {
       timestamp: 123,
       accounts: {
         accounts: [{ id: "a1" } as any],
+        bookmarks: [],
+        pinnedAccountIds: [],
+        orderedAccountIds: [],
+        deletedEntryRecords: {
+          deleted: {
+            kind: "account",
+            deletedAt: 200,
+            entryUpdatedAt: 100,
+          },
+        },
         last_updated: 456,
       } as any,
       tagStore: { version: 1, tagsById: {} },
@@ -624,7 +654,13 @@ describe("normalizeBackupForMerge", () => {
     expect(result.bookmarks).toEqual([])
     expect(result.pinnedAccountIds).toEqual([])
     expect(result.orderedAccountIds).toEqual([])
-    expect(result.deletedEntryRecords).toEqual({})
+    expect(result.deletedEntryRecords).toEqual({
+      deleted: {
+        kind: "account",
+        deletedAt: 200,
+        entryUpdatedAt: 100,
+      },
+    })
     expect(result.accountsTimestamp).toBe(456)
     expect(result.preferences).toEqual({ themeMode: "dark" })
     expect(result.channelConfigs).toEqual({ 1: { enabled: true } })
@@ -680,6 +716,15 @@ describe("normalizeBackupForMerge", () => {
     const payload: RawBackupData = {
       version: "1.0",
       timestamp: 999,
+      accounts: {
+        deletedEntryRecords: {
+          deleted: {
+            kind: "bookmark",
+            deletedAt: 300,
+            entryUpdatedAt: 200,
+          },
+        },
+      } as any,
       data: {
         accounts: [{ id: "legacy" }],
         preferences: { themeMode: "dark" },
@@ -693,6 +738,13 @@ describe("normalizeBackupForMerge", () => {
     expect(result.bookmarks).toEqual([])
     expect(result.pinnedAccountIds).toEqual([])
     expect(result.orderedAccountIds).toEqual([])
+    expect(result.deletedEntryRecords).toEqual({
+      deleted: {
+        kind: "bookmark",
+        deletedAt: 300,
+        entryUpdatedAt: 200,
+      },
+    })
     expect(result.accountsTimestamp).toBe(999)
     expect(result.preferences).toEqual({ themeMode: "dark" })
     expect(result.channelConfigs).toEqual({ 2: { enabled: false } })

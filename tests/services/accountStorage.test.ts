@@ -1148,6 +1148,45 @@ describe("accountStorage core behaviors", () => {
     }
   })
 
+  it("deleteAccount records deletion without user timestamp and ignores async status cleanup failure", async () => {
+    vi.useFakeTimers()
+    const deletedAt = new Date("2026-05-22T02:00:00Z")
+
+    try {
+      vi.setSystemTime(deletedAt)
+      pruneStatusForAccountIdsMock.mockRejectedValueOnce(
+        new Error("status cleanup failed"),
+      )
+
+      const account = createAccount({
+        id: "delete-no-user-timestamp",
+        updated_at: 123,
+        user_updated_at: undefined as any,
+      })
+      delete (account as Partial<SiteAccount>).user_updated_at
+      seedStorage([account])
+
+      await expect(
+        accountStorage.deleteAccount("delete-no-user-timestamp"),
+      ).resolves.toBe(true)
+
+      const config = storageData.get(
+        ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+      ) as AccountStorageConfig
+      expect(config.deletedEntryRecords?.["delete-no-user-timestamp"]).toEqual({
+        kind: "account",
+        deletedAt: deletedAt.getTime(),
+        entryUpdatedAt: 123,
+      })
+      await Promise.resolve()
+      expect(pruneStatusForAccountIdsMock).toHaveBeenCalledWith([
+        "delete-no-user-timestamp",
+      ])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("deleteAccount should surface a missing-account error", async () => {
     seedStorage([createAccount({ id: "present" })])
 
@@ -1191,6 +1230,36 @@ describe("accountStorage core behaviors", () => {
     expect(pruneStatusForAccountIdsMock).toHaveBeenCalledWith([
       "bulk-b",
       "bulk-c",
+    ])
+  })
+
+  it("deleteAccounts still returns deleted ids when async status cleanup fails", async () => {
+    const accounts = [
+      createAccount({ id: "bulk-cleanup-a" }),
+      createAccount({ id: "bulk-cleanup-b" }),
+    ]
+    storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
+      accounts,
+      bookmarks: [],
+      pinnedAccountIds: [],
+      orderedAccountIds: [],
+      last_updated: Date.now(),
+    } satisfies AccountStorageConfig)
+    pruneStatusForAccountIdsMock.mockRejectedValueOnce(
+      new Error("bulk cleanup failed"),
+    )
+
+    await expect(
+      accountStorage.deleteAccounts(["bulk-cleanup-a", "bulk-cleanup-b"]),
+    ).resolves.toEqual({
+      deletedCount: 2,
+      deletedIds: ["bulk-cleanup-a", "bulk-cleanup-b"],
+    })
+
+    await Promise.resolve()
+    expect(pruneStatusForAccountIdsMock).toHaveBeenCalledWith([
+      "bulk-cleanup-a",
+      "bulk-cleanup-b",
     ])
   })
 
@@ -2609,6 +2678,79 @@ describe("accountStorage bookmarks", () => {
       ) as AccountStorageConfig
       expect(persisted.accounts[0].disabled).toBe(false)
       expect(persisted.accounts[0].excludeFromTotalBalance).toBe(false)
+    })
+
+    it("getAccountById migrates legacy accounts without changing user update time", async () => {
+      vi.useFakeTimers()
+      const now = new Date("2026-05-23T01:00:00Z")
+
+      try {
+        vi.setSystemTime(now)
+        const legacyAccount = createAccount({
+          id: "legacy-by-id",
+          updated_at: 100,
+          user_updated_at: 100,
+        })
+        delete (legacyAccount as any).disabled
+        delete (legacyAccount as any).excludeFromTotalBalance
+        seedStorage([legacyAccount])
+
+        const found = await accountStorage.getAccountById("legacy-by-id")
+
+        expect(found?.id).toBe("legacy-by-id")
+        expect(found?.user_updated_at).toBe(100)
+        const persisted = storageData.get(
+          ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+        ) as AccountStorageConfig
+        expect(persisted.accounts[0].updated_at).toBe(100)
+        expect(persisted.accounts[0].user_updated_at).toBe(100)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it("getAccountByBaseUrlAndUserId migrates matches without changing user update time", async () => {
+      vi.useFakeTimers()
+      const now = new Date("2026-05-23T02:00:00Z")
+
+      try {
+        vi.setSystemTime(now)
+        const legacyAccount = createAccount({
+          id: "legacy-by-url-user",
+          site_url: "https://legacy-user.example.com",
+          updated_at: 200,
+          user_updated_at: 200,
+          account_info: {
+            id: 987,
+            access_token: "token",
+            username: "legacy-user",
+            quota: 100,
+            today_prompt_tokens: 0,
+            today_completion_tokens: 0,
+            today_quota_consumption: 0,
+            today_requests_count: 0,
+            today_income: 0,
+          },
+        })
+        delete (legacyAccount as any).disabled
+        delete (legacyAccount as any).excludeFromTotalBalance
+        seedStorage([legacyAccount])
+
+        const found = await accountStorage.getAccountByBaseUrlAndUserId(
+          "https://legacy-user.example.com",
+          987,
+        )
+
+        expect(found?.id).toBe("legacy-by-url-user")
+        expect(found?.user_updated_at).toBe(200)
+        const persisted = storageData.get(
+          ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+        ) as AccountStorageConfig
+        expect(persisted.accounts[0].updated_at).toBe(200)
+        expect(persisted.accounts[0].user_updated_at).toBe(200)
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
     it("exportData falls back to a safe default config when storage reads fail", async () => {
