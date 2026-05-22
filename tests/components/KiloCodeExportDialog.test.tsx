@@ -152,6 +152,7 @@ const createSiteAccount = (site: DisplaySiteData): SiteAccount => ({
   last_sync_time: 0,
   created_at: 0,
   updated_at: 0,
+  user_updated_at: 0,
 })
 
 const expectKiloAccountExportActionStarted = (

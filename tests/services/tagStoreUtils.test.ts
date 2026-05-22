@@ -54,6 +54,7 @@ function makeAccount(overrides: Partial<SiteAccount>): SiteAccount {
       } as any),
     last_sync_time: overrides.last_sync_time ?? 0,
     updated_at: overrides.updated_at ?? 0,
+    user_updated_at: overrides.user_updated_at ?? overrides.updated_at ?? 0,
     created_at: overrides.created_at ?? 0,
     notes: overrides.notes ?? "",
     authType: overrides.authType ?? AuthTypeEnum.AccessToken,

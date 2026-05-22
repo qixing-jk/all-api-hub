@@ -44,6 +44,7 @@ const DEFAULT_SITE_ACCOUNT: SiteAccount = {
   account_info: DEFAULT_ACCOUNT_INFO,
   last_sync_time: 0,
   updated_at: 0,
+  user_updated_at: 0,
   created_at: 0,
   notes: "",
   tagIds: [],
@@ -251,6 +252,9 @@ function normalizeCheckInConfig(raw: DeepPartial<CheckInConfig> | undefined) {
  */
 export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
   const merged = deepOverride<SiteAccount>(DEFAULT_SITE_ACCOUNT, raw)
+  const updatedAt = coerceNumber(merged.updated_at, 0)
+  const rawUserUpdatedAt = (raw as { user_updated_at?: unknown })
+    .user_updated_at
 
   return {
     ...merged,
@@ -272,7 +276,8 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
     account_info: normalizeAccountInfo(merged.account_info),
     health: normalizeHealthStatus(merged.health),
     last_sync_time: coerceNumber(merged.last_sync_time, 0),
-    updated_at: coerceNumber(merged.updated_at, 0),
+    updated_at: updatedAt,
+    user_updated_at: coerceNumber(rawUserUpdatedAt, updatedAt),
     created_at: coerceNumber(merged.created_at, 0),
     notes: coerceString(merged.notes, ""),
     tagIds: coerceStringArray(merged.tagIds),
@@ -295,7 +300,10 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
  * structures so downstream reads see stable shapes.
  */
 export function createPersistedSiteAccount(params: {
-  account: Omit<SiteAccount, "id" | "created_at" | "updated_at">
+  account: Omit<
+    SiteAccount,
+    "id" | "created_at" | "updated_at" | "user_updated_at"
+  >
   id: string
   now: number
 }): SiteAccount {
@@ -306,6 +314,7 @@ export function createPersistedSiteAccount(params: {
       id: params.id,
       created_at: params.now,
       updated_at: params.now,
+      user_updated_at: params.now,
     } as DeepPartial<SiteAccount>,
   )
 
@@ -326,11 +335,15 @@ export function applySiteAccountUpdates(params: {
   account: SiteAccount
   updates: DeepPartial<SiteAccount>
   now: number
+  updateUserTimestamp?: boolean
 }): SiteAccount {
   const normalized = normalizeSiteAccount(params.account)
   const merged = deepOverride<SiteAccount>(normalized, {
     ...params.updates,
     updated_at: params.now,
+    ...(params.updateUserTimestamp === false
+      ? {}
+      : { user_updated_at: params.now }),
   } as DeepPartial<SiteAccount>)
   const result = normalizeSiteAccount(merged)
 

@@ -281,6 +281,7 @@ function createMockNewApiChannelListData(channels?: any[]) {
  * Creates a mock SiteAccount entity for integration-style New API tests.
  */
 function createMockSiteAccount(overrides?: Partial<SiteAccount>): SiteAccount {
+  const now = Date.now()
   return {
     id: "account-1",
     site_name: "Test Site",
@@ -303,12 +304,13 @@ function createMockSiteAccount(overrides?: Partial<SiteAccount>): SiteAccount {
       today_requests_count: 5,
       today_income: 0,
     },
-    last_sync_time: Date.now(),
-    updated_at: Date.now(),
-    created_at: Date.now() - 86400000,
+    last_sync_time: now,
+    updated_at: now,
+    created_at: now - 86400000,
     authType: AuthTypeEnum.AccessToken,
     checkIn: { enableDetection: false },
     ...overrides,
+    user_updated_at: overrides?.user_updated_at ?? overrides?.updated_at ?? now,
   }
 }
 

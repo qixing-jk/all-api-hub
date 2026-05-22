@@ -65,6 +65,10 @@ type RefreshAccountOptions = {
   reEnableOnSuccess?: boolean
 }
 
+type UpdateAccountOptions = {
+  updateUserTimestamp?: boolean
+}
+
 class AccountStorageService {
   private storage: Storage
 
@@ -107,6 +111,13 @@ class AccountStorageService {
       entryUpdatedAt:
         typeof input.entryUpdatedAt === "number" ? input.entryUpdatedAt : 0,
     }
+  }
+
+  private static resolveAccountUserUpdatedAt(account?: SiteAccount) {
+    if (!account) return undefined
+    return typeof account.user_updated_at === "number"
+      ? account.user_updated_at
+      : account.updated_at
   }
 
   /**
@@ -202,7 +213,9 @@ class AccountStorageService {
           accountId: account.id,
         })
         const migratedAccount = migrateAccountConfig(account)
-        await this.updateAccount(id, migratedAccount)
+        await this.updateAccount(id, migratedAccount, {
+          updateUserTimestamp: false,
+        })
         return migratedAccount
       }
 
@@ -303,7 +316,9 @@ class AccountStorageService {
           userId,
         })
         const migratedAccount = migrateAccountConfig(account)
-        await this.updateAccount(account.id, migratedAccount)
+        await this.updateAccount(account.id, migratedAccount, {
+          updateUserTimestamp: false,
+        })
         return migratedAccount
       }
 
@@ -356,7 +371,10 @@ class AccountStorageService {
    * Add a new account; generates id/timestamps and saves.
    */
   async addAccount(
-    accountData: Omit<SiteAccount, "id" | "created_at" | "updated_at">,
+    accountData: Omit<
+      SiteAccount,
+      "id" | "created_at" | "updated_at" | "user_updated_at"
+    >,
   ): Promise<string> {
     try {
       logger.info("开始添加新账号", { siteName: accountData.site_name })
@@ -383,6 +401,7 @@ class AccountStorageService {
   async updateAccount(
     id: string,
     updates: DeepPartial<SiteAccount>,
+    options?: UpdateAccountOptions,
   ): Promise<boolean> {
     try {
       return await this.mutateAccountById(id, ({ account }) => ({
@@ -390,6 +409,7 @@ class AccountStorageService {
           account,
           updates,
           now: Date.now(),
+          updateUserTimestamp: options?.updateUserTimestamp,
         }),
         result: true,
         changed: true,
@@ -566,7 +586,8 @@ class AccountStorageService {
           ...(config.deletedEntryRecords || {}),
           [id]: AccountStorageService.createDeletedEntryRecord({
             kind: "account",
-            entryUpdatedAt: deletedAccount?.updated_at,
+            entryUpdatedAt:
+              AccountStorageService.resolveAccountUserUpdatedAt(deletedAccount),
             now,
           }),
         }
@@ -633,7 +654,8 @@ class AccountStorageService {
               account.id,
               AccountStorageService.createDeletedEntryRecord({
                 kind: "account",
-                entryUpdatedAt: account.updated_at,
+                entryUpdatedAt:
+                  AccountStorageService.resolveAccountUserUpdatedAt(account),
                 now,
               }),
             ]),
@@ -835,9 +857,13 @@ class AccountStorageService {
    * Update account last_sync_time to now.
    */
   async updateSyncTime(id: string): Promise<boolean> {
-    return this.updateAccount(id, {
-      last_sync_time: Date.now(),
-    })
+    return this.updateAccount(
+      id,
+      {
+        last_sync_time: Date.now(),
+      },
+      { updateUserTimestamp: false },
+    )
   }
 
   /**
@@ -860,17 +886,21 @@ class AccountStorageService {
       const detectedAt = today.getTime()
       const currentCheckIn = account.checkIn
 
-      return this.updateAccount(id, {
-        checkIn: {
-          ...currentCheckIn,
-          siteStatus: {
-            ...(currentCheckIn.siteStatus ?? {}),
-            isCheckedInToday: true,
-            lastCheckInDate: todayDate,
-            lastDetectedAt: detectedAt,
+      return this.updateAccount(
+        id,
+        {
+          checkIn: {
+            ...currentCheckIn,
+            siteStatus: {
+              ...(currentCheckIn.siteStatus ?? {}),
+              isCheckedInToday: true,
+              lastCheckInDate: todayDate,
+              lastDetectedAt: detectedAt,
+            },
           },
         },
-      })
+        { updateUserTimestamp: false },
+      )
     } catch (error) {
       logger.error("标记账号为已签到失败", { accountId: id, error })
       return false
@@ -901,16 +931,20 @@ class AccountStorageService {
       const todayDate = today.toISOString().split("T")[0]
       const currentCheckIn = account.checkIn
 
-      return this.updateAccount(id, {
-        checkIn: {
-          ...currentCheckIn,
-          customCheckIn: {
-            ...(currentCheckIn.customCheckIn ?? {}),
-            isCheckedInToday: true,
-            lastCheckInDate: todayDate,
+      return this.updateAccount(
+        id,
+        {
+          checkIn: {
+            ...currentCheckIn,
+            customCheckIn: {
+              ...(currentCheckIn.customCheckIn ?? {}),
+              isCheckedInToday: true,
+              lastCheckInDate: todayDate,
+            },
           },
         },
-      })
+        { updateUserTimestamp: false },
+      )
     } catch (error) {
       logger.error("标记账号外部签到为已完成失败", { accountId: id, error })
       return false
@@ -1034,7 +1068,12 @@ class AccountStorageService {
       })
 
       // 构建更新数据
-      const updateData: Partial<Omit<SiteAccount, "id" | "created_at">> = {
+      const updateData: Partial<
+        Omit<
+          SiteAccount,
+          "id" | "created_at" | "updated_at" | "user_updated_at"
+        >
+      > = {
         health: {
           status: result.healthStatus.status,
           reason: result.healthStatus.message,
@@ -1148,7 +1187,9 @@ class AccountStorageService {
       }
 
       // 更新账号信息
-      const didPersist = await this.updateAccount(id, updateData)
+      const didPersist = await this.updateAccount(id, updateData, {
+        updateUserTimestamp: false,
+      })
       const updatedAccount = didPersist
         ? await this.getAccountById(id)
         : account
@@ -1192,14 +1233,18 @@ class AccountStorageService {
       logger.error("刷新账号数据失败", { accountId: id, error })
       // 在出现异常时也尝试更新健康状态为unknown
       try {
-        await this.updateAccount(id, {
-          health: {
-            status: SiteHealthStatus.Unknown,
-            reason: getErrorMessage(error),
-            code: undefined,
+        await this.updateAccount(
+          id,
+          {
+            health: {
+              status: SiteHealthStatus.Unknown,
+              reason: getErrorMessage(error),
+              code: undefined,
+            },
+            last_sync_time: Date.now(),
           },
-          last_sync_time: Date.now(),
-        })
+          { updateUserTimestamp: false },
+        )
       } catch (updateError) {
         logger.error("更新健康状态失败", { accountId: id, error: updateError })
       }
@@ -2061,7 +2106,9 @@ class AccountStorageService {
       return account
     }
 
-    const success = await this.updateAccount(account.id, updates)
+    const success = await this.updateAccount(account.id, updates, {
+      updateUserTimestamp: false,
+    })
     if (success) {
       const refreshed = await this.getAccountById(account.id)
       if (refreshed) {

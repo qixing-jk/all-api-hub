@@ -176,6 +176,7 @@ export function createStoredAccount(
     },
     last_sync_time: now,
     updated_at: now,
+    user_updated_at: now,
     created_at: now,
     notes: "",
     tagIds: [],

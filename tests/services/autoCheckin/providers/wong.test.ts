@@ -35,6 +35,7 @@ const mockAccount: SiteAccount = {
   last_sync_time: Date.now(),
   created_at: Date.now(),
   updated_at: Date.now(),
+  user_updated_at: Date.now(),
 }
 
 describe("wongGongyiProvider", () => {

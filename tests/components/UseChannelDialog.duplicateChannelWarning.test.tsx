@@ -91,6 +91,7 @@ const buildSiteAccount = (
     enableDetection: false,
   },
   ...overrides,
+  user_updated_at: overrides.user_updated_at ?? overrides.updated_at ?? 0,
 })
 
 const buildDisplaySiteData = (

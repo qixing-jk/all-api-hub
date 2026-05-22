@@ -83,6 +83,7 @@ export interface SiteAccount {
   account_info: AccountInfo // 账号信息
   last_sync_time: number // 最后同步时间 (timestamp)
   updated_at: number // 更改时间 (timestamp)
+  user_updated_at: number // 用户意图更改时间 (timestamp)
   created_at: number // 创建时间 (timestamp)
   /**
    * Free-form notes for this account.

@@ -1216,6 +1216,7 @@ class WebdavAutoSyncService {
           id: account.id,
           kind: "account",
           entryUpdatedAt: account.updated_at,
+          entryUserUpdatedAt: account.user_updated_at,
           deletedEntryRecords,
         })
       ) {
@@ -1236,6 +1237,7 @@ class WebdavAutoSyncService {
               id: remoteAccount.id,
               kind: "account",
               entryUpdatedAt: remoteAccount.updated_at,
+              entryUserUpdatedAt: remoteAccount.user_updated_at,
               deletedEntryRecords,
             })
           ) {
@@ -1433,6 +1435,7 @@ class WebdavAutoSyncService {
     id: string
     kind: DeletedEntryKind
     entryUpdatedAt?: number
+    entryUserUpdatedAt?: number
     deletedEntryRecords: AccountStorageConfig["deletedEntryRecords"]
   }) {
     const record = input.deletedEntryRecords?.[input.id]
@@ -1442,8 +1445,12 @@ class WebdavAutoSyncService {
 
     const entryUpdatedAt =
       typeof input.entryUpdatedAt === "number" ? input.entryUpdatedAt : 0
+    const entryUserUpdatedAt =
+      typeof input.entryUserUpdatedAt === "number"
+        ? input.entryUserUpdatedAt
+        : entryUpdatedAt
     const deletionBoundary = Math.max(record.deletedAt, record.entryUpdatedAt)
-    return entryUpdatedAt <= deletionBoundary
+    return entryUserUpdatedAt <= deletionBoundary
   }
 
   private static pruneResolvedDeletedEntryRecords(input: {

@@ -221,6 +221,7 @@ export function buildSiteAccount(
     last_sync_time: 1700000000000,
     created_at: 1700000000000,
     updated_at: 1700000000000,
+    user_updated_at: 1700000000000,
   }
 
   return {

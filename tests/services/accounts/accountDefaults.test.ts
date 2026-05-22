@@ -37,6 +37,7 @@ describe("accountDefaults", () => {
       },
       last_sync_time: 0,
       updated_at: 0,
+      user_updated_at: 0,
       created_at: 0,
       notes: "",
       authType: AuthTypeEnum.AccessToken,
@@ -55,6 +56,7 @@ describe("accountDefaults", () => {
         bookmarks: [],
         pinnedAccountIds: [],
         orderedAccountIds: [],
+        deletedEntryRecords: {},
         last_updated: 123,
       })
     })
@@ -65,6 +67,7 @@ describe("accountDefaults", () => {
         bookmarks: [] as any,
         pinnedAccountIds: ["a"],
         orderedAccountIds: ["b"],
+        deletedEntryRecords: {},
         last_updated: 42,
       }
 
@@ -79,6 +82,7 @@ describe("accountDefaults", () => {
         bookmarks: [],
         pinnedAccountIds: [],
         orderedAccountIds: [],
+        deletedEntryRecords: {},
         last_updated: 321,
       })
     })
@@ -100,6 +104,7 @@ describe("accountDefaults", () => {
         bookmarks: [{ id: "bookmark-1" }],
         pinnedAccountIds: [],
         orderedAccountIds: ["ordered-1"],
+        deletedEntryRecords: {},
         last_updated: 456,
       })
     })
@@ -125,6 +130,18 @@ describe("accountDefaults", () => {
       expect(normalized.checkIn.enableDetection).toBe(false)
     })
 
+    it("falls back legacy user update timestamp to updated_at", () => {
+      const legacy = createSiteAccount({
+        updated_at: 123,
+      })
+      delete (legacy as any).user_updated_at
+
+      const normalized = normalizeSiteAccount(legacy as any)
+
+      expect(normalized.updated_at).toBe(123)
+      expect(normalized.user_updated_at).toBe(123)
+    })
+
     it("preserves explicit values over defaults", () => {
       const account = createSiteAccount({
         disabled: true,
@@ -133,6 +150,8 @@ describe("accountDefaults", () => {
         tags: ["Legacy"],
         checkIn: { enableDetection: true, autoCheckInEnabled: false },
         notes: "hello",
+        updated_at: 456,
+        user_updated_at: 123,
       })
 
       const normalized = normalizeSiteAccount(account)
@@ -144,6 +163,8 @@ describe("accountDefaults", () => {
       expect(normalized.checkIn.enableDetection).toBe(true)
       expect(normalized.checkIn.autoCheckInEnabled).toBe(false)
       expect(normalized.notes).toBe("hello")
+      expect(normalized.updated_at).toBe(456)
+      expect(normalized.user_updated_at).toBe(123)
     })
 
     it("canonicalizes AIHubMix accounts to the console web origin", () => {
@@ -207,11 +228,13 @@ describe("accountDefaults", () => {
         id: _legacyId,
         created_at: _legacyCreatedAt,
         updated_at: _legacyUpdatedAt,
+        user_updated_at: _legacyUserUpdatedAt,
         ...account
       } = createSiteAccount({
         id: "legacy-id" as any,
         created_at: 1 as any,
         updated_at: 2 as any,
+        user_updated_at: 3 as any,
         notes: undefined as any,
         checkIn: {
           enableDetection: true,
@@ -222,6 +245,7 @@ describe("accountDefaults", () => {
       void _legacyId
       void _legacyCreatedAt
       void _legacyUpdatedAt
+      void _legacyUserUpdatedAt
 
       const created = createPersistedSiteAccount({
         id: "persisted-id",
@@ -232,6 +256,7 @@ describe("accountDefaults", () => {
       expect(created.id).toBe("persisted-id")
       expect(created.created_at).toBe(777)
       expect(created.updated_at).toBe(777)
+      expect(created.user_updated_at).toBe(777)
       expect(created.notes).toBe("")
       expect(created.tagIds).toEqual(["tag-a"])
       expect(created.checkIn.customCheckIn?.openRedeemWithCheckIn).toBe(true)
@@ -276,10 +301,44 @@ describe("accountDefaults", () => {
       expect(updated.tagIds).toEqual(["b"])
     })
 
+    it("advances user update timestamp by default", () => {
+      const current = createSiteAccount({
+        updated_at: 111,
+        user_updated_at: 100,
+      })
+
+      const updated = applySiteAccountUpdates({
+        account: current,
+        updates: { notes: "manual" },
+        now: 999,
+      })
+
+      expect(updated.updated_at).toBe(999)
+      expect(updated.user_updated_at).toBe(999)
+    })
+
+    it("can preserve user update timestamp for automated updates", () => {
+      const current = createSiteAccount({
+        updated_at: 111,
+        user_updated_at: 100,
+      })
+
+      const updated = applySiteAccountUpdates({
+        account: current,
+        updates: { last_sync_time: 999 },
+        now: 999,
+        updateUserTimestamp: false,
+      })
+
+      expect(updated.updated_at).toBe(999)
+      expect(updated.user_updated_at).toBe(100)
+    })
+
     it("handles legacy stored accounts missing additive fields during partial update", () => {
       const legacy = createSiteAccount()
       delete (legacy as any).tagIds
       delete (legacy as any).checkIn
+      delete (legacy as any).user_updated_at
 
       const updated = applySiteAccountUpdates({
         account: legacy as any,
@@ -290,6 +349,7 @@ describe("accountDefaults", () => {
       expect(updated.notes).toBe("updated")
       expect(updated.tagIds).toEqual([])
       expect(updated.checkIn.enableDetection).toBe(false)
+      expect(updated.user_updated_at).toBe(999)
     })
 
     it("preserves explicit cleanup semantics for health.code when update sets it to undefined", () => {

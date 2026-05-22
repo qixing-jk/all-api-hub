@@ -142,7 +142,11 @@ type RefreshedSub2ApiRequest<
 
 type Sub2ApiAccountStorageRef = {
   getAccountById: (id: string) => Promise<any>
-  updateAccount: (id: string, updates: Record<string, any>) => Promise<boolean>
+  updateAccount: (
+    id: string,
+    updates: Record<string, any>,
+    options?: { updateUserTimestamp?: boolean },
+  ) => Promise<boolean>
 } | null
 
 type HydratedSub2ApiAuth<
@@ -244,7 +248,9 @@ const persistSub2ApiAuthUpdate = async (
       }
     }
 
-    const updated = await storage.updateAccount(request.accountId, updates)
+    const updated = await storage.updateAccount(request.accountId, updates, {
+      updateUserTimestamp: false,
+    })
     if (!updated) {
       logger.warn("Failed to persist Sub2API auth update after key request", {
         accountId: request.accountId,

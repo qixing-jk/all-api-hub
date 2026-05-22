@@ -255,6 +255,99 @@ describe("WebdavAutoSyncService.mergeData", () => {
     })
   })
 
+  it("keeps deleted accounts suppressed when only automation updated the remote account", () => {
+    const local: any = {
+      accounts: [],
+      bookmarks: [],
+      deletedEntryRecords: {
+        deleted: {
+          kind: "account",
+          deletedAt: 200,
+          entryUpdatedAt: 100,
+        },
+      },
+      accountsTimestamp: 200,
+      tagStore: { version: 1, tagsById: {} },
+      preferences: basePrefsLocal,
+      preferencesTimestamp: 50,
+      channelConfigs: {},
+      apiCredentialProfiles: emptyApiCredentialProfiles,
+    }
+
+    const remote: any = {
+      accounts: [
+        {
+          id: "deleted",
+          site_name: "remote-deleted",
+          updated_at: 250,
+          user_updated_at: 100,
+        },
+      ],
+      bookmarks: [],
+      deletedEntryRecords: {},
+      accountsTimestamp: 250,
+      tagStore: { version: 1, tagsById: {} },
+      preferences: basePrefsRemote,
+      preferencesTimestamp: 60,
+      channelConfigs: {},
+      apiCredentialProfiles: emptyApiCredentialProfiles,
+    }
+
+    const result = callMerge(local, remote)
+
+    expect(result.accounts).toEqual([])
+    expect(result.deletedEntryRecords).toEqual({
+      deleted: {
+        kind: "account",
+        deletedAt: 200,
+        entryUpdatedAt: 100,
+      },
+    })
+  })
+
+  it("restores deleted accounts when the remote account has newer user edits", () => {
+    const local: any = {
+      accounts: [],
+      bookmarks: [],
+      deletedEntryRecords: {
+        deleted: {
+          kind: "account",
+          deletedAt: 200,
+          entryUpdatedAt: 100,
+        },
+      },
+      accountsTimestamp: 200,
+      tagStore: { version: 1, tagsById: {} },
+      preferences: basePrefsLocal,
+      preferencesTimestamp: 50,
+      channelConfigs: {},
+      apiCredentialProfiles: emptyApiCredentialProfiles,
+    }
+
+    const remoteAccount = {
+      id: "deleted",
+      site_name: "remote-edited",
+      updated_at: 250,
+      user_updated_at: 250,
+    }
+    const remote: any = {
+      accounts: [remoteAccount],
+      bookmarks: [],
+      deletedEntryRecords: {},
+      accountsTimestamp: 250,
+      tagStore: { version: 1, tagsById: {} },
+      preferences: basePrefsRemote,
+      preferencesTimestamp: 60,
+      channelConfigs: {},
+      apiCredentialProfiles: emptyApiCredentialProfiles,
+    }
+
+    const result = callMerge(local, remote)
+
+    expect(result.accounts).toEqual([remoteAccount])
+    expect(result.deletedEntryRecords).toEqual({})
+  })
+
   it("applies remote account deletion markers to stale local accounts", () => {
     const local: any = {
       accounts: [

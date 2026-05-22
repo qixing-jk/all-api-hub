@@ -105,6 +105,7 @@ const seedStorage = (
 
 const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
   const numericId = overrides.id?.replace(/\D/g, "") || "1"
+  const updatedAt = overrides.updated_at ?? Date.now()
 
   return {
     id: overrides.id || "account-1",
@@ -129,7 +130,8 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
       today_income: overrides.account_info?.today_income ?? 500_000,
     },
     last_sync_time: overrides.last_sync_time ?? Date.now(),
-    updated_at: overrides.updated_at ?? Date.now(),
+    updated_at: updatedAt,
+    user_updated_at: overrides.user_updated_at ?? updatedAt,
     created_at: overrides.created_at ?? Date.now(),
     notes: overrides.notes ?? "",
     manualBalanceUsd: overrides.manualBalanceUsd,
@@ -516,6 +518,70 @@ describe("accountStorage core behaviors", () => {
     const updated = accounts.find((acc) => acc.id === "with-tags")
 
     expect(updated?.tagIds).toEqual([])
+  })
+
+  it("updateAccount advances user timestamp while refreshAccount preserves it", async () => {
+    vi.useFakeTimers()
+    const initialNow = new Date(2026, 0, 2, 10, 0, 0)
+    const manualNow = new Date(2026, 0, 2, 11, 0, 0)
+    const refreshNow = new Date(2026, 0, 2, 12, 0, 0)
+    vi.setSystemTime(initialNow)
+
+    const account = {
+      ...createAccount({
+        id: "timestamp-split",
+        site_type: "one-api",
+        site_url: "https://timestamp.example.com",
+        updated_at: initialNow.getTime(),
+      }),
+      user_updated_at: initialNow.getTime(),
+    } as SiteAccount & { user_updated_at: number }
+    seedStorage([account])
+
+    vi.setSystemTime(manualNow)
+    const manualSuccess = await accountStorage.updateAccount(
+      "timestamp-split",
+      {
+        notes: "manual edit",
+      },
+    )
+
+    expect(manualSuccess).toBe(true)
+    const manuallyUpdated = (await accountStorage.getAccountById(
+      "timestamp-split",
+    )) as (SiteAccount & { user_updated_at: number }) | null
+    expect(manuallyUpdated?.updated_at).toBe(manualNow.getTime())
+    expect(manuallyUpdated?.user_updated_at).toBe(manualNow.getTime())
+
+    mockRefreshAccountData.mockResolvedValueOnce({
+      success: true,
+      data: {
+        quota: 42,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+        checkIn: {
+          enableDetection: false,
+        },
+      },
+      healthStatus: {
+        status: SiteHealthStatus.Healthy,
+        message: "",
+      },
+    })
+
+    vi.setSystemTime(refreshNow)
+    await accountStorage.refreshAccount("timestamp-split", true)
+
+    const refreshed = (await accountStorage.getAccountById(
+      "timestamp-split",
+    )) as (SiteAccount & { user_updated_at: number }) | null
+    expect(refreshed?.updated_at).toBe(refreshNow.getTime())
+    expect(refreshed?.user_updated_at).toBe(manualNow.getTime())
+
+    vi.useRealTimers()
   })
 
   it("updateAccount should not lose parallel updates to different accounts", async () => {
