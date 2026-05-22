@@ -49,15 +49,21 @@ test.describe("real-site E2E: New API account add flow", () => {
     const accountFixture =
       await test.step("save account from real site auto-detect", async () => {
         const sitePage = await context.newPage()
-        return await runCompatibleRealSiteAccountSaveFlow({
-          page,
-          extensionId,
-          serviceWorker,
-          sitePage,
-          config,
-          siteType: SITE_TYPES.NEW_API,
-          login: loginToRealNewApiSite,
-        })
+        try {
+          return await runCompatibleRealSiteAccountSaveFlow({
+            page,
+            extensionId,
+            serviceWorker,
+            sitePage,
+            config,
+            siteType: SITE_TYPES.NEW_API,
+            login: loginToRealNewApiSite,
+          })
+        } finally {
+          if (!sitePage.isClosed()) {
+            await sitePage.close()
+          }
+        }
       })
     await runRealSiteAccountFixtureUsageChecks(
       {

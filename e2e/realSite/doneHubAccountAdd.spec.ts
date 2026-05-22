@@ -49,16 +49,22 @@ test.describe("real-site E2E: DoneHub account add flow", () => {
     const accountFixture =
       await test.step("save account from real site auto-detect", async () => {
         const sitePage = await context.newPage()
-        return await runCompatibleRealSiteAccountSaveFlow({
-          page,
-          extensionId,
-          serviceWorker,
-          sitePage,
-          config,
-          siteType: SITE_TYPES.DONE_HUB,
-          expectedDetectedSiteType: SITE_TYPES.DONE_HUB,
-          login: loginToRealDoneHubSite,
-        })
+        try {
+          return await runCompatibleRealSiteAccountSaveFlow({
+            page,
+            extensionId,
+            serviceWorker,
+            sitePage,
+            config,
+            siteType: SITE_TYPES.DONE_HUB,
+            expectedDetectedSiteType: SITE_TYPES.DONE_HUB,
+            login: loginToRealDoneHubSite,
+          })
+        } finally {
+          if (!sitePage.isClosed()) {
+            await sitePage.close()
+          }
+        }
       })
     await runRealSiteAccountFixtureUsageChecks(
       {

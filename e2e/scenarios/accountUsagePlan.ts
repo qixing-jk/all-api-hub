@@ -33,9 +33,28 @@ export async function runAccountFixtureUsagePlan<
     step: AccountUsagePlanStep
   },
 ) {
+  let runError: unknown
+
   try {
     await runAccountUsagePlan(context, checks, options)
-  } finally {
+  } catch (error) {
+    runError = error
+  }
+
+  try {
     await context.account.cleanup()
+  } catch (cleanupError) {
+    if (runError) {
+      throw new AggregateError(
+        [runError, cleanupError],
+        "Account usage plan failed and account cleanup also failed",
+      )
+    }
+
+    throw cleanupError
+  }
+
+  if (runError) {
+    throw runError
   }
 }

@@ -141,4 +141,25 @@ describe("account scenario fixtures", () => {
 
     expect(fixture.cleanup).toHaveBeenCalledOnce()
   })
+
+  it("preserves composed scenario and cleanup failures together", async () => {
+    const scenarioError = new Error("scenario failed")
+    const cleanupError = new Error("cleanup failed")
+    const fixture = createAccountFixture({
+      accountId: "composed-account",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://composed.example.com",
+      cleanup: vi.fn().mockRejectedValue(cleanupError),
+    })
+
+    await expect(
+      withAccountFixtureCleanup(fixture, async () => {
+        throw scenarioError
+      }),
+    ).rejects.toMatchObject({
+      errors: [scenarioError, cleanupError],
+    })
+
+    expect(fixture.cleanup).toHaveBeenCalledOnce()
+  })
 })

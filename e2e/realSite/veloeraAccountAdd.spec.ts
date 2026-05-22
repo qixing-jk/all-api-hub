@@ -49,16 +49,22 @@ test.describe("real-site E2E: Veloera account add flow", () => {
     const accountFixture =
       await test.step("save account from real site auto-detect", async () => {
         const sitePage = await context.newPage()
-        return await runCompatibleRealSiteAccountSaveFlow({
-          page,
-          extensionId,
-          serviceWorker,
-          sitePage,
-          config,
-          siteType: SITE_TYPES.VELOERA,
-          expectedDetectedSiteType: SITE_TYPES.VELOERA,
-          login: loginToRealVeloeraSite,
-        })
+        try {
+          return await runCompatibleRealSiteAccountSaveFlow({
+            page,
+            extensionId,
+            serviceWorker,
+            sitePage,
+            config,
+            siteType: SITE_TYPES.VELOERA,
+            expectedDetectedSiteType: SITE_TYPES.VELOERA,
+            login: loginToRealVeloeraSite,
+          })
+        } finally {
+          if (!sitePage.isClosed()) {
+            await sitePage.close()
+          }
+        }
       })
     await runRealSiteAccountFixtureUsageChecks(
       {

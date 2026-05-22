@@ -48,16 +48,22 @@ test.describe("real-site E2E: OneHub account add flow", () => {
     const accountFixture =
       await test.step("save account from real site auto-detect", async () => {
         const sitePage = await context.newPage()
-        return await runCompatibleRealSiteAccountSaveFlow({
-          page,
-          extensionId,
-          serviceWorker,
-          sitePage,
-          config,
-          siteType: SITE_TYPES.ONE_HUB,
-          expectedDetectedSiteType: SITE_TYPES.ONE_HUB,
-          login: loginToRealOneHubSite,
-        })
+        try {
+          return await runCompatibleRealSiteAccountSaveFlow({
+            page,
+            extensionId,
+            serviceWorker,
+            sitePage,
+            config,
+            siteType: SITE_TYPES.ONE_HUB,
+            expectedDetectedSiteType: SITE_TYPES.ONE_HUB,
+            login: loginToRealOneHubSite,
+          })
+        } finally {
+          if (!sitePage.isClosed()) {
+            await sitePage.close()
+          }
+        }
       })
     await runRealSiteAccountFixtureUsageChecks(
       {

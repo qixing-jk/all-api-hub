@@ -56,9 +56,28 @@ export async function withAccountFixtureCleanup(
   fixture: AccountFixture,
   runScenario: (fixture: AccountFixture) => Promise<void>,
 ) {
+  let scenarioError: unknown
+
   try {
     await runScenario(fixture)
-  } finally {
+  } catch (error) {
+    scenarioError = error
+  }
+
+  try {
     await fixture.cleanup()
+  } catch (cleanupError) {
+    if (scenarioError) {
+      throw new AggregateError(
+        [scenarioError, cleanupError],
+        "Account fixture scenario failed and cleanup also failed",
+      )
+    }
+
+    throw cleanupError
+  }
+
+  if (scenarioError) {
+    throw scenarioError
   }
 }

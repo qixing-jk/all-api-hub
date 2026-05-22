@@ -257,14 +257,18 @@ export function VerifyApiCredentialProfileDialog({
   }, [profile, t])
 
   const preserveCurrentProbeStateForModel = useCallback(
-    (nextModelId: string) => {
+    (nextModelId: string, nextApiType: ApiVerificationApiType) => {
       if (!profile) return
 
       pendingHistoryContextKeyRef.current = null
       lastLoadedHistoryContextKeyRef.current =
-        createVerificationHistoryContextKey(profile.id, apiType, nextModelId)
+        createVerificationHistoryContextKey(
+          profile.id,
+          nextApiType,
+          nextModelId,
+        )
     },
-    [apiType, profile],
+    [profile],
   )
 
   const fetchModels = useCallback(
@@ -296,7 +300,7 @@ export function VerifyApiCredentialProfileDialog({
               (probe) => probe.isRunning || probe.result,
             )
             if (hasActiveProbeState) {
-              preserveCurrentProbeStateForModel(suggestedModelId)
+              preserveCurrentProbeStateForModel(suggestedModelId, nextApiType)
             }
 
             return suggestedModelId
@@ -495,7 +499,7 @@ export function VerifyApiCredentialProfileDialog({
           // Avoid overriding user input while the probe is in-flight.
           setModelId((current) => {
             if (current.trim()) return current
-            preserveCurrentProbeStateForModel(suggested)
+            preserveCurrentProbeStateForModel(suggested, apiType)
             return suggested
           })
         }
@@ -587,7 +591,7 @@ export function VerifyApiCredentialProfileDialog({
               modelIdForSuite = suggested
               setModelId((current) => {
                 if (current.trim()) return current
-                preserveCurrentProbeStateForModel(suggested)
+                preserveCurrentProbeStateForModel(suggested, apiType)
                 return suggested
               })
             }

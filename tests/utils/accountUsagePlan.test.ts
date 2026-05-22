@@ -133,4 +133,37 @@ describe("account usage plan scenario", () => {
     ).rejects.toThrow(error)
     expect(fixture.cleanup).toHaveBeenCalledOnce()
   })
+
+  it("preserves fixture-backed check and cleanup failures together", async () => {
+    const checkError = new Error("check failed")
+    const cleanupError = new Error("cleanup failed")
+    const fixture: AccountFixture = {
+      accountId: "account-1",
+      siteType: "new-api",
+      baseUrl: "https://example.com",
+      cleanup: vi.fn().mockRejectedValue(cleanupError),
+    }
+
+    await expect(
+      runAccountFixtureUsagePlan(
+        { account: fixture },
+        [
+          {
+            name: "failing check",
+            run: async () => {
+              throw checkError
+            },
+          },
+        ],
+        {
+          step: async (_name, run) => {
+            await run()
+          },
+        },
+      ),
+    ).rejects.toMatchObject({
+      errors: [checkError, cleanupError],
+    })
+    expect(fixture.cleanup).toHaveBeenCalledOnce()
+  })
 })

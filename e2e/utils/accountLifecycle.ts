@@ -92,11 +92,7 @@ async function findSavedApiCredentialProfile(params: {
       (profile) =>
         !params.existingProfileIds.has(profile.id) &&
         matchesExpectedProfile(profile, params.expectedProfile),
-    ) ??
-    profiles.find((profile) =>
-      matchesExpectedProfile(profile, params.expectedProfile),
-    ) ??
-    null
+    ) ?? null
   )
 }
 
