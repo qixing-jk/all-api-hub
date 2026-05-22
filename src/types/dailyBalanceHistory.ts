@@ -40,6 +40,22 @@ export interface DailyBalanceHistoryStore {
   snapshotsByAccountId: Record<string, Record<string, DailyBalanceSnapshot>>
 }
 
+export type TodayIncomeEstimateStatus =
+  | "available"
+  | "disabled"
+  | "missing_current_snapshot"
+  | "missing_baseline"
+  | "missing_cashflow"
+  | "manual_balance"
+  | "invalid_estimate"
+
+export interface TodayIncomeEstimateResult {
+  reportedTodayIncome: number | null
+  estimatedTodayIncome: number | null
+  compensation: number | null
+  status: TodayIncomeEstimateStatus
+}
+
 export interface BalanceHistoryEndOfDayCapturePreferences {
   enabled: boolean
 }
