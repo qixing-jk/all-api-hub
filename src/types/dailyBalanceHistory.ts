@@ -44,6 +44,10 @@ export interface BalanceHistoryEndOfDayCapturePreferences {
   enabled: boolean
 }
 
+export interface BalanceHistoryEstimatedTodayIncomePreferences {
+  enabled: boolean
+}
+
 /**
  * User preferences controlling daily balance history capture and retention.
  *
@@ -54,11 +58,13 @@ export interface BalanceHistoryEndOfDayCapturePreferences {
 export interface BalanceHistoryPreferences {
   enabled: boolean
   endOfDayCapture: BalanceHistoryEndOfDayCapturePreferences
+  estimatedTodayIncome: BalanceHistoryEstimatedTodayIncomePreferences
   retentionDays: number
 }
 
 export const DEFAULT_BALANCE_HISTORY_PREFERENCES: BalanceHistoryPreferences = {
   enabled: false,
   endOfDayCapture: { enabled: false },
+  estimatedTodayIncome: { enabled: false },
   retentionDays: 365,
 }

@@ -413,9 +413,9 @@ describe("UserPreferencesContext", () => {
     expect(context.taskNotifications).toEqual(
       DEFAULT_TASK_NOTIFICATION_PREFERENCES,
     )
-    expect(
-      (latestContext as any)?.preferences.taskNotifications,
-    ).toBeUndefined()
+    expect((latestContext as any)?.preferences.taskNotifications).toEqual(
+      DEFAULT_TASK_NOTIFICATION_PREFERENCES,
+    )
   })
 
   it("hydrates missing task notification preferences before applying local updates", async () => {
@@ -897,6 +897,24 @@ describe("UserPreferencesContext", () => {
     })
     expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
       action: RuntimeActionIds.PreferencesRefreshContextMenus,
+    })
+  })
+
+  it("normalizes missing estimated today income preferences to disabled", async () => {
+    const preferences = clonePreferences()
+    preferences.balanceHistory = {
+      enabled: true,
+      endOfDayCapture: { enabled: false },
+      retentionDays: 30,
+    } as any
+
+    await renderProvider(preferences)
+
+    await waitFor(() => {
+      expect((latestContext as any)?.preferences.balanceHistory).toMatchObject({
+        enabled: true,
+        estimatedTodayIncome: { enabled: false },
+      })
     })
   })
 

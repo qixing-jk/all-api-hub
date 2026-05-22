@@ -37,7 +37,7 @@ import { migrateSortingConfig } from "./sortingConfigMigration"
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 24
+export const CURRENT_PREFERENCES_VERSION = 25
 
 /**
  * Migration function type
@@ -312,6 +312,13 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
       balanceHistory: {
         enabled,
         endOfDayCapture: { enabled: endOfDayCaptureEnabled },
+        estimatedTodayIncome: {
+          enabled:
+            typeof stored?.estimatedTodayIncome?.enabled === "boolean"
+              ? stored.estimatedTodayIncome.enabled
+              : DEFAULT_BALANCE_HISTORY_PREFERENCES.estimatedTodayIncome
+                  .enabled,
+        },
         retentionDays,
       },
       preferencesVersion: 12,
@@ -524,6 +531,42 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
         enabled: false,
       },
       preferencesVersion: 24,
+    }
+  },
+
+  // Version 24 -> 25: Introduce estimated today income balance-history preference
+  25: (prefs: UserPreferences): UserPreferences => {
+    logger.debug(
+      "Migrating preferences from v24 to v25 (estimated today income preference)",
+    )
+
+    const stored = (prefs as any).balanceHistory as
+      | Partial<BalanceHistoryPreferences>
+      | undefined
+
+    return {
+      ...prefs,
+      balanceHistory: {
+        enabled:
+          typeof stored?.enabled === "boolean"
+            ? stored.enabled
+            : DEFAULT_BALANCE_HISTORY_PREFERENCES.enabled,
+        endOfDayCapture: {
+          enabled:
+            typeof stored?.endOfDayCapture?.enabled === "boolean"
+              ? stored.endOfDayCapture.enabled
+              : DEFAULT_BALANCE_HISTORY_PREFERENCES.endOfDayCapture.enabled,
+        },
+        estimatedTodayIncome: {
+          enabled:
+            typeof stored?.estimatedTodayIncome?.enabled === "boolean"
+              ? stored.estimatedTodayIncome.enabled
+              : DEFAULT_BALANCE_HISTORY_PREFERENCES.estimatedTodayIncome
+                  .enabled,
+        },
+        retentionDays: clampBalanceHistoryRetentionDays(stored?.retentionDays),
+      },
+      preferencesVersion: 25,
     }
   },
 }

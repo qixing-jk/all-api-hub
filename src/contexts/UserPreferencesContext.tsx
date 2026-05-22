@@ -495,7 +495,8 @@ export const UserPreferencesProvider = ({
     try {
       setIsLoading(true)
       const prefs = await userPreferences.getPreferences()
-      setPreferences(prefs)
+      const nextPreferences = normalizeContextPreferenceSnapshot(prefs)
+      setPreferences(nextPreferences)
     } catch (error) {
       logger.error("加载用户偏好设置失败", error)
     } finally {
