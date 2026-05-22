@@ -694,6 +694,112 @@ describe("AddTokenDialog prefill", () => {
     })
   })
 
+  it("waits for async edit success handling before closing the dialog", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce(["gpt-4"])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    updateApiTokenMock.mockResolvedValueOnce(true)
+    let resolveSuccess: () => void = () => undefined
+    const onSuccess = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSuccess = resolve
+        }),
+    )
+    const onClose = vi.fn()
+    const editingToken = {
+      id: 123,
+      accountId: ACCOUNT.id,
+      accountName: ACCOUNT.name,
+      name: "Existing key",
+      remain_quota: -1,
+      expired_time: -1,
+      unlimited_quota: true,
+      model_limits_enabled: false,
+      model_limits: "",
+      allow_ips: "",
+      group: "default",
+    } as any
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={onClose}
+        onSuccess={onSuccess}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+        editingToken={editingToken}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:dialog.updateToken",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalledWith()
+    })
+    expect(onClose).not.toHaveBeenCalled()
+
+    resolveSuccess()
+
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled()
+    })
+  })
+
+  it("continues closing the dialog when the edit onSuccess callback rejects", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce(["gpt-4"])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    updateApiTokenMock.mockResolvedValueOnce(true)
+    const onSuccess = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("edit callback failed"))
+    const onClose = vi.fn()
+    const editingToken = {
+      id: 123,
+      accountId: ACCOUNT.id,
+      accountName: ACCOUNT.name,
+      name: "Existing key",
+      remain_quota: -1,
+      expired_time: -1,
+      unlimited_quota: true,
+      model_limits_enabled: false,
+      model_limits: "",
+      allow_ips: "",
+      group: "default",
+    } as any
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={onClose}
+        onSuccess={onSuccess}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+        editingToken={editingToken}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "keyManagement:dialog.updateToken",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalledWith()
+      expect(onClose).toHaveBeenCalled()
+    })
+  })
+
   it("closes through the one-time key dialog acknowledgement", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
     fetchUserGroupsMock.mockResolvedValueOnce({

@@ -189,6 +189,7 @@ export function VerifyApiCredentialProfileDialog({
   const [fetchModelsError, setFetchModelsError] = useState<string | null>(null)
   const [isPersisting, setIsPersisting] = useState(false)
 
+  const apiTypeRef = useRef(apiType)
   const fetchModelsRequestIdRef = useRef(0)
   const pendingHistoryContextKeyRef = useRef<string | null>(null)
   const lastLoadedHistoryContextKeyRef = useRef<string | null>(null)
@@ -224,6 +225,11 @@ export function VerifyApiCredentialProfileDialog({
 
   const isAnyProbeRunning = probes.some((p) => p.isRunning)
   const canClose = !isRunning && !isAnyProbeRunning && !isPersisting
+
+  useEffect(() => {
+    apiTypeRef.current = apiType
+  }, [apiType])
+
   const getHistoryTargetForModel = useCallback(
     (nextModelId?: string) => {
       if (!profile) return null
@@ -299,7 +305,7 @@ export function VerifyApiCredentialProfileDialog({
             const hasActiveProbeState = probesRef.current.some(
               (probe) => probe.isRunning || probe.result,
             )
-            if (hasActiveProbeState) {
+            if (hasActiveProbeState && nextApiType === apiTypeRef.current) {
               preserveCurrentProbeStateForModel(suggestedModelId, nextApiType)
             }
 
@@ -706,6 +712,7 @@ export function VerifyApiCredentialProfileDialog({
                 ) : null}
               </div>
               <SearchableSelect
+                aria-label={t("aiApiVerification:verifyDialog.meta.apiType")}
                 options={[
                   {
                     value: API_TYPES.OPENAI_COMPATIBLE,

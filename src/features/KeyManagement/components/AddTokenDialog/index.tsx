@@ -201,7 +201,6 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
       if (isEditMode) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
       }
-      handleClose()
       if (isEditMode && onSuccess) {
         try {
           await onSuccess()
@@ -209,6 +208,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
           logger.error("AddTokenDialog onSuccess callback failed", error)
         }
       }
+      handleClose()
     } catch (error) {
       logger.error(`${isEditMode ? "更新" : "创建"}密钥失败`, error)
       const message = getErrorMessage(error)
