@@ -2,7 +2,7 @@ name: E2E Smoke
 
 on:
   push:
-    branches: [main, develop, test/**]
+    branches: [main, develop]
     paths:
       - "src/**"
       - "public/**"
