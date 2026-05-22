@@ -1090,6 +1090,68 @@ describe("AccountList", () => {
     )
   })
 
+  it("shows filtered balance, consumption, and income totals for visible accounts", async () => {
+    const user = userEvent.setup()
+    const includedAccount = buildDisplaySiteData({
+      id: "included",
+      name: "Included Account",
+      disabled: false,
+      balance: { USD: 10, CNY: 70 },
+      todayConsumption: { USD: 1, CNY: 7 },
+      todayIncome: { USD: 2, CNY: 14 },
+    })
+    const incomeOptOutAccount = buildDisplaySiteData({
+      id: "income-opt-out",
+      name: "Income Opt Out",
+      disabled: false,
+      balance: { USD: 20, CNY: 140 },
+      todayConsumption: { USD: 3, CNY: 21 },
+      todayIncome: { USD: 4, CNY: 28 },
+      excludeFromTodayIncome: true,
+    })
+    const disabledAccount = buildDisplaySiteData({
+      id: "disabled",
+      name: "Disabled Account",
+      disabled: true,
+      balance: { USD: 100, CNY: 700 },
+      todayConsumption: { USD: 100, CNY: 700 },
+      todayIncome: { USD: 100, CNY: 700 },
+    })
+
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        sortedData: [includedAccount, incomeOptOutAccount, disabledAccount],
+        displayData: [includedAccount, incomeOptOutAccount, disabledAccount],
+        tags: [],
+        tagCountsById: {},
+      }),
+    )
+
+    render(<AccountList />)
+
+    await user.click(
+      screen.getByRole("button", { name: "common:status.enabled" }),
+    )
+
+    expect(screen.getAllByTestId(TEST_IDS.accountRow)).toHaveLength(2)
+    expect(screen.getByText("Included Account")).toBeInTheDocument()
+    expect(screen.getByText("Income Opt Out")).toBeInTheDocument()
+    expect(screen.queryByText("Disabled Account")).not.toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "account:filteredTotals.balance: USD 30.00 / CNY 210.00",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText(
+        "account:filteredTotals.consumption: USD 4.00 / CNY 28.00",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("account:filteredTotals.income: USD 2.00 / CNY 14.00"),
+    ).toBeInTheDocument()
+  })
+
   it("keeps site-type options visible when search narrows counts to zero", () => {
     render(<AccountList initialSearchQuery="beta" />)
 
