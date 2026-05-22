@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import {
   extractDomainPrefix,
   getSiteName,
@@ -87,6 +88,7 @@ describe("accountOperations", () => {
         expect.objectContaining({
           tagIds: [],
         }),
+        { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
       )
     })
 
@@ -120,6 +122,7 @@ describe("accountOperations", () => {
         expect.objectContaining({
           tagIds: [],
         }),
+        { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
       )
     })
 
@@ -218,6 +221,7 @@ describe("accountOperations", () => {
         expect.objectContaining({
           site_type: SITE_TYPES.UNKNOWN,
         }),
+        { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
       )
     })
   })
