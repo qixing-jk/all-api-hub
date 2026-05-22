@@ -1,11 +1,9 @@
 import { POPUP_PAGE_PATH } from "~/constants/extensionPages"
 import { POPUP_TEST_IDS } from "~/entrypoints/popup/testIds"
-import {
-  API_CREDENTIAL_PROFILES_TEST_IDS,
-  getApiCredentialProfileVerifyProbeTestId,
-} from "~/features/ApiCredentialProfiles/testIds"
+import { API_CREDENTIAL_PROFILES_TEST_IDS } from "~/features/ApiCredentialProfiles/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { verifyApiCredentialProfileModelsProbeScenario } from "~~/e2e/scenarios/apiCredentialProfileVerification"
 import {
   createStoredApiCredentialProfile,
   forceExtensionLanguage,
@@ -137,26 +135,11 @@ test("creates a popup API credential profile, verifies it, and uses it in Model 
 
   expect(profileId).toBeTruthy()
 
-  await page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyButton).click()
-  const modelsProbe = page.getByTestId(
-    getApiCredentialProfileVerifyProbeTestId("models"),
-  )
-  await expect(
-    page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
-  ).toBeVisible()
-
-  await modelsProbe
-    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton)
-    .click()
-
-  await expect(modelsProbe).toContainText("Pass")
-  await expect(modelsProbe).toContainText("Fetched 2 models.")
-  await page
-    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyDialogCloseButton)
-    .click()
-  await expect(
-    page.getByRole("heading", { name: "API Verification" }),
-  ).toHaveCount(0)
+  await verifyApiCredentialProfileModelsProbeScenario({
+    page,
+    expectedModelCount: 2,
+    closeDialog: true,
+  })
 
   const targetPagePromise = waitForExtensionPage(context, {
     extensionId,
@@ -210,21 +193,10 @@ test("verifies a stored popup API credential profile against mocked endpoints", 
     page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.popupView),
   ).toBeVisible()
 
-  await page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyButton).click()
-
-  const modelsProbe = page.getByTestId(
-    getApiCredentialProfileVerifyProbeTestId("models"),
-  )
-  await expect(
-    page.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
-  ).toBeVisible()
-
-  await modelsProbe
-    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton)
-    .click()
-
-  await expect(modelsProbe).toContainText("Pass")
-  await expect(modelsProbe).toContainText("Fetched 2 models.")
+  await verifyApiCredentialProfileModelsProbeScenario({
+    page,
+    expectedModelCount: 2,
+  })
 })
 
 test("opens Model Management for a stored popup API credential profile and loads its models", async ({

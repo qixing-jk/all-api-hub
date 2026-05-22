@@ -6,7 +6,11 @@ import {
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
-import { runCompatibleRealSiteAccountKeyFlow } from "~~/e2e/utils/realSite/compatibleAccountKeyFlow"
+import {
+  realSiteAccountUsageChecks,
+  runRealSiteAccountFixtureUsageChecks,
+} from "~~/e2e/utils/realSite/accountUsage"
+import { runCompatibleRealSiteAccountSaveFlow } from "~~/e2e/utils/realSite/compatibleAccountSaveFlow"
 import {
   getOneHubRealSiteSkipReason,
   loginToRealOneHubSite,
@@ -21,11 +25,11 @@ test.describe("real-site E2E: OneHub account add flow", () => {
     await stubLlmMetadataIndex(context)
   })
 
-  test("logs into a real OneHub site, saves the account, then creates and deletes a key", async ({
+  test("logs into a real OneHub site, saves the account, then verifies account usage workflows", async ({
     context,
     extensionId,
     page,
-  }) => {
+  }, testInfo) => {
     const realSite = resolveOneHubRealSiteConfig()
     test.skip(
       !realSite.config,
@@ -41,16 +45,38 @@ test.describe("real-site E2E: OneHub account add flow", () => {
       openChangelogOnUpdate: false,
     })
 
-    const sitePage = await context.newPage()
-    await runCompatibleRealSiteAccountKeyFlow({
-      page,
-      extensionId,
-      sitePage,
-      config,
-      siteType: SITE_TYPES.ONE_HUB,
-      expectedDetectedSiteType: SITE_TYPES.ONE_HUB,
-      label: "OneHub",
-      login: loginToRealOneHubSite,
-    })
+    const accountFixture =
+      await test.step("save account from real site auto-detect", async () => {
+        const sitePage = await context.newPage()
+        return await runCompatibleRealSiteAccountSaveFlow({
+          page,
+          extensionId,
+          serviceWorker,
+          sitePage,
+          config,
+          siteType: SITE_TYPES.ONE_HUB,
+          expectedDetectedSiteType: SITE_TYPES.ONE_HUB,
+          login: loginToRealOneHubSite,
+        })
+      })
+    await runRealSiteAccountFixtureUsageChecks(
+      {
+        testInfo,
+        page,
+        extensionId,
+        serviceWorker,
+        account: accountFixture,
+        label: "OneHub",
+      },
+      [
+        realSiteAccountUsageChecks.keyLifecycle(),
+        realSiteAccountUsageChecks.keyToApiProfileAndPopupModels(),
+        realSiteAccountUsageChecks.providerDestinations({
+          validateDestinationPages: true,
+        }),
+        realSiteAccountUsageChecks.modelCatalog(),
+        realSiteAccountUsageChecks.modelToKey({ envPrefix: "ONE_HUB" }),
+      ],
+    )
   })
 })

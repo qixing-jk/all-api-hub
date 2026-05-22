@@ -266,7 +266,7 @@ test("auto-checkin quick-run route triggers the runtime action once and consumes
   page,
 }) => {
   await page.addInitScript(
-    ({ stateKey, getStatusAction, runNowAction }) => {
+    ({ stateKey, getStatusAction, runNowAction, siteType }) => {
       const defaultState: AutoCheckinRuntimeStubState = {
         calls: [],
         runNowCount: 0,
@@ -311,7 +311,7 @@ test("auto-checkin quick-run route triggers the runtime action once and consumes
                 {
                   accountId: "e2e-account-1",
                   accountName: "E2E Example",
-                  siteType: "new-api",
+                  siteType,
                   detectionEnabled: true,
                   autoCheckinEnabled: true,
                   providerAvailable: true,
@@ -378,6 +378,7 @@ test("auto-checkin quick-run route triggers the runtime action once and consumes
       stateKey: AUTO_CHECKIN_E2E_STATE_KEY,
       getStatusAction: RuntimeActionIds.AutoCheckinGetStatus,
       runNowAction: RuntimeActionIds.AutoCheckinRunNow,
+      siteType: SITE_TYPES.NEW_API,
     },
   )
 

@@ -6,7 +6,11 @@ import {
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
-import { runCompatibleRealSiteAccountKeyFlow } from "~~/e2e/utils/realSite/compatibleAccountKeyFlow"
+import {
+  realSiteAccountUsageChecks,
+  runRealSiteAccountFixtureUsageChecks,
+} from "~~/e2e/utils/realSite/accountUsage"
+import { runCompatibleRealSiteAccountSaveFlow } from "~~/e2e/utils/realSite/compatibleAccountSaveFlow"
 import {
   getDoneHubRealSiteSkipReason,
   loginToRealDoneHubSite,
@@ -21,11 +25,11 @@ test.describe("real-site E2E: DoneHub account add flow", () => {
     await stubLlmMetadataIndex(context)
   })
 
-  test("logs into a real DoneHub site, saves the account, then creates and deletes a key", async ({
+  test("logs into a real DoneHub site, saves the account, then verifies account usage workflows", async ({
     context,
     extensionId,
     page,
-  }) => {
+  }, testInfo) => {
     const realSite = resolveDoneHubRealSiteConfig()
     test.skip(
       !realSite.config,
@@ -42,16 +46,50 @@ test.describe("real-site E2E: DoneHub account add flow", () => {
       openChangelogOnUpdate: false,
     })
 
-    const sitePage = await context.newPage()
-    await runCompatibleRealSiteAccountKeyFlow({
-      page,
-      extensionId,
-      sitePage,
-      config,
-      siteType: SITE_TYPES.DONE_HUB,
-      expectedDetectedSiteType: SITE_TYPES.DONE_HUB,
-      label: "DoneHub",
-      login: loginToRealDoneHubSite,
-    })
+    const accountFixture =
+      await test.step("save account from real site auto-detect", async () => {
+        const sitePage = await context.newPage()
+        return await runCompatibleRealSiteAccountSaveFlow({
+          page,
+          extensionId,
+          serviceWorker,
+          sitePage,
+          config,
+          siteType: SITE_TYPES.DONE_HUB,
+          expectedDetectedSiteType: SITE_TYPES.DONE_HUB,
+          login: loginToRealDoneHubSite,
+        })
+      })
+    await runRealSiteAccountFixtureUsageChecks(
+      {
+        testInfo,
+        page,
+        extensionId,
+        serviceWorker,
+        account: accountFixture,
+        label: "DoneHub",
+      },
+      [
+        realSiteAccountUsageChecks.keyLifecycle(),
+        realSiteAccountUsageChecks.keyToApiProfileAndPopupModels({
+          popupModelsProbe: {
+            expectedStatus: "fail",
+            expectedSummaryText: "No models returned",
+          },
+        }),
+        realSiteAccountUsageChecks.providerDestinations({
+          validateDestinationPages: true,
+        }),
+        realSiteAccountUsageChecks.modelCatalog({
+          expectations: {
+            allowEmptyCatalog: true,
+          },
+        }),
+        realSiteAccountUsageChecks.modelToKey({
+          envPrefix: "DONE_HUB",
+          hasAvailableModel: false,
+        }),
+      ],
+    )
   })
 })

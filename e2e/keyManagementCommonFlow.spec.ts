@@ -1,9 +1,9 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
-import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
-import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { getKeyManagementTokenRowTestId } from "~/features/KeyManagement/testIds"
 import type { ApiToken } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
-import { createAndVerifyTokenFromApp } from "~~/e2e/utils/accountLifecycle"
+import { verifyAccountKeyLifecycleUsage } from "~~/e2e/scenarios/accountUsage"
+import { saveTokenToApiCredentialProfilesFromKeyManagementPage } from "~~/e2e/utils/accountLifecycle"
 import {
   createStoredAccount,
   forceExtensionLanguage,
@@ -14,10 +14,10 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
-  getPlasmoStorageRawValue,
   getServiceWorker,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { seedMockAccountFixture } from "~~/e2e/utils/mockedSite/accountFixtures"
 
 function createStubApiToken(overrides: Partial<ApiToken> = {}): ApiToken {
   const nowSeconds = Math.floor(Date.now() / 1000)
@@ -42,40 +42,6 @@ function createStubApiToken(overrides: Partial<ApiToken> = {}): ApiToken {
   }
 }
 
-async function readStoredApiCredentialProfiles(
-  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
-): Promise<
-  Array<{
-    id?: string
-    name?: string
-    baseUrl?: string
-    apiKey?: string
-    tagIds?: string[]
-  }>
-> {
-  const raw = await getPlasmoStorageRawValue<unknown>(
-    serviceWorker,
-    STORAGE_KEYS.API_CREDENTIAL_PROFILES,
-  )
-
-  if (typeof raw !== "string") return []
-
-  try {
-    const parsed = JSON.parse(raw) as {
-      profiles?: Array<{
-        id?: string
-        name?: string
-        baseUrl?: string
-        apiKey?: string
-        tagIds?: string[]
-      }>
-    }
-    return Array.isArray(parsed.profiles) ? parsed.profiles : []
-  } catch {
-    return []
-  }
-}
-
 test.beforeEach(async ({ context, page }) => {
   installExtensionPageGuards(page)
   await forceExtensionLanguage(page, "en")
@@ -89,17 +55,23 @@ test("creates a token from key management and reloads it into the visible list",
 }) => {
   const serviceWorker = await getServiceWorker(context)
 
-  await seedStoredAccounts(serviceWorker, [createStoredAccount()])
+  const accountFixture = await seedMockAccountFixture({
+    serviceWorker,
+    account: createStoredAccount({
+      id: "e2e-key-create-account",
+      site_url: "https://example.com",
+    }),
+  })
   await stubNewApiSiteRoutes(context)
 
-  await createAndVerifyTokenFromApp({
-    page,
+  await verifyAccountKeyLifecycleUsage({
     extensionId,
-    accountId: "e2e-account-1",
-    tokenName: "E2E Created Key",
+    page,
+    serviceWorker,
+    account: accountFixture,
+    openFromAccountRow: false,
+    buildTokenName: () => "E2E Created Key",
   })
-
-  await expect(page.getByText("E2E Created Key")).toBeVisible()
 })
 
 test("updates an existing token from key management and reloads the visible list", async ({
@@ -250,28 +222,17 @@ test("saves a key to API credential profiles and opens the profiles page", async
     page.getByRole("heading", { name: "Profile Export Key" }),
   ).toBeVisible()
 
-  await page
-    .getByTestId(KEY_MANAGEMENT_TEST_IDS.saveToApiProfilesButton)
-    .click()
-
-  await expect
-    .poll(async () => {
-      const profiles = await readStoredApiCredentialProfiles(serviceWorker)
-      return (
-        profiles.find((profile) => profile.apiKey === "sk-profile-export") ??
-        null
-      )
-    })
-    .toMatchObject({
+  await saveTokenToApiCredentialProfilesFromKeyManagementPage({
+    serviceWorker,
+    page,
+    row: page.getByTestId(getKeyManagementTokenRowTestId(1)),
+    expectedProfile: {
       name: "Profile Source - Profile Export Key",
       baseUrl: "https://profile-source.example.com",
       apiKey: "sk-profile-export",
       tagIds: ["team-shared"],
-    })
-
-  await page
-    .getByTestId(KEY_MANAGEMENT_TEST_IDS.openApiProfilesToastButton)
-    .click()
+    },
+  })
 
   await expect(page).toHaveURL(/options\.html.*#apiCredentialProfiles$/)
   await expect(

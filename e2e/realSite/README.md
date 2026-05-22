@@ -1,12 +1,12 @@
 # Real-Site E2E
 
 These Playwright specs exercise account auto-detection against live deployments
-of supported, source-available, self-hostable upstreams. Compatible API-family
-sites and Sub2API also run the shared in-app key lifecycle: save the account
-through the UI, open Key Management through the account row, create a short test
-key, and delete it before the test exits. A site type should only be added here
-after inspecting the upstream repository and confirming it contains server
-source code plus a runnable deployment path, not merely a public GitHub link.
+of supported, source-available, self-hostable upstreams. The specs are intended
+to cover representative real-site account flows where the upstream surface makes
+that practical, without documenting every shared test step in this README.
+A site type should only be added here after inspecting the upstream repository
+and confirming it contains server source code plus a runnable deployment path,
+not merely a public GitHub link.
 
 Confirmed source-available targets in this suite:
 
@@ -15,6 +15,14 @@ Confirmed source-available targets in this suite:
 - DoneHub: Go server source, web source, Docker/deployment files.
 - Veloera: Go server source, web source, Docker/deployment files.
 - Sub2API: dedicated auth model and real-site helper.
+
+For current coverage details, inspect the specs in this directory and the shared
+helpers under `e2e/scenarios/`.
+
+Account auto-detection and existing-account feature checks are separate
+scenario helpers. Real-site specs compose them by saving an account from a live
+site, passing the returned account fixture into reusable usage scenarios, then
+cleaning up through the fixture owner.
 
 Run all real-site specs:
 

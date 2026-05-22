@@ -1,6 +1,7 @@
 import type { Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
+import type { AccountSiteType } from "~/constants/siteType"
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementListItemTestId,
@@ -87,7 +88,7 @@ export async function autoDetectAccountFromAddDialog(
 
 export async function waitForSavedAccount(params: {
   serviceWorker: ServiceWorker
-  siteType: string
+  siteType: AccountSiteType
   baseUrl: string
   timeoutMs?: number
 }) {
@@ -125,7 +126,7 @@ export async function expectAccountListItemVisible(
 export async function expectAccountListItemVisibleBySite(
   page: Page,
   params: {
-    siteType: string
+    siteType: AccountSiteType
     baseUrl: string
     timeoutMs?: number
   },
@@ -148,7 +149,7 @@ function cssAttributeValue(value: string) {
 
 async function readSavedAccount(
   serviceWorker: ServiceWorker,
-  siteType: string,
+  siteType: AccountSiteType,
   baseUrl: string,
 ): Promise<SiteAccount | null> {
   const raw = await getPlasmoStorageRawValue<unknown>(

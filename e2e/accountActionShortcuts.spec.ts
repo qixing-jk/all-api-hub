@@ -2,12 +2,14 @@ import type { Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementListItemTestId,
 } from "~/features/AccountManagement/testIds"
 import type { ApiToken } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { verifyAccountProviderDestinationUsage } from "~~/e2e/scenarios/accountUsage"
 import {
   createStoredAccount,
   forceExtensionLanguage,
@@ -98,21 +100,6 @@ async function openAccountActionsMenu(page: Page, accountName: string) {
   await row
     .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
     .click()
-}
-
-async function expectBrowserTabOpened(
-  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
-  url: string,
-) {
-  await expect
-    .poll(async () => {
-      return await serviceWorker.evaluate(async (targetUrl) => {
-        const chromeApi = (globalThis as any).chrome
-        const tabs = await chromeApi.tabs.query({})
-        return tabs.some((tab: { url?: string }) => tab.url === targetUrl)
-      }, url)
-    })
-    .toBe(true)
 }
 
 test.beforeEach(async ({ context, page }) => {
@@ -302,22 +289,13 @@ test("opens provider usage and redeem destinations from the account row menu", a
   await waitForExtensionRoot(page)
   await expectPermissionOnboardingHidden(page)
 
-  await openAccountActionsMenu(page, "Shortcut Routes Account")
-  await page
-    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowUsageLogMenuItem)
-    .click()
-
-  await expectBrowserTabOpened(
+  await verifyAccountProviderDestinationUsage({
+    page,
     serviceWorker,
-    "https://shortcut-routes.example.com/console/log",
-  )
-
-  await page.bringToFront()
-  await openAccountActionsMenu(page, "Shortcut Routes Account")
-  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowRedeemMenuItem).click()
-
-  await expectBrowserTabOpened(
-    serviceWorker,
-    "https://shortcut-routes.example.com/console/topup",
-  )
+    account: {
+      accountId: "shortcut-routes-account",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://shortcut-routes.example.com",
+    },
+  })
 })

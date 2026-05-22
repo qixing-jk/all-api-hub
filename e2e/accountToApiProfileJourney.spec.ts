@@ -1,31 +1,27 @@
 import type { Page, Worker } from "@playwright/test"
 
-import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
+import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { POPUP_TEST_IDS } from "~/entrypoints/popup/testIds"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementListItemTestId,
 } from "~/features/AccountManagement/testIds"
-import {
-  API_CREDENTIAL_PROFILES_TEST_IDS,
-  getApiCredentialProfileVerifyProbeTestId,
-} from "~/features/ApiCredentialProfiles/testIds"
-import {
-  getKeyManagementTokenRowTestId,
-  KEY_MANAGEMENT_TEST_IDS,
-} from "~/features/KeyManagement/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { ApiToken, SiteAccount } from "~/types"
-import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { createNoopAccountFixtureCleanup } from "~~/e2e/scenarios/accountFixtures"
+import { runAccountKeyToApiProfileScenario } from "~~/e2e/scenarios/accountKeyToApiProfile"
+import {
+  openApiCredentialProfilesPopupScenario,
+  verifyApiCredentialProfileModelsProbeScenario,
+} from "~~/e2e/scenarios/apiCredentialProfileVerification"
 import {
   forceExtensionLanguage,
   installExtensionPageGuards,
   seedUserPreferences,
   stubLlmMetadataIndex,
   stubNewApiSiteRoutes,
-  waitForExtensionPage,
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
@@ -49,24 +45,6 @@ async function readStoredAccounts(
   try {
     const parsed = JSON.parse(raw) as { accounts?: SiteAccount[] }
     return Array.isArray(parsed.accounts) ? parsed.accounts : []
-  } catch {
-    return []
-  }
-}
-
-async function readStoredApiCredentialProfiles(
-  serviceWorker: Worker,
-): Promise<ApiCredentialProfile[]> {
-  const raw = await getPlasmoStorageRawValue<unknown>(
-    serviceWorker,
-    STORAGE_KEYS.API_CREDENTIAL_PROFILES,
-  )
-
-  if (typeof raw !== "string") return []
-
-  try {
-    const parsed = JSON.parse(raw) as { profiles?: ApiCredentialProfile[] }
-    return Array.isArray(parsed.profiles) ? parsed.profiles : []
   } catch {
     return []
   }
@@ -112,23 +90,14 @@ function getAccountRowByText(page: Page, text: string) {
     .filter({ hasText: text })
 }
 
-async function openAccountActionsMenu(page: Page, accountRowText: string) {
-  const row = getAccountRowByText(page, accountRowText)
-
-  await row.hover()
-  await row
-    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
-    .click()
-}
-
 test.beforeEach(async ({ context, page }) => {
   installExtensionPageGuards(page)
   await forceExtensionLanguage(page, "en")
   await stubLlmMetadataIndex(context)
   await stubNewApiSiteRoutes(context, {
     baseUrl: JOURNEY_SITE_URL,
-    title: "new-api",
-    systemName: "new-api",
+    title: SITE_TYPES.NEW_API,
+    systemName: SITE_TYPES.NEW_API,
     userId: 77,
     username: "journey-user",
     accessToken: "journey-access-token",
@@ -189,86 +158,35 @@ test("adds an account, creates a reusable API profile from its key, and verifies
   await expect(getAccountRowByText(page, "journey-user")).toBeVisible()
 
   const accountId = await getJourneyAccountId(serviceWorker)
-  const keysPagePromise = waitForExtensionPage(context, {
+  await runAccountKeyToApiProfileScenario({
     extensionId,
-    path: OPTIONS_PAGE_PATH,
-    hash: `#${MENU_ITEM_IDS.KEYS}`,
-    searchParams: { accountId },
-  })
-
-  await openAccountActionsMenu(page, "journey-user")
-  await page
-    .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowKeyManagementMenuItem)
-    .click()
-
-  const keysPage = await keysPagePromise
-  installExtensionPageGuards(keysPage)
-  await waitForExtensionRoot(keysPage)
-  await expect(keysPage).toHaveURL(new RegExp(`accountId=${accountId}#keys$`))
-  await expect(
-    keysPage.getByTestId(getKeyManagementTokenRowTestId(42)),
-  ).toBeVisible()
-
-  await keysPage.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenButton).click()
-  await expect(keysPage.locator("#tokenName")).toBeVisible()
-  await keysPage.locator("#tokenName").fill("Journey Created Key")
-  await keysPage
-    .getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenSubmitButton)
-    .click()
-  await expect(
-    keysPage.getByRole("heading", { name: "Journey Created Key" }),
-  ).toBeVisible()
-
-  await keysPage
-    .getByTestId(getKeyManagementTokenRowTestId(43))
-    .getByTestId(KEY_MANAGEMENT_TEST_IDS.saveToApiProfilesButton)
-    .click()
-
-  await expect
-    .poll(async () => {
-      const profiles = await readStoredApiCredentialProfiles(serviceWorker)
-      return (
-        profiles.find((profile) => profile.apiKey === "sk-created-43") ?? null
-      )
-    })
-    .toMatchObject({
+    extensionPage: page,
+    getServiceWorker: async () => serviceWorker,
+    resolveAccountFixture: async () => ({
+      accountId,
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: JOURNEY_SITE_URL,
+      cleanup: createNoopAccountFixtureCleanup(),
+    }),
+    buildTokenName: () => "Journey Created Key",
+    expectedProfile: {
       name: "Example - Journey Created Key",
       baseUrl: JOURNEY_SITE_URL,
       apiKey: "sk-created-43",
-    })
+    },
+    cleanupAccountFixture: false,
+    cleanupCreatedProfile: false,
+  })
 
-  const popupPage = await context.newPage()
-  installExtensionPageGuards(popupPage)
-  await forceExtensionLanguage(popupPage, "en")
-  await popupPage.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
-  await waitForExtensionRoot(popupPage)
-
-  await popupPage.getByTestId(POPUP_TEST_IDS.apiCredentialProfilesTab).click()
-  await expect(
-    popupPage.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.popupView),
-  ).toBeVisible()
-  await expect(
-    popupPage.getByRole("heading", {
-      name: "Example - Journey Created Key",
-    }),
-  ).toBeVisible()
-
-  await popupPage
-    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyButton)
-    .click()
-  const modelsProbe = popupPage.getByTestId(
-    getApiCredentialProfileVerifyProbeTestId("models"),
-  )
-  await expect(
-    popupPage.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
-  ).toBeVisible()
-
-  await modelsProbe
-    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton)
-    .click()
-
-  await expect(modelsProbe).toContainText("Pass")
-  await expect(modelsProbe).toContainText("Fetched 2 models.")
+  const popupPage = await openApiCredentialProfilesPopupScenario({
+    page: await context.newPage(),
+    extensionId,
+  })
+  await verifyApiCredentialProfileModelsProbeScenario({
+    page: popupPage,
+    profileName: "Example - Journey Created Key",
+    expectedModelCount: 2,
+  })
 
   await sitePage.close()
 })

@@ -1,9 +1,6 @@
-import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
-import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
-import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import type { ModelPricing } from "~/services/apiService/common/type"
-import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { test } from "~~/e2e/fixtures/extensionTest"
+import { runModelToKeyManagementScenario } from "~~/e2e/scenarios/modelToKeyManagement"
 import {
   createStoredAccount,
   forceExtensionLanguage,
@@ -11,13 +8,8 @@ import {
   seedStoredAccounts,
   stubLlmMetadataIndex,
   stubNewApiSiteRoutes,
-  waitForExtensionPage,
 } from "~~/e2e/utils/commonUserFlows"
-import {
-  expectPermissionOnboardingHidden,
-  getServiceWorker,
-} from "~~/e2e/utils/extensionState"
-import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
+import { getServiceWorker } from "~~/e2e/utils/extensionState"
 
 const MODEL_KEY_BASE_URL = "https://model-key.example.com"
 const MODEL_KEY_ACCOUNT_ID = "model-key-account"
@@ -72,65 +64,23 @@ test("creates a model-scoped key from Model List and continues in Key Management
     },
   })
 
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.MODELS}?accountId=${MODEL_KEY_ACCOUNT_ID}`,
-  )
-  await waitForExtensionRoot(page)
-  await expectPermissionOnboardingHidden(page)
-
-  await expect(page.getByRole("heading", { name: "Model List" })).toBeVisible()
-  await expect(page.getByRole("heading", { name: MODEL_ID })).toBeVisible()
-
-  await page.getByTestId(MODEL_LIST_TEST_IDS.modelKeyDialogButton).click()
-
-  const keyDialog = page.getByTestId(MODEL_LIST_TEST_IDS.modelKeyDialog)
-  await expect(
-    keyDialog.getByText(`No compatible keys for ${MODEL_ID}`),
-  ).toBeVisible()
-  await expect(keyDialog.getByText("vip")).toBeVisible()
-
-  await keyDialog.getByTestId(MODEL_LIST_TEST_IDS.createCustomKeyButton).click()
-
-  const addKeyDialog = page.getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenDialog)
-  await expect(addKeyDialog.locator("#tokenName")).toHaveValue(CREATED_KEY_NAME)
-  await expect(addKeyDialog.getByText("Model Limits")).toBeVisible()
-  await expect(addKeyDialog.getByText(MODEL_ID)).toBeVisible()
-  await expect(addKeyDialog.getByText("vip - VIP")).toBeVisible()
-
-  await addKeyDialog
-    .getByTestId(KEY_MANAGEMENT_TEST_IDS.addTokenSubmitButton)
-    .click()
-
-  await expect(addKeyDialog).toHaveCount(0)
-  await expect(keyDialog.getByText(CREATED_KEY_NAME)).toBeVisible()
-  await expect(
-    keyDialog.getByText(`No compatible keys for ${MODEL_ID}`),
-  ).toHaveCount(0)
-
-  const keysPagePromise = waitForExtensionPage(context, {
+  await runModelToKeyManagementScenario({
+    page,
     extensionId,
-    path: OPTIONS_PAGE_PATH,
-    hash: `#${MENU_ITEM_IDS.KEYS}`,
-    searchParams: { accountId: MODEL_KEY_ACCOUNT_ID },
+    accountId: MODEL_KEY_ACCOUNT_ID,
+    modelId: MODEL_ID,
+    createdKeyName: CREATED_KEY_NAME,
+    catalogExpectations: {
+      sourceLabel: "Model Key Account",
+      modelNames: [MODEL_ID],
+      totalModels: 1,
+    },
+    expectedModelDialogLabels: ["vip"],
+    expectedAddKeyDialogLabels: ["vip - VIP"],
+    expectedKeyManagementLabels: ["vip"],
+    prepareKeyManagementPage: async (keysPage) => {
+      installExtensionPageGuards(keysPage)
+      await forceExtensionLanguage(keysPage, "en")
+    },
   })
-
-  await keyDialog
-    .getByTestId(MODEL_LIST_TEST_IDS.openKeyManagementButton)
-    .click()
-
-  const keysPage = await keysPagePromise
-  installExtensionPageGuards(keysPage)
-  await forceExtensionLanguage(keysPage, "en")
-  await waitForExtensionRoot(keysPage)
-  await expectPermissionOnboardingHidden(keysPage)
-
-  const targetUrl = new URL(keysPage.url())
-  expect(targetUrl.hash).toBe(`#${MENU_ITEM_IDS.KEYS}`)
-  expect(targetUrl.searchParams.get("accountId")).toBe(MODEL_KEY_ACCOUNT_ID)
-
-  await expect(
-    keysPage.getByRole("heading", { name: CREATED_KEY_NAME }),
-  ).toBeVisible()
-  await expect(keysPage.getByText("Group:")).toBeVisible()
-  await expect(keysPage.getByText("vip", { exact: true })).toBeVisible()
 })

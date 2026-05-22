@@ -7,6 +7,7 @@ import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import type { ModelPricing } from "~/services/apiService/common/type"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { verifyAccountModelCatalogUsage } from "~~/e2e/scenarios/accountUsage"
 import {
   createStoredAccount,
   forceExtensionLanguage,
@@ -101,21 +102,16 @@ test("loads account-backed models from the options route", async ({
 }) => {
   await seedModelListAccount(context)
 
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.MODELS}?accountId=model-list-account`,
-  )
-  await waitForExtensionRoot(page)
-  await expectPermissionOnboardingHidden(page)
-
-  await expect(page.getByRole("heading", { name: "Model List" })).toBeVisible()
-  await expect(page.getByRole("combobox").first()).toContainText(
-    "Model Catalog Account",
-  )
-  await expect(page.getByText("gpt-4o-mini")).toBeVisible()
-  await expect(page.getByText("claude-3-5-sonnet")).toBeVisible()
-  await expect(page.getByText("gemini-1.5-flash")).toBeVisible()
-  await expect(page.getByText("Total 3 models")).toBeVisible()
-  await expect(page.getByText("Showing 3 models")).toBeVisible()
+  await verifyAccountModelCatalogUsage({
+    page,
+    extensionId,
+    account: { accountId: "model-list-account" },
+    expectations: {
+      sourceLabel: "Model Catalog Account",
+      modelNames: ["gpt-4o-mini", "claude-3-5-sonnet", "gemini-1.5-flash"],
+      totalModels: 3,
+    },
+  })
 })
 
 test("routes no-source setup CTAs to account and API credential management", async ({

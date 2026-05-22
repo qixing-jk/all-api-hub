@@ -1,8 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
-  createAndVerifyTokenFromApp,
   deleteTokenFromKeyManagementPage,
+  expectTokenCreatedInKeyManagementPage,
+  openKeyManagementForAccount,
+  submitTokenCreationFromKeyManagementPage,
 } from "~~/e2e/utils/accountLifecycle"
 import {
   buildRealSiteTestTokenName,
@@ -10,13 +13,19 @@ import {
 } from "~~/e2e/utils/realSite/keyManagement"
 
 const mocks = vi.hoisted(() => ({
-  createAndVerifyTokenFromApp: vi.fn(),
   deleteTokenFromKeyManagementPage: vi.fn(),
+  expectTokenCreatedInKeyManagementPage: vi.fn(),
+  openKeyManagementForAccount: vi.fn(),
+  submitTokenCreationFromKeyManagementPage: vi.fn(),
 }))
 
 vi.mock("~~/e2e/utils/accountLifecycle", () => ({
-  createAndVerifyTokenFromApp: mocks.createAndVerifyTokenFromApp,
   deleteTokenFromKeyManagementPage: mocks.deleteTokenFromKeyManagementPage,
+  expectTokenCreatedInKeyManagementPage:
+    mocks.expectTokenCreatedInKeyManagementPage,
+  openKeyManagementForAccount: mocks.openKeyManagementForAccount,
+  submitTokenCreationFromKeyManagementPage:
+    mocks.submitTokenCreationFromKeyManagementPage,
 }))
 
 describe("real-site key management E2E helpers", () => {
@@ -63,14 +72,12 @@ describe("real-site key management E2E helpers", () => {
 
     vi.spyOn(Date, "now").mockReturnValue(1_773_600_000_000)
     vi.spyOn(Math, "random").mockReturnValue(0.123456789)
-    vi.mocked(createAndVerifyTokenFromApp).mockImplementation(
-      async (params) => {
-        params.onTokenSubmitted?.({
-          page: submittedPage,
-          tokenName: expectedTokenName,
-        })
-        throw creationError
-      },
+    vi.mocked(openKeyManagementForAccount).mockResolvedValue(submittedPage)
+    vi.mocked(submitTokenCreationFromKeyManagementPage).mockResolvedValue(
+      undefined,
+    )
+    vi.mocked(expectTokenCreatedInKeyManagementPage).mockRejectedValue(
+      creationError,
     )
     vi.mocked(deleteTokenFromKeyManagementPage).mockResolvedValue(undefined)
 
@@ -83,20 +90,26 @@ describe("real-site key management E2E helpers", () => {
       runRealSiteKeyLifecycleFromAccountRow({
         page,
         extensionId: "extension-id",
-        siteType: "new-api",
+        siteType: SITE_TYPES.NEW_API,
         baseUrl: "https://new-api.test",
         label: "New API",
       }),
     ).rejects.toThrow(creationError)
 
-    expect(createAndVerifyTokenFromApp).toHaveBeenCalledWith({
+    expect(openKeyManagementForAccount).toHaveBeenCalledWith({
       page,
       extensionId: "extension-id",
-      siteType: "new-api",
+      siteType: SITE_TYPES.NEW_API,
       baseUrl: "https://new-api.test",
-      tokenName: expectedTokenName,
       openFromAccountRow: true,
-      onTokenSubmitted: expect.any(Function),
+    })
+    expect(submitTokenCreationFromKeyManagementPage).toHaveBeenCalledWith({
+      page: submittedPage,
+      tokenName: expectedTokenName,
+    })
+    expect(expectTokenCreatedInKeyManagementPage).toHaveBeenCalledWith({
+      page: submittedPage,
+      tokenName: expectedTokenName,
     })
     expect(deleteTokenFromKeyManagementPage).toHaveBeenCalledWith({
       page: submittedPage,

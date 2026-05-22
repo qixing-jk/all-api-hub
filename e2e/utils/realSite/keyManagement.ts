@@ -1,8 +1,11 @@
 import type { Page } from "@playwright/test"
 
+import type { AccountSiteType } from "~/constants/siteType"
 import {
-  createAndVerifyTokenFromApp,
   deleteTokenFromKeyManagementPage,
+  expectTokenCreatedInKeyManagementPage,
+  openKeyManagementForAccount,
+  submitTokenCreationFromKeyManagementPage,
 } from "~~/e2e/utils/accountLifecycle"
 
 const TEST_TOKEN_NAME_PREFIX = "AAH E2E"
@@ -13,7 +16,7 @@ const MAX_TEST_TOKEN_RUN_ID_LENGTH = 12
 export async function runRealSiteKeyLifecycleFromAccountRow(params: {
   page: Page
   extensionId: string
-  siteType: string
+  siteType: AccountSiteType
   baseUrl: string
   label: string
 }) {
@@ -25,17 +28,22 @@ export async function runRealSiteKeyLifecycleFromAccountRow(params: {
   let keyManagementPage = params.page
 
   try {
-    const tokenResult = await createAndVerifyTokenFromApp({
+    keyManagementPage = await openKeyManagementForAccount({
       page: params.page,
       extensionId: params.extensionId,
       siteType: params.siteType,
       baseUrl: params.baseUrl,
-      tokenName,
       openFromAccountRow: true,
-      onTokenSubmitted: (result) => {
-        keyManagementPage = result.page
-        createdTokenName = result.tokenName
-      },
+    })
+    await submitTokenCreationFromKeyManagementPage({
+      page: keyManagementPage,
+      tokenName,
+    })
+    createdTokenName = tokenName
+
+    const tokenResult = await expectTokenCreatedInKeyManagementPage({
+      page: keyManagementPage,
+      tokenName,
     })
     keyManagementPage = tokenResult.page
   } finally {
@@ -67,7 +75,7 @@ export function buildRealSiteTestTokenName(params: {
     .slice(0, MAX_TEST_TOKEN_NAME_LENGTH)
 }
 
-function buildRealSiteRunId() {
+export function buildRealSiteRunId() {
   return `${Date.now().toString(36).slice(-6)}${Math.random()
     .toString(36)
     .slice(2, 6)}`

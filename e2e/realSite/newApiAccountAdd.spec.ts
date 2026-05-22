@@ -6,7 +6,11 @@ import {
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import { getServiceWorker } from "~~/e2e/utils/extensionState"
-import { runCompatibleRealSiteAccountKeyFlow } from "~~/e2e/utils/realSite/compatibleAccountKeyFlow"
+import {
+  realSiteAccountUsageChecks,
+  runRealSiteAccountFixtureUsageChecks,
+} from "~~/e2e/utils/realSite/accountUsage"
+import { runCompatibleRealSiteAccountSaveFlow } from "~~/e2e/utils/realSite/compatibleAccountSaveFlow"
 import {
   getNewApiRealSiteSkipReason,
   loginToRealNewApiSite,
@@ -21,11 +25,11 @@ test.describe("real-site E2E: New API account add flow", () => {
     await stubLlmMetadataIndex(context)
   })
 
-  test("logs into a real New API site, saves the account, then creates and deletes a key", async ({
+  test("logs into a real New API site, saves the account, then verifies account usage workflows", async ({
     context,
     extensionId,
     page,
-  }) => {
+  }, testInfo) => {
     const realSite = resolveNewApiRealSiteConfig()
     test.skip(
       !realSite.config,
@@ -42,15 +46,37 @@ test.describe("real-site E2E: New API account add flow", () => {
       openChangelogOnUpdate: false,
     })
 
-    const sitePage = await context.newPage()
-    await runCompatibleRealSiteAccountKeyFlow({
-      page,
-      extensionId,
-      sitePage,
-      config,
-      siteType: SITE_TYPES.NEW_API,
-      label: "New API",
-      login: loginToRealNewApiSite,
-    })
+    const accountFixture =
+      await test.step("save account from real site auto-detect", async () => {
+        const sitePage = await context.newPage()
+        return await runCompatibleRealSiteAccountSaveFlow({
+          page,
+          extensionId,
+          serviceWorker,
+          sitePage,
+          config,
+          siteType: SITE_TYPES.NEW_API,
+          login: loginToRealNewApiSite,
+        })
+      })
+    await runRealSiteAccountFixtureUsageChecks(
+      {
+        testInfo,
+        page,
+        extensionId,
+        serviceWorker,
+        account: accountFixture,
+        label: "New API",
+      },
+      [
+        realSiteAccountUsageChecks.keyLifecycle(),
+        realSiteAccountUsageChecks.keyToApiProfileAndPopupModels(),
+        realSiteAccountUsageChecks.providerDestinations({
+          validateDestinationPages: true,
+        }),
+        realSiteAccountUsageChecks.modelCatalog(),
+        realSiteAccountUsageChecks.modelToKey({ envPrefix: "NEW_API" }),
+      ],
+    )
   })
 })

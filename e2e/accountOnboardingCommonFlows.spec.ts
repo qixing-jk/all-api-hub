@@ -1,26 +1,23 @@
 import type { BrowserContext, Route } from "@playwright/test"
 
-import { OPTIONS_PAGE_PATH, POPUP_PAGE_PATH } from "~/constants/extensionPages"
+import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import {
   AIHUBMIX_API_ORIGIN,
   AIHUBMIX_WEB_ORIGIN,
   SITE_TYPES,
 } from "~/constants/siteType"
-import { POPUP_TEST_IDS } from "~/entrypoints/popup/testIds"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import {
-  API_CREDENTIAL_PROFILES_TEST_IDS,
-  getApiCredentialProfileVerifyProbeTestId,
-} from "~/features/ApiCredentialProfiles/testIds"
-import {
-  getKeyManagementTokenRowTestId,
-  KEY_MANAGEMENT_TEST_IDS,
-} from "~/features/KeyManagement/testIds"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import type { SiteAccount } from "~/types"
-import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
+import { runAccountAutoDetectScenario } from "~~/e2e/scenarios/accountAutoDetect"
+import { saveExistingAccountTokenToApiProfileScenario } from "~~/e2e/scenarios/accountKeyToApiProfile"
+import {
+  openApiCredentialProfilesPopupScenario,
+  verifyApiCredentialProfileModelsProbeScenario,
+} from "~~/e2e/scenarios/apiCredentialProfileVerification"
 import {
   createStoredAccount,
   forceExtensionLanguage,
@@ -56,24 +53,6 @@ async function readStoredAccounts(
   try {
     const parsed = JSON.parse(raw) as { accounts?: SiteAccount[] }
     return Array.isArray(parsed.accounts) ? parsed.accounts : []
-  } catch {
-    return []
-  }
-}
-
-async function readStoredApiCredentialProfiles(
-  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
-): Promise<ApiCredentialProfile[]> {
-  const raw = await getPlasmoStorageRawValue<unknown>(
-    serviceWorker,
-    STORAGE_KEYS.API_CREDENTIAL_PROFILES,
-  )
-
-  if (typeof raw !== "string") return []
-
-  try {
-    const parsed = JSON.parse(raw) as { profiles?: ApiCredentialProfile[] }
-    return Array.isArray(parsed.profiles) ? parsed.profiles : []
   } catch {
     return []
   }
@@ -384,20 +363,6 @@ test("adds an account through the real add-account auto-detect flow", async ({
   extensionId,
   page,
 }) => {
-  const sitePage = await context.newPage()
-  await sitePage.addInitScript(() => {
-    window.localStorage.setItem(
-      "user",
-      JSON.stringify({
-        id: 1,
-        username: "e2e-user",
-        quota: 1000,
-      }),
-    )
-  })
-  await sitePage.goto("https://example.com")
-  await sitePage.bringToFront()
-
   const serviceWorker = await getServiceWorker(context)
   await seedUserPreferences(serviceWorker, {
     tempWindowFallback: {
@@ -405,24 +370,30 @@ test("adds an account through the real add-account auto-detect flow", async ({
     },
   })
 
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#account`,
-  )
-  await waitForExtensionRoot(page)
-  await expectPermissionOnboardingHidden(page)
-
-  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
-
-  await expect(page.locator("#site-url")).toBeVisible()
-  await page.locator("#site-url").fill("https://example.com")
-  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton).click()
-
-  await expect(page.getByRole("button", { name: "Confirm Add" })).toBeVisible()
-  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton).click()
-
-  await expect(
-    page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListView),
-  ).toContainText("e2e-user")
+  await runAccountAutoDetectScenario({
+    extensionId,
+    extensionPage: page,
+    baseUrl: "https://example.com",
+    siteType: SITE_TYPES.NEW_API,
+    getServiceWorker: async () => serviceWorker,
+    openSitePage: async () => {
+      const sitePage = await context.newPage()
+      await sitePage.addInitScript(() => {
+        window.localStorage.setItem(
+          "user",
+          JSON.stringify({
+            id: 1,
+            username: "e2e-user",
+            quota: 1000,
+          }),
+        )
+      })
+      await sitePage.goto("https://example.com")
+      await sitePage.bringToFront()
+      return sitePage
+    },
+    prepareDetectableSite: async () => undefined,
+  })
 
   const persistedAccounts = await serviceWorker.evaluate(async () => {
     const chromeApi = (globalThis as any).chrome
@@ -443,7 +414,6 @@ test("adds an account through the real add-account auto-detect flow", async ({
   })
 
   expect(persistedAccounts).toContain('"username":"e2e-user"')
-  await sitePage.close()
 })
 
 test("enables default-key provisioning, adds an account, saves the created key as a reusable API profile, and verifies it from the popup", async ({
@@ -471,52 +441,39 @@ test("enables default-key provisioning, adds an account, saves the created key a
   await autoProvisionSwitch.click()
   await expect(autoProvisionSwitch).toHaveAttribute("aria-checked", "true")
 
-  const sitePage = await context.newPage()
-  installExtensionPageGuards(sitePage)
-  await forceExtensionLanguage(sitePage, "en")
-  await sitePage.addInitScript(() => {
-    window.localStorage.setItem(
-      "user",
-      JSON.stringify({
-        id: 1,
-        username: "e2e-user",
-        quota: 1000,
-      }),
-    )
+  const accountFixture = await runAccountAutoDetectScenario({
+    extensionId,
+    extensionPage: page,
+    baseUrl: "https://example.com",
+    siteType: SITE_TYPES.NEW_API,
+    getServiceWorker: async () => serviceWorker,
+    openSitePage: async () => {
+      const sitePage = await context.newPage()
+      installExtensionPageGuards(sitePage)
+      await forceExtensionLanguage(sitePage, "en")
+      await sitePage.addInitScript(() => {
+        window.localStorage.setItem(
+          "user",
+          JSON.stringify({
+            id: 1,
+            username: "e2e-user",
+            quota: 1000,
+          }),
+        )
+      })
+      await sitePage.goto("https://example.com")
+      await sitePage.bringToFront()
+      return sitePage
+    },
+    prepareDetectableSite: async () => undefined,
   })
-  await sitePage.goto("https://example.com")
-  await sitePage.bringToFront()
-
-  await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.ACCOUNT}`,
-  )
-  await waitForExtensionRoot(page)
-  await expectPermissionOnboardingHidden(page)
-
-  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.addAccountButton).click()
-  await expect(page.locator("#site-url")).toBeVisible()
-  await page.locator("#site-url").fill("https://example.com")
-  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.autoDetectButton).click()
-
-  await expect(page.getByRole("button", { name: "Confirm Add" })).toBeVisible()
-  await page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.confirmAddButton).click()
-
   await expect(
     page.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.accountListView),
   ).toContainText("e2e-user")
   await expect(page.getByText("Created a default API key for")).toBeVisible()
 
-  await expect
-    .poll(() => findStoredAccountIdByUsername(serviceWorker, "e2e-user"))
-    .not.toBeNull()
-  const accountId = await findStoredAccountIdByUsername(
-    serviceWorker,
-    "e2e-user",
-  )
-  expect(accountId).toBeTruthy()
-
   await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.KEYS}?accountId=${accountId}`,
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.KEYS}?accountId=${accountFixture.accountId}`,
   )
   await waitForExtensionRoot(page)
   await expectPermissionOnboardingHidden(page)
@@ -527,59 +484,29 @@ test("enables default-key provisioning, adds an account, saves the created key a
   await expect(page.getByText("Group:")).toBeVisible()
   await expect(page.getByText("default", { exact: true })).toBeVisible()
 
-  await page
-    .getByTestId(getKeyManagementTokenRowTestId(1))
-    .getByTestId(KEY_MANAGEMENT_TEST_IDS.saveToApiProfilesButton)
-    .click()
-
-  let savedProfileName = ""
-  await expect
-    .poll(async () => {
-      const profiles = await readStoredApiCredentialProfiles(serviceWorker)
-      const profile =
-        profiles.find((candidate) => candidate.apiKey === "sk-created-1") ??
-        null
-
-      savedProfileName = profile?.name ?? ""
-      return profile
-    })
-    .toMatchObject({
+  const savedProfile = await saveExistingAccountTokenToApiProfileScenario({
+    extensionId,
+    extensionPage: page,
+    getServiceWorker: async () => serviceWorker,
+    resolveAccountFixture: async () => accountFixture,
+    tokenName: DEFAULT_AUTO_PROVISION_TOKEN_NAME,
+    openFromAccountRow: false,
+    expectedProfile: {
       baseUrl: "https://example.com",
       apiKey: "sk-created-1",
-    })
+    },
+    cleanupCreatedProfile: false,
+  })
 
-  const popupPage = await context.newPage()
-  installExtensionPageGuards(popupPage)
-  await forceExtensionLanguage(popupPage, "en")
-  await popupPage.goto(`chrome-extension://${extensionId}/${POPUP_PAGE_PATH}`)
-  await waitForExtensionRoot(popupPage)
-
-  await popupPage.getByTestId(POPUP_TEST_IDS.apiCredentialProfilesTab).click()
-  await expect(
-    popupPage.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.popupView),
-  ).toBeVisible()
-  await expect(
-    popupPage.getByRole("heading", { name: savedProfileName }),
-  ).toBeVisible()
-
-  await popupPage
-    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyButton)
-    .click()
-  const modelsProbe = popupPage.getByTestId(
-    getApiCredentialProfileVerifyProbeTestId("models"),
-  )
-  await expect(
-    popupPage.getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyModelId),
-  ).toBeVisible()
-
-  await modelsProbe
-    .getByTestId(API_CREDENTIAL_PROFILES_TEST_IDS.verifyProbeRunButton)
-    .click()
-
-  await expect(modelsProbe).toContainText("Pass")
-  await expect(modelsProbe).toContainText("Fetched 2 models.")
-
-  await sitePage.close()
+  const popupPage = await openApiCredentialProfilesPopupScenario({
+    page: await context.newPage(),
+    extensionId,
+  })
+  await verifyApiCredentialProfileModelsProbeScenario({
+    page: popupPage,
+    profileName: savedProfile.name,
+    expectedModelCount: 2,
+  })
 })
 
 test("adds an AIHubMix account, preserves its one-time key, and opens managed-site channel setup", async ({
