@@ -29,6 +29,8 @@ import {
 } from "~/services/tags/tagStoreUtils"
 import type {
   AccountStorageConfig,
+  DeletedEntryKind,
+  DeletedEntryRecord,
   SiteAccount,
   SiteBookmark,
   TagStore,
@@ -189,7 +191,89 @@ type WebdavBackupAccountsSection = {
   bookmarks: WebdavBackupEntry[]
   pinnedAccountIds: string[]
   orderedAccountIds: string[]
+  deletedEntryRecords: AccountStorageConfig["deletedEntryRecords"]
   lastUpdated: number
+}
+
+/**
+ * Normalizes deletion markers from WebDAV backup payloads.
+ */
+function normalizeWebdavDeletedEntryRecords(
+  raw: unknown,
+): NonNullable<AccountStorageConfig["deletedEntryRecords"]> {
+  if (!raw || typeof raw !== "object") return {}
+
+  const records: NonNullable<AccountStorageConfig["deletedEntryRecords"]> = {}
+
+  for (const [id, value] of Object.entries(raw)) {
+    if (!id || !value || typeof value !== "object") continue
+
+    const candidate = value as Partial<DeletedEntryRecord>
+    const kind = candidate.kind
+    const deletedAt = Number(candidate.deletedAt)
+    const entryUpdatedAt = Number(candidate.entryUpdatedAt)
+
+    if (kind !== "account" && kind !== "bookmark") continue
+    if (!Number.isFinite(deletedAt) || deletedAt <= 0) continue
+
+    records[id] = {
+      kind,
+      deletedAt,
+      entryUpdatedAt: Number.isFinite(entryUpdatedAt) ? entryUpdatedAt : 0,
+    }
+  }
+
+  return records
+}
+
+/**
+ * Keeps only deletion markers for the selected account/bookmark domains.
+ */
+function filterWebdavDeletedEntryRecordsBySelection(input: {
+  records: AccountStorageConfig["deletedEntryRecords"]
+  includeAccounts: boolean
+  includeBookmarks: boolean
+}) {
+  const filtered: NonNullable<AccountStorageConfig["deletedEntryRecords"]> = {}
+  const includeKind = (kind: DeletedEntryKind) =>
+    (kind === "account" && input.includeAccounts) ||
+    (kind === "bookmark" && input.includeBookmarks)
+
+  for (const [id, record] of Object.entries(input.records || {})) {
+    if (!includeKind(record.kind)) continue
+    filtered[id] = record
+  }
+
+  return filtered
+}
+
+/**
+ * Merges local and remote deletion markers, keeping the newest marker per id.
+ */
+function mergeWebdavDeletedEntryRecords(input: {
+  localRecords: AccountStorageConfig["deletedEntryRecords"]
+  remoteRecords: AccountStorageConfig["deletedEntryRecords"]
+  includeAccounts: boolean
+  includeBookmarks: boolean
+}) {
+  const records: NonNullable<AccountStorageConfig["deletedEntryRecords"]> = {}
+
+  for (const source of [input.remoteRecords, input.localRecords]) {
+    const selected = filterWebdavDeletedEntryRecordsBySelection({
+      records: source,
+      includeAccounts: input.includeAccounts,
+      includeBookmarks: input.includeBookmarks,
+    })
+
+    for (const [id, record] of Object.entries(selected)) {
+      const current = records[id]
+      if (!current || record.deletedAt > current.deletedAt) {
+        records[id] = record
+      }
+    }
+  }
+
+  return records
 }
 
 /**
@@ -223,6 +307,9 @@ function readWebdavBackupAccountsSection(
     ),
     orderedAccountIds: normalizeWebdavStringIdList(
       rawAccountsConfig?.orderedAccountIds,
+    ),
+    deletedEntryRecords: normalizeWebdavDeletedEntryRecords(
+      rawAccountsConfig?.deletedEntryRecords,
     ),
     lastUpdated:
       typeof rawAccountsConfig?.last_updated === "number"
@@ -308,6 +395,7 @@ function buildWebdavAccountsSection(input: {
   bookmarks: WebdavBackupEntry[]
   pinnedAccountIds: string[]
   orderedAccountIds: string[]
+  deletedEntryRecords: AccountStorageConfig["deletedEntryRecords"]
   lastUpdated: number
 }): Record<string, unknown> | undefined {
   if (!input.shouldInclude) {
@@ -319,6 +407,7 @@ function buildWebdavAccountsSection(input: {
     ...(input.includeBookmarks ? { bookmarks: input.bookmarks } : {}),
     pinnedAccountIds: input.pinnedAccountIds,
     orderedAccountIds: input.orderedAccountIds,
+    deletedEntryRecords: input.deletedEntryRecords || {},
     last_updated: input.lastUpdated,
   }
 }
@@ -542,14 +631,29 @@ export function mergeWebdavBackupPayloadBySelection(input: {
 
   const incomingPinnedAccountIds = localAccountsSection.pinnedAccountIds
   const incomingOrderedAccountIds = localAccountsSection.orderedAccountIds
+  const incomingDeletedEntryRecords = localAccountsSection.deletedEntryRecords
   const remotePinnedAccountIds = remotePresence.hasPinnedAccountIds
     ? normalizeWebdavStringIdList(normalizedRemote.pinnedAccountIds)
     : []
   const remoteOrderedAccountIds = remotePresence.hasOrderedAccountIds
     ? normalizeWebdavStringIdList(normalizedRemote.orderedAccountIds)
     : []
+  const remoteDeletedEntryRecords = normalizedRemote.deletedEntryRecords || {}
 
   const shouldMergeAccountsSection = selection.accounts || selection.bookmarks
+  const deletedEntryRecords = shouldMergeAccountsSection
+    ? mergeWebdavDeletedEntryRecords({
+        localRecords: incomingDeletedEntryRecords,
+        remoteRecords: remoteDeletedEntryRecords,
+        includeAccounts: selection.accounts || remotePresence.hasAccountsList,
+        includeBookmarks:
+          selection.bookmarks || remotePresence.hasBookmarksList,
+      })
+    : filterWebdavDeletedEntryRecordsBySelection({
+        records: remoteDeletedEntryRecords,
+        includeAccounts: remotePresence.hasAccountsList,
+        includeBookmarks: remotePresence.hasBookmarksList,
+      })
   const pinnedAccountIds = shouldMergeAccountsSection
     ? mergePrioritizedWebdavIdList({
         prioritizedIds: incomingPinnedAccountIds,
@@ -590,6 +694,7 @@ export function mergeWebdavBackupPayloadBySelection(input: {
     bookmarks,
     pinnedAccountIds,
     orderedAccountIds,
+    deletedEntryRecords,
     lastUpdated: shouldMergeAccountsSection
       ? localAccountsSection.lastUpdated
       : normalizedRemote.accountsTimestamp || backup.timestamp,
@@ -802,6 +907,12 @@ export function createWebdavImportPayloadBySelection(input: {
       bookmarks: bookmarksToImport,
       pinnedAccountIds,
       orderedAccountIds,
+      deletedEntryRecords: mergeWebdavDeletedEntryRecords({
+        localRecords: localState.accountsConfig.deletedEntryRecords,
+        remoteRecords: normalizedRemote.deletedEntryRecords,
+        includeAccounts: importAccountsFromRemote,
+        includeBookmarks: importBookmarksFromRemote,
+      }),
       last_updated: Date.now(),
     }
   }
@@ -886,6 +997,11 @@ export function filterWebdavBackupPayloadBySelection(input: {
     localAccountsSection.orderedAccountIds,
     entryIdSet,
   )
+  const deletedEntryRecords = filterWebdavDeletedEntryRecordsBySelection({
+    records: localAccountsSection.deletedEntryRecords,
+    includeAccounts: selection.accounts,
+    includeBookmarks: selection.bookmarks,
+  })
 
   const shouldIncludeAccounts = selection.accounts || selection.bookmarks
 
@@ -898,6 +1014,7 @@ export function filterWebdavBackupPayloadBySelection(input: {
     bookmarks,
     pinnedAccountIds,
     orderedAccountIds,
+    deletedEntryRecords,
     lastUpdated: localAccountsSection.lastUpdated,
   })
 

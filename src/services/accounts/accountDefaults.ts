@@ -76,6 +76,37 @@ const coerceStringArray = (input: unknown): string[] => {
 }
 
 /**
+ * Normalizes persisted deletion markers used by WebDAV sync reconciliation.
+ */
+function normalizeDeletedEntryRecords(
+  raw: unknown,
+): AccountStorageConfig["deletedEntryRecords"] {
+  if (!raw || typeof raw !== "object") return {}
+
+  const records: NonNullable<AccountStorageConfig["deletedEntryRecords"]> = {}
+
+  for (const [id, value] of Object.entries(raw)) {
+    if (!id || !value || typeof value !== "object") continue
+
+    const candidate = value as Record<string, unknown>
+    const kind = candidate.kind
+    const deletedAt = coerceNumber(candidate.deletedAt, 0)
+    const entryUpdatedAt = coerceNumber(candidate.entryUpdatedAt, 0)
+
+    if (kind !== "account" && kind !== "bookmark") continue
+    if (deletedAt <= 0) continue
+
+    records[id] = {
+      kind,
+      deletedAt,
+      entryUpdatedAt,
+    }
+  }
+
+  return records
+}
+
+/**
  * Creates the canonical default shape for `AccountStorageConfig`.
  *
  * All top-level collections are present as arrays and `last_updated` is set to `now`.
@@ -88,6 +119,7 @@ export function createDefaultAccountStorageConfig(
     bookmarks: [],
     pinnedAccountIds: [],
     orderedAccountIds: [],
+    deletedEntryRecords: {},
     last_updated: now,
   }
 }
@@ -111,6 +143,7 @@ export function normalizeAccountStorageConfigForRead(
     orderedAccountIds: Array.isArray(raw?.orderedAccountIds)
       ? raw.orderedAccountIds
       : [],
+    deletedEntryRecords: normalizeDeletedEntryRecords(raw?.deletedEntryRecords),
     last_updated:
       typeof raw?.last_updated === "number" ? raw.last_updated : now,
   }
@@ -136,6 +169,9 @@ export function normalizeAccountStorageConfigForWrite(
     orderedAccountIds: Array.isArray(config.orderedAccountIds)
       ? config.orderedAccountIds
       : [],
+    deletedEntryRecords: normalizeDeletedEntryRecords(
+      config.deletedEntryRecords,
+    ),
     last_updated: now,
   }
 }

@@ -1055,15 +1055,29 @@ describe("accountStorage core behaviors", () => {
   })
 
   it("deleteAccount should remove account data and pinned references", async () => {
-    const account = createAccount({ id: "to-delete" })
-    seedStorage([account], ["to-delete"])
+    vi.useFakeTimers()
+    const deletedAt = new Date("2026-05-22T01:00:00Z")
 
-    await accountStorage.deleteAccount("to-delete")
+    try {
+      vi.setSystemTime(deletedAt)
 
-    const config = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
-    expect(config?.accounts).toHaveLength(0)
-    expect(config?.pinnedAccountIds).toEqual([])
-    expect(pruneStatusForAccountIdsMock).toHaveBeenCalledWith(["to-delete"])
+      const account = createAccount({ id: "to-delete" })
+      seedStorage([account], ["to-delete"])
+
+      await accountStorage.deleteAccount("to-delete")
+
+      const config = storageData.get(ACCOUNT_STORAGE_KEYS.ACCOUNTS)
+      expect(config?.accounts).toHaveLength(0)
+      expect(config?.pinnedAccountIds).toEqual([])
+      expect(config?.deletedEntryRecords?.["to-delete"]).toEqual({
+        kind: "account",
+        deletedAt: deletedAt.getTime(),
+        entryUpdatedAt: account.updated_at,
+      })
+      expect(pruneStatusForAccountIdsMock).toHaveBeenCalledWith(["to-delete"])
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("deleteAccount should surface a missing-account error", async () => {

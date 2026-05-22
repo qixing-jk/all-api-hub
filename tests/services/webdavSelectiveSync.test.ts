@@ -17,6 +17,18 @@ describe("filterWebdavBackupPayloadBySelection", () => {
       bookmarks: [{ id: "b1" }],
       pinnedAccountIds: ["b1", "a2"],
       orderedAccountIds: ["b1", "a1", "a2"],
+      deletedEntryRecords: {
+        "a-deleted": {
+          kind: "account",
+          deletedAt: 200,
+          entryUpdatedAt: 100,
+        },
+        "b-deleted": {
+          kind: "bookmark",
+          deletedAt: 210,
+          entryUpdatedAt: 110,
+        },
+      },
       last_updated: 456,
     },
     tagStore: { version: 1, tagsById: {} },
@@ -63,6 +75,13 @@ describe("filterWebdavBackupPayloadBySelection", () => {
     expect((payload.accounts as any).bookmarks).toBeUndefined()
     expect((payload.accounts as any).pinnedAccountIds).toEqual(["a2"])
     expect((payload.accounts as any).orderedAccountIds).toEqual(["a1", "a2"])
+    expect((payload.accounts as any).deletedEntryRecords).toEqual({
+      "a-deleted": {
+        kind: "account",
+        deletedAt: 200,
+        entryUpdatedAt: 100,
+      },
+    })
   })
 
   it("omits unselected sections and filters bookmarks-only payload", () => {
@@ -85,6 +104,13 @@ describe("filterWebdavBackupPayloadBySelection", () => {
     expect((payload.accounts as any).bookmarks).toEqual([{ id: "b1" }])
     expect((payload.accounts as any).pinnedAccountIds).toEqual(["b1"])
     expect((payload.accounts as any).orderedAccountIds).toEqual(["b1"])
+    expect((payload.accounts as any).deletedEntryRecords).toEqual({
+      "b-deleted": {
+        kind: "bookmark",
+        deletedAt: 210,
+        entryUpdatedAt: 110,
+      },
+    })
   })
 
   it("omits taggable sections when only preferences are selected", () => {
@@ -261,6 +287,13 @@ describe("mergeWebdavBackupPayloadBySelection", () => {
         bookmarks: [{ id: "local-bookmark" }],
         pinnedAccountIds: ["local-account"],
         orderedAccountIds: ["local-account"],
+        deletedEntryRecords: {
+          "local-deleted-account": {
+            kind: "account",
+            deletedAt: 456,
+            entryUpdatedAt: 123,
+          },
+        },
         last_updated: 456,
       },
       tagStore: { version: 1, tagsById: {} },
@@ -276,6 +309,13 @@ describe("mergeWebdavBackupPayloadBySelection", () => {
         bookmarks: [{ id: "remote-bookmark" }],
         pinnedAccountIds: ["remote-bookmark", "remote-account"],
         orderedAccountIds: ["remote-bookmark", "remote-account"],
+        deletedEntryRecords: {
+          "remote-deleted-bookmark": {
+            kind: "bookmark",
+            deletedAt: 123,
+            entryUpdatedAt: 12,
+          },
+        },
         last_updated: 123,
       },
       tagStore: { version: 1, tagsById: {} },
@@ -308,6 +348,18 @@ describe("mergeWebdavBackupPayloadBySelection", () => {
       "local-account",
       "remote-bookmark",
     ])
+    expect((payload.accounts as any).deletedEntryRecords).toEqual({
+      "remote-deleted-bookmark": {
+        kind: "bookmark",
+        deletedAt: 123,
+        entryUpdatedAt: 12,
+      },
+      "local-deleted-account": {
+        kind: "account",
+        deletedAt: 456,
+        entryUpdatedAt: 123,
+      },
+    })
   })
 
   it("preserves legacy remote api credential profiles when they are unselected", () => {

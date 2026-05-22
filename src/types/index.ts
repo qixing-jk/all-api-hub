@@ -294,6 +294,14 @@ export interface SiteBookmark {
   updated_at: number
 }
 
+export type DeletedEntryKind = "account" | "bookmark"
+
+export interface DeletedEntryRecord {
+  kind: DeletedEntryKind
+  deletedAt: number
+  entryUpdatedAt: number
+}
+
 /**
  * Account and bookmark storage schema persisted in the extension's storage.
  */
@@ -313,6 +321,11 @@ export interface AccountStorageConfig {
    * Manual ordering of entries (full list of ids), newest change first.
    */
   orderedAccountIds: string[]
+  /**
+   * Best-effort deletion markers used by WebDAV merge sync to avoid restoring
+   * stale remote entries that were intentionally deleted on this device.
+   */
+  deletedEntryRecords?: Record<string, DeletedEntryRecord>
   last_updated: number
 }
 

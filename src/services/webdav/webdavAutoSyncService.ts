@@ -19,7 +19,13 @@ import {
   createDefaultTagStore,
   sanitizeTagStore,
 } from "~/services/tags/tagStoreUtils"
-import type { SiteAccount, SiteBookmark, TagStore } from "~/types"
+import type {
+  AccountStorageConfig,
+  DeletedEntryKind,
+  SiteAccount,
+  SiteBookmark,
+  TagStore,
+} from "~/types"
 import {
   API_CREDENTIAL_PROFILES_CONFIG_VERSION,
   type ApiCredentialProfilesConfig,
@@ -515,6 +521,7 @@ class WebdavAutoSyncService {
     bookmarks: SiteBookmark[]
     pinnedAccountIds: string[]
     orderedAccountIds: string[]
+    deletedEntryRecords?: AccountStorageConfig["deletedEntryRecords"]
     tagStore: TagStore
     preferences: UserPreferences
     channelConfigs: ChannelConfigMap
@@ -528,6 +535,7 @@ class WebdavAutoSyncService {
         bookmarks: input.bookmarks,
         pinnedAccountIds: input.pinnedAccountIds,
         orderedAccountIds: input.orderedAccountIds,
+        deletedEntryRecords: input.deletedEntryRecords || {},
         last_updated: Date.now(),
       },
       tagStore: input.tagStore,
@@ -584,6 +592,7 @@ class WebdavAutoSyncService {
         accounts: localAccounts,
         bookmarks: localBookmarks,
       }),
+      deletedEntryRecords: localAccountsConfig.deletedEntryRecords,
       tagStore: localTagStore,
       preferences: localPreferences,
       channelConfigs: localChannelConfigs,
@@ -677,6 +686,7 @@ class WebdavAutoSyncService {
       localApiCredentialProfiles
     let pinnedAccountIdsToSave: string[] = localPinnedAccountIds
     let orderedAccountIdsToSave: string[] = localOrderedAccountIds
+    let deletedEntryRecordsToSave = localAccountsConfig.deletedEntryRecords
 
     if (strategy === WEBDAV_SYNC_STRATEGIES.MERGE && remoteData) {
       // 合并策略
@@ -688,6 +698,7 @@ class WebdavAutoSyncService {
         {
           accounts: localAccountsConfig.accounts,
           bookmarks: localBookmarks,
+          deletedEntryRecords: localAccountsConfig.deletedEntryRecords,
           accountsTimestamp: localAccountsConfig.last_updated,
           tagStore: localTagStore,
           preferences: localPreferences,
@@ -699,6 +710,7 @@ class WebdavAutoSyncService {
         {
           accounts: normalizedRemote.accounts,
           bookmarks: normalizedRemote.bookmarks,
+          deletedEntryRecords: normalizedRemote.deletedEntryRecords,
           accountsTimestamp: normalizedRemote.accountsTimestamp,
           tagStore: sanitizeTagStore(
             normalizedRemote.tagStore ?? createDefaultTagStore(),
@@ -720,6 +732,7 @@ class WebdavAutoSyncService {
       preferencesToSave = mergeResult.preferences
       channelConfigsToSave = mergeResult.channelConfigs
       apiCredentialProfilesToSave = mergeResult.apiCredentialProfiles
+      deletedEntryRecordsToSave = mergeResult.deletedEntryRecords
 
       const entryIdSet = new Set<string>([
         ...accountsToSave.map((account) => account.id),
@@ -950,6 +963,7 @@ class WebdavAutoSyncService {
         syncDataSelection,
         accountsToSave,
         bookmarksToSave,
+        deletedEntryRecordsToSave,
         pinnedAccountIdsToSave,
         orderedAccountIdsToSave,
         tagStoreToSave,
@@ -970,6 +984,7 @@ class WebdavAutoSyncService {
       bookmarks: bookmarksToSave,
       pinnedAccountIds: pinnedAccountIdsToSave,
       orderedAccountIds: orderedAccountIdsToSave,
+      deletedEntryRecords: deletedEntryRecordsToSave,
       tagStore: tagStoreToSave,
       preferences: preferencesToSave,
       channelConfigs: channelConfigsToSave,
@@ -1000,6 +1015,7 @@ class WebdavAutoSyncService {
     syncDataSelection: WebDAVSyncDataSelection
     accountsToSave: SiteAccount[]
     bookmarksToSave: SiteBookmark[]
+    deletedEntryRecordsToSave?: AccountStorageConfig["deletedEntryRecords"]
     pinnedAccountIdsToSave: string[]
     orderedAccountIdsToSave: string[]
     tagStoreToSave: TagStore
@@ -1011,6 +1027,7 @@ class WebdavAutoSyncService {
       bookmarks?: SiteBookmark[]
       pinnedAccountIds?: string[]
       orderedAccountIds?: string[]
+      deletedEntryRecords?: AccountStorageConfig["deletedEntryRecords"]
     }
     localTagStore: TagStore
     localPreferences: UserPreferences
@@ -1034,6 +1051,7 @@ class WebdavAutoSyncService {
                 pinnedAccountIds: input.pinnedAccountIdsToSave,
                 orderedAccountIds: input.orderedAccountIdsToSave,
                 bookmarks: input.bookmarksToSave,
+                deletedEntryRecords: input.deletedEntryRecordsToSave,
               })
 
               rollbackSteps.push(async () => {
@@ -1044,6 +1062,8 @@ class WebdavAutoSyncService {
                     input.localAccountsConfig.pinnedAccountIds || [],
                   orderedAccountIds:
                     input.localAccountsConfig.orderedAccountIds || [],
+                  deletedEntryRecords:
+                    input.localAccountsConfig.deletedEntryRecords,
                 })
               })
             }
@@ -1116,6 +1136,7 @@ class WebdavAutoSyncService {
     local: {
       accounts: SiteAccount[]
       bookmarks: SiteBookmark[]
+      deletedEntryRecords?: AccountStorageConfig["deletedEntryRecords"]
       accountsTimestamp: number
       tagStore: TagStore
       preferences: UserPreferences
@@ -1126,6 +1147,7 @@ class WebdavAutoSyncService {
     remote: {
       accounts: SiteAccount[]
       bookmarks: SiteBookmark[]
+      deletedEntryRecords?: AccountStorageConfig["deletedEntryRecords"]
       accountsTimestamp: number
       tagStore: TagStore
       preferences: UserPreferences
@@ -1141,6 +1163,9 @@ class WebdavAutoSyncService {
     preferences: UserPreferences
     channelConfigs: ChannelConfigMap
     apiCredentialProfiles: ApiCredentialProfilesConfig
+    deletedEntryRecords: NonNullable<
+      AccountStorageConfig["deletedEntryRecords"]
+    >
   } {
     logger.debug("开始合并数据", {
       localAccountCount: local.accounts.length,
@@ -1179,9 +1204,24 @@ class WebdavAutoSyncService {
 
     // 合并账号数据
     const accountMap = new Map<string, SiteAccount>()
+    const deletedEntryRecords = WebdavAutoSyncService.mergeDeletedEntryRecords({
+      localRecords: local.deletedEntryRecords,
+      remoteRecords: remote.deletedEntryRecords,
+    })
 
     // 首先添加本地账号
     tagMerge.localAccounts.forEach((account) => {
+      if (
+        WebdavAutoSyncService.isEntrySuppressedByDeletionRecord({
+          id: account.id,
+          kind: "account",
+          entryUpdatedAt: account.updated_at,
+          deletedEntryRecords,
+        })
+      ) {
+        return
+      }
+
       accountMap.set(account.id, account)
     })
 
@@ -1191,6 +1231,21 @@ class WebdavAutoSyncService {
         const localAccount = accountMap.get(remoteAccount.id)
 
         if (!localAccount) {
+          if (
+            WebdavAutoSyncService.isEntrySuppressedByDeletionRecord({
+              id: remoteAccount.id,
+              kind: "account",
+              entryUpdatedAt: remoteAccount.updated_at,
+              deletedEntryRecords,
+            })
+          ) {
+            logger.debug("忽略已删除账号的旧远程副本", {
+              accountId: remoteAccount.id,
+              siteName: remoteAccount.site_name,
+            })
+            return
+          }
+
           // 远程账号在本地不存在，直接添加
           accountMap.set(remoteAccount.id, remoteAccount)
           logger.debug("添加远程账号", {
@@ -1223,6 +1278,17 @@ class WebdavAutoSyncService {
 
     const bookmarkMap = new Map<string, SiteBookmark>()
     tagMerge.localBookmarks.forEach((bookmark) => {
+      if (
+        WebdavAutoSyncService.isEntrySuppressedByDeletionRecord({
+          id: bookmark.id,
+          kind: "bookmark",
+          entryUpdatedAt: bookmark.updated_at,
+          deletedEntryRecords,
+        })
+      ) {
+        return
+      }
+
       bookmarkMap.set(bookmark.id, bookmark)
     })
 
@@ -1230,6 +1296,17 @@ class WebdavAutoSyncService {
       tagMerge.remoteBookmarks.forEach((remoteBookmark) => {
         const localBookmark = bookmarkMap.get(remoteBookmark.id)
         if (!localBookmark) {
+          if (
+            WebdavAutoSyncService.isEntrySuppressedByDeletionRecord({
+              id: remoteBookmark.id,
+              kind: "bookmark",
+              entryUpdatedAt: remoteBookmark.updated_at,
+              deletedEntryRecords,
+            })
+          ) {
+            return
+          }
+
           bookmarkMap.set(remoteBookmark.id, remoteBookmark)
           return
         }
@@ -1243,6 +1320,13 @@ class WebdavAutoSyncService {
     }
 
     const mergedBookmarks = Array.from(bookmarkMap.values())
+
+    const deletedEntryRecordsToKeep =
+      WebdavAutoSyncService.pruneResolvedDeletedEntryRecords({
+        records: deletedEntryRecords,
+        accounts: mergedAccounts,
+        bookmarks: mergedBookmarks,
+      })
 
     const apiCredentialProfiles = selection.apiCredentialProfiles
       ? mergeApiCredentialProfilesConfigs({
@@ -1323,7 +1407,58 @@ class WebdavAutoSyncService {
       preferences,
       channelConfigs: mergedChannelConfigs,
       apiCredentialProfiles,
+      deletedEntryRecords: deletedEntryRecordsToKeep,
     }
+  }
+
+  private static mergeDeletedEntryRecords(input: {
+    localRecords?: AccountStorageConfig["deletedEntryRecords"]
+    remoteRecords?: AccountStorageConfig["deletedEntryRecords"]
+  }): NonNullable<AccountStorageConfig["deletedEntryRecords"]> {
+    const records: NonNullable<AccountStorageConfig["deletedEntryRecords"]> = {}
+
+    for (const source of [input.remoteRecords, input.localRecords]) {
+      for (const [id, record] of Object.entries(source || {})) {
+        const current = records[id]
+        if (!current || record.deletedAt > current.deletedAt) {
+          records[id] = record
+        }
+      }
+    }
+
+    return records
+  }
+
+  private static isEntrySuppressedByDeletionRecord(input: {
+    id: string
+    kind: DeletedEntryKind
+    entryUpdatedAt?: number
+    deletedEntryRecords: AccountStorageConfig["deletedEntryRecords"]
+  }) {
+    const record = input.deletedEntryRecords?.[input.id]
+    if (!record || record.kind !== input.kind) {
+      return false
+    }
+
+    const entryUpdatedAt =
+      typeof input.entryUpdatedAt === "number" ? input.entryUpdatedAt : 0
+    const deletionBoundary = Math.max(record.deletedAt, record.entryUpdatedAt)
+    return entryUpdatedAt <= deletionBoundary
+  }
+
+  private static pruneResolvedDeletedEntryRecords(input: {
+    records: NonNullable<AccountStorageConfig["deletedEntryRecords"]>
+    accounts: SiteAccount[]
+    bookmarks: SiteBookmark[]
+  }) {
+    const records = { ...input.records }
+    for (const account of input.accounts) {
+      delete records[account.id]
+    }
+    for (const bookmark of input.bookmarks) {
+      delete records[bookmark.id]
+    }
+    return records
   }
 
   /**

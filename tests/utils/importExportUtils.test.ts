@@ -595,6 +595,7 @@ describe("normalizeBackupForMerge", () => {
       bookmarks: [],
       pinnedAccountIds: [],
       orderedAccountIds: [],
+      deletedEntryRecords: {},
       accountsTimestamp: 0,
       preferences: null,
       channelConfigs: null,
@@ -623,6 +624,7 @@ describe("normalizeBackupForMerge", () => {
     expect(result.bookmarks).toEqual([])
     expect(result.pinnedAccountIds).toEqual([])
     expect(result.orderedAccountIds).toEqual([])
+    expect(result.deletedEntryRecords).toEqual({})
     expect(result.accountsTimestamp).toBe(456)
     expect(result.preferences).toEqual({ themeMode: "dark" })
     expect(result.channelConfigs).toEqual({ 1: { enabled: true } })

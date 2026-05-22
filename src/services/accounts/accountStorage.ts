@@ -18,6 +18,8 @@ import {
   SiteHealthStatus,
   type AccountStats,
   type AccountStorageConfig,
+  type DeletedEntryKind,
+  type DeletedEntryRecord,
   type DisplaySiteData,
   type SiteAccount,
   type SiteBookmark,
@@ -92,6 +94,19 @@ class AccountStorageService {
     account: Pick<SiteAccount, "excludeFromTotalBalance">,
   ) {
     return account.excludeFromTotalBalance
+  }
+
+  private static createDeletedEntryRecord(input: {
+    kind: DeletedEntryKind
+    entryUpdatedAt?: number
+    now: number
+  }): DeletedEntryRecord {
+    return {
+      kind: input.kind,
+      deletedAt: input.now,
+      entryUpdatedAt:
+        typeof input.entryUpdatedAt === "number" ? input.entryUpdatedAt : 0,
+    }
   }
 
   /**
@@ -525,6 +540,7 @@ class AccountStorageService {
     try {
       const deleted = await this.mutateStorageConfig((config) => {
         const accounts = config.accounts
+        const deletedAccount = accounts.find((account) => account.id === id)
         const filteredAccounts = accounts.filter((account) => account.id !== id)
 
         if (filteredAccounts.length === accounts.length) {
@@ -545,6 +561,15 @@ class AccountStorageService {
         config.orderedAccountIds = config.orderedAccountIds.filter(
           (orderedId) => orderedId !== id,
         )
+        const now = Date.now()
+        config.deletedEntryRecords = {
+          ...(config.deletedEntryRecords || {}),
+          [id]: AccountStorageService.createDeletedEntryRecord({
+            kind: "account",
+            entryUpdatedAt: deletedAccount?.updated_at,
+            now,
+          }),
+        }
         return { result: true, changed: true }
       })
 
@@ -577,9 +602,10 @@ class AccountStorageService {
     try {
       const result = await this.mutateStorageConfig((config) => {
         const accounts = config.accounts
-        const deletedIds = accounts
-          .filter((account) => idSet.has(account.id))
-          .map((account) => account.id)
+        const deletedAccounts = accounts.filter((account) =>
+          idSet.has(account.id),
+        )
+        const deletedIds = deletedAccounts.map((account) => account.id)
         const filteredAccounts = accounts.filter(
           (account) => !idSet.has(account.id),
         )
@@ -599,6 +625,20 @@ class AccountStorageService {
         config.orderedAccountIds = config.orderedAccountIds.filter(
           (orderedId) => !idSet.has(orderedId),
         )
+        const now = Date.now()
+        config.deletedEntryRecords = {
+          ...(config.deletedEntryRecords || {}),
+          ...Object.fromEntries(
+            deletedAccounts.map((account) => [
+              account.id,
+              AccountStorageService.createDeletedEntryRecord({
+                kind: "account",
+                entryUpdatedAt: account.updated_at,
+                now,
+              }),
+            ]),
+          ),
+        }
         return { result: { deletedCount, deletedIds }, changed: true }
       })
 
@@ -1461,6 +1501,7 @@ class AccountStorageService {
     bookmarks?: SiteBookmark[]
     pinnedAccountIds?: string[]
     orderedAccountIds?: string[]
+    deletedEntryRecords?: AccountStorageConfig["deletedEntryRecords"]
   }): Promise<{ migratedCount: number }> {
     return this.withStorageWriteLock(async () => {
       const backupConfig = this.cloneConfig(await this.getStorageConfig())
@@ -1505,12 +1546,21 @@ class AccountStorageService {
             )
           : filteredOrderedIds
 
+        const deletedEntryRecords = {
+          ...(backupConfig.deletedEntryRecords || {}),
+          ...(data.deletedEntryRecords || {}),
+        }
+        for (const id of entryIds) {
+          delete deletedEntryRecords[id]
+        }
+
         const nextConfig = normalizeAccountStorageConfigForWrite({
           ...backupConfig,
           accounts: normalizedAccounts,
           bookmarks: bookmarksToImport,
           pinnedAccountIds: pinnedToPersist,
           orderedAccountIds: orderedToPersist,
+          deletedEntryRecords,
         })
 
         await this.storage.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, nextConfig)
@@ -1950,6 +2000,16 @@ class AccountStorageService {
         config.orderedAccountIds = config.orderedAccountIds.filter(
           (orderedId) => orderedId !== id,
         )
+        const now = Date.now()
+        const current = bookmarks.find((bookmark) => bookmark.id === id)
+        config.deletedEntryRecords = {
+          ...(config.deletedEntryRecords || {}),
+          [id]: AccountStorageService.createDeletedEntryRecord({
+            kind: "bookmark",
+            entryUpdatedAt: current?.updated_at,
+            now,
+          }),
+        }
         return { result: true, changed: true }
       })
     } catch (error) {

@@ -293,6 +293,7 @@ export function normalizeBackupForMerge(
   bookmarks: any[]
   pinnedAccountIds: string[]
   orderedAccountIds: string[]
+  deletedEntryRecords: AccountStorageConfig["deletedEntryRecords"]
   accountsTimestamp: number
   preferences: any | null
   channelConfigs: ChannelConfigMap | null
@@ -305,6 +306,7 @@ export function normalizeBackupForMerge(
       bookmarks: [],
       pinnedAccountIds: [],
       orderedAccountIds: [],
+      deletedEntryRecords: {},
       accountsTimestamp: 0,
       preferences: null,
       channelConfigs: null,
@@ -335,6 +337,7 @@ function normalizeV2BackupForMerge(
   bookmarks: any[]
   pinnedAccountIds: string[]
   orderedAccountIds: string[]
+  deletedEntryRecords: AccountStorageConfig["deletedEntryRecords"]
   accountsTimestamp: number
   preferences: any | null
   channelConfigs: ChannelConfigMap | null
@@ -357,6 +360,11 @@ function normalizeV2BackupForMerge(
   const orderedAccountIds = Array.isArray(accountsConfig.orderedAccountIds)
     ? accountsConfig.orderedAccountIds
     : []
+  const deletedEntryRecords =
+    accountsConfig.deletedEntryRecords &&
+    typeof accountsConfig.deletedEntryRecords === "object"
+      ? (accountsConfig.deletedEntryRecords as AccountStorageConfig["deletedEntryRecords"])
+      : {}
   const accountsTimestamp =
     typeof accountsConfig.last_updated === "number"
       ? accountsConfig.last_updated
@@ -373,6 +381,7 @@ function normalizeV2BackupForMerge(
     bookmarks,
     pinnedAccountIds,
     orderedAccountIds,
+    deletedEntryRecords,
     accountsTimestamp,
     preferences: data.preferences || localPreferences,
     channelConfigs,
@@ -394,6 +403,7 @@ function normalizeV1BackupForMerge(
   bookmarks: any[]
   pinnedAccountIds: string[]
   orderedAccountIds: string[]
+  deletedEntryRecords: AccountStorageConfig["deletedEntryRecords"]
   accountsTimestamp: number
   preferences: any | null
   channelConfigs: ChannelConfigMap | null
@@ -426,6 +436,11 @@ function normalizeV1BackupForMerge(
   const orderedAccountIds = Array.isArray(accountsConfig.orderedAccountIds)
     ? accountsConfig.orderedAccountIds
     : []
+  const deletedEntryRecords =
+    accountsConfig.deletedEntryRecords &&
+    typeof accountsConfig.deletedEntryRecords === "object"
+      ? (accountsConfig.deletedEntryRecords as AccountStorageConfig["deletedEntryRecords"])
+      : {}
 
   const accountsTimestamp =
     typeof accountsConfig.last_updated === "number"
@@ -447,6 +462,7 @@ function normalizeV1BackupForMerge(
     bookmarks,
     pinnedAccountIds,
     orderedAccountIds,
+    deletedEntryRecords,
     accountsTimestamp,
     preferences,
     channelConfigs,
@@ -513,6 +529,9 @@ async function importV2Backup(
       bookmarks,
       pinnedAccountIds,
       orderedAccountIds,
+      deletedEntryRecords: !Array.isArray(accountsConfig)
+        ? (accountsConfig as AccountStorageConfig).deletedEntryRecords
+        : undefined,
     })
     // Ensure legacy imports (string tags) are migrated to tag ids.
     await tagStorage.ensureLegacyMigration()

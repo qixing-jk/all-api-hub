@@ -206,6 +206,101 @@ describe("WebdavAutoSyncService.mergeData", () => {
     expect(a2.site_name).toBe("remote-2")
   })
 
+  it("keeps deleted local accounts from being restored by older remote backups", () => {
+    const local: any = {
+      accounts: [{ id: "kept", site_name: "local-kept", updated_at: 300 }],
+      bookmarks: [],
+      deletedEntryRecords: {
+        deleted: {
+          kind: "account",
+          deletedAt: 200,
+          entryUpdatedAt: 100,
+        },
+      },
+      accountsTimestamp: 200,
+      tagStore: { version: 1, tagsById: {} },
+      preferences: basePrefsLocal,
+      preferencesTimestamp: 50,
+      channelConfigs: {},
+      apiCredentialProfiles: emptyApiCredentialProfiles,
+    }
+
+    const remote: any = {
+      accounts: [
+        { id: "deleted", site_name: "remote-deleted", updated_at: 100 },
+        { id: "newer", site_name: "remote-newer", updated_at: 250 },
+      ],
+      bookmarks: [],
+      deletedEntryRecords: {},
+      accountsTimestamp: 150,
+      tagStore: { version: 1, tagsById: {} },
+      preferences: basePrefsRemote,
+      preferencesTimestamp: 60,
+      channelConfigs: {},
+      apiCredentialProfiles: emptyApiCredentialProfiles,
+    }
+
+    const result = callMerge(local, remote)
+
+    expect(result.accounts.map((account: any) => account.id).sort()).toEqual([
+      "kept",
+      "newer",
+    ])
+    expect(result.deletedEntryRecords).toEqual({
+      deleted: {
+        kind: "account",
+        deletedAt: 200,
+        entryUpdatedAt: 100,
+      },
+    })
+  })
+
+  it("applies remote account deletion markers to stale local accounts", () => {
+    const local: any = {
+      accounts: [
+        { id: "deleted", site_name: "local-deleted", updated_at: 100 },
+        { id: "kept", site_name: "local-kept", updated_at: 300 },
+      ],
+      bookmarks: [],
+      deletedEntryRecords: {},
+      accountsTimestamp: 100,
+      tagStore: { version: 1, tagsById: {} },
+      preferences: basePrefsLocal,
+      preferencesTimestamp: 50,
+      channelConfigs: {},
+      apiCredentialProfiles: emptyApiCredentialProfiles,
+    }
+
+    const remote: any = {
+      accounts: [],
+      bookmarks: [],
+      deletedEntryRecords: {
+        deleted: {
+          kind: "account",
+          deletedAt: 200,
+          entryUpdatedAt: 100,
+        },
+      },
+      accountsTimestamp: 200,
+      tagStore: { version: 1, tagsById: {} },
+      preferences: basePrefsRemote,
+      preferencesTimestamp: 60,
+      channelConfigs: {},
+      apiCredentialProfiles: emptyApiCredentialProfiles,
+    }
+
+    const result = callMerge(local, remote)
+
+    expect(result.accounts.map((account: any) => account.id)).toEqual(["kept"])
+    expect(result.deletedEntryRecords).toEqual({
+      deleted: {
+        kind: "account",
+        deletedAt: 200,
+        entryUpdatedAt: 100,
+      },
+    })
+  })
+
   it("merges bookmarks by id choosing the most recently updated", () => {
     const local: any = {
       accounts: [],
