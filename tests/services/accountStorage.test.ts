@@ -522,66 +522,68 @@ describe("accountStorage core behaviors", () => {
 
   it("updateAccount advances user timestamp while refreshAccount preserves it", async () => {
     vi.useFakeTimers()
-    const initialNow = new Date(2026, 0, 2, 10, 0, 0)
-    const manualNow = new Date(2026, 0, 2, 11, 0, 0)
-    const refreshNow = new Date(2026, 0, 2, 12, 0, 0)
-    vi.setSystemTime(initialNow)
+    try {
+      const initialNow = new Date(2026, 0, 2, 10, 0, 0)
+      const manualNow = new Date(2026, 0, 2, 11, 0, 0)
+      const refreshNow = new Date(2026, 0, 2, 12, 0, 0)
+      vi.setSystemTime(initialNow)
 
-    const account = {
-      ...createAccount({
-        id: "timestamp-split",
-        site_type: "one-api",
-        site_url: "https://timestamp.example.com",
-        updated_at: initialNow.getTime(),
-      }),
-      user_updated_at: initialNow.getTime(),
-    } as SiteAccount & { user_updated_at: number }
-    seedStorage([account])
+      const account = {
+        ...createAccount({
+          id: "timestamp-split",
+          site_type: "one-api",
+          site_url: "https://timestamp.example.com",
+          updated_at: initialNow.getTime(),
+        }),
+        user_updated_at: initialNow.getTime(),
+      } as SiteAccount & { user_updated_at: number }
+      seedStorage([account])
 
-    vi.setSystemTime(manualNow)
-    const manualSuccess = await accountStorage.updateAccount(
-      "timestamp-split",
-      {
-        notes: "manual edit",
-      },
-    )
-
-    expect(manualSuccess).toBe(true)
-    const manuallyUpdated = (await accountStorage.getAccountById(
-      "timestamp-split",
-    )) as (SiteAccount & { user_updated_at: number }) | null
-    expect(manuallyUpdated?.updated_at).toBe(manualNow.getTime())
-    expect(manuallyUpdated?.user_updated_at).toBe(manualNow.getTime())
-
-    mockRefreshAccountData.mockResolvedValueOnce({
-      success: true,
-      data: {
-        quota: 42,
-        today_prompt_tokens: 0,
-        today_completion_tokens: 0,
-        today_quota_consumption: 0,
-        today_requests_count: 0,
-        today_income: 0,
-        checkIn: {
-          enableDetection: false,
+      vi.setSystemTime(manualNow)
+      const manualSuccess = await accountStorage.updateAccount(
+        "timestamp-split",
+        {
+          notes: "manual edit",
         },
-      },
-      healthStatus: {
-        status: SiteHealthStatus.Healthy,
-        message: "",
-      },
-    })
+      )
 
-    vi.setSystemTime(refreshNow)
-    await accountStorage.refreshAccount("timestamp-split", true)
+      expect(manualSuccess).toBe(true)
+      const manuallyUpdated = (await accountStorage.getAccountById(
+        "timestamp-split",
+      )) as (SiteAccount & { user_updated_at: number }) | null
+      expect(manuallyUpdated?.updated_at).toBe(manualNow.getTime())
+      expect(manuallyUpdated?.user_updated_at).toBe(manualNow.getTime())
 
-    const refreshed = (await accountStorage.getAccountById(
-      "timestamp-split",
-    )) as (SiteAccount & { user_updated_at: number }) | null
-    expect(refreshed?.updated_at).toBe(refreshNow.getTime())
-    expect(refreshed?.user_updated_at).toBe(manualNow.getTime())
+      mockRefreshAccountData.mockResolvedValueOnce({
+        success: true,
+        data: {
+          quota: 42,
+          today_prompt_tokens: 0,
+          today_completion_tokens: 0,
+          today_quota_consumption: 0,
+          today_requests_count: 0,
+          today_income: 0,
+          checkIn: {
+            enableDetection: false,
+          },
+        },
+        healthStatus: {
+          status: SiteHealthStatus.Healthy,
+          message: "",
+        },
+      })
 
-    vi.useRealTimers()
+      vi.setSystemTime(refreshNow)
+      await accountStorage.refreshAccount("timestamp-split", true)
+
+      const refreshed = (await accountStorage.getAccountById(
+        "timestamp-split",
+      )) as (SiteAccount & { user_updated_at: number }) | null
+      expect(refreshed?.updated_at).toBe(refreshNow.getTime())
+      expect(refreshed?.user_updated_at).toBe(manualNow.getTime())
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   it("updateAccount should not lose parallel updates to different accounts", async () => {
@@ -2668,6 +2670,61 @@ describe("accountStorage bookmarks", () => {
       expect(restored.bookmarks).toEqual([backupBookmark])
       expect(restored.pinnedAccountIds).toEqual(["backup-1", "bookmark-1"])
       expect(restored.orderedAccountIds).toEqual(["bookmark-1", "backup-1"])
+    })
+
+    it("importData keeps the newest deleted entry record when markers collide", async () => {
+      storageData.set(ACCOUNT_STORAGE_KEYS.ACCOUNTS, {
+        accounts: [],
+        bookmarks: [],
+        pinnedAccountIds: [],
+        orderedAccountIds: [],
+        deletedEntryRecords: {
+          "same-id": {
+            kind: "account",
+            deletedAt: 300,
+            entryUpdatedAt: 150,
+          },
+          "incoming-older": {
+            kind: "bookmark",
+            deletedAt: 100,
+            entryUpdatedAt: 50,
+          },
+        },
+        last_updated: Date.now(),
+      } satisfies AccountStorageConfig)
+
+      await accountStorage.importData({
+        accounts: [createAccount({ id: "imported-1" })],
+        deletedEntryRecords: {
+          "same-id": {
+            kind: "account",
+            deletedAt: 200,
+            entryUpdatedAt: 100,
+          },
+          "incoming-older": {
+            kind: "bookmark",
+            deletedAt: 400,
+            entryUpdatedAt: 350,
+          },
+        },
+      })
+
+      const imported = storageData.get(
+        ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+      ) as AccountStorageConfig
+
+      expect(imported.deletedEntryRecords).toMatchObject({
+        "same-id": {
+          kind: "account",
+          deletedAt: 300,
+          entryUpdatedAt: 150,
+        },
+        "incoming-older": {
+          kind: "bookmark",
+          deletedAt: 400,
+          entryUpdatedAt: 350,
+        },
+      })
     })
 
     it("importData sanitizes bookmarks and filters pinned and ordered ids to surviving entries", async () => {

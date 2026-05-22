@@ -73,6 +73,48 @@ describe("accountDefaults", () => {
 
       expect(normalizeAccountStorageConfigForRead(raw, 999)).toEqual(raw)
     })
+
+    it("drops reserved deletion marker ids into a null-prototype map", () => {
+      const persistedDeletedEntryRecords = JSON.parse(`{
+        "safe": {
+          "kind": "account",
+          "deletedAt": 200,
+          "entryUpdatedAt": 100
+        },
+        "__proto__": {
+          "kind": "account",
+          "deletedAt": 201,
+          "entryUpdatedAt": 101
+        },
+        "constructor": {
+          "kind": "bookmark",
+          "deletedAt": 202,
+          "entryUpdatedAt": 102
+        },
+        "prototype": {
+          "kind": "bookmark",
+          "deletedAt": 203,
+          "entryUpdatedAt": 103
+        }
+      }`)
+
+      const normalized = normalizeAccountStorageConfigForRead(
+        {
+          deletedEntryRecords: persistedDeletedEntryRecords,
+        } as any,
+        999,
+      )
+
+      expect(Object.getPrototypeOf(normalized.deletedEntryRecords)).toBeNull()
+      expect(normalized.deletedEntryRecords).toEqual({
+        safe: {
+          kind: "account",
+          deletedAt: 200,
+          entryUpdatedAt: 100,
+        },
+      })
+      expect(({} as any).safe).toBeUndefined()
+    })
   })
 
   describe("storage helpers", () => {

@@ -3,10 +3,12 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
 import {
   AuthTypeEnum,
+  DELETED_ENTRY_KINDS,
   SiteHealthStatus,
   type AccountInfo,
   type AccountStorageConfig,
   type CheckInConfig,
+  type DeletedEntryKind,
   type HealthStatus,
   type SiteAccount,
 } from "~/types"
@@ -76,6 +78,15 @@ const coerceStringArray = (input: unknown): string[] => {
     .filter((value) => value.length > 0)
 }
 
+const RESERVED_DELETED_ENTRY_RECORD_IDS = new Set([
+  "__proto__",
+  "constructor",
+  "prototype",
+])
+
+const isDeletedEntryKind = (kind: unknown): kind is DeletedEntryKind =>
+  DELETED_ENTRY_KINDS.includes(kind as DeletedEntryKind)
+
 /**
  * Normalizes persisted deletion markers used by WebDAV sync reconciliation.
  */
@@ -84,17 +95,26 @@ function normalizeDeletedEntryRecords(
 ): AccountStorageConfig["deletedEntryRecords"] {
   if (!raw || typeof raw !== "object") return {}
 
-  const records: NonNullable<AccountStorageConfig["deletedEntryRecords"]> = {}
+  const records = Object.create(null) as NonNullable<
+    AccountStorageConfig["deletedEntryRecords"]
+  >
 
   for (const [id, value] of Object.entries(raw)) {
-    if (!id || !value || typeof value !== "object") continue
+    if (
+      !id ||
+      RESERVED_DELETED_ENTRY_RECORD_IDS.has(id) ||
+      !value ||
+      typeof value !== "object"
+    ) {
+      continue
+    }
 
     const candidate = value as Record<string, unknown>
     const kind = candidate.kind
     const deletedAt = coerceNumber(candidate.deletedAt, 0)
     const entryUpdatedAt = coerceNumber(candidate.entryUpdatedAt, 0)
 
-    if (kind !== "account" && kind !== "bookmark") continue
+    if (!isDeletedEntryKind(kind)) continue
     if (deletedAt <= 0) continue
 
     records[id] = {

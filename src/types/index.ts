@@ -295,7 +295,17 @@ export interface SiteBookmark {
   updated_at: number
 }
 
-export type DeletedEntryKind = "account" | "bookmark"
+export const DELETED_ENTRY_KIND = {
+  ACCOUNT: "account",
+  BOOKMARK: "bookmark",
+} as const
+
+export const DELETED_ENTRY_KINDS = [
+  DELETED_ENTRY_KIND.ACCOUNT,
+  DELETED_ENTRY_KIND.BOOKMARK,
+] as const
+
+export type DeletedEntryKind = (typeof DELETED_ENTRY_KINDS)[number]
 
 export interface DeletedEntryRecord {
   kind: DeletedEntryKind

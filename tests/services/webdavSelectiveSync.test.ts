@@ -362,6 +362,81 @@ describe("mergeWebdavBackupPayloadBySelection", () => {
     })
   })
 
+  it("does not upload local tombstones for unselected account domains", () => {
+    const backup: any = {
+      version: "2.0",
+      timestamp: 456,
+      accounts: {
+        accounts: [{ id: "local-account" }],
+        bookmarks: [{ id: "local-bookmark" }],
+        pinnedAccountIds: ["local-bookmark"],
+        orderedAccountIds: ["local-bookmark"],
+        deletedEntryRecords: {
+          "local-deleted-account": {
+            kind: "account",
+            deletedAt: 456,
+            entryUpdatedAt: 123,
+          },
+          "local-deleted-bookmark": {
+            kind: "bookmark",
+            deletedAt: 455,
+            entryUpdatedAt: 122,
+          },
+        },
+        last_updated: 456,
+      },
+      tagStore: { version: 1, tagsById: {} },
+      preferences: { lastUpdated: 456, themeMode: "dark" },
+      channelConfigs: { 1: { enabled: true } },
+    }
+
+    const remoteBackup: any = {
+      version: "2.0",
+      timestamp: 123,
+      accounts: {
+        accounts: [{ id: "remote-account" }],
+        bookmarks: [{ id: "remote-bookmark" }],
+        pinnedAccountIds: ["remote-account"],
+        orderedAccountIds: ["remote-account"],
+        deletedEntryRecords: {
+          "remote-deleted-account": {
+            kind: "account",
+            deletedAt: 123,
+            entryUpdatedAt: 12,
+          },
+        },
+        last_updated: 123,
+      },
+      tagStore: { version: 1, tagsById: {} },
+      preferences: { lastUpdated: 123, themeMode: "light" },
+      channelConfigs: { 1: { enabled: false } },
+    }
+
+    const payload = mergeWebdavBackupPayloadBySelection({
+      backup,
+      selection: {
+        accounts: false,
+        bookmarks: true,
+        apiCredentialProfiles: false,
+        preferences: false,
+      },
+      remoteBackup,
+    })
+
+    expect((payload.accounts as any).deletedEntryRecords).toEqual({
+      "remote-deleted-account": {
+        kind: "account",
+        deletedAt: 123,
+        entryUpdatedAt: 12,
+      },
+      "local-deleted-bookmark": {
+        kind: "bookmark",
+        deletedAt: 455,
+        entryUpdatedAt: 122,
+      },
+    })
+  })
+
   it("preserves legacy remote api credential profiles when they are unselected", () => {
     const backup: any = {
       version: "2.0",

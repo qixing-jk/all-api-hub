@@ -394,6 +394,53 @@ describe("WebdavAutoSyncService.mergeData", () => {
     })
   })
 
+  it("does not apply remote account deletion markers when accounts are unselected", () => {
+    const localAccount = {
+      id: "local-account",
+      site_name: "local-account",
+      updated_at: 100,
+    }
+    const local: any = {
+      accounts: [localAccount],
+      bookmarks: [],
+      deletedEntryRecords: {},
+      accountsTimestamp: 100,
+      tagStore: { version: 1, tagsById: {} },
+      preferences: basePrefsLocal,
+      preferencesTimestamp: 50,
+      channelConfigs: {},
+      apiCredentialProfiles: emptyApiCredentialProfiles,
+    }
+
+    const remote: any = {
+      accounts: [],
+      bookmarks: [],
+      deletedEntryRecords: {
+        "local-account": {
+          kind: "account",
+          deletedAt: 200,
+          entryUpdatedAt: 100,
+        },
+      },
+      accountsTimestamp: 200,
+      tagStore: { version: 1, tagsById: {} },
+      preferences: basePrefsRemote,
+      preferencesTimestamp: 60,
+      channelConfigs: {},
+      apiCredentialProfiles: emptyApiCredentialProfiles,
+    }
+
+    const result = (webdavAutoSyncService as any).mergeData(local, remote, {
+      accounts: false,
+      bookmarks: true,
+      apiCredentialProfiles: false,
+      preferences: false,
+    })
+
+    expect(result.accounts).toEqual([localAccount])
+    expect(result.deletedEntryRecords).toEqual({})
+  })
+
   it("merges bookmarks by id choosing the most recently updated", () => {
     const local: any = {
       accounts: [],

@@ -541,6 +541,7 @@ describe("apiService sub2api key management service", () => {
           tokenExpiresAt: now + 3600 * 1000,
         },
       }),
+      { updateUserTimestamp: false },
     )
   })
 
@@ -591,6 +592,7 @@ describe("apiService sub2api key management service", () => {
       expect.objectContaining({
         account_info: { access_token: "resynced-jwt" },
       }),
+      { updateUserTimestamp: false },
     )
   })
 

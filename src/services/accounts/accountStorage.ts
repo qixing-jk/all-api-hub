@@ -15,6 +15,7 @@ import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { maybeCaptureDailyBalanceSnapshot } from "~/services/history/dailyBalanceHistory/capture"
 import { ensureAccountTagsStorageMigrated } from "~/services/tags/migrations/accountTagsStorageMigration"
 import {
+  DELETED_ENTRY_KIND,
   SiteHealthStatus,
   type AccountStats,
   type AccountStorageConfig,
@@ -118,6 +119,24 @@ class AccountStorageService {
     return typeof account.user_updated_at === "number"
       ? account.user_updated_at
       : account.updated_at
+  }
+
+  private static mergeDeletedEntryRecordMaps(input: {
+    existing?: AccountStorageConfig["deletedEntryRecords"]
+    incoming?: AccountStorageConfig["deletedEntryRecords"]
+  }): NonNullable<AccountStorageConfig["deletedEntryRecords"]> {
+    const records: NonNullable<AccountStorageConfig["deletedEntryRecords"]> = {
+      ...(input.existing || {}),
+    }
+
+    for (const [id, incoming] of Object.entries(input.incoming || {})) {
+      const current = records[id]
+      if (!current || incoming.deletedAt > current.deletedAt) {
+        records[id] = incoming
+      }
+    }
+
+    return records
   }
 
   /**
@@ -585,7 +604,7 @@ class AccountStorageService {
         config.deletedEntryRecords = {
           ...(config.deletedEntryRecords || {}),
           [id]: AccountStorageService.createDeletedEntryRecord({
-            kind: "account",
+            kind: DELETED_ENTRY_KIND.ACCOUNT,
             entryUpdatedAt:
               AccountStorageService.resolveAccountUserUpdatedAt(deletedAccount),
             now,
@@ -653,7 +672,7 @@ class AccountStorageService {
             deletedAccounts.map((account) => [
               account.id,
               AccountStorageService.createDeletedEntryRecord({
-                kind: "account",
+                kind: DELETED_ENTRY_KIND.ACCOUNT,
                 entryUpdatedAt:
                   AccountStorageService.resolveAccountUserUpdatedAt(account),
                 now,
@@ -1591,10 +1610,11 @@ class AccountStorageService {
             )
           : filteredOrderedIds
 
-        const deletedEntryRecords = {
-          ...(backupConfig.deletedEntryRecords || {}),
-          ...(data.deletedEntryRecords || {}),
-        }
+        const deletedEntryRecords =
+          AccountStorageService.mergeDeletedEntryRecordMaps({
+            existing: backupConfig.deletedEntryRecords,
+            incoming: data.deletedEntryRecords,
+          })
         for (const id of entryIds) {
           delete deletedEntryRecords[id]
         }
@@ -2050,7 +2070,7 @@ class AccountStorageService {
         config.deletedEntryRecords = {
           ...(config.deletedEntryRecords || {}),
           [id]: AccountStorageService.createDeletedEntryRecord({
-            kind: "bookmark",
+            kind: DELETED_ENTRY_KIND.BOOKMARK,
             entryUpdatedAt: current?.updated_at,
             now,
           }),
