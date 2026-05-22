@@ -30,9 +30,11 @@ export type BalanceHistoryAccountSummaryRow = {
   endBalance: number | null
   netTotal: number | null
   incomeTotal: number | null
+  estimatedIncomeTotal: number | null
   outcomeTotal: number | null
   snapshotDays: number
   cashflowDays: number
+  estimatedIncomeDays: number
   totalDays: number
 }
 
@@ -40,6 +42,7 @@ interface BalanceHistoryAccountSummaryTableProps {
   rows: BalanceHistoryAccountSummaryRow[]
   isLoading: boolean
   currencySymbol: string
+  showEstimatedIncome?: boolean
 }
 
 /**
@@ -66,6 +69,7 @@ export default function BalanceHistoryAccountSummaryTable({
   rows,
   isLoading,
   currencySymbol,
+  showEstimatedIncome = false,
 }: BalanceHistoryAccountSummaryTableProps) {
   const { t } = useTranslation("balanceHistory")
   const isInitialLoading = isLoading && rows.length === 0
@@ -126,6 +130,24 @@ export default function BalanceHistoryAccountSummaryTable({
         ),
         sortingFn: sortNullableNumber,
       },
+      ...(showEstimatedIncome
+        ? [
+            {
+              accessorKey: "estimatedIncomeTotal",
+              header: t("table.columns.estimatedIncomeTotal"),
+              cell: ({
+                row,
+              }: {
+                row: Row<BalanceHistoryAccountSummaryRow>
+              }) => (
+                <div className="text-sm">
+                  {formatMoney(row.original.estimatedIncomeTotal)}
+                </div>
+              ),
+              sortingFn: sortNullableNumber,
+            } satisfies ColumnDef<BalanceHistoryAccountSummaryRow, unknown>,
+          ]
+        : []),
       {
         accessorKey: "outcomeTotal",
         header: t("table.columns.outcomeTotal"),
@@ -165,7 +187,7 @@ export default function BalanceHistoryAccountSummaryTable({
         ),
       },
     ]
-  }, [currencySymbol, t])
+  }, [currencySymbol, showEstimatedIncome, t])
 
   const table = useReactTable({
     data: rows,

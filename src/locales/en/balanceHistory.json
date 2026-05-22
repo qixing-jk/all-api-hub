@@ -82,6 +82,7 @@
   },
   "metrics": {
     "balance": "Balance",
+    "estimatedIncome": "Estimated income",
     "income": "Income",
     "net": "Net change",
     "outcome": "Outcome"
@@ -122,6 +123,7 @@
       "account": "Account",
       "cashflowCoverage": "Cashflow coverage",
       "endBalance": "End balance",
+      "estimatedIncomeTotal": "Estimated income total",
       "incomeTotal": "Income total",
       "outcomeTotal": "Outcome total",
       "rangeNet": "Range net",

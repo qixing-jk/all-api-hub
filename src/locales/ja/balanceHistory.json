@@ -82,6 +82,7 @@
   },
   "metrics": {
     "balance": "残高",
+    "estimatedIncome": "推定収入",
     "income": "収入",
     "net": "純増減",
     "outcome": "支出"
@@ -122,6 +123,7 @@
       "account": "アカウント",
       "cashflowCoverage": "キャッシュフローのカバー率",
       "endBalance": "期末残高",
+      "estimatedIncomeTotal": "推定収入合計",
       "incomeTotal": "総収入",
       "outcomeTotal": "総支出",
       "rangeNet": "期間純増減",

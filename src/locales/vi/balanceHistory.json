@@ -82,6 +82,7 @@
   },
   "metrics": {
     "balance": "Số dư",
+    "estimatedIncome": "Thu nhập ước tính",
     "income": "Thu nhập",
     "net": "Thay đổi ròng",
     "outcome": "Chi phí"
@@ -122,6 +123,7 @@
       "account": "Tài khoản",
       "cashflowCoverage": "Độ bao phủ thu chi",
       "endBalance": "Số dư cuối kỳ",
+      "estimatedIncomeTotal": "Tổng thu nhập ước tính",
       "incomeTotal": "Thu nhập trong kỳ",
       "outcomeTotal": "Chi phí trong kỳ",
       "rangeNet": "Thay đổi ròng trong kỳ",

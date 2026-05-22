@@ -49,9 +49,11 @@ const buildRow = (
   endBalance: 12,
   netTotal: 2,
   incomeTotal: 4,
+  estimatedIncomeTotal: null,
   outcomeTotal: 2,
   snapshotDays: 3,
   cashflowDays: 2,
+  estimatedIncomeDays: 0,
   totalDays: 4,
   ...overrides,
 })
@@ -149,6 +151,42 @@ describe("BalanceHistoryAccountSummaryTable", () => {
     expect(alphaRowScope.getByText("$3.00")).toBeInTheDocument()
     expect(alphaRowScope.getByText("4/5")).toBeInTheDocument()
     expect(alphaRowScope.getByText("3/5")).toBeInTheDocument()
+  })
+
+  it("renders estimated income column only when enabled", () => {
+    const rows = [
+      buildRow({
+        estimatedIncomeTotal: 3,
+        estimatedIncomeDays: 1,
+      }),
+    ]
+
+    const { rerender } = render(
+      <BalanceHistoryAccountSummaryTable
+        rows={rows}
+        isLoading={false}
+        currencySymbol="$"
+        showEstimatedIncome={false}
+      />,
+    )
+
+    expect(
+      screen.queryByText("balanceHistory:table.columns.estimatedIncomeTotal"),
+    ).not.toBeInTheDocument()
+
+    rerender(
+      <BalanceHistoryAccountSummaryTable
+        rows={rows}
+        isLoading={false}
+        currencySymbol="$"
+        showEstimatedIncome
+      />,
+    )
+
+    expect(
+      screen.getByText("balanceHistory:table.columns.estimatedIncomeTotal"),
+    ).toBeInTheDocument()
+    expect(screen.getByText("$3.00")).toBeInTheDocument()
   })
 
   it("toggles nullable numeric sorting from descending to ascending while keeping null balances observable", async () => {

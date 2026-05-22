@@ -138,12 +138,14 @@ describe("BalanceHistory options page", () => {
     showTodayCashflow = true,
     enabled = false,
     endOfDayCaptureEnabled = false,
+    estimatedTodayIncomeEnabled = false,
     retentionDays = DEFAULT_RETENTION_DAYS,
     currencyType = "USD",
   }: {
     showTodayCashflow?: boolean
     enabled?: boolean
     endOfDayCaptureEnabled?: boolean
+    estimatedTodayIncomeEnabled?: boolean
     retentionDays?: number
     currencyType?: "USD" | "CNY"
   } = {}) =>
@@ -153,6 +155,7 @@ describe("BalanceHistory options page", () => {
         balanceHistory: {
           enabled,
           endOfDayCapture: { enabled: endOfDayCaptureEnabled },
+          estimatedTodayIncome: { enabled: estimatedTodayIncomeEnabled },
           retentionDays,
         },
       },
@@ -1229,6 +1232,154 @@ describe("BalanceHistory options page", () => {
           ),
         }),
       ).toBeInTheDocument()
+    } finally {
+      dateNowSpy.mockRestore()
+    }
+  })
+
+  it("does not expose selected estimated income metrics after the preference is disabled", async () => {
+    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
+    const fixedNowMs = FIXED_NOW.getTime()
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
+
+    try {
+      const todayKey = getDayKeyFromUnixSeconds(Math.floor(fixedNowMs / 1000))
+
+      vi.mocked(useUserPreferencesContext).mockReturnValue(
+        createMockUserPreferencesContext({
+          enabled: true,
+          estimatedTodayIncomeEnabled: true,
+        }),
+      )
+      vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+        {
+          id: "a1",
+          site_name: "Site A",
+          site_url: "https://a.example.com",
+          site_type: SITE_TYPES.ONE_API,
+          account_info: { username: "User A" },
+        },
+      ] as any)
+      vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
+        schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+        snapshotsByAccountId: {
+          a1: {
+            [todayKey]: {
+              quota: 10 * factor,
+              today_income: 1 * factor,
+              today_quota_consumption: 4 * factor,
+              capturedAt: 0,
+              source: "refresh",
+            },
+          },
+        },
+      } as any)
+
+      const { rerender } = render(<BalanceHistory />)
+
+      expect(await screen.findByText(PAGE_TITLE)).toBeInTheDocument()
+
+      const user = userEvent.setup()
+      await user.click(
+        screen.getByRole("button", {
+          name: getMetricDropdownButtonName(
+            "breakdown",
+            "balanceHistory:metrics.balance",
+          ),
+        }),
+      )
+      await user.click(
+        await screen.findByRole("menuitemradio", {
+          name: "balanceHistory:metrics.estimatedIncome",
+        }),
+      )
+      await user.click(
+        screen.getByRole("button", {
+          name: getMetricDropdownButtonName(
+            "trend",
+            "balanceHistory:metrics.balance",
+          ),
+        }),
+      )
+      await user.click(
+        await screen.findByRole("menuitemradio", {
+          name: "balanceHistory:metrics.estimatedIncome",
+        }),
+      )
+
+      expect(
+        screen.getByRole("button", {
+          name: getMetricDropdownButtonName(
+            "breakdown",
+            "balanceHistory:metrics.estimatedIncome",
+          ),
+        }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", {
+          name: getMetricDropdownButtonName(
+            "trend",
+            "balanceHistory:metrics.estimatedIncome",
+          ),
+        }),
+      ).toBeInTheDocument()
+
+      vi.mocked(useUserPreferencesContext).mockReturnValue(
+        createMockUserPreferencesContext({
+          enabled: true,
+          estimatedTodayIncomeEnabled: false,
+        }),
+      )
+
+      rerender(<BalanceHistory />)
+
+      expect(
+        screen.queryByRole("button", {
+          name: getMetricDropdownButtonName(
+            "breakdown",
+            "balanceHistory:metrics.estimatedIncome",
+          ),
+        }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.queryByRole("button", {
+          name: getMetricDropdownButtonName(
+            "trend",
+            "balanceHistory:metrics.estimatedIncome",
+          ),
+        }),
+      ).not.toBeInTheDocument()
+      expect(
+        screen.getByRole("button", {
+          name: getMetricDropdownButtonName(
+            "breakdown",
+            "balanceHistory:metrics.income",
+          ),
+        }),
+      ).toBeInTheDocument()
+      expect(
+        screen.getByRole("button", {
+          name: getMetricDropdownButtonName(
+            "trend",
+            "balanceHistory:metrics.income",
+          ),
+        }),
+      ).toBeInTheDocument()
+
+      await user.click(
+        screen.getByRole("button", {
+          name: getMetricDropdownButtonName(
+            "breakdown",
+            "balanceHistory:metrics.income",
+          ),
+        }),
+      )
+      expect(
+        screen.queryByRole("menuitemradio", {
+          name: "balanceHistory:metrics.estimatedIncome",
+        }),
+      ).not.toBeInTheDocument()
     } finally {
       dateNowSpy.mockRestore()
     }

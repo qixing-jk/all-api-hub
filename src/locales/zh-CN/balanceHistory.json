@@ -82,6 +82,7 @@
   },
   "metrics": {
     "balance": "余额",
+    "estimatedIncome": "估算收入",
     "income": "收入",
     "net": "净变化",
     "outcome": "支出"
@@ -122,6 +123,7 @@
       "account": "账户",
       "cashflowCoverage": "收支覆盖",
       "endBalance": "结束余额",
+      "estimatedIncomeTotal": "估算收入合计",
       "incomeTotal": "区间收入",
       "outcomeTotal": "区间支出",
       "rangeNet": "区间净变化",
