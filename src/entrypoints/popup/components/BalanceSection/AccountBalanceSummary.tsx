@@ -9,6 +9,7 @@ import { useAccountDataContext } from "~/features/AccountManagement/hooks/Accoun
 import {
   calculateTotalBalance,
   calculateTotalConsumption,
+  calculateTotalIncomeForSites,
   getCurrencySymbol,
   getOppositeCurrency,
 } from "~/utils/core/formatters"
@@ -83,19 +84,10 @@ export default function AccountBalanceSummary() {
     [displayData],
   )
 
-  const totalIncome = useMemo(() => {
-    return {
-      USD: parseFloat(
-        (
-          stats.today_total_income /
-          UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
-        ).toFixed(2),
-      ),
-      CNY: displayData.reduce((sum, site) => {
-        return sum + (site.todayIncome?.CNY || 0)
-      }, 0),
-    }
-  }, [displayData, stats.today_total_income])
+  const totalIncome = useMemo(
+    () => calculateTotalIncomeForSites(displayData),
+    [displayData],
+  )
 
   const handleCurrencyToggle = () => {
     updateCurrencyType(getOppositeCurrency(currencyType))

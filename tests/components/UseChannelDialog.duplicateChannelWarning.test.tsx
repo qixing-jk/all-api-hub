@@ -92,6 +92,7 @@ const buildSiteAccount = (
   },
   ...overrides,
   user_updated_at: overrides.user_updated_at ?? overrides.updated_at ?? 0,
+  excludeFromTodayIncome: overrides.excludeFromTodayIncome === true,
 })
 
 const buildDisplaySiteData = (

@@ -179,7 +179,7 @@ describe("ShareOverviewSnapshotButton", () => {
     expect(trackerCompleteMock).not.toHaveBeenCalled()
   })
 
-  it("builds an enabled-only overview payload and excludes opt-out balances from the total", async () => {
+  it("builds an enabled-only overview payload and excludes opt-out balances and income from totals", async () => {
     const user = userEvent.setup()
     const enabledIncluded = buildDisplaySiteData({
       id: "enabled-included",
@@ -193,6 +193,7 @@ describe("ShareOverviewSnapshotButton", () => {
       id: "enabled-excluded",
       disabled: false,
       excludeFromTotalBalance: true,
+      excludeFromTodayIncome: true,
       last_sync_time: 250,
       balance: { USD: 20, CNY: 140 },
       todayIncome: { USD: 4, CNY: 28 },
@@ -225,7 +226,7 @@ describe("ShareOverviewSnapshotButton", () => {
       enabledAccountCount: 2,
       totalBalance: 10,
       includeTodayCashflow: true,
-      todayIncome: 6,
+      todayIncome: 2,
       todayOutcome: 4,
       asOf: 250,
     })

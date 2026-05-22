@@ -46,6 +46,8 @@
     "exchangeRate": "充值金額比例（CNY/USD）",
     "exchangeRateDesc": "表示充值 1 美元需要多少人民幣。系統會嘗試自動獲取，如未獲取到請手動填寫",
     "exchangeRatePlaceholder": "請輸入充值比例",
+    "excludeFromTodayIncome": "不計入今日收入",
+    "excludeFromTodayIncomeDesc": "僅影響“今日收入”合計，不會停用重新整理、簽到或帳號顯示",
     "excludeFromTotalBalance": "不計入總餘額",
     "excludeFromTotalBalanceDesc": "僅影響“總餘額”統計，不會禁用重新整理、簽到等功能",
     "hideAccessToken": "隱藏訪問令牌",

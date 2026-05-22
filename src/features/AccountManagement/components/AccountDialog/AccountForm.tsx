@@ -51,6 +51,7 @@ interface AccountFormProps {
   onNotesChange: (value: string) => void
   onSelectedTagIdsChange: (value: string[]) => void
   onExcludeFromTotalBalanceChange: (value: boolean) => void
+  onExcludeFromTodayIncomeChange: (value: boolean) => void
   onCookieAuthSessionCookieChange: (value: string) => void
   onImportCookieAuthSessionCookie: () => void
   onOpenCookiePermissionSettings: () => void
@@ -88,6 +89,7 @@ export default function AccountForm({
   onNotesChange,
   onSelectedTagIdsChange,
   onExcludeFromTotalBalanceChange,
+  onExcludeFromTodayIncomeChange,
   onCookieAuthSessionCookieChange,
   onImportCookieAuthSessionCookie,
   onOpenCookiePermissionSettings,
@@ -115,6 +117,7 @@ export default function AccountForm({
     notes,
     tagIds,
     excludeFromTotalBalance,
+    excludeFromTodayIncome,
     cookieAuthSessionCookie,
     sub2apiUseRefreshToken,
     sub2apiRefreshToken,
@@ -664,6 +667,28 @@ export default function AccountForm({
             id="exclude-from-total-balance"
             className={`${
               excludeFromTotalBalance ? "bg-green-600" : "bg-gray-200"
+            } focus:ring-green-500`}
+          />
+        </div>
+
+        <div className="flex w-full items-center justify-between gap-4">
+          <div className="flex-1">
+            <label
+              htmlFor="exclude-from-today-income"
+              className="dark:text-dark-text-secondary text-sm font-medium text-gray-700"
+            >
+              {t("form.excludeFromTodayIncome")}
+            </label>
+            <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
+              {t("form.excludeFromTodayIncomeDesc")}
+            </p>
+          </div>
+          <Switch
+            checked={excludeFromTodayIncome}
+            onChange={onExcludeFromTodayIncomeChange}
+            id="exclude-from-today-income"
+            className={`${
+              excludeFromTodayIncome ? "bg-green-600" : "bg-gray-200"
             } focus:ring-green-500`}
           />
         </div>

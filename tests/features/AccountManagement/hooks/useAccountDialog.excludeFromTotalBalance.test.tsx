@@ -44,13 +44,13 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
-describe("useAccountDialog excludeFromTotalBalance", () => {
+describe("useAccountDialog aggregate exclusion flags", () => {
   beforeEach(async () => {
     server.resetHandlers()
     await accountStorage.clearAllData()
   })
 
-  it("persists the exclusion flag on update", async () => {
+  it("persists the balance exclusion flag on update", async () => {
     server.use(
       http.get("https://api.example.com/api/log/self", () =>
         HttpResponse.json(
@@ -89,6 +89,7 @@ describe("useAccountDialog excludeFromTotalBalance", () => {
       authType: AuthTypeEnum.AccessToken,
       checkIn: { enableDetection: false } as any,
       excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
     } as any)
 
     const onClose = vi.fn()
@@ -119,5 +120,75 @@ describe("useAccountDialog excludeFromTotalBalance", () => {
 
     const updated = await accountStorage.getAccountById(accountId)
     expect(updated?.excludeFromTotalBalance).toBe(true)
+  })
+
+  it("persists the today income exclusion flag on update", async () => {
+    server.use(
+      http.get("https://api.example.com/api/log/self", () =>
+        HttpResponse.json(
+          { success: false, message: "fetch failed" },
+          { status: 500 },
+        ),
+      ),
+      http.get("https://api.example.com/api/user/self", () =>
+        HttpResponse.json(
+          { success: false, message: "fetch failed" },
+          { status: 500 },
+        ),
+      ),
+    )
+
+    const accountId = await accountStorage.addAccount({
+      site_name: "Test",
+      site_url: "https://api.example.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: "unknown",
+      exchange_rate: 7,
+      account_info: {
+        id: 1,
+        access_token: "token",
+        username: "user",
+        quota: 0,
+        today_prompt_tokens: 0,
+        today_completion_tokens: 0,
+        today_quota_consumption: 0,
+        today_requests_count: 0,
+        today_income: 0,
+      },
+      last_sync_time: 0,
+      notes: "",
+      tagIds: [],
+      authType: AuthTypeEnum.AccessToken,
+      checkIn: { enableDetection: false } as any,
+      excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
+    } as any)
+
+    const account = { id: accountId } as any
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.EDIT,
+        account,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state.siteName).toBe("Test")
+    })
+
+    await act(async () => {
+      result.current.setters.setExcludeFromTodayIncome(true)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleSaveAccount()
+    })
+
+    const updated = await accountStorage.getAccountById(accountId)
+    expect(updated?.excludeFromTodayIncome).toBe(true)
   })
 })

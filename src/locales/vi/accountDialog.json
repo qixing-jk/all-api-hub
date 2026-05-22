@@ -46,6 +46,8 @@
     "exchangeRate": "Tỷ giá nạp (CNY/USD)",
     "exchangeRateDesc": "Biểu thị cần bao nhiêu Nhân dân tệ (CNY) để nạp 1 đô la Mỹ (USD). Hệ thống sẽ cố gắng tự động lấy, nếu không lấy được, vui lòng điền thủ công",
     "exchangeRatePlaceholder": "Vui lòng nhập tỷ giá nạp",
+    "excludeFromTodayIncome": "Không tính vào thu nhập hôm nay",
+    "excludeFromTodayIncomeDesc": "Chỉ ảnh hưởng đến tổng thu nhập hôm nay, không vô hiệu hóa làm mới, điểm danh hoặc hiển thị tài khoản",
     "excludeFromTotalBalance": "Không tính vào tổng số dư",
     "excludeFromTotalBalanceDesc": "Chỉ ảnh hưởng đến thống kê \"Tổng số dư\", sẽ không vô hiệu hóa các chức năng như làm mới, điểm danh, v.v.",
     "hideAccessToken": "Ẩn Access Token",

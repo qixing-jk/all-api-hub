@@ -217,6 +217,26 @@ export const calculateTotalConsumptionForSites = (sites: DisplaySiteData[]) => {
 }
 
 /**
+ * Sum per-site income metrics into global USD/CNY totals.
+ *
+ * Today Income excludes:
+ * - disabled accounts ({@link DisplaySiteData.disabled})
+ * - enabled but explicitly excluded accounts ({@link DisplaySiteData.excludeFromTodayIncome})
+ */
+export const calculateTotalIncomeForSites = (sites: DisplaySiteData[]) => {
+  const enabledSites = sites.filter(
+    (site) => !site.disabled && site.excludeFromTodayIncome !== true,
+  )
+  const usd = enabledSites.reduce((sum, site) => sum + site.todayIncome.USD, 0)
+  const cny = enabledSites.reduce((sum, site) => sum + site.todayIncome.CNY, 0)
+
+  return {
+    USD: usd,
+    CNY: cny,
+  }
+}
+
+/**
  * 获取货币符号
  */
 export const getCurrencySymbol = (currencyType: CurrencyType): string => {

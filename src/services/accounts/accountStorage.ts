@@ -141,6 +141,18 @@ class AccountStorageService {
   }
 
   /**
+   * "Exclude from Today Income" guard.
+   *
+   * Note: legacy persisted records may omit `excludeFromTodayIncome`, but read
+   * normalization ensures runtime accounts always have stable boolean values.
+   */
+  private static isAccountExcludedFromTodayIncome(
+    account: Pick<SiteAccount, "excludeFromTodayIncome">,
+  ) {
+    return account.excludeFromTodayIncome
+  }
+
+  /**
    * Run a storage mutation under an exclusive lock to prevent cross-context
    * (popup/options/background) concurrent read-modify-write races.
    *
@@ -1471,6 +1483,8 @@ class AccountStorageService {
         disabled: AccountStorageService.isAccountDisabled(normalized),
         excludeFromTotalBalance:
           AccountStorageService.isAccountExcludedFromTotalBalance(normalized),
+        excludeFromTodayIncome:
+          AccountStorageService.isAccountExcludedFromTodayIncome(normalized),
         balance: {
           USD:
             normalized.account_info.quota /

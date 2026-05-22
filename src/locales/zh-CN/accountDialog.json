@@ -46,6 +46,8 @@
     "exchangeRate": "充值金额比例（CNY/USD）",
     "exchangeRateDesc": "表示充值 1 美元需要多少人民币。系统会尝试自动获取，如未获取到请手动填写",
     "exchangeRatePlaceholder": "请输入充值比例",
+    "excludeFromTodayIncome": "不计入今日收入",
+    "excludeFromTodayIncomeDesc": "仅影响“今日收入”合计，不会禁用刷新、签到或账号显示",
     "excludeFromTotalBalance": "不计入总余额",
     "excludeFromTotalBalanceDesc": "仅影响“总余额”统计，不会禁用刷新、签到等功能",
     "hideAccessToken": "隐藏访问令牌",

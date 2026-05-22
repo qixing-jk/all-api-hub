@@ -184,12 +184,12 @@ describe("popup BalanceSection components", () => {
     ).toHaveTextContent("-$0.80")
 
     expect(incomeValue).toHaveAttribute("data-start", "0")
-    expect(incomeValue).toHaveAttribute("data-end", "0.5")
+    expect(incomeValue).toHaveAttribute("data-end", "1.25")
     expect(
       screen.getAllByRole("button", {
         name: "common:currency.clickToSwitch",
       })[2],
-    ).toHaveTextContent("+$0.50")
+    ).toHaveTextContent("+$1.25")
 
     fireEvent.click(
       screen.getAllByRole("button", {
@@ -198,6 +198,45 @@ describe("popup BalanceSection components", () => {
     )
 
     expect(updateCurrencyType).toHaveBeenCalledWith("CNY")
+  })
+
+  it("excludes disabled accounts and today-income opt-outs from popup income totals", () => {
+    mockUseAccountDataContext.mockReturnValue(
+      createAccountDataContextValue({
+        displayData: [
+          {
+            id: "included",
+            name: "Included Account",
+            balance: { USD: 10, CNY: 70 },
+            todayIncome: { USD: 1.25, CNY: 8.75 },
+          },
+          {
+            id: "income-opt-out",
+            name: "Income Opt Out",
+            balance: { USD: 10, CNY: 70 },
+            todayIncome: { USD: 9, CNY: 63 },
+            excludeFromTodayIncome: true,
+          },
+          {
+            id: "disabled",
+            name: "Disabled",
+            disabled: true,
+            balance: { USD: 10, CNY: 70 },
+            todayIncome: { USD: 5, CNY: 35 },
+          },
+        ],
+        stats: {
+          today_total_consumption: 400_000,
+          today_total_income: 1_525_000,
+        },
+      }),
+    )
+
+    render(<AccountBalanceSummary />)
+
+    const [, , incomeValue] = screen.getAllByTestId("countup")
+
+    expect(incomeValue).toHaveAttribute("data-end", "1.25")
   })
 
   it("uses initial-load animation, hides cashflow cards when disabled, and shows CNY totals", () => {

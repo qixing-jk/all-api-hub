@@ -98,7 +98,8 @@
   },
   "filteredTotals": {
     "balance": "残高",
-    "consumption": "本日の消費"
+    "consumption": "本日の消費",
+    "income": "本日の収入"
   },
   "healthStatus": {
     "apiError": "API エラー",

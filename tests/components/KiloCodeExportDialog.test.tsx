@@ -135,6 +135,7 @@ const createSiteAccount = (site: DisplaySiteData): SiteAccount => ({
   tagIds: [],
   disabled: false,
   excludeFromTotalBalance: false,
+  excludeFromTodayIncome: false,
   checkIn: { enableDetection: false },
   health: { status: SiteHealthStatus.Healthy },
   authType: site.authType,

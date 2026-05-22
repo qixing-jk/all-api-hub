@@ -107,7 +107,8 @@
   },
   "filteredTotals": {
     "balance": "Balance",
-    "consumption": "Today's consumption"
+    "consumption": "Today's consumption",
+    "income": "Today's income"
   },
   "healthStatus": {
     "apiError": "API error",

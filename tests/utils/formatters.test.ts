@@ -4,6 +4,7 @@ import type { CurrencyType } from "~/types"
 import {
   calculateTotalBalance,
   calculateTotalConsumption,
+  calculateTotalIncomeForSites,
   createSortComparator,
   formatFullTime,
   formatKeyTime,
@@ -244,6 +245,21 @@ describe("formatters utilities", () => {
 
       expect(result.USD).toBe(10)
       expect(result.CNY).toBe(20)
+    })
+  })
+
+  describe("calculateTotalIncomeForSites", () => {
+    it("excludes disabled accounts and accounts opted out of today income totals", () => {
+      const data = [
+        { todayIncome: { USD: 10, CNY: 70 }, disabled: false },
+        { todayIncome: { USD: 1, CNY: 7 }, excludeFromTodayIncome: true },
+        { todayIncome: { USD: 5, CNY: 35 }, disabled: true },
+      ] as any
+
+      const result = calculateTotalIncomeForSites(data)
+
+      expect(result.USD).toBe(10)
+      expect(result.CNY).toBe(70)
     })
   })
 

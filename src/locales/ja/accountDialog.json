@@ -46,6 +46,8 @@
     "exchangeRate": "チャージ金額レート（CNY/USD）",
     "exchangeRateDesc": "1 USD をチャージするのに必要な人民元額を表します。システムが自動取得を試みますが、取得できない場合は手動入力してください",
     "exchangeRatePlaceholder": "レートを入力してください",
+    "excludeFromTodayIncome": "今日の収入から除外",
+    "excludeFromTodayIncomeDesc": "更新、チェックイン、アカウント表示を無効にせず、今日の収入合計から除外します",
     "excludeFromTotalBalance": "総残高から除外",
     "excludeFromTotalBalanceDesc": "更新やチェックインを無効にせず、このアカウントを総残高集計から除外します",
     "hideAccessToken": "Access Token を非表示",

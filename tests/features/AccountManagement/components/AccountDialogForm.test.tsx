@@ -69,6 +69,7 @@ describe("AccountDialog AccountForm", () => {
       notes: "existing note",
       tagIds: [],
       excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
       cookieAuthSessionCookie: "",
       sub2apiUseRefreshToken: false,
       sub2apiRefreshToken: "",
@@ -92,6 +93,7 @@ describe("AccountDialog AccountForm", () => {
     onNotesChange: vi.fn(),
     onSelectedTagIdsChange: vi.fn(),
     onExcludeFromTotalBalanceChange: vi.fn(),
+    onExcludeFromTodayIncomeChange: vi.fn(),
     onCookieAuthSessionCookieChange: vi.fn(),
     onImportCookieAuthSessionCookie: vi.fn(),
     onOpenCookiePermissionSettings: vi.fn(),
@@ -341,6 +343,11 @@ describe("AccountDialog AccountForm", () => {
       }),
     )
     await user.click(
+      screen.getByRole("switch", {
+        name: "accountDialog:form.excludeFromTodayIncome",
+      }),
+    )
+    await user.click(
       screen.getByRole("button", {
         name: "accountDialog:form.tagsPlaceholder",
       }),
@@ -364,6 +371,7 @@ describe("AccountDialog AccountForm", () => {
     expect(props.onExchangeRateChange).toHaveBeenLastCalledWith("8.8")
     expect(props.onManualBalanceUsdChange).toHaveBeenLastCalledWith("12.5")
     expect(props.onExcludeFromTotalBalanceChange).toHaveBeenCalledWith(true)
+    expect(props.onExcludeFromTodayIncomeChange).toHaveBeenCalledWith(true)
     expect(props.onSelectedTagIdsChange).toHaveBeenCalledWith(["tag-1"])
     expect(props.onNotesChange).toHaveBeenLastCalledWith(
       "existing note updated",

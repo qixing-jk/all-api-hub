@@ -19,6 +19,11 @@ import {
 } from "~/services/productAnalytics/events"
 import { buildOverviewShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
 import { getErrorMessage } from "~/utils/core/error"
+import {
+  calculateTotalBalanceForSites,
+  calculateTotalConsumptionForSites,
+  calculateTotalIncomeForSites,
+} from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("ShareOverviewSnapshotButton")
@@ -68,24 +73,14 @@ export default function ShareOverviewSnapshotButton() {
       usageDataPresent: includeToday,
     }
 
-    let totalBalance = 0
-    let todayIncome = 0
-    let todayOutcome = 0
-
-    for (const site of displayData) {
-      if (site.disabled === true) {
-        continue
-      }
-
-      if (site.excludeFromTotalBalance !== true) {
-        totalBalance += site.balance?.[currencyType] ?? 0
-      }
-
-      if (includeToday) {
-        todayIncome += site.todayIncome?.[currencyType] ?? 0
-        todayOutcome += site.todayConsumption?.[currencyType] ?? 0
-      }
-    }
+    const totalBalance =
+      calculateTotalBalanceForSites(displayData)[currencyType]
+    const todayIncome = includeToday
+      ? calculateTotalIncomeForSites(displayData)[currencyType]
+      : 0
+    const todayOutcome = includeToday
+      ? calculateTotalConsumptionForSites(displayData)[currencyType]
+      : 0
 
     // Overview snapshots are aggregate-only and must not include per-account identifiers.
     const payload = buildOverviewShareSnapshotPayload({

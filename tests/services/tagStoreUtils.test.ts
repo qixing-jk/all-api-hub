@@ -60,6 +60,7 @@ function makeAccount(overrides: Partial<SiteAccount>): SiteAccount {
     authType: overrides.authType ?? AuthTypeEnum.AccessToken,
     disabled: overrides.disabled === true,
     excludeFromTotalBalance: overrides.excludeFromTotalBalance === true,
+    excludeFromTodayIncome: overrides.excludeFromTodayIncome === true,
     checkIn: overrides.checkIn ?? ({ enableDetection: false } as any),
     tagIds: overrides.tagIds ?? [],
     ...overrides,

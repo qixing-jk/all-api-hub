@@ -101,6 +101,7 @@ describe("accountDataMigration", () => {
       expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
       expect(migrated.disabled).toBe(false)
       expect(migrated.excludeFromTotalBalance).toBe(false)
+      expect(migrated.excludeFromTodayIncome).toBe(false)
       expect(migrated.checkIn).toBeDefined()
       expect(migrated.checkIn?.enableDetection).toBe(true)
       expect(migrated.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
@@ -127,6 +128,7 @@ describe("accountDataMigration", () => {
       expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
       expect(migrated.disabled).toBe(false)
       expect(migrated.excludeFromTotalBalance).toBe(false)
+      expect(migrated.excludeFromTodayIncome).toBe(false)
       expect(migrated.checkIn?.customCheckIn).toEqual({
         url: "https://custom.example.com/checkin",
         redeemUrl: "https://custom.example.com/redeem",
@@ -238,6 +240,31 @@ describe("accountDataMigration", () => {
 
       expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
       expect(migrated.sub2apiAuth).toBeUndefined()
+    })
+
+    it("ensures excludeFromTodayIncome exists when migrating version 5 to current version", () => {
+      const legacyV5Account = createSiteAccount({
+        configVersion: 5,
+      })
+
+      delete (legacyV5Account as any).excludeFromTodayIncome
+
+      const migrated = migrateAccountConfig(legacyV5Account)
+
+      expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
+      expect(migrated.excludeFromTodayIncome).toBe(false)
+    })
+
+    it("preserves excludeFromTodayIncome=true when migrating version 5 to current version", () => {
+      const legacyV5Account = createSiteAccount({
+        configVersion: 5,
+        excludeFromTodayIncome: true,
+      })
+
+      const migrated = migrateAccountConfig(legacyV5Account)
+
+      expect(migrated.configVersion).toBe(CURRENT_CONFIG_VERSION)
+      expect(migrated.excludeFromTodayIncome).toBe(true)
     })
 
     it("migrates version 1 site check-in status into checkIn.siteStatus", () => {

@@ -311,6 +311,7 @@ function createMockSiteAccount(overrides?: Partial<SiteAccount>): SiteAccount {
     checkIn: { enableDetection: false },
     ...overrides,
     user_updated_at: overrides?.user_updated_at ?? overrides?.updated_at ?? now,
+    excludeFromTodayIncome: overrides?.excludeFromTodayIncome === true,
   }
 }
 

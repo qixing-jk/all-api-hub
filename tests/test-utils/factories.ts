@@ -204,6 +204,7 @@ export function buildSiteAccount(
     tagIds: [],
     disabled: false,
     excludeFromTotalBalance: false,
+    excludeFromTodayIncome: false,
     checkIn: { enableDetection: true },
     health: { status: SiteHealthStatus.Healthy },
     authType: AuthTypeEnum.AccessToken,

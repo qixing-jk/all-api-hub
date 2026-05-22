@@ -182,6 +182,7 @@ export function createStoredAccount(
     tagIds: [],
     disabled: false,
     excludeFromTotalBalance: false,
+    excludeFromTodayIncome: false,
     authType: AuthTypeEnum.AccessToken,
     checkIn: {
       enableDetection: false,

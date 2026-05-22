@@ -46,6 +46,8 @@
     "exchangeRate": "Recharge Amount Ratio (CNY/USD)",
     "exchangeRateDesc": "Indicates how much RMB is needed to recharge 1 USD. The system will try to get it automatically, please fill in manually if not obtained",
     "exchangeRatePlaceholder": "Please enter exchange rate",
+    "excludeFromTodayIncome": "Exclude from Today's Income",
+    "excludeFromTodayIncomeDesc": "Skips this account in Today's Income totals without disabling refresh, check-in, or account display",
     "excludeFromTotalBalance": "Exclude from Total Balance",
     "excludeFromTotalBalanceDesc": "Skips this account in the Total Balance aggregate without disabling refresh or check-in",
     "hideAccessToken": "Hide Access Token",

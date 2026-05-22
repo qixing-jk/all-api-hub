@@ -12,13 +12,14 @@ import { createLogger } from "~/utils/core/logger"
 import { migrateCheckInDualStatusConfig } from "./checkInDualStatusMigration"
 import { migrateCheckInConfig } from "./checkInMigration"
 import { migrateDisabledFlagConfig } from "./disabledFlagMigration"
+import { migrateExcludeFromTodayIncomeConfig } from "./excludeFromTodayIncomeMigration"
 import { migrateExcludeFromTotalBalanceConfig } from "./excludeFromTotalBalanceMigration"
 import { migrateSub2ApiAuthConfig } from "./sub2apiAuthMigration"
 
 const logger = createLogger("AccountDataMigration")
 
 // Current version of the configuration schema
-export const CURRENT_CONFIG_VERSION = 5
+export const CURRENT_CONFIG_VERSION = 6
 
 /**
  * Migration function type
@@ -64,6 +65,13 @@ const migrations: Record<number, MigrationFunction> = {
   5: (account: SiteAccount): SiteAccount => {
     const migrated = migrateSub2ApiAuthConfig(account)
     migrated.configVersion = 5
+    return migrated
+  },
+
+  // Version 5 -> 6: Ensure `excludeFromTodayIncome` exists (default false) and is normalized.
+  6: (account: SiteAccount): SiteAccount => {
+    const migrated = migrateExcludeFromTodayIncomeConfig(account)
+    migrated.configVersion = 6
     return migrated
   },
 }

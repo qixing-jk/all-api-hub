@@ -56,6 +56,7 @@ import type { DisplaySiteData, SortField } from "~/types"
 import {
   calculateTotalBalanceForSites,
   calculateTotalConsumptionForSites,
+  calculateTotalIncomeForSites,
 } from "~/utils/core/formatters"
 import { formatMoneyFixed } from "~/utils/core/money"
 
@@ -624,6 +625,13 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
     () =>
       showTodayCashflow
         ? calculateTotalConsumptionForSites(filteredSites)
+        : { USD: 0, CNY: 0 },
+    [filteredSites, showTodayCashflow],
+  )
+  const filteredIncome = useMemo(
+    () =>
+      showTodayCashflow
+        ? calculateTotalIncomeForSites(filteredSites)
         : { USD: 0, CNY: 0 },
     [filteredSites, showTodayCashflow],
   )
@@ -1241,11 +1249,18 @@ export default function AccountList({ initialSearchQuery }: AccountListProps) {
                     {formatMoneyFixed(filteredBalance.CNY)}
                   </span>
                   {showTodayCashflow && (
-                    <span>
-                      {t("account:filteredTotals.consumption")}: USD{" "}
-                      {formatMoneyFixed(filteredConsumption.USD)} / CNY{" "}
-                      {formatMoneyFixed(filteredConsumption.CNY)}
-                    </span>
+                    <>
+                      <span>
+                        {t("account:filteredTotals.consumption")}: USD{" "}
+                        {formatMoneyFixed(filteredConsumption.USD)} / CNY{" "}
+                        {formatMoneyFixed(filteredConsumption.CNY)}
+                      </span>
+                      <span>
+                        {t("account:filteredTotals.income")}: USD{" "}
+                        {formatMoneyFixed(filteredIncome.USD)} / CNY{" "}
+                        {formatMoneyFixed(filteredIncome.CNY)}
+                      </span>
+                    </>
                   )}
                 </div>
               </div>

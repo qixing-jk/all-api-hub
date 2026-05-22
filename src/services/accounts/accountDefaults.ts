@@ -52,6 +52,7 @@ const DEFAULT_SITE_ACCOUNT: SiteAccount = {
   tagIds: [],
   disabled: false,
   excludeFromTotalBalance: false,
+  excludeFromTodayIncome: false,
   authType: AuthTypeEnum.AccessToken,
   checkIn: DEFAULT_CHECK_IN_CONFIG,
 }
@@ -306,6 +307,7 @@ export function normalizeSiteAccount(raw: SiteAccount): SiteAccount {
       : undefined,
     disabled: merged.disabled === true,
     excludeFromTotalBalance: merged.excludeFromTotalBalance === true,
+    excludeFromTodayIncome: merged.excludeFromTodayIncome === true,
     authType: VALID_AUTH_TYPES.has(merged.authType)
       ? merged.authType
       : AuthTypeEnum.AccessToken,

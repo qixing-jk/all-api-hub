@@ -219,6 +219,7 @@ export function useAccountDialog({
   const notes = draft.notes
   const tagIds = draft.tagIds
   const excludeFromTotalBalance = draft.excludeFromTotalBalance
+  const excludeFromTodayIncome = draft.excludeFromTodayIncome
   const checkIn = draft.checkIn
   const siteType = draft.siteType
   const authType = draft.authType
@@ -290,6 +291,12 @@ export function useAccountDialog({
   const setExcludeFromTotalBalance = useCallback(
     (value: boolean) => {
       updateDraft((prev) => ({ ...prev, excludeFromTotalBalance: value }))
+    },
+    [updateDraft],
+  )
+  const setExcludeFromTodayIncome = useCallback(
+    (value: boolean) => {
+      updateDraft((prev) => ({ ...prev, excludeFromTodayIncome: value }))
     },
     [updateDraft],
   )
@@ -599,6 +606,7 @@ export function useAccountDialog({
             tagIds: siteAccount.tagIds || [],
             excludeFromTotalBalance:
               siteAccount.excludeFromTotalBalance === true,
+            excludeFromTodayIncome: siteAccount.excludeFromTodayIncome === true,
             checkIn: {
               enableDetection: siteAccount.checkIn?.enableDetection ?? false,
               autoCheckInEnabled:
@@ -1304,6 +1312,7 @@ export function useAccountDialog({
               cookieAuthSessionCookie.trim(),
               manualBalanceUsd,
               excludeFromTotalBalance,
+              excludeFromTodayIncome,
               sub2apiAuth,
               {
                 skipAutoProvisionKeyOnAccountAdd:
@@ -1327,6 +1336,7 @@ export function useAccountDialog({
               cookieAuthSessionCookie.trim(),
               manualBalanceUsd,
               excludeFromTotalBalance,
+              excludeFromTodayIncome,
               sub2apiAuth,
             )
 
@@ -2066,6 +2076,7 @@ export function useAccountDialog({
       notes,
       tagIds,
       excludeFromTotalBalance,
+      excludeFromTodayIncome,
       checkIn,
       siteType,
       authType,
@@ -2111,6 +2122,7 @@ export function useAccountDialog({
       setNotes,
       setTagIds,
       setExcludeFromTotalBalance,
+      setExcludeFromTodayIncome,
       setCheckIn,
       setSiteType,
       setAuthType,

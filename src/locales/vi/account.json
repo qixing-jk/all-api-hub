@@ -98,7 +98,8 @@
   },
   "filteredTotals": {
     "balance": "Số dư",
-    "consumption": "Tiêu hao hôm nay"
+    "consumption": "Tiêu hao hôm nay",
+    "income": "Thu nhập hôm nay"
   },
   "healthStatus": {
     "apiError": "Lỗi API",

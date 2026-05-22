@@ -158,6 +158,7 @@ describe("accountDefaults", () => {
       const legacy = createSiteAccount()
       delete (legacy as any).disabled
       delete (legacy as any).excludeFromTotalBalance
+      delete (legacy as any).excludeFromTodayIncome
       delete (legacy as any).tagIds
       delete (legacy as any).tags
       delete (legacy as any).checkIn
@@ -167,6 +168,7 @@ describe("accountDefaults", () => {
 
       expect(normalized.disabled).toBe(false)
       expect(normalized.excludeFromTotalBalance).toBe(false)
+      expect(normalized.excludeFromTodayIncome).toBe(false)
       expect(normalized.tagIds).toEqual([])
       expect(normalized.tags).toBeUndefined()
       expect(normalized.notes).toBe("")
@@ -189,6 +191,7 @@ describe("accountDefaults", () => {
       const account = createSiteAccount({
         disabled: true,
         excludeFromTotalBalance: true,
+        excludeFromTodayIncome: true,
         tagIds: ["t1"],
         tags: ["Legacy"],
         checkIn: { enableDetection: true, autoCheckInEnabled: false },
@@ -201,6 +204,7 @@ describe("accountDefaults", () => {
 
       expect(normalized.disabled).toBe(true)
       expect(normalized.excludeFromTotalBalance).toBe(true)
+      expect(normalized.excludeFromTodayIncome).toBe(true)
       expect(normalized.tagIds).toEqual(["t1"])
       expect(normalized.tags).toEqual(["Legacy"])
       expect(normalized.checkIn.enableDetection).toBe(true)

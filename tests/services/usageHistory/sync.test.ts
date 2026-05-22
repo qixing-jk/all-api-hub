@@ -74,6 +74,7 @@ async function createTestAccount(baseUrl: string): Promise<string> {
     tagIds: [],
     disabled: false,
     excludeFromTotalBalance: false,
+    excludeFromTodayIncome: false,
     authType: AuthTypeEnum.AccessToken,
     checkIn: { enableDetection: false },
   }

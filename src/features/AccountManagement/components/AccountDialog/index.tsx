@@ -225,6 +225,9 @@ export default function AccountDialog({
                 onExcludeFromTotalBalanceChange={
                   setters.setExcludeFromTotalBalance
                 }
+                onExcludeFromTodayIncomeChange={
+                  setters.setExcludeFromTodayIncome
+                }
                 tags={tags}
                 tagCountsById={tagCountsById}
                 createTag={createTag}

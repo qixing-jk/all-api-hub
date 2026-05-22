@@ -632,6 +632,7 @@ export async function validateAndSaveAccount(
   cookieAuthSessionCookie: string,
   manualBalanceUsd?: string,
   excludeFromTotalBalance = false,
+  excludeFromTodayIncome = false,
   sub2apiAuth?: Sub2ApiAuthConfig,
   options: ValidateAndSaveAccountOptions = {},
 ): Promise<AccountSaveResponse> {
@@ -742,6 +743,7 @@ export async function validateAndSaveAccount(
       authType: authType,
       disabled: false,
       excludeFromTotalBalance: excludeFromTotalBalance === true,
+      excludeFromTodayIncome: excludeFromTodayIncome === true,
       cookieAuth:
         authType === AuthTypeEnum.Cookie
           ? { sessionCookie: sessionCookieHeader.trim() }
@@ -803,6 +805,7 @@ export async function validateAndSaveAccount(
       authType: authType,
       disabled: false,
       excludeFromTotalBalance: excludeFromTotalBalance === true,
+      excludeFromTodayIncome: excludeFromTodayIncome === true,
       cookieAuth:
         authType === AuthTypeEnum.Cookie
           ? { sessionCookie: sessionCookieHeader.trim() }
@@ -903,6 +906,7 @@ export async function validateAndUpdateAccount(
   cookieAuthSessionCookie: string,
   manualBalanceUsd?: string,
   excludeFromTotalBalance = false,
+  excludeFromTodayIncome = false,
   sub2apiAuth?: Sub2ApiAuthConfig,
 ): Promise<AccountSaveResponse> {
   const sessionCookieHeader =
@@ -993,6 +997,7 @@ export async function validateAndUpdateAccount(
       site_type: normalizedSiteType,
       authType: authType,
       excludeFromTotalBalance: excludeFromTotalBalance === true,
+      excludeFromTodayIncome: excludeFromTodayIncome === true,
       cookieAuth:
         authType === AuthTypeEnum.Cookie
           ? { sessionCookie: sessionCookieHeader.trim() }
@@ -1054,6 +1059,7 @@ export async function validateAndUpdateAccount(
       site_type: normalizedSiteType,
       authType: authType,
       excludeFromTotalBalance: excludeFromTotalBalance === true,
+      excludeFromTodayIncome: excludeFromTodayIncome === true,
       cookieAuth:
         authType === AuthTypeEnum.Cookie
           ? { sessionCookie: sessionCookieHeader.trim() }

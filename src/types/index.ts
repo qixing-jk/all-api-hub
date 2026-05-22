@@ -128,6 +128,16 @@ export interface SiteAccount {
    */
   excludeFromTotalBalance: boolean
   /**
+   * Whether this stored account is excluded from the "Today Income" aggregate.
+   *
+   * Unlike {@link SiteAccount.disabled}, excluded accounts remain enabled for refresh,
+   * check-in, and other background behaviors; they are only skipped when computing
+   * aggregate Today Income display values.
+   *
+   * Canonical persisted shape: always present as a boolean; default: false.
+   */
+  excludeFromTodayIncome: boolean
+  /**
    * Legacy flag indicating whether the account can be checked in today.
    * @deprecated Use `checkIn.siteStatus.isCheckedInToday` instead.
    */
@@ -168,6 +178,7 @@ export interface SiteAccount {
    * 1.2.0: Persist/normalize `disabled` flag (configVersion = 3)
    * 1.2.1: Persist/normalize `excludeFromTotalBalance` flag (configVersion = 4)
    * 1.2.2: Persist/normalize Sub2API refresh-token auth (configVersion = 5)
+   * 1.2.3: Persist/normalize `excludeFromTodayIncome` flag (configVersion = 6)
    * @since 1.0.0
    */
   configVersion?: number
@@ -445,6 +456,13 @@ export interface DisplaySiteData {
    * a disabled state for actions like refresh or check-in.
    */
   excludeFromTotalBalance?: boolean
+  /**
+   * "Exclude from Today Income" state projected from {@link SiteAccount.excludeFromTodayIncome}.
+   *
+   * This affects only aggregate Today Income values; per-account row income display
+   * and account behaviors like refresh/check-in remain unchanged.
+   */
+  excludeFromTodayIncome?: boolean
   /**
    * Legacy flag indicating whether the account can be checked in today.
    * @deprecated Use `checkIn.siteStatus.isCheckedInToday` instead.

@@ -28,6 +28,7 @@ export interface AccountDialogDraft {
   notes: string
   tagIds: string[]
   excludeFromTotalBalance: boolean
+  excludeFromTodayIncome: boolean
   checkIn: CheckInConfig
   siteType: AccountSiteType
   authType: AuthTypeEnum
@@ -51,6 +52,7 @@ export function createEmptyAccountDialogDraft(): AccountDialogDraft {
     notes: "",
     tagIds: [],
     excludeFromTotalBalance: false,
+    excludeFromTodayIncome: false,
     checkIn: {
       enableDetection: false,
       autoCheckInEnabled: true,

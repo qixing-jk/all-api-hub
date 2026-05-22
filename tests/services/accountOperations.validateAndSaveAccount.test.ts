@@ -201,6 +201,7 @@ describe("accountOperations validateAndSaveAccount", () => {
       tagIds: [],
       disabled: false,
       excludeFromTotalBalance: false,
+      excludeFromTodayIncome: false,
       authType: AuthTypeEnum.AccessToken,
       checkIn: CHECK_IN_DISABLED,
     })
@@ -260,6 +261,7 @@ describe("accountOperations validateAndSaveAccount", () => {
       "",
       undefined,
       true,
+      false,
       {
         refreshToken: " refresh-token ",
         tokenExpiresAt: 0,
@@ -469,6 +471,7 @@ describe("accountOperations validateAndSaveAccount", () => {
       "",
       undefined,
       false,
+      false,
       undefined,
       { skipAutoProvisionKeyOnAccountAdd: true },
     )
@@ -500,6 +503,7 @@ describe("accountOperations validateAndSaveAccount", () => {
       AuthTypeEnum.AccessToken,
       "",
       undefined,
+      false,
       false,
       undefined,
       { skipAutoProvisionKeyOnAccountAdd: true },

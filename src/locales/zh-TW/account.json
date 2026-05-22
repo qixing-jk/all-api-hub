@@ -98,7 +98,8 @@
   },
   "filteredTotals": {
     "balance": "餘額",
-    "consumption": "今日消耗"
+    "consumption": "今日消耗",
+    "income": "今日收入"
   },
   "healthStatus": {
     "apiError": "API錯誤",

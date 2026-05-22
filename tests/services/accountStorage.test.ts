@@ -112,6 +112,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
     id: overrides.id || "account-1",
     disabled: overrides.disabled === true,
     excludeFromTotalBalance: overrides.excludeFromTotalBalance === true,
+    excludeFromTodayIncome: overrides.excludeFromTodayIncome === true,
     site_name: overrides.site_name || "Test Site",
     site_url: overrides.site_url || "https://test.example.com",
     health: overrides.health || { status: SiteHealthStatus.Healthy },
