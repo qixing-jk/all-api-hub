@@ -5,9 +5,9 @@
 ## Feature Highlights
 
 - **One-Click Backup/Restore**: After filling in WebDAV credentials on the "Import/Export" page, you can upload or download JSON backups at any time.
-- **Automatic Synchronization**: `webdavAutoSyncService` supports scheduled background synchronization (default 1 hour), automatically merging or overwriting data based on the strategy.
+- **Automatic Synchronization**: Background scheduled synchronization (default 1 hour), automatically merging or overwriting data based on the strategy.
 - **Multi-Strategy Support**: Choose "Merge / Upload Only / Download Only" to meet differentiated needs for primary and secondary devices.
-- **Conflict Merging**: In merge mode, accounts and preferences are de-duplicated by update time, maximizing the retention of newer data.
+- **Conflict Merging**: In merge mode, retain the newer accounts, bookmarks, and preferences by update time; when deleting accounts or bookmarks, a deletion marker is recorded to prevent old backups from reintroducing them after the next sync.
 
 ## Prerequisites
 
@@ -41,7 +41,7 @@ Enable "Automatic Synchronization" on the same page for scheduled background syn
    - First call `testWebdavConnection` to confirm credentials are valid.
    - Download remote backup (if it doesn't exist, it's considered the first backup).
    - Export local accounts and preferences, determining the final data based on the strategy:
-     - **Merge**: Retain the latest items based on `updated_at` / `lastUpdated` timestamps.
+     - **Merge**: Retain the latest items based on `updated_at` / `lastUpdated` timestamps; deletion markers for accounts and bookmarks will participate in the merge during synchronization, preventing deleted items from being restored by old remote copies.
      - **Upload Only/Download Only**: Directly select local or remote data.
    - Write the merged result back to local (via `accountStorage.importData` + `userPreferences.importPreferences`).
    - Generate new JSON and upload it to `all-api-hub-backup/all-api-hub-1-0.json`.
@@ -59,7 +59,7 @@ Enable "Automatic Synchronization" on the same page for scheduled background syn
 |------|----------|
 | Test connection failed | Check if the URL includes the protocol (`https://`) and if remote writing is allowed. |
 | Automatic synchronization unresponsive | Possibly due to the browser being put to sleep by the system or automatic synchronization not being enabled; reopen the extension and save settings. |
-| Duplicate accounts after merging | Manually delete duplicates and re-upload; for strict control, use the "Upload Only" strategy. |
+| Duplicate accounts or bookmarks after merging | Manually delete duplicates and re-upload; for strict control, use the "Upload Only" strategy. Deleted accounts and bookmarks participate in subsequent merges via deletion markers and are typically not restored by old backups. |
 | JSON file too large | It is recommended to regularly clean up expired accounts or export in batches to avoid exceeding WebDAV limits. |
 
 ## Related Documents
