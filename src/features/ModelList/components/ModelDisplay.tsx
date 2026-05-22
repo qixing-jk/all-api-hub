@@ -19,6 +19,7 @@ import type {
   ModelManagementSourceCapabilities,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_MANAGEMENT_SOURCE_KINDS } from "~/features/ModelList/modelManagementSources"
+import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import { cn } from "~/lib/utils"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
 import {
@@ -147,6 +148,7 @@ export function ModelDisplay(props: ModelDisplayProps) {
 
   return (
     <div
+      data-testid={MODEL_LIST_TEST_IDS.modelDisplay}
       className="max-h-[70vh] overflow-hidden"
       style={{ height: listContainerHeight }}
     >

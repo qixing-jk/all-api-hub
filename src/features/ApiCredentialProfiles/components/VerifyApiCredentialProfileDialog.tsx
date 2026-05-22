@@ -256,6 +256,17 @@ export function VerifyApiCredentialProfileDialog({
     )
   }, [profile, t])
 
+  const preserveCurrentProbeStateForModel = useCallback(
+    (nextModelId: string) => {
+      if (!profile) return
+
+      pendingHistoryContextKeyRef.current = null
+      lastLoadedHistoryContextKeyRef.current =
+        createVerificationHistoryContextKey(profile.id, apiType, nextModelId)
+    },
+    [apiType, profile],
+  )
+
   const fetchModels = useCallback(
     async (nextApiType: ApiVerificationApiType) => {
       if (!profile) return
@@ -278,7 +289,18 @@ export function VerifyApiCredentialProfileDialog({
         setModelOptions(normalized)
         const suggestedModelId = pickSuggestedModelId(nextApiType, normalized)
         if (suggestedModelId) {
-          setModelId((current) => (current.trim() ? current : suggestedModelId))
+          setModelId((current) => {
+            if (current.trim()) return current
+
+            const hasActiveProbeState = probesRef.current.some(
+              (probe) => probe.isRunning || probe.result,
+            )
+            if (hasActiveProbeState) {
+              preserveCurrentProbeStateForModel(suggestedModelId)
+            }
+
+            return suggestedModelId
+          })
         }
       } catch (error) {
         const message =
@@ -296,7 +318,7 @@ export function VerifyApiCredentialProfileDialog({
         }
       }
     },
-    [profile, t],
+    [preserveCurrentProbeStateForModel, profile, probesRef, t],
   )
 
   useEffect(() => {
@@ -471,7 +493,11 @@ export function VerifyApiCredentialProfileDialog({
           modelsOutput.suggestedModelId ?? modelsOutput.modelIdsPreview?.[0]
         if (suggested) {
           // Avoid overriding user input while the probe is in-flight.
-          setModelId((current) => (current.trim() ? current : suggested))
+          setModelId((current) => {
+            if (current.trim()) return current
+            preserveCurrentProbeStateForModel(suggested)
+            return suggested
+          })
         }
       }
 
@@ -559,7 +585,11 @@ export function VerifyApiCredentialProfileDialog({
               modelsOutput?.modelIdsPreview?.[0]
             if (suggested) {
               modelIdForSuite = suggested
-              setModelId((current) => (current.trim() ? current : suggested))
+              setModelId((current) => {
+                if (current.trim()) return current
+                preserveCurrentProbeStateForModel(suggested)
+                return suggested
+              })
             }
           }
           continue

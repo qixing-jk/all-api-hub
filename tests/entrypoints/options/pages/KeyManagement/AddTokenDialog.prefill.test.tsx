@@ -646,6 +646,54 @@ describe("AddTokenDialog prefill", () => {
     })
   })
 
+  it("waits for async create success handling before closing the dialog", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    createApiTokenMock.mockResolvedValueOnce(true)
+    let resolveSuccess: () => void = () => undefined
+    const onSuccess = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSuccess = resolve
+        }),
+    )
+    const onClose = vi.fn()
+
+    const user = userEvent.setup()
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={onClose}
+        onSuccess={onSuccess}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+      />,
+    )
+
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "Async callback",
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+
+    await waitFor(() => {
+      expect(onSuccess).toHaveBeenCalledWith(undefined)
+    })
+    expect(onClose).not.toHaveBeenCalled()
+
+    resolveSuccess()
+
+    await waitFor(() => {
+      expect(onClose).toHaveBeenCalled()
+    })
+  })
+
   it("closes through the one-time key dialog acknowledgement", async () => {
     fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
     fetchUserGroupsMock.mockResolvedValueOnce({

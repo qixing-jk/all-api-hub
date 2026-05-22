@@ -2,16 +2,24 @@ import type { Locator, Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import type { AccountSiteType } from "~/constants/siteType"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import {
   getKeyManagementTokenRowTestId,
   KEY_MANAGEMENT_TEST_IDS,
 } from "~/features/KeyManagement/testIds"
+import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import {
+  API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+  type ApiCredentialProfile,
+} from "~/types/apiCredentialProfiles"
 import { expect } from "~~/e2e/fixtures/extensionTest"
 import { waitForExtensionPage } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
+  getPlasmoStorageRawValue,
   getServiceWorker,
+  setPlasmoStorageValue,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 import {
@@ -30,9 +38,88 @@ type AccountTokenIdentity = {
   name: string
 }
 
-type SavedAccountUiResult = {
-  siteType: string
+export type SavedApiCredentialProfileExpectation = Partial<
+  Pick<ApiCredentialProfile, "name" | "baseUrl" | "apiKey" | "tagIds">
+>
+
+export type SavedAccountUiResult = {
+  accountId?: string
+  siteType: AccountSiteType
   baseUrl: string
+}
+
+async function readStoredApiCredentialProfiles(
+  serviceWorker: ServiceWorker,
+): Promise<ApiCredentialProfile[]> {
+  const raw = await getPlasmoStorageRawValue<unknown>(
+    serviceWorker,
+    STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+  )
+
+  if (typeof raw !== "string") return []
+
+  try {
+    const parsed = JSON.parse(raw) as { profiles?: ApiCredentialProfile[] }
+    return Array.isArray(parsed.profiles) ? parsed.profiles : []
+  } catch {
+    return []
+  }
+}
+
+function matchesExpectedProfile(
+  profile: ApiCredentialProfile,
+  expectation: SavedApiCredentialProfileExpectation = {},
+) {
+  return (
+    (expectation.name === undefined || profile.name === expectation.name) &&
+    (expectation.baseUrl === undefined ||
+      profile.baseUrl === expectation.baseUrl) &&
+    (expectation.apiKey === undefined ||
+      profile.apiKey === expectation.apiKey) &&
+    (expectation.tagIds === undefined ||
+      JSON.stringify(profile.tagIds) === JSON.stringify(expectation.tagIds))
+  )
+}
+
+async function findSavedApiCredentialProfile(params: {
+  serviceWorker: ServiceWorker
+  existingProfileIds: Set<string>
+  expectedProfile?: SavedApiCredentialProfileExpectation
+}) {
+  const profiles = await readStoredApiCredentialProfiles(params.serviceWorker)
+  return (
+    profiles.find(
+      (profile) =>
+        !params.existingProfileIds.has(profile.id) &&
+        matchesExpectedProfile(profile, params.expectedProfile),
+    ) ??
+    profiles.find((profile) =>
+      matchesExpectedProfile(profile, params.expectedProfile),
+    ) ??
+    null
+  )
+}
+
+export async function deleteApiCredentialProfileFromStorage(params: {
+  serviceWorker: ServiceWorker
+  profileId: string
+}) {
+  const profiles = await readStoredApiCredentialProfiles(params.serviceWorker)
+  const filtered = profiles.filter((profile) => profile.id !== params.profileId)
+
+  if (filtered.length === profiles.length) {
+    return
+  }
+
+  await setPlasmoStorageValue(
+    params.serviceWorker,
+    STORAGE_KEYS.API_CREDENTIAL_PROFILES,
+    {
+      version: API_CREDENTIAL_PROFILES_CONFIG_VERSION,
+      profiles: filtered,
+      lastUpdated: Date.now(),
+    },
+  )
 }
 
 export async function saveAutoDetectedAccountFromApp(params: {
@@ -40,8 +127,8 @@ export async function saveAutoDetectedAccountFromApp(params: {
   extensionId: string
   serviceWorker?: ServiceWorker
   baseUrl: string
-  siteType: string
-  expectedSiteType?: string
+  siteType: AccountSiteType
+  expectedSiteType?: AccountSiteType
   prepareDetectedDialog?: (dialog: AccountAddDialog) => Promise<void>
 }): Promise<SavedAccountUiResult> {
   await openAccountManagementPage({
@@ -94,6 +181,7 @@ export async function saveAutoDetectedAccountFromApp(params: {
   await expectAccountListItemVisible(params.page, savedAccount.id)
 
   return {
+    accountId: savedAccount.id,
     siteType: savedAccount.site_type,
     baseUrl: savedAccount.site_url,
   }
@@ -120,15 +208,15 @@ async function openKeyManagementPageFromAccountRow(params: {
   page: Page
   extensionId: string
   accountId?: string
-  siteType?: string
+  siteType?: AccountSiteType
   baseUrl?: string
 }): Promise<Page> {
   const row =
     params.accountId !== undefined
       ? await expectAccountListItemVisible(params.page, params.accountId)
       : await expectAccountListItemVisibleBySite(params.page, {
-          siteType: params.siteType ?? "",
-          baseUrl: params.baseUrl ?? "",
+          siteType: requireAccountSiteType(params.siteType),
+          baseUrl: requireAccountBaseUrl(params.baseUrl),
         })
 
   await row.hover()
@@ -219,20 +307,16 @@ export async function deleteTokenFromKeyManagementPage(params: {
   await expect(row).toHaveCount(0, { timeout: 60_000 })
 }
 
-export async function createAndVerifyTokenFromApp(params: {
+export async function openKeyManagementForAccount(params: {
   page: Page
   extensionId: string
   accountId?: string
-  siteType?: string
+  siteType?: AccountSiteType
   baseUrl?: string
-  tokenName: string
   openFromAccountRow?: boolean
-  onTokenSubmitted?: (result: { page: Page; tokenName: string }) => void
-}) {
-  let keyManagementPage = params.page
-
+}): Promise<Page> {
   if (params.openFromAccountRow) {
-    keyManagementPage = await openKeyManagementPageFromAccountRow({
+    return await openKeyManagementPageFromAccountRow({
       page: params.page,
       extensionId: params.extensionId,
       accountId: params.accountId,
@@ -246,29 +330,103 @@ export async function createAndVerifyTokenFromApp(params: {
       )
     }
 
-    keyManagementPage = await openKeyManagementPage({
+    return await openKeyManagementPage({
       page: params.page,
       extensionId: params.extensionId,
       accountId: params.accountId,
     })
   }
-  await submitCreateTokenForm({
-    page: keyManagementPage,
-    tokenName: params.tokenName,
-  })
-  params.onTokenSubmitted?.({
-    page: keyManagementPage,
-    tokenName: params.tokenName,
-  })
+}
 
-  await closeTokenCreationDialogsIfPresent(keyManagementPage)
+export async function submitTokenCreationFromKeyManagementPage(params: {
+  page: Page
+  tokenName: string
+}) {
+  await submitCreateTokenForm({
+    page: params.page,
+    tokenName: params.tokenName,
+  })
+}
+
+export async function expectTokenCreatedInKeyManagementPage(params: {
+  page: Page
+  tokenName: string
+}) {
+  await closeTokenCreationDialogsIfPresent(params.page)
   const row = await expectTokenVisibleInKeyManagementPage({
-    page: keyManagementPage,
+    page: params.page,
     tokenName: params.tokenName,
   })
 
   return {
-    page: keyManagementPage,
+    page: params.page,
     row,
   }
+}
+
+export async function saveTokenToApiCredentialProfilesFromKeyManagementPage(params: {
+  serviceWorker: ServiceWorker
+  page: Page
+  row: Locator
+  expectedProfile?: SavedApiCredentialProfileExpectation
+  openProfilesPage?: boolean
+}): Promise<ApiCredentialProfile> {
+  const existingProfileIds = new Set(
+    (await readStoredApiCredentialProfiles(params.serviceWorker)).map(
+      (profile) => profile.id,
+    ),
+  )
+
+  await params.row
+    .getByTestId(KEY_MANAGEMENT_TEST_IDS.saveToApiProfilesButton)
+    .click()
+
+  await expect
+    .poll(async () => {
+      return await findSavedApiCredentialProfile({
+        serviceWorker: params.serviceWorker,
+        existingProfileIds,
+        expectedProfile: params.expectedProfile,
+      })
+    })
+    .toMatchObject(params.expectedProfile ?? {})
+
+  const savedProfile = await findSavedApiCredentialProfile({
+    serviceWorker: params.serviceWorker,
+    existingProfileIds,
+    expectedProfile: params.expectedProfile,
+  })
+
+  if (!savedProfile) {
+    throw new Error("Saving key to API profiles did not create a profile")
+  }
+
+  if (params.openProfilesPage !== false) {
+    await params.page
+      .getByTestId(KEY_MANAGEMENT_TEST_IDS.openApiProfilesToastButton)
+      .click()
+    await expect(
+      params.page.getByRole("heading", { name: savedProfile.name }),
+    ).toBeVisible()
+  }
+
+  return savedProfile
+}
+
+function requireAccountSiteType(siteType: AccountSiteType | undefined) {
+  if (!siteType) {
+    throw new Error(
+      "siteType is required when opening Key Management from row.",
+    )
+  }
+
+  return siteType
+}
+
+function requireAccountBaseUrl(baseUrl: string | undefined) {
+  if (!baseUrl) {
+    throw new Error("baseUrl is required when opening Key Management from row.")
+  }
+
+  return baseUrl
 }

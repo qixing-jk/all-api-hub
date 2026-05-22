@@ -52,6 +52,7 @@ type WaitForExtensionPageParams = {
   hash?: string
   searchParams?: Record<string, string>
   timeoutMs?: number
+  reuseExistingPage?: boolean
 }
 
 type StubNewApiSiteRoutesOptions = {
@@ -474,13 +475,15 @@ export async function waitForExtensionPage(
   context: BrowserContext,
   params: WaitForExtensionPageParams,
 ) {
-  const existingPage = context
-    .pages()
-    .find((page) => isMatchingExtensionPage(page, params))
+  if (params.reuseExistingPage !== false) {
+    const existingPage = context
+      .pages()
+      .find((page) => isMatchingExtensionPage(page, params))
 
-  if (existingPage) {
-    await existingPage.waitForLoadState("domcontentloaded")
-    return existingPage
+    if (existingPage) {
+      await existingPage.waitForLoadState("domcontentloaded")
+      return existingPage
+    }
   }
 
   const page = await context.waitForEvent("page", {
@@ -564,7 +567,7 @@ export async function stubNewApiSiteRoutes(
   const exchangeRate = options.exchangeRate ?? 7
   const todayQuotaConsumption = options.todayQuotaConsumption ?? 0
   const redemptionCreditQuota = options.redemptionCreditQuota ?? 100_000
-  const title = options.title ?? "new-api"
+  const title = options.title ?? SITE_TYPES.NEW_API
   const systemName = options.systemName ?? "E2E New API"
   const models = options.models ?? ["gpt-4o-mini", "gpt-4.1-mini"]
   const pricingModels = options.pricingModels ?? buildStubPricingModels(models)

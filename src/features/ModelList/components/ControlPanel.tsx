@@ -38,6 +38,7 @@ import {
   MODEL_LIST_SORT_MODES,
   type ModelListSortMode,
 } from "~/features/ModelList/sortModes"
+import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
 import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -206,7 +207,7 @@ export function ControlPanel({
   }
 
   return (
-    <Card className="mb-6">
+    <Card className="mb-6" data-testid={MODEL_LIST_TEST_IDS.controlPanel}>
       <CardContent>
         {isProfileSource && (
           <Alert

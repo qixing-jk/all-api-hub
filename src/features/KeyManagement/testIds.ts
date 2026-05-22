@@ -9,9 +9,12 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   oneTimeKeyCloseButton: "key-management-one-time-key-close-button",
 } as const
 
+export const KEY_MANAGEMENT_TOKEN_ROW_TEST_ID_PREFIX =
+  "key-management-token-row-" as const
+
 /**
  * Returns the stable test id for a rendered API key row.
  */
 export function getKeyManagementTokenRowTestId(tokenId: string | number) {
-  return `key-management-token-row-${tokenId}`
+  return `${KEY_MANAGEMENT_TOKEN_ROW_TEST_ID_PREFIX}${tokenId}`
 }

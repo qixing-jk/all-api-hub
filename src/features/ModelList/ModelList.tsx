@@ -324,7 +324,7 @@ export default function ModelList(props: {
   }, [pricingContexts, pricingData, selectedSource?.kind])
 
   return (
-    <div className="p-6">
+    <div className="p-6" data-testid={MODEL_LIST_TEST_IDS.page}>
       <PageHeader
         icon={Cpu}
         title={t("title")}

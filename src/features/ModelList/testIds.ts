@@ -1,4 +1,7 @@
 export const MODEL_LIST_TEST_IDS = {
+  page: "model-list-page",
+  controlPanel: "model-list-control-panel",
+  modelDisplay: "model-list-display",
   addApiCredentialProfileButton: "model-list-add-api-credential-profile-button",
   addFirstAccountButton: "model-list-add-first-account-button",
   modelKeyDialogButton: "model-list-model-key-dialog-button",
