@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { ApiError } from "~/services/apiService/common/errors"
 import type {
   ApiServiceRequest,
@@ -541,7 +542,7 @@ describe("apiService sub2api key management service", () => {
           tokenExpiresAt: now + 3600 * 1000,
         },
       }),
-      { updateUserTimestamp: false },
+      { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
     )
   })
 
@@ -592,7 +593,7 @@ describe("apiService sub2api key management service", () => {
       expect.objectContaining({
         account_info: { access_token: "resynced-jwt" },
       }),
-      { updateUserTimestamp: false },
+      { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
     )
   })
 

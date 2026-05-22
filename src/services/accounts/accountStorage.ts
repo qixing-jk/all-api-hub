@@ -37,6 +37,7 @@ import { autoCheckinStorage } from "../checkin/autoCheckin/storage"
 import { userPreferences } from "../preferences/userPreferences"
 import { getAccountSiteType } from "../siteDetection/detectSiteType"
 import {
+  AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
   createDefaultAccountStorageConfig,
   createPersistedSiteAccount,
@@ -67,7 +68,7 @@ type RefreshAccountOptions = {
 }
 
 type UpdateAccountOptions = {
-  updateUserTimestamp?: boolean
+  userTimestampMode: AccountUpdateUserTimestampMode
 }
 
 class AccountStorageService {
@@ -233,7 +234,7 @@ class AccountStorageService {
         })
         const migratedAccount = migrateAccountConfig(account)
         await this.updateAccount(id, migratedAccount, {
-          updateUserTimestamp: false,
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
         })
         return migratedAccount
       }
@@ -336,7 +337,7 @@ class AccountStorageService {
         })
         const migratedAccount = migrateAccountConfig(account)
         await this.updateAccount(account.id, migratedAccount, {
-          updateUserTimestamp: false,
+          userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
         })
         return migratedAccount
       }
@@ -420,7 +421,7 @@ class AccountStorageService {
   async updateAccount(
     id: string,
     updates: DeepPartial<SiteAccount>,
-    options?: UpdateAccountOptions,
+    options: UpdateAccountOptions,
   ): Promise<boolean> {
     try {
       return await this.mutateAccountById(id, ({ account }) => ({
@@ -428,7 +429,7 @@ class AccountStorageService {
           account,
           updates,
           now: Date.now(),
-          updateUserTimestamp: options?.updateUserTimestamp,
+          userTimestampMode: options.userTimestampMode,
         }),
         result: true,
         changed: true,
@@ -456,6 +457,7 @@ class AccountStorageService {
             account,
             updates: { disabled: normalized },
             now: Date.now(),
+            userTimestampMode: AccountUpdateUserTimestampMode.Touch,
           }),
           result: {
             updated: true,
@@ -541,6 +543,7 @@ class AccountStorageService {
             account,
             updates: { disabled: normalized },
             now,
+            userTimestampMode: AccountUpdateUserTimestampMode.Touch,
           })
         })
 
@@ -881,7 +884,7 @@ class AccountStorageService {
       {
         last_sync_time: Date.now(),
       },
-      { updateUserTimestamp: false },
+      { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
     )
   }
 
@@ -918,7 +921,7 @@ class AccountStorageService {
             },
           },
         },
-        { updateUserTimestamp: false },
+        { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
       )
     } catch (error) {
       logger.error("标记账号为已签到失败", { accountId: id, error })
@@ -962,7 +965,7 @@ class AccountStorageService {
             },
           },
         },
-        { updateUserTimestamp: false },
+        { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
       )
     } catch (error) {
       logger.error("标记账号外部签到为已完成失败", { accountId: id, error })
@@ -1207,7 +1210,7 @@ class AccountStorageService {
 
       // 更新账号信息
       const didPersist = await this.updateAccount(id, updateData, {
-        updateUserTimestamp: false,
+        userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
       })
       const updatedAccount = didPersist
         ? await this.getAccountById(id)
@@ -1262,7 +1265,7 @@ class AccountStorageService {
             },
             last_sync_time: Date.now(),
           },
-          { updateUserTimestamp: false },
+          { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
         )
       } catch (updateError) {
         logger.error("更新健康状态失败", { accountId: id, error: updateError })
@@ -2127,7 +2130,7 @@ class AccountStorageService {
     }
 
     const success = await this.updateAccount(account.id, updates, {
-      updateUserTimestamp: false,
+      userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
     })
     if (success) {
       const refreshed = await this.getAccountById(account.id)

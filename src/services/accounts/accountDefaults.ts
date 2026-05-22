@@ -341,6 +341,14 @@ export function createPersistedSiteAccount(params: {
   return normalizeSiteAccount(merged)
 }
 
+export const AccountUpdateUserTimestampMode = {
+  Touch: "touch",
+  Preserve: "preserve",
+} as const
+
+export type AccountUpdateUserTimestampMode =
+  (typeof AccountUpdateUserTimestampMode)[keyof typeof AccountUpdateUserTimestampMode]
+
 /**
  * Applies a partial update to a stored `SiteAccount`.
  *
@@ -355,13 +363,13 @@ export function applySiteAccountUpdates(params: {
   account: SiteAccount
   updates: DeepPartial<SiteAccount>
   now: number
-  updateUserTimestamp?: boolean
+  userTimestampMode: AccountUpdateUserTimestampMode
 }): SiteAccount {
   const normalized = normalizeSiteAccount(params.account)
   const merged = deepOverride<SiteAccount>(normalized, {
     ...params.updates,
     updated_at: params.now,
-    ...(params.updateUserTimestamp === false
+    ...(params.userTimestampMode === AccountUpdateUserTimestampMode.Preserve
       ? {}
       : { user_updated_at: params.now }),
   } as DeepPartial<SiteAccount>)

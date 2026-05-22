@@ -12,6 +12,7 @@ import {
   type AccountSiteType,
 } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import {
   ensureDefaultApiTokenForAccount,
   generateDefaultTokenRequest,
@@ -1016,7 +1017,9 @@ export async function validateAndUpdateAccount(
       last_sync_time: Date.now(),
     }
 
-    const success = await accountStorage.updateAccount(accountId, updateData)
+    const success = await accountStorage.updateAccount(accountId, updateData, {
+      userTimestampMode: AccountUpdateUserTimestampMode.Touch,
+    })
     if (!success) {
       return {
         success: false,
@@ -1078,6 +1081,7 @@ export async function validateAndUpdateAccount(
     const success = await accountStorage.updateAccount(
       accountId,
       partialUpdateData,
+      { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
     )
 
     if (!success) {

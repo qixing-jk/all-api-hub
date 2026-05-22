@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import type {
   ApiServiceAccountRequest,
@@ -1082,7 +1083,7 @@ describe("apiService sub2api refreshAccountData", () => {
           tokenExpiresAt: now + 3600 * 1000,
         },
       },
-      { updateUserTimestamp: false },
+      { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
     )
     expect(result.success).toBe(true)
     expect(result.authUpdate?.userId).toBe(9)

@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   ACCOUNT_STORAGE_KEYS,
@@ -509,9 +510,13 @@ describe("accountStorage core behaviors", () => {
     })
     seedStorage([account])
 
-    const success = await accountStorage.updateAccount("with-tags", {
-      tagIds: [],
-    })
+    const success = await accountStorage.updateAccount(
+      "with-tags",
+      {
+        tagIds: [],
+      },
+      { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+    )
     expect(success).toBe(true)
 
     const accounts = await accountStorage.getAllAccounts()
@@ -545,6 +550,7 @@ describe("accountStorage core behaviors", () => {
         {
           notes: "manual edit",
         },
+        { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
       )
 
       expect(manualSuccess).toBe(true)
@@ -607,9 +613,13 @@ describe("accountStorage core behaviors", () => {
 
     await Promise.all(
       accounts.map((account) =>
-        accountStorage.updateAccount(account.id, {
-          notes: expectedNotesById.get(account.id),
-        }),
+        accountStorage.updateAccount(
+          account.id,
+          {
+            notes: expectedNotesById.get(account.id),
+          },
+          { userTimestampMode: AccountUpdateUserTimestampMode.Touch },
+        ),
       ),
     )
 

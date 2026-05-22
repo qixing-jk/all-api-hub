@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import {
+  AccountUpdateUserTimestampMode,
   applySiteAccountUpdates,
   createDefaultAccountStorageConfig,
   createPersistedSiteAccount,
@@ -325,6 +326,7 @@ describe("accountDefaults", () => {
           },
         } as any,
         now: 999,
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
       })
 
       expect(updated.checkIn.siteStatus?.isCheckedInToday).toBe(true)
@@ -338,12 +340,13 @@ describe("accountDefaults", () => {
         account: current,
         updates: { tagIds: ["b"] },
         now: 999,
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
       })
 
       expect(updated.tagIds).toEqual(["b"])
     })
 
-    it("advances user update timestamp by default", () => {
+    it("advances user update timestamp when requested", () => {
       const current = createSiteAccount({
         updated_at: 111,
         user_updated_at: 100,
@@ -353,6 +356,7 @@ describe("accountDefaults", () => {
         account: current,
         updates: { notes: "manual" },
         now: 999,
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
       })
 
       expect(updated.updated_at).toBe(999)
@@ -369,7 +373,7 @@ describe("accountDefaults", () => {
         account: current,
         updates: { last_sync_time: 999 },
         now: 999,
-        updateUserTimestamp: false,
+        userTimestampMode: AccountUpdateUserTimestampMode.Preserve,
       })
 
       expect(updated.updated_at).toBe(999)
@@ -386,6 +390,7 @@ describe("accountDefaults", () => {
         account: legacy as any,
         updates: { notes: "updated" },
         now: 999,
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
       })
 
       expect(updated.notes).toBe("updated")
@@ -407,6 +412,7 @@ describe("accountDefaults", () => {
         account: current,
         updates: { health: { code: undefined } } as any,
         now: 999,
+        userTimestampMode: AccountUpdateUserTimestampMode.Touch,
       })
 
       expect(updated.health.code).toBeUndefined()
