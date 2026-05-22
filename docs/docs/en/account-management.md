@@ -27,6 +27,7 @@ In **"Settings -> Basic Settings -> Account Management"**, you can enable the fo
 
 - ⚡ **Auto-fill Current Page URL**: When enabled, clicking "Add Account" will automatically fill in the URL of the current browser tab, saving you from manual copying.
 - 🔑 **Auto-provision Default Token after Adding**: When enabled, after successfully adding an account, the extension will automatically attempt to create a default API key (Token) for you in the site backend for immediate export and use.
+  - **AIHubMix**: AIHubMix API keys are only displayed in full once upon creation. After adding a new AIHubMix account (excluding the "Configure to Hosted Site" process), the extension will first pop up a confirmation dialog asking if you want to create the default key immediately and display the one-time full key; if you cancel, you will need to manually create and save the full key in "Key Management" later.
 - ⚠️ **Warn on Adding Duplicate Accounts**: When attempting to add an already existing site (same URL), the extension will pop up a confirmation prompt to prevent accidental duplicate additions.
 
 ---
@@ -59,6 +60,10 @@ As the number of accounts increases, you can keep the list tidy in the following
 - In **"Settings -> Sorting Priority"**, you can customize global sorting logic. For details, see [Sorting Priority Settings](./sorting-priority.md).
 - Supports multi-level sorting by dimensions such as balance, creation time, health status, and check-in status.
 - You can also manually adjust the order by dragging in the account list (requires switching to manual sorting mode).
+
+### 4.4 Balance and Today's Earnings Statistics
+- When adding or editing an account, you can enable **"Exclude from Total Balance"** to prevent this account from participating in the total balance summary in pop-ups, account lists, and shared overview snapshots; this will not affect account refresh, check-in, or list display.
+- If an account's earnings should not be included in the daily summary, you can enable **"Exclude from Today's Earnings"**. This switch only affects the daily earnings total in pop-ups, account lists, and shared overview snapshots; it will not hide the account, nor will it stop refreshing or check-in.
 
 ---
 
