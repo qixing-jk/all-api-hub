@@ -814,6 +814,93 @@ describe("AccountDataContext initial load orchestration", () => {
     })
   })
 
+  it("projects available estimated income onto display account rows", async () => {
+    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+
+    mockUserPreferencesContext.current = {
+      ...mockUserPreferencesContext.current,
+      preferences: {
+        balanceHistory: {
+          estimatedTodayIncome: { enabled: true },
+        },
+      },
+    }
+    mockGetAllAccounts.mockResolvedValue([
+      {
+        id: "included",
+        disabled: false,
+        excludeFromTodayIncome: false,
+        exchange_rate: 7,
+        account_info: { id: 1 },
+        last_sync_time: 0,
+      },
+      {
+        id: "manual",
+        disabled: false,
+        excludeFromTodayIncome: false,
+        manualBalanceUsd: "12.34",
+        exchange_rate: 7,
+        account_info: { id: 2 },
+        last_sync_time: 0,
+      },
+    ])
+    mockGetDailyBalanceHistoryStore.mockResolvedValue({
+      schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+      snapshotsByAccountId: {
+        included: {
+          "2026-05-22": {
+            quota: 10 * factor,
+            today_income: 0,
+            today_quota_consumption: 0,
+            capturedAt: 1,
+            source: "alarm",
+          },
+          "2026-05-23": {
+            quota: 12 * factor,
+            today_income: 0.5 * factor,
+            today_quota_consumption: 1 * factor,
+            capturedAt: 2,
+            source: "refresh",
+          },
+        },
+        manual: {
+          "2026-05-22": {
+            quota: 10 * factor,
+            today_income: 0,
+            today_quota_consumption: 0,
+            capturedAt: 1,
+            source: "alarm",
+          },
+          "2026-05-23": {
+            quota: 12 * factor,
+            today_income: 0.5 * factor,
+            today_quota_consumption: 1 * factor,
+            capturedAt: 2,
+            source: "refresh",
+          },
+        },
+      },
+    })
+    vi.setSystemTime(new Date("2026-05-23T08:00:00.000Z"))
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().displayData).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "included",
+            estimatedTodayIncome: { USD: 3, CNY: 21 },
+          }),
+          expect.objectContaining({
+            id: "manual",
+            estimatedTodayIncome: null,
+          }),
+        ]),
+      )
+    })
+  })
+
   it("keeps initial load active until current-tab and open-tab checks complete", async () => {
     let resolveActiveTabs: ((tabs: browser.tabs.Tab[]) => void) | undefined
     let resolveAllTabs: ((tabs: browser.tabs.Tab[]) => void) | undefined

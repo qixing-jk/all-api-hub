@@ -33,13 +33,13 @@ const BalanceDisplay: React.FC<{
 }) => {
   const { t } = useTranslation("common")
 
-  const sizeClass = size === "md" ? "text-2xl" : "text-4xl"
+  const sizeClass = size === "md" ? "text-base" : "text-3xl"
 
   return (
-    <div className="flex items-center space-x-1 break-all">
+    <div className="flex min-w-0 items-center space-x-1">
       <button
         onClick={onCurrencyToggle}
-        className={`${sizeClass} dark:text-dark-text-primary p-0 text-left font-bold tracking-tight text-gray-900 transition-colors hover:text-blue-600`}
+        className={`${sizeClass} dark:text-dark-text-primary min-w-0 p-0 text-left leading-tight font-bold tracking-tight break-words text-gray-900 tabular-nums transition-colors hover:text-blue-600`}
         aria-label={t("currency.clickToSwitch", {
           currency:
             currencyType === "USD" ? t("currency.cny") : t("currency.usd"),
@@ -103,7 +103,7 @@ export default function AccountBalanceSummary() {
 
   return (
     <div className="space-y-3">
-      <div className="space-y-1">
+      <div className="dark:bg-dark-bg-secondary/40 space-y-1 rounded-lg bg-gray-50/80 p-3">
         <BodySmall className="font-medium">
           {t("account:stats.totalBalance")}
         </BodySmall>
@@ -121,11 +121,11 @@ export default function AccountBalanceSummary() {
         <div
           className={
             estimatedTodayIncomeEnabled
-              ? "grid grid-cols-1 gap-3 sm:grid-cols-3"
-              : "grid grid-cols-2 gap-3"
+              ? "grid grid-cols-3 gap-2"
+              : "grid grid-cols-2 gap-2"
           }
         >
-          <div className="space-y-1">
+          <div className="dark:bg-dark-bg-secondary/30 min-w-0 space-y-1 rounded-md bg-gray-50/70 p-2">
             <Caption className="font-medium">
               {t("account:stats.todayConsumption")}
             </Caption>
@@ -142,7 +142,7 @@ export default function AccountBalanceSummary() {
             />
           </div>
 
-          <div className="space-y-1">
+          <div className="dark:bg-dark-bg-secondary/30 min-w-0 space-y-1 rounded-md bg-gray-50/70 p-2">
             <Caption className="font-medium">
               {estimatedTodayIncomeEnabled
                 ? t("account:stats.trustedTodayIncome")
@@ -160,7 +160,7 @@ export default function AccountBalanceSummary() {
           </div>
 
           {estimatedTodayIncomeEnabled && (
-            <div className="space-y-1">
+            <div className="dark:bg-dark-bg-secondary/30 min-w-0 space-y-1 rounded-md bg-gray-50/70 p-2">
               <Caption className="font-medium">
                 {t("account:stats.estimatedTodayIncome")}
               </Caption>
@@ -179,7 +179,7 @@ export default function AccountBalanceSummary() {
                   size="md"
                 />
               ) : (
-                <div className="dark:text-dark-text-tertiary text-2xl font-bold text-gray-500">
+                <div className="dark:text-dark-text-tertiary text-base font-bold text-gray-500">
                   -
                 </div>
               )}

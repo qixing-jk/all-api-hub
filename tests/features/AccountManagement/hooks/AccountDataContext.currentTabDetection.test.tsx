@@ -71,6 +71,11 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
       lastModified: Date.now(),
       criteria: [{ id: "current_site", enabled: true, priority: 0 }],
     },
+    preferences: {
+      balanceHistory: {
+        estimatedTodayIncome: { enabled: false },
+      },
+    },
   }),
 }))
 

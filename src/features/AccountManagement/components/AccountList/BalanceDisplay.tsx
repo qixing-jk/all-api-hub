@@ -48,19 +48,8 @@ const AnimatedValue: React.FC<{
       ? 0
       : getDisplayMoneyValue(startValue)
     const shouldAnimate = hasCommittedRef.current
-
-    return (
-      <div
-        className={`truncate transition-all duration-200 ${
-          isRefreshing
-            ? "animate-pulse opacity-60"
-            : onClick
-              ? "cursor-pointer hover:scale-105 hover:opacity-80"
-              : ""
-        } ${className}`}
-        onClick={onClick}
-        title={title}
-      >
+    const content = (
+      <>
         {prefix}
         {getCurrencySymbol(currencyType)}
         {shouldAnimate ? (
@@ -79,6 +68,40 @@ const AnimatedValue: React.FC<{
           displayEndValue.toFixed(UI_CONSTANTS.MONEY.DECIMALS)
         )}
         {suffix}
+      </>
+    )
+
+    if (onClick) {
+      return (
+        <button
+          type="button"
+          className={`ml-auto block max-w-full truncate bg-transparent p-0 text-right transition-all duration-200 ${
+            isRefreshing
+              ? "animate-pulse opacity-60"
+              : "cursor-pointer hover:scale-105 hover:opacity-80"
+          } ${className}`}
+          onClick={onClick}
+          title={title}
+          aria-label={title}
+        >
+          {content}
+        </button>
+      )
+    }
+
+    return (
+      <div
+        className={`ml-auto max-w-full truncate text-right transition-all duration-200 ${
+          isRefreshing
+            ? "animate-pulse opacity-60"
+            : onClick
+              ? "cursor-pointer hover:scale-105 hover:opacity-80"
+              : ""
+        } ${className}`}
+        onClick={onClick}
+        title={title}
+      >
+        {content}
       </div>
     )
   },
@@ -87,12 +110,16 @@ const AnimatedValue: React.FC<{
 const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
   const { t } = useTranslation("account")
   const { isInitialLoad, prevBalances } = useAccountDataContext()
-  const { currencyType, showTodayCashflow } = useUserPreferencesContext()
+  const { currencyType, showTodayCashflow, preferences } =
+    useUserPreferencesContext()
   const { handleRefreshAccount, refreshingAccountId } =
     useAccountActionsContext()
 
   const isRefreshing = refreshingAccountId === site.id
   const isAccountDisabled = site.disabled === true
+  const estimatedTodayIncomeEnabled =
+    preferences?.balanceHistory?.estimatedTodayIncome?.enabled === true
+  const estimatedTodayIncome = site.estimatedTodayIncome?.[currencyType]
 
   const handleRefreshClick = async () => {
     if (isAccountDisabled) return
@@ -106,7 +133,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
     : t("list.balance.refreshBalance")
 
   return (
-    <div className="w-full overflow-hidden text-right">
+    <div className="flex w-full flex-col items-end overflow-hidden text-right">
       {/* Balance */}
       <AnimatedValue
         value={site.balance[currencyType]}
@@ -121,7 +148,7 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
 
       {/* Today's Statistics */}
       {showTodayCashflow && (
-        <div className="space-y-0.5">
+        <div className="flex max-w-full flex-wrap justify-end gap-x-1.5 gap-y-0.5">
           {/* Consumption */}
           <AnimatedValue
             value={site.todayConsumption[currencyType]}
@@ -159,6 +186,27 @@ const BalanceDisplay: React.FC<BalanceDisplayProps> = React.memo(({ site }) => {
             onClick={isAccountDisabled ? undefined : handleRefreshClick}
             isRefreshing={isRefreshing}
           />
+
+          {estimatedTodayIncomeEnabled &&
+            typeof estimatedTodayIncome === "number" && (
+              <AnimatedValue
+                value={estimatedTodayIncome}
+                startValue={0}
+                prefix="~"
+                className={`text-[10px] sm:text-xs ${
+                  estimatedTodayIncome > 0
+                    ? "text-indigo-500"
+                    : "dark:text-dark-text-tertiary text-gray-400"
+                }`}
+                title={
+                  isAccountDisabled
+                    ? t("list.site.disabled")
+                    : t("stats.estimatedTodayIncome")
+                }
+                onClick={isAccountDisabled ? undefined : handleRefreshClick}
+                isRefreshing={isRefreshing}
+              />
+            )}
         </div>
       )}
     </div>

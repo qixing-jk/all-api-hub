@@ -22,7 +22,11 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
-import { buildEstimatedTodayIncomeMoneyTotals } from "~/services/history/dailyBalanceHistory/todayIncomeEstimate"
+import {
+  buildEstimatedTodayIncomeMoneyTotals,
+  convertQuotaToMoney,
+  estimateTodayIncomeForAccount,
+} from "~/services/history/dailyBalanceHistory/todayIncomeEstimate"
 import { createDynamicSortComparator } from "~/services/preferences/utils/sortingPriority"
 import {
   buildAccountSearchIndex,
@@ -295,6 +299,51 @@ export const AccountDataProvider = ({
     [],
   )
 
+  const buildDisplayDataWithBalanceHistory = useCallback(
+    (params: {
+      nextAccounts: SiteAccount[]
+      currentTagStore: TagStore
+      balanceHistoryStore: Awaited<
+        ReturnType<typeof dailyBalanceHistoryStorage.getStore>
+      >
+      todayKey: string
+    }) => {
+      const estimatedByAccountId = new Map<string, CurrencyAmount | null>()
+
+      for (const account of params.nextAccounts) {
+        const estimate = estimateTodayIncomeForAccount({
+          enabled:
+            estimatedTodayIncomeEnabled &&
+            account.disabled !== true &&
+            account.excludeFromTodayIncome !== true,
+          store: params.balanceHistoryStore,
+          account,
+          currentDayKey: params.todayKey,
+        })
+
+        estimatedByAccountId.set(
+          account.id,
+          estimate.status === "available" &&
+            estimate.estimatedTodayIncome !== null
+            ? convertQuotaToMoney({
+                quota: estimate.estimatedTodayIncome,
+                exchangeRate: account.exchange_rate,
+              })
+            : null,
+        )
+      }
+
+      return buildDisplayDataWithResolvedTags(
+        params.nextAccounts,
+        params.currentTagStore,
+      ).map((site) => ({
+        ...site,
+        estimatedTodayIncome: estimatedByAccountId.get(site.id) ?? null,
+      }))
+    },
+    [buildDisplayDataWithResolvedTags, estimatedTodayIncomeEnabled],
+  )
+
   const accountsRef = useRef<SiteAccount[]>([])
   accountsRef.current = accounts
   const hasLoadedAccountDataRef = useRef(false)
@@ -512,10 +561,13 @@ export const AccountDataProvider = ({
         accountStorage.getPinnedList(),
         dailyBalanceHistoryStorage.getStore(),
       ])
-      const displaySiteData = buildDisplayDataWithResolvedTags(
-        allAccounts,
+      const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+      const displaySiteData = buildDisplayDataWithBalanceHistory({
+        nextAccounts: allAccounts,
         currentTagStore,
-      )
+        balanceHistoryStore,
+        todayKey,
+      })
 
       setTagStore(currentTagStore)
       setTags(
@@ -533,7 +585,6 @@ export const AccountDataProvider = ({
       setBookmarks(allBookmarks)
       setStats(accountStats)
       setDisplayData(displaySiteData)
-      const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
       const enabledAccounts = allAccounts.filter(
         (account) =>
           account.disabled !== true && account.excludeFromTodayIncome !== true,
@@ -572,7 +623,7 @@ export const AccountDataProvider = ({
       }
     }
   }, [
-    buildDisplayDataWithResolvedTags,
+    buildDisplayDataWithBalanceHistory,
     estimatedTodayIncomeEnabled,
     prevTotalConsumption,
     prevBalances,

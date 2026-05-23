@@ -190,6 +190,11 @@ describe("popup BalanceSection components", () => {
         name: "common:currency.clickToSwitch",
       })[0],
     ).toHaveTextContent("$10.00")
+    expect(
+      screen.getAllByRole("button", {
+        name: "common:currency.clickToSwitch",
+      })[0],
+    ).toHaveClass("text-3xl")
 
     expect(consumptionValue).toHaveAttribute("data-start", "1.5")
     expect(consumptionValue).toHaveAttribute("data-end", "0.8")

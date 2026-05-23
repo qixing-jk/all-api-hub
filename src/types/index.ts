@@ -421,6 +421,7 @@ export interface DisplaySiteData {
   balance: CurrencyAmount
   todayConsumption: CurrencyAmount
   todayIncome: CurrencyAmount
+  estimatedTodayIncome?: CurrencyAmount | null
   todayTokens: TokenUsage
   health: HealthStatus
   last_sync_time?: number
