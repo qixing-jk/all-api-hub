@@ -172,10 +172,12 @@
   },
   "stats": {
     "completion": "補完",
+    "estimatedTodayIncome": "推定収入",
     "prompt": "プロンプト",
     "todayConsumption": "本日の消費",
     "todayIncome": "本日の収入",
-    "totalBalance": "総残高"
+    "totalBalance": "総残高",
+    "trustedTodayIncome": "信頼済み収入"
   },
   "title": "アカウント管理"
 }

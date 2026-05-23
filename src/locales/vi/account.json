@@ -172,10 +172,12 @@
   },
   "stats": {
     "completion": "Hoàn thành",
+    "estimatedTodayIncome": "Thu nhập ước tính",
     "prompt": "Nhắc nhở",
     "todayConsumption": "Tiêu hao hôm nay",
     "todayIncome": "Thu nhập hôm nay",
-    "totalBalance": "Tổng số dư"
+    "totalBalance": "Tổng số dư",
+    "trustedTodayIncome": "Thu nhập tin cậy"
   },
   "title": "Quản lý tài khoản"
 }

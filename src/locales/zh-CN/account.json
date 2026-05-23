@@ -172,10 +172,12 @@
   },
   "stats": {
     "completion": "补全",
+    "estimatedTodayIncome": "估算收入",
     "prompt": "提示",
     "todayConsumption": "今日消耗",
     "todayIncome": "今日收入",
-    "totalBalance": "总余额"
+    "totalBalance": "总余额",
+    "trustedTodayIncome": "可信收入"
   },
   "title": "账户管理"
 }

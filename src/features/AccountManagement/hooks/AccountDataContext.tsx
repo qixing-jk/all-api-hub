@@ -20,6 +20,9 @@ import {
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
+import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
+import { buildEstimatedTodayIncomeMoneyTotals } from "~/services/history/dailyBalanceHistory/todayIncomeEstimate"
 import { createDynamicSortComparator } from "~/services/preferences/utils/sortingPriority"
 import {
   buildAccountSearchIndex,
@@ -131,6 +134,12 @@ interface AccountDataContextType {
   isRefreshing: boolean
   isRefreshingDisabledAccounts: boolean
   prevTotalConsumption: CurrencyAmount
+  todayIncomeEstimateTotals: {
+    trusted: CurrencyAmount
+    estimated: CurrencyAmount | null
+    availableAccounts: number
+    totalAccounts: number
+  }
   prevBalances: CurrencyAmountMap
   /**
    * Accounts that share the same origin with the current active tab (site-level match).
@@ -200,7 +209,10 @@ export const AccountDataProvider = ({
     updateSortConfig,
     sortingPriorityConfig,
     refreshOnOpen,
+    preferences,
   } = useUserPreferencesContext()
+  const estimatedTodayIncomeEnabled =
+    preferences.balanceHistory?.estimatedTodayIncome?.enabled === true
   const [accounts, setAccounts] = useState<SiteAccount[]>([])
   const [bookmarks, setBookmarks] = useState<SiteBookmark[]>([])
   const [displayData, setDisplayData] = useState<DisplaySiteData[]>([])
@@ -224,6 +236,14 @@ export const AccountDataProvider = ({
     useState(false)
   const [prevTotalConsumption, setPrevTotalConsumption] =
     useState<CurrencyAmount>({ USD: 0, CNY: 0 })
+  const [todayIncomeEstimateTotals, setTodayIncomeEstimateTotals] = useState<
+    AccountDataContextType["todayIncomeEstimateTotals"]
+  >({
+    trusted: { USD: 0, CNY: 0 },
+    estimated: null,
+    availableAccounts: 0,
+    totalAccounts: 0,
+  })
   const [prevBalances, setPrevBalances] = useState<CurrencyAmountMap>({})
   const [sortField, setSortField] = useState<SortField>(initialSortField)
   const [sortOrder, setSortOrder] = useState<SortOrder>(initialSortOrder)
@@ -482,6 +502,7 @@ export const AccountDataProvider = ({
         accountStats,
         currentTagStore,
         pinnedIds,
+        balanceHistoryStore,
       ] = await Promise.all([
         accountStorage.getAllAccounts(),
         accountStorage.getAllBookmarks(),
@@ -489,6 +510,7 @@ export const AccountDataProvider = ({
         accountStorage.getAccountStats(),
         tagStorage.getTagStore(),
         accountStorage.getPinnedList(),
+        dailyBalanceHistoryStorage.getStore(),
       ])
       const displaySiteData = buildDisplayDataWithResolvedTags(
         allAccounts,
@@ -511,6 +533,19 @@ export const AccountDataProvider = ({
       setBookmarks(allBookmarks)
       setStats(accountStats)
       setDisplayData(displaySiteData)
+      const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+      const enabledAccounts = allAccounts.filter(
+        (account) =>
+          account.disabled !== true && account.excludeFromTodayIncome !== true,
+      )
+      setTodayIncomeEstimateTotals(
+        buildEstimatedTodayIncomeMoneyTotals({
+          enabled: estimatedTodayIncomeEnabled,
+          store: balanceHistoryStore,
+          accounts: enabledAccounts,
+          currentDayKey: todayKey,
+        }),
+      )
 
       const entryIdSet = new Set<string>([
         ...displaySiteData.map((site) => site.id),
@@ -536,7 +571,12 @@ export const AccountDataProvider = ({
         setHasLoadedAccountData(true)
       }
     }
-  }, [buildDisplayDataWithResolvedTags, prevTotalConsumption, prevBalances])
+  }, [
+    buildDisplayDataWithResolvedTags,
+    estimatedTodayIncomeEnabled,
+    prevTotalConsumption,
+    prevBalances,
+  ])
 
   /**
    * Tag CRUD actions exposed to UIs (AccountDialog, filters).
@@ -1148,6 +1188,7 @@ export const AccountDataProvider = ({
       isRefreshing,
       isRefreshingDisabledAccounts,
       prevTotalConsumption,
+      todayIncomeEstimateTotals,
       prevBalances,
       detectedSiteAccounts,
       detectedAccount,
@@ -1186,6 +1227,7 @@ export const AccountDataProvider = ({
       isRefreshing,
       isRefreshingDisabledAccounts,
       prevTotalConsumption,
+      todayIncomeEstimateTotals,
       prevBalances,
       detectedSiteAccounts,
       detectedAccount,

@@ -9,12 +9,14 @@ import {
   DATA_TYPE_CREATED_AT,
 } from "~/constants"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { UI_CONSTANTS } from "~/constants/ui"
 import {
   AccountDataProvider,
   useAccountDataContext,
 } from "~/features/AccountManagement/hooks/AccountDataContext"
 import type { SearchResult } from "~/services/search/accountSearch"
 import type { DisplaySiteData } from "~/types"
+import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 import { SortingCriteriaType } from "~/types/sorting"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
@@ -47,6 +49,7 @@ const {
   mockSetPinnedListSubset,
   mockSetOrderedListSubset,
   mockGetTagStore,
+  mockGetDailyBalanceHistoryStore,
   mockCreateTag,
   mockRenameTag,
   mockDeleteTag,
@@ -84,6 +87,7 @@ const {
   mockSetPinnedListSubset: vi.fn(),
   mockSetOrderedListSubset: vi.fn(),
   mockGetTagStore: vi.fn(),
+  mockGetDailyBalanceHistoryStore: vi.fn(),
   mockCreateTag: vi.fn(),
   mockRenameTag: vi.fn(),
   mockDeleteTag: vi.fn(),
@@ -154,6 +158,11 @@ const mockUserPreferencesContext = vi.hoisted(() => ({
         { id: "manual_order", enabled: true, priority: 1 },
       ],
     },
+    preferences: {
+      balanceHistory: {
+        estimatedTodayIncome: { enabled: false },
+      },
+    },
     showTodayCashflow: true,
   },
 }))
@@ -192,6 +201,12 @@ vi.mock("~/services/tags/tagStorage", () => ({
     createTag: mockCreateTag,
     renameTag: mockRenameTag,
     deleteTag: mockDeleteTag,
+  },
+}))
+
+vi.mock("~/services/history/dailyBalanceHistory/storage", () => ({
+  dailyBalanceHistoryStorage: {
+    getStore: mockGetDailyBalanceHistoryStore,
   },
 }))
 
@@ -244,11 +259,20 @@ beforeEach(() => {
         { id: "manual_order", enabled: true, priority: 1 },
       ],
     },
+    preferences: {
+      balanceHistory: {
+        estimatedTodayIncome: { enabled: false },
+      },
+    },
     showTodayCashflow: true,
   }
 
   mockResetExpiredCheckIns.mockResolvedValue(undefined)
   mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+  mockGetDailyBalanceHistoryStore.mockResolvedValue({
+    schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+    snapshotsByAccountId: {},
+  })
   mockGetAllAccounts.mockResolvedValue([])
   mockGetAllBookmarks.mockResolvedValue([])
   mockGetOrderedList.mockResolvedValue([])
@@ -710,6 +734,86 @@ describe("AccountDataContext handleReorder", () => {
 })
 
 describe("AccountDataContext initial load orchestration", () => {
+  it("excludes today-income opt-outs from estimated income totals", async () => {
+    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+
+    mockUserPreferencesContext.current = {
+      ...mockUserPreferencesContext.current,
+      preferences: {
+        balanceHistory: {
+          estimatedTodayIncome: { enabled: true },
+        },
+      },
+    }
+    mockGetAllAccounts.mockResolvedValue([
+      {
+        id: "included",
+        disabled: false,
+        excludeFromTodayIncome: false,
+        exchange_rate: 7,
+        account_info: { id: 1 },
+        last_sync_time: 0,
+      },
+      {
+        id: "excluded",
+        disabled: false,
+        excludeFromTodayIncome: true,
+        exchange_rate: 7,
+        account_info: { id: 2 },
+        last_sync_time: 0,
+      },
+    ])
+    mockGetDailyBalanceHistoryStore.mockResolvedValue({
+      schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+      snapshotsByAccountId: {
+        included: {
+          "2026-05-22": {
+            quota: 10 * factor,
+            today_income: 0,
+            today_quota_consumption: 0,
+            capturedAt: 1,
+            source: "alarm",
+          },
+          "2026-05-23": {
+            quota: 12 * factor,
+            today_income: 0.5 * factor,
+            today_quota_consumption: 1 * factor,
+            capturedAt: 2,
+            source: "refresh",
+          },
+        },
+        excluded: {
+          "2026-05-22": {
+            quota: 20 * factor,
+            today_income: 0,
+            today_quota_consumption: 0,
+            capturedAt: 1,
+            source: "alarm",
+          },
+          "2026-05-23": {
+            quota: 30 * factor,
+            today_income: 9 * factor,
+            today_quota_consumption: 1 * factor,
+            capturedAt: 2,
+            source: "refresh",
+          },
+        },
+      },
+    })
+    vi.setSystemTime(new Date("2026-05-23T08:00:00.000Z"))
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().todayIncomeEstimateTotals).toMatchObject({
+        trusted: { USD: 0.5, CNY: 3.5 },
+        estimated: { USD: 3, CNY: 21 },
+        availableAccounts: 1,
+        totalAccounts: 1,
+      })
+    })
+  })
+
   it("keeps initial load active until current-tab and open-tab checks complete", async () => {
     let resolveActiveTabs: ((tabs: browser.tabs.Tab[]) => void) | undefined
     let resolveAllTabs: ((tabs: browser.tabs.Tab[]) => void) | undefined

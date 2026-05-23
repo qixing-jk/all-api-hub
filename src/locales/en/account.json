@@ -181,10 +181,12 @@
   },
   "stats": {
     "completion": "Completion",
+    "estimatedTodayIncome": "Estimated income",
     "prompt": "Prompt",
     "todayConsumption": "Today's Consumption",
     "todayIncome": "Today's Income",
-    "totalBalance": "Total Balance"
+    "totalBalance": "Total Balance",
+    "trustedTodayIncome": "Trusted income"
   },
   "title": "Account Management"
 }

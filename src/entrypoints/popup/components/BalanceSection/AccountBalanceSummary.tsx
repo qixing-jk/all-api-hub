@@ -69,10 +69,18 @@ const BalanceDisplay: React.FC<{
  */
 export default function AccountBalanceSummary() {
   const { t } = useTranslation(["account", "common"])
-  const { accounts, displayData, stats, isInitialLoad, prevTotalConsumption } =
-    useAccountDataContext()
-  const { currencyType, showTodayCashflow, updateCurrencyType } =
+  const {
+    accounts,
+    displayData,
+    stats,
+    isInitialLoad,
+    prevTotalConsumption,
+    todayIncomeEstimateTotals,
+  } = useAccountDataContext()
+  const { currencyType, showTodayCashflow, updateCurrencyType, preferences } =
     useUserPreferencesContext()
+  const estimatedTodayIncomeEnabled =
+    preferences.balanceHistory?.estimatedTodayIncome?.enabled === true
 
   const totalConsumption = useMemo(
     () => calculateTotalConsumption(stats, accounts),
@@ -110,7 +118,13 @@ export default function AccountBalanceSummary() {
       </div>
 
       {showTodayCashflow && (
-        <div className="grid grid-cols-2 gap-3">
+        <div
+          className={
+            estimatedTodayIncomeEnabled
+              ? "grid grid-cols-1 gap-3 sm:grid-cols-3"
+              : "grid grid-cols-2 gap-3"
+          }
+        >
           <div className="space-y-1">
             <Caption className="font-medium">
               {t("account:stats.todayConsumption")}
@@ -130,7 +144,9 @@ export default function AccountBalanceSummary() {
 
           <div className="space-y-1">
             <Caption className="font-medium">
-              {t("account:stats.todayIncome")}
+              {estimatedTodayIncomeEnabled
+                ? t("account:stats.trustedTodayIncome")
+                : t("account:stats.todayIncome")}
             </Caption>
             <BalanceDisplay
               value={totalIncome[currencyType]}
@@ -142,6 +158,33 @@ export default function AccountBalanceSummary() {
               size="md"
             />
           </div>
+
+          {estimatedTodayIncomeEnabled && (
+            <div className="space-y-1">
+              <Caption className="font-medium">
+                {t("account:stats.estimatedTodayIncome")}
+              </Caption>
+              {todayIncomeEstimateTotals.estimated ? (
+                <BalanceDisplay
+                  value={todayIncomeEstimateTotals.estimated[currencyType]}
+                  startValue={0}
+                  isInitialLoad={isInitialLoad}
+                  currencyType={currencyType}
+                  onCurrencyToggle={handleCurrencyToggle}
+                  prefix={
+                    todayIncomeEstimateTotals.estimated[currencyType] > 0
+                      ? "+"
+                      : ""
+                  }
+                  size="md"
+                />
+              ) : (
+                <div className="dark:text-dark-text-tertiary text-2xl font-bold text-gray-500">
+                  -
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
