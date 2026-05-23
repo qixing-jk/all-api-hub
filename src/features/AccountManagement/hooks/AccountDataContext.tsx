@@ -45,6 +45,7 @@ import type {
   Tag,
   TagStore,
 } from "~/types"
+import { TODAY_INCOME_ESTIMATE_STATUS } from "~/types/dailyBalanceHistory"
 import { SortingCriteriaType } from "~/types/sorting"
 import {
   getActiveTabs,
@@ -323,7 +324,7 @@ export const AccountDataProvider = ({
 
         estimatedByAccountId.set(
           account.id,
-          estimate.status === "available" &&
+          estimate.status === TODAY_INCOME_ESTIMATE_STATUS.available &&
             estimate.estimatedTodayIncome !== null
             ? convertQuotaToMoney({
                 quota: estimate.estimatedTodayIncome,
@@ -346,6 +347,10 @@ export const AccountDataProvider = ({
 
   const accountsRef = useRef<SiteAccount[]>([])
   accountsRef.current = accounts
+  const targetedReloadGenerationRef = useRef(0)
+  const targetedReloadGenerationByAccountIdRef = useRef<Record<string, number>>(
+    {},
+  )
   const hasLoadedAccountDataRef = useRef(false)
   hasLoadedAccountDataRef.current = hasLoadedAccountData
   const hasResolvedInitialCurrentTabRef = useRef(false)
@@ -815,6 +820,13 @@ export const AccountDataProvider = ({
       }
 
       try {
+        const reloadGeneration = targetedReloadGenerationRef.current + 1
+        targetedReloadGenerationRef.current = reloadGeneration
+        for (const accountId of uniqueIds) {
+          targetedReloadGenerationByAccountIdRef.current[accountId] =
+            reloadGeneration
+        }
+
         const reloadedAccounts = await Promise.all(
           uniqueIds.map(async (accountId) => {
             const account = await accountStorage.getAccountById(accountId)
@@ -824,16 +836,24 @@ export const AccountDataProvider = ({
             return account
           }),
         )
+        const activeReloadedAccounts = reloadedAccounts.filter(
+          (account) =>
+            targetedReloadGenerationByAccountIdRef.current[account.id] ===
+            reloadGeneration,
+        )
+        if (activeReloadedAccounts.length === 0) {
+          return
+        }
 
         const reloadedById = Object.fromEntries(
-          reloadedAccounts.map((account) => [account.id, account]),
+          activeReloadedAccounts.map((account) => [account.id, account]),
         )
 
         const mergedAccounts = accountsRef.current.map(
           (account) => reloadedById[account.id] ?? account,
         )
         const knownIds = new Set(mergedAccounts.map((account) => account.id))
-        for (const account of reloadedAccounts) {
+        for (const account of activeReloadedAccounts) {
           if (!knownIds.has(account.id)) {
             mergedAccounts.push(account)
           }
@@ -843,14 +863,50 @@ export const AccountDataProvider = ({
         setAccounts(mergedAccounts)
         const balanceHistoryStore = await dailyBalanceHistoryStorage.getStore()
         const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
+        const latestAccounts = accountsRef.current
+        const latestKnownIds = new Set(
+          latestAccounts.map((account) => account.id),
+        )
+        const latestMergedAccounts = latestAccounts.map(
+          (account) => reloadedById[account.id] ?? account,
+        )
+        for (const account of activeReloadedAccounts) {
+          if (!latestKnownIds.has(account.id)) {
+            latestMergedAccounts.push(account)
+          }
+        }
+
+        accountsRef.current = latestMergedAccounts
+        setAccounts(latestMergedAccounts)
         setDisplayData(
           buildDisplayDataWithBalanceHistory({
-            nextAccounts: mergedAccounts,
+            nextAccounts: latestMergedAccounts,
             currentTagStore: tagStore,
             balanceHistoryStore,
             todayKey,
           }),
         )
+        const enabledAccounts = latestMergedAccounts.filter(
+          (account) =>
+            account.disabled !== true &&
+            account.excludeFromTodayIncome !== true,
+        )
+        setTodayIncomeEstimateTotals(
+          buildEstimatedTodayIncomeMoneyTotals({
+            enabled: estimatedTodayIncomeEnabled,
+            store: balanceHistoryStore,
+            accounts: enabledAccounts,
+            currentDayKey: todayKey,
+          }),
+        )
+        for (const account of activeReloadedAccounts) {
+          if (
+            targetedReloadGenerationByAccountIdRef.current[account.id] ===
+            reloadGeneration
+          ) {
+            delete targetedReloadGenerationByAccountIdRef.current[account.id]
+          }
+        }
       } catch (error) {
         logger.warn(
           "Account-scoped reload failed; falling back to full reload",
@@ -883,7 +939,12 @@ export const AccountDataProvider = ({
         void reloadAccountsById(updatedAccountIds)
       }
     })
-  }, [buildDisplayDataWithBalanceHistory, loadAccountData, tagStore])
+  }, [
+    buildDisplayDataWithBalanceHistory,
+    estimatedTodayIncomeEnabled,
+    loadAccountData,
+    tagStore,
+  ])
 
   const handleSort = useCallback(
     (field: SortField) => {

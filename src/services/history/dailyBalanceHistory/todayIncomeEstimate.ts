@@ -165,7 +165,10 @@ export function buildEstimatedTodayIncomeMoneyTotals(params: {
       trusted.CNY += trustedMoney.CNY
     }
 
-    if (result.status !== "available" || result.estimatedTodayIncome === null) {
+    if (
+      result.status !== TODAY_INCOME_ESTIMATE_STATUS.available ||
+      result.estimatedTodayIncome === null
+    ) {
       continue
     }
 

@@ -339,6 +339,15 @@ function createEmptyStats() {
   }
 }
 
+function createDeferred<T>() {
+  let resolve!: (value: T | PromiseLike<T>) => void
+  const promise = new Promise<T>((res) => {
+    resolve = res
+  })
+
+  return { promise, resolve }
+}
+
 function createBrowserTab(
   overrides: Partial<browser.tabs.Tab> = {},
 ): browser.tabs.Tab {
@@ -2346,6 +2355,12 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
       expect(byId.a?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
       expect(byId.a?.estimatedTodayIncome).toEqual({ USD: 3, CNY: 21 })
       expect(byId.b?.estimatedTodayIncome).toEqual({ USD: 2, CNY: 14 })
+      expect(getLatestCtx().todayIncomeEstimateTotals).toMatchObject({
+        trusted: { USD: 1, CNY: 7 },
+        estimated: { USD: 5, CNY: 35 },
+        availableAccounts: 2,
+        totalAccounts: 2,
+      })
     })
 
     expect(mockGetDailyBalanceHistoryStore).toHaveBeenCalledTimes(2)
@@ -2485,6 +2500,10 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
   it("merges concurrent targeted reloads against the latest account snapshot", async () => {
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
     mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    const emptyStore = {
+      schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+      snapshotsByAccountId: {},
+    }
 
     const accountA: any = {
       id: "a",
@@ -2536,6 +2555,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
       }
       return Promise.resolve(null)
     })
+    mockGetDailyBalanceHistoryStore.mockResolvedValue(emptyStore)
 
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
 
@@ -2555,6 +2575,13 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
       | ((message: any) => void)
       | undefined
     expect(listener).toBeTypeOf("function")
+
+    mockGetDailyBalanceHistoryStore.mockReset()
+    const reloadAStore = createDeferred<typeof emptyStore>()
+    const reloadBStore = createDeferred<typeof emptyStore>()
+    mockGetDailyBalanceHistoryStore
+      .mockReturnValueOnce(reloadAStore.promise)
+      .mockReturnValueOnce(reloadBStore.promise)
 
     await act(async () => {
       listener!({
@@ -2576,11 +2603,7 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     })
 
     await waitFor(() => {
-      const byId = Object.fromEntries(
-        (latestCtx?.displayData ?? []).map((item: any) => [item.id, item]),
-      )
-      expect(byId.a?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
-      expect(byId.b?.checkIn?.siteStatus?.isCheckedInToday).toBe(false)
+      expect(mockGetDailyBalanceHistoryStore).toHaveBeenCalledTimes(1)
     })
 
     await act(async () => {
@@ -2592,11 +2615,127 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     })
 
     await waitFor(() => {
+      expect(mockGetDailyBalanceHistoryStore).toHaveBeenCalledTimes(2)
+    })
+
+    await act(async () => {
+      reloadBStore.resolve(emptyStore)
+      await reloadBStore.promise
+    })
+
+    await waitFor(() => {
       const byId = Object.fromEntries(
         (latestCtx?.displayData ?? []).map((item: any) => [item.id, item]),
       )
       expect(byId.a?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
       expect(byId.b?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
     })
+
+    await act(async () => {
+      reloadAStore.resolve(emptyStore)
+      await reloadAStore.promise
+    })
+
+    await waitFor(() => {
+      const byId = Object.fromEntries(
+        (latestCtx?.displayData ?? []).map((item: any) => [item.id, item]),
+      )
+      expect(byId.a?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
+      expect(byId.b?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
+    })
+  })
+
+  it("ignores older targeted reloads for the same account after a newer reload completes", async () => {
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    const emptyStore = {
+      schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+      snapshotsByAccountId: {},
+    }
+
+    mockGetAllAccounts.mockResolvedValue([
+      {
+        id: "a",
+        checkIn: { siteStatus: { isCheckedInToday: false } },
+      },
+    ])
+    mockGetAllBookmarks.mockResolvedValue([])
+    mockGetOrderedList.mockResolvedValue(["a"])
+    mockGetPinnedList.mockResolvedValue([])
+    mockGetAccountStats.mockResolvedValue(createEmptyStats())
+    mockConvertToDisplayData.mockImplementation((input: any) => {
+      const accounts = Array.isArray(input) ? input : [input]
+      const display = accounts.map((account: any) => ({
+        id: account.id,
+        name: account.id,
+        checkIn: account.checkIn,
+      }))
+      return Array.isArray(input) ? display : display[0]
+    })
+    mockGetDailyBalanceHistoryStore.mockResolvedValue(emptyStore)
+
+    const olderReload = createDeferred<any>()
+    const newerReload = createDeferred<any>()
+    mockGetAccountById
+      .mockReturnValueOnce(olderReload.promise)
+      .mockReturnValueOnce(newerReload.promise)
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().displayData).toEqual([
+        expect.objectContaining({
+          id: "a",
+          checkIn: { siteStatus: { isCheckedInToday: false } },
+        }),
+      ])
+    })
+
+    const listener = (globalThis as any).__accountDataContextRuntimeListener as
+      | ((message: any) => void)
+      | undefined
+    expect(listener).toBeTypeOf("function")
+
+    mockGetDailyBalanceHistoryStore.mockClear()
+
+    await act(async () => {
+      listener!({
+        action: RuntimeActionIds.AutoCheckinRunCompleted,
+        updatedAccountIds: ["a"],
+      })
+      listener!({
+        action: RuntimeActionIds.AutoCheckinRunCompleted,
+        updatedAccountIds: ["a"],
+      })
+    })
+
+    await act(async () => {
+      newerReload.resolve({
+        id: "a",
+        checkIn: { siteStatus: { isCheckedInToday: true } },
+      })
+      await newerReload.promise
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().displayData[0]?.checkIn).toEqual({
+        siteStatus: { isCheckedInToday: true },
+      })
+    })
+
+    await act(async () => {
+      olderReload.resolve({
+        id: "a",
+        checkIn: { siteStatus: { isCheckedInToday: false } },
+      })
+      await olderReload.promise
+    })
+
+    await waitFor(() => {
+      expect(getLatestCtx().displayData[0]?.checkIn).toEqual({
+        siteStatus: { isCheckedInToday: true },
+      })
+    })
+    expect(mockGetDailyBalanceHistoryStore).toHaveBeenCalledTimes(1)
   })
 })

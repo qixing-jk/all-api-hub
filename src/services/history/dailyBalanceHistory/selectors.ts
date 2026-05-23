@@ -2,7 +2,10 @@ import { UI_CONSTANTS } from "~/constants/ui"
 import { listDayKeysInRange } from "~/services/history/dailyBalanceHistory/dayKeys"
 import { estimateTodayIncomeForAccount } from "~/services/history/dailyBalanceHistory/todayIncomeEstimate"
 import type { CurrencyType } from "~/types"
-import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
+import {
+  TODAY_INCOME_ESTIMATE_STATUS,
+  type DailyBalanceHistoryStore,
+} from "~/types/dailyBalanceHistory"
 
 interface DailyBalanceHistoryCoverage {
   totalAccounts: number
@@ -391,7 +394,7 @@ export function buildPerAccountDailyBalanceMoneySeries(params: {
         })
 
         if (
-          estimate.status !== "available" ||
+          estimate.status !== TODAY_INCOME_ESTIMATE_STATUS.available ||
           estimate.estimatedTodayIncome === null
         ) {
           continue
@@ -515,7 +518,7 @@ export function buildAccountRangeSummaries(params: {
         })
 
         if (
-          estimate.status !== "available" ||
+          estimate.status !== TODAY_INCOME_ESTIMATE_STATUS.available ||
           estimate.estimatedTodayIncome === null
         ) {
           continue
