@@ -243,6 +243,48 @@ describe("BalanceDisplay", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("renders neutral disabled estimated income without a refresh action", async () => {
+    const user = userEvent.setup()
+    const handleRefreshAccount = vi.fn().mockResolvedValue(undefined)
+
+    mockUseUserPreferencesContext.mockReturnValue({
+      currencyType: "USD",
+      showTodayCashflow: true,
+      preferences: {
+        balanceHistory: {
+          estimatedTodayIncome: { enabled: true },
+        },
+      },
+    })
+    mockUseAccountActionsContext.mockReturnValue({
+      handleRefreshAccount,
+      refreshingAccountId: null,
+    })
+
+    render(
+      <BalanceDisplay
+        site={buildDisplaySiteData({
+          disabled: true,
+          estimatedTodayIncome: { USD: 0, CNY: 0 },
+        })}
+      />,
+    )
+
+    const disabledValues = screen.getAllByTitle("account:list.site.disabled")
+    const estimatedNode = disabledValues.at(-1)!
+    expect(estimatedNode).toHaveTextContent("~$0.00")
+    expect(estimatedNode).toHaveClass("text-gray-400")
+    expect(
+      screen.queryByRole("button", {
+        name: "account:stats.estimatedTodayIncome",
+      }),
+    ).not.toBeInTheDocument()
+
+    await user.click(estimatedNode)
+
+    expect(handleRefreshAccount).not.toHaveBeenCalled()
+  })
+
   it("shows disabled titles and neutral cashflow styling without refreshing disabled accounts", async () => {
     const user = userEvent.setup()
     const site = buildDisplaySiteData({

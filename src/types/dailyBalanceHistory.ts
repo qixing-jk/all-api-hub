@@ -40,14 +40,18 @@ export interface DailyBalanceHistoryStore {
   snapshotsByAccountId: Record<string, Record<string, DailyBalanceSnapshot>>
 }
 
+export const TODAY_INCOME_ESTIMATE_STATUS = {
+  available: "available",
+  disabled: "disabled",
+  missingCurrentSnapshot: "missing_current_snapshot",
+  missingBaseline: "missing_baseline",
+  missingCashflow: "missing_cashflow",
+  manualBalance: "manual_balance",
+  invalidEstimate: "invalid_estimate",
+} as const
+
 export type TodayIncomeEstimateStatus =
-  | "available"
-  | "disabled"
-  | "missing_current_snapshot"
-  | "missing_baseline"
-  | "missing_cashflow"
-  | "manual_balance"
-  | "invalid_estimate"
+  (typeof TODAY_INCOME_ESTIMATE_STATUS)[keyof typeof TODAY_INCOME_ESTIMATE_STATUS]
 
 export interface TodayIncomeEstimateResult {
   reportedTodayIncome: number | null

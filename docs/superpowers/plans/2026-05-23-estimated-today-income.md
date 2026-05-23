@@ -130,7 +130,7 @@ it("normalizes missing estimated today income preferences to disabled", async ()
 Run:
 
 ```bash
-pnpm vitest --run tests/services/configMigration/preferences/preferencesMigration.test.ts tests/contexts/UserPreferencesContext.test.tsx
+pnpm vitest related --run tests/services/configMigration/preferences/preferencesMigration.test.ts tests/contexts/UserPreferencesContext.test.tsx
 ```
 
 Expected: FAIL because `estimatedTodayIncome` and the new migration do not exist.
@@ -226,7 +226,7 @@ Add migration `25` after migration `24`:
 Run:
 
 ```bash
-pnpm vitest --run tests/services/configMigration/preferences/preferencesMigration.test.ts tests/contexts/UserPreferencesContext.test.tsx
+pnpm vitest related --run tests/services/configMigration/preferences/preferencesMigration.test.ts tests/contexts/UserPreferencesContext.test.tsx
 ```
 
 Expected: PASS.
@@ -372,7 +372,7 @@ describe("today income estimate", () => {
 Run:
 
 ```bash
-pnpm vitest --run tests/services/dailyBalanceHistory/todayIncomeEstimate.test.ts
+pnpm vitest related --run tests/services/dailyBalanceHistory/todayIncomeEstimate.test.ts
 ```
 
 Expected: FAIL because the helper file does not exist.
@@ -578,7 +578,7 @@ export interface TodayIncomeEstimateResult {
 Run:
 
 ```bash
-pnpm vitest --run tests/services/dailyBalanceHistory/todayIncomeEstimate.test.ts
+pnpm vitest related --run tests/services/dailyBalanceHistory/todayIncomeEstimate.test.ts
 ```
 
 Expected: PASS.
@@ -687,7 +687,7 @@ it("summarizes estimated income separately from trusted income", () => {
 Run:
 
 ```bash
-pnpm vitest --run tests/services/dailyBalanceHistory/selectors.test.ts
+pnpm vitest related --run tests/services/dailyBalanceHistory/selectors.test.ts
 ```
 
 Expected: FAIL because selector params and output fields do not exist.
@@ -770,7 +770,7 @@ For aggregate series and summaries, keep existing `income` behavior unchanged. A
 Run:
 
 ```bash
-pnpm vitest --run tests/services/dailyBalanceHistory/selectors.test.ts
+pnpm vitest related --run tests/services/dailyBalanceHistory/selectors.test.ts
 ```
 
 Expected: PASS.
@@ -844,7 +844,7 @@ it("saves estimated today income display preference", async () => {
 Run:
 
 ```bash
-pnpm vitest --run tests/entrypoints/options/BalanceHistorySettings.test.tsx
+pnpm vitest related --run tests/entrypoints/options/BalanceHistorySettings.test.tsx
 ```
 
 Expected: FAIL because the third switch and payload field do not exist.
@@ -938,7 +938,7 @@ Keep key shapes identical across all locales.
 Run:
 
 ```bash
-pnpm vitest --run tests/entrypoints/options/BalanceHistorySettings.test.tsx
+pnpm vitest related --run tests/entrypoints/options/BalanceHistorySettings.test.tsx
 pnpm run i18n:extract:ci
 ```
 
@@ -1009,7 +1009,7 @@ it("renders estimated income column only when enabled", () => {
 Run:
 
 ```bash
-pnpm vitest --run tests/features/BalanceHistory/components/BalanceHistoryAccountSummaryTable.test.tsx
+pnpm vitest related --run tests/features/BalanceHistory/components/BalanceHistoryAccountSummaryTable.test.tsx
 ```
 
 Expected: FAIL because the prop and columns do not exist.
@@ -1197,7 +1197,7 @@ Preserve all existing keys and localized meaning.
 Run:
 
 ```bash
-pnpm vitest --run tests/services/dailyBalanceHistory/selectors.test.ts tests/features/BalanceHistory/components/BalanceHistoryAccountSummaryTable.test.tsx
+pnpm vitest related --run tests/services/dailyBalanceHistory/selectors.test.ts tests/features/BalanceHistory/components/BalanceHistoryAccountSummaryTable.test.tsx
 pnpm run i18n:extract:ci
 ```
 
@@ -1292,7 +1292,7 @@ it("shows trusted and estimated today income when enabled", () => {
 Run:
 
 ```bash
-pnpm vitest --run tests/entrypoints/popup/BalanceSection.test.tsx
+pnpm vitest related --run tests/entrypoints/popup/BalanceSection.test.tsx
 ```
 
 Expected: FAIL because context field and labels do not exist.
@@ -1479,7 +1479,7 @@ Keep key shape identical across locales.
 Run:
 
 ```bash
-pnpm vitest --run tests/entrypoints/popup/BalanceSection.test.tsx
+pnpm vitest related --run tests/entrypoints/popup/BalanceSection.test.tsx
 pnpm run i18n:extract:ci
 ```
 
@@ -1505,7 +1505,7 @@ git commit -m "feat(popup): show estimated today income"
 Run:
 
 ```bash
-pnpm vitest --run tests/services/configMigration/preferences/preferencesMigration.test.ts tests/contexts/UserPreferencesContext.test.tsx tests/services/dailyBalanceHistory/todayIncomeEstimate.test.ts tests/services/dailyBalanceHistory/selectors.test.ts tests/entrypoints/options/BalanceHistorySettings.test.tsx tests/features/BalanceHistory/components/BalanceHistoryAccountSummaryTable.test.tsx tests/entrypoints/popup/BalanceSection.test.tsx
+pnpm vitest related --run tests/services/configMigration/preferences/preferencesMigration.test.ts tests/contexts/UserPreferencesContext.test.tsx tests/services/dailyBalanceHistory/todayIncomeEstimate.test.ts tests/services/dailyBalanceHistory/selectors.test.ts tests/entrypoints/options/BalanceHistorySettings.test.tsx tests/features/BalanceHistory/components/BalanceHistoryAccountSummaryTable.test.tsx tests/entrypoints/popup/BalanceSection.test.tsx
 ```
 
 Expected: PASS.

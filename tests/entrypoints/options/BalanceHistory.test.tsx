@@ -26,7 +26,7 @@ import { tagStorage } from "~/services/tags/tagStorage"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
-import { render, screen, waitFor } from "~~/tests/test-utils/render"
+import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const getMetricDropdownButtonName = (
   section: "breakdown" | "trend",
@@ -1186,6 +1186,11 @@ describe("BalanceHistory options page", () => {
           name: "balanceHistory:breakdown.chartTypes.pie",
         }),
       ).toBeDisabled()
+      await user.click(
+        screen.getByRole("button", {
+          name: "balanceHistory:breakdown.chartTypes.histogram",
+        }),
+      )
 
       await user.click(
         screen.getByRole("button", {
@@ -1232,6 +1237,88 @@ describe("BalanceHistory options page", () => {
           ),
         }),
       ).toBeInTheDocument()
+      await user.click(
+        screen.getByRole("button", {
+          name: "balanceHistory:trend.chartTypes.bar",
+        }),
+      )
+      await user.click(
+        screen.getByRole("button", {
+          name: "balanceHistory:trend.chartTypes.line",
+        }),
+      )
+    } finally {
+      dateNowSpy.mockRestore()
+    }
+  })
+
+  it("updates currency and manual date controls", async () => {
+    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+    const FIXED_NOW = new Date(2026, 1, 7, 12, 0, 0)
+    const fixedNowMs = FIXED_NOW.getTime()
+    const dateNowSpy = vi.spyOn(Date, "now").mockReturnValue(fixedNowMs)
+    const updateCurrencyType = vi.fn(async () => {})
+
+    try {
+      const todayKey = getDayKeyFromUnixSeconds(Math.floor(fixedNowMs / 1000))
+      vi.mocked(useUserPreferencesContext).mockReturnValue({
+        ...createMockUserPreferencesContext({
+          enabled: true,
+          currencyType: "USD",
+        }),
+        updateCurrencyType,
+      } as any)
+      vi.mocked(accountStorage.getEnabledAccounts).mockResolvedValue([
+        {
+          id: "a1",
+          site_name: "Site A",
+          site_url: "https://a.example.com",
+          site_type: SITE_TYPES.ONE_API,
+          account_info: { username: "User A" },
+        },
+      ] as any)
+      vi.mocked(dailyBalanceHistoryStorage.getStore).mockResolvedValue({
+        schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+        snapshotsByAccountId: {
+          a1: {
+            [todayKey]: {
+              quota: 10 * factor,
+              today_income: 1 * factor,
+              today_quota_consumption: 2 * factor,
+              capturedAt: 0,
+              source: "refresh",
+            },
+          },
+        },
+      } as any)
+
+      render(<BalanceHistory />)
+
+      expect(await screen.findByText(PAGE_TITLE)).toBeInTheDocument()
+
+      const user = userEvent.setup()
+      await user.click(
+        screen.getByRole("button", { name: "settings:display.usd" }),
+      )
+      await user.click(
+        screen.getByRole("button", { name: "settings:display.cny" }),
+      )
+
+      fireEvent.change(screen.getByLabelText(START_DAY_LABEL), {
+        target: { value: "2026-02-01" },
+      })
+      fireEvent.change(screen.getByLabelText(END_DAY_LABEL), {
+        target: { value: "2026-02-07" },
+      })
+      fireEvent.change(
+        screen.getByLabelText("balanceHistory:breakdown.controls.reference"),
+        { target: { value: "2026-02-07" } },
+      )
+
+      expect(updateCurrencyType).toHaveBeenCalledTimes(1)
+      expect(updateCurrencyType).toHaveBeenCalledWith("CNY")
+      expect(screen.getByLabelText(START_DAY_LABEL)).toHaveValue("2026-02-01")
+      expect(screen.getByLabelText(END_DAY_LABEL)).toHaveValue("2026-02-07")
     } finally {
       dateNowSpy.mockRestore()
     }

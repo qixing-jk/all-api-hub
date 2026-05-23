@@ -2226,6 +2226,131 @@ describe("AccountDataContext auto-checkin runCompleted handling", () => {
     expect(mockGetAccountById).toHaveBeenCalledWith("a")
   })
 
+  it("preserves estimated today income on targeted reload display rows", async () => {
+    const factor = UI_CONSTANTS.EXCHANGE_RATE.CONVERSION_FACTOR
+
+    mockUserPreferencesContext.current = {
+      ...mockUserPreferencesContext.current,
+      preferences: {
+        balanceHistory: {
+          estimatedTodayIncome: { enabled: true },
+        },
+      },
+    }
+    vi.setSystemTime(new Date("2026-05-23T08:00:00.000Z"))
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+
+    const accountA: any = {
+      id: "a",
+      disabled: false,
+      excludeFromTodayIncome: false,
+      exchange_rate: 7,
+      checkIn: { siteStatus: { isCheckedInToday: false } },
+      account_info: { id: 1 },
+    }
+    const accountB: any = {
+      id: "b",
+      disabled: false,
+      excludeFromTodayIncome: false,
+      exchange_rate: 7,
+      checkIn: { siteStatus: { isCheckedInToday: false } },
+      account_info: { id: 2 },
+    }
+
+    mockGetAllAccounts.mockResolvedValue([accountA, accountB])
+    mockGetAllBookmarks.mockResolvedValue([])
+    mockGetOrderedList.mockResolvedValue(["a", "b"])
+    mockGetPinnedList.mockResolvedValue([])
+    mockGetAccountStats.mockResolvedValue(createEmptyStats())
+    mockConvertToDisplayData.mockImplementation((input: any) => {
+      const accounts = Array.isArray(input) ? input : [input]
+      const display = accounts.map((account: any) => ({
+        id: account.id,
+        name: account.id,
+        checkIn: account.checkIn,
+      }))
+      return Array.isArray(input) ? display : display[0]
+    })
+    mockGetDailyBalanceHistoryStore.mockResolvedValue({
+      schemaVersion: DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION,
+      snapshotsByAccountId: {
+        a: {
+          "2026-05-22": {
+            quota: 10 * factor,
+            today_income: 0,
+            today_quota_consumption: 0,
+            capturedAt: 1,
+            source: "alarm",
+          },
+          "2026-05-23": {
+            quota: 12 * factor,
+            today_income: 0.5 * factor,
+            today_quota_consumption: 1 * factor,
+            capturedAt: 2,
+            source: "refresh",
+          },
+        },
+        b: {
+          "2026-05-22": {
+            quota: 20 * factor,
+            today_income: 0,
+            today_quota_consumption: 0,
+            capturedAt: 1,
+            source: "alarm",
+          },
+          "2026-05-23": {
+            quota: 21 * factor,
+            today_income: 0.5 * factor,
+            today_quota_consumption: 1 * factor,
+            capturedAt: 2,
+            source: "refresh",
+          },
+        },
+      },
+    })
+    mockGetAccountById.mockResolvedValue({
+      ...accountA,
+      checkIn: { siteStatus: { isCheckedInToday: true } },
+    })
+
+    const getLatestCtx = await renderAccountDataProvider()
+
+    await waitFor(() => {
+      expect(getLatestCtx().displayData).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            id: "a",
+            estimatedTodayIncome: { USD: 3, CNY: 21 },
+          }),
+        ]),
+      )
+    })
+
+    const listener = (globalThis as any).__accountDataContextRuntimeListener as
+      | ((message: any) => void)
+      | undefined
+    expect(listener).toBeTypeOf("function")
+
+    await act(async () => {
+      listener!({
+        action: RuntimeActionIds.AutoCheckinRunCompleted,
+        updatedAccountIds: ["a"],
+      })
+    })
+
+    await waitFor(() => {
+      const byId = Object.fromEntries(
+        getLatestCtx().displayData.map((item: any) => [item.id, item]),
+      )
+      expect(byId.a?.checkIn?.siteStatus?.isCheckedInToday).toBe(true)
+      expect(byId.a?.estimatedTodayIncome).toEqual({ USD: 3, CNY: 21 })
+      expect(byId.b?.estimatedTodayIncome).toEqual({ USD: 2, CNY: 14 })
+    })
+
+    expect(mockGetDailyBalanceHistoryStore).toHaveBeenCalledTimes(2)
+  })
+
   it("skips reload work when auto-checkin completion does not include any valid account ids", async () => {
     mockGetAllAccounts.mockResolvedValue([{ id: "a" }])
 

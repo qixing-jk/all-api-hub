@@ -139,6 +139,33 @@ describe("dailyBalanceHistoryScheduler", () => {
     )
   })
 
+  it("schedules tomorrow when today's capture time has already passed", async () => {
+    vi.setSystemTime(new Date(2026, 2, 28, 23, 56, 0, 0))
+    const expected = new Date(Date.now())
+    expected.setDate(expected.getDate() + 1)
+    expected.setHours(23, 55, 0, 0)
+
+    await dailyBalanceHistoryScheduler.initialize()
+
+    expect(mockCreateAlarm).toHaveBeenCalledWith(
+      DAILY_BALANCE_HISTORY_ALARM_NAME,
+      { when: expected.getTime() },
+    )
+  })
+
+  it("ignores unrelated alarms", async () => {
+    let alarmHandler: ((alarm: { name: string }) => Promise<void>) | undefined
+    mockOnAlarm.mockImplementation((handler) => {
+      alarmHandler = handler
+    })
+
+    await dailyBalanceHistoryScheduler.initialize()
+    await alarmHandler?.({ name: "other-alarm" })
+
+    expect(mockGetEnabledAccounts).not.toHaveBeenCalled()
+    expect(mockNotifyTaskResult).not.toHaveBeenCalled()
+  })
+
   it("reuses a preserved future alarm instead of creating a new one", async () => {
     mockGetAlarm.mockResolvedValue({
       name: DAILY_BALANCE_HISTORY_ALARM_NAME,
@@ -147,6 +174,24 @@ describe("dailyBalanceHistoryScheduler", () => {
 
     await dailyBalanceHistoryScheduler.initialize()
 
+    expect(mockCreateAlarm).not.toHaveBeenCalled()
+  })
+
+  it("clears the alarm when capture scheduling is disabled", async () => {
+    mockGetPreferences.mockResolvedValue({
+      balanceHistory: {
+        ...DEFAULT_BALANCE_HISTORY_PREFERENCES,
+        enabled: true,
+        endOfDayCapture: { enabled: false },
+        retentionDays: 30,
+      },
+    })
+
+    await dailyBalanceHistoryScheduler.initialize()
+
+    expect(mockClearAlarm).toHaveBeenCalledWith(
+      DAILY_BALANCE_HISTORY_ALARM_NAME,
+    )
     expect(mockCreateAlarm).not.toHaveBeenCalled()
   })
 
@@ -432,6 +477,87 @@ describe("dailyBalanceHistoryScheduler", () => {
     })
   })
 
+  it("uses default seed cashflow values and skips invalid quotas", async () => {
+    mockGetEnabledAccounts.mockResolvedValue([
+      {
+        id: "defaulted",
+        account_info: {
+          quota: 12_000_000,
+          today_income: Number.NaN,
+          today_quota_consumption: Number.NaN,
+        },
+        exchange_rate: 7,
+      },
+      {
+        id: "invalid",
+        account_info: {
+          quota: 0,
+          today_income: 500_000,
+          today_quota_consumption: 1_000_000,
+        },
+        exchange_rate: 7,
+      },
+    ])
+
+    const result =
+      await dailyBalanceHistoryScheduler.debugSeedEstimateSnapshots()
+
+    expect(mockUpsertSnapshot).toHaveBeenCalledTimes(2)
+    expect(mockUpsertSnapshot).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({
+        accountId: "defaulted",
+        snapshot: expect.objectContaining({
+          quota: 12_000_000,
+          today_income: 0,
+          today_quota_consumption: 0,
+        }),
+      }),
+    )
+    expect(mockUpsertSnapshot).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({
+        accountId: "defaulted",
+        snapshot: expect.objectContaining({
+          quota: 12_000_000,
+          today_income: 0,
+          today_quota_consumption: 1_000_000,
+        }),
+      }),
+    )
+    expect(result).toEqual({
+      seeded: 1,
+      skipped: 1,
+      todayKey: "2026-03-28",
+      yesterdayKey: "2026-03-27",
+    })
+  })
+
+  it("counts failed snapshot writes as skipped during development seeding", async () => {
+    mockGetEnabledAccounts.mockResolvedValue([
+      {
+        id: "failed",
+        account_info: {
+          quota: 12_000_000,
+          today_income: 500_000,
+          today_quota_consumption: 1_000_000,
+        },
+        exchange_rate: 7,
+      },
+    ])
+    mockUpsertSnapshot.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
+
+    const result =
+      await dailyBalanceHistoryScheduler.debugSeedEstimateSnapshots()
+
+    expect(result).toEqual({
+      seeded: 0,
+      skipped: 1,
+      todayKey: "2026-03-28",
+      yesterdayKey: "2026-03-27",
+    })
+  })
+
   it("keeps both seeded days even when the configured retention is one day", async () => {
     mockGetPreferences.mockResolvedValue({
       balanceHistory: {
@@ -516,6 +642,56 @@ describe("dailyBalanceHistoryScheduler", () => {
     expect(response).toHaveBeenCalledWith({
       success: false,
       error: "Debug action unavailable",
+    })
+  })
+
+  it("returns null immediately when a capture run is already active", async () => {
+    ;(dailyBalanceHistoryScheduler as any).isRunning = true
+
+    const result = await dailyBalanceHistoryScheduler.runEndOfDayCapture({
+      trigger: "refresh",
+    })
+
+    expect(result).toBeNull()
+    expect(mockGetPreferences).not.toHaveBeenCalled()
+  })
+
+  it("routes malformed refresh message account ids to a full refresh", async () => {
+    const response = vi.fn()
+
+    await handleDailyBalanceHistoryMessage(
+      {
+        action: RuntimeActionIds.BalanceHistoryRefreshNow,
+        accountIds: "not-an-array",
+      },
+      response,
+    )
+
+    expect(mockRefreshAllAccounts).toHaveBeenCalledWith(true)
+    expect(response).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        success: 2,
+        failed: 1,
+        refreshedCount: 1,
+      },
+    })
+  })
+
+  it("returns a runtime error response when message handling throws", async () => {
+    mockPruneAll.mockRejectedValueOnce(new Error("storage closed"))
+    const response = vi.fn()
+
+    await handleDailyBalanceHistoryMessage(
+      {
+        action: RuntimeActionIds.BalanceHistoryPrune,
+      },
+      response,
+    )
+
+    expect(response).toHaveBeenCalledWith({
+      success: false,
+      error: "storage closed",
     })
   })
 

@@ -841,8 +841,15 @@ export const AccountDataProvider = ({
 
         accountsRef.current = mergedAccounts
         setAccounts(mergedAccounts)
+        const balanceHistoryStore = await dailyBalanceHistoryStorage.getStore()
+        const todayKey = getDayKeyFromUnixSeconds(Math.floor(Date.now() / 1000))
         setDisplayData(
-          buildDisplayDataWithResolvedTags(mergedAccounts, tagStore),
+          buildDisplayDataWithBalanceHistory({
+            nextAccounts: mergedAccounts,
+            currentTagStore: tagStore,
+            balanceHistoryStore,
+            todayKey,
+          }),
         )
       } catch (error) {
         logger.warn(
@@ -876,7 +883,7 @@ export const AccountDataProvider = ({
         void reloadAccountsById(updatedAccountIds)
       }
     })
-  }, [buildDisplayDataWithResolvedTags, loadAccountData, tagStore])
+  }, [buildDisplayDataWithBalanceHistory, loadAccountData, tagStore])
 
   const handleSort = useCallback(
     (field: SortField) => {

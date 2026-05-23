@@ -1,9 +1,8 @@
 import { UI_CONSTANTS } from "~/constants/ui"
+import { listDayKeysInRange } from "~/services/history/dailyBalanceHistory/dayKeys"
+import { estimateTodayIncomeForAccount } from "~/services/history/dailyBalanceHistory/todayIncomeEstimate"
 import type { CurrencyType } from "~/types"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
-
-import { listDayKeysInRange } from "./dayKeys"
-import { estimateTodayIncomeForAccount } from "./todayIncomeEstimate"
 
 interface DailyBalanceHistoryCoverage {
   totalAccounts: number
@@ -382,27 +381,29 @@ export function buildPerAccountDailyBalanceMoneySeries(params: {
       }
     }
 
-    for (let index = 0; index < dayKeys.length; index += 1) {
-      const estimate = estimateTodayIncomeForAccount({
-        enabled: estimatedTodayIncomeEnabled,
-        store,
-        account: buildEstimateAccount({ accountId, manualBalanceAccountIds }),
-        currentDayKey: dayKeys[index],
-      })
+    if (estimatedTodayIncomeEnabled) {
+      for (let index = 0; index < dayKeys.length; index += 1) {
+        const estimate = estimateTodayIncomeForAccount({
+          enabled: true,
+          store,
+          account: buildEstimateAccount({ accountId, manualBalanceAccountIds }),
+          currentDayKey: dayKeys[index],
+        })
 
-      if (
-        estimate.status !== "available" ||
-        estimate.estimatedTodayIncome === null
-      ) {
-        continue
+        if (
+          estimate.status !== "available" ||
+          estimate.estimatedTodayIncome === null
+        ) {
+          continue
+        }
+
+        estimatedIncome[index] = convertQuotaToSelectedMoney({
+          quota: estimate.estimatedTodayIncome,
+          conversionFactor,
+          exchangeRate,
+        })
+        coverageByDay[index].estimatedIncomeAccounts += 1
       }
-
-      estimatedIncome[index] = convertQuotaToSelectedMoney({
-        quota: estimate.estimatedTodayIncome,
-        conversionFactor,
-        exchangeRate,
-      })
-      coverageByDay[index].estimatedIncomeAccounts += 1
     }
 
     seriesByAccountId[accountId] = {
@@ -505,26 +506,28 @@ export function buildAccountRangeSummaries(params: {
         }
       }
 
-      const estimate = estimateTodayIncomeForAccount({
-        enabled: estimatedTodayIncomeEnabled,
-        store,
-        account: buildEstimateAccount({ accountId, manualBalanceAccountIds }),
-        currentDayKey: dayKey,
-      })
+      if (estimatedTodayIncomeEnabled) {
+        const estimate = estimateTodayIncomeForAccount({
+          enabled: true,
+          store,
+          account: buildEstimateAccount({ accountId, manualBalanceAccountIds }),
+          currentDayKey: dayKey,
+        })
 
-      if (
-        estimate.status !== "available" ||
-        estimate.estimatedTodayIncome === null
-      ) {
-        continue
+        if (
+          estimate.status !== "available" ||
+          estimate.estimatedTodayIncome === null
+        ) {
+          continue
+        }
+
+        estimatedIncomeDays += 1
+        estimatedIncomeSum += convertQuotaToSelectedMoney({
+          quota: estimate.estimatedTodayIncome,
+          conversionFactor,
+          exchangeRate,
+        })
       }
-
-      estimatedIncomeDays += 1
-      estimatedIncomeSum += convertQuotaToSelectedMoney({
-        quota: estimate.estimatedTodayIncome,
-        conversionFactor,
-        exchangeRate,
-      })
     }
 
     const incomeTotal = cashflowDays > 0 ? incomeSum : null

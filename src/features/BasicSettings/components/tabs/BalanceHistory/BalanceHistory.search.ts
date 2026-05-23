@@ -90,7 +90,7 @@ export const balanceHistorySearchControls: OptionsSearchItemDefinition[] = [
     "balanceHistory",
     "balance-history-apply-settings",
     "balanceHistory:actions.applySettings",
-    583,
+    584,
     {
       breadcrumbsKeys: [
         ...DEFAULT_BREADCRUMBS,

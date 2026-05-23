@@ -1,11 +1,11 @@
 import { UI_CONSTANTS } from "~/constants/ui"
+import { subtractDaysFromDayKey } from "~/services/history/dailyBalanceHistory/dayKeys"
 import type { CurrencyAmount, SiteAccount } from "~/types"
 import type {
   DailyBalanceHistoryStore,
   TodayIncomeEstimateResult,
 } from "~/types/dailyBalanceHistory"
-
-import { subtractDaysFromDayKey } from "./dayKeys"
+import { TODAY_INCOME_ESTIMATE_STATUS } from "~/types/dailyBalanceHistory"
 
 type TodayIncomeEstimateAccount = Pick<SiteAccount, "id" | "manualBalanceUsd">
 
@@ -19,19 +19,19 @@ const NULL_RESULT_BY_STATUS = {
     reportedTodayIncome: null,
     estimatedTodayIncome: null,
     compensation: null,
-    status: "disabled",
+    status: TODAY_INCOME_ESTIMATE_STATUS.disabled,
   },
   missing_current_snapshot: {
     reportedTodayIncome: null,
     estimatedTodayIncome: null,
     compensation: null,
-    status: "missing_current_snapshot",
+    status: TODAY_INCOME_ESTIMATE_STATUS.missingCurrentSnapshot,
   },
   manual_balance: {
     reportedTodayIncome: null,
     estimatedTodayIncome: null,
     compensation: null,
-    status: "manual_balance",
+    status: TODAY_INCOME_ESTIMATE_STATUS.manualBalance,
   },
 } as const satisfies Record<string, TodayIncomeEstimateResult>
 
@@ -77,7 +77,7 @@ export function estimateTodayIncomeForAccount(params: {
       reportedTodayIncome,
       estimatedTodayIncome: null,
       compensation: null,
-      status: "missing_baseline",
+      status: TODAY_INCOME_ESTIMATE_STATUS.missingBaseline,
     }
   }
 
@@ -86,7 +86,7 @@ export function estimateTodayIncomeForAccount(params: {
       reportedTodayIncome,
       estimatedTodayIncome: null,
       compensation: null,
-      status: "missing_cashflow",
+      status: TODAY_INCOME_ESTIMATE_STATUS.missingCashflow,
     }
   }
 
@@ -100,7 +100,7 @@ export function estimateTodayIncomeForAccount(params: {
       reportedTodayIncome,
       estimatedTodayIncome: null,
       compensation: null,
-      status: "invalid_estimate",
+      status: TODAY_INCOME_ESTIMATE_STATUS.invalidEstimate,
     }
   }
 
@@ -111,7 +111,7 @@ export function estimateTodayIncomeForAccount(params: {
       reportedTodayIncome === null
         ? null
         : estimatedTodayIncome - reportedTodayIncome,
-    status: "available",
+    status: TODAY_INCOME_ESTIMATE_STATUS.available,
   }
 }
 
