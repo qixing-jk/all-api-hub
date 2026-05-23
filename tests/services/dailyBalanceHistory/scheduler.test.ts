@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from "vitest"
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { DAILY_BALANCE_HISTORY_ALARM_NAME } from "~/services/history/dailyBalanceHistory/constants"
@@ -18,6 +18,7 @@ const {
   mockGetEnabledAccounts,
   mockRefreshAccount,
   mockRefreshAllAccounts,
+  mockUpsertSnapshot,
   mockPruneAll,
   mockCreateAlarm,
   mockClearAlarm,
@@ -31,6 +32,7 @@ const {
   mockGetEnabledAccounts: vi.fn(),
   mockRefreshAccount: vi.fn(),
   mockRefreshAllAccounts: vi.fn(),
+  mockUpsertSnapshot: vi.fn(),
   mockPruneAll: vi.fn(),
   mockCreateAlarm: vi.fn(),
   mockClearAlarm: vi.fn(),
@@ -57,6 +59,7 @@ vi.mock("~/services/accounts/accountStorage", () => ({
 
 vi.mock("~/services/history/dailyBalanceHistory/storage", () => ({
   dailyBalanceHistoryStorage: {
+    upsertSnapshot: mockUpsertSnapshot,
     pruneAll: mockPruneAll,
   },
 }))
@@ -87,6 +90,7 @@ describe("dailyBalanceHistoryScheduler", () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.unstubAllEnvs()
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-03-28T08:00:00.000Z"))
     ;(dailyBalanceHistoryScheduler as any).isInitialized = false
@@ -108,12 +112,18 @@ describe("dailyBalanceHistoryScheduler", () => {
       refreshedCount: 1,
     })
     mockRefreshAccount.mockResolvedValue({ refreshed: true })
+    mockUpsertSnapshot.mockResolvedValue(true)
     mockPruneAll.mockResolvedValue(true)
     mockHasAlarmsAPI.mockReturnValue(true)
     mockGetAlarm.mockResolvedValue(undefined)
     mockCreateAlarm.mockResolvedValue(undefined)
     mockClearAlarm.mockResolvedValue(true)
     mockNotifyTaskResult.mockResolvedValue(true)
+  })
+
+  afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.useRealTimers()
   })
 
   it("initializes once, registers the alarm listener, and schedules the next capture", async () => {
@@ -157,6 +167,7 @@ describe("dailyBalanceHistoryScheduler", () => {
       balanceHistory: {
         enabled: true,
         endOfDayCapture: { enabled: false },
+        estimatedTodayIncome: { enabled: false },
         retentionDays: 3650,
       },
     })
@@ -349,6 +360,162 @@ describe("dailyBalanceHistoryScheduler", () => {
     expect(unknownResponse).toHaveBeenCalledWith({
       success: false,
       error: "Unknown action",
+    })
+  })
+
+  it("seeds development snapshots for enabled accounts that can be estimated", async () => {
+    mockGetEnabledAccounts.mockResolvedValue([
+      {
+        id: "included",
+        account_info: {
+          quota: 12_000_000,
+          today_income: 500_000,
+          today_quota_consumption: 1_000_000,
+        },
+        exchange_rate: 7,
+      },
+      {
+        id: "excluded",
+        excludeFromTodayIncome: true,
+        account_info: {
+          quota: 20_000_000,
+          today_income: 1_000_000,
+          today_quota_consumption: 2_000_000,
+        },
+        exchange_rate: 7,
+      },
+      {
+        id: "manual",
+        manualBalanceUsd: "12.34",
+        account_info: {
+          quota: 30_000_000,
+          today_income: 1_000_000,
+          today_quota_consumption: 2_000_000,
+        },
+        exchange_rate: 7,
+      },
+    ])
+
+    const result =
+      await dailyBalanceHistoryScheduler.debugSeedEstimateSnapshots()
+
+    expect(mockUpsertSnapshot).toHaveBeenCalledTimes(2)
+    expect(mockUpsertSnapshot).toHaveBeenNthCalledWith(1, {
+      accountId: "included",
+      dayKey: "2026-03-27",
+      retentionDays: 30,
+      snapshot: {
+        quota: 11_500_000,
+        today_income: 0,
+        today_quota_consumption: 0,
+        capturedAt: Date.now() - 24 * 60 * 60 * 1000,
+        source: "refresh",
+      },
+    })
+    expect(mockUpsertSnapshot).toHaveBeenNthCalledWith(2, {
+      accountId: "included",
+      dayKey: "2026-03-28",
+      retentionDays: 30,
+      snapshot: {
+        quota: 12_000_000,
+        today_income: 500_000,
+        today_quota_consumption: 1_000_000,
+        capturedAt: Date.now(),
+        source: "refresh",
+      },
+    })
+    expect(result).toEqual({
+      seeded: 1,
+      skipped: 2,
+      todayKey: "2026-03-28",
+      yesterdayKey: "2026-03-27",
+    })
+  })
+
+  it("keeps both seeded days even when the configured retention is one day", async () => {
+    mockGetPreferences.mockResolvedValue({
+      balanceHistory: {
+        ...DEFAULT_BALANCE_HISTORY_PREFERENCES,
+        enabled: true,
+        endOfDayCapture: { enabled: true },
+        retentionDays: 1,
+      },
+    })
+    mockGetEnabledAccounts.mockResolvedValue([
+      {
+        id: "included",
+        account_info: {
+          quota: 12_000_000,
+          today_income: 500_000,
+          today_quota_consumption: 1_000_000,
+        },
+        exchange_rate: 7,
+      },
+    ])
+
+    const result =
+      await dailyBalanceHistoryScheduler.debugSeedEstimateSnapshots()
+
+    expect(mockUpsertSnapshot).toHaveBeenCalledTimes(2)
+    expect(mockUpsertSnapshot).toHaveBeenNthCalledWith(
+      1,
+      expect.objectContaining({ retentionDays: 2 }),
+    )
+    expect(mockUpsertSnapshot).toHaveBeenNthCalledWith(
+      2,
+      expect.objectContaining({ retentionDays: 2 }),
+    )
+    expect(result).toEqual({
+      seeded: 1,
+      skipped: 0,
+      todayKey: "2026-03-28",
+      yesterdayKey: "2026-03-27",
+    })
+  })
+
+  it("routes the development snapshot seed runtime message", async () => {
+    vi.stubEnv("MODE", "development")
+    mockGetEnabledAccounts.mockResolvedValue([
+      {
+        id: "included",
+        account_info: {
+          quota: 12_000_000,
+          today_income: 500_000,
+          today_quota_consumption: 1_000_000,
+        },
+        exchange_rate: 7,
+      },
+    ])
+
+    const response = vi.fn()
+    await handleDailyBalanceHistoryMessage(
+      {
+        action: RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots,
+      },
+      response,
+    )
+
+    expect(response).toHaveBeenCalledWith({
+      success: true,
+      data: expect.objectContaining({ seeded: 1, skipped: 0 }),
+    })
+  })
+
+  it("rejects the snapshot seed runtime message outside development mode", async () => {
+    vi.stubEnv("MODE", "production")
+
+    const response = vi.fn()
+    await handleDailyBalanceHistoryMessage(
+      {
+        action: RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots,
+      },
+      response,
+    )
+
+    expect(mockUpsertSnapshot).not.toHaveBeenCalled()
+    expect(response).toHaveBeenCalledWith({
+      success: false,
+      error: "Debug action unavailable",
     })
   })
 

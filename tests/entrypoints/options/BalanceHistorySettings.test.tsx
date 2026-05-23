@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import BalanceHistorySettings from "~/features/BasicSettings/components/tabs/BalanceHistory/BalanceHistorySettings"
 import { hasAlarmsAPI } from "~/utils/browser/browserApi"
@@ -38,7 +39,15 @@ vi.mock("react-hot-toast", () => {
 describe("BalanceHistorySettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.unstubAllEnvs()
     vi.mocked(hasAlarmsAPI).mockReturnValue(true)
+    ;(globalThis as any).browser = {
+      ...(globalThis as any).browser,
+      runtime: {
+        ...((globalThis as any).browser?.runtime ?? {}),
+        sendMessage: vi.fn(),
+      },
+    }
   })
 
   const renderSubject = () => render(<BalanceHistorySettings />)
@@ -136,5 +145,55 @@ describe("BalanceHistorySettings", () => {
         name: "balanceHistory:settings.estimatedTodayIncome",
       }),
     ).not.toBeDisabled()
+  })
+
+  it("shows a development-only action to seed estimated-income snapshots", async () => {
+    vi.stubEnv("MODE", "development")
+    const sendMessage = vi
+      .fn()
+      .mockResolvedValue({ success: true, data: { seeded: 2, skipped: 1 } })
+    ;(globalThis as any).browser.runtime.sendMessage = sendMessage
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: {
+        balanceHistory: {
+          enabled: true,
+          endOfDayCapture: { enabled: false },
+          estimatedTodayIncome: { enabled: true },
+          retentionDays: 30,
+        },
+      },
+      updateBalanceHistory: vi.fn().mockResolvedValue(true),
+    } as any)
+
+    renderSubject()
+
+    fireEvent.click(await screen.findByText("Dev: Seed estimate snapshots"))
+
+    await waitFor(() => {
+      expect(sendMessage).toHaveBeenCalledWith({
+        action: RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots,
+      })
+    })
+  })
+
+  it("hides the estimated-income snapshot seed action outside development mode", () => {
+    vi.stubEnv("MODE", "production")
+    vi.mocked(useUserPreferencesContext).mockReturnValue({
+      preferences: {
+        balanceHistory: {
+          enabled: true,
+          endOfDayCapture: { enabled: false },
+          estimatedTodayIncome: { enabled: true },
+          retentionDays: 30,
+        },
+      },
+      updateBalanceHistory: vi.fn().mockResolvedValue(true),
+    } as any)
+
+    renderSubject()
+
+    expect(
+      screen.queryByText("Dev: Seed estimate snapshots"),
+    ).not.toBeInTheDocument()
   })
 })

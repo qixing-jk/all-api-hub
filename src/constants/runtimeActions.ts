@@ -354,6 +354,10 @@ export const RuntimeActionIds = {
     RuntimeActionPrefixes.BalanceHistory,
     "prune",
   ),
+  BalanceHistoryDebugSeedEstimateSnapshots: composeRuntimeAction(
+    RuntimeActionPrefixes.BalanceHistory,
+    "debugSeedEstimateSnapshots",
+  ),
 
   WebdavAutoSyncSetup: composeRuntimeAction(
     RuntimeActionPrefixes.WebdavAutoSync,

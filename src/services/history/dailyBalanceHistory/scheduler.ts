@@ -23,6 +23,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import { DAILY_BALANCE_HISTORY_ALARM_NAME } from "./constants"
+import { getDayKeyFromUnixSeconds, subtractDaysFromDayKey } from "./dayKeys"
 import { dailyBalanceHistoryStorage } from "./storage"
 import { clampBalanceHistoryRetentionDays } from "./utils"
 
@@ -231,6 +232,90 @@ class DailyBalanceHistoryScheduler {
     return { success, failed, refreshedCount }
   }
 
+  async debugSeedEstimateSnapshots(): Promise<{
+    seeded: number
+    skipped: number
+    todayKey: string
+    yesterdayKey: string
+  }> {
+    const prefs = await userPreferences.getPreferences()
+    const config = prefs.balanceHistory ?? DEFAULT_BALANCE_HISTORY_PREFERENCES
+    const retentionDays = Math.max(
+      2,
+      clampBalanceHistoryRetentionDays(config.retentionDays),
+    )
+    const nowMs = Date.now()
+    const todayKey = getDayKeyFromUnixSeconds(Math.floor(nowMs / 1000))
+    const yesterdayKey = subtractDaysFromDayKey(todayKey, 1)
+    const accounts = await accountStorage.getEnabledAccounts()
+    let seeded = 0
+    let skipped = 0
+
+    for (const account of accounts) {
+      if (
+        account.excludeFromTodayIncome === true ||
+        (typeof account.manualBalanceUsd === "string" &&
+          account.manualBalanceUsd.trim() !== "")
+      ) {
+        skipped += 1
+        continue
+      }
+
+      const info = account.account_info
+      const quota = Number(info?.quota)
+      if (!Number.isFinite(quota) || quota <= 0) {
+        skipped += 1
+        continue
+      }
+
+      const todayConsumption = Number.isFinite(info?.today_quota_consumption)
+        ? Math.max(0, Number(info.today_quota_consumption))
+        : 1_000_000
+      const trustedIncome = Number.isFinite(info?.today_income)
+        ? Math.max(0, Number(info.today_income))
+        : 0
+      const estimatedIncome = Math.max(trustedIncome + 1_000_000, 1_000_000)
+      const baselineQuota = Math.max(
+        0,
+        quota + todayConsumption - estimatedIncome,
+      )
+      const yesterdayCapturedAt = nowMs - 24 * 60 * 60 * 1000
+
+      const yesterdayOk = await dailyBalanceHistoryStorage.upsertSnapshot({
+        accountId: account.id,
+        dayKey: yesterdayKey,
+        retentionDays,
+        snapshot: {
+          quota: baselineQuota,
+          today_income: 0,
+          today_quota_consumption: 0,
+          capturedAt: yesterdayCapturedAt,
+          source: "refresh",
+        },
+      })
+      const todayOk = await dailyBalanceHistoryStorage.upsertSnapshot({
+        accountId: account.id,
+        dayKey: todayKey,
+        retentionDays,
+        snapshot: {
+          quota,
+          today_income: trustedIncome,
+          today_quota_consumption: todayConsumption,
+          capturedAt: nowMs,
+          source: "refresh",
+        },
+      })
+
+      if (yesterdayOk && todayOk) {
+        seeded += 1
+      } else {
+        skipped += 1
+      }
+    }
+
+    return { seeded, skipped, todayKey, yesterdayKey }
+  }
+
   async runEndOfDayCapture(params: {
     trigger: DailyBalanceHistoryCaptureSource
   }) {
@@ -326,6 +411,18 @@ export const handleDailyBalanceHistoryMessage = async (
       case RuntimeActionIds.BalanceHistoryPrune: {
         const ok = await dailyBalanceHistoryScheduler.pruneNow()
         sendResponse({ success: ok })
+        break
+      }
+
+      case RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots: {
+        if (import.meta.env.MODE !== "development") {
+          sendResponse({ success: false, error: "Debug action unavailable" })
+          break
+        }
+
+        const result =
+          await dailyBalanceHistoryScheduler.debugSeedEstimateSnapshots()
+        sendResponse({ success: true, data: result })
         break
       }
 
