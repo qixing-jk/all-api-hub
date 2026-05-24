@@ -23,6 +23,10 @@
     "verifyApi": "Xác minh API",
     "verifyCliSupport": "Xác minh khả năng tương thích CLI"
   },
+  "aihubmixCatalogFallbackNotice": {
+    "description": "Chưa thể xác nhận phạm vi mô hình thực sự khả dụng của tài khoản này, nên toàn bộ danh mục mô hình AIHubMix đang được hiển thị. Một số mô hình có thể không gọi được bằng tài khoản này; hãy lấy quyền của tài khoản trên trang và kết quả xác minh thực tế làm nguồn xác thực cuối cùng.",
+    "title": "Đã chuyển về toàn bộ danh mục mô hình AIHubMix"
+  },
   "allAccounts": "Tất cả tài khoản",
   "allBillingModes": "Tất cả phương thức tính phí",
   "allGroups": "Tất cả các nhóm",
@@ -132,6 +136,9 @@
     "subtitle": "Tài khoản: {{accountName}} · Mô hình: {{modelId}}",
     "title": "Khóa tương ứng với mô hình"
   },
+  "lowestPrice": "Giá thấp nhất",
+  "lowestPriceWithinAccountFilters": "Hàng này có giá thấp nhất trong bộ lọc tài khoản hiện tại và cùng phương thức tính phí.",
+  "lowestPriceWithinBillingMode": "Hàng này có giá thấp nhất trong cùng phương thức tính phí.",
   "messages": {
     "copyFailed": "Sao chép thất bại",
     "modelNameCopied": "Đã sao chép tên mô hình",

@@ -25,6 +25,10 @@
     "verifyApi": "Verify API",
     "verifyCliSupport": "Verify CLI Support"
   },
+  "aihubmixCatalogFallbackNotice": {
+    "description": "This account's actual available model scope could not be confirmed, so the full AIHubMix model catalog is shown. Some models may not be callable with this account; use the site's account permissions and real verification results as the final source of truth.",
+    "title": "Fell back to the full AIHubMix model catalog"
+  },
   "allAccounts": "All accounts",
   "allBillingModes": "All Billing Modes",
   "allGroups": "All Groups",
@@ -138,6 +142,9 @@
     "subtitle": "Account: {{accountName}} · Model: {{modelId}}",
     "title": "Key for model"
   },
+  "lowestPrice": "Lowest Price",
+  "lowestPriceWithinAccountFilters": "This row is the lowest price within the current account filters and same billing mode.",
+  "lowestPriceWithinBillingMode": "This row is the lowest price within the same billing mode.",
   "messages": {
     "copyFailed": "Copy failed",
     "modelNameCopied": "Model name copied",

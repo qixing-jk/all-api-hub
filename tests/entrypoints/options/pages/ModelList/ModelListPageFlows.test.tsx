@@ -8,6 +8,7 @@ import {
   createAccountSource,
   createAllAccountsSource,
   createProfileSource,
+  toAihubmixCatalogFallbackCapabilities,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
 import {
@@ -476,6 +477,42 @@ describe("ModelList page flows", () => {
     ).toEqual([])
   })
 
+  it("shows the AIHubMix catalog fallback notice separately from account-key fallback", async () => {
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        isFallbackCatalogActive: false,
+        isAihubmixCatalogFallbackActive: true,
+        pricingData: {
+          success: true,
+          data: [{ model_name: "gpt-aihubmix" }],
+          group_ratio: {},
+          usable_group: {},
+        },
+        baseFilteredModels: [
+          {
+            model: { model_name: "gpt-aihubmix" },
+            source: createAccountSource(ACCOUNT),
+          },
+        ],
+      }),
+    )
+
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(
+      await screen.findByText("modelList:aihubmixCatalogFallbackNotice.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("modelList:aihubmixCatalogFallbackNotice.description"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("modelList:fallbackSourceNotice.title"),
+    ).not.toBeInTheDocument()
+  })
+
   it("keeps summary counts sourced from the pre-account-filter model set", async () => {
     mockUseModelListData.mockReturnValue(
       buildState({
@@ -514,6 +551,36 @@ describe("ModelList page flows", () => {
     expect(
       screen.getByRole("button", { name: "Summary Backup Account:1" }),
     ).toBeInTheDocument()
+  })
+
+  it("omits all-accounts summary items for accounts without eligible summary rows", async () => {
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        selectedSource: ALL_ACCOUNTS_SOURCE,
+        selectedSourceValue: ALL_ACCOUNTS_SOURCE.value,
+        currentAccount: null,
+        sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
+        pricingData: null,
+        pricingContexts: [{ accountId: ACCOUNT.id }],
+        accountSummaryCountsByAccountId: new Map([[SECOND_ACCOUNT.id, 1]]),
+        accountQueryStates: [
+          { account: ACCOUNT, errorType: null },
+          { account: SECOND_ACCOUNT, errorType: null },
+        ],
+      }),
+    )
+
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(
+      await screen.findByRole("button", { name: "Summary Backup Account:1" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Summary Primary Account:0" }),
+    ).not.toBeInTheDocument()
   })
 
   it("forwards loading and error states to the account summary bar instead of falling back to counts", async () => {
@@ -855,6 +922,107 @@ describe("ModelList page flows", () => {
     )
 
     expect(await screen.findByText("Batch Verify Dialog 2")).toBeInTheDocument()
+  })
+
+  it("omits all-accounts rows that cannot provide verification credentials from batch verification", async () => {
+    const user = userEvent.setup()
+    const aihubmixSource = createAccountSource({
+      ...SECOND_ACCOUNT,
+      id: "aihubmix-account",
+      name: "AIHubMix",
+      siteType: "AIHubMix",
+      baseUrl: "https://aihubmix.com",
+    })
+    const disabledAihubmixSource = {
+      ...aihubmixSource,
+      capabilities: toAihubmixCatalogFallbackCapabilities(
+        aihubmixSource.capabilities,
+      ),
+    }
+
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        selectedSource: ALL_ACCOUNTS_SOURCE,
+        selectedSourceValue: ALL_ACCOUNTS_SOURCE.value,
+        currentAccount: null,
+        sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
+        pricingData: null,
+        pricingContexts: [
+          {
+            account: ACCOUNT,
+            pricing: { data: [{ model_name: "gpt-4o" }] },
+          },
+          {
+            account: aihubmixSource.account,
+            pricing: { data: [{ model_name: "gpt-aihubmix" }] },
+          },
+        ],
+        filteredModels: [
+          {
+            model: { model_name: "gpt-4o", enable_groups: ["default"] },
+            source: createAccountSource(ACCOUNT),
+          },
+          {
+            model: { model_name: "gpt-aihubmix", enable_groups: [] },
+            source: disabledAihubmixSource,
+          },
+        ],
+      }),
+    )
+
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await user.click(
+      await screen.findByRole("button", { name: "Batch verify" }),
+    )
+
+    expect(await screen.findByText("Batch Verify Dialog 1")).toBeInTheDocument()
+  })
+
+  it("hides batch verification when every visible row lacks verification credentials", async () => {
+    const aihubmixSource = createAccountSource({
+      ...ACCOUNT,
+      siteType: "AIHubMix",
+      baseUrl: "https://aihubmix.com",
+    })
+    const disabledAihubmixSource = {
+      ...aihubmixSource,
+      capabilities: toAihubmixCatalogFallbackCapabilities(
+        aihubmixSource.capabilities,
+      ),
+    }
+
+    mockUseModelListData.mockReturnValue(
+      buildState({
+        selectedSource: ALL_ACCOUNTS_SOURCE,
+        selectedSourceValue: ALL_ACCOUNTS_SOURCE.value,
+        currentAccount: null,
+        sourceCapabilities: ALL_ACCOUNTS_SOURCE.capabilities,
+        pricingData: null,
+        pricingContexts: [
+          {
+            account: aihubmixSource.account,
+            pricing: { data: [{ model_name: "gpt-aihubmix" }] },
+          },
+        ],
+        filteredModels: [
+          {
+            model: { model_name: "gpt-aihubmix", enable_groups: [] },
+            source: disabledAihubmixSource,
+          },
+        ],
+      }),
+    )
+
+    render(<ModelList />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    expect(screen.queryByRole("button", { name: "Batch verify" })).toBeNull()
   })
 
   it("lets all-accounts rows reuse the top-level account tag filter", async () => {

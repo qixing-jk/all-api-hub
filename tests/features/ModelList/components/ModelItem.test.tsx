@@ -89,7 +89,12 @@ vi.mock(
 )
 
 vi.mock("~/features/ModelList/components/ModelItem/ModelItemPricing", () => ({
-  ModelItemPricing: () => <div data-testid="model-pricing" />,
+  ModelItemPricing: ({ showRatioColumn }: { showRatioColumn: boolean }) => (
+    <div
+      data-testid="model-pricing"
+      data-show-ratio-column={String(showRatioColumn)}
+    />
+  ),
 }))
 
 vi.mock("~/features/ModelList/components/ModelItem/ModelItemDetails", () => ({
@@ -158,6 +163,7 @@ function createDefaultProps() {
       },
       capabilities: {
         supportsPricing: true,
+        supportsRatioDisplay: true,
         supportsGroupFiltering: true,
         supportsAccountSummary: false,
         supportsTokenCompatibility: false,
@@ -198,6 +204,29 @@ describe("ModelItem", () => {
     expect(
       screen.queryByText("availableGroups: vip (1x)"),
     ).not.toBeInTheDocument()
+  })
+
+  it("suppresses the ratio column when either the row or display capabilities do not support ratios", () => {
+    const props = createDefaultProps()
+
+    render(
+      <ModelItem
+        {...props}
+        showRatioColumn={true}
+        source={{
+          ...props.source,
+          capabilities: {
+            ...props.source.capabilities,
+            supportsRatioDisplay: false,
+          },
+        }}
+      />,
+    )
+
+    expect(screen.getByTestId("model-pricing")).toHaveAttribute(
+      "data-show-ratio-column",
+      "false",
+    )
   })
 
   it("uses internal expansion state when expansion props are omitted", async () => {

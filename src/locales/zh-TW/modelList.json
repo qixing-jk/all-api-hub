@@ -23,6 +23,10 @@
     "verifyApi": "驗證介面",
     "verifyCliSupport": "驗證 CLI 相容性"
   },
+  "aihubmixCatalogFallbackNotice": {
+    "description": "未能確認此帳號的實際可用模型範圍，目前顯示 AIHubMix 完整模型目錄。部分模型可能無法透過此帳號呼叫，請以站點帳號權限和實際驗證結果為準。",
+    "title": "已回退到 AIHubMix 完整模型目錄"
+  },
   "allAccounts": "所有帳號",
   "allBillingModes": "所有計費方式",
   "allGroups": "所有分組",
@@ -132,6 +136,9 @@
     "subtitle": "帳號：{{accountName}} · 模型：{{modelId}}",
     "title": "模型對應金鑰"
   },
+  "lowestPrice": "最低價",
+  "lowestPriceWithinAccountFilters": "在目前帳號篩選範圍內，該列是相同計費模式下價格最低的選項",
+  "lowestPriceWithinBillingMode": "該列是相同計費模式下價格最低的選項",
   "messages": {
     "copyFailed": "複製失敗",
     "modelNameCopied": "模型名稱已複製",

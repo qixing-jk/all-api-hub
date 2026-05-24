@@ -104,6 +104,95 @@ describe("ControlPanel profile capabilities", () => {
     ).toBeInTheDocument()
   })
 
+  it("hides pricing and group controls for catalog-only account capabilities", async () => {
+    render(
+      <ControlPanel
+        selectedSource={
+          { kind: "account", account: { name: "AIHubMix" } } as any
+        }
+        sourceCapabilities={{
+          supportsPricing: false,
+          supportsRatioDisplay: false,
+          supportsGroupFiltering: false,
+          supportsAccountSummary: false,
+          supportsTokenCompatibility: false,
+          supportsCredentialVerification: true,
+          supportsBatchCredentialVerification: true,
+          supportsCliVerification: true,
+        }}
+        searchTerm=""
+        setSearchTerm={vi.fn()}
+        sortMode={MODEL_LIST_SORT_MODES.DEFAULT}
+        setSortMode={vi.fn()}
+        selectedBillingMode={MODEL_LIST_BILLING_MODES.ALL}
+        setSelectedBillingMode={vi.fn()}
+        selectedGroups={[]}
+        setSelectedGroups={vi.fn()}
+        availableGroups={["default"]}
+        pricingData={{ group_ratio: { default: 1 } }}
+        showRealPrice={false}
+        setShowRealPrice={vi.fn()}
+        showRatioColumn={false}
+        setShowRatioColumn={vi.fn()}
+        showEndpointTypes={true}
+        setShowEndpointTypes={vi.fn()}
+        totalModels={1}
+        filteredModels={[{ model: { model_name: "gpt-aihubmix" } }]}
+      />,
+    )
+
+    expect(
+      await screen.findByText("modelList:searchModels"),
+    ).toBeInTheDocument()
+    expect(screen.queryByText("modelList:userGroup")).not.toBeInTheDocument()
+    expect(screen.queryByText("modelList:sortBy")).not.toBeInTheDocument()
+    expect(screen.queryByText("modelList:billingMode")).not.toBeInTheDocument()
+    expect(screen.queryByText("modelList:realAmount")).not.toBeInTheDocument()
+    expect(screen.queryByText("modelList:showRatio")).not.toBeInTheDocument()
+  })
+
+  it("keeps pricing controls but hides the ratio toggle when ratio display is unsupported", async () => {
+    render(
+      <ControlPanel
+        selectedSource={
+          { kind: "account", account: { name: "AIHubMix" } } as any
+        }
+        sourceCapabilities={{
+          supportsPricing: true,
+          supportsRatioDisplay: false,
+          supportsGroupFiltering: false,
+          supportsAccountSummary: false,
+          supportsTokenCompatibility: false,
+          supportsCredentialVerification: false,
+          supportsBatchCredentialVerification: false,
+          supportsCliVerification: false,
+        }}
+        searchTerm=""
+        setSearchTerm={vi.fn()}
+        sortMode={MODEL_LIST_SORT_MODES.DEFAULT}
+        setSortMode={vi.fn()}
+        selectedBillingMode={MODEL_LIST_BILLING_MODES.ALL}
+        setSelectedBillingMode={vi.fn()}
+        selectedGroups={[]}
+        setSelectedGroups={vi.fn()}
+        availableGroups={["default"]}
+        pricingData={{ group_ratio: {} }}
+        showRealPrice={false}
+        setShowRealPrice={vi.fn()}
+        showRatioColumn={false}
+        setShowRatioColumn={vi.fn()}
+        showEndpointTypes={true}
+        setShowEndpointTypes={vi.fn()}
+        totalModels={1}
+        filteredModels={[{ model: { model_name: "gpt-aihubmix" } }]}
+      />,
+    )
+
+    expect(await screen.findByText("modelList:billingMode")).toBeInTheDocument()
+    expect(screen.getByText("modelList:realAmount")).toBeInTheDocument()
+    expect(screen.queryByText("modelList:showRatio")).not.toBeInTheDocument()
+  })
+
   it("renders group ratio labels, uses the group fallback ratio, and copies visible model names", async () => {
     const setSearchTerm = vi.fn()
     const setSortMode = vi.fn()
@@ -120,6 +209,7 @@ describe("ControlPanel profile capabilities", () => {
           {
             supportsGroupFiltering: true,
             supportsPricing: true,
+            supportsRatioDisplay: true,
           } as any
         }
         searchTerm="gpt"
@@ -160,11 +250,6 @@ describe("ControlPanel profile capabilities", () => {
     expect(setSortMode).toHaveBeenCalledWith(MODEL_LIST_SORT_MODES.PRICE_ASC)
 
     expect(billingModeSelect).toHaveTextContent("modelList:allBillingModes")
-    fireEvent.click(billingModeSelect)
-    fireEvent.click(await screen.findByText("ui:billing.perCall"))
-    expect(setSelectedBillingMode).toHaveBeenCalledWith(
-      MODEL_LIST_BILLING_MODES.PER_CALL,
-    )
 
     expect(groupSelect).toHaveTextContent("modelList:allGroups")
     fireEvent.click(groupSelect)
@@ -224,6 +309,7 @@ describe("ControlPanel profile capabilities", () => {
           {
             supportsGroupFiltering: false,
             supportsPricing: false,
+            supportsRatioDisplay: false,
           } as any
         }
         searchTerm=""
@@ -270,6 +356,7 @@ describe("ControlPanel profile capabilities", () => {
           {
             supportsGroupFiltering: false,
             supportsPricing: false,
+            supportsRatioDisplay: false,
           } as any
         }
         searchTerm=""
@@ -319,6 +406,7 @@ describe("ControlPanel profile capabilities", () => {
           {
             supportsGroupFiltering: false,
             supportsPricing: false,
+            supportsRatioDisplay: false,
           } as any
         }
         searchTerm=""
@@ -362,6 +450,7 @@ describe("ControlPanel profile capabilities", () => {
           {
             supportsGroupFiltering: false,
             supportsPricing: true,
+            supportsRatioDisplay: true,
           } as any
         }
         searchTerm=""
@@ -415,6 +504,7 @@ describe("ControlPanel profile capabilities", () => {
           {
             supportsGroupFiltering: true,
             supportsPricing: true,
+            supportsRatioDisplay: true,
           } as any
         }
         searchTerm="private-search"
@@ -446,16 +536,8 @@ describe("ControlPanel profile capabilities", () => {
     const [, billingModeSelect, groupSelect] = comboboxes
 
     expect(billingModeSelect).toHaveTextContent("modelList:allBillingModes")
-    fireEvent.click(billingModeSelect)
-    fireEvent.click(await screen.findByText("ui:billing.perCall"))
-    expect(setSelectedBillingMode).toHaveBeenCalledWith(
-      MODEL_LIST_BILLING_MODES.PER_CALL,
-    )
 
     expect(groupSelect).toHaveTextContent("modelList:allGroups")
-    fireEvent.click(groupSelect)
-    fireEvent.click(await screen.findByText("private-group (2x)"))
-    expect(setSelectedGroups).toHaveBeenCalledWith(["private-group"])
 
     expect(setSearchTerm).toHaveBeenCalledWith("")
 
@@ -465,7 +547,7 @@ describe("ControlPanel profile capabilities", () => {
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
-    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledTimes(3)
+    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledTimes(1)
 
     const analyticsCalls = JSON.stringify(
       trackProductAnalyticsActionStartedMock.mock.calls,

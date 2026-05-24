@@ -32,6 +32,42 @@ interface ModelItemPricingProps {
   groupSelectionScope?: ModelListGroupSelectionScope
 }
 
+interface PriceMetaBadgeViewModel {
+  kind: "optimal-group" | "lowest-price"
+  variant: "success" | "secondary"
+}
+
+/**
+ * Resolves which pricing metadata badge should be rendered for the model row.
+ */
+function resolvePriceMetaBadge(params: {
+  effectiveGroup?: string
+  isLowestPrice: boolean
+  showsOptimalGroup: boolean
+}): PriceMetaBadgeViewModel | null {
+  const { effectiveGroup, isLowestPrice, showsOptimalGroup } = params
+
+  if (effectiveGroup) {
+    if (!showsOptimalGroup && !isLowestPrice) {
+      return null
+    }
+
+    return {
+      kind: "optimal-group",
+      variant: isLowestPrice ? "success" : "secondary",
+    }
+  }
+
+  if (!isLowestPrice) {
+    return null
+  }
+
+  return {
+    kind: "lowest-price",
+    variant: "success",
+  }
+}
+
 export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   model,
   calculatedPrice,
@@ -56,35 +92,49 @@ export const ModelItemPricing: React.FC<ModelItemPricingProps> = ({
   const effectiveGroupLabel = effectiveGroup
     ? formatGroupLabelFromRatios(effectiveGroup, groupRatios)
     : undefined
-  const shouldShowPriceMeta =
-    effectiveGroup && (showsOptimalGroup || isLowestPrice)
-  const priceMetaTitle = shouldShowPriceMeta
-    ? isLowestPrice
-      ? t(
-          groupSelectionScope === MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS
-            ? "optimalGroupLowestPriceWithinAccountFilters"
-            : "optimalGroupLowestPriceWithinBillingMode",
-          {
-            group: effectiveGroupLabel,
-          },
-        )
-      : t(
-          groupSelectionScope === MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS
-            ? "optimalGroupWithinAccountFilters"
-            : "optimalGroupWithinSelectedGroups",
-          {
-            group: effectiveGroupLabel,
-          },
-        )
-    : undefined
-  const priceMeta = shouldShowPriceMeta ? (
+  const priceMetaBadge = resolvePriceMetaBadge({
+    effectiveGroup,
+    isLowestPrice,
+    showsOptimalGroup,
+  })
+  const isAllAccountsGroupScope =
+    groupSelectionScope === MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS
+  const priceMetaLabel =
+    priceMetaBadge?.kind === "optimal-group"
+      ? t("optimalGroup", { group: effectiveGroupLabel })
+      : priceMetaBadge?.kind === "lowest-price"
+        ? t("lowestPrice")
+        : undefined
+  const priceMetaTitle =
+    priceMetaBadge?.kind === "optimal-group"
+      ? isLowestPrice
+        ? isAllAccountsGroupScope
+          ? t("optimalGroupLowestPriceWithinAccountFilters", {
+              group: effectiveGroupLabel,
+            })
+          : t("optimalGroupLowestPriceWithinBillingMode", {
+              group: effectiveGroupLabel,
+            })
+        : isAllAccountsGroupScope
+          ? t("optimalGroupWithinAccountFilters", {
+              group: effectiveGroupLabel,
+            })
+          : t("optimalGroupWithinSelectedGroups", {
+              group: effectiveGroupLabel,
+            })
+      : priceMetaBadge?.kind === "lowest-price"
+        ? isAllAccountsGroupScope
+          ? t("lowestPriceWithinAccountFilters")
+          : t("lowestPriceWithinBillingMode")
+        : undefined
+  const priceMeta = priceMetaBadge ? (
     <Badge
-      variant={isLowestPrice ? "success" : "secondary"}
+      variant={priceMetaBadge.variant}
       size="sm"
       className="shrink-0 text-[10px] sm:text-xs"
       title={priceMetaTitle}
     >
-      {t("optimalGroup", { group: effectiveGroupLabel })}
+      {priceMetaLabel}
     </Badge>
   ) : null
 

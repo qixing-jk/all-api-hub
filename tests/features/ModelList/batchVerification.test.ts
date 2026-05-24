@@ -87,6 +87,38 @@ describe("model list batch verification helpers", () => {
     expect(item.enableGroups).toBeNull()
   })
 
+  it("omits rows whose source cannot provide verification credentials", () => {
+    const supportedSource = {
+      kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      account: { id: "supported-account" },
+      capabilities: {
+        supportsBatchCredentialVerification: true,
+      },
+    } as any
+    const unsupportedSource = {
+      kind: MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      account: { id: "aihubmix-account" },
+      capabilities: {
+        supportsBatchCredentialVerification: false,
+      },
+    } as any
+
+    const result = createBatchVerifyModelItems([
+      {
+        model: { model_name: "gpt-4o", enable_groups: [DEFAULT_MODEL_GROUP] },
+        source: supportedSource,
+      },
+      {
+        model: { model_name: "gpt-aihubmix", enable_groups: [] },
+        source: unsupportedSource,
+      },
+    ] as any)
+
+    expect(result.map((item) => item.key)).toEqual([
+      "account:supported-account:gpt-4o",
+    ])
+  })
+
   it("auto-detects the closest verification API type from model id", () => {
     expect(
       resolveBatchVerifyApiType(

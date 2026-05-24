@@ -296,7 +296,7 @@ export function ControlPanel({
                 </label>
               )}
 
-              {sourceCapabilities.supportsPricing && (
+              {sourceCapabilities.supportsRatioDisplay && (
                 <label className="flex cursor-pointer items-center space-x-2">
                   <Switch
                     checked={showRatioColumn}

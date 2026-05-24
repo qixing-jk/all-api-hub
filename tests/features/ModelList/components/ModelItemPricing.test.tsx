@@ -396,6 +396,31 @@ describe("Model item pricing and description", () => {
       )
     })
 
+    it("shows a lowest-price badge for rows without group semantics", () => {
+      isTokenBillingTypeMock.mockReturnValue(true)
+
+      render(
+        <ModelItemPricing
+          model={createModel({ model_ratio: 0 })}
+          calculatedPrice={createCalculatedPrice()}
+          exchangeRate={7}
+          showRealPrice={false}
+          showPricing={true}
+          showRatioColumn={false}
+          isAvailableForUser={true}
+          isLowestPrice={true}
+          groupRatios={{}}
+          groupSelectionScope={MODEL_LIST_GROUP_SELECTION_SCOPES.ALL_ACCOUNTS}
+        />,
+      )
+
+      expect(screen.getByText("lowestPrice")).toHaveAttribute(
+        "title",
+        "lowestPriceWithinAccountFilters",
+      )
+      expect(screen.queryByText("optimalGroup")).toBeNull()
+    })
+
     it("uses account-filter copy for all-accounts auto-picked groups", () => {
       isTokenBillingTypeMock.mockReturnValue(true)
 

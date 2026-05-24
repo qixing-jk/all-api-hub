@@ -164,12 +164,39 @@ export default function ModelItem(props: ModelItemProps) {
       ? () => onFilterAccount(source.account.id)
       : undefined
 
+  const effectiveCapabilities: ModelManagementSourceCapabilities = {
+    supportsPricing:
+      source.capabilities.supportsPricing &&
+      displayCapabilities.supportsPricing,
+    supportsRatioDisplay:
+      source.capabilities.supportsRatioDisplay &&
+      displayCapabilities.supportsRatioDisplay,
+    supportsGroupFiltering:
+      source.capabilities.supportsGroupFiltering &&
+      displayCapabilities.supportsGroupFiltering,
+    supportsAccountSummary:
+      source.capabilities.supportsAccountSummary &&
+      displayCapabilities.supportsAccountSummary,
+    supportsTokenCompatibility:
+      source.capabilities.supportsTokenCompatibility &&
+      displayCapabilities.supportsTokenCompatibility,
+    supportsCredentialVerification:
+      source.capabilities.supportsCredentialVerification &&
+      displayCapabilities.supportsCredentialVerification,
+    supportsBatchCredentialVerification:
+      source.capabilities.supportsBatchCredentialVerification &&
+      displayCapabilities.supportsBatchCredentialVerification,
+    supportsCliVerification:
+      source.capabilities.supportsCliVerification &&
+      displayCapabilities.supportsCliVerification,
+  }
+
   const showPricing =
     source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
-    displayCapabilities.supportsPricing
+    effectiveCapabilities.supportsPricing
   const showGroupDetails =
     source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
-    displayCapabilities.supportsGroupFiltering
+    effectiveCapabilities.supportsGroupFiltering
   const canExpand =
     source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT && showGroupDetails
 
@@ -227,7 +254,7 @@ export default function ModelItem(props: ModelItemProps) {
             verificationSummary={verificationSummary}
             onOpenKeyDialog={
               source.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT &&
-              source.capabilities.supportsTokenCompatibility &&
+              effectiveCapabilities.supportsTokenCompatibility &&
               onOpenModelKeyDialog
                 ? () =>
                     onOpenModelKeyDialog(
@@ -238,13 +265,14 @@ export default function ModelItem(props: ModelItemProps) {
                 : undefined
             }
             onVerifyApi={
-              source.capabilities.supportsCredentialVerification &&
+              effectiveCapabilities.supportsCredentialVerification &&
               onVerifyModel
                 ? () => onVerifyModel(source, model.model_name)
                 : undefined
             }
             onVerifyCliSupport={
-              source.capabilities.supportsCliVerification && onVerifyCliSupport
+              effectiveCapabilities.supportsCliVerification &&
+              onVerifyCliSupport
                 ? () => onVerifyCliSupport(source, model.model_name)
                 : undefined
             }
@@ -281,7 +309,9 @@ export default function ModelItem(props: ModelItemProps) {
           exchangeRate={exchangeRate}
           showRealPrice={showRealPrice}
           showPricing={showPricing}
-          showRatioColumn={showRatioColumn}
+          showRatioColumn={
+            showRatioColumn && effectiveCapabilities.supportsRatioDisplay
+          }
           isAvailableForUser={isAvailableForUser}
           isLowestPrice={isLowestPrice}
           effectiveGroup={effectiveGroup}

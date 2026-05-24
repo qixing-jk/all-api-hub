@@ -106,6 +106,7 @@ export default function ModelList(props: {
     loadErrorMessage,
     accountFallback,
     isFallbackCatalogActive,
+    isAihubmixCatalogFallbackActive,
 
     filteredModels,
     accountSummaryCountsByAccountId,
@@ -186,12 +187,16 @@ export default function ModelList(props: {
       if (!state) {
         return []
       }
+      const count = accountSummaryCountsByAccountId.get(state.account.id)
+      if (count === undefined && !state.isLoading && !state.errorType) {
+        return []
+      }
 
       return [
         {
           accountId: state.account.id,
           name: state.account.name,
-          count: accountSummaryCountsByAccountId.get(state.account.id) ?? 0,
+          count: count ?? 0,
           isLoading: state.isLoading,
           errorType: state.errorType,
         },
@@ -281,14 +286,20 @@ export default function ModelList(props: {
     modelEnableGroups: string[],
   ) => setModelKeyContext({ account, modelId, modelEnableGroups })
 
+  const batchVerifyItems = useMemo(
+    () => createBatchVerifyModelItems(filteredModels),
+    [filteredModels],
+  )
+
   const handleOpenBatchVerify = () => {
-    const items = createBatchVerifyModelItems(filteredModels)
-    if (items.length === 0) return
-    setBatchVerifyContext({ items })
+    if (batchVerifyItems.length === 0) return
+    setBatchVerifyContext({ items: batchVerifyItems })
   }
 
   const canBatchVerifyModels =
-    !!selectedSource && sourceCapabilities.supportsBatchCredentialVerification
+    !!selectedSource &&
+    sourceCapabilities.supportsBatchCredentialVerification &&
+    batchVerifyItems.length > 0
 
   const handleOpenAccountManagement = useCallback(() => {
     pushWithinOptionsPage(`#${MENU_ITEM_IDS.ACCOUNT}`)
@@ -428,6 +439,15 @@ export default function ModelList(props: {
               className="mb-6"
               title={t("fallbackSourceNotice.title")}
               description={t("fallbackSourceNotice.description")}
+            />
+          )}
+
+          {isAihubmixCatalogFallbackActive && (
+            <Alert
+              variant="warning"
+              className="mb-6"
+              title={t("aihubmixCatalogFallbackNotice.title")}
+              description={t("aihubmixCatalogFallbackNotice.description")}
             />
           )}
 

@@ -23,6 +23,10 @@
     "verifyApi": "API を検証",
     "verifyCliSupport": "CLI 対応を検証"
   },
+  "aihubmixCatalogFallbackNotice": {
+    "description": "このアカウントで実際に利用できるモデル範囲を確認できなかったため、AIHubMix の完全なモデルカタログを表示しています。一部のモデルはこのアカウントでは呼び出せない可能性があります。サイト側のアカウント権限と実際の検証結果を最終的な判断基準にしてください。",
+    "title": "AIHubMix の完全なモデルカタログへフォールバックしました"
+  },
   "allAccounts": "すべてのアカウント",
   "allBillingModes": "すべての課金方式",
   "allGroups": "すべてのグループ",
@@ -132,6 +136,9 @@
     "subtitle": "アカウント: {{accountName}} · モデル: {{modelId}}",
     "title": "モデル用キー"
   },
+  "lowestPrice": "最安値",
+  "lowestPriceWithinAccountFilters": "現在のアカウント絞り込み内で、この行は同じ課金方式の中で最安です",
+  "lowestPriceWithinBillingMode": "この行は同じ課金方式の中で最安です",
   "messages": {
     "copyFailed": "コピーに失敗しました",
     "modelNameCopied": "モデル名をコピーしました",

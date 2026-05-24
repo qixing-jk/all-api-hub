@@ -23,6 +23,10 @@
     "verifyApi": "验证接口",
     "verifyCliSupport": "验证 CLI 兼容性"
   },
+  "aihubmixCatalogFallbackNotice": {
+    "description": "未能确认该账号的实际可用模型范围，当前显示 AIHubMix 完整模型目录。部分模型可能无法通过此账号调用，请以站点账号权限和实际验证结果为准。",
+    "title": "已回退到 AIHubMix 完整模型目录"
+  },
   "allAccounts": "所有账号",
   "allBillingModes": "所有计费方式",
   "allGroups": "所有分组",
@@ -132,6 +136,9 @@
     "subtitle": "账号：{{accountName}} · 模型：{{modelId}}",
     "title": "模型对应密钥"
   },
+  "lowestPrice": "最低价",
+  "lowestPriceWithinAccountFilters": "在当前账号筛选范围内，该行是相同计费模式下价格最低的选项",
+  "lowestPriceWithinBillingMode": "该行是相同计费模式下价格最低的选项",
   "messages": {
     "copyFailed": "复制失败",
     "modelNameCopied": "模型名称已复制",

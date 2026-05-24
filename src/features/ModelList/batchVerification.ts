@@ -38,6 +38,12 @@ export function createBatchVerifyModelItems(
   const items: BatchVerifyModelItem[] = []
 
   for (const item of models) {
+    if (
+      item.source.capabilities?.supportsBatchCredentialVerification === false
+    ) {
+      continue
+    }
+
     const modelId = item.model.model_name?.trim()
     if (!modelId) continue
 
