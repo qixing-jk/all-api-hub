@@ -1,6 +1,7 @@
 /**
  * API 服务 - 用于与 One API/New API 站点进行交互
  */
+import type { AccountSiteType } from "~/constants/siteType"
 import type { PerCallPrice } from "~/services/models/utils/modelPricing"
 import {
   ApiToken,
@@ -136,10 +137,32 @@ export interface ModelPricing {
   quota_type: number // 0 = 按量计费，1 = 按次计费
   model_ratio: number
   model_price: number | PerCallPrice
+  /**
+   * Direct token prices in USD per 1M tokens for providers that do not expose
+   * One-API/New-API ratio semantics.
+   */
+  token_price_usd_per_million?: {
+    input?: number
+    output?: number
+    cache_read?: number
+  }
   owner_by?: string
   completion_ratio: number
   enable_groups: string[]
   supported_endpoint_types: string[]
+}
+
+export const MODEL_LIST_SOURCE_KINDS = {
+  USER_SCOPED: "user-scoped",
+  CATALOG_FALLBACK: "catalog-fallback",
+} as const
+
+export type ModelListSourceKind =
+  (typeof MODEL_LIST_SOURCE_KINDS)[keyof typeof MODEL_LIST_SOURCE_KINDS]
+
+export interface ModelListSourceInfo {
+  kind: ModelListSourceKind
+  provider?: AccountSiteType
 }
 
 // 模型定价响应类型
@@ -148,6 +171,7 @@ export interface PricingResponse {
   group_ratio: Record<string, number>
   success: boolean
   usable_group: Record<string, string>
+  model_list_source?: ModelListSourceInfo
 }
 
 export interface PaginatedData<T> {

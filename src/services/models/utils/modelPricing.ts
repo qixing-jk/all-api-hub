@@ -17,13 +17,66 @@ export interface CalculatedPrice {
 
 export type PerCallPrice = number | { input: number; output: number }
 
+const NEW_API_QUOTA_PER_USD = 500_000
+const TOKEN_PRICE_UNIT_TOKENS = 1_000_000
+const NEW_API_RATIO_BASE_USD_PER_MILLION_TOKENS =
+  TOKEN_PRICE_UNIT_TOKENS / NEW_API_QUOTA_PER_USD
+
+type TokenPriceUSD = Pick<CalculatedPrice, "inputUSD" | "outputUSD">
+
+/**
+ * Returns true when the provider supplied a finite direct USD price value.
+ */
+const isFiniteTokenPrice = (value: number | undefined): value is number =>
+  typeof value === "number" && Number.isFinite(value)
+
+/**
+ * Reads direct USD-per-1M-token prices from providers without ratio semantics.
+ */
+const resolveDirectTokenPriceUSD = (
+  model: ModelPricing,
+): TokenPriceUSD | null => {
+  const directInputUSD = model.token_price_usd_per_million?.input
+  const directOutputUSD = model.token_price_usd_per_million?.output
+
+  if (
+    !isFiniteTokenPrice(directInputUSD) ||
+    !isFiniteTokenPrice(directOutputUSD)
+  ) {
+    return null
+  }
+
+  return {
+    inputUSD: directInputUSD,
+    outputUSD: directOutputUSD,
+  }
+}
+
+/**
+ * Calculates token prices for New API/One API-compatible ratio responses.
+ */
+const calculateRatioTokenPriceUSD = (
+  model: ModelPricing,
+  groupMultiplier: number,
+): TokenPriceUSD => {
+  const inputUSD =
+    model.model_ratio *
+    NEW_API_RATIO_BASE_USD_PER_MILLION_TOKENS *
+    groupMultiplier
+  const outputUSD = inputUSD * model.completion_ratio
+
+  return { inputUSD, outputUSD }
+}
+
 /**
  * 计算模型价格
  * @param model 模型定价信息
  * @param groupRatio 分组倍率映射表
  * @param exchangeRate 汇率（CNY per USD）
  * @param userGroup 用户分组标识，用于匹配 groupRatio
- * 原理 https://github.com/QuantumNous/new-api/blob/7437b671efb6b994eae3d8d721e3cbe215e5abc9/web/src/helpers/utils.jsx#L595
+ * New API 倍率体系中 500,000 配额 = 1 USD，所以 1M tokens 的倍率 1 基准价为 2 USD。
+ * 原理 https://docs.newapi.ai/guide/console/settings/rate-settings/
+ * 当前前端实现 https://github.com/QuantumNous/new-api/blob/main/web/default/src/features/pricing/lib/price.ts
  */
 export const calculateModelPrice = (
   model: ModelPricing,
@@ -35,12 +88,22 @@ export const calculateModelPrice = (
   const groupMultiplier = groupRatio[userGroup] || 1
 
   if (isTokenBillingType(model.quota_type)) {
-    // 按量计费
-    // inputUSD（每 1M token） = model_ratio × 2 × groupRatio
-    // complUSD（每 1M token） = model_ratio × completion_ratio × 2 × groupRatio
-    const inputUSD = model.model_ratio * 2 * groupMultiplier
-    const outputUSD =
-      model.model_ratio * model.completion_ratio * 2 * groupMultiplier
+    const directPrice = resolveDirectTokenPriceUSD(model)
+    if (directPrice) {
+      return {
+        ...directPrice,
+        inputCNY: directPrice.inputUSD * exchangeRate,
+        outputCNY: directPrice.outputUSD * exchangeRate,
+      }
+    }
+
+    // 按 New API/One API 兼容倍率计费；倍率基准来自 1M tokens / 500,000 quota-per-USD。
+    // inputUSD（每 1M token） = model_ratio × baseUSDPer1M × groupRatio
+    // complUSD（每 1M token） = inputUSD × completion_ratio
+    const { inputUSD, outputUSD } = calculateRatioTokenPriceUSD(
+      model,
+      groupMultiplier,
+    )
 
     return {
       inputUSD,

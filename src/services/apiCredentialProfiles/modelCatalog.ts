@@ -1,4 +1,6 @@
+import { SITE_TYPES } from "~/constants/siteType"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import { getApiService } from "~/services/apiService"
 import { fetchAnthropicModelIds } from "~/services/apiService/anthropic"
 import type {
   ModelPricing,
@@ -78,6 +80,20 @@ export async function loadAccountTokenFallbackPricingResponse(
   params: LoadAccountTokenFallbackPricingParams,
 ): Promise<PricingResponse> {
   const declaredModelIds = parseDelimitedList(params.token.models)
+
+  if (params.account.siteType === SITE_TYPES.AIHUBMIX) {
+    return getApiService(params.account.siteType).fetchModelPricing({
+      baseUrl: params.account.baseUrl,
+      accountId: params.account.id,
+      auth: {
+        authType: params.account.authType,
+        userId: params.account.userId,
+        accessToken: params.account.token,
+        cookie: params.account.cookieAuthSessionCookie,
+      },
+    })
+  }
+
   let resolvedTokenKey = ""
 
   try {
