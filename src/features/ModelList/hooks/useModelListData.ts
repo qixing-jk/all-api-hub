@@ -4,12 +4,18 @@ import { useApiCredentialProfiles } from "~/features/ApiCredentialProfiles/hooks
 import { useAccountData } from "~/hooks/useAccountData"
 
 import {
+  isAihubmixCatalogFallbackPricing,
+  isAihubmixModelListPricing,
+} from "../aihubmixModelList"
+import {
   EMPTY_MODEL_MANAGEMENT_CAPABILITIES,
   isProfileSourceValue,
   MODEL_MANAGEMENT_SOURCE_KINDS,
   NO_MODEL_MANAGEMENT_SOURCE_VALUE,
   resolveModelManagementSource,
   toAccountSourceValue,
+  toAihubmixCatalogFallbackCapabilities,
+  toAihubmixModelListCapabilities,
   toCatalogOnlyCapabilities,
   toProfileSourceValue,
   type ModelManagementSource,
@@ -175,17 +181,44 @@ export function useModelListData(routeParams?: Record<string, string>) {
   })
 
   const isFallbackCatalogActive = modelData.accountFallback?.isActive === true
+  const isSelectedAccountAihubmixCatalogFallback =
+    isAihubmixCatalogFallbackPricing(currentAccount, modelData.pricingData)
+  const isSelectedAccountAihubmixModelList = isAihubmixModelListPricing(
+    currentAccount,
+    modelData.pricingData,
+  )
+  const isAnyAllAccountsAihubmixCatalogFallback =
+    selectedSource?.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS &&
+    modelData.pricingContexts.some(({ account, pricing }) =>
+      isAihubmixCatalogFallbackPricing(account, pricing),
+    )
+  const isAihubmixCatalogFallbackActive =
+    isSelectedAccountAihubmixCatalogFallback ||
+    isAnyAllAccountsAihubmixCatalogFallback
 
   const sourceCapabilities = useMemo(() => {
     const baseCapabilities =
       selectedSource?.capabilities ?? EMPTY_MODEL_MANAGEMENT_CAPABILITIES
+
+    if (isSelectedAccountAihubmixCatalogFallback) {
+      return toAihubmixCatalogFallbackCapabilities(baseCapabilities)
+    }
+
+    if (isSelectedAccountAihubmixModelList) {
+      return toAihubmixModelListCapabilities(baseCapabilities)
+    }
 
     // Account-key fallback keeps the same owning account selected, but the
     // rendered catalog is no longer pricing-authoritative.
     return isFallbackCatalogActive
       ? toCatalogOnlyCapabilities(baseCapabilities)
       : baseCapabilities
-  }, [isFallbackCatalogActive, selectedSource?.capabilities])
+  }, [
+    isFallbackCatalogActive,
+    isSelectedAccountAihubmixCatalogFallback,
+    isSelectedAccountAihubmixModelList,
+    selectedSource?.capabilities,
+  ])
 
   useEffect(() => {
     if (!sourceCapabilities.supportsPricing) {
@@ -230,6 +263,7 @@ export function useModelListData(routeParams?: Record<string, string>) {
     currentProfile,
     sourceCapabilities,
     isFallbackCatalogActive,
+    isAihubmixCatalogFallbackActive,
     fallbackTokenName: modelData.accountFallback?.activeTokenName ?? null,
 
     ...state,

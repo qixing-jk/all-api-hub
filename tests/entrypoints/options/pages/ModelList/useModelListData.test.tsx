@@ -1,6 +1,7 @@
 import { act, renderHook, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import { useModelListData } from "~/features/ModelList/hooks/useModelListData"
 import {
   ALL_ACCOUNTS_SOURCE_VALUE,
@@ -10,6 +11,7 @@ import {
   toProfileSourceValue,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
+import { MODEL_LIST_SOURCE_KINDS } from "~/services/apiService/common/type"
 import { AuthTypeEnum, SiteHealthStatus, type DisplaySiteData } from "~/types"
 
 const mockUseAccountData = vi.fn()
@@ -355,6 +357,188 @@ describe("useModelListData", () => {
       supportsCredentialVerification: true,
       supportsBatchCredentialVerification: true,
       supportsCliVerification: true,
+    })
+  })
+
+  it("keeps AIHubMix catalog fallback pricing while disabling key-backed capabilities", async () => {
+    const aihubmixAccount: DisplaySiteData = {
+      ...ACCOUNT,
+      id: "aihubmix-account",
+      siteType: SITE_TYPES.AIHUBMIX,
+    }
+
+    mockUseAccountData.mockReturnValue({
+      enabledDisplayData: [aihubmixAccount],
+    })
+    mockUseModelData.mockReturnValue({
+      pricingData: {
+        data: [],
+        group_ratio: {},
+        success: true,
+        usable_group: {},
+        model_list_source: {
+          kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+          provider: SITE_TYPES.AIHUBMIX,
+        },
+      },
+      pricingContexts: [],
+      isLoading: false,
+      dataFormatError: false,
+      accountQueryStates: [],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue(
+        toAccountSourceValue(aihubmixAccount.id),
+      )
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      )
+    })
+
+    expect(result.current.isAihubmixCatalogFallbackActive).toBe(true)
+    expect(result.current.sourceCapabilities).toMatchObject({
+      supportsPricing: true,
+      supportsGroupFiltering: false,
+      supportsAccountSummary: false,
+      supportsTokenCompatibility: false,
+      supportsCredentialVerification: false,
+      supportsBatchCredentialVerification: false,
+      supportsCliVerification: false,
+    })
+  })
+
+  it("keeps AIHubMix user-scoped pricing while disabling key-backed capabilities", async () => {
+    const aihubmixAccount: DisplaySiteData = {
+      ...ACCOUNT,
+      id: "aihubmix-account",
+      siteType: SITE_TYPES.AIHUBMIX,
+    }
+
+    mockUseAccountData.mockReturnValue({
+      enabledDisplayData: [aihubmixAccount],
+    })
+    mockUseModelData.mockReturnValue({
+      pricingData: {
+        data: [],
+        group_ratio: {},
+        success: true,
+        usable_group: {},
+        model_list_source: {
+          kind: MODEL_LIST_SOURCE_KINDS.USER_SCOPED,
+          provider: SITE_TYPES.AIHUBMIX,
+        },
+      },
+      pricingContexts: [],
+      isLoading: false,
+      dataFormatError: false,
+      accountQueryStates: [],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue(
+        toAccountSourceValue(aihubmixAccount.id),
+      )
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT,
+      )
+    })
+
+    expect(result.current.isAihubmixCatalogFallbackActive).toBe(false)
+    expect(result.current.sourceCapabilities).toMatchObject({
+      supportsPricing: true,
+      supportsGroupFiltering: false,
+      supportsAccountSummary: false,
+      supportsTokenCompatibility: false,
+      supportsCredentialVerification: false,
+      supportsBatchCredentialVerification: false,
+      supportsCliVerification: false,
+    })
+  })
+
+  it("exposes AIHubMix catalog fallback notice state without globally downgrading all-accounts capabilities", async () => {
+    const aihubmixAccount: DisplaySiteData = {
+      ...ACCOUNT,
+      id: "aihubmix-account",
+      siteType: SITE_TYPES.AIHUBMIX,
+    }
+    const normalAccount: DisplaySiteData = {
+      ...ACCOUNT,
+      id: "normal-account",
+      name: "Normal Account",
+    }
+
+    mockUseAccountData.mockReturnValue({
+      enabledDisplayData: [aihubmixAccount, normalAccount],
+    })
+    mockUseModelData.mockReturnValue({
+      pricingData: null,
+      pricingContexts: [
+        {
+          account: aihubmixAccount,
+          pricing: {
+            data: [],
+            group_ratio: {},
+            success: true,
+            usable_group: {},
+            model_list_source: {
+              kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+              provider: SITE_TYPES.AIHUBMIX,
+            },
+          },
+        },
+        {
+          account: normalAccount,
+          pricing: {
+            data: [],
+            group_ratio: {},
+            success: true,
+            usable_group: {},
+          },
+        },
+      ],
+      isLoading: false,
+      dataFormatError: false,
+      accountQueryStates: [],
+      loadPricingData: vi.fn(),
+      loadErrorMessage: null,
+      accountFallback: null,
+    })
+
+    const { result } = renderHook(() => useModelListData())
+
+    act(() => {
+      result.current.setSelectedSourceValue(ALL_ACCOUNTS_SOURCE_VALUE)
+    })
+
+    await waitFor(() => {
+      expect(result.current.selectedSource?.kind).toBe(
+        MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS,
+      )
+    })
+
+    expect(result.current.isAihubmixCatalogFallbackActive).toBe(true)
+    expect(result.current.sourceCapabilities).toMatchObject({
+      supportsPricing: true,
+      supportsGroupFiltering: true,
+      supportsAccountSummary: true,
+      supportsTokenCompatibility: false,
     })
   })
 

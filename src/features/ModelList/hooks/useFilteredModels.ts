@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react"
 
 import { UI_CONSTANTS } from "~/constants/ui"
+import { applyAihubmixModelListCapabilities } from "~/features/ModelList/aihubmixModelList"
 import {
   createAccountSource,
   MODEL_MANAGEMENT_SOURCE_KINDS,
@@ -251,6 +252,16 @@ function getModelBillingMode(quotaType: number): PricingBillingMode {
     : MODEL_LIST_BILLING_MODES.PER_CALL
 }
 
+/** Returns true when row pricing metadata should affect filters and sorting. */
+function supportsPricingDerivedBehavior(
+  item: Pick<CalculatedModelItem, "source">,
+) {
+  return (
+    item.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT ||
+    item.source.capabilities.supportsPricing
+  )
+}
+
 /** Picks the best priced calculated item across candidate groups. */
 function resolveBestCalculatedItem(
   rawItem: RawModelItem,
@@ -319,13 +330,13 @@ function resolveBestCalculatedItem(
 function resolveCalculatedModels(params: {
   rawItems: RawModelItem[]
   getGroupCandidates: (item: RawModelItem) => string[]
-  supportsGroupFiltering: boolean
+  getSupportsGroupFiltering: (item: RawModelItem) => boolean
   showRealPrice: boolean
 }) {
   const {
     rawItems,
     getGroupCandidates,
-    supportsGroupFiltering,
+    getSupportsGroupFiltering,
     showRealPrice,
   } = params
 
@@ -334,7 +345,7 @@ function resolveCalculatedModels(params: {
       resolveBestCalculatedItem(
         item,
         getGroupCandidates(item),
-        supportsGroupFiltering,
+        getSupportsGroupFiltering(item),
         showRealPrice,
       ),
     )
@@ -382,9 +393,22 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
             ? account.balance.CNY / account.balance.USD
             : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
 
+        const accountSource = createAccountSource(account)
+        const allAccountsRowSource = {
+          ...accountSource,
+          capabilities: {
+            ...accountSource.capabilities,
+            supportsAccountSummary: true,
+          },
+        }
+        const source = applyAihubmixModelListCapabilities(
+          allAccountsRowSource,
+          pricing,
+        )
+
         return pricing.data.map((model) => ({
           model,
-          source: createAccountSource(account),
+          source,
           groupRatios: pricing.group_ratio ?? {},
           exchangeRate,
         }))
@@ -414,9 +438,14 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
           selectedSource.account.balance.USD
         : UI_CONSTANTS.EXCHANGE_RATE.DEFAULT
 
+    const source = applyAihubmixModelListCapabilities(
+      selectedSource,
+      pricingData,
+    )
+
     return pricingData.data.map((model) => ({
       model,
-      source: selectedSource,
+      source,
       groupRatios: pricingData.group_ratio ?? {},
       exchangeRate,
     }))
@@ -595,7 +624,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
 
   const getEffectiveGroupCandidatesForRawItem = useCallback(
     (item: RawModelItem) => {
-      if (!selectedSource?.capabilities.supportsGroupFiltering) {
+      if (
+        !selectedSource?.capabilities.supportsGroupFiltering ||
+        !item.source.capabilities.supportsGroupFiltering
+      ) {
         return [DEFAULT_MODEL_GROUP]
       }
 
@@ -635,19 +667,23 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       selectedSource?.capabilities.supportsGroupFiltering ?? false
 
     if (supportsGroupFiltering) {
-      filtered = filtered.filter(
-        (item) =>
+      filtered = filtered.filter((item) => {
+        const itemSupportsGroupFiltering =
+          item.source.capabilities.supportsGroupFiltering
+        return (
           resolveCandidateGroups(
             item,
             getEffectiveGroupCandidatesForRawItem(item),
-            supportsGroupFiltering,
-          ).length > 0,
-      )
+            itemSupportsGroupFiltering,
+          ).length > 0
+        )
+      })
     }
 
     if (selectedBillingMode !== MODEL_LIST_BILLING_MODES.ALL) {
       filtered = filtered.filter(
         (item) =>
+          !supportsPricingDerivedBehavior(item) ||
           getModelBillingMode(item.model.quota_type) === selectedBillingMode,
       )
     }
@@ -691,6 +727,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     const countMap = new Map<string, number>()
 
     accountSummaryItems.forEach((item) => {
+      if (!item.source.capabilities.supportsAccountSummary) {
+        return
+      }
+
       const accountId = item.source.account.id
       countMap.set(accountId, (countMap.get(accountId) ?? 0) + 1)
     })
@@ -703,8 +743,9 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
       resolveCalculatedModels({
         rawItems: accountFilteredBaseRawModels,
         getGroupCandidates: getEffectiveGroupCandidatesForRawItem,
-        supportsGroupFiltering:
-          selectedSource?.capabilities.supportsGroupFiltering ?? false,
+        getSupportsGroupFiltering: (item) =>
+          (selectedSource?.capabilities.supportsGroupFiltering ?? false) &&
+          item.source.capabilities.supportsGroupFiltering,
         showRealPrice,
       }),
     [
@@ -726,6 +767,10 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
 
     const priceKeys = new Map<string, ComparablePriceKey>()
     providerFilteredModels.forEach((item) => {
+      if (!supportsPricingDerivedBehavior(item)) {
+        return
+      }
+
       priceKeys.set(
         getModelItemKey(item),
         getComparablePriceKey(item, showRealPrice),
@@ -796,70 +841,95 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
 
     const direction = sortMode === MODEL_LIST_SORT_MODES.PRICE_DESC ? -1 : 1
 
-    const sortedWithIndices = providerFilteredModels
-      .map((item, index) => ({
-        item,
-        index,
-        itemKey: getModelItemKey(item),
-        priceKey: priceKeys.get(getModelItemKey(item))!,
-      }))
-      .sort((a, b) => {
-        if (sortMode === MODEL_LIST_SORT_MODES.DEFAULT) {
-          return a.index - b.index
-        }
+    const indexedItems = providerFilteredModels.map((item, index) => ({
+      item,
+      index,
+      itemKey: getModelItemKey(item),
+      priceKey: priceKeys.get(getModelItemKey(item)),
+    }))
 
-        if (sortMode === MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST) {
-          const modelNameComparison = a.item.model.model_name.localeCompare(
-            b.item.model.model_name,
-          )
-          if (modelNameComparison !== 0) {
-            return modelNameComparison
-          }
-        }
-
-        const billingModeComparison =
-          BILLING_MODE_ORDER[a.priceKey.billingMode] -
-          BILLING_MODE_ORDER[b.priceKey.billingMode]
-        if (billingModeComparison !== 0) {
-          return billingModeComparison
-        }
-
-        const priceComparison = comparePriceKeys(
-          a.priceKey,
-          b.priceKey,
-          direction,
-        )
-        if (priceComparison !== 0) {
-          return priceComparison
-        }
-
-        const effectiveGroupComparison = (
-          a.item.effectiveGroup ?? ""
-        ).localeCompare(b.item.effectiveGroup ?? "")
-        if (effectiveGroupComparison !== 0) {
-          return effectiveGroupComparison
-        }
-
+    const comparePricedRows = (
+      a: (typeof indexedItems)[number] & { priceKey: ComparablePriceKey },
+      b: (typeof indexedItems)[number] & { priceKey: ComparablePriceKey },
+    ) => {
+      if (sortMode === MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST) {
         const modelNameComparison = a.item.model.model_name.localeCompare(
           b.item.model.model_name,
         )
         if (modelNameComparison !== 0) {
           return modelNameComparison
         }
+      }
 
-        const sourceLabelComparison = getSourceSortLabel(a.item).localeCompare(
-          getSourceSortLabel(b.item),
-        )
-        if (sourceLabelComparison !== 0) {
-          return sourceLabelComparison
-        }
+      const billingModeComparison =
+        BILLING_MODE_ORDER[a.priceKey.billingMode] -
+        BILLING_MODE_ORDER[b.priceKey.billingMode]
+      if (billingModeComparison !== 0) {
+        return billingModeComparison
+      }
 
-        if (a.itemKey !== b.itemKey) {
-          return a.itemKey.localeCompare(b.itemKey)
-        }
+      const priceComparison = comparePriceKeys(
+        a.priceKey,
+        b.priceKey,
+        direction,
+      )
+      if (priceComparison !== 0) {
+        return priceComparison
+      }
 
-        return a.index - b.index
-      })
+      const effectiveGroupComparison = (
+        a.item.effectiveGroup ?? ""
+      ).localeCompare(b.item.effectiveGroup ?? "")
+      if (effectiveGroupComparison !== 0) {
+        return effectiveGroupComparison
+      }
+
+      const modelNameComparison = a.item.model.model_name.localeCompare(
+        b.item.model.model_name,
+      )
+      if (modelNameComparison !== 0) {
+        return modelNameComparison
+      }
+
+      const sourceLabelComparison = getSourceSortLabel(a.item).localeCompare(
+        getSourceSortLabel(b.item),
+      )
+      if (sourceLabelComparison !== 0) {
+        return sourceLabelComparison
+      }
+
+      if (a.itemKey !== b.itemKey) {
+        return a.itemKey.localeCompare(b.itemKey)
+      }
+
+      return a.index - b.index
+    }
+
+    const sortedWithIndices =
+      sortMode === MODEL_LIST_SORT_MODES.DEFAULT
+        ? indexedItems
+        : (() => {
+            const pricedItems = indexedItems
+              .filter(
+                (
+                  item,
+                ): item is (typeof indexedItems)[number] & {
+                  priceKey: ComparablePriceKey
+                } => !!item.priceKey,
+              )
+              .sort(comparePricedRows)
+
+            let pricedIndex = 0
+            return indexedItems.map((item) => {
+              if (!item.priceKey) {
+                return item
+              }
+
+              const nextPricedItem = pricedItems[pricedIndex]
+              pricedIndex += 1
+              return nextPricedItem ?? item
+            })
+          })()
 
     return sortedWithIndices.map(({ item, itemKey }) => ({
       ...item,

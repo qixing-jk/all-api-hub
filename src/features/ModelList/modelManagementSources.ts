@@ -17,6 +17,7 @@ const MODEL_MANAGEMENT_SOURCE_VALUE_PREFIXES = {
 
 export type ModelManagementSourceCapabilities = {
   supportsPricing: boolean
+  supportsRatioDisplay: boolean
   supportsGroupFiltering: boolean
   supportsAccountSummary: boolean
   supportsTokenCompatibility: boolean
@@ -61,6 +62,7 @@ export type ModelManagementItemSource =
 export const EMPTY_MODEL_MANAGEMENT_CAPABILITIES: ModelManagementSourceCapabilities =
   {
     supportsPricing: false,
+    supportsRatioDisplay: false,
     supportsGroupFiltering: false,
     supportsAccountSummary: false,
     supportsTokenCompatibility: false,
@@ -71,6 +73,7 @@ export const EMPTY_MODEL_MANAGEMENT_CAPABILITIES: ModelManagementSourceCapabilit
 
 const ACCOUNT_SOURCE_CAPABILITIES: ModelManagementSourceCapabilities = {
   supportsPricing: true,
+  supportsRatioDisplay: true,
   supportsGroupFiltering: true,
   supportsAccountSummary: false,
   supportsTokenCompatibility: true,
@@ -81,6 +84,7 @@ const ACCOUNT_SOURCE_CAPABILITIES: ModelManagementSourceCapabilities = {
 
 const ALL_ACCOUNTS_SOURCE_CAPABILITIES: ModelManagementSourceCapabilities = {
   supportsPricing: true,
+  supportsRatioDisplay: true,
   supportsGroupFiltering: true,
   supportsAccountSummary: true,
   supportsTokenCompatibility: false,
@@ -91,6 +95,7 @@ const ALL_ACCOUNTS_SOURCE_CAPABILITIES: ModelManagementSourceCapabilities = {
 
 const PROFILE_SOURCE_CAPABILITIES: ModelManagementSourceCapabilities = {
   supportsPricing: false,
+  supportsRatioDisplay: false,
   supportsGroupFiltering: false,
   supportsAccountSummary: false,
   supportsTokenCompatibility: false,
@@ -109,7 +114,50 @@ export function toCatalogOnlyCapabilities(
   return {
     ...capabilities,
     supportsPricing: false,
+    supportsRatioDisplay: false,
     supportsGroupFiltering: false,
+    supportsAccountSummary: false,
+  }
+}
+
+/**
+ * Disables group filtering for sources whose model-list API has no group
+ * semantics while preserving the rest of the source behavior.
+ */
+function withoutGroupFilteringCapabilities(
+  capabilities: ModelManagementSourceCapabilities,
+): ModelManagementSourceCapabilities {
+  return {
+    ...capabilities,
+    supportsGroupFiltering: false,
+  }
+}
+
+/**
+ * Downgrades AIHubMix model-list rows that can expose model and pricing
+ * metadata but cannot provide a revealable API key for key/verification tools.
+ */
+export function toAihubmixModelListCapabilities(
+  capabilities: ModelManagementSourceCapabilities,
+): ModelManagementSourceCapabilities {
+  return {
+    ...withoutGroupFilteringCapabilities(capabilities),
+    supportsRatioDisplay: false,
+    supportsTokenCompatibility: false,
+    supportsCredentialVerification: false,
+    supportsBatchCredentialVerification: false,
+    supportsCliVerification: false,
+  }
+}
+
+/**
+ * Downgrades AIHubMix catalog fallback rows, which are not account-scoped.
+ */
+export function toAihubmixCatalogFallbackCapabilities(
+  capabilities: ModelManagementSourceCapabilities,
+): ModelManagementSourceCapabilities {
+  return {
+    ...toAihubmixModelListCapabilities(capabilities),
     supportsAccountSummary: false,
   }
 }

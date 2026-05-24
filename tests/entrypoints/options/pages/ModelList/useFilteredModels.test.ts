@@ -10,7 +10,10 @@ import {
   createProfileSource,
 } from "~/features/ModelList/modelManagementSources"
 import { MODEL_LIST_SORT_MODES } from "~/features/ModelList/sortModes"
-import type { PricingResponse } from "~/services/apiService/common/type"
+import {
+  MODEL_LIST_SOURCE_KINDS,
+  type PricingResponse,
+} from "~/services/apiService/common/type"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { MODEL_PROVIDER_FILTER_VALUES } from "~/services/models/utils/modelProviders"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
@@ -453,6 +456,303 @@ describe("useFilteredModels", () => {
     })
     expect(result.current.availableAccountGroupOptionsByAccountId).toEqual({
       "account-context-missing-group-ratio": [{ name: "default", ratio: 1 }],
+    })
+  })
+
+  it("keeps single-account AIHubMix catalog fallback rows visible without groups", async () => {
+    const account = createDisplayAccount({
+      id: "account-aihubmix-single",
+      name: "AIHubMix",
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "gpt-4o-mini",
+            enable_groups: [],
+          },
+        ],
+        {
+          model_list_source: {
+            provider: SITE_TYPES.AIHUBMIX,
+            kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+          },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+      selectedGroups: [],
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["gpt-4o-mini"])
+    })
+
+    expect(result.current.filteredModels[0]?.effectiveGroup).toBeUndefined()
+  })
+
+  it("keeps single-account AIHubMix user-scoped rows visible without groups", async () => {
+    const account = createDisplayAccount({
+      id: "account-aihubmix-user-scoped",
+      name: "AIHubMix",
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "gpt-4o-mini",
+            enable_groups: [],
+          },
+          {
+            model_name: "claude-3-5-sonnet",
+            enable_groups: [],
+          },
+        ],
+        {
+          model_list_source: {
+            provider: SITE_TYPES.AIHUBMIX,
+            kind: MODEL_LIST_SOURCE_KINDS.USER_SCOPED,
+          },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+      selectedGroups: ["default"],
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["gpt-4o-mini", "claude-3-5-sonnet"])
+    })
+
+    expect(result.current.availableGroups).toEqual([])
+    expect(result.current.filteredModels[0]?.source.capabilities).toMatchObject(
+      {
+        supportsPricing: true,
+        supportsGroupFiltering: false,
+        supportsTokenCompatibility: false,
+        supportsCredentialVerification: false,
+        supportsBatchCredentialVerification: false,
+        supportsCliVerification: false,
+      },
+    )
+    expect(result.current.filteredModels[0]?.effectiveGroup).toBeUndefined()
+  })
+
+  it("downgrades only AIHubMix catalog fallback rows in all-accounts mode", async () => {
+    const aihubmixAccount = createDisplayAccount({
+      id: "account-aihubmix",
+      name: "AIHubMix",
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+    })
+    const normalAccount = createDisplayAccount({
+      id: "account-normal",
+      name: "Normal Account",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://normal.example.com",
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: aihubmixAccount,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "gpt-4o-mini",
+                enable_groups: [],
+              },
+            ],
+            {
+              model_list_source: {
+                provider: SITE_TYPES.AIHUBMIX,
+                kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+              },
+            },
+          ),
+        },
+        {
+          account: normalAccount,
+          pricing: createPricingResponse(["claude-3-5-sonnet"]),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+    })
+
+    await waitFor(() => {
+      expect(result.current.filteredModels).toHaveLength(2)
+    })
+
+    const aihubmixRow = result.current.filteredModels.find(
+      (item) =>
+        item.source.kind === "account" &&
+        item.source.account.id === aihubmixAccount.id,
+    )
+    const normalRow = result.current.filteredModels.find(
+      (item) =>
+        item.source.kind === "account" &&
+        item.source.account.id === normalAccount.id,
+    )
+
+    expect(aihubmixRow?.source.capabilities).toMatchObject({
+      supportsPricing: true,
+      supportsGroupFiltering: false,
+      supportsAccountSummary: false,
+      supportsTokenCompatibility: false,
+      supportsCredentialVerification: false,
+      supportsBatchCredentialVerification: false,
+      supportsCliVerification: false,
+    })
+    expect(normalRow?.source.capabilities).toMatchObject({
+      supportsPricing: true,
+      supportsGroupFiltering: true,
+      supportsTokenCompatibility: true,
+    })
+    expect(
+      Array.from(result.current.accountSummaryCountsByAccountId.entries()),
+    ).toEqual([[normalAccount.id, 1]])
+  })
+
+  it("applies billing filters to AIHubMix catalog fallback rows with pricing metadata", async () => {
+    const aihubmixAccount = createDisplayAccount({
+      id: "account-aihubmix",
+      name: "AIHubMix",
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+    })
+    const normalAccount = createDisplayAccount({
+      id: "account-normal",
+      name: "Normal Account",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://normal.example.com",
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: aihubmixAccount,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "catalog-token-metadata",
+                quota_type: 0,
+                enable_groups: [],
+              },
+            ],
+            {
+              model_list_source: {
+                provider: SITE_TYPES.AIHUBMIX,
+                kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+              },
+            },
+          ),
+        },
+        {
+          account: normalAccount,
+          pricing: createPricingResponse([
+            {
+              model_name: "normal-per-call",
+              quota_type: 1,
+              model_price: 0.25,
+              enable_groups: ["default"],
+            },
+          ]),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      selectedBillingMode: MODEL_LIST_BILLING_MODES.PER_CALL,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["normal-per-call"])
+    })
+  })
+
+  it("includes AIHubMix catalog fallback rows in price-derived sorting", async () => {
+    const expensiveAccount = createDisplayAccount({
+      id: "account-expensive",
+      name: "Expensive Account",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://expensive.example.com",
+    })
+    const aihubmixAccount = createDisplayAccount({
+      id: "account-aihubmix",
+      name: "AIHubMix",
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+    })
+    const cheapAccount = createDisplayAccount({
+      id: "account-cheap",
+      name: "Cheap Account",
+      siteType: SITE_TYPES.NEW_API,
+      baseUrl: "https://cheap.example.com",
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: expensiveAccount,
+          pricing: createPricingResponse([
+            {
+              model_name: "expensive-token",
+              quota_type: 0,
+              model_ratio: 3,
+              completion_ratio: 1,
+              enable_groups: ["default"],
+            },
+          ]),
+        },
+        {
+          account: aihubmixAccount,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "catalog-priced-token",
+                quota_type: 0,
+                model_ratio: 2,
+                completion_ratio: 1,
+                enable_groups: [],
+              },
+            ],
+            {
+              model_list_source: {
+                provider: SITE_TYPES.AIHUBMIX,
+                kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+              },
+            },
+          ),
+        },
+        {
+          account: cheapAccount,
+          pricing: createPricingResponse([
+            {
+              model_name: "cheap-token",
+              quota_type: 0,
+              model_ratio: 1,
+              completion_ratio: 1,
+              enable_groups: ["default"],
+            },
+          ]),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["cheap-token", "catalog-priced-token", "expensive-token"])
     })
   })
 
@@ -927,6 +1227,81 @@ describe("useFilteredModels", () => {
       ).toEqual([
         ["account-default-only", "default", 1.2, true],
         ["account-multi-group", "default", 2, false],
+      ])
+    })
+  })
+
+  it("compares AIHubMix direct token prices against ratio-based accounts in all-accounts mode", async () => {
+    const ratioAccount = createDisplayAccount({
+      id: "account-ratio",
+      name: "Ratio Account",
+      siteType: SITE_TYPES.NEW_API,
+      balance: { USD: 10, CNY: 70 },
+    })
+    const aihubmixAccount = createDisplayAccount({
+      id: "account-aihubmix-direct",
+      name: "AIHubMix",
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingContexts: [
+        {
+          account: ratioAccount,
+          pricing: createPricingResponse([
+            {
+              model_name: "gemini-3.5-flash",
+              quota_type: 0,
+              model_ratio: 1,
+              completion_ratio: 3,
+              enable_groups: ["default"],
+            },
+          ]),
+        },
+        {
+          account: aihubmixAccount,
+          pricing: createPricingResponse(
+            [
+              {
+                model_name: "gemini-3.5-flash",
+                quota_type: 0,
+                model_ratio: 0,
+                completion_ratio: 0,
+                enable_groups: [],
+                token_price_usd_per_million: {
+                  input: 1.5,
+                  output: 9,
+                },
+              },
+            ],
+            {
+              group_ratio: {},
+              model_list_source: {
+                provider: SITE_TYPES.AIHUBMIX,
+                kind: MODEL_LIST_SOURCE_KINDS.USER_SCOPED,
+              },
+            },
+          ),
+        },
+      ],
+      selectedSource: createAllAccountsSource(),
+      sortMode: MODEL_LIST_SORT_MODES.MODEL_CHEAPEST_FIRST,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => [
+          item.source.kind === "account" ? item.source.account.id : "profile",
+          item.effectiveGroup,
+          item.calculatedPrice.inputUSD,
+          item.calculatedPrice.outputUSD,
+          item.isLowestPrice,
+        ]),
+      ).toEqual([
+        ["account-aihubmix-direct", undefined, 1.5, 9, true],
+        ["account-ratio", "default", 2, 6, false],
       ])
     })
   })
