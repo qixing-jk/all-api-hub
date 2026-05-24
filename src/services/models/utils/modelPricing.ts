@@ -23,6 +23,7 @@ const NEW_API_RATIO_BASE_USD_PER_MILLION_TOKENS =
   TOKEN_PRICE_UNIT_TOKENS / NEW_API_QUOTA_PER_USD
 
 type TokenPriceUSD = Pick<CalculatedPrice, "inputUSD" | "outputUSD">
+type PartialTokenPriceUSD = Partial<TokenPriceUSD>
 
 /**
  * Returns true when the provider supplied a finite direct USD price value.
@@ -35,20 +36,15 @@ const isFiniteTokenPrice = (value: number | undefined): value is number =>
  */
 const resolveDirectTokenPriceUSD = (
   model: ModelPricing,
-): TokenPriceUSD | null => {
+): PartialTokenPriceUSD => {
   const directInputUSD = model.token_price_usd_per_million?.input
   const directOutputUSD = model.token_price_usd_per_million?.output
 
-  if (
-    !isFiniteTokenPrice(directInputUSD) ||
-    !isFiniteTokenPrice(directOutputUSD)
-  ) {
-    return null
-  }
-
   return {
-    inputUSD: directInputUSD,
-    outputUSD: directOutputUSD,
+    ...(isFiniteTokenPrice(directInputUSD) ? { inputUSD: directInputUSD } : {}),
+    ...(isFiniteTokenPrice(directOutputUSD)
+      ? { outputUSD: directOutputUSD }
+      : {}),
   }
 }
 
@@ -88,22 +84,13 @@ export const calculateModelPrice = (
   const groupMultiplier = groupRatio[userGroup] || 1
 
   if (isTokenBillingType(model.quota_type)) {
-    const directPrice = resolveDirectTokenPriceUSD(model)
-    if (directPrice) {
-      return {
-        ...directPrice,
-        inputCNY: directPrice.inputUSD * exchangeRate,
-        outputCNY: directPrice.outputUSD * exchangeRate,
-      }
-    }
-
     // 按 New API/One API 兼容倍率计费；倍率基准来自 1M tokens / 500,000 quota-per-USD。
     // inputUSD（每 1M token） = model_ratio × baseUSDPer1M × groupRatio
     // complUSD（每 1M token） = inputUSD × completion_ratio
-    const { inputUSD, outputUSD } = calculateRatioTokenPriceUSD(
-      model,
-      groupMultiplier,
-    )
+    const ratioPrice = calculateRatioTokenPriceUSD(model, groupMultiplier)
+    const directPrice = resolveDirectTokenPriceUSD(model)
+    const inputUSD = directPrice.inputUSD ?? ratioPrice.inputUSD
+    const outputUSD = directPrice.outputUSD ?? ratioPrice.outputUSD
 
     return {
       inputUSD,

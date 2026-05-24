@@ -273,11 +273,18 @@ const normalizeModelIds = (payload: unknown): string[] => {
     return Array.from(
       new Set(
         payload.flatMap((item) => {
-          if (typeof item === "string") return [item]
+          if (typeof item === "string") {
+            const normalized = item.trim()
+            return normalized ? [normalized] : []
+          }
           if (item && typeof item === "object") {
             const record = item as Record<string, unknown>
             const id = record.id ?? record.model ?? record.name
-            return typeof id === "string" ? [id] : []
+            if (typeof id === "string") {
+              const normalized = id.trim()
+              return normalized ? [normalized] : []
+            }
+            return []
           }
           return []
         }),
@@ -291,7 +298,10 @@ const normalizeModelIds = (payload: unknown): string[] => {
       new Set(
         Object.values(record).flatMap((value) => {
           if (Array.isArray(value)) return normalizeModelIds(value)
-          if (typeof value === "string") return [value]
+          if (typeof value === "string") {
+            const normalized = value.trim()
+            return normalized ? [normalized] : []
+          }
           return []
         }),
       ),
@@ -891,5 +901,7 @@ export async function fetchAllModels(
   request: ApiServiceRequest,
 ): Promise<string[]> {
   const catalog = await fetchAIHubMixModelCatalog(request)
-  return catalog.map(getAIHubMixCatalogModelId).filter(Boolean)
+  return Array.from(
+    new Set(catalog.map(getAIHubMixCatalogModelId).filter(Boolean)),
+  )
 }

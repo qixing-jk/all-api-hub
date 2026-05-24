@@ -812,6 +812,58 @@ describe("useFilteredModels", () => {
     ).toBe(true)
   })
 
+  it("keeps unpriced rows in place while sorting priced rows around them", async () => {
+    const account = createDisplayAccount({
+      id: "account-mixed-priced",
+      name: "Mixed Priced Account",
+      siteType: SITE_TYPES.AIHUBMIX,
+      baseUrl: "https://aihubmix.com",
+      balance: { USD: 10, CNY: 70 },
+    })
+
+    const { result } = renderUseFilteredModels({
+      pricingData: createPricingResponse(
+        [
+          {
+            model_name: "priced-expensive",
+            quota_type: 0,
+            model_ratio: 3,
+            completion_ratio: 1,
+            enable_groups: ["default"],
+          },
+          {
+            model_name: "unpriced-catalog-row",
+            quota_type: 0,
+            model_ratio: 1,
+            completion_ratio: 1,
+            enable_groups: [],
+          },
+          {
+            model_name: "priced-cheap",
+            quota_type: 0,
+            model_ratio: 1,
+            completion_ratio: 1,
+            enable_groups: ["default"],
+          },
+        ],
+        {
+          model_list_source: {
+            provider: SITE_TYPES.AIHUBMIX,
+            kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+          },
+        },
+      ),
+      selectedSource: createAccountSource(account),
+      sortMode: MODEL_LIST_SORT_MODES.PRICE_ASC,
+    })
+
+    await waitFor(() => {
+      expect(
+        result.current.filteredModels.map((item) => item.model.model_name),
+      ).toEqual(["priced-cheap", "unpriced-catalog-row", "priced-expensive"])
+    })
+  })
+
   it("leaves lowest-price badges unset when all-accounts rows have no comparable per-call prices", async () => {
     const accountA = createDisplayAccount({
       id: "account-unpriced-a",

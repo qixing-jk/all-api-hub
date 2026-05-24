@@ -418,7 +418,7 @@ describe("Model item pricing and description", () => {
         "title",
         "lowestPriceWithinAccountFilters",
       )
-      expect(screen.queryByText("optimalGroup")).toBeNull()
+      expect(screen.queryByText(/^optimalGroup:/)).toBeNull()
     })
 
     it("uses account-filter copy for all-accounts auto-picked groups", () => {

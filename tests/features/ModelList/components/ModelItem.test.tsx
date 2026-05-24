@@ -89,9 +89,16 @@ vi.mock(
 )
 
 vi.mock("~/features/ModelList/components/ModelItem/ModelItemPricing", () => ({
-  ModelItemPricing: ({ showRatioColumn }: { showRatioColumn: boolean }) => (
+  ModelItemPricing: ({
+    showPricing,
+    showRatioColumn,
+  }: {
+    showPricing: boolean
+    showRatioColumn: boolean
+  }) => (
     <div
       data-testid="model-pricing"
+      data-show-pricing={String(showPricing)}
       data-show-ratio-column={String(showRatioColumn)}
     />
   ),
@@ -225,6 +232,29 @@ describe("ModelItem", () => {
 
     expect(screen.getByTestId("model-pricing")).toHaveAttribute(
       "data-show-ratio-column",
+      "false",
+    )
+  })
+
+  it("suppresses pricing when display capabilities disable account pricing", () => {
+    render(
+      <ModelItem
+        {...createDefaultProps()}
+        displayCapabilities={{
+          supportsPricing: false,
+          supportsRatioDisplay: true,
+          supportsGroupFiltering: true,
+          supportsAccountSummary: true,
+          supportsTokenCompatibility: true,
+          supportsCredentialVerification: true,
+          supportsBatchCredentialVerification: true,
+          supportsCliVerification: true,
+        }}
+      />,
+    )
+
+    expect(screen.getByTestId("model-pricing")).toHaveAttribute(
+      "data-show-pricing",
       "false",
     )
   })

@@ -1062,6 +1062,28 @@ describe("apiService AIHubMix", () => {
     ])
   })
 
+  it("trims and de-duplicates user-scoped model ids", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: [
+            " gpt-4o ",
+            { model: "gpt-4o" },
+            { id: " claude-3-5-sonnet " },
+            " ",
+          ],
+        }),
+      ),
+    )
+
+    await expect(fetchAccountAvailableModels(baseRequest)).resolves.toEqual([
+      "gpt-4o",
+      "claude-3-5-sonnet",
+    ])
+  })
+
   it("normalizes catalog model response variants", async () => {
     server.use(
       http.get("https://aihubmix.com/api/v1/models", () =>
@@ -1081,6 +1103,28 @@ describe("apiService AIHubMix", () => {
     await expect(fetchAllModels(baseRequest)).resolves.toEqual([
       "gpt-4o",
       "gpt-4o-mini",
+      "claude-3-5-sonnet",
+    ])
+  })
+
+  it("trims and de-duplicates global catalog model ids", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/v1/models", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: [
+            { model_id: " gpt-4o " },
+            { id: "gpt-4o" },
+            { name: " claude-3-5-sonnet " },
+            { model_id: " " },
+          ],
+        }),
+      ),
+    )
+
+    await expect(fetchAllModels(baseRequest)).resolves.toEqual([
+      "gpt-4o",
       "claude-3-5-sonnet",
     ])
   })
@@ -1452,6 +1496,63 @@ describe("apiService AIHubMix", () => {
           completion_ratio: 0,
           enable_groups: [],
           supported_endpoint_types: [],
+        },
+      ],
+    })
+  })
+
+  it("maps catalog description fallbacks, owner fallbacks, and comma-separated endpoints", async () => {
+    server.use(
+      http.get("https://aihubmix.com/api/v1/models", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: [
+            {
+              model_id: "catalog-with-description",
+              description: "Description fallback",
+              developer: "Developer fallback",
+              endpoints: " chat, embeddings , ",
+            },
+            {
+              model_id: "catalog-with-owner",
+              owner_by: "Owner fallback",
+            },
+            {
+              model_id: "catalog-with-developer-id",
+              developer_id: 12,
+            },
+          ],
+        }),
+      ),
+      http.get("https://aihubmix.com/api/user/available_models", () =>
+        HttpResponse.json({
+          success: true,
+          message: "",
+          data: [
+            { model: "catalog-with-description" },
+            { model: "catalog-with-owner" },
+            { model: "catalog-with-developer-id" },
+          ],
+        }),
+      ),
+    )
+
+    await expect(fetchModelPricing(baseRequest)).resolves.toMatchObject({
+      data: [
+        {
+          model_name: "catalog-with-description",
+          model_description: "Description fallback",
+          owner_by: "Developer fallback",
+          supported_endpoint_types: ["chat", "embeddings"],
+        },
+        {
+          model_name: "catalog-with-owner",
+          owner_by: "Owner fallback",
+        },
+        {
+          model_name: "catalog-with-developer-id",
+          owner_by: "12",
         },
       ],
     })

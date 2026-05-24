@@ -154,6 +154,52 @@ describe("modelPricing utils", () => {
         expect(result.inputCNY).toBe(195) // 30 × 6.5
         expect(result.outputCNY).toBe(390) // 60 × 6.5
       })
+
+      it("uses direct input token pricing while falling back to ratio output pricing", () => {
+        const result = calculateModelPrice(
+          {
+            ...tokenModel,
+            model_ratio: 3,
+            completion_ratio: 4,
+            token_price_usd_per_million: {
+              input: 1.5,
+            },
+          },
+          baseGroupRatio,
+          exchangeRate,
+          "vip",
+        )
+
+        expect(result).toMatchObject({
+          inputUSD: 1.5,
+          outputUSD: 48,
+          inputCNY: 10.5,
+          outputCNY: 336,
+        })
+      })
+
+      it("uses direct output token pricing while falling back to ratio input pricing", () => {
+        const result = calculateModelPrice(
+          {
+            ...tokenModel,
+            model_ratio: 3,
+            completion_ratio: 4,
+            token_price_usd_per_million: {
+              output: 9,
+            },
+          },
+          baseGroupRatio,
+          exchangeRate,
+          "default",
+        )
+
+        expect(result).toMatchObject({
+          inputUSD: 6,
+          outputUSD: 9,
+          inputCNY: 42,
+          outputCNY: 63,
+        })
+      })
     })
 
     describe("Per-call billing (quota_type != 0)", () => {
