@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED,
   buildApiCredentialProfilePricingResponse,
@@ -7,6 +8,10 @@ import {
   loadAccountTokenFallbackPricingResponse,
   normalizeApiCredentialModelIds,
 } from "~/services/apiCredentialProfiles/modelCatalog"
+import {
+  MODEL_LIST_SOURCE_KINDS,
+  type PricingResponse,
+} from "~/services/apiService/common/type"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
 
@@ -14,12 +19,18 @@ const {
   fetchAnthropicModelIdsMock,
   fetchGoogleModelIdsMock,
   fetchOpenAICompatibleModelIdsMock,
+  getApiServiceMock,
   resolveDisplayAccountTokenForSecretMock,
 } = vi.hoisted(() => ({
   fetchAnthropicModelIdsMock: vi.fn(),
   fetchGoogleModelIdsMock: vi.fn(),
   fetchOpenAICompatibleModelIdsMock: vi.fn(),
+  getApiServiceMock: vi.fn(),
   resolveDisplayAccountTokenForSecretMock: vi.fn(),
+}))
+
+vi.mock("~/services/apiService", () => ({
+  getApiService: (...args: unknown[]) => getApiServiceMock(...args),
 }))
 
 vi.mock("~/services/apiService/anthropic", () => ({
@@ -89,6 +100,7 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
     fetchAnthropicModelIdsMock.mockReset()
     fetchGoogleModelIdsMock.mockReset()
     fetchOpenAICompatibleModelIdsMock.mockReset()
+    getApiServiceMock.mockReset()
     resolveDisplayAccountTokenForSecretMock.mockReset()
     resolveDisplayAccountTokenForSecretMock.mockImplementation(
       async (_account, token) => token,
@@ -191,6 +203,64 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
     })
 
     expect(result.data.map((item) => item.model_name)).toEqual(["gpt-4o-mini"])
+  })
+
+  it("loads AIHubMix account-key fallback models without revealing masked keys", async () => {
+    const aihubmixPricing: PricingResponse = {
+      success: true,
+      group_ratio: {},
+      usable_group: {},
+      model_list_source: {
+        kind: MODEL_LIST_SOURCE_KINDS.CATALOG_FALLBACK,
+        provider: SITE_TYPES.AIHUBMIX,
+      },
+      data: [
+        {
+          model_name: "gpt-aihubmix-catalog",
+          quota_type: 0,
+          model_ratio: 0,
+          model_price: 0,
+          completion_ratio: 1,
+          enable_groups: [],
+          supported_endpoint_types: [],
+        },
+      ],
+    }
+    const fetchModelPricingMock = vi.fn().mockResolvedValueOnce(aihubmixPricing)
+    getApiServiceMock.mockReturnValueOnce({
+      fetchModelPricing: fetchModelPricingMock,
+    })
+    resolveDisplayAccountTokenForSecretMock.mockRejectedValueOnce(
+      new Error("AIHubMix cannot reveal masked keys"),
+    )
+
+    const result = await loadAccountTokenFallbackPricingResponse({
+      account: {
+        ...ACCOUNT,
+        siteType: SITE_TYPES.AIHUBMIX,
+        baseUrl: "https://aihubmix.com",
+      },
+      token: {
+        ...TOKEN,
+        key: "sk-****masked",
+        models: "",
+      },
+    })
+
+    expect(result).toBe(aihubmixPricing)
+    expect(getApiServiceMock).toHaveBeenCalledWith(SITE_TYPES.AIHUBMIX)
+    expect(fetchModelPricingMock).toHaveBeenCalledWith({
+      baseUrl: "https://aihubmix.com",
+      accountId: "account-1",
+      auth: {
+        authType: AuthTypeEnum.AccessToken,
+        userId: 1,
+        accessToken: "account-token",
+        cookie: undefined,
+      },
+    })
+    expect(resolveDisplayAccountTokenForSecretMock).not.toHaveBeenCalled()
+    expect(fetchOpenAICompatibleModelIdsMock).not.toHaveBeenCalled()
   })
 
   it("redacts the resolved key and base URL when fallback loading fails", async () => {
