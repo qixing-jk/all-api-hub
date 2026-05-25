@@ -26,7 +26,7 @@ export function useAddAccountHandler() {
     prefillOrEvent?: AddAccountPrefill | MouseEvent | null,
   ) => {
     const prefill =
-      prefillOrEvent && isAddAccountPrefill(prefillOrEvent)
+      prefillOrEvent && isSponsorAddAccountPrefill(prefillOrEvent)
         ? prefillOrEvent
         : null
 
@@ -45,8 +45,3 @@ export function useAddAccountHandler() {
 
   return { handleAddAccountClick }
 }
-
-/**
- * Identifies explicit sponsor prefill values while ignoring React click events.
- */
-const isAddAccountPrefill = isSponsorAddAccountPrefill

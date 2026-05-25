@@ -103,6 +103,45 @@ describe("SponsorRecommendationsSection", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("omits optional auth type from sponsor add-account prefill when none is provided", async () => {
+    const user = userEvent.setup()
+    const openSpy = vi.fn()
+    vi.stubGlobal("open", openSpy)
+
+    renderSection([
+      {
+        id: "supported-provider",
+        name: "Supported Provider",
+        tagline: "Supported provider.",
+        primaryAffiliateUrl: "https://supported.example.test/register",
+        supportStatus: SPONSOR_SUPPORT_STATUS.Supported,
+        accountPrefill: {
+          siteType: SITE_TYPES.NEW_API,
+          siteUrl: "https://supported.example.test",
+        },
+        fallbackHints: {
+          bookmarkManager: false,
+          apiCredentialProfiles: false,
+        },
+        source: SPONSOR_CATALOG_SOURCES.Bundled,
+        rank: 1,
+      },
+    ])
+
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorContinueAddAccountAction,
+      ),
+    )
+
+    expect(onContinueAddAccount).toHaveBeenCalledWith({
+      siteUrl: "https://supported.example.test",
+      siteType: SITE_TYPES.NEW_API,
+      source: "sponsor",
+      sponsorId: "supported-provider",
+    })
+  })
+
   it("renders unsupported sponsor fallback actions as secondary guidance without site-support requests", async () => {
     const user = userEvent.setup()
     const openSpy = vi.fn()
@@ -188,6 +227,98 @@ describe("SponsorRecommendationsSection", () => {
       "_blank",
       "noopener,noreferrer",
     )
+  })
+
+  it("opens the provider URL directly when unsupported sponsors have no fallback actions", async () => {
+    const user = userEvent.setup()
+    const openSpy = vi.fn()
+    vi.stubGlobal("open", openSpy)
+
+    renderSection([
+      {
+        id: "manual-provider",
+        name: "Manual Provider",
+        tagline: "Manual setup required.",
+        primaryAffiliateUrl: "https://manual.example.com/register",
+        supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+        fallbackHints: {
+          bookmarkManager: false,
+          apiCredentialProfiles: false,
+        },
+        source: SPONSOR_CATALOG_SOURCES.Bundled,
+        rank: 2,
+      },
+    ])
+
+    await user.click(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPrimaryAction),
+    )
+
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://manual.example.com/register",
+      "_blank",
+      "noopener,noreferrer",
+    )
+    expect(onOpenBookmarkManager).not.toHaveBeenCalled()
+    expect(onOpenApiCredentialProfiles).not.toHaveBeenCalled()
+  })
+
+  it("routes single fallback actions through the provider URL fallback", async () => {
+    const user = userEvent.setup()
+    const openSpy = vi.fn()
+    vi.stubGlobal("open", openSpy)
+
+    renderSection([
+      {
+        id: "bookmark-provider",
+        name: "Bookmark Provider",
+        tagline: "Bookmark first.",
+        primaryAffiliateUrl: "https://bookmark.example.com/register",
+        supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+        fallbackHints: {
+          bookmarkManager: true,
+          apiCredentialProfiles: false,
+        },
+        source: SPONSOR_CATALOG_SOURCES.Bundled,
+        rank: 2,
+      },
+      {
+        id: "api-provider",
+        name: "API Provider",
+        tagline: "API credential first.",
+        primaryAffiliateUrl: "https://api.example.com/register",
+        supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+        fallbackHints: {
+          bookmarkManager: false,
+          apiCredentialProfiles: true,
+        },
+        source: SPONSOR_CATALOG_SOURCES.Bundled,
+        rank: 3,
+      },
+    ])
+
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorFallbackBookmarkAction,
+      ),
+    )
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorFallbackApiCredentialProfilesAction,
+      ),
+    )
+
+    expect(onOpenBookmarkManager).toHaveBeenCalledWith({
+      name: "Bookmark Provider",
+      url: "https://bookmark.example.com/register",
+    })
+    expect(onOpenApiCredentialProfiles).toHaveBeenCalledWith({
+      name: "API Provider",
+      baseUrl: "https://api.example.com/register",
+      apiKeyCreateUrl: undefined,
+      apiKeyCreateHint: undefined,
+    })
+    expect(openSpy).toHaveBeenCalledTimes(2)
   })
 
   it("renders nothing when no recommendations are available", () => {
