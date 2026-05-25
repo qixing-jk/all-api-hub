@@ -24,6 +24,28 @@ describe("IconButton", () => {
     trackStartedMock.mockResolvedValue(undefined)
   })
 
+  it("uses stable shadcn-aligned icon button sizes", () => {
+    render(
+      <>
+        <IconButton aria-label="Default icon">
+          <span />
+        </IconButton>
+        <IconButton aria-label="Small icon" size="sm">
+          <span />
+        </IconButton>
+      </>,
+    )
+
+    expect(screen.getByRole("button", { name: "Default icon" })).toHaveClass(
+      "h-9",
+      "w-9",
+    )
+    expect(screen.getByRole("button", { name: "Small icon" })).toHaveClass(
+      "h-8",
+      "w-8",
+    )
+  })
+
   it("tracks controlled analytics action without reading button content", () => {
     const onClick = vi.fn()
 
