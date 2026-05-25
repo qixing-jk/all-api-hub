@@ -3,6 +3,7 @@ import os from "node:os"
 import path from "node:path"
 import { test as base, expect as baseExpect, chromium } from "@playwright/test"
 
+import { stubSponsorRemoteCatalog } from "~~/e2e/utils/commonUserFlows"
 import {
   assertBuiltExtensionExists,
   getExtensionIdFromServiceWorker,
@@ -51,6 +52,7 @@ export const test = base.extend<ExtensionFixtures>({
         ...launchOptions,
         ...(headless ? { channel: "chromium" } : {}),
       })
+      await stubSponsorRemoteCatalog(context)
 
       await run(context)
     } finally {

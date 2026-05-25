@@ -154,6 +154,14 @@ export async function stubLlmMetadataIndex(context: BrowserContext) {
         body: JSON.stringify({ models: [] }),
       }),
   )
+  await stubSponsorRemoteCatalog(context)
+}
+
+/**
+ * Reuse a deterministic sponsor catalog payload so background recommendation
+ * refreshes do not depend on a PR branch asset already existing on main.
+ */
+export async function stubSponsorRemoteCatalog(context: BrowserContext) {
   await context.route(E2E_SPONSOR_REMOTE_CATALOG_URL, (route) =>
     route.fulfill({
       status: 200,

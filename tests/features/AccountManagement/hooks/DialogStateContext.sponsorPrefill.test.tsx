@@ -14,21 +14,31 @@ const accountDialogProps = vi.hoisted(() => ({
   renderCount: 0,
 }))
 
+const loadAccountDataMock = vi.hoisted(() => vi.fn())
+
 const {
   getAndClearPendingSponsorAddAccountPrefillMock,
   isExtensionSidePanelMock,
+  isSponsorAddAccountPrefillMock,
   stopWatchingPendingSponsorAddAccountPrefillMock,
   watchPendingSponsorAddAccountPrefillMock,
 } = vi.hoisted(() => ({
   getAndClearPendingSponsorAddAccountPrefillMock: vi.fn(),
   isExtensionSidePanelMock: vi.fn(() => false),
+  isSponsorAddAccountPrefillMock: vi.fn((value: unknown) => {
+    return (
+      typeof value === "object" &&
+      value !== null &&
+      (value as any).source === "sponsor"
+    )
+  }),
   stopWatchingPendingSponsorAddAccountPrefillMock: vi.fn(),
   watchPendingSponsorAddAccountPrefillMock: vi.fn(),
 }))
 
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
-    loadAccountData: vi.fn(),
+    loadAccountData: loadAccountDataMock,
   }),
 }))
 
@@ -37,7 +47,18 @@ vi.mock("~/features/AccountManagement/components/AccountDialog", () => ({
     accountDialogProps.current = props
     accountDialogProps.renderCount += 1
     return (
-      <div data-testid="account-dialog">{JSON.stringify(props.prefill)}</div>
+      <div data-testid="account-dialog">
+        <span>{JSON.stringify(props.prefill)}</span>
+        <button type="button" onClick={() => props.onSuccess({ id: "saved" })}>
+          save
+        </button>
+        <button type="button" onClick={() => props.onError(new Error("boom"))}>
+          fail
+        </button>
+        <button type="button" onClick={props.onClose}>
+          close
+        </button>
+      </div>
     )
   },
 }))
@@ -47,6 +68,7 @@ vi.mock(
   () => ({
     getAndClearPendingSponsorAddAccountPrefill:
       getAndClearPendingSponsorAddAccountPrefillMock,
+    isSponsorAddAccountPrefill: isSponsorAddAccountPrefillMock,
     watchPendingSponsorAddAccountPrefill:
       watchPendingSponsorAddAccountPrefillMock,
   }),
@@ -91,6 +113,13 @@ describe("DialogStateContext sponsor prefill", () => {
     accountDialogProps.renderCount = 0
     vi.clearAllMocks()
     isExtensionSidePanelMock.mockReturnValue(false)
+    isSponsorAddAccountPrefillMock.mockImplementation((value: unknown) => {
+      return (
+        typeof value === "object" &&
+        value !== null &&
+        (value as any).source === "sponsor"
+      )
+    })
     getAndClearPendingSponsorAddAccountPrefillMock.mockResolvedValue(null)
     watchPendingSponsorAddAccountPrefillMock.mockReturnValue(
       stopWatchingPendingSponsorAddAccountPrefillMock,
@@ -120,6 +149,112 @@ describe("DialogStateContext sponsor prefill", () => {
       sponsorId: "aihubmix",
     })
     expect(screen.getByTestId("account-dialog")).toHaveTextContent("aihubmix")
+  })
+
+  it("opens add account without sponsor prefill when invoked from a click event", async () => {
+    const user = userEvent.setup()
+
+    function ClickHarness() {
+      const { openAddAccount } = useDialogStateContext()
+      return (
+        <button type="button" onClick={openAddAccount}>
+          add
+        </button>
+      )
+    }
+
+    render(
+      <DialogStateProvider>
+        <ClickHarness />
+      </DialogStateProvider>,
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+        withReleaseUpdateStatusProvider: false,
+      },
+    )
+
+    await user.click(screen.getByRole("button", { name: "add" }))
+
+    expect(accountDialogProps.current).toMatchObject({
+      mode: DIALOG_MODES.ADD,
+      prefill: null,
+    })
+  })
+
+  it("resolves and closes add-account dialogs after a successful save", async () => {
+    const user = userEvent.setup()
+    let result: Promise<unknown> | undefined
+
+    function SaveHarness() {
+      const { openAccountDialog } = useDialogStateContext()
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            result = openAccountDialog({ mode: DIALOG_MODES.ADD })
+          }}
+        >
+          open
+        </button>
+      )
+    }
+
+    render(
+      <DialogStateProvider>
+        <SaveHarness />
+      </DialogStateProvider>,
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+        withReleaseUpdateStatusProvider: false,
+      },
+    )
+
+    await user.click(screen.getByRole("button", { name: "open" }))
+    await user.click(screen.getByRole("button", { name: "save" }))
+
+    await expect(result).resolves.toEqual({ id: "saved" })
+    expect(screen.queryByTestId("account-dialog")).not.toBeInTheDocument()
+    expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
+  })
+
+  it("rejects and closes add-account dialogs after a save error", async () => {
+    const user = userEvent.setup()
+    let result: Promise<unknown> | undefined
+
+    function ErrorHarness() {
+      const { openAccountDialog } = useDialogStateContext()
+      return (
+        <button
+          type="button"
+          onClick={() => {
+            result = openAccountDialog({ mode: DIALOG_MODES.ADD })
+          }}
+        >
+          open
+        </button>
+      )
+    }
+
+    render(
+      <DialogStateProvider>
+        <ErrorHarness />
+      </DialogStateProvider>,
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+        withReleaseUpdateStatusProvider: false,
+      },
+    )
+
+    await user.click(screen.getByRole("button", { name: "open" }))
+
+    const rejection = expect(result).rejects.toThrow("boom")
+    await user.click(screen.getByRole("button", { name: "fail" }))
+    await rejection
+    expect(screen.queryByTestId("account-dialog")).not.toBeInTheDocument()
+    expect(loadAccountDataMock).toHaveBeenCalledTimes(1)
   })
 
   it("opens add account from a pending side-panel sponsor prefill and clears the intent", async () => {
@@ -200,5 +335,39 @@ describe("DialogStateContext sponsor prefill", () => {
     expect(
       getAndClearPendingSponsorAddAccountPrefillMock,
     ).toHaveBeenCalledTimes(2)
+  })
+
+  it("stops watching pending sponsor prefill when a side panel unmounts", () => {
+    isExtensionSidePanelMock.mockReturnValue(true)
+
+    const { unmount } = render(
+      <DialogStateProvider>
+        <div>side panel</div>
+      </DialogStateProvider>,
+      {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+        withReleaseUpdateStatusProvider: false,
+      },
+    )
+
+    unmount()
+
+    expect(stopWatchingPendingSponsorAddAccountPrefillMock).toHaveBeenCalled()
+  })
+
+  it("throws when useDialogStateContext is rendered outside its provider", () => {
+    function InvalidHarness() {
+      useDialogStateContext()
+      return null
+    }
+
+    expect(() =>
+      render(<InvalidHarness />, {
+        withUserPreferencesProvider: false,
+        withThemeProvider: false,
+        withReleaseUpdateStatusProvider: false,
+      }),
+    ).toThrow("useDialogStateContext")
   })
 })

@@ -6,6 +6,7 @@ import { Storage } from "@plasmohq/storage"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   getAndClearPendingSponsorAddAccountPrefill,
+  isSponsorAddAccountPrefill,
   setPendingSponsorAddAccountPrefill,
   watchPendingSponsorAddAccountPrefill,
 } from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
@@ -37,6 +38,34 @@ describe("pending sponsor add-account intent", () => {
     await expect(
       getAndClearPendingSponsorAddAccountPrefill(),
     ).resolves.toBeNull()
+  })
+
+  it("rejects malformed sponsor prefill values before opening or persisting them", () => {
+    expect(isSponsorAddAccountPrefill(null)).toBe(false)
+    expect(
+      isSponsorAddAccountPrefill({
+        source: "bookmark",
+        sponsorId: "supported-provider",
+        siteType: SITE_TYPES.NEW_API,
+        siteUrl: "https://supported.example.test",
+      }),
+    ).toBe(false)
+    expect(
+      isSponsorAddAccountPrefill({
+        source: "sponsor",
+        sponsorId: "supported-provider",
+        siteType: SITE_TYPES.UNKNOWN,
+        siteUrl: "https://supported.example.test",
+      }),
+    ).toBe(false)
+    expect(
+      isSponsorAddAccountPrefill({
+        source: "sponsor",
+        sponsorId: "supported-provider",
+        siteType: SITE_TYPES.NEW_API,
+        siteUrl: "https://[invalid",
+      }),
+    ).toBe(false)
   })
 
   it("clears malformed pending prefill without opening the add-account flow", async () => {

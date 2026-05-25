@@ -542,6 +542,89 @@ describe("sponsor catalog normalization", () => {
     ])
   })
 
+  it("rejects malformed item shape, id, status, date range, website, and URL parser failures", () => {
+    const catalog: RawSponsorCatalog = {
+      schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
+      items: [
+        null as unknown as RawSponsorCatalog["items"][number],
+        {
+          id: "Bad ID",
+          enabled: true,
+          supportStatus: SPONSOR_SUPPORT_STATUS.Supported,
+          urls: {
+            primaryAffiliate: "https://example.com/bad-id",
+          },
+          locales: {
+            en: { name: "Bad ID", tagline: "Invalid id" },
+          },
+        },
+        {
+          id: "bad-status",
+          enabled: true,
+          supportStatus: "maybe" as typeof SPONSOR_SUPPORT_STATUS.Supported,
+          urls: {
+            primaryAffiliate: "https://example.com/bad-status",
+          },
+          locales: {
+            en: { name: "Bad Status", tagline: "Invalid status" },
+          },
+        },
+        {
+          id: "bad-date",
+          enabled: true,
+          startsAt: "not a date",
+          supportStatus: SPONSOR_SUPPORT_STATUS.Supported,
+          urls: {
+            primaryAffiliate: "https://example.com/bad-date",
+          },
+          locales: {
+            en: { name: "Bad Date", tagline: "Invalid date" },
+          },
+        },
+        {
+          id: "bad-website",
+          enabled: true,
+          supportStatus: SPONSOR_SUPPORT_STATUS.Supported,
+          urls: {
+            primaryAffiliate: "https://example.com/bad-website",
+            website: "javascript:alert(1)",
+          },
+          locales: {
+            en: { name: "Bad Website", tagline: "Invalid website" },
+          },
+        },
+        {
+          id: "bad-url",
+          enabled: true,
+          supportStatus: SPONSOR_SUPPORT_STATUS.Supported,
+          urls: {
+            primaryAffiliate: "https://[invalid",
+          },
+          locales: {
+            en: { name: "Bad URL", tagline: "Invalid URL" },
+          },
+        },
+      ],
+    }
+
+    const result = normalizeSponsorCatalog(catalog, {
+      locale: "en",
+      now,
+      source: SPONSOR_CATALOG_SOURCES.Remote,
+    })
+
+    expect(result.ok).toBe(false)
+    expect(result.items).toEqual([])
+    expect(result.errors).toEqual([
+      "item unknown has invalid shape",
+      "item Bad ID has invalid id",
+      "item bad-status has invalid supportStatus",
+      "item bad-date is outside its active date range",
+      "item bad-website has invalid website URL",
+      "item bad-url has invalid primaryAffiliate URL",
+    ])
+  })
+
   it("rejects unknown account prefill site types without throwing", () => {
     const catalog: RawSponsorCatalog = {
       schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
