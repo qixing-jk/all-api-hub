@@ -81,6 +81,13 @@ type ExtensionPageGuardOptions = {
   ignoreConsoleErrorPatterns?: RegExp[]
 }
 
+const E2E_SPONSOR_REMOTE_CATALOG_URL =
+  "https://raw.githubusercontent.com/qixing-jk/all-api-hub/main/public/sponsor-catalog.json"
+const E2E_SPONSOR_CATALOG_PAYLOAD = {
+  schemaVersion: 3,
+  items: [],
+}
+
 /**
  * Surface unexpected runtime errors immediately instead of letting the popup or
  * options page fail silently in the background.
@@ -134,8 +141,8 @@ export async function forceExtensionLanguage(page: Page, language = "en") {
 }
 
 /**
- * Reuse a deterministic metadata payload so unrelated model-catalog fetches do
- * not reach the network during these user-flow specs.
+ * Reuse deterministic external catalog payloads so unrelated background
+ * refreshes do not reach the network during these user-flow specs.
  */
 export async function stubLlmMetadataIndex(context: BrowserContext) {
   await context.route(
@@ -146,6 +153,13 @@ export async function stubLlmMetadataIndex(context: BrowserContext) {
         contentType: "application/json",
         body: JSON.stringify({ models: [] }),
       }),
+  )
+  await context.route(E2E_SPONSOR_REMOTE_CATALOG_URL, (route) =>
+    route.fulfill({
+      status: 200,
+      contentType: "application/json",
+      body: JSON.stringify(E2E_SPONSOR_CATALOG_PAYLOAD),
+    }),
   )
 }
 
