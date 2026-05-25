@@ -7,23 +7,58 @@ interface BookmarkDialogState {
   isOpen: boolean
   mode: BookmarkDialogMode
   bookmark: SiteBookmark | null
-  prefill: {
-    name?: string
-    url?: string
-  } | null
+  prefill: BookmarkAddPrefill | null
+}
+
+type BookmarkAddPrefill = {
+  name?: string
+  url?: string
 }
 
 /**
- * Checks whether a value carries bookmark add-dialog prefill fields.
+ * Normalizes bookmark add-dialog prefill fields before they reach controlled inputs.
  */
-function isBookmarkAddPrefill(
+function normalizeBookmarkAddPrefill(
   value: unknown,
-): value is { name?: string; url?: string } {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    ("name" in value || "url" in value)
-  )
+): BookmarkAddPrefill | null {
+  if (typeof value !== "object" || value === null) return null
+
+  const record = value as Record<string, unknown>
+  const name = trimOptionalString(record.name)
+  const url = normalizeOptionalHttpUrl(record.url)
+  const prefill = {
+    ...(name ? { name } : {}),
+    ...(url ? { url } : {}),
+  }
+
+  return Object.keys(prefill).length > 0 ? prefill : null
+}
+
+/**
+ * Trims optional string input and omits empty or non-string values.
+ */
+function trimOptionalString(value: unknown): string | undefined {
+  if (typeof value !== "string") return undefined
+
+  const trimmed = value.trim()
+  return trimmed.length > 0 ? trimmed : undefined
+}
+
+/**
+ * Returns an HTTP(S) URL string when the optional input is safe to render.
+ */
+function normalizeOptionalHttpUrl(value: unknown): string | undefined {
+  const trimmed = trimOptionalString(value)
+  if (!trimmed) return undefined
+
+  try {
+    const url = new URL(trimmed)
+    return url.protocol === "http:" || url.protocol === "https:"
+      ? trimmed
+      : undefined
+  } catch {
+    return undefined
+  }
 }
 
 /**
@@ -47,7 +82,7 @@ export function useBookmarkDialogState(initial?: Partial<BookmarkDialogState>) {
         isOpen: true,
         mode: "add",
         bookmark: null,
-        prefill: isBookmarkAddPrefill(prefill) ? prefill : null,
+        prefill: normalizeBookmarkAddPrefill(prefill),
       })
     },
     [],

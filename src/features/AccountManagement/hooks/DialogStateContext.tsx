@@ -15,6 +15,7 @@ import AccountDialog from "~/features/AccountManagement/components/AccountDialog
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import {
   getAndClearPendingSponsorAddAccountPrefill,
+  isSponsorAddAccountPrefill,
   watchPendingSponsorAddAccountPrefill,
 } from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
 import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/types"
@@ -103,7 +104,7 @@ export const DialogStateProvider = ({ children }: { children: ReactNode }) => {
   const openAddAccount = useCallback(
     (prefillOrEvent?: AddAccountPrefill | MouseEvent | null) => {
       const prefill =
-        prefillOrEvent && isAddAccountPrefill(prefillOrEvent)
+        prefillOrEvent && isSponsorAddAccountPrefill(prefillOrEvent)
           ? prefillOrEvent
           : null
 
@@ -193,18 +194,4 @@ export const useDialogStateContext = () => {
     )
   }
   return context
-}
-
-/**
- * Identifies explicit sponsor prefill values while ignoring React click events.
- */
-function isAddAccountPrefill(
-  value: AddAccountPrefill | MouseEvent,
-): value is AddAccountPrefill {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "source" in value &&
-    value.source === "sponsor"
-  )
 }

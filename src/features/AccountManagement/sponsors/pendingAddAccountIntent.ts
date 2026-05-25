@@ -5,7 +5,10 @@ import { normalizeOptionalAccountAuthType } from "~/features/AccountManagement/u
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { createLogger } from "~/utils/core/logger"
 
-import type { AddAccountPrefill } from "./types"
+import {
+  SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE,
+  type AddAccountPrefill,
+} from "./types"
 
 const logger = createLogger("SponsorAddAccountIntent")
 const storage = new Storage({ area: "local" })
@@ -76,6 +79,13 @@ export function watchPendingSponsorAddAccountPrefill(
   }
 }
 
+/** Identifies validated sponsor add-account prefill values while ignoring UI events. */
+export function isSponsorAddAccountPrefill(
+  value: unknown,
+): value is AddAccountPrefill {
+  return normalizeAddAccountPrefill(value) !== null
+}
+
 /**
  * Validates a stored pending-prefill envelope and enforces its short TTL.
  */
@@ -101,7 +111,7 @@ function normalizeAddAccountPrefill(value: unknown): AddAccountPrefill | null {
   if (envelopePrefill) return envelopePrefill
 
   if (!isRecord(value)) return null
-  if (value.source !== "sponsor") return null
+  if (value.source !== SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE) return null
   if (typeof value.sponsorId !== "string" || !value.sponsorId.trim()) {
     return null
   }
@@ -120,7 +130,7 @@ function normalizeAddAccountPrefill(value: unknown): AddAccountPrefill | null {
     if (url.protocol !== "https:" && url.protocol !== "http:") return null
 
     return {
-      source: "sponsor",
+      source: SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE,
       sponsorId: value.sponsorId.trim(),
       siteType: value.siteType,
       siteUrl: value.siteUrl.trim(),

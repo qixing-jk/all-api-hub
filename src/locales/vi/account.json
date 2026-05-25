@@ -172,18 +172,18 @@
   },
   "sponsor": {
     "actions": {
-      "continueAddAccount": "Continue adding this account",
-      "openApiCredentialProfilesFallback": "Add this provider's API key as an API credential",
-      "openBookmarkManagerFallback": "Bookmark provider instead of adding an account",
-      "visitProvider": "Visit provider"
+      "continueAddAccount": "Tiếp tục thêm tài khoản này",
+      "openApiCredentialProfilesFallback": "Thêm API Key của nhà cung cấp này làm thông tin xác thực API",
+      "openBookmarkManagerFallback": "Đánh dấu nhà cung cấp thay vì thêm tài khoản",
+      "visitProvider": "Truy cập nhà cung cấp"
     },
-    "recommendedProviders": "Recommended providers",
+    "recommendedProviders": "Nhà cung cấp được đề xuất",
     "supportStatus": {
-      "fallbackApiCredentialProfiles": "Add as credential",
-      "fallbackBookmark": "Bookmark first",
-      "fallbackBookmarkAndApi": "Bookmark / add credential",
-      "supported": "Can be added directly",
-      "unsupported": "May require manual setup"
+      "fallbackApiCredentialProfiles": "Có thể thêm làm thông tin xác thực",
+      "fallbackBookmark": "Có thể đánh dấu trước",
+      "fallbackBookmarkAndApi": "Đánh dấu / thêm thông tin xác thực",
+      "supported": "Có thể thêm trực tiếp",
+      "unsupported": "Có thể cần thiết lập thủ công"
     }
   },
   "stats": {

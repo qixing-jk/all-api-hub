@@ -98,7 +98,13 @@ export async function loadSponsorRecommendations(
     })
   }
 
-  const cachedCatalog = await sponsorCatalogStorage.getCachedRemoteCatalog()
+  let cachedCatalog: RawSponsorCatalog | null = null
+  try {
+    cachedCatalog = await sponsorCatalogStorage.getCachedRemoteCatalog()
+  } catch (error) {
+    logger.warn("Failed to read sponsor catalog cache", error)
+  }
+
   if (cachedCatalog) {
     const cached = normalizeSponsorCatalog(cachedCatalog, {
       ...options,

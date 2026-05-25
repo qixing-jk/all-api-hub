@@ -428,6 +428,27 @@ describe("useApiCredentialProfilesController", () => {
     expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
   })
 
+  it("normalizes add-prefill values before storing dialog state", async () => {
+    tagStorageListTagsMock.mockResolvedValue([])
+
+    const { result } = renderController()
+
+    await act(async () => {
+      result.current.openAddDialog({
+        name: "  Sponsor Provider  ",
+        baseUrl: "  https://api.example.com/v1  ",
+        apiKeyCreateUrl: "javascript:alert(1)",
+        apiKeyCreateHint: 42,
+      })
+      await Promise.resolve()
+    })
+
+    expect(result.current.addPrefill).toEqual({
+      name: "Sponsor Provider",
+      baseUrl: "https://api.example.com/v1",
+    })
+  })
+
   it("completes profile save analytics with the scoped entrypoint", async () => {
     tagStorageListTagsMock.mockResolvedValue([])
     createProfileMock.mockResolvedValue(buildProfile())

@@ -157,6 +157,20 @@ describe("sponsor recommendation loader", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it("falls back to bundled recommendations when cache reads fail", async () => {
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+    vi.mocked(sponsorCatalogStorage.getCachedRemoteCatalog).mockRejectedValue(
+      new Error("storage unavailable"),
+    )
+
+    const result = await loadSponsorRecommendations({ locale: "zh-CN", now })
+
+    expect(result.items).toEqual([])
+    expect(result.source).toBe(SPONSOR_CATALOG_SOURCES.Bundled)
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it("injects public catalog examples into bundled recommendations only in development", async () => {
     vi.stubEnv("MODE", "development")
     vi.mocked(sponsorCatalogStorage.getCachedRemoteCatalog).mockResolvedValue(

@@ -18,6 +18,8 @@ export const SPONSOR_CATALOG_SOURCES = {
 export type SponsorCatalogSource =
   (typeof SPONSOR_CATALOG_SOURCES)[keyof typeof SPONSOR_CATALOG_SOURCES]
 
+export const SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE = "sponsor" as const
+
 export interface SponsorLocalizedContent {
   name: string
   tagline: string
@@ -96,7 +98,7 @@ export interface SponsorCatalogNormalizationResult {
 }
 
 export interface AddAccountPrefill {
-  source: "sponsor"
+  source: typeof SPONSOR_ADD_ACCOUNT_PREFILL_SOURCE
   sponsorId: string
   siteType: AccountSiteType
   siteUrl: string

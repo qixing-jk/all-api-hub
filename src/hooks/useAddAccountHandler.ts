@@ -2,7 +2,10 @@ import type { MouseEvent } from "react"
 
 import { showFirefoxWarningDialog } from "~/entrypoints/popup/components/FirefoxAddAccountWarningDialog/showFirefoxWarningDialog"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
-import { setPendingSponsorAddAccountPrefill } from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
+import {
+  isSponsorAddAccountPrefill,
+  setPendingSponsorAddAccountPrefill,
+} from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
 import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/types"
 import {
   isDesktopDevice,
@@ -46,13 +49,4 @@ export function useAddAccountHandler() {
 /**
  * Identifies explicit sponsor prefill values while ignoring React click events.
  */
-function isAddAccountPrefill(
-  value: AddAccountPrefill | MouseEvent,
-): value is AddAccountPrefill {
-  return (
-    typeof value === "object" &&
-    value !== null &&
-    "source" in value &&
-    value.source === "sponsor"
-  )
-}
+const isAddAccountPrefill = isSponsorAddAccountPrefill

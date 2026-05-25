@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
+import { fakeBrowser } from "wxt/testing/fake-browser"
 
 import { Storage } from "@plasmohq/storage"
 
@@ -6,6 +7,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   getAndClearPendingSponsorAddAccountPrefill,
   setPendingSponsorAddAccountPrefill,
+  watchPendingSponsorAddAccountPrefill,
 } from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import { AuthTypeEnum } from "~/types"
@@ -125,5 +127,59 @@ describe("pending sponsor add-account intent", () => {
     await expect(
       storage.get(STORAGE_KEYS.SPONSOR_ADD_ACCOUNT_PENDING_PREFILL),
     ).resolves.toBeUndefined()
+  })
+
+  it("notifies mounted side panels only when a new pending prefill is written", async () => {
+    const onPendingPrefill = vi.fn()
+
+    const stopWatching = watchPendingSponsorAddAccountPrefill(onPendingPrefill)
+
+    await fakeBrowser.storage.onChanged.trigger(
+      {
+        [STORAGE_KEYS.SPONSOR_ADD_ACCOUNT_PENDING_PREFILL]: {
+          newValue: JSON.stringify({
+            createdAt: Date.now(),
+            prefill: {
+              source: "sponsor",
+              sponsorId: "supported-provider",
+              siteType: SITE_TYPES.NEW_API,
+              siteUrl: "https://supported.example.test",
+            },
+          }),
+        },
+      },
+      "local",
+    )
+    await fakeBrowser.storage.onChanged.trigger(
+      {
+        [STORAGE_KEYS.SPONSOR_ADD_ACCOUNT_PENDING_PREFILL]: {
+          oldValue: JSON.stringify({}),
+        },
+      },
+      "local",
+    )
+
+    expect(onPendingPrefill).toHaveBeenCalledTimes(1)
+
+    stopWatching()
+
+    await fakeBrowser.storage.onChanged.trigger(
+      {
+        [STORAGE_KEYS.SPONSOR_ADD_ACCOUNT_PENDING_PREFILL]: {
+          newValue: JSON.stringify({
+            createdAt: Date.now(),
+            prefill: {
+              source: "sponsor",
+              sponsorId: "supported-provider",
+              siteType: SITE_TYPES.NEW_API,
+              siteUrl: "https://supported.example.test",
+            },
+          }),
+        },
+      },
+      "local",
+    )
+
+    expect(onPendingPrefill).toHaveBeenCalledTimes(1)
   })
 })

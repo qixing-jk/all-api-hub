@@ -161,6 +161,8 @@ describe("useAccountDialog sponsor prefill", () => {
   })
 
   it("ignores invalid sponsor prefill and keeps the normal add flow", async () => {
+    ;(globalThis as any).browser.tabs.query = vi.fn(async () => [])
+
     const { result } = renderAccountDialogHook({
       mode: DIALOG_MODES.ADD,
       isOpen: true,
