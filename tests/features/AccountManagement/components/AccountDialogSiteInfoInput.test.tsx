@@ -84,6 +84,46 @@ describe("AccountDialog SiteInfoInput", () => {
     expect(props.onAuthTypeChange).toHaveBeenCalledWith(AuthTypeEnum.Cookie)
   })
 
+  it("stacks auth above the URL before switching to a wide two-column layout", async () => {
+    const props = createAddModeProps()
+
+    render(<SiteInfoInput {...props} />)
+
+    const urlInput = await screen.findByLabelText(
+      "accountDialog:siteInfo.siteUrl",
+    )
+    const authTypeTrigger = screen.getByTestId(
+      "account-management-auth-type-trigger",
+    )
+
+    const container = authTypeTrigger.closest(
+      "[data-layout='site-auth-url-container']",
+    )
+    const layout = authTypeTrigger.closest(
+      "[data-layout='site-auth-url-layout']",
+    )
+    expect(container).toHaveClass("[container-type:inline-size]")
+    expect(layout).toHaveClass(
+      "grid",
+      "[@container(min-width:28rem)]:grid-cols-[minmax(0,1fr)_auto]",
+    )
+    expect(
+      authTypeTrigger.closest("[data-layout='auth-type-field']"),
+    ).toHaveClass(
+      "order-1",
+      "max-w-full",
+      "[@container(min-width:28rem)]:order-2",
+    )
+    expect(urlInput.closest("[data-layout='site-url-field']")).toHaveClass(
+      "order-2",
+      "w-full",
+      "min-w-0",
+      "[@container(min-width:28rem)]:order-1",
+    )
+    expect(authTypeTrigger).toHaveAttribute("data-size", "default")
+    expect(authTypeTrigger).toHaveClass("data-[size=default]:h-9")
+  })
+
   it("shows the generic already-added warning and disables current-tab reuse when the tab URL is unavailable", async () => {
     const props = createAddModeProps()
     props.currentTabUrl = null

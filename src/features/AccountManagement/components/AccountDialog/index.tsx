@@ -1,4 +1,5 @@
-import type { ComponentProps } from "react"
+import { InformationCircleIcon } from "@heroicons/react/24/outline"
+import { useEffect, useState, type ComponentProps } from "react"
 import { useTranslation } from "react-i18next"
 
 import { ThemeAwareToaster } from "~/components/ThemeAwareToaster"
@@ -6,11 +7,19 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
+import { SPONSOR_RECOMMENDATION_SURFACES } from "~/features/AccountManagement/sponsors/constants"
+import { SponsorRecommendationsSection } from "~/features/AccountManagement/sponsors/SponsorRecommendationsSection"
+import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/types"
+import { useSponsorRecommendations } from "~/features/AccountManagement/sponsors/useSponsorRecommendations"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { OneTimeApiKeyDialog } from "~/features/KeyManagement/components/OneTimeApiKeyDialog"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import type { DisplaySiteData } from "~/types"
+import {
+  openApiCredentialProfilesPage,
+  openFullBookmarkManagerPage,
+} from "~/utils/navigation"
 
 import AccountForm from "./AccountForm"
 import ActionButtons from "./ActionButtons"
@@ -30,6 +39,7 @@ interface AccountDialogProps {
   onClose: () => void
   mode: DialogMode
   account?: DisplaySiteData | null
+  prefill?: AddAccountPrefill | null
   onSuccess: (data: any) => void
   onError: (error: any) => void
 }
@@ -41,6 +51,7 @@ interface AccountDialogProps {
  * @param props.onClose Handler invoked when closing without saving.
  * @param props.mode Current dialog mode (add or edit).
  * @param props.account Account data to prefill the form when editing.
+ * @param props.prefill Optional add-mode account prefill.
  * @param props.onSuccess Callback fired with saved data.
  * @param props.onError Callback fired when submission fails.
  */
@@ -49,6 +60,7 @@ export default function AccountDialog({
   onClose,
   mode,
   account,
+  prefill,
   onSuccess,
   onError,
 }: AccountDialogProps) {
@@ -72,6 +84,7 @@ export default function AccountDialog({
     },
     mode,
     account,
+    prefill,
     onSuccess,
   })
 
@@ -92,6 +105,21 @@ export default function AccountDialog({
   const showEntryAuthTypeSelector =
     mode === DIALOG_MODES.ADD &&
     state.phase === ACCOUNT_DIALOG_PHASES.SITE_INPUT
+  const canShowSponsorRecommendations = isOpen && showEntryAuthTypeSelector
+  const sponsorRecommendations = useSponsorRecommendations({
+    surface: SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog,
+    enabled: canShowSponsorRecommendations,
+  })
+  const showSponsorRecommendations =
+    canShowSponsorRecommendations && sponsorRecommendations.items.length > 0
+  const [selectedSponsorPostClickNote, setSelectedSponsorPostClickNote] =
+    useState<string | null>(null)
+
+  useEffect(() => {
+    if (!canShowSponsorRecommendations) {
+      setSelectedSponsorPostClickNote(null)
+    }
+  }, [canShowSponsorRecommendations])
   const addModeSiteInfoProps =
     mode === DIALOG_MODES.ADD
       ? {
@@ -153,6 +181,7 @@ export default function AccountDialog({
       <Modal
         isOpen={isOpen}
         onClose={handlers.handleClose}
+        size="lg"
         panelTestId={ACCOUNT_MANAGEMENT_TEST_IDS.accountDialog}
         floatingContent={
           <ThemeAwareToaster
@@ -199,7 +228,46 @@ export default function AccountDialog({
               <AutoDetectSlowHintAlert />
             )}
 
-            <SiteInfoInput {...siteInfoInputProps} />
+            <div className="grid gap-3">
+              <SiteInfoInput {...siteInfoInputProps} />
+              {selectedSponsorPostClickNote ? (
+                <div
+                  className="flex items-start gap-2 rounded-md bg-blue-50 p-2 text-xs leading-5 text-blue-700 dark:bg-blue-900/20 dark:text-blue-300"
+                  data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPostClickNote}
+                >
+                  <InformationCircleIcon
+                    aria-hidden="true"
+                    className="mt-0.5 h-4 w-4 shrink-0"
+                  />
+                  <span>{selectedSponsorPostClickNote}</span>
+                </div>
+              ) : null}
+              {showSponsorRecommendations ? (
+                <SponsorRecommendationsSection
+                  surface={SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog}
+                  items={sponsorRecommendations.items}
+                  onContinueAddAccount={(nextPrefill) => {
+                    handlers.handleUrlChange(nextPrefill.siteUrl)
+                    setters.setSiteType(nextPrefill.siteType)
+                    if (nextPrefill.authType) {
+                      setters.setAuthType(nextPrefill.authType)
+                    }
+                    const selectedSponsor = sponsorRecommendations.items.find(
+                      (item) => item.id === nextPrefill.sponsorId,
+                    )
+                    setSelectedSponsorPostClickNote(
+                      selectedSponsor?.postClickNote ?? null,
+                    )
+                  }}
+                  onOpenBookmarkManager={(prefill) => {
+                    void openFullBookmarkManagerPage({ create: prefill })
+                  }}
+                  onOpenApiCredentialProfiles={(prefill) => {
+                    void openApiCredentialProfilesPage({ create: prefill })
+                  }}
+                />
+              ) : null}
+            </div>
 
             {state.phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM && (
               <AccountForm

@@ -170,6 +170,22 @@
     "noResults": "一致するアカウントが見つかりません",
     "placeholder": "サイト情報またはアカウント情報を入力して検索"
   },
+  "sponsor": {
+    "actions": {
+      "continueAddAccount": "Continue adding this account",
+      "openApiCredentialProfilesFallback": "Add this provider's API key as an API credential",
+      "openBookmarkManagerFallback": "Bookmark provider instead of adding an account",
+      "visitProvider": "Visit provider"
+    },
+    "recommendedProviders": "Recommended providers",
+    "supportStatus": {
+      "fallbackApiCredentialProfiles": "Add as credential",
+      "fallbackBookmark": "Bookmark first",
+      "fallbackBookmarkAndApi": "Bookmark / add credential",
+      "supported": "Can be added directly",
+      "unsupported": "May require manual setup"
+    }
+  },
   "stats": {
     "completion": "補完",
     "estimatedTodayIncome": "推定収入",

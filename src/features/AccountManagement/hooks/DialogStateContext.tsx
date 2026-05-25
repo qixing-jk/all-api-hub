@@ -2,26 +2,36 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useRef,
   useState,
+  type MouseEvent,
   type ReactNode,
 } from "react"
 
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import AccountDialog from "~/features/AccountManagement/components/AccountDialog"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import {
+  getAndClearPendingSponsorAddAccountPrefill,
+  watchPendingSponsorAddAccountPrefill,
+} from "~/features/AccountManagement/sponsors/pendingAddAccountIntent"
+import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/types"
 import type { DisplaySiteData } from "~/types"
+import { isExtensionSidePanel } from "~/utils/browser"
 
 interface DialogOptions {
   mode: DialogMode
   account?: DisplaySiteData | null
+  prefill?: AddAccountPrefill | null
 }
 
 interface DialogState {
   isOpen: boolean
   mode: DialogMode
   account: DisplaySiteData | null
+  prefill: AddAccountPrefill | null
 }
 
 interface DialogStateContextType {
@@ -30,7 +40,9 @@ interface DialogStateContextType {
   isAddAccountOpen: boolean
   isEditAccountOpen: boolean
   editingAccount: DisplaySiteData | null
-  openAddAccount: () => void
+  openAddAccount: (
+    prefillOrEvent?: AddAccountPrefill | MouseEvent | null,
+  ) => void
   closeAddAccount: () => void
   openEditAccount: (account: DisplaySiteData) => void
   closeEditAccount: () => void
@@ -46,6 +58,7 @@ export const DialogStateProvider = ({ children }: { children: ReactNode }) => {
     isOpen: false,
     mode: DIALOG_MODES.ADD,
     account: null,
+    prefill: null,
   })
 
   const promiseRef = useRef<{
@@ -59,6 +72,7 @@ export const DialogStateProvider = ({ children }: { children: ReactNode }) => {
         isOpen: true,
         mode: options.mode,
         account: options.account || null,
+        prefill: options.prefill ?? null,
       })
       promiseRef.current = { resolve, reject }
     })
@@ -87,9 +101,41 @@ export const DialogStateProvider = ({ children }: { children: ReactNode }) => {
   const editingAccount = dialogState.account
 
   const openAddAccount = useCallback(
-    () => openAccountDialog({ mode: DIALOG_MODES.ADD }),
+    (prefillOrEvent?: AddAccountPrefill | MouseEvent | null) => {
+      const prefill =
+        prefillOrEvent && isAddAccountPrefill(prefillOrEvent)
+          ? prefillOrEvent
+          : null
+
+      openAccountDialog({ mode: DIALOG_MODES.ADD, prefill })
+    },
     [openAccountDialog],
   )
+
+  useEffect(() => {
+    if (!isExtensionSidePanel()) return
+
+    let cancelled = false
+
+    const consumePendingPrefill = () => {
+      void getAndClearPendingSponsorAddAccountPrefill().then((prefill) => {
+        if (cancelled || !prefill) return
+
+        openAccountDialog({ mode: DIALOG_MODES.ADD, prefill })
+      })
+    }
+
+    consumePendingPrefill()
+    const stopWatchingPendingPrefill = watchPendingSponsorAddAccountPrefill(
+      consumePendingPrefill,
+    )
+
+    return () => {
+      cancelled = true
+      stopWatchingPendingPrefill()
+    }
+  }, [openAccountDialog])
+
   const closeAddAccount = useCallback(handleClose, [loadAccountData])
   const openEditAccount = useCallback(
     (account: DisplaySiteData) =>
@@ -130,6 +176,7 @@ export const DialogStateProvider = ({ children }: { children: ReactNode }) => {
           onClose={handleClose}
           mode={dialogState.mode}
           account={dialogState.account}
+          prefill={dialogState.prefill}
           onSuccess={handleSuccess}
           onError={handleError}
         />
@@ -146,4 +193,18 @@ export const useDialogStateContext = () => {
     )
   }
   return context
+}
+
+/**
+ * Identifies explicit sponsor prefill values while ignoring React click events.
+ */
+function isAddAccountPrefill(
+  value: AddAccountPrefill | MouseEvent,
+): value is AddAccountPrefill {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    "source" in value &&
+    value.source === "sponsor"
+  )
 }

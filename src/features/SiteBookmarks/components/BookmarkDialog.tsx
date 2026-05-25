@@ -34,6 +34,10 @@ interface BookmarkDialogProps {
   isOpen: boolean
   mode: BookmarkDialogMode
   bookmark: SiteBookmark | null
+  prefill?: {
+    name?: string
+    url?: string
+  } | null
   onClose: () => void
 }
 
@@ -53,6 +57,7 @@ export default function BookmarkDialog({
   isOpen,
   mode,
   bookmark,
+  prefill,
   onClose,
 }: BookmarkDialogProps) {
   const { t } = useTranslation(["bookmark", "messages", "common"])
@@ -61,12 +66,12 @@ export default function BookmarkDialog({
 
   const initial = useMemo(
     () => ({
-      name: bookmark?.name ?? "",
-      url: bookmark?.url ?? "",
+      name: bookmark?.name ?? prefill?.name ?? "",
+      url: bookmark?.url ?? prefill?.url ?? "",
       notes: bookmark?.notes ?? "",
       tagIds: bookmark?.tagIds ?? [],
     }),
-    [bookmark],
+    [bookmark, prefill],
   )
 
   const [name, setName] = useState(initial.name)

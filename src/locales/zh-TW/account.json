@@ -170,6 +170,22 @@
     "noResults": "沒有找到匹配的帳號",
     "placeholder": "輸入站點資訊或帳號資訊進行搜尋"
   },
+  "sponsor": {
+    "actions": {
+      "continueAddAccount": "繼續新增此帳號",
+      "openApiCredentialProfilesFallback": "可將其 API 金鑰新增為 API 憑證",
+      "openBookmarkManagerFallback": "暫不新增帳號，先收藏服務商",
+      "visitProvider": "造訪服務商"
+    },
+    "recommendedProviders": "推薦服務商",
+    "supportStatus": {
+      "fallbackApiCredentialProfiles": "可加為憑證",
+      "fallbackBookmark": "可先收藏",
+      "fallbackBookmarkAndApi": "可先收藏 / 可加為憑證",
+      "supported": "可直接新增",
+      "unsupported": "可能需要手動設定"
+    }
+  },
   "stats": {
     "completion": "補全",
     "estimatedTodayIncome": "估算收入",

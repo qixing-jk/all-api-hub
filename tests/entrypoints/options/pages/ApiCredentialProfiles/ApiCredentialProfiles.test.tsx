@@ -216,6 +216,36 @@ describe("ApiCredentialProfiles page", () => {
     expect(await screen.findByText("https://example.com")).toBeInTheDocument()
   })
 
+  it("opens a prefilled add dialog from sponsor route params", async () => {
+    render(
+      <ApiCredentialProfiles
+        routeParams={{
+          action: "add",
+          name: "Manual Provider",
+          baseUrl: "https://manual.example.com",
+          apiKeyCreateUrl: "https://manual.example.com/keys?aff=all-api-hub",
+          apiKeyCreateHint: "Use promo code APIHUB after registration.",
+        }}
+      />,
+    )
+
+    expect(
+      await screen.findByText("apiCredentialProfiles:dialog.addTitle"),
+    ).toBeInTheDocument()
+    expect(screen.getByDisplayValue("Manual Provider")).toBeInTheDocument()
+    expect(
+      screen.getByDisplayValue("https://manual.example.com"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("link", {
+        name: "apiCredentialProfiles:dialog.actions.openApiKeyCreateUrl",
+      }),
+    ).toHaveAttribute("href", "https://manual.example.com/keys?aff=all-api-hub")
+    expect(
+      screen.getByText("Use promo code APIHUB after registration."),
+    ).toBeInTheDocument()
+  })
+
   it("edits an existing profile", async () => {
     const user = userEvent.setup()
 

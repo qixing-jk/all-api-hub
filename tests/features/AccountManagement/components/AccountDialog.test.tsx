@@ -1,13 +1,17 @@
 import userEvent from "@testing-library/user-event"
+import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
+import { SITE_TYPES } from "~/constants/siteType"
 import AccountDialog from "~/features/AccountManagement/components/AccountDialog"
 import {
   ACCOUNT_DIALOG_FORM_SOURCES,
   ACCOUNT_DIALOG_PHASES,
   createEmptyAccountDialogDraft,
 } from "~/features/AccountManagement/components/AccountDialog/models"
+import type { SponsorRecommendation } from "~/features/AccountManagement/sponsors/types"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import { ACCOUNT_POST_SAVE_WORKFLOW_STEPS } from "~/services/accounts/accountPostSaveWorkflow"
 import { AuthTypeEnum } from "~/types"
@@ -21,7 +25,33 @@ const {
   mockRenameTag,
   mockDeleteTag,
   mockOpenEditAccount,
+  mockSponsorRecommendationItems,
+  mockUseSponsorRecommendations,
+  mockOpenFullBookmarkManagerPage,
+  mockOpenApiCredentialProfilesPage,
+  mockOpenSiteSupportRequestPage,
 } = vi.hoisted(() => ({
+  mockSponsorRecommendationItems: [
+    {
+      id: "anyrouter",
+      name: "AnyRouter",
+      tagline: "Supported provider.",
+      supportStatus: "supported",
+      primaryAffiliateUrl: "https://anyrouter.example.com/register",
+      websiteUrl: "https://anyrouter.example.com",
+      accountPrefill: {
+        siteType: "anyrouter",
+        siteUrl: "https://anyrouter.example.com",
+        authType: "cookie",
+      },
+      fallbackHints: {
+        bookmarkManager: false,
+        apiCredentialProfiles: false,
+      },
+      source: "bundled",
+      rank: 1,
+    },
+  ] as SponsorRecommendation[],
   mockState: {
     url: "https://api.example.com",
     phase: "site-input",
@@ -152,6 +182,10 @@ const {
   mockRenameTag: vi.fn(),
   mockDeleteTag: vi.fn(),
   mockOpenEditAccount: vi.fn(),
+  mockUseSponsorRecommendations: vi.fn(),
+  mockOpenFullBookmarkManagerPage: vi.fn(),
+  mockOpenApiCredentialProfilesPage: vi.fn(),
+  mockOpenSiteSupportRequestPage: vi.fn(),
 }))
 
 function resetMockState() {
@@ -270,6 +304,30 @@ vi.mock("~/features/AccountManagement/hooks/DialogStateContext", () => ({
   }),
 }))
 
+vi.mock("~/contexts/ReleaseUpdateStatusContext", () => ({
+  ReleaseUpdateStatusProvider: ({ children }: { children: ReactNode }) => (
+    <>{children}</>
+  ),
+}))
+
+vi.mock("~/contexts/UserPreferencesContext", () => ({
+  UserPreferencesProvider: ({ children }: { children: ReactNode }) => (
+    <>{children}</>
+  ),
+  useUserPreferencesContext: () => ({
+    managedSiteType: SITE_TYPES.NEW_API,
+    themeMode: "light",
+    updateThemeMode: vi.fn(),
+  }),
+}))
+
+vi.mock(
+  "~/features/AccountManagement/sponsors/useSponsorRecommendations",
+  () => ({
+    useSponsorRecommendations: mockUseSponsorRecommendations,
+  }),
+)
+
 vi.mock(
   "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog",
   () => ({
@@ -280,6 +338,12 @@ vi.mock(
     }),
   }),
 )
+
+vi.mock("~/utils/navigation", () => ({
+  openFullBookmarkManagerPage: mockOpenFullBookmarkManagerPage,
+  openApiCredentialProfilesPage: mockOpenApiCredentialProfilesPage,
+  openSiteSupportRequestPage: mockOpenSiteSupportRequestPage,
+}))
 
 describe("AccountDialog", () => {
   beforeEach(() => {
@@ -295,7 +359,34 @@ describe("AccountDialog", () => {
       dispatchEvent: vi.fn(),
     }))
     resetMockState()
+    mockSponsorRecommendationItems.splice(
+      0,
+      mockSponsorRecommendationItems.length,
+      {
+        id: "anyrouter",
+        name: "AnyRouter",
+        tagline: "Supported provider.",
+        supportStatus: "supported",
+        primaryAffiliateUrl: "https://anyrouter.example.com/register",
+        websiteUrl: "https://anyrouter.example.com",
+        accountPrefill: {
+          siteType: SITE_TYPES.ANYROUTER,
+          siteUrl: "https://anyrouter.example.com",
+          authType: AuthTypeEnum.Cookie,
+        },
+        fallbackHints: {
+          bookmarkManager: false,
+          apiCredentialProfiles: false,
+        },
+        source: "bundled",
+        rank: 1,
+      },
+    )
     mockHandlers.shouldDeferAccountSaveSuccess.mockReturnValue(false)
+    mockUseSponsorRecommendations.mockImplementation(() => ({
+      isLoading: false,
+      items: mockSponsorRecommendationItems,
+    }))
   })
 
   it("hides the form before the dialog reaches the account-form phase", async () => {
@@ -357,6 +448,255 @@ describe("AccountDialog", () => {
     await screen.findByLabelText("accountDialog:siteInfo.siteUrl")
     expect(
       screen.queryByTestId("account-management-auth-type-trigger"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("renders sponsor recommendations only in add-mode site input", async () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
+
+    const { unmount } = render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    expect(
+      await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorRecommendations,
+      ),
+    ).toBeInTheDocument()
+
+    unmount()
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+
+    const accountFormRender = render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.queryByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.sponsorRecommendations),
+    ).not.toBeInTheDocument()
+
+    accountFormRender.unmount()
+    mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.EDIT}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.queryByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.sponsorRecommendations),
+    ).not.toBeInTheDocument()
+  })
+
+  it("disables sponsor recommendations outside the add-account entry phase", () => {
+    mockState.phase = ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
+
+    const accountFormRender = render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    expect(mockUseSponsorRecommendations).toHaveBeenLastCalledWith({
+      surface: "add-account-dialog",
+      enabled: false,
+    })
+
+    accountFormRender.unmount()
+    mockUseSponsorRecommendations.mockClear()
+    mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.EDIT}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    expect(mockUseSponsorRecommendations).toHaveBeenLastCalledWith({
+      surface: "add-account-dialog",
+      enabled: false,
+    })
+  })
+
+  it("prefills url and site type when continuing a supported sponsor", async () => {
+    const user = userEvent.setup()
+    const openSpy = vi.fn()
+    vi.stubGlobal("open", openSpy)
+    mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorContinueAddAccountAction,
+      ),
+    )
+
+    expect(mockHandlers.handleUrlChange).toHaveBeenCalledWith(
+      "https://anyrouter.example.com",
+    )
+    expect(mockSetters.setSiteType).toHaveBeenCalledWith(SITE_TYPES.ANYROUTER)
+    expect(mockSetters.setAuthType).toHaveBeenCalledWith(AuthTypeEnum.Cookie)
+    expect(openSpy).toHaveBeenCalledWith(
+      "https://anyrouter.example.com/register",
+      "_blank",
+      "noopener,noreferrer",
+    )
+  })
+
+  it("shows the selected sponsor post-click note below the site URL helpers", async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal("open", vi.fn())
+    mockSponsorRecommendationItems[0] = {
+      ...mockSponsorRecommendationItems[0],
+      postClickNote: "充值时输入 APIHUB 可查看服务商活动。",
+    }
+    mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.queryByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPostClickNote),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorContinueAddAccountAction,
+      ),
+    )
+
+    expect(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPostClickNote),
+    ).toHaveTextContent("充值时输入 APIHUB 可查看服务商活动。")
+  })
+
+  it("opens sponsor fallback destinations from add-mode site input", async () => {
+    const user = userEvent.setup()
+    mockSponsorRecommendationItems.splice(
+      0,
+      mockSponsorRecommendationItems.length,
+      {
+        id: "manual-provider",
+        name: "Manual Provider",
+        tagline: "Needs manual setup.",
+        supportStatus: "unsupported",
+        primaryAffiliateUrl: "https://manual-provider.example.com/register",
+        websiteUrl: "https://manual-provider.example.com",
+        apiKeyCreateUrl:
+          "https://manual-provider.example.com/dashboard/keys?aff=all-api-hub",
+        postClickNote: "充值时输入 APIHUB 可查看服务商活动。",
+        fallbackHints: {
+          bookmarkManager: true,
+          apiCredentialProfiles: true,
+        },
+        source: "bundled",
+        rank: 1,
+      },
+    )
+    mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorFallbackBookmarkAction,
+      ),
+    )
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorFallbackApiCredentialProfilesAction,
+      ),
+    )
+
+    expect(mockOpenSiteSupportRequestPage).not.toHaveBeenCalled()
+    expect(mockOpenFullBookmarkManagerPage).toHaveBeenCalledWith({
+      create: {
+        name: "Manual Provider",
+        url: "https://manual-provider.example.com",
+      },
+    })
+    expect(mockOpenApiCredentialProfilesPage).toHaveBeenCalledWith({
+      create: {
+        name: "Manual Provider",
+        baseUrl: "https://manual-provider.example.com",
+        apiKeyCreateUrl:
+          "https://manual-provider.example.com/dashboard/keys?aff=all-api-hub",
+        apiKeyCreateHint: "充值时输入 APIHUB 可查看服务商活动。",
+      },
+    })
+  })
+
+  it("does not render sponsor recommendations when no items are available", () => {
+    mockSponsorRecommendationItems.splice(0)
+    mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    expect(
+      screen.queryByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.sponsorRecommendations),
     ).not.toBeInTheDocument()
   })
 

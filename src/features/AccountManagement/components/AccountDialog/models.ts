@@ -1,4 +1,5 @@
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
+import type { AddAccountPrefill } from "~/features/AccountManagement/sponsors/types"
 import { AuthTypeEnum, type CheckInConfig } from "~/types"
 
 export const ACCOUNT_DIALOG_PHASES = {
@@ -13,6 +14,7 @@ export const ACCOUNT_DIALOG_FORM_SOURCES = {
   MANUAL: "manual",
   DETECTED: "detected",
   EXISTING_ACCOUNT: "existing-account",
+  SPONSOR: "sponsor",
 } as const
 
 export type AccountDialogFormSource =
@@ -74,3 +76,5 @@ export function createEmptyAccountDialogDraft(): AccountDialogDraft {
     sub2apiTokenExpiresAt: null,
   }
 }
+
+export type { AddAccountPrefill }

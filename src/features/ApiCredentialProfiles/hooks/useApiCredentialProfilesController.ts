@@ -70,6 +70,29 @@ type SaveApiCredentialProfileInput = {
   telemetryConfig?: ApiCredentialTelemetryConfig
 }
 
+type ApiCredentialProfileAddPrefill = {
+  name?: string
+  baseUrl?: string
+  apiKeyCreateUrl?: string
+  apiKeyCreateHint?: string
+}
+
+/**
+ * Checks whether a value carries add-dialog prefill fields.
+ */
+function isApiCredentialProfileAddPrefill(
+  value: unknown,
+): value is ApiCredentialProfileAddPrefill {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    ("name" in value ||
+      "baseUrl" in value ||
+      "apiKeyCreateUrl" in value ||
+      "apiKeyCreateHint" in value)
+  )
+}
+
 type RuntimeBroadcastMessage = {
   type?: (typeof RuntimeMessageTypes)[keyof typeof RuntimeMessageTypes]
 }
@@ -316,14 +339,21 @@ export function useApiCredentialProfilesController() {
   const [isEditorOpen, setIsEditorOpen] = useState(false)
   const [editingProfile, setEditingProfile] =
     useState<ApiCredentialProfile | null>(null)
+  const [addPrefill, setAddPrefill] =
+    useState<ApiCredentialProfileAddPrefill | null>(null)
 
-  const openAddDialog = useCallback(() => {
-    setEditingProfile(null)
-    setIsEditorOpen(true)
-  }, [])
+  const openAddDialog = useCallback(
+    (prefill?: ApiCredentialProfileAddPrefill | null | unknown) => {
+      setEditingProfile(null)
+      setAddPrefill(isApiCredentialProfileAddPrefill(prefill) ? prefill : null)
+      setIsEditorOpen(true)
+    },
+    [],
+  )
 
   const openEditDialog = useCallback((profile: ApiCredentialProfile) => {
     setEditingProfile(profile)
+    setAddPrefill(null)
     setIsEditorOpen(true)
   }, [])
 
@@ -714,6 +744,7 @@ export function useApiCredentialProfilesController() {
     isEditorOpen,
     setIsEditorOpen,
     editingProfile,
+    addPrefill,
     openAddDialog,
     openEditDialog,
     handleSave,

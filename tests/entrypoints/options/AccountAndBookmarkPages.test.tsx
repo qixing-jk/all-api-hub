@@ -105,8 +105,20 @@ vi.mock("~/features/SiteBookmarks/components/BookmarksList", () => ({
 }))
 
 vi.mock("~/features/SiteBookmarks/components/BookmarkDialog", () => ({
-  default: ({ isOpen }: { isOpen: boolean }) =>
-    isOpen ? <div>BookmarkDialogOpen</div> : null,
+  default: ({
+    isOpen,
+    prefill,
+  }: {
+    isOpen: boolean
+    prefill?: { name?: string; url?: string } | null
+  }) =>
+    isOpen ? (
+      <div>
+        <div>BookmarkDialogOpen</div>
+        <div data-testid="bookmark-dialog-name">{prefill?.name}</div>
+        <div data-testid="bookmark-dialog-url">{prefill?.url}</div>
+      </div>
+    ) : null,
 }))
 
 beforeEach(() => {
@@ -498,5 +510,25 @@ describe("options BookmarkManagement page", () => {
       await screen.findByRole("button", { name: "bookmark:actions.add" }),
     )
     expect(await screen.findByText("BookmarkDialogOpen")).toBeInTheDocument()
+  })
+
+  it("opens a prefilled add-bookmark dialog from sponsor route params", async () => {
+    render(
+      <BookmarkManagement
+        routeParams={{
+          action: "add",
+          name: "Manual Provider",
+          url: "https://manual.example.com",
+        }}
+      />,
+    )
+
+    expect(await screen.findByText("BookmarkDialogOpen")).toBeInTheDocument()
+    expect(screen.getByTestId("bookmark-dialog-name")).toHaveTextContent(
+      "Manual Provider",
+    )
+    expect(screen.getByTestId("bookmark-dialog-url")).toHaveTextContent(
+      "https://manual.example.com",
+    )
   })
 })

@@ -56,6 +56,7 @@ export function ApiCredentialProfilesDialogs({
         isOpen={controller.isEditorOpen}
         onClose={() => controller.setIsEditorOpen(false)}
         profile={controller.editingProfile}
+        addPrefill={controller.addPrefill}
         tags={controller.tags}
         createTag={controller.createTag}
         renameTag={controller.renameTag}

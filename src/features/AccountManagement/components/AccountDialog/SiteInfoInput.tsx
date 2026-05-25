@@ -92,20 +92,75 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
   return (
     <div className="space-y-2">
       {!isDetected && props.showAuthTypeSelector === true ? (
-        <>
-          <div className="flex justify-between gap-2">
-            <label
-              htmlFor="site-url"
-              className="dark:text-dark-text-secondary block text-sm font-medium text-gray-700"
+        <div
+          data-layout="site-auth-url-container"
+          className="[container-type:inline-size]"
+        >
+          <div
+            data-layout="site-auth-url-layout"
+            className="grid gap-2 [@container(min-width:28rem)]:grid-cols-[minmax(0,1fr)_auto] [@container(min-width:28rem)]:items-end"
+          >
+            <div
+              data-layout="auth-type-field"
+              className="order-1 max-w-full [@container(min-width:28rem)]:order-2"
             >
-              {t("siteInfo.siteUrl")}
-            </label>
-            <label className="dark:text-dark-text-secondary block text-sm font-medium text-gray-700">
-              {t("siteInfo.authMethod")}
-            </label>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="relative grow">
+              <label className="dark:text-dark-text-secondary mb-1 block text-sm font-medium text-gray-700">
+                {t("siteInfo.authMethod")}
+              </label>
+              <Tooltip
+                wrapperClassName="w-full [@container(min-width:28rem)]:w-auto"
+                content={
+                  isSub2Api
+                    ? t("siteInfo.sub2apiAuthOnly")
+                    : t("siteInfo.cookieWarning")
+                }
+              >
+                <Select
+                  value={props.authType}
+                  onValueChange={(value) =>
+                    props.onAuthTypeChange(value as AuthTypeEnum)
+                  }
+                  disabled={isSub2Api}
+                >
+                  <SelectTrigger
+                    className="w-full max-w-full [@container(min-width:28rem)]:w-auto"
+                    aria-label={t("siteInfo.authMethod")}
+                    data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.authTypeTrigger}
+                    data-auth-type={props.authType}
+                  >
+                    <SelectValue
+                      placeholder={t("siteInfo.authMethodPlaceholder")}
+                    />
+                  </SelectTrigger>
+                  <SelectContent align="end" className="min-w-48">
+                    <SelectItem value={AuthTypeEnum.AccessToken}>
+                      <div className="flex items-center gap-2">
+                        <KeyIcon className="h-4 w-4" />
+                        <span>{t("siteInfo.authType.accessToken")}</span>
+                      </div>
+                    </SelectItem>
+                    {!isSub2Api && (
+                      <SelectItem value={AuthTypeEnum.Cookie}>
+                        <div className="flex items-center gap-2">
+                          <Cookie className="h-4 w-4" />
+                          <span>{t("siteInfo.authType.cookieAuth")}</span>
+                        </div>
+                      </SelectItem>
+                    )}
+                  </SelectContent>
+                </Select>
+              </Tooltip>
+            </div>
+            <div
+              data-layout="site-url-field"
+              className="order-2 w-full min-w-0 [@container(min-width:28rem)]:order-1"
+            >
+              <label
+                htmlFor="site-url"
+                className="dark:text-dark-text-secondary mb-1 block text-sm font-medium text-gray-700"
+              >
+                {t("siteInfo.siteUrl")}
+              </label>
               <Input
                 id="site-url"
                 type="text"
@@ -118,50 +173,8 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
                 clearButtonLabel={t("common:actions.clear")}
               />
             </div>
-            <Tooltip
-              content={
-                isSub2Api
-                  ? t("siteInfo.sub2apiAuthOnly")
-                  : t("siteInfo.cookieWarning")
-              }
-            >
-              <Select
-                value={props.authType}
-                onValueChange={(value) =>
-                  props.onAuthTypeChange(value as AuthTypeEnum)
-                }
-                disabled={isSub2Api}
-              >
-                <SelectTrigger
-                  className="w-full"
-                  aria-label={t("siteInfo.authMethod")}
-                  data-testid={ACCOUNT_MANAGEMENT_TEST_IDS.authTypeTrigger}
-                  data-auth-type={props.authType}
-                >
-                  <SelectValue
-                    placeholder={t("siteInfo.authMethodPlaceholder")}
-                  />
-                </SelectTrigger>
-                <SelectContent align="end" className="min-w-48">
-                  <SelectItem value={AuthTypeEnum.AccessToken}>
-                    <div className="flex items-center gap-2">
-                      <KeyIcon className="h-4 w-4" />
-                      <span>{t("siteInfo.authType.accessToken")}</span>
-                    </div>
-                  </SelectItem>
-                  {!isSub2Api && (
-                    <SelectItem value={AuthTypeEnum.Cookie}>
-                      <div className="flex items-center gap-2">
-                        <Cookie className="h-4 w-4" />
-                        <span>{t("siteInfo.authType.cookieAuth")}</span>
-                      </div>
-                    </SelectItem>
-                  )}
-                </SelectContent>
-              </Select>
-            </Tooltip>
           </div>
-        </>
+        </div>
       ) : (
         <>
           <label

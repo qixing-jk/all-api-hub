@@ -7,6 +7,23 @@ interface BookmarkDialogState {
   isOpen: boolean
   mode: BookmarkDialogMode
   bookmark: SiteBookmark | null
+  prefill: {
+    name?: string
+    url?: string
+  } | null
+}
+
+/**
+ * Checks whether a value carries bookmark add-dialog prefill fields.
+ */
+function isBookmarkAddPrefill(
+  value: unknown,
+): value is { name?: string; url?: string } {
+  return (
+    typeof value === "object" &&
+    value !== null &&
+    ("name" in value || "url" in value)
+  )
 }
 
 /**
@@ -20,15 +37,24 @@ export function useBookmarkDialogState(initial?: Partial<BookmarkDialogState>) {
     isOpen: false,
     mode: "add",
     bookmark: null,
+    prefill: null,
     ...initial,
   }))
 
-  const openAddBookmark = useCallback(() => {
-    setState({ isOpen: true, mode: "add", bookmark: null })
-  }, [])
+  const openAddBookmark = useCallback(
+    (prefill?: { name?: string; url?: string } | null | unknown) => {
+      setState({
+        isOpen: true,
+        mode: "add",
+        bookmark: null,
+        prefill: isBookmarkAddPrefill(prefill) ? prefill : null,
+      })
+    },
+    [],
+  )
 
   const openEditBookmark = useCallback((bookmark: SiteBookmark) => {
-    setState({ isOpen: true, mode: "edit", bookmark })
+    setState({ isOpen: true, mode: "edit", bookmark, prefill: null })
   }, [])
 
   const closeBookmarkDialog = useCallback(() => {
@@ -36,6 +62,7 @@ export function useBookmarkDialogState(initial?: Partial<BookmarkDialogState>) {
       ...prev,
       isOpen: false,
       bookmark: null,
+      prefill: null,
     }))
   }, [])
 
@@ -44,9 +71,16 @@ export function useBookmarkDialogState(initial?: Partial<BookmarkDialogState>) {
       isOpen: state.isOpen,
       mode: state.mode,
       bookmark: state.bookmark,
+      prefill: state.prefill,
       onClose: closeBookmarkDialog,
     }),
-    [closeBookmarkDialog, state.bookmark, state.isOpen, state.mode],
+    [
+      closeBookmarkDialog,
+      state.bookmark,
+      state.isOpen,
+      state.mode,
+      state.prefill,
+    ],
   )
 
   return {

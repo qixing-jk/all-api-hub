@@ -1,4 +1,5 @@
 import { Bookmark } from "lucide-react"
+import { useEffect, useMemo, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/components/PageHeader"
@@ -21,11 +22,36 @@ import {
 /**
  * Renders the Bookmark Management page body: header with CTA and bookmarks list.
  */
-function BookmarkManagementContent({ searchQuery }: { searchQuery?: string }) {
+function BookmarkManagementContent({
+  searchQuery,
+  createPrefill,
+}: {
+  searchQuery?: string
+  createPrefill?: {
+    name: string
+    url: string
+  } | null
+}) {
   const { t } = useTranslation(["bookmark", "common"])
   const { openAddBookmark } = useBookmarkDialogContext()
+  const consumedCreatePrefillKeyRef = useRef<string | null>(null)
   const pageSurface =
     PRODUCT_ANALYTICS_SURFACE_IDS.OptionsBookmarkManagementPage
+
+  useEffect(() => {
+    if (!createPrefill) {
+      consumedCreatePrefillKeyRef.current = null
+      return
+    }
+
+    const prefillKey = `${createPrefill.name}\n${createPrefill.url}`
+    if (consumedCreatePrefillKeyRef.current === prefillKey) {
+      return
+    }
+
+    consumedCreatePrefillKeyRef.current = prefillKey
+    openAddBookmark(createPrefill)
+  }, [createPrefill, openAddBookmark])
 
   return (
     <div className="dark:bg-dark-bg-secondary flex flex-col bg-white p-6">
@@ -40,7 +66,7 @@ function BookmarkManagementContent({ searchQuery }: { searchQuery?: string }) {
           description={t("bookmark:description")}
           actions={
             <Button
-              onClick={openAddBookmark}
+              onClick={() => openAddBookmark()}
               data-testid={SITE_BOOKMARKS_TEST_IDS.addButton}
               analyticsAction={PRODUCT_ANALYTICS_ACTION_IDS.CreateBookmark}
             >
@@ -69,10 +95,27 @@ function BookmarkManagement({
   refreshKey,
   routeParams,
 }: BookmarkManagementProps) {
+  const createPrefill = useMemo(() => {
+    if (routeParams?.action !== "add") {
+      return null
+    }
+
+    const name = routeParams.name?.trim()
+    const url = routeParams.url?.trim()
+    if (!name || !url) {
+      return null
+    }
+
+    return { name, url }
+  }, [routeParams])
+
   return (
     <AccountDataProvider refreshKey={refreshKey}>
       <BookmarkDialogStateProvider>
-        <BookmarkManagementContent searchQuery={routeParams?.search} />
+        <BookmarkManagementContent
+          searchQuery={routeParams?.search}
+          createPrefill={createPrefill}
+        />
       </BookmarkDialogStateProvider>
     </AccountDataProvider>
   )

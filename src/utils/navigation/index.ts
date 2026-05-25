@@ -283,6 +283,27 @@ const withPopupClose = <T extends any[]>(
   }
 }
 
+interface BookmarkCreationNavigationParams {
+  name: string
+  url: string
+}
+
+interface ApiCredentialProfileCreationNavigationParams {
+  name: string
+  baseUrl: string
+  apiKeyCreateUrl?: string
+  apiKeyCreateHint?: string
+}
+
+interface BookmarkManagerNavigationParams {
+  search?: string
+  create?: BookmarkCreationNavigationParams
+}
+
+interface ApiCredentialProfilesNavigationParams {
+  create?: ApiCredentialProfileCreationNavigationParams
+}
+
 /**
  * Opens or focuses the account manager page, preferring in-page navigation when already on options.html.
  * @param params Optional query parameters to prefilter accounts.
@@ -316,9 +337,19 @@ const _openFullManagerPage = (
  * @param params Optional query parameters to prefilter bookmarks.
  * @param params.search Search keyword applied to the bookmark list.
  */
-const _openFullBookmarkManagerPage = (params?: { search?: string }) => {
+const _openFullBookmarkManagerPage = (
+  params?: BookmarkManagerNavigationParams,
+) => {
   const targetHash = getBookmarkHash()
-  const searchParams = params?.search ? { search: params.search } : undefined
+  const searchParams = params?.create
+    ? {
+        action: "add",
+        name: params.create.name,
+        url: params.create.url,
+      }
+    : params?.search
+      ? { search: params.search }
+      : undefined
 
   if (isOnOptionsPage()) {
     replaceWithinOptionsPage(targetHash, searchParams)
@@ -505,15 +536,26 @@ const _openCommunityPage = async (language?: string) => {
 /**
  * Opens the API credential profiles section, preferring in-page navigation when already on options.html.
  */
-const _openApiCredentialProfilesPage = () => {
+const _openApiCredentialProfilesPage = (
+  params?: ApiCredentialProfilesNavigationParams,
+) => {
   const targetHash = getApiCredentialProfilesHash()
+  const searchParams = params?.create
+    ? {
+        action: "add",
+        name: params.create.name,
+        baseUrl: params.create.baseUrl,
+        apiKeyCreateUrl: params.create.apiKeyCreateUrl,
+        apiKeyCreateHint: params.create.apiKeyCreateHint,
+      }
+    : undefined
 
   if (isOnOptionsPage()) {
-    replaceWithinOptionsPage(targetHash)
+    replaceWithinOptionsPage(targetHash, searchParams)
     return
   }
 
-  return openOrFocusOptionsPage(targetHash)
+  return openOrFocusOptionsPage(targetHash, searchParams)
 }
 
 /**
@@ -730,8 +772,9 @@ export const openAccountManagerWithSearch = withPopupClose((search: string) =>
  * Launch the bookmark manager root view, auto-closing the popup when invoked
  * from popup.html to prevent duplicate UI shells.
  */
-export const openFullBookmarkManagerPage = withPopupClose(() =>
-  _openFullBookmarkManagerPage(),
+export const openFullBookmarkManagerPage = withPopupClose(
+  (params?: BookmarkManagerNavigationParams) =>
+    _openFullBookmarkManagerPage(params),
 )
 
 /**
@@ -829,7 +872,8 @@ export const openCommunityPage = withPopupClose(_openCommunityPage)
  * Open the API credential profiles page and close the popup afterward when applicable.
  */
 export const openApiCredentialProfilesPage = withPopupClose(
-  _openApiCredentialProfilesPage,
+  (params?: ApiCredentialProfilesNavigationParams) =>
+    _openApiCredentialProfilesPage(params),
 )
 
 /**

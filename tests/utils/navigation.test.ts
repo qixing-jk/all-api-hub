@@ -748,6 +748,32 @@ describe("navigation utilities", () => {
     )
   })
 
+  it("opens bookmark and API credential creation flows with prefill query params", async () => {
+    await openFullBookmarkManagerPage({
+      create: {
+        name: "Manual Provider",
+        url: "https://manual.example.com",
+      },
+    })
+    await openApiCredentialProfilesPage({
+      create: {
+        name: "Manual Provider",
+        baseUrl: "https://manual.example.com",
+        apiKeyCreateUrl: "https://manual.example.com/keys?aff=all-api-hub",
+        apiKeyCreateHint: "Use promo code APIHUB after registration.",
+      },
+    })
+
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      `${OPTIONS_PAGE_URL}?action=add&name=Manual+Provider&url=https%3A%2F%2Fmanual.example.com#bookmark`,
+      true,
+    )
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      `${OPTIONS_PAGE_URL}?action=add&name=Manual+Provider&baseUrl=https%3A%2F%2Fmanual.example.com&apiKeyCreateUrl=https%3A%2F%2Fmanual.example.com%2Fkeys%3Faff%3Dall-api-hub&apiKeyCreateHint=Use+promo+code+APIHUB+after+registration.#apiCredentialProfiles`,
+      true,
+    )
+  })
+
   it("opens managed-site pages without empty query params when no filters are provided", async () => {
     await openManagedSiteChannelsPage()
     await openManagedSiteModelSyncPage()

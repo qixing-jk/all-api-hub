@@ -45,6 +45,16 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   dedupeConfirmDeleteButton: "account-management-dedupe-confirm-delete-button",
   duplicateWarningContinueButton:
     "account-management-duplicate-warning-continue-button",
+  sponsorRecommendations: "account-management-sponsor-recommendations",
+  sponsorRecommendationCard: "account-management-sponsor-recommendation-card",
+  sponsorPrimaryAction: "account-management-sponsor-primary-action",
+  sponsorContinueAddAccountAction:
+    "account-management-sponsor-continue-add-account-action",
+  sponsorPostClickNote: "account-management-sponsor-post-click-note",
+  sponsorFallbackBookmarkAction:
+    "account-management-sponsor-fallback-bookmark-action",
+  sponsorFallbackApiCredentialProfilesAction:
+    "account-management-sponsor-fallback-api-credential-profiles-action",
 } as const
 
 /**

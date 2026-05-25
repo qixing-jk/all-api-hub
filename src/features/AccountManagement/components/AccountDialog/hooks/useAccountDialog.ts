@@ -13,6 +13,11 @@ import {
 } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
+  isAccountAuthType,
+  normalizeAccountAuthTypeOrDefault,
+  normalizeOptionalAccountAuthType,
+} from "~/features/AccountManagement/utils/accountAuthType"
+import {
   autoDetectAccount,
   getSiteName,
   isValidAccount,
@@ -81,6 +86,7 @@ import {
   type AccountDialogDraft,
   type AccountDialogFormSource,
   type AccountDialogPhase,
+  type AddAccountPrefill,
 } from "../models"
 
 const AUTO_DETECT_SLOW_HINT_DELAY_MS = 10_000
@@ -100,6 +106,7 @@ interface CookieImportResponse {
 interface UseAccountDialogProps {
   mode: DialogMode
   account?: DisplaySiteData | null
+  prefill?: AddAccountPrefill | null
   isOpen: boolean
   onClose: () => void
   onSuccess?: (data: any) => void
@@ -123,6 +130,7 @@ interface AihubmixPostSaveKeyPromptState {
  * @param props Hook configuration supporting add/edit modes and callbacks.
  * @param props.mode Current dialog mode (add or edit).
  * @param props.account Account record to edit when in edit mode.
+ * @param props.prefill Optional add-mode sponsor prefill.
  * @param props.isOpen Whether the dialog is currently open.
  * @param props.onClose Handler invoked when dialog closes.
  * @param props.onSuccess Optional handler invoked after successful save.
@@ -131,6 +139,7 @@ interface AihubmixPostSaveKeyPromptState {
 export function useAccountDialog({
   mode,
   account,
+  prefill,
   isOpen,
   onClose,
   onSuccess,
@@ -317,7 +326,9 @@ export function useAccountDialog({
   )
   const setAuthType = useCallback(
     (value: AuthTypeEnum) => {
-      updateDraft((prev) => ({ ...prev, authType: value }))
+      updateDraft((prev) =>
+        isAccountAuthType(value) ? { ...prev, authType: value } : prev,
+      )
     },
     [updateDraft],
   )
@@ -563,26 +574,37 @@ export function useAccountDialog({
     }
   }, [onSuccess])
 
-  const resetForm = useCallback(() => {
-    newAccountRef.current = null
-    detectedCookieStoreIdRef.current = null
-    duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
-    hasConsumedAutoFillCurrentSiteUrlRef.current = false
-    setUrl("")
-    setDraft(createEmptyAccountDialogDraft())
-    const nextFlowState = getInitialFlowState(mode)
-    setPhase(nextFlowState.phase)
-    setFormSource(nextFlowState.formSource)
-    setShowAccessToken(false)
-    setDetectionError(null)
-    setCurrentTabUrl(null)
-    setIsAutoConfiguring(false)
-    setIsImportingCookies(false)
-    setShowCookiePermissionWarning(false)
-    setIsImportingSub2apiSession(false)
-    clearPostSaveWorkflowState()
-    targetAccountRef.current = null
-  }, [clearPostSaveWorkflowState, mode])
+  const resetForm = useCallback(
+    (nextPrefill?: AddAccountPrefill | null) => {
+      newAccountRef.current = null
+      detectedCookieStoreIdRef.current = null
+      duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
+      hasConsumedAutoFillCurrentSiteUrlRef.current = Boolean(nextPrefill)
+      setUrl(nextPrefill?.siteUrl ?? "")
+      setDraft({
+        ...createEmptyAccountDialogDraft(),
+        siteType: nextPrefill?.siteType ?? SITE_TYPES.UNKNOWN,
+        authType: normalizeAccountAuthTypeOrDefault(nextPrefill?.authType),
+      })
+      const nextFlowState = getInitialFlowState(mode)
+      setPhase(nextFlowState.phase)
+      setFormSource(
+        nextPrefill
+          ? ACCOUNT_DIALOG_FORM_SOURCES.SPONSOR
+          : nextFlowState.formSource,
+      )
+      setShowAccessToken(false)
+      setDetectionError(null)
+      setCurrentTabUrl(null)
+      setIsAutoConfiguring(false)
+      setIsImportingCookies(false)
+      setShowCookiePermissionWarning(false)
+      setIsImportingSub2apiSession(false)
+      clearPostSaveWorkflowState()
+      targetAccountRef.current = null
+    },
+    [clearPostSaveWorkflowState, mode],
+  )
 
   const loadAccountData = useCallback(
     async (accountId: string) => {
@@ -707,7 +729,9 @@ export function useAccountDialog({
 
   useEffect(() => {
     if (isOpen) {
-      resetForm()
+      const nextPrefill =
+        mode === DIALOG_MODES.ADD ? normalizeSponsorPrefill(prefill) : null
+      resetForm(nextPrefill)
       if (mode === DIALOG_MODES.EDIT && account) {
         loadAccountData(account.id)
       } else {
@@ -715,7 +739,15 @@ export function useAccountDialog({
         checkCurrentTab()
       }
     }
-  }, [isOpen, mode, account, resetForm, loadAccountData, checkCurrentTab])
+  }, [
+    isOpen,
+    mode,
+    account,
+    prefill,
+    resetForm,
+    loadAccountData,
+    checkCurrentTab,
+  ])
 
   useEffect(() => {
     if (!isOpen || mode !== DIALOG_MODES.ADD) {
@@ -2171,6 +2203,32 @@ function normalizeSiteUrlForDuplicateCheck(params: {
     url: params.value,
     siteType: params.siteType,
   })
+}
+
+/**
+ * Normalizes sponsor-provided add-account metadata to the dialog's base URL contract.
+ */
+function normalizeSponsorPrefill(
+  prefill: AddAccountPrefill | null | undefined,
+): AddAccountPrefill | null {
+  if (!prefill || prefill.source !== "sponsor") return null
+  if (!isAccountSiteType(prefill.siteType)) return null
+  const normalizedAuthType = normalizeOptionalAccountAuthType(prefill.authType)
+  if (normalizedAuthType === false) return null
+
+  try {
+    const url = new URL(prefill.siteUrl)
+    if (url.protocol !== "https:" && url.protocol !== "http:") return null
+
+    return {
+      ...prefill,
+      siteUrl: `${url.protocol}//${url.host}`,
+      siteType: prefill.siteType,
+      ...(normalizedAuthType ? { authType: normalizedAuthType } : {}),
+    }
+  } catch {
+    return null
+  }
 }
 
 /**

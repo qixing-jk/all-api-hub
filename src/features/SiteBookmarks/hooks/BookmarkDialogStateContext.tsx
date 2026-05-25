@@ -19,7 +19,7 @@ interface OpenBookmarkDialogOptions {
 
 interface BookmarkDialogStateContextType {
   openBookmarkDialog: (options: OpenBookmarkDialogOptions) => void
-  openAddBookmark: () => void
+  openAddBookmark: (prefill?: { name?: string; url?: string } | null) => void
   openEditBookmark: (bookmark: SiteBookmark) => void
   closeBookmarkDialog: () => void
 }
@@ -53,6 +53,7 @@ export function BookmarkDialogStateProvider({
         isOpen: true,
         mode: options.mode,
         bookmark: options.bookmark ?? null,
+        prefill: null,
       })
     },
     [setState],

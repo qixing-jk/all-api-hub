@@ -170,6 +170,22 @@
     "noResults": "Không tìm thấy tài khoản phù hợp",
     "placeholder": "Nhập thông tin trang web hoặc thông tin tài khoản để tìm kiếm"
   },
+  "sponsor": {
+    "actions": {
+      "continueAddAccount": "Continue adding this account",
+      "openApiCredentialProfilesFallback": "Add this provider's API key as an API credential",
+      "openBookmarkManagerFallback": "Bookmark provider instead of adding an account",
+      "visitProvider": "Visit provider"
+    },
+    "recommendedProviders": "Recommended providers",
+    "supportStatus": {
+      "fallbackApiCredentialProfiles": "Add as credential",
+      "fallbackBookmark": "Bookmark first",
+      "fallbackBookmarkAndApi": "Bookmark / add credential",
+      "supported": "Can be added directly",
+      "unsupported": "May require manual setup"
+    }
+  },
   "stats": {
     "completion": "Hoàn thành",
     "estimatedTodayIncome": "Thu nhập ước tính",

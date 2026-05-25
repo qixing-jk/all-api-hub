@@ -1,5 +1,10 @@
 import { DialogTitle } from "@headlessui/react"
-import { KeyIcon, PencilIcon, PlusIcon } from "@heroicons/react/24/outline"
+import {
+  ArrowTopRightOnSquareIcon,
+  KeyIcon,
+  PencilIcon,
+  PlusIcon,
+} from "@heroicons/react/24/outline"
 import type { ChangeEvent } from "react"
 import { useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
@@ -70,6 +75,12 @@ interface ApiCredentialProfileDialogProps {
   isOpen: boolean
   onClose: () => void
   profile?: ApiCredentialProfile | null
+  addPrefill?: {
+    name?: string
+    baseUrl?: string
+    apiKeyCreateUrl?: string
+    apiKeyCreateHint?: string
+  } | null
   tags: Tag[]
   createTag: (name: string) => Promise<Tag>
   renameTag: (tagId: string, name: string) => Promise<Tag>
@@ -105,6 +116,7 @@ export function ApiCredentialProfileDialog({
   isOpen,
   onClose,
   profile,
+  addPrefill,
   tags,
   createTag,
   renameTag,
@@ -174,16 +186,16 @@ export function ApiCredentialProfileDialog({
       return
     }
 
-    setName("")
+    setName(addPrefill?.name ?? "")
     setApiType(API_TYPES.OPENAI_COMPATIBLE)
-    setBaseUrl("")
+    setBaseUrl(addPrefill?.baseUrl ?? "")
     setApiKey("")
     setTagIds([])
     setNotes("")
     setTelemetryMode(DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG.mode)
     setCustomEndpoint("")
     setCustomJsonPaths({})
-  }, [isOpen, profile])
+  }, [addPrefill, isOpen, profile])
 
   const normalizedBaseUrlPreview = useMemo(() => {
     const normalized = normalizeBaseUrl(apiType, baseUrl)
@@ -519,6 +531,32 @@ export function ApiCredentialProfileDialog({
               leftIcon={<KeyIcon className="h-5 w-5" />}
             />
           </FormField>
+
+          {!isEditMode && addPrefill?.apiKeyCreateUrl ? (
+            <div className="dark:border-dark-bg-tertiary dark:bg-dark-bg-tertiary/40 rounded-md border border-blue-100 bg-blue-50/70 p-3 text-sm dark:border-blue-900/50">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                <p className="text-blue-800 dark:text-blue-200">
+                  {addPrefill.apiKeyCreateHint ??
+                    t("apiCredentialProfiles:dialog.hints.apiKeyCreateUrl")}
+                </p>
+                <Button asChild variant="secondary" size="sm">
+                  <a
+                    href={addPrefill.apiKeyCreateUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    {t(
+                      "apiCredentialProfiles:dialog.actions.openApiKeyCreateUrl",
+                    )}
+                    <ArrowTopRightOnSquareIcon
+                      aria-hidden="true"
+                      className="h-4 w-4"
+                    />
+                  </a>
+                </Button>
+              </div>
+            </div>
+          ) : null}
 
           <FormField
             label={t("apiCredentialProfiles:dialog.fields.tags")}
