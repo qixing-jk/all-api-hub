@@ -1,5 +1,14 @@
 # Changelog
 
+## [3.41.1](https://github.com/qixing-jk/all-api-hub/compare/v3.41.0...v3.41.1) (2026-05-26)
+
+
+### Bug Fixes
+
+* **account-dialog:** keep detected check-in prefill ([0977a10](https://github.com/qixing-jk/all-api-hub/commit/0977a10dfa22b4c2b4d1c0b6ad1ce324d112c523))
+* **auto-checkin:** allow account quick runs when global schedule is off ([42bb6db](https://github.com/qixing-jk/all-api-hub/commit/42bb6db4d2e7021244d81e2dec2434c85e3db51e))
+* **auto-checkin:** prefer incognito Turnstile for access-token accounts ([#860](https://github.com/qixing-jk/all-api-hub/issues/860)) ([f36ee62](https://github.com/qixing-jk/all-api-hub/commit/f36ee62d3773a53bae86e1de3af78dc3866a7f8e))
+
 ## [3.41.0](https://github.com/qixing-jk/all-api-hub/compare/v3.40.0...v3.41.0) (2026-05-26)
 
 
