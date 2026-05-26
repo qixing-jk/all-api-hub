@@ -7,6 +7,7 @@ export const KEY_MANAGEMENT_TEST_IDS = {
   openApiProfilesToastButton: "key-management-open-api-profiles-toast-button",
   addTokenSubmitButton: "key-management-add-token-submit-button",
   oneTimeKeyCloseButton: "key-management-one-time-key-close-button",
+  oneTimeKeySaveButton: "key-management-one-time-key-save-button",
 } as const
 
 export const KEY_MANAGEMENT_TOKEN_ROW_TEST_ID_PREFIX =

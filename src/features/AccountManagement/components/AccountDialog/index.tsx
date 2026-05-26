@@ -1,10 +1,12 @@
 import { InformationCircleIcon } from "@heroicons/react/24/outline"
 import { useEffect, useState, type ComponentProps } from "react"
+import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { ThemeAwareToaster } from "~/components/ThemeAwareToaster"
 import { Modal } from "~/components/ui/Dialog/Modal"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
+import { AIHUBMIX_API_ORIGIN } from "~/constants/siteType"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
 import { SPONSOR_RECOMMENDATION_SURFACES } from "~/features/AccountManagement/sponsors/constants"
@@ -14,8 +16,13 @@ import { useSponsorRecommendations } from "~/features/AccountManagement/sponsors
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { OneTimeApiKeyDialog } from "~/features/KeyManagement/components/OneTimeApiKeyDialog"
+import { buildApiCredentialProfileName } from "~/features/KeyManagement/utils/apiCredentialProfileName"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
+import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
+import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/core/logger"
 import {
   openApiCredentialProfilesPage,
   openFullBookmarkManagerPage,
@@ -33,6 +40,8 @@ import InfoPanel from "./InfoPanel"
 import { ManagedSiteConfigPromptDialog } from "./ManagedSiteConfigPromptDialog"
 import { ACCOUNT_DIALOG_PHASES } from "./models"
 import SiteInfoInput from "./SiteInfoInput"
+
+const logger = createLogger("AccountDialog")
 
 interface AccountDialogProps {
   isOpen: boolean
@@ -175,6 +184,36 @@ export default function AccountDialog({
           postSaveSub2ApiDialogSessionId,
         )
       : null
+
+  const handleSavePostSaveOneTimeTokenToApiProfiles = async () => {
+    if (!state.postSaveOneTimeToken?.key) return
+
+    try {
+      const profile = await apiCredentialProfilesStorage.createProfile({
+        name: buildApiCredentialProfileName({
+          accountName: state.draft.siteName || "AIHubMix",
+          tokenName: state.postSaveOneTimeToken.name ?? "",
+        }),
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: AIHUBMIX_API_ORIGIN,
+        apiKey: state.postSaveOneTimeToken.key,
+        tagIds: state.draft.tagIds,
+      })
+      toast.success(
+        t("keyManagement:messages.savedToApiProfiles", {
+          name: profile.name,
+        }),
+      )
+    } catch (error) {
+      logger.error("Failed to save AIHubMix one-time key to API profiles", {
+        message: toSanitizedErrorSummary(error, [
+          state.postSaveOneTimeToken.key,
+        ]),
+      })
+      toast.error(t("keyManagement:messages.saveToApiProfilesFailed"))
+      throw error
+    }
+  }
 
   return (
     <>
@@ -378,6 +417,13 @@ export default function AccountDialog({
         isOpen={!!state.postSaveOneTimeToken}
         token={state.postSaveOneTimeToken}
         onClose={handlers.handlePostSaveOneTimeTokenClose}
+        saveAction={
+          state.postSaveOneTimeToken
+            ? {
+                onSave: handleSavePostSaveOneTimeTokenToApiProfiles,
+              }
+            : undefined
+        }
       />
     </>
   )

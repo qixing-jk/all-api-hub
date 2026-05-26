@@ -1,5 +1,6 @@
 import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
+import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
@@ -30,6 +31,8 @@ const {
   mockOpenFullBookmarkManagerPage,
   mockOpenApiCredentialProfilesPage,
   mockOpenSiteSupportRequestPage,
+  mockCreateApiCredentialProfile,
+  mockLoggerError,
 } = vi.hoisted(() => ({
   mockSponsorRecommendationItems: [
     {
@@ -186,6 +189,8 @@ const {
   mockOpenFullBookmarkManagerPage: vi.fn(),
   mockOpenApiCredentialProfilesPage: vi.fn(),
   mockOpenSiteSupportRequestPage: vi.fn(),
+  mockCreateApiCredentialProfile: vi.fn(),
+  mockLoggerError: vi.fn(),
 }))
 
 function resetMockState() {
@@ -273,6 +278,9 @@ vi.mock("~/features/KeyManagement/components/OneTimeApiKeyDialog", () => ({
   OneTimeApiKeyDialog: (props: {
     isOpen: boolean
     token: { key?: string } | null
+    saveAction?: {
+      onSave: () => Promise<void>
+    }
   }) => (
     <div data-testid="post-save-one-time-key-dialog">
       <div data-testid="post-save-one-time-key-open">
@@ -281,8 +289,49 @@ vi.mock("~/features/KeyManagement/components/OneTimeApiKeyDialog", () => ({
       <div data-testid="post-save-one-time-key-value">
         {props.token?.key ?? ""}
       </div>
+      {props.saveAction ? (
+        <button
+          type="button"
+          data-testid="post-save-one-time-key-save"
+          onClick={() => props.saveAction?.onSave().catch(() => undefined)}
+        >
+          save
+        </button>
+      ) : null}
     </div>
   ),
+}))
+
+vi.mock(
+  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
+  () => ({
+    apiCredentialProfilesStorage: {
+      createProfile: (...args: unknown[]) =>
+        mockCreateApiCredentialProfile(...args),
+    },
+  }),
+)
+
+vi.mock("react-hot-toast", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("react-hot-toast")>()
+
+  return {
+    ...actual,
+    default: {
+      ...actual.default,
+      success: vi.fn(),
+      error: vi.fn(),
+    },
+  }
+})
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    debug: vi.fn(),
+    error: mockLoggerError,
+    info: vi.fn(),
+    warn: vi.fn(),
+  }),
 }))
 
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
@@ -383,6 +432,17 @@ describe("AccountDialog", () => {
       },
     )
     mockHandlers.shouldDeferAccountSaveSuccess.mockReturnValue(false)
+    mockCreateApiCredentialProfile.mockResolvedValue({
+      id: "profile-1",
+      name: "AIHubMix - Default API Key",
+      apiType: "openai-compatible",
+      baseUrl: "https://aihubmix.com",
+      apiKey: "sk-one-time",
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    })
     mockUseSponsorRecommendations.mockImplementation(() => ({
       isLoading: false,
       items: mockSponsorRecommendationItems,
@@ -797,6 +857,103 @@ describe("AccountDialog", () => {
     expect(
       screen.getByTestId("post-save-one-time-key-value"),
     ).toHaveTextContent("sk-one-time")
+    expect(
+      screen.getByTestId("post-save-one-time-key-save"),
+    ).toBeInTheDocument()
+  })
+
+  it("saves an AIHubMix one-time key to API credential profiles without navigating", async () => {
+    const user = userEvent.setup()
+    mockState.draft.siteName = "AIHubMix"
+    mockState.draft.tagIds = ["tag-a"]
+    mockState.postSaveOneTimeToken = {
+      id: 10,
+      user_id: 13,
+      key: "sk-one-time-full",
+      name: "Default API Key",
+      status: 1,
+      created_time: 1,
+      accessed_time: 1,
+      expired_time: -1,
+      remain_quota: -1,
+      unlimited_quota: true,
+      used_quota: 0,
+    }
+    mockCreateApiCredentialProfile.mockResolvedValueOnce({
+      id: "profile-1",
+      name: "AIHubMix - Default API Key",
+      apiType: "openai-compatible",
+      baseUrl: "https://aihubmix.com",
+      apiKey: "sk-one-time-full",
+      tagIds: ["tag-a"],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    })
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    await user.click(await screen.findByTestId("post-save-one-time-key-save"))
+
+    await waitFor(() => {
+      expect(mockCreateApiCredentialProfile).toHaveBeenCalledWith({
+        name: "AIHubMix - Default API Key",
+        apiType: "openai-compatible",
+        baseUrl: "https://aihubmix.com",
+        apiKey: "sk-one-time-full",
+        tagIds: ["tag-a"],
+      })
+    })
+    expect(toast.success).toHaveBeenCalledWith(
+      "keyManagement:messages.savedToApiProfiles",
+    )
+    expect(mockHandlers.handlePostSaveOneTimeTokenClose).not.toHaveBeenCalled()
+    expect(mockOpenApiCredentialProfilesPage).not.toHaveBeenCalled()
+  })
+
+  it("keeps the AIHubMix one-time key dialog open when API profile save fails", async () => {
+    const user = userEvent.setup()
+    mockState.draft.siteName = "AIHubMix"
+    mockState.postSaveOneTimeToken = {
+      key: "sk-one-time-full",
+      name: "Default API Key",
+    }
+    mockCreateApiCredentialProfile.mockRejectedValueOnce(
+      new Error("storage failed for sk-one-time-full"),
+    )
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    await user.click(await screen.findByTestId("post-save-one-time-key-save"))
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith(
+        "keyManagement:messages.saveToApiProfilesFailed",
+      )
+    })
+    expect(mockLoggerError).toHaveBeenCalledWith(
+      "Failed to save AIHubMix one-time key to API profiles",
+      {
+        message: "storage failed for [REDACTED]",
+      },
+    )
+    expect(mockHandlers.handlePostSaveOneTimeTokenClose).not.toHaveBeenCalled()
   })
 
   it("renders the AIHubMix post-save key confirmation dialog", async () => {

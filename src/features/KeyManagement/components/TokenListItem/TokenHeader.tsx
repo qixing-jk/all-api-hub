@@ -75,31 +75,12 @@ import {
 } from "~/utils/navigation"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
+import { buildApiCredentialProfileName } from "../../utils/apiCredentialProfileName"
 
 /**
  * Unified logger scoped to the Key Management token header actions.
  */
 const logger = createLogger("TokenHeader")
-
-/**
- * Build a stable API credential profile name from token and account labels.
- */
-function buildApiCredentialProfileName(params: {
-  accountName: string
-  fallbackAccountName?: string
-  tokenName: string
-}) {
-  const parts = [
-    params.accountName,
-    params.fallbackAccountName ?? "",
-    params.tokenName,
-  ]
-    .map((value) => value.trim())
-    .filter(Boolean)
-    .filter((value, index, list) => list.indexOf(value) === index)
-
-  return parts.join(" - ")
-}
 
 interface TokenHeaderProps {
   /**
