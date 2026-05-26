@@ -380,35 +380,75 @@ describe("useAccountDialog duplicate account warning", () => {
       .spyOn(userPreferences, "updateWarnOnDuplicateAccountAdd")
       .mockResolvedValueOnce(false)
 
-    await accountStorage.addAccount(
-      buildSiteAccount({
-        site_name: "Existing",
-        site_url: "https://api.example.com",
-      }),
-    )
+    try {
+      await accountStorage.addAccount(
+        buildSiteAccount({
+          site_name: "Existing",
+          site_url: "https://api.example.com",
+        }),
+      )
 
-    const { result } = await renderDuplicateWarningHook()
+      const { result } = await renderDuplicateWarningHook()
 
-    await act(async () => {
-      result.current.handlers.handleUrlChange("https://api.example.com")
-    })
+      await act(async () => {
+        result.current.handlers.handleUrlChange("https://api.example.com")
+      })
 
-    act(() => {
-      void result.current.handlers.handleShowManualForm()
-    })
+      act(() => {
+        void result.current.handlers.handleShowManualForm()
+      })
 
-    await waitFor(() => {
+      await waitFor(() => {
+        expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true)
+      })
+
+      await act(async () => {
+        await result.current.handlers.handleDuplicateAccountWarningDisableAndContinue()
+      })
+
       expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true)
-    })
+      expect(result.current.state.showManualForm).toBe(false)
+    } finally {
+      updatePreferenceSpy.mockRestore()
+    }
+  })
 
-    await act(async () => {
-      await result.current.handlers.handleDuplicateAccountWarningDisableAndContinue()
-    })
+  it("keeps the duplicate warning open when disabling future warnings rejects", async () => {
+    const updatePreferenceSpy = vi
+      .spyOn(userPreferences, "updateWarnOnDuplicateAccountAdd")
+      .mockRejectedValueOnce(new Error("storage unavailable"))
 
-    expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true)
-    expect(result.current.state.showManualForm).toBe(false)
+    try {
+      await accountStorage.addAccount(
+        buildSiteAccount({
+          site_name: "Existing",
+          site_url: "https://api.example.com",
+        }),
+      )
 
-    updatePreferenceSpy.mockRestore()
+      const { result } = await renderDuplicateWarningHook()
+
+      await act(async () => {
+        result.current.handlers.handleUrlChange("https://api.example.com")
+      })
+
+      act(() => {
+        void result.current.handlers.handleShowManualForm()
+      })
+
+      await waitFor(() => {
+        expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true)
+      })
+
+      await act(async () => {
+        await result.current.handlers.handleDuplicateAccountWarningDisableAndContinue()
+      })
+
+      expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true)
+      expect(result.current.state.showManualForm).toBe(false)
+    } finally {
+      updatePreferenceSpy.mockRestore()
+    }
   })
 
   it("cancels a pending duplicate warning and closes the dialog cleanly", async () => {
