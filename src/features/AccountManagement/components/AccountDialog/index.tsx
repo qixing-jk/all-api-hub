@@ -337,6 +337,9 @@ export default function AccountDialog({
         existingUserId={state.duplicateAccountWarning.existingUserId}
         onCancel={handlers.handleDuplicateAccountWarningCancel}
         onContinue={handlers.handleDuplicateAccountWarningContinue}
+        onDisableWarningAndContinue={
+          handlers.handleDuplicateAccountWarningDisableAndContinue
+        }
       />
 
       <ManagedSiteConfigPromptDialog

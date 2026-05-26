@@ -177,7 +177,8 @@
   "warnings": {
     "duplicateAccount": {
       "actions": {
-        "continue": "Tiếp tục"
+        "continue": "Tiếp tục",
+        "disableAndContinue": "Không nhắc lại và tiếp tục"
       },
       "description_other": "Bạn đã thêm {{count}} tài khoản vào {{siteUrl}}. Tiếp tục thêm có thể gây trùng lặp. Bạn có muốn tiếp tục không?",
       "descriptionExact": "Trên {{siteUrl}}, tài khoản có User ID {{userId}} đã tồn tại ({{username}}). Việc tiếp tục thêm có thể gây ra trùng lặp, bạn có muốn tiếp tục không?",

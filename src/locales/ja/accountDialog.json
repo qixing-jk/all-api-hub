@@ -177,7 +177,8 @@
   "warnings": {
     "duplicateAccount": {
       "actions": {
-        "continue": "続行"
+        "continue": "続行",
+        "disableAndContinue": "今後表示せずに続行"
       },
       "description_other": "{{siteUrl}} にはすでに {{count}} 件のアカウントがあります。さらに追加すると重複する可能性があります。続行しますか？",
       "descriptionExact": "{{siteUrl}} に user ID {{userId}}（{{username}}）のアカウントがすでに存在します。さらに追加すると重複する可能性があります。続行しますか？",

@@ -178,7 +178,8 @@
   "warnings": {
     "duplicateAccount": {
       "actions": {
-        "continue": "Continue"
+        "continue": "Continue",
+        "disableAndContinue": "Don't remind me again and continue"
       },
       "description_one": "You already have {{count}} account for {{siteUrl}}. Adding another may create duplicates. Do you want to continue?",
       "description_other": "You already have {{count}} accounts for {{siteUrl}}. Adding another may create duplicates. Do you want to continue?",

@@ -15,6 +15,7 @@ export interface DuplicateAccountWarningDialogProps {
   existingUserId?: string | number | null
   onCancel: () => void
   onContinue: () => void
+  onDisableWarningAndContinue: () => void
 }
 
 /**
@@ -29,6 +30,7 @@ export function DuplicateAccountWarningDialog({
   existingUserId,
   onCancel,
   onContinue,
+  onDisableWarningAndContinue,
 }: DuplicateAccountWarningDialogProps) {
   const { t } = useTranslation(["accountDialog", "common"])
 
@@ -52,25 +54,38 @@ export function DuplicateAccountWarningDialog({
         </div>
       }
       footer={
-        <div className="flex space-x-3">
+        <div className="space-y-2">
+          <div className="flex space-x-3">
+            <Button
+              type="button"
+              onClick={onCancel}
+              variant="secondary"
+              className="flex-1"
+            >
+              {t("common:actions.cancel")}
+            </Button>
+            <Button
+              type="button"
+              onClick={onContinue}
+              variant="warning"
+              className="flex-1"
+              data-testid={
+                ACCOUNT_MANAGEMENT_TEST_IDS.duplicateWarningContinueButton
+              }
+            >
+              {t("accountDialog:warnings.duplicateAccount.actions.continue")}
+            </Button>
+          </div>
           <Button
             type="button"
-            onClick={onCancel}
-            variant="secondary"
-            className="flex-1"
+            onClick={onDisableWarningAndContinue}
+            variant="link"
+            size="sm"
+            className="w-full text-xs"
           >
-            {t("common:actions.cancel")}
-          </Button>
-          <Button
-            type="button"
-            onClick={onContinue}
-            variant="warning"
-            className="flex-1"
-            data-testid={
-              ACCOUNT_MANAGEMENT_TEST_IDS.duplicateWarningContinueButton
-            }
-          >
-            {t("accountDialog:warnings.duplicateAccount.actions.continue")}
+            {t(
+              "accountDialog:warnings.duplicateAccount.actions.disableAndContinue",
+            )}
           </Button>
         </div>
       }

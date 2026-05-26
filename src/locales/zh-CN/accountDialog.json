@@ -177,7 +177,8 @@
   "warnings": {
     "duplicateAccount": {
       "actions": {
-        "continue": "继续"
+        "continue": "继续",
+        "disableAndContinue": "以后不再提醒，并继续"
       },
       "description": "你已在 {{siteUrl}} 添加了 {{count}} 个账号。继续添加可能会造成重复，是否继续？",
       "descriptionExact": "在 {{siteUrl}} 上，用户 ID {{userId}} 的账号已存在（{{username}}）。继续添加可能会造成重复，是否继续？",

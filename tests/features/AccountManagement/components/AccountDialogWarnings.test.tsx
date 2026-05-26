@@ -204,6 +204,7 @@ describe("AccountDialog warnings", () => {
   it("renders the exact-match duplicate warning for numeric user ids and stringifies missing usernames", () => {
     const onCancel = vi.fn()
     const onContinue = vi.fn()
+    const onDisableWarningAndContinue = vi.fn()
 
     render(
       <DuplicateAccountWarningDialog
@@ -214,6 +215,7 @@ describe("AccountDialog warnings", () => {
         existingUsername={null}
         onCancel={onCancel}
         onContinue={onContinue}
+        onDisableWarningAndContinue={onDisableWarningAndContinue}
       />,
     )
 
@@ -243,6 +245,30 @@ describe("AccountDialog warnings", () => {
 
     expect(onCancel).toHaveBeenCalledTimes(1)
     expect(onContinue).toHaveBeenCalledTimes(1)
+    expect(onDisableWarningAndContinue).not.toHaveBeenCalled()
+  })
+
+  it("offers a secondary action that disables future duplicate warnings and continues", () => {
+    const onDisableWarningAndContinue = vi.fn()
+
+    render(
+      <DuplicateAccountWarningDialog
+        isOpen
+        siteUrl="https://site.example.com"
+        existingAccountsCount={2}
+        onCancel={vi.fn()}
+        onContinue={vi.fn()}
+        onDisableWarningAndContinue={onDisableWarningAndContinue}
+      />,
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "accountDialog:warnings.duplicateAccount.actions.disableAndContinue",
+      }),
+    )
+
+    expect(onDisableWarningAndContinue).toHaveBeenCalledTimes(1)
   })
 
   it("renders managed-site setup guidance and wires both actions", () => {
@@ -305,6 +331,7 @@ describe("AccountDialog warnings", () => {
         existingUsername="alice"
         onCancel={vi.fn()}
         onContinue={vi.fn()}
+        onDisableWarningAndContinue={vi.fn()}
       />,
     )
 
@@ -332,6 +359,7 @@ describe("AccountDialog warnings", () => {
         existingUsername="alice"
         onCancel={vi.fn()}
         onContinue={vi.fn()}
+        onDisableWarningAndContinue={vi.fn()}
       />,
     )
 
