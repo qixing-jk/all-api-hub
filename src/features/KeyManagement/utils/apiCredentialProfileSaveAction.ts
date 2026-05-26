@@ -1,6 +1,7 @@
 import type { TFunction } from "i18next"
 import toast from "react-hot-toast"
 
+import { AIHUBMIX_API_ORIGIN, SITE_TYPES } from "~/constants/siteType"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
@@ -21,6 +22,7 @@ interface BuildOneTimeApiKeyProfileSaveActionParams {
   accountName: string
   fallbackAccountName?: string
   baseUrl: string
+  siteType?: string
   tagIds?: string[]
   token: Pick<ApiToken, "key" | "name">
   t: TFunction
@@ -35,6 +37,7 @@ export function buildOneTimeApiKeyProfileSaveAction({
   accountName,
   fallbackAccountName,
   baseUrl,
+  siteType,
   tagIds,
   token,
   t,
@@ -47,6 +50,7 @@ export function buildOneTimeApiKeyProfileSaveAction({
         accountName,
         fallbackAccountName,
         baseUrl,
+        siteType,
         tagIds,
         token,
         t,
@@ -70,6 +74,7 @@ async function saveOneTimeApiKeyToProfile({
   accountName,
   fallbackAccountName,
   baseUrl,
+  siteType,
   tagIds,
   token,
   t,
@@ -84,7 +89,7 @@ async function saveOneTimeApiKeyToProfile({
         tokenName: token.name ?? "",
       }),
       apiType: API_TYPES.OPENAI_COMPATIBLE,
-      baseUrl,
+      baseUrl: siteType === SITE_TYPES.AIHUBMIX ? AIHUBMIX_API_ORIGIN : baseUrl,
       apiKey: token.key,
       tagIds: tagIds ?? [],
     })

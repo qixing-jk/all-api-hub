@@ -63,6 +63,7 @@ export default function CopyKeyDialog({
       ? buildOneTimeApiKeyProfileSaveAction({
           accountName: account.name,
           baseUrl: account.baseUrl,
+          siteType: account.siteType,
           tagIds: account.tagIds ?? [],
           token: oneTimeToken,
           t: keyManagementT,

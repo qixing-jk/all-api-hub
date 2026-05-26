@@ -129,6 +129,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
     ? buildOneTimeApiKeyProfileSaveAction({
         accountName: account.name,
         baseUrl: account.baseUrl,
+        siteType: account.siteType,
         tagIds: account.tagIds ?? [],
         token: oneTimeToken,
         t,

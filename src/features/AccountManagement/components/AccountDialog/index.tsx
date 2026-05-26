@@ -185,6 +185,7 @@ export default function AccountDialog({
     ? buildOneTimeApiKeyProfileSaveAction({
         accountName: state.draft.siteName || "AIHubMix",
         baseUrl: AIHUBMIX_API_ORIGIN,
+        siteType: state.siteType,
         tagIds: state.draft.tagIds,
         token: state.postSaveOneTimeToken,
         t,

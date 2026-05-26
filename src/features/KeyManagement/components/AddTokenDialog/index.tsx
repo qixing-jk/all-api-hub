@@ -137,6 +137,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
       ? buildOneTimeApiKeyProfileSaveAction({
           accountName: currentAccount.name,
           baseUrl: currentAccount.baseUrl,
+          siteType: currentAccount.siteType,
           tagIds: currentAccount.tagIds ?? [],
           token: oneTimeToken,
           t,
