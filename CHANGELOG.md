@@ -1,5 +1,22 @@
 # Changelog
 
+## [3.41.0](https://github.com/qixing-jk/all-api-hub/compare/v3.40.0...v3.41.0) (2026-05-26)
+
+
+### Features
+
+* **account:** guide new accounts with sponsor recommendations ([#858](https://github.com/qixing-jk/all-api-hub/issues/858)) ([08c815e](https://github.com/qixing-jk/all-api-hub/commit/08c815eabdd7f2b65b647e32ef1a0d394947360a))
+* **accounts:** Support exclude accounts from today income totals ([#852](https://github.com/qixing-jk/all-api-hub/issues/852)) ([378079a](https://github.com/qixing-jk/all-api-hub/commit/378079ac467e796540b77671c1bc4d196b8becdd))
+* Add AIHubMix model list support with scoped catalog fallback ([#857](https://github.com/qixing-jk/all-api-hub/issues/857)) ([3698eb9](https://github.com/qixing-jk/all-api-hub/commit/3698eb9c0c9d20fc9f19cfa99894a23f6f75b2d6))
+* **balance-history:** show estimated today income ([#855](https://github.com/qixing-jk/all-api-hub/issues/855)) ([20c2e60](https://github.com/qixing-jk/all-api-hub/commit/20c2e60348695f66a6a87a5e8fe2a0eb55c9c2c0))
+
+
+### Bug Fixes
+
+* **auto-checkin:** add protected verification hint ([a849e34](https://github.com/qixing-jk/all-api-hub/commit/a849e34838b9b7ce75862c27b9df79a449211a59))
+* **ui:** make IconButton responsive while preserving shadcn sizing ([c843732](https://github.com/qixing-jk/all-api-hub/commit/c8437323500908679a5e25145aa61ac0c3d4983c))
+* **webdav:** prevent deleted accounts from reappearing after sync ([#849](https://github.com/qixing-jk/all-api-hub/issues/849)) ([2403e15](https://github.com/qixing-jk/all-api-hub/commit/2403e1514f01f2f5cb0712e26f77775d3720525d))
+
 ## [3.40.0](https://github.com/qixing-jk/all-api-hub/compare/v3.39.0...v3.40.0) (2026-05-19)
 
 
