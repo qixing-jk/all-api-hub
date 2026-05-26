@@ -6,8 +6,10 @@ import { Modal } from "~/components/ui"
 import { useCopyKeyDialog } from "~/features/AccountManagement/components/CopyKeyDialog/hooks/useCopyKeyDialog"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { OneTimeApiKeyDialog } from "~/features/KeyManagement/components/OneTimeApiKeyDialog"
+import { buildOneTimeApiKeyProfileSaveAction } from "~/features/KeyManagement/utils/apiCredentialProfileSaveAction"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/core/logger"
 
 import { DialogFooter } from "./DialogFooter"
 import { DialogHeader } from "./DialogHeader"
@@ -30,6 +32,7 @@ export default function CopyKeyDialog({
   account,
 }: CopyKeyDialogProps) {
   const { t } = useTranslation("messages")
+  const keyManagementT = useTranslation("keyManagement").t
   const [isAddTokenDialogOpen, setIsAddTokenDialogOpen] = useState(false)
   const isMountedRef = useRef(true)
   const [ccSwitchContext, setCCSwitchContext] = useState<{
@@ -55,6 +58,18 @@ export default function CopyKeyDialog({
     clearSub2ApiCreateAllowedGroups,
     clearOneTimeToken,
   } = useCopyKeyDialog(isOpen, account)
+  const oneTimeKeySaveAction =
+    account && oneTimeToken
+      ? buildOneTimeApiKeyProfileSaveAction({
+          accountName: account.name,
+          baseUrl: account.baseUrl,
+          tagIds: account.tagIds ?? [],
+          token: oneTimeToken,
+          t: keyManagementT,
+          logger,
+          source: "CopyKeyDialog",
+        })
+      : undefined
 
   const handleOpenAddTokenDialog = () => {
     clearSub2ApiCreateAllowedGroups()
@@ -183,7 +198,10 @@ export default function CopyKeyDialog({
         isOpen={!!oneTimeToken}
         token={oneTimeToken}
         onClose={clearOneTimeToken}
+        saveAction={oneTimeKeySaveAction}
       />
     </>
   )
 }
+
+const logger = createLogger("CopyKeyDialog")

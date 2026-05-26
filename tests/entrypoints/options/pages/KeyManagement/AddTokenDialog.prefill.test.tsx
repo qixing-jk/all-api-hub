@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { Z_INDEX } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -13,6 +14,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
 import {
   fireEvent,
@@ -31,6 +33,7 @@ const {
   toastSuccessMock,
   toastErrorMock,
   trackerCompleteMock,
+  createApiCredentialProfileMock,
 } = vi.hoisted(() => ({
   createApiTokenMock: vi.fn(),
   updateApiTokenMock: vi.fn(),
@@ -40,6 +43,7 @@ const {
   toastSuccessMock: vi.fn(),
   toastErrorMock: vi.fn(),
   trackerCompleteMock: vi.fn(),
+  createApiCredentialProfileMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -64,6 +68,16 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     startProductAnalyticsActionMock(...args),
 }))
 
+vi.mock(
+  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
+  () => ({
+    apiCredentialProfilesStorage: {
+      createProfile: (...args: unknown[]) =>
+        createApiCredentialProfileMock(...args),
+    },
+  }),
+)
+
 const ACCOUNT = {
   id: "acc-1",
   name: "Example",
@@ -74,6 +88,7 @@ const ACCOUNT = {
   userId: 1,
   authType: AuthTypeEnum.AccessToken,
   checkIn: { enableDetection: false },
+  tagIds: ["tag-a"],
 } as any
 
 describe("AddTokenDialog prefill", () => {
@@ -84,6 +99,7 @@ describe("AddTokenDialog prefill", () => {
     fetchUserGroupsMock.mockReset()
     startProductAnalyticsActionMock.mockReset()
     trackerCompleteMock.mockReset()
+    createApiCredentialProfileMock.mockReset()
     startProductAnalyticsActionMock.mockReturnValue({
       complete: trackerCompleteMock,
     })
@@ -496,6 +512,78 @@ describe("AddTokenDialog prefill", () => {
       expect(toastErrorMock).toHaveBeenCalledWith("clipboard denied")
     })
 
+    expect(
+      screen.getByLabelText("keyManagement:oneTimeKey.keyLabel"),
+    ).toHaveValue("sk-created-full-secret")
+  })
+
+  it("saves a created one-time key to an API credential profile without closing the dialog", async () => {
+    fetchAccountAvailableModelsMock.mockResolvedValueOnce([])
+    fetchUserGroupsMock.mockResolvedValueOnce({
+      default: { desc: "default", ratio: 1 },
+    })
+    createApiTokenMock.mockResolvedValueOnce({
+      id: 7,
+      user_id: 1,
+      key: "sk-created-full-secret",
+      status: 1,
+      name: "My Key",
+      created_time: 1,
+      accessed_time: 1,
+      expired_time: -1,
+      remain_quota: -1,
+      unlimited_quota: true,
+      used_quota: 0,
+    })
+    createApiCredentialProfileMock.mockResolvedValueOnce({
+      id: "profile-1",
+      name: "Example - My Key",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: ACCOUNT.baseUrl,
+      apiKey: "sk-created-full-secret",
+      tagIds: ACCOUNT.tagIds,
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    })
+    const onClose = vi.fn()
+
+    const user = userEvent.setup()
+    vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined)
+
+    render(
+      <AddTokenDialog
+        isOpen={true}
+        onClose={onClose}
+        availableAccounts={[ACCOUNT]}
+        preSelectedAccountId={ACCOUNT.id}
+      />,
+    )
+
+    await user.type(
+      await screen.findByLabelText(/keyManagement:dialog\.tokenName/),
+      "My Key",
+    )
+    await user.click(
+      screen.getByRole("button", { name: "keyManagement:dialog.createToken" }),
+    )
+    await user.click(
+      await screen.findByTestId(KEY_MANAGEMENT_TEST_IDS.oneTimeKeySaveButton),
+    )
+
+    await waitFor(() => {
+      expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
+        name: "Example - My Key",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: ACCOUNT.baseUrl,
+        apiKey: "sk-created-full-secret",
+        tagIds: ACCOUNT.tagIds,
+      })
+    })
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "keyManagement:messages.savedToApiProfiles",
+    )
+    expect(onClose).not.toHaveBeenCalled()
     expect(
       screen.getByLabelText("keyManagement:oneTimeKey.keyLabel"),
     ).toHaveValue("sk-created-full-secret")

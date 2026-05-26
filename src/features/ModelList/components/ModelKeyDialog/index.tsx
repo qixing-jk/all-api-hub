@@ -18,6 +18,7 @@ import {
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { OneTimeApiKeyDialog } from "~/features/KeyManagement/components/OneTimeApiKeyDialog"
+import { buildOneTimeApiKeyProfileSaveAction } from "~/features/KeyManagement/utils/apiCredentialProfileSaveAction"
 import { DEFAULT_MODEL_GROUP } from "~/services/models/constants"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -29,6 +30,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { createLogger } from "~/utils/core/logger"
 import { openKeysPage } from "~/utils/navigation"
 
 import { MODEL_LIST_TEST_IDS } from "../../testIds"
@@ -39,6 +41,7 @@ import {
 
 const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
 const keyDialogSurface = PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListKeyDialog
+const logger = createLogger("ModelKeyDialog")
 
 /**
  * Modal used by the Model List to help users select or create a key compatible with a specific model.
@@ -122,6 +125,17 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
     modelId,
     modelEnableGroups,
   })
+  const oneTimeKeySaveAction = oneTimeToken
+    ? buildOneTimeApiKeyProfileSaveAction({
+        accountName: account.name,
+        baseUrl: account.baseUrl,
+        tagIds: account.tagIds ?? [],
+        token: oneTimeToken,
+        t,
+        logger,
+        source: "ModelKeyDialog",
+      })
+    : undefined
 
   const requiresExplicitSelection = compatibleTokens.length > 1
 
@@ -461,6 +475,7 @@ export default function ModelKeyDialog(props: ModelKeyDialogProps) {
         isOpen={!!oneTimeToken}
         token={oneTimeToken}
         onClose={clearOneTimeToken}
+        saveAction={oneTimeKeySaveAction}
       />
     </>
   )

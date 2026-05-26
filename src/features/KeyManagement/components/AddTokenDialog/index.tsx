@@ -22,6 +22,7 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
+import { buildOneTimeApiKeyProfileSaveAction } from "../../utils/apiCredentialProfileSaveAction"
 import { OneTimeApiKeyDialog } from "../OneTimeApiKeyDialog"
 import { DialogHeader } from "./DialogHeader"
 import { FormActions } from "./FormActions"
@@ -131,6 +132,18 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
     setOneTimeToken(null)
     handleClose()
   }
+  const oneTimeKeySaveAction =
+    oneTimeToken && currentAccount
+      ? buildOneTimeApiKeyProfileSaveAction({
+          accountName: currentAccount.name,
+          baseUrl: currentAccount.baseUrl,
+          tagIds: currentAccount.tagIds ?? [],
+          token: oneTimeToken,
+          t,
+          logger,
+          source: "AddTokenDialog",
+        })
+      : undefined
 
   const handleSubmit = async () => {
     if (
@@ -276,6 +289,7 @@ export default function AddTokenDialog(props: AddTokenDialogProps) {
         isOpen={!!oneTimeToken}
         token={oneTimeToken}
         onClose={handleCloseOneTimeKeyDialog}
+        saveAction={oneTimeKeySaveAction}
       />
     </>
   )

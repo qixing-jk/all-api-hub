@@ -948,7 +948,7 @@ describe("AccountDialog", () => {
       )
     })
     expect(mockLoggerError).toHaveBeenCalledWith(
-      "Failed to save AIHubMix one-time key to API profiles",
+      "Failed to save one-time key to API profiles from AccountDialog",
       {
         message: "storage failed for [REDACTED]",
       },

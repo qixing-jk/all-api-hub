@@ -1,6 +1,7 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
 import ModelKeyDialog from "~/features/ModelList/components/ModelKeyDialog"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -10,6 +11,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { AuthTypeEnum } from "~/types"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -23,6 +25,7 @@ const {
   startProductAnalyticsActionMock,
   completeProductAnalyticsActionMock,
   trackProductAnalyticsActionStartedMock,
+  createApiCredentialProfileMock,
 } = vi.hoisted(() => ({
   fetchAccountTokensMock: vi.fn(),
   createApiTokenMock: vi.fn(),
@@ -33,6 +36,7 @@ const {
   startProductAnalyticsActionMock: vi.fn(),
   completeProductAnalyticsActionMock: vi.fn(),
   trackProductAnalyticsActionStartedMock: vi.fn(),
+  createApiCredentialProfileMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -78,6 +82,16 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     trackProductAnalyticsActionStartedMock(...args),
 }))
 
+vi.mock(
+  "~/services/apiCredentialProfiles/apiCredentialProfilesStorage",
+  () => ({
+    apiCredentialProfilesStorage: {
+      createProfile: (...args: unknown[]) =>
+        createApiCredentialProfileMock(...args),
+    },
+  }),
+)
+
 const ACCOUNT = {
   id: "acc-1",
   name: "Example",
@@ -88,6 +102,7 @@ const ACCOUNT = {
   userId: 1,
   authType: AuthTypeEnum.AccessToken,
   checkIn: { enableDetection: false },
+  tagIds: ["tag-a"],
 } as any
 
 const TOKEN = {
@@ -120,6 +135,7 @@ describe("ModelKeyDialog", () => {
     startProductAnalyticsActionMock.mockReset()
     completeProductAnalyticsActionMock.mockReset()
     trackProductAnalyticsActionStartedMock.mockReset()
+    createApiCredentialProfileMock.mockReset()
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
@@ -305,6 +321,67 @@ describe("ModelKeyDialog", () => {
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
     )
+  })
+
+  it("saves a default-created one-time key to an API credential profile without closing the dialog", async () => {
+    fetchAccountTokensMock.mockResolvedValueOnce([])
+    createApiTokenMock.mockResolvedValueOnce({
+      ...TOKEN,
+      id: 8,
+      key: "sk-created-full-secret",
+      name: "model-key",
+    })
+    createApiCredentialProfileMock.mockResolvedValueOnce({
+      id: "profile-1",
+      name: "Example - model-key",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: ACCOUNT.baseUrl,
+      apiKey: "sk-created-full-secret",
+      tagIds: ACCOUNT.tagIds,
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    })
+    const onClose = vi.fn()
+
+    const user = userEvent.setup()
+    vi.spyOn(navigator.clipboard, "writeText").mockResolvedValue(undefined)
+
+    render(
+      <ModelKeyDialog
+        isOpen={true}
+        onClose={onClose}
+        account={ACCOUNT}
+        modelId="gpt-4"
+        modelEnableGroups={["default"]}
+      />,
+    )
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "modelList:keyDialog.createKey",
+      }),
+    )
+    await user.click(
+      await screen.findByTestId(KEY_MANAGEMENT_TEST_IDS.oneTimeKeySaveButton),
+    )
+
+    await waitFor(() => {
+      expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
+        name: "Example - model-key",
+        apiType: API_TYPES.OPENAI_COMPATIBLE,
+        baseUrl: ACCOUNT.baseUrl,
+        apiKey: "sk-created-full-secret",
+        tagIds: ACCOUNT.tagIds,
+      })
+    })
+    expect(toastSuccessMock).toHaveBeenCalledWith(
+      "keyManagement:messages.savedToApiProfiles",
+    )
+    expect(onClose).not.toHaveBeenCalled()
+    expect(
+      screen.getByLabelText("keyManagement:oneTimeKey.keyLabel"),
+    ).toHaveValue("sk-created-full-secret")
   })
 
   it("formats optional-prefix compatible created keys before showing the one-time dialog", async () => {
