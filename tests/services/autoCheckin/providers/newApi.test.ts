@@ -141,10 +141,13 @@ describe("newApiProvider", () => {
       })
     })
 
-    it("uses the site check-in page for Turnstile-assisted temp context when Turnstile is required", async () => {
+    it("uses an incognito Turnstile temp context first for access-token accounts", async () => {
       const { fetchApi } = await import("~/services/apiService/common/utils")
       const { tempWindowTurnstileFetch } = await import(
         "~/utils/browser/tempWindowFetch"
+      )
+      const { isAllowedIncognitoAccess } = await import(
+        "~/utils/browser/browserApi"
       )
 
       vi.mocked(fetchApi).mockResolvedValueOnce({
@@ -164,6 +167,7 @@ describe("newApiProvider", () => {
         },
         turnstile: { status: "token_obtained", hasTurnstile: true },
       })
+      vi.mocked(isAllowedIncognitoAccess).mockResolvedValueOnce(true)
 
       const account = {
         ...mockAccount,
@@ -184,9 +188,46 @@ describe("newApiProvider", () => {
           fetchUrl: "https://test.com/api/user/checkin",
           responseType: "json",
           authType: AuthTypeEnum.AccessToken,
+          useIncognito: true,
           turnstileTimeoutMs: 12000,
           turnstilePreTrigger: { kind: "checkinButton" },
         }),
+      )
+    })
+
+    it("falls back to normal Turnstile temp context when access-token incognito access is unavailable", async () => {
+      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { tempWindowTurnstileFetch } = await import(
+        "~/utils/browser/tempWindowFetch"
+      )
+      const { isAllowedIncognitoAccess } = await import(
+        "~/utils/browser/browserApi"
+      )
+
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        success: false,
+        message: "Turnstile token 为空",
+        data: null,
+      })
+      vi.mocked(isAllowedIncognitoAccess).mockResolvedValueOnce(false)
+      vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce({
+        success: true,
+        status: 200,
+        headers: {},
+        data: {
+          success: true,
+          message: "签到成功",
+          data: { checkin_date: "2026-01-01", quota_awarded: 1 },
+        },
+        turnstile: { status: "token_obtained", hasTurnstile: true },
+      })
+
+      const result = await newApiProvider.checkIn(mockAccount)
+
+      expect(result.status).toBe("success")
+      expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(1)
+      expect(tempWindowTurnstileFetch).toHaveBeenCalledWith(
+        expect.not.objectContaining({ useIncognito: true }),
       )
     })
 
@@ -574,7 +615,7 @@ describe("newApiProvider", () => {
       })
     })
 
-    it("retries in an incognito temp context when Turnstile widget is not present and checked_in_today is false", async () => {
+    it("falls back to the normal temp context when an incognito-first Turnstile attempt cannot obtain a token", async () => {
       const { fetchApi, fetchApiData } = await import(
         "~/services/apiService/common/utils"
       )
@@ -621,8 +662,12 @@ describe("newApiProvider", () => {
       expect(result.status).toBe("success")
       expect(tempWindowTurnstileFetch).toHaveBeenCalledTimes(2)
       expect(tempWindowTurnstileFetch).toHaveBeenNthCalledWith(
-        2,
+        1,
         expect.objectContaining({ useIncognito: true }),
+      )
+      expect(tempWindowTurnstileFetch).toHaveBeenNthCalledWith(
+        2,
+        expect.not.objectContaining({ useIncognito: true }),
       )
     })
 

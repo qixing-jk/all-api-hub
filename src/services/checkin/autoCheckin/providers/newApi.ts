@@ -265,6 +265,65 @@ async function maybeRetryTurnstileInIncognito(params: {
   )
 }
 
+type TurnstileAssistedAttempt = {
+  assisted: TempWindowTurnstileFetch | null
+  usedIncognito: boolean
+  incognitoAllowed: boolean | null
+}
+
+/**
+ * Run one Turnstile-assisted temp-window check-in attempt.
+ */
+async function runTurnstileAssistedAttempt(params: {
+  assistedParams: ReturnType<typeof buildTurnstileAssistedParams>
+  useIncognito: boolean
+}): Promise<TempWindowTurnstileFetch | null> {
+  return await tempWindowTurnstileFetch({
+    ...params.assistedParams,
+    ...(params.useIncognito ? { useIncognito: true } : {}),
+  })
+}
+
+/**
+ * Prefer an incognito Turnstile context for access-token accounts.
+ */
+async function runPreferredTurnstileAssistedAttempt(params: {
+  account: SiteAccount
+  assistedParams: ReturnType<typeof buildTurnstileAssistedParams>
+}): Promise<TurnstileAssistedAttempt> {
+  if (getEffectiveAuthType(params.account) !== AuthTypeEnum.AccessToken) {
+    return {
+      assisted: await runTurnstileAssistedAttempt({
+        assistedParams: params.assistedParams,
+        useIncognito: false,
+      }),
+      usedIncognito: false,
+      incognitoAllowed: null,
+    }
+  }
+
+  const incognitoAllowed = await isAllowedIncognitoAccess()
+  if (incognitoAllowed === true) {
+    return {
+      assisted: await runTurnstileAssistedAttempt({
+        assistedParams: params.assistedParams,
+        useIncognito: true,
+      }),
+      usedIncognito: true,
+      incognitoAllowed,
+    }
+  }
+
+  return {
+    assisted: await runTurnstileAssistedAttempt({
+      assistedParams: params.assistedParams,
+      useIncognito: false,
+    }),
+    usedIncognito: false,
+    incognitoAllowed,
+  }
+}
+
 /**
  * When the initial check-in attempt indicates Turnstile verification is required,
  */
@@ -278,7 +337,11 @@ async function resolveTurnstileAssistedCheckinResult(params: {
     checkInUrl,
   )
 
-  const assisted = await tempWindowTurnstileFetch(assistedParams)
+  const initialAttempt = await runPreferredTurnstileAssistedAttempt({
+    account: params.account,
+    assistedParams,
+  })
+  let assisted = initialAttempt.assisted
 
   if (!assisted) {
     return {
@@ -301,6 +364,35 @@ async function resolveTurnstileAssistedCheckinResult(params: {
         }
       }
 
+      if (initialAttempt.usedIncognito) {
+        const normalAssisted = await runTurnstileAssistedAttempt({
+          assistedParams,
+          useIncognito: false,
+        })
+
+        if (normalAssisted) {
+          const normalPayload = normalAssisted.data as
+            | NewApiCheckinResponse
+            | undefined
+          const normalMessage = normalizeCheckinMessage(normalPayload?.message)
+          const normalResult = resolveStandardCheckinResult({
+            payload: normalPayload,
+            message: normalMessage,
+          })
+
+          if (normalResult) {
+            return normalResult
+          }
+
+          if (
+            normalAssisted.success ||
+            normalAssisted.turnstile?.status === "token_obtained"
+          ) {
+            assisted = normalAssisted
+          }
+        }
+      }
+
       /**
        * Multi-account edge case:
        * - The API call is made with this account's auth (usually access token),
@@ -313,9 +405,19 @@ async function resolveTurnstileAssistedCheckinResult(params: {
        * without mutating normal browsing state.
        */
       if (
+        !initialAttempt.usedIncognito &&
         assisted.turnstile?.status === "not_present" &&
         !assisted.turnstile?.hasTurnstile
       ) {
+        if (initialAttempt.incognitoAllowed === false) {
+          return {
+            status: CHECKIN_RESULT_STATUS.FAILED,
+            messageKey: NEW_API_MESSAGE_KEYS.turnstileIncognitoAccessRequired,
+            messageParams: { checkInUrl },
+            data: assisted ?? undefined,
+          }
+        }
+
         const incognitoResult = await maybeRetryTurnstileInIncognito({
           assisted,
           assistedParams,
