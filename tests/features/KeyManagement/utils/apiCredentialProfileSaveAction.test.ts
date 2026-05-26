@@ -9,13 +9,16 @@ import {
 import { buildOneTimeApiKeyProfileSaveAction } from "~/features/KeyManagement/utils/apiCredentialProfileSaveAction"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 
-const { createApiCredentialProfileMock, toastSuccessMock } = vi.hoisted(() => ({
-  createApiCredentialProfileMock: vi.fn(),
-  toastSuccessMock: vi.fn(),
-}))
+const { createApiCredentialProfileMock, toastErrorMock, toastSuccessMock } =
+  vi.hoisted(() => ({
+    createApiCredentialProfileMock: vi.fn(),
+    toastErrorMock: vi.fn(),
+    toastSuccessMock: vi.fn(),
+  }))
 
 vi.mock("react-hot-toast", () => ({
   default: {
+    error: toastErrorMock,
     success: toastSuccessMock,
   },
 }))
@@ -33,6 +36,7 @@ vi.mock(
 describe("buildOneTimeApiKeyProfileSaveAction", () => {
   beforeEach(() => {
     createApiCredentialProfileMock.mockReset()
+    toastErrorMock.mockReset()
     toastSuccessMock.mockReset()
   })
 
@@ -112,5 +116,78 @@ describe("buildOneTimeApiKeyProfileSaveAction", () => {
       apiKey: "sk-one-time-full",
       tagIds: [],
     })
+  })
+
+  it("normalizes profile names by trimming, skipping empty parts, and deduplicating labels", async () => {
+    createApiCredentialProfileMock.mockResolvedValueOnce({
+      id: "profile-1",
+      name: "Example - Default API Key",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://api.example.com",
+      apiKey: "sk-one-time-full",
+      tagIds: [],
+      notes: "",
+      createdAt: 1,
+      updatedAt: 1,
+    })
+    const t = vi.fn((key: string) => key) as unknown as TFunction
+    const logger = { error: vi.fn() }
+
+    const saveAction = buildOneTimeApiKeyProfileSaveAction({
+      accountName: "  Example  ",
+      fallbackAccountName: "Example",
+      baseUrl: "https://api.example.com",
+      siteType: SITE_TYPES.NEW_API,
+      token: {
+        key: "sk-one-time-full",
+        name: "  Default API Key  ",
+      },
+      t,
+      logger,
+      source: "AddTokenDialog",
+    })
+
+    await saveAction.onSave()
+
+    expect(createApiCredentialProfileMock).toHaveBeenCalledWith({
+      name: "Example - Default API Key",
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
+      baseUrl: "https://api.example.com",
+      apiKey: "sk-one-time-full",
+      tagIds: [],
+    })
+  })
+
+  it("logs, reports, and rethrows profile creation failures", async () => {
+    const error = new Error("storage failed")
+    createApiCredentialProfileMock.mockRejectedValueOnce(error)
+    const t = vi.fn((key: string) => key) as unknown as TFunction
+    const logger = { error: vi.fn() }
+
+    const saveAction = buildOneTimeApiKeyProfileSaveAction({
+      accountName: "Example",
+      baseUrl: "https://api.example.com",
+      siteType: SITE_TYPES.NEW_API,
+      token: {
+        key: "sk-one-time-full",
+        name: "Default API Key",
+      },
+      t,
+      logger,
+      source: "AddTokenDialog",
+    })
+
+    await expect(saveAction.onSave()).rejects.toThrow(error)
+
+    expect(logger.error).toHaveBeenCalledWith(
+      "Failed to save one-time key to API profiles from AddTokenDialog",
+      {
+        message: "storage failed",
+      },
+    )
+    expect(toastErrorMock).toHaveBeenCalledWith(
+      "keyManagement:messages.saveToApiProfilesFailed",
+    )
+    expect(toastSuccessMock).not.toHaveBeenCalled()
   })
 })

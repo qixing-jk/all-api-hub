@@ -39,6 +39,8 @@ import {
   WorkflowTransitionButton,
 } from "~/components/ui"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
+import { buildApiCredentialProfileName } from "~/features/KeyManagement/utils/apiCredentialProfileName"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { OpenInCherryStudio } from "~/services/integrations/cherryStudio"
@@ -73,9 +75,6 @@ import {
   openApiCredentialProfilesPage,
   openSettingsTab,
 } from "~/utils/navigation"
-
-import { KEY_MANAGEMENT_TEST_IDS } from "../../testIds"
-import { buildApiCredentialProfileName } from "../../utils/apiCredentialProfileName"
 
 /**
  * Unified logger scoped to the Key Management token header actions.

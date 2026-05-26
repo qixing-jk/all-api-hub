@@ -1,5 +1,6 @@
 import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
+import { act } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { KEY_MANAGEMENT_TEST_IDS } from "~/features/KeyManagement/testIds"
@@ -112,5 +113,38 @@ describe("OneTimeApiKeyDialog", () => {
 
     expect(onSave).toHaveBeenCalledTimes(1)
     expect(onClose).not.toHaveBeenCalled()
+  })
+
+  it("prevents duplicate save submissions while a save is in flight", async () => {
+    const user = userEvent.setup()
+    let resolveSave: (() => void) | undefined
+    const onSave = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          resolveSave = resolve
+        }),
+    )
+
+    render(
+      <OneTimeApiKeyDialog
+        isOpen={true}
+        token={{ key: "sk-one-time", name: "Default API Key" } as any}
+        onClose={vi.fn()}
+        autoCopy={false}
+        saveAction={{ onSave }}
+      />,
+    )
+
+    const saveButton = screen.getByTestId(
+      KEY_MANAGEMENT_TEST_IDS.oneTimeKeySaveButton,
+    )
+
+    await user.dblClick(saveButton)
+
+    expect(onSave).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      resolveSave?.()
+    })
   })
 })

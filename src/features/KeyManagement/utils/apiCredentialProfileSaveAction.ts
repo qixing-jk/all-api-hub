@@ -2,12 +2,11 @@ import type { TFunction } from "i18next"
 import toast from "react-hot-toast"
 
 import { AIHUBMIX_API_ORIGIN, SITE_TYPES } from "~/constants/siteType"
+import { buildApiCredentialProfileName } from "~/features/KeyManagement/utils/apiCredentialProfileName"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { ApiToken } from "~/types"
-
-import { buildApiCredentialProfileName } from "./apiCredentialProfileName"
 
 type OneTimeApiKeySaveAction = {
   onSave: () => Promise<void>
