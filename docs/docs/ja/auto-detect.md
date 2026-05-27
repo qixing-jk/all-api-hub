@@ -47,4 +47,3 @@
 自動認識が常に完了しない場合は、**手動追加** に切り替えて、情報を補完し、その後アカウントを保存することができます。
 
 詳細は [アカウント手動追加ガイド](./get-started.md#manual-addition) を参照してください。
-</previous_translation_markdown>
