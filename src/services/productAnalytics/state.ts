@@ -81,7 +81,7 @@ export function normalizeShieldBypassSummaryState(
 }
 
 /**
- * Keeps only analytics runtime state from the shared persisted analytics payload.
+ * Keeps only analytics runtime state from persisted analytics state payloads.
  */
 export function normalizeProductAnalyticsState(
   value: unknown,
@@ -130,10 +130,10 @@ class ProductAnalyticsStateService {
 
   private async saveState(patch: ProductAnalyticsStatePatch): Promise<void> {
     const stored = await this.storage.get(
-      PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES,
+      PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE,
     )
     await this.storage.set(
-      PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES,
+      PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE,
       {
         ...(stored && typeof stored === "object" && !Array.isArray(stored)
           ? stored
@@ -147,7 +147,7 @@ class ProductAnalyticsStateService {
   async getState(): Promise<ProductAnalyticsState> {
     try {
       const stored = await this.storage.get(
-        PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES,
+        PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE,
       )
       return normalizeProductAnalyticsState(stored)
     } catch (error) {

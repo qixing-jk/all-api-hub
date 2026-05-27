@@ -18,6 +18,7 @@ describe("productAnalyticsPreferences", () => {
     await storage.remove(
       PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES,
     )
+    await storage.remove(PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE)
   })
 
   afterEach(async () => {
@@ -25,6 +26,7 @@ describe("productAnalyticsPreferences", () => {
     await storage.remove(
       PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES,
     )
+    await storage.remove(PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE)
   })
 
   it("resolves analytics as enabled when no explicit preference exists", async () => {
@@ -33,7 +35,7 @@ describe("productAnalyticsPreferences", () => {
     )
   })
 
-  it("persists explicit disabled preference durably", async () => {
+  it("persists explicit disabled preference without retaining legacy state fields", async () => {
     await storage.set(
       PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES,
       {
@@ -58,15 +60,13 @@ describe("productAnalyticsPreferences", () => {
     )
     await expect(
       storage.get(PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES),
-    ).resolves.toEqual(
-      expect.objectContaining({
-        lastSettingsSnapshotAt: 67890,
-        shieldBypassSummary: {
-          day: "2026-05-12",
-          promptShownCount: 2,
-        },
-      }),
-    )
+    ).resolves.toEqual({
+      enabled: false,
+      updatedAt: Date.parse("2026-05-12T00:00:00.000Z"),
+    })
+    await expect(
+      storage.get(PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE),
+    ).resolves.toBeUndefined()
   })
 
   it("generates anonymous id once and reuses it", async () => {

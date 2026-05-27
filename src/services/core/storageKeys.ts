@@ -88,6 +88,7 @@ export const USER_PREFERENCES_STORAGE_KEYS = {
 
 export const PRODUCT_ANALYTICS_STORAGE_KEYS = {
   PRODUCT_ANALYTICS_PREFERENCES: "productAnalytics_preferences_v1",
+  PRODUCT_ANALYTICS_STATE: "productAnalytics_state_v1",
 } as const
 
 const DAILY_BALANCE_HISTORY_STORAGE_KEYS = {

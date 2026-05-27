@@ -18,6 +18,7 @@ describe("productAnalyticsState", () => {
     await storage.remove(
       PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES,
     )
+    await storage.remove(PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE)
   })
 
   afterEach(async () => {
@@ -25,9 +26,10 @@ describe("productAnalyticsState", () => {
     await storage.remove(
       PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES,
     )
+    await storage.remove(PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE)
   })
 
-  it("persists site ecosystem snapshot timestamp in analytics local state", async () => {
+  it("persists site ecosystem snapshot timestamp only in analytics state storage", async () => {
     await storage.set(
       PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES,
       {
@@ -46,13 +48,19 @@ describe("productAnalyticsState", () => {
       }),
     )
     await expect(
-      storage.get(PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES),
+      storage.get(PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_STATE),
     ).resolves.toEqual(
       expect.objectContaining({
-        enabled: false,
-        anonymousId: "analytics-existing",
+        lastSiteEcosystemSnapshotAt: 12345,
+        updatedAt: Date.parse("2026-05-12T00:00:00.000Z"),
       }),
     )
+    await expect(
+      storage.get(PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES),
+    ).resolves.toEqual({
+      enabled: false,
+      anonymousId: "analytics-existing",
+    })
   })
 
   it("persists settings snapshot timestamp in analytics local state", async () => {

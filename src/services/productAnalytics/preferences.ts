@@ -21,16 +21,6 @@ interface ProductAnalyticsPreferenceState {
 type ProductAnalyticsPreferencePatch = Partial<ProductAnalyticsPreferenceState>
 
 /**
- * Preserves unrelated fields when preferences share the persisted analytics payload.
- */
-function normalizePersistedObject(value: unknown): Record<string, unknown> {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return {}
-  }
-  return value as Record<string, unknown>
-}
-
-/**
  * Keeps only supported preference fields from persisted storage payloads.
  */
 export function normalizeState(
@@ -75,13 +65,9 @@ class ProductAnalyticsPreferencesService {
     state: ProductAnalyticsPreferenceState,
     patch: ProductAnalyticsPreferencePatch,
   ): Promise<void> {
-    const stored = await this.storage.get(
-      PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES,
-    )
     await this.storage.set(
       PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES,
       {
-        ...normalizePersistedObject(stored),
         ...normalizeState(state),
         ...patch,
         updatedAt: Date.now(),
