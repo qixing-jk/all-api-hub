@@ -2,8 +2,10 @@ import type { PostHogConfig } from "posthog-js/dist/module.no-external"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_PAGE_IDS,
 } from "~/services/productAnalytics/events"
 
@@ -12,6 +14,7 @@ const { posthogMocks, preferenceMocks, getManifestMock, i18nCoreMock } =
     posthogMocks: {
       init: vi.fn(),
       capture: vi.fn(),
+      getFeatureFlagPayload: vi.fn(),
     },
     preferenceMocks: {
       isEnabled: vi.fn(),
@@ -64,6 +67,7 @@ describe("productAnalyticsClient", () => {
       async (work: (anonymousId: string) => Promise<boolean>) =>
         await work("analytics-123"),
     )
+    posthogMocks.getFeatureFlagPayload.mockReturnValue(null)
     getManifestMock.mockReturnValue({ version: "3.37.0" })
     i18nCoreMock.resolvedLanguage = "en"
     i18nCoreMock.language = "en"
@@ -266,6 +270,70 @@ describe("productAnalyticsClient", () => {
     await expect(
       client.capture(PRODUCT_ANALYTICS_EVENTS.AppOpened, {
         url: "https://private.example/path",
+      }),
+    ).resolves.toBe(false)
+
+    expect(posthogMocks.capture).not.toHaveBeenCalled()
+  })
+
+  it("does not capture events disabled by the PostHog analytics policy payload", async () => {
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")
+    posthogMocks.getFeatureFlagPayload.mockReturnValue({
+      disabledEvents: [PRODUCT_ANALYTICS_EVENTS.PageViewed],
+    })
+
+    const client = await importClient()
+
+    await expect(
+      client.capture(PRODUCT_ANALYTICS_EVENTS.PageViewed, {
+        page_id: PRODUCT_ANALYTICS_PAGE_IDS.OptionsBasicSettings,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      }),
+    ).resolves.toBe(false)
+
+    expect(posthogMocks.init).toHaveBeenCalledTimes(1)
+    expect(posthogMocks.getFeatureFlagPayload).toHaveBeenCalledWith(
+      "aah-product-analytics-policy",
+    )
+    expect(posthogMocks.capture).not.toHaveBeenCalled()
+  })
+
+  it("does not capture feature action events disabled by feature id", async () => {
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")
+    posthogMocks.getFeatureFlagPayload.mockReturnValue({
+      disabledFeatureIds: [PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin],
+    })
+
+    const client = await importClient()
+
+    await expect(
+      client.capture(PRODUCT_ANALYTICS_EVENTS.FeatureActionStarted, {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      }),
+    ).resolves.toBe(false)
+
+    expect(posthogMocks.capture).not.toHaveBeenCalled()
+  })
+
+  it("does not capture feature action events disabled by action id", async () => {
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")
+    posthogMocks.getFeatureFlagPayload.mockReturnValue({
+      disabledActionIds: [PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow],
+    })
+
+    const client = await importClient()
+
+    await expect(
+      client.capture(PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted, {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: "success",
       }),
     ).resolves.toBe(false)
 

@@ -16,6 +16,7 @@ import { sanitizeProductAnalyticsEvent } from "./privacy"
 
 const logger = createLogger("ProductAnalyticsClient")
 const DEVELOPMENT_DISTINCT_ID = "analytics-development"
+const PRODUCT_ANALYTICS_POLICY_FLAG_KEY = "aah-product-analytics-policy"
 
 type PostHogConfig = {
   projectToken: string
@@ -25,6 +26,12 @@ type PostHogConfig = {
 type SanitizedCapture = {
   config: PostHogConfig
   properties: Properties
+}
+
+type ProductAnalyticsPolicyPayload = {
+  disabledEvents?: string[]
+  disabledFeatureIds?: string[]
+  disabledActionIds?: string[]
 }
 
 let initialized = false
@@ -100,6 +107,52 @@ function shouldCaptureEvent(
 }
 
 /**
+ * Keeps only string entries from untrusted PostHog feature flag payload fields.
+ */
+function normalizeStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) return []
+  return value.filter((item): item is string => typeof item === "string")
+}
+
+/**
+ * Reads the optional PostHog-hosted analytics policy payload.
+ */
+function readAnalyticsPolicyPayload(): ProductAnalyticsPolicyPayload {
+  const payload = posthog.getFeatureFlagPayload(
+    PRODUCT_ANALYTICS_POLICY_FLAG_KEY,
+  )
+  if (!payload || typeof payload !== "object" || Array.isArray(payload)) {
+    return {}
+  }
+
+  const policy = payload as Record<string, unknown>
+  return {
+    disabledEvents: normalizeStringList(policy.disabledEvents),
+    disabledFeatureIds: normalizeStringList(policy.disabledFeatureIds),
+    disabledActionIds: normalizeStringList(policy.disabledActionIds),
+  }
+}
+
+/**
+ * Checks whether the sanitized event is suppressed by the remote policy.
+ */
+function isDisabledByPolicy(
+  eventName: ProductAnalyticsEventName,
+  properties: Properties,
+): boolean {
+  const policy = readAnalyticsPolicyPayload()
+  if (policy.disabledEvents?.includes(eventName)) return true
+
+  const featureId =
+    typeof properties.feature_id === "string" ? properties.feature_id : ""
+  if (featureId && policy.disabledFeatureIds?.includes(featureId)) return true
+
+  const actionId =
+    typeof properties.action_id === "string" ? properties.action_id : ""
+  return Boolean(actionId && policy.disabledActionIds?.includes(actionId))
+}
+
+/**
  * Collapses local development traffic into one stable PostHog profile.
  */
 function resolveDistinctId(anonymousId: string): string {
@@ -138,6 +191,10 @@ async function captureWithAnonymousId(
       const distinctId = resolveDistinctId(anonymousId)
 
       initializePostHog(capture.config, distinctId)
+
+      if (isDisabledByPolicy(eventName, capture.properties)) {
+        return false
+      }
 
       posthog.capture(eventName, {
         ...buildSharedContext(),
