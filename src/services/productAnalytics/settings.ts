@@ -39,6 +39,9 @@ import { bucketCount } from "./privacy"
 type SettingChangedPayload = ProductAnalyticsEventPayload<
   typeof PRODUCT_ANALYTICS_EVENTS.SettingChanged
 >
+type SettingsSnapshotCapturedPayload = ProductAnalyticsEventPayload<
+  typeof PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured
+>
 
 type UserManagedSiteModelSyncConfig = NonNullable<
   UserPreferences["managedSiteModelSync"]
@@ -600,6 +603,147 @@ export function buildSettingsSnapshotEvents(
 }
 
 /**
+ * Builds one aggregate settings snapshot for cadence-limited background
+ * telemetry. Patch-scoped option-page telemetry stays module-level so it can
+ * attribute which settings area was saved.
+ */
+export function buildAggregateSettingsSnapshotEvent(
+  preferences: UserPreferences,
+  entrypoint: ProductAnalyticsEntrypoint,
+): SettingsSnapshotCapturedPayload {
+  const [
+    account,
+    autoRefresh,
+    usageHistory,
+    balanceHistory,
+    managedSite,
+    managedSiteModelSync,
+    autoCheckin,
+    modelRedirect,
+    redemptionAssist,
+    webAiApiCheck,
+    tempWindowFallback,
+    webdav,
+    taskNotifications,
+    siteAnnouncements,
+  ] = buildSettingsSnapshotEvents(preferences, entrypoint)
+
+  return {
+    entrypoint,
+    auto_provision_key_on_account_add_enabled:
+      account.auto_provision_key_on_account_add_enabled,
+    auto_fill_current_site_url_on_account_add_enabled:
+      account.auto_fill_current_site_url_on_account_add_enabled,
+    warn_on_duplicate_account_add_enabled:
+      account.warn_on_duplicate_account_add_enabled,
+    show_today_cashflow_enabled: account.show_today_cashflow_enabled,
+    show_health_status_enabled: account.show_health_status_enabled,
+    account_auto_refresh_enabled: autoRefresh.enabled,
+    account_auto_refresh_on_open_enabled: autoRefresh.refresh_on_open_enabled,
+    account_auto_refresh_interval_bucket: autoRefresh.refresh_interval_bucket,
+    account_auto_refresh_min_interval_bucket:
+      autoRefresh.min_refresh_interval_bucket,
+    usage_history_enabled: usageHistory.enabled,
+    usage_history_mode: usageHistory.mode,
+    usage_history_sync_interval_bucket: usageHistory.sync_interval_bucket,
+    usage_history_retention_days_bucket: usageHistory.retention_days_bucket,
+    balance_history_enabled: balanceHistory.enabled,
+    balance_history_end_of_day_capture_enabled:
+      balanceHistory.end_of_day_capture_enabled,
+    balance_history_retention_days_bucket: balanceHistory.retention_days_bucket,
+    managed_site_type: managedSite.managed_site_type,
+    new_api_configured: managedSite.new_api_configured,
+    done_hub_configured: managedSite.done_hub_configured,
+    veloera_configured: managedSite.veloera_configured,
+    octopus_configured: managedSite.octopus_configured,
+    axon_hub_configured: managedSite.axon_hub_configured,
+    claude_code_hub_configured: managedSite.claude_code_hub_configured,
+    cli_proxy_configured: managedSite.cli_proxy_configured,
+    claude_code_router_configured: managedSite.claude_code_router_configured,
+    managed_site_model_sync_enabled: managedSiteModelSync.enabled,
+    managed_site_model_sync_interval_bucket:
+      managedSiteModelSync.sync_interval_bucket,
+    managed_site_model_sync_concurrency_bucket:
+      managedSiteModelSync.concurrency_bucket,
+    managed_site_model_sync_retry_max_attempts_bucket:
+      managedSiteModelSync.retry_max_attempts_bucket,
+    managed_site_model_sync_rate_limit_rpm_bucket:
+      managedSiteModelSync.rate_limit_rpm_bucket,
+    managed_site_model_sync_rate_limit_burst_bucket:
+      managedSiteModelSync.rate_limit_burst_bucket,
+    managed_site_model_sync_allowed_models_configured:
+      managedSiteModelSync.allowed_models_configured,
+    managed_site_model_sync_global_filters_configured:
+      managedSiteModelSync.global_filters_configured,
+    auto_checkin_global_enabled: autoCheckin.global_enabled,
+    auto_checkin_ui_pretrigger_enabled: autoCheckin.ui_pretrigger_enabled,
+    auto_checkin_notify_completion_enabled:
+      autoCheckin.notify_completion_enabled,
+    auto_checkin_retry_enabled: autoCheckin.retry_enabled,
+    auto_checkin_schedule_mode: autoCheckin.schedule_mode,
+    auto_checkin_retry_interval_bucket: autoCheckin.retry_interval_bucket,
+    auto_checkin_retry_max_attempts_bucket:
+      autoCheckin.retry_max_attempts_bucket,
+    auto_checkin_window_length_bucket: autoCheckin.window_length_bucket,
+    auto_checkin_deterministic_time_bucket:
+      autoCheckin.deterministic_time_bucket,
+    model_redirect_enabled: modelRedirect.enabled,
+    model_redirect_standard_models_configured:
+      modelRedirect.standard_models_configured,
+    model_redirect_prune_missing_targets_on_model_sync_enabled:
+      modelRedirect.prune_missing_targets_on_model_sync_enabled,
+    redemption_assist_enabled: redemptionAssist.enabled,
+    redemption_assist_context_menu_enabled:
+      redemptionAssist.context_menu_enabled,
+    redemption_assist_relaxed_code_validation_enabled:
+      redemptionAssist.relaxed_code_validation_enabled,
+    redemption_assist_allowlist_enabled: redemptionAssist.url_whitelist_enabled,
+    redemption_assist_allowlist_patterns_configured:
+      redemptionAssist.url_whitelist_patterns_configured,
+    redemption_assist_allowlist_account_urls_enabled:
+      redemptionAssist.url_whitelist_account_urls_enabled,
+    redemption_assist_allowlist_checkin_redeem_urls_enabled:
+      redemptionAssist.url_whitelist_checkin_redeem_urls_enabled,
+    web_ai_api_check_enabled: webAiApiCheck.enabled,
+    web_ai_api_check_context_menu_enabled: webAiApiCheck.context_menu_enabled,
+    web_ai_api_check_auto_detect_enabled: webAiApiCheck.auto_detect_enabled,
+    web_ai_api_check_auto_detect_patterns_configured:
+      webAiApiCheck.auto_detect_url_patterns_configured,
+    temp_window_fallback_enabled: tempWindowFallback.enabled,
+    temp_window_fallback_popup_enabled: tempWindowFallback.popup_enabled,
+    temp_window_fallback_sidepanel_enabled:
+      tempWindowFallback.sidepanel_enabled,
+    temp_window_fallback_options_enabled: tempWindowFallback.options_enabled,
+    temp_window_fallback_auto_refresh_enabled:
+      tempWindowFallback.auto_refresh_enabled,
+    temp_window_fallback_manual_refresh_enabled:
+      tempWindowFallback.manual_refresh_enabled,
+    temp_window_fallback_mode: tempWindowFallback.mode,
+    webdav_configured: webdav.configured,
+    webdav_auto_sync_enabled: webdav.auto_sync_enabled,
+    webdav_backup_encryption_enabled: webdav.backup_encryption_enabled,
+    webdav_sync_strategy: webdav.sync_strategy,
+    webdav_sync_interval_bucket: webdav.sync_interval_bucket,
+    webdav_sync_accounts_enabled: webdav.sync_accounts_enabled,
+    webdav_sync_bookmarks_enabled: webdav.sync_bookmarks_enabled,
+    webdav_sync_api_profiles_enabled: webdav.sync_api_profiles_enabled,
+    webdav_sync_preferences_enabled: webdav.sync_preferences_enabled,
+    task_notifications_enabled: taskNotifications.enabled,
+    task_notifications_browser_channel_enabled:
+      taskNotifications.browser_channel_enabled,
+    task_notifications_third_party_channel_count_bucket:
+      taskNotifications.third_party_channel_count_bucket,
+    task_notifications_task_enabled_count_bucket:
+      taskNotifications.task_enabled_count_bucket,
+    site_announcements_enabled: siteAnnouncements.enabled,
+    site_announcements_notification_enabled:
+      siteAnnouncements.notification_enabled,
+    site_announcements_polling_interval_bucket:
+      siteAnnouncements.polling_interval_bucket,
+  }
+}
+
+/**
  * Emits settings snapshots for either all tracked settings or just the modules
  * touched by a saved preference patch.
  */
@@ -614,7 +758,7 @@ export function trackSettingsSnapshotEvents(
     patch,
   )) {
     void trackProductAnalyticsEvent(
-      PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
       properties,
     )
   }

@@ -205,6 +205,10 @@ describe("product analytics event enums", () => {
   })
 
   it("defines fixed Managed Site Model Sync setting ids", () => {
+    expect(PRODUCT_ANALYTICS_EVENTS).toMatchObject({
+      SettingsSnapshotCaptured: "settings_snapshot_captured",
+    })
+
     expect(PRODUCT_ANALYTICS_SETTING_IDS).toMatchObject({
       AccountBehaviorSnapshot: "account_behavior_snapshot",
       AutoRefreshConfigSnapshot: "auto_refresh_config_snapshot",
@@ -290,16 +294,19 @@ describe("product analytics event enums", () => {
 describe("trackProductAnalyticsEvent", () => {
   it("forwards typed analytics events to the background runtime handler", async () => {
     await expect(
-      trackProductAnalyticsEvent(PRODUCT_ANALYTICS_EVENTS.SettingChanged, {
-        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ProductAnalyticsEnabled,
-        enabled: true,
-        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-      }),
+      trackProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+        {
+          setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ProductAnalyticsEnabled,
+          enabled: true,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        },
+      ),
     ).resolves.toBe(true)
 
     expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
       action: RuntimeActionIds.ProductAnalyticsTrackEvent,
-      eventName: PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      eventName: PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
       properties: {
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ProductAnalyticsEnabled,
         enabled: true,

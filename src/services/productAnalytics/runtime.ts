@@ -17,7 +17,7 @@ import {
   type ProductAnalyticsRuntimeRequest,
 } from "./events"
 import { productAnalyticsPreferences } from "./preferences"
-import { buildSettingsSnapshotEvents } from "./settings"
+import { buildAggregateSettingsSnapshotEvent } from "./settings"
 import { shouldSendSettingsSnapshot } from "./settingsSnapshot"
 import {
   buildSiteEcosystemAnalyticsEvents,
@@ -84,18 +84,16 @@ async function captureSettingsSnapshot(): Promise<boolean> {
   }
 
   const preferences = await userPreferences.getPreferences()
-  const events = buildSettingsSnapshotEvents(
+  const event = buildAggregateSettingsSnapshotEvent(
     preferences,
     PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
   )
 
-  for (const properties of events) {
-    const captured = await productAnalyticsClient.capture(
-      PRODUCT_ANALYTICS_EVENTS.SettingChanged,
-      properties,
-    )
-    if (!captured) return false
-  }
+  const captured = await productAnalyticsClient.capture(
+    PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+    event,
+  )
+  if (!captured) return false
 
   await productAnalyticsPreferences.setLastSettingsSnapshotAt(now)
   return true

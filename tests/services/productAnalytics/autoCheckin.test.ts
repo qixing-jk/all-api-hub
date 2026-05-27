@@ -60,7 +60,7 @@ describe("auto-checkin product analytics", () => {
     expect(JSON.stringify(snapshot)).not.toContain("09:30")
   })
 
-  it("tracks the config snapshot as a setting_changed event", () => {
+  it("tracks the config snapshot as a snapshot event", () => {
     trackAutoCheckinConfigSnapshot(
       {
         globalEnabled: false,
@@ -79,7 +79,7 @@ describe("auto-checkin product analytics", () => {
     )
 
     expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,

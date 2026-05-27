@@ -19,6 +19,7 @@ import {
   trackProductAnalyticsEvent,
 } from "~/services/productAnalytics/events"
 import {
+  buildAggregateSettingsSnapshotEvent,
   buildSettingsSnapshotEvents,
   trackSettingsSnapshotEvents,
 } from "~/services/productAnalytics/settings"
@@ -388,6 +389,44 @@ describe("settings product analytics snapshots", () => {
     expect(JSON.stringify(events)).not.toContain("secret")
   })
 
+  it("builds one aggregate settings snapshot with module-prefixed fields", () => {
+    const snapshot = buildAggregateSettingsSnapshotEvent(
+      createPreferences({
+        accountAutoRefresh: {
+          enabled: true,
+          refreshOnOpen: true,
+          interval: 3_600_000,
+          minInterval: 300_000,
+        },
+        webdav: {
+          ...createPreferences().webdav,
+          url: "https://dav.example/private",
+          username: "private-user",
+          autoSync: true,
+        },
+        autoCheckin: {
+          ...createPreferences().autoCheckin!,
+          globalEnabled: false,
+        },
+      }),
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+    )
+
+    expect(snapshot).toEqual(
+      expect.objectContaining({
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        account_auto_refresh_enabled: true,
+        account_auto_refresh_on_open_enabled: true,
+        webdav_configured: true,
+        webdav_auto_sync_enabled: true,
+        auto_checkin_global_enabled: false,
+      }),
+    )
+    expect(snapshot).not.toHaveProperty("setting_id")
+    expect(JSON.stringify(snapshot)).not.toContain("private")
+    expect(JSON.stringify(snapshot)).not.toContain("https://")
+  })
+
   it("tracks only affected snapshots for a preference patch", () => {
     const preferences = createPreferences()
 
@@ -403,14 +442,14 @@ describe("settings product analytics snapshots", () => {
     expect(trackProductAnalyticsEventMock).toHaveBeenCalledTimes(2)
     expect(trackProductAnalyticsEventMock).toHaveBeenNthCalledWith(
       1,
-      PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoRefreshConfigSnapshot,
       }),
     )
     expect(trackProductAnalyticsEventMock).toHaveBeenNthCalledWith(
       2,
-      PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebDavConfigSnapshot,
       }),

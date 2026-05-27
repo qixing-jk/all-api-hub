@@ -158,7 +158,7 @@ export function trackAutoCheckinConfigSnapshot(
   entrypoint: ProductAnalyticsEntrypoint,
 ) {
   void trackProductAnalyticsEvent(
-    PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+    PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
     buildAutoCheckinConfigSnapshotProperties(preferences, entrypoint),
   )
 }

@@ -111,7 +111,7 @@ describe("product analytics runtime", () => {
     expect(sendResponse).toHaveBeenCalledWith({ success: true })
   })
 
-  it("sends rate-limited settings snapshots", async () => {
+  it("sends one rate-limited aggregate settings snapshot", async () => {
     const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValue(
       createDefaultPreferences(Date.parse("2026-05-12T00:00:00.000Z")),
@@ -125,18 +125,13 @@ describe("product analytics runtime", () => {
       sendResponse,
     )
 
+    expect(captureMock).toHaveBeenCalledTimes(1)
     expect(captureMock).toHaveBeenCalledWith(
-      "setting_changed",
+      "settings_snapshot_captured",
       expect.objectContaining({
-        setting_id: "account_behavior_snapshot",
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      }),
-    )
-    expect(captureMock).toHaveBeenCalledWith(
-      "setting_changed",
-      expect.objectContaining({
-        setting_id: "webdav_config_snapshot",
-        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        account_auto_refresh_enabled: false,
+        webdav_configured: false,
       }),
     )
     expect(preferenceMocks.setLastSettingsSnapshotAt).toHaveBeenCalledWith(
@@ -165,9 +160,9 @@ describe("product analytics runtime", () => {
     expect(preferenceMocks.setLastSettingsSnapshotAt).not.toHaveBeenCalled()
   })
 
-  it("does not update settings snapshot cadence when a snapshot event capture returns false", async () => {
+  it("does not update settings snapshot cadence when aggregate snapshot capture returns false", async () => {
     const sendResponse = vi.fn()
-    captureMock.mockResolvedValueOnce(true).mockResolvedValueOnce(false)
+    captureMock.mockResolvedValueOnce(false)
 
     await handleProductAnalyticsMessage(
       {
@@ -177,7 +172,7 @@ describe("product analytics runtime", () => {
       sendResponse,
     )
 
-    expect(captureMock).toHaveBeenCalledTimes(2)
+    expect(captureMock).toHaveBeenCalledTimes(1)
     expect(preferenceMocks.setLastSettingsSnapshotAt).not.toHaveBeenCalled()
     expect(sendResponse).toHaveBeenCalledWith({ success: false })
   })
@@ -382,14 +377,14 @@ describe("product analytics runtime", () => {
     expect(captureMock).not.toHaveBeenCalled()
 
     await vi.advanceTimersByTimeAsync(1)
-    expect(captureMock).toHaveBeenCalledTimes(14)
+    expect(captureMock).toHaveBeenCalledTimes(1)
 
     handler({ user_preferences: {} }, "local")
     cleanup()
     await vi.advanceTimersByTimeAsync(2_000)
 
     expect(removeListener).toHaveBeenCalledWith(handler)
-    expect(captureMock).toHaveBeenCalledTimes(14)
+    expect(captureMock).toHaveBeenCalledTimes(1)
   })
 
   it("keeps preference change listener setup idempotent in one runtime context", async () => {
@@ -407,7 +402,7 @@ describe("product analytics runtime", () => {
 
     handler({ user_preferences: {} }, "local")
     await vi.advanceTimersByTimeAsync(2_000)
-    expect(captureMock).toHaveBeenCalledTimes(14)
+    expect(captureMock).toHaveBeenCalledTimes(1)
 
     secondCleanup()
     expect(removeListener).toHaveBeenCalledTimes(1)
@@ -418,7 +413,7 @@ describe("product analytics runtime", () => {
     await vi.advanceTimersByTimeAsync(2_000)
 
     expect(removeListener).toHaveBeenCalledTimes(1)
-    expect(captureMock).toHaveBeenCalledTimes(14)
+    expect(captureMock).toHaveBeenCalledTimes(1)
   })
 
   it("keeps account change listener setup idempotent in one runtime context", async () => {
