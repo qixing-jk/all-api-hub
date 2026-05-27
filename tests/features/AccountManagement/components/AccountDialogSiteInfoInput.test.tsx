@@ -109,6 +109,24 @@ describe("AccountDialog SiteInfoInput", () => {
     expect(props.onRequestCookieAuthPermissions).toHaveBeenCalledTimes(1)
   })
 
+  it("hides the cookie permission action for Sub2API even when stale cookie auth is selected", async () => {
+    const props = createAddModeProps()
+    props.siteType = SITE_TYPES.SUB2API
+    props.authType = AuthTypeEnum.Cookie
+    props.cookieAuthPermissionsGranted = false
+
+    render(<SiteInfoInput {...props} />)
+
+    expect(
+      await screen.findByText("accountDialog:siteInfo.sub2apiHint"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        "accountDialog:form.cookiePermissionRecommendationDesc",
+      ),
+    ).not.toBeInTheDocument()
+  })
+
   it("stacks auth above the URL before switching to a wide two-column layout", async () => {
     const props = createAddModeProps()
 

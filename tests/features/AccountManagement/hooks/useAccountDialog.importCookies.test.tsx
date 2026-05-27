@@ -6,6 +6,7 @@ import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { AuthTypeEnum } from "~/types"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const { mockOpenWithAccount, mockOpenSub2ApiTokenCreationDialog } = vi.hoisted(
@@ -277,7 +278,7 @@ describe("useAccountDialog cookie import feedback", () => {
     })
 
     await act(async () => {
-      result.current.setters.setAuthType("cookie" as any)
+      result.current.setters.setAuthType(AuthTypeEnum.Cookie)
     })
 
     await waitFor(() => {

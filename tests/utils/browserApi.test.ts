@@ -1341,4 +1341,23 @@ describe("browserApi action and permissions helpers", () => {
       (globalThis as any).browser.permissions.onRemoved.removeListener,
     ).toHaveBeenCalledWith(removed)
   })
+
+  it("returns safe cleanup functions when permission event listeners are unsupported", () => {
+    ;(globalThis as any).browser.permissions.onAdded.addListener = vi.fn(() => {
+      throw new Error("not implemented")
+    })
+    ;(globalThis as any).browser.permissions.onRemoved.addListener = vi.fn(
+      () => {
+        throw new Error("not implemented")
+      },
+    )
+
+    const cleanupAdded = onPermissionsAdded(vi.fn())
+    const cleanupRemoved = onPermissionsRemoved(vi.fn())
+
+    expect(typeof cleanupAdded).toBe("function")
+    expect(typeof cleanupRemoved).toBe("function")
+    expect(() => cleanupAdded()).not.toThrow()
+    expect(() => cleanupRemoved()).not.toThrow()
+  })
 })

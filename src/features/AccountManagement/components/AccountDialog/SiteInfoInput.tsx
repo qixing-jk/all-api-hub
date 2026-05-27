@@ -91,6 +91,7 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
   const isSub2Api = siteType === SITE_TYPES.SUB2API
   const shouldShowCookiePermissionRecommendation =
     !isDetected &&
+    !isSub2Api &&
     props.showAuthTypeSelector === true &&
     props.authType === AuthTypeEnum.Cookie
 

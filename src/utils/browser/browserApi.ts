@@ -1074,8 +1074,15 @@ export async function removePermissions(
 export function onPermissionsAdded(
   callback: (permissions: browser.permissions.Permissions) => void,
 ): () => void {
-  browser.permissions.onAdded.addListener(callback)
-  return () => browser.permissions.onAdded.removeListener(callback)
+  try {
+    browser.permissions.onAdded.addListener(callback)
+    return () => browser.permissions.onAdded.removeListener(callback)
+  } catch (error) {
+    logger.warn("permissions.onAdded listener unavailable", {
+      error: getErrorMessage(error),
+    })
+    return () => {}
+  }
 }
 
 /**
@@ -1085,6 +1092,13 @@ export function onPermissionsAdded(
 export function onPermissionsRemoved(
   callback: (permissions: browser.permissions.Permissions) => void,
 ): () => void {
-  browser.permissions.onRemoved.addListener(callback)
-  return () => browser.permissions.onRemoved.removeListener(callback)
+  try {
+    browser.permissions.onRemoved.addListener(callback)
+    return () => browser.permissions.onRemoved.removeListener(callback)
+  } catch (error) {
+    logger.warn("permissions.onRemoved listener unavailable", {
+      error: getErrorMessage(error),
+    })
+    return () => {}
+  }
 }
