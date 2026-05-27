@@ -7,12 +7,12 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "./events"
+import { bucketCount } from "./privacy"
 import {
-  productAnalyticsPreferences,
+  productAnalyticsState,
   type ProductAnalyticsShieldBypassSummaryPatch,
   type ProductAnalyticsShieldBypassSummaryState,
-} from "./preferences"
-import { bucketCount } from "./privacy"
+} from "./state"
 
 /**
  * Formats timestamps into the UTC day bucket used for daily summaries.
@@ -96,7 +96,7 @@ function buildSummaryProperties(
 async function incrementShieldBypassSummary(
   patch: ProductAnalyticsShieldBypassSummaryPatch,
 ) {
-  await productAnalyticsPreferences.incrementShieldBypassSummary(patch)
+  await productAnalyticsState.incrementShieldBypassSummary(patch)
 }
 
 /**
@@ -154,8 +154,7 @@ export async function recordShieldBypassTempWindowTurnstileFetchResult(
  * Sends the previous UTC day's shield-bypass summary when it has activity.
  */
 export async function flushShieldBypassDailySummary(): Promise<boolean> {
-  const summary =
-    await productAnalyticsPreferences.getShieldBypassSummaryState()
+  const summary = await productAnalyticsState.getShieldBypassSummaryState()
   const today = getUtcDay()
 
   if (!summary.day || summary.day === today || !hasSummaryActivity(summary)) {
@@ -168,7 +167,7 @@ export async function flushShieldBypassDailySummary(): Promise<boolean> {
   )
   if (!captured) return false
 
-  await productAnalyticsPreferences.replaceShieldBypassSummaryState(
+  await productAnalyticsState.replaceShieldBypassSummaryState(
     emptySummary(today),
   )
   return true

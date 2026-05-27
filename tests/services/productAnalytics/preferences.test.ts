@@ -4,7 +4,6 @@ import { Storage } from "@plasmohq/storage"
 
 import { PRODUCT_ANALYTICS_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
-  normalizeShieldBypassSummaryState,
   normalizeState,
   PRODUCT_ANALYTICS_DEFAULT_ENABLED,
   productAnalyticsPreferences,
@@ -35,6 +34,17 @@ describe("productAnalyticsPreferences", () => {
   })
 
   it("persists explicit disabled preference durably", async () => {
+    await storage.set(
+      PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES,
+      {
+        lastSettingsSnapshotAt: 67890,
+        shieldBypassSummary: {
+          day: "2026-05-12",
+          promptShownCount: 2,
+        },
+      },
+    )
+
     await expect(productAnalyticsPreferences.setEnabled(false)).resolves.toBe(
       true,
     )
@@ -44,6 +54,17 @@ describe("productAnalyticsPreferences", () => {
       expect.objectContaining({
         enabled: false,
         updatedAt: Date.parse("2026-05-12T00:00:00.000Z"),
+      }),
+    )
+    await expect(
+      storage.get(PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES),
+    ).resolves.toEqual(
+      expect.objectContaining({
+        lastSettingsSnapshotAt: 67890,
+        shieldBypassSummary: {
+          day: "2026-05-12",
+          promptShownCount: 2,
+        },
       }),
     )
   })
@@ -130,113 +151,24 @@ describe("productAnalyticsPreferences", () => {
     ).resolves.toBe(first)
   })
 
-  it("persists site ecosystem snapshot timestamp", async () => {
-    await expect(
-      productAnalyticsPreferences.setLastSiteEcosystemSnapshotAt(12345),
-    ).resolves.toBe(true)
-
-    await expect(productAnalyticsPreferences.getState()).resolves.toEqual(
-      expect.objectContaining({
-        lastSiteEcosystemSnapshotAt: 12345,
-      }),
-    )
-  })
-
-  it("persists settings snapshot timestamp", async () => {
-    await expect(
-      productAnalyticsPreferences.setLastSettingsSnapshotAt(67890),
-    ).resolves.toBe(true)
-
-    await expect(productAnalyticsPreferences.getState()).resolves.toEqual(
-      expect.objectContaining({
-        lastSettingsSnapshotAt: 67890,
-      }),
-    )
-  })
-
-  it("increments shield bypass summary counts for the current UTC day", async () => {
-    await productAnalyticsPreferences.incrementShieldBypassSummary({
-      promptShownCount: 2,
-      tempWindowFetchSuccessCount: 1,
-    })
-    await productAnalyticsPreferences.incrementShieldBypassSummary({
-      promptShownCount: 1,
-      tempWindowFetchFailureCount: 1,
-    })
-
-    await expect(productAnalyticsPreferences.getState()).resolves.toEqual(
-      expect.objectContaining({
-        shieldBypassSummary: expect.objectContaining({
-          day: "2026-05-12",
-          promptShownCount: 3,
-          tempWindowFetchSuccessCount: 1,
-          tempWindowFetchFailureCount: 1,
-        }),
-      }),
-    )
-  })
-
-  it("rolls shield bypass summary counts to a new UTC day", async () => {
-    await productAnalyticsPreferences.replaceShieldBypassSummaryState({
-      day: "2026-05-11",
-      promptShownCount: 9,
-    })
-
-    await productAnalyticsPreferences.incrementShieldBypassSummary({
-      settingsVisitedCount: 1,
-    })
-
-    await expect(productAnalyticsPreferences.getState()).resolves.toEqual(
-      expect.objectContaining({
-        shieldBypassSummary: {
-          day: "2026-05-12",
-          settingsVisitedCount: 1,
-        },
-      }),
-    )
-  })
-
-  it("rejects invalid settings snapshot timestamps", async () => {
-    await expect(
-      productAnalyticsPreferences.setLastSettingsSnapshotAt(Number.NaN),
-    ).resolves.toBe(false)
-
-    await expect(productAnalyticsPreferences.getState()).resolves.not.toEqual(
-      expect.objectContaining({
-        lastSettingsSnapshotAt: expect.any(Number),
-      }),
-    )
-  })
-
   it("normalizes persisted anonymous id whitespace", () => {
     expect(normalizeState({ anonymousId: "  analytics-existing  " })).toEqual({
       anonymousId: "analytics-existing",
     })
   })
 
-  it("normalizes persisted settings snapshot timestamp", () => {
-    expect(normalizeState({ lastSettingsSnapshotAt: 67890 })).toEqual({
-      lastSettingsSnapshotAt: 67890,
-    })
-  })
-
-  it("drops invalid persisted settings snapshot timestamp", () => {
-    expect(normalizeState({ lastSettingsSnapshotAt: Number.NaN })).toEqual({})
-  })
-
-  it("normalizes persisted shield bypass summary counts", () => {
+  it("keeps telemetry state out of normalized preferences", () => {
     expect(
-      normalizeShieldBypassSummaryState({
-        day: "2026-05-12",
-        promptShownCount: 2.8,
-        promptDismissedCount: -1,
-        settingsVisitedCount: Number.NaN,
-        tempWindowFetchSuccessCount: 1,
+      normalizeState({
+        anonymousId: "analytics-existing",
+        lastSettingsSnapshotAt: 67890,
+        shieldBypassSummary: {
+          day: "2026-05-12",
+          promptShownCount: 2,
+        },
       }),
     ).toEqual({
-      day: "2026-05-12",
-      promptShownCount: 2,
-      tempWindowFetchSuccessCount: 1,
+      anonymousId: "analytics-existing",
     })
   })
 })

@@ -9,9 +9,9 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 
-const { captureMock, preferenceMocks } = vi.hoisted(() => ({
+const { captureMock, stateMocks } = vi.hoisted(() => ({
   captureMock: vi.fn(),
-  preferenceMocks: {
+  stateMocks: {
     getShieldBypassSummaryState: vi.fn(),
     incrementShieldBypassSummary: vi.fn(),
     replaceShieldBypassSummaryState: vi.fn(),
@@ -24,16 +24,14 @@ vi.mock("~/services/productAnalytics/client", () => ({
   },
 }))
 
-vi.mock("~/services/productAnalytics/preferences", async (importOriginal) => {
+vi.mock("~/services/productAnalytics/state", async (importOriginal) => {
   const actual =
-    await importOriginal<
-      typeof import("~/services/productAnalytics/preferences")
-    >()
+    await importOriginal<typeof import("~/services/productAnalytics/state")>()
   return {
     ...actual,
-    productAnalyticsPreferences: {
-      ...actual.productAnalyticsPreferences,
-      ...preferenceMocks,
+    productAnalyticsState: {
+      ...actual.productAnalyticsState,
+      ...stateMocks,
     },
   }
 })
@@ -44,7 +42,7 @@ describe("shield bypass product analytics summary", () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date("2026-05-12T08:00:00.000Z"))
     captureMock.mockResolvedValue(true)
-    preferenceMocks.getShieldBypassSummaryState.mockResolvedValue({
+    stateMocks.getShieldBypassSummaryState.mockResolvedValue({
       day: "2026-05-11",
       promptShownCount: 11,
       promptDismissedCount: 2,
@@ -54,8 +52,8 @@ describe("shield bypass product analytics summary", () => {
       tempWindowTurnstileFetchSuccessCount: 0,
       tempWindowTurnstileFetchFailureCount: 4,
     })
-    preferenceMocks.incrementShieldBypassSummary.mockResolvedValue(true)
-    preferenceMocks.replaceShieldBypassSummaryState.mockResolvedValue(true)
+    stateMocks.incrementShieldBypassSummary.mockResolvedValue(true)
+    stateMocks.replaceShieldBypassSummaryState.mockResolvedValue(true)
   })
 
   it("records prompt exposure locally instead of sending per-exposure analytics", async () => {
@@ -65,7 +63,7 @@ describe("shield bypass product analytics summary", () => {
 
     await recordShieldBypassPromptShown()
 
-    expect(preferenceMocks.incrementShieldBypassSummary).toHaveBeenCalledWith({
+    expect(stateMocks.incrementShieldBypassSummary).toHaveBeenCalledWith({
       promptShownCount: 1,
     })
     expect(captureMock).not.toHaveBeenCalled()
@@ -96,9 +94,7 @@ describe("shield bypass product analytics summary", () => {
         temp_window_turnstile_fetch_failure_count_bucket: "4_10",
       },
     )
-    expect(
-      preferenceMocks.replaceShieldBypassSummaryState,
-    ).toHaveBeenCalledWith({
+    expect(stateMocks.replaceShieldBypassSummaryState).toHaveBeenCalledWith({
       day: "2026-05-12",
       promptShownCount: 0,
       promptDismissedCount: 0,
@@ -111,7 +107,7 @@ describe("shield bypass product analytics summary", () => {
   })
 
   it("keeps same-day summary local until the next UTC day", async () => {
-    preferenceMocks.getShieldBypassSummaryState.mockResolvedValue({
+    stateMocks.getShieldBypassSummaryState.mockResolvedValue({
       day: "2026-05-12",
       promptShownCount: 5,
     })
@@ -122,8 +118,6 @@ describe("shield bypass product analytics summary", () => {
     await expect(flushShieldBypassDailySummary()).resolves.toBe(false)
 
     expect(captureMock).not.toHaveBeenCalled()
-    expect(
-      preferenceMocks.replaceShieldBypassSummaryState,
-    ).not.toHaveBeenCalled()
+    expect(stateMocks.replaceShieldBypassSummaryState).not.toHaveBeenCalled()
   })
 })

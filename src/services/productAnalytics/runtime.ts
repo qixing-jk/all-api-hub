@@ -24,6 +24,7 @@ import {
   buildSiteEcosystemAnalyticsEvents,
   shouldSendSiteEcosystemSnapshot,
 } from "./siteEcosystem"
+import { productAnalyticsState } from "./state"
 
 const logger = createLogger("ProductAnalyticsRuntime")
 const ACCOUNT_CHANGE_SNAPSHOT_DEBOUNCE_MS = 2_000
@@ -49,7 +50,7 @@ function isKnownEventName(value: unknown): value is ProductAnalyticsEventName {
 async function captureSiteEcosystemSnapshot(): Promise<boolean> {
   if (!(await productAnalyticsPreferences.isEnabled())) return false
 
-  const state = await productAnalyticsPreferences.getState()
+  const state = await productAnalyticsState.getState()
   const now = Date.now()
   if (
     !shouldSendSiteEcosystemSnapshot(state.lastSiteEcosystemSnapshotAt, now)
@@ -68,7 +69,7 @@ async function captureSiteEcosystemSnapshot(): Promise<boolean> {
     if (!captured) return false
   }
 
-  await productAnalyticsPreferences.setLastSiteEcosystemSnapshotAt(now)
+  await productAnalyticsState.setLastSiteEcosystemSnapshotAt(now)
   return true
 }
 
@@ -78,7 +79,7 @@ async function captureSiteEcosystemSnapshot(): Promise<boolean> {
 async function captureSettingsSnapshot(): Promise<boolean> {
   if (!(await productAnalyticsPreferences.isEnabled())) return false
 
-  const state = await productAnalyticsPreferences.getState()
+  const state = await productAnalyticsState.getState()
   const now = Date.now()
   if (!shouldSendSettingsSnapshot(state.lastSettingsSnapshotAt, now)) {
     return false
@@ -96,7 +97,7 @@ async function captureSettingsSnapshot(): Promise<boolean> {
   )
   if (!captured) return false
 
-  await productAnalyticsPreferences.setLastSettingsSnapshotAt(now)
+  await productAnalyticsState.setLastSettingsSnapshotAt(now)
   return true
 }
 

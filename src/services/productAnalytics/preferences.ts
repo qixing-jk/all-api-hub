@@ -15,29 +15,20 @@ export const PRODUCT_ANALYTICS_DEFAULT_ENABLED = true
 interface ProductAnalyticsPreferenceState {
   enabled?: boolean
   anonymousId?: string
-  lastSiteEcosystemSnapshotAt?: number
-  lastSettingsSnapshotAt?: number
-  shieldBypassSummary?: ProductAnalyticsShieldBypassSummaryState
   updatedAt?: number
 }
 
 type ProductAnalyticsPreferencePatch = Partial<ProductAnalyticsPreferenceState>
 
-export type ProductAnalyticsShieldBypassSummaryState = {
-  day?: string
-  promptShownCount?: number
-  promptDismissedCount?: number
-  settingsVisitedCount?: number
-  tempWindowFetchSuccessCount?: number
-  tempWindowFetchFailureCount?: number
-  tempWindowTurnstileFetchSuccessCount?: number
-  tempWindowTurnstileFetchFailureCount?: number
+/**
+ * Preserves unrelated fields when preferences share the persisted analytics payload.
+ */
+function normalizePersistedObject(value: unknown): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    return {}
+  }
+  return value as Record<string, unknown>
 }
-
-export type ProductAnalyticsShieldBypassSummaryPatch = Omit<
-  ProductAnalyticsShieldBypassSummaryState,
-  "day"
->
 
 /**
  * Keeps only supported preference fields from persisted storage payloads.
@@ -62,79 +53,11 @@ export function normalizeState(
     normalized.anonymousId = anonymousId
   }
 
-  if (
-    typeof state.lastSiteEcosystemSnapshotAt === "number" &&
-    Number.isFinite(state.lastSiteEcosystemSnapshotAt)
-  ) {
-    normalized.lastSiteEcosystemSnapshotAt = state.lastSiteEcosystemSnapshotAt
-  }
-
-  if (
-    typeof state.lastSettingsSnapshotAt === "number" &&
-    Number.isFinite(state.lastSettingsSnapshotAt)
-  ) {
-    normalized.lastSettingsSnapshotAt = state.lastSettingsSnapshotAt
-  }
-
-  const shieldBypassSummary = normalizeShieldBypassSummaryState(
-    state.shieldBypassSummary,
-  )
-  if (shieldBypassSummary) {
-    normalized.shieldBypassSummary = shieldBypassSummary
-  }
-
   if (typeof state.updatedAt === "number" && Number.isFinite(state.updatedAt)) {
     normalized.updatedAt = state.updatedAt
   }
 
   return normalized
-}
-
-/**
- * Normalizes persisted counters to positive integer increments only.
- */
-function normalizeCount(value: unknown): number | undefined {
-  if (typeof value !== "number" || !Number.isFinite(value) || value <= 0) {
-    return undefined
-  }
-  return Math.floor(value)
-}
-
-/**
- * Keeps only valid shield-bypass summary fields from persisted storage.
- */
-export function normalizeShieldBypassSummaryState(
-  value: unknown,
-): ProductAnalyticsShieldBypassSummaryState | undefined {
-  if (!value || typeof value !== "object" || Array.isArray(value)) {
-    return undefined
-  }
-
-  const state = value as ProductAnalyticsShieldBypassSummaryState
-  const normalized: ProductAnalyticsShieldBypassSummaryState = {}
-
-  if (typeof state.day === "string" && /^\d{4}-\d{2}-\d{2}$/.test(state.day)) {
-    normalized.day = state.day
-  }
-
-  const countKeys = [
-    "promptShownCount",
-    "promptDismissedCount",
-    "settingsVisitedCount",
-    "tempWindowFetchSuccessCount",
-    "tempWindowFetchFailureCount",
-    "tempWindowTurnstileFetchSuccessCount",
-    "tempWindowTurnstileFetchFailureCount",
-  ] as const
-
-  for (const key of countKeys) {
-    const count = normalizeCount(state[key])
-    if (typeof count === "number") {
-      normalized[key] = count
-    }
-  }
-
-  return Object.keys(normalized).length > 0 ? normalized : undefined
 }
 
 class ProductAnalyticsPreferencesService {
@@ -152,10 +75,14 @@ class ProductAnalyticsPreferencesService {
     state: ProductAnalyticsPreferenceState,
     patch: ProductAnalyticsPreferencePatch,
   ): Promise<void> {
+    const stored = await this.storage.get(
+      PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES,
+    )
     await this.storage.set(
       PRODUCT_ANALYTICS_STORAGE_KEYS.PRODUCT_ANALYTICS_PREFERENCES,
       {
-        ...state,
+        ...normalizePersistedObject(stored),
+        ...normalizeState(state),
         ...patch,
         updatedAt: Date.now(),
       },
@@ -224,99 +151,6 @@ class ProductAnalyticsPreferencesService {
       const anonymousId = await this.getOrCreateAnonymousIdFromState(state)
       return await work(anonymousId)
     })
-  }
-
-  async setLastSiteEcosystemSnapshotAt(timestamp: number): Promise<boolean> {
-    if (!Number.isFinite(timestamp)) {
-      return false
-    }
-
-    try {
-      await this.withStorageWriteLock(async () => {
-        const state = await this.getState()
-        await this.saveState(state, { lastSiteEcosystemSnapshotAt: timestamp })
-      })
-      return true
-    } catch (error) {
-      logger.warn("Failed to update site ecosystem snapshot timestamp", error)
-      return false
-    }
-  }
-
-  async setLastSettingsSnapshotAt(timestamp: number): Promise<boolean> {
-    if (!Number.isFinite(timestamp)) {
-      return false
-    }
-
-    try {
-      await this.withStorageWriteLock(async () => {
-        const state = await this.getState()
-        await this.saveState(state, { lastSettingsSnapshotAt: timestamp })
-      })
-      return true
-    } catch (error) {
-      logger.warn("Failed to update settings snapshot timestamp", error)
-      return false
-    }
-  }
-
-  async getShieldBypassSummaryState(): Promise<ProductAnalyticsShieldBypassSummaryState> {
-    const state = await this.getState()
-    return state.shieldBypassSummary ?? {}
-  }
-
-  async replaceShieldBypassSummaryState(
-    nextSummary: ProductAnalyticsShieldBypassSummaryState,
-  ): Promise<boolean> {
-    try {
-      await this.withStorageWriteLock(async () => {
-        const state = await this.getState()
-        await this.saveState(state, {
-          shieldBypassSummary:
-            normalizeShieldBypassSummaryState(nextSummary) ?? {},
-        })
-      })
-      return true
-    } catch (error) {
-      logger.warn("Failed to replace shield bypass summary state", error)
-      return false
-    }
-  }
-
-  async incrementShieldBypassSummary(
-    patch: ProductAnalyticsShieldBypassSummaryPatch,
-  ): Promise<boolean> {
-    try {
-      await this.withStorageWriteLock(async () => {
-        const state = await this.getState()
-        const today = new Date().toISOString().slice(0, 10)
-        const current =
-          state.shieldBypassSummary?.day === today
-            ? state.shieldBypassSummary
-            : { day: today }
-        const nextSummary: ProductAnalyticsShieldBypassSummaryState = {
-          ...current,
-          day: today,
-        }
-
-        for (const [key, value] of Object.entries(patch) as Array<
-          [keyof ProductAnalyticsShieldBypassSummaryPatch, number | undefined]
-        >) {
-          if (typeof value !== "number" || !Number.isFinite(value)) continue
-          nextSummary[key] = Math.max(0, (nextSummary[key] ?? 0) + value)
-        }
-
-        await this.saveState(state, {
-          shieldBypassSummary: normalizeShieldBypassSummaryState(
-            nextSummary,
-          ) ?? { day: today },
-        })
-      })
-      return true
-    } catch (error) {
-      logger.warn("Failed to increment shield bypass summary state", error)
-      return false
-    }
   }
 
   private async getOrCreateAnonymousIdFromState(
