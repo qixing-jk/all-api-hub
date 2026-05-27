@@ -265,7 +265,9 @@ export default function AccountDialog({
                   surface={SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog}
                   items={sponsorRecommendations.items}
                   onContinueAddAccount={(nextPrefill) => {
-                    handlers.handleUrlChange(nextPrefill.siteUrl)
+                    handlers.handleUrlChange(nextPrefill.siteUrl, {
+                      applyAuthDefault: false,
+                    })
                     setters.setSiteType(nextPrefill.siteType)
                     if (nextPrefill.authType) {
                       setters.setAuthType(nextPrefill.authType)

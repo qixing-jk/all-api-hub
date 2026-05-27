@@ -630,6 +630,7 @@ describe("AccountDialog", () => {
 
     expect(mockHandlers.handleUrlChange).toHaveBeenCalledWith(
       "https://anyrouter.example.com",
+      { applyAuthDefault: false },
     )
     expect(mockSetters.setSiteType).toHaveBeenCalledWith(SITE_TYPES.ANYROUTER)
     expect(mockSetters.setAuthType).toHaveBeenCalledWith(AuthTypeEnum.Cookie)
@@ -638,6 +639,43 @@ describe("AccountDialog", () => {
       "_blank",
       "noopener,noreferrer",
     )
+  })
+
+  it("does not infer auth when continuing a sponsor without explicit auth", async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal("open", vi.fn())
+    mockSponsorRecommendationItems[0] = {
+      ...mockSponsorRecommendationItems[0],
+      accountPrefill: {
+        siteType: SITE_TYPES.ANYROUTER,
+        siteUrl: "https://anyrouter.example.com",
+      },
+    }
+    mockState.phase = ACCOUNT_DIALOG_PHASES.SITE_INPUT
+    mockState.formSource = ACCOUNT_DIALOG_FORM_SOURCES.MANUAL
+
+    render(
+      <AccountDialog
+        isOpen={true}
+        onClose={vi.fn()}
+        mode={DIALOG_MODES.ADD}
+        onSuccess={vi.fn()}
+        onError={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorContinueAddAccountAction,
+      ),
+    )
+
+    expect(mockHandlers.handleUrlChange).toHaveBeenCalledWith(
+      "https://anyrouter.example.com",
+      { applyAuthDefault: false },
+    )
+    expect(mockSetters.setSiteType).toHaveBeenCalledWith(SITE_TYPES.ANYROUTER)
+    expect(mockSetters.setAuthType).not.toHaveBeenCalled()
   })
 
   it("shows the selected sponsor post-click note below the site URL helpers", async () => {

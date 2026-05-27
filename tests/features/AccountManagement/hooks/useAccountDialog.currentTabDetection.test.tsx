@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { DIALOG_MODES } from "~/constants/dialogModes"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
+import { AuthTypeEnum } from "~/types"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const originalBrowser = globalThis.browser
@@ -297,6 +298,38 @@ describe("useAccountDialog current tab detection", () => {
     })
 
     expect(result.current.state.url).toBe("https://picked.example.com")
+  })
+
+  it("applies URL auth defaults when the user chooses the current tab", async () => {
+    const tabsQueryMock = globalThis.browser.tabs.query as ReturnType<
+      typeof vi.fn
+    >
+    tabsQueryMock.mockResolvedValue([
+      {
+        id: 7,
+        url: "https://anyrouter.top/console",
+      },
+    ])
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe("https://anyrouter.top")
+    })
+
+    await act(async () => {
+      result.current.handlers.handleUseCurrentTabUrl()
+    })
+
+    expect(result.current.state.url).toBe("https://anyrouter.top")
+    expect(result.current.state.authType).toBe(AuthTypeEnum.Cookie)
   })
 
   it("prefills the add-account url from the current tab when the setting is enabled", async () => {

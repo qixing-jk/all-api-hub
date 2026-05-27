@@ -14,8 +14,8 @@ import {
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import {
   isAccountAuthType,
-  normalizeAccountAuthTypeOrDefault,
   normalizeOptionalAccountAuthType,
+  resolveDefaultAccountAuthType,
 } from "~/features/AccountManagement/utils/accountAuthType"
 import {
   autoDetectAccount,
@@ -220,6 +220,7 @@ export function useAccountDialog({
     null,
   )
   const hasConsumedAutoFillCurrentSiteUrlRef = useRef(false)
+  const hasExplicitAuthTypeRef = useRef(false)
   const siteName = draft.siteName
   const username = draft.username
   const accessToken = draft.accessToken
@@ -327,9 +328,10 @@ export function useAccountDialog({
   )
   const setAuthType = useCallback(
     (value: AuthTypeEnum) => {
-      updateDraft((prev) =>
-        isAccountAuthType(value) ? { ...prev, authType: value } : prev,
-      )
+      if (!isAccountAuthType(value)) return
+
+      hasExplicitAuthTypeRef.current = true
+      updateDraft((prev) => ({ ...prev, authType: value }))
     },
     [updateDraft],
   )
@@ -607,11 +609,16 @@ export function useAccountDialog({
       detectedCookieStoreIdRef.current = null
       duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
       hasConsumedAutoFillCurrentSiteUrlRef.current = Boolean(nextPrefill)
+      const normalizedPrefillAuthType = normalizeOptionalAccountAuthType(
+        nextPrefill?.authType,
+      )
+      const nextSiteType = nextPrefill?.siteType ?? SITE_TYPES.UNKNOWN
+      hasExplicitAuthTypeRef.current = Boolean(normalizedPrefillAuthType)
       setUrl(nextPrefill?.siteUrl ?? "")
       setDraft({
         ...createEmptyAccountDialogDraft(),
-        siteType: nextPrefill?.siteType ?? SITE_TYPES.UNKNOWN,
-        authType: normalizeAccountAuthTypeOrDefault(nextPrefill?.authType),
+        siteType: nextSiteType,
+        authType: normalizedPrefillAuthType || AuthTypeEnum.AccessToken,
       })
       const nextFlowState = getInitialFlowState(mode)
       setPhase(nextFlowState.phase)
@@ -644,6 +651,7 @@ export function useAccountDialog({
             siteAccount.site_type,
             Boolean(siteAccount.sub2apiAuth),
           )
+          hasExplicitAuthTypeRef.current = true
           setDraft({
             siteName: siteAccount.site_name,
             username: siteAccount.account_info.username,
@@ -841,9 +849,42 @@ export function useAccountDialog({
     }
   }, [isDetecting])
 
+  const handleUrlChange = (
+    newUrl: string,
+    options: { applyAuthDefault?: boolean } = {},
+  ) => {
+    const shouldApplyAuthDefault = options.applyAuthDefault !== false
+    duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
+    detectedCookieStoreIdRef.current = null
+    hasConsumedAutoFillCurrentSiteUrlRef.current = true
+    if (newUrl.trim()) {
+      try {
+        const urlObj = new URL(newUrl)
+        const baseUrl = `${urlObj.protocol}//${urlObj.host}`
+        setUrl(baseUrl)
+        if (shouldApplyAuthDefault && !hasExplicitAuthTypeRef.current) {
+          updateDraft((prev) => ({
+            ...prev,
+            authType: resolveDefaultAccountAuthType({
+              siteUrl: baseUrl,
+            }),
+          }))
+        }
+      } catch (error) {
+        logger.warn("Failed to normalize URL input", { error, url: newUrl })
+        setUrl(newUrl)
+      }
+    } else {
+      setUrl("")
+      if (mode === DIALOG_MODES.ADD) {
+        setSiteName("")
+      }
+    }
+  }
+
   const handleUseCurrentTabUrl = () => {
     if (currentTabUrl) {
-      setUrl(currentTabUrl)
+      handleUrlChange(currentTabUrl)
     }
   }
 
@@ -2047,27 +2088,6 @@ export function useAccountDialog({
     } finally {
       if (isCurrentRun()) {
         setIsAutoConfiguring(false)
-      }
-    }
-  }
-
-  const handleUrlChange = (newUrl: string) => {
-    duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
-    detectedCookieStoreIdRef.current = null
-    hasConsumedAutoFillCurrentSiteUrlRef.current = true
-    if (newUrl.trim()) {
-      try {
-        const urlObj = new URL(newUrl)
-        const baseUrl = `${urlObj.protocol}//${urlObj.host}`
-        setUrl(baseUrl)
-      } catch (error) {
-        logger.warn("Failed to normalize URL input", { error, url: newUrl })
-        setUrl(newUrl)
-      }
-    } else {
-      setUrl("")
-      if (mode === DIALOG_MODES.ADD) {
-        setSiteName("")
       }
     }
   }
