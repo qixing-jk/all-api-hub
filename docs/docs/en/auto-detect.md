@@ -14,7 +14,7 @@ Auto-identification requires opening a temporary page and reading site informati
 
 After initially granting optional permissions, identifying some sites might get stuck in auto-identification, appearing as a continuously loading interface:
 
--   Solution: Open the browser extension management page, **disable then re-enable** this extension, or **restart the browser** and retry identification/authorization.
+-   Solution: First, click **Reload extension and retry** in the slow identification prompt. After confirmation, allow the plugin to reload its runtime, then perform identification again. If the prompt does not appear or the issue persists after reloading, open the browser extension management page, **disable then re-enable** this extension, or **restart the browser** and retry identification/authorization.
 -   For the purpose and explanation of optional permissions, see: `/permissions` (Permission Management).
 
 ## Identification Failed: First, Confirm You Are Indeed Logged In
