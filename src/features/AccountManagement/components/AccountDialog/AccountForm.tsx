@@ -26,6 +26,10 @@ import {
 import { ACCOUNT_SITE_TITLE_RULES, SITE_TYPES } from "~/constants/siteType"
 import { AccountFormSection } from "~/features/AccountManagement/components/AccountDialog/AccountFormSection"
 import { ACCOUNT_FORM_MOBILE_DEFAULT_OPEN } from "~/features/AccountManagement/components/AccountDialog/accountFormSections"
+import {
+  CookieAuthPermissionRecommendation,
+  type CookieAuthPermissionRecommendationProps,
+} from "~/features/AccountManagement/components/AccountDialog/CookieAuthPermissionRecommendation"
 import type { AccountDialogDraft } from "~/features/AccountManagement/components/AccountDialog/models"
 import { TagPicker } from "~/features/AccountManagement/components/TagPicker"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
@@ -55,6 +59,9 @@ interface AccountFormProps {
   onCookieAuthSessionCookieChange: (value: string) => void
   onImportCookieAuthSessionCookie: () => void
   onOpenCookiePermissionSettings: () => void
+  cookieAuthPermissionsGranted?: CookieAuthPermissionRecommendationProps["cookieAuthPermissionsGranted"]
+  isRequestingCookieAuthPermissions?: boolean
+  onRequestCookieAuthPermissions?: () => void
   onSub2apiUseRefreshTokenChange: (value: boolean) => void
   onSub2apiRefreshTokenChange: (value: string) => void
   onImportSub2apiSession: () => void
@@ -93,6 +100,9 @@ export default function AccountForm({
   onCookieAuthSessionCookieChange,
   onImportCookieAuthSessionCookie,
   onOpenCookiePermissionSettings,
+  cookieAuthPermissionsGranted,
+  isRequestingCookieAuthPermissions,
+  onRequestCookieAuthPermissions,
   onSub2apiUseRefreshTokenChange,
   onSub2apiRefreshTokenChange,
   onImportSub2apiSession,
@@ -362,6 +372,13 @@ export default function AccountForm({
             required
           >
             <div className="space-y-2">
+              <CookieAuthPermissionRecommendation
+                cookieAuthPermissionsGranted={cookieAuthPermissionsGranted}
+                isRequestingCookieAuthPermissions={
+                  isRequestingCookieAuthPermissions
+                }
+                onRequestCookieAuthPermissions={onRequestCookieAuthPermissions}
+              />
               <Button
                 type="button"
                 variant="outline"

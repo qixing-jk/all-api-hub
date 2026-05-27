@@ -19,6 +19,10 @@ import {
   SelectValue,
 } from "~/components/ui"
 import { SITE_TYPES } from "~/constants/siteType"
+import {
+  CookieAuthPermissionRecommendation,
+  type CookieAuthPermissionRecommendationProps,
+} from "~/features/AccountManagement/components/AccountDialog/CookieAuthPermissionRecommendation"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { AuthTypeEnum, type DisplaySiteData } from "~/types"
 
@@ -34,6 +38,9 @@ interface SiteInfoInputBaseProps {
   detectedAccount?: DisplaySiteData | null
   onUseCurrentTab?: () => void
   onEditAccount?: (account: DisplaySiteData) => void
+  cookieAuthPermissionsGranted?: CookieAuthPermissionRecommendationProps["cookieAuthPermissionsGranted"]
+  isRequestingCookieAuthPermissions?: boolean
+  onRequestCookieAuthPermissions?: () => void
 }
 
 type SiteInfoInputWithAuthSelectorProps = SiteInfoInputBaseProps & {
@@ -82,6 +89,10 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
   } = props
   const { t } = useTranslation(["accountDialog", "common"])
   const isSub2Api = siteType === SITE_TYPES.SUB2API
+  const shouldShowCookiePermissionRecommendation =
+    !isDetected &&
+    props.showAuthTypeSelector === true &&
+    props.authType === AuthTypeEnum.Cookie
 
   const handleEditClick = () => {
     if (detectedAccount && onEditAccount) {
@@ -199,6 +210,17 @@ export default function SiteInfoInput(props: SiteInfoInputProps) {
         </>
       )}
       <div className="flex flex-col justify-between gap-y-2 text-xs">
+        {shouldShowCookiePermissionRecommendation && (
+          <CookieAuthPermissionRecommendation
+            cookieAuthPermissionsGranted={props.cookieAuthPermissionsGranted}
+            isRequestingCookieAuthPermissions={
+              props.isRequestingCookieAuthPermissions
+            }
+            onRequestCookieAuthPermissions={
+              props.onRequestCookieAuthPermissions
+            }
+          />
+        )}
         {isSub2Api && (
           <div className="flex w-full items-start gap-2 rounded-md bg-blue-50 p-2 text-xs text-blue-700 dark:bg-blue-900/20 dark:text-blue-300">
             <InformationCircleIcon className="mt-0.5 h-4 w-4 shrink-0" />

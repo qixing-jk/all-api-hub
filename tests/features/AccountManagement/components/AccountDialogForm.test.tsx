@@ -97,6 +97,7 @@ describe("AccountDialog AccountForm", () => {
     onCookieAuthSessionCookieChange: vi.fn(),
     onImportCookieAuthSessionCookie: vi.fn(),
     onOpenCookiePermissionSettings: vi.fn(),
+    onRequestCookieAuthPermissions: vi.fn(),
     onSub2apiUseRefreshTokenChange: vi.fn(),
     onSub2apiRefreshTokenChange: vi.fn(),
     onImportSub2apiSession: vi.fn(),
@@ -439,6 +440,40 @@ describe("AccountDialog AccountForm", () => {
     ).toBeEnabled()
     expect(
       await screen.findByPlaceholderText(
+        "accountDialog:form.cookieAuthSessionCookiePlaceholder",
+      ),
+    ).toBeRequired()
+  })
+
+  it("shows a compact full cookie-auth permission recommendation without fallback copy", async () => {
+    const user = userEvent.setup()
+    const props = createProps()
+    props.draft.authType = AuthTypeEnum.Cookie
+    props.cookieAuthPermissionsGranted = false
+
+    render(<AccountForm {...props} />)
+
+    expect(
+      await screen.findByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionRecommendation,
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("accountDialog:form.cookiePermissionRecommendationDesc"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("accountDialog:form.cookiePermissionManualFallback"),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton,
+      ),
+    )
+
+    expect(props.onRequestCookieAuthPermissions).toHaveBeenCalledTimes(1)
+    expect(
+      screen.getByPlaceholderText(
         "accountDialog:form.cookieAuthSessionCookiePlaceholder",
       ),
     ).toBeRequired()

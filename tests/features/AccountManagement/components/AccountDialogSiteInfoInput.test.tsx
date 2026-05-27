@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import SiteInfoInput from "~/features/AccountManagement/components/AccountDialog/SiteInfoInput"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 import { AuthTypeEnum } from "~/types"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
@@ -21,6 +22,7 @@ describe("AccountDialog SiteInfoInput", () => {
     siteType: "new-api",
     authType: AuthTypeEnum.AccessToken,
     onAuthTypeChange: vi.fn(),
+    onRequestCookieAuthPermissions: vi.fn(),
     showAuthTypeSelector: true,
     currentTabUrl: "https://current.example.com",
     isCurrentSiteAdded: false,
@@ -82,6 +84,29 @@ describe("AccountDialog SiteInfoInput", () => {
     )
 
     expect(props.onAuthTypeChange).toHaveBeenCalledWith(AuthTypeEnum.Cookie)
+  })
+
+  it("shows one pre-detection cookie permission action when cookie auth is selected", async () => {
+    const user = userEvent.setup()
+    const props = createAddModeProps()
+    props.authType = AuthTypeEnum.Cookie
+    props.cookieAuthPermissionsGranted = false
+
+    render(<SiteInfoInput {...props} />)
+
+    expect(
+      await screen.findByText(
+        "accountDialog:form.cookiePermissionRecommendationDesc",
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.cookiePermissionGrantButton,
+      ),
+    )
+
+    expect(props.onRequestCookieAuthPermissions).toHaveBeenCalledTimes(1)
   })
 
   it("stacks auth above the URL before switching to a wide two-column layout", async () => {

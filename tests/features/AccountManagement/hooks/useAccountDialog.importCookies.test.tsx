@@ -19,6 +19,18 @@ const { mockOpenSettingsTab } = vi.hoisted(() => ({
   mockOpenSettingsTab: vi.fn(),
 }))
 
+const {
+  mockEnsurePermissions,
+  mockHasPermission,
+  mockHasPermissions,
+  mockOnOptionalPermissionsChanged,
+} = vi.hoisted(() => ({
+  mockEnsurePermissions: vi.fn(),
+  mockHasPermission: vi.fn(),
+  mockHasPermissions: vi.fn(),
+  mockOnOptionalPermissionsChanged: vi.fn(() => vi.fn()),
+}))
+
 vi.mock("react-hot-toast", () => ({
   default: {
     success: vi.fn(),
@@ -60,9 +72,27 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
+vi.mock("~/services/permissions/permissionManager", () => ({
+  ensurePermissions: mockEnsurePermissions,
+  hasPermission: mockHasPermission,
+  hasPermissions: mockHasPermissions,
+  onOptionalPermissionsChanged: mockOnOptionalPermissionsChanged,
+  OPTIONAL_PERMISSION_IDS: {
+    Cookies: "cookies",
+    declarativeNetRequestWithHostAccess: "declarativeNetRequestWithHostAccess",
+    WebRequest: "webRequest",
+    WebRequestBlocking: "webRequestBlocking",
+  },
+  OPTIONAL_PERMISSIONS: ["cookies", "declarativeNetRequestWithHostAccess"],
+}))
+
 describe("useAccountDialog cookie import feedback", () => {
   beforeEach(async () => {
     vi.clearAllMocks()
+    mockHasPermission.mockResolvedValue(true)
+    mockHasPermissions.mockResolvedValue(true)
+    mockEnsurePermissions.mockResolvedValue(true)
+    mockOnOptionalPermissionsChanged.mockReturnValue(vi.fn())
     await accountStorage.clearAllData()
   })
 
@@ -225,6 +255,46 @@ describe("useAccountDialog cookie import feedback", () => {
     expect(result.current.state.showCookiePermissionWarning).toBe(false)
     expect(toast.error).toHaveBeenCalledWith(
       "accountDialog:messages.importCookiesFailed",
+    )
+  })
+
+  it("recommends and requests the full cookie-auth optional permission set", async () => {
+    vi.mocked(toast.success).mockClear()
+    mockHasPermission.mockResolvedValue(false)
+    mockHasPermissions.mockResolvedValue(false)
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setAuthType("cookie" as any)
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.cookieAuthPermissionsGranted).toBe(false)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleRequestCookieAuthPermissions()
+    })
+
+    expect(mockEnsurePermissions).toHaveBeenCalledWith([
+      "cookies",
+      "declarativeNetRequestWithHostAccess",
+    ])
+    expect(mockEnsurePermissions).toHaveBeenCalledTimes(1)
+    expect(toast.success).toHaveBeenCalledWith(
+      "accountDialog:messages.cookiePermissionGranted",
     )
   })
 })

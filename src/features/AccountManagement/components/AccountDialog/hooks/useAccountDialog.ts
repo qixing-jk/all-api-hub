@@ -45,6 +45,14 @@ import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteLabel,
 } from "~/services/managedSites/utils/managedSite"
+import {
+  ensurePermissions,
+  hasPermissions,
+  onOptionalPermissionsChanged,
+  OPTIONAL_PERMISSION_IDS,
+  OPTIONAL_PERMISSIONS,
+  type ManifestOptionalPermissions,
+} from "~/services/permissions/permissionManager"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -95,6 +103,55 @@ const AUTO_DETECT_SLOW_HINT_DELAY_MS = 10_000
  * Logger scoped to the account dialog lifecycle. Ensure we never include raw tokens/cookies in log details.
  */
 const logger = createLogger("AccountDialogHook")
+
+interface CookieAuthPermissionState {
+  granted: boolean | null
+  pending: boolean
+}
+
+const createInitialCookieAuthPermissionState =
+  (): CookieAuthPermissionState => ({
+    granted: null,
+    pending: false,
+  })
+
+const getCookieAuthAdvancedPermissions = (): ManifestOptionalPermissions[] => {
+  const advancedCandidates: ManifestOptionalPermissions[] = []
+
+  if (
+    OPTIONAL_PERMISSIONS.includes(
+      OPTIONAL_PERMISSION_IDS.declarativeNetRequestWithHostAccess,
+    )
+  ) {
+    advancedCandidates.push(
+      OPTIONAL_PERMISSION_IDS.declarativeNetRequestWithHostAccess,
+    )
+  }
+
+  if (OPTIONAL_PERMISSIONS.includes(OPTIONAL_PERMISSION_IDS.WebRequest)) {
+    advancedCandidates.push(OPTIONAL_PERMISSION_IDS.WebRequest)
+  }
+
+  if (
+    OPTIONAL_PERMISSIONS.includes(OPTIONAL_PERMISSION_IDS.WebRequestBlocking)
+  ) {
+    advancedCandidates.push(OPTIONAL_PERMISSION_IDS.WebRequestBlocking)
+  }
+
+  return advancedCandidates
+}
+
+const getCookieAuthPermissions = (): ManifestOptionalPermissions[] => {
+  const permissions: ManifestOptionalPermissions[] = []
+
+  if (OPTIONAL_PERMISSIONS.includes(OPTIONAL_PERMISSION_IDS.Cookies)) {
+    permissions.push(OPTIONAL_PERMISSION_IDS.Cookies)
+  }
+
+  permissions.push(...getCookieAuthAdvancedPermissions())
+
+  return permissions
+}
 
 interface CookieImportResponse {
   success?: boolean
@@ -174,6 +231,8 @@ export function useAccountDialog({
   const [isImportingCookies, setIsImportingCookies] = useState(false)
   const [showCookiePermissionWarning, setShowCookiePermissionWarning] =
     useState(false)
+  const [cookieAuthPermissionState, setCookieAuthPermissionState] =
+    useState<CookieAuthPermissionState>(createInitialCookieAuthPermissionState)
   const [isImportingSub2apiSession, setIsImportingSub2apiSession] =
     useState(false)
   const [accountPostSaveWorkflowStep, setAccountPostSaveWorkflowStep] =
@@ -339,6 +398,23 @@ export function useAccountDialog({
     },
     [updateDraft],
   )
+  const refreshCookieAuthPermissionState = useCallback(async () => {
+    try {
+      const cookieAuthPermissions = getCookieAuthPermissions()
+      const granted = await hasPermissions(cookieAuthPermissions)
+
+      setCookieAuthPermissionState((prev) => ({
+        ...prev,
+        granted,
+      }))
+    } catch (error) {
+      logger.warn("Failed to refresh cookie auth permission state", { error })
+      setCookieAuthPermissionState((prev) => ({
+        ...prev,
+        granted: false,
+      }))
+    }
+  }, [])
   const setSub2apiUseRefreshToken = useCallback(
     (value: boolean) => {
       updateDraft((prev) => ({ ...prev, sub2apiUseRefreshToken: value }))
@@ -385,6 +461,21 @@ export function useAccountDialog({
       cancelPendingDuplicateAccountWarning()
     }
   }, [cancelPendingDuplicateAccountWarning, isOpen])
+
+  useEffect(() => {
+    if (!isOpen || authType !== AuthTypeEnum.Cookie) {
+      return
+    }
+
+    void refreshCookieAuthPermissionState()
+    const unsubscribe = onOptionalPermissionsChanged(() => {
+      void refreshCookieAuthPermissionState()
+    })
+
+    return () => {
+      unsubscribe()
+    }
+  }, [authType, isOpen, refreshCookieAuthPermissionState])
 
   const requestDuplicateAccountAddConfirmation = useCallback(
     (params: {
@@ -876,6 +967,42 @@ export function useAccountDialog({
   const handleOpenCookiePermissionSettings = useCallback(() => {
     void openSettingsTab("permissions")
   }, [])
+
+  const handleRequestCookieAuthPermissions = useCallback(async () => {
+    const cookieAuthPermissions = getCookieAuthPermissions()
+
+    if (cookieAuthPermissions.length === 0) {
+      setCookieAuthPermissionState((prev) => ({
+        ...prev,
+        granted: true,
+      }))
+      return
+    }
+
+    setCookieAuthPermissionState((prev) => ({ ...prev, pending: true }))
+
+    try {
+      const granted = await ensurePermissions(cookieAuthPermissions)
+      await refreshCookieAuthPermissionState()
+
+      if (granted) {
+        toast.success(t("messages.cookiePermissionGranted"))
+      } else {
+        toast.error(t("messages.cookiePermissionGrantFailed"))
+      }
+    } catch (error) {
+      logger.warn("Failed to request cookie auth permissions", {
+        error,
+        permissions: cookieAuthPermissions,
+      })
+      toast.error(t("messages.cookiePermissionGrantFailed"))
+    } finally {
+      setCookieAuthPermissionState((prev) => ({
+        ...prev,
+        pending: false,
+      }))
+    }
+  }, [refreshCookieAuthPermissionState, t])
 
   const isAihubmixNormalSaveForegroundKeyFlow = useCallback(
     (options?: {
@@ -2147,6 +2274,8 @@ export function useAccountDialog({
       cookieAuthSessionCookie,
       isImportingCookies,
       showCookiePermissionWarning,
+      cookieAuthPermissionsGranted: cookieAuthPermissionState.granted,
+      isRequestingCookieAuthPermissions: cookieAuthPermissionState.pending,
       isImportingSub2apiSession,
       accountPostSaveWorkflowStep,
       postSaveOneTimeToken,
@@ -2202,6 +2331,7 @@ export function useAccountDialog({
       handleClose,
       handleImportCookieAuthSessionCookie,
       handleOpenCookiePermissionSettings,
+      handleRequestCookieAuthPermissions,
       handleImportSub2apiSession,
       handleSub2apiUseRefreshTokenChange,
       handleDuplicateAccountWarningCancel,
