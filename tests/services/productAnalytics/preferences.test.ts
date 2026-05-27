@@ -4,6 +4,7 @@ import { Storage } from "@plasmohq/storage"
 
 import { PRODUCT_ANALYTICS_STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
+  normalizeShieldBypassSummaryState,
   normalizeState,
   PRODUCT_ANALYTICS_DEFAULT_ENABLED,
   productAnalyticsPreferences,
@@ -153,6 +154,48 @@ describe("productAnalyticsPreferences", () => {
     )
   })
 
+  it("increments shield bypass summary counts for the current UTC day", async () => {
+    await productAnalyticsPreferences.incrementShieldBypassSummary({
+      promptShownCount: 2,
+      tempWindowFetchSuccessCount: 1,
+    })
+    await productAnalyticsPreferences.incrementShieldBypassSummary({
+      promptShownCount: 1,
+      tempWindowFetchFailureCount: 1,
+    })
+
+    await expect(productAnalyticsPreferences.getState()).resolves.toEqual(
+      expect.objectContaining({
+        shieldBypassSummary: expect.objectContaining({
+          day: "2026-05-12",
+          promptShownCount: 3,
+          tempWindowFetchSuccessCount: 1,
+          tempWindowFetchFailureCount: 1,
+        }),
+      }),
+    )
+  })
+
+  it("rolls shield bypass summary counts to a new UTC day", async () => {
+    await productAnalyticsPreferences.replaceShieldBypassSummaryState({
+      day: "2026-05-11",
+      promptShownCount: 9,
+    })
+
+    await productAnalyticsPreferences.incrementShieldBypassSummary({
+      settingsVisitedCount: 1,
+    })
+
+    await expect(productAnalyticsPreferences.getState()).resolves.toEqual(
+      expect.objectContaining({
+        shieldBypassSummary: {
+          day: "2026-05-12",
+          settingsVisitedCount: 1,
+        },
+      }),
+    )
+  })
+
   it("rejects invalid settings snapshot timestamps", async () => {
     await expect(
       productAnalyticsPreferences.setLastSettingsSnapshotAt(Number.NaN),
@@ -179,5 +222,21 @@ describe("productAnalyticsPreferences", () => {
 
   it("drops invalid persisted settings snapshot timestamp", () => {
     expect(normalizeState({ lastSettingsSnapshotAt: Number.NaN })).toEqual({})
+  })
+
+  it("normalizes persisted shield bypass summary counts", () => {
+    expect(
+      normalizeShieldBypassSummaryState({
+        day: "2026-05-12",
+        promptShownCount: 2.8,
+        promptDismissedCount: -1,
+        settingsVisitedCount: Number.NaN,
+        tempWindowFetchSuccessCount: 1,
+      }),
+    ).toEqual({
+      day: "2026-05-12",
+      promptShownCount: 2,
+      tempWindowFetchSuccessCount: 1,
+    })
   })
 })

@@ -19,6 +19,7 @@ import {
 import { productAnalyticsPreferences } from "./preferences"
 import { buildAggregateSettingsSnapshotEvent } from "./settings"
 import { shouldSendSettingsSnapshot } from "./settingsSnapshot"
+import { flushShieldBypassDailySummary } from "./shieldBypassSummary"
 import {
   buildSiteEcosystemAnalyticsEvents,
   shouldSendSiteEcosystemSnapshot,
@@ -191,6 +192,17 @@ function captureSettingsSnapshotBestEffort() {
 }
 
 /**
+ * Starts shield-bypass summary capture without failing background startup.
+ */
+function flushShieldBypassDailySummaryBestEffort() {
+  void flushShieldBypassDailySummary().catch((error) => {
+    if (isDevelopmentMode()) {
+      logger.debug("Product analytics shield bypass summary failed", error)
+    }
+  })
+}
+
+/**
  * Watches local account storage changes and debounces site ecosystem snapshot capture.
  */
 export function setupProductAnalyticsAccountChangeListener() {
@@ -306,4 +318,11 @@ export function triggerStartupSiteEcosystemSnapshot() {
  */
 export function triggerStartupSettingsSnapshot() {
   captureSettingsSnapshotBestEffort()
+}
+
+/**
+ * Triggers the startup shield-bypass summary flush in the background worker.
+ */
+export function triggerStartupShieldBypassDailySummary() {
+  flushShieldBypassDailySummaryBestEffort()
 }

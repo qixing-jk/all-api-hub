@@ -11,7 +11,12 @@ import {
 } from "~/services/productAnalytics/events"
 import { render, screen } from "~~/tests/test-utils/render"
 
-const { translationMap, trackStartedMock } = vi.hoisted(() => ({
+const {
+  translationMap,
+  trackStartedMock,
+  recordDismissedMock,
+  recordSettingsVisitedMock,
+} = vi.hoisted(() => ({
   translationMap: {
     titlePrefix: "Shield Mode",
     "toast.title": "Shield Prompt",
@@ -20,10 +25,17 @@ const { translationMap, trackStartedMock } = vi.hoisted(() => ({
     "toast.actions.openSettings": "Open settings",
   } as Record<string, string>,
   trackStartedMock: vi.fn(),
+  recordDismissedMock: vi.fn(),
+  recordSettingsVisitedMock: vi.fn(),
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionStarted: trackStartedMock,
+}))
+
+vi.mock("~/services/productAnalytics/shieldBypassSummary", () => ({
+  recordShieldBypassPromptDismissed: recordDismissedMock,
+  recordShieldBypassSettingsVisited: recordSettingsVisitedMock,
 }))
 
 vi.mock("react-i18next", async (importOriginal) => {
@@ -98,6 +110,8 @@ describe("ShieldBypassPromptToast", () => {
 
     expect(onDismiss).toHaveBeenCalledTimes(1)
     expect(onOpenSettings).toHaveBeenCalledTimes(1)
+    expect(recordDismissedMock).toHaveBeenCalledTimes(1)
+    expect(recordSettingsVisitedMock).toHaveBeenCalledTimes(1)
     expect(trackStartedMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShieldBypassPromptDismissed,

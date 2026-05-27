@@ -17,13 +17,25 @@ import {
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
 } from "~/utils/browser/cookieHelper"
 
-const { trackProductAnalyticsActionCompletedMock } = vi.hoisted(() => ({
+const {
+  trackProductAnalyticsActionCompletedMock,
+  recordTempWindowFetchResultMock,
+  recordTempWindowTurnstileFetchResultMock,
+} = vi.hoisted(() => ({
   trackProductAnalyticsActionCompletedMock: vi.fn(),
+  recordTempWindowFetchResultMock: vi.fn(),
+  recordTempWindowTurnstileFetchResultMock: vi.fn(),
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionCompleted:
     trackProductAnalyticsActionCompletedMock,
+}))
+
+vi.mock("~/services/productAnalytics/shieldBypassSummary", () => ({
+  recordShieldBypassTempWindowFetchResult: recordTempWindowFetchResultMock,
+  recordShieldBypassTempWindowTurnstileFetchResult:
+    recordTempWindowTurnstileFetchResultMock,
 }))
 
 const originalBrowser = (globalThis as any).browser
@@ -127,6 +139,8 @@ describe("tempWindowPool window fallback", () => {
     tempContextMode = "window"
     defaultTempContextMode = "window"
     trackProductAnalyticsActionCompletedMock.mockReset()
+    recordTempWindowFetchResultMock.mockReset()
+    recordTempWindowTurnstileFetchResultMock.mockReset()
 
     vi.useFakeTimers()
     vi.resetModules()

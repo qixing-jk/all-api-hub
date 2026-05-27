@@ -24,6 +24,10 @@ import {
   type ProductAnalyticsResult,
   type ProductAnalyticsStatusKind,
 } from "~/services/productAnalytics/events"
+import {
+  recordShieldBypassTempWindowFetchResult,
+  recordShieldBypassTempWindowTurnstileFetchResult,
+} from "~/services/productAnalytics/shieldBypassSummary"
 import { getAccountSiteType } from "~/services/siteDetection/detectSiteType"
 import { AuthTypeEnum } from "~/types"
 import type {
@@ -569,6 +573,22 @@ function trackTempWindowFetchCompleted(input: {
   result: ProductAnalyticsResult
   errorCategory?: ProductAnalyticsErrorCategory
 }) {
+  if (input.actionId === PRODUCT_ANALYTICS_ACTION_IDS.RunTempWindowFetch) {
+    void recordShieldBypassTempWindowFetchResult(
+      input.result === PRODUCT_ANALYTICS_RESULTS.Success
+        ? PRODUCT_ANALYTICS_RESULTS.Success
+        : PRODUCT_ANALYTICS_RESULTS.Failure,
+    )
+  } else if (
+    input.actionId === PRODUCT_ANALYTICS_ACTION_IDS.RunTempWindowTurnstileFetch
+  ) {
+    void recordShieldBypassTempWindowTurnstileFetchResult(
+      input.result === PRODUCT_ANALYTICS_RESULTS.Success
+        ? PRODUCT_ANALYTICS_RESULTS.Success
+        : PRODUCT_ANALYTICS_RESULTS.Failure,
+    )
+  }
+
   void trackProductAnalyticsActionCompleted({
     ...backgroundShieldBypassAnalyticsScope,
     actionId: input.actionId,

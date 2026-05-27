@@ -793,6 +793,58 @@ describe("product analytics privacy filtering", () => {
     },
   )
 
+  it("keeps shield bypass daily summary buckets while dropping request details", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.SummarizeShieldBypassDaily,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        shield_bypass_prompt_shown_count_bucket:
+          PRODUCT_ANALYTICS_COUNT_BUCKETS.TenPlus,
+        shield_bypass_prompt_dismissed_count_bucket:
+          PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+        shield_bypass_settings_visited_count_bucket:
+          PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
+        temp_window_fetch_success_count_bucket:
+          PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+        temp_window_fetch_failure_count_bucket:
+          PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
+        temp_window_turnstile_fetch_success_count_bucket:
+          PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero,
+        temp_window_turnstile_fetch_failure_count_bucket:
+          PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+        fetchUrl: "https://private.example/api/checkin?token=secret",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.SummarizeShieldBypassDaily,
+      surface_id:
+        PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      shield_bypass_prompt_shown_count_bucket:
+        PRODUCT_ANALYTICS_COUNT_BUCKETS.TenPlus,
+      shield_bypass_prompt_dismissed_count_bucket:
+        PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+      shield_bypass_settings_visited_count_bucket:
+        PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
+      temp_window_fetch_success_count_bucket:
+        PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+      temp_window_fetch_failure_count_bucket:
+        PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
+      temp_window_turnstile_fetch_success_count_bucket:
+        PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero,
+      temp_window_turnstile_fetch_failure_count_bucket:
+        PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+    })
+  })
+
   it("drops invalid enum values while keeping valid entrypoint", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.PageViewed,

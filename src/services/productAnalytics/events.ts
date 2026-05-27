@@ -431,6 +431,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   ShowRedemptionBatchResult: "show_redemption_batch_result",
   ShowRedemptionPrompt: "show_redemption_prompt",
   ShowShieldBypassPrompt: "show_shield_bypass_prompt",
+  SummarizeShieldBypassDaily: "summarize_shield_bypass_daily",
   StartBatchModelVerify: "start_batch_model_verify",
   StopBatchModelVerify: "stop_batch_model_verify",
   ScheduledManagedSiteModelSync: "scheduled_managed_site_model_sync",
@@ -714,6 +715,13 @@ export type ProductAnalyticsEventPayloadMap = {
     blocked_count_bucket?: ProductAnalyticsCountBucket
     model_count_bucket?: ProductAnalyticsCountBucket
     usage_data_present?: boolean
+    shield_bypass_prompt_shown_count_bucket?: ProductAnalyticsCountBucket
+    shield_bypass_prompt_dismissed_count_bucket?: ProductAnalyticsCountBucket
+    shield_bypass_settings_visited_count_bucket?: ProductAnalyticsCountBucket
+    temp_window_fetch_success_count_bucket?: ProductAnalyticsCountBucket
+    temp_window_fetch_failure_count_bucket?: ProductAnalyticsCountBucket
+    temp_window_turnstile_fetch_success_count_bucket?: ProductAnalyticsCountBucket
+    temp_window_turnstile_fetch_failure_count_bucket?: ProductAnalyticsCountBucket
     entrypoint: ProductAnalyticsEntrypoint
   }
   [PRODUCT_ANALYTICS_EVENTS.SettingChanged]: {

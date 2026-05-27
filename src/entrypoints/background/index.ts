@@ -19,6 +19,7 @@ import {
   setupProductAnalyticsAccountChangeListener,
   setupProductAnalyticsPreferencesChangeListener,
   triggerStartupSettingsSnapshot,
+  triggerStartupShieldBypassDailySummary,
   triggerStartupSiteEcosystemSnapshot,
 } from "~/services/productAnalytics/runtime"
 import { tagStorage } from "~/services/tags/tagStorage"
@@ -209,4 +210,5 @@ async function main() {
   await initializeCookieInterceptors()
   triggerStartupSiteEcosystemSnapshot()
   triggerStartupSettingsSnapshot()
+  triggerStartupShieldBypassDailySummary()
 }

@@ -69,6 +69,13 @@ const EVENT_ALLOWED_KEYS = {
     "blocked_count_bucket",
     "model_count_bucket",
     "usage_data_present",
+    "shield_bypass_prompt_shown_count_bucket",
+    "shield_bypass_prompt_dismissed_count_bucket",
+    "shield_bypass_settings_visited_count_bucket",
+    "temp_window_fetch_success_count_bucket",
+    "temp_window_fetch_failure_count_bucket",
+    "temp_window_turnstile_fetch_success_count_bucket",
+    "temp_window_turnstile_fetch_failure_count_bucket",
     "entrypoint",
   ],
   [PRODUCT_ANALYTICS_EVENTS.SettingChanged]: [
@@ -371,6 +378,15 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   rate_limit_burst_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   schedule_mode: Object.values(PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES),
   selected_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
+  shield_bypass_prompt_dismissed_count_bucket: Object.values(
+    PRODUCT_ANALYTICS_COUNT_BUCKETS,
+  ),
+  shield_bypass_prompt_shown_count_bucket: Object.values(
+    PRODUCT_ANALYTICS_COUNT_BUCKETS,
+  ),
+  shield_bypass_settings_visited_count_bucket: Object.values(
+    PRODUCT_ANALYTICS_COUNT_BUCKETS,
+  ),
   setting_id: Object.values(PRODUCT_ANALYTICS_SETTING_IDS),
   site_type: PRODUCT_ANALYTICS_SITE_TYPES,
   skipped_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
@@ -381,6 +397,18 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   surface_id: Object.values(PRODUCT_ANALYTICS_SURFACE_IDS),
   target_managed_site_type: Object.values(PRODUCT_ANALYTICS_MANAGED_SITE_TYPES),
   telemetry_source: Object.values(PRODUCT_ANALYTICS_TELEMETRY_SOURCES),
+  temp_window_fetch_failure_count_bucket: Object.values(
+    PRODUCT_ANALYTICS_COUNT_BUCKETS,
+  ),
+  temp_window_fetch_success_count_bucket: Object.values(
+    PRODUCT_ANALYTICS_COUNT_BUCKETS,
+  ),
+  temp_window_turnstile_fetch_failure_count_bucket: Object.values(
+    PRODUCT_ANALYTICS_COUNT_BUCKETS,
+  ),
+  temp_window_turnstile_fetch_success_count_bucket: Object.values(
+    PRODUCT_ANALYTICS_COUNT_BUCKETS,
+  ),
   site_announcements_polling_interval_bucket: Object.values(
     PRODUCT_ANALYTICS_MODE_IDS,
   ),
@@ -418,6 +446,8 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "auto_provision_key_on_account_add_enabled",
   "managed_site_type",
   "new_api_configured",
+  "shield_bypass_prompt_dismissed_count_bucket",
+  "shield_bypass_prompt_shown_count_bucket",
   "sync_accounts_enabled",
   "source_managed_site_type",
   "target_managed_site_type",

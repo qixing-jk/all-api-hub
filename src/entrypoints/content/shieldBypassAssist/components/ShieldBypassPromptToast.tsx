@@ -16,6 +16,10 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import {
+  recordShieldBypassPromptDismissed,
+  recordShieldBypassSettingsVisited,
+} from "~/services/productAnalytics/shieldBypassSummary"
 
 /** Removes a previously applied prefix from a title string. */
 function stripPrefixedTitle(title: string, prefix: string) {
@@ -105,6 +109,14 @@ export function ShieldBypassPromptToast({
 
   const titlePrefix = useMemo(() => t("titlePrefix"), [t])
   usePrefixedDocumentTitle(titlePrefix)
+  const handleDismiss = () => {
+    void recordShieldBypassPromptDismissed()
+    onDismiss()
+  }
+  const handleOpenSettings = () => {
+    void recordShieldBypassSettingsVisited()
+    onOpenSettings()
+  }
 
   return (
     <ProductAnalyticsScope
@@ -124,7 +136,7 @@ export function ShieldBypassPromptToast({
               analyticsAction={
                 PRODUCT_ANALYTICS_ACTION_IDS.ShieldBypassPromptDismissed
               }
-              onClick={onDismiss}
+              onClick={handleDismiss}
             >
               {t("toast.actions.dismiss")}
             </Button>
@@ -132,7 +144,7 @@ export function ShieldBypassPromptToast({
               analyticsAction={
                 PRODUCT_ANALYTICS_ACTION_IDS.ShieldBypassSettingsVisited
               }
-              onClick={onOpenSettings}
+              onClick={handleOpenSettings}
             >
               {t("toast.actions.openSettings")}
             </Button>
