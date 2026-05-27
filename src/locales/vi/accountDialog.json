@@ -8,6 +8,7 @@
     "confirmAdd": "Xác nhận thêm",
     "helpDocument": "Tài liệu hướng dẫn",
     "reloadCurrentPage": "Làm mới trang hiện tại",
+    "reloadExtensionAndRetry": "Tải lại tiện ích rồi thử lại",
     "reportUnsupportedSite": "Báo cáo trang web chưa được hỗ trợ",
     "saveAccount": "Lưu tài khoản",
     "saveChanges": "Lưu thay đổi",
@@ -111,6 +112,7 @@
   },
   "messages": {
     "addSuccess": "Thêm tài khoản {{name}} thành công!",
+    "autoDetectCookiePermissionReloadHint": "Nếu lần nhận dạng đầu tiên cứ chờ mãi ngay sau khi cấp quyền Cookie nhiều tài khoản, hãy tải lại tiện ích rồi thử lại.",
     "autoDetectFailed": "Tự động nhận dạng thất bại: {{error}}",
     "autoDetectSuccess": "Tự động nhận dạng thành công!",
     "autoDetectTakingTooLong": "Tự động nhận dạng mất quá nhiều thời gian? Nhấp để mở tài liệu khắc phục sự cố",
@@ -127,6 +129,7 @@
     "loadFailed": "Tải dữ liệu tài khoản thất bại",
     "newApiConfigFailed": "Cấu hình tự động vào New API thất bại: {{error}}",
     "operationFailed": "Thao tác thất bại: {{error}}",
+    "reloadExtensionConfirm": "Tải lại tiện ích sẽ đóng trang tiện ích hiện tại. Vui lòng xác nhận bạn đã lưu thông tin cần thiết.",
     "saveAccountFailed": "Lưu tài khoản thất bại",
     "saveFailed": "Lưu thất bại",
     "updateSuccess": "Cập nhật tài khoản {{name}} thành công!",
@@ -198,6 +201,10 @@
       "guide": "Tính năng này trước tiên sẽ lưu tài khoản hiện tại, sau đó tự động chuẩn bị API Key khả dụng và điền sẵn vào kênh mới của {{managedSite}}, giúp bạn hoàn thành việc tạo kênh nhanh hơn. Bạn có thể sử dụng tính năng này sau khi hoàn tất cấu hình trang web được quản lý.",
       "title": "Cấu hình {{managedSite}} trước",
       "warningTitle": "{{managedSite}} chưa hoàn tất cấu hình"
+    },
+    "reloadExtension": {
+      "title": "Tải lại tiện ích",
+      "warningTitle": "Xác nhận tải lại tiện ích?"
     }
   }
 }

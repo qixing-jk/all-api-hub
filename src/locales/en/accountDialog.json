@@ -8,6 +8,7 @@
     "confirmAdd": "Confirm Add",
     "helpDocument": "Help Document",
     "reloadCurrentPage": "Reload current page",
+    "reloadExtensionAndRetry": "Reload extension and retry",
     "reportUnsupportedSite": "Report unsupported site",
     "saveAccount": "Save Account",
     "saveChanges": "Save Changes",
@@ -112,6 +113,7 @@
   },
   "messages": {
     "addSuccess": "Account {{name}} added successfully!",
+    "autoDetectCookiePermissionReloadHint": "If the first detection keeps waiting right after granting Cookie multi-account permissions, reload the extension and try again.",
     "autoDetectFailed": "Auto-detect failed: {{error}}",
     "autoDetectSuccess": "Auto-detect successful!",
     "autoDetectTakingTooLong": "Auto-detect is taking longer than expected. Open troubleshooting guide.",
@@ -128,6 +130,7 @@
     "loadFailed": "Failed to load account data",
     "newApiConfigFailed": "Auto-configuration to New API failed: {{error}}",
     "operationFailed": "Operation failed: {{error}}",
+    "reloadExtensionConfirm": "Reloading the extension will close the current extension page. Make sure any needed information has been saved.",
     "saveAccountFailed": "Failed to save account",
     "saveFailed": "Save failed",
     "updateSuccess": "Account {{name}} updated successfully!",
@@ -200,6 +203,10 @@
       "guide": "This feature first saves the current account, then prepares a usable API key and prefills it into a new channel in {{managedSite}}, helping you finish channel creation faster. It becomes available after the managed-site setup is complete.",
       "title": "Configure {{managedSite}} first",
       "warningTitle": "{{managedSite}} is not configured yet"
+    },
+    "reloadExtension": {
+      "title": "Reload extension",
+      "warningTitle": "Confirm extension reload?"
     }
   }
 }

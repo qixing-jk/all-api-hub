@@ -915,6 +915,17 @@ export function getManifestVersion(): number {
 }
 
 /**
+ * Reloads the extension runtime when the current browser exposes the API.
+ */
+export function reloadRuntime(): void {
+  try {
+    browser.runtime.reload?.()
+  } catch (error) {
+    logger.warn("Failed to reload extension runtime", error)
+  }
+}
+
+/**
  * Returns whether the extension is allowed to run in incognito/private windows.
  *
  * Chrome/Edge require the user to explicitly allow an extension to run in

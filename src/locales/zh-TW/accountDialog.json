@@ -8,6 +8,7 @@
     "confirmAdd": "確認新增",
     "helpDocument": "幫助文件",
     "reloadCurrentPage": "重新整理當前頁面",
+    "reloadExtensionAndRetry": "重新載入擴充套件後重試",
     "reportUnsupportedSite": "反饋未適配站點",
     "saveAccount": "儲存帳號",
     "saveChanges": "儲存更改",
@@ -111,6 +112,7 @@
   },
   "messages": {
     "addSuccess": "帳號 {{name}} 新增成功!",
+    "autoDetectCookiePermissionReloadHint": "如果剛授予 Cookie 多帳號權限後首次識別一直沒有結果，可重新載入擴充套件後再試。",
     "autoDetectFailed": "自動識別失敗: {{error}}",
     "autoDetectSuccess": "自動識別成功！",
     "autoDetectTakingTooLong": "自動識別耗時較長？點擊開啟排查文件",
@@ -127,6 +129,7 @@
     "loadFailed": "載入帳號資料失敗",
     "newApiConfigFailed": "自動配置到 New API失敗: {{error}}",
     "operationFailed": "操作失敗: {{error}}",
+    "reloadExtensionConfirm": "重新載入擴充套件會關閉目前擴充套件頁面，請確認已儲存需要的資訊。",
     "saveAccountFailed": "儲存帳號失敗",
     "saveFailed": "儲存失敗",
     "updateSuccess": "帳號 {{name}} 更新成功!",
@@ -198,6 +201,10 @@
       "guide": "這個功能會先儲存目前帳號，再自動準備可用的 API Key，並預填到 {{managedSite}} 的新建渠道中，幫你更快完成渠道建立。完成託管站點配置後即可使用。",
       "title": "先配置 {{managedSite}}",
       "warningTitle": "{{managedSite}} 尚未完成配置"
+    },
+    "reloadExtension": {
+      "title": "重新載入擴充套件",
+      "warningTitle": "確認重新載入擴充套件？"
     }
   }
 }

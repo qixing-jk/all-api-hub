@@ -8,6 +8,7 @@
     "confirmAdd": "追加を確認",
     "helpDocument": "ヘルプドキュメント",
     "reloadCurrentPage": "現在のページを再読み込み",
+    "reloadExtensionAndRetry": "拡張機能を再読み込みして再試行",
     "reportUnsupportedSite": "未対応サイトを報告",
     "saveAccount": "アカウントを保存",
     "saveChanges": "変更を保存",
@@ -111,6 +112,7 @@
   },
   "messages": {
     "addSuccess": "アカウント {{name}} を正常に追加しました",
+    "autoDetectCookiePermissionReloadHint": "Cookie 複数アカウント権限を許可した直後の初回検出が進まない場合は、拡張機能を再読み込みしてから再試行できます。",
     "autoDetectFailed": "自動検出に失敗しました: {{error}}",
     "autoDetectSuccess": "自動検出に成功しました",
     "autoDetectTakingTooLong": "自動検出に想定より時間がかかっています。トラブルシューティングガイドを開いてください。",
@@ -127,6 +129,7 @@
     "loadFailed": "アカウントデータの読み込みに失敗しました",
     "newApiConfigFailed": "New API への自動設定に失敗しました: {{error}}",
     "operationFailed": "操作に失敗しました: {{error}}",
+    "reloadExtensionConfirm": "拡張機能を再読み込みすると現在の拡張機能ページが閉じます。必要な情報を保存済みであることを確認してください。",
     "saveAccountFailed": "アカウントの保存に失敗しました",
     "saveFailed": "保存に失敗しました",
     "updateSuccess": "アカウント {{name}} を正常に更新しました",
@@ -198,6 +201,10 @@
       "guide": "この機能は現在のアカウントを先に保存し、そのアカウントで使える API Key を自動で用意して {{managedSite}} の新規チャネルに事前入力します。より素早くチャネルを作成でき、管理サイト設定の完了後に利用できます。",
       "title": "先に {{managedSite}} を設定してください",
       "warningTitle": "{{managedSite}} はまだ設定されていません"
+    },
+    "reloadExtension": {
+      "title": "拡張機能を再読み込み",
+      "warningTitle": "拡張機能を再読み込みしますか？"
     }
   }
 }

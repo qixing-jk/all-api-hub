@@ -1,7 +1,13 @@
-import { QuestionMarkCircleIcon } from "@heroicons/react/24/outline"
+import {
+  ArrowPathIcon,
+  QuestionMarkCircleIcon,
+} from "@heroicons/react/24/outline"
+import { useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Alert, Button } from "~/components/ui"
+import { DestructiveConfirmDialog } from "~/components/ui/Dialog/DestructiveConfirmDialog"
+import { reloadRuntime } from "~/utils/browser/browserApi"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
 export interface AutoDetectSlowHintAlertProps {
@@ -17,7 +23,8 @@ export default function AutoDetectSlowHintAlert({
   helpDocUrl = getDocsAutoDetectUrl(),
   onHelpClick,
 }: AutoDetectSlowHintAlertProps) {
-  const { t } = useTranslation("accountDialog")
+  const { t } = useTranslation(["accountDialog", "common"])
+  const [isReloadConfirmOpen, setIsReloadConfirmOpen] = useState(false)
 
   const handleHelpClick = () => {
     if (onHelpClick) {
@@ -27,20 +34,58 @@ export default function AutoDetectSlowHintAlert({
     browser.tabs.create({ url: helpDocUrl, active: true })
   }
 
+  const handleReloadExtension = () => {
+    setIsReloadConfirmOpen(true)
+  }
+
+  const handleConfirmReloadExtension = () => {
+    setIsReloadConfirmOpen(false)
+    reloadRuntime()
+  }
+
   return (
-    <Alert variant="info" className="mb-4">
-      <div>
-        <p className="mb-2 text-xs">{t("messages.autoDetectTakingTooLong")}</p>
-        <Button
-          type="button"
-          onClick={handleHelpClick}
-          variant="secondary"
-          size="sm"
-          leftIcon={<QuestionMarkCircleIcon className="h-3 w-3" />}
-        >
-          {t("actions.helpDocument")}
-        </Button>
-      </div>
-    </Alert>
+    <>
+      <Alert variant="info" className="mb-4">
+        <div>
+          <p className="mb-2 text-xs">
+            {t("accountDialog:messages.autoDetectTakingTooLong")}
+          </p>
+          <p className="mb-2 text-xs">
+            {t("accountDialog:messages.autoDetectCookiePermissionReloadHint")}
+          </p>
+          <div className="flex flex-wrap gap-2">
+            <Button
+              type="button"
+              onClick={handleHelpClick}
+              variant="secondary"
+              size="sm"
+              leftIcon={<QuestionMarkCircleIcon className="h-3 w-3" />}
+            >
+              {t("accountDialog:actions.helpDocument")}
+            </Button>
+            <Button
+              type="button"
+              onClick={handleReloadExtension}
+              variant="outline"
+              size="sm"
+              leftIcon={<ArrowPathIcon className="h-3 w-3" />}
+            >
+              {t("accountDialog:actions.reloadExtensionAndRetry")}
+            </Button>
+          </div>
+        </div>
+      </Alert>
+
+      <DestructiveConfirmDialog
+        isOpen={isReloadConfirmOpen}
+        onClose={() => setIsReloadConfirmOpen(false)}
+        title={t("accountDialog:warnings.reloadExtension.title")}
+        warningTitle={t("accountDialog:warnings.reloadExtension.warningTitle")}
+        description={t("accountDialog:messages.reloadExtensionConfirm")}
+        cancelLabel={t("common:actions.cancel")}
+        confirmLabel={t("accountDialog:actions.reloadExtensionAndRetry")}
+        onConfirm={handleConfirmReloadExtension}
+      />
+    </>
   )
 }

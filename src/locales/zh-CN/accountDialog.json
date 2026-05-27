@@ -8,6 +8,7 @@
     "confirmAdd": "确认添加",
     "helpDocument": "帮助文档",
     "reloadCurrentPage": "刷新当前页面",
+    "reloadExtensionAndRetry": "重新加载扩展后重试",
     "reportUnsupportedSite": "反馈未适配站点",
     "saveAccount": "保存账号",
     "saveChanges": "保存更改",
@@ -111,6 +112,7 @@
   },
   "messages": {
     "addSuccess": "账号 {{name}} 添加成功!",
+    "autoDetectCookiePermissionReloadHint": "如果刚授予 Cookie 多账号权限后首次识别一直无结果，可重新加载扩展后再试。",
     "autoDetectFailed": "自动识别失败: {{error}}",
     "autoDetectSuccess": "自动识别成功！",
     "autoDetectTakingTooLong": "自动识别耗时较长？点击打开排查文档",
@@ -127,6 +129,7 @@
     "loadFailed": "加载账号数据失败",
     "newApiConfigFailed": "自动配置到 New API失败: {{error}}",
     "operationFailed": "操作失败: {{error}}",
+    "reloadExtensionConfirm": "重新加载扩展会关闭当前扩展页面，请确认已保存需要的信息。",
     "saveAccountFailed": "保存账号失败",
     "saveFailed": "保存失败",
     "updateSuccess": "账号 {{name}} 更新成功!",
@@ -198,6 +201,10 @@
       "guide": "这个功能会先保存当前账号，再自动准备可用的 API Key，并预填到 {{managedSite}} 的新建渠道中，帮你更快完成渠道创建。完成托管站点配置后即可使用。",
       "title": "先配置 {{managedSite}}",
       "warningTitle": "{{managedSite}} 尚未完成配置"
+    },
+    "reloadExtension": {
+      "title": "重新加载扩展",
+      "warningTitle": "确认重新加载扩展？"
     }
   }
 }
