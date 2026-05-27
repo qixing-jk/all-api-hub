@@ -1,4 +1,4 @@
-import { describe, expect, it, vi } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 
 import AutoDetectSlowHintAlert from "~/features/AccountManagement/components/AccountDialog/AutoDetectSlowHintAlert"
 import { fireEvent, render, screen, within } from "~~/tests/test-utils/render"
@@ -18,6 +18,10 @@ vi.mock("~/utils/navigation/docsLinks", () => ({
 }))
 
 describe("AutoDetectSlowHintAlert", () => {
+  afterEach(() => {
+    vi.clearAllMocks()
+  })
+
   it("opens auto-detect troubleshooting doc", async () => {
     const { getDocsAutoDetectUrl } = await import(
       "~/utils/navigation/docsLinks"

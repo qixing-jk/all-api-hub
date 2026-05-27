@@ -38,6 +38,7 @@ import {
   onTabRemoved,
   onTabUpdated,
   onWindowRemoved,
+  reloadRuntime,
   removeActionClickListener,
   removePermissions,
   removeTabOrWindow,
@@ -1049,6 +1050,29 @@ describe("browserApi window and manifest helpers", () => {
       optional_permissions: [],
     })
     expect(getManifestVersion()).toBe(3)
+  })
+
+  it("delegates extension reload to browser.runtime.reload when available", () => {
+    const reload = vi.fn()
+    ;(globalThis as any).browser.runtime.reload = reload
+
+    reloadRuntime()
+
+    expect(reload).toHaveBeenCalledTimes(1)
+  })
+
+  it("does not throw when runtime reload is unavailable", () => {
+    delete (globalThis as any).browser.runtime.reload
+
+    expect(() => reloadRuntime()).not.toThrow()
+  })
+
+  it("swallows runtime reload failures", () => {
+    ;(globalThis as any).browser.runtime.reload = vi.fn(() => {
+      throw new Error("reload unavailable")
+    })
+
+    expect(() => reloadRuntime()).not.toThrow()
   })
 
   it("returns incognito access as null when the browser API throws", async () => {
