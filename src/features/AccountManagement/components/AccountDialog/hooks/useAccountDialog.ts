@@ -2485,8 +2485,8 @@ function getAutoDetectAnalyticsErrorCategory(
     case AutoDetectErrorType.INVALID_RESPONSE:
       return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
     case AutoDetectErrorType.NOT_FOUND:
-      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
     case AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED:
+      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
     case AutoDetectErrorType.UNKNOWN:
     default:
       if (structuredError !== undefined) {

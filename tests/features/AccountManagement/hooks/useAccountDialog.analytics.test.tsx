@@ -241,6 +241,10 @@ describe("useAccountDialog analytics", () => {
       PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
     ],
     [
+      AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED,
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+    ],
+    [
       AutoDetectErrorType.SERVER_ERROR,
       PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network,
     ],

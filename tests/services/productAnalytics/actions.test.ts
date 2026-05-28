@@ -295,6 +295,14 @@ describe("product analytics action helpers", () => {
     ).toBe(PRODUCT_ANALYTICS_ERROR_CATEGORIES.Timeout)
     expect(
       resolveProductAnalyticsErrorCategoryFromError({
+        name: "NotAllowedError",
+      }),
+    ).toBe(PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission)
+    expect(
+      resolveProductAnalyticsErrorCategoryFromError({ name: "NotFoundError" }),
+    ).toBe(PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported)
+    expect(
+      resolveProductAnalyticsErrorCategoryFromError({
         cause: { statusCode: 403 },
       }),
     ).toBe(PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth)

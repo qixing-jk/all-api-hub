@@ -174,6 +174,18 @@ export function resolveProductAnalyticsErrorCategoryFromError(
     return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Timeout
   }
 
+  if (
+    error.name === "NotAllowedError" ||
+    error.name === "SecurityError" ||
+    error.name === "PermissionDeniedError"
+  ) {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission
+  }
+
+  if (error.name === "NotFoundError" || error.name === "NotSupportedError") {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
+  }
+
   if (error.cause && error.cause !== error) {
     return resolveProductAnalyticsErrorCategoryFromError(error.cause)
   }

@@ -687,7 +687,11 @@ describe("AccountActionButtons", () => {
   })
 
   it("falls back to the copy dialog when the token probe throws", async () => {
-    fetchAccountTokensMock.mockRejectedValueOnce(new Error("probe failed"))
+    const tokenLoadError = { statusCode: 401, message: "private auth text" }
+    fetchAccountTokensMock.mockRejectedValueOnce(tokenLoadError)
+    resolveProductAnalyticsErrorCategoryFromErrorMock.mockReturnValueOnce(
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+    )
 
     const user = userEvent.setup()
     const onCopyKey = vi.fn()
@@ -716,11 +720,12 @@ describe("AccountActionButtons", () => {
         expect.objectContaining({ id: "acc-probe-failed" }),
       )
     })
+    expect(
+      resolveProductAnalyticsErrorCategoryFromErrorMock,
+    ).toHaveBeenCalledWith(tokenLoadError)
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
-      {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      },
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth },
     )
   })
 

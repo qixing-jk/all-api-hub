@@ -396,7 +396,7 @@ export default function AccountActionButtons({
       // Fallback to opening dialog
       onCopyKey(site)
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
       })
     } finally {
       setIsCheckingTokens(false)
