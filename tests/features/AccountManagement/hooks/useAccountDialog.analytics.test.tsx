@@ -228,6 +228,53 @@ describe("useAccountDialog analytics", () => {
     expectNoSensitiveAnalyticsFields()
   })
 
+  it.each([
+    [
+      AutoDetectErrorType.NOT_FOUND,
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+    ],
+    [
+      AutoDetectErrorType.SERVER_ERROR,
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network,
+    ],
+  ])(
+    "tracks %s account auto-detect failures with a specific safe error category",
+    async (errorType, errorCategory) => {
+      mockAutoDetectAccount.mockResolvedValueOnce({
+        success: false,
+        message: "backend leaked private host",
+        detailedError: {
+          type: errorType,
+          message: "private backend text",
+        },
+      })
+
+      const { result } = renderAddHook()
+
+      await waitFor(() => {
+        expect(result.current.state).toBeTruthy()
+      })
+
+      await setUrlAndWait(result, "https://private.example.com")
+
+      await act(async () => {
+        await result.current.handlers.handleAutoDetect()
+      })
+
+      expectStartedAction(PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect)
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+          },
+        },
+      )
+      expectNoSensitiveAnalyticsFields()
+    },
+  )
+
   it("tracks duplicate-warning cancellation during account auto-detect as cancelled", async () => {
     await accountStorage.addAccount(
       buildSiteAccount({

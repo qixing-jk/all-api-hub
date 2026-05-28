@@ -2473,12 +2473,13 @@ function getAutoDetectAnalyticsErrorCategory(
     case AutoDetectErrorType.TIMEOUT:
       return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Timeout
     case AutoDetectErrorType.NETWORK_ERROR:
+    case AutoDetectErrorType.SERVER_ERROR:
       return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network
     case AutoDetectErrorType.INVALID_RESPONSE:
       return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
-    case AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED:
     case AutoDetectErrorType.NOT_FOUND:
-    case AutoDetectErrorType.SERVER_ERROR:
+      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
+    case AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED:
     case AutoDetectErrorType.UNKNOWN:
     default:
       return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown

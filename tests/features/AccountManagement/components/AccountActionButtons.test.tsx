@@ -12,6 +12,7 @@ import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_STATUS_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_STATES,
 } from "~/services/productAnalytics/events"
@@ -965,6 +966,11 @@ describe("AccountActionButtons", () => {
       })
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
+          },
+        },
       )
     })
   })
@@ -1010,6 +1016,11 @@ describe("AccountActionButtons", () => {
       )
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
+          },
+        },
       )
     })
   })
@@ -1149,6 +1160,66 @@ describe("AccountActionButtons", () => {
     await waitFor(() => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Skipped,
+        {
+          insights: {
+            statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Warning,
+          },
+        },
+      )
+    })
+  })
+
+  it("tracks failed quick-checkin completion with status kind context", async () => {
+    toastLoadingMock.mockReturnValue("toast-quick-checkin-failed-status")
+    sendRuntimeMessageMock
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          perAccount: {
+            "acc-quick-failed-status": {
+              status: CHECKIN_RESULT_STATUS.FAILED,
+              messageKey: "autoCheckin:providerFallback.checkinFailed",
+            },
+          },
+        },
+      })
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-quick-failed-status",
+          disabled: false,
+          name: "Failed Status Site",
+          checkIn: { enableDetection: true },
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText("account:actions.quickCheckin")
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
+          },
+        },
       )
     })
   })

@@ -59,9 +59,11 @@ import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_STATUS_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_STATES,
   type ProductAnalyticsResult,
+  type ProductAnalyticsStatusKind,
 } from "~/services/productAnalytics/events"
 import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
@@ -173,6 +175,20 @@ const getQuickCheckinAnalyticsResult = (
   }
 
   return PRODUCT_ANALYTICS_RESULTS.Success
+}
+
+const getQuickCheckinAnalyticsStatusKind = (
+  status: string | undefined,
+): ProductAnalyticsStatusKind => {
+  if (status === CHECKIN_RESULT_STATUS.FAILED) {
+    return PRODUCT_ANALYTICS_STATUS_KINDS.Error
+  }
+
+  if (status === CHECKIN_RESULT_STATUS.SKIPPED) {
+    return PRODUCT_ANALYTICS_STATUS_KINDS.Warning
+  }
+
+  return PRODUCT_ANALYTICS_STATUS_KINDS.Healthy
 }
 
 const getLocateManagedSiteChannelToastMessage = (
@@ -744,12 +760,18 @@ export default function AccountActionButtons({
       }
 
       const analyticsResult = getQuickCheckinAnalyticsResult(status)
+      const quickCheckinInsights = {
+        statusKind: getQuickCheckinAnalyticsStatusKind(status),
+      }
       if (analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure) {
         tracker.complete(analyticsResult, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: quickCheckinInsights,
         })
       } else {
-        tracker.complete(analyticsResult)
+        tracker.complete(analyticsResult, {
+          insights: quickCheckinInsights,
+        })
       }
       void loadAccountData()
     } catch (error) {
