@@ -682,7 +682,7 @@ export default function AutoCheckin(props: {
       errorCategory?: typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
     ) => {
       void trackProductAnalyticsActionCompleted({
-        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountSite,
         surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,

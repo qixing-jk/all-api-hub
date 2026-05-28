@@ -111,6 +111,7 @@ export default function ModelList(props: {
     filteredModels,
     accountSummaryCountsByAccountId,
     allProvidersFilteredCount,
+    getFilteredResultCount,
     availableGroups,
     availableAccountGroupsByAccountId,
     availableAccountGroupOptionsByAccountId,
@@ -539,6 +540,7 @@ export default function ModelList(props: {
             setShowEndpointTypes={setShowEndpointTypes}
             totalModels={totalModels}
             filteredModels={filteredModels}
+            getFilteredResultCount={getFilteredResultCount}
             onBatchVerifyModels={
               canBatchVerifyModels ? handleOpenBatchVerify : undefined
             }

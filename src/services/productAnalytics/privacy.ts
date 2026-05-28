@@ -451,9 +451,16 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
 
 const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "account_count_bucket",
+  "account_auto_refresh_enabled",
+  "account_auto_refresh_interval_bucket",
+  "account_auto_refresh_min_interval_bucket",
+  "account_auto_refresh_on_open_enabled",
   "auto_detect_url_patterns_configured",
   "auto_fill_current_site_url_on_account_add_enabled",
   "auto_provision_key_on_account_add_enabled",
+  "balance_history_enabled",
+  "balance_history_end_of_day_capture_enabled",
+  "balance_history_retention_days_bucket",
   "managed_site_type",
   "new_api_configured",
   "shield_bypass_prompt_dismissed_count_bucket",

@@ -153,4 +153,56 @@ describe("AutoCheckin FilterBar", () => {
       JSON.stringify(trackProductAnalyticsActionCompletedMock.mock.calls),
     ).not.toContain("private-keyword")
   })
+
+  it("counts results after both pending status and keyword filters", () => {
+    rtlRender(
+      <I18nextProvider i18n={testI18n}>
+        <FilterBar
+          accountResults={[
+            {
+              accountId: "account-1",
+              accountName: "Alpha",
+              status: CHECKIN_RESULT_STATUS.FAILED,
+              rawMessage: "needs private login",
+              timestamp: 1,
+            } as any,
+            {
+              accountId: "account-2",
+              accountName: "Beta",
+              status: CHECKIN_RESULT_STATUS.FAILED,
+              rawMessage: "different failure",
+              timestamp: 2,
+            } as any,
+            {
+              accountId: "account-3",
+              accountName: "Private Success",
+              status: CHECKIN_RESULT_STATUS.SUCCESS,
+              rawMessage: "ok",
+              timestamp: 3,
+            } as any,
+          ]}
+          status={FILTER_STATUS.ALL}
+          keyword="private"
+          onStatusChange={vi.fn()}
+          onKeywordChange={vi.fn()}
+        />
+      </I18nextProvider>,
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: /autoCheckin:execution\.filters\.failed/i,
+      }),
+    )
+
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        insights: expect.objectContaining({
+          mode: PRODUCT_ANALYTICS_MODE_IDS.StatusFilter,
+          filterCount: 2,
+          resultCount: 1,
+        }),
+      }),
+    )
+  })
 })

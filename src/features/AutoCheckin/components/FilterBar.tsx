@@ -32,6 +32,42 @@ export const FILTER_STATUS = {
 
 export type FilterStatus = (typeof FILTER_STATUS)[keyof typeof FILTER_STATUS]
 
+const getResultMessage = (result: CheckinAccountResult) =>
+  result.rawMessage ?? result.message ?? result.messageKey ?? ""
+
+const matchesStatusFilter = (
+  result: CheckinAccountResult,
+  status: FilterStatus,
+) => {
+  switch (status) {
+    case FILTER_STATUS.SUCCESS:
+      return (
+        result.status === CHECKIN_RESULT_STATUS.SUCCESS ||
+        result.status === CHECKIN_RESULT_STATUS.ALREADY_CHECKED
+      )
+    case FILTER_STATUS.FAILED:
+      return result.status === CHECKIN_RESULT_STATUS.FAILED
+    case FILTER_STATUS.SKIPPED:
+      return result.status === CHECKIN_RESULT_STATUS.SKIPPED
+    case FILTER_STATUS.ALL:
+      return true
+  }
+}
+
+const matchesKeywordFilter = (
+  result: CheckinAccountResult,
+  keyword: string,
+) => {
+  const normalizedKeyword = keyword.trim().toLowerCase()
+  if (!normalizedKeyword) return true
+
+  return (
+    result.accountName.toLowerCase().includes(normalizedKeyword) ||
+    String(result.accountId).toLowerCase().includes(normalizedKeyword) ||
+    getResultMessage(result).toLowerCase().includes(normalizedKeyword)
+  )
+}
+
 interface FilterBarProps {
   accountResults: CheckinAccountResult[]
   status: FilterStatus
@@ -70,18 +106,15 @@ export default function FilterBar({
   const skippedCount = accountResults.filter(
     (r) => r.status === CHECKIN_RESULT_STATUS.SKIPPED,
   ).length
-  const getFilteredResultCount = (nextStatus: FilterStatus) => {
-    switch (nextStatus) {
-      case FILTER_STATUS.SUCCESS:
-        return successCount
-      case FILTER_STATUS.FAILED:
-        return failedCount
-      case FILTER_STATUS.SKIPPED:
-        return skippedCount
-      case FILTER_STATUS.ALL:
-        return totalCount
-    }
-  }
+  const getFilteredResultCount = (
+    nextStatus: FilterStatus,
+    nextKeyword: string,
+  ) =>
+    accountResults.filter(
+      (result) =>
+        matchesStatusFilter(result, nextStatus) &&
+        matchesKeywordFilter(result, nextKeyword),
+    ).length
   const trackFilterSelection = (
     mode:
       | typeof PRODUCT_ANALYTICS_MODE_IDS.SearchFilter
@@ -102,7 +135,7 @@ export default function FilterBar({
         targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ResultFilter,
         mode,
         filterCount,
-        resultCount: getFilteredResultCount(nextStatus),
+        resultCount: getFilteredResultCount(nextStatus, nextKeyword),
       },
     })
   }

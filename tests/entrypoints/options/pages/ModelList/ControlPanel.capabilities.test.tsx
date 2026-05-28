@@ -657,4 +657,68 @@ describe("ControlPanel profile capabilities", () => {
       },
     })
   })
+
+  it("tracks pending filter result counts from the shared model-list estimator", async () => {
+    const setSelectedBillingMode = vi.fn()
+    const getFilteredResultCount = vi.fn(() => 7)
+
+    render(
+      <ControlPanel
+        selectedSource={{ kind: "account" } as any}
+        sourceCapabilities={
+          {
+            supportsGroupFiltering: false,
+            supportsPricing: true,
+            supportsRatioDisplay: false,
+          } as any
+        }
+        searchTerm="private-search"
+        setSearchTerm={vi.fn()}
+        sortMode={MODEL_LIST_SORT_MODES.DEFAULT}
+        setSortMode={vi.fn()}
+        selectedBillingMode={MODEL_LIST_BILLING_MODES.ALL}
+        setSelectedBillingMode={setSelectedBillingMode}
+        selectedGroups={[]}
+        setSelectedGroups={vi.fn()}
+        availableGroups={[]}
+        pricingData={{ group_ratio: {} }}
+        showRealPrice={false}
+        setShowRealPrice={vi.fn()}
+        showRatioColumn={false}
+        setShowRatioColumn={vi.fn()}
+        showEndpointTypes={true}
+        setShowEndpointTypes={vi.fn()}
+        totalModels={10}
+        filteredModels={[{ model: { model_name: "current-visible-model" } }]}
+        getFilteredResultCount={getFilteredResultCount}
+      />,
+    )
+
+    const [, billingModeSelect] = await screen.findAllByRole("combobox")
+    fireEvent.click(billingModeSelect)
+    fireEvent.click(await screen.findByText("ui:billing.tokenBased"))
+
+    expect(setSelectedBillingMode).toHaveBeenCalledWith(
+      MODEL_LIST_BILLING_MODES.TOKEN_BASED,
+    )
+    expect(getFilteredResultCount).toHaveBeenCalledWith({
+      searchTerm: "private-search",
+      sortMode: MODEL_LIST_SORT_MODES.DEFAULT,
+      selectedBillingMode: MODEL_LIST_BILLING_MODES.TOKEN_BASED,
+      selectedGroups: [],
+    })
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.BillingFilter,
+        filterCount: 2,
+        resultCount: 7,
+      },
+    })
+  })
 })

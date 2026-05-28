@@ -72,6 +72,12 @@ interface ControlPanelProps {
   setShowEndpointTypes: (show: boolean) => void
   totalModels: number
   filteredModels: any[]
+  getFilteredResultCount?: (filters: {
+    searchTerm?: string
+    sortMode?: ModelListSortMode
+    selectedBillingMode?: ModelListBillingMode
+    selectedGroups?: string[]
+  }) => number
   onBatchVerifyModels?: () => void
 }
 
@@ -98,6 +104,7 @@ interface ControlPanelProps {
  * @param props.setShowEndpointTypes Setter for endpoint type toggle.
  * @param props.totalModels Total models available.
  * @param props.filteredModels Currently filtered model list.
+ * @param props.getFilteredResultCount Optional estimator for pending filter state.
  * @param props.onBatchVerifyModels Optional handler for batch API verification.
  * @returns Card with filters, toggles, and actions.
  */
@@ -122,6 +129,7 @@ export function ControlPanel({
   setShowEndpointTypes,
   totalModels,
   filteredModels,
+  getFilteredResultCount,
   onBatchVerifyModels,
 }: ControlPanelProps) {
   const { t } = useTranslation(["modelList", "ui"])
@@ -204,6 +212,13 @@ export function ControlPanel({
       (nextSortMode !== MODEL_LIST_SORT_MODES.DEFAULT ? 1 : 0) +
       (nextSelectedBillingMode !== MODEL_LIST_BILLING_MODES.ALL ? 1 : 0) +
       nextSelectedGroups.length
+    const resultCount =
+      getFilteredResultCount?.({
+        searchTerm: nextSearchTerm,
+        sortMode: nextSortMode,
+        selectedBillingMode: nextSelectedBillingMode,
+        selectedGroups: nextSelectedGroups,
+      }) ?? filteredModels.length
 
     void trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
@@ -215,7 +230,7 @@ export function ControlPanel({
         targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
         mode,
         filterCount,
-        resultCount: filteredModels.length,
+        resultCount,
       },
     })
   }

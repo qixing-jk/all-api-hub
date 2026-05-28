@@ -165,7 +165,7 @@ describe("AutoCheckinUiOpenPretrigger", () => {
       }),
     )
     expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
       expect.objectContaining({
         global_enabled: true,
         ui_pretrigger_enabled: true,

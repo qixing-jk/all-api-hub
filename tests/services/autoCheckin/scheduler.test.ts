@@ -359,7 +359,7 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
     const snapshotCall =
       mockedProductAnalytics.trackProductAnalyticsEvent.mock.calls.find(
         ([eventName, payload]) =>
-          eventName === PRODUCT_ANALYTICS_EVENTS.SettingChanged &&
+          eventName === PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured &&
           payload?.setting_id ===
             PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
       )

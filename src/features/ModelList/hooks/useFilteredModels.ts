@@ -352,6 +352,13 @@ function resolveCalculatedModels(params: {
     .filter((item): item is CalculatedModelItem => item !== null)
 }
 
+type FilterOverrides = Partial<
+  Pick<
+    UseFilteredModelsProps,
+    "searchTerm" | "sortMode" | "selectedBillingMode" | "selectedGroups"
+  >
+>
+
 /**
  * Derives filtered model list with pricing and helper metadata for UI controls.
  * Applies group, search, provider, and account filters on priced models.
@@ -570,31 +577,6 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     selectedSource?.kind,
   ])
 
-  const effectiveSingleSourceGroupCandidates = useMemo(() => {
-    if (!selectedSource?.capabilities.supportsGroupFiltering) {
-      return [DEFAULT_MODEL_GROUP]
-    }
-
-    if (selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
-      return []
-    }
-
-    const uniqueSelectedGroups = Array.from(
-      new Set(selectedGroups.filter(Boolean)),
-    )
-
-    if (uniqueSelectedGroups.length > 0) {
-      return uniqueSelectedGroups
-    }
-
-    return availableGroups.length > 0 ? availableGroups : [DEFAULT_MODEL_GROUP]
-  }, [
-    availableGroups,
-    selectedGroups,
-    selectedSource?.capabilities.supportsGroupFiltering,
-    selectedSource?.kind,
-  ])
-
   const includedAllAccountsGroupsByAccountId = useMemo(() => {
     if (selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
       return {}
@@ -622,8 +604,36 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     selectedSource?.kind,
   ])
 
-  const getEffectiveGroupCandidatesForRawItem = useCallback(
-    (item: RawModelItem) => {
+  const getSingleSourceGroupCandidates = useCallback(
+    (groups: string[] = selectedGroups) => {
+      if (!selectedSource?.capabilities.supportsGroupFiltering) {
+        return [DEFAULT_MODEL_GROUP]
+      }
+
+      if (selectedSource.kind === MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
+        return []
+      }
+
+      const uniqueSelectedGroups = Array.from(new Set(groups.filter(Boolean)))
+
+      if (uniqueSelectedGroups.length > 0) {
+        return uniqueSelectedGroups
+      }
+
+      return availableGroups.length > 0
+        ? availableGroups
+        : [DEFAULT_MODEL_GROUP]
+    },
+    [
+      availableGroups,
+      selectedGroups,
+      selectedSource?.capabilities.supportsGroupFiltering,
+      selectedSource?.kind,
+    ],
+  )
+
+  const getGroupCandidatesForRawItem = useCallback(
+    (item: RawModelItem, groups: string[] = selectedGroups) => {
       if (
         !selectedSource?.capabilities.supportsGroupFiltering ||
         !item.source.capabilities.supportsGroupFiltering
@@ -640,79 +650,144 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
         )
       }
 
-      return effectiveSingleSourceGroupCandidates
+      return getSingleSourceGroupCandidates(groups)
     },
     [
-      effectiveSingleSourceGroupCandidates,
+      getSingleSourceGroupCandidates,
       includedAllAccountsGroupsByAccountId,
+      selectedGroups,
       selectedSource?.capabilities.supportsGroupFiltering,
       selectedSource?.kind,
     ],
   )
 
-  const baseFilteredRawModels = useMemo(() => {
-    let filtered = rawModelItems
+  const getEffectiveGroupCandidatesForRawItem = useCallback(
+    (item: RawModelItem) => getGroupCandidatesForRawItem(item),
+    [getGroupCandidatesForRawItem],
+  )
 
-    if (searchTerm) {
-      const searchLower = searchTerm.toLowerCase()
-      filtered = filtered.filter(
-        (item) =>
-          item.model.model_name.toLowerCase().includes(searchLower) ||
-          item.model.model_description?.toLowerCase().includes(searchLower) ||
-          false,
-      )
-    }
+  const getBaseFilteredRawModels = useCallback(
+    (overrides: FilterOverrides = {}) => {
+      let filtered = rawModelItems
+      const nextSearchTerm = overrides.searchTerm ?? searchTerm
+      const nextSelectedBillingMode =
+        overrides.selectedBillingMode ?? selectedBillingMode
+      const nextSelectedGroups = overrides.selectedGroups ?? selectedGroups
 
-    const supportsGroupFiltering =
-      selectedSource?.capabilities.supportsGroupFiltering ?? false
-
-    if (supportsGroupFiltering) {
-      filtered = filtered.filter((item) => {
-        const itemSupportsGroupFiltering =
-          item.source.capabilities.supportsGroupFiltering
-        return (
-          resolveCandidateGroups(
-            item,
-            getEffectiveGroupCandidatesForRawItem(item),
-            itemSupportsGroupFiltering,
-          ).length > 0
+      if (nextSearchTerm) {
+        const searchLower = nextSearchTerm.toLowerCase()
+        filtered = filtered.filter(
+          (item) =>
+            item.model.model_name.toLowerCase().includes(searchLower) ||
+            item.model.model_description?.toLowerCase().includes(searchLower) ||
+            false,
         )
-      })
-    }
+      }
 
-    if (selectedBillingMode !== MODEL_LIST_BILLING_MODES.ALL) {
-      filtered = filtered.filter(
+      const supportsGroupFiltering =
+        selectedSource?.capabilities.supportsGroupFiltering ?? false
+
+      if (supportsGroupFiltering) {
+        filtered = filtered.filter((item) => {
+          const itemSupportsGroupFiltering =
+            item.source.capabilities.supportsGroupFiltering
+          return (
+            resolveCandidateGroups(
+              item,
+              getGroupCandidatesForRawItem(item, nextSelectedGroups),
+              itemSupportsGroupFiltering,
+            ).length > 0
+          )
+        })
+      }
+
+      if (nextSelectedBillingMode !== MODEL_LIST_BILLING_MODES.ALL) {
+        filtered = filtered.filter(
+          (item) =>
+            !supportsPricingDerivedBehavior(item) ||
+            getModelBillingMode(item.model.quota_type) ===
+              nextSelectedBillingMode,
+        )
+      }
+
+      return filtered
+    },
+    [
+      getGroupCandidatesForRawItem,
+      rawModelItems,
+      searchTerm,
+      selectedBillingMode,
+      selectedGroups,
+      selectedSource?.capabilities.supportsGroupFiltering,
+    ],
+  )
+
+  const baseFilteredRawModels = useMemo(
+    () => getBaseFilteredRawModels(),
+    [getBaseFilteredRawModels],
+  )
+
+  const getAccountFilteredRawModels = useCallback(
+    (rawItems: RawModelItem[]) => {
+      if (
+        selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS ||
+        accountFilterAccountIds.length === 0
+      ) {
+        return rawItems
+      }
+
+      const selectedAccountIds = new Set(accountFilterAccountIds)
+
+      return rawItems.filter(
         (item) =>
-          !supportsPricingDerivedBehavior(item) ||
-          getModelBillingMode(item.model.quota_type) === selectedBillingMode,
+          item.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT ||
+          selectedAccountIds.has(item.source.account.id),
       )
-    }
+    },
+    [accountFilterAccountIds, selectedSource?.kind],
+  )
 
-    return filtered
-  }, [
-    selectedBillingMode,
-    getEffectiveGroupCandidatesForRawItem,
-    rawModelItems,
-    searchTerm,
-    selectedSource?.capabilities.supportsGroupFiltering,
-  ])
+  const accountFilteredBaseRawModels = useMemo(
+    () => getAccountFilteredRawModels(baseFilteredRawModels),
+    [baseFilteredRawModels, getAccountFilteredRawModels],
+  )
 
-  const accountFilteredBaseRawModels = useMemo(() => {
-    if (
-      selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS ||
-      accountFilterAccountIds.length === 0
-    ) {
-      return baseFilteredRawModels
-    }
+  const getFilteredResultCount = useCallback(
+    (overrides: FilterOverrides = {}) => {
+      const baseModels = resolveCalculatedModels({
+        rawItems: getAccountFilteredRawModels(
+          getBaseFilteredRawModels(overrides),
+        ),
+        getGroupCandidates: (item) =>
+          getGroupCandidatesForRawItem(
+            item,
+            overrides.selectedGroups ?? selectedGroups,
+          ),
+        getSupportsGroupFiltering: (item) =>
+          (selectedSource?.capabilities.supportsGroupFiltering ?? false) &&
+          item.source.capabilities.supportsGroupFiltering,
+        showRealPrice,
+      })
 
-    const selectedAccountIds = new Set(accountFilterAccountIds)
+      if (selectedProvider === MODEL_PROVIDER_FILTER_VALUES.ALL) {
+        return baseModels.length
+      }
 
-    return baseFilteredRawModels.filter(
-      (item) =>
-        item.source.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ACCOUNT ||
-        selectedAccountIds.has(item.source.account.id),
-    )
-  }, [accountFilterAccountIds, baseFilteredRawModels, selectedSource?.kind])
+      return baseModels.filter(
+        (item) =>
+          filterModelsByProvider([item.model], selectedProvider).length > 0,
+      ).length
+    },
+    [
+      getAccountFilteredRawModels,
+      getBaseFilteredRawModels,
+      getGroupCandidatesForRawItem,
+      selectedGroups,
+      selectedProvider,
+      selectedSource?.capabilities.supportsGroupFiltering,
+      showRealPrice,
+    ],
+  )
 
   const accountSummaryCountsByAccountId = useMemo(() => {
     if (selectedSource?.kind !== MODEL_MANAGEMENT_SOURCE_KINDS.ALL_ACCOUNTS) {
@@ -955,6 +1030,7 @@ export function useFilteredModels(params: UseFilteredModelsProps) {
     baseFilteredModels,
     allProvidersFilteredCount: baseFilteredModels.length,
     getProviderFilteredCount,
+    getFilteredResultCount,
     availableGroups,
     availableAccountGroupsByAccountId,
     availableAccountGroupOptionsByAccountId,

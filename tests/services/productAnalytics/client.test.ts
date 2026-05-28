@@ -340,6 +340,33 @@ describe("productAnalyticsClient", () => {
     expect(posthogMocks.capture).not.toHaveBeenCalled()
   })
 
+  it("ignores malformed analytics policy payload fields safely", async () => {
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")
+    posthogMocks.getFeatureFlagPayload.mockReturnValue({
+      disabledEvents: PRODUCT_ANALYTICS_EVENTS.PageViewed,
+      disabledFeatureIds: {
+        value: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      },
+      disabledActionIds: [
+        PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow,
+        123,
+        null,
+      ],
+    })
+
+    const client = await importClient()
+
+    await expect(
+      client.capture(PRODUCT_ANALYTICS_EVENTS.PageViewed, {
+        page_id: PRODUCT_ANALYTICS_PAGE_IDS.OptionsBasicSettings,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      }),
+    ).resolves.toBe(true)
+
+    expect(posthogMocks.capture).toHaveBeenCalledTimes(1)
+  })
+
   it("does not capture when analytics is disabled before locked capture work", async () => {
     vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
     vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")

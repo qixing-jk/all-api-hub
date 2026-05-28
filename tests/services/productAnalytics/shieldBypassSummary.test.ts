@@ -106,6 +106,18 @@ describe("shield bypass product analytics summary", () => {
     })
   })
 
+  it("does not roll local state forward when daily summary upload fails", async () => {
+    captureMock.mockResolvedValue(false)
+    const { flushShieldBypassDailySummary } = await import(
+      "~/services/productAnalytics/shieldBypassSummary"
+    )
+
+    await expect(flushShieldBypassDailySummary()).resolves.toBe(false)
+
+    expect(captureMock).toHaveBeenCalledTimes(1)
+    expect(stateMocks.replaceShieldBypassSummaryState).not.toHaveBeenCalled()
+  })
+
   it("keeps same-day summary local until the next UTC day", async () => {
     stateMocks.getShieldBypassSummaryState.mockResolvedValue({
       day: "2026-05-12",

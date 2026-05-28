@@ -519,7 +519,7 @@ describe("AutoCheckin account actions", () => {
       expect(betaButton).not.toBeDisabled()
     })
     expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountSite,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
@@ -529,7 +529,7 @@ describe("AutoCheckin account actions", () => {
       },
     })
     expect(startProductAnalyticsActionMock).not.toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountSite,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
@@ -603,7 +603,7 @@ describe("AutoCheckin account actions", () => {
       expect(openButton).not.toBeDisabled()
     })
     expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountSite,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
@@ -614,7 +614,7 @@ describe("AutoCheckin account actions", () => {
       },
     })
     expect(startProductAnalyticsActionMock).not.toHaveBeenCalledWith({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountSite,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,

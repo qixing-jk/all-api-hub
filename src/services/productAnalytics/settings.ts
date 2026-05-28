@@ -611,22 +611,26 @@ export function buildAggregateSettingsSnapshotEvent(
   preferences: UserPreferences,
   entrypoint: ProductAnalyticsEntrypoint,
 ): SettingsSnapshotCapturedPayload {
-  const [
-    account,
-    autoRefresh,
-    usageHistory,
-    balanceHistory,
-    managedSite,
-    managedSiteModelSync,
-    autoCheckin,
-    modelRedirect,
-    redemptionAssist,
-    webAiApiCheck,
-    tempWindowFallback,
-    webdav,
-    taskNotifications,
-    siteAnnouncements,
-  ] = buildSettingsSnapshotEvents(preferences, entrypoint)
+  const snapshots = Object.fromEntries(
+    ALL_SETTINGS_SNAPSHOT_KEYS.map((key) => [
+      key,
+      buildSnapshotByKey(key, preferences, entrypoint),
+    ]),
+  ) as Record<SettingsSnapshotKey, SettingChangedPayload>
+  const account = snapshots.account
+  const autoRefresh = snapshots.autoRefresh
+  const usageHistory = snapshots.usageHistory
+  const balanceHistory = snapshots.balanceHistory
+  const managedSite = snapshots.managedSite
+  const managedSiteModelSync = snapshots.managedSiteModelSync
+  const autoCheckin = snapshots.autoCheckin
+  const modelRedirect = snapshots.modelRedirect
+  const redemptionAssist = snapshots.redemptionAssist
+  const webAiApiCheck = snapshots.webAiApiCheck
+  const tempWindowFallback = snapshots.tempWindowFallback
+  const webdav = snapshots.webdav
+  const taskNotifications = snapshots.taskNotifications
+  const siteAnnouncements = snapshots.siteAnnouncements
 
   return {
     entrypoint,

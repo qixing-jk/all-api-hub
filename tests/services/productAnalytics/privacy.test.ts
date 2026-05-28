@@ -406,6 +406,67 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
+  it("keeps reviewed aggregate settings snapshot fields with sensitive-looking names", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+      {
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        account_auto_refresh_enabled: true,
+        account_auto_refresh_on_open_enabled: false,
+        account_auto_refresh_interval_bucket:
+          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
+        account_auto_refresh_min_interval_bucket:
+          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalTenTo60m,
+        balance_history_enabled: true,
+        balance_history_end_of_day_capture_enabled: true,
+        balance_history_retention_days_bucket:
+          PRODUCT_ANALYTICS_MODE_IDS.RetentionDaysThirtyOneTo365,
+        managed_site_model_sync_enabled: true,
+        managed_site_model_sync_interval_bucket:
+          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalSixTo24h,
+        managed_site_model_sync_concurrency_bucket:
+          PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+        managed_site_model_sync_retry_max_attempts_bucket:
+          PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.TwoToThree,
+        managed_site_model_sync_rate_limit_rpm_bucket:
+          PRODUCT_ANALYTICS_MODE_IDS.RateLimitTwentyTo60,
+        managed_site_model_sync_rate_limit_burst_bucket:
+          PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+        managed_site_model_sync_allowed_models_configured: true,
+        managed_site_model_sync_global_filters_configured: true,
+        accountName: "Private account",
+        balanceAmount: "123.45",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      account_auto_refresh_enabled: true,
+      account_auto_refresh_on_open_enabled: false,
+      account_auto_refresh_interval_bucket:
+        PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
+      account_auto_refresh_min_interval_bucket:
+        PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalTenTo60m,
+      balance_history_enabled: true,
+      balance_history_end_of_day_capture_enabled: true,
+      balance_history_retention_days_bucket:
+        PRODUCT_ANALYTICS_MODE_IDS.RetentionDaysThirtyOneTo365,
+      managed_site_model_sync_enabled: true,
+      managed_site_model_sync_interval_bucket:
+        PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalSixTo24h,
+      managed_site_model_sync_concurrency_bucket:
+        PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+      managed_site_model_sync_retry_max_attempts_bucket:
+        PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.TwoToThree,
+      managed_site_model_sync_rate_limit_rpm_bucket:
+        PRODUCT_ANALYTICS_MODE_IDS.RateLimitTwentyTo60,
+      managed_site_model_sync_rate_limit_burst_bucket:
+        PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+      managed_site_model_sync_allowed_models_configured: true,
+      managed_site_model_sync_global_filters_configured: true,
+    })
+  })
+
   it("drops uncontrolled Managed Site Model Sync setting ids", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.SettingChanged,
