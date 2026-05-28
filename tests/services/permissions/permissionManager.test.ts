@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   COOKIE_INTERCEPTOR_PERMISSIONS,
   ensurePermissions,
+  ensurePermissionsDetailed,
   hasCookieInterceptorPermissions,
   hasPermission,
   hasPermissions,
@@ -10,12 +11,16 @@ import {
   OPTIONAL_PERMISSION_IDS,
   OPTIONAL_PERMISSIONS,
   removePermission,
+  removePermissionDetailed,
   requestPermission,
+  requestPermissionDetailed,
 } from "~/services/permissions/permissionManager"
 
 const {
   containsPermissionsMock,
+  requestPermissionsDetailedMock,
   requestPermissionsMock,
+  removePermissionsDetailedMock,
   removePermissionsMock,
   permissionsAddedCallbacks,
   permissionsRemovedCallbacks,
@@ -23,7 +28,9 @@ const {
   unsubscribeRemovedMock,
 } = vi.hoisted(() => ({
   containsPermissionsMock: vi.fn(),
+  requestPermissionsDetailedMock: vi.fn(),
   requestPermissionsMock: vi.fn(),
+  removePermissionsDetailedMock: vi.fn(),
   removePermissionsMock: vi.fn(),
   permissionsAddedCallbacks: [] as Array<(permissions: any) => void>,
   permissionsRemovedCallbacks: [] as Array<(permissions: any) => void>,
@@ -50,7 +57,9 @@ vi.mock("~/utils/browser/browserApi", () => ({
     return unsubscribeRemovedMock
   }),
   removePermissions: removePermissionsMock,
+  removePermissionsDetailed: removePermissionsDetailedMock,
   requestPermissions: requestPermissionsMock,
+  requestPermissionsDetailed: requestPermissionsDetailedMock,
 }))
 
 describe("permissionManager", () => {
@@ -77,11 +86,25 @@ describe("permissionManager", () => {
   it("wraps single-permission checks, requests, and removals", async () => {
     containsPermissionsMock.mockResolvedValueOnce(true)
     requestPermissionsMock.mockResolvedValueOnce(true)
+    requestPermissionsDetailedMock.mockResolvedValueOnce({
+      success: true,
+    })
     removePermissionsMock.mockResolvedValueOnce(true)
+    removePermissionsDetailedMock.mockResolvedValueOnce({
+      success: false,
+      failureReason: "api_exception",
+    })
 
     await expect(hasPermission("cookies")).resolves.toBe(true)
     await expect(requestPermission("clipboardRead")).resolves.toBe(true)
+    await expect(requestPermissionDetailed("clipboardRead")).resolves.toEqual({
+      success: true,
+    })
     await expect(removePermission("webRequest")).resolves.toBe(true)
+    await expect(removePermissionDetailed("webRequest")).resolves.toEqual({
+      success: false,
+      failureReason: "api_exception",
+    })
 
     expect(containsPermissionsMock).toHaveBeenCalledWith({
       permissions: ["cookies"],
@@ -89,7 +112,13 @@ describe("permissionManager", () => {
     expect(requestPermissionsMock).toHaveBeenCalledWith({
       permissions: ["clipboardRead"],
     })
+    expect(requestPermissionsDetailedMock).toHaveBeenCalledWith({
+      permissions: ["clipboardRead"],
+    })
     expect(removePermissionsMock).toHaveBeenCalledWith({
+      permissions: ["webRequest"],
+    })
+    expect(removePermissionsDetailedMock).toHaveBeenCalledWith({
       permissions: ["webRequest"],
     })
   })
@@ -111,15 +140,201 @@ describe("permissionManager", () => {
       .mockResolvedValueOnce(true)
       .mockResolvedValueOnce(false)
       .mockResolvedValueOnce(false)
-    requestPermissionsMock.mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true)
+    requestPermissionsDetailedMock.mockResolvedValueOnce({ success: true })
 
     await expect(
       ensurePermissions(["cookies", "webRequest", "clipboardRead"]),
     ).resolves.toBe(true)
 
-    expect(requestPermissionsMock).toHaveBeenCalledWith({
+    expect(requestPermissionsDetailedMock).toHaveBeenCalledWith({
       permissions: ["webRequest", "clipboardRead"],
     })
+  })
+
+  it("returns per-permission details for only the missing permissions request", async () => {
+    containsPermissionsMock
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true)
+      .mockResolvedValueOnce(true)
+    requestPermissionsDetailedMock.mockResolvedValueOnce({ success: true })
+
+    await expect(
+      ensurePermissionsDetailed(["cookies", "webRequest", "clipboardRead"]),
+    ).resolves.toEqual({
+      success: true,
+      results: [
+        {
+          id: "cookies",
+          requested: false,
+          success: true,
+          wasGrantedBefore: true,
+          wasGrantedAfter: true,
+        },
+        {
+          id: "webRequest",
+          requested: true,
+          success: true,
+          wasGrantedBefore: false,
+          wasGrantedAfter: true,
+        },
+        {
+          id: "clipboardRead",
+          requested: true,
+          success: true,
+          wasGrantedBefore: false,
+          wasGrantedAfter: true,
+        },
+      ],
+      requestedResults: [
+        {
+          id: "webRequest",
+          requested: true,
+          success: true,
+          wasGrantedBefore: false,
+          wasGrantedAfter: true,
+        },
+        {
+          id: "clipboardRead",
+          requested: true,
+          success: true,
+          wasGrantedBefore: false,
+          wasGrantedAfter: true,
+        },
+      ],
+    })
+
+    expect(requestPermissionsDetailedMock).toHaveBeenCalledWith({
+      permissions: ["webRequest", "clipboardRead"],
+    })
+  })
+
+  it("preserves API exception details for each requested permission", async () => {
+    containsPermissionsMock
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(false)
+    requestPermissionsDetailedMock.mockResolvedValueOnce({
+      success: false,
+      failureReason: "api_exception",
+    })
+
+    await expect(
+      ensurePermissionsDetailed(["webRequest", "clipboardRead"]),
+    ).resolves.toEqual({
+      success: false,
+      results: [
+        {
+          id: "webRequest",
+          requested: true,
+          success: false,
+          failureReason: "api_exception",
+          wasGrantedBefore: false,
+          wasGrantedAfter: false,
+        },
+        {
+          id: "clipboardRead",
+          requested: true,
+          success: false,
+          failureReason: "api_exception",
+          wasGrantedBefore: false,
+          wasGrantedAfter: false,
+        },
+      ],
+      requestedResults: [
+        {
+          id: "webRequest",
+          requested: true,
+          success: false,
+          failureReason: "api_exception",
+          wasGrantedBefore: false,
+          wasGrantedAfter: false,
+        },
+        {
+          id: "clipboardRead",
+          requested: true,
+          success: false,
+          failureReason: "api_exception",
+          wasGrantedBefore: false,
+          wasGrantedAfter: false,
+        },
+      ],
+    })
+  })
+
+  it("keeps request success as the operation result when post-request status probes fail", async () => {
+    containsPermissionsMock
+      .mockResolvedValueOnce(false)
+      .mockRejectedValueOnce(new Error("post-probe failed"))
+    requestPermissionsDetailedMock.mockResolvedValueOnce({ success: true })
+
+    await expect(ensurePermissions(["clipboardRead"])).resolves.toBe(true)
+
+    vi.clearAllMocks()
+
+    containsPermissionsMock
+      .mockResolvedValueOnce(false)
+      .mockRejectedValueOnce(new Error("post-probe failed"))
+    requestPermissionsDetailedMock.mockResolvedValueOnce({ success: true })
+
+    await expect(ensurePermissionsDetailed(["clipboardRead"])).resolves.toEqual(
+      {
+        success: true,
+        results: [
+          {
+            id: "clipboardRead",
+            requested: true,
+            success: true,
+            wasGrantedBefore: false,
+            wasGrantedAfter: false,
+          },
+        ],
+        requestedResults: [
+          {
+            id: "clipboardRead",
+            requested: true,
+            success: true,
+            wasGrantedBefore: false,
+            wasGrantedAfter: false,
+          },
+        ],
+      },
+    )
+  })
+
+  it("keeps user denial as the operation result even if a later status probe observes granted", async () => {
+    containsPermissionsMock
+      .mockResolvedValueOnce(false)
+      .mockResolvedValueOnce(true)
+    requestPermissionsDetailedMock.mockResolvedValueOnce({ success: false })
+
+    await expect(ensurePermissionsDetailed(["clipboardRead"])).resolves.toEqual(
+      {
+        success: false,
+        results: [
+          {
+            id: "clipboardRead",
+            requested: true,
+            success: false,
+            wasGrantedBefore: false,
+            wasGrantedAfter: true,
+          },
+        ],
+        requestedResults: [
+          {
+            id: "clipboardRead",
+            requested: true,
+            success: false,
+            wasGrantedBefore: false,
+            wasGrantedAfter: true,
+          },
+        ],
+      },
+    )
   })
 
   it("returns true from ensurePermissions when nothing is missing", async () => {

@@ -663,6 +663,34 @@ export const PRODUCT_ANALYTICS_PERMISSION_IDS = {
 export type ProductAnalyticsPermissionId =
   (typeof PRODUCT_ANALYTICS_PERMISSION_IDS)[keyof typeof PRODUCT_ANALYTICS_PERMISSION_IDS]
 
+export const PRODUCT_ANALYTICS_PERMISSION_OPERATIONS = {
+  Request: "request",
+  Remove: "remove",
+} as const
+
+export type ProductAnalyticsPermissionOperation =
+  (typeof PRODUCT_ANALYTICS_PERMISSION_OPERATIONS)[keyof typeof PRODUCT_ANALYTICS_PERMISSION_OPERATIONS]
+
+export const PRODUCT_ANALYTICS_PERMISSION_OUTCOMES = {
+  Granted: "granted",
+  Denied: "denied",
+  Revoked: "revoked",
+  RevokeFailed: "revoke_failed",
+  ApiError: "api_error",
+} as const
+
+export type ProductAnalyticsPermissionOutcome =
+  (typeof PRODUCT_ANALYTICS_PERMISSION_OUTCOMES)[keyof typeof PRODUCT_ANALYTICS_PERMISSION_OUTCOMES]
+
+export const PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS = {
+  UserDenied: "user_denied",
+  RemoveFailed: "remove_failed",
+  ApiException: "api_exception",
+} as const
+
+export type ProductAnalyticsPermissionFailureReason =
+  (typeof PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS)[keyof typeof PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS]
+
 export const PRODUCT_ANALYTICS_SITE_TYPES = [
   ...new Set([...ACCOUNT_SITE_TYPES, ...MANAGED_SITE_TYPES]),
 ] as ReadonlyArray<(typeof ACCOUNT_SITE_TYPES)[number] | ManagedSiteType>
@@ -891,6 +919,11 @@ export type ProductAnalyticsEventPayloadMap = {
   [PRODUCT_ANALYTICS_EVENTS.PermissionResult]: {
     permission_id: ProductAnalyticsPermissionId
     result: ProductAnalyticsResult
+    operation: ProductAnalyticsPermissionOperation
+    outcome: ProductAnalyticsPermissionOutcome
+    failure_reason?: ProductAnalyticsPermissionFailureReason
+    was_granted_before: boolean
+    was_granted_after: boolean
     entrypoint: ProductAnalyticsEntrypoint
   }
   [PRODUCT_ANALYTICS_EVENTS.SiteEcosystemSnapshot]: {

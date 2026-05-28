@@ -11,10 +11,19 @@ import enSettings from "~/locales/en/settings.json"
 import jaSettings from "~/locales/ja/settings.json"
 import zhCnSettings from "~/locales/zh-CN/settings.json"
 import zhTwSettings from "~/locales/zh-TW/settings.json"
+import {
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS,
+  PRODUCT_ANALYTICS_PERMISSION_IDS,
+  PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
+  PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
+  PRODUCT_ANALYTICS_RESULTS,
+} from "~/services/productAnalytics/events"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const permissionMocks = vi.hoisted(() => ({
-  ensurePermissions: vi.fn(),
+  ensurePermissionsDetailed: vi.fn(),
   hasPermission: vi.fn(),
   onOptionalPermissionsChanged: vi.fn(),
 }))
@@ -25,6 +34,10 @@ const preferenceMocks = vi.hoisted(() => ({
 
 const toastHelperMocks = vi.hoisted(() => ({
   showResultToast: vi.fn(),
+}))
+
+const analyticsMocks = vi.hoisted(() => ({
+  trackProductAnalyticsEvent: vi.fn(),
 }))
 
 vi.mock("~/services/permissions/permissionManager", () => {
@@ -38,15 +51,33 @@ vi.mock("~/services/permissions/permissionManager", () => {
   ] as const
 
   return {
+    OPTIONAL_PERMISSION_IDS: {
+      Cookies: "cookies",
+      declarativeNetRequestWithHostAccess:
+        "declarativeNetRequestWithHostAccess",
+      WebRequest: "webRequest",
+      WebRequestBlocking: "webRequestBlocking",
+      ClipboardRead: "clipboardRead",
+      Notifications: "notifications",
+    },
     OPTIONAL_PERMISSIONS,
     OPTIONAL_PERMISSION_DEFINITIONS: OPTIONAL_PERMISSIONS.map((id) => ({
       id,
       titleKey: `permissions.items.${id}.title`,
       descriptionKey: `permissions.items.${id}.description`,
     })),
-    ensurePermissions: permissionMocks.ensurePermissions,
+    ensurePermissionsDetailed: permissionMocks.ensurePermissionsDetailed,
     hasPermission: permissionMocks.hasPermission,
     onOptionalPermissionsChanged: permissionMocks.onOptionalPermissionsChanged,
+  }
+})
+
+vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+  return {
+    ...actual,
+    trackProductAnalyticsEvent: analyticsMocks.trackProductAnalyticsEvent,
   }
 })
 
@@ -182,7 +213,11 @@ describe("PermissionOnboardingDialog language selection", () => {
 
   beforeEach(() => {
     persistedLanguage = "en"
-    permissionMocks.ensurePermissions.mockResolvedValue(true)
+    permissionMocks.ensurePermissionsDetailed.mockResolvedValue({
+      success: true,
+      results: [],
+      requestedResults: [],
+    })
     permissionMocks.hasPermission.mockResolvedValue(false)
     permissionMocks.onOptionalPermissionsChanged.mockReturnValue(() => {})
     preferenceMocks.setLanguage.mockImplementation(
@@ -194,11 +229,12 @@ describe("PermissionOnboardingDialog language selection", () => {
   })
 
   afterEach(() => {
-    permissionMocks.ensurePermissions.mockReset()
+    permissionMocks.ensurePermissionsDetailed.mockReset()
     permissionMocks.hasPermission.mockReset()
     permissionMocks.onOptionalPermissionsChanged.mockReset()
     preferenceMocks.setLanguage.mockReset()
     toastHelperMocks.showResultToast.mockReset()
+    analyticsMocks.trackProductAnalyticsEvent.mockReset()
   })
 
   it("renders the onboarding selector and updates onboarding copy immediately when the language changes", async () => {
@@ -440,7 +476,7 @@ describe("PermissionOnboardingDialog language selection", () => {
     )
 
     await waitFor(() => {
-      expect(permissionMocks.ensurePermissions).toHaveBeenCalledWith([
+      expect(permissionMocks.ensurePermissionsDetailed).toHaveBeenCalledWith([
         "cookies",
         "declarativeNetRequestWithHostAccess",
         "webRequest",
@@ -458,12 +494,109 @@ describe("PermissionOnboardingDialog language selection", () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it("tracks grant-all permission outcomes for permissions that were actually requested", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    const i18n = await createSettingsI18n("en")
+
+    permissionMocks.ensurePermissionsDetailed.mockResolvedValueOnce({
+      success: false,
+      results: [
+        {
+          id: "cookies",
+          requested: false,
+          success: true,
+          wasGrantedBefore: true,
+          wasGrantedAfter: true,
+        },
+        {
+          id: "clipboardRead",
+          requested: true,
+          success: false,
+          wasGrantedBefore: false,
+          wasGrantedAfter: false,
+        },
+        {
+          id: "notifications",
+          requested: true,
+          success: false,
+          failureReason: "api_exception",
+          wasGrantedBefore: false,
+          wasGrantedAfter: false,
+        },
+      ],
+      requestedResults: [
+        {
+          id: "clipboardRead",
+          requested: true,
+          success: false,
+          wasGrantedBefore: false,
+          wasGrantedAfter: false,
+        },
+        {
+          id: "notifications",
+          requested: true,
+          success: false,
+          failureReason: "api_exception",
+          wasGrantedBefore: false,
+          wasGrantedAfter: false,
+        },
+      ],
+    })
+
+    renderWithI18n(<PermissionOnboardingDialog open onClose={onClose} />, i18n)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: i18n.t("permissionsOnboarding.actions.allowAll"),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(analyticsMocks.trackProductAnalyticsEvent).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+        {
+          permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.ClipboardRead,
+          result: PRODUCT_ANALYTICS_RESULTS.Failure,
+          operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+          outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.Denied,
+          failure_reason:
+            PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.UserDenied,
+          was_granted_before: false,
+          was_granted_after: false,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        },
+      )
+    })
+    expect(analyticsMocks.trackProductAnalyticsEvent).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Notifications,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+        failure_reason:
+          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+        was_granted_before: false,
+        was_granted_after: false,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+    expect(analyticsMocks.trackProductAnalyticsEvent).not.toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      expect.objectContaining({
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Cookies,
+      }),
+    )
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
   it("keeps the dialog open and shows the error toast when granting permissions fails", async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     const i18n = await createSettingsI18n("en")
 
-    permissionMocks.ensurePermissions.mockRejectedValueOnce(
+    permissionMocks.ensurePermissionsDetailed.mockRejectedValueOnce(
       new Error("permission boom"),
     )
 
@@ -494,12 +627,20 @@ describe("PermissionOnboardingDialog language selection", () => {
     const user = userEvent.setup()
     const onClose = vi.fn()
     const i18n = await createSettingsI18n("en")
-    let resolveRequest: (value: boolean) => void
-    const ensurePromise = new Promise<boolean>((resolve) => {
+    let resolveRequest: (value: {
+      success: boolean
+      results: unknown[]
+      requestedResults: unknown[]
+    }) => void
+    const ensurePromise = new Promise<{
+      success: boolean
+      results: unknown[]
+      requestedResults: unknown[]
+    }>((resolve) => {
       resolveRequest = resolve
     })
 
-    permissionMocks.ensurePermissions.mockReturnValueOnce(ensurePromise)
+    permissionMocks.ensurePermissionsDetailed.mockReturnValueOnce(ensurePromise)
 
     renderWithI18n(<PermissionOnboardingDialog open onClose={onClose} />, i18n)
 
@@ -520,7 +661,11 @@ describe("PermissionOnboardingDialog language selection", () => {
       expect(starButton).toBeDisabled()
     })
 
-    resolveRequest!(true)
+    resolveRequest!({
+      success: true,
+      results: [],
+      requestedResults: [],
+    })
 
     await waitFor(() => {
       expect(onClose).toHaveBeenCalledTimes(1)

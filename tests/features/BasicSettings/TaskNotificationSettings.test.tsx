@@ -8,7 +8,10 @@ import { OPTIONAL_PERMISSION_IDS } from "~/services/permissions/permissionManage
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS,
   PRODUCT_ANALYTICS_PERMISSION_IDS,
+  PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
+  PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
   PRODUCT_ANALYTICS_RESULTS,
 } from "~/services/productAnalytics/events"
 import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements"
@@ -29,7 +32,7 @@ import { render, screen, waitFor } from "~~/tests/test-utils/render"
 const {
   hasPermissionMock,
   onOptionalPermissionsChangedMock,
-  requestPermissionMock,
+  requestPermissionDetailedMock,
   sendRuntimeMessageMock,
   showResultToastMock,
   taskNotificationsMock,
@@ -40,7 +43,7 @@ const {
 } = vi.hoisted(() => ({
   hasPermissionMock: vi.fn(),
   onOptionalPermissionsChangedMock: vi.fn(),
-  requestPermissionMock: vi.fn(),
+  requestPermissionDetailedMock: vi.fn(),
   sendRuntimeMessageMock: vi.fn(),
   showResultToastMock: vi.fn(),
   taskNotificationsMock: {
@@ -69,7 +72,7 @@ vi.mock("~/services/permissions/permissionManager", () => ({
   },
   hasPermission: hasPermissionMock,
   onOptionalPermissionsChanged: onOptionalPermissionsChangedMock,
-  requestPermission: requestPermissionMock,
+  requestPermissionDetailed: requestPermissionDetailedMock,
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -101,7 +104,7 @@ describe("TaskNotificationSettings", () => {
     vi.clearAllMocks()
     hasPermissionMock.mockResolvedValue(false)
     onOptionalPermissionsChangedMock.mockReturnValue(() => {})
-    requestPermissionMock.mockResolvedValue(true)
+    requestPermissionDetailedMock.mockResolvedValue({ success: true })
     sendRuntimeMessageMock.mockResolvedValue({ success: true })
     taskNotificationsMock.current = structuredClone(
       DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -132,7 +135,7 @@ describe("TaskNotificationSettings", () => {
     )
 
     await waitFor(() => {
-      expect(requestPermissionMock).toHaveBeenCalledWith(
+      expect(requestPermissionDetailedMock).toHaveBeenCalledWith(
         OPTIONAL_PERMISSION_IDS.Notifications,
       )
     })
@@ -147,6 +150,10 @@ describe("TaskNotificationSettings", () => {
       {
         permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Notifications,
         result: PRODUCT_ANALYTICS_RESULTS.Success,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.Granted,
+        was_granted_before: false,
+        was_granted_after: true,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       },
     )
@@ -179,7 +186,7 @@ describe("TaskNotificationSettings", () => {
   })
 
   it("tracks denied notification permission requests as failures", async () => {
-    requestPermissionMock.mockResolvedValueOnce(false)
+    requestPermissionDetailedMock.mockResolvedValueOnce({ success: false })
 
     render(<TaskNotificationSettings />, {
       withUserPreferencesProvider: false,
@@ -204,6 +211,11 @@ describe("TaskNotificationSettings", () => {
       {
         permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Notifications,
         result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.Denied,
+        failure_reason: PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.UserDenied,
+        was_granted_before: false,
+        was_granted_after: false,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       },
     )

@@ -4,7 +4,10 @@ import {
   onPermissionsAdded,
   onPermissionsRemoved,
   removePermissions,
+  removePermissionsDetailed,
   requestPermissions,
+  requestPermissionsDetailed,
+  type PermissionOperationResult,
 } from "~/utils/browser/browserApi"
 
 export const OPTIONAL_PERMISSION_IDS = {
@@ -18,6 +21,19 @@ export const OPTIONAL_PERMISSION_IDS = {
 
 export type ManifestOptionalPermissions =
   (typeof OPTIONAL_PERMISSION_IDS)[keyof typeof OPTIONAL_PERMISSION_IDS]
+
+export interface PermissionEnsureResult extends PermissionOperationResult {
+  id: ManifestOptionalPermissions
+  requested: boolean
+  wasGrantedBefore: boolean
+  wasGrantedAfter: boolean
+}
+
+export interface EnsurePermissionsResult {
+  success: boolean
+  results: PermissionEnsureResult[]
+  requestedResults: PermissionEnsureResult[]
+}
 
 /**
  * Read optional permissions declared in manifest.
@@ -100,6 +116,17 @@ export async function requestPermission(
 }
 
 /**
+ * Request a single optional permission while preserving API failure metadata.
+ */
+export async function requestPermissionDetailed(
+  id: ManifestOptionalPermissions,
+): Promise<PermissionOperationResult> {
+  return await requestPermissionsDetailed({
+    permissions: [id as unknown as browser._manifest.OptionalPermission],
+  })
+}
+
+/**
  * Remove a single optional permission (revocation).
  */
 export async function removePermission(
@@ -111,26 +138,108 @@ export async function removePermission(
 }
 
 /**
+ * Remove a single optional permission while preserving API failure metadata.
+ */
+export async function removePermissionDetailed(
+  id: ManifestOptionalPermissions,
+): Promise<PermissionOperationResult> {
+  return await removePermissionsDetailed({
+    permissions: [id as unknown as browser._manifest.OptionalPermission],
+  })
+}
+
+/**
  * Ensure a set of optional permissions; prompts only for missing ones.
  */
 export async function ensurePermissions(
   ids: ManifestOptionalPermissions[],
 ): Promise<boolean> {
+  return (await ensurePermissionsDetailed(ids)).success
+}
+
+/**
+ * Ensure optional permissions and expose per-permission before/after results.
+ */
+export async function ensurePermissionsDetailed(
+  ids: ManifestOptionalPermissions[],
+): Promise<EnsurePermissionsResult> {
   const missing: ManifestOptionalPermissions[] = []
+  const grantedBeforeById = new Map<ManifestOptionalPermissions, boolean>()
 
   for (const id of ids) {
-    if (!(await hasPermission(id))) {
+    const wasGrantedBefore = await hasPermission(id)
+    grantedBeforeById.set(id, wasGrantedBefore)
+    if (!wasGrantedBefore) {
       missing.push(id)
     }
   }
 
   if (missing.length === 0) {
-    return true
+    const results = ids.map((id) => ({
+      id,
+      requested: false,
+      success: true,
+      wasGrantedBefore: true,
+      wasGrantedAfter: true,
+    }))
+
+    return {
+      success: true,
+      results,
+      requestedResults: [],
+    }
   }
 
-  return await requestPermissions({
+  const requestResult = await requestPermissionsDetailed({
     permissions: missing as unknown as browser._manifest.OptionalPermission[],
   })
+  const wasGrantedAfterById = new Map<ManifestOptionalPermissions, boolean>()
+
+  for (const id of missing) {
+    try {
+      wasGrantedAfterById.set(id, await hasPermission(id))
+    } catch {
+      wasGrantedAfterById.set(id, false)
+    }
+  }
+
+  const requestedResults = missing.map<PermissionEnsureResult>((id) => {
+    const wasGrantedAfter = wasGrantedAfterById.get(id) ?? false
+
+    return {
+      id,
+      requested: true,
+      success: requestResult.success,
+      ...(requestResult.failureReason
+        ? { failureReason: requestResult.failureReason }
+        : {}),
+      wasGrantedBefore: grantedBeforeById.get(id) ?? false,
+      wasGrantedAfter,
+    }
+  })
+  const requestedResultById = new Map(
+    requestedResults.map((result) => [result.id, result]),
+  )
+  const results = ids.map<PermissionEnsureResult>((id) => {
+    const requestedResult = requestedResultById.get(id)
+    if (requestedResult) {
+      return requestedResult
+    }
+
+    return {
+      id,
+      requested: false,
+      success: true,
+      wasGrantedBefore: true,
+      wasGrantedAfter: true,
+    }
+  })
+
+  return {
+    success: results.every((result) => result.success),
+    results,
+    requestedResults,
+  }
 }
 
 /**

@@ -1046,6 +1046,18 @@ export async function containsPermissions(
   }
 }
 
+export const PERMISSION_OPERATION_FAILURE_REASONS = {
+  ApiException: "api_exception",
+} as const
+
+export type PermissionOperationFailureReason =
+  (typeof PERMISSION_OPERATION_FAILURE_REASONS)[keyof typeof PERMISSION_OPERATION_FAILURE_REASONS]
+
+export interface PermissionOperationResult {
+  success: boolean
+  failureReason?: PermissionOperationFailureReason
+}
+
 /**
  * Request additional permissions from the user, logging failures for debugging.
  * @param permissions Permission descriptor to be requested from the browser.
@@ -1054,11 +1066,23 @@ export async function containsPermissions(
 export async function requestPermissions(
   permissions: browser.permissions.Permissions,
 ): Promise<boolean> {
+  return (await requestPermissionsDetailed(permissions)).success
+}
+
+/**
+ * Request additional permissions and preserve whether failure came from the API itself.
+ */
+export async function requestPermissionsDetailed(
+  permissions: browser.permissions.Permissions,
+): Promise<PermissionOperationResult> {
   try {
-    return await browser.permissions.request(permissions)
+    return { success: await browser.permissions.request(permissions) }
   } catch (error) {
     logger.error("permissions.request failed", { permissions, error })
-    return false
+    return {
+      success: false,
+      failureReason: PERMISSION_OPERATION_FAILURE_REASONS.ApiException,
+    }
   }
 }
 
@@ -1070,11 +1094,23 @@ export async function requestPermissions(
 export async function removePermissions(
   permissions: browser.permissions.Permissions,
 ): Promise<boolean> {
+  return (await removePermissionsDetailed(permissions)).success
+}
+
+/**
+ * Remove previously granted permissions and preserve whether failure came from the API itself.
+ */
+export async function removePermissionsDetailed(
+  permissions: browser.permissions.Permissions,
+): Promise<PermissionOperationResult> {
   try {
-    return await browser.permissions.remove(permissions)
+    return { success: await browser.permissions.remove(permissions) }
   } catch (error) {
     logger.error("permissions.remove failed", { permissions, error })
-    return false
+    return {
+      success: false,
+      failureReason: PERMISSION_OPERATION_FAILURE_REASONS.ApiException,
+    }
   }
 }
 

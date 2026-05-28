@@ -17,7 +17,10 @@ import {
   PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_PAGE_IDS,
+  PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS,
   PRODUCT_ANALYTICS_PERMISSION_IDS,
+  PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
+  PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SITE_TYPES,
@@ -288,6 +291,11 @@ const EVENT_ALLOWED_KEYS = {
   [PRODUCT_ANALYTICS_EVENTS.PermissionResult]: [
     "permission_id",
     "result",
+    "operation",
+    "outcome",
+    "failure_reason",
+    "was_granted_before",
+    "was_granted_after",
     "entrypoint",
   ],
   [PRODUCT_ANALYTICS_EVENTS.SiteEcosystemSnapshot]: [
@@ -372,6 +380,9 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   model_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   page_id: Object.values(PRODUCT_ANALYTICS_PAGE_IDS),
   permission_id: Object.values(PRODUCT_ANALYTICS_PERMISSION_IDS),
+  operation: Object.values(PRODUCT_ANALYTICS_PERMISSION_OPERATIONS),
+  outcome: Object.values(PRODUCT_ANALYTICS_PERMISSION_OUTCOMES),
+  failure_reason: Object.values(PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS),
   ready_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   result: Object.values(PRODUCT_ANALYTICS_RESULTS),
   result_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
@@ -493,6 +504,8 @@ function isAllowedFieldValue(key: string, value: string | boolean): boolean {
       key === "enabled" ||
       key === "configured" ||
       key === "usage_data_present" ||
+      key === "was_granted_before" ||
+      key === "was_granted_after" ||
       key.endsWith("_enabled") ||
       key.endsWith("_configured")
     )

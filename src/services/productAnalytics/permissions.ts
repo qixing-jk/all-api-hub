@@ -6,11 +6,16 @@ import {
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS,
   PRODUCT_ANALYTICS_PERMISSION_IDS,
+  PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
+  PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
   PRODUCT_ANALYTICS_RESULTS,
   trackProductAnalyticsEvent,
+  type ProductAnalyticsPermissionFailureReason,
   type ProductAnalyticsPermissionId,
-  type ProductAnalyticsResult,
+  type ProductAnalyticsPermissionOperation,
+  type ProductAnalyticsPermissionOutcome,
 } from "./events"
 
 const PRODUCT_ANALYTICS_PERMISSION_ID_BY_OPTIONAL_PERMISSION: Record<
@@ -35,13 +40,54 @@ const PRODUCT_ANALYTICS_PERMISSION_ID_BY_OPTIONAL_PERMISSION: Record<
  */
 export function trackOptionalPermissionResult(
   permissionId: ManifestOptionalPermissions,
-  result: ProductAnalyticsResult,
+  params: {
+    operation: ProductAnalyticsPermissionOperation
+    outcome: ProductAnalyticsPermissionOutcome
+    failureReason?: ProductAnalyticsPermissionFailureReason
+    wasGrantedBefore: boolean
+    wasGrantedAfter: boolean
+  },
 ) {
   void trackProductAnalyticsEvent(PRODUCT_ANALYTICS_EVENTS.PermissionResult, {
     permission_id:
       PRODUCT_ANALYTICS_PERMISSION_ID_BY_OPTIONAL_PERMISSION[permissionId],
-    result,
+    result: getPermissionAnalyticsResult(
+      params.outcome === PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.Granted ||
+        params.outcome === PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.Revoked,
+    ),
+    operation: params.operation,
+    outcome: params.outcome,
+    ...(params.failureReason ? { failure_reason: params.failureReason } : {}),
+    was_granted_before: params.wasGrantedBefore,
+    was_granted_after: params.wasGrantedAfter,
     entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+  })
+}
+
+/**
+ * Reports an optional browser permission request outcome using the shared taxonomy.
+ */
+export function trackOptionalPermissionRequestResult(
+  permissionId: ManifestOptionalPermissions,
+  params: {
+    success: boolean
+    failureReason?: unknown
+    wasGrantedBefore: boolean
+    wasGrantedAfter: boolean
+  },
+) {
+  trackOptionalPermissionResult(permissionId, {
+    operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+    outcome: params.failureReason
+      ? PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError
+      : getPermissionRequestOutcome(params.success),
+    failureReason: params.failureReason
+      ? PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException
+      : params.success
+        ? undefined
+        : PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.UserDenied,
+    wasGrantedBefore: params.wasGrantedBefore,
+    wasGrantedAfter: params.wasGrantedAfter,
   })
 }
 
@@ -52,4 +98,28 @@ export function getPermissionAnalyticsResult(success: boolean) {
   return success
     ? PRODUCT_ANALYTICS_RESULTS.Success
     : PRODUCT_ANALYTICS_RESULTS.Failure
+}
+
+/**
+ * Converts a permission request boolean into a user-facing permission outcome.
+ */
+export function getPermissionRequestOutcome(success: boolean) {
+  return success
+    ? PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.Granted
+    : PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.Denied
+}
+
+/**
+ * Converts a permission removal boolean into a revocation outcome.
+ */
+export function getPermissionRemoveOutcome(success: boolean) {
+  return success
+    ? PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.Revoked
+    : PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.RevokeFailed
+}
+
+export {
+  PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS,
+  PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
+  PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
 }

@@ -38,11 +38,14 @@ import {
   onTabRemoved,
   onTabUpdated,
   onWindowRemoved,
+  PERMISSION_OPERATION_FAILURE_REASONS,
   reloadRuntime,
   removeActionClickListener,
   removePermissions,
+  removePermissionsDetailed,
   removeTabOrWindow,
   requestPermissions,
+  requestPermissionsDetailed,
   sendRuntimeActionMessage,
   sendTabMessageWithRetry,
   setActionPopup,
@@ -1323,6 +1326,24 @@ describe("browserApi action and permissions helpers", () => {
     await expect(removePermissions({ permissions: ["tabs"] })).resolves.toBe(
       false,
     )
+    ;(globalThis as any).browser.permissions.request = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("request failed"))
+    ;(globalThis as any).browser.permissions.remove = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("remove failed"))
+    await expect(
+      requestPermissionsDetailed({ permissions: ["tabs"] }),
+    ).resolves.toEqual({
+      success: false,
+      failureReason: PERMISSION_OPERATION_FAILURE_REASONS.ApiException,
+    })
+    await expect(
+      removePermissionsDetailed({ permissions: ["tabs"] }),
+    ).resolves.toEqual({
+      success: false,
+      failureReason: PERMISSION_OPERATION_FAILURE_REASONS.ApiException,
+    })
   })
 
   it("returns permission results and manages permission event listeners", async () => {
@@ -1342,6 +1363,12 @@ describe("browserApi action and permissions helpers", () => {
     await expect(removePermissions({ permissions: ["tabs"] })).resolves.toBe(
       true,
     )
+    await expect(
+      requestPermissionsDetailed({ permissions: ["tabs"] }),
+    ).resolves.toEqual({ success: true })
+    await expect(
+      removePermissionsDetailed({ permissions: ["tabs"] }),
+    ).resolves.toEqual({ success: true })
 
     const added = vi.fn()
     const removed = vi.fn()

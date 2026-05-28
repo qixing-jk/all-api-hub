@@ -46,7 +46,7 @@ import {
   getManagedSiteLabel,
 } from "~/services/managedSites/utils/managedSite"
 import {
-  ensurePermissions,
+  ensurePermissionsDetailed,
   hasPermissions,
   onOptionalPermissionsChanged,
   OPTIONAL_PERMISSION_IDS,
@@ -64,6 +64,7 @@ import {
   type ProductAnalyticsActionId,
   type ProductAnalyticsErrorCategory,
 } from "~/services/productAnalytics/events"
+import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/permissions"
 import {
   AuthTypeEnum,
   type ApiToken,
@@ -1023,7 +1024,18 @@ export function useAccountDialog({
     setCookieAuthPermissionState((prev) => ({ ...prev, pending: true }))
 
     try {
-      const granted = await ensurePermissions(cookieAuthPermissions)
+      const result = await ensurePermissionsDetailed(cookieAuthPermissions)
+      const granted = result.success
+      for (const permissionResult of result.requestedResults) {
+        trackOptionalPermissionRequestResult(permissionResult.id, {
+          success: permissionResult.success,
+          failureReason: permissionResult.failureReason
+            ? permissionResult.failureReason
+            : undefined,
+          wasGrantedBefore: permissionResult.wasGrantedBefore,
+          wasGrantedAfter: permissionResult.wasGrantedAfter,
+        })
+      }
       await refreshCookieAuthPermissionState()
 
       if (granted) {

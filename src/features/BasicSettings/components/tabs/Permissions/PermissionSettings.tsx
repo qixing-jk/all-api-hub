@@ -14,11 +14,15 @@ import {
   onOptionalPermissionsChanged,
   OPTIONAL_PERMISSION_DEFINITIONS,
   OPTIONAL_PERMISSIONS,
-  removePermission,
-  requestPermission,
+  removePermissionDetailed,
+  requestPermissionDetailed,
 } from "~/services/permissions/permissionManager"
 import {
-  getPermissionAnalyticsResult,
+  getPermissionRemoveOutcome,
+  getPermissionRequestOutcome,
+  PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS,
+  PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
+  PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
   trackOptionalPermissionResult,
 } from "~/services/productAnalytics/permissions"
 import { createLogger } from "~/utils/core/logger"
@@ -152,14 +156,26 @@ export default function PermissionSettings() {
         label,
       })
       let success = false
+      const wasGrantedBefore = state.statuses[id] === true
 
       try {
         if (shouldEnable) {
-          success = await requestPermission(id)
-          trackOptionalPermissionResult(
-            id,
-            getPermissionAnalyticsResult(success),
-          )
+          const result = await requestPermissionDetailed(id)
+          success = result.success
+          const wasGrantedAfter = success || wasGrantedBefore
+          trackOptionalPermissionResult(id, {
+            operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+            outcome: result.failureReason
+              ? PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError
+              : getPermissionRequestOutcome(success),
+            failureReason: result.failureReason
+              ? PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException
+              : success
+                ? undefined
+                : PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.UserDenied,
+            wasGrantedBefore,
+            wasGrantedAfter,
+          })
           logger.debug("Permission request completed", { id, success })
           showResultToast(
             success,
@@ -167,11 +183,22 @@ export default function PermissionSettings() {
             t("permissions.messages.grantFailed", { name: label }),
           )
         } else {
-          success = await removePermission(id)
-          trackOptionalPermissionResult(
-            id,
-            getPermissionAnalyticsResult(success),
-          )
+          const result = await removePermissionDetailed(id)
+          success = result.success
+          const wasGrantedAfter = success ? false : wasGrantedBefore
+          trackOptionalPermissionResult(id, {
+            operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Remove,
+            outcome: result.failureReason
+              ? PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError
+              : getPermissionRemoveOutcome(success),
+            failureReason: result.failureReason
+              ? PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException
+              : success
+                ? undefined
+                : PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.RemoveFailed,
+            wasGrantedBefore,
+            wasGrantedAfter,
+          })
           logger.debug("Permission revoke completed", { id, success })
           showResultToast(
             success,
@@ -191,7 +218,16 @@ export default function PermissionSettings() {
         }
       } catch (error) {
         success = false
-        trackOptionalPermissionResult(id, getPermissionAnalyticsResult(success))
+        trackOptionalPermissionResult(id, {
+          operation: shouldEnable
+            ? PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request
+            : PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Remove,
+          outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+          failureReason:
+            PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+          wasGrantedBefore,
+          wasGrantedAfter: wasGrantedBefore,
+        })
         logger.error("Failed to toggle optional permission", { id, error })
         showResultToast(
           false,
@@ -212,7 +248,7 @@ export default function PermissionSettings() {
         }))
       }
     },
-    [t],
+    [state.statuses, t],
   )
 
   const isLoading = useMemo(
