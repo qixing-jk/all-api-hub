@@ -47,6 +47,17 @@ export class WebdavFileNotFoundError extends Error {
   }
 }
 
+class WebdavHttpError extends Error {
+  constructor(
+    message: string,
+    public statusCode: number,
+  ) {
+    super(message)
+    this.name = "WebdavHttpError"
+    Object.setPrototypeOf(this, WebdavHttpError.prototype)
+  }
+}
+
 /**
  * Type guard to detect WebDAV file-not-found errors, which may be represented
  * @param error - The error object to check
@@ -265,11 +276,14 @@ export async function testWebdavConnection(custom?: Partial<WebDAVConfig>) {
   })
   // 401/403 明确表示鉴权失败
   if (res.status === 401 || res.status === 403)
-    throw new Error(t("messages:webdav.authFailed"))
+    throw new WebdavHttpError(t("messages:webdav.authFailed"), res.status)
   // 其余 2xx–4xx（例如部分 WebDAV 服务返回的 405/409 等）视为网络可达且凭据大概率有效
   if (res.status >= 200 && res.status < 500) return true
   // 5xx 等错误仍视为连接失败，保留原有错误信息
-  throw new Error(t("messages:webdav.connectionFailed", { status: res.status }))
+  throw new WebdavHttpError(
+    t("messages:webdav.connectionFailed", { status: res.status }),
+    res.status,
+  )
 }
 
 /**
@@ -308,8 +322,11 @@ export async function downloadBackupRaw(
   if (await isMissingWebdavBackupResponse(res))
     throw new WebdavFileNotFoundError()
   if (res.status === 401 || res.status === 403)
-    throw new Error(t("messages:webdav.authFailed"))
-  throw new Error(t("messages:webdav.downloadFailed", { status: res.status }))
+    throw new WebdavHttpError(t("messages:webdav.authFailed"), res.status)
+  throw new WebdavHttpError(
+    t("messages:webdav.downloadFailed", { status: res.status }),
+    res.status,
+  )
 }
 
 /**
@@ -386,6 +403,9 @@ export async function uploadBackup(
 
   if (res.status >= 200 && res.status < 300) return true
   if (res.status === 401 || res.status === 403)
-    throw new Error(t("messages:webdav.authFailed"))
-  throw new Error(t("messages:webdav.uploadFailed", { status: res.status }))
+    throw new WebdavHttpError(t("messages:webdav.authFailed"), res.status)
+  throw new WebdavHttpError(
+    t("messages:webdav.uploadFailed", { status: res.status }),
+    res.status,
+  )
 }

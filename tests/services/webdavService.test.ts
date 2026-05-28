@@ -137,18 +137,22 @@ describe("webdavService", () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
       globalAny.fetch.mockResolvedValue({ status: 401 })
 
-      await expect(testWebdavConnection()).rejects.toThrow(
-        "messages:webdav.authFailed",
-      )
+      const error = await testWebdavConnection().catch((thrown) => thrown)
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.authFailed")
+      expect(error.statusCode).toBe(401)
     })
 
     it("throws connectionFailed for 5xx status codes", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
       globalAny.fetch.mockResolvedValue({ status: 500 })
 
-      await expect(testWebdavConnection()).rejects.toThrow(
-        "messages:webdav.connectionFailed",
-      )
+      const error = await testWebdavConnection().catch((thrown) => thrown)
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.connectionFailed")
+      expect(error.statusCode).toBe(500)
     })
   })
 
@@ -291,18 +295,22 @@ describe("webdavService", () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
       globalAny.fetch.mockResolvedValue({ status: 403 })
 
-      await expect(downloadBackup()).rejects.toThrow(
-        "messages:webdav.authFailed",
-      )
+      const error = await downloadBackup().catch((thrown) => thrown)
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.authFailed")
+      expect(error.statusCode).toBe(403)
     })
 
     it("throws downloadFailed for other status codes", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
       globalAny.fetch.mockResolvedValue({ status: 500 })
 
-      await expect(downloadBackup()).rejects.toThrow(
-        "messages:webdav.downloadFailed",
-      )
+      const error = await downloadBackup().catch((thrown) => thrown)
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.downloadFailed")
+      expect(error.statusCode).toBe(500)
     })
 
     it("treats unreadable 409 bodies as a generic download failure", async () => {
@@ -452,9 +460,11 @@ describe("webdavService", () => {
         .mockResolvedValueOnce({ status: 201 }) // MKCOL ok
         .mockResolvedValueOnce({ status: 401 }) // PUT unauthorized
 
-      await expect(uploadBackup("{}")).rejects.toThrow(
-        "messages:webdav.authFailed",
-      )
+      const error = await uploadBackup("{}").catch((thrown) => thrown)
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.authFailed")
+      expect(error.statusCode).toBe(401)
     })
 
     it("throws uploadFailed for other error codes from PUT", async () => {
@@ -464,9 +474,11 @@ describe("webdavService", () => {
         .mockResolvedValueOnce({ status: 201 })
         .mockResolvedValueOnce({ status: 500 })
 
-      await expect(uploadBackup("{}")).rejects.toThrow(
-        "messages:webdav.uploadFailed",
-      )
+      const error = await uploadBackup("{}").catch((thrown) => thrown)
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.uploadFailed")
+      expect(error.statusCode).toBe(500)
     })
 
     it("encrypts backup content before uploading when backup encryption is enabled", async () => {
