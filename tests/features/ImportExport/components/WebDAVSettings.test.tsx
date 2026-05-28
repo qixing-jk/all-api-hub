@@ -14,6 +14,7 @@ import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContex
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
 import WebDAVAutoSyncSettings from "~/features/ImportExport/components/WebDAVAutoSyncSettings"
 import WebDAVSettings from "~/features/ImportExport/components/WebDAVSettings"
+import { WEBDAV_TARGET_IDS } from "~/features/ImportExport/searchTargets"
 import { resolveProductAnalyticsActionContext } from "~/services/productAnalytics/actionConfig"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -228,6 +229,17 @@ const ENCRYPTED_BACKUP_ENVELOPE = {
 
 function clickWebdavAction(actionId: string) {
   fireEvent.click(document.getElementById(actionId) as HTMLButtonElement)
+}
+
+function clearWebdavSyncDataSelection() {
+  ;[
+    WEBDAV_TARGET_IDS.syncDataAccounts,
+    WEBDAV_TARGET_IDS.syncDataBookmarks,
+    WEBDAV_TARGET_IDS.syncDataApiCredentialProfiles,
+    WEBDAV_TARGET_IDS.syncDataPreferences,
+  ].forEach((id) =>
+    fireEvent.click(document.getElementById(id) as HTMLInputElement),
+  )
 }
 
 async function openManualDecryptDialog() {
@@ -566,10 +578,7 @@ describe("WebDAVSettings", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    screen
-      .getAllByRole("checkbox")
-      .slice(0, 4)
-      .forEach((checkbox) => fireEvent.click(checkbox))
+    clearWebdavSyncDataSelection()
 
     clickWebdavAction("webdav-upload-backup")
 
@@ -690,10 +699,7 @@ describe("WebDAVSettings", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    screen
-      .getAllByRole("checkbox")
-      .slice(0, 4)
-      .forEach((checkbox) => fireEvent.click(checkbox))
+    clearWebdavSyncDataSelection()
 
     clickWebdavAction("webdav-download-import")
 
@@ -850,10 +856,7 @@ describe("WebDAVSettings", () => {
 
     await openManualDecryptDialog()
 
-    screen
-      .getAllByRole("checkbox")
-      .slice(0, 4)
-      .forEach((checkbox) => fireEvent.click(checkbox))
+    clearWebdavSyncDataSelection()
 
     fireEvent.click(
       screen.getByRole("button", {
@@ -1073,10 +1076,7 @@ describe("WebDAVSettings", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    screen
-      .getAllByRole("checkbox")
-      .slice(0, 4)
-      .forEach((checkbox) => fireEvent.click(checkbox))
+    clearWebdavSyncDataSelection()
 
     clickWebdavAction("webdav-upload-backup")
 
@@ -1250,10 +1250,7 @@ describe("WebDAVSettings", () => {
 
     expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
 
-    screen
-      .getAllByRole("checkbox")
-      .slice(0, 4)
-      .forEach((checkbox) => fireEvent.click(checkbox))
+    clearWebdavSyncDataSelection()
 
     clickWebdavAction("webdav-download-import")
 
@@ -1481,6 +1478,15 @@ describe("WebDAVSettings", () => {
       expect(toast.error).toHaveBeenCalledWith(
         "settings:messages.saveSettingsFailed",
       )
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
+          },
+        },
+      )
     })
   })
 
@@ -1568,10 +1574,7 @@ describe("WebDAVSettings", () => {
       expect(document.getElementById("decryptPassword")).toBeTruthy()
     })
 
-    screen
-      .getAllByRole("checkbox")
-      .slice(0, 4)
-      .forEach((checkbox) => fireEvent.click(checkbox))
+    clearWebdavSyncDataSelection()
 
     fireEvent.click(
       screen.getByRole("button", {

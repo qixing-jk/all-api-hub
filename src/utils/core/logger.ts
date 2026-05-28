@@ -240,8 +240,8 @@ function getConsoleSink(
  */
 function sanitizeLogDetails(details: unknown): unknown {
   try {
-    const seen = new WeakMap<object, unknown>()
-    return sanitizeValue(details, undefined, seen)
+    const activePath = new WeakSet<object>()
+    return sanitizeValue(details, undefined, activePath)
   } catch {
     return "[Unserializable]"
   }
@@ -253,7 +253,8 @@ function sanitizeLogDetails(details: unknown): unknown {
 function sanitizeValue(
   value: unknown,
   keyHint: string | undefined,
-  seen: WeakMap<object, unknown>,
+  activePath: WeakSet<object>,
+  redactErrorText = false,
 ): unknown {
   if (typeof keyHint === "string" && isSensitiveKey(keyHint)) {
     return REDACTED_PLACEHOLDER
@@ -302,47 +303,84 @@ function sanitizeValue(
   }
 
   const obj = value as object
-  if (seen.has(obj)) return CIRCULAR_PLACEHOLDER
-  seen.set(obj, true)
+  if (activePath.has(obj)) return CIRCULAR_PLACEHOLDER
+  activePath.add(obj)
 
   if (value instanceof Error) {
     const output: Record<string, unknown> = {
       name: value.name,
-      message: value.message,
-      stack: value.stack,
+      message: redactErrorText
+        ? sanitizeSensitiveErrorText(value.message)
+        : value.message,
+      stack:
+        redactErrorText && typeof value.stack === "string"
+          ? sanitizeSensitiveErrorText(value.stack)
+          : value.stack,
     }
 
     const cause = "cause" in value ? value.cause : undefined
     if (typeof cause !== "undefined") {
-      output.cause = sanitizeValue(cause, "cause", seen)
+      output.cause = sanitizeValue(cause, "cause", activePath, true)
     }
 
+    activePath.delete(obj)
     return output
   }
 
   if (Array.isArray(value)) {
-    return value.map((item) => sanitizeValue(item, undefined, seen))
+    const output = value.map((item) =>
+      sanitizeValue(item, undefined, activePath, redactErrorText),
+    )
+    activePath.delete(obj)
+    return output
   }
 
   if (value instanceof Map) {
-    return Array.from(value.entries()).map(([k, v]) => [
-      sanitizeValue(k, undefined, seen),
-      sanitizeValue(v, undefined, seen),
+    const output = Array.from(value.entries()).map(([k, v]) => [
+      sanitizeValue(k, undefined, activePath, redactErrorText),
+      sanitizeValue(v, undefined, activePath, redactErrorText),
     ])
+    activePath.delete(obj)
+    return output
   }
 
   if (value instanceof Set) {
-    return Array.from(value.values()).map((v) =>
-      sanitizeValue(v, undefined, seen),
+    const output = Array.from(value.values()).map((v) =>
+      sanitizeValue(v, undefined, activePath, redactErrorText),
     )
+    activePath.delete(obj)
+    return output
   }
 
   const output: Record<string, unknown> = {}
   for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-    output[k] = sanitizeValue(v, k, seen)
+    output[k] = sanitizeValue(
+      v,
+      k,
+      activePath,
+      redactErrorText || k === "cause",
+    )
   }
 
+  activePath.delete(obj)
   return output
+}
+
+/**
+ * Redacts sensitive inline values from nested Error text while leaving the
+ * legacy top-level Error message/stack behavior unchanged.
+ */
+function sanitizeSensitiveErrorText(text: string): string {
+  return text
+    .replace(/https?:\/\/[^\s"'<>]+/gi, (url) => sanitizeUrlForLog(url))
+    .replace(
+      /\b(authorization)\s*[:=]\s*(?:bearer\s+)?[^\s,&;]+/gi,
+      "$1=[REDACTED]",
+    )
+    .replace(
+      /\b(token|access[\s_-]?token|refresh[\s_-]?token|admin[\s_-]?token|api[\s_-]?key|key|password|passwd|secret|client[\s_-]?secret|management[\s_-]?key)\s*[:=]\s*[^\s,&;]+/gi,
+      "$1=[REDACTED]",
+    )
 }
 
 /**
