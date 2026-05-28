@@ -58,6 +58,7 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -1338,6 +1339,9 @@ export function useAccountDialog({
     if (!url.trim()) {
       analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        insights: {
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+        },
       })
       return
     }
@@ -1345,7 +1349,11 @@ export function useAccountDialog({
     try {
       const shouldContinue = await ensureDuplicateAccountAddConfirmation()
       if (!shouldContinue) {
-        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled)
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Prompt,
+          },
+        })
         return
       }
     } catch (error) {
@@ -1356,6 +1364,9 @@ export function useAccountDialog({
       )
       analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Prompt,
+        },
       })
       return
     }
@@ -1374,6 +1385,9 @@ export function useAccountDialog({
           errorCategory: getAutoDetectAnalyticsErrorCategory(
             result.detailedError?.type,
           ),
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+          },
         })
         return
       }
@@ -1492,6 +1506,9 @@ export function useAccountDialog({
       enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
       analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: getAutoDetectAnalyticsErrorCategory(detectionError.type),
+        insights: {
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+        },
       })
     } finally {
       setIsDetecting(false)
