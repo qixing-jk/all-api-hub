@@ -12,6 +12,8 @@ import { trackAutoCheckinConfigSnapshot } from "~/services/productAnalytics/auto
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
@@ -372,9 +374,14 @@ class AutoCheckinScheduler {
     durationMs: number
     mode: (typeof PRODUCT_ANALYTICS_MODE_IDS)[keyof typeof PRODUCT_ANALYTICS_MODE_IDS]
   }) {
+    const result = this.mapRunSummaryToProductAnalyticsResult(params.summary)
+
     void trackProductAnalyticsActionCompleted({
       ...AUTO_CHECKIN_BACKGROUND_ANALYTICS_CONTEXT,
-      result: this.mapRunSummaryToProductAnalyticsResult(params.summary),
+      result,
+      ...(result === PRODUCT_ANALYTICS_RESULTS.Failure
+        ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
+        : {}),
       durationMs: params.durationMs,
       insights: {
         itemCount:
@@ -385,6 +392,9 @@ class AutoCheckinScheduler {
         skippedCount: params.summary.skippedCount,
         sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
         mode: params.mode,
+        ...(result === PRODUCT_ANALYTICS_RESULTS.Failure
+          ? { failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute }
+          : {}),
       },
     })
   }

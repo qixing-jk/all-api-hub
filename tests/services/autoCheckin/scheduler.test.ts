@@ -17,7 +17,9 @@ import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytic
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SETTING_IDS,
@@ -972,6 +974,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundAutoCheckinScheduler,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
       result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       durationMs: expect.any(Number),
       insights: {
         itemCount: 3,
@@ -980,6 +983,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
         skippedCount: 1,
         sourceKind: "auto",
         mode: "telemetry_auto",
+        failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
       },
     })
 
@@ -1867,6 +1871,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundAutoCheckinScheduler,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
       result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       durationMs: expect.any(Number),
       insights: {
         itemCount: 2,
@@ -1875,6 +1880,7 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
         skippedCount: 0,
         sourceKind: "auto",
         mode: "retry_failed",
+        failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
       },
     })
 
