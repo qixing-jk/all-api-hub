@@ -35,6 +35,7 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -117,6 +118,15 @@ function getWebdavAnalyticsErrorCategory(error: unknown) {
   }
 
   return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+}
+
+/** Classify which WebDAV phase failed without exposing raw connection details. */
+function getWebdavAnalyticsFailureStage(error: unknown) {
+  if (error instanceof PersistWebdavConfigError) {
+    return PRODUCT_ANALYTICS_FAILURE_STAGES.Persist
+  }
+
+  return PRODUCT_ANALYTICS_FAILURE_STAGES.Execute
 }
 
 /**
@@ -284,6 +294,9 @@ export default function WebDAVSettings() {
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: getWebdavAnalyticsErrorCategory(e),
+        insights: {
+          failureStage: getWebdavAnalyticsFailureStage(e),
+        },
       })
     } finally {
       setSaving(false)
@@ -312,6 +325,9 @@ export default function WebDAVSettings() {
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: getWebdavAnalyticsErrorCategory(e),
+        insights: {
+          failureStage: getWebdavAnalyticsFailureStage(e),
+        },
       })
     } finally {
       setTesting(false)

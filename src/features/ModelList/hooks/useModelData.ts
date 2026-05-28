@@ -154,6 +154,47 @@ function getModelDataErrorCategory(
   return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
 }
 
+/** Classify whether model catalog loading failed during parsing or execution. */
+function getModelDataFailureStage(
+  error: unknown,
+): ProductAnalyticsFailureStage {
+  const code =
+    error && typeof error === "object"
+      ? (error as { code?: unknown }).code
+      : undefined
+
+  return code === MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT
+    ? PRODUCT_ANALYTICS_FAILURE_STAGES.Parse
+    : PRODUCT_ANALYTICS_FAILURE_STAGES.Execute
+}
+
+/** Derive aggregate model catalog diagnostics from the failed account queries. */
+function getAggregateModelDataFailureDiagnostics(errors: unknown[]): {
+  errorCategory: ProductAnalyticsErrorCategory
+  failureStage: ProductAnalyticsFailureStage
+} {
+  const knownErrorCategory = errors
+    .map((error) => getModelDataErrorCategory(error))
+    .find(
+      (errorCategory) =>
+        errorCategory !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+    )
+
+  const hasParseFailure = errors.some(
+    (error) =>
+      getModelDataFailureStage(error) ===
+      PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
+  )
+
+  return {
+    errorCategory:
+      knownErrorCategory ?? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+    failureStage: hasParseFailure
+      ? PRODUCT_ANALYTICS_FAILURE_STAGES.Parse
+      : PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+  }
+}
+
 const MODEL_DATA_ANALYTICS_CONTEXT = {
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
   actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshModelPricingData,
@@ -867,7 +908,8 @@ function useAllAccountsModelData(
     if (!queries.every((query) => query.isSuccess || query.isError)) return
 
     const successCount = queries.filter((query) => query.isSuccess).length
-    const failureCount = queries.filter((query) => query.isError).length
+    const failedQueries = queries.filter((query) => query.isError)
+    const failureCount = failedQueries.length
     const modelCount = queries.reduce(
       (count, query) => count + getPricingModelCount(query.data),
       0,
@@ -886,6 +928,13 @@ function useAllAccountsModelData(
     if (trackedAggregateLoadKeyRef.current === trackingKey) return
     trackedAggregateLoadKeyRef.current = trackingKey
 
+    const failureDiagnostics =
+      failureCount > 0
+        ? getAggregateModelDataFailureDiagnostics(
+            failedQueries.map((query) => query.error),
+          )
+        : null
+
     // Conservative aggregate semantics: any account failure makes the overall
     // load a failure, because the rendered catalog is incomplete.
     trackModelDataLoadCompletion({
@@ -894,11 +943,11 @@ function useAllAccountsModelData(
           ? PRODUCT_ANALYTICS_RESULTS.Failure
           : PRODUCT_ANALYTICS_RESULTS.Success,
       sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAllAccounts,
-      ...(failureCount > 0
-        ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
+      ...(failureDiagnostics
+        ? { errorCategory: failureDiagnostics.errorCategory }
         : {}),
-      ...(failureCount > 0
-        ? { failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute }
+      ...(failureDiagnostics
+        ? { failureStage: failureDiagnostics.failureStage }
         : {}),
       modelCount,
       successCount,
@@ -1067,6 +1116,7 @@ function useProfileModelData(
           result: PRODUCT_ANALYTICS_RESULTS.Failure,
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile,
           errorCategory: getModelDataErrorCategory(query.error),
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
         })
       }
     }

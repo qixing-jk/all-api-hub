@@ -457,6 +457,80 @@ describe("useModelData all-accounts loading", () => {
     })
   })
 
+  it("tracks all-account invalid-format aggregate load as validation parse failure", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+
+    const fetchModelPricing = vi.fn().mockImplementation(({ accountId }) => {
+      if (accountId === "analytics-all-valid") {
+        return Promise.resolve({
+          data: [
+            {
+              model_name: "gpt-4o-mini",
+              quota_type: 0,
+              model_ratio: 1,
+              model_price: 1,
+              completion_ratio: 1,
+              enable_groups: ["default"],
+              supported_endpoint_types: [],
+            },
+          ],
+          group_ratio: { default: 1 },
+          success: true,
+          usable_group: { default: true },
+        })
+      }
+
+      return Promise.resolve({
+        data: null,
+        group_ratio: {},
+        success: true,
+        usable_group: {},
+      })
+    })
+    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+
+    const accounts = [
+      createDisplayAccount({
+        id: "analytics-all-valid",
+        baseUrl: "https://all-valid.example.com",
+        userId: 81,
+      }),
+      createDisplayAccount({
+        id: "analytics-all-invalid-format",
+        baseUrl: "https://all-invalid-format.example.com",
+        userId: 82,
+      }),
+    ]
+
+    renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAllAccountsSource(),
+          accounts,
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(
+      () => {
+        expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledTimes(
+          1,
+        )
+      },
+      { timeout: 3000 },
+    )
+    expectLastModelDataAnalyticsCompletion({
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAllAccounts,
+      modelCount: 1,
+      successCount: 1,
+      failureCount: 1,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
+    })
+  })
+
   it("tracks profile catalog load success and failure without profile details", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
@@ -516,6 +590,7 @@ describe("useModelData all-accounts loading", () => {
       result: PRODUCT_ANALYTICS_RESULTS.Failure,
       sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile,
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
     })
   })
 

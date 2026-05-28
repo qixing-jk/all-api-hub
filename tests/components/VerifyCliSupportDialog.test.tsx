@@ -5,6 +5,8 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -1112,7 +1114,9 @@ describe("VerifyCliSupportDialog", () => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
             successCount: 2,
             failureCount: 1,
           },

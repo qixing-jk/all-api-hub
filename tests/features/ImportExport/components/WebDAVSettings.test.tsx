@@ -19,6 +19,7 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -374,7 +375,12 @@ describe("WebDAVSettings", () => {
     await waitFor(() => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
-        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation },
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
+          },
+        },
       )
     })
   })
@@ -416,7 +422,38 @@ describe("WebDAVSettings", () => {
     await waitFor(() => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         "failure",
-        { errorCategory: "validation" },
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
+          },
+        },
+      )
+    })
+  })
+
+  it("completes WebDAV connection test analytics with execute stage when the connection check fails", async () => {
+    mockTestWebdavConnection.mockRejectedValueOnce(
+      new Error("connection failed"),
+    )
+
+    render(<WebDAVSettings />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "importExport:webdav.testConnection",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+          },
+        },
       )
     })
   })
