@@ -302,6 +302,11 @@ describe("product analytics action helpers", () => {
       resolveProductAnalyticsErrorCategoryFromError({ name: "NotFoundError" }),
     ).toBe(PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported)
     expect(
+      resolveProductAnalyticsErrorCategoryFromError(
+        new TypeError("Failed to fetch"),
+      ),
+    ).toBe(PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network)
+    expect(
       resolveProductAnalyticsErrorCategoryFromError({
         cause: { statusCode: 403 },
       }),

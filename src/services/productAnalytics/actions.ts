@@ -104,6 +104,17 @@ function getStructuredErrorCodes(error: StructuredAnalyticsError) {
   )
 }
 
+/** Detects browser fetch failures without using provider/backend text. */
+function isBrowserNetworkError(error: StructuredAnalyticsError) {
+  if (error.name === "NetworkError") return true
+
+  return (
+    error.name === "TypeError" &&
+    error instanceof Error &&
+    /fetch/i.test(error.message)
+  )
+}
+
 /** Maps repo API error codes to the coarse analytics taxonomy. */
 function resolveProductAnalyticsCategoryFromCode(code: string) {
   switch (code) {
@@ -184,6 +195,10 @@ export function resolveProductAnalyticsErrorCategoryFromError(
 
   if (error.name === "NotFoundError" || error.name === "NotSupportedError") {
     return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
+  }
+
+  if (isBrowserNetworkError(error)) {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network
   }
 
   if (error.cause && error.cause !== error) {

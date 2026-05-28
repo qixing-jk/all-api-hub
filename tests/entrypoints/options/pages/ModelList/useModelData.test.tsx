@@ -59,10 +59,16 @@ vi.mock("~/services/apiService", () => ({
   getApiService: vi.fn(),
 }))
 
-vi.mock("~/services/productAnalytics/actions", () => ({
-  trackProductAnalyticsActionCompleted: (...args: unknown[]) =>
-    mockTrackProductAnalyticsActionCompleted(...args),
-}))
+vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/productAnalytics/actions")>()
+
+  return {
+    ...actual,
+    trackProductAnalyticsActionCompleted: (...args: unknown[]) =>
+      mockTrackProductAnalyticsActionCompleted(...args),
+  }
+})
 
 vi.mock(
   "~/services/accounts/utils/apiServiceRequest",
@@ -454,6 +460,75 @@ describe("useModelData all-accounts loading", () => {
       successCount: 1,
       failureCount: 1,
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+    })
+  })
+
+  it("tracks all-account fetch exceptions as network failures", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+
+    const fetchModelPricing = vi.fn().mockImplementation(({ accountId }) => {
+      if (accountId === "analytics-all-success") {
+        return Promise.resolve({
+          data: [
+            {
+              model_name: "gpt-4o-mini",
+              quota_type: 0,
+              model_ratio: 1,
+              model_price: 1,
+              completion_ratio: 1,
+              enable_groups: ["default"],
+              supported_endpoint_types: [],
+            },
+          ],
+          group_ratio: { default: 1 },
+          success: true,
+          usable_group: { default: true },
+        })
+      }
+
+      return Promise.reject(new TypeError("Failed to fetch"))
+    })
+    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+
+    const accounts = [
+      createDisplayAccount({
+        id: "analytics-all-success",
+        baseUrl: "https://all-success.example.com",
+        userId: 75,
+      }),
+      createDisplayAccount({
+        id: "analytics-all-network-failure",
+        baseUrl: "https://all-network-failure.example.com",
+        userId: 76,
+      }),
+    ]
+
+    renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAllAccountsSource(),
+          accounts,
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(
+      () => {
+        expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledTimes(
+          1,
+        )
+      },
+      { timeout: 3000 },
+    )
+    expectLastModelDataAnalyticsCompletion({
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAllAccounts,
+      modelCount: 1,
+      successCount: 1,
+      failureCount: 1,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network,
       failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
     })
   })
