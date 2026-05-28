@@ -61,10 +61,16 @@ vi.mock("~/contexts/UserPreferencesContext", () => ({
   useUserPreferencesContext: () => mockedUseUserPreferencesContext(),
 }))
 
-vi.mock("~/services/productAnalytics/actions", () => ({
-  startProductAnalyticsAction: (...args: unknown[]) =>
-    startProductAnalyticsActionMock(...args),
-}))
+vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/productAnalytics/actions")>()
+
+  return {
+    ...actual,
+    startProductAnalyticsAction: (...args: unknown[]) =>
+      startProductAnalyticsActionMock(...args),
+  }
+})
 
 vi.mock("react-hot-toast", () => ({
   default: {
@@ -538,6 +544,93 @@ describe("useKeyManagement enabled account filtering", () => {
     )
   })
 
+  it("maps structured all-account token refresh failures to safe analytics categories", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+
+    const account = createDisplayAccount({
+      id: "analytics-refresh-auth",
+      name: "Secret Auth Account",
+      baseUrl: "https://secret-auth.example/v1",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    const fetchAccountTokens = vi.fn(async () => {
+      throw new ApiError("private unauthorized", 401, "/api/token")
+    })
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE)
+    })
+
+    await waitFor(() =>
+      expect(trackerCompleteMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+          insights: {
+            mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 1,
+          },
+        },
+      ),
+    )
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      "private unauthorized",
+    )
+  })
+
+  it("maps structured single-account token refresh failures to safe analytics categories", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+
+    const account = createDisplayAccount({
+      id: "analytics-single-refresh-auth",
+      name: "Secret Single Auth Account",
+      baseUrl: "https://secret-single-auth.example/v1",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    const fetchAccountTokens = vi.fn(async () => {
+      throw new ApiError("private unauthorized", 401, "/api/token")
+    })
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(account.id)
+    })
+
+    await waitFor(() =>
+      expect(trackerCompleteMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+          insights: {
+            mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+          },
+        },
+      ),
+    )
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      "private unauthorized",
+    )
+  })
+
   it("marks superseded all-account token refresh analytics as skipped", async () => {
     const account = createDisplayAccount({
       id: "superseded-refresh-acc",
@@ -689,6 +782,64 @@ describe("useKeyManagement enabled account filtering", () => {
     })
     expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
       "first raw retry failure",
+    )
+  })
+
+  it("maps structured retry-failed token refresh failures to safe analytics categories", async () => {
+    const mockedUseAccountData = vi.mocked(useAccountData)
+
+    const account = createDisplayAccount({
+      id: "analytics-retry-rate-limit",
+      name: "Retry Rate Limit Account",
+      baseUrl: "https://retry-rate-limit.example/v1",
+    })
+
+    mockedUseAccountData.mockReturnValue({
+      enabledDisplayData: [account],
+    } as any)
+
+    let calls = 0
+    const fetchAccountTokens = vi.fn(async () => {
+      calls += 1
+      throw new ApiError(
+        calls === 1 ? "initial private failure" : "retry private failure",
+        429,
+        "/api/token",
+      )
+    })
+    vi.mocked(getApiService).mockReturnValue({ fetchAccountTokens } as any)
+
+    const { result } = renderHook(() => useKeyManagement(), {
+      wrapper: createWrapper(),
+    })
+
+    act(() => {
+      result.current.setSelectedAccount(KEY_MANAGEMENT_ALL_ACCOUNTS_VALUE)
+    })
+
+    await waitFor(() => expect(result.current.failedAccounts).toHaveLength(1))
+    trackerCompleteMock.mockClear()
+
+    await act(async () => {
+      await result.current.retryFailedAccounts()
+    })
+
+    await waitFor(() =>
+      expect(trackerCompleteMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit,
+          insights: {
+            mode: PRODUCT_ANALYTICS_MODE_IDS.RetryFailed,
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 1,
+          },
+        },
+      ),
+    )
+    expect(JSON.stringify(trackerCompleteMock.mock.calls)).not.toContain(
+      "retry private failure",
     )
   })
 
@@ -2419,6 +2570,15 @@ describe("useKeyManagement enabled account filtering", () => {
       )
     })
     expect(result.current.tokens).toEqual([])
+    expect(trackerCompleteMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        insights: {
+          mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+        },
+      },
+    )
   })
 
   it("copies a resolved token secret to the clipboard and shows success feedback", async () => {

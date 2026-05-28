@@ -23,15 +23,18 @@ import {
   fetchApiCredentialModelIds,
   normalizeApiCredentialModelIds,
 } from "~/services/apiCredentialProfiles/modelCatalog"
-import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  resolveProductAnalyticsErrorCategoryFromError,
+  startProductAnalyticsAction,
+} from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
   API_TYPES,
   getApiVerificationProbeDefinitions,
@@ -517,9 +520,7 @@ export function VerifyApiCredentialProfileDialog({
       } else {
         tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory:
-            result.status === "unsupported"
-              ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
-              : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            resolveProductAnalyticsErrorCategoryFromProbeResult(result),
         })
       }
       return result
@@ -550,7 +551,7 @@ export function VerifyApiCredentialProfileDialog({
       replaceProbes(nextProbes)
       await persistProbeResults(nextProbes, modelIdOverride)
       tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
       })
       return fallback
     }
@@ -628,7 +629,9 @@ export function VerifyApiCredentialProfileDialog({
       const hasFailedProbe = failureCount > 0
       if (hasFailedProbe) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          errorCategory: resolveProductAnalyticsErrorCategoryFromProbeResult(
+            results.find((result) => result.status === "fail"),
+          ),
           insights,
         })
         return
@@ -643,7 +646,7 @@ export function VerifyApiCredentialProfileDialog({
         ]),
       })
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
       })
     } finally {
       setIsRunning(false)

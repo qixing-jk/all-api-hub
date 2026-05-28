@@ -52,6 +52,57 @@ export function summaryKeyFromHttpStatus(
   return undefined
 }
 
+/** Reads valid HTTP status integers from structured status fields. */
+function readFiniteStatus(value: unknown): number | undefined {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return Number.isInteger(value) && value >= 100 && value <= 599
+      ? value
+      : undefined
+  }
+  if (typeof value === "string") {
+    const parsed = Number(value)
+    if (Number.isInteger(parsed) && parsed >= 100 && parsed <= 599) {
+      return parsed
+    }
+  }
+  return undefined
+}
+
+/** Narrows object-like values before inspecting known metadata fields. */
+function readObjectRecord(value: unknown): Record<string, unknown> | undefined {
+  return value && typeof value === "object"
+    ? (value as Record<string, unknown>)
+    : undefined
+}
+
+/**
+ * Infer an HTTP status code only from structured error metadata.
+ *
+ * Use this for analytics-facing diagnostics so provider/user text cannot change
+ * the coarse failure category.
+ */
+export function inferStructuredHttpStatus(error: unknown): number | undefined {
+  const errorRecord = readObjectRecord(error)
+  if (!errorRecord) return undefined
+
+  const directStatus =
+    readFiniteStatus(errorRecord.status) ??
+    readFiniteStatus(errorRecord.statusCode)
+  if (typeof directStatus === "number") return directStatus
+
+  const responseRecord = readObjectRecord(errorRecord.response)
+  const responseStatus =
+    readFiniteStatus(responseRecord?.status) ??
+    readFiniteStatus(responseRecord?.statusCode)
+  if (typeof responseStatus === "number") return responseStatus
+
+  if (errorRecord.cause && errorRecord.cause !== error) {
+    return inferStructuredHttpStatus(errorRecord.cause)
+  }
+
+  return undefined
+}
+
 /**
  * Infer an HTTP status code from a thrown error object and/or a sanitized message.
  *
@@ -62,23 +113,8 @@ export function inferHttpStatus(
   error: unknown,
   sanitizedMessage: string,
 ): number | undefined {
-  if (error && typeof error === "object") {
-    const anyErr = error as any
-    const candidates = [
-      anyErr.status,
-      anyErr.statusCode,
-      anyErr.response?.status,
-      anyErr.cause?.status,
-      anyErr.cause?.statusCode,
-    ]
-    for (const value of candidates) {
-      if (typeof value === "number" && Number.isFinite(value)) return value
-      if (typeof value === "string") {
-        const parsed = Number(value)
-        if (Number.isFinite(parsed)) return parsed
-      }
-    }
-  }
+  const structuredStatus = inferStructuredHttpStatus(error)
+  if (typeof structuredStatus === "number") return structuredStatus
 
   const match = sanitizedMessage.match(/\b(401|403|404|429|500|502|503)\b/)
   return match ? Number(match[1]) : undefined

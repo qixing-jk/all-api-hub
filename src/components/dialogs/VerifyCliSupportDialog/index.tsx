@@ -17,19 +17,23 @@ import {
   normalizeApiCredentialModelIds,
 } from "~/services/apiCredentialProfiles/modelCatalog"
 import { getApiService } from "~/services/apiService"
-import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  resolveProductAnalyticsErrorCategoryFromError,
+  startProductAnalyticsAction,
+} from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import { guessModelIdFromToken } from "~/services/verification/aiApiVerification"
 import {
   inferHttpStatus,
+  inferStructuredHttpStatus,
   summaryKeyFromHttpStatus,
   toSanitizedErrorSummary,
 } from "~/services/verification/aiApiVerification/utils"
@@ -305,6 +309,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         Array.from(secretsToRedact),
       )
       const inferredStatus = inferHttpStatus(error, sanitizedMessage)
+      const analyticsStatus = inferStructuredHttpStatus(error)
       const summaryKey =
         summaryKeyFromHttpStatus(inferredStatus) ??
         (typeof inferredStatus === "number"
@@ -338,7 +343,9 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         },
         output: {
           error: sanitizedMessage,
-          inferredHttpStatus: inferredStatus,
+          ...(typeof analyticsStatus === "number"
+            ? { inferredHttpStatus: analyticsStatus }
+            : {}),
         },
         details: {
           occurredAt: new Date(finishedAt).toISOString(),
@@ -373,6 +380,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
     let successCount = 0
     let failureCount = 0
     let hasExecutedTool = false
+    let failedToolResult: CliSupportResult | undefined
     setIsRunning(true)
     setTools(buildInitialToolState())
 
@@ -387,6 +395,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         } else if (result.status === "fail") {
           hasExecutedTool = true
           failureCount += 1
+          failedToolResult ??= result
         }
       }
       const completionResult =
@@ -397,7 +406,12 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
             : PRODUCT_ANALYTICS_RESULTS.Skipped
       tracker.complete(completionResult, {
         ...(completionResult === PRODUCT_ANALYTICS_RESULTS.Failure
-          ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
+          ? {
+              errorCategory:
+                resolveProductAnalyticsErrorCategoryFromProbeResult(
+                  failedToolResult,
+                ),
+            }
           : {}),
         insights: {
           ...(completionResult === PRODUCT_ANALYTICS_RESULTS.Failure
@@ -412,7 +426,7 @@ export function VerifyCliSupportDialog(props: VerifyCliSupportDialogProps) {
         message: toSanitizedErrorSummary(error, []),
       })
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
         insights: {
           failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
           successCount,

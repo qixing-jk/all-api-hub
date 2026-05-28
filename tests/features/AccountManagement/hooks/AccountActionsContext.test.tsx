@@ -81,10 +81,16 @@ vi.mock("~/utils/core/logger", () => ({
   }),
 }))
 
-vi.mock("~/services/productAnalytics/actions", () => ({
-  startProductAnalyticsAction: (...args: unknown[]) =>
-    mockStartProductAnalyticsAction(...args),
-}))
+vi.mock("~/services/productAnalytics/actions", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/productAnalytics/actions")>()
+
+  return {
+    ...actual,
+    startProductAnalyticsAction: (...args: unknown[]) =>
+      mockStartProductAnalyticsAction(...args),
+  }
+})
 
 /**
  * Helper component to capture and expose the AccountActionsContext value.
@@ -753,6 +759,33 @@ describe("AccountActionsContext", () => {
       PRODUCT_ANALYTICS_RESULTS.Failure,
       { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
     )
+  })
+
+  it("maps structured runtime send failures for external check-ins to safe analytics categories", async () => {
+    const { getContext } = await renderContext()
+
+    await act(async () => {
+      mockSendRuntimeMessage.mockRejectedValueOnce(
+        Object.assign(new Error("private runtime failure"), {
+          code: "TEMP_WINDOW_PERMISSION_REQUIRED",
+        }),
+      )
+      await getContext().handleOpenExternalCheckIns(
+        [createAccount({ id: "permission-open" })],
+        withExternalCheckInAnalytics(),
+      )
+    })
+
+    expect(mockToast.error).toHaveBeenCalledWith(
+      "messages:errors.operation.failed",
+    )
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission },
+    )
+    expect(
+      JSON.stringify(mockCompleteProductAnalyticsAction.mock.calls),
+    ).not.toContain("private runtime failure")
   })
 
   it("tracks thrown external check-in errors without blocking user feedback", async () => {

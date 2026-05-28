@@ -93,6 +93,12 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
 })
 
 vi.mock("~/services/productAnalytics/actions", () => ({
+  resolveProductAnalyticsErrorCategoryFromError: (error: unknown) =>
+    error &&
+    typeof error === "object" &&
+    (error as { statusCode?: unknown }).statusCode === 401
+      ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
+      : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
   startProductAnalyticsAction: (...args: unknown[]) =>
     mockStartProductAnalyticsAction(...args),
 }))
@@ -755,6 +761,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
       status: "fail",
       latencyMs: 1,
       summary: "Unauthorized",
+      output: { inferredHttpStatus: 401 },
     })
 
     render(
@@ -792,7 +799,7 @@ describe("VerifyApiCredentialProfileDialog", () => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
           insights: {
             itemCount: 1,
             successCount: 0,

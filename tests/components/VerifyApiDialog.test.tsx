@@ -39,6 +39,12 @@ vi.mock("~/services/apiService", () => ({
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
+  resolveProductAnalyticsErrorCategoryFromError: (error: unknown) =>
+    error &&
+    typeof error === "object" &&
+    (error as { statusCode?: unknown }).statusCode === 401
+      ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
+      : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
   startProductAnalyticsAction: (...args: any[]) =>
     mockStartProductAnalyticsAction(...args),
 }))
@@ -530,7 +536,7 @@ describe("VerifyApiDialog", () => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
             successCount: 1,

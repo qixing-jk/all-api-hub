@@ -50,6 +50,7 @@ import {
   supportsManagedSiteBaseUrlChannelLookup,
 } from "~/services/managedSites/utils/managedSite"
 import {
+  resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
   type ProductAnalyticsActionContext,
 } from "~/services/productAnalytics/actions"
@@ -721,7 +722,8 @@ export default function AccountActionButtons({
           }),
         )
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          errorCategory:
+            resolveProductAnalyticsErrorCategoryFromError(response),
         })
         return
       }
@@ -782,7 +784,7 @@ export default function AccountActionButtons({
         }),
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
       })
     }
   }

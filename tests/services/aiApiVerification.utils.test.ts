@@ -96,6 +96,31 @@ describe("aiApiVerification utils", () => {
     ).toBeUndefined()
   })
 
+  it("infers analytics HTTP status only from structured error fields", async () => {
+    const { inferHttpStatus, inferStructuredHttpStatus } = await import(
+      "~/services/verification/aiApiVerification/utils"
+    )
+
+    expect(inferStructuredHttpStatus({ status: 401 })).toBe(401)
+    expect(inferStructuredHttpStatus({ statusCode: "403" })).toBe(403)
+    expect(inferStructuredHttpStatus({ response: { status: 404 } })).toBe(404)
+    expect(inferStructuredHttpStatus({ cause: { statusCode: "429" } })).toBe(
+      429,
+    )
+    expect(
+      inferHttpStatus(
+        new Error("service returned 401"),
+        "service returned 401",
+      ),
+    ).toBe(401)
+    expect(
+      inferStructuredHttpStatus(new Error("service returned 401")),
+    ).toBeUndefined()
+    expect(inferStructuredHttpStatus({ statusCode: 99 })).toBeUndefined()
+    expect(inferStructuredHttpStatus({ statusCode: "600" })).toBeUndefined()
+    expect(inferStructuredHttpStatus({ statusCode: 401.5 })).toBeUndefined()
+  })
+
   it("normalizes verification base URLs and guesses a fallback model id from token metadata", async () => {
     const {
       coerceBaseUrlToAnthropicV1,

@@ -27,6 +27,7 @@ const {
   mockToastSuccess,
   mockStartProductAnalyticsAction,
   mockCompleteProductAnalyticsAction,
+  mockResolveProductAnalyticsErrorCategoryFromError,
 } = vi.hoisted(() => ({
   mockAutoDetectAccount: vi.fn(),
   mockOpenWithAccount: vi.fn(),
@@ -35,6 +36,7 @@ const {
   mockToastSuccess: vi.fn(),
   mockStartProductAnalyticsAction: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
+  mockResolveProductAnalyticsErrorCategoryFromError: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -69,6 +71,8 @@ vi.mock("~/services/accounts/accountOperations", async (importOriginal) => {
 
 vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: mockStartProductAnalyticsAction,
+  resolveProductAnalyticsErrorCategoryFromError:
+    mockResolveProductAnalyticsErrorCategoryFromError,
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -93,6 +97,9 @@ describe("useAccountDialog analytics", () => {
     mockStartProductAnalyticsAction.mockReturnValue({
       complete: mockCompleteProductAnalyticsAction,
     })
+    mockResolveProductAnalyticsErrorCategoryFromError.mockReturnValue(
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+    )
     ;(globalThis.browser.tabs.sendMessage as any) = vi.fn()
   })
 
@@ -410,6 +417,41 @@ describe("useAccountDialog analytics", () => {
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+        },
+      },
+    )
+    expectNoSensitiveAnalyticsFields()
+  })
+
+  it("tracks thrown account auto-detect structured errors with the shared safe category", async () => {
+    const structuredError = { statusCode: 429, message: "private rate limit" }
+    mockAutoDetectAccount.mockRejectedValueOnce(structuredError)
+    mockResolveProductAnalyticsErrorCategoryFromError.mockReturnValueOnce(
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit,
+    )
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await setUrlAndWait(result, "https://private.example.com")
+
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(
+      mockResolveProductAnalyticsErrorCategoryFromError,
+    ).toHaveBeenCalledWith(structuredError)
+    expectStartedAction(PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect)
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit,
         insights: {
           failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
         },

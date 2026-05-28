@@ -9,6 +9,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsErrorCategory,
 } from "~/services/productAnalytics/events"
 import type {
   RedemptionAssistShouldPromptRequest,
@@ -249,7 +250,10 @@ async function handleContextMenuRedemption(
         return
       }
 
-      await showRedeemBatchResultToast(results, retry)
+      await showRedeemBatchResultToast(
+        results.map(toRedeemBatchDisplayItem),
+        createRedeemBatchDisplayRetry(retry),
+      )
     } finally {
       dismissLoadingToast()
     }
@@ -375,7 +379,10 @@ async function scanForRedemptionCodes(sourceText?: string) {
         return
       }
 
-      await showRedeemBatchResultToast(results, retry)
+      await showRedeemBatchResultToast(
+        results.map(toRedeemBatchDisplayItem),
+        createRedeemBatchDisplayRetry(retry),
+      )
     } finally {
       dismissLoadingToast()
     }
@@ -415,6 +422,54 @@ type RedeemBatchItem = {
   preview: string
   success: boolean
   message: string
+  analyticsErrorCategory?: ProductAnalyticsErrorCategory
+}
+
+type RedeemBatchDisplayItem = Omit<RedeemBatchItem, "analyticsErrorCategory">
+
+const REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES = {
+  InvalidUrl: "INVALID_URL",
+  MultipleAccounts: "MULTIPLE_ACCOUNTS",
+  NoAccounts: "NO_ACCOUNTS",
+  AccountSelectionCancelled: "ACCOUNT_SELECTION_CANCELLED",
+} as const
+
+type RedemptionPromptAnalyticsResultCode =
+  (typeof REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES)[keyof typeof REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES]
+
+/** Maps fixed redemption result codes into the coarse analytics taxonomy. */
+function getRedemptionPromptAnalyticsErrorCategory(
+  code?: RedemptionPromptAnalyticsResultCode,
+): ProductAnalyticsErrorCategory {
+  switch (code) {
+    case REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.InvalidUrl:
+    case REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.MultipleAccounts:
+    case REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.NoAccounts:
+    case REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.AccountSelectionCancelled:
+      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
+    default:
+      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+  }
+}
+
+/** Removes analytics-only fields before handing redemption results to UI. */
+function toRedeemBatchDisplayItem(
+  item: RedeemBatchItem,
+): RedeemBatchDisplayItem {
+  return {
+    code: item.code,
+    preview: item.preview,
+    success: item.success,
+    message: item.message,
+  }
+}
+
+/** Wraps retry callbacks so UI consumers never receive analytics-only fields. */
+function createRedeemBatchDisplayRetry(
+  retry: (code: string) => Promise<RedeemBatchItem>,
+) {
+  return async (code: string): Promise<RedeemBatchDisplayItem> =>
+    toRedeemBatchDisplayItem(await retry(code))
 }
 
 /**
@@ -426,6 +481,14 @@ function trackConfirmRedemptionPromptCompleted(
 ) {
   const successCount = results.filter((item) => item.success).length
   const failureCount = results.length - successCount
+  const failureCategory = results
+    .filter((item) => !item.success)
+    .map((item) => item.analyticsErrorCategory)
+    .find(
+      (category): category is ProductAnalyticsErrorCategory =>
+        Boolean(category) &&
+        category !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+    )
   const result =
     results.length === 0
       ? PRODUCT_ANALYTICS_RESULTS.Skipped
@@ -440,7 +503,10 @@ function trackConfirmRedemptionPromptCompleted(
     entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
     result,
     ...(result === PRODUCT_ANALYTICS_RESULTS.Failure
-      ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
+      ? {
+          errorCategory:
+            failureCategory ?? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        }
       : {}),
     insights: {
       itemCount: results.length,
@@ -509,6 +575,9 @@ async function redeemCodesSequential(params: {
           preview: maskCode(code),
           success: false,
           message: t("redemptionAssist:messages.cancelled"),
+          analyticsErrorCategory: getRedemptionPromptAnalyticsErrorCategory(
+            REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.AccountSelectionCancelled,
+          ),
         }
       }
 
@@ -528,6 +597,9 @@ async function redeemCodesSequential(params: {
           preview: maskCode(code),
           success: false,
           message: t("redemptionAssist:messages.cancelled"),
+          analyticsErrorCategory: getRedemptionPromptAnalyticsErrorCategory(
+            REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.AccountSelectionCancelled,
+          ),
         }
       }
 
@@ -542,6 +614,9 @@ async function redeemCodesSequential(params: {
       preview: maskCode(code),
       success: false,
       message: msg,
+      analyticsErrorCategory: getRedemptionPromptAnalyticsErrorCategory(
+        getFixedRedemptionPromptResultCode(result?.code),
+      ),
     }
   }
 
@@ -553,5 +628,19 @@ async function redeemCodesSequential(params: {
   return {
     results,
     retry: redeemOne,
+  }
+}
+
+/** Narrows background result codes to the fixed set allowed for analytics. */
+function getFixedRedemptionPromptResultCode(
+  code: unknown,
+): RedemptionPromptAnalyticsResultCode | undefined {
+  switch (code) {
+    case REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.InvalidUrl:
+    case REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.MultipleAccounts:
+    case REDEMPTION_PROMPT_ANALYTICS_RESULT_CODES.NoAccounts:
+      return code
+    default:
+      return undefined
   }
 }

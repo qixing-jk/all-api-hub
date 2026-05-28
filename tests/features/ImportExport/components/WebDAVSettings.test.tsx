@@ -159,6 +159,12 @@ vi.mock("~/utils/browser/browserApi", () => ({
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
+  resolveProductAnalyticsErrorCategoryFromError: (error: unknown) =>
+    error &&
+    typeof error === "object" &&
+    (error as { statusCode?: unknown }).statusCode === 401
+      ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
+      : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
   startProductAnalyticsAction: (...args: unknown[]) =>
     mockStartProductAnalyticsAction(...args),
 }))
@@ -542,6 +548,34 @@ describe("WebDAVSettings", () => {
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+          },
+        },
+      )
+    })
+  })
+
+  it("maps structured WebDAV connection failures to safe analytics categories", async () => {
+    mockTestWebdavConnection.mockRejectedValueOnce(
+      Object.assign(new Error("private connection failed"), {
+        statusCode: 401,
+      }),
+    )
+
+    render(<WebDAVSettings />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "importExport:webdav.testConnection",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
           },

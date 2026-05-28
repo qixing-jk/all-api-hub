@@ -19,13 +19,15 @@ import {
   loadAccountTokenFallbackPricingResponse,
 } from "~/services/apiCredentialProfiles/modelCatalog"
 import { getApiService } from "~/services/apiService"
-import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import type { PricingResponse } from "~/services/apiService/common/type"
 import {
   MODEL_PRICING_CACHE_TTL_MS,
   modelPricingCache,
 } from "~/services/models/modelPricingCache"
-import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
+import {
+  resolveProductAnalyticsErrorCategoryFromError,
+  trackProductAnalyticsActionCompleted,
+} from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -119,39 +121,14 @@ function getModelDataErrorCategory(
 ): ProductAnalyticsErrorCategory {
   const code =
     error && typeof error === "object"
-      ? (error as { code?: unknown; originalCode?: unknown }).code
-      : undefined
-  const originalCode =
-    error && typeof error === "object"
-      ? (error as { originalCode?: unknown }).originalCode
+      ? (error as { code?: unknown }).code
       : undefined
 
   if (code === MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT) {
     return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
   }
 
-  if (error instanceof ApiError) {
-    if (
-      error.statusCode === 401 ||
-      error.statusCode === 403 ||
-      code === API_ERROR_CODES.HTTP_401 ||
-      code === API_ERROR_CODES.HTTP_403 ||
-      originalCode === API_ERROR_CODES.HTTP_401 ||
-      originalCode === API_ERROR_CODES.HTTP_403
-    ) {
-      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
-    }
-
-    if (code === API_ERROR_CODES.NETWORK_ERROR) {
-      return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network
-    }
-  }
-
-  if (error instanceof TypeError && error.message.includes("fetch")) {
-    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network
-  }
-
-  return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+  return resolveProductAnalyticsErrorCategoryFromError(error)
 }
 
 /** Classify whether model catalog loading failed during parsing or execution. */

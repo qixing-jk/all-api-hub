@@ -22,6 +22,7 @@ import { inputVariants } from "~/components/ui/input"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { cn } from "~/lib/utils"
 import {
+  resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
   type ProductAnalyticsActionInsights,
 } from "~/services/productAnalytics/actions"
@@ -37,6 +38,7 @@ import {
   type ProductAnalyticsResult,
   type ProductAnalyticsSourceKind,
 } from "~/services/productAnalytics/events"
+import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
   API_TYPES,
   getApiVerificationProbeDefinitions,
@@ -478,8 +480,14 @@ export function ApiCheckModalHost() {
             response?.error ||
               t("webAiApiCheck:modal.errors.fetchModelsFailed"),
           )
+          const errorCategory =
+            typeof response?.errorStatusCode === "number"
+              ? resolveProductAnalyticsErrorCategoryFromError({
+                  statusCode: response.errorStatusCode,
+                })
+              : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            errorCategory,
             insights: {
               sourceKind:
                 origin === "auto"
@@ -492,7 +500,7 @@ export function ApiCheckModalHost() {
         }
       } catch (error) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
           insights: {
             sourceKind:
               origin === "auto"
@@ -625,7 +633,10 @@ export function ApiCheckModalHost() {
         const analyticsResult = getProbeAnalyticsResult(result)
         tracker?.complete(analyticsResult, {
           ...(analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure
-            ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
+            ? {
+                errorCategory:
+                  resolveProductAnalyticsErrorCategoryFromProbeResult(result),
+              }
             : {}),
           insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
             mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
@@ -662,7 +673,7 @@ export function ApiCheckModalHost() {
         }),
       })
       return fallback
-    } catch {
+    } catch (error) {
       const fallback: ApiVerificationProbeResult = {
         id: probeId,
         status: "fail",
@@ -685,7 +696,7 @@ export function ApiCheckModalHost() {
         ),
       )
       tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
         insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
           mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
         }),
@@ -743,7 +754,12 @@ export function ApiCheckModalHost() {
 
       tracker.complete(analyticsResult, {
         ...(analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure
-          ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
+          ? {
+              errorCategory:
+                resolveProductAnalyticsErrorCategoryFromProbeResult(
+                  results.find((result) => result.status === "fail"),
+                ),
+            }
           : {}),
         insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
           mode: PRODUCT_ANALYTICS_MODE_IDS.All,

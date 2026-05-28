@@ -43,6 +43,12 @@ vi.mock("~/services/accounts/utils/apiServiceRequest", () => ({
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
+  resolveProductAnalyticsErrorCategoryFromError: (error: unknown) =>
+    error &&
+    typeof error === "object" &&
+    (error as { statusCode?: unknown }).statusCode === 401
+      ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
+      : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
   startProductAnalyticsAction: (...args: any[]) =>
     mockStartProductAnalyticsAction(...args),
 }))
@@ -903,6 +909,77 @@ describe("VerifyCliSupportDialog", () => {
     })
     fireEvent.click(outputToggle)
     expect(await within(toolCard).findByText(/401/)).toBeInTheDocument()
+  })
+
+  it("does not use message-derived HTTP status for CLI failure analytics", async () => {
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        user_id: 1,
+        key: "secret",
+        status: 1,
+        name: "token-1",
+        models: "",
+        model_limits: "",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+    mockRunCliSupportTool.mockRejectedValueOnce(new Error("Unauthorized 401"))
+
+    render(
+      <VerifyCliSupportDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          id: "a1",
+          name: "Account",
+          username: "u",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+          todayTokens: { upload: 0, download: 0 },
+          health: { status: "healthy" as any },
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://example.com",
+          token: "t",
+          userId: 1,
+          authType: "access_token" as any,
+          checkIn: { enableDetection: false } as any,
+        }}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "cliSupportVerification:verifyDialog.actions.run",
+      }),
+    )
+
+    const toolCard = await screen.findByTestId(getCliToolCardTestId("claude"))
+    expect(
+      await within(toolCard).findByText(
+        "cliSupportVerification:verifyDialog.summaries.unauthorized",
+      ),
+    ).toBeInTheDocument()
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+            successCount: 0,
+            failureCount: 1,
+          },
+        },
+      )
+    })
   })
 
   it("surfaces generic unexpected failures when no HTTP status can be inferred", async () => {

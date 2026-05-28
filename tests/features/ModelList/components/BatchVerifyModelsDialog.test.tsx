@@ -112,6 +112,12 @@ vi.mock("~/services/verification/aiApiVerification", async (importOriginal) => {
 })
 
 vi.mock("~/services/productAnalytics/actions", () => ({
+  resolveProductAnalyticsErrorCategoryFromError: (error: unknown) =>
+    error &&
+    typeof error === "object" &&
+    (error as { statusCode?: unknown }).statusCode === 401
+      ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
+      : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
   startProductAnalyticsAction: (...args: any[]) =>
     mockStartProductAnalyticsAction(...args),
   trackProductAnalyticsActionStarted: (...args: any[]) =>
@@ -660,6 +666,7 @@ describe("BatchVerifyModelsDialog", () => {
       status: "fail",
       latencyMs: 12,
       summary: "Request failed",
+      output: { inferredHttpStatus: 401 },
     })
 
     renderDialog([
@@ -681,7 +688,7 @@ describe("BatchVerifyModelsDialog", () => {
       expect(mockCompleteStartProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
           insights: {
             itemCount: 1,
             successCount: 0,

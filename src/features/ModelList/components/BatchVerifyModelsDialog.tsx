@@ -39,7 +39,10 @@ import {
   fetchDisplayAccountTokens,
   resolveDisplayAccountTokenForSecret,
 } from "~/services/accounts/utils/apiServiceRequest"
-import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  resolveProductAnalyticsErrorCategoryFromError,
+  startProductAnalyticsAction,
+} from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -47,7 +50,9 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsErrorCategory,
 } from "~/services/productAnalytics/events"
+import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
   API_TYPES,
   getApiVerificationProbeDefinitions,
@@ -88,6 +93,7 @@ type BatchVerifyRow = {
   summary: string
   results: ApiVerificationProbeResult[]
   tokenName?: string
+  errorCategory?: ProductAnalyticsErrorCategory
 }
 
 type AccountBatchVerifyModelItem = BatchVerifyModelItem & {
@@ -262,6 +268,9 @@ export function BatchVerifyModelsDialog({
   const [hasStarted, setHasStarted] = useState(false)
   const shouldStopRef = useRef(false)
   const batchAbortControllerRef = useRef<AbortController | null>(null)
+  const batchFailureCategoryRef = useRef<
+    ProductAnalyticsErrorCategory | undefined
+  >(undefined)
   const previousDialogSnapshotRef = useRef({
     isOpen: false,
     items,
@@ -482,6 +491,7 @@ export function BatchVerifyModelsDialog({
         summary: t("modelList:batchVerify.status.running"),
         results: [],
         tokenName: undefined,
+        errorCategory: undefined,
       })
 
       let apiKey = ""
@@ -627,6 +637,18 @@ export function BatchVerifyModelsDialog({
         ).length
 
         const status = deriveBatchVerifyRowStatus(results)
+        const errorCategory =
+          status === BATCH_VERIFY_ROW_STATUSES.FAIL
+            ? resolveProductAnalyticsErrorCategoryFromProbeResult(
+                results.find((result) => result.status === "fail"),
+              )
+            : undefined
+        if (
+          errorCategory &&
+          errorCategory !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+        ) {
+          batchFailureCategoryRef.current ??= errorCategory
+        }
         updateRow(item.key, {
           status,
           latencyMs: getRowLatency(results),
@@ -638,6 +660,7 @@ export function BatchVerifyModelsDialog({
           }),
           results,
           tokenName: credentials.tokenName,
+          errorCategory,
         })
         return status
       } catch (error) {
@@ -670,6 +693,11 @@ export function BatchVerifyModelsDialog({
           latencyMs: Date.now() - startedAt,
           summary: message,
         }
+        const errorCategory =
+          resolveProductAnalyticsErrorCategoryFromError(error)
+        if (errorCategory !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown) {
+          batchFailureCategoryRef.current ??= errorCategory
+        }
         await persistResult(item, apiType, [result]).catch((persistError) => {
           logger.error("Failed to persist batch verification failure", {
             modelId: item.modelId,
@@ -681,6 +709,7 @@ export function BatchVerifyModelsDialog({
           latencyMs: result.latencyMs,
           summary: message,
           results: [result],
+          errorCategory,
         })
         return BATCH_VERIFY_ROW_STATUSES.FAIL
       }
@@ -722,6 +751,7 @@ export function BatchVerifyModelsDialog({
     clearCachedTokenPromises()
     const abortController = new AbortController()
     batchAbortControllerRef.current = abortController
+    batchFailureCategoryRef.current = undefined
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.StartBatchModelVerify,
@@ -794,7 +824,9 @@ export function BatchVerifyModelsDialog({
         )
       ) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          errorCategory:
+            batchFailureCategoryRef.current ??
+            PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: completionInsights,
         })
       } else if (

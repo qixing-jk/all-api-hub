@@ -28,6 +28,7 @@ import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/a
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
+  resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
   type ProductAnalyticsActionContext,
 } from "~/services/productAnalytics/actions"
@@ -118,7 +119,7 @@ function getWebdavAnalyticsErrorCategory(error: unknown) {
     return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
   }
 
-  return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+  return resolveProductAnalyticsErrorCategoryFromError(error)
 }
 
 /** Classify which WebDAV phase failed without exposing raw connection details. */

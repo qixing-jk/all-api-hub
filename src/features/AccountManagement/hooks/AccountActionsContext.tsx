@@ -11,6 +11,7 @@ import toast from "react-hot-toast"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
+  resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
   type ProductAnalyticsActionContext,
 } from "~/services/productAnalytics/actions"
@@ -365,7 +366,7 @@ export const AccountActionsProvider = ({
         if (!analyticsCompleted) {
           analyticsCompleted = true
           tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
           })
         }
         toast.error(

@@ -53,6 +53,7 @@ export type ApiCheckFetchModelsResponse =
   | {
       success: false
       error?: string
+      errorStatusCode?: number
     }
 
 /**

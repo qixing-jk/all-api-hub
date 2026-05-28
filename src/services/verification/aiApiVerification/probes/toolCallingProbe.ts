@@ -8,6 +8,7 @@ import type {
 } from "../types"
 import {
   inferHttpStatus,
+  inferStructuredHttpStatus,
   isAbortError,
   summaryKeyFromHttpStatus,
   toSanitizedErrorSummary,
@@ -128,6 +129,7 @@ export async function runToolCallingProbe(
 
     const summary = toSanitizedErrorSummary(error, secretsToRedact)
     const inferredStatus = inferHttpStatus(error, summary)
+    const analyticsStatus = inferStructuredHttpStatus(error)
     return {
       id: "tool-calling",
       status: "fail",
@@ -150,6 +152,10 @@ export async function runToolCallingProbe(
         },
         toolChoice: "required",
       },
+      output:
+        typeof analyticsStatus === "number"
+          ? { inferredHttpStatus: analyticsStatus }
+          : undefined,
     }
   }
 }

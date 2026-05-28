@@ -264,6 +264,66 @@ describe("product analytics action helpers", () => {
     )
   })
 
+  it("maps structured errors to safe analytics categories without raw messages", async () => {
+    const { resolveProductAnalyticsErrorCategoryFromError } = await import(
+      "~/services/productAnalytics/actions"
+    )
+
+    expect(
+      resolveProductAnalyticsErrorCategoryFromError({ statusCode: 401 }),
+    ).toBe(PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth)
+    expect(
+      resolveProductAnalyticsErrorCategoryFromError({ statusCode: 429 }),
+    ).toBe(PRODUCT_ANALYTICS_ERROR_CATEGORIES.RateLimit)
+    expect(
+      resolveProductAnalyticsErrorCategoryFromError({
+        code: "NETWORK_ERROR",
+      }),
+    ).toBe(PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network)
+    expect(
+      resolveProductAnalyticsErrorCategoryFromError({
+        originalCode: "JSON_PARSE_ERROR",
+      }),
+    ).toBe(PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation)
+    expect(
+      resolveProductAnalyticsErrorCategoryFromError({
+        code: "FEATURE_UNSUPPORTED",
+      }),
+    ).toBe(PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported)
+    expect(
+      resolveProductAnalyticsErrorCategoryFromError({ name: "AbortError" }),
+    ).toBe(PRODUCT_ANALYTICS_ERROR_CATEGORIES.Timeout)
+    expect(
+      resolveProductAnalyticsErrorCategoryFromError({
+        cause: { statusCode: 403 },
+      }),
+    ).toBe(PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth)
+    expect(
+      resolveProductAnalyticsErrorCategoryFromError({ statusCode: 99 }),
+    ).toBe(PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown)
+    expect(
+      resolveProductAnalyticsErrorCategoryFromError({ statusCode: 600 }),
+    ).toBe(PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown)
+  })
+
+  it("keeps unstructured analytics errors in the unknown bucket", async () => {
+    const { resolveProductAnalyticsErrorCategoryFromError } = await import(
+      "~/services/productAnalytics/actions"
+    )
+
+    expect(resolveProductAnalyticsErrorCategoryFromError("private text")).toBe(
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+    )
+    expect(resolveProductAnalyticsErrorCategoryFromError({})).toBe(
+      PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+    )
+    expect(
+      resolveProductAnalyticsErrorCategoryFromError(
+        new TypeError("Cannot read properties of undefined"),
+      ),
+    ).toBe(PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown)
+  })
+
   it("tracks completion with controlled action insight properties", async () => {
     const { trackProductAnalyticsActionCompleted } = await import(
       "~/services/productAnalytics/actions"

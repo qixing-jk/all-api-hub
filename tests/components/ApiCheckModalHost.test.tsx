@@ -42,6 +42,12 @@ const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
   }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
+  resolveProductAnalyticsErrorCategoryFromError: (error: unknown) =>
+    error &&
+    typeof error === "object" &&
+    (error as { statusCode?: unknown }).statusCode === 401
+      ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth
+      : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
   startProductAnalyticsAction: startProductAnalyticsActionMock,
 }))
 
@@ -753,6 +759,61 @@ describe("ApiCheckModalHost", () => {
         },
       },
     )
+  })
+
+  it("maps structured probe HTTP status to an auth analytics failure", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return { success: true, modelIds: [] }
+      }
+
+      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
+        return {
+          success: true,
+          result: {
+            id: message.probeId,
+            status: "fail",
+            latencyMs: 0,
+            summary: "Request failed",
+            output: { inferredHttpStatus: 401 },
+          },
+        }
+      }
+
+      return { success: false }
+    })
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-secret-xyz")
+
+    const probeCard = await screen.findByTestId(
+      getWebAiApiCheckProbeTestId("text-generation"),
+    )
+
+    await user.click(
+      within(probeCard).getByRole("button", {
+        name: "webAiApiCheck:modal.actions.runOne",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        expect.objectContaining({
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+        }),
+      )
+    })
   })
 
   it("tracks successful individual probe with fixed source/mode and no credential details", async () => {

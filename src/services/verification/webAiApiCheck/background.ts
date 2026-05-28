@@ -17,6 +17,7 @@ import {
 } from "~/services/verification/aiApiVerification"
 import {
   inferHttpStatus,
+  inferStructuredHttpStatus,
   summaryKeyFromHttpStatus,
   toSanitizedErrorSummary,
 } from "~/services/verification/aiApiVerification/utils"
@@ -211,15 +212,18 @@ export async function handleWebAiApiCheckMessage(
           return
         } catch (error) {
           const message = toSanitizedErrorSummary(error, [apiKey])
+          const status = inferStructuredHttpStatus(error)
           logger.error("Failed to fetch models", {
             apiType,
             baseUrl: normalizedBaseUrl,
             message,
+            status,
           })
 
           const response: ApiCheckFetchModelsResponse = {
             success: false,
             error: message,
+            errorStatusCode: status,
           }
           sendResponse(response)
           return
@@ -263,6 +267,7 @@ export async function handleWebAiApiCheckMessage(
         } catch (error) {
           const message = toSanitizedErrorSummary(error, [apiKey])
           const status = inferHttpStatus(error, message)
+          const analyticsStatus = inferStructuredHttpStatus(error)
           const summaryKey = summaryKeyFromHttpStatus(status)
 
           logger.error("Probe execution failed", {
@@ -284,6 +289,10 @@ export async function handleWebAiApiCheckMessage(
               apiType,
               baseUrl: normalizedBaseUrl,
             },
+            output:
+              typeof analyticsStatus === "number"
+                ? { inferredHttpStatus: analyticsStatus }
+                : undefined,
           }
 
           const response: ApiCheckRunProbeResponse = { success: true, result }

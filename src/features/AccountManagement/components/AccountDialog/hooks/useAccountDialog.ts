@@ -53,7 +53,10 @@ import {
   OPTIONAL_PERMISSIONS,
   type ManifestOptionalPermissions,
 } from "~/services/permissions/permissionManager"
-import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  resolveProductAnalyticsErrorCategoryFromError,
+  startProductAnalyticsAction,
+} from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -1505,7 +1508,10 @@ export function useAccountDialog({
       setDetectionError(detectionError)
       enterForm(ACCOUNT_DIALOG_FORM_SOURCES.MANUAL)
       analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: getAutoDetectAnalyticsErrorCategory(detectionError.type),
+        errorCategory: getAutoDetectAnalyticsErrorCategory(
+          detectionError.type,
+          error,
+        ),
         insights: {
           failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
         },
@@ -2465,6 +2471,7 @@ function startAccountDialogAnalyticsAction(actionId: ProductAnalyticsActionId) {
  */
 function getAutoDetectAnalyticsErrorCategory(
   errorType?: AutoDetectErrorType,
+  structuredError?: unknown,
 ): ProductAnalyticsErrorCategory {
   switch (errorType) {
     case AutoDetectErrorType.UNAUTHORIZED:
@@ -2482,6 +2489,9 @@ function getAutoDetectAnalyticsErrorCategory(
     case AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED:
     case AutoDetectErrorType.UNKNOWN:
     default:
+      if (structuredError !== undefined) {
+        return resolveProductAnalyticsErrorCategoryFromError(structuredError)
+      }
       return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
   }
 }

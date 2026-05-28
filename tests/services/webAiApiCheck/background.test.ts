@@ -356,6 +356,68 @@ describe("webAiApiCheck background handlers", () => {
     })
   })
 
+  it("fetchModels does not expose message-derived status codes to analytics", async () => {
+    vi.resetModules()
+    const { fetchOpenAICompatibleModelIds } = await import(
+      "~/services/apiService/openaiCompatible"
+    )
+    vi.mocked(fetchOpenAICompatibleModelIds).mockRejectedValue(
+      new Error("Unauthorized 401: sk-secret-xyz"),
+    )
+
+    const { handleWebAiApiCheckMessage } = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+
+    const sendResponse = vi.fn()
+    await handleWebAiApiCheckMessage(
+      {
+        action: RuntimeActionIds.ApiCheckFetchModels,
+        apiType: "openai",
+        baseUrl: "https://api.example.com/v1",
+        apiKey: "sk-secret-xyz",
+      },
+      sendResponse,
+    )
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "Unauthorized 401: [REDACTED]",
+    })
+  })
+
+  it("fetchModels returns structured status codes for analytics classification", async () => {
+    vi.resetModules()
+    const { fetchOpenAICompatibleModelIds } = await import(
+      "~/services/apiService/openaiCompatible"
+    )
+    vi.mocked(fetchOpenAICompatibleModelIds).mockRejectedValue({
+      statusCode: 401,
+      message: "Unauthorized: sk-secret-xyz",
+    })
+
+    const { handleWebAiApiCheckMessage } = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+
+    const sendResponse = vi.fn()
+    await handleWebAiApiCheckMessage(
+      {
+        action: RuntimeActionIds.ApiCheckFetchModels,
+        apiType: "openai",
+        baseUrl: "https://api.example.com/v1",
+        apiKey: "sk-secret-xyz",
+      },
+      sendResponse,
+    )
+
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "Unauthorized: [REDACTED]",
+      errorStatusCode: 401,
+    })
+  })
+
   it("fetchModels returns a stable error for unsupported api types after generic normalization", async () => {
     vi.resetModules()
 
@@ -519,6 +581,73 @@ describe("webAiApiCheck background handlers", () => {
     expect(response?.success).toBe(true)
     expect(response?.result?.status).toBe("fail")
     expect(response?.result?.summary).toBe("Forbidden: [REDACTED]")
+  })
+
+  it("runProbe omits analytics HTTP status when status is message-derived", async () => {
+    vi.resetModules()
+    const { runApiVerificationProbe } = await import(
+      "~/services/verification/aiApiVerification"
+    )
+    vi.mocked(runApiVerificationProbe).mockRejectedValue(
+      new Error("Forbidden 401: sk-secret-xyz"),
+    )
+
+    const { handleWebAiApiCheckMessage } = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+
+    const sendResponse = vi.fn()
+    await handleWebAiApiCheckMessage(
+      {
+        action: RuntimeActionIds.ApiCheckRunProbe,
+        apiType: "openai-compatible",
+        baseUrl: "https://proxy.example.com/api/v1",
+        apiKey: "sk-secret-xyz",
+        modelId: "gpt-4o-mini",
+        probeId: "text-generation",
+      },
+      sendResponse,
+    )
+
+    const response = sendResponse.mock.calls[0]?.[0] as any
+    expect(response?.success).toBe(true)
+    expect(response?.result?.summaryKey).toBe(
+      "verifyDialog.summaries.unauthorized",
+    )
+    expect(response?.result?.summaryParams).toEqual({ status: 401 })
+    expect(response?.result?.output).toBeUndefined()
+  })
+
+  it("runProbe exposes structured HTTP status for analytics classification", async () => {
+    vi.resetModules()
+    const { runApiVerificationProbe } = await import(
+      "~/services/verification/aiApiVerification"
+    )
+    vi.mocked(runApiVerificationProbe).mockRejectedValue({
+      response: { status: 401 },
+      message: "Forbidden: sk-secret-xyz",
+    })
+
+    const { handleWebAiApiCheckMessage } = await import(
+      "~/services/verification/webAiApiCheck/background"
+    )
+
+    const sendResponse = vi.fn()
+    await handleWebAiApiCheckMessage(
+      {
+        action: RuntimeActionIds.ApiCheckRunProbe,
+        apiType: "openai-compatible",
+        baseUrl: "https://proxy.example.com/api/v1",
+        apiKey: "sk-secret-xyz",
+        modelId: "gpt-4o-mini",
+        probeId: "text-generation",
+      },
+      sendResponse,
+    )
+
+    const response = sendResponse.mock.calls[0]?.[0] as any
+    expect(response?.success).toBe(true)
+    expect(response?.result?.output).toEqual({ inferredHttpStatus: 401 })
   })
 
   it("runProbe omits summary params when the failure has no inferable status code", async () => {

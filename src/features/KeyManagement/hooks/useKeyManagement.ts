@@ -12,7 +12,10 @@ import {
 import { formatOptionalSkPrefixSiteTokenAuthKey } from "~/services/apiService/common/apiKey"
 import { getManagedSiteTokenChannelStatus } from "~/services/managedSites/tokenChannelStatus"
 import { supportsManagedSiteBaseUrlChannelLookup } from "~/services/managedSites/utils/managedSite"
-import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  resolveProductAnalyticsErrorCategoryFromError,
+  startProductAnalyticsAction,
+} from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -22,6 +25,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_STATUS_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsErrorCategory,
 } from "~/services/productAnalytics/events"
 import type { AccountToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
@@ -116,6 +120,7 @@ interface TokenInventoryState {
   status: TokenLoadStatus
   tokens: AccountToken[]
   errorMessage?: string
+  errorCategory?: ProductAnalyticsErrorCategory
 }
 
 interface FailedAccountTokenLoad {
@@ -129,6 +134,12 @@ interface TokenLoadProgress {
   loaded: number
   loading: number
   error: number
+}
+
+interface TokenLoadAggregateResult {
+  successCount: number
+  failureCount: number
+  errorCategory?: ProductAnalyticsErrorCategory
 }
 
 interface ManagedSiteTokenStatusState {
@@ -326,6 +337,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
   const accountRequestEpochRef = useRef<Record<string, number>>({})
   const managedSiteStatusRunIdRef = useRef(0)
   const isMountedRef = useRef(true)
+  const tokenLoadErrorCategoriesRef = useRef<
+    Record<string, ProductAnalyticsErrorCategory>
+  >({})
 
   const startNewLoadEpoch = useCallback(() => {
     selectionEpochRef.current += 1
@@ -609,6 +623,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           status: "loading",
           tokens: prev[accountId]?.tokens ?? [],
           errorMessage: undefined,
+          errorCategory: undefined,
         },
       }))
 
@@ -621,12 +636,15 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
         if (!Array.isArray(tokens)) {
           const errorMessage = loadFailedMessageRef.current
+          const errorCategory = PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
+          tokenLoadErrorCategoriesRef.current[accountId] = errorCategory
           setTokenInventories((prev) => ({
             ...prev,
             [accountId]: {
               status: "error",
               tokens: prev[accountId]?.tokens ?? [],
               errorMessage,
+              errorCategory,
             },
           }))
           if (toastOnError) {
@@ -647,8 +665,10 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             status: "loaded",
             tokens: tokensWithAccount,
             errorMessage: undefined,
+            errorCategory: undefined,
           },
         }))
+        delete tokenLoadErrorCategoriesRef.current[accountId]
         return "loaded"
       } catch (error) {
         if (!isEpochActive(loadEpoch)) return null
@@ -656,6 +676,9 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
 
         const errorMessage =
           getErrorMessage(error) || loadFailedMessageRef.current
+        const errorCategory =
+          resolveProductAnalyticsErrorCategoryFromError(error)
+        tokenLoadErrorCategoriesRef.current[accountId] = errorCategory
         logger.error("获取账号密钥失败", errorMessage)
         setTokenInventories((prev) => ({
           ...prev,
@@ -663,6 +686,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             status: "error",
             tokens: prev[accountId]?.tokens ?? [],
             errorMessage,
+            errorCategory,
           },
         }))
         if (toastOnError) {
@@ -686,8 +710,12 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
    * - different origins load concurrently
    */
   const loadTokensForAccounts = useCallback(
-    async (params: { accountIds: string[]; loadEpoch: number }) => {
+    async (params: {
+      accountIds: string[]
+      loadEpoch: number
+    }): Promise<TokenLoadAggregateResult> => {
       const { accountIds, loadEpoch } = params
+      tokenLoadErrorCategoriesRef.current = {}
       const targetAccounts = accountIds.flatMap((id) => {
         const account = accountById.get(id)
         return account ? [account] : []
@@ -739,7 +767,20 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         failureCount +=
           accountsByOrigin.get(originEntries[index]?.[0] ?? "")?.length ?? 0
       })
-      return { successCount, failureCount }
+      const failureCategories = targetAccounts
+        .map((account) => tokenLoadErrorCategoriesRef.current[account.id])
+        .filter(
+          (category): category is ProductAnalyticsErrorCategory =>
+            category !== undefined,
+        )
+      const nonUnknownFailureCategory = failureCategories.find(
+        (category) => category !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      )
+      return {
+        successCount,
+        failureCount,
+        errorCategory: nonUnknownFailureCategory ?? failureCategories[0],
+      }
     },
     [accountById, isEpochActive, loadTokensForAccount],
   )
@@ -770,9 +811,12 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         setTokenInventories((prev) => {
           const next: Record<string, TokenInventoryState> = {}
           for (const account of enabledDisplayData) {
-            next[account.id] = prev[account.id] ?? {
-              status: "idle",
-              tokens: [],
+            next[account.id] = {
+              ...(prev[account.id] ?? {
+                status: "idle",
+                tokens: [],
+              }),
+              errorCategory: undefined,
             }
           }
           return next
@@ -797,6 +841,12 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
             ? PRODUCT_ANALYTICS_RESULTS.Failure
             : PRODUCT_ANALYTICS_RESULTS.Success,
           {
+            ...(failureCount > 0 &&
+            loadResult.errorCategory &&
+            loadResult.errorCategory !==
+              PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+              ? { errorCategory: loadResult.errorCategory }
+              : {}),
             insights: {
               mode: PRODUCT_ANALYTICS_MODE_IDS.All,
               itemCount: targetAccountIds.length,
@@ -838,12 +888,19 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
           : status === null
             ? PRODUCT_ANALYTICS_RESULTS.Skipped
             : PRODUCT_ANALYTICS_RESULTS.Failure
+      const errorCategory =
+        result === PRODUCT_ANALYTICS_RESULTS.Failure
+          ? tokenLoadErrorCategoriesRef.current[targetAccountId] ??
+            tokenInventoriesRef.current[targetAccountId]?.errorCategory ??
+            PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+          : undefined
       tracker.complete(result, {
-        ...(result !== PRODUCT_ANALYTICS_RESULTS.Failure
-          ? {}
-          : {
-              errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-            }),
+        ...(errorCategory &&
+        errorCategory !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+          ? { errorCategory }
+          : result === PRODUCT_ANALYTICS_RESULTS.Failure
+            ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
+            : {}),
         insights: {
           mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
         },
@@ -891,6 +948,11 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
         ? PRODUCT_ANALYTICS_RESULTS.Failure
         : PRODUCT_ANALYTICS_RESULTS.Success,
       {
+        ...(failureCount > 0 &&
+        loadResult.errorCategory &&
+        loadResult.errorCategory !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+          ? { errorCategory: loadResult.errorCategory }
+          : {}),
         insights: {
           mode: PRODUCT_ANALYTICS_MODE_IDS.RetryFailed,
           itemCount: failedAccountIds.length,

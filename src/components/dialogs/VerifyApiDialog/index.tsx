@@ -16,16 +16,19 @@ import { Modal } from "~/components/ui/Dialog/Modal"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { getApiService } from "~/services/apiService"
 import { identifyProvider } from "~/services/models/utils/modelProviders"
-import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  resolveProductAnalyticsErrorCategoryFromError,
+  startProductAnalyticsAction,
+} from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
   API_TYPES,
   getApiVerificationProbeDefinitions,
@@ -267,6 +270,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
     let successCount = 0
     let failureCount = 0
     let hasExecutedProbe = false
+    let failedProbeResult: ApiVerificationProbeResult | undefined
     setIsRunning(true)
     replaceProbes(buildProbeState(apiType))
     try {
@@ -284,6 +288,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         } else if (result.status === "fail") {
           hasExecutedProbe = true
           failureCount += 1
+          failedProbeResult ??= result
         }
       }
       const completionResult =
@@ -294,7 +299,12 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
             : PRODUCT_ANALYTICS_RESULTS.Skipped
       tracker.complete(completionResult, {
         ...(completionResult === PRODUCT_ANALYTICS_RESULTS.Failure
-          ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation }
+          ? {
+              errorCategory:
+                resolveProductAnalyticsErrorCategoryFromProbeResult(
+                  failedProbeResult,
+                ),
+            }
           : {}),
         insights: {
           ...(completionResult === PRODUCT_ANALYTICS_RESULTS.Failure
@@ -309,7 +319,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         message: toSanitizedErrorSummary(error, []),
       })
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
         insights: {
           failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
           successCount,
