@@ -87,6 +87,18 @@ const EVENT_ALLOWED_KEYS = {
     "temp_window_turnstile_fetch_failure_count_bucket",
     "entrypoint",
   ],
+  [PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured]: [
+    "feature_id",
+    "surface_id",
+    "entrypoint",
+    "shield_bypass_prompt_shown_count_bucket",
+    "shield_bypass_prompt_dismissed_count_bucket",
+    "shield_bypass_settings_visited_count_bucket",
+    "temp_window_fetch_success_count_bucket",
+    "temp_window_fetch_failure_count_bucket",
+    "temp_window_turnstile_fetch_success_count_bucket",
+    "temp_window_turnstile_fetch_failure_count_bucket",
+  ],
   [PRODUCT_ANALYTICS_EVENTS.SettingChanged]: [
     "setting_id",
     "enabled",

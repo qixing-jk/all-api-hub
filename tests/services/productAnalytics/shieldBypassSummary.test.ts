@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_COUNT_BUCKETS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
@@ -130,14 +129,12 @@ describe("shield bypass product analytics summary", () => {
     await expect(flushShieldBypassDailySummary()).resolves.toBe(true)
 
     expect(captureMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured,
       {
         feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-        action_id: PRODUCT_ANALYTICS_ACTION_IDS.SummarizeShieldBypassDaily,
         surface_id:
           PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-        result: PRODUCT_ANALYTICS_RESULTS.Success,
         shield_bypass_prompt_shown_count_bucket:
           PRODUCT_ANALYTICS_COUNT_BUCKETS.TenPlus,
         shield_bypass_prompt_dismissed_count_bucket:

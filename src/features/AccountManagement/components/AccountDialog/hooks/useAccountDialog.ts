@@ -1044,6 +1044,15 @@ export function useAccountDialog({
         toast.error(t("messages.cookiePermissionGrantFailed"))
       }
     } catch (error) {
+      const wasGrantedBefore = cookieAuthPermissionState.granted === true
+      for (const permissionId of cookieAuthPermissions) {
+        trackOptionalPermissionRequestResult(permissionId, {
+          success: false,
+          failureReason: error,
+          wasGrantedBefore,
+          wasGrantedAfter: wasGrantedBefore,
+        })
+      }
       logger.warn("Failed to request cookie auth permissions", {
         error,
         permissions: cookieAuthPermissions,
@@ -1055,7 +1064,7 @@ export function useAccountDialog({
         pending: false,
       }))
     }
-  }, [refreshCookieAuthPermissionState, t])
+  }, [cookieAuthPermissionState.granted, refreshCookieAuthPermissionState, t])
 
   const isAihubmixNormalSaveForegroundKeyFlow = useCallback(
     (options?: {

@@ -905,7 +905,7 @@ describe("product analytics privacy filtering", () => {
 
   it("keeps shield bypass daily summary buckets while dropping request details", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
-      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured,
       {
         feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
         action_id: PRODUCT_ANALYTICS_ACTION_IDS.SummarizeShieldBypassDaily,
@@ -933,11 +933,9 @@ describe("product analytics privacy filtering", () => {
 
     expect(sanitized).toEqual({
       feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-      action_id: PRODUCT_ANALYTICS_ACTION_IDS.SummarizeShieldBypassDaily,
       surface_id:
         PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      result: PRODUCT_ANALYTICS_RESULTS.Success,
       shield_bypass_prompt_shown_count_bucket:
         PRODUCT_ANALYTICS_COUNT_BUCKETS.TenPlus,
       shield_bypass_prompt_dismissed_count_bucket:

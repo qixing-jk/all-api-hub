@@ -623,6 +623,113 @@ describe("PermissionOnboardingDialog language selection", () => {
     ).toBeEnabled()
   })
 
+  it("tracks every target permission as an API error when grant-all unexpectedly rejects", async () => {
+    const user = userEvent.setup()
+    const onClose = vi.fn()
+    const i18n = await createSettingsI18n("en")
+
+    permissionMocks.ensurePermissionsDetailed.mockRejectedValueOnce(
+      new Error("permission boom"),
+    )
+
+    renderWithI18n(<PermissionOnboardingDialog open onClose={onClose} />, i18n)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: i18n.t("permissionsOnboarding.actions.allowAll"),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(analyticsMocks.trackProductAnalyticsEvent).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+        {
+          permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Cookies,
+          result: PRODUCT_ANALYTICS_RESULTS.Failure,
+          operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+          outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+          failure_reason:
+            PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+          was_granted_before: false,
+          was_granted_after: false,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        },
+      )
+    })
+    expect(analyticsMocks.trackProductAnalyticsEvent).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id:
+          PRODUCT_ANALYTICS_PERMISSION_IDS.DeclarativeNetRequestWithHostAccess,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+        failure_reason:
+          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+        was_granted_before: false,
+        was_granted_after: false,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+    expect(analyticsMocks.trackProductAnalyticsEvent).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.WebRequest,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+        failure_reason:
+          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+        was_granted_before: false,
+        was_granted_after: false,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+    expect(analyticsMocks.trackProductAnalyticsEvent).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.WebRequestBlocking,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+        failure_reason:
+          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+        was_granted_before: false,
+        was_granted_after: false,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+    expect(analyticsMocks.trackProductAnalyticsEvent).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.ClipboardRead,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+        failure_reason:
+          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+        was_granted_before: false,
+        was_granted_after: false,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+    expect(analyticsMocks.trackProductAnalyticsEvent).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Notifications,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+        failure_reason:
+          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+        was_granted_before: false,
+        was_granted_after: false,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+    expect(onClose).not.toHaveBeenCalled()
+  })
+
   it("disables the secondary actions while a permission request is in progress", async () => {
     const user = userEvent.setup()
     const onClose = vi.fn()

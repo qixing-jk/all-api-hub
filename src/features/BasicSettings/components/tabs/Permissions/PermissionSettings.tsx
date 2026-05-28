@@ -19,10 +19,10 @@ import {
 } from "~/services/permissions/permissionManager"
 import {
   getPermissionRemoveOutcome,
-  getPermissionRequestOutcome,
   PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS,
   PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
   PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
+  trackOptionalPermissionRequestResult,
   trackOptionalPermissionResult,
 } from "~/services/productAnalytics/permissions"
 import { createLogger } from "~/utils/core/logger"
@@ -163,16 +163,11 @@ export default function PermissionSettings() {
           const result = await requestPermissionDetailed(id)
           success = result.success
           const wasGrantedAfter = success || wasGrantedBefore
-          trackOptionalPermissionResult(id, {
-            operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
-            outcome: result.failureReason
-              ? PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError
-              : getPermissionRequestOutcome(success),
+          trackOptionalPermissionRequestResult(id, {
+            success,
             failureReason: result.failureReason
-              ? PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException
-              : success
-                ? undefined
-                : PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.UserDenied,
+              ? result.failureReason
+              : undefined,
             wasGrantedBefore,
             wasGrantedAfter,
           })
@@ -218,16 +213,23 @@ export default function PermissionSettings() {
         }
       } catch (error) {
         success = false
-        trackOptionalPermissionResult(id, {
-          operation: shouldEnable
-            ? PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request
-            : PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Remove,
-          outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
-          failureReason:
-            PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
-          wasGrantedBefore,
-          wasGrantedAfter: wasGrantedBefore,
-        })
+        if (shouldEnable) {
+          trackOptionalPermissionRequestResult(id, {
+            success: false,
+            failureReason: error,
+            wasGrantedBefore,
+            wasGrantedAfter: wasGrantedBefore,
+          })
+        } else {
+          trackOptionalPermissionResult(id, {
+            operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Remove,
+            outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+            failureReason:
+              PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+            wasGrantedBefore,
+            wasGrantedAfter: wasGrantedBefore,
+          })
+        }
         logger.error("Failed to toggle optional permission", { id, error })
         showResultToast(
           false,

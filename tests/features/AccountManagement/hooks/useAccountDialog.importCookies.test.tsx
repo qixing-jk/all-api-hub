@@ -578,4 +578,95 @@ describe("useAccountDialog cookie import feedback", () => {
       "accountDialog:messages.cookiePermissionGrantFailed",
     )
   })
+
+  it("tracks every cookie-auth permission as an API error when the permission request rejects", async () => {
+    vi.mocked(toast.error).mockClear()
+    mockHasPermission.mockResolvedValue(false)
+    mockHasPermissions.mockResolvedValue(false)
+    mockEnsurePermissionsDetailed.mockRejectedValueOnce(
+      new Error("permission request failed"),
+    )
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await act(async () => {
+      result.current.setters.setAuthType(AuthTypeEnum.Cookie)
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleRequestCookieAuthPermissions()
+    })
+
+    expect(mockTrackProductAnalyticsEvent).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Cookies,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+        failure_reason:
+          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+        was_granted_before: false,
+        was_granted_after: false,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+    expect(mockTrackProductAnalyticsEvent).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id:
+          PRODUCT_ANALYTICS_PERMISSION_IDS.DeclarativeNetRequestWithHostAccess,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+        failure_reason:
+          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+        was_granted_before: false,
+        was_granted_after: false,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+    expect(mockTrackProductAnalyticsEvent).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.WebRequest,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+        failure_reason:
+          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+        was_granted_before: false,
+        was_granted_after: false,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+    expect(mockTrackProductAnalyticsEvent).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.WebRequestBlocking,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+        failure_reason:
+          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+        was_granted_before: false,
+        was_granted_after: false,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+    expect(toast.error).toHaveBeenCalledWith(
+      "accountDialog:messages.cookiePermissionGrantFailed",
+    )
+  })
 })

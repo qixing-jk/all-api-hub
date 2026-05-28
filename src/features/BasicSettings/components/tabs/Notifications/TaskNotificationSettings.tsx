@@ -27,13 +27,7 @@ import {
   OPTIONAL_PERMISSION_IDS,
   requestPermissionDetailed,
 } from "~/services/permissions/permissionManager"
-import {
-  getPermissionRequestOutcome,
-  PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS,
-  PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
-  PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
-  trackOptionalPermissionResult,
-} from "~/services/productAnalytics/permissions"
+import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/permissions"
 import {
   TASK_NOTIFICATION_CHANNELS,
   TASK_NOTIFICATION_TASKS,
@@ -544,19 +538,17 @@ export default function TaskNotificationSettings() {
         OPTIONAL_PERMISSION_IDS.Notifications,
       )
       const success = result.success
-      trackOptionalPermissionResult(OPTIONAL_PERMISSION_IDS.Notifications, {
-        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
-        outcome: result.failureReason
-          ? PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError
-          : getPermissionRequestOutcome(success),
-        failureReason: result.failureReason
-          ? PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException
-          : success
-            ? undefined
-            : PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.UserDenied,
-        wasGrantedBefore,
-        wasGrantedAfter: success || wasGrantedBefore,
-      })
+      trackOptionalPermissionRequestResult(
+        OPTIONAL_PERMISSION_IDS.Notifications,
+        {
+          success,
+          failureReason: result.failureReason
+            ? result.failureReason
+            : undefined,
+          wasGrantedBefore,
+          wasGrantedAfter: success || wasGrantedBefore,
+        },
+      )
       await refreshPermissionStatus()
       showResultToast(
         success,
@@ -564,15 +556,22 @@ export default function TaskNotificationSettings() {
         t("taskNotifications.permission.requestFailed"),
       )
     } catch (error) {
-      trackOptionalPermissionResult(OPTIONAL_PERMISSION_IDS.Notifications, {
-        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
-        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
-        failureReason:
-          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
-        wasGrantedBefore,
-        wasGrantedAfter: wasGrantedBefore,
-      })
-      throw error
+      trackOptionalPermissionRequestResult(
+        OPTIONAL_PERMISSION_IDS.Notifications,
+        {
+          success: false,
+          failureReason: error,
+          wasGrantedBefore,
+          wasGrantedAfter: wasGrantedBefore,
+        },
+      )
+      logger.warn("Failed to request notification permission", error)
+      await refreshPermissionStatus()
+      showResultToast(
+        false,
+        t("taskNotifications.permission.requestSuccess"),
+        t("taskNotifications.permission.requestFailed"),
+      )
     } finally {
       setIsRequestingPermission(false)
     }

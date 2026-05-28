@@ -221,6 +221,86 @@ describe("TaskNotificationSettings", () => {
     )
   })
 
+  it("tracks notification permission API exceptions as request failures", async () => {
+    requestPermissionDetailedMock.mockResolvedValueOnce({
+      success: false,
+      failureReason: "api_exception",
+    })
+
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "settings:taskNotifications.permission.request",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToastMock).toHaveBeenCalledWith(
+        false,
+        "settings:taskNotifications.permission.requestSuccess",
+        "settings:taskNotifications.permission.requestFailed",
+      )
+    })
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Notifications,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+        failure_reason:
+          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+        was_granted_before: false,
+        was_granted_after: false,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+  })
+
+  it("handles rejected notification permission requests without rethrowing", async () => {
+    requestPermissionDetailedMock.mockRejectedValueOnce(
+      new Error("permission request rejected"),
+    )
+
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "settings:taskNotifications.permission.request",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToastMock).toHaveBeenCalledWith(
+        false,
+        "settings:taskNotifications.permission.requestSuccess",
+        "settings:taskNotifications.permission.requestFailed",
+      )
+    })
+    expect(hasPermissionMock).toHaveBeenCalledTimes(2)
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.Notifications,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+        failure_reason:
+          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+        was_granted_before: false,
+        was_granted_after: false,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+  })
+
   it("refreshes permission status when optional permissions change", async () => {
     let permissionsChangedHandler: (() => void | Promise<void>) | undefined
     hasPermissionMock.mockResolvedValueOnce(false).mockResolvedValueOnce(true)

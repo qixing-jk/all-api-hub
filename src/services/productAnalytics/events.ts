@@ -16,6 +16,7 @@ export const PRODUCT_ANALYTICS_EVENTS = {
   PageViewed: "page_viewed",
   FeatureActionStarted: "feature_action_started",
   FeatureActionCompleted: "feature_action_completed",
+  ShieldBypassSummaryCaptured: "shield_bypass_summary_captured",
   SettingChanged: "setting_changed",
   SettingsSnapshotCaptured: "settings_snapshot_captured",
   PermissionResult: "permission_result",
@@ -776,6 +777,18 @@ export type ProductAnalyticsEventPayloadMap = {
     temp_window_turnstile_fetch_success_count_bucket?: ProductAnalyticsCountBucket
     temp_window_turnstile_fetch_failure_count_bucket?: ProductAnalyticsCountBucket
     entrypoint: ProductAnalyticsEntrypoint
+  }
+  [PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured]: {
+    feature_id: typeof PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist
+    surface_id: typeof PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext
+    entrypoint: typeof PRODUCT_ANALYTICS_ENTRYPOINTS.Background
+    shield_bypass_prompt_shown_count_bucket?: ProductAnalyticsCountBucket
+    shield_bypass_prompt_dismissed_count_bucket?: ProductAnalyticsCountBucket
+    shield_bypass_settings_visited_count_bucket?: ProductAnalyticsCountBucket
+    temp_window_fetch_success_count_bucket?: ProductAnalyticsCountBucket
+    temp_window_fetch_failure_count_bucket?: ProductAnalyticsCountBucket
+    temp_window_turnstile_fetch_success_count_bucket?: ProductAnalyticsCountBucket
+    temp_window_turnstile_fetch_failure_count_bucket?: ProductAnalyticsCountBucket
   }
   [PRODUCT_ANALYTICS_EVENTS.SettingChanged]: {
     setting_id: ProductAnalyticsSettingId

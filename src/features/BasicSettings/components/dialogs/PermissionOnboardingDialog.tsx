@@ -170,6 +170,15 @@ export function PermissionOnboardingDialog({
         t("permissionsOnboarding.toasts.error"),
       )
     } catch (error) {
+      for (const permissionId of OPTIONAL_PERMISSIONS) {
+        const wasGrantedBefore = statuses[permissionId] === true
+        trackOptionalPermissionRequestResult(permissionId, {
+          success: false,
+          failureReason: error,
+          wasGrantedBefore,
+          wasGrantedAfter: wasGrantedBefore,
+        })
+      }
       logger.error("Failed to grant all optional permissions", error)
       success = false
       showResultToast(false, t("permissionsOnboarding.toasts.error"))
@@ -181,7 +190,7 @@ export function PermissionOnboardingDialog({
     if (success) {
       onClose()
     }
-  }, [hasOptionalPermissions, loadStatuses, onClose, t])
+  }, [hasOptionalPermissions, loadStatuses, onClose, statuses, t])
 
   const handleOpenGithub = useCallback(() => {
     window.open(GITHUB_URL, "_blank", "noopener,noreferrer")

@@ -298,4 +298,50 @@ describe("PermissionSettings", () => {
       },
     )
   })
+
+  it("tracks browser API request exceptions returned by the permission manager", async () => {
+    requestPermissionDetailedMock.mockResolvedValueOnce({
+      success: false,
+      failureReason: "api_exception",
+    })
+
+    render(<PermissionSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await screen.findByText("settings:permissions.items.clipboardRead.title")
+    const clipboardRow = document.getElementById("clipboardRead")
+    if (!clipboardRow) {
+      throw new Error("Expected clipboard permission row")
+    }
+
+    fireEvent.click(
+      within(clipboardRow).getByRole("button", {
+        name: "settings:permissions.actions.allow",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToastMock).toHaveBeenCalledWith(
+        false,
+        "settings:permissions.messages.granted",
+        "settings:permissions.messages.grantFailed",
+      )
+    })
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.PermissionResult,
+      {
+        permission_id: PRODUCT_ANALYTICS_PERMISSION_IDS.ClipboardRead,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.ApiError,
+        failure_reason:
+          PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.ApiException,
+        was_granted_before: false,
+        was_granted_after: false,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      },
+    )
+  })
 })

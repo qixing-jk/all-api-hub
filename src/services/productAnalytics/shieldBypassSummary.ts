@@ -1,6 +1,5 @@
 import { productAnalyticsClient } from "./client"
 import {
-  PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
@@ -62,10 +61,8 @@ function buildSummaryProperties(
 ) {
   return {
     feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
-    action_id: PRODUCT_ANALYTICS_ACTION_IDS.SummarizeShieldBypassDaily,
     surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
     entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-    result: PRODUCT_ANALYTICS_RESULTS.Success,
     shield_bypass_prompt_shown_count_bucket: bucketCount(
       summary.promptShownCount ?? 0,
     ),
@@ -162,7 +159,7 @@ export async function flushShieldBypassDailySummary(): Promise<boolean> {
   }
 
   const captured = await productAnalyticsClient.capture(
-    PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+    PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured,
     buildSummaryProperties(summary),
   )
   if (!captured) return false

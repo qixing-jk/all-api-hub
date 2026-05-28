@@ -18,6 +18,7 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
@@ -152,6 +153,7 @@ const expectLastModelDataAnalyticsCompletion = (expected: {
   successCount?: number
   failureCount?: number
   errorCategory?: string
+  failureStage?: string
 }) => {
   const lastCall = mockTrackProductAnalyticsActionCompleted.mock.lastCall?.[0]
 
@@ -166,6 +168,7 @@ const expectLastModelDataAnalyticsCompletion = (expected: {
       : {}),
     insights: {
       sourceKind: expected.sourceKind,
+      ...(expected.failureStage ? { failureStage: expected.failureStage } : {}),
       ...(typeof expected.modelCount === "number"
         ? { modelCount: expected.modelCount }
         : {}),
@@ -381,6 +384,7 @@ describe("useModelData all-accounts loading", () => {
       result: PRODUCT_ANALYTICS_RESULTS.Failure,
       sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
     })
   })
 
@@ -449,6 +453,7 @@ describe("useModelData all-accounts loading", () => {
       successCount: 1,
       failureCount: 1,
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
     })
   })
 
@@ -597,6 +602,7 @@ describe("useModelData all-accounts loading", () => {
       result: PRODUCT_ANALYTICS_RESULTS.Failure,
       sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelFallbackCatalog,
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
     })
   })
 

@@ -20,6 +20,8 @@ import { startProductAnalyticsAction } from "~/services/productAnalytics/actions
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -291,7 +293,13 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
             ? PRODUCT_ANALYTICS_RESULTS.Success
             : PRODUCT_ANALYTICS_RESULTS.Skipped
       tracker.complete(completionResult, {
+        ...(completionResult === PRODUCT_ANALYTICS_RESULTS.Failure
+          ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation }
+          : {}),
         insights: {
+          ...(completionResult === PRODUCT_ANALYTICS_RESULTS.Failure
+            ? { failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute }
+            : {}),
           successCount,
           failureCount,
         },
@@ -301,7 +309,9 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         message: toSanitizedErrorSummary(error, []),
       })
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
           successCount,
           failureCount,
         },

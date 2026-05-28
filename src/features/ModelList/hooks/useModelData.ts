@@ -30,11 +30,13 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsErrorCategory,
+  type ProductAnalyticsFailureStage,
   type ProductAnalyticsResult,
   type ProductAnalyticsSourceKind,
 } from "~/services/productAnalytics/events"
@@ -165,6 +167,7 @@ const MODEL_DATA_ANALYTICS_CONTEXT = {
  * @param params.result Coarse load outcome.
  * @param params.sourceKind Selected model source kind.
  * @param params.errorCategory Optional sanitized failure category.
+ * @param params.failureStage Optional sanitized failure stage.
  * @param params.modelCount Number of models loaded, when available.
  * @param params.successCount Number of successful account loads, when available.
  * @param params.failureCount Number of failed account loads, when available.
@@ -173,6 +176,7 @@ function trackModelDataLoadCompletion(params: {
   result: ProductAnalyticsResult
   sourceKind: ProductAnalyticsSourceKind
   errorCategory?: ProductAnalyticsErrorCategory
+  failureStage?: ProductAnalyticsFailureStage
   modelCount?: number
   successCount?: number
   failureCount?: number
@@ -183,6 +187,7 @@ function trackModelDataLoadCompletion(params: {
     errorCategory: params.errorCategory,
     insights: {
       sourceKind: params.sourceKind,
+      ...(params.failureStage ? { failureStage: params.failureStage } : {}),
       ...(typeof params.modelCount === "number"
         ? { modelCount: params.modelCount }
         : {}),
@@ -581,6 +586,7 @@ function useSingleAccountModelData(params: {
         result: PRODUCT_ANALYTICS_RESULTS.Failure,
         sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelFallbackCatalog,
         errorCategory: getModelDataErrorCategory(error),
+        failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
       })
     } finally {
       if (isActiveFallbackCatalogRequest(requestScopeKey, requestId)) {
@@ -675,6 +681,7 @@ function useSingleAccountModelData(params: {
             result: PRODUCT_ANALYTICS_RESULTS.Failure,
             sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
             errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
           })
         }
         return
@@ -691,6 +698,7 @@ function useSingleAccountModelData(params: {
           result: PRODUCT_ANALYTICS_RESULTS.Failure,
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
           errorCategory: getModelDataErrorCategory(query.error),
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
         })
       }
     }
@@ -888,6 +896,9 @@ function useAllAccountsModelData(
       sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAllAccounts,
       ...(failureCount > 0
         ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
+        : {}),
+      ...(failureCount > 0
+        ? { failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute }
         : {}),
       modelCount,
       successCount,
