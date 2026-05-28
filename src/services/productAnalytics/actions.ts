@@ -3,6 +3,7 @@ import { createLogger } from "~/utils/core/logger"
 import type { ProductAnalyticsActionContext } from "./actionConfig"
 import {
   PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_RESULTS,
   trackProductAnalyticsEvent,
   type ProductAnalyticsApiType,
@@ -136,6 +137,23 @@ function mapProductAnalyticsActionInsights(
 }
 
 /**
+ * Resolves an explicit failure stage or applies a coarse fallback for failures.
+ */
+function resolveProductAnalyticsFailureStage({
+  result,
+  insights,
+}: {
+  result: ProductAnalyticsResult
+  insights?: ProductAnalyticsActionInsights
+}) {
+  if (insights?.failureStage) return insights.failureStage
+
+  return result === PRODUCT_ANALYTICS_RESULTS.Failure
+    ? PRODUCT_ANALYTICS_FAILURE_STAGES.Execute
+    : undefined
+}
+
+/**
  * Tracks explicit UI intent using fixed analytics enums only.
  */
 export async function trackProductAnalyticsActionStarted({
@@ -173,6 +191,11 @@ export async function trackProductAnalyticsActionCompleted({
   insights,
 }: ProductAnalyticsActionCompletion) {
   try {
+    const failureStage = resolveProductAnalyticsFailureStage({
+      result,
+      insights,
+    })
+
     await trackProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
       {
@@ -186,6 +209,7 @@ export async function trackProductAnalyticsActionCompleted({
           ? { duration_bucket: bucketDurationMs(durationMs) }
           : {}),
         ...mapProductAnalyticsActionInsights(insights),
+        ...(failureStage ? { failure_stage: failureStage } : {}),
       },
     )
   } catch (error) {

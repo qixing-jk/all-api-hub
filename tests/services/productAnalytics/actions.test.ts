@@ -210,6 +210,56 @@ describe("product analytics action helpers", () => {
         result: PRODUCT_ANALYTICS_RESULTS.Failure,
         error_category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network,
         duration_bucket: "5_30s",
+        failure_stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      },
+    )
+  })
+
+  it("defaults failed completions without an explicit failure stage to execute", async () => {
+    const { trackProductAnalyticsActionCompleted } = await import(
+      "~/services/productAnalytics/actions"
+    )
+
+    await trackProductAnalyticsActionCompleted({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+    })
+
+    expect(trackMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.RunAutoCheckinNow,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        error_category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        failure_stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      },
+    )
+  })
+
+  it("does not add failure diagnostics to non-failure completions by default", async () => {
+    const { trackProductAnalyticsActionCompleted } = await import(
+      "~/services/productAnalytics/actions"
+    )
+
+    await trackProductAnalyticsActionCompleted({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ExportFullBackup,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Cancelled,
+    })
+
+    expect(trackMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ImportExport,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.ExportFullBackup,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Cancelled,
       },
     )
   })
