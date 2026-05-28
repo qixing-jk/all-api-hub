@@ -6,7 +6,11 @@ import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
 } from "../types"
-import { isAbortError, toSanitizedErrorSummary } from "../utils"
+import {
+  buildSafeProbeFailureDiagnostics,
+  isAbortError,
+  toSanitizedErrorSummary,
+} from "../utils"
 
 type RunTextGenerationProbeParams = {
   baseUrl: string
@@ -69,17 +73,23 @@ export async function runTextGenerationProbe(
       throw error
     }
 
+    const summary = toSanitizedErrorSummary(error, secretsToRedact)
+    const diagnostics = buildSafeProbeFailureDiagnostics(error, summary)
+
     return {
       id: "text-generation",
       status: "fail",
       latencyMs: okLatency(startedAt),
-      summary: toSanitizedErrorSummary(error, secretsToRedact),
+      summary,
+      summaryKey: diagnostics.summaryKey,
+      summaryParams: diagnostics.summaryParams,
       input: {
         apiType: params.apiType,
         baseUrl: params.baseUrl,
         modelId: params.modelId,
         prompt: "Reply with exactly: OK",
       },
+      output: diagnostics.output,
     }
   }
 }

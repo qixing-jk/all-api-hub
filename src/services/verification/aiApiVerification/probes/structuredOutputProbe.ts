@@ -7,7 +7,11 @@ import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
 } from "../types"
-import { isAbortError, toSanitizedErrorSummary } from "../utils"
+import {
+  buildSafeProbeFailureDiagnostics,
+  isAbortError,
+  toSanitizedErrorSummary,
+} from "../utils"
 
 type RunStructuredOutputProbeParams = {
   baseUrl: string
@@ -73,11 +77,14 @@ export async function runStructuredOutputProbe(
     }
 
     const summary = toSanitizedErrorSummary(error, secretsToRedact)
+    const diagnostics = buildSafeProbeFailureDiagnostics(error, summary)
     return {
       id: "structured-output",
       status: "fail",
       latencyMs: okLatency(startedAt),
       summary,
+      summaryKey: diagnostics.summaryKey,
+      summaryParams: diagnostics.summaryParams,
       input: {
         apiType: params.apiType,
         baseUrl: params.baseUrl,
@@ -85,6 +92,7 @@ export async function runStructuredOutputProbe(
         prompt: "Return a JSON object with shape { ok: true }.",
         schema: { ok: true },
       },
+      output: diagnostics.output,
     }
   }
 }

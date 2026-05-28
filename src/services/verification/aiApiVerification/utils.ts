@@ -52,6 +52,31 @@ export function summaryKeyFromHttpStatus(
   return undefined
 }
 
+/**
+ * Build safe, structured failure diagnostics for UI copy and analytics.
+ *
+ * `summaryKey` may use a status parsed from the sanitized message for better
+ * local UI feedback, but `output.inferredHttpStatus` only uses structured error
+ * fields so analytics does not depend on provider text.
+ */
+export function buildSafeProbeFailureDiagnostics(
+  error: unknown,
+  sanitizedMessage: string,
+) {
+  const displayStatus = inferHttpStatus(error, sanitizedMessage)
+  const analyticsStatus = inferStructuredHttpStatus(error)
+
+  return {
+    summaryKey: summaryKeyFromHttpStatus(displayStatus),
+    summaryParams:
+      typeof displayStatus === "number" ? { status: displayStatus } : undefined,
+    output:
+      typeof analyticsStatus === "number"
+        ? { inferredHttpStatus: analyticsStatus }
+        : undefined,
+  }
+}
+
 /** Reads valid HTTP status integers from structured status fields. */
 function readFiniteStatus(value: unknown): number | undefined {
   if (typeof value === "number" && Number.isFinite(value)) {

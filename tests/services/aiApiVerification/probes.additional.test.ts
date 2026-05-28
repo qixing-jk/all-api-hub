@@ -99,6 +99,32 @@ describe("AI API verification probes", () => {
         }),
       ).rejects.toBe(abortError)
     })
+
+    it("preserves structured model-list failure status for analytics", async () => {
+      mocks.fetchOpenAICompatibleModelIds.mockRejectedValueOnce({
+        statusCode: 401,
+        message: "private auth failure sk-secret",
+      })
+
+      const { runModelsProbe } = await import(
+        "~/services/verification/aiApiVerification/probes/modelsProbe"
+      )
+
+      const { result } = await runModelsProbe({
+        apiType: "openai-compatible",
+        baseUrl: "https://example.com",
+        apiKey: "sk-secret",
+      })
+
+      expect(result).toMatchObject({
+        id: "models",
+        status: "fail",
+        summaryKey: "verifyDialog.summaries.unauthorized",
+        summaryParams: { status: 401 },
+        output: { inferredHttpStatus: 401 },
+      })
+      expect(result.summary).not.toContain("sk-secret")
+    })
   })
 
   describe("runWebSearchProbe", () => {
@@ -175,7 +201,9 @@ describe("AI API verification probes", () => {
 
     it("returns a sanitized failure summary when the provider call throws", async () => {
       mocks.generateText.mockRejectedValueOnce(
-        new Error("request failed sk-secret"),
+        Object.assign(new Error("request failed sk-secret"), {
+          statusCode: 403,
+        }),
       )
 
       const { runWebSearchProbe } = await import(
@@ -192,6 +220,9 @@ describe("AI API verification probes", () => {
       expect(result).toMatchObject({
         id: "web-search",
         status: "fail",
+        summaryKey: "verifyDialog.summaries.forbidden",
+        summaryParams: { status: 403 },
+        output: { inferredHttpStatus: 403 },
       })
       expect(result.summary).not.toContain("sk-secret")
     })
@@ -450,7 +481,9 @@ describe("AI API verification probes", () => {
 
     it("sanitizes thrown text-generation errors", async () => {
       mocks.generateText.mockRejectedValueOnce(
-        new Error("bad gateway sk-secret"),
+        Object.assign(new Error("bad gateway sk-secret"), {
+          response: { status: 502 },
+        }),
       )
 
       const { runTextGenerationProbe } = await import(
@@ -467,6 +500,8 @@ describe("AI API verification probes", () => {
       expect(result).toMatchObject({
         id: "text-generation",
         status: "fail",
+        summaryParams: { status: 502 },
+        output: { inferredHttpStatus: 502 },
       })
       expect(result.summary).not.toContain("sk-secret")
     })
@@ -546,7 +581,9 @@ describe("AI API verification probes", () => {
 
     it("sanitizes thrown structured-output errors", async () => {
       mocks.generateText.mockRejectedValueOnce(
-        new Error("invalid schema sk-secret"),
+        Object.assign(new Error("invalid schema sk-secret"), {
+          status: "429",
+        }),
       )
 
       const { runStructuredOutputProbe } = await import(
@@ -563,6 +600,8 @@ describe("AI API verification probes", () => {
       expect(result).toMatchObject({
         id: "structured-output",
         status: "fail",
+        summaryParams: { status: 429 },
+        output: { inferredHttpStatus: 429 },
       })
       expect(result.summary).not.toContain("sk-secret")
     })

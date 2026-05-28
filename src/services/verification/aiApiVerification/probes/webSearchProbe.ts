@@ -6,7 +6,11 @@ import type {
   ApiVerificationApiType,
   ApiVerificationProbeResult,
 } from "../types"
-import { isAbortError, toSanitizedErrorSummary } from "../utils"
+import {
+  buildSafeProbeFailureDiagnostics,
+  isAbortError,
+  toSanitizedErrorSummary,
+} from "../utils"
 
 type RunWebSearchProbeParams = {
   baseUrl: string
@@ -154,16 +158,22 @@ export async function runWebSearchProbe(
       throw error
     }
 
+    const summary = toSanitizedErrorSummary(error, secretsToRedact)
+    const diagnostics = buildSafeProbeFailureDiagnostics(error, summary)
+
     return {
       id: "web-search",
       status: "fail",
       latencyMs: okLatency(startedAt),
-      summary: toSanitizedErrorSummary(error, secretsToRedact),
+      summary,
+      summaryKey: diagnostics.summaryKey,
+      summaryParams: diagnostics.summaryParams,
       input: {
         apiType: params.apiType,
         baseUrl: params.baseUrl,
         modelId: params.modelId,
       },
+      output: diagnostics.output,
     }
   }
 }
