@@ -8,12 +8,15 @@ import { ReactNode } from "react"
 import { useTranslation } from "react-i18next"
 
 import { Input } from "~/components/ui"
-import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
+import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/events"
 import {
   CHECKIN_RESULT_STATUS,
@@ -67,12 +70,40 @@ export default function FilterBar({
   const skippedCount = accountResults.filter(
     (r) => r.status === CHECKIN_RESULT_STATUS.SKIPPED,
   ).length
-  const trackStatusFilterSelection = () => {
-    void trackProductAnalyticsActionStarted({
+  const getFilteredResultCount = (nextStatus: FilterStatus) => {
+    switch (nextStatus) {
+      case FILTER_STATUS.SUCCESS:
+        return successCount
+      case FILTER_STATUS.FAILED:
+        return failedCount
+      case FILTER_STATUS.SKIPPED:
+        return skippedCount
+      case FILTER_STATUS.ALL:
+        return totalCount
+    }
+  }
+  const trackFilterSelection = (
+    mode:
+      | typeof PRODUCT_ANALYTICS_MODE_IDS.SearchFilter
+      | typeof PRODUCT_ANALYTICS_MODE_IDS.StatusFilter,
+    nextStatus: FilterStatus = status,
+    nextKeyword: string = keyword,
+  ) => {
+    const filterCount =
+      (nextStatus === FILTER_STATUS.ALL ? 0 : 1) + (nextKeyword.trim() ? 1 : 0)
+
+    void trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterAutoCheckinResults,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinFilterBar,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ResultFilter,
+        mode,
+        filterCount,
+        resultCount: getFilteredResultCount(nextStatus),
+      },
     })
   }
 
@@ -86,7 +117,7 @@ export default function FilterBar({
     <button
       onClick={() => {
         onStatusChange(value)
-        trackStatusFilterSelection()
+        trackFilterSelection(PRODUCT_ANALYTICS_MODE_IDS.StatusFilter, value)
       }}
       className={`flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
         status === value
@@ -149,7 +180,14 @@ export default function FilterBar({
           value={keyword}
           onChange={(e) => onKeywordChange(e.target.value)}
           leftIcon={<MagnifyingGlassIcon className="h-4 w-4" />}
-          onClear={() => onKeywordChange("")}
+          onClear={() => {
+            onKeywordChange("")
+            trackFilterSelection(
+              PRODUCT_ANALYTICS_MODE_IDS.SearchFilter,
+              status,
+              "",
+            )
+          }}
           clearButtonLabel={t("common:actions.clear")}
         />
       </div>

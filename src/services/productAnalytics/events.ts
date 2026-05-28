@@ -112,6 +112,7 @@ export const PRODUCT_ANALYTICS_TARGET_KINDS = {
   ExternalSite: "external_site",
   ManualSignIn: "manual_sign_in",
   ModelFilter: "model_filter",
+  ResultFilter: "result_filter",
   ModelSource: "model_source",
 } as const
 
@@ -144,6 +145,7 @@ export const PRODUCT_ANALYTICS_MODE_IDS = {
   BillingFilter: "billing_filter",
   GroupFilter: "group_filter",
   AccountFilter: "account_filter",
+  StatusFilter: "status_filter",
   ExpandDetails: "expand_details",
   CollapseDetails: "collapse_details",
   ApiVerification: "api_verification",

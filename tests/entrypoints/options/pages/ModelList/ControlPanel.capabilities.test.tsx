@@ -299,7 +299,7 @@ describe("ControlPanel profile capabilities", () => {
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       insights: {
         targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
-        mode: PRODUCT_ANALYTICS_MODE_IDS.SearchFilter,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.SortFilter,
         filterCount: 2,
         resultCount: 2,
       },
@@ -582,5 +582,79 @@ describe("ControlPanel profile capabilities", () => {
     expect(analyticsCalls).not.toContain("private-search")
     expect(analyticsCalls).not.toContain("private-group")
     expect(analyticsCalls).not.toContain("private-model-id")
+  })
+
+  it("tracks billing and group filters as distinct analytics modes", async () => {
+    const setSelectedBillingMode = vi.fn()
+    const setSelectedGroups = vi.fn()
+
+    render(
+      <ControlPanel
+        selectedSource={{ kind: "account" } as any}
+        sourceCapabilities={
+          {
+            supportsGroupFiltering: true,
+            supportsPricing: true,
+            supportsRatioDisplay: false,
+          } as any
+        }
+        searchTerm=""
+        setSearchTerm={vi.fn()}
+        sortMode={MODEL_LIST_SORT_MODES.DEFAULT}
+        setSortMode={vi.fn()}
+        selectedBillingMode={MODEL_LIST_BILLING_MODES.ALL}
+        setSelectedBillingMode={setSelectedBillingMode}
+        selectedGroups={[]}
+        setSelectedGroups={setSelectedGroups}
+        availableGroups={["vip"]}
+        pricingData={{ group_ratio: { vip: 2 } }}
+        showRealPrice={false}
+        setShowRealPrice={vi.fn()}
+        showRatioColumn={false}
+        setShowRatioColumn={vi.fn()}
+        showEndpointTypes={true}
+        setShowEndpointTypes={vi.fn()}
+        totalModels={3}
+        filteredModels={[{ model: { model_name: "private-model-id" } }]}
+      />,
+    )
+
+    const [, billingModeSelect, groupSelect] =
+      await screen.findAllByRole("combobox")
+    fireEvent.click(billingModeSelect)
+    fireEvent.click(await screen.findByText("ui:billing.tokenBased"))
+    fireEvent.click(groupSelect)
+    fireEvent.click(await screen.findByText("vip (2x)"))
+
+    expect(setSelectedBillingMode).toHaveBeenCalledWith(
+      MODEL_LIST_BILLING_MODES.TOKEN_BASED,
+    )
+    expect(setSelectedGroups).toHaveBeenCalledWith(["vip"])
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.BillingFilter,
+        filterCount: 1,
+        resultCount: 1,
+      },
+    })
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.GroupFilter,
+        filterCount: 1,
+        resultCount: 1,
+      },
+    })
   })
 })

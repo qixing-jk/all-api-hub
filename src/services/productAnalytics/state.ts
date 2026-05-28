@@ -9,7 +9,7 @@ import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("ProductAnalyticsState")
 
-export interface ProductAnalyticsState {
+interface ProductAnalyticsState {
   lastSiteEcosystemSnapshotAt?: number
   lastSettingsSnapshotAt?: number
   shieldBypassSummary?: ProductAnalyticsShieldBypassSummaryState

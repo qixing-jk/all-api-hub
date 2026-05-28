@@ -48,6 +48,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
+  type ProductAnalyticsModeId,
 } from "~/services/productAnalytics/events"
 
 interface ControlPanelProps {
@@ -185,6 +186,7 @@ export function ControlPanel({
     toast.success(t("messages.modelNamesCopied"))
   }
   const trackFilterChange = (
+    mode: ProductAnalyticsModeId,
     nextFilters: Partial<{
       searchTerm: string
       sortMode: ModelListSortMode
@@ -211,7 +213,7 @@ export function ControlPanel({
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       insights: {
         targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
-        mode: PRODUCT_ANALYTICS_MODE_IDS.SearchFilter,
+        mode,
         filterCount,
         resultCount: filteredModels.length,
       },
@@ -219,21 +221,29 @@ export function ControlPanel({
   }
   const handleClearSearch = () => {
     setSearchTerm("")
-    trackFilterChange({ searchTerm: "" })
+    trackFilterChange(PRODUCT_ANALYTICS_MODE_IDS.SearchFilter, {
+      searchTerm: "",
+    })
   }
   const handleSortModeChange = (value: string) => {
     const nextSortMode = value as ModelListSortMode
     setSortMode(nextSortMode)
-    trackFilterChange({ sortMode: nextSortMode })
+    trackFilterChange(PRODUCT_ANALYTICS_MODE_IDS.SortFilter, {
+      sortMode: nextSortMode,
+    })
   }
   const handleBillingModeChange = (value: string) => {
     const nextBillingMode = value as ModelListBillingMode
     setSelectedBillingMode(nextBillingMode)
-    trackFilterChange({ selectedBillingMode: nextBillingMode })
+    trackFilterChange(PRODUCT_ANALYTICS_MODE_IDS.BillingFilter, {
+      selectedBillingMode: nextBillingMode,
+    })
   }
   const handleGroupSelectionChange = (groups: string[]) => {
     setSelectedGroups(groups)
-    trackFilterChange({ selectedGroups: groups })
+    trackFilterChange(PRODUCT_ANALYTICS_MODE_IDS.GroupFilter, {
+      selectedGroups: groups,
+    })
   }
 
   return (

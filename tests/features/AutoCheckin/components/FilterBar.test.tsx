@@ -9,23 +9,26 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/events"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
-const { trackProductAnalyticsActionStartedMock } = vi.hoisted(() => ({
-  trackProductAnalyticsActionStartedMock: vi.fn(),
+const { trackProductAnalyticsActionCompletedMock } = vi.hoisted(() => ({
+  trackProductAnalyticsActionCompletedMock: vi.fn(),
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
-  trackProductAnalyticsActionStarted: (...args: any[]) =>
-    trackProductAnalyticsActionStartedMock(...args),
+  trackProductAnalyticsActionCompleted: (...args: any[]) =>
+    trackProductAnalyticsActionCompletedMock(...args),
 }))
 
 describe("AutoCheckin FilterBar", () => {
   afterEach(() => {
-    trackProductAnalyticsActionStartedMock.mockReset()
+    trackProductAnalyticsActionCompletedMock.mockReset()
   })
 
   it("clears the keyword search from the shared input clear button", () => {
@@ -56,7 +59,7 @@ describe("AutoCheckin FilterBar", () => {
     expect(onKeywordChange).toHaveBeenCalledWith("")
   })
 
-  it("tracks status filter selection with controlled action and surface metadata", () => {
+  it("tracks status filter selection with controlled result-filter metadata", () => {
     const onStatusChange = vi.fn()
 
     rtlRender(
@@ -67,6 +70,13 @@ describe("AutoCheckin FilterBar", () => {
               accountId: "account-1",
               accountName: "Alpha",
               status: CHECKIN_RESULT_STATUS.FAILED,
+              timestamp: 1,
+            } as any,
+            {
+              accountId: "account-2",
+              accountName: "Beta",
+              status: CHECKIN_RESULT_STATUS.SUCCESS,
+              timestamp: 2,
             } as any,
           ]}
           status={FILTER_STATUS.ALL}
@@ -84,11 +94,63 @@ describe("AutoCheckin FilterBar", () => {
     )
 
     expect(onStatusChange).toHaveBeenCalledWith(FILTER_STATUS.FAILED)
-    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterAutoCheckinResults,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinFilterBar,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ResultFilter,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.StatusFilter,
+        filterCount: 1,
+        resultCount: 1,
+      },
     })
+  })
+
+  it("tracks keyword clearing without exposing the raw keyword", () => {
+    const onKeywordChange = vi.fn()
+
+    rtlRender(
+      <I18nextProvider i18n={testI18n}>
+        <FilterBar
+          accountResults={[
+            {
+              accountId: "account-1",
+              accountName: "Private Account",
+              status: CHECKIN_RESULT_STATUS.FAILED,
+              timestamp: 1,
+            } as any,
+          ]}
+          status={FILTER_STATUS.FAILED}
+          keyword="private-keyword"
+          onStatusChange={vi.fn()}
+          onKeywordChange={onKeywordChange}
+        />
+      </I18nextProvider>,
+    )
+
+    fireEvent.click(
+      screen.getByRole("button", { name: "common:actions.clear" }),
+    )
+
+    expect(onKeywordChange).toHaveBeenCalledWith("")
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterAutoCheckinResults,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinFilterBar,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ResultFilter,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.SearchFilter,
+        filterCount: 1,
+        resultCount: 1,
+      },
+    })
+    expect(
+      JSON.stringify(trackProductAnalyticsActionCompletedMock.mock.calls),
+    ).not.toContain("private-keyword")
   })
 })

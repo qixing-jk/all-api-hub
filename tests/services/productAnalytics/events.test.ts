@@ -152,6 +152,7 @@ describe("product analytics event enums", () => {
       TelemetrySub2ApiUsage: "telemetry_sub2api_usage",
       TelemetryOpenAiBilling: "telemetry_openai_billing",
       TelemetryCustomReadOnlyEndpoint: "telemetry_custom_read_only_endpoint",
+      StatusFilter: "status_filter",
     })
 
     expect(PRODUCT_ANALYTICS_API_TYPES).toMatchObject({
