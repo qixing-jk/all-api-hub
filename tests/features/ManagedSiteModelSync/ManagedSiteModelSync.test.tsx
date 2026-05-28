@@ -22,6 +22,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/events"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
@@ -31,6 +32,7 @@ const {
   mockShowWarningToast,
   mockOpenSettingsTab,
   mockStartProductAnalyticsAction,
+  mockTrackProductAnalyticsActionCompleted,
   mockCompleteProductAnalyticsAction,
   loggerMocks,
 } = vi.hoisted(() => ({
@@ -39,6 +41,7 @@ const {
   mockShowWarningToast: vi.fn(),
   mockOpenSettingsTab: vi.fn(),
   mockStartProductAnalyticsAction: vi.fn(),
+  mockTrackProductAnalyticsActionCompleted: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
   loggerMocks: {
     error: vi.fn(),
@@ -75,6 +78,8 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: (...args: unknown[]) =>
     mockStartProductAnalyticsAction(...args),
+  trackProductAnalyticsActionCompleted: (...args: unknown[]) =>
+    mockTrackProductAnalyticsActionCompleted(...args),
 }))
 
 vi.mock("~/contexts/UserPreferencesContext", () => ({
@@ -362,18 +367,20 @@ describe("ManagedSiteModelSync page", () => {
       screen.getByText("messages:newapi.configMissing"),
     ).toBeInTheDocument()
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
-    expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith(
+    expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith({
+      ...actionBarAnalyticsContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteModelSyncConfigRequired,
+      ),
+      result: PRODUCT_ANALYTICS_RESULTS.Skipped,
+      insights: {
+        managedSiteType: "new-api",
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ConfigRequired,
+      },
+    })
+    expect(mockStartProductAnalyticsAction).not.toHaveBeenCalledWith(
       actionBarAnalyticsContext(
         PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteModelSyncConfigRequired,
       ),
-    )
-    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Skipped,
-      {
-        insights: {
-          managedSiteType: "new-api",
-        },
-      },
     )
 
     fireEvent.click(

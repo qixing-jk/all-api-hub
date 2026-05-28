@@ -9,14 +9,16 @@ import {
   toAccountSourceValue,
   toProfileSourceValue,
 } from "~/features/ModelList/modelManagementSources"
-import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/events"
 import type { DisplaySiteData } from "~/types"
 import type { ApiCredentialProfile } from "~/types/apiCredentialProfiles"
@@ -95,16 +97,16 @@ export function AccountSelector({
   const [isAccountGroupFilterOpen, setIsAccountGroupFilterOpen] =
     useState(false)
   const handleSourceChange = (sourceValue: string) => {
-    const tracker = startProductAnalyticsAction({
+    setSelectedSourceValue(sourceValue)
+    void trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.SelectModelSource,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
-
-    setSelectedSourceValue(sourceValue)
-    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
       insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelSource,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.AccountFilter,
         sourceKind: resolveAnalyticsSourceKind(sourceValue),
       },
     })

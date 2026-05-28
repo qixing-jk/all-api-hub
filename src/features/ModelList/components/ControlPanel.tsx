@@ -39,12 +39,15 @@ import {
   type ModelListSortMode,
 } from "~/features/ModelList/sortModes"
 import { MODEL_LIST_TEST_IDS } from "~/features/ModelList/testIds"
-import { trackProductAnalyticsActionStarted } from "~/services/productAnalytics/actions"
+import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/events"
 
 interface ControlPanelProps {
@@ -181,29 +184,56 @@ export function ControlPanel({
     navigator.clipboard.writeText(modelNames)
     toast.success(t("messages.modelNamesCopied"))
   }
-  const trackFilterChange = () => {
-    void trackProductAnalyticsActionStarted({
+  const trackFilterChange = (
+    nextFilters: Partial<{
+      searchTerm: string
+      sortMode: ModelListSortMode
+      selectedBillingMode: ModelListBillingMode
+      selectedGroups: string[]
+    }> = {},
+  ) => {
+    const nextSearchTerm = nextFilters.searchTerm ?? searchTerm
+    const nextSortMode = nextFilters.sortMode ?? sortMode
+    const nextSelectedBillingMode =
+      nextFilters.selectedBillingMode ?? selectedBillingMode
+    const nextSelectedGroups = nextFilters.selectedGroups ?? selectedGroups
+    const filterCount =
+      (nextSearchTerm.trim() ? 1 : 0) +
+      (nextSortMode !== MODEL_LIST_SORT_MODES.DEFAULT ? 1 : 0) +
+      (nextSelectedBillingMode !== MODEL_LIST_BILLING_MODES.ALL ? 1 : 0) +
+      nextSelectedGroups.length
+
+    void trackProductAnalyticsActionCompleted({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.SearchFilter,
+        filterCount,
+        resultCount: filteredModels.length,
+      },
     })
   }
   const handleClearSearch = () => {
     setSearchTerm("")
-    trackFilterChange()
+    trackFilterChange({ searchTerm: "" })
   }
   const handleSortModeChange = (value: string) => {
-    setSortMode(value as ModelListSortMode)
-    trackFilterChange()
+    const nextSortMode = value as ModelListSortMode
+    setSortMode(nextSortMode)
+    trackFilterChange({ sortMode: nextSortMode })
   }
   const handleBillingModeChange = (value: string) => {
-    setSelectedBillingMode(value as ModelListBillingMode)
-    trackFilterChange()
+    const nextBillingMode = value as ModelListBillingMode
+    setSelectedBillingMode(nextBillingMode)
+    trackFilterChange({ selectedBillingMode: nextBillingMode })
   }
   const handleGroupSelectionChange = (groups: string[]) => {
     setSelectedGroups(groups)
-    trackFilterChange()
+    trackFilterChange({ selectedGroups: groups })
   }
 
   return (

@@ -60,6 +60,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_STATES,
   type ProductAnalyticsResult,
 } from "~/services/productAnalytics/events"
 import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
@@ -572,6 +573,9 @@ export default function AccountActionButtons({
   }
 
   const handleDisableToggle = async () => {
+    const targetState = isAccountDisabled
+      ? PRODUCT_ANALYTICS_TARGET_STATES.Enabled
+      : PRODUCT_ANALYTICS_TARGET_STATES.Disabled
     const tracker = startProductAnalyticsAction({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.ToggleAccountDisabled,
@@ -582,10 +586,17 @@ export default function AccountActionButtons({
     try {
       const success = await handleSetAccountDisabled(site, !isAccountDisabled)
       if (success) {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          insights: {
+            targetState,
+          },
+        })
       } else {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            targetState,
+          },
         })
       }
     } catch (error) {
@@ -596,6 +607,9 @@ export default function AccountActionButtons({
       })
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          targetState,
+        },
       })
     }
   }

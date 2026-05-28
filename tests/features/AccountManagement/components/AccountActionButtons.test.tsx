@@ -13,6 +13,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_STATES,
 } from "~/services/productAnalytics/events"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
@@ -754,6 +755,11 @@ describe("AccountActionButtons", () => {
       })
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            targetState: PRODUCT_ANALYTICS_TARGET_STATES.Disabled,
+          },
+        },
       )
     })
   })
@@ -799,6 +805,9 @@ describe("AccountActionButtons", () => {
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            targetState: PRODUCT_ANALYTICS_TARGET_STATES.Disabled,
+          },
         },
       )
     })
@@ -838,6 +847,9 @@ describe("AccountActionButtons", () => {
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            targetState: PRODUCT_ANALYTICS_TARGET_STATES.Disabled,
+          },
         },
       )
     })

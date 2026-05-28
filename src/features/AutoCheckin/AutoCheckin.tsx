@@ -21,7 +21,10 @@ import DelAccountDialog from "~/features/AccountManagement/components/DelAccount
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
-import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
+import {
+  startProductAnalyticsAction,
+  trackProductAnalyticsActionCompleted,
+} from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -29,6 +32,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
   type ProductAnalyticsResult,
 } from "~/services/productAnalytics/events"
 import type { DisplaySiteData } from "~/types"
@@ -673,12 +677,22 @@ export default function AutoCheckin(props: {
   )
 
   const handleOpenAccountSite = async (accountId: string) => {
-    const tracker = startProductAnalyticsAction({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountSite,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
+    const completeOpenAccountSiteAnalytics = (
+      result: ProductAnalyticsResult,
+      errorCategory?: typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+    ) => {
+      void trackProductAnalyticsActionCompleted({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountSite,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result,
+        ...(errorCategory ? { errorCategory } : {}),
+        insights: {
+          targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ExternalSite,
+        },
+      })
+    }
 
     try {
       setPendingOpeningSiteAccountIds((prev) => {
@@ -687,14 +701,15 @@ export default function AutoCheckin(props: {
         return next
       })
       await openAccountSiteForAccount(accountId)
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      completeOpenAccountSiteAnalytics(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error: unknown) {
       toast.error(
         t("messages.error.openSiteFailed", { error: getErrorMessage(error) }),
       )
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
+      completeOpenAccountSiteAnalytics(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      )
     } finally {
       setPendingOpeningSiteAccountIds((prev) => {
         const next = new Set(prev)
@@ -705,24 +720,35 @@ export default function AutoCheckin(props: {
   }
 
   const handleOpenManualSignIn = async (accountId: string) => {
-    const tracker = startProductAnalyticsAction({
-      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
-      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinManualSignIn,
-      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-    })
+    const completeOpenManualSignInAnalytics = (
+      result: ProductAnalyticsResult,
+      errorCategory?: typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+    ) => {
+      void trackProductAnalyticsActionCompleted({
+        featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+        actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinManualSignIn,
+        surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinResultsTable,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result,
+        ...(errorCategory ? { errorCategory } : {}),
+        insights: {
+          targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ManualSignIn,
+        },
+      })
+    }
 
     try {
       setOpeningManualAccountId(accountId)
       await openManualSignInForAccount(accountId)
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      completeOpenManualSignInAnalytics(PRODUCT_ANALYTICS_RESULTS.Success)
     } catch (error: unknown) {
       toast.error(
         t("messages.error.openManualFailed", { error: getErrorMessage(error) }),
       )
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-      })
+      completeOpenManualSignInAnalytics(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      )
     } finally {
       setOpeningManualAccountId(null)
     }

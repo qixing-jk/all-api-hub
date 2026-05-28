@@ -15,6 +15,8 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_STATUS_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
+  PRODUCT_ANALYTICS_TARGET_STATES,
   PRODUCT_ANALYTICS_TELEMETRY_SOURCES,
 } from "~/services/productAnalytics/events"
 
@@ -232,6 +234,8 @@ describe("product analytics action helpers", () => {
         editorMode: PRODUCT_ANALYTICS_EDITOR_MODES.Json,
         statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
         telemetrySource: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.NewApiTokenUsage,
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
+        targetState: PRODUCT_ANALYTICS_TARGET_STATES.Enabled,
         managedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
         sourceManagedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
         targetManagedSiteType: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.Octopus,
@@ -245,6 +249,8 @@ describe("product analytics action helpers", () => {
         readyCount: 1,
         blockedCount: 2,
         modelCount: 11,
+        filterCount: 2,
+        resultCount: 8,
         usageDataPresent: true,
       },
     })
@@ -265,6 +271,8 @@ describe("product analytics action helpers", () => {
         editor_mode: PRODUCT_ANALYTICS_EDITOR_MODES.Json,
         status_kind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
         telemetry_source: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.NewApiTokenUsage,
+        target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
+        target_state: PRODUCT_ANALYTICS_TARGET_STATES.Enabled,
         managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
         source_managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.NewApi,
         target_managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.Octopus,
@@ -278,6 +286,8 @@ describe("product analytics action helpers", () => {
         ready_count_bucket: "1",
         blocked_count_bucket: "2_3",
         model_count_bucket: "10_plus",
+        filter_count_bucket: "2_3",
+        result_count_bucket: "4_10",
         usage_data_present: true,
       },
     )

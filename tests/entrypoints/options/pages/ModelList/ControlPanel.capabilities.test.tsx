@@ -9,7 +9,10 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/events"
 import { API_TYPES } from "~/services/verification/aiApiVerification"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -18,10 +21,12 @@ const {
   toastErrorMock,
   toastSuccessMock,
   trackProductAnalyticsActionStartedMock,
+  trackProductAnalyticsActionCompletedMock,
 } = vi.hoisted(() => ({
   toastErrorMock: vi.fn(),
   toastSuccessMock: vi.fn(),
   trackProductAnalyticsActionStartedMock: vi.fn(),
+  trackProductAnalyticsActionCompletedMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -34,6 +39,8 @@ vi.mock("react-hot-toast", () => ({
 vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionStarted: (...args: any[]) =>
     trackProductAnalyticsActionStartedMock(...args),
+  trackProductAnalyticsActionCompleted: (...args: any[]) =>
+    trackProductAnalyticsActionCompletedMock(...args),
 }))
 
 describe("ControlPanel profile capabilities", () => {
@@ -284,6 +291,19 @@ describe("ControlPanel profile capabilities", () => {
         "gpt-4o-mini,claude-3-5-sonnet",
       ),
     )
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.SearchFilter,
+        filterCount: 2,
+        resultCount: 2,
+      },
+    })
     expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.CopyVisibleModelNames,
@@ -541,16 +561,23 @@ describe("ControlPanel profile capabilities", () => {
 
     expect(setSearchTerm).toHaveBeenCalledWith("")
 
-    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledWith({
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListControlPanel,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.SearchFilter,
+        filterCount: 0,
+        resultCount: 1,
+      },
     })
-    expect(trackProductAnalyticsActionStartedMock).toHaveBeenCalledTimes(1)
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledTimes(1)
 
     const analyticsCalls = JSON.stringify(
-      trackProductAnalyticsActionStartedMock.mock.calls,
+      trackProductAnalyticsActionCompletedMock.mock.calls,
     )
     expect(analyticsCalls).not.toContain("private-search")
     expect(analyticsCalls).not.toContain("private-group")

@@ -19,6 +19,7 @@ import {
 } from "~/services/managedSites/utils/managedSite"
 import {
   startProductAnalyticsAction,
+  trackProductAnalyticsActionCompleted,
   type ProductAnalyticsActionCompleteOptions,
   type ProductAnalyticsActionContext,
   type ProductAnalyticsActionInsights,
@@ -32,6 +33,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
   type ProductAnalyticsResult,
   type ProductAnalyticsStatusKind,
 } from "~/services/productAnalytics/events"
@@ -407,15 +409,16 @@ export default function ManagedSiteModelSync({
       setIsLoading(false)
       if (configMissingTrackedFor.current !== managedSiteType) {
         configMissingTrackedFor.current = managedSiteType
-        const tracker = startModelSyncAnalytics({
+        void trackProductAnalyticsActionCompleted({
           ...actionBarAnalyticsScope,
           actionId:
             PRODUCT_ANALYTICS_ACTION_IDS.OpenManagedSiteModelSyncConfigRequired,
+          result: PRODUCT_ANALYTICS_RESULTS.Skipped,
+          insights: {
+            managedSiteType,
+            targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ConfigRequired,
+          },
         })
-        completeModelSyncActionAnalytics(
-          tracker,
-          PRODUCT_ANALYTICS_RESULTS.Skipped,
-        )
       }
       return
     }

@@ -1,25 +1,30 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AccountSelector } from "~/features/ModelList/components/AccountSelector"
+import {
+  PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
+  PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
+} from "~/services/productAnalytics/events"
 import { fireEvent, render, screen } from "~~/tests/test-utils/render"
 
-const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
-  vi.hoisted(() => ({
-    startProductAnalyticsActionMock: vi.fn(),
-    completeProductAnalyticsActionMock: vi.fn(),
-  }))
+const { trackProductAnalyticsActionCompletedMock } = vi.hoisted(() => ({
+  trackProductAnalyticsActionCompletedMock: vi.fn(),
+}))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
-  startProductAnalyticsAction: (...args: any[]) =>
-    startProductAnalyticsActionMock(...args),
+  trackProductAnalyticsActionCompleted: (...args: any[]) =>
+    trackProductAnalyticsActionCompletedMock(...args),
 }))
 
 describe("AccountSelector", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    startProductAnalyticsActionMock.mockReturnValue({
-      complete: completeProductAnalyticsActionMock,
-    })
   })
 
   it("includes the profile hostname in the selector label", async () => {
@@ -265,22 +270,22 @@ describe("AccountSelector", () => {
     fireEvent.click(await screen.findByText("Private Account Name"))
 
     expect(setSelectedSourceValue).toHaveBeenCalledWith("account:account-1")
-    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
-      featureId: "model_list",
-      actionId: "select_model_source",
-      surfaceId: "options_model_list_page",
-      entrypoint: "options",
-    })
-    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith("success", {
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.SelectModelSource,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
       insights: {
-        sourceKind: "model_account",
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelSource,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.AccountFilter,
+        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
       },
     })
 
-    const serializedCalls = JSON.stringify([
-      startProductAnalyticsActionMock.mock.calls,
-      completeProductAnalyticsActionMock.mock.calls,
-    ])
+    const serializedCalls = JSON.stringify(
+      trackProductAnalyticsActionCompletedMock.mock.calls,
+    )
     expect(serializedCalls).not.toContain("Private Account Name")
     expect(serializedCalls).not.toContain("Private Profile")
     expect(serializedCalls).not.toContain("private.example.com")

@@ -14,6 +14,8 @@ import {
   type ProductAnalyticsResult,
   type ProductAnalyticsSourceKind,
   type ProductAnalyticsStatusKind,
+  type ProductAnalyticsTargetKind,
+  type ProductAnalyticsTargetState,
   type ProductAnalyticsTelemetrySource,
 } from "./events"
 import { bucketCount, bucketDurationMs } from "./privacy"
@@ -39,6 +41,8 @@ export type ProductAnalyticsActionInsights = {
   editorMode?: ProductAnalyticsEditorMode
   statusKind?: ProductAnalyticsStatusKind
   telemetrySource?: ProductAnalyticsTelemetrySource
+  targetKind?: ProductAnalyticsTargetKind
+  targetState?: ProductAnalyticsTargetState
   managedSiteType?: ProductAnalyticsManagedSiteType
   sourceManagedSiteType?: ProductAnalyticsManagedSiteType
   targetManagedSiteType?: ProductAnalyticsManagedSiteType
@@ -52,6 +56,8 @@ export type ProductAnalyticsActionInsights = {
   readyCount?: number
   blockedCount?: number
   modelCount?: number
+  filterCount?: number
+  resultCount?: number
   usageDataPresent?: boolean
 }
 
@@ -78,6 +84,8 @@ function mapProductAnalyticsActionInsights(
     ...(insights.telemetrySource
       ? { telemetry_source: insights.telemetrySource }
       : {}),
+    ...(insights.targetKind ? { target_kind: insights.targetKind } : {}),
+    ...(insights.targetState ? { target_state: insights.targetState } : {}),
     ...(insights.managedSiteType
       ? { managed_site_type: insights.managedSiteType }
       : {}),
@@ -114,6 +122,12 @@ function mapProductAnalyticsActionInsights(
       : {}),
     ...(typeof insights.modelCount === "number"
       ? { model_count_bucket: bucketCount(insights.modelCount) }
+      : {}),
+    ...(typeof insights.filterCount === "number"
+      ? { filter_count_bucket: bucketCount(insights.filterCount) }
+      : {}),
+    ...(typeof insights.resultCount === "number"
+      ? { result_count_bucket: bucketCount(insights.resultCount) }
       : {}),
     ...(typeof insights.usageDataPresent === "boolean"
       ? { usage_data_present: insights.usageDataPresent }

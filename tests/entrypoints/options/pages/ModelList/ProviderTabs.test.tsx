@@ -10,19 +10,20 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
+  PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/events"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
-const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
-  vi.hoisted(() => ({
-    startProductAnalyticsActionMock: vi.fn(),
-    completeProductAnalyticsActionMock: vi.fn(),
-  }))
+const { trackProductAnalyticsActionCompletedMock } = vi.hoisted(() => ({
+  trackProductAnalyticsActionCompletedMock: vi.fn(),
+}))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
-  startProductAnalyticsAction: (...args: any[]) =>
-    startProductAnalyticsActionMock(...args),
+  trackProductAnalyticsActionCompleted: (...args: any[]) =>
+    trackProductAnalyticsActionCompletedMock(...args),
 }))
 
 const createProviders = () => ["OpenAI", "Claude", "Gemini"] as any
@@ -70,9 +71,6 @@ const renderProviderTabs = ({
 describe("ProviderTabs scroll arrows", () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    startProductAnalyticsActionMock.mockReturnValue({
-      complete: completeProductAnalyticsActionMock,
-    })
   })
 
   it("enables right arrow when tab list overflows", async () => {
@@ -191,13 +189,19 @@ describe("ProviderTabs selection", () => {
     fireEvent.click(await screen.findByRole("tab", { name: /Claude \(1\)/ }))
 
     expect(setSelectedProvider).toHaveBeenCalledWith("Claude")
-    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+    expect(trackProductAnalyticsActionCompletedMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.ModelList,
       actionId: PRODUCT_ANALYTICS_ACTION_IDS.FilterModelList,
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsModelListPage,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.ProviderFilter,
+        filterCount: 1,
+        resultCount: 1,
+      },
     })
-    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith("success")
   })
 
   it("keeps a provider tab selected when a non-all provider is active and lets users switch back to all", async () => {

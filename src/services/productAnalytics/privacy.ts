@@ -24,6 +24,8 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_STATUS_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  PRODUCT_ANALYTICS_TARGET_KINDS,
+  PRODUCT_ANALYTICS_TARGET_STATES,
   PRODUCT_ANALYTICS_TELEMETRY_SOURCES,
   type ProductAnalyticsEventName,
 } from "./events"
@@ -55,6 +57,8 @@ const EVENT_ALLOWED_KEYS = {
     "editor_mode",
     "status_kind",
     "telemetry_source",
+    "target_kind",
+    "target_state",
     "managed_site_type",
     "source_managed_site_type",
     "target_managed_site_type",
@@ -68,6 +72,8 @@ const EVENT_ALLOWED_KEYS = {
     "ready_count_bucket",
     "blocked_count_bucket",
     "model_count_bucket",
+    "filter_count_bucket",
+    "result_count_bucket",
     "usage_data_present",
     "shield_bypass_prompt_shown_count_bucket",
     "shield_bypass_prompt_dismissed_count_bucket",
@@ -337,6 +343,7 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   failure_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   failure_stage: Object.values(PRODUCT_ANALYTICS_FAILURE_STAGES),
   feature_id: Object.values(PRODUCT_ANALYTICS_FEATURE_IDS),
+  filter_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   item_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   known_site_type_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   managed_site_model_sync_concurrency_bucket: Object.values(
@@ -367,6 +374,7 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   permission_id: Object.values(PRODUCT_ANALYTICS_PERMISSION_IDS),
   ready_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   result: Object.values(PRODUCT_ANALYTICS_RESULTS),
+  result_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   retry_interval_bucket: Object.values(
     PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS,
   ),
@@ -395,6 +403,8 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   status_kind: Object.values(PRODUCT_ANALYTICS_STATUS_KINDS),
   success_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   surface_id: Object.values(PRODUCT_ANALYTICS_SURFACE_IDS),
+  target_kind: Object.values(PRODUCT_ANALYTICS_TARGET_KINDS),
+  target_state: Object.values(PRODUCT_ANALYTICS_TARGET_STATES),
   target_managed_site_type: Object.values(PRODUCT_ANALYTICS_MANAGED_SITE_TYPES),
   telemetry_source: Object.values(PRODUCT_ANALYTICS_TELEMETRY_SOURCES),
   temp_window_fetch_failure_count_bucket: Object.values(

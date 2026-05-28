@@ -107,6 +107,25 @@ export const PRODUCT_ANALYTICS_SOURCE_KINDS = {
 export type ProductAnalyticsSourceKind =
   (typeof PRODUCT_ANALYTICS_SOURCE_KINDS)[keyof typeof PRODUCT_ANALYTICS_SOURCE_KINDS]
 
+export const PRODUCT_ANALYTICS_TARGET_KINDS = {
+  ConfigRequired: "config_required",
+  ExternalSite: "external_site",
+  ManualSignIn: "manual_sign_in",
+  ModelFilter: "model_filter",
+  ModelSource: "model_source",
+} as const
+
+export type ProductAnalyticsTargetKind =
+  (typeof PRODUCT_ANALYTICS_TARGET_KINDS)[keyof typeof PRODUCT_ANALYTICS_TARGET_KINDS]
+
+export const PRODUCT_ANALYTICS_TARGET_STATES = {
+  Enabled: "enabled",
+  Disabled: "disabled",
+} as const
+
+export type ProductAnalyticsTargetState =
+  (typeof PRODUCT_ANALYTICS_TARGET_STATES)[keyof typeof PRODUCT_ANALYTICS_TARGET_STATES]
+
 export const PRODUCT_ANALYTICS_MODE_IDS = {
   All: "all",
   Selected: "selected",
@@ -701,6 +720,8 @@ export type ProductAnalyticsEventPayloadMap = {
     editor_mode?: ProductAnalyticsEditorMode
     status_kind?: ProductAnalyticsStatusKind
     telemetry_source?: ProductAnalyticsTelemetrySource
+    target_kind?: ProductAnalyticsTargetKind
+    target_state?: ProductAnalyticsTargetState
     managed_site_type?: ProductAnalyticsManagedSiteType
     source_managed_site_type?: ProductAnalyticsManagedSiteType
     target_managed_site_type?: ProductAnalyticsManagedSiteType
@@ -714,6 +735,8 @@ export type ProductAnalyticsEventPayloadMap = {
     ready_count_bucket?: ProductAnalyticsCountBucket
     blocked_count_bucket?: ProductAnalyticsCountBucket
     model_count_bucket?: ProductAnalyticsCountBucket
+    filter_count_bucket?: ProductAnalyticsCountBucket
+    result_count_bucket?: ProductAnalyticsCountBucket
     usage_data_present?: boolean
     shield_bypass_prompt_shown_count_bucket?: ProductAnalyticsCountBucket
     shield_bypass_prompt_dismissed_count_bucket?: ProductAnalyticsCountBucket
