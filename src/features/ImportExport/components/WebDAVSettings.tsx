@@ -263,9 +263,15 @@ export default function WebDAVSettings() {
       return
     }
 
-    const success = await updateWebdavSettings(updates, {
-      expectedLastUpdated: options?.expectedLastUpdated ?? expectedLastUpdated,
-    })
+    let success: boolean
+    try {
+      success = await updateWebdavSettings(updates, {
+        expectedLastUpdated:
+          options?.expectedLastUpdated ?? expectedLastUpdated,
+      })
+    } catch {
+      throw new PersistWebdavConfigError()
+    }
     if (!success) {
       throw new PersistWebdavConfigError()
     }
@@ -411,6 +417,9 @@ export default function WebDAVSettings() {
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: getWebdavAnalyticsErrorCategory(e),
+        insights: {
+          failureStage: getWebdavAnalyticsFailureStage(e),
+        },
       })
     } finally {
       setUploading(false)
@@ -501,6 +510,9 @@ export default function WebDAVSettings() {
       )
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: getWebdavAnalyticsErrorCategory(e),
+        insights: {
+          failureStage: getWebdavAnalyticsFailureStage(e),
+        },
       })
     } finally {
       setDownloading(false)

@@ -1365,7 +1365,7 @@ export function useAccountDialog({
       analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
-          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Prompt,
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
         },
       })
       return

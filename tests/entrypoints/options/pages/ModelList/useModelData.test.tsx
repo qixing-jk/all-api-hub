@@ -13,6 +13,7 @@ import {
 } from "~/features/ModelList/modelManagementSources"
 import { InvalidTokenPayloadError } from "~/services/accounts/utils/apiServiceRequest"
 import { getApiService } from "~/services/apiService"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import { modelPricingCache } from "~/services/models/modelPricingCache"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -526,6 +527,72 @@ describe("useModelData all-accounts loading", () => {
       modelCount: 1,
       successCount: 1,
       failureCount: 1,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
+    })
+  })
+
+  it("tracks all-account aggregate diagnostics from the same parse failure", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+
+    const fetchModelPricing = vi.fn().mockImplementation(({ accountId }) => {
+      if (accountId === "analytics-all-auth-failure") {
+        return Promise.reject(
+          new ApiError(
+            "private auth failure",
+            401,
+            "https://private.example.com/api/pricing",
+            API_ERROR_CODES.HTTP_401,
+          ),
+        )
+      }
+
+      return Promise.resolve({
+        data: null,
+        group_ratio: {},
+        success: true,
+        usable_group: {},
+      })
+    })
+    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+
+    const accounts = [
+      createDisplayAccount({
+        id: "analytics-all-auth-failure",
+        baseUrl: "https://all-auth-failure.example.com",
+        userId: 91,
+      }),
+      createDisplayAccount({
+        id: "analytics-all-invalid-format",
+        baseUrl: "https://all-invalid-format.example.com",
+        userId: 92,
+      }),
+    ]
+
+    renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAllAccountsSource(),
+          accounts,
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(
+      () => {
+        expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledTimes(
+          1,
+        )
+      },
+      { timeout: 3000 },
+    )
+    expectLastModelDataAnalyticsCompletion({
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAllAccounts,
+      modelCount: 0,
+      successCount: 0,
+      failureCount: 2,
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
       failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
     })

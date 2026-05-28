@@ -168,31 +168,41 @@ function getModelDataFailureStage(
     : PRODUCT_ANALYTICS_FAILURE_STAGES.Execute
 }
 
+/** Derive coupled analytics diagnostics from a single model-data failure. */
+function getModelDataFailureDiagnostics(error: unknown): {
+  errorCategory: ProductAnalyticsErrorCategory
+  failureStage: ProductAnalyticsFailureStage
+} {
+  return {
+    errorCategory: getModelDataErrorCategory(error),
+    failureStage: getModelDataFailureStage(error),
+  }
+}
+
 /** Derive aggregate model catalog diagnostics from the failed account queries. */
 function getAggregateModelDataFailureDiagnostics(errors: unknown[]): {
   errorCategory: ProductAnalyticsErrorCategory
   failureStage: ProductAnalyticsFailureStage
 } {
-  const knownErrorCategory = errors
-    .map((error) => getModelDataErrorCategory(error))
-    .find(
-      (errorCategory) =>
-        errorCategory !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+  const diagnostics = errors.map((error) =>
+    getModelDataFailureDiagnostics(error),
+  )
+  const representativeDiagnostic =
+    diagnostics.find(
+      (diagnostic) =>
+        diagnostic.failureStage === PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
+    ) ??
+    diagnostics.find(
+      (diagnostic) =>
+        diagnostic.errorCategory !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
     )
 
-  const hasParseFailure = errors.some(
-    (error) =>
-      getModelDataFailureStage(error) ===
-      PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
+  return (
+    representativeDiagnostic ?? {
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+    }
   )
-
-  return {
-    errorCategory:
-      knownErrorCategory ?? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-    failureStage: hasParseFailure
-      ? PRODUCT_ANALYTICS_FAILURE_STAGES.Parse
-      : PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
-  }
 }
 
 const MODEL_DATA_ANALYTICS_CONTEXT = {

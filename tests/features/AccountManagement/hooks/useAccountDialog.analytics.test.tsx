@@ -296,7 +296,7 @@ describe("useAccountDialog analytics", () => {
     expectNoSensitiveAnalyticsFields()
   })
 
-  it("tracks duplicate-check errors during account auto-detect with a prompt failure stage", async () => {
+  it("tracks duplicate-check errors during account auto-detect with a persist failure stage", async () => {
     const getAllAccountsSpy = vi
       .spyOn(accountStorage, "getAllAccounts")
       .mockRejectedValueOnce(new Error("private storage failure"))
@@ -319,7 +319,7 @@ describe("useAccountDialog analytics", () => {
       {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
-          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Prompt,
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
         },
       },
     )
