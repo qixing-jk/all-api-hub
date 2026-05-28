@@ -230,6 +230,23 @@ function clickWebdavAction(actionId: string) {
   fireEvent.click(document.getElementById(actionId) as HTMLButtonElement)
 }
 
+async function openManualDecryptDialog() {
+  mockDownloadBackupRaw.mockResolvedValueOnce("encrypted-payload")
+  mockTryParseEncryptedWebdavBackupEnvelope.mockReturnValue(
+    ENCRYPTED_BACKUP_ENVELOPE,
+  )
+
+  expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
+
+  fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
+    target: { value: "" },
+  })
+  clickWebdavAction("webdav-download-import")
+
+  await screen.findByText("importExport:webdav.encryption.decryptDialogTitle")
+  mockCompleteProductAnalyticsAction.mockClear()
+}
+
 describe("WebDAVSettings", () => {
   beforeEach(() => {
     vi.clearAllMocks()
@@ -802,22 +819,9 @@ describe("WebDAVSettings", () => {
   })
 
   it("completes manual decrypt/import analytics as validation failure when decrypt fails", async () => {
-    mockDownloadBackupRaw.mockResolvedValueOnce("encrypted-payload")
-    mockTryParseEncryptedWebdavBackupEnvelope.mockReturnValue(
-      ENCRYPTED_BACKUP_ENVELOPE,
-    )
-
     render(<WebDAVSettings />)
 
-    expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
-
-    fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
-      target: { value: "" },
-    })
-    clickWebdavAction("webdav-download-import")
-
-    await screen.findByText("importExport:webdav.encryption.decryptDialogTitle")
-    mockCompleteProductAnalyticsAction.mockClear()
+    await openManualDecryptDialog()
 
     mockDecryptWebdavBackupEnvelope.mockRejectedValueOnce(
       new Error("manual decrypt failed"),
@@ -831,7 +835,74 @@ describe("WebDAVSettings", () => {
     await waitFor(() => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
-        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation },
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+          },
+        },
+      )
+    })
+  })
+
+  it("completes manual decrypt/import analytics as validation failure when sync data becomes empty", async () => {
+    render(<WebDAVSettings />)
+
+    await openManualDecryptDialog()
+
+    screen
+      .getAllByRole("checkbox")
+      .slice(0, 4)
+      .forEach((checkbox) => fireEvent.click(checkbox))
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.encryption.decryptAction",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+          },
+        },
+      )
+    })
+    expect(mockDecryptWebdavBackupEnvelope).not.toHaveBeenCalled()
+  })
+
+  it("completes manual decrypt/import analytics with execute stage when import fails after decrypt", async () => {
+    mockImportFromBackupObject.mockRejectedValueOnce(new Error("import failed"))
+
+    render(<WebDAVSettings />)
+
+    await openManualDecryptDialog()
+
+    fireEvent.change(
+      document.getElementById("decryptPassword") as HTMLInputElement,
+      {
+        target: { value: "manual-secret" },
+      },
+    )
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.encryption.decryptAction",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+          },
+        },
       )
     })
   })

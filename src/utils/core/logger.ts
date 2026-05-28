@@ -297,14 +297,6 @@ function sanitizeValue(
     return sanitizeUrlForLog(value.toString())
   }
 
-  if (value instanceof Error) {
-    return {
-      name: value.name,
-      message: value.message,
-      stack: value.stack,
-    }
-  }
-
   if (typeof value !== "object") {
     return String(value)
   }
@@ -312,6 +304,21 @@ function sanitizeValue(
   const obj = value as object
   if (seen.has(obj)) return CIRCULAR_PLACEHOLDER
   seen.set(obj, true)
+
+  if (value instanceof Error) {
+    const output: Record<string, unknown> = {
+      name: value.name,
+      message: value.message,
+      stack: value.stack,
+    }
+
+    const cause = "cause" in value ? value.cause : undefined
+    if (typeof cause !== "undefined") {
+      output.cause = sanitizeValue(cause, "cause", seen)
+    }
+
+    return output
+  }
 
   if (Array.isArray(value)) {
     return value.map((item) => sanitizeValue(item, undefined, seen))

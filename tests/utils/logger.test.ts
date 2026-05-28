@@ -146,6 +146,59 @@ describe("unified logger", () => {
     expect(details.list[0].key).toBe("[REDACTED]")
   })
 
+  it("preserves and sanitizes nested error causes", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+
+    const rootCause = new TypeError("fetch failed")
+    ;(rootCause as any).cause = {
+      endpoint: "https://example.com/path?token=secret#frag",
+      apiKey: "nested-secret",
+    }
+    const error = new Error("persist failed", { cause: rootCause })
+
+    const logger = createLogger("CauseTest")
+    logger.error("webdav config failed", error)
+
+    expect(errorSpy).toHaveBeenCalledTimes(1)
+    const details = errorSpy.mock.calls[0]?.[1] as any
+
+    expect(details).toEqual({
+      name: "Error",
+      message: "persist failed",
+      stack: error.stack,
+      cause: {
+        name: "TypeError",
+        message: "fetch failed",
+        stack: rootCause.stack,
+        cause: {
+          endpoint: "https://example.com/path",
+          apiKey: "[REDACTED]",
+        },
+      },
+    })
+  })
+
+  it("does not throw on circular error causes", () => {
+    const errorSpy = vi.spyOn(console, "error").mockImplementation(() => {})
+
+    const selfCauseError = new Error("loop")
+    ;(selfCauseError as any).cause = selfCauseError
+    const objectCause: any = { reason: "manual cause" }
+    objectCause.self = objectCause
+    const wrapper = new Error("wrapper")
+    ;(wrapper as any).cause = objectCause
+
+    const logger = createLogger("CircularCauseTest")
+    expect(() => logger.error("self cause", selfCauseError)).not.toThrow()
+    expect(() => logger.error("object cause", wrapper)).not.toThrow()
+
+    expect(errorSpy).toHaveBeenCalledTimes(2)
+    const selfCauseDetails = errorSpy.mock.calls[0]?.[1] as any
+    const objectCauseDetails = errorSpy.mock.calls[1]?.[1] as any
+    expect(selfCauseDetails.cause).toBe("[Circular]")
+    expect(objectCauseDetails.cause.self).toBe("[Circular]")
+  })
+
   it("handles circular details without throwing", () => {
     const infoSpy = vi.spyOn(console, "info").mockImplementation(() => {})
 

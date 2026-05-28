@@ -108,6 +108,7 @@ class PersistWebdavConfigError extends Error {
   constructor(cause?: unknown) {
     super("Failed to persist WebDAV settings", { cause })
     this.name = "PersistWebdavConfigError"
+    ;(this as Error & { cause?: unknown }).cause = cause
   }
 }
 
@@ -548,6 +549,9 @@ export default function WebDAVSettings() {
       if (!ensureSyncDataSelected()) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+          },
         })
         return
       }
@@ -605,6 +609,11 @@ export default function WebDAVSettings() {
         errorCategory: decryptCompleted
           ? getWebdavAnalyticsErrorCategory(e)
           : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        insights: {
+          failureStage: decryptCompleted
+            ? getWebdavAnalyticsFailureStage(e)
+            : PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+        },
       })
     } finally {
       setDecrypting(false)
