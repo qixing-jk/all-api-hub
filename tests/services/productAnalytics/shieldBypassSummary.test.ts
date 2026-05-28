@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
+  PRODUCT_ANALYTICS_COUNT_BUCKETS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
@@ -69,6 +70,58 @@ describe("shield bypass product analytics summary", () => {
     expect(captureMock).not.toHaveBeenCalled()
   })
 
+  it("records prompt dismissal and settings visits locally", async () => {
+    const {
+      recordShieldBypassPromptDismissed,
+      recordShieldBypassSettingsVisited,
+    } = await import("~/services/productAnalytics/shieldBypassSummary")
+
+    await recordShieldBypassPromptDismissed()
+    await recordShieldBypassSettingsVisited()
+
+    expect(stateMocks.incrementShieldBypassSummary).toHaveBeenNthCalledWith(1, {
+      promptDismissedCount: 1,
+    })
+    expect(stateMocks.incrementShieldBypassSummary).toHaveBeenNthCalledWith(2, {
+      settingsVisitedCount: 1,
+    })
+    expect(captureMock).not.toHaveBeenCalled()
+  })
+
+  it("records temp-window fetch outcomes locally", async () => {
+    const {
+      recordShieldBypassTempWindowFetchResult,
+      recordShieldBypassTempWindowTurnstileFetchResult,
+    } = await import("~/services/productAnalytics/shieldBypassSummary")
+
+    await recordShieldBypassTempWindowFetchResult(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+    await recordShieldBypassTempWindowFetchResult(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+    )
+    await recordShieldBypassTempWindowTurnstileFetchResult(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+    )
+    await recordShieldBypassTempWindowTurnstileFetchResult(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+    )
+
+    expect(stateMocks.incrementShieldBypassSummary).toHaveBeenNthCalledWith(1, {
+      tempWindowFetchSuccessCount: 1,
+    })
+    expect(stateMocks.incrementShieldBypassSummary).toHaveBeenNthCalledWith(2, {
+      tempWindowFetchFailureCount: 1,
+    })
+    expect(stateMocks.incrementShieldBypassSummary).toHaveBeenNthCalledWith(3, {
+      tempWindowTurnstileFetchSuccessCount: 1,
+    })
+    expect(stateMocks.incrementShieldBypassSummary).toHaveBeenNthCalledWith(4, {
+      tempWindowTurnstileFetchFailureCount: 1,
+    })
+    expect(captureMock).not.toHaveBeenCalled()
+  })
+
   it("uploads one bucketed daily summary and rolls the local state forward", async () => {
     const { flushShieldBypassDailySummary } = await import(
       "~/services/productAnalytics/shieldBypassSummary"
@@ -85,13 +138,20 @@ describe("shield bypass product analytics summary", () => {
           PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
         result: PRODUCT_ANALYTICS_RESULTS.Success,
-        shield_bypass_prompt_shown_count_bucket: "10_plus",
-        shield_bypass_prompt_dismissed_count_bucket: "2_3",
-        shield_bypass_settings_visited_count_bucket: "1",
-        temp_window_fetch_success_count_bucket: "2_3",
-        temp_window_fetch_failure_count_bucket: "1",
-        temp_window_turnstile_fetch_success_count_bucket: "0",
-        temp_window_turnstile_fetch_failure_count_bucket: "4_10",
+        shield_bypass_prompt_shown_count_bucket:
+          PRODUCT_ANALYTICS_COUNT_BUCKETS.TenPlus,
+        shield_bypass_prompt_dismissed_count_bucket:
+          PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+        shield_bypass_settings_visited_count_bucket:
+          PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
+        temp_window_fetch_success_count_bucket:
+          PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+        temp_window_fetch_failure_count_bucket:
+          PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
+        temp_window_turnstile_fetch_success_count_bucket:
+          PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero,
+        temp_window_turnstile_fetch_failure_count_bucket:
+          PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
       },
     )
     expect(stateMocks.replaceShieldBypassSummaryState).toHaveBeenCalledWith({
@@ -122,6 +182,27 @@ describe("shield bypass product analytics summary", () => {
     stateMocks.getShieldBypassSummaryState.mockResolvedValue({
       day: "2026-05-12",
       promptShownCount: 5,
+    })
+    const { flushShieldBypassDailySummary } = await import(
+      "~/services/productAnalytics/shieldBypassSummary"
+    )
+
+    await expect(flushShieldBypassDailySummary()).resolves.toBe(false)
+
+    expect(captureMock).not.toHaveBeenCalled()
+    expect(stateMocks.replaceShieldBypassSummaryState).not.toHaveBeenCalled()
+  })
+
+  it("does not upload an empty previous-day summary", async () => {
+    stateMocks.getShieldBypassSummaryState.mockResolvedValue({
+      day: "2026-05-11",
+      promptShownCount: 0,
+      promptDismissedCount: 0,
+      settingsVisitedCount: 0,
+      tempWindowFetchSuccessCount: 0,
+      tempWindowFetchFailureCount: 0,
+      tempWindowTurnstileFetchSuccessCount: 0,
+      tempWindowTurnstileFetchFailureCount: 0,
     })
     const { flushShieldBypassDailySummary } = await import(
       "~/services/productAnalytics/shieldBypassSummary"

@@ -463,6 +463,8 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "balance_history_retention_days_bucket",
   "managed_site_type",
   "new_api_configured",
+  "redemption_assist_allowlist_account_urls_enabled",
+  "redemption_assist_allowlist_checkin_redeem_urls_enabled",
   "shield_bypass_prompt_dismissed_count_bucket",
   "shield_bypass_prompt_shown_count_bucket",
   "sync_accounts_enabled",

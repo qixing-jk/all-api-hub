@@ -434,8 +434,11 @@ describe("product analytics privacy filtering", () => {
           PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
         managed_site_model_sync_allowed_models_configured: true,
         managed_site_model_sync_global_filters_configured: true,
+        redemption_assist_allowlist_account_urls_enabled: true,
+        redemption_assist_allowlist_checkin_redeem_urls_enabled: false,
         accountName: "Private account",
         balanceAmount: "123.45",
+        configuredUrl: "https://private.example",
       },
     )
 
@@ -464,6 +467,8 @@ describe("product analytics privacy filtering", () => {
         PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
       managed_site_model_sync_allowed_models_configured: true,
       managed_site_model_sync_global_filters_configured: true,
+      redemption_assist_allowlist_account_urls_enabled: true,
+      redemption_assist_allowlist_checkin_redeem_urls_enabled: false,
     })
   })
 
