@@ -192,6 +192,22 @@ const getQuickCheckinAnalyticsStatusKind = (
   return PRODUCT_ANALYTICS_STATUS_KINDS.Healthy
 }
 
+const getQuickCheckinFailureAnalyticsCategory = (result: {
+  messageKey?: unknown
+}) => {
+  if (result.messageKey === "autoCheckin:providerFallback.checkinFailed") {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
+  }
+
+  if (
+    result.messageKey === "autoCheckin:providerFallback.endpointNotSupported"
+  ) {
+    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
+  }
+
+  return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+}
+
 const getLocateManagedSiteChannelToastMessage = (
   t: TFunction,
   inspection: ManagedSiteChannelMatchInspection,
@@ -767,7 +783,9 @@ export default function AccountActionButtons({
       }
       if (analyticsResult === PRODUCT_ANALYTICS_RESULTS.Failure) {
         tracker.complete(analyticsResult, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          errorCategory: result
+            ? getQuickCheckinFailureAnalyticsCategory(result)
+            : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: quickCheckinInsights,
         })
       } else {

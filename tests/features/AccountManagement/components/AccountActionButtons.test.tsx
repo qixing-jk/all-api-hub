@@ -1273,7 +1273,62 @@ describe("AccountActionButtons", () => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          insights: {
+            statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
+          },
+        },
+      )
+    })
+  })
+
+  it("tracks unsupported quick-checkin endpoint failures with a safe category", async () => {
+    toastLoadingMock.mockReturnValue("toast-quick-checkin-unsupported")
+    sendRuntimeMessageMock
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({
+        success: true,
+        data: {
+          perAccount: {
+            "acc-quick-unsupported": {
+              status: CHECKIN_RESULT_STATUS.FAILED,
+              messageKey: "autoCheckin:providerFallback.endpointNotSupported",
+            },
+          },
+        },
+      })
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-quick-unsupported",
+          disabled: false,
+          name: "Unsupported Site",
+          checkIn: { enableDetection: true },
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText("account:actions.quickCheckin")
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
           insights: {
             statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
           },
