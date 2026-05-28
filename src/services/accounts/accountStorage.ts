@@ -195,27 +195,19 @@ class AccountStorageService {
    */
   async getAllAccounts(): Promise<SiteAccount[]> {
     try {
-      // Ensure tag data is migrated on reads so downstream consumers always see
-      // `tagIds` and a consistent global tag store.
-      await ensureAccountTagsStorageMigrated(this.storage)
-
-      const config = await this.getStorageConfigOrDefault()
-      const { accounts, migratedCount } = migrateAccountsConfig(config.accounts)
-      const normalizedAccounts = accounts.map(normalizeSiteAccount)
-
-      if (migratedCount > 0) {
-        // If any account schemas were upgraded, persist the normalized set immediately
-        logger.info("Accounts migrated; persisting updated accounts", {
-          migratedCount,
-        })
-        await this.saveAccounts(normalizedAccounts)
-      }
-
-      return normalizedAccounts
+      return await this.readAllAccounts()
     } catch (error) {
       logger.error("获取账号信息失败", error)
       return []
     }
+  }
+
+  /**
+   * Get all accounts while preserving storage read failures for callers that
+   * must fail closed instead of treating unreadable storage as an empty list.
+   */
+  async getAllAccountsOrThrow(): Promise<SiteAccount[]> {
+    return this.readAllAccounts()
   }
 
   /**
@@ -1689,6 +1681,26 @@ class AccountStorageService {
       logger.error("获取存储配置失败", error)
       return createDefaultAccountStorageConfig()
     }
+  }
+
+  private async readAllAccounts(): Promise<SiteAccount[]> {
+    // Ensure tag data is migrated on reads so downstream consumers always see
+    // `tagIds` and a consistent global tag store.
+    await ensureAccountTagsStorageMigrated(this.storage)
+
+    const config = await this.getStorageConfig()
+    const { accounts, migratedCount } = migrateAccountsConfig(config.accounts)
+    const normalizedAccounts = accounts.map(normalizeSiteAccount)
+
+    if (migratedCount > 0) {
+      // If any account schemas were upgraded, persist the normalized set immediately
+      logger.info("Accounts migrated; persisting updated accounts", {
+        migratedCount,
+      })
+      await this.saveAccounts(normalizedAccounts)
+    }
+
+    return normalizedAccounts
   }
 
   /**

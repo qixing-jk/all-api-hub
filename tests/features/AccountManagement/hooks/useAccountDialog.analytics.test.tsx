@@ -88,6 +88,7 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 describe("useAccountDialog analytics", () => {
   beforeEach(async () => {
     vi.clearAllMocks()
+    mockAutoDetectAccount.mockReset()
     await accountStorage.clearAllData()
     mockStartProductAnalyticsAction.mockReturnValue({
       complete: mockCompleteProductAnalyticsAction,
@@ -297,8 +298,19 @@ describe("useAccountDialog analytics", () => {
   })
 
   it("tracks duplicate-check errors during account auto-detect with a persist failure stage", async () => {
-    const getAllAccountsSpy = vi
-      .spyOn(accountStorage, "getAllAccounts")
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: true,
+      data: {
+        username: "private-user",
+        accessToken: "private-token",
+        userId: "123",
+        exchangeRate: 7,
+        siteName: "Detected Site",
+        siteType: SITE_TYPES.NEW_API,
+      },
+    })
+    const storageGetSpy = vi
+      .spyOn((accountStorage as any).storage, "get")
       .mockRejectedValueOnce(new Error("private storage failure"))
 
     const { result } = renderAddHook()
@@ -326,7 +338,7 @@ describe("useAccountDialog analytics", () => {
     expect(mockAutoDetectAccount).not.toHaveBeenCalled()
     expectNoSensitiveAnalyticsFields()
 
-    getAllAccountsSpy.mockRestore()
+    storageGetSpy.mockRestore()
   })
 
   it("tracks thrown account auto-detect errors with a detection failure stage", async () => {

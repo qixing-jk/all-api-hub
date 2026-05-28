@@ -105,8 +105,8 @@ const WEBDAV_SYNC_DATA_INPUT_IDS: Record<WebDAVSyncDataKey, string> = {
 }
 
 class PersistWebdavConfigError extends Error {
-  constructor() {
-    super("Failed to persist WebDAV settings")
+  constructor(cause?: unknown) {
+    super("Failed to persist WebDAV settings", { cause })
     this.name = "PersistWebdavConfigError"
   }
 }
@@ -269,8 +269,8 @@ export default function WebDAVSettings() {
         expectedLastUpdated:
           options?.expectedLastUpdated ?? expectedLastUpdated,
       })
-    } catch {
-      throw new PersistWebdavConfigError()
+    } catch (error) {
+      throw new PersistWebdavConfigError(error)
     }
     if (!success) {
       throw new PersistWebdavConfigError()
@@ -358,6 +358,9 @@ export default function WebDAVSettings() {
       if (!ensureSyncDataSelected()) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+          },
         })
         return
       }
@@ -456,6 +459,9 @@ export default function WebDAVSettings() {
       if (!ensureSyncDataSelected()) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+          },
         })
         return
       }

@@ -386,8 +386,9 @@ describe("WebDAVSettings", () => {
   })
 
   it("completes WebDAV config save analytics with persist stage when persistence throws", async () => {
+    const persistenceError = new Error("storage unavailable")
     mockUserPreferences.savePreferencesWithResult.mockRejectedValueOnce(
-      new Error("storage unavailable"),
+      persistenceError,
     )
 
     render(<WebDAVSettings />)
@@ -409,6 +410,12 @@ describe("WebDAVSettings", () => {
         },
       )
     })
+    expect(loggerMocks.error).toHaveBeenCalledWith(
+      "Failed to save WebDAV settings",
+      expect.objectContaining({
+        cause: persistenceError,
+      }),
+    )
   })
 
   it("completes WebDAV connection test analytics as success", async () => {
@@ -552,7 +559,12 @@ describe("WebDAVSettings", () => {
     await waitFor(() => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
-        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation },
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+          },
+        },
       )
     })
     expect(mockUploadBackup).not.toHaveBeenCalled()
@@ -654,6 +666,32 @@ describe("WebDAVSettings", () => {
         PRODUCT_ANALYTICS_RESULTS.Skipped,
       )
     })
+  })
+
+  it("completes WebDAV download/import analytics as validation failure when sync data is empty", async () => {
+    render(<WebDAVSettings />)
+
+    expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
+
+    screen
+      .getAllByRole("checkbox")
+      .slice(0, 4)
+      .forEach((checkbox) => fireEvent.click(checkbox))
+
+    clickWebdavAction("webdav-download-import")
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+          },
+        },
+      )
+    })
+    expect(mockDownloadBackupRaw).not.toHaveBeenCalled()
   })
 
   it("completes WebDAV download/import analytics as unknown failure when import fails", async () => {

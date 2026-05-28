@@ -532,7 +532,7 @@ export function useAccountDialog({
       return true
     }
 
-    const accounts = await accountStorage.getAllAccounts()
+    const accounts = await accountStorage.getAllAccountsOrThrow()
     const existingSiteAccounts = accounts.filter(
       (acc) =>
         normalizeSiteUrlForDuplicateCheck({
