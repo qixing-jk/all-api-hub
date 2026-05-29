@@ -547,6 +547,83 @@ describe("VerifyApiDialog", () => {
     })
   })
 
+  it("maps structured thrown probe status to an auth analytics failure", async () => {
+    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+      { id: "models", requiresModelId: false },
+      { id: "text-generation", requiresModelId: true },
+    ])
+    mockFetchAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        user_id: 1,
+        key: "secret",
+        status: 1,
+        name: "token-1",
+        created_time: 0,
+        accessed_time: 0,
+        expired_time: 0,
+        remain_quota: 0,
+        unlimited_quota: true,
+        used_quota: 0,
+      },
+    ])
+    mockRunApiVerificationProbe
+      .mockResolvedValueOnce({
+        id: "models",
+        status: "pass",
+        latencyMs: 8,
+        summary: "Models listed",
+      })
+      .mockRejectedValueOnce({
+        statusCode: 401,
+        message: "Unauthorized",
+      })
+
+    render(
+      <VerifyApiDialog
+        isOpen={true}
+        onClose={() => {}}
+        account={{
+          id: "a1",
+          name: "Account",
+          username: "u",
+          balance: { USD: 0, CNY: 0 },
+          todayConsumption: { USD: 0, CNY: 0 },
+          todayIncome: { USD: 0, CNY: 0 },
+          todayTokens: { upload: 0, download: 0 },
+          health: { status: "healthy" as any },
+          siteType: SITE_TYPES.NEW_API,
+          baseUrl: "https://example.com",
+          token: "t",
+          userId: 1,
+          authType: "access_token" as any,
+          checkIn: { enableDetection: false } as any,
+        }}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    const runAllButton = await screen.findByRole("button", {
+      name: "aiApiVerification:verifyDialog.actions.run",
+    })
+    await waitFor(() => expect(runAllButton).toBeEnabled())
+    fireEvent.click(runAllButton)
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+            successCount: 1,
+            failureCount: 1,
+          },
+        },
+      )
+    })
+  })
+
   it("completes run-all analytics as skipped when no probes execute", async () => {
     mockGetApiVerificationProbeDefinitions.mockReturnValue([
       { id: "text-generation", requiresModelId: true },

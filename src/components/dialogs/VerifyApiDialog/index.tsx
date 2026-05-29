@@ -45,7 +45,10 @@ import {
   getApiVerificationProbeLabel,
   translateApiVerificationSummary,
 } from "~/services/verification/aiApiVerification/i18n"
-import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
+import {
+  buildSafeProbeFailureDiagnostics,
+  toSanitizedErrorSummary,
+} from "~/services/verification/aiApiVerification/utils"
 import {
   createAccountModelVerificationHistoryTarget,
   verificationResultHistoryStorage,
@@ -215,17 +218,18 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
       )
       return result
     } catch (error) {
+      const sanitizedMessage = toSanitizedErrorSummary(
+        error,
+        [
+          selectedToken.key,
+          resolvedToken.key,
+          account.token,
+          account.cookieAuthSessionCookie,
+        ].filter(Boolean) as string[],
+      )
       logger.error("Probe failed", {
         probeId,
-        message: toSanitizedErrorSummary(
-          error,
-          [
-            selectedToken.key,
-            resolvedToken.key,
-            account.token,
-            account.cookieAuthSessionCookie,
-          ].filter(Boolean) as string[],
-        ),
+        message: sanitizedMessage,
       })
 
       const fallback: ApiVerificationProbeResult = {
@@ -233,6 +237,7 @@ export function VerifyApiDialog(props: VerifyApiDialogProps) {
         status: "fail",
         latencyMs: 0,
         summary: t("verifyDialog.errors.unexpected"),
+        ...buildSafeProbeFailureDiagnostics(error, sanitizedMessage),
       }
       const nextProbes = probesRef.current.map((probe) => {
         if (probe.definition.id !== probeId) return probe

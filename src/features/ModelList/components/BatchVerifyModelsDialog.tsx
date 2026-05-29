@@ -65,7 +65,10 @@ import {
   getApiVerificationApiTypeLabel,
   getApiVerificationProbeLabel,
 } from "~/services/verification/aiApiVerification/i18n"
-import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
+import {
+  buildSafeProbeFailureDiagnostics,
+  toSanitizedErrorSummary,
+} from "~/services/verification/aiApiVerification/utils"
 import {
   createAccountModelVerificationHistoryTarget,
   createProfileModelVerificationHistoryTarget,
@@ -610,13 +613,15 @@ export function BatchVerifyModelsDialog({
                     apiKey,
                   ])
 
+            const sanitizedMessage = toSanitizedErrorSummary(error, redactions)
             results.push({
               id: probe.id,
               status: "fail",
               latencyMs: 0,
               summary:
-                toSanitizedErrorSummary(error, redactions) ||
+                sanitizedMessage ||
                 t("modelList:batchVerify.messages.unexpected"),
+              ...buildSafeProbeFailureDiagnostics(error, sanitizedMessage),
             })
           }
         }

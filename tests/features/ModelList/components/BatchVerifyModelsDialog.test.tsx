@@ -699,6 +699,64 @@ describe("BatchVerifyModelsDialog", () => {
     })
   })
 
+  it("maps structured thrown probe status to an auth batch analytics failure", async () => {
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe.mockRejectedValueOnce({
+      statusCode: 401,
+      message: "Unauthorized",
+    })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteStartProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+          insights: {
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 1,
+          },
+        },
+      )
+    })
+  })
+
   it("completes batch verification analytics as skipped when no compatible token exists", async () => {
     mockFetchDisplayAccountTokens.mockResolvedValueOnce([
       {
