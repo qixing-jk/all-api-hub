@@ -23,6 +23,7 @@ export type ApiCheckShouldPromptResponse =
   | {
       success: true
       shouldPrompt: boolean
+      enhancedShouldPrompt: boolean
     }
   | {
       success: false

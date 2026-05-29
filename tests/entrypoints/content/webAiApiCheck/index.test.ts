@@ -186,6 +186,110 @@ describe("setupWebAiApiCheckContent", () => {
     cleanup()
   })
 
+  it("opens auto-detect for enhanced matches when enhanced auto-detect is enabled", async () => {
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckShouldPrompt) {
+        return {
+          success: true,
+          shouldPrompt: true,
+          enhancedShouldPrompt: true,
+        }
+      }
+      return { success: false }
+    })
+    vi.mocked(showApiCheckConfirmToast).mockResolvedValue(true)
+
+    const cleanup = setupWebAiApiCheckContent()
+
+    document.dispatchEvent(
+      makeClipboardEvent(
+        "copy",
+        [
+          "proxy.example.com/api/v1/chat/completions",
+          "test-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1",
+        ].join("\n"),
+      ),
+    )
+
+    await waitFor(() =>
+      expect(dispatchOpenApiCheckModal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          trigger: "autoDetect",
+          extraction: expect.objectContaining({
+            summary: expect.objectContaining({
+              usesEnhancedResult: true,
+            }),
+          }),
+        }),
+      ),
+    )
+    expect(showApiCheckConfirmToast).toHaveBeenCalledWith({
+      usesEnhancedResult: true,
+    })
+
+    cleanup()
+  })
+
+  it("does not prompt for enhanced-only matches when enhanced auto-detect is disabled", async () => {
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckShouldPrompt) {
+        return {
+          success: true,
+          shouldPrompt: true,
+          enhancedShouldPrompt: false,
+        }
+      }
+      return { success: false }
+    })
+
+    const cleanup = setupWebAiApiCheckContent()
+
+    document.dispatchEvent(
+      makeClipboardEvent(
+        "copy",
+        [
+          "proxy.example.com/api/v1/chat/completions",
+          "test-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1",
+        ].join("\n"),
+      ),
+    )
+
+    await waitFor(() => expect(sendRuntimeMessage).toHaveBeenCalled())
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(showApiCheckConfirmToast).not.toHaveBeenCalled()
+    expect(dispatchOpenApiCheckModal).not.toHaveBeenCalled()
+
+    cleanup()
+  })
+
+  it("does not auto-prompt for manual-only unseparated long keys", async () => {
+    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+      success: true,
+      shouldPrompt: true,
+      enhancedShouldPrompt: true,
+    })
+
+    const cleanup = setupWebAiApiCheckContent()
+
+    document.dispatchEvent(
+      makeClipboardEvent(
+        "copy",
+        [
+          "https://proxy.example.com/api",
+          "TESTKEYAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1",
+        ].join("\n"),
+      ),
+    )
+
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(showApiCheckConfirmToast).not.toHaveBeenCalled()
+    expect(dispatchOpenApiCheckModal).not.toHaveBeenCalled()
+
+    cleanup()
+  })
+
   it("does not open modal when the auto-detect confirmation toast is dismissed", async () => {
     const apiKey = buildApiKey()
     vi.mocked(sendRuntimeMessage).mockResolvedValue({

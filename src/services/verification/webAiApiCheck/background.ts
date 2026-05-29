@@ -58,7 +58,8 @@ function getWebAiApiCheckPreferences(
         enabled: true,
       },
       autoDetect: {
-        enabled: false,
+        enabled: true,
+        enhanced: { enabled: true },
         urlWhitelist: { patterns: [] },
       },
     }
@@ -143,14 +144,16 @@ export async function handleWebAiApiCheckMessage(
         const prefs = await userPreferences.getPreferences()
         const config = getWebAiApiCheckPreferences(prefs)
         const patterns = config.autoDetect?.urlWhitelist?.patterns ?? []
-        const shouldPrompt =
-          config.enabled &&
-          !!config.autoDetect?.enabled &&
-          isUrlAllowedByRegexList(pageUrl, patterns)
+        const autoDetectEnabled = config.enabled && !!config.autoDetect?.enabled
+        const urlAllowed = isUrlAllowedByRegexList(pageUrl, patterns)
+        const shouldPrompt = autoDetectEnabled && urlAllowed
+        const enhancedShouldPrompt =
+          shouldPrompt && !!config.autoDetect?.enhanced?.enabled
 
         const response: ApiCheckShouldPromptResponse = {
           success: true,
           shouldPrompt,
+          enhancedShouldPrompt,
         }
         sendResponse(response)
         return

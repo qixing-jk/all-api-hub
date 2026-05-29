@@ -14,6 +14,7 @@ import {
   dispatchOpenApiCheckModal,
   waitForApiCheckModalHostReady,
   type ApiCheckModalClosedDetail,
+  type ApiCheckOpenModalDetail,
 } from "./events"
 import { showApiCheckConfirmToast } from "./utils/apiCheckToasts"
 
@@ -111,22 +112,32 @@ function setupWebAiApiCheckDetection() {
     return `${hash}:${text.length}`
   }
 
-  const requestShouldPrompt = async (pageUrl: string): Promise<boolean> => {
+  const requestShouldPrompt = async (
+    pageUrl: string,
+  ): Promise<{ shouldPrompt: boolean; enhancedShouldPrompt: boolean }> => {
     try {
       const response: any = await sendRuntimeMessage({
         action: RuntimeActionIds.ApiCheckShouldPrompt,
         pageUrl,
       })
-      return !!response?.success && !!response?.shouldPrompt
+      return {
+        shouldPrompt: !!response?.success && !!response?.shouldPrompt,
+        enhancedShouldPrompt:
+          !!response?.success && !!response?.enhancedShouldPrompt,
+      }
     } catch (error) {
       logger.warn("Failed to read ApiCheck shouldPrompt state", error)
-      return false
+      return { shouldPrompt: false, enhancedShouldPrompt: false }
     }
   }
 
   const scanForApiCheckCredentials = async (
     sourceText: string,
-    options?: { pageUrl?: string; shouldPrompt?: boolean },
+    options?: {
+      pageUrl?: string
+      shouldPrompt?: boolean
+      enhancedShouldPrompt?: boolean
+    },
   ) => {
     const text = (sourceText ?? "").trim()
     if (!text) return
@@ -140,21 +151,36 @@ function setupWebAiApiCheckDetection() {
 
     const extracted = extractApiCheckCredentialsFromText(text)
     if (!extracted.baseUrl || !extracted.apiKey) return
+    if (
+      extracted.summary.usesEnhancedResult &&
+      !extracted.summary.enhancedAutoPromptEligible
+    ) {
+      return
+    }
 
     toastInFlight = true
 
     try {
-      const shouldPrompt =
+      const promptState =
         typeof options?.shouldPrompt === "boolean"
-          ? options.shouldPrompt
+          ? {
+              shouldPrompt: options.shouldPrompt,
+              enhancedShouldPrompt: !!options.enhancedShouldPrompt,
+            }
           : await requestShouldPrompt(pageUrl)
 
-      if (!shouldPrompt) {
+      const canPrompt = extracted.summary.usesEnhancedResult
+        ? promptState.enhancedShouldPrompt
+        : promptState.shouldPrompt
+
+      if (!canPrompt) {
         return
       }
 
       lastPromptAt = Date.now()
-      const confirmed = await showApiCheckConfirmToast()
+      const confirmed = await showApiCheckConfirmToast({
+        usesEnhancedResult: extracted.summary.usesEnhancedResult,
+      })
       if (!confirmed) {
         return
       }
@@ -163,6 +189,10 @@ function setupWebAiApiCheckDetection() {
         sourceText: text,
         pageUrl,
         trigger: "autoDetect",
+        extraction: {
+          candidates: extracted.candidates,
+          summary: extracted.summary,
+        },
       })
     } catch (error) {
       logger.warn("Auto-detect flow failed", error)
@@ -173,7 +203,11 @@ function setupWebAiApiCheckDetection() {
 
   const scheduleApiCheckScan = async (
     sourceText: string,
-    options?: { pageUrl?: string; shouldPrompt?: boolean },
+    options?: {
+      pageUrl?: string
+      shouldPrompt?: boolean
+      enhancedShouldPrompt?: boolean
+    },
   ) => {
     const text = (sourceText ?? "").trim()
     if (!text) return
@@ -223,8 +257,10 @@ function setupWebAiApiCheckDetection() {
       }
 
       void (async () => {
-        const shouldPrompt = await requestShouldPrompt(pageUrl)
-        if (!shouldPrompt) return
+        const promptState = await requestShouldPrompt(pageUrl)
+        if (!promptState.shouldPrompt && !promptState.enhancedShouldPrompt) {
+          return
+        }
 
         const hasPermission = await checkPermissionViaMessage({
           permissions: ["clipboardRead"],
@@ -238,7 +274,8 @@ function setupWebAiApiCheckDetection() {
           if (clipboardText) {
             await scheduleApiCheckScan(clipboardText, {
               pageUrl,
-              shouldPrompt: true,
+              shouldPrompt: promptState.shouldPrompt,
+              enhancedShouldPrompt: promptState.enhancedShouldPrompt,
             })
           }
         } catch (error) {
@@ -287,6 +324,7 @@ async function openModal(params: {
   sourceText: string
   pageUrl: string
   trigger: "contextMenu" | "autoDetect"
+  extraction?: ApiCheckOpenModalDetail["extraction"]
 }) {
   await ensureRedemptionToastUi()
   await waitForApiCheckModalHostReady()

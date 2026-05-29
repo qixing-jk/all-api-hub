@@ -6,6 +6,11 @@
  * without importing UI components (avoids circular deps).
  */
 
+import type {
+  ApiCheckCandidate,
+  ApiCheckExtractionSummary,
+} from "~/services/verification/webAiApiCheck/extractCredentials"
+
 export const API_CHECK_OPEN_MODAL_EVENT = "all-api-hub:api-check:open-modal"
 export const API_CHECK_MODAL_CLOSED_EVENT = "all-api-hub:api-check:closed-modal"
 export const API_CHECK_MODAL_HOST_READY_EVENT =
@@ -17,6 +22,13 @@ export type ApiCheckOpenModalDetail = {
   sourceText: string
   pageUrl: string
   trigger: "contextMenu" | "autoDetect"
+  extraction?: {
+    candidates: {
+      baseUrls: ApiCheckCandidate[]
+      apiKeys: ApiCheckCandidate[]
+    }
+    summary: ApiCheckExtractionSummary
+  }
 }
 
 export type ApiCheckModalClosedDetail = {

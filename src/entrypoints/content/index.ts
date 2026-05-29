@@ -37,6 +37,8 @@ function areContentFeaturePreferencesEqual(
       right.redemptionAssistContextMenuEnabled &&
     left.webAiApiCheckDetectionEnabled ===
       right.webAiApiCheckDetectionEnabled &&
+    left.webAiApiCheckEnhancedDetectionEnabled ===
+      right.webAiApiCheckEnhancedDetectionEnabled &&
     left.webAiApiCheckContextMenuEnabled ===
       right.webAiApiCheckContextMenuEnabled
   )

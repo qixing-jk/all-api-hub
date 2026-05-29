@@ -30,7 +30,7 @@ describe("webAiApiCheck events", () => {
     )
 
     dispatchOpenApiCheckModal({
-      sourceText: "sk-abc",
+      sourceText: "sk-test-abc",
       pageUrl: "https://example.com",
       trigger: "autoDetect",
     })
@@ -42,7 +42,7 @@ describe("webAiApiCheck events", () => {
 
     expect(openListener).toHaveBeenCalledTimes(1)
     expect((openListener.mock.calls[0]?.[0] as CustomEvent).detail).toEqual({
-      sourceText: "sk-abc",
+      sourceText: "sk-test-abc",
       pageUrl: "https://example.com",
       trigger: "autoDetect",
     })
@@ -53,6 +53,44 @@ describe("webAiApiCheck events", () => {
       trigger: "contextMenu",
       reason: "completed",
     })
+  })
+
+  it("dispatches optional extraction metadata with open modal events", async () => {
+    const { API_CHECK_OPEN_MODAL_EVENT, dispatchOpenApiCheckModal } =
+      await import("~/entrypoints/content/webAiApiCheck/events")
+
+    const listener = vi.fn()
+    window.addEventListener(API_CHECK_OPEN_MODAL_EVENT, listener)
+
+    dispatchOpenApiCheckModal({
+      sourceText: "proxy.example.com\ntest-Aa1Bb2Cc3Dd4Ee5Ff6Gg",
+      pageUrl: "https://console.example.com",
+      trigger: "autoDetect",
+      extraction: {
+        summary: {
+          hasEnhancedBaseUrl: true,
+          hasEnhancedApiKey: true,
+          hasCleanup: false,
+          usesEnhancedResult: true,
+          autoPromptEligible: false,
+          enhancedAutoPromptEligible: true,
+        },
+        candidates: {
+          baseUrls: [],
+          apiKeys: [],
+        },
+      },
+    } as any)
+
+    expect(listener).toHaveBeenCalledWith(
+      expect.objectContaining({
+        detail: expect.objectContaining({
+          extraction: expect.objectContaining({
+            summary: expect.objectContaining({ usesEnhancedResult: true }),
+          }),
+        }),
+      }),
+    )
   })
 
   it("resolves host-ready waiters immediately after the host has been marked ready", async () => {

@@ -86,6 +86,7 @@ describe("webAiApiCheck background handlers", () => {
         },
         autoDetect: {
           enabled: false,
+          enhanced: { enabled: true },
           urlWhitelist: { patterns: ["^https://example\\.com"] },
         },
       },
@@ -107,6 +108,7 @@ describe("webAiApiCheck background handlers", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
       shouldPrompt: false,
+      enhancedShouldPrompt: false,
     })
   })
 
@@ -124,6 +126,7 @@ describe("webAiApiCheck background handlers", () => {
         },
         autoDetect: {
           enabled: true,
+          enhanced: { enabled: true },
           urlWhitelist: { patterns: ["^https://example\\.com"] },
         },
       },
@@ -145,6 +148,7 @@ describe("webAiApiCheck background handlers", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
       shouldPrompt: true,
+      enhancedShouldPrompt: true,
     })
   })
 
@@ -174,6 +178,7 @@ describe("webAiApiCheck background handlers", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
       shouldPrompt: false,
+      enhancedShouldPrompt: false,
     })
   })
 
@@ -246,14 +251,14 @@ describe("webAiApiCheck background handlers", () => {
         action: RuntimeActionIds.ApiCheckFetchModels,
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api/v1/chat/completions",
-        apiKey: "sk-abcdef123456",
+        apiKey: "sk-test-background-fixture-12345",
       },
       sendResponse,
     )
 
     expect(fetchOpenAICompatibleModelIds).toHaveBeenCalledWith({
       baseUrl: "https://proxy.example.com/api",
-      apiKey: "sk-abcdef123456",
+      apiKey: "sk-test-background-fixture-12345",
     })
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
@@ -335,7 +340,7 @@ describe("webAiApiCheck background handlers", () => {
       "~/services/apiService/openaiCompatible"
     )
     vi.mocked(fetchOpenAICompatibleModelIds).mockRejectedValue(
-      new Error("Unauthorized: sk-secret-xyz"),
+      new Error("Unauthorized: sk-test-secret-fixture"),
     )
 
     const { handleWebAiApiCheckMessage } = await import(
@@ -348,7 +353,7 @@ describe("webAiApiCheck background handlers", () => {
         action: RuntimeActionIds.ApiCheckFetchModels,
         apiType: "openai",
         baseUrl: "https://api.example.com/v1",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
       },
       sendResponse,
     )
@@ -365,7 +370,7 @@ describe("webAiApiCheck background handlers", () => {
       "~/services/apiService/openaiCompatible"
     )
     vi.mocked(fetchOpenAICompatibleModelIds).mockRejectedValue(
-      new Error("Unauthorized 401: sk-secret-xyz"),
+      new Error("Unauthorized 401: sk-test-secret-fixture"),
     )
 
     const { handleWebAiApiCheckMessage } = await import(
@@ -378,7 +383,7 @@ describe("webAiApiCheck background handlers", () => {
         action: RuntimeActionIds.ApiCheckFetchModels,
         apiType: "openai",
         baseUrl: "https://api.example.com/v1",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
       },
       sendResponse,
     )
@@ -399,7 +404,7 @@ describe("webAiApiCheck background handlers", () => {
     )
     vi.mocked(fetchOpenAICompatibleModelIds).mockRejectedValue({
       statusCode: 401,
-      message: "Unauthorized: sk-secret-xyz",
+      message: "Unauthorized: sk-test-secret-fixture",
     })
 
     const { handleWebAiApiCheckMessage } = await import(
@@ -412,7 +417,7 @@ describe("webAiApiCheck background handlers", () => {
         action: RuntimeActionIds.ApiCheckFetchModels,
         apiType: "openai",
         baseUrl: "https://api.example.com/v1",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
       },
       sendResponse,
     )
@@ -461,7 +466,7 @@ describe("webAiApiCheck background handlers", () => {
         action: RuntimeActionIds.ApiCheckRunProbe,
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api/v1",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
         probeId: "" as any,
       },
       sendResponse,
@@ -490,7 +495,7 @@ describe("webAiApiCheck background handlers", () => {
         action: RuntimeActionIds.ApiCheckRunProbe,
         apiType: "openai-compatible",
         baseUrl: "not a url",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
         probeId: "text-generation",
       },
       sendResponse,
@@ -530,7 +535,7 @@ describe("webAiApiCheck background handlers", () => {
         action: RuntimeActionIds.ApiCheckRunProbe,
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api/v1",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
         modelId: "   ",
         probeId: "text-generation",
       },
@@ -539,7 +544,7 @@ describe("webAiApiCheck background handlers", () => {
 
     expect(runApiVerificationProbe).toHaveBeenCalledWith({
       apiType: "openai-compatible",
-      apiKey: "sk-secret-xyz",
+      apiKey: "sk-test-secret-fixture",
       baseUrl: "https://proxy.example.com/api",
       modelId: undefined,
       probeId: "text-generation",
@@ -565,7 +570,7 @@ describe("webAiApiCheck background handlers", () => {
       "~/services/verification/aiApiVerification"
     )
     vi.mocked(runApiVerificationProbe).mockRejectedValue(
-      new Error("Forbidden: sk-secret-xyz"),
+      new Error("Forbidden: sk-test-secret-fixture"),
     )
 
     const { handleWebAiApiCheckMessage } = await import(
@@ -578,7 +583,7 @@ describe("webAiApiCheck background handlers", () => {
         action: RuntimeActionIds.ApiCheckRunProbe,
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api/v1",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
         modelId: "gpt-4o-mini",
         probeId: "text-generation",
       },
@@ -597,7 +602,7 @@ describe("webAiApiCheck background handlers", () => {
       "~/services/verification/aiApiVerification"
     )
     vi.mocked(runApiVerificationProbe).mockRejectedValue(
-      new Error("Forbidden 401: sk-secret-xyz"),
+      new Error("Forbidden 401: sk-test-secret-fixture"),
     )
 
     const { handleWebAiApiCheckMessage } = await import(
@@ -610,7 +615,7 @@ describe("webAiApiCheck background handlers", () => {
         action: RuntimeActionIds.ApiCheckRunProbe,
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api/v1",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
         modelId: "gpt-4o-mini",
         probeId: "text-generation",
       },
@@ -633,7 +638,7 @@ describe("webAiApiCheck background handlers", () => {
     )
     vi.mocked(runApiVerificationProbe).mockRejectedValue({
       response: { status: 401 },
-      message: "Forbidden: sk-secret-xyz",
+      message: "Forbidden: sk-test-secret-fixture",
     })
 
     const { handleWebAiApiCheckMessage } = await import(
@@ -646,7 +651,7 @@ describe("webAiApiCheck background handlers", () => {
         action: RuntimeActionIds.ApiCheckRunProbe,
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api/v1",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
         modelId: "gpt-4o-mini",
         probeId: "text-generation",
       },
@@ -664,7 +669,7 @@ describe("webAiApiCheck background handlers", () => {
       "~/services/verification/aiApiVerification"
     )
     vi.mocked(runApiVerificationProbe).mockRejectedValue(
-      new Error("Socket hang up: sk-secret-xyz"),
+      new Error("Socket hang up: sk-test-secret-fixture"),
     )
 
     const { handleWebAiApiCheckMessage } = await import(
@@ -677,7 +682,7 @@ describe("webAiApiCheck background handlers", () => {
         action: RuntimeActionIds.ApiCheckRunProbe,
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api/v1",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
         probeId: "text-generation",
       },
       sendResponse,
@@ -712,7 +717,7 @@ describe("webAiApiCheck background handlers", () => {
       name: "proxy.example.com",
       apiType: "openai-compatible",
       baseUrl: "https://proxy.example.com/api",
-      apiKey: "sk-secret-xyz",
+      apiKey: "sk-test-secret-fixture",
       tagIds: [],
       notes: "",
       createdAt: 1,
@@ -729,7 +734,7 @@ describe("webAiApiCheck background handlers", () => {
         action: RuntimeActionIds.ApiCheckSaveProfile,
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api/v1/chat/completions",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
         pageUrl: "https://example.com/docs",
       },
       sendResponse,
@@ -739,7 +744,7 @@ describe("webAiApiCheck background handlers", () => {
       name: "proxy.example.com",
       apiType: "openai-compatible",
       baseUrl: "https://proxy.example.com/api",
-      apiKey: "sk-secret-xyz",
+      apiKey: "sk-test-secret-fixture",
       tagIds: [],
       notes: "",
     })
@@ -791,7 +796,7 @@ describe("webAiApiCheck background handlers", () => {
         action: RuntimeActionIds.ApiCheckSaveProfile,
         apiType: "openai-compatible",
         baseUrl: "not a url",
-        apiKey: "sk-valid-enough",
+        apiKey: "sk-test-valid-enough",
       },
       sendResponse,
     )
@@ -811,7 +816,7 @@ describe("webAiApiCheck background handlers", () => {
     )
 
     vi.mocked(apiCredentialProfilesStorage.createProfile).mockRejectedValue(
-      new Error("duplicate key sk-secret-xyz"),
+      new Error("duplicate key sk-test-secret-fixture"),
     )
 
     const { handleWebAiApiCheckMessage } = await import(
@@ -824,7 +829,7 @@ describe("webAiApiCheck background handlers", () => {
         action: RuntimeActionIds.ApiCheckSaveProfile,
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api/v1",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
         name: "  My Profile  ",
       },
       sendResponse,
@@ -834,7 +839,7 @@ describe("webAiApiCheck background handlers", () => {
       name: "My Profile",
       apiType: "openai-compatible",
       baseUrl: "https://proxy.example.com/api",
-      apiKey: "sk-secret-xyz",
+      apiKey: "sk-test-secret-fixture",
       tagIds: [],
       notes: "",
     })
