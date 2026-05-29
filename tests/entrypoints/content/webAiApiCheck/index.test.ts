@@ -230,6 +230,71 @@ describe("setupWebAiApiCheckContent", () => {
     cleanup()
   })
 
+  it("opens auto-detect for selected text on pointerup and stops after cleanup", async () => {
+    const selectedText = buildApiCheckClipboardText({
+      baseUrl: "https://proxy.example.com/api",
+      apiKey: buildApiKey(),
+    })
+    const getSelectionSpy = vi.spyOn(window, "getSelection").mockReturnValue({
+      toString: () => selectedText,
+    } as any)
+
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckShouldPrompt) {
+        return {
+          success: true,
+          shouldPrompt: true,
+          enhancedShouldPrompt: false,
+        }
+      }
+      return { success: false }
+    })
+    vi.mocked(showApiCheckConfirmToast).mockResolvedValue(true)
+
+    const cleanup = setupWebAiApiCheckContent({
+      enableDetection: true,
+      enableContextMenu: false,
+    })
+
+    document.dispatchEvent(new Event("pointerup", { bubbles: true }))
+
+    await waitFor(() =>
+      expect(dispatchOpenApiCheckModal).toHaveBeenCalledWith(
+        expect.objectContaining({
+          sourceText: selectedText,
+          trigger: "autoDetect",
+        }),
+      ),
+    )
+
+    expect(sendRuntimeMessage).toHaveBeenCalledWith({
+      action: RuntimeActionIds.ApiCheckShouldPrompt,
+      pageUrl: window.location.href,
+    })
+    expect(showApiCheckConfirmToast).toHaveBeenCalledWith({
+      usesEnhancedResult: false,
+    })
+
+    cleanup()
+    vi.mocked(sendRuntimeMessage).mockClear()
+    vi.mocked(showApiCheckConfirmToast).mockClear()
+    vi.mocked(dispatchOpenApiCheckModal).mockClear()
+    getSelectionSpy.mockReturnValue({
+      toString: () =>
+        buildApiCheckClipboardText({
+          baseUrl: "https://proxy.example.com/api",
+          apiKey: buildApiKey(),
+        }),
+    } as any)
+
+    document.dispatchEvent(new Event("pointerup", { bubbles: true }))
+    await flushMicrotasks()
+
+    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+    expect(showApiCheckConfirmToast).not.toHaveBeenCalled()
+    expect(dispatchOpenApiCheckModal).not.toHaveBeenCalled()
+  })
+
   it("does not prompt for enhanced-only matches when enhanced auto-detect is disabled", async () => {
     vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
       if (message.action === RuntimeActionIds.ApiCheckShouldPrompt) {

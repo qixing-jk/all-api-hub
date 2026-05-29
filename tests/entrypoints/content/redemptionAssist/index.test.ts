@@ -252,6 +252,74 @@ describe("setupRedemptionAssistContent", () => {
     cleanup()
   })
 
+  it("auto-redeems selected text on pointerup and stops after cleanup", async () => {
+    const getSelectionSpy = vi.spyOn(window, "getSelection").mockReturnValue({
+      toString: () => codeA,
+    } as any)
+
+    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.RedemptionAssistShouldPrompt) {
+        return {
+          success: true,
+          promptableCodes: [codeA],
+        }
+      }
+
+      if (message.action === RuntimeActionIds.RedemptionAssistAutoRedeemByUrl) {
+        return {
+          data: {
+            success: true,
+            message: "redeemed-from-pointerup",
+          },
+        }
+      }
+
+      return { success: false }
+    })
+
+    const { setupRedemptionAssistContent } = await import(
+      "~/entrypoints/content/redemptionAssist"
+    )
+
+    const cleanup = setupRedemptionAssistContent({
+      enableDetection: true,
+      enableContextMenu: false,
+    })
+
+    document.dispatchEvent(new Event("pointerup", { bubbles: true }))
+
+    await waitFor(() => {
+      expect(mockShowRedeemResultToast).toHaveBeenCalledWith(
+        true,
+        "redeemed-from-pointerup",
+      )
+    })
+
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+      action: RuntimeActionIds.RedemptionAssistShouldPrompt,
+      url: window.location.href,
+      codes: [codeA],
+    })
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+      action: RuntimeActionIds.RedemptionAssistAutoRedeemByUrl,
+      url: window.location.href,
+      code: codeA,
+    })
+
+    cleanup()
+    mockSendRuntimeMessage.mockClear()
+    mockShowRedeemResultToast.mockClear()
+    getSelectionSpy.mockReturnValue({
+      toString: () => codeB,
+    } as any)
+
+    document.dispatchEvent(new Event("pointerup", { bubbles: true }))
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+    expect(mockShowRedeemResultToast).not.toHaveBeenCalled()
+  })
+
   it("prefers selected text over clipboard reads on click", async () => {
     const readText = vi.fn().mockResolvedValue(codeB)
     Object.defineProperty(navigator, "clipboard", {

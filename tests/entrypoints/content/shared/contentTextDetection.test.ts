@@ -116,7 +116,7 @@ describe("contentTextDetection", () => {
     cleanup()
   })
 
-  it("removes the mouseup listener on cleanup", () => {
+  it("removes the pointerup listener on cleanup", () => {
     const onText = vi.fn()
     mockSelectionText("selected before cleanup")
 
