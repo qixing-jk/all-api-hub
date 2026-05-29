@@ -184,28 +184,11 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildControlDefinition(
-    "control:action-click-sidepanel",
-    "general",
-    "action-click-behavior",
-    "settings:actionClick.sidepanelTitle",
-    506,
-    {
-      descriptionKey: "settings:actionClick.sidepanelUnsupportedHelper",
-      breadcrumbsKeys: [
-        ...DEFAULT_BREADCRUMBS,
-        "settings:tabs.general",
-        "settings:actionClick.title",
-      ],
-      keywords: ["sidepanel", "sidebar", "toolbar"],
-      isVisible: (context) => context.sidePanelSupported,
-    },
-  ),
-  buildControlDefinition(
     "control:site-announcements-polling",
     "general",
     SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
     "settings:siteAnnouncementNotifications.polling.enable",
-    507,
+    506,
     {
       descriptionKey:
         "settings:siteAnnouncementNotifications.polling.enableDesc",
@@ -218,7 +201,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_INTERVAL,
     "settings:siteAnnouncementNotifications.polling.interval",
-    508,
+    507,
     {
       descriptionKey:
         "settings:siteAnnouncementNotifications.polling.intervalDesc",
@@ -237,7 +220,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE,
     "settings:siteAnnouncementNotifications.page.title",
-    509,
+    508,
     {
       descriptionKey: "settings:siteAnnouncementNotifications.page.description",
       breadcrumbsKeys: SITE_ANNOUNCEMENT_BREADCRUMBS,
@@ -249,7 +232,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "changelog-on-update-toggle",
     "settings:changelogOnUpdate.toggleLabel",
-    510,
+    509,
     {
       descriptionKey: "settings:changelogOnUpdate.toggleDesc",
       breadcrumbsKeys: [
@@ -265,7 +248,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "logging-console-enabled",
     "settings:logging.consoleEnabled",
-    511,
+    510,
     {
       descriptionKey: "settings:logging.consoleEnabledDesc",
       breadcrumbsKeys: [
@@ -281,7 +264,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "logging-min-level",
     "settings:logging.minLevel",
-    512,
+    511,
     {
       descriptionKey: "settings:logging.minLevelDesc",
       breadcrumbsKeys: [
@@ -297,7 +280,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "product-analytics-enabled",
     "settings:productAnalytics.enableLabel",
-    513,
+    512,
     {
       descriptionKey: "settings:productAnalytics.enableDescription",
       breadcrumbsKeys: PRODUCT_ANALYTICS_BREADCRUMBS,
@@ -309,7 +292,7 @@ export const generalSearchControls: OptionsSearchItemDefinition[] = [
     "general",
     "danger-reset-settings",
     "settings:danger.resetSettings",
-    515,
+    513,
     {
       descriptionKey: "settings:danger.resetDesc",
       breadcrumbsKeys: [

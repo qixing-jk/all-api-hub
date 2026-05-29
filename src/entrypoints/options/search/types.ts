@@ -21,8 +21,10 @@ export interface OptionsSearchContext {
   autoCheckinEnabled: boolean
   hasOptionalPermissions: boolean
   managedSiteType: ManagedSiteType
+  modelRedirectEnabled: boolean
   sidePanelSupported: boolean
   showTodayCashflow: boolean
+  webdavAutoSyncEnabled: boolean
 }
 
 export interface OptionsSearchItemDefinition {

@@ -23,12 +23,42 @@ const TASK_NOTIFICATION_CHANNEL_BREADCRUMBS = [
   "settings:taskNotifications.groups.channels.title",
 ]
 
+const TELEGRAM_CHANNEL_BREADCRUMBS = [
+  ...TASK_NOTIFICATION_CHANNEL_BREADCRUMBS,
+  "settings:taskNotifications.channels.telegram.title",
+]
+
+const FEISHU_CHANNEL_BREADCRUMBS = [
+  ...TASK_NOTIFICATION_CHANNEL_BREADCRUMBS,
+  "settings:taskNotifications.channels.feishu.title",
+]
+
+const DINGTALK_CHANNEL_BREADCRUMBS = [
+  ...TASK_NOTIFICATION_CHANNEL_BREADCRUMBS,
+  "settings:taskNotifications.channels.dingtalk.title",
+]
+
+const WECOM_CHANNEL_BREADCRUMBS = [
+  ...TASK_NOTIFICATION_CHANNEL_BREADCRUMBS,
+  "settings:taskNotifications.channels.wecom.title",
+]
+
+const NTFY_CHANNEL_BREADCRUMBS = [
+  ...TASK_NOTIFICATION_CHANNEL_BREADCRUMBS,
+  "settings:taskNotifications.channels.ntfy.title",
+]
+
+const WEBHOOK_CHANNEL_BREADCRUMBS = [
+  ...TASK_NOTIFICATION_CHANNEL_BREADCRUMBS,
+  "settings:taskNotifications.channels.webhook.title",
+]
+
 const TASK_NOTIFICATION_TASK_BREADCRUMBS = [
   ...NOTIFICATIONS_TAB_BREADCRUMBS,
   "settings:taskNotifications.groups.tasks.title",
 ]
 
-const TASK_NOTIFICATION_TASK_CONTROL_ORDER_START = 616
+const TASK_NOTIFICATION_TASK_CONTROL_ORDER_START = 625
 
 const TASK_NOTIFICATION_TASK_SEARCH_CONTROLS = [
   {
@@ -76,6 +106,78 @@ const TASK_NOTIFICATION_TASK_SEARCH_CONTROLS = [
     labelKey: "settings:taskNotifications.siteAnnouncements.enable",
     descriptionKey: "settings:taskNotifications.siteAnnouncements.enableDesc",
     keywords: ["notification", "site announcement", "notice"],
+  },
+] as const
+
+const TASK_NOTIFICATION_CREDENTIAL_SEARCH_CONTROLS = [
+  {
+    searchId: "control:task-notifications-telegram-bot-token",
+    targetId: SETTINGS_ANCHORS.TASK_NOTIFICATIONS_TELEGRAM_BOT_TOKEN,
+    labelKey: "settings:taskNotifications.channels.telegram.botToken",
+    breadcrumbsKeys: TELEGRAM_CHANNEL_BREADCRUMBS,
+    keywords: ["notification", "telegram", "bot token"],
+  },
+  {
+    searchId: "control:task-notifications-telegram-chat-id",
+    targetId: SETTINGS_ANCHORS.TASK_NOTIFICATIONS_TELEGRAM_CHAT_ID,
+    labelKey: "settings:taskNotifications.channels.telegram.chatId",
+    breadcrumbsKeys: TELEGRAM_CHANNEL_BREADCRUMBS,
+    keywords: ["notification", "telegram", "chat id"],
+  },
+  {
+    searchId: "control:task-notifications-feishu-webhook-key",
+    targetId: SETTINGS_ANCHORS.TASK_NOTIFICATIONS_FEISHU_WEBHOOK_KEY,
+    labelKey: "settings:taskNotifications.channels.feishu.webhookKey",
+    breadcrumbsKeys: FEISHU_CHANNEL_BREADCRUMBS,
+    keywords: ["notification", "feishu", "lark", "webhook key"],
+  },
+  {
+    searchId: "control:task-notifications-dingtalk-webhook-key",
+    targetId: SETTINGS_ANCHORS.TASK_NOTIFICATIONS_DINGTALK_WEBHOOK_KEY,
+    labelKey: "settings:taskNotifications.channels.dingtalk.webhookKey",
+    breadcrumbsKeys: DINGTALK_CHANNEL_BREADCRUMBS,
+    keywords: ["notification", "dingtalk", "钉钉", "webhook key"],
+  },
+  {
+    searchId: "control:task-notifications-dingtalk-secret",
+    targetId: SETTINGS_ANCHORS.TASK_NOTIFICATIONS_DINGTALK_SECRET,
+    labelKey: "settings:taskNotifications.channels.dingtalk.secret",
+    breadcrumbsKeys: DINGTALK_CHANNEL_BREADCRUMBS,
+    keywords: ["notification", "dingtalk", "钉钉", "secret"],
+  },
+  {
+    searchId: "control:task-notifications-wecom-webhook-key",
+    targetId: SETTINGS_ANCHORS.TASK_NOTIFICATIONS_WECOM_WEBHOOK_KEY,
+    labelKey: "settings:taskNotifications.channels.wecom.webhookKey",
+    breadcrumbsKeys: WECOM_CHANNEL_BREADCRUMBS,
+    keywords: [
+      "notification",
+      "wecom",
+      "wechat work",
+      "企业微信",
+      "webhook key",
+    ],
+  },
+  {
+    searchId: "control:task-notifications-ntfy-topic-url",
+    targetId: SETTINGS_ANCHORS.TASK_NOTIFICATIONS_NTFY_TOPIC_URL,
+    labelKey: "settings:taskNotifications.channels.ntfy.topicUrl",
+    breadcrumbsKeys: NTFY_CHANNEL_BREADCRUMBS,
+    keywords: ["notification", "ntfy", "topic url", "push"],
+  },
+  {
+    searchId: "control:task-notifications-ntfy-access-token",
+    targetId: SETTINGS_ANCHORS.TASK_NOTIFICATIONS_NTFY_ACCESS_TOKEN,
+    labelKey: "settings:taskNotifications.channels.ntfy.accessToken",
+    breadcrumbsKeys: NTFY_CHANNEL_BREADCRUMBS,
+    keywords: ["notification", "ntfy", "access token"],
+  },
+  {
+    searchId: "control:task-notifications-webhook-url",
+    targetId: SETTINGS_ANCHORS.TASK_NOTIFICATIONS_WEBHOOK_URL,
+    labelKey: "settings:taskNotifications.channels.webhook.url",
+    breadcrumbsKeys: WEBHOOK_CHANNEL_BREADCRUMBS,
+    keywords: ["notification", "webhook", "url", "http"],
   },
 ] as const
 
@@ -238,6 +340,19 @@ export const notificationsSearchControls: OptionsSearchItemDefinition[] = [
       breadcrumbsKeys: TASK_NOTIFICATION_CHANNEL_BREADCRUMBS,
       keywords: ["notification", "webhook", "http"],
     },
+  ),
+  ...TASK_NOTIFICATION_CREDENTIAL_SEARCH_CONTROLS.map((definition, index) =>
+    buildControlDefinition(
+      definition.searchId,
+      NOTIFICATIONS_TAB_ID,
+      definition.targetId,
+      definition.labelKey,
+      616 + index,
+      {
+        breadcrumbsKeys: [...definition.breadcrumbsKeys],
+        keywords: [...definition.keywords],
+      },
+    ),
   ),
   ...TASK_NOTIFICATION_TASK_SEARCH_CONTROLS.map((definition, index) =>
     buildControlDefinition(

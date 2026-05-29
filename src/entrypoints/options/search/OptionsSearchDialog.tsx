@@ -37,7 +37,7 @@ interface OptionsSearchDialogProps {
   open: boolean
 }
 
-const GROUP_ORDER = ["page", "tab", "control"] as const
+const GROUP_ORDER = ["page", "tab", "section", "control"] as const
 
 /**
  * Returns the icon used to represent a search result item by kind.
@@ -129,6 +129,7 @@ export function OptionsSearchDialog({
   const groups = useMemo(() => {
     const pageItems: OptionsSearchItem[] = []
     const tabItems: OptionsSearchItem[] = []
+    const sectionItems: OptionsSearchItem[] = []
     const controlItems: OptionsSearchItem[] = []
 
     results.forEach((item) => {
@@ -142,12 +143,18 @@ export function OptionsSearchDialog({
         return
       }
 
+      if (item.kind === "section") {
+        sectionItems.push(item)
+        return
+      }
+
       controlItems.push(item)
     })
 
     return {
       page: pageItems,
       tab: tabItems,
+      section: sectionItems,
       control: controlItems,
     }
   }, [results])

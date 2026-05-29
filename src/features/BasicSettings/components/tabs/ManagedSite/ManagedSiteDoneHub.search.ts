@@ -41,7 +41,7 @@ export const managedSiteDoneHubSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:done-hub-admin-credentials-link",
     "managedSite",
-    "done-hub-admin-credentials-link",
+    "done-hub-base-url",
     "settings:doneHub.adminCredentialsLink.title",
     664,
     {
@@ -51,7 +51,7 @@ export const managedSiteDoneHubSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.managedSite",
         "settings:doneHub.title",
       ],
-      keywords: ["done-hub", "donehub", "admin credentials"],
+      keywords: ["done-hub", "donehub", "admin credentials", "base url"],
       isVisible: (context) => context.managedSiteType === SITE_TYPES.DONE_HUB,
     },
   ),

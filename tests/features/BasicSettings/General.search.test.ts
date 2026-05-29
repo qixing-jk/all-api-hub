@@ -22,6 +22,8 @@ describe("general settings search definitions", () => {
 
   it("keeps diagnostics controls before product analytics and reset actions", () => {
     const orderedControlIds = generalSearchControls.map((control) => control.id)
+    expect(orderedControlIds).not.toContain("control:action-click-sidepanel")
+
     const siteAnnouncementsIndex = orderedControlIds.indexOf(
       "control:site-announcements-polling",
     )

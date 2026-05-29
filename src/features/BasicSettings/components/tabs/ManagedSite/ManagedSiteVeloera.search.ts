@@ -41,7 +41,7 @@ export const managedSiteVeloeraSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:veloera-admin-credentials-link",
     "managedSite",
-    "veloera-admin-credentials-link",
+    "veloera-base-url",
     "settings:veloera.adminCredentialsLink.title",
     660,
     {
@@ -51,7 +51,7 @@ export const managedSiteVeloeraSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.managedSite",
         "settings:veloera.title",
       ],
-      keywords: ["veloera", "admin credentials"],
+      keywords: ["veloera", "admin credentials", "base url"],
       isVisible: (context) => context.managedSiteType === SITE_TYPES.VELOERA,
     },
   ),

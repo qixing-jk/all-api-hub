@@ -12,8 +12,10 @@ const context: OptionsSearchContext = {
   autoCheckinEnabled: true,
   hasOptionalPermissions: true,
   managedSiteType: "new-api",
+  modelRedirectEnabled: true,
   showTodayCashflow: true,
   sidePanelSupported: true,
+  webdavAutoSyncEnabled: true,
 }
 
 describe("useOptionsSearch", () => {
@@ -59,6 +61,58 @@ describe("useOptionsSearch", () => {
       result.current.results.some((item) => item.tabId === "permissions"),
     ).toBe(true)
   })
+
+  it("hides controls whose runtime targets are not rendered", () => {
+    const { result } = renderHook(
+      () =>
+        useOptionsSearch(
+          {
+            ...context,
+            modelRedirectEnabled: false,
+            webdavAutoSyncEnabled: false,
+          },
+          "",
+        ),
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    expect(result.current.items.map((item) => item.id)).not.toContain(
+      "control:managed-site-model-redirect-standard-models",
+    )
+    expect(result.current.items.map((item) => item.id)).not.toContain(
+      "control:webdav-auto-sync-interval",
+    )
+    expect(result.current.items.map((item) => item.id)).not.toContain(
+      "control:webdav-auto-sync-interval-data-backup",
+    )
+  })
+
+  it("finds notification credentials and managed-site compatibility aliases", () => {
+    const notification = renderHook(
+      () => useOptionsSearch(context, "chat id"),
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+    expect(notification.result.current.results[0]?.id).toBe(
+      "control:task-notifications-telegram-chat-id",
+    )
+
+    const compatibility = renderHook(() => useOptionsSearch(context, "voapi"), {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+    expect(compatibility.result.current.results[0]?.id).toBe(
+      "control:managed-site-type",
+    )
+  })
 })
 
 describe("useOptionsSearchContext", () => {
@@ -75,7 +129,9 @@ describe("useOptionsSearchContext", () => {
           autoCheckinEnabled: true,
           hasOptionalPermissions: true,
           managedSiteType: "new-api",
+          modelRedirectEnabled: false,
           showTodayCashflow: false,
+          webdavAutoSyncEnabled: false,
         }),
       {
         withReleaseUpdateStatusProvider: false,
@@ -88,8 +144,10 @@ describe("useOptionsSearchContext", () => {
       autoCheckinEnabled: true,
       hasOptionalPermissions: true,
       managedSiteType: "new-api",
+      modelRedirectEnabled: false,
       showTodayCashflow: false,
       sidePanelSupported: false,
+      webdavAutoSyncEnabled: false,
     })
   })
 })

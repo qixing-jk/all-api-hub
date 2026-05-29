@@ -10,6 +10,26 @@ const isStandardManagedSite = (managedSiteType: ManagedSiteType) =>
   managedSiteType !== SITE_TYPES.AXON_HUB &&
   managedSiteType !== SITE_TYPES.CLAUDE_CODE_HUB
 
+const isStandardManagedSiteContext = (context: {
+  managedSiteType: ManagedSiteType
+}) => isStandardManagedSite(context.managedSiteType)
+
+const isStandardManagedSiteWithModelRedirect = (context: {
+  managedSiteType: ManagedSiteType
+  modelRedirectEnabled: boolean
+}) =>
+  isStandardManagedSite(context.managedSiteType) && context.modelRedirectEnabled
+
+const SHARED_MODEL_SYNC_KEYWORDS = [
+  "model sync",
+  "managed site",
+  "new-api",
+  "done-hub",
+  "donehub",
+  "veloera",
+  "octopus",
+]
+
 export const managedSiteCoreSearchSections: OptionsSearchItemDefinition[] = [
   buildSectionDefinition(
     "section:managed-site-selector",
@@ -25,7 +45,8 @@ export const managedSiteCoreSearchSections: OptionsSearchItemDefinition[] = [
     "managedSiteModelSync:settings.title",
     347,
     {
-      isVisible: (context) => isStandardManagedSite(context.managedSiteType),
+      keywords: SHARED_MODEL_SYNC_KEYWORDS,
+      isVisible: isStandardManagedSiteContext,
     },
   ),
   buildSectionDefinition(
@@ -35,7 +56,7 @@ export const managedSiteCoreSearchSections: OptionsSearchItemDefinition[] = [
     "modelRedirect:title",
     348,
     {
-      isVisible: (context) => isStandardManagedSite(context.managedSiteType),
+      isVisible: isStandardManagedSiteContext,
     },
   ),
 ]
@@ -62,6 +83,13 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
         "octopus",
         "axonhub",
         "claude-code-hub",
+        "v-api",
+        "voapi",
+        "super-api",
+        "rix-api",
+        "neo-api",
+        "one-api compatible",
+        "new api compatible",
       ],
     },
   ),
@@ -78,8 +106,8 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.managedSite",
         "managedSiteModelSync:settings.title",
       ],
-      keywords: ["model sync", "sync", "new-api"],
-      isVisible: (context) => isStandardManagedSite(context.managedSiteType),
+      keywords: [...SHARED_MODEL_SYNC_KEYWORDS, "sync"],
+      isVisible: isStandardManagedSiteContext,
     },
   ),
   buildControlDefinition(
@@ -95,8 +123,8 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.managedSite",
         "managedSiteModelSync:settings.title",
       ],
-      keywords: ["model sync", "interval", "schedule"],
-      isVisible: (context) => isStandardManagedSite(context.managedSiteType),
+      keywords: [...SHARED_MODEL_SYNC_KEYWORDS, "interval", "schedule"],
+      isVisible: isStandardManagedSiteContext,
     },
   ),
   buildControlDefinition(
@@ -112,8 +140,8 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.managedSite",
         "managedSiteModelSync:settings.title",
       ],
-      keywords: ["model sync", "concurrency"],
-      isVisible: (context) => isStandardManagedSite(context.managedSiteType),
+      keywords: [...SHARED_MODEL_SYNC_KEYWORDS, "concurrency"],
+      isVisible: isStandardManagedSiteContext,
     },
   ),
   buildControlDefinition(
@@ -129,8 +157,8 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.managedSite",
         "managedSiteModelSync:settings.title",
       ],
-      keywords: ["model sync", "retries"],
-      isVisible: (context) => isStandardManagedSite(context.managedSiteType),
+      keywords: [...SHARED_MODEL_SYNC_KEYWORDS, "retries"],
+      isVisible: isStandardManagedSiteContext,
     },
   ),
   buildControlDefinition(
@@ -146,8 +174,8 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.managedSite",
         "managedSiteModelSync:settings.title",
       ],
-      keywords: ["model sync", "rate limit", "rpm"],
-      isVisible: (context) => isStandardManagedSite(context.managedSiteType),
+      keywords: [...SHARED_MODEL_SYNC_KEYWORDS, "rate limit", "rpm"],
+      isVisible: isStandardManagedSiteContext,
     },
   ),
   buildControlDefinition(
@@ -163,8 +191,8 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.managedSite",
         "managedSiteModelSync:settings.title",
       ],
-      keywords: ["model sync", "rate limit", "burst"],
-      isVisible: (context) => isStandardManagedSite(context.managedSiteType),
+      keywords: [...SHARED_MODEL_SYNC_KEYWORDS, "rate limit", "burst"],
+      isVisible: isStandardManagedSiteContext,
     },
   ),
   buildControlDefinition(
@@ -180,8 +208,8 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.managedSite",
         "managedSiteModelSync:settings.title",
       ],
-      keywords: ["model sync", "allowed models"],
-      isVisible: (context) => isStandardManagedSite(context.managedSiteType),
+      keywords: [...SHARED_MODEL_SYNC_KEYWORDS, "allowed models"],
+      isVisible: isStandardManagedSiteContext,
     },
   ),
   buildControlDefinition(
@@ -198,8 +226,8 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.managedSite",
         "managedSiteModelSync:settings.title",
       ],
-      keywords: ["model sync", "filters", "channel filters"],
-      isVisible: (context) => isStandardManagedSite(context.managedSiteType),
+      keywords: [...SHARED_MODEL_SYNC_KEYWORDS, "filters", "channel filters"],
+      isVisible: isStandardManagedSiteContext,
     },
   ),
   buildControlDefinition(
@@ -215,8 +243,8 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.managedSite",
         "managedSiteModelSync:settings.title",
       ],
-      keywords: ["model sync", "execution", "history"],
-      isVisible: (context) => isStandardManagedSite(context.managedSiteType),
+      keywords: [...SHARED_MODEL_SYNC_KEYWORDS, "execution", "history"],
+      isVisible: isStandardManagedSiteContext,
     },
   ),
   buildControlDefinition(
@@ -233,7 +261,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
         "modelRedirect:title",
       ],
       keywords: ["model redirect", "redirect"],
-      isVisible: (context) => isStandardManagedSite(context.managedSiteType),
+      isVisible: isStandardManagedSiteContext,
     },
   ),
   buildControlDefinition(
@@ -250,7 +278,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
         "modelRedirect:title",
       ],
       keywords: ["model redirect", "standard models", "models"],
-      isVisible: (context) => isStandardManagedSite(context.managedSiteType),
+      isVisible: isStandardManagedSiteWithModelRedirect,
     },
   ),
   buildControlDefinition(
@@ -267,7 +295,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
         "modelRedirect:title",
       ],
       keywords: ["model redirect", "prune", "missing targets", "model sync"],
-      isVisible: (context) => isStandardManagedSite(context.managedSiteType),
+      isVisible: isStandardManagedSiteWithModelRedirect,
     },
   ),
   buildControlDefinition(
@@ -283,7 +311,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
         "modelRedirect:title",
       ],
       keywords: ["model redirect", "regenerate", "mapping"],
-      isVisible: (context) => isStandardManagedSite(context.managedSiteType),
+      isVisible: isStandardManagedSiteWithModelRedirect,
     },
   ),
   buildControlDefinition(
@@ -300,7 +328,7 @@ export const managedSiteCoreSearchControls: OptionsSearchItemDefinition[] = [
         "modelRedirect:title",
       ],
       keywords: ["model redirect", "bulk clear", "clear mappings"],
-      isVisible: (context) => isStandardManagedSite(context.managedSiteType),
+      isVisible: isStandardManagedSiteContext,
     },
   ),
 ]

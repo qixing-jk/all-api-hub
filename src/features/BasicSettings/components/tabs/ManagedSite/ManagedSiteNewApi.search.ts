@@ -126,7 +126,7 @@ export const managedSiteNewApiSearchControls: OptionsSearchItemDefinition[] = [
   buildControlDefinition(
     "control:new-api-admin-credentials-link",
     "managedSite",
-    "new-api-admin-credentials-link",
+    "new-api-base-url",
     "settings:newApi.adminCredentialsLink.title",
     647,
     {
@@ -136,7 +136,7 @@ export const managedSiteNewApiSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.managedSite",
         "settings:newApi.title",
       ],
-      keywords: ["new-api", "admin credentials", "login"],
+      keywords: ["new-api", "admin credentials", "login", "base url"],
       isVisible: (context) => context.managedSiteType === SITE_TYPES.NEW_API,
     },
   ),

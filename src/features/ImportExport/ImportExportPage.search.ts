@@ -111,6 +111,67 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
     },
   ),
   buildPageControlDefinition(
+    "control:import-backup-action",
+    MENU_ITEM_IDS.IMPORT_EXPORT,
+    "import-backup-action",
+    "common:actions.import",
+    744.5,
+    {
+      descriptionKey: "importExport:import.description",
+      keywords: ["import", "restore", "backup"],
+    },
+  ),
+  buildPageControlDefinition(
+    "control:import-export-webdav-url",
+    MENU_ITEM_IDS.IMPORT_EXPORT,
+    WEBDAV_TARGET_IDS.url,
+    "importExport:webdav.webdavUrl",
+    744.6,
+    {
+      descriptionKey: "importExport:webdav.configDesc",
+      keywords: [
+        "webdav",
+        "webdav url",
+        "import export webdav url",
+        "url",
+        "backup",
+      ],
+    },
+  ),
+  buildPageControlDefinition(
+    "control:import-export-webdav-username",
+    MENU_ITEM_IDS.IMPORT_EXPORT,
+    WEBDAV_TARGET_IDS.username,
+    "importExport:webdav.username",
+    744.7,
+    {
+      descriptionKey: "importExport:webdav.configDesc",
+      keywords: ["webdav", "username"],
+    },
+  ),
+  buildPageControlDefinition(
+    "control:import-export-webdav-password",
+    MENU_ITEM_IDS.IMPORT_EXPORT,
+    WEBDAV_TARGET_IDS.password,
+    "importExport:webdav.password",
+    744.8,
+    {
+      descriptionKey: "importExport:webdav.configDesc",
+      keywords: ["webdav", "password"],
+    },
+  ),
+  buildPageControlDefinition(
+    "control:import-export-webdav-auto-sync-enable",
+    MENU_ITEM_IDS.IMPORT_EXPORT,
+    WEBDAV_AUTO_SYNC_TARGET_IDS.enable,
+    "importExport:webdav.autoSync.enable",
+    744.9,
+    {
+      descriptionKey: "importExport:webdav.autoSync.enableDesc",
+      keywords: ["webdav", "auto sync"],
+    },
+  ),
+  buildPageControlDefinition(
     "control:webdav-restore-policy",
     MENU_ITEM_IDS.IMPORT_EXPORT,
     WEBDAV_TARGET_IDS.restorePolicy,
@@ -256,6 +317,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
     {
       descriptionKey: "importExport:webdav.autoSync.intervalDesc",
       keywords: ["webdav", "auto sync", "interval"],
+      isVisible: (context) => context.webdavAutoSyncEnabled,
     },
   ),
   buildPageControlDefinition(
@@ -267,6 +329,7 @@ export const importExportPageSearchControls: OptionsSearchItemDefinition[] = [
     {
       descriptionKey: "importExport:webdav.autoSync.strategyDesc",
       keywords: ["webdav", "auto sync", "strategy"],
+      isVisible: (context) => context.webdavAutoSyncEnabled,
     },
   ),
   buildPageControlDefinition(

@@ -102,7 +102,9 @@ function OptionsPage() {
     autoCheckinEnabled: Boolean(preferences?.autoCheckin?.globalEnabled),
     hasOptionalPermissions,
     managedSiteType,
+    modelRedirectEnabled: Boolean(preferences?.modelRedirect?.enabled),
     showTodayCashflow,
+    webdavAutoSyncEnabled: Boolean(preferences?.webdav?.autoSync),
   })
 
   useSearchHotkeys({

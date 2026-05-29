@@ -141,6 +141,7 @@ const ImportSection = ({
           >
             {/* 导入按钮 */}
             <Button
+              id="import-backup-action"
               onClick={handleImport}
               disabled={isImporting || !validation?.valid}
               loading={isImporting}

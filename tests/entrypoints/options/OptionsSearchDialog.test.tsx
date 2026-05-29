@@ -9,8 +9,10 @@ const baseContext: OptionsSearchContext = {
   autoCheckinEnabled: true,
   hasOptionalPermissions: true,
   managedSiteType: "new-api",
+  modelRedirectEnabled: true,
   showTodayCashflow: true,
   sidePanelSupported: true,
+  webdavAutoSyncEnabled: true,
 }
 
 describe("OptionsSearchDialog", () => {
@@ -81,7 +83,7 @@ describe("OptionsSearchDialog", () => {
     ).not.toBeInTheDocument()
   })
 
-  it("groups page, tab, and control results and matches technical aliases", async () => {
+  it("groups page, tab, section, and control results and matches technical aliases", async () => {
     const user = userEvent.setup()
     const onPageNavigate = vi.fn()
 
@@ -100,6 +102,9 @@ describe("OptionsSearchDialog", () => {
 
     expect(
       screen.getByRole("group", { name: "ui:optionsSearch.groups.control" }),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("group", { name: "ui:optionsSearch.groups.section" }),
     ).toBeInTheDocument()
     expect(
       screen.getAllByText("importExport:webdav.title").length,
@@ -128,6 +133,29 @@ describe("OptionsSearchDialog", () => {
     expect(
       screen.getAllByText("importExport:webdav.uploadBackup").length,
     ).toBeGreaterThan(0)
+  })
+
+  it("finds standalone Import/Export WebDAV setup controls", async () => {
+    const user = userEvent.setup()
+    const onPageNavigate = vi.fn()
+
+    render(
+      <OptionsSearchDialog
+        open
+        onOpenChange={vi.fn()}
+        onPageNavigate={onPageNavigate}
+        context={baseContext}
+      />,
+    )
+
+    await screen.findByRole("dialog")
+    await user.type(screen.getByRole("combobox"), "import export webdav url")
+    await user.click(screen.getByText("importExport:webdav.webdavUrl"))
+
+    expect(onPageNavigate).toHaveBeenCalledWith("importExport", {
+      anchor: "webdav-url",
+      highlight: "webdav-url",
+    })
   })
 
   it("finds newly indexed settings that were previously missing", async () => {

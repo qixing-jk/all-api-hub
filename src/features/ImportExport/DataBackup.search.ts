@@ -51,7 +51,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
         "settings:tabs.dataBackup",
         "importExport:webdav.title",
       ],
-      keywords: ["webdav", "url", "backup"],
+      keywords: ["webdav", "webdav url", "url", "backup"],
     },
   ),
   buildControlDefinition(
@@ -317,6 +317,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
         "importExport:webdav.autoSync.title",
       ],
       keywords: ["webdav", "auto sync", "interval"],
+      isVisible: (context) => context.webdavAutoSyncEnabled,
     },
   ),
   buildControlDefinition(
@@ -333,6 +334,7 @@ export const dataBackupSearchControls: OptionsSearchItemDefinition[] = [
         "importExport:webdav.autoSync.title",
       ],
       keywords: ["webdav", "auto sync", "strategy"],
+      isVisible: (context) => context.webdavAutoSyncEnabled,
     },
   ),
   buildControlDefinition(

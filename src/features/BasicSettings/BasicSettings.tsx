@@ -174,6 +174,7 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   sorting: "accountManagement",
   "auto-refresh": "refresh",
   refresh: "refresh",
+  "auto-checkin": "checkinRedeem",
   "checkin-redeem": "checkinRedeem",
   checkin: "checkinRedeem",
   "web-ai-api-check": "webAiApiCheck",

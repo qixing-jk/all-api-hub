@@ -399,6 +399,7 @@
       "control": "Settings Items",
       "page": "Pages",
       "recent": "Recent",
+      "section": "Sections",
       "tab": "Settings Tabs"
     },
     "idleDescription": "Type a setting name, keyword, or technical alias to start searching.",

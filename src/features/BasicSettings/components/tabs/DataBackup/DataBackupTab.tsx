@@ -53,12 +53,12 @@ export default function DataBackupTab() {
       </section>
 
       {/* WebDAV Section */}
-      <section id="webdav">
+      <section>
         <WebDAVSettings />
       </section>
 
       {/* WebDAV Auto-Sync Section */}
-      <section id="webdav-auto-sync">
+      <section>
         <WebDAVAutoSyncSettings />
       </section>
     </div>
