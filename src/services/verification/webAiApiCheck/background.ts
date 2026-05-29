@@ -8,6 +8,7 @@ import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
+import { resolveProductAnalyticsErrorCategoryFromError } from "~/services/productAnalytics/actions"
 import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/events"
 import {
   API_TYPES,
@@ -226,7 +227,7 @@ export async function handleWebAiApiCheckMessage(
           const response: ApiCheckFetchModelsResponse = {
             success: false,
             error: message,
-            errorStatusCode: status,
+            ...(typeof status === "number" ? { errorStatusCode: status } : {}),
           }
           sendResponse(response)
           return
@@ -365,6 +366,7 @@ export async function handleWebAiApiCheckMessage(
           const response: ApiCheckSaveProfileResponse = {
             success: false,
             error: message,
+            errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
           }
           sendResponse(response)
           return

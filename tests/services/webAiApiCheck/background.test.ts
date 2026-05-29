@@ -387,6 +387,9 @@ describe("webAiApiCheck background handlers", () => {
       success: false,
       error: "Unauthorized 401: [REDACTED]",
     })
+    expect(sendResponse.mock.calls[0]?.[0]).not.toHaveProperty(
+      "errorStatusCode",
+    )
   })
 
   it("fetchModels returns structured status codes for analytics classification", async () => {
@@ -838,6 +841,7 @@ describe("webAiApiCheck background handlers", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "duplicate key [REDACTED]",
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
     })
   })
 

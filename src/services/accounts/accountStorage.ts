@@ -1693,48 +1693,34 @@ class AccountStorageService {
     const normalizedAccounts = accounts.map(normalizeSiteAccount)
 
     if (migratedCount > 0) {
-      // If any account schemas were upgraded, persist the normalized set immediately
       logger.info("Accounts migrated; persisting updated accounts", {
         migratedCount,
       })
-      await this.saveAccounts(normalizedAccounts)
+      await this.persistReadMigration()
     }
 
     return normalizedAccounts
   }
 
   /**
-   * Save the full account list while also pruning stale pinned/ordered ids.
+   * Persist read-time account migrations from the current storage snapshot.
    *
-   * This keeps derived collections in sync so the UI never references missing
-   * accounts after deletions or imports.
+   * Re-reading under the write lock avoids replacing newer add/update/delete
+   * operations with the stale snapshot originally returned to the caller.
    */
-  private async saveAccounts(accounts: SiteAccount[]): Promise<void> {
-    logger.debug("开始保存账号数据", { accountCount: accounts.length })
+  private async persistReadMigration(): Promise<void> {
     await this.mutateStorageConfig((existingConfig) => {
-      const { entryIds } = AccountStorageService.buildEntryIdSets({
-        accounts,
-        bookmarks: existingConfig.bookmarks,
-      })
-      const filteredPinnedIds = existingConfig.pinnedAccountIds.filter((id) =>
-        entryIds.has(id),
+      const { accounts, migratedCount } = migrateAccountsConfig(
+        existingConfig.accounts,
       )
-      const filteredOrderedIds = existingConfig.orderedAccountIds.filter((id) =>
-        entryIds.has(id),
-      )
-      existingConfig.accounts = accounts
-      existingConfig.pinnedAccountIds = filteredPinnedIds
-      existingConfig.orderedAccountIds = filteredOrderedIds
 
-      logger.debug("保存的配置数据", {
-        accountCount: accounts.length,
-        pinnedCount: filteredPinnedIds.length,
-        orderedCount: filteredOrderedIds.length,
-        storageKey: ACCOUNT_STORAGE_KEYS.ACCOUNTS,
-      })
+      if (migratedCount === 0) {
+        return { result: undefined, changed: false }
+      }
+
+      existingConfig.accounts = accounts.map(normalizeSiteAccount)
       return { result: undefined, changed: true }
     })
-    logger.debug("账号数据保存完成")
   }
 
   /**

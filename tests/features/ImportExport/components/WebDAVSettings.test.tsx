@@ -396,7 +396,7 @@ describe("WebDAVSettings", () => {
     })
   })
 
-  it("completes WebDAV config save analytics as validation failure when persistence rejects the update", async () => {
+  it("completes WebDAV config save analytics as unknown failure when persistence rejects the update", async () => {
     mockUserPreferences.savePreferencesWithResult.mockResolvedValue(null)
 
     render(<WebDAVSettings />)
@@ -411,7 +411,7 @@ describe("WebDAVSettings", () => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
           },
@@ -438,7 +438,7 @@ describe("WebDAVSettings", () => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
           },
@@ -451,6 +451,34 @@ describe("WebDAVSettings", () => {
         cause: persistenceError,
       }),
     )
+  })
+
+  it("maps structured WebDAV config persistence failures to safe analytics categories", async () => {
+    mockUserPreferences.savePreferencesWithResult.mockRejectedValueOnce(
+      Object.assign(new Error("private storage auth failed"), {
+        statusCode: 401,
+      }),
+    )
+
+    render(<WebDAVSettings />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "importExport:webdav.saveConfig",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+          insights: {
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
+          },
+        },
+      )
+    })
   })
 
   it("completes WebDAV connection test analytics as success", async () => {
@@ -491,7 +519,7 @@ describe("WebDAVSettings", () => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         "failure",
         {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
           },
@@ -520,7 +548,7 @@ describe("WebDAVSettings", () => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
           },
@@ -670,7 +698,7 @@ describe("WebDAVSettings", () => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
           },
@@ -791,7 +819,7 @@ describe("WebDAVSettings", () => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
         {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
           },

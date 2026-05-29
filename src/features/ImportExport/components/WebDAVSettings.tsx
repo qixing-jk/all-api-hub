@@ -116,7 +116,9 @@ class PersistWebdavConfigError extends Error {
 /** Classify WebDAV validation failures without exposing raw error details. */
 function getWebdavAnalyticsErrorCategory(error: unknown) {
   if (error instanceof PersistWebdavConfigError) {
-    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
+    return error.cause
+      ? resolveProductAnalyticsErrorCategoryFromError(error.cause)
+      : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
   }
 
   return resolveProductAnalyticsErrorCategoryFromError(error)

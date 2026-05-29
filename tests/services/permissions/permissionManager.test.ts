@@ -266,13 +266,13 @@ describe("permissionManager", () => {
     })
   })
 
-  it("keeps request success as the operation result when post-request status probes fail", async () => {
+  it("fails the ensure result when a successful request is not granted after recheck", async () => {
     containsPermissionsMock
       .mockResolvedValueOnce(false)
       .mockRejectedValueOnce(new Error("post-probe failed"))
     requestPermissionsDetailedMock.mockResolvedValueOnce({ success: true })
 
-    await expect(ensurePermissions(["clipboardRead"])).resolves.toBe(true)
+    await expect(ensurePermissions(["clipboardRead"])).resolves.toBe(false)
 
     vi.clearAllMocks()
 
@@ -283,12 +283,12 @@ describe("permissionManager", () => {
 
     await expect(ensurePermissionsDetailed(["clipboardRead"])).resolves.toEqual(
       {
-        success: true,
+        success: false,
         results: [
           {
             id: "clipboardRead",
             requested: true,
-            success: true,
+            success: false,
             wasGrantedBefore: false,
             wasGrantedAfter: false,
           },
@@ -297,7 +297,7 @@ describe("permissionManager", () => {
           {
             id: "clipboardRead",
             requested: true,
-            success: true,
+            success: false,
             wasGrantedBefore: false,
             wasGrantedAfter: false,
           },
@@ -306,7 +306,7 @@ describe("permissionManager", () => {
     )
   })
 
-  it("keeps user denial as the operation result even if a later status probe observes granted", async () => {
+  it("uses the post-request grant state when the request API reports denial", async () => {
     containsPermissionsMock
       .mockResolvedValueOnce(false)
       .mockResolvedValueOnce(true)
@@ -314,12 +314,12 @@ describe("permissionManager", () => {
 
     await expect(ensurePermissionsDetailed(["clipboardRead"])).resolves.toEqual(
       {
-        success: false,
+        success: true,
         results: [
           {
             id: "clipboardRead",
             requested: true,
-            success: false,
+            success: true,
             wasGrantedBefore: false,
             wasGrantedAfter: true,
           },
@@ -328,7 +328,7 @@ describe("permissionManager", () => {
           {
             id: "clipboardRead",
             requested: true,
-            success: false,
+            success: true,
             wasGrantedBefore: false,
             wasGrantedAfter: true,
           },

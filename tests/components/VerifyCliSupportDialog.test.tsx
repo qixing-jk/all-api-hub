@@ -955,11 +955,11 @@ describe("VerifyCliSupportDialog", () => {
       />,
     )
 
-    fireEvent.click(
-      await screen.findByRole("button", {
-        name: "cliSupportVerification:verifyDialog.actions.run",
-      }),
-    )
+    const runButton = await screen.findByRole("button", {
+      name: "cliSupportVerification:verifyDialog.actions.run",
+    })
+    await waitFor(() => expect(runButton).toBeEnabled())
+    fireEvent.click(runButton)
 
     const toolCard = await screen.findByTestId(getCliToolCardTestId("claude"))
     expect(

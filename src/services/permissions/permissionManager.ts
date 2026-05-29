@@ -209,8 +209,8 @@ export async function ensurePermissionsDetailed(
     return {
       id,
       requested: true,
-      success: requestResult.success,
-      ...(requestResult.failureReason
+      success: wasGrantedAfter,
+      ...(!wasGrantedAfter && requestResult.failureReason
         ? { failureReason: requestResult.failureReason }
         : {}),
       wasGrantedBefore: grantedBeforeById.get(id) ?? false,

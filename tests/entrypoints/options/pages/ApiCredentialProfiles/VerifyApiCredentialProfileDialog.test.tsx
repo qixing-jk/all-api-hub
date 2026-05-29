@@ -810,6 +810,93 @@ describe("VerifyApiCredentialProfileDialog", () => {
     )
   })
 
+  it("uses the first known failed probe category for suite analytics", async () => {
+    const user = userEvent.setup()
+
+    mockGetApiVerificationProbeDefinitions.mockReturnValueOnce([
+      { id: "models", requiresModelId: false },
+      { id: "text-generation", requiresModelId: false },
+    ])
+    mockRunApiVerificationProbe
+      .mockResolvedValueOnce({
+        id: "models",
+        status: "fail",
+        latencyMs: 1,
+        summary: "Unknown failure",
+      })
+      .mockResolvedValueOnce({
+        id: "text-generation",
+        status: "fail",
+        latencyMs: 2,
+        summary: "Unauthorized",
+        output: { inferredHttpStatus: 401 },
+      })
+      .mockResolvedValueOnce({
+        id: "tool-calling",
+        status: "pass",
+        latencyMs: 3,
+        summary: "OK",
+      })
+      .mockResolvedValueOnce({
+        id: "structured-output",
+        status: "pass",
+        latencyMs: 4,
+        summary: "OK",
+      })
+      .mockResolvedValueOnce({
+        id: "web-search",
+        status: "pass",
+        latencyMs: 5,
+        summary: "OK",
+      })
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p-1",
+          name: "Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+        initialModelId="gpt-test"
+      />,
+    )
+
+    const closeButton = await screen.findByText(
+      "aiApiVerification:verifyDialog.actions.close",
+      { selector: "button" },
+    )
+    const footer = closeButton.parentElement
+    if (!footer) throw new Error("Missing modal footer")
+
+    await user.click(
+      within(footer).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.run",
+      }),
+    )
+
+    await waitFor(() =>
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+          insights: {
+            itemCount: 5,
+            successCount: 3,
+            failureCount: 2,
+          },
+        },
+      ),
+    )
+  })
+
   it("tracks API credential verification suite probe exceptions with safe structured diagnostics", async () => {
     const user = userEvent.setup()
     const structuredError = Object.assign(

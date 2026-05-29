@@ -24,10 +24,12 @@ const storageData = new Map<string, any>()
 
 const storageHooks: {
   beforeGet: (key: string) => Promise<void>
+  afterGet: (key: string, value: any) => Promise<void>
   beforeSet: (key: string, value: any) => Promise<void>
   beforeRemove: (key: string) => Promise<void>
 } = {
   beforeGet: async () => {},
+  afterGet: async () => {},
   beforeSet: async () => {},
   beforeRemove: async () => {},
 }
@@ -60,7 +62,9 @@ vi.mock("@plasmohq/storage", () => {
 
     async get(key: string) {
       await storageHooks.beforeGet(key)
-      return storageData.get(key)
+      const value = storageData.get(key)
+      await storageHooks.afterGet(key, value)
+      return value
     }
 
     async remove(key: string) {
@@ -233,6 +237,50 @@ describe("accountStorage core behaviors", () => {
     expect(
       Object.values(persistedTagStore.tagsById).map((t: any) => t.name),
     ).toEqual(["Work"])
+  })
+
+  it("preserves concurrent account writes while persisting read migrations", async () => {
+    const legacyAccount = createAccount({
+      id: "legacy",
+      configVersion: 5,
+    })
+    const concurrentAccount = createAccount({
+      id: "concurrent",
+      site_name: "Concurrent Site",
+    })
+    let injectedConcurrentWrite = false
+    let accountStorageReadCount = 0
+
+    seedStorage([legacyAccount])
+    storageHooks.afterGet = async (key) => {
+      if (key !== ACCOUNT_STORAGE_KEYS.ACCOUNTS) return
+
+      accountStorageReadCount += 1
+      if (!injectedConcurrentWrite && accountStorageReadCount === 2) {
+        injectedConcurrentWrite = true
+        await accountStorage.addAccount(concurrentAccount)
+      }
+    }
+
+    try {
+      await accountStorage.getAllAccounts()
+
+      const persistedConfig = storageData.get(
+        ACCOUNT_STORAGE_KEYS.ACCOUNTS,
+      ) as AccountStorageConfig
+      expect(persistedConfig.accounts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ id: "legacy" }),
+          expect.objectContaining({ site_name: concurrentAccount.site_name }),
+        ]),
+      )
+      expect(
+        persistedConfig.accounts.find((account) => account.id === "legacy")
+          ?.configVersion,
+      ).toBe(6)
+    } finally {
+      storageHooks.afterGet = async () => {}
+    }
   })
 
   it("convertToDisplayData should normalize currency values", () => {
@@ -493,10 +541,6 @@ describe("accountStorage core behaviors", () => {
       "a-2", // duplicate
     ])
 
-    expect(await accountStorage.getOrderedList()).toEqual(["a-2", "a-1"])
-
-    // When accounts change, saveAccounts should drop invalid ordered ids
-    await (accountStorage as any).saveAccounts(accounts.slice(0, 2))
     expect(await accountStorage.getOrderedList()).toEqual(["a-2", "a-1"])
 
     // After deleting an account, ordered ids should be cleaned

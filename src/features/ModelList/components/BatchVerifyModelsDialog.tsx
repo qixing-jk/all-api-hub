@@ -644,9 +644,15 @@ export function BatchVerifyModelsDialog({
         const status = deriveBatchVerifyRowStatus(results)
         const errorCategory =
           status === BATCH_VERIFY_ROW_STATUSES.FAIL
-            ? resolveProductAnalyticsErrorCategoryFromProbeResult(
-                results.find((result) => result.status === "fail"),
-              )
+            ? results
+                .filter((result) => result.status === "fail")
+                .map((result) =>
+                  resolveProductAnalyticsErrorCategoryFromProbeResult(result),
+                )
+                .find(
+                  (category) =>
+                    category !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+                ) ?? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
             : undefined
         if (
           errorCategory &&

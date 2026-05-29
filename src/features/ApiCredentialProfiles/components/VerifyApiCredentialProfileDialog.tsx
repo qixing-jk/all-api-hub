@@ -30,6 +30,7 @@ import {
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -633,10 +634,18 @@ export function VerifyApiCredentialProfileDialog({
 
       const hasFailedProbe = failureCount > 0
       if (hasFailedProbe) {
+        const errorCategory = results
+          .filter((result) => result.status === "fail")
+          .map((result) =>
+            resolveProductAnalyticsErrorCategoryFromProbeResult(result),
+          )
+          .find(
+            (category) =>
+              category !== PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          )
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: resolveProductAnalyticsErrorCategoryFromProbeResult(
-            results.find((result) => result.status === "fail"),
-          ),
+          errorCategory:
+            errorCategory ?? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights,
         })
         return

@@ -699,6 +699,83 @@ describe("BatchVerifyModelsDialog", () => {
     })
   })
 
+  it("uses the first known failed probe category for batch analytics", async () => {
+    mockGetApiVerificationProbeDefinitions.mockReturnValue([
+      { id: "models", requiresModelId: false },
+      { id: "text-generation", requiresModelId: false },
+    ])
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([
+      {
+        id: 1,
+        name: "default-token",
+        key: "masked",
+        status: 1,
+        group: "default",
+        model_limits_enabled: false,
+        model_limits: "",
+        models: "",
+      },
+    ])
+    mockResolveDisplayAccountTokenForSecret.mockResolvedValueOnce({
+      id: 1,
+      name: "default-token",
+      key: "sk-real",
+      status: 1,
+      group: "default",
+      model_limits_enabled: false,
+      model_limits: "",
+      models: "",
+    })
+    mockRunApiVerificationProbe
+      .mockResolvedValueOnce({
+        id: "models",
+        status: "fail",
+        latencyMs: 12,
+        summary: "Unknown failure",
+      })
+      .mockResolvedValueOnce({
+        id: "text-generation",
+        status: "fail",
+        latencyMs: 13,
+        summary: "Unauthorized",
+        output: { inferredHttpStatus: 401 },
+      })
+
+    renderDialog([
+      {
+        key: "account:acc-1:model:gpt-4o",
+        modelId: "gpt-4o",
+        enableGroups: ["default"],
+        source: { kind: "account", account },
+      },
+    ])
+
+    fireEvent.click(
+      await screen.findByLabelText(
+        "aiApiVerification:verifyDialog.probes.models",
+      ),
+    )
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "modelList:batchVerify.actions.start",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteStartProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+          insights: {
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 1,
+          },
+        },
+      )
+    })
+  })
+
   it("maps structured thrown probe status to an auth batch analytics failure", async () => {
     mockFetchDisplayAccountTokens.mockResolvedValueOnce([
       {

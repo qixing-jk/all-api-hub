@@ -684,11 +684,13 @@ export function ApiCheckModalHost() {
       })
       return fallback
     } catch (error) {
-      const fallback: ApiVerificationProbeResult = {
+      const errorCategory = resolveProductAnalyticsErrorCategoryFromError(error)
+      const fallback: ApiCheckProbeResultWithAnalyticsCategory = {
         id: probeId,
         status: "fail",
         latencyMs: 0,
         summary: t("webAiApiCheck:modal.errors.runProbeFailed"),
+        analyticsErrorCategory: errorCategory,
         input: {
           apiType,
           baseUrl: trimmedBaseUrl,
@@ -706,7 +708,7 @@ export function ApiCheckModalHost() {
         ),
       )
       tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
+        errorCategory,
         insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
           mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
         }),
@@ -862,10 +864,10 @@ export function ApiCheckModalHost() {
           insights: buildApiCheckAnalyticsInsights(apiType, trigger),
         })
       }
-    } catch {
+    } catch (error) {
       toast.error(t("webAiApiCheck:modal.errors.saveToProfilesFailed"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
         insights: buildApiCheckAnalyticsInsights(apiType, trigger),
       })
     } finally {

@@ -390,7 +390,7 @@ describe("useAccountDialog analytics", () => {
     expectNoSensitiveAnalyticsFields()
   })
 
-  it("tracks duplicate-check errors during account auto-detect with a persist failure stage", async () => {
+  it("does not treat advisory duplicate-check errors as auto-detect failures", async () => {
     mockAutoDetectAccount.mockResolvedValueOnce({
       success: true,
       data: {
@@ -418,17 +418,10 @@ describe("useAccountDialog analytics", () => {
       await result.current.handlers.handleAutoDetect()
     })
 
-    expectStartedAction(PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect)
+    expect(mockAutoDetectAccount).toHaveBeenCalled()
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Failure,
-      {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        insights: {
-          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
-        },
-      },
+      PRODUCT_ANALYTICS_RESULTS.Success,
     )
-    expect(mockAutoDetectAccount).not.toHaveBeenCalled()
     expectNoSensitiveAnalyticsFields()
 
     storageGetSpy.mockRestore()

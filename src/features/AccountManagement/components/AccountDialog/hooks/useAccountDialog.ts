@@ -535,7 +535,19 @@ export function useAccountDialog({
       return true
     }
 
-    const accounts = await accountStorage.getAllAccountsOrThrow()
+    let accounts: Awaited<ReturnType<typeof accountStorage.getAllAccounts>>
+    try {
+      accounts = await accountStorage.getAllAccountsOrThrow()
+    } catch (error) {
+      logger.warn(
+        "Duplicate-account lookup failed; continuing without warning",
+        {
+          error,
+          siteUrl: normalizedBaseUrl,
+        },
+      )
+      return true
+    }
     const existingSiteAccounts = accounts.filter(
       (acc) =>
         normalizeSiteUrlForDuplicateCheck({
