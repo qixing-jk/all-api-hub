@@ -94,7 +94,7 @@ export function trackOptionalPermissionRequestResult(
 /**
  * Converts a browser permission boolean outcome into the shared analytics result enum.
  */
-export function getPermissionAnalyticsResult(success: boolean) {
+function getPermissionAnalyticsResult(success: boolean) {
   return success
     ? PRODUCT_ANALYTICS_RESULTS.Success
     : PRODUCT_ANALYTICS_RESULTS.Failure
@@ -103,7 +103,7 @@ export function getPermissionAnalyticsResult(success: boolean) {
 /**
  * Converts a permission request boolean into a user-facing permission outcome.
  */
-export function getPermissionRequestOutcome(success: boolean) {
+function getPermissionRequestOutcome(success: boolean) {
   return success
     ? PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.Granted
     : PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.Denied
