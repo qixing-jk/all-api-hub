@@ -30,6 +30,10 @@ vi.mock("react-i18next", async (importOriginal) => {
           "webAiApiCheck:confirmToast.body":
             "Do you want to open the AI API test Panel to check and test the AI API's availability?",
           "webAiApiCheck:confirmToast.open": "Open",
+          "webAiApiCheck:confirmToast.settings": "Settings",
+          "webAiApiCheck:confirmToast.feedback": "Report issue",
+          "webAiApiCheck:confirmToast.enhancedInfo":
+            "Triggered by enhanced auto-detect. If this looks wrong, report it or turn off enhanced auto-detect in settings.",
           "common:actions.cancel": "Cancel",
         }
         return map[key] ?? key
@@ -74,6 +78,49 @@ describe("ApiCheckConfirmToast", () => {
     expect(onAction).toHaveBeenNthCalledWith(1, "cancel")
     expect(onAction).toHaveBeenNthCalledWith(2, "confirm")
     expect(parentClick).not.toHaveBeenCalled()
+  })
+
+  it("does not show enhanced auto-detect info for standard matches", () => {
+    render(<ApiCheckConfirmToast onAction={vi.fn()} />)
+
+    expect(
+      screen.queryByText(
+        "Triggered by enhanced auto-detect. If this looks wrong, report it or turn off enhanced auto-detect in settings.",
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByRole("button", { name: "Report issue" }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("shows enhanced auto-detect info with feedback and settings shortcuts", async () => {
+    const user = userEvent.setup()
+    const onAction = vi.fn()
+
+    render(<ApiCheckConfirmToast onAction={onAction} usesEnhancedResult />)
+
+    expect(
+      screen.getByText(
+        "Triggered by enhanced auto-detect. If this looks wrong, report it or turn off enhanced auto-detect in settings.",
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: "Report issue" }))
+    await user.click(screen.getByRole("button", { name: "Settings" }))
+
+    expect(onAction).toHaveBeenNthCalledWith(1, "feedback")
+    expect(onAction).toHaveBeenNthCalledWith(2, "settings")
+  })
+
+  it("emits settings actions without closing the confirmation flow", async () => {
+    const user = userEvent.setup()
+    const onAction = vi.fn()
+
+    render(<ApiCheckConfirmToast onAction={onAction} usesEnhancedResult />)
+
+    await user.click(screen.getByRole("button", { name: "Settings" }))
+
+    expect(onAction).toHaveBeenCalledExactlyOnceWith("settings")
   })
 
   it("tracks fixed analytics metadata for confirmation actions", async () => {

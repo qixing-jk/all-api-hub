@@ -1,7 +1,10 @@
 {
   "confirmToast": {
     "body": "是否開啟 AI API 測試面板，以檢查並測試 AI API 可用性？",
+    "enhancedInfo": "此提示由增強自動檢測觸發。若判斷有誤，建議回報問題；也可在設定中關閉增強自動檢測。",
+    "feedback": "回報問題",
     "open": "開啟",
+    "settings": "開啟設定",
     "title": "檢測到有效 AI API 網址和API Key"
   },
   "messages": {
@@ -23,6 +26,9 @@
       "showKey": "顯示 Key",
       "test": "測試",
       "testing": "測試中…"
+    },
+    "candidates": {
+      "apiKey": "候選 Key {{index}}"
     },
     "errors": {
       "fetchModelsFailed": "獲取模型列表失敗。",
@@ -56,6 +62,10 @@
     "autoDetect": {
       "enable": "啟用自動檢測",
       "enableDesc": "啟用後，擴充套件可能從複製操作中識別憑據，並在開啟彈窗前請求確認。",
+      "enhanced": {
+        "enable": "啟用增強自動檢測",
+        "enableDesc": "識別裸網域、非標準金鑰格式，以及複製內容中夾雜非法字元的金鑰。增強命中會在彈窗中提示並可快速關閉。"
+      },
       "whitelist": {
         "invalidMore": "…以及更多",
         "invalidTitle": "無效規則",

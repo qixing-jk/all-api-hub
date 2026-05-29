@@ -1,3 +1,4 @@
+import { Info } from "lucide-react"
 import React from "react"
 import { useTranslation } from "react-i18next"
 
@@ -17,7 +18,11 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 
-export type ApiCheckConfirmToastAction = "confirm" | "cancel"
+export type ApiCheckConfirmToastAction =
+  | "confirm"
+  | "cancel"
+  | "settings"
+  | "feedback"
 
 /**
  * Top-right confirmation toast used by auto-detect.
@@ -27,7 +32,8 @@ export type ApiCheckConfirmToastAction = "confirm" | "cancel"
  */
 export const ApiCheckConfirmToast: React.FC<{
   onAction: (action: ApiCheckConfirmToastAction) => void
-}> = ({ onAction }) => {
+  usesEnhancedResult?: boolean
+}> = ({ onAction, usesEnhancedResult = false }) => {
   const { t } = useTranslation(["webAiApiCheck", "common"])
 
   return (
@@ -42,6 +48,36 @@ export const ApiCheckConfirmToast: React.FC<{
         </CardHeader>
         <CardContent padding="sm" className="space-y-3">
           <Body>{t("webAiApiCheck:confirmToast.body")}</Body>
+          {usesEnhancedResult ? (
+            <div className="bg-muted/50 text-muted-foreground flex items-start gap-2 rounded-md px-2 py-2 text-sm">
+              <Info className="mt-0.5 h-4 w-4 shrink-0" />
+              <div>
+                <span>{t("webAiApiCheck:confirmToast.enhancedInfo")}</span>
+                <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1">
+                  <button
+                    type="button"
+                    className="font-medium text-(--button-link-foreground) underline-offset-4 hover:text-(--button-link-hover-foreground) hover:underline focus-visible:ring-2 focus-visible:ring-(--button-link-ring) focus-visible:outline-none"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onAction("feedback")
+                    }}
+                  >
+                    {t("webAiApiCheck:confirmToast.feedback")}
+                  </button>
+                  <button
+                    type="button"
+                    className="font-medium text-(--button-link-foreground) underline-offset-4 hover:text-(--button-link-hover-foreground) hover:underline focus-visible:ring-2 focus-visible:ring-(--button-link-ring) focus-visible:outline-none"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onAction("settings")
+                    }}
+                  >
+                    {t("webAiApiCheck:confirmToast.settings")}
+                  </button>
+                </div>
+              </div>
+            </div>
+          ) : null}
           <div className="flex justify-end gap-2">
             <Button
               variant="secondary"

@@ -41,6 +41,7 @@ const mocks = vi.hoisted(() => ({
   handleTempWindowFetch: vi.fn(),
   handleTempWindowTurnstileFetch: vi.fn(),
   handleTempWindowGetRenderedTitle: vi.fn(),
+  openBugReportPage: vi.fn(),
 }))
 
 vi.mock("~/utils/browser/browserApi", () => ({
@@ -66,6 +67,7 @@ vi.mock("~/entrypoints/background/cookieInterceptor", () => ({
 
 vi.mock("~/utils/navigation", () => ({
   openOrFocusOptionsMenuItem: mocks.openOrFocusOptionsMenuItem,
+  openBugReportPage: mocks.openBugReportPage,
 }))
 
 vi.mock("~/entrypoints/background/tempWindowPool", () => ({
@@ -293,6 +295,13 @@ describe("setupRuntimeMessageListeners additional routing", () => {
         action: RuntimeActionIds.OpenSettingsApiCredentialProfiles,
         expectedArgs: [MENU_ITEM_IDS.API_CREDENTIAL_PROFILES],
       },
+      {
+        action: RuntimeActionIds.OpenSettingsWebAiApiCheck,
+        expectedArgs: [
+          MENU_ITEM_IDS.BASIC,
+          { tab: "webAiApiCheck", anchor: "web-ai-api-check" },
+        ],
+      },
     ]
 
     for (const item of openCalls) {
@@ -305,6 +314,21 @@ describe("setupRuntimeMessageListeners additional routing", () => {
         ...item.expectedArgs,
       )
     }
+  })
+
+  it("opens the bug report feedback destination for background-triggered navigation", async () => {
+    const listener = await loadListener()
+    const sendResponse = vi.fn()
+
+    const result = listener(
+      { action: RuntimeActionIds.OpenFeedbackBugReport },
+      {},
+      sendResponse,
+    )
+
+    expect(result).toBe(true)
+    expect(sendResponse).toHaveBeenCalledWith({ success: true })
+    expect(mocks.openBugReportPage).toHaveBeenCalledTimes(1)
   })
 
   it("routes release update actions to the dedicated handler", async () => {

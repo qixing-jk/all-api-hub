@@ -18,6 +18,7 @@ export const RuntimeActionPrefixes = {
   ChannelConfig: "channelConfig:",
   CookieInterceptor: "cookieInterceptor:",
   ExternalCheckIn: "externalCheckIn:",
+  Feedback: "feedback:",
   LdohSiteLookup: "ldohSiteLookup:",
   ModelSync: "modelSync:",
   OpenSettings: "openSettings:",
@@ -115,6 +116,14 @@ export const RuntimeActionIds = {
   OpenSettingsApiCredentialProfiles: composeRuntimeAction(
     RuntimeActionPrefixes.OpenSettings,
     "apiCredentialProfiles",
+  ),
+  OpenSettingsWebAiApiCheck: composeRuntimeAction(
+    RuntimeActionPrefixes.OpenSettings,
+    "webAiApiCheck",
+  ),
+  OpenFeedbackBugReport: composeRuntimeAction(
+    RuntimeActionPrefixes.Feedback,
+    "openBugReport",
   ),
 
   PreferencesUpdateActionClickBehavior: composeRuntimeAction(

@@ -1,7 +1,10 @@
 {
   "confirmToast": {
     "body": "Bạn có muốn mở bảng kiểm tra AI API để kiểm tra và dùng thử khả năng khả dụng của AI API không?",
+    "enhancedInfo": "Thông báo này được kích hoạt bởi tự động phát hiện nâng cao. Nếu kết quả sai, hãy báo lỗi hoặc tắt tự động phát hiện nâng cao trong cài đặt.",
+    "feedback": "Báo lỗi",
     "open": "Mở",
+    "settings": "Mở cài đặt",
     "title": "Đã phát hiện URL AI API và API Key hợp lệ"
   },
   "messages": {
@@ -23,6 +26,9 @@
       "showKey": "Hiện Key",
       "test": "Kiểm tra",
       "testing": "Đang kiểm tra..."
+    },
+    "candidates": {
+      "apiKey": "Key ứng viên {{index}}"
     },
     "errors": {
       "fetchModelsFailed": "Lấy danh sách mô hình thất bại.",
@@ -56,6 +62,10 @@
     "autoDetect": {
       "enable": "Bật tự động phát hiện",
       "enableDesc": "Sau khi bật, tiện ích có thể nhận diện thông tin xác thực từ thao tác sao chép và yêu cầu xác nhận trước khi mở cửa sổ bật lên.",
+      "enhanced": {
+        "enable": "Bật tự động phát hiện nâng cao",
+        "enableDesc": "Nhận diện miền trần, định dạng khóa không chuẩn và khóa lẫn ký tự không hợp lệ trong nội dung đã sao chép. Kết quả nâng cao sẽ hiển thị nhắc nhở trong cửa sổ bật lên và có thể tắt nhanh."
+      },
       "whitelist": {
         "invalidMore": "...và nhiều hơn nữa",
         "invalidTitle": "Quy tắc không hợp lệ",

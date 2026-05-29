@@ -77,6 +77,10 @@ type ApiCheckProbeResultWithAnalyticsCategory = ApiVerificationProbeResult & {
   analyticsErrorCategory?: ProductAnalyticsErrorCategory
 }
 
+type ApiCheckExtractionMetadata = NonNullable<
+  ApiCheckOpenModalDetail["extraction"]
+>
+
 // Preserve the real debounce in dev/prod to avoid bursty background requests
 // while typing, but skip the wall-clock delay in Vitest.
 const MODEL_AUTO_FETCH_DEBOUNCE_MS = import.meta.env.MODE === "test" ? 0 : 300
@@ -175,6 +179,8 @@ export function ApiCheckModalHost() {
   const [sourceText, setSourceText] = useState("")
   const [baseUrl, setBaseUrl] = useState("")
   const [apiKey, setApiKey] = useState("")
+  const [extractionMetadata, setExtractionMetadata] =
+    useState<ApiCheckOpenModalDetail["extraction"]>(undefined)
   const [apiKeyVisible, setApiKeyVisible] = useState(false)
   const [apiType, setApiType] = useState<ApiVerificationApiType>(
     API_TYPES.OPENAI_COMPATIBLE,
@@ -195,6 +201,7 @@ export function ApiCheckModalHost() {
   const lastAutoFetchKeyRef = useRef<string | null>(null)
   const fetchModelsRequestIdRef = useRef(0)
   const hasSignaledHostReadyRef = useRef(false)
+  const skipNextSourceTextExtractionRef = useRef<string | null>(null)
   const dialogRef = useRef<HTMLDivElement | null>(null)
   const backdropRef = useRef<HTMLDivElement | null>(null)
   const scrollContainerRef = useRef<HTMLDivElement | null>(null)
@@ -329,11 +336,21 @@ export function ApiCheckModalHost() {
       setPageUrl(detail.pageUrl || window.location.href)
 
       const nextSourceText = (detail.sourceText ?? "").toString()
+      skipNextSourceTextExtractionRef.current = nextSourceText
       setSourceText(nextSourceText)
 
       const extracted = extractApiCheckCredentialsFromText(nextSourceText)
-      setBaseUrl(extracted.baseUrl ?? "")
-      setApiKey(extracted.apiKey ?? "")
+      const extraction = detail.extraction ?? {
+        candidates: extracted.candidates,
+        summary: extracted.summary,
+      }
+      const nextBaseUrl =
+        extraction.candidates.baseUrls[0]?.value ?? extracted.baseUrl ?? ""
+      const nextApiKey =
+        extraction.candidates.apiKeys[0]?.value ?? extracted.apiKey ?? ""
+      setExtractionMetadata(extraction)
+      setBaseUrl(nextBaseUrl)
+      setApiKey(nextApiKey)
 
       setApiKeyVisible(false)
       setModelId("")
@@ -348,7 +365,7 @@ export function ApiCheckModalHost() {
         ...contentApiCheckAnalyticsScope,
         actionId: PRODUCT_ANALYTICS_ACTION_IDS.ShowApiCredentialCheckModal,
       })
-      const hasUsableCredentials = !!extracted.baseUrl && !!extracted.apiKey
+      const hasUsableCredentials = !!nextBaseUrl && !!nextApiKey
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         insights: {
           sourceKind: getApiCheckSourceKind(detail.trigger),
@@ -389,6 +406,7 @@ export function ApiCheckModalHost() {
       reason,
     })
     lastAutoFetchKeyRef.current = null
+    setExtractionMetadata(undefined)
     setIsOpen(false)
   }
 
@@ -396,10 +414,68 @@ export function ApiCheckModalHost() {
   // a manual "Re-extract" action after editing/pasting into the textarea.
   useEffect(() => {
     if (!isOpen) return
+    if (skipNextSourceTextExtractionRef.current === sourceText) {
+      skipNextSourceTextExtractionRef.current = null
+      return
+    }
     const extracted = extractApiCheckCredentialsFromText(sourceText)
+    setExtractionMetadata({
+      candidates: extracted.candidates,
+      summary: extracted.summary,
+    })
     if (extracted.baseUrl) setBaseUrl(extracted.baseUrl)
     if (extracted.apiKey) setApiKey(extracted.apiKey)
   }, [isOpen, sourceText])
+
+  const renderCandidateButtons = (
+    kind: "baseUrl" | "apiKey",
+    candidates: ApiCheckExtractionMetadata["candidates"]["baseUrls"],
+    currentValue: string,
+    onSelect: (value: string) => void,
+  ) => {
+    if (candidates.length <= 1) return null
+
+    return (
+      <div className="mt-1 flex flex-wrap gap-1">
+        {candidates.slice(0, 4).map((candidate, index) => {
+          const apiKeyCandidateLabel = t(
+            "webAiApiCheck:modal.candidates.apiKey",
+            {
+              index: index + 1,
+            },
+          )
+          const label =
+            kind === "apiKey"
+              ? apiKeyCandidateLabel === "webAiApiCheck:modal.candidates.apiKey"
+                ? `${apiKeyCandidateLabel} ${index + 1}`
+                : apiKeyCandidateLabel
+              : candidate.value
+
+          return (
+            <button
+              key={`${kind}-${candidate.value}`}
+              type="button"
+              data-testid={`${
+                kind === "apiKey"
+                  ? WEB_AI_API_CHECK_TEST_IDS.apiKeyCandidatePrefix
+                  : WEB_AI_API_CHECK_TEST_IDS.baseUrlCandidatePrefix
+              }-${index}`}
+              className={cn(
+                "max-w-full truncate rounded-md border px-2 py-1 text-xs sm:max-w-64",
+                currentValue === candidate.value
+                  ? "border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-200"
+                  : "border-border text-muted-foreground hover:bg-muted",
+              )}
+              title={kind === "baseUrl" ? candidate.value : undefined}
+              onClick={() => onSelect(candidate.value)}
+            >
+              {label}
+            </button>
+          )
+        })}
+      </div>
+    )
+  }
 
   const fetchModels = useCallback(
     async (origin: "auto" | "manual") => {
@@ -964,6 +1040,12 @@ export function ApiCheckModalHost() {
                     onChange={(e) => setBaseUrl(e.target.value)}
                     placeholder="https://example.com/api"
                   />
+                  {renderCandidateButtons(
+                    "baseUrl",
+                    extractionMetadata?.candidates.baseUrls ?? [],
+                    baseUrl,
+                    setBaseUrl,
+                  )}
                 </div>
 
                 <div className="space-y-1.5">
@@ -983,6 +1065,12 @@ export function ApiCheckModalHost() {
                     onChange={(e) => setApiKey(e.target.value)}
                     placeholder="sk-..."
                   />
+                  {renderCandidateButtons(
+                    "apiKey",
+                    extractionMetadata?.candidates.apiKeys ?? [],
+                    apiKey,
+                    setApiKey,
+                  )}
                 </div>
 
                 <div className="space-y-1.5">

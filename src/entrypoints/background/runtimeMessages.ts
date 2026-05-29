@@ -30,7 +30,10 @@ import {
 import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
+import {
+  openBugReportPage,
+  openOrFocusOptionsMenuItem,
+} from "~/utils/navigation"
 
 import { setupContextMenus } from "./contextMenus"
 import { trackCookieInterceptorUrl } from "./cookieInterceptor"
@@ -226,6 +229,21 @@ export function setupRuntimeMessageListeners() {
         request.action === RuntimeActionIds.OpenSettingsApiCredentialProfiles
       ) {
         openOrFocusOptionsMenuItem(MENU_ITEM_IDS.API_CREDENTIAL_PROFILES)
+        sendResponse({ success: true })
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.OpenSettingsWebAiApiCheck) {
+        openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC, {
+          tab: "webAiApiCheck",
+          anchor: "web-ai-api-check",
+        })
+        sendResponse({ success: true })
+        return true
+      }
+
+      if (request.action === RuntimeActionIds.OpenFeedbackBugReport) {
+        void openBugReportPage()
         sendResponse({ success: true })
         return true
       }

@@ -6,7 +6,6 @@ import {
   within,
 } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
-import type { ReactNode } from "react"
 import toast from "react-hot-toast/headless"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
@@ -35,11 +34,15 @@ import {
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { render } from "~~/tests/test-utils/render"
 
-const { startProductAnalyticsActionMock, completeProductAnalyticsActionMock } =
-  vi.hoisted(() => ({
-    startProductAnalyticsActionMock: vi.fn(),
-    completeProductAnalyticsActionMock: vi.fn(),
-  }))
+const {
+  startProductAnalyticsActionMock,
+  completeProductAnalyticsActionMock,
+  updateWebAiApiCheckMock,
+} = vi.hoisted(() => ({
+  startProductAnalyticsActionMock: vi.fn(),
+  completeProductAnalyticsActionMock: vi.fn(),
+  updateWebAiApiCheckMock: vi.fn(),
+}))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
   resolveProductAnalyticsErrorCategoryFromError: (error: unknown) =>
@@ -51,17 +54,17 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: startProductAnalyticsActionMock,
 }))
 
-vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
+vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/contexts/UserPreferencesContext")>()
+    await importOriginal<
+      typeof import("~/services/preferences/userPreferences")
+    >()
   return {
     ...actual,
-    UserPreferencesProvider: ({ children }: { children: ReactNode }) =>
-      children,
-    useUserPreferencesContext: () => ({
-      themeMode: "system",
-      updateThemeMode: vi.fn().mockResolvedValue(true),
-    }),
+    userPreferences: {
+      ...actual.userPreferences,
+      updateWebAiApiCheck: updateWebAiApiCheckMock,
+    },
   }
 })
 
@@ -105,6 +108,8 @@ describe("ApiCheckModalHost", () => {
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
+    updateWebAiApiCheckMock.mockReset()
+    updateWebAiApiCheckMock.mockResolvedValue(true)
     vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
       if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
         return { success: true, modelIds: [] }
@@ -113,7 +118,11 @@ describe("ApiCheckModalHost", () => {
     })
   })
 
-  const renderSubject = () => render(<ApiCheckModalHost />)
+  const renderSubject = () =>
+    render(<ApiCheckModalHost />, {
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
 
   const openModal = async (
     detailOverrides?: Partial<ApiCheckOpenModalDetail>,
@@ -159,7 +168,7 @@ describe("ApiCheckModalHost", () => {
 
   it("tracks modal open with safe credential presence insights", async () => {
     const sourceText =
-      "Base URL: https://proxy.example.com/api\nAPI Key: sk-open-secret"
+      "Base URL: https://proxy.example.com/api\nAPI Key: sk-test-open-fixture"
     const pageUrl = "https://console.example.com/settings?token=secret"
 
     await openModal({
@@ -191,7 +200,7 @@ describe("ApiCheckModalHost", () => {
     })
     expectAnalyticsCallsToExcludeSensitiveValues([
       sourceText,
-      "sk-open-secret",
+      "sk-test-open-fixture",
       "https://proxy.example.com/api",
       pageUrl,
     ])
@@ -376,7 +385,7 @@ describe("ApiCheckModalHost", () => {
   it("tracks auto-detected dismiss analytics as auto source without credential details", async () => {
     const user = userEvent.setup()
     const sourceText =
-      "Base URL: https://proxy.example.com/api\nAPI Key: sk-auto-secret"
+      "Base URL: https://proxy.example.com/api\nAPI Key: sk-test-auto-fixture"
     const pageUrl = "https://console.example.com/settings?token=secret"
 
     await openModal({
@@ -406,7 +415,7 @@ describe("ApiCheckModalHost", () => {
 
     expectAnalyticsCallsToExcludeSensitiveValues([
       sourceText,
-      "sk-auto-secret",
+      "sk-test-auto-fixture",
       "https://proxy.example.com/api",
       pageUrl,
     ])
@@ -422,7 +431,7 @@ describe("ApiCheckModalHost", () => {
 
     await user.click(textarea)
     await user.paste(
-      "Base URL: https://proxy.example.com/api/v1\nAPI Key: sk-abcdef1234567890",
+      "Base URL: https://proxy.example.com/api/v1\nAPI Key: sk-test-modal-input-fixture-12345",
     )
 
     const baseUrlInput = screen.getByPlaceholderText(
@@ -434,7 +443,378 @@ describe("ApiCheckModalHost", () => {
 
     await waitFor(() => {
       expect(baseUrlInput.value).toBe("https://proxy.example.com/api")
-      expect(apiKeyInput.value).toBe("sk-abcdef1234567890")
+      expect(apiKeyInput.value).toBe("sk-test-modal-input-fixture-12345")
+    })
+  })
+
+  it("prefills cleaned enhanced values without showing an enhanced disclosure", async () => {
+    const cleanedKey = "sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1"
+
+    await openModal({
+      sourceText:
+        "proxy.example.com/api/v1/chat/completions\nsk-testAa1Bb2Cc3Dd4Ee5Ff6Gg【删除这里]7Hh8Ii9Jj0Kk1",
+      trigger: "autoDetect",
+      extraction: {
+        candidates: {
+          baseUrls: [
+            {
+              value: "https://proxy.example.com/api",
+              kind: "baseUrl",
+              confidence: "enhancedHigh",
+              reasons: ["bareDomain", "schemeAdded", "pathNormalized"],
+              autoPromptEligible: true,
+            },
+          ],
+          apiKeys: [
+            {
+              value: cleanedKey,
+              kind: "apiKey",
+              confidence: "standard",
+              reasons: ["knownPrefix", "illegalCharsRemoved"],
+              cleanupApplied: true,
+              autoPromptEligible: true,
+            },
+          ],
+        },
+        summary: {
+          hasEnhancedBaseUrl: true,
+          hasEnhancedApiKey: false,
+          hasCleanup: true,
+          usesEnhancedResult: true,
+          autoPromptEligible: false,
+          enhancedAutoPromptEligible: true,
+        },
+      },
+    } as any)
+
+    await screen.findByTestId(WEB_AI_API_CHECK_TEST_IDS.modal)
+    expect(
+      screen.queryByText("webAiApiCheck:modal.enhanced.title"),
+    ).not.toBeInTheDocument()
+
+    const apiKeyInput = screen.getByPlaceholderText(
+      "sk-...",
+    ) as HTMLInputElement
+    expect(apiKeyInput.value).toBe(cleanedKey)
+    expectAnalyticsCallsToExcludeSensitiveValues([cleanedKey])
+  })
+
+  it("allows selecting alternate extracted candidates", async () => {
+    const user = userEvent.setup()
+
+    await openModal({
+      sourceText: "manual source",
+      extraction: {
+        candidates: {
+          baseUrls: [
+            {
+              value: "https://first.example.com/api",
+              kind: "baseUrl",
+              confidence: "standard",
+              reasons: ["labeled"],
+              autoPromptEligible: true,
+            },
+            {
+              value: "https://second.example.com/api",
+              kind: "baseUrl",
+              confidence: "enhancedHigh",
+              reasons: ["bareDomain", "schemeAdded"],
+              autoPromptEligible: true,
+            },
+          ],
+          apiKeys: [
+            {
+              value: "sk-test-first-candidate-fixture",
+              kind: "apiKey",
+              confidence: "standard",
+              reasons: ["knownPrefix"],
+              autoPromptEligible: true,
+            },
+            {
+              value: "test-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1",
+              kind: "apiKey",
+              confidence: "enhancedHigh",
+              reasons: ["unknownShortPrefix"],
+              autoPromptEligible: true,
+            },
+          ],
+        },
+        summary: {
+          hasEnhancedBaseUrl: true,
+          hasEnhancedApiKey: true,
+          hasCleanup: false,
+          usesEnhancedResult: false,
+          autoPromptEligible: true,
+          enhancedAutoPromptEligible: true,
+        },
+      },
+    } as any)
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "https://second.example.com/api",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.candidates.apiKey 2",
+      }),
+    )
+
+    expect(
+      (
+        screen.getByPlaceholderText(
+          "https://example.com/api",
+        ) as HTMLInputElement
+      ).value,
+    ).toBe("https://second.example.com/api")
+    expect(
+      (screen.getByPlaceholderText("sk-...") as HTMLInputElement).value,
+    ).toBe("test-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
+  })
+
+  it("does not expose raw API key candidate values in button attributes", async () => {
+    const rawApiKey = "test-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1"
+    const longBaseUrl =
+      "https://very-long-subdomain.example.com/api/compatible/v1"
+
+    await openModal({
+      sourceText: "manual source",
+      extraction: {
+        candidates: {
+          baseUrls: [
+            {
+              value: "https://first.example.com/api",
+              kind: "baseUrl",
+              confidence: "standard",
+              reasons: ["labeled"],
+              autoPromptEligible: true,
+            },
+            {
+              value: longBaseUrl,
+              kind: "baseUrl",
+              confidence: "enhancedHigh",
+              reasons: ["bareDomain", "schemeAdded"],
+              autoPromptEligible: true,
+            },
+          ],
+          apiKeys: [
+            {
+              value: "sk-test-first-candidate-fixture",
+              kind: "apiKey",
+              confidence: "standard",
+              reasons: ["knownPrefix"],
+              autoPromptEligible: true,
+            },
+            {
+              value: rawApiKey,
+              kind: "apiKey",
+              confidence: "enhancedHigh",
+              reasons: ["unknownShortPrefix"],
+              autoPromptEligible: true,
+            },
+          ],
+        },
+        summary: {
+          hasEnhancedBaseUrl: true,
+          hasEnhancedApiKey: true,
+          hasCleanup: false,
+          usesEnhancedResult: false,
+          autoPromptEligible: true,
+          enhancedAutoPromptEligible: true,
+        },
+      },
+    } as any)
+
+    const apiKeyCandidate = await screen.findByRole("button", {
+      name: "webAiApiCheck:modal.candidates.apiKey 2",
+    })
+    const baseUrlCandidate = screen.getByRole("button", {
+      name: longBaseUrl,
+    })
+
+    expect(apiKeyCandidate).not.toHaveTextContent(rawApiKey)
+    expect(apiKeyCandidate).toHaveAccessibleName(
+      "webAiApiCheck:modal.candidates.apiKey 2",
+    )
+    expect(apiKeyCandidate).not.toHaveAttribute("title", rawApiKey)
+    expect(apiKeyCandidate.getAttribute("data-testid")).not.toContain(rawApiKey)
+    expect(baseUrlCandidate).toHaveAttribute("title", longBaseUrl)
+  })
+
+  it("does not show enhanced disclosure for unselected enhanced alternates", async () => {
+    await openModal({
+      sourceText: "manual source",
+      extraction: {
+        candidates: {
+          baseUrls: [
+            {
+              value: "https://standard.example.com/api",
+              kind: "baseUrl",
+              confidence: "standard",
+              reasons: ["labeled"],
+              autoPromptEligible: true,
+            },
+            {
+              value: "https://enhanced.example.com/api",
+              kind: "baseUrl",
+              confidence: "enhancedHigh",
+              reasons: ["bareDomain", "schemeAdded"],
+              autoPromptEligible: true,
+            },
+          ],
+          apiKeys: [
+            {
+              value: "sk-test-standard-fixture",
+              kind: "apiKey",
+              confidence: "standard",
+              reasons: ["knownPrefix"],
+              autoPromptEligible: true,
+            },
+            {
+              value: "test-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1",
+              kind: "apiKey",
+              confidence: "enhancedHigh",
+              reasons: ["unknownShortPrefix"],
+              autoPromptEligible: true,
+            },
+          ],
+        },
+        summary: {
+          hasEnhancedBaseUrl: true,
+          hasEnhancedApiKey: true,
+          hasCleanup: false,
+          usesEnhancedResult: false,
+          autoPromptEligible: true,
+          enhancedAutoPromptEligible: true,
+        },
+      },
+    } as any)
+
+    await screen.findByTestId(WEB_AI_API_CHECK_TEST_IDS.modal)
+
+    expect(
+      screen.queryByText("webAiApiCheck:modal.enhanced.title"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps enhanced disclosure hidden when selecting enhanced alternates", async () => {
+    const user = userEvent.setup()
+
+    await openModal({
+      sourceText: "manual source",
+      extraction: {
+        candidates: {
+          baseUrls: [
+            {
+              value: "https://standard.example.com/api",
+              kind: "baseUrl",
+              confidence: "standard",
+              reasons: ["labeled"],
+              autoPromptEligible: true,
+            },
+            {
+              value: "https://enhanced.example.com/api",
+              kind: "baseUrl",
+              confidence: "enhancedHigh",
+              reasons: ["bareDomain", "schemeAdded"],
+              autoPromptEligible: true,
+            },
+          ],
+          apiKeys: [
+            {
+              value: "sk-test-standard-fixture",
+              kind: "apiKey",
+              confidence: "standard",
+              reasons: ["knownPrefix"],
+              autoPromptEligible: true,
+            },
+            {
+              value: "test-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1",
+              kind: "apiKey",
+              confidence: "enhancedHigh",
+              reasons: ["unknownShortPrefix"],
+              autoPromptEligible: true,
+            },
+          ],
+        },
+        summary: {
+          hasEnhancedBaseUrl: true,
+          hasEnhancedApiKey: true,
+          hasCleanup: false,
+          usesEnhancedResult: false,
+          autoPromptEligible: true,
+          enhancedAutoPromptEligible: true,
+        },
+      },
+    } as any)
+
+    expect(
+      screen.queryByText("webAiApiCheck:modal.enhanced.title"),
+    ).not.toBeInTheDocument()
+
+    await user.click(
+      await screen.findByRole("button", {
+        name: "https://enhanced.example.com/api",
+      }),
+    )
+    await user.click(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.candidates.apiKey 2",
+      }),
+    )
+
+    expect(
+      screen.queryByText("webAiApiCheck:modal.enhanced.title"),
+    ).not.toBeInTheDocument()
+  })
+
+  it("tracks modal open readiness from extraction metadata selected values", async () => {
+    await openModal({
+      sourceText: "metadata only",
+      trigger: "autoDetect",
+      extraction: {
+        candidates: {
+          baseUrls: [
+            {
+              value: "https://metadata.example.com/api",
+              kind: "baseUrl",
+              confidence: "enhancedHigh",
+              reasons: ["bareDomain", "schemeAdded"],
+              autoPromptEligible: true,
+            },
+          ],
+          apiKeys: [
+            {
+              value: "test-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1",
+              kind: "apiKey",
+              confidence: "enhancedHigh",
+              reasons: ["unknownShortPrefix"],
+              autoPromptEligible: true,
+            },
+          ],
+        },
+        summary: {
+          hasEnhancedBaseUrl: true,
+          hasEnhancedApiKey: true,
+          hasCleanup: false,
+          usesEnhancedResult: true,
+          autoPromptEligible: false,
+          enhancedAutoPromptEligible: true,
+        },
+      },
+    } as any)
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        expect.objectContaining({
+          insights: expect.objectContaining({
+            readyCount: 1,
+            blockedCount: 0,
+          }),
+        }),
+      )
     })
   })
 
@@ -457,14 +837,14 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-abcdef1234567890")
+    await user.paste("sk-test-modal-save-fixture-12345")
 
     await waitFor(() => {
       expect(sendRuntimeMessage).toHaveBeenCalledWith({
         action: RuntimeActionIds.ApiCheckFetchModels,
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api",
-        apiKey: "sk-abcdef1234567890",
+        apiKey: "sk-test-modal-save-fixture-12345",
       })
     })
 
@@ -486,7 +866,7 @@ describe("ApiCheckModalHost", () => {
 
   it("tracks automatic model fetch completion with safe api type and model-count insights", async () => {
     const sourceText =
-      "Base URL: https://proxy.example.com/api\nAPI Key: sk-auto-model-secret"
+      "Base URL: https://proxy.example.com/api\nAPI Key: sk-test-auto-model-fixture"
     const pageUrl = "https://console.example.com/settings?token=secret"
     const modelId = "gpt-4o-sensitive"
 
@@ -523,7 +903,7 @@ describe("ApiCheckModalHost", () => {
     })
     expectAnalyticsCallsToExcludeSensitiveValues([
       sourceText,
-      "sk-auto-model-secret",
+      "sk-test-auto-model-fixture",
       "https://proxy.example.com/api",
       pageUrl,
       modelId,
@@ -545,7 +925,10 @@ describe("ApiCheckModalHost", () => {
       await screen.findByPlaceholderText("https://example.com/api"),
       "https://proxy.example.com/api",
     )
-    await user.type(await screen.findByPlaceholderText("sk-..."), "sk-secret")
+    await user.type(
+      await screen.findByPlaceholderText("sk-..."),
+      "sk-test-secret-fixture",
+    )
 
     await user.click(
       screen.getByRole("button", {
@@ -577,7 +960,7 @@ describe("ApiCheckModalHost", () => {
     const user = userEvent.setup()
     const detail: ApiCheckOpenModalDetail = {
       sourceText:
-        "Base URL: https://proxy.example.com/api\nAPI Key: sk-secret-xyz",
+        "Base URL: https://proxy.example.com/api\nAPI Key: sk-test-secret-fixture",
       pageUrl: "https://example.com",
       trigger: "contextMenu",
     }
@@ -589,7 +972,7 @@ describe("ApiCheckModalHost", () => {
         action: RuntimeActionIds.ApiCheckFetchModels,
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
       })
     })
     expect(sendRuntimeMessage).toHaveBeenCalledTimes(1)
@@ -655,7 +1038,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     await waitFor(() => {
       expect(
@@ -684,7 +1067,7 @@ describe("ApiCheckModalHost", () => {
         action: RuntimeActionIds.ApiCheckFetchModels,
         apiType: "anthropic",
         baseUrl: "https://proxy.example.com/api",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
       })
     })
 
@@ -728,7 +1111,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -794,7 +1177,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -819,10 +1202,10 @@ describe("ApiCheckModalHost", () => {
   it("tracks successful individual probe with fixed source/mode and no credential details", async () => {
     const user = userEvent.setup()
     const sourceText =
-      "Base URL: https://proxy.example.com/api\nAPI Key: sk-secret-xyz"
+      "Base URL: https://proxy.example.com/api\nAPI Key: sk-test-secret-fixture"
     const pageUrl = "https://console.example.com/settings?token=secret"
     const baseUrl = "https://proxy.example.com/api"
-    const apiKey = "sk-secret-xyz"
+    const apiKey = "sk-test-secret-fixture"
     const modelId = "gpt-4o-sensitive"
 
     vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
@@ -930,7 +1313,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -988,7 +1371,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -1031,7 +1414,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     await user.click(
       await screen.findByText("webAiApiCheck:modal.actions.test"),
@@ -1091,14 +1474,14 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     await waitFor(() => {
       expect(sendRuntimeMessage).toHaveBeenCalledWith({
         action: RuntimeActionIds.ApiCheckFetchModels,
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
       })
     })
 
@@ -1117,7 +1500,7 @@ describe("ApiCheckModalHost", () => {
         action: RuntimeActionIds.ApiCheckSaveProfile,
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
         pageUrl: "https://example.com",
       })
     })
@@ -1171,7 +1554,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     const saveButton = await screen.findByRole("button", {
       name: "webAiApiCheck:modal.actions.saveToProfiles",
@@ -1240,7 +1623,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     const saveButton = await screen.findByRole("button", {
       name: "webAiApiCheck:modal.actions.saveToProfiles",
@@ -1302,7 +1685,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     const saveButton = await screen.findByRole("button", {
       name: "webAiApiCheck:modal.actions.saveToProfiles",
@@ -1375,7 +1758,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     const saveButton = await screen.findByRole("button", {
       name: "webAiApiCheck:modal.actions.saveToProfiles",
@@ -1416,7 +1799,7 @@ describe("ApiCheckModalHost", () => {
         action: RuntimeActionIds.ApiCheckSaveProfile,
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api",
-        apiKey: "sk-secret-xyz",
+        apiKey: "sk-test-secret-fixture",
         pageUrl: "https://example.com",
       })
     })
@@ -1444,7 +1827,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -1540,7 +1923,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     expect(
       await screen.findByText("webAiApiCheck:modal.errors.fetchModelsFailed"),
@@ -1570,7 +1953,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     await waitFor(() => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
@@ -1609,7 +1992,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     const saveButton = await screen.findByRole("button", {
       name: "webAiApiCheck:modal.actions.saveToProfiles",
@@ -1666,7 +2049,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     const probeCard = await screen.findByTestId(
       getWebAiApiCheckProbeTestId("text-generation"),
@@ -1718,7 +2101,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(baseUrlInput)
     await user.paste("https://proxy.example.com/api")
     await user.click(apiKeyInput)
-    await user.paste("sk-secret-xyz")
+    await user.paste("sk-test-secret-fixture")
 
     await waitFor(() => {
       expect(

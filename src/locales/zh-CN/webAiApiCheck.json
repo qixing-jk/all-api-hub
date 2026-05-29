@@ -1,7 +1,10 @@
 {
   "confirmToast": {
     "body": "是否打开 AI API 测试面板，以检查并测试 AI API 可用性？",
+    "enhancedInfo": "此提示由增强自动检测触发。若判断有误，建议反馈问题；也可在设置中关闭增强自动检测。",
+    "feedback": "反馈问题",
     "open": "打开",
+    "settings": "打开设置",
     "title": "检测到有效 AI API 网址和API Key"
   },
   "messages": {
@@ -23,6 +26,9 @@
       "showKey": "显示 Key",
       "test": "测试",
       "testing": "测试中…"
+    },
+    "candidates": {
+      "apiKey": "候选 Key {{index}}"
     },
     "errors": {
       "fetchModelsFailed": "获取模型列表失败。",
@@ -56,6 +62,10 @@
     "autoDetect": {
       "enable": "启用自动检测",
       "enableDesc": "启用后，扩展可能从复制操作中识别凭据，并在打开弹窗前请求确认。",
+      "enhanced": {
+        "enable": "启用增强自动检测",
+        "enableDesc": "识别裸域名、非标准密钥格式，以及复制内容中夹杂非法字符的密钥。增强命中会在弹窗中提示并可快速关闭。"
+      },
       "whitelist": {
         "invalidMore": "…以及更多",
         "invalidTitle": "无效规则",

@@ -1,6 +1,11 @@
 import toast from "react-hot-toast/headless"
 
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ensureRedemptionToastUi } from "~/entrypoints/content/shared/uiRoot"
+import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { createLogger } from "~/utils/core/logger"
+
+const logger = createLogger("ApiCheckToasts")
 
 let apiCheckToastModulesPromise: Promise<{
   createElement: typeof import("react").createElement
@@ -30,7 +35,9 @@ async function loadApiCheckToastModules() {
  * Show the top-right confirmation toast used by auto-detect.
  * @returns Resolves `true` when confirmed, `false` when cancelled/dismissed.
  */
-export async function showApiCheckConfirmToast(): Promise<boolean> {
+export async function showApiCheckConfirmToast(options?: {
+  usesEnhancedResult?: boolean
+}): Promise<boolean> {
   await ensureRedemptionToastUi()
   const { createElement, ApiCheckConfirmToast } =
     await loadApiCheckToastModules()
@@ -48,7 +55,32 @@ export async function showApiCheckConfirmToast(): Promise<boolean> {
     toast.custom(
       (toastInstance) =>
         createElement(ApiCheckConfirmToast, {
-          onAction: (action) => finish(action === "confirm", toastInstance.id),
+          onAction: (action) => {
+            if (action === "settings") {
+              void sendRuntimeMessage({
+                action: RuntimeActionIds.OpenSettingsWebAiApiCheck,
+              }).catch((error) => {
+                logger.error(
+                  "Failed to open Web AI API Check settings page",
+                  error,
+                )
+              })
+              return
+            }
+            if (action === "feedback") {
+              void sendRuntimeMessage({
+                action: RuntimeActionIds.OpenFeedbackBugReport,
+              }).catch((error) => {
+                logger.error(
+                  "Failed to open Web AI API Check feedback page",
+                  error,
+                )
+              })
+              return
+            }
+            finish(action === "confirm", toastInstance.id)
+          },
+          usesEnhancedResult: !!options?.usesEnhancedResult,
         }),
       {
         duration: Infinity,

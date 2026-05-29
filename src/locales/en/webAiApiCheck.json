@@ -1,7 +1,10 @@
 {
   "confirmToast": {
     "body": "Do you want to open the AI API test Panel to check and test the AI API's availability?",
+    "enhancedInfo": "Triggered by enhanced auto-detect. If this looks wrong, report it or turn off enhanced auto-detect in settings.",
+    "feedback": "Report issue",
     "open": "Open",
+    "settings": "Open settings",
     "title": "AI API URL and API Key Detected"
   },
   "messages": {
@@ -23,6 +26,9 @@
       "showKey": "Show key",
       "test": "Test",
       "testing": "Testing…"
+    },
+    "candidates": {
+      "apiKey": "Candidate key {{index}}"
     },
     "errors": {
       "fetchModelsFailed": "Failed to fetch models.",
@@ -56,6 +62,10 @@
     "autoDetect": {
       "enable": "Enable auto-detect",
       "enableDesc": "When enabled, the extension may detect credentials from copy actions and will ask for confirmation before opening the modal.",
+      "enhanced": {
+        "enable": "Enable enhanced auto-detect",
+        "enableDesc": "Recognize bare domains, non-standard key formats, and keys mixed with invalid characters in copied content. Enhanced matches show a prompt in the modal and can be quickly turned off."
+      },
       "whitelist": {
         "invalidMore": "…and more",
         "invalidTitle": "Invalid patterns",

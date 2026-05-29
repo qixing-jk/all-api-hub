@@ -1,7 +1,10 @@
 {
   "confirmToast": {
     "body": "AI API の可用性を確認・テストするために、AI API テストパネルを開きますか？",
+    "enhancedInfo": "この通知は拡張自動検出によって表示されました。誤検出の場合は問題を報告するか、設定で拡張自動検出を無効にできます。",
+    "feedback": "問題を報告",
     "open": "開く",
+    "settings": "設定を開く",
     "title": "AI API の URL と API キーを検出しました"
   },
   "messages": {
@@ -23,6 +26,9 @@
       "showKey": "キーを表示",
       "test": "テスト",
       "testing": "テスト中…"
+    },
+    "candidates": {
+      "apiKey": "候補 Key {{index}}"
     },
     "errors": {
       "fetchModelsFailed": "モデルの取得に失敗しました。",
@@ -56,6 +62,10 @@
     "autoDetect": {
       "enable": "自動検出を有効化",
       "enableDesc": "有効にすると、拡張機能はコピー操作から認証情報を検出する場合があり、モーダルを開く前に確認を求めます。",
+      "enhanced": {
+        "enable": "拡張自動検出を有効化",
+        "enableDesc": "裸のドメイン、非標準のキー形式、コピー内容に不正な文字が混在したキーを識別します。拡張検出に一致するとモーダルで通知され、すばやく無効化できます。"
+      },
       "whitelist": {
         "invalidMore": "…他",
         "invalidTitle": "無効なパターン",

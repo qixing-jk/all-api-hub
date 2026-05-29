@@ -73,6 +73,9 @@ export default function WebAiApiCheckSettings() {
 
   const autoDetect =
     config.autoDetect ?? DEFAULT_PREFERENCES.webAiApiCheck!.autoDetect
+  const enhancedAutoDetect = autoDetect.enhanced ?? {
+    enabled: true,
+  }
   const whitelist =
     autoDetect.urlWhitelist ??
     DEFAULT_PREFERENCES.webAiApiCheck!.autoDetect.urlWhitelist
@@ -151,11 +154,36 @@ export default function WebAiApiCheckSettings() {
                   void saveSettings({
                     autoDetect: {
                       ...autoDetect,
+                      enhanced: enhancedAutoDetect,
                       enabled: checked,
                     },
                   })
                 }}
                 disabled={isSaving}
+              />
+            }
+          />
+          <CardItem
+            id={WEB_AI_API_CHECK_TARGET_IDS.enhancedAutoDetect}
+            title={t("webAiApiCheck:settings.autoDetect.enhanced.enable")}
+            description={t(
+              "webAiApiCheck:settings.autoDetect.enhanced.enableDesc",
+            )}
+            rightContent={
+              <Switch
+                checked={!!enhancedAutoDetect.enabled}
+                onChange={(checked) => {
+                  void saveSettings({
+                    autoDetect: {
+                      ...autoDetect,
+                      enhanced: {
+                        ...enhancedAutoDetect,
+                        enabled: checked,
+                      },
+                    },
+                  })
+                }}
+                disabled={isSaving || !autoDetect.enabled}
               />
             }
           />
@@ -218,6 +246,7 @@ export default function WebAiApiCheckSettings() {
                   void saveSettings({
                     autoDetect: {
                       ...autoDetect,
+                      enhanced: enhancedAutoDetect,
                       urlWhitelist: {
                         ...whitelist,
                         patterns,
