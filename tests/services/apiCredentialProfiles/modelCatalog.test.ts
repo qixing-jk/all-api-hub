@@ -8,6 +8,7 @@ import {
   loadAccountTokenFallbackPricingResponse,
   normalizeApiCredentialModelIds,
 } from "~/services/apiCredentialProfiles/modelCatalog"
+import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import {
   MODEL_LIST_SOURCE_KINDS,
   type PricingResponse,
@@ -293,6 +294,40 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
     expect(message).not.toContain("https://example.com")
     expect(message.length).toBeGreaterThan(0)
     expect(message).not.toBe(ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED)
+  })
+
+  it("preserves structured fallback load failure metadata for analytics", async () => {
+    resolveDisplayAccountTokenForSecretMock.mockResolvedValueOnce({
+      ...TOKEN,
+      key: "sk-real-secret",
+    })
+    const authError = new ApiError(
+      "401 for sk-real-secret at https://example.com/v1/models",
+      401,
+      "https://example.com/v1/models",
+      API_ERROR_CODES.HTTP_401,
+    )
+    fetchOpenAICompatibleModelIdsMock.mockRejectedValueOnce(authError)
+
+    let caughtError: unknown
+
+    try {
+      await loadAccountTokenFallbackPricingResponse({
+        account: ACCOUNT,
+        token: {
+          ...TOKEN,
+          models: "",
+        },
+      })
+    } catch (error) {
+      caughtError = error
+    }
+
+    expect(caughtError).toBeInstanceOf(Error)
+    expect((caughtError as Error & { cause?: unknown }).cause).toBe(authError)
+    expect(
+      caughtError instanceof Error ? caughtError.message : "",
+    ).not.toContain("sk-real-secret")
   })
 
   it("normalizes, filters, and de-duplicates raw model ids when building profile catalogs", () => {

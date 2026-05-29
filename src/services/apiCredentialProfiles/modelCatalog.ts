@@ -127,7 +127,9 @@ export async function loadAccountTokenFallbackPricingResponse(
       resolvedTokenKey,
     ])
 
-    throw new Error(sanitizedMessage || ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED)
+    throw new Error(sanitizedMessage || ACCOUNT_TOKEN_FALLBACK_LOAD_FAILED, {
+      cause: error,
+    })
   }
 }
 

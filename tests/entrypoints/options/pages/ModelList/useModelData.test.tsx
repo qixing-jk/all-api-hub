@@ -1623,6 +1623,85 @@ describe("useModelData all-accounts loading", () => {
     )
   })
 
+  it("classifies fallback catalog structured failures without leaking details", async () => {
+    toastSuccessMock.mockReset()
+    toastErrorMock.mockReset()
+
+    const fetchModelPricing = vi.fn().mockRejectedValue(new Error("boom"))
+    vi.mocked(getApiService).mockReturnValue({ fetchModelPricing } as any)
+
+    const fallbackToken = {
+      id: 6,
+      user_id: 42,
+      key: "sk-only",
+      status: 1,
+      name: "Only key",
+      created_time: 0,
+      accessed_time: 0,
+      expired_time: -1,
+      remain_quota: 0,
+      unlimited_quota: true,
+      used_quota: 0,
+    }
+
+    mockFetchDisplayAccountTokens.mockResolvedValueOnce([fallbackToken])
+    mockLoadAccountTokenFallbackPricingResponse.mockRejectedValueOnce(
+      new Error("sanitized fallback failure", {
+        cause: new ApiError(
+          "private auth failure for sk-only",
+          401,
+          "/v1/models",
+          API_ERROR_CODES.HTTP_401,
+        ),
+      }),
+    )
+
+    const account = createDisplayAccount({
+      id: "catalog-auth-error-account",
+      baseUrl: "https://catalog-auth-error.example.com",
+      userId: 42,
+    })
+
+    const { result } = renderHook(
+      () =>
+        useModelData({
+          selectedSource: createAccountSource(account),
+          accounts: [account],
+        }),
+      { wrapper: createWrapper() },
+    )
+
+    await waitFor(
+      () => {
+        expect(mockFetchDisplayAccountTokens).toHaveBeenCalledTimes(1)
+      },
+      { timeout: 3000 },
+    )
+    await waitFor(
+      () => {
+        expect(result.current.accountFallback?.selectedTokenId).toBe(6)
+      },
+      { timeout: 3000 },
+    )
+    mockTrackProductAnalyticsActionCompleted.mockClear()
+
+    await act(async () => {
+      await result.current.accountFallback?.loadCatalog()
+    })
+
+    await waitFor(() => {
+      expectLastModelDataAnalyticsCompletion({
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelFallbackCatalog,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+        failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      })
+    })
+    expect(
+      JSON.stringify(mockTrackProductAnalyticsActionCompleted.mock.calls),
+    ).not.toContain("sk-only")
+  })
+
   it("reports mixed invalid-format and load-failed states in all-accounts mode", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
