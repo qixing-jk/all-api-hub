@@ -259,4 +259,37 @@ describe("apiCheckToasts", () => {
     element.props.onAction("cancel")
     await expect(toastPromise).resolves.toBe(false)
   })
+
+  it("logs feedback-open failures without dismissing the confirmation toast", async () => {
+    const feedbackError = new Error("feedback failed")
+    sendRuntimeMessageMock.mockRejectedValue(feedbackError)
+
+    const { showApiCheckConfirmToast } = await import(
+      "~/entrypoints/content/webAiApiCheck/utils/apiCheckToasts"
+    )
+
+    const toastPromise = showApiCheckConfirmToast({ usesEnhancedResult: true })
+
+    await waitFor(() => {
+      expect(toastCustomMock).toHaveBeenCalledTimes(1)
+    })
+
+    const renderer = toastCustomMock.mock.calls[0]?.[0] as (
+      toastInstance: ToastInstance,
+    ) => React.ReactElement<ApiCheckConfirmToastProps>
+    const element = renderer({ id: "api-check-toast-id" })
+
+    element.props.onAction("feedback")
+
+    await waitFor(() => {
+      expect(loggerErrorMock).toHaveBeenCalledWith(
+        "Failed to open Web AI API Check feedback page",
+        feedbackError,
+      )
+    })
+    expect(toastDismissMock).not.toHaveBeenCalled()
+
+    element.props.onAction("confirm")
+    await expect(toastPromise).resolves.toBe(true)
+  })
 })

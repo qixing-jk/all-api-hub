@@ -243,6 +243,27 @@ describe("webAiApiCheck extractCredentials", () => {
     expect(result.summary.usesEnhancedResult).toBe(true)
   })
 
+  it("keeps the strongest confidence when duplicate base URL candidates merge", () => {
+    const result = extractApiCheckCredentialsFromText(`
+      endpoint=proxy.example.com/api
+      https://proxy.example.com/api
+    `)
+
+    expect(result.baseUrlCandidates).toEqual(["https://proxy.example.com/api"])
+    expect(result.candidates.baseUrls[0]).toEqual(
+      expect.objectContaining({
+        value: "https://proxy.example.com/api",
+        confidence: "standard",
+        reasons: expect.arrayContaining([
+          "labeled",
+          "bareDomain",
+          "schemeAdded",
+          "genericUrl",
+        ]),
+      }),
+    )
+  })
+
   it("normalizes bare domain endpoint paths through provider-family rules", () => {
     const result = extractApiCheckCredentialsFromText(`
       proxy.example.com/api/v1/chat/completions
@@ -321,6 +342,20 @@ describe("webAiApiCheck extractCredentials", () => {
     )
   })
 
+  it("marks unknown short-prefix keys with multiple segments", () => {
+    const result = extractApiCheckCredentialsFromText(
+      "test-Aa1Bb2Cc3Dd4Ee5Ff6-Gg7Hh8Ii9Jj0Kk1",
+    )
+
+    expect(result.apiKey).toBe("test-Aa1Bb2Cc3Dd4Ee5Ff6-Gg7Hh8Ii9Jj0Kk1")
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        confidence: "enhancedHigh",
+        reasons: expect.arrayContaining(["unknownShortPrefix", "multiSegment"]),
+      }),
+    )
+  })
+
   it("recognizes tp-prefixed keys as known provider tokens", () => {
     const fixtureKey = "tp-fixture000000000000000000000000"
     const result = extractApiCheckCredentialsFromText(fixtureKey)
@@ -345,6 +380,25 @@ describe("webAiApiCheck extractCredentials", () => {
         confidence: "enhancedMedium",
         autoPromptEligible: false,
         reasons: expect.arrayContaining(["unknownLongPrefix"]),
+      }),
+    )
+  })
+
+  it("marks cleaned unknown long-prefix keys as manual enhanced candidates", () => {
+    const result = extractApiCheckCredentialsFromText(
+      "longprefix-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9#Jj0Kk1",
+    )
+
+    expect(result.apiKey).toBe("longprefix-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        confidence: "enhancedMedium",
+        cleanupApplied: true,
+        autoPromptEligible: false,
+        reasons: expect.arrayContaining([
+          "unknownLongPrefix",
+          "illegalCharsRemoved",
+        ]),
       }),
     )
   })
@@ -378,6 +432,45 @@ describe("webAiApiCheck extractCredentials", () => {
       expect.objectContaining({
         cleanupApplied: true,
         reasons: expect.arrayContaining(["knownPrefix", "illegalCharsRemoved"]),
+      }),
+    )
+  })
+
+  it("merges duplicate known-prefix candidates with cleanup metadata", () => {
+    const cleanedKey = "sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1"
+    const result = extractApiCheckCredentialsFromText(`
+      Authorization: Bearer ${cleanedKey}
+      pasted key: sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9#Jj0Kk1
+    `)
+
+    expect(result.apiKeyCandidates[0]).toBe(cleanedKey)
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        value: cleanedKey,
+        cleanupApplied: true,
+        autoPromptEligible: true,
+        reasons: expect.arrayContaining([
+          "authorizationHeader",
+          "knownPrefix",
+          "illegalCharsRemoved",
+        ]),
+      }),
+    )
+  })
+
+  it("keeps the strongest confidence when duplicate candidate windows merge", () => {
+    const fixtureKey = "sk-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1"
+    const result = extractApiCheckCredentialsFromText(`
+      token: ${fixtureKey}
+      ${fixtureKey}
+    `)
+
+    expect(result.apiKeyCandidates).toEqual([fixtureKey])
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        value: fixtureKey,
+        confidence: "standard",
+        reasons: expect.arrayContaining(["labeled", "knownPrefix"]),
       }),
     )
   })
@@ -431,6 +524,56 @@ describe("webAiApiCheck extractCredentials", () => {
         confidence: "enhancedMedium",
         autoPromptEligible: false,
         reasons: expect.arrayContaining(["unseparatedLongToken"]),
+      }),
+    )
+  })
+
+  it("prefers separated enhanced keys over unseparated long strings", () => {
+    const result = extractApiCheckCredentialsFromText(`
+      TESTKEYAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1
+      longprefix-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1
+    `)
+
+    expect(result.apiKey).toBe("longprefix-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
+    expect(result.apiKeyCandidates).toEqual([
+      "longprefix-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1",
+      "TESTKEYAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1",
+    ])
+  })
+
+  it("marks cleaned unseparated long strings as manual enhanced candidates", () => {
+    const result = extractApiCheckCredentialsFromText(
+      "TESTKEYAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9#Jj0Kk1",
+    )
+
+    expect(result.apiKey).toBe("TESTKEYAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        confidence: "enhancedMedium",
+        cleanupApplied: true,
+        autoPromptEligible: false,
+        reasons: expect.arrayContaining([
+          "unseparatedLongToken",
+          "illegalCharsRemoved",
+        ]),
+      }),
+    )
+  })
+
+  it("normalizes bare Google-family domains with version paths", () => {
+    const result = extractApiCheckCredentialsFromText(
+      "generativelanguage.googleapis.com/v1beta/models",
+    )
+
+    expect(result.baseUrl).toBe("https://generativelanguage.googleapis.com")
+    expect(result.candidates.baseUrls[0]).toEqual(
+      expect.objectContaining({
+        confidence: "enhancedHigh",
+        reasons: expect.arrayContaining([
+          "bareDomain",
+          "schemeAdded",
+          "pathNormalized",
+        ]),
       }),
     )
   })
