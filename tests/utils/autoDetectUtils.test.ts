@@ -316,6 +316,18 @@ describe("autoDetectUtils", () => {
       })
     })
 
+    it("maps site-type detection failures to stable local guidance", () => {
+      const result = getAutoDetectErrorByCode(
+        AUTO_DETECT_ERROR_CODES.SITE_TYPE_DETECTION_FAILED,
+      )
+
+      expect(result).toMatchObject({
+        type: AutoDetectErrorType.NOT_FOUND,
+        message: "messages:autodetect.notFound",
+        helpDocUrl: getDocsAutoDetectUrl(),
+      })
+    })
+
     it("returns null for unknown codes", () => {
       expect(getAutoDetectErrorByCode(undefined)).toBeNull()
     })

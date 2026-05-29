@@ -333,7 +333,7 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
     mockedBrowserApi.hasAlarmsAPI.mockReturnValue(true)
   })
 
-  it("tracks a background config snapshot with only bucketed schedule fields", async () => {
+  it("tracks a background config snapshot with exact numeric schedule fields", async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date(2024, 0, 1, 9, 0, 0))
 
@@ -375,10 +375,10 @@ describe("autoCheckinScheduler.scheduleNextRun", () => {
       notify_completion_enabled: true,
       retry_enabled: true,
       schedule_mode: "deterministic",
-      retry_interval_bucket: "10_30m",
-      retry_max_attempts_bucket: "2_3",
-      window_length_bucket: "4_12h",
-      deterministic_time_bucket: "morning",
+      retry_interval_minutes: 30,
+      retry_max_attempts: 3,
+      window_length_minutes: 270,
+      deterministic_time_minutes: 570,
     })
     expect(JSON.stringify(snapshotCall?.[1])).not.toContain("08:15")
     expect(JSON.stringify(snapshotCall?.[1])).not.toContain("12:45")
@@ -5386,10 +5386,6 @@ describe("autoCheckinScheduler private helpers", () => {
   })
 
   it("derives snapshot skip reasons from account state and provider availability", () => {
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValueOnce({
-      canCheckIn: vi.fn(() => true),
-    })
-
     expect(
       (autoCheckinScheduler as any).buildAccountSnapshot(
         {
@@ -5426,10 +5422,6 @@ describe("autoCheckinScheduler private helpers", () => {
       accountId: "no-provider",
       skipReason: "no_provider",
       providerAvailable: false,
-    })
-
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValueOnce({
-      canCheckIn: vi.fn(() => true),
     })
 
     expect(
@@ -5469,10 +5461,6 @@ describe("autoCheckinScheduler private helpers", () => {
       accountId: "provider-not-ready",
       skipReason: "provider_not_ready",
       providerAvailable: false,
-    })
-
-    mockedProviders.resolveAutoCheckinProvider.mockReturnValueOnce({
-      canCheckIn: vi.fn(() => true),
     })
 
     expect(

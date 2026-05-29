@@ -567,8 +567,12 @@ describe("accountOperations autoDetectAccount", () => {
 
     expect(result).toMatchObject({
       success: false,
+      message: "messages:autodetect.notFound",
       autoDetectFailureReason:
         AUTO_DETECT_FAILURE_REASONS.SiteTypeDetectionFailed,
+      detailedError: expect.objectContaining({
+        type: AutoDetectErrorType.NOT_FOUND,
+      }),
     })
   })
 

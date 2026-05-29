@@ -3,21 +3,21 @@ import { Bookmark, ExternalLink, KeyRound, Plus } from "lucide-react"
 import { useTranslation } from "react-i18next"
 
 import { Badge, IconButton } from "~/components/ui"
-import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-import { cn } from "~/lib/utils"
-
 import {
+  SPONSOR_RECOMMENDATION_ACTION_KINDS,
   trackSponsorRecommendationClick,
   type SponsorRecommendationActionKind,
-} from "./analytics"
-import { type SponsorRecommendationSurface } from "./constants"
+} from "~/features/AccountManagement/sponsors/analytics"
+import { type SponsorRecommendationSurface } from "~/features/AccountManagement/sponsors/constants"
 import {
   SPONSOR_SUPPORT_STATUS,
   type AddAccountPrefill,
   type SponsorApiCredentialFallbackPrefill,
   type SponsorBookmarkFallbackPrefill,
   type SponsorRecommendation,
-} from "./types"
+} from "~/features/AccountManagement/sponsors/types"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { cn } from "~/lib/utils"
 
 interface SponsorRecommendationCardProps {
   item: SponsorRecommendation
@@ -90,7 +90,7 @@ export function SponsorRecommendationCard({
   }
 
   const handlePrimaryClick = () => {
-    trackClick("visit_provider")
+    trackClick(SPONSOR_RECOMMENDATION_ACTION_KINDS.VisitProvider)
     window.open(item.primaryAffiliateUrl, "_blank", "noopener,noreferrer")
   }
 
@@ -99,7 +99,7 @@ export function SponsorRecommendationCard({
       return
     }
 
-    trackClick("continue_add_account")
+    trackClick(SPONSOR_RECOMMENDATION_ACTION_KINDS.ContinueAddAccount)
     onContinueAddAccount({
       siteUrl: item.accountPrefill.siteUrl,
       siteType: item.accountPrefill.siteType,
@@ -113,7 +113,7 @@ export function SponsorRecommendationCard({
   }
 
   const handleOpenBookmarkManager = () => {
-    trackClick("bookmark_fallback")
+    trackClick(SPONSOR_RECOMMENDATION_ACTION_KINDS.BookmarkFallback)
     window.open(item.primaryAffiliateUrl, "_blank", "noopener,noreferrer")
     onOpenBookmarkManager({
       name: item.name,
@@ -122,7 +122,9 @@ export function SponsorRecommendationCard({
   }
 
   const handleOpenApiCredentialProfiles = () => {
-    trackClick("api_credential_profiles_fallback")
+    trackClick(
+      SPONSOR_RECOMMENDATION_ACTION_KINDS.ApiCredentialProfilesFallback,
+    )
     window.open(item.primaryAffiliateUrl, "_blank", "noopener,noreferrer")
     onOpenApiCredentialProfiles({
       name: item.name,

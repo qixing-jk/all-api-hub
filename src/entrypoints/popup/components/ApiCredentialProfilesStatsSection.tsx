@@ -61,6 +61,8 @@ export default function ApiCredentialProfilesStatsSection() {
         acc.profileTelemetryCount += 1
         if (snapshot.health.status === SiteHealthStatus.Healthy) {
           acc.healthyCount += 1
+        } else {
+          acc.unhealthyTelemetryCount += 1
         }
         if (typeof snapshot.balanceUsd === "number") {
           acc.balanceUsd += snapshot.balanceUsd
@@ -77,6 +79,7 @@ export default function ApiCredentialProfilesStatsSection() {
         balanceUsd: 0,
         balanceSources: 0,
         profileTelemetryCount: 0,
+        unhealthyTelemetryCount: 0,
         todayUsageSources: 0,
         todayUsageUsd: 0,
       },
@@ -105,7 +108,7 @@ export default function ApiCredentialProfilesStatsSection() {
         item_count: profiles.length,
         selected_count: usedTagsCount,
         success_count: telemetryStats.healthyCount,
-        failure_count: telemetryStats.profileTelemetryCount,
+        failure_count: telemetryStats.unhealthyTelemetryCount,
         model_count: uniqueBaseUrlsCount,
       },
     )
@@ -113,7 +116,7 @@ export default function ApiCredentialProfilesStatsSection() {
     isLoading,
     profiles.length,
     telemetryStats.healthyCount,
-    telemetryStats.profileTelemetryCount,
+    telemetryStats.unhealthyTelemetryCount,
     uniqueBaseUrlsCount,
     usedTagsCount,
   ])

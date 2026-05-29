@@ -299,7 +299,7 @@ export async function autoDetectAccount(
         analyzeAutoDetectError(errorMsg)
       return {
         success: false,
-        message: errorMsg,
+        message: detailedError.message || errorMsg,
         detailedError,
         autoDetectContext,
         autoDetectFailureReason:

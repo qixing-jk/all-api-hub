@@ -596,7 +596,7 @@ function shouldKeepProperty(
   allowedKeys: Set<string>,
   key: string,
   value: unknown,
-): value is string | boolean {
+): value is string | boolean | number {
   return (
     allowedKeys.has(key) &&
     isPrivacyReviewedKey(key) &&
@@ -615,10 +615,9 @@ export function sanitizeProductAnalyticsEvent(
   if (!rawProperties || typeof rawProperties !== "object") return {}
 
   const allowedKeys = new Set(EVENT_ALLOWED_KEYS[eventName] ?? [])
-  const rawRecord = rawProperties as Record<string, unknown>
   const sanitized: SanitizedProperties = {}
 
-  for (const [key, value] of Object.entries(rawRecord)) {
+  for (const [key, value] of Object.entries(rawProperties)) {
     if (!shouldKeepProperty(allowedKeys, key, value)) continue
 
     sanitized[key] = value

@@ -853,8 +853,6 @@ class AutoCheckinScheduler {
     const disabled = account.disabled === true
     const detectionEnabled = account.checkIn?.enableDetection ?? false
     const autoCheckinEnabled = account.checkIn?.autoCheckInEnabled !== false
-    const provider = resolveAutoCheckinProvider(account)
-    const providerAvailable = provider ? provider.canCheckIn(account) : false
 
     let skipReason: AutoCheckinSkipReason | undefined
 
@@ -864,9 +862,14 @@ class AutoCheckinScheduler {
       skipReason = AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED
     } else if (!autoCheckinEnabled) {
       skipReason = AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED
-    } else if (!provider) {
+    }
+
+    const provider = skipReason ? null : resolveAutoCheckinProvider(account)
+    const providerAvailable = provider ? provider.canCheckIn(account) : false
+
+    if (!skipReason && !provider) {
       skipReason = AUTO_CHECKIN_SKIP_REASON.NO_PROVIDER
-    } else if (!providerAvailable) {
+    } else if (!skipReason && !providerAvailable) {
       skipReason = AUTO_CHECKIN_SKIP_REASON.PROVIDER_NOT_READY
     }
 

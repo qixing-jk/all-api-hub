@@ -182,11 +182,12 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://example.com/console")
 
-    expect(result.autoDetectContext).toMatchObject({
+    expect(result.autoDetectContext).toEqual({
       strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
       fetchContextKind: AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab,
       incognitoContextUsed: true,
       currentTabMatched: true,
+      siteType: SITE_TYPES.NEW_API,
     })
   })
 
@@ -920,11 +921,12 @@ describe("autoDetectSmart", () => {
     })
     expect(result.data).not.toHaveProperty("fetchContext")
     expect(mockFetchUserInfo).toHaveBeenCalledTimes(2)
-    expect(result.autoDetectContext).toMatchObject({
+    expect(result.autoDetectContext).toEqual({
       strategy: AUTO_DETECT_STRATEGIES.DirectApi,
       fetchContextKind: AUTO_DETECT_FETCH_CONTEXT_KINDS.None,
       incognitoContextUsed: false,
       currentTabMatched: false,
+      siteType: SITE_TYPES.NEW_API,
     })
   })
 

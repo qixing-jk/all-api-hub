@@ -212,4 +212,43 @@ describe("ApiCredentialProfilesStatsSection", () => {
     expect(payloadText).not.toContain("tag-c")
     expect(payloadText).not.toContain("alpha.example.com")
   })
+
+  it("tracks only unhealthy telemetry snapshots as failures", () => {
+    mockUseUserPreferencesContext.mockReturnValue({ currencyType: "USD" })
+    mockUseApiCredentialProfiles.mockReturnValue({
+      isLoading: false,
+      profiles: [
+        buildProfile({
+          id: "profile-1",
+          telemetrySnapshot: {
+            attempts: [],
+            health: { status: SiteHealthStatus.Healthy },
+            lastSyncTime: 1000,
+          },
+        }),
+        buildProfile({
+          id: "profile-2",
+          telemetrySnapshot: {
+            attempts: [],
+            health: { status: SiteHealthStatus.Warning },
+            lastSyncTime: 1000,
+          },
+        }),
+      ],
+    })
+
+    render(<ApiCredentialProfilesStatsSection />, {
+      withReleaseUpdateStatusProvider: false,
+      withThemeProvider: false,
+      withUserPreferencesProvider: false,
+    })
+
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      expect.objectContaining({
+        success_count: 1,
+        failure_count: 1,
+      }),
+    )
+  })
 })

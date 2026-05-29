@@ -1,4 +1,13 @@
 import {
+  SPONSOR_RECOMMENDATION_SURFACES,
+  type SponsorRecommendationSurface,
+} from "~/features/AccountManagement/sponsors/constants"
+import {
+  SPONSOR_CATALOG_SOURCES,
+  SPONSOR_SUPPORT_STATUS,
+  type SponsorRecommendation,
+} from "~/features/AccountManagement/sponsors/types"
+import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
@@ -15,21 +24,16 @@ import {
   type ProductAnalyticsSurfaceId,
 } from "~/services/productAnalytics/events"
 
-import {
-  SPONSOR_RECOMMENDATION_SURFACES,
-  type SponsorRecommendationSurface,
-} from "./constants"
-import {
-  SPONSOR_CATALOG_SOURCES,
-  SPONSOR_SUPPORT_STATUS,
-  type SponsorRecommendation,
-} from "./types"
+export const SPONSOR_RECOMMENDATION_ACTION_KINDS = {
+  ApiCredentialProfilesFallback:
+    PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS.ApiCredentialProfilesFallback,
+  BookmarkFallback: PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS.BookmarkFallback,
+  ContinueAddAccount: PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS.ContinueAddAccount,
+  VisitProvider: PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS.VisitProvider,
+} as const
 
 export type SponsorRecommendationActionKind =
-  | typeof PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS.ApiCredentialProfilesFallback
-  | typeof PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS.BookmarkFallback
-  | typeof PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS.ContinueAddAccount
-  | typeof PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS.VisitProvider
+  (typeof SPONSOR_RECOMMENDATION_ACTION_KINDS)[keyof typeof SPONSOR_RECOMMENDATION_ACTION_KINDS]
 
 const SPONSOR_SURFACE_TO_PRODUCT_ANALYTICS_SURFACE = {
   [SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog]:

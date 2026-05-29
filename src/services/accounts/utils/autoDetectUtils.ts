@@ -122,6 +122,12 @@ export function getAutoDetectErrorByCode(
   switch (errorCode) {
     case AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE:
       return createCurrentTabReloadRequiredError()
+    case AUTO_DETECT_ERROR_CODES.SITE_TYPE_DETECTION_FAILED:
+      return {
+        type: AutoDetectErrorType.NOT_FOUND,
+        message: t("messages:autodetect.notFound"),
+        helpDocUrl: getDocsAutoDetectUrl(),
+      }
     default:
       return null
   }

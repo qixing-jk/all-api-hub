@@ -1,23 +1,22 @@
 import { useEffect, useId, useRef } from "react"
 import { useTranslation } from "react-i18next"
 
-import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
-
 import {
   getSponsorRecommendationImpressionKey,
   trackSponsorRecommendationsImpression,
-} from "./analytics"
+} from "~/features/AccountManagement/sponsors/analytics"
 import {
   SPONSOR_RECOMMENDATION_SURFACES,
   type SponsorRecommendationSurface,
-} from "./constants"
-import { SponsorRecommendationCard } from "./SponsorRecommendationCard"
+} from "~/features/AccountManagement/sponsors/constants"
+import { SponsorRecommendationCard } from "~/features/AccountManagement/sponsors/SponsorRecommendationCard"
 import type {
   AddAccountPrefill,
   SponsorApiCredentialFallbackPrefill,
   SponsorBookmarkFallbackPrefill,
   SponsorRecommendation,
-} from "./types"
+} from "~/features/AccountManagement/sponsors/types"
+import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
 
 interface SponsorRecommendationsSectionProps {
   surface: SponsorRecommendationSurface

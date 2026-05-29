@@ -221,6 +221,16 @@ describe("useAccountDialog analytics", () => {
         },
       },
     )
+    expect(
+      mockCompleteProductAnalyticsAction.mock.calls[0]?.[1]?.insights,
+    ).toEqual({
+      requestedAuthMode: AuthTypeEnum.AccessToken,
+      autoDetectStrategy: AUTO_DETECT_STRATEGIES.CurrentTab,
+      siteType: SITE_TYPES.NEW_API,
+      fetchContextKind: AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab,
+      incognitoContextUsed: true,
+      currentTabMatched: true,
+    })
     expectNoSensitiveAnalyticsFields()
   })
 

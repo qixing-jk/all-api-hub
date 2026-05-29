@@ -203,7 +203,7 @@ export function trackAutoCheckinRunAnalytics(
 }
 
 /**
- * Parses a local HH:mm value so analytics can bucket time without exposing it.
+ * Parses a local HH:mm value so analytics can report exact local-minute offsets without raw strings.
  */
 function parseTimeToMinutes(time: string): number | null {
   if (!/^\d{2}:\d{2}$/.test(time)) {
