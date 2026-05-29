@@ -46,6 +46,14 @@ export function tryParseOrigin(
 }
 
 /**
+ * Returns whether the value is an absolute HTTP(S) URL.
+ */
+export function isHttpUrl(value: string | undefined | null): boolean {
+  const parsed = tryParseUrl(value)
+  return parsed?.protocol === "http:" || parsed?.protocol === "https:"
+}
+
+/**
  * Best-effort URL prefix extraction for matching/logging.
  * Returns `origin + pathname` (no query/hash), or `null` when invalid.
  */

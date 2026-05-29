@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest"
 
 import {
+  isHttpUrl,
   normalizeUrlForBasePath,
   normalizeUrlForOriginKey,
   normalizeUrlPathname,
@@ -104,5 +105,19 @@ describe("urlParsing", () => {
         normalizeUrlForOriginKey(" HTTPS://Example.com/ ", { lowerCase: true }),
       ).toBe("https://example.com")
     })
+  })
+})
+
+describe("isHttpUrl", () => {
+  it("returns true for absolute http and https urls", () => {
+    expect(isHttpUrl("https://example.com/path")).toBe(true)
+    expect(isHttpUrl("http://example.com/path")).toBe(true)
+  })
+
+  it("returns false for non-http, relative, empty, and invalid urls", () => {
+    expect(isHttpUrl("chrome://extensions")).toBe(false)
+    expect(isHttpUrl("/relative/path")).toBe(false)
+    expect(isHttpUrl("")).toBe(false)
+    expect(isHttpUrl("not-a-url")).toBe(false)
   })
 })

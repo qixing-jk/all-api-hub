@@ -5,7 +5,13 @@ import {
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
+import { isHttpUrl } from "~/utils/core/urlParsing"
 
+import {
+  getClipboardEventText,
+  getSelectedText,
+  registerSelectionEndTextDetection,
+} from "../shared/contentTextDetection"
 import { isEventFromAllApiHubContentUi } from "../shared/contentUi"
 import { isLikelyCopyActionTarget } from "../shared/copyActionTarget"
 import { ensureRedemptionToastUi } from "../shared/uiRoot"
@@ -143,7 +149,7 @@ function setupWebAiApiCheckDetection() {
     if (!text) return
 
     const pageUrl = options?.pageUrl || window.location.href
-    if (!/^https?:/i.test(pageUrl)) return
+    if (!isHttpUrl(pageUrl)) return
 
     const now = Date.now()
     if (toastInFlight) return
@@ -240,9 +246,9 @@ function setupWebAiApiCheckDetection() {
       lastClickScan = now
 
       const pageUrl = window.location.href
-      if (!/^https?:/i.test(pageUrl)) return
+      if (!isHttpUrl(pageUrl)) return
 
-      const selectionText = window.getSelection()?.toString().trim() || ""
+      const selectionText = getSelectedText()
       if (selectionText) {
         void scheduleApiCheckScan(selectionText, { pageUrl })
         return
@@ -291,16 +297,20 @@ function setupWebAiApiCheckDetection() {
     }
 
     const pageUrl = window.location.href
-    if (!/^https?:/i.test(pageUrl)) return
+    if (!isHttpUrl(pageUrl)) return
 
-    const selectionText = window.getSelection()?.toString().trim() || ""
-    const clipboardText = event.clipboardData?.getData("text") || ""
-    const sourceText = selectionText || clipboardText
+    const sourceText = getClipboardEventText(event)
 
     if (sourceText) {
       void scheduleApiCheckScan(sourceText, { pageUrl })
     }
   }
+
+  const cleanupSelectionEndDetection = registerSelectionEndTextDetection(
+    (sourceText) => {
+      void scheduleApiCheckScan(sourceText, { pageUrl: window.location.href })
+    },
+  )
 
   document.addEventListener("click", handleClick, true)
   document.addEventListener("copy", handleClipboardEvent, true)
@@ -314,6 +324,7 @@ function setupWebAiApiCheckDetection() {
     document.removeEventListener("click", handleClick, true)
     document.removeEventListener("copy", handleClipboardEvent, true)
     document.removeEventListener("cut", handleClipboardEvent, true)
+    cleanupSelectionEndDetection()
   }
 }
 

@@ -1,4 +1,9 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import {
+  getClipboardEventText,
+  getSelectedText,
+  registerSelectionEndTextDetection,
+} from "~/entrypoints/content/shared/contentTextDetection"
 import { isEventFromAllApiHubContentUi } from "~/entrypoints/content/shared/contentUi"
 import { isLikelyCopyActionTarget } from "~/entrypoints/content/shared/copyActionTarget"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
@@ -21,6 +26,7 @@ import {
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
+import { isHttpUrl } from "~/utils/core/urlParsing"
 import { t } from "~/utils/i18n/core"
 
 import {
@@ -81,8 +87,7 @@ function setupRedemptionAssistDetection() {
       lastClickScan = now
 
       // Try to get selected text first
-      const selection = window.getSelection()
-      let text = selection?.toString().trim() || ""
+      let text = getSelectedText()
 
       // Fallback: try to read clipboard content if the click target looks like a copy action
       if (
@@ -126,20 +131,18 @@ function setupRedemptionAssistDetection() {
     if (isEventFromAllApiHubContentUi(event.target)) {
       return
     }
-    const selection = window.getSelection()
-    let text = selection?.toString().trim() || ""
-
-    if (!text && event.clipboardData) {
-      const clipText = event.clipboardData.getData("text")
-      if (clipText) {
-        text = clipText
-      }
-    }
+    const text = getClipboardEventText(event)
 
     if (text) {
       void scheduleRedemptionScan(text)
     }
   }
+
+  const cleanupSelectionEndDetection = registerSelectionEndTextDetection(
+    (sourceText) => {
+      void scheduleRedemptionScan(sourceText)
+    },
+  )
 
   document.addEventListener("click", handleClick, true)
   document.addEventListener("copy", handleClipboardEvent, true)
@@ -149,6 +152,7 @@ function setupRedemptionAssistDetection() {
     document.removeEventListener("click", handleClick, true)
     document.removeEventListener("copy", handleClipboardEvent, true)
     document.removeEventListener("cut", handleClipboardEvent, true)
+    cleanupSelectionEndDetection()
   }
 }
 
@@ -322,7 +326,7 @@ async function scanForRedemptionCodes(sourceText?: string) {
 
     // Skip non-http(s) pages to avoid unnecessary background traffic.
     // (e.g. chrome://, about:, file://, extension pages)
-    if (!/^https?:/i.test(url)) {
+    if (!isHttpUrl(url)) {
       return
     }
 
