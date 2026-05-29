@@ -142,6 +142,23 @@ Node.js version from `.nvmrc` and pnpm 10+.
 - Normalize data at the highest reliable boundary, then pass the normalized shape downward. Once a contract is established, prefer required types in downstream helpers and components instead of reintroducing optional fallbacks at each leaf.
 - Keep fallback behavior close to the layer that defines the rule or owns the data contract. Do not duplicate the same fallback across multiple consumers merely to compensate for weak typing or incomplete normalization upstream.
 
+### Feature Observability and Discoverability
+
+Treat telemetry and settings discoverability as related release-readiness checks for new or materially changed product behavior. They answer different questions and should be evaluated separately.
+
+#### Telemetry
+
+- For new or materially changed product behavior, make an explicit telemetry decision before handoff: `none`, `reuse existing`, `add action`, `add settings snapshot`, or `add result/summary event`. Do not default to silent feature work.
+- Add or update product analytics for new user-visible actions, settings, async/background flows, automatic detection branches, confirmation/cancel paths, shortcuts, and recovery actions when the data is needed to understand adoption, success, failure, skipped states, or funnel drop-off.
+- Keep analytics privacy-safe: record controlled booleans, enums, counts, durations, and status categories only. Do not record URLs, hosts, paths, raw IDs, names, API keys, tokens, cookies, prompts, responses, user-entered text, backend messages, or stack traces.
+- When adding analytics fields, update the typed event payload, privacy allow-list/sanitizer, snapshot builders, and focused tests together. If telemetry is intentionally not added, state the reason in the final handoff.
+
+#### Settings Search and Deep Links
+
+- When adding, renaming, moving, or deleting settings UI, update settings search definitions and deep-link targets in the same change. Check the relevant `*.search.ts`, `searchTargets.ts`, target `id` attributes, URL `anchor` parameters, and `ANCHOR_TO_TAB` mappings when heading anchors or cross-entrypoint navigation are involved.
+- Prefer a single exported target-id constant for settings controls that are used by both rendered DOM ids and search/navigation definitions. Do not duplicate anchor strings across UI, search index, tests, or runtime navigation.
+- Cover settings search and anchor behavior with focused unit/component tests by default. Add Playwright E2E only when the risk depends on real extension browser behavior rather than search registry data or route parameter handling.
+
 ### Progressive Refactoring
 
 - Prefer progressive refactors over big-bang rewrites when replacing legacy flows or reshaping feature boundaries.
