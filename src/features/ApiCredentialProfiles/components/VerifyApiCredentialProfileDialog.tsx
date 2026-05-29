@@ -48,7 +48,10 @@ import {
   getApiVerificationProbeLabel,
   translateApiVerificationSummary,
 } from "~/services/verification/aiApiVerification/i18n"
-import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
+import {
+  buildSafeProbeFailureDiagnostics,
+  toSanitizedErrorSummary,
+} from "~/services/verification/aiApiVerification/utils"
 import {
   createProfileModelVerificationHistoryTarget,
   createProfileVerificationHistoryTarget,
@@ -525,12 +528,13 @@ export function VerifyApiCredentialProfileDialog({
       }
       return result
     } catch (error) {
+      const sanitizedMessage = toSanitizedErrorSummary(error, [
+        profile.apiKey,
+        profile.baseUrl,
+      ])
       logger.error("Probe failed", {
         probeId,
-        message: toSanitizedErrorSummary(error, [
-          profile.apiKey,
-          profile.baseUrl,
-        ]),
+        message: sanitizedMessage,
       })
 
       const fallback: ApiVerificationProbeResult = {
@@ -538,6 +542,7 @@ export function VerifyApiCredentialProfileDialog({
         status: "fail",
         latencyMs: 0,
         summary: t("aiApiVerification:verifyDialog.errors.unexpected"),
+        ...buildSafeProbeFailureDiagnostics(error, sanitizedMessage),
       }
 
       const nextProbes = probesRef.current.map((probe) => {

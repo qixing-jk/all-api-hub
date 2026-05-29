@@ -810,6 +810,65 @@ describe("VerifyApiCredentialProfileDialog", () => {
     )
   })
 
+  it("tracks API credential verification suite probe exceptions with safe structured diagnostics", async () => {
+    const user = userEvent.setup()
+    const structuredError = Object.assign(
+      new Error("https://example.com sk-test unauthorized"),
+      { statusCode: 401 },
+    )
+
+    mockRunApiVerificationProbe.mockRejectedValueOnce(structuredError)
+
+    render(
+      <VerifyApiCredentialProfileDialog
+        isOpen={true}
+        onClose={() => {}}
+        profile={{
+          id: "p-1",
+          name: "Profile",
+          apiType: API_TYPES.OPENAI_COMPATIBLE,
+          baseUrl: "https://example.com",
+          apiKey: "sk-test",
+          tagIds: [],
+          notes: "",
+          createdAt: 1,
+          updatedAt: 1,
+        }}
+      />,
+    )
+
+    const closeButton = await screen.findByText(
+      "aiApiVerification:verifyDialog.actions.close",
+      { selector: "button" },
+    )
+    const footer = closeButton.parentElement
+    if (!footer) throw new Error("Missing modal footer")
+
+    await user.click(
+      within(footer).getByRole("button", {
+        name: "aiApiVerification:verifyDialog.actions.run",
+      }),
+    )
+
+    await waitFor(() =>
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+          insights: {
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 1,
+          },
+        },
+      ),
+    )
+    expect(loggerErrorMock).toHaveBeenCalledWith("Probe failed", {
+      probeId: "models",
+      message: "[REDACTED] [REDACTED] unauthorized",
+    })
+  })
+
   it("tracks API credential verification suite-level exceptions with an error category", async () => {
     const user = userEvent.setup()
 
