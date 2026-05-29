@@ -464,12 +464,11 @@ function toRedeemBatchDisplayItem(
   }
 }
 
-/** Wraps retry callbacks so UI consumers never receive analytics-only fields. */
+/** Wraps retry callbacks with a stable per-code result signature. */
 function createRedeemBatchDisplayRetry(
   retry: (code: string) => Promise<RedeemBatchItem>,
 ) {
-  return async (code: string): Promise<RedeemBatchDisplayItem> =>
-    toRedeemBatchDisplayItem(await retry(code))
+  return async (code: string): Promise<RedeemBatchItem> => retry(code)
 }
 
 /**

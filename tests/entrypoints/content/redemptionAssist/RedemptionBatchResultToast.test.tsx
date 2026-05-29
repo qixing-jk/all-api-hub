@@ -83,7 +83,7 @@ describe("RedemptionBatchResultToast", () => {
     )
   })
 
-  it("tracks failed retry completion as validation when the retry returns an invalid-code result without leaking raw code", async () => {
+  it("tracks failed retry completion using a structured category without leaking raw code", async () => {
     const user = userEvent.setup()
 
     render(
@@ -100,8 +100,9 @@ describe("RedemptionBatchResultToast", () => {
           code: "raw-secret-code",
           preview: "RA**",
           success: false,
-          message: "Invalid redemption code",
-          errorMessage: "Invalid redemption code",
+          message: "private backend failure text",
+          errorMessage: "private backend failure text",
+          analyticsErrorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
         })}
         onClose={vi.fn()}
       />,
@@ -124,5 +125,6 @@ describe("RedemptionBatchResultToast", () => {
     ])
     expect(analyticsPayloads).not.toContain("raw-secret-code")
     expect(analyticsPayloads).not.toContain("RA**")
+    expect(analyticsPayloads).not.toContain("private backend")
   })
 })

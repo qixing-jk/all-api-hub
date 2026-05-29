@@ -18,6 +18,7 @@ import {
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsErrorCategory,
 } from "~/services/productAnalytics/events"
 import { createLogger } from "~/utils/core/logger"
 
@@ -27,21 +28,12 @@ import { createLogger } from "~/utils/core/logger"
 const logger = createLogger("RedemptionBatchResultToast")
 
 /**
- * Maps retry result text into a coarse analytics error category.
+ * Reads the retry result's structured analytics category.
  */
 function getRetryErrorCategory(item?: RedemptionBatchResultItem) {
-  const message = `${item?.message ?? ""} ${item?.errorMessage ?? ""}`
-    .trim()
-    .toLowerCase()
-
-  if (
-    item?.success === false &&
-    /\b(invalid|validation|malformed|format)\b/.test(message)
-  ) {
-    return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation
-  }
-
-  return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+  return (
+    item?.analyticsErrorCategory ?? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+  )
 }
 
 export interface RedemptionBatchResultItem {
@@ -50,6 +42,7 @@ export interface RedemptionBatchResultItem {
   success: boolean
   message: string
   errorMessage?: string
+  analyticsErrorCategory?: ProductAnalyticsErrorCategory
 }
 
 export interface RedemptionBatchResultToastProps {
