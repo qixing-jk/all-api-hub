@@ -4,6 +4,7 @@ import { AUTO_DETECT_ERROR_CODES } from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { autoDetectAccount } from "~/services/accounts/accountOperations"
+import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
 import { AuthTypeEnum } from "~/types"
 
@@ -448,7 +449,9 @@ describe("accountOperations autoDetectAccount", () => {
     expect(result).toMatchObject({
       success: false,
       message: "messages:operations.detection.getUserIdFailed",
-      detailedError: expect.any(Object),
+      detailedError: expect.objectContaining({
+        type: AutoDetectErrorType.INVALID_RESPONSE,
+      }),
     })
   })
 
@@ -848,7 +851,9 @@ describe("accountOperations autoDetectAccount", () => {
     expect(result).toMatchObject({
       success: false,
       message: "messages:operations.detection.getInfoFailed",
-      detailedError: expect.any(Object),
+      detailedError: expect.objectContaining({
+        type: AutoDetectErrorType.INVALID_RESPONSE,
+      }),
     })
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
@@ -880,7 +885,9 @@ describe("accountOperations autoDetectAccount", () => {
     expect(result).toMatchObject({
       success: false,
       message: "messages:operations.detection.getInfoFailed",
-      detailedError: expect.any(Object),
+      detailedError: expect.objectContaining({
+        type: AutoDetectErrorType.INVALID_RESPONSE,
+      }),
     })
   })
 
@@ -911,7 +918,9 @@ describe("accountOperations autoDetectAccount", () => {
     expect(result).toMatchObject({
       success: false,
       message: "messages:operations.detection.getInfoFailed",
-      detailedError: expect.any(Object),
+      detailedError: expect.objectContaining({
+        type: AutoDetectErrorType.INVALID_RESPONSE,
+      }),
     })
   })
 

@@ -21,6 +21,7 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import {
   analyzeAutoDetectError,
+  AutoDetectErrorType,
   getAutoDetectErrorByCode,
 } from "~/services/accounts/utils/autoDetectUtils"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
@@ -235,13 +236,13 @@ export async function autoDetectAccount(
       : effectiveAuthType
 
     if (!userId) {
-      const detailedError = analyzeAutoDetectError(
-        t("messages:operations.detection.getUserIdFailed"),
-      )
       return {
         success: false,
         message: t("messages:operations.detection.getUserIdFailed"),
-        detailedError,
+        detailedError: {
+          type: AutoDetectErrorType.INVALID_RESPONSE,
+          message: t("messages:autodetect.unexpectedData"),
+        },
       }
     }
 
@@ -353,13 +354,13 @@ export async function autoDetectAccount(
       ((effectiveAuthType === AuthTypeEnum.AccessToken || isAIHubMix) &&
         !access_token)
     ) {
-      const detailedError = analyzeAutoDetectError(
-        t("messages:operations.detection.getInfoFailed"),
-      )
       return {
         success: false,
         message: t("messages:operations.detection.getInfoFailed"),
-        detailedError,
+        detailedError: {
+          type: AutoDetectErrorType.INVALID_RESPONSE,
+          message: t("messages:autodetect.unexpectedData"),
+        },
       }
     }
 

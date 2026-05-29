@@ -286,6 +286,41 @@ describe("useAccountDialog analytics", () => {
     },
   )
 
+  it("tracks local account auto-detect data-shape failures as validation", async () => {
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: false,
+      message: "local validation failed",
+      detailedError: {
+        type: AutoDetectErrorType.INVALID_RESPONSE,
+        message: "private local detail",
+      },
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await setUrlAndWait(result, "https://private.example.com")
+
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expectStartedAction(PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect)
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        insights: {
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+        },
+      },
+    )
+    expectNoSensitiveAnalyticsFields()
+  })
+
   it("tracks duplicate-warning cancellation during account auto-detect as cancelled", async () => {
     await accountStorage.addAccount(
       buildSiteAccount({
