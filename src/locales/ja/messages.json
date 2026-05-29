@@ -156,8 +156,12 @@
   "operations": {
     "detection": {
       "failed": "自動検出に失敗しました。情報を手動入力するか、対象サイトにログインしていることを確認してください",
+      "getAccessTokenFailedDetailed": "アカウントは検出されましたが、アクセストークンを取得できませんでした。API トークンを作成または表示できる権限があるか確認するか、手動で入力してください。",
       "getInfoFailed": "ユーザー名または Access Token の取得に失敗しました",
-      "getUserIdFailed": "ユーザー ID を取得できませんでした"
+      "getSiteStatusFailedDetailed": "アカウントは検出されましたが、サイト状態を読み取れませんでした。時間をおいて再試行してください。解消しない場合は、先に手動で保存してください。",
+      "getUserIdFailed": "ユーザー ID を取得できませんでした",
+      "getUserIdFailedDetailed": "サイトには接続できましたが、ユーザー ID を読み取れませんでした。対象サイトにログインしていることを確認してから再試行してください。",
+      "getUsernameFailedDetailed": "アカウントは検出されましたが、サイトがユーザー名を返しませんでした。ログインしていることを確認するか、手動で入力してください。"
     }
   },
   "storage": {

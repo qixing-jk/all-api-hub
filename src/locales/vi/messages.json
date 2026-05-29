@@ -156,8 +156,12 @@
   "operations": {
     "detection": {
       "failed": "Phát hiện tự động thất bại, vui lòng nhập thông tin thủ công hoặc đảm bảo đã đăng nhập vào trang web mục tiêu",
+      "getAccessTokenFailedDetailed": "Đã phát hiện tài khoản, nhưng không thể lấy token truy cập. Hãy xác nhận tài khoản có quyền tạo hoặc xem API token, hoặc nhập thủ công.",
       "getInfoFailed": "Không thể lấy tên người dùng hoặc token truy cập",
-      "getUserIdFailed": "Không thể lấy ID người dùng"
+      "getSiteStatusFailedDetailed": "Đã phát hiện tài khoản, nhưng không thể đọc trạng thái trang web. Hãy thử lại sau; nếu vẫn lỗi, hãy lưu tài khoản thủ công trước.",
+      "getUserIdFailed": "Không thể lấy ID người dùng",
+      "getUserIdFailedDetailed": "Đã kết nối tới trang web, nhưng không thể đọc ID người dùng. Hãy đảm bảo bạn đã đăng nhập vào trang web mục tiêu rồi thử lại.",
+      "getUsernameFailedDetailed": "Đã phát hiện tài khoản, nhưng trang web không trả về tên người dùng. Hãy đảm bảo bạn đã đăng nhập, hoặc nhập tài khoản thủ công."
     }
   },
   "storage": {

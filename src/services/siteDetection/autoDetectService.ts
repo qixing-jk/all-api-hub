@@ -176,6 +176,7 @@ async function combineUserDataAndSiteType(
     return {
       success: false,
       error: getErrorMessage(error),
+      errorCode: AUTO_DETECT_ERROR_CODES.SITE_TYPE_DETECTION_FAILED,
     }
   }
 }
@@ -260,6 +261,7 @@ async function autoDetectDirect(url: string): Promise<AutoDetectResult> {
     return {
       success: false,
       error: getErrorMessage(error),
+      errorCode: AUTO_DETECT_ERROR_CODES.SITE_TYPE_DETECTION_FAILED,
     }
   }
 }

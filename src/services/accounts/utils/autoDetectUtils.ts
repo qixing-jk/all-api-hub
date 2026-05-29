@@ -17,7 +17,9 @@
  */
 import {
   AUTO_DETECT_ERROR_CODES,
+  AUTO_DETECT_FAILURE_REASONS,
   type AutoDetectErrorCode,
+  type AutoDetectFailureReason,
 } from "~/constants/autoDetect"
 import {
   AIHUBMIX_HOSTNAMES,
@@ -42,6 +44,8 @@ export enum AutoDetectErrorType {
   NOT_FOUND = "notFound",
   SERVER_ERROR = "serverError",
 }
+
+export { AUTO_DETECT_FAILURE_REASONS, type AutoDetectFailureReason }
 
 // 自动识别错误信息
 export interface AutoDetectError {

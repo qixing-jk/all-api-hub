@@ -8,6 +8,7 @@ import {
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_RESULTS,
   trackProductAnalyticsEvent,
+  type ProductAnalyticsAccountAutoDetectFailureReason,
   type ProductAnalyticsApiType,
   type ProductAnalyticsEditorMode,
   type ProductAnalyticsErrorCategory,
@@ -50,6 +51,7 @@ export type ProductAnalyticsActionInsights = {
   sourceManagedSiteType?: ProductAnalyticsManagedSiteType
   targetManagedSiteType?: ProductAnalyticsManagedSiteType
   failureStage?: ProductAnalyticsFailureStage
+  accountAutoDetectFailureReason?: ProductAnalyticsAccountAutoDetectFailureReason
   itemCount?: number
   selectedCount?: number
   successCount?: number
@@ -237,6 +239,12 @@ function mapProductAnalyticsActionInsights(
       ? { target_managed_site_type: insights.targetManagedSiteType }
       : {}),
     ...(insights.failureStage ? { failure_stage: insights.failureStage } : {}),
+    ...(insights.accountAutoDetectFailureReason
+      ? {
+          account_auto_detect_failure_reason:
+            insights.accountAutoDetectFailureReason,
+        }
+      : {}),
     ...(typeof insights.itemCount === "number"
       ? { item_count_bucket: bucketCount(insights.itemCount) }
       : {}),

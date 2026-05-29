@@ -1,4 +1,7 @@
-import { AutoDetectError } from "~/services/accounts/utils/autoDetectUtils"
+import type {
+  AutoDetectError,
+  AutoDetectFailureReason,
+} from "~/services/accounts/utils/autoDetectUtils"
 import type { ApiServiceFetchContext } from "~/services/apiService/common/type"
 
 import type {
@@ -35,6 +38,7 @@ export interface AccountValidationResponse
     fetchContext?: ApiServiceFetchContext
   }> {
   detailedError?: AutoDetectError // Keep for backwards compatibility
+  autoDetectFailureReason?: AutoDetectFailureReason
 }
 
 /**

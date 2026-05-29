@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
+  PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS,
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_API_TYPES,
   PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS,
@@ -486,6 +487,37 @@ describe("product analytics privacy filtering", () => {
       failure_reason: PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.UserDenied,
       was_granted_before: false,
       was_granted_after: false,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+  })
+
+  it("keeps account auto-detect failure reasons without raw diagnostic context", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
+        surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        error_category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+        failure_stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+        account_auto_detect_failure_reason:
+          PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS.CurrentTabContentScriptUnavailable,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        url: "https://private.example.com",
+        errorMessage: "private backend error",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
+      surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      error_category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+      failure_stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+      account_auto_detect_failure_reason:
+        PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS.CurrentTabContentScriptUnavailable,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
   })

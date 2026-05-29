@@ -957,6 +957,7 @@ describe("autoDetectSmart", () => {
     expect(result).toEqual({
       success: false,
       error: "detect failed",
+      errorCode: AUTO_DETECT_ERROR_CODES.SITE_TYPE_DETECTION_FAILED,
     })
   })
 

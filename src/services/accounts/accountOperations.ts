@@ -4,6 +4,8 @@
 
 import toast from "react-hot-toast"
 
+import type { AutoDetectErrorCode } from "~/constants/autoDetect"
+import { AUTO_DETECT_ERROR_CODES } from "~/constants/autoDetect"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   ACCOUNT_SITE_TITLE_RULES,
@@ -21,8 +23,10 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import { createDisplayAccountApiContext } from "~/services/accounts/utils/apiServiceRequest"
 import {
   analyzeAutoDetectError,
+  AUTO_DETECT_FAILURE_REASONS,
   AutoDetectErrorType,
   getAutoDetectErrorByCode,
+  type AutoDetectFailureReason,
 } from "~/services/accounts/utils/autoDetectUtils"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
 import { getApiService } from "~/services/apiService"
@@ -66,6 +70,66 @@ const isCreatedApiToken = (value: unknown): value is ApiToken =>
   typeof value === "object" &&
   typeof (value as Partial<ApiToken>).id === "number" &&
   typeof (value as Partial<ApiToken>).key === "string"
+
+/**
+ * Maps machine-readable auto-detect service errors into analytics-safe failure reasons.
+ */
+function getAutoDetectFailureReasonByErrorCode(
+  errorCode?: AutoDetectErrorCode,
+): AutoDetectFailureReason | undefined {
+  switch (errorCode) {
+    case AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE:
+      return AUTO_DETECT_FAILURE_REASONS.CurrentTabContentScriptUnavailable
+    case AUTO_DETECT_ERROR_CODES.SITE_TYPE_DETECTION_FAILED:
+      return AUTO_DETECT_FAILURE_REASONS.SiteTypeDetectionFailed
+    default:
+      return undefined
+  }
+}
+
+/**
+ * Preserves the failing completion step while keeping the original error available for UI classification.
+ */
+class AutoDetectCompletionError extends Error {
+  constructor(
+    readonly reason: AutoDetectFailureReason,
+    cause: unknown,
+  ) {
+    super(getErrorMessage(cause))
+    this.name = "AutoDetectCompletionError"
+    this.cause = cause
+  }
+}
+
+/**
+ * Resolves the most specific auto-detect completion reason available for analytics.
+ */
+function getAutoDetectCompletionFailureReason(
+  error: unknown,
+): AutoDetectFailureReason {
+  return error instanceof AutoDetectCompletionError
+    ? error.reason
+    : AUTO_DETECT_FAILURE_REASONS.UnexpectedException
+}
+
+/**
+ * Returns local user-facing guidance for known completion failures.
+ */
+function getAutoDetectCompletionFailureMessage(
+  reason: AutoDetectFailureReason,
+  fallbackErrorMessage: string,
+) {
+  switch (reason) {
+    case AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed:
+      return t("messages:operations.detection.getAccessTokenFailedDetailed")
+    case AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed:
+      return t("messages:operations.detection.getSiteStatusFailedDetailed")
+    default:
+      return t("accountDialog:messages.autoDetectFailed", {
+        error: fallbackErrorMessage,
+      })
+  }
+}
 
 /**
  * Create a localized timeout error for manual account data fetching.
@@ -220,6 +284,9 @@ export async function autoDetectAccount(
         success: false,
         message: errorMsg,
         detailedError,
+        autoDetectFailureReason:
+          getAutoDetectFailureReasonByErrorCode(detectResult.errorCode) ??
+          AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
       }
     }
 
@@ -238,11 +305,12 @@ export async function autoDetectAccount(
     if (!userId) {
       return {
         success: false,
-        message: t("messages:operations.detection.getUserIdFailed"),
+        message: t("messages:operations.detection.getUserIdFailedDetailed"),
         detailedError: {
           type: AutoDetectErrorType.INVALID_RESPONSE,
-          message: t("messages:autodetect.unexpectedData"),
+          message: t("messages:operations.detection.getUserIdFailedDetailed"),
         },
+        autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.UserIdMissing,
       }
     }
 
@@ -316,6 +384,12 @@ export async function autoDetectAccount(
 
     const siteStatusPromise: Promise<SiteStatusInfo | null> =
       fetchSiteStatusFallback()
+    const classifiedSiteStatusPromise = siteStatusPromise.catch((error) => {
+      throw new AutoDetectCompletionError(
+        AUTO_DETECT_FAILURE_REASONS.SiteStatusFetchFailed,
+        error,
+      )
+    })
 
     const fetchSupportCheckInFallback = () =>
       getApiService(siteType).fetchSupportCheckIn(
@@ -329,18 +403,29 @@ export async function autoDetectAccount(
       )
 
     const checkSupportPromise: Promise<boolean | undefined> =
-      siteStatusPromise.then((siteStatus) =>
+      classifiedSiteStatusPromise.then((siteStatus) =>
         typeof siteStatus?.checkin_enabled === "boolean"
           ? siteStatus.checkin_enabled
-          : fetchSupportCheckInFallback(),
+          : fetchSupportCheckInFallback().catch((error) => {
+              logger.warn("Auto-detect check-in support probe failed", {
+                siteType,
+                error: getErrorMessage(error),
+              })
+              return false
+            }),
       )
 
     // 并行执行 token 获取和 site 状态获取（降低端到端等待）
     const [tokenInfo, siteStatus, checkSupport, siteName] = await Promise.all([
-      tokenPromise,
-      siteStatusPromise,
+      tokenPromise.catch((error) => {
+        throw new AutoDetectCompletionError(
+          AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+          error,
+        )
+      }),
+      classifiedSiteStatusPromise,
       checkSupportPromise,
-      siteStatusPromise.then((resolvedSiteStatus) =>
+      classifiedSiteStatusPromise.then((resolvedSiteStatus) =>
         getSiteName(url, siteType, resolvedSiteStatus),
       ),
     ])
@@ -348,19 +433,30 @@ export async function autoDetectAccount(
     const { username: detectedUsername, access_token } = tokenInfo
 
     // 验证获取到的用户信息是否完整
+    const isUsernameMissing = !isSub2Api && !detectedUsername
+    const isAccessTokenMissing =
+      (effectiveAuthType === AuthTypeEnum.AccessToken || isAIHubMix) &&
+      !access_token
+
     if (
       // Sub2API 默认可能返回空 username（""），此时不应阻止账号识别；但 AccessToken 仍然必须存在
-      (!isSub2Api && !detectedUsername) ||
-      ((effectiveAuthType === AuthTypeEnum.AccessToken || isAIHubMix) &&
-        !access_token)
+      isUsernameMissing ||
+      isAccessTokenMissing
     ) {
+      const failureReason = isAccessTokenMissing
+        ? AUTO_DETECT_FAILURE_REASONS.AccessTokenMissing
+        : AUTO_DETECT_FAILURE_REASONS.UsernameMissing
+      const message = isAccessTokenMissing
+        ? t("messages:operations.detection.getAccessTokenFailedDetailed")
+        : t("messages:operations.detection.getUsernameFailedDetailed")
       return {
         success: false,
-        message: t("messages:operations.detection.getInfoFailed"),
+        message,
         detailedError: {
           type: AutoDetectErrorType.INVALID_RESPONSE,
-          message: t("messages:autodetect.unexpectedData"),
+          message,
         },
+        autoDetectFailureReason: failureReason,
       }
     }
 
@@ -401,6 +497,11 @@ export async function autoDetectAccount(
     }
   } catch (error) {
     const errorMessage = getErrorMessage(error)
+    const autoDetectFailureReason = getAutoDetectCompletionFailureReason(error)
+    const message = getAutoDetectCompletionFailureMessage(
+      autoDetectFailureReason,
+      errorMessage,
+    )
     logger.error(
       t("messages:autodetect.failed", { error: errorMessage }),
       error,
@@ -408,10 +509,9 @@ export async function autoDetectAccount(
     const detailedError = analyzeAutoDetectError(error)
     return {
       success: false,
-      message: t("accountDialog:messages.autoDetectFailed", {
-        error: errorMessage,
-      }),
+      message,
       detailedError,
+      autoDetectFailureReason,
     }
   }
 }

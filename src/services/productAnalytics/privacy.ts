@@ -1,4 +1,5 @@
 import {
+  PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS,
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_API_TYPES,
   PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS,
@@ -70,6 +71,7 @@ const EVENT_ALLOWED_KEYS = {
     "source_managed_site_type",
     "target_managed_site_type",
     "failure_stage",
+    "account_auto_detect_failure_reason",
     "item_count_bucket",
     "selected_count_bucket",
     "success_count_bucket",
@@ -406,6 +408,9 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   operation: Object.values(PRODUCT_ANALYTICS_PERMISSION_OPERATIONS),
   outcome: Object.values(PRODUCT_ANALYTICS_PERMISSION_OUTCOMES),
   failure_reason: Object.values(PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS),
+  account_auto_detect_failure_reason: Object.values(
+    PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS,
+  ),
   ready_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   result: Object.values(PRODUCT_ANALYTICS_RESULTS),
   result_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
@@ -499,6 +504,7 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
 
 const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "account_count_bucket",
+  "account_auto_detect_failure_reason",
   "account_auto_refresh_enabled",
   "account_auto_refresh_interval_bucket",
   "account_auto_refresh_min_interval_bucket",

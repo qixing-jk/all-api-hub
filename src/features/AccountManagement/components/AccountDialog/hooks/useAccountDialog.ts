@@ -1402,6 +1402,12 @@ export function useAccountDialog({
           ),
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+            ...(result.autoDetectFailureReason
+              ? {
+                  accountAutoDetectFailureReason:
+                    result.autoDetectFailureReason,
+                }
+              : {}),
           },
         })
         return

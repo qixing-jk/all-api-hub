@@ -6,7 +6,10 @@ import { DIALOG_MODES } from "~/constants/dialogModes"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { AutoDetectErrorType } from "~/services/accounts/utils/autoDetectUtils"
+import {
+  AUTO_DETECT_FAILURE_REASONS,
+  AutoDetectErrorType,
+} from "~/services/accounts/utils/autoDetectUtils"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -204,6 +207,7 @@ describe("useAccountDialog analytics", () => {
     mockAutoDetectAccount.mockResolvedValueOnce({
       success: false,
       message: "backend leaked private host",
+      autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
       detailedError: {
         type: AutoDetectErrorType.UNAUTHORIZED,
         message: "private backend text",
@@ -229,6 +233,45 @@ describe("useAccountDialog analytics", () => {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
         insights: {
           failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+          accountAutoDetectFailureReason:
+            AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
+        },
+      },
+    )
+    expectNoSensitiveAnalyticsFields()
+  })
+
+  it("tracks account auto-detect token-fetch failures with a safe reason", async () => {
+    mockAutoDetectAccount.mockResolvedValueOnce({
+      success: false,
+      message: "local token guidance",
+      autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
+      detailedError: {
+        type: AutoDetectErrorType.UNKNOWN,
+        message: "private backend text",
+      },
+    })
+
+    const { result } = renderAddHook()
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await setUrlAndWait(result, "https://private.example.com")
+
+    await act(async () => {
+      await result.current.handlers.handleAutoDetect()
+    })
+
+    expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        insights: {
+          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
+          accountAutoDetectFailureReason:
+            AUTO_DETECT_FAILURE_REASONS.TokenFetchFailed,
         },
       },
     )

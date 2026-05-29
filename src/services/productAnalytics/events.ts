@@ -1,3 +1,7 @@
+import {
+  AUTO_DETECT_FAILURE_REASONS,
+  type AutoDetectFailureReason,
+} from "~/constants/autoDetect"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   ACCOUNT_SITE_TYPES,
@@ -702,6 +706,12 @@ export const PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS = {
 export type ProductAnalyticsPermissionFailureReason =
   (typeof PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS)[keyof typeof PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS]
 
+export const PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS =
+  AUTO_DETECT_FAILURE_REASONS
+
+export type ProductAnalyticsAccountAutoDetectFailureReason =
+  AutoDetectFailureReason
+
 export const PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS = {
   ApiCredentialProfilesFallback: "api_credential_profiles_fallback",
   BookmarkFallback: "bookmark_fallback",
@@ -808,6 +818,7 @@ export type ProductAnalyticsEventPayloadMap = {
     source_managed_site_type?: ProductAnalyticsManagedSiteType
     target_managed_site_type?: ProductAnalyticsManagedSiteType
     failure_stage?: ProductAnalyticsFailureStage
+    account_auto_detect_failure_reason?: ProductAnalyticsAccountAutoDetectFailureReason
     item_count_bucket?: ProductAnalyticsCountBucket
     selected_count_bucket?: ProductAnalyticsCountBucket
     success_count_bucket?: ProductAnalyticsCountBucket

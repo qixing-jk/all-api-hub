@@ -156,8 +156,12 @@
   "operations": {
     "detection": {
       "failed": "自动检测失败，请手动输入信息或确保已在目标站点登录",
+      "getAccessTokenFailedDetailed": "已识别到账号，但未能获取访问令牌。请确认账号有创建或查看 API 令牌的权限，或改用手动输入。",
       "getInfoFailed": "未能获取到用户名或访问令牌",
-      "getUserIdFailed": "无法获取用户 ID"
+      "getSiteStatusFailedDetailed": "已识别到账号，但读取站点状态失败。请稍后重试；如果仍失败，可先手动保存账号。",
+      "getUserIdFailed": "无法获取用户 ID",
+      "getUserIdFailedDetailed": "已连接到站点，但未能读取用户 ID。请确认已在目标站点登录后重试。",
+      "getUsernameFailedDetailed": "已识别到账号，但站点未返回用户名。请确认已登录，或改用手动输入。"
     }
   },
   "storage": {

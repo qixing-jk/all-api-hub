@@ -156,8 +156,12 @@
   "operations": {
     "detection": {
       "failed": "自動檢測失敗，請手動輸入資訊或確保已在目標站點登入",
+      "getAccessTokenFailedDetailed": "已識別到帳號，但未能取得存取權杖。請確認帳號有建立或查看 API 權杖的權限，或改用手動輸入。",
       "getInfoFailed": "未能獲取到使用者名稱或訪問令牌",
-      "getUserIdFailed": "無法獲取使用者 ID"
+      "getSiteStatusFailedDetailed": "已識別到帳號，但讀取站點狀態失敗。請稍後重試；如果仍失敗，可先手動儲存帳號。",
+      "getUserIdFailed": "無法獲取使用者 ID",
+      "getUserIdFailedDetailed": "已連線到站點，但未能讀取使用者 ID。請確認已在目標站點登入後重試。",
+      "getUsernameFailedDetailed": "已識別到帳號，但站點未返回使用者名稱。請確認已登入，或改用手動輸入。"
     }
   },
   "storage": {
