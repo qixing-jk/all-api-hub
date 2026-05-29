@@ -294,6 +294,24 @@ function resolveProductAnalyticsFailureStage({
 }
 
 /**
+ * Failed task completions should always carry a coarse category so diagnostics
+ * can distinguish explicitly unknown failures from missing instrumentation.
+ */
+function resolveProductAnalyticsErrorCategory({
+  result,
+  errorCategory,
+}: {
+  result: ProductAnalyticsResult
+  errorCategory?: ProductAnalyticsErrorCategory
+}) {
+  if (errorCategory) return errorCategory
+
+  return result === PRODUCT_ANALYTICS_RESULTS.Failure
+    ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
+    : undefined
+}
+
+/**
  * Tracks explicit UI intent using fixed analytics enums only.
  */
 export async function trackProductAnalyticsActionStarted({
@@ -335,6 +353,10 @@ export async function trackProductAnalyticsActionCompleted({
       result,
       insights,
     })
+    const resolvedErrorCategory = resolveProductAnalyticsErrorCategory({
+      result,
+      errorCategory,
+    })
 
     await trackProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
@@ -344,7 +366,9 @@ export async function trackProductAnalyticsActionCompleted({
         ...(surfaceId ? { surface_id: surfaceId } : {}),
         entrypoint,
         result,
-        ...(errorCategory ? { error_category: errorCategory } : {}),
+        ...(resolvedErrorCategory
+          ? { error_category: resolvedErrorCategory }
+          : {}),
         ...(typeof durationMs === "number"
           ? { duration_bucket: bucketDurationMs(durationMs) }
           : {}),

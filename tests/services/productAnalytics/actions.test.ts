@@ -241,6 +241,31 @@ describe("product analytics action helpers", () => {
     )
   })
 
+  it("defaults failed completions without an explicit error category to unknown", async () => {
+    const { trackProductAnalyticsActionCompleted } = await import(
+      "~/services/productAnalytics/actions"
+    )
+
+    await trackProductAnalyticsActionCompleted({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccountTokens,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+    })
+
+    expect(trackMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccountTokens,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        error_category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        failure_stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      },
+    )
+  })
+
   it("does not add failure diagnostics to non-failure completions by default", async () => {
     const { trackProductAnalyticsActionCompleted } = await import(
       "~/services/productAnalytics/actions"
