@@ -1568,8 +1568,10 @@ describe("UserPreferencesContext", () => {
       })
     })
 
-    expect((latestContext as any).preferences.webAiApiCheck).toMatchObject({
+    expect((latestContext as any).preferences.webAiApiCheck).toEqual({
+      ...DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
       autoDetect: {
+        ...DEFAULT_WEB_AI_API_CHECK_PREFERENCES.autoDetect,
         enhanced: { enabled: false },
       },
     })

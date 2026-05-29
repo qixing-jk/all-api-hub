@@ -329,14 +329,10 @@ const KNOWN_KEY_PREFIXES = [
   { value: "sk-ant", requiresHyphenSuffix: true },
   { value: "sk-or", requiresHyphenSuffix: true },
   { value: "sk", requiresHyphenSuffix: true },
+  // Xiaomi MiMo keys use the `tp-` token prefix.
   { value: "tp", requiresHyphenSuffix: true },
   { value: "AIza", requiresHyphenSuffix: false },
 ] as const
-
-const KNOWN_KEY_PREFIX_PATTERN = new RegExp(
-  KNOWN_KEY_PREFIXES.map((prefix) => prefix.value).join("|"),
-  "i",
-)
 
 /**
  * Escape a literal prefix before composing provider-token regexes.
@@ -344,6 +340,13 @@ const KNOWN_KEY_PREFIX_PATTERN = new RegExp(
 function escapeRegExp(value: string) {
   return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
 }
+
+const KNOWN_KEY_PREFIX_PATTERN = new RegExp(
+  `(?<![A-Za-z0-9_-])(?:${KNOWN_KEY_PREFIXES.map((prefix) =>
+    escapeRegExp(prefix.value),
+  ).join("|")})`,
+  "i",
+)
 
 /**
  * Build the token-body pattern for a known provider key prefix.

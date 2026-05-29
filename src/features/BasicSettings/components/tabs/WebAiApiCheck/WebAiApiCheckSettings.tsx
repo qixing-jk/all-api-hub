@@ -73,9 +73,9 @@ export default function WebAiApiCheckSettings() {
 
   const autoDetect =
     config.autoDetect ?? DEFAULT_PREFERENCES.webAiApiCheck!.autoDetect
-  const enhancedAutoDetect = autoDetect.enhanced ?? {
-    enabled: true,
-  }
+  const enhancedAutoDetect =
+    autoDetect.enhanced ??
+    DEFAULT_PREFERENCES.webAiApiCheck!.autoDetect.enhanced
   const whitelist =
     autoDetect.urlWhitelist ??
     DEFAULT_PREFERENCES.webAiApiCheck!.autoDetect.urlWhitelist

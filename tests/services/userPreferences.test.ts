@@ -113,6 +113,13 @@ describe("userPreferences", () => {
   describe("updateWebAiApiCheck", () => {
     it("persists nested enhanced auto-detect updates without a React provider", async () => {
       await userPreferences.resetToDefaults()
+      await userPreferences.updateWebAiApiCheck({
+        autoDetect: {
+          urlWhitelist: {
+            patterns: ["^https://stored\\.example"],
+          },
+        },
+      })
 
       await expect(
         userPreferences.updateWebAiApiCheck({
@@ -126,6 +133,9 @@ describe("userPreferences", () => {
 
       expect(preferences.webAiApiCheck?.autoDetect.enhanced.enabled).toBe(false)
       expect(preferences.webAiApiCheck?.autoDetect.enabled).toBe(true)
+      expect(
+        preferences.webAiApiCheck?.autoDetect.urlWhitelist.patterns,
+      ).toEqual(["^https://stored\\.example"])
       expect(preferences.webAiApiCheck?.enabled).toBe(true)
     })
   })

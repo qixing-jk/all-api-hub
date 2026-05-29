@@ -244,7 +244,12 @@ export function setupRuntimeMessageListeners() {
 
       if (request.action === RuntimeActionIds.OpenFeedbackBugReport) {
         void openBugReportPage()
-        sendResponse({ success: true })
+          .then(() => {
+            sendResponse({ success: true })
+          })
+          .catch((error) => {
+            sendResponse({ success: false, error: getErrorMessage(error) })
+          })
         return true
       }
 

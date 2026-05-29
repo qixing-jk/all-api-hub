@@ -92,4 +92,21 @@ describe("resolveContentFeaturePreferences", () => {
       webAiApiCheckEnhancedDetectionEnabled: false,
     })
   })
+
+  it("resolves enhanced detection as disabled when the enhanced toggle is off", () => {
+    expect(
+      resolveContentFeaturePreferences({
+        webAiApiCheck: {
+          enabled: true,
+          autoDetect: {
+            enabled: true,
+            enhanced: { enabled: false },
+          },
+        },
+      }),
+    ).toMatchObject({
+      webAiApiCheckDetectionEnabled: true,
+      webAiApiCheckEnhancedDetectionEnabled: false,
+    })
+  })
 })

@@ -221,7 +221,7 @@ describe("content entrypoint", () => {
         enableContextMenu: true,
       })
       expect(setupWebAiApiCheckContentMock).toHaveBeenCalledWith({
-        enableDetection: false,
+        enableDetection: true,
         enableContextMenu: true,
       })
     })

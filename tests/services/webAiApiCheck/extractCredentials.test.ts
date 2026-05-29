@@ -382,6 +382,20 @@ describe("webAiApiCheck extractCredentials", () => {
     )
   })
 
+  it("does not trim unknown short-prefix keys at embedded known-prefix text", () => {
+    const fixtureKey = "disk-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1"
+    const result = extractApiCheckCredentialsFromText(fixtureKey)
+
+    expect(result.apiKey).toBe(fixtureKey)
+    expect(result.apiKeyCandidates[0]).toBe(fixtureKey)
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        reasons: expect.arrayContaining(["unknownShortPrefix"]),
+      }),
+    )
+    expect(result.candidates.apiKeys[0].reasons).not.toContain("knownPrefix")
+  })
+
   it("cleans illegal ASCII punctuation inside suspected key windows", () => {
     const result = extractApiCheckCredentialsFromText(
       "sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg#7Hh8Ii9Jj0Kk1",

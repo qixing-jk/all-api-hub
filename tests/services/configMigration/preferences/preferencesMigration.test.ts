@@ -317,6 +317,34 @@ describe("preferencesMigration", () => {
       })
     })
 
+    it("preserves an explicit enhanced auto-detect opt-out during v25 migration", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 25,
+        webAiApiCheck: {
+          enabled: true,
+          contextMenu: { enabled: true },
+          autoDetect: {
+            enabled: true,
+            enhanced: { enabled: false },
+            urlWhitelist: { patterns: ["^https://stored\\.example"] },
+          },
+        },
+      } as any)
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.webAiApiCheck).toMatchObject({
+        enabled: true,
+        contextMenu: { enabled: true },
+        autoDetect: {
+          enabled: true,
+          enhanced: { enabled: false },
+          urlWhitelist: { patterns: ["^https://stored\\.example"] },
+        },
+      })
+    })
+
     it("defaults site announcement polling to disabled for new preference snapshots", () => {
       expect(DEFAULT_PREFERENCES.siteAnnouncementNotifications).toEqual(
         DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,

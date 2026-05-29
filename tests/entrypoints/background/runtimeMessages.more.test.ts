@@ -319,6 +319,7 @@ describe("setupRuntimeMessageListeners additional routing", () => {
   it("opens the bug report feedback destination for background-triggered navigation", async () => {
     const listener = await loadListener()
     const sendResponse = vi.fn()
+    mocks.openBugReportPage.mockResolvedValueOnce(undefined)
 
     const result = listener(
       { action: RuntimeActionIds.OpenFeedbackBugReport },
@@ -327,8 +328,30 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     )
 
     expect(result).toBe(true)
+    await waitForAsyncResponse()
     expect(sendResponse).toHaveBeenCalledWith({ success: true })
     expect(mocks.openBugReportPage).toHaveBeenCalledTimes(1)
+  })
+
+  it("surfaces bug report navigation failures", async () => {
+    const listener = await loadListener()
+    const sendResponse = vi.fn()
+    mocks.openBugReportPage.mockRejectedValueOnce(
+      new Error("navigation blocked"),
+    )
+
+    const result = listener(
+      { action: RuntimeActionIds.OpenFeedbackBugReport },
+      {},
+      sendResponse,
+    )
+
+    expect(result).toBe(true)
+    await waitForAsyncResponse()
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: false,
+      error: "navigation blocked",
+    })
   })
 
   it("routes release update actions to the dedicated handler", async () => {

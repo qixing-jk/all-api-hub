@@ -54,26 +54,30 @@ export const ApiCheckConfirmToast: React.FC<{
               <div>
                 <span>{t("webAiApiCheck:confirmToast.enhancedInfo")}</span>
                 <div className="mt-1 flex flex-wrap gap-x-2 gap-y-1">
-                  <button
+                  <Button
                     type="button"
-                    className="font-medium text-(--button-link-foreground) underline-offset-4 hover:text-(--button-link-hover-foreground) hover:underline focus-visible:ring-2 focus-visible:ring-(--button-link-ring) focus-visible:outline-none"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-sm"
                     onClick={(e) => {
                       e.stopPropagation()
                       onAction("feedback")
                     }}
                   >
                     {t("webAiApiCheck:confirmToast.feedback")}
-                  </button>
-                  <button
+                  </Button>
+                  <Button
                     type="button"
-                    className="font-medium text-(--button-link-foreground) underline-offset-4 hover:text-(--button-link-hover-foreground) hover:underline focus-visible:ring-2 focus-visible:ring-(--button-link-ring) focus-visible:outline-none"
+                    variant="link"
+                    size="sm"
+                    className="h-auto p-0 text-sm"
                     onClick={(e) => {
                       e.stopPropagation()
                       onAction("settings")
                     }}
                   >
                     {t("webAiApiCheck:confirmToast.settings")}
-                  </button>
+                  </Button>
                 </div>
               </div>
             </div>
