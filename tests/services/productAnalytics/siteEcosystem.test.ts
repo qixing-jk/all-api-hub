@@ -22,7 +22,7 @@ function buildRawSiteTypeAccount(
 }
 
 describe("siteEcosystem analytics", () => {
-  it("builds coarse aggregate and per-site-type events without exporting private account data", () => {
+  it("builds exact aggregate and per-site-type events without exporting private account data", () => {
     const events = buildSiteEcosystemAnalyticsEvents([
       buildSiteAccount({
         id: "private-account-1",
@@ -79,32 +79,32 @@ describe("siteEcosystem analytics", () => {
       {
         eventName: "site_ecosystem_snapshot",
         properties: {
-          total_account_count_bucket: "4_10",
-          distinct_site_count_bucket: "2_3",
-          known_site_type_count_bucket: "2_3",
-          unknown_site_count_bucket: "1",
-          managed_site_count_bucket: "2_3",
+          total_account_count: 4,
+          distinct_site_count: 3,
+          known_site_type_count: 2,
+          unknown_site_count: 1,
+          managed_site_count: 3,
         },
       },
       {
         eventName: "site_type_present",
         properties: {
           site_type: SITE_TYPES.NEW_API,
-          account_count_bucket: "2_3",
+          account_count: 2,
         },
       },
       {
         eventName: "site_type_present",
         properties: {
           site_type: SITE_TYPES.AXON_HUB,
-          account_count_bucket: "1",
+          account_count: 1,
         },
       },
       {
         eventName: "site_type_present",
         properties: {
           site_type: SITE_TYPES.UNKNOWN,
-          account_count_bucket: "1",
+          account_count: 1,
         },
       },
     ])

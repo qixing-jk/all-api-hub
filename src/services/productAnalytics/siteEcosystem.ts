@@ -11,7 +11,6 @@ import {
   type ProductAnalyticsEventPayload,
   type ProductAnalyticsSiteType,
 } from "./events"
-import { bucketCount } from "./privacy"
 
 export const SITE_ECOSYSTEM_SNAPSHOT_INTERVAL_MS = 3 * 24 * 60 * 60 * 1000
 
@@ -106,11 +105,11 @@ export function buildSiteEcosystemAnalyticsEvents(
     {
       eventName: PRODUCT_ANALYTICS_EVENTS.SiteEcosystemSnapshot,
       properties: {
-        total_account_count_bucket: bucketCount(accounts.length),
-        distinct_site_count_bucket: bucketCount(siteKeys.size),
-        known_site_type_count_bucket: bucketCount(knownSiteTypes.size),
-        unknown_site_count_bucket: bucketCount(unknownSiteCount),
-        managed_site_count_bucket: bucketCount(managedSiteCount),
+        total_account_count: accounts.length,
+        distinct_site_count: siteKeys.size,
+        known_site_type_count: knownSiteTypes.size,
+        unknown_site_count: unknownSiteCount,
+        managed_site_count: managedSiteCount,
       },
     },
     ...orderedSiteTypes
@@ -120,9 +119,7 @@ export function buildSiteEcosystemAnalyticsEvents(
           eventName: PRODUCT_ANALYTICS_EVENTS.SiteTypePresent,
           properties: {
             site_type: siteType,
-            account_count_bucket: bucketCount(
-              siteTypeCounts.get(siteType) ?? 0,
-            ),
+            account_count: siteTypeCounts.get(siteType) ?? 0,
           },
         }),
       ),

@@ -30,7 +30,7 @@ vi.mock("~/services/productAnalytics/events", async (importOriginal) => ({
 }))
 
 describe("auto-checkin product analytics", () => {
-  it("builds a bucketed config snapshot without raw schedule values", () => {
+  it("builds an exact config snapshot without exporting raw schedule strings", () => {
     const snapshot = buildAutoCheckinConfigSnapshotProperties(
       {
         globalEnabled: true,
@@ -57,10 +57,10 @@ describe("auto-checkin product analytics", () => {
       notify_completion_enabled: true,
       retry_enabled: true,
       schedule_mode: "deterministic",
-      retry_interval_bucket: "10_30m",
-      retry_max_attempts_bucket: "2_3",
-      window_length_bucket: "4_12h",
-      deterministic_time_bucket: "morning",
+      retry_interval_minutes: 30,
+      retry_max_attempts: 3,
+      window_length_minutes: 270,
+      deterministic_time_minutes: 570,
     })
     expect(JSON.stringify(snapshot)).not.toContain("08:15")
     expect(JSON.stringify(snapshot)).not.toContain("12:45")
@@ -91,10 +91,9 @@ describe("auto-checkin product analytics", () => {
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoCheckinConfigSnapshot,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         global_enabled: false,
-        retry_interval_bucket: "lt_10m",
-        retry_max_attempts_bucket: "1",
-        window_length_bucket: "4_12h",
-        deterministic_time_bucket: "unset",
+        retry_interval_minutes: 5,
+        retry_max_attempts: 1,
+        window_length_minutes: 300,
       }),
     )
   })
@@ -118,11 +117,11 @@ describe("auto-checkin product analytics", () => {
       PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     )
 
-    expect(snapshot.window_length_bucket).toBe("lt_1h")
-    expect(snapshot.deterministic_time_bucket).toBe("unset")
+    expect(snapshot.window_length_minutes).toBe(0)
+    expect(snapshot.deterministic_time_minutes).toBeUndefined()
   })
 
-  it("buckets invalid time bounds and long retry settings without raw values", () => {
+  it("normalizes invalid time bounds and keeps long retry settings exact", () => {
     const snapshot = buildAutoCheckinConfigSnapshotProperties(
       {
         globalEnabled: false,
@@ -143,16 +142,16 @@ describe("auto-checkin product analytics", () => {
 
     expect(snapshot).toEqual(
       expect.objectContaining({
-        retry_interval_bucket: "gt_60m",
-        retry_max_attempts_bucket: "4_plus",
-        window_length_bucket: "lt_1h",
-        deterministic_time_bucket: "evening",
+        retry_interval_minutes: 90,
+        retry_max_attempts: 5,
+        window_length_minutes: 0,
+        deterministic_time_minutes: 1125,
       }),
     )
     expect(JSON.stringify(snapshot)).not.toContain("18:45")
   })
 
-  it("buckets short overnight windows and afternoon deterministic times", () => {
+  it("keeps short overnight windows and deterministic times exact", () => {
     const snapshot = buildAutoCheckinConfigSnapshotProperties(
       {
         globalEnabled: true,
@@ -173,10 +172,10 @@ describe("auto-checkin product analytics", () => {
 
     expect(snapshot).toEqual(
       expect.objectContaining({
-        retry_interval_bucket: "30_60m",
-        retry_max_attempts_bucket: "2_3",
-        window_length_bucket: "lt_1h",
-        deterministic_time_bucket: "afternoon",
+        retry_interval_minutes: 60,
+        retry_max_attempts: 2,
+        window_length_minutes: 30,
+        deterministic_time_minutes: 810,
       }),
     )
   })

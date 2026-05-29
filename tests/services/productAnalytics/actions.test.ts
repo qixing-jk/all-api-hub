@@ -184,7 +184,7 @@ describe("product analytics action helpers", () => {
     ).toBeUndefined()
   })
 
-  it("tracks completion with duration and error buckets but no raw error text", async () => {
+  it("tracks completion with exact duration and error categories but no raw error text", async () => {
     const { trackProductAnalyticsActionCompleted } = await import(
       "~/services/productAnalytics/actions"
     )
@@ -209,7 +209,7 @@ describe("product analytics action helpers", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
         result: PRODUCT_ANALYTICS_RESULTS.Failure,
         error_category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network,
-        duration_bucket: "5_30s",
+        duration_ms: 6000,
         failure_stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
       },
     )
@@ -412,7 +412,7 @@ describe("product analytics action helpers", () => {
           PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         result: PRODUCT_ANALYTICS_RESULTS.Success,
-        duration_bucket: "1_5s",
+        duration_ms: 2000,
         api_type: PRODUCT_ANALYTICS_API_TYPES.OpenAiCompatible,
         source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.History,
         mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
@@ -538,7 +538,7 @@ describe("product analytics action helpers", () => {
           surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsImportExportPage,
           entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
           result: PRODUCT_ANALYTICS_RESULTS.Success,
-          duration_bucket: "1_5s",
+          duration_ms: 1250,
         },
       )
     })
@@ -591,7 +591,7 @@ describe("product analytics action helpers", () => {
             PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
           entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
           result: PRODUCT_ANALYTICS_RESULTS.Success,
-          duration_bucket: "1_5s",
+          duration_ms: 2000,
           api_type: PRODUCT_ANALYTICS_API_TYPES.OpenAiCompatible,
           source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.History,
           mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,

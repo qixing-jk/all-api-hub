@@ -10,11 +10,7 @@ import {
 } from "~/types/autoCheckin"
 
 import {
-  PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS,
-  PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS,
-  PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS,
   PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES,
-  PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_SETTING_IDS,
@@ -230,84 +226,62 @@ function parseTimeToMinutes(time: string): number | null {
 }
 
 /**
- * Converts retry interval minutes into a coarse strategy bucket.
+ * Normalizes retry interval minutes into a non-negative analytics value.
  */
-function bucketRetryInterval(intervalMinutes: number | undefined) {
+function normalizeNonNegativeInteger(value: number | undefined) {
+  const numberValue = Number(value)
+  if (
+    !Number.isFinite(numberValue) ||
+    !Number.isInteger(numberValue) ||
+    numberValue < 0
+  ) {
+    return 0
+  }
+  return numberValue
+}
+
+/**
+ * Normalizes retry interval minutes into a non-negative analytics value.
+ */
+function normalizeRetryInterval(intervalMinutes: number | undefined) {
   const interval = Number(intervalMinutes)
-  if (!Number.isFinite(interval) || interval < 10) {
-    return PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS.LessThan10m
-  }
-  if (interval <= 30) {
-    return PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS.TenTo30m
-  }
-  if (interval <= 60) {
-    return PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS.ThirtyTo60m
-  }
-  return PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS.GreaterThan60m
+  return Number.isFinite(interval) && interval >= 0 ? Math.round(interval) : 0
 }
 
 /**
- * Converts retry attempt limits into a coarse strategy bucket.
+ * Normalizes retry attempt limits into a non-negative analytics value.
  */
-function bucketRetryAttempts(maxAttempts: number | undefined) {
-  const attempts = Number(maxAttempts)
-  if (!Number.isFinite(attempts) || attempts <= 1) {
-    return PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.One
-  }
-  if (attempts <= 3) {
-    return PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.TwoToThree
-  }
-  return PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.FourPlus
+function normalizeRetryAttempts(maxAttempts: number | undefined) {
+  return normalizeNonNegativeInteger(maxAttempts)
 }
 
 /**
- * Buckets the configured daily check-in window length without exposing bounds.
+ * Converts the configured daily check-in window length into minutes.
  */
-function bucketWindowLength(config: AutoCheckinPreferences) {
+function getWindowLengthMinutes(config: AutoCheckinPreferences) {
   const start = parseTimeToMinutes(config.windowStart)
   const end = parseTimeToMinutes(config.windowEnd)
 
   if (start === null || end === null || start === end) {
-    return PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS.LessThan1h
+    return 0
   }
 
-  const durationMinutes = end > start ? end - start : 24 * 60 - start + end
-  if (durationMinutes < 60) {
-    return PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS.LessThan1h
-  }
-  if (durationMinutes <= 4 * 60) {
-    return PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS.OneTo4h
-  }
-  if (durationMinutes <= 12 * 60) {
-    return PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS.FourTo12h
-  }
-  return PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS.GreaterThan12h
+  return end > start ? end - start : 24 * 60 - start + end
 }
 
 /**
- * Buckets deterministic run time into a broad day-part value.
+ * Converts deterministic run time into minutes from local midnight.
  */
-function bucketDeterministicTime(time: string | undefined) {
+function getDeterministicTimeMinutes(time: string | undefined) {
   if (!time) {
-    return PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS.Unset
+    return undefined
   }
 
   const minutes = parseTimeToMinutes(time)
   if (minutes === null) {
-    return PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS.Unset
+    return undefined
   }
-
-  const hour = Math.floor(minutes / 60)
-  if (hour < 6) {
-    return PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS.Night
-  }
-  if (hour < 12) {
-    return PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS.Morning
-  }
-  if (hour < 18) {
-    return PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS.Afternoon
-  }
-  return PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS.Evening
+  return minutes
 }
 
 /**
@@ -328,18 +302,20 @@ export function buildAutoCheckinConfigSnapshotProperties(
       preferences.scheduleMode === AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC
         ? PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES.Deterministic
         : PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES.Random,
-    retry_interval_bucket: bucketRetryInterval(
+    retry_interval_minutes: normalizeRetryInterval(
       preferences.retryStrategy?.intervalMinutes,
     ),
-    retry_max_attempts_bucket: bucketRetryAttempts(
+    retry_max_attempts: normalizeRetryAttempts(
       preferences.retryStrategy?.maxAttemptsPerDay,
     ),
-    window_length_bucket: bucketWindowLength(preferences),
-    deterministic_time_bucket: bucketDeterministicTime(
-      preferences.scheduleMode === AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC
-        ? preferences.deterministicTime
-        : undefined,
-    ),
+    window_length_minutes: getWindowLengthMinutes(preferences),
+    ...(preferences.scheduleMode === AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC
+      ? {
+          deterministic_time_minutes: getDeterministicTimeMinutes(
+            preferences.deterministicTime,
+          ),
+        }
+      : {}),
   } as const
 }
 

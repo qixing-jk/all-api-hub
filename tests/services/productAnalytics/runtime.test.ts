@@ -233,13 +233,13 @@ describe("product analytics runtime", () => {
     expect(captureMock).toHaveBeenCalledWith(
       "site_ecosystem_snapshot",
       expect.objectContaining({
-        total_account_count_bucket: "1",
-        distinct_site_count_bucket: "1",
+        total_account_count: 1,
+        distinct_site_count: 1,
       }),
     )
     expect(captureMock).toHaveBeenCalledWith("site_type_present", {
       site_type: SITE_TYPES.NEW_API,
-      account_count_bucket: "1",
+      account_count: 1,
     })
     expect(stateMocks.setLastSiteEcosystemSnapshotAt).toHaveBeenCalledWith(
       Date.parse("2026-05-12T00:00:00.000Z"),

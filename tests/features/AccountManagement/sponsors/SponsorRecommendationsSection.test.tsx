@@ -461,7 +461,7 @@ describe("SponsorRecommendationsSection", () => {
         sponsor_id: "supported-provider",
         sponsor_support_status: "supported",
         sponsor_catalog_source: "bundled",
-        sponsor_rank_bucket: "1",
+        sponsor_rank: 1,
         item_count: 2,
       }),
     )
@@ -474,7 +474,7 @@ describe("SponsorRecommendationsSection", () => {
         sponsor_id: "remote-provider",
         sponsor_support_status: "unsupported",
         sponsor_catalog_source: "remote",
-        sponsor_rank_bucket: "2_3",
+        sponsor_rank: 2,
         item_count: 2,
       }),
     )

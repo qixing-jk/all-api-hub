@@ -6,13 +6,11 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS,
   PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES,
-  PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS,
   PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   trackProductAnalyticsEvent,
   type ProductAnalyticsActionId,
   type ProductAnalyticsSponsorCatalogSource,
-  type ProductAnalyticsSponsorRankBucket,
   type ProductAnalyticsSponsorSupportStatus,
   type ProductAnalyticsSurfaceId,
 } from "~/services/productAnalytics/events"
@@ -105,7 +103,7 @@ export function trackSponsorRecommendationClick({
       sponsor_action_kind: actionKind,
       sponsor_catalog_source: resolveSponsorCatalogSource([item]),
       sponsor_id: item.id,
-      sponsor_rank_bucket: bucketSponsorRank(item.rank),
+      sponsor_rank: item.rank,
       sponsor_support_status: resolveSponsorSupportStatus(item),
     },
   )
@@ -166,15 +164,4 @@ function resolveSponsorSupportStatus(
   return item.supportStatus === SPONSOR_SUPPORT_STATUS.Supported
     ? PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES.Supported
     : PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES.Unsupported
-}
-
-/** Converts exact recommendation rank into a coarse analytics bucket. */
-function bucketSponsorRank(rank: number): ProductAnalyticsSponsorRankBucket {
-  if (!Number.isFinite(rank) || rank <= 0) {
-    return PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS.Unknown
-  }
-  if (rank === 1) return PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS.One
-  if (rank <= 3) return PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS.TwoToThree
-  if (rank <= 10) return PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS.FourToTen
-  return PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS.TenPlus
 }

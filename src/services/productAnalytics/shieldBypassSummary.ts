@@ -6,7 +6,6 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "./events"
-import { bucketCount } from "./privacy"
 import {
   productAnalyticsState,
   type ProductAnalyticsShieldBypassSummaryPatch,
@@ -54,7 +53,7 @@ function hasSummaryActivity(summary: ProductAnalyticsShieldBypassSummaryState) {
 }
 
 /**
- * Converts local counters into privacy-safe bucketed analytics properties.
+ * Converts local counters into privacy-filtered analytics properties.
  */
 function buildSummaryProperties(
   summary: ProductAnalyticsShieldBypassSummaryState,
@@ -63,27 +62,15 @@ function buildSummaryProperties(
     feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ShieldBypassAssist,
     surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
     entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-    shield_bypass_prompt_shown_count_bucket: bucketCount(
-      summary.promptShownCount ?? 0,
-    ),
-    shield_bypass_prompt_dismissed_count_bucket: bucketCount(
-      summary.promptDismissedCount ?? 0,
-    ),
-    shield_bypass_settings_visited_count_bucket: bucketCount(
-      summary.settingsVisitedCount ?? 0,
-    ),
-    temp_window_fetch_success_count_bucket: bucketCount(
-      summary.tempWindowFetchSuccessCount ?? 0,
-    ),
-    temp_window_fetch_failure_count_bucket: bucketCount(
-      summary.tempWindowFetchFailureCount ?? 0,
-    ),
-    temp_window_turnstile_fetch_success_count_bucket: bucketCount(
+    shield_bypass_prompt_shown_count: summary.promptShownCount ?? 0,
+    shield_bypass_prompt_dismissed_count: summary.promptDismissedCount ?? 0,
+    shield_bypass_settings_visited_count: summary.settingsVisitedCount ?? 0,
+    temp_window_fetch_success_count: summary.tempWindowFetchSuccessCount ?? 0,
+    temp_window_fetch_failure_count: summary.tempWindowFetchFailureCount ?? 0,
+    temp_window_turnstile_fetch_success_count:
       summary.tempWindowTurnstileFetchSuccessCount ?? 0,
-    ),
-    temp_window_turnstile_fetch_failure_count_bucket: bucketCount(
+    temp_window_turnstile_fetch_failure_count:
       summary.tempWindowTurnstileFetchFailureCount ?? 0,
-    ),
   }
 }
 

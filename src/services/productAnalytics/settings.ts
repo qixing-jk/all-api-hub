@@ -24,7 +24,6 @@ import { deepOverride } from "~/utils"
 
 import { buildAutoCheckinConfigSnapshotProperties } from "./autoCheckin"
 import {
-  PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS,
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_SETTING_IDS,
@@ -34,7 +33,6 @@ import {
   type ProductAnalyticsManagedSiteType,
   type ProductAnalyticsModeId,
 } from "./events"
-import { bucketCount } from "./privacy"
 
 type SettingChangedPayload = ProductAnalyticsEventPayload<
   typeof PRODUCT_ANALYTICS_EVENTS.SettingChanged
@@ -68,60 +66,14 @@ const ALL_SETTINGS_SNAPSHOT_KEYS = [
 
 type SettingsSnapshotKey = (typeof ALL_SETTINGS_SNAPSHOT_KEYS)[number]
 
-/**
- * Buckets minute/second cadences into coarse ranges shared by settings snapshots.
- */
-function bucketIntervalMinutes(minutes: number): ProductAnalyticsModeId {
-  if (!Number.isFinite(minutes) || minutes < 10) {
-    return PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalLessThan10m
-  }
-  if (minutes <= 60) return PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalTenTo60m
-  if (minutes <= 6 * 60) {
-    return PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h
-  }
-  if (minutes <= 24 * 60) {
-    return PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalSixTo24h
-  }
-  return PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalGreaterThan24h
+function normalizeNonNegativeInteger(value: number): number {
+  return Number.isFinite(value) && Number.isInteger(value) && value >= 0
+    ? value
+    : 0
 }
 
-function bucketMinIntervalSeconds(seconds: number): ProductAnalyticsModeId {
-  if (!Number.isFinite(seconds) || seconds < 60) {
-    return PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalLessThan10m
-  }
-  if (seconds <= 10 * 60) {
-    return PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo10m
-  }
-  return bucketIntervalMinutes(seconds / 60)
-}
-
-function bucketRetentionDays(days: number): ProductAnalyticsModeId {
-  if (!Number.isFinite(days) || days <= 7) {
-    return PRODUCT_ANALYTICS_MODE_IDS.RetentionDaysSevenOrLess
-  }
-  if (days <= 30) return PRODUCT_ANALYTICS_MODE_IDS.RetentionDaysEightTo30
-  if (days <= 365) {
-    return PRODUCT_ANALYTICS_MODE_IDS.RetentionDaysThirtyOneTo365
-  }
-  return PRODUCT_ANALYTICS_MODE_IDS.RetentionDaysGreaterThan365
-}
-
-function bucketRateLimit(value: number): ProductAnalyticsModeId {
-  if (!Number.isFinite(value) || value < 20) {
-    return PRODUCT_ANALYTICS_MODE_IDS.RateLimitLessThan20
-  }
-  if (value <= 60) return PRODUCT_ANALYTICS_MODE_IDS.RateLimitTwentyTo60
-  return PRODUCT_ANALYTICS_MODE_IDS.RateLimitSixtyPlus
-}
-
-function bucketRetryAttempts(value: number) {
-  if (!Number.isFinite(value) || value <= 1) {
-    return PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.One
-  }
-  if (value <= 3) {
-    return PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.TwoToThree
-  }
-  return PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.FourPlus
+function normalizeNonNegativeMinutes(value: number): number {
+  return Number.isFinite(value) && value >= 0 ? Math.round(value) : 0
 }
 
 function getUsageHistoryScheduleMode(mode: string | undefined) {
@@ -285,8 +237,10 @@ function buildAutoRefreshSnapshot(
     entrypoint,
     enabled: config.enabled === true,
     refresh_on_open_enabled: config.refreshOnOpen === true,
-    refresh_interval_bucket: bucketIntervalMinutes(config.interval / 60_000),
-    min_refresh_interval_bucket: bucketMinIntervalSeconds(
+    refresh_interval_minutes: normalizeNonNegativeMinutes(
+      config.interval / 60_000,
+    ),
+    min_refresh_interval_seconds: normalizeNonNegativeInteger(
       config.minInterval / 1_000,
     ),
   }
@@ -302,8 +256,10 @@ function buildUsageHistorySnapshot(
     entrypoint,
     enabled: config.enabled === true,
     mode: getUsageHistoryScheduleMode(config.scheduleMode),
-    sync_interval_bucket: bucketIntervalMinutes(config.syncIntervalMinutes),
-    retention_days_bucket: bucketRetentionDays(config.retentionDays),
+    sync_interval_minutes: normalizeNonNegativeInteger(
+      config.syncIntervalMinutes,
+    ),
+    retention_days: normalizeNonNegativeInteger(config.retentionDays),
   }
 }
 
@@ -317,7 +273,7 @@ function buildBalanceHistorySnapshot(
     entrypoint,
     enabled: config.enabled === true,
     end_of_day_capture_enabled: config.endOfDayCapture?.enabled === true,
-    retention_days_bucket: bucketRetentionDays(config.retentionDays),
+    retention_days: normalizeNonNegativeInteger(config.retentionDays),
   }
 }
 
@@ -356,11 +312,15 @@ function buildManagedSiteModelSyncSnapshot(
       PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncConfigSnapshot,
     entrypoint,
     enabled: config.enabled === true,
-    sync_interval_bucket: bucketIntervalMinutes(config.interval / 60_000),
-    concurrency_bucket: bucketCount(config.concurrency),
-    retry_max_attempts_bucket: bucketRetryAttempts(config.maxRetries),
-    rate_limit_rpm_bucket: bucketRateLimit(config.rateLimit.requestsPerMinute),
-    rate_limit_burst_bucket: bucketCount(config.rateLimit.burst),
+    sync_interval_minutes: normalizeNonNegativeMinutes(
+      config.interval / 60_000,
+    ),
+    concurrency: normalizeNonNegativeInteger(config.concurrency),
+    retry_max_attempts: normalizeNonNegativeInteger(config.maxRetries),
+    rate_limit_rpm: normalizeNonNegativeInteger(
+      config.rateLimit.requestsPerMinute,
+    ),
+    rate_limit_burst: normalizeNonNegativeInteger(config.rateLimit.burst),
     allowed_models_configured: (config.allowedModels ?? []).length > 0,
     global_filters_configured:
       (config.globalChannelModelFilters ?? []).length > 0,
@@ -450,7 +410,9 @@ function buildWebdavSnapshot(
     auto_sync_enabled: config.autoSync === true,
     backup_encryption_enabled: config.backupEncryptionEnabled === true,
     sync_strategy: getWebdavSyncStrategy(config.syncStrategy),
-    sync_interval_bucket: bucketIntervalMinutes(config.syncInterval / 60),
+    sync_interval_minutes: normalizeNonNegativeMinutes(
+      config.syncInterval / 60,
+    ),
     sync_accounts_enabled: syncData.accounts,
     sync_bookmarks_enabled: syncData.bookmarks,
     sync_api_profiles_enabled: syncData.apiCredentialProfiles,
@@ -481,8 +443,8 @@ function buildTaskNotificationsSnapshot(
     enabled: config.enabled === true,
     browser_channel_enabled:
       config.channels[TASK_NOTIFICATION_CHANNELS.Browser].enabled === true,
-    third_party_channel_count_bucket: bucketCount(thirdPartyChannelCount),
-    task_enabled_count_bucket: bucketCount(taskEnabledCount),
+    third_party_channel_count: thirdPartyChannelCount,
+    task_enabled_count: taskEnabledCount,
   }
 }
 
@@ -498,7 +460,9 @@ function buildSiteAnnouncementsSnapshot(
     entrypoint,
     enabled: config.enabled === true,
     notification_enabled: config.notificationEnabled === true,
-    polling_interval_bucket: bucketIntervalMinutes(config.intervalMinutes),
+    polling_interval_minutes: normalizeNonNegativeInteger(
+      config.intervalMinutes,
+    ),
   }
 }
 
@@ -644,17 +608,17 @@ export function buildAggregateSettingsSnapshotEvent(
     show_health_status_enabled: account.show_health_status_enabled,
     account_auto_refresh_enabled: autoRefresh.enabled,
     account_auto_refresh_on_open_enabled: autoRefresh.refresh_on_open_enabled,
-    account_auto_refresh_interval_bucket: autoRefresh.refresh_interval_bucket,
-    account_auto_refresh_min_interval_bucket:
-      autoRefresh.min_refresh_interval_bucket,
+    account_auto_refresh_interval_minutes: autoRefresh.refresh_interval_minutes,
+    account_auto_refresh_min_interval_seconds:
+      autoRefresh.min_refresh_interval_seconds,
     usage_history_enabled: usageHistory.enabled,
     usage_history_mode: usageHistory.mode,
-    usage_history_sync_interval_bucket: usageHistory.sync_interval_bucket,
-    usage_history_retention_days_bucket: usageHistory.retention_days_bucket,
+    usage_history_sync_interval_minutes: usageHistory.sync_interval_minutes,
+    usage_history_retention_days: usageHistory.retention_days,
     balance_history_enabled: balanceHistory.enabled,
     balance_history_end_of_day_capture_enabled:
       balanceHistory.end_of_day_capture_enabled,
-    balance_history_retention_days_bucket: balanceHistory.retention_days_bucket,
+    balance_history_retention_days: balanceHistory.retention_days,
     managed_site_type: managedSite.managed_site_type,
     new_api_configured: managedSite.new_api_configured,
     done_hub_configured: managedSite.done_hub_configured,
@@ -665,16 +629,14 @@ export function buildAggregateSettingsSnapshotEvent(
     cli_proxy_configured: managedSite.cli_proxy_configured,
     claude_code_router_configured: managedSite.claude_code_router_configured,
     managed_site_model_sync_enabled: managedSiteModelSync.enabled,
-    managed_site_model_sync_interval_bucket:
-      managedSiteModelSync.sync_interval_bucket,
-    managed_site_model_sync_concurrency_bucket:
-      managedSiteModelSync.concurrency_bucket,
-    managed_site_model_sync_retry_max_attempts_bucket:
-      managedSiteModelSync.retry_max_attempts_bucket,
-    managed_site_model_sync_rate_limit_rpm_bucket:
-      managedSiteModelSync.rate_limit_rpm_bucket,
-    managed_site_model_sync_rate_limit_burst_bucket:
-      managedSiteModelSync.rate_limit_burst_bucket,
+    managed_site_model_sync_interval_minutes:
+      managedSiteModelSync.sync_interval_minutes,
+    managed_site_model_sync_concurrency: managedSiteModelSync.concurrency,
+    managed_site_model_sync_retry_max_attempts:
+      managedSiteModelSync.retry_max_attempts,
+    managed_site_model_sync_rate_limit_rpm: managedSiteModelSync.rate_limit_rpm,
+    managed_site_model_sync_rate_limit_burst:
+      managedSiteModelSync.rate_limit_burst,
     managed_site_model_sync_allowed_models_configured:
       managedSiteModelSync.allowed_models_configured,
     managed_site_model_sync_global_filters_configured:
@@ -685,12 +647,11 @@ export function buildAggregateSettingsSnapshotEvent(
       autoCheckin.notify_completion_enabled,
     auto_checkin_retry_enabled: autoCheckin.retry_enabled,
     auto_checkin_schedule_mode: autoCheckin.schedule_mode,
-    auto_checkin_retry_interval_bucket: autoCheckin.retry_interval_bucket,
-    auto_checkin_retry_max_attempts_bucket:
-      autoCheckin.retry_max_attempts_bucket,
-    auto_checkin_window_length_bucket: autoCheckin.window_length_bucket,
-    auto_checkin_deterministic_time_bucket:
-      autoCheckin.deterministic_time_bucket,
+    auto_checkin_retry_interval_minutes: autoCheckin.retry_interval_minutes,
+    auto_checkin_retry_max_attempts: autoCheckin.retry_max_attempts,
+    auto_checkin_window_length_minutes: autoCheckin.window_length_minutes,
+    auto_checkin_deterministic_time_minutes:
+      autoCheckin.deterministic_time_minutes,
     model_redirect_enabled: modelRedirect.enabled,
     model_redirect_standard_models_configured:
       modelRedirect.standard_models_configured,
@@ -727,7 +688,7 @@ export function buildAggregateSettingsSnapshotEvent(
     webdav_auto_sync_enabled: webdav.auto_sync_enabled,
     webdav_backup_encryption_enabled: webdav.backup_encryption_enabled,
     webdav_sync_strategy: webdav.sync_strategy,
-    webdav_sync_interval_bucket: webdav.sync_interval_bucket,
+    webdav_sync_interval_minutes: webdav.sync_interval_minutes,
     webdav_sync_accounts_enabled: webdav.sync_accounts_enabled,
     webdav_sync_bookmarks_enabled: webdav.sync_bookmarks_enabled,
     webdav_sync_api_profiles_enabled: webdav.sync_api_profiles_enabled,
@@ -735,15 +696,14 @@ export function buildAggregateSettingsSnapshotEvent(
     task_notifications_enabled: taskNotifications.enabled,
     task_notifications_browser_channel_enabled:
       taskNotifications.browser_channel_enabled,
-    task_notifications_third_party_channel_count_bucket:
-      taskNotifications.third_party_channel_count_bucket,
-    task_notifications_task_enabled_count_bucket:
-      taskNotifications.task_enabled_count_bucket,
+    task_notifications_third_party_channel_count:
+      taskNotifications.third_party_channel_count,
+    task_notifications_task_enabled_count: taskNotifications.task_enabled_count,
     site_announcements_enabled: siteAnnouncements.enabled,
     site_announcements_notification_enabled:
       siteAnnouncements.notification_enabled,
-    site_announcements_polling_interval_bucket:
-      siteAnnouncements.polling_interval_bucket,
+    site_announcements_polling_interval_minutes:
+      siteAnnouncements.polling_interval_minutes,
   }
 }
 

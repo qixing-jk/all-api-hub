@@ -6,12 +6,7 @@ import {
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
 import {
-  PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS,
-  PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS,
-  PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS,
   PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES,
-  PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS,
-  PRODUCT_ANALYTICS_COUNT_BUCKETS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_MODE_IDS,
@@ -243,28 +238,23 @@ describe("settings product analytics snapshots", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         enabled: true,
         refresh_on_open_enabled: true,
-        refresh_interval_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalTenTo60m,
-        min_refresh_interval_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo10m,
+        refresh_interval_minutes: 60,
+        min_refresh_interval_seconds: 300,
       },
       {
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.UsageHistoryConfigSnapshot,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         enabled: true,
         mode: PRODUCT_ANALYTICS_MODE_IDS.UsageHistoryAlarm,
-        sync_interval_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalSixTo24h,
-        retention_days_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RetentionDaysEightTo30,
+        sync_interval_minutes: 720,
+        retention_days: 30,
       },
       {
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.BalanceHistoryConfigSnapshot,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         enabled: true,
         end_of_day_capture_enabled: true,
-        retention_days_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RetentionDaysGreaterThan365,
+        retention_days: 730,
       },
       {
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteConfigSnapshot,
@@ -284,12 +274,11 @@ describe("settings product analytics snapshots", () => {
           PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncConfigSnapshot,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         enabled: true,
-        sync_interval_bucket: PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
-        concurrency_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
-        retry_max_attempts_bucket:
-          PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.FourPlus,
-        rate_limit_rpm_bucket: PRODUCT_ANALYTICS_MODE_IDS.RateLimitSixtyPlus,
-        rate_limit_burst_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TenPlus,
+        sync_interval_minutes: 120,
+        concurrency: 6,
+        retry_max_attempts: 4,
+        rate_limit_rpm: 90,
+        rate_limit_burst: 12,
         allowed_models_configured: true,
         global_filters_configured: true,
       },
@@ -302,14 +291,10 @@ describe("settings product analytics snapshots", () => {
         retry_enabled: true,
         schedule_mode:
           PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES.Deterministic,
-        retry_interval_bucket:
-          PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS.ThirtyTo60m,
-        retry_max_attempts_bucket:
-          PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.FourPlus,
-        window_length_bucket:
-          PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS.OneTo4h,
-        deterministic_time_bucket:
-          PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS.Morning,
+        retry_interval_minutes: 45,
+        retry_max_attempts: 4,
+        window_length_minutes: 240,
+        deterministic_time_minutes: 570,
       },
       {
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ModelRedirectConfigSnapshot,
@@ -357,7 +342,7 @@ describe("settings product analytics snapshots", () => {
         auto_sync_enabled: true,
         backup_encryption_enabled: true,
         sync_strategy: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
-        sync_interval_bucket: PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
+        sync_interval_minutes: 120,
         sync_accounts_enabled: true,
         sync_bookmarks_enabled: false,
         sync_api_profiles_enabled: true,
@@ -369,9 +354,8 @@ describe("settings product analytics snapshots", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         enabled: true,
         browser_channel_enabled: true,
-        third_party_channel_count_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
-        task_enabled_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+        third_party_channel_count: 3,
+        task_enabled_count: 4,
       },
       {
         setting_id:
@@ -379,8 +363,7 @@ describe("settings product analytics snapshots", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         enabled: true,
         notification_enabled: false,
-        polling_interval_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalSixTo24h,
+        polling_interval_minutes: 1440,
       },
     ])
 
@@ -456,7 +439,7 @@ describe("settings product analytics snapshots", () => {
     )
   })
 
-  it("buckets millisecond auto-refresh intervals as minutes and seconds", () => {
+  it("reports millisecond auto-refresh intervals as exact minutes and seconds", () => {
     const [autoRefreshSnapshot] = buildSettingsSnapshotEvents(
       createPreferences({
         accountAutoRefresh: {
@@ -473,15 +456,13 @@ describe("settings product analytics snapshots", () => {
     expect(autoRefreshSnapshot).toEqual(
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoRefreshConfigSnapshot,
-        refresh_interval_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalTenTo60m,
-        min_refresh_interval_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalLessThan10m,
+        refresh_interval_minutes: 10,
+        min_refresh_interval_seconds: 5,
       }),
     )
   })
 
-  it("buckets boundary settings and legacy managed-site sync preferences", () => {
+  it("reports boundary settings and legacy managed-site sync preferences exactly", () => {
     const events = buildSettingsSnapshotEvents(
       createPreferences({
         accountAutoRefresh: {
@@ -528,18 +509,14 @@ describe("settings product analytics snapshots", () => {
     expect(events).toEqual([
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoRefreshConfigSnapshot,
-        refresh_interval_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalGreaterThan24h,
-        min_refresh_interval_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
+        refresh_interval_minutes: 1500,
+        min_refresh_interval_seconds: 5400,
       }),
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.UsageHistoryConfigSnapshot,
         mode: PRODUCT_ANALYTICS_MODE_IDS.UsageHistoryManual,
-        sync_interval_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalLessThan10m,
-        retention_days_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RetentionDaysGreaterThan365,
+        sync_interval_minutes: 0,
+        retention_days: 400,
       }),
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteConfigSnapshot,
@@ -548,13 +525,11 @@ describe("settings product analytics snapshots", () => {
       expect.objectContaining({
         setting_id:
           PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncConfigSnapshot,
-        sync_interval_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalTenTo60m,
-        concurrency_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero,
-        retry_max_attempts_bucket:
-          PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.One,
-        rate_limit_rpm_bucket: PRODUCT_ANALYTICS_MODE_IDS.RateLimitLessThan20,
-        rate_limit_burst_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero,
+        sync_interval_minutes: 15,
+        concurrency: 0,
+        retry_max_attempts: 1,
+        rate_limit_rpm: 10,
+        rate_limit_burst: 0,
         allowed_models_configured: false,
         global_filters_configured: false,
       }),
@@ -565,7 +540,7 @@ describe("settings product analytics snapshots", () => {
     ])
   })
 
-  it("resolves patch keys and remaining bucket branches for targeted snapshots", () => {
+  it("resolves patch keys and exact numeric fields for targeted snapshots", () => {
     const preferences = createPreferences({
       usageHistory: {
         enabled: false,
@@ -623,8 +598,7 @@ describe("settings product analytics snapshots", () => {
       }),
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.BalanceHistoryConfigSnapshot,
-        retention_days_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RetentionDaysThirtyOneTo365,
+        retention_days: 365,
       }),
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ModelRedirectConfigSnapshot,
@@ -663,17 +637,15 @@ describe("settings product analytics snapshots", () => {
     expect(usageSnapshot).toEqual(
       expect.objectContaining({
         mode: PRODUCT_ANALYTICS_MODE_IDS.UsageHistoryAfterRefresh,
-        retention_days_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RetentionDaysSevenOrLess,
+        retention_days: 7,
       }),
     )
     expect(syncSnapshot).toEqual(
       expect.objectContaining({
-        sync_interval_bucket: PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
-        concurrency_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TenPlus,
-        retry_max_attempts_bucket:
-          PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.One,
-        rate_limit_rpm_bucket: PRODUCT_ANALYTICS_MODE_IDS.RateLimitTwentyTo60,
+        sync_interval_minutes: 180,
+        concurrency: 12,
+        retry_max_attempts: 0,
+        rate_limit_rpm: 60,
       }),
     )
   })

@@ -1,7 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import {
-  PRODUCT_ANALYTICS_COUNT_BUCKETS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FEATURE_IDS,
@@ -121,7 +120,7 @@ describe("shield bypass product analytics summary", () => {
     expect(captureMock).not.toHaveBeenCalled()
   })
 
-  it("uploads one bucketed daily summary and rolls the local state forward", async () => {
+  it("uploads one exact daily summary and rolls the local state forward", async () => {
     const { flushShieldBypassDailySummary } = await import(
       "~/services/productAnalytics/shieldBypassSummary"
     )
@@ -135,20 +134,13 @@ describe("shield bypass product analytics summary", () => {
         surface_id:
           PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-        shield_bypass_prompt_shown_count_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.TenPlus,
-        shield_bypass_prompt_dismissed_count_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
-        shield_bypass_settings_visited_count_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
-        temp_window_fetch_success_count_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
-        temp_window_fetch_failure_count_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
-        temp_window_turnstile_fetch_success_count_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero,
-        temp_window_turnstile_fetch_failure_count_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+        shield_bypass_prompt_shown_count: 11,
+        shield_bypass_prompt_dismissed_count: 2,
+        shield_bypass_settings_visited_count: 1,
+        temp_window_fetch_success_count: 3,
+        temp_window_fetch_failure_count: 1,
+        temp_window_turnstile_fetch_success_count: 0,
+        temp_window_turnstile_fetch_failure_count: 4,
       },
     )
     expect(stateMocks.replaceShieldBypassSummaryState).toHaveBeenCalledWith({

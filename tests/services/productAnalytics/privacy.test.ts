@@ -9,13 +9,7 @@ import {
   PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS,
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_API_TYPES,
-  PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS,
-  PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS,
-  PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS,
   PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES,
-  PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS,
-  PRODUCT_ANALYTICS_COUNT_BUCKETS,
-  PRODUCT_ANALYTICS_DURATION_BUCKETS,
   PRODUCT_ANALYTICS_EDITOR_MODES,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
@@ -33,7 +27,6 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS,
   PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES,
-  PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS,
   PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES,
   PRODUCT_ANALYTICS_STATUS_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -41,11 +34,7 @@ import {
   PRODUCT_ANALYTICS_TARGET_STATES,
   PRODUCT_ANALYTICS_TELEMETRY_SOURCES,
 } from "~/services/productAnalytics/events"
-import {
-  bucketCount,
-  bucketDurationMs,
-  sanitizeProductAnalyticsEvent,
-} from "~/services/productAnalytics/privacy"
+import { sanitizeProductAnalyticsEvent } from "~/services/productAnalytics/privacy"
 import { AuthTypeEnum } from "~/types"
 
 describe("product analytics privacy filtering", () => {
@@ -117,7 +106,7 @@ describe("product analytics privacy filtering", () => {
           PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         result: PRODUCT_ANALYTICS_RESULTS.Success,
-        duration_bucket: "1_5s",
+        duration_ms: 2000,
         action_name: "Refresh Alice",
         surface_name: "Account row for Alice",
         label: "Refresh private account for Alice",
@@ -134,7 +123,7 @@ describe("product analytics privacy filtering", () => {
         PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementRowActions,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       result: PRODUCT_ANALYTICS_RESULTS.Success,
-      duration_bucket: "1_5s",
+      duration_ms: 2000,
     })
   })
 
@@ -154,7 +143,7 @@ describe("product analytics privacy filtering", () => {
         sponsor_catalog_source:
           PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES.Remote,
         sponsor_id: "packycode",
-        sponsor_rank_bucket: PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS.One,
+        sponsor_rank: 1,
         sponsor_support_status:
           PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES.Supported,
         sponsor_supported_count: 1,
@@ -177,7 +166,7 @@ describe("product analytics privacy filtering", () => {
       sponsor_action_kind: PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS.VisitProvider,
       sponsor_catalog_source: PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES.Remote,
       sponsor_id: "packycode",
-      sponsor_rank_bucket: PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS.One,
+      sponsor_rank: 1,
       sponsor_support_status:
         PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES.Supported,
       sponsor_supported_count: 1,
@@ -194,7 +183,7 @@ describe("product analytics privacy filtering", () => {
         surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementDialog,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         result: PRODUCT_ANALYTICS_RESULTS.Success,
-        duration_bucket: "lt_1s",
+        duration_ms: 500,
         accountName: "Secret Account",
         tokenName: "Production token",
         tokenKey: "sk-secret",
@@ -209,7 +198,7 @@ describe("product analytics privacy filtering", () => {
       surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsKeyManagementDialog,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       result: PRODUCT_ANALYTICS_RESULTS.Success,
-      duration_bucket: "lt_1s",
+      duration_ms: 500,
     })
   })
 
@@ -245,7 +234,7 @@ describe("product analytics privacy filtering", () => {
           entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
           result,
           error_category: errorCategory,
-          duration_bucket: PRODUCT_ANALYTICS_DURATION_BUCKETS.OneTo5s,
+          duration_ms: 2000,
           accountName: "Secret Account",
           accountId: "private-account-id",
           accountUrl: "https://private.example/account",
@@ -266,7 +255,7 @@ describe("product analytics privacy filtering", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         result,
         ...(errorCategory ? { error_category: errorCategory } : {}),
-        duration_bucket: PRODUCT_ANALYTICS_DURATION_BUCKETS.OneTo5s,
+        duration_ms: 2000,
       })
     },
   )
@@ -297,7 +286,7 @@ describe("product analytics privacy filtering", () => {
         target_value: "private-provider",
         source_url: "https://private.example/path",
         sourceText: "sk-secret",
-        bucketed_selected_count: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+        selected_count_label: "2_3",
         telemetry_endpoint: "/api/usage/token/",
       },
     )
@@ -365,12 +354,11 @@ describe("product analytics privacy filtering", () => {
         setting_id:
           PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncConfigSnapshot,
         enabled: true,
-        sync_interval_bucket: PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
-        concurrency_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
-        retry_max_attempts_bucket:
-          PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.FourPlus,
-        rate_limit_rpm_bucket: PRODUCT_ANALYTICS_MODE_IDS.RateLimitSixtyPlus,
-        rate_limit_burst_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TenPlus,
+        sync_interval_minutes: 120,
+        concurrency: 6,
+        retry_max_attempts: 4,
+        rate_limit_rpm: 90,
+        rate_limit_burst: 12,
         allowed_models_configured: true,
         global_filters_configured: true,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
@@ -385,12 +373,11 @@ describe("product analytics privacy filtering", () => {
       setting_id:
         PRODUCT_ANALYTICS_SETTING_IDS.ManagedSiteModelSyncConfigSnapshot,
       enabled: true,
-      sync_interval_bucket: PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
-      concurrency_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
-      retry_max_attempts_bucket:
-        PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.FourPlus,
-      rate_limit_rpm_bucket: PRODUCT_ANALYTICS_MODE_IDS.RateLimitSixtyPlus,
-      rate_limit_burst_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TenPlus,
+      sync_interval_minutes: 120,
+      concurrency: 6,
+      retry_max_attempts: 4,
+      rate_limit_rpm: 90,
+      rate_limit_burst: 12,
       allowed_models_configured: true,
       global_filters_configured: true,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
@@ -439,7 +426,7 @@ describe("product analytics privacy filtering", () => {
         auto_sync_enabled: true,
         backup_encryption_enabled: true,
         sync_strategy: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
-        sync_interval_bucket: PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
+        sync_interval_minutes: 120,
         sync_accounts_enabled: true,
         sync_bookmarks_enabled: false,
         sync_api_profiles_enabled: true,
@@ -458,7 +445,7 @@ describe("product analytics privacy filtering", () => {
       auto_sync_enabled: true,
       backup_encryption_enabled: true,
       sync_strategy: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
-      sync_interval_bucket: PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
+      sync_interval_minutes: 120,
       sync_accounts_enabled: true,
       sync_bookmarks_enabled: false,
       sync_api_profiles_enabled: true,
@@ -572,25 +559,17 @@ describe("product analytics privacy filtering", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
         account_auto_refresh_enabled: true,
         account_auto_refresh_on_open_enabled: false,
-        account_auto_refresh_interval_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
-        account_auto_refresh_min_interval_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalTenTo60m,
+        account_auto_refresh_interval_minutes: 120,
+        account_auto_refresh_min_interval_seconds: 3600,
         balance_history_enabled: true,
         balance_history_end_of_day_capture_enabled: true,
-        balance_history_retention_days_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RetentionDaysThirtyOneTo365,
+        balance_history_retention_days: 365,
         managed_site_model_sync_enabled: true,
-        managed_site_model_sync_interval_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalSixTo24h,
-        managed_site_model_sync_concurrency_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
-        managed_site_model_sync_retry_max_attempts_bucket:
-          PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.TwoToThree,
-        managed_site_model_sync_rate_limit_rpm_bucket:
-          PRODUCT_ANALYTICS_MODE_IDS.RateLimitTwentyTo60,
-        managed_site_model_sync_rate_limit_burst_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+        managed_site_model_sync_interval_minutes: 720,
+        managed_site_model_sync_concurrency: 2,
+        managed_site_model_sync_retry_max_attempts: 3,
+        managed_site_model_sync_rate_limit_rpm: 60,
+        managed_site_model_sync_rate_limit_burst: 6,
         managed_site_model_sync_allowed_models_configured: true,
         managed_site_model_sync_global_filters_configured: true,
         redemption_assist_allowlist_account_urls_enabled: true,
@@ -605,25 +584,17 @@ describe("product analytics privacy filtering", () => {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
       account_auto_refresh_enabled: true,
       account_auto_refresh_on_open_enabled: false,
-      account_auto_refresh_interval_bucket:
-        PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalOneTo6h,
-      account_auto_refresh_min_interval_bucket:
-        PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalTenTo60m,
+      account_auto_refresh_interval_minutes: 120,
+      account_auto_refresh_min_interval_seconds: 3600,
       balance_history_enabled: true,
       balance_history_end_of_day_capture_enabled: true,
-      balance_history_retention_days_bucket:
-        PRODUCT_ANALYTICS_MODE_IDS.RetentionDaysThirtyOneTo365,
+      balance_history_retention_days: 365,
       managed_site_model_sync_enabled: true,
-      managed_site_model_sync_interval_bucket:
-        PRODUCT_ANALYTICS_MODE_IDS.RefreshIntervalSixTo24h,
-      managed_site_model_sync_concurrency_bucket:
-        PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
-      managed_site_model_sync_retry_max_attempts_bucket:
-        PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.TwoToThree,
-      managed_site_model_sync_rate_limit_rpm_bucket:
-        PRODUCT_ANALYTICS_MODE_IDS.RateLimitTwentyTo60,
-      managed_site_model_sync_rate_limit_burst_bucket:
-        PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+      managed_site_model_sync_interval_minutes: 720,
+      managed_site_model_sync_concurrency: 2,
+      managed_site_model_sync_retry_max_attempts: 3,
+      managed_site_model_sync_rate_limit_rpm: 60,
+      managed_site_model_sync_rate_limit_burst: 6,
       managed_site_model_sync_allowed_models_configured: true,
       managed_site_model_sync_global_filters_configured: true,
       redemption_assist_allowlist_account_urls_enabled: true,
@@ -658,14 +629,10 @@ describe("product analytics privacy filtering", () => {
         notify_completion_enabled: false,
         retry_enabled: true,
         schedule_mode: PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES.Random,
-        retry_interval_bucket:
-          PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS.TenTo30m,
-        retry_max_attempts_bucket:
-          PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.TwoToThree,
-        window_length_bucket:
-          PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS.FourTo12h,
-        deterministic_time_bucket:
-          PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS.Unset,
+        retry_interval_minutes: 15,
+        retry_max_attempts: 3,
+        window_length_minutes: 570,
+        deterministic_time_minutes: 0,
         windowStart: "09:15",
         windowEnd: "18:45",
         deterministicTime: "10:30",
@@ -684,14 +651,10 @@ describe("product analytics privacy filtering", () => {
       notify_completion_enabled: false,
       retry_enabled: true,
       schedule_mode: PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES.Random,
-      retry_interval_bucket:
-        PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS.TenTo30m,
-      retry_max_attempts_bucket:
-        PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS.TwoToThree,
-      window_length_bucket:
-        PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS.FourTo12h,
-      deterministic_time_bucket:
-        PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS.Unset,
+      retry_interval_minutes: 15,
+      retry_max_attempts: 3,
+      window_length_minutes: 570,
+      deterministic_time_minutes: 0,
     })
   })
 
@@ -703,10 +666,10 @@ describe("product analytics privacy filtering", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         global_enabled: true,
         schedule_mode: "custom-private-mode",
-        retry_interval_bucket: "15",
-        retry_max_attempts_bucket: "99",
-        window_length_bucket: "09:00-18:00",
-        deterministic_time_bucket: "10:30",
+        retry_interval_label: "15m",
+        retry_max_attempts_label: "99",
+        window_length_label: "09:00-18:00",
+        deterministic_time_label: "10:30",
       },
     )
 
@@ -813,14 +776,14 @@ describe("product analytics privacy filtering", () => {
         target_managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.DoneHub,
         failure_stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Preview,
         editor_mode: PRODUCT_ANALYTICS_EDITOR_MODES.Json,
-        warning_count: 1,
+        warning_count_label: "1",
         ready_count: 7,
         blocked_count: 3,
         sourceSiteUrl: "https://source.example",
         targetSiteUrl: "https://target.example",
         channelName: "Production channel",
         rawWarningCount: 7,
-        warning_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
+        warning_count: 1,
       },
     )
 
@@ -993,7 +956,7 @@ describe("product analytics privacy filtering", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         result: PRODUCT_ANALYTICS_RESULTS.Failure,
         error_category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
-        duration_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
+        duration_ms: 1,
         url: "https://private.example/path",
         baseUrl: "https://private.example",
         accessToken: "sk-secret",
@@ -1017,6 +980,7 @@ describe("product analytics privacy filtering", () => {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       result: PRODUCT_ANALYTICS_RESULTS.Failure,
       error_category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      duration_ms: 1,
     })
   })
 
@@ -1111,7 +1075,7 @@ describe("product analytics privacy filtering", () => {
     },
   )
 
-  it("keeps shield bypass daily summary buckets while dropping request details", () => {
+  it("keeps shield bypass daily summary counts while dropping request details", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured,
       {
@@ -1121,20 +1085,13 @@ describe("product analytics privacy filtering", () => {
           PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
         result: PRODUCT_ANALYTICS_RESULTS.Success,
-        shield_bypass_prompt_shown_count_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.TenPlus,
-        shield_bypass_prompt_dismissed_count_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
-        shield_bypass_settings_visited_count_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
-        temp_window_fetch_success_count_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
-        temp_window_fetch_failure_count_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
-        temp_window_turnstile_fetch_success_count_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero,
-        temp_window_turnstile_fetch_failure_count_bucket:
-          PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+        shield_bypass_prompt_shown_count: 11,
+        shield_bypass_prompt_dismissed_count: 2,
+        shield_bypass_settings_visited_count: 1,
+        temp_window_fetch_success_count: 6,
+        temp_window_fetch_failure_count: 1,
+        temp_window_turnstile_fetch_success_count: 0,
+        temp_window_turnstile_fetch_failure_count: 6,
         fetchUrl: "https://private.example/api/checkin?token=secret",
       },
     )
@@ -1144,20 +1101,13 @@ describe("product analytics privacy filtering", () => {
       surface_id:
         PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundShieldBypassTempContext,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
-      shield_bypass_prompt_shown_count_bucket:
-        PRODUCT_ANALYTICS_COUNT_BUCKETS.TenPlus,
-      shield_bypass_prompt_dismissed_count_bucket:
-        PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
-      shield_bypass_settings_visited_count_bucket:
-        PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
-      temp_window_fetch_success_count_bucket:
-        PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
-      temp_window_fetch_failure_count_bucket:
-        PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
-      temp_window_turnstile_fetch_success_count_bucket:
-        PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero,
-      temp_window_turnstile_fetch_failure_count_bucket:
-        PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+      shield_bypass_prompt_shown_count: 11,
+      shield_bypass_prompt_dismissed_count: 2,
+      shield_bypass_settings_visited_count: 1,
+      temp_window_fetch_success_count: 6,
+      temp_window_fetch_failure_count: 1,
+      temp_window_turnstile_fetch_success_count: 0,
+      temp_window_turnstile_fetch_failure_count: 6,
     })
   })
 
@@ -1175,35 +1125,35 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
-  it("keeps site ecosystem snapshot bucket fields only", () => {
+  it("keeps site ecosystem snapshot count fields only", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.SiteEcosystemSnapshot,
       {
-        total_account_count_bucket: "4_10",
-        distinct_site_count_bucket: "2_3",
-        known_site_type_count_bucket: "1",
-        unknown_site_count_bucket: "0",
-        managed_site_count_bucket: "2_3",
+        total_account_count: 6,
+        distinct_site_count: 2,
+        known_site_type_count: 1,
+        unknown_site_count: 0,
+        managed_site_count: 2,
         site_url: "https://private.example",
         hostname: "private.example",
       },
     )
 
     expect(sanitized).toEqual({
-      total_account_count_bucket: "4_10",
-      distinct_site_count_bucket: "2_3",
-      known_site_type_count_bucket: "1",
-      unknown_site_count_bucket: "0",
-      managed_site_count_bucket: "2_3",
+      total_account_count: 6,
+      distinct_site_count: 2,
+      known_site_type_count: 1,
+      unknown_site_count: 0,
+      managed_site_count: 2,
     })
   })
 
-  it("keeps site type bucket field despite forbidden key pattern", () => {
+  it("keeps site type count field despite forbidden key pattern", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.SiteTypePresent,
       {
         site_type: SITE_TYPES.NEW_API,
-        account_count_bucket: "2_3",
+        account_count: 2,
         accountName: "Secret Account",
         domain: "private.example",
         url: "https://private.example/account",
@@ -1212,7 +1162,7 @@ describe("product analytics privacy filtering", () => {
 
     expect(sanitized).toEqual({
       site_type: SITE_TYPES.NEW_API,
-      account_count_bucket: "2_3",
+      account_count: 2,
     })
   })
 
@@ -1227,31 +1177,15 @@ describe("product analytics privacy filtering", () => {
         PRODUCT_ANALYTICS_EVENTS.SiteTypePresent,
         {
           site_type: siteType,
-          account_count_bucket: "1",
+          account_count: 1,
           url: "https://private.example/account",
         },
       )
 
       expect(sanitized).toEqual({
         site_type: siteType,
-        account_count_bucket: "1",
+        account_count: 1,
       })
     },
   )
-
-  it("buckets count boundaries", () => {
-    expect(bucketCount(0)).toBe(PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero)
-    expect(bucketCount(1)).toBe(PRODUCT_ANALYTICS_COUNT_BUCKETS.One)
-    expect(bucketCount(3)).toBe(PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree)
-    expect(bucketCount(10)).toBe(PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen)
-    expect(bucketCount(11)).toBe(PRODUCT_ANALYTICS_COUNT_BUCKETS.TenPlus)
-  })
-
-  it("buckets duration boundaries", () => {
-    expect(bucketDurationMs(999)).toBe("lt_1s")
-    expect(bucketDurationMs(5_000)).toBe("1_5s")
-    expect(bucketDurationMs(30_000)).toBe("5_30s")
-    expect(bucketDurationMs(120_000)).toBe("30_120s")
-    expect(bucketDurationMs(120_001)).toBe("gt_120s")
-  })
 })

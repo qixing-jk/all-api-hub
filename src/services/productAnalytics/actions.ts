@@ -26,7 +26,6 @@ import {
   type ProductAnalyticsTargetState,
   type ProductAnalyticsTelemetrySource,
 } from "./events"
-import { bucketDurationMs } from "./privacy"
 
 export {
   resolveProductAnalyticsActionContext,
@@ -403,9 +402,7 @@ export async function trackProductAnalyticsActionCompleted({
         ...(resolvedErrorCategory
           ? { error_category: resolvedErrorCategory }
           : {}),
-        ...(typeof durationMs === "number"
-          ? { duration_bucket: bucketDurationMs(durationMs) }
-          : {}),
+        ...(typeof durationMs === "number" ? { duration_ms: durationMs } : {}),
         ...mapProductAnalyticsActionInsights(insights),
         ...(failureStage ? { failure_stage: failureStage } : {}),
       },
