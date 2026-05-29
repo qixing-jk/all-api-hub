@@ -88,6 +88,15 @@ describe("webAiApiCheck utils", () => {
       expect(extractApiCheckCredentialsFromText("")).toEqual({
         baseUrlCandidates: [],
         apiKeyCandidates: [],
+        candidates: { baseUrls: [], apiKeys: [] },
+        summary: {
+          hasEnhancedBaseUrl: false,
+          hasEnhancedApiKey: false,
+          hasCleanup: false,
+          usesEnhancedResult: false,
+          autoPromptEligible: false,
+          enhancedAutoPromptEligible: false,
+        },
         baseUrl: null,
         apiKey: null,
       })

@@ -11,11 +11,59 @@ import {
  * The extractor is intentionally "best-effort" and returns candidate lists
  * (deduplicated) plus a suggested best match for each field.
  */
+export type ApiCheckCandidateConfidence =
+  | "standard"
+  | "enhancedHigh"
+  | "enhancedMedium"
+
+export type ApiCheckCandidateReason =
+  | "labeled"
+  | "genericUrl"
+  | "authorizationHeader"
+  | "knownPrefix"
+  | "unknownShortPrefix"
+  | "unknownLongPrefix"
+  | "multiSegment"
+  | "unseparatedLongToken"
+  | "bareDomain"
+  | "schemeAdded"
+  | "pathNormalized"
+  | "illegalCharsRemoved"
+
+export type ApiCheckCandidateKind = "baseUrl" | "apiKey"
+
+export type ApiCheckCandidate = {
+  value: string
+  kind: ApiCheckCandidateKind
+  confidence: ApiCheckCandidateConfidence
+  reasons: ApiCheckCandidateReason[]
+  cleanupApplied?: boolean
+  autoPromptEligible: boolean
+}
+
+export type ApiCheckExtractionSummary = {
+  hasEnhancedBaseUrl: boolean
+  hasEnhancedApiKey: boolean
+  hasCleanup: boolean
+  usesEnhancedResult: boolean
+  autoPromptEligible: boolean
+  enhancedAutoPromptEligible: boolean
+}
+
 type ApiCheckExtractionResult = {
   baseUrlCandidates: string[]
   apiKeyCandidates: string[]
+  candidates: {
+    baseUrls: ApiCheckCandidate[]
+    apiKeys: ApiCheckCandidate[]
+  }
+  summary: ApiCheckExtractionSummary
   baseUrl: string | null
   apiKey: string | null
+}
+
+type InternalApiCheckCandidate = ApiCheckCandidate & {
+  insertionOrder: number
 }
 
 /**
@@ -26,6 +74,187 @@ function trimWrappingPunctuation(value: string): string {
     .trim()
     .replace(/^[("'`[{<]+/, "")
     .replace(/[)"'`}\]>.,;]+$/, "")
+}
+
+const CONFIDENCE_RANK: Record<ApiCheckCandidateConfidence, number> = {
+  standard: 0,
+  enhancedHigh: 1,
+  enhancedMedium: 2,
+}
+
+/**
+ * Merge reason tags without changing their first-seen ordering.
+ */
+function mergeReasons(
+  current: ApiCheckCandidateReason[],
+  next: ApiCheckCandidateReason[],
+) {
+  const merged = [...current]
+  for (const reason of next) {
+    if (!merged.includes(reason)) merged.push(reason)
+  }
+  return merged
+}
+
+/**
+ * Sort candidates from most suitable best-match choice to least suitable.
+ */
+function compareCandidates(
+  a: InternalApiCheckCandidate,
+  b: InternalApiCheckCandidate,
+) {
+  const confidenceDelta =
+    CONFIDENCE_RANK[a.confidence] - CONFIDENCE_RANK[b.confidence]
+  if (confidenceDelta !== 0) return confidenceDelta
+
+  const labeledDelta =
+    Number(b.reasons.includes("labeled")) -
+    Number(a.reasons.includes("labeled"))
+  if (labeledDelta !== 0) return labeledDelta
+
+  const knownPrefixDelta =
+    Number(b.reasons.includes("knownPrefix")) -
+    Number(a.reasons.includes("knownPrefix"))
+  if (knownPrefixDelta !== 0) return knownPrefixDelta
+
+  const cleanupDelta = Number(!!b.cleanupApplied) - Number(!!a.cleanupApplied)
+  if (cleanupDelta !== 0) return cleanupDelta
+
+  return a.insertionOrder - b.insertionOrder
+}
+
+/**
+ * Rank API key candidates by how likely the final value is to be usable.
+ */
+function getApiKeyUsefulnessRank(candidate: InternalApiCheckCandidate) {
+  if (candidate.reasons.includes("knownPrefix")) return 4
+  if (candidate.reasons.includes("unknownShortPrefix")) return 3
+  if (
+    candidate.reasons.includes("unknownLongPrefix") ||
+    candidate.reasons.includes("multiSegment")
+  ) {
+    return 2
+  }
+  if (candidate.reasons.includes("unseparatedLongToken")) return 1
+  return 0
+}
+
+/**
+ * Sort API key candidates by final key-likeness before source hints.
+ */
+function compareApiKeyCandidates(
+  a: InternalApiCheckCandidate,
+  b: InternalApiCheckCandidate,
+) {
+  const usefulnessDelta =
+    getApiKeyUsefulnessRank(b) - getApiKeyUsefulnessRank(a)
+  if (usefulnessDelta !== 0) return usefulnessDelta
+
+  const labeledDelta =
+    Number(b.reasons.includes("labeled")) -
+    Number(a.reasons.includes("labeled"))
+  if (labeledDelta !== 0) return labeledDelta
+
+  const authorizationHeaderDelta =
+    Number(b.reasons.includes("authorizationHeader")) -
+    Number(a.reasons.includes("authorizationHeader"))
+  if (authorizationHeaderDelta !== 0) return authorizationHeaderDelta
+
+  const cleanupDelta = Number(!!b.cleanupApplied) - Number(!!a.cleanupApplied)
+  if (cleanupDelta !== 0) return cleanupDelta
+
+  return a.insertionOrder - b.insertionOrder
+}
+
+/**
+ * Insert a structured candidate or merge it into an existing value match.
+ */
+function pushCandidate(
+  list: InternalApiCheckCandidate[],
+  candidate: InternalApiCheckCandidate,
+) {
+  if (!candidate.value) return
+  const existing = list.find((item) => item.value === candidate.value)
+  if (existing) {
+    existing.reasons = mergeReasons(existing.reasons, candidate.reasons)
+    if (candidate.cleanupApplied) {
+      existing.cleanupApplied = true
+    }
+    existing.autoPromptEligible =
+      existing.autoPromptEligible || candidate.autoPromptEligible
+    if (
+      CONFIDENCE_RANK[candidate.confidence] <
+      CONFIDENCE_RANK[existing.confidence]
+    ) {
+      existing.confidence = candidate.confidence
+    }
+    return
+  }
+  list.push(candidate)
+}
+
+/**
+ * Drop internal ranking data before exposing structured candidates.
+ */
+function toPublicCandidate(candidate: InternalApiCheckCandidate) {
+  const { insertionOrder: _insertionOrder, ...publicCandidate } = candidate
+  return publicCandidate
+}
+
+/**
+ * Build aggregate flags for compatibility and later enhanced extraction flows.
+ */
+function buildSummary(params: {
+  baseUrls: InternalApiCheckCandidate[]
+  apiKeys: InternalApiCheckCandidate[]
+  selectedBaseUrl?: InternalApiCheckCandidate
+  selectedApiKey?: InternalApiCheckCandidate
+}): ApiCheckExtractionSummary {
+  const hasEnhancedBaseUrl = params.baseUrls.some(
+    (candidate) => candidate.confidence !== "standard",
+  )
+  const hasEnhancedApiKey = params.apiKeys.some(
+    (candidate) => candidate.confidence !== "standard",
+  )
+  const hasCleanup = params.apiKeys.some(
+    (candidate) => candidate.cleanupApplied,
+  )
+  const selectedBaseUrlUsesEnhanced =
+    !!params.selectedBaseUrl && params.selectedBaseUrl.confidence !== "standard"
+  const selectedApiKeyUsesEnhanced =
+    !!params.selectedApiKey && params.selectedApiKey.confidence !== "standard"
+  const usesEnhancedResult =
+    selectedBaseUrlUsesEnhanced ||
+    selectedApiKeyUsesEnhanced ||
+    !!params.selectedApiKey?.cleanupApplied
+
+  const autoPromptEligible =
+    !!params.selectedBaseUrl?.autoPromptEligible &&
+    !!params.selectedApiKey?.autoPromptEligible &&
+    !usesEnhancedResult
+
+  const hasBaseUrlForEnhanced = !!params.selectedBaseUrl
+  const selectedKeyAllowsAuto =
+    !!params.selectedApiKey?.autoPromptEligible ||
+    (!!params.selectedApiKey &&
+      hasBaseUrlForEnhanced &&
+      !params.selectedApiKey.reasons.includes("unseparatedLongToken"))
+
+  const enhancedAutoPromptEligible =
+    !!params.selectedBaseUrl &&
+    !!params.selectedApiKey &&
+    usesEnhancedResult &&
+    !!params.selectedBaseUrl.autoPromptEligible &&
+    selectedKeyAllowsAuto
+
+  return {
+    hasEnhancedBaseUrl,
+    hasEnhancedApiKey,
+    hasCleanup,
+    usesEnhancedResult,
+    autoPromptEligible,
+    enhancedAutoPromptEligible,
+  }
 }
 
 /**
@@ -96,6 +325,248 @@ export function normalizeGoogleFamilyBaseUrl(baseUrl: string): string | null {
   return normalizeBaseUrlByStrippingPathSegment(baseUrl, "v1beta")
 }
 
+const KNOWN_KEY_PREFIXES = [
+  { value: "sk-ant", requiresHyphenSuffix: true },
+  { value: "sk-or", requiresHyphenSuffix: true },
+  { value: "sk", requiresHyphenSuffix: true },
+  { value: "tp", requiresHyphenSuffix: true },
+  { value: "AIza", requiresHyphenSuffix: false },
+] as const
+
+const KNOWN_KEY_PREFIX_PATTERN = new RegExp(
+  KNOWN_KEY_PREFIXES.map((prefix) => prefix.value).join("|"),
+  "i",
+)
+
+/**
+ * Escape a literal prefix before composing provider-token regexes.
+ */
+function escapeRegExp(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+/**
+ * Build the token-body pattern for a known provider key prefix.
+ */
+function getKnownKeyPrefixPattern(prefix: (typeof KNOWN_KEY_PREFIXES)[number]) {
+  const escaped = escapeRegExp(prefix.value)
+  return prefix.requiresHyphenSuffix
+    ? `${escaped}-[a-z0-9_-]{10,}`
+    : `${escaped}[a-z0-9_-]{10,}`
+}
+
+const KNOWN_KEY_TOKEN_PATTERN = new RegExp(
+  `\\b(?:${KNOWN_KEY_PREFIXES.map(getKnownKeyPrefixPattern).join("|")})\\b`,
+  "gi",
+)
+
+/**
+ * Start cleanup at a known key prefix when surrounding label text is captured.
+ */
+function trimToKnownKeyPrefix(raw: string) {
+  const prefixMatch = KNOWN_KEY_PREFIX_PATTERN.exec(raw)
+  return prefixMatch ? raw.slice(prefixMatch.index) : raw
+}
+
+/**
+ * Remove characters that cannot be part of supported API key tokens.
+ */
+function cleanKeyWindow(raw: string) {
+  const cleaned = trimToKnownKeyPrefix(raw).replace(/[^A-Za-z0-9_-]/g, "")
+  return {
+    value: cleaned,
+    cleanupApplied: cleaned !== raw,
+  }
+}
+
+/**
+ * Detect token segments that look generated rather than natural language.
+ */
+function isRandomLookingSegment(segment: string): boolean {
+  if (segment.length < 12) return false
+  const hasLetter = /[A-Za-z]/.test(segment)
+  const hasDigit = /\d/.test(segment)
+  const hasMixedCase = /[a-z]/.test(segment) && /[A-Z]/.test(segment)
+  return hasLetter && (hasDigit || hasMixedCase)
+}
+
+/**
+ * Filter out ordinary dashed or underscored words that are not key-like.
+ */
+function isNaturalLanguageMultiSegment(value: string): boolean {
+  const segments = value.split(/[-_]/).filter(Boolean)
+  if (segments.length < 2) return false
+  return segments.every((segment) => /^[a-z]{2,12}$/i.test(segment))
+}
+
+/**
+ * Score a raw token-like window as an API key candidate when it is plausible.
+ */
+function classifyApiKeyCandidate(
+  raw: string,
+): Omit<ApiCheckCandidate, "kind"> | null {
+  const trimmed = trimWrappingPunctuation(raw)
+  if (!trimmed) return null
+
+  const cleaned = cleanKeyWindow(trimmed)
+  const value = cleaned.value
+  if (value.length < 18) return null
+  if (!/^[A-Za-z0-9_-]+$/.test(value)) return null
+  if (isNaturalLanguageMultiSegment(value)) return null
+
+  const lowerValue = value.toLowerCase()
+  const segments = value.split(/[-_]/).filter(Boolean)
+  const hasSeparator = /[-_]/.test(value)
+  const hasLongRandomSegment = segments.some((segment) =>
+    isRandomLookingSegment(segment),
+  )
+
+  const knownHyphenPrefix = KNOWN_KEY_PREFIXES.find(
+    (prefix) =>
+      prefix.requiresHyphenSuffix && lowerValue.startsWith(`${prefix.value}-`),
+  )
+
+  if (knownHyphenPrefix || value.startsWith("AIza")) {
+    return {
+      value,
+      confidence: "standard",
+      reasons: [
+        "knownPrefix",
+        ...(segments.length >= 3
+          ? (["multiSegment"] satisfies ApiCheckCandidateReason[])
+          : []),
+        ...(cleaned.cleanupApplied
+          ? (["illegalCharsRemoved"] satisfies ApiCheckCandidateReason[])
+          : []),
+      ],
+      cleanupApplied: cleaned.cleanupApplied,
+      autoPromptEligible: true,
+    }
+  }
+
+  if (hasSeparator && segments.length >= 2) {
+    const prefix = segments[0] ?? ""
+    const body = segments.slice(1).join("")
+    const isShortPrefix = prefix.length >= 1 && prefix.length <= 6
+    const hasLongBody = body.length >= 24 && isRandomLookingSegment(body)
+    const isMultiSegment =
+      value.length >= 32 && hasLongRandomSegment && segments.length >= 2
+
+    if (isShortPrefix && hasLongBody) {
+      return {
+        value,
+        confidence: "enhancedHigh",
+        reasons: [
+          "unknownShortPrefix",
+          ...(isMultiSegment
+            ? (["multiSegment"] satisfies ApiCheckCandidateReason[])
+            : []),
+          ...(cleaned.cleanupApplied
+            ? (["illegalCharsRemoved"] satisfies ApiCheckCandidateReason[])
+            : []),
+        ],
+        cleanupApplied: cleaned.cleanupApplied,
+        autoPromptEligible: true,
+      }
+    }
+
+    if (isMultiSegment) {
+      return {
+        value,
+        confidence: "enhancedMedium",
+        reasons: [
+          prefix.length >= 7 ? "unknownLongPrefix" : "multiSegment",
+          ...(cleaned.cleanupApplied
+            ? (["illegalCharsRemoved"] satisfies ApiCheckCandidateReason[])
+            : []),
+        ],
+        cleanupApplied: cleaned.cleanupApplied,
+        autoPromptEligible: false,
+      }
+    }
+  }
+
+  if (!hasSeparator && value.length >= 40 && isRandomLookingSegment(value)) {
+    return {
+      value,
+      confidence: "enhancedMedium",
+      reasons: [
+        "unseparatedLongToken",
+        ...(cleaned.cleanupApplied
+          ? (["illegalCharsRemoved"] satisfies ApiCheckCandidateReason[])
+          : []),
+      ],
+      cleanupApplied: cleaned.cleanupApplied,
+      autoPromptEligible: false,
+    }
+  }
+
+  return null
+}
+
+const COMMON_NON_URL_FILE_EXTENSIONS = new Set([
+  "css",
+  "csv",
+  "gif",
+  "jpeg",
+  "jpg",
+  "js",
+  "json",
+  "lock",
+  "md",
+  "png",
+  "svg",
+  "ts",
+  "tsx",
+  "txt",
+  "yml",
+  "yaml",
+])
+
+/**
+ * Detect dotted numeric versions that look like hostnames to the bare-domain regex.
+ */
+function isLikelyVersionString(value: string): boolean {
+  return /^\d+(?:\.\d+){1,3}$/.test(value)
+}
+
+/**
+ * Check whether a domain-like regex hit is part of an email address.
+ */
+function isEmailAddressLike(
+  input: string,
+  startIndex: number,
+  endIndex: number,
+) {
+  return input[startIndex - 1] === "@" || input[endIndex] === "@"
+}
+
+/**
+ * Filter bare-domain hits down to URL-like hostnames and optional paths.
+ */
+function isLikelyBareDomainCandidate(raw: string): boolean {
+  const candidate = trimWrappingPunctuation(raw)
+  if (!candidate || candidate.includes("@")) return false
+  if (/^https?:\/\//i.test(candidate)) return false
+  if (isLikelyVersionString(candidate)) return false
+
+  const host = candidate.split(/[/?#]/, 1)[0] ?? ""
+  if (!host.includes(".")) return false
+  if (!/^[a-z0-9.-]+$/i.test(host)) return false
+  if (host.startsWith(".") || host.endsWith(".")) return false
+  if (host.split(".").some((part) => part.length === 0)) return false
+
+  const parts = host.split(".")
+  const tld = parts[parts.length - 1]?.toLowerCase() ?? ""
+  if (tld.length < 2) return false
+  if (/^\d+$/.test(tld)) return false
+
+  const hasPath = /[/?#]/.test(candidate)
+  if (!hasPath && COMMON_NON_URL_FILE_EXTENSIONS.has(tld)) return false
+
+  return true
+}
+
 /**
  * Extract best-effort baseUrl + apiKey candidates from a free-form text blob.
  *
@@ -112,19 +583,67 @@ export function extractApiCheckCredentialsFromText(
     return {
       baseUrlCandidates: [],
       apiKeyCandidates: [],
+      candidates: { baseUrls: [], apiKeys: [] },
+      summary: {
+        hasEnhancedBaseUrl: false,
+        hasEnhancedApiKey: false,
+        hasCleanup: false,
+        usesEnhancedResult: false,
+        autoPromptEligible: false,
+        enhancedAutoPromptEligible: false,
+      },
       baseUrl: null,
       apiKey: null,
     }
   }
 
-  const baseUrlCandidates: string[] = []
-  const apiKeyCandidates: string[] = []
+  const baseUrlCandidates: InternalApiCheckCandidate[] = []
+  const apiKeyCandidates: InternalApiCheckCandidate[] = []
+  let insertionOrder = 0
 
-  const pushUnique = (list: string[], value: string | null) => {
+  const pushBaseUrlCandidate = (
+    value: string | null,
+    reasons: ApiCheckCandidateReason[],
+    confidence: ApiCheckCandidateConfidence = "standard",
+  ) => {
     if (!value) return
-    if (!list.includes(value)) {
-      list.push(value)
+    pushCandidate(baseUrlCandidates, {
+      value,
+      kind: "baseUrl",
+      confidence,
+      reasons,
+      autoPromptEligible: true,
+      insertionOrder,
+    })
+    insertionOrder += 1
+  }
+
+  const pushApiKeyCandidate = (
+    value: string | null,
+    reasons: ApiCheckCandidateReason[],
+  ) => {
+    if (!value) return
+    const classified = classifyApiKeyCandidate(value)
+    if (classified) {
+      pushCandidate(apiKeyCandidates, {
+        ...classified,
+        kind: "apiKey",
+        reasons: mergeReasons(reasons, classified.reasons),
+        insertionOrder,
+      })
+      insertionOrder += 1
+      return
     }
+    if (value.length < 10) return
+    pushCandidate(apiKeyCandidates, {
+      value,
+      kind: "apiKey",
+      confidence: "standard",
+      reasons,
+      autoPromptEligible: true,
+      insertionOrder,
+    })
+    insertionOrder += 1
   }
 
   // 1) Keyword-guided URL extractions (highest confidence).
@@ -135,13 +654,29 @@ export function extractApiCheckCredentialsFromText(
     const normalized = normalizeApiCheckBaseUrl(raw)
     const openAiNormalized = normalizeOpenAiFamilyBaseUrl(raw)
     const googleNormalized = normalizeGoogleFamilyBaseUrl(raw)
+    const isLabeledBareDomain =
+      !/^https?:\/\//i.test(raw) && isLikelyBareDomainCandidate(raw)
+    const labeledReasons: ApiCheckCandidateReason[] = isLabeledBareDomain
+      ? ["labeled", "bareDomain", "schemeAdded"]
+      : ["labeled"]
+    const confidence: ApiCheckCandidateConfidence = isLabeledBareDomain
+      ? "enhancedHigh"
+      : "standard"
     if (openAiNormalized !== normalized) {
-      pushUnique(baseUrlCandidates, openAiNormalized)
+      pushBaseUrlCandidate(
+        openAiNormalized,
+        [...labeledReasons, "pathNormalized"],
+        confidence,
+      )
     }
     if (googleNormalized !== normalized) {
-      pushUnique(baseUrlCandidates, googleNormalized)
+      pushBaseUrlCandidate(
+        googleNormalized,
+        [...labeledReasons, "pathNormalized"],
+        confidence,
+      )
     }
-    pushUnique(baseUrlCandidates, normalized)
+    pushBaseUrlCandidate(normalized, labeledReasons, confidence)
   }
 
   // 2) Generic URL scan (fallback).
@@ -152,45 +687,103 @@ export function extractApiCheckCredentialsFromText(
     const openAiNormalized = normalizeOpenAiFamilyBaseUrl(raw)
     const googleNormalized = normalizeGoogleFamilyBaseUrl(raw)
     if (openAiNormalized !== normalized) {
-      pushUnique(baseUrlCandidates, openAiNormalized)
+      pushBaseUrlCandidate(openAiNormalized, ["genericUrl", "pathNormalized"])
     }
     if (googleNormalized !== normalized) {
-      pushUnique(baseUrlCandidates, googleNormalized)
+      pushBaseUrlCandidate(googleNormalized, ["genericUrl", "pathNormalized"])
     }
-    pushUnique(baseUrlCandidates, normalized)
+    pushBaseUrlCandidate(normalized, ["genericUrl"])
   }
 
-  // 3) Keyword-guided key extraction.
+  // 3) Bare domain scan, adding a scheme before normalization.
+  const bareDomainPattern =
+    /(^|[\s("'`[{<])([a-z0-9][a-z0-9.-]*\.[a-z]{2,}(?:\/[^\s'"]*)?)/gi
+  for (const match of input.matchAll(bareDomainPattern)) {
+    const raw = trimWrappingPunctuation(match[2] ?? "")
+    const startIndex = match.index ?? 0
+    const endIndex = startIndex + match[0].length
+    if (isEmailAddressLike(input, startIndex, endIndex)) continue
+    if (!isLikelyBareDomainCandidate(raw)) continue
+
+    const withScheme = `https://${raw}`
+    const normalized = normalizeApiCheckBaseUrl(withScheme)
+    const openAiNormalized = normalizeOpenAiFamilyBaseUrl(withScheme)
+    const googleNormalized = normalizeGoogleFamilyBaseUrl(withScheme)
+    const baseReasons: ApiCheckCandidateReason[] = ["bareDomain", "schemeAdded"]
+
+    if (openAiNormalized !== normalized) {
+      pushBaseUrlCandidate(
+        openAiNormalized,
+        [...baseReasons, "pathNormalized"],
+        "enhancedHigh",
+      )
+    }
+    if (googleNormalized !== normalized) {
+      pushBaseUrlCandidate(
+        googleNormalized,
+        [...baseReasons, "pathNormalized"],
+        "enhancedHigh",
+      )
+    }
+    pushBaseUrlCandidate(normalized, baseReasons, "enhancedHigh")
+  }
+
+  // 4) Keyword-guided key extraction.
   const authBearerPattern = /\bAuthorization\b\s*:\s*Bearer\s+([^\s'"]+)/gi
   for (const match of input.matchAll(authBearerPattern)) {
     const raw = trimWrappingPunctuation(match[1] ?? "")
-    if (raw) pushUnique(apiKeyCandidates, raw)
+    if (raw) pushApiKeyCandidate(raw, ["authorizationHeader", "knownPrefix"])
   }
 
   const apiKeyPattern =
-    /\b(?:api[_\s-]?key|token|access[_\s-]?token|secret)\b\s*[:=]\s*([^\s'"]+)/gi
+    /\b(?:api[_\s-]?key|key|token|access[_\s-]?token|secret)\b\s*[:=]\s*([^\s'"]+)/gi
   for (const match of input.matchAll(apiKeyPattern)) {
     const raw = trimWrappingPunctuation(match[1] ?? "")
-    if (raw) pushUnique(apiKeyCandidates, raw)
+    if (raw) pushApiKeyCandidate(raw, ["labeled"])
   }
 
-  // 4) Common provider token prefixes (lowest confidence, but useful when no labels exist).
-  const openAiKeyPattern = /\bsk-[a-z0-9_-]{10,}\b/gi
-  for (const match of input.matchAll(openAiKeyPattern)) {
+  // 5) Common provider token prefixes (lowest confidence, but useful when no labels exist).
+  for (const match of input.matchAll(KNOWN_KEY_TOKEN_PATTERN)) {
     const raw = trimWrappingPunctuation(match[0] ?? "")
-    if (raw) pushUnique(apiKeyCandidates, raw)
+    if (raw) pushApiKeyCandidate(raw, ["knownPrefix"])
   }
 
-  const googleKeyPattern = /\bAIza[0-9a-z_-]{10,}\b/gi
-  for (const match of input.matchAll(googleKeyPattern)) {
-    const raw = trimWrappingPunctuation(match[0] ?? "")
-    if (raw) pushUnique(apiKeyCandidates, raw)
+  // 6) Enhanced key windows: bounded to a single non-whitespace token so cleanup
+  // can remove accidental punctuation without merging URLs, assignments, or lines.
+  const enhancedKeyWindowPattern =
+    /(?<![A-Za-z0-9_-])([A-Za-z0-9_-][^\s'"=:/\\]{17,})(?![A-Za-z0-9_-])/g
+  for (const match of input.matchAll(enhancedKeyWindowPattern)) {
+    const classified = classifyApiKeyCandidate(match[1] ?? "")
+    if (!classified) continue
+
+    pushCandidate(apiKeyCandidates, {
+      ...classified,
+      kind: "apiKey",
+      insertionOrder,
+    })
+    insertionOrder += 1
   }
+
+  baseUrlCandidates.sort(compareCandidates)
+  apiKeyCandidates.sort(compareApiKeyCandidates)
+
+  const selectedBaseUrl = baseUrlCandidates[0]
+  const selectedApiKey = apiKeyCandidates[0]
 
   return {
-    baseUrlCandidates,
-    apiKeyCandidates,
-    baseUrl: baseUrlCandidates[0] ?? null,
-    apiKey: apiKeyCandidates[0] ?? null,
+    baseUrlCandidates: baseUrlCandidates.map((candidate) => candidate.value),
+    apiKeyCandidates: apiKeyCandidates.map((candidate) => candidate.value),
+    candidates: {
+      baseUrls: baseUrlCandidates.map(toPublicCandidate),
+      apiKeys: apiKeyCandidates.map(toPublicCandidate),
+    },
+    summary: buildSummary({
+      baseUrls: baseUrlCandidates,
+      apiKeys: apiKeyCandidates,
+      selectedBaseUrl,
+      selectedApiKey,
+    }),
+    baseUrl: selectedBaseUrl?.value ?? null,
+    apiKey: selectedApiKey?.value ?? null,
   }
 }

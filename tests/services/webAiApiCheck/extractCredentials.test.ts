@@ -40,27 +40,154 @@ describe("webAiApiCheck extractCredentials", () => {
     expect(extractApiCheckCredentialsFromText("   ")).toEqual({
       baseUrlCandidates: [],
       apiKeyCandidates: [],
+      candidates: { baseUrls: [], apiKeys: [] },
+      summary: {
+        hasEnhancedBaseUrl: false,
+        hasEnhancedApiKey: false,
+        hasCleanup: false,
+        usesEnhancedResult: false,
+        autoPromptEligible: false,
+        enhancedAutoPromptEligible: false,
+      },
       baseUrl: null,
       apiKey: null,
     })
+  })
+
+  it("returns structured candidate metadata while preserving best-match aliases", () => {
+    const result = extractApiCheckCredentialsFromText(`
+      endpoint=https://proxy.example.com/api/v1/chat/completions
+      Authorization: Bearer sk-test-structured-candidate-fixture
+    `)
+
+    expect(result.baseUrl).toBe("https://proxy.example.com/api")
+    expect(result.apiKey).toBe("sk-test-structured-candidate-fixture")
+    expect(result.baseUrlCandidates[0]).toBe("https://proxy.example.com/api")
+    expect(result.apiKeyCandidates[0]).toBe(
+      "sk-test-structured-candidate-fixture",
+    )
+
+    expect(result.candidates.baseUrls[0]).toEqual(
+      expect.objectContaining({
+        value: "https://proxy.example.com/api",
+        kind: "baseUrl",
+        confidence: "standard",
+      }),
+    )
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        value: "sk-test-structured-candidate-fixture",
+        kind: "apiKey",
+        confidence: "standard",
+      }),
+    )
+    expect(result.summary).toEqual({
+      hasEnhancedBaseUrl: false,
+      hasEnhancedApiKey: false,
+      hasCleanup: false,
+      usesEnhancedResult: false,
+      autoPromptEligible: true,
+      enhancedAutoPromptEligible: false,
+    })
+  })
+
+  it("extracts standard base_url and KEY assignments without requiring enhanced detection", () => {
+    const apiKey =
+      "sk-teststandardkeyassignmentfixture000000000000000000000000000000"
+    const result = extractApiCheckCredentialsFromText(`
+      base_url = https://dxb.huifei.net/v1
+
+      KEY = ${apiKey}
+    `)
+
+    expect(result.baseUrl).toBe("https://dxb.huifei.net")
+    expect(result.apiKey).toBe(apiKey)
+    expect(result.summary).toEqual({
+      hasEnhancedBaseUrl: false,
+      hasEnhancedApiKey: false,
+      hasCleanup: false,
+      usesEnhancedResult: false,
+      autoPromptEligible: true,
+      enhancedAutoPromptEligible: false,
+    })
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        value: apiKey,
+        confidence: "standard",
+        reasons: expect.arrayContaining(["labeled", "knownPrefix"]),
+      }),
+    )
+  })
+
+  it("deduplicates structured candidates by value while merging reasons", () => {
+    const result = extractApiCheckCredentialsFromText(`
+      endpoint=https://proxy.example.com/api/v1/models
+      https://proxy.example.com/api/v1/models
+      token=sk-test-deduplicate-candidate-fixture
+      sk-test-deduplicate-candidate-fixture
+    `)
+
+    expect(result.baseUrlCandidates).toEqual([
+      "https://proxy.example.com/api",
+      "https://proxy.example.com/api/v1/models",
+    ])
+    expect(result.apiKeyCandidates).toEqual([
+      "sk-test-deduplicate-candidate-fixture",
+    ])
+    expect(result.candidates.baseUrls[0].reasons).toContain("pathNormalized")
+    expect(result.candidates.apiKeys[0].reasons).toContain("labeled")
+    expect(result.candidates.apiKeys[0].reasons).toContain("knownPrefix")
+  })
+
+  it("preserves first extracted key when same-priority candidates have different lengths", () => {
+    const result = extractApiCheckCredentialsFromText(`
+      api_key=fake-longer-first-candidate-fixture
+      token=fake-short-second
+    `)
+
+    expect(result.apiKey).toBe("fake-longer-first-candidate-fixture")
+    expect(result.apiKeyCandidates).toEqual([
+      "fake-longer-first-candidate-fixture",
+      "fake-short-second",
+    ])
+  })
+
+  it("prioritizes key candidates by final key-likeness over extraction source", () => {
+    const likelyKey = "test-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1"
+    const result = extractApiCheckCredentialsFromText(`
+      token=fake-not-the-best-candidate-but-long-enough
+      copied ${likelyKey}
+    `)
+
+    expect(result.apiKey).toBe(likelyKey)
+    expect(result.apiKeyCandidates[0]).toBe(likelyKey)
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        confidence: "enhancedHigh",
+        reasons: expect.arrayContaining(["unknownShortPrefix"]),
+      }),
+    )
   })
 
   it("prioritizes labeled urls, deduplicates generic repeats, and captures multiple provider keys", () => {
     const text = `
       endpoint=https://proxy.example.com/api/v1/chat/completions
       curl https://proxy.example.com/api/v1/chat/completions
-      Authorization: Bearer sk-abcdefghijklmno
-      google_key=AIzaabcdefghijklmno12345
+      Authorization: Bearer sk-test-provider-key-12345
+      google_key=AIzaTESTKEYAa1Bb2Cc3Dd4Ee5Ff6
     `
 
-    expect(extractApiCheckCredentialsFromText(text)).toEqual({
+    expect(extractApiCheckCredentialsFromText(text)).toMatchObject({
       baseUrlCandidates: [
         "https://proxy.example.com/api",
         "https://proxy.example.com/api/v1/chat/completions",
       ],
-      apiKeyCandidates: ["sk-abcdefghijklmno", "AIzaabcdefghijklmno12345"],
+      apiKeyCandidates: [
+        "sk-test-provider-key-12345",
+        "AIzaTESTKEYAa1Bb2Cc3Dd4Ee5Ff6",
+      ],
       baseUrl: "https://proxy.example.com/api",
-      apiKey: "sk-abcdefghijklmno",
+      apiKey: "sk-test-provider-key-12345",
     })
   })
 
@@ -70,7 +197,7 @@ describe("webAiApiCheck extractCredentials", () => {
       https://proxy.example.com/api/v1beta/models
     `
 
-    expect(extractApiCheckCredentialsFromText(text)).toEqual({
+    expect(extractApiCheckCredentialsFromText(text)).toMatchObject({
       baseUrlCandidates: [
         "https://proxy.example.com/api",
         "https://proxy.example.com/api/v1beta/models",
@@ -81,20 +208,216 @@ describe("webAiApiCheck extractCredentials", () => {
     })
   })
 
+  it("recognizes bare domain base URLs and adds https", () => {
+    const result = extractApiCheckCredentialsFromText(`
+      Use api.example.com with key sk-test-bare-domain-fixture-12345
+    `)
+
+    expect(result.baseUrlCandidates).toContain("https://api.example.com")
+    expect(result.candidates.baseUrls[0]).toEqual(
+      expect.objectContaining({
+        value: "https://api.example.com",
+        confidence: "enhancedHigh",
+        reasons: expect.arrayContaining(["bareDomain", "schemeAdded"]),
+      }),
+    )
+    expect(result.summary.hasEnhancedBaseUrl).toBe(true)
+    expect(result.summary.usesEnhancedResult).toBe(true)
+  })
+
+  it("classifies labeled bare domain base URLs as enhanced", () => {
+    const result = extractApiCheckCredentialsFromText(`
+      endpoint=api.example.com
+      sk-test-labeled-bare-domain-fixture-12345
+    `)
+
+    expect(result.baseUrlCandidates[0]).toBe("https://api.example.com")
+    expect(result.candidates.baseUrls[0]).toEqual(
+      expect.objectContaining({
+        value: "https://api.example.com",
+        confidence: "enhancedHigh",
+        reasons: expect.arrayContaining(["bareDomain", "schemeAdded"]),
+      }),
+    )
+    expect(result.summary.hasEnhancedBaseUrl).toBe(true)
+    expect(result.summary.usesEnhancedResult).toBe(true)
+  })
+
+  it("normalizes bare domain endpoint paths through provider-family rules", () => {
+    const result = extractApiCheckCredentialsFromText(`
+      proxy.example.com/api/v1/chat/completions
+      sk-test-bare-path-fixture-123456789
+    `)
+
+    expect(result.baseUrlCandidates).toEqual(
+      expect.arrayContaining([
+        "https://proxy.example.com/api",
+        "https://proxy.example.com/api/v1/chat/completions",
+      ]),
+    )
+    expect(result.baseUrl).toBe("https://proxy.example.com/api")
+  })
+
+  it("does not treat emails, filenames, versions, or plain words as bare URLs", () => {
+    const result = extractApiCheckCredentialsFromText(`
+      Contact ops@example.com
+      Open README.md
+      Version 3.41.1
+      The token is sk-test-filter-bare-domain-fixture
+    `)
+
+    expect(result.baseUrlCandidates).toEqual([])
+  })
+
   it("ignores invalid labeled values and falls back to plain provider token matches", () => {
     const text = `
       baseURL=[]
       Authorization: Bearer []
       secret=[]
-      plain sk-zyxwvutsrqponmlk
-      extra AIza1234567890abcdefghij
+      plain sk-test-fallback-fixture-12345
+      extra AIzaTESTKEYAa1Bb2Cc3Dd4
     `
 
-    expect(extractApiCheckCredentialsFromText(text)).toEqual({
+    expect(extractApiCheckCredentialsFromText(text)).toMatchObject({
       baseUrlCandidates: [],
-      apiKeyCandidates: ["sk-zyxwvutsrqponmlk", "AIza1234567890abcdefghij"],
+      apiKeyCandidates: [
+        "sk-test-fallback-fixture-12345",
+        "AIzaTESTKEYAa1Bb2Cc3Dd4",
+      ],
       baseUrl: null,
-      apiKey: "sk-zyxwvutsrqponmlk",
+      apiKey: "sk-test-fallback-fixture-12345",
     })
+  })
+
+  it("recognizes known multi-segment key prefixes", () => {
+    const anthropic = extractApiCheckCredentialsFromText(
+      "sk-ant-api03-testFixtureAa1Bb2Cc3Dd4Ee5Ff6",
+    )
+    const openRouter = extractApiCheckCredentialsFromText(
+      "sk-or-v1-testFixtureAa1Bb2Cc3Dd4Ee5Ff6",
+    )
+
+    expect(anthropic.apiKey).toBe("sk-ant-api03-testFixtureAa1Bb2Cc3Dd4Ee5Ff6")
+    expect(anthropic.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        confidence: "standard",
+        reasons: expect.arrayContaining(["knownPrefix", "multiSegment"]),
+      }),
+    )
+    expect(openRouter.apiKey).toBe("sk-or-v1-testFixtureAa1Bb2Cc3Dd4Ee5Ff6")
+  })
+
+  it("recognizes unknown short-prefix keys with long random bodies", () => {
+    const result = extractApiCheckCredentialsFromText(
+      "test-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1",
+    )
+
+    expect(result.apiKey).toBe("test-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        confidence: "enhancedHigh",
+        reasons: expect.arrayContaining(["unknownShortPrefix"]),
+      }),
+    )
+  })
+
+  it("recognizes tp-prefixed keys as known provider tokens", () => {
+    const fixtureKey = "tp-fixture000000000000000000000000"
+    const result = extractApiCheckCredentialsFromText(fixtureKey)
+
+    expect(result.apiKey).toBe(fixtureKey)
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        confidence: "standard",
+        reasons: expect.arrayContaining(["knownPrefix"]),
+      }),
+    )
+  })
+
+  it("downgrades unknown long-prefix keys unless paired with base URL", () => {
+    const result = extractApiCheckCredentialsFromText(
+      "longprefix-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1",
+    )
+
+    expect(result.apiKey).toBe("longprefix-Aa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        confidence: "enhancedMedium",
+        autoPromptEligible: false,
+        reasons: expect.arrayContaining(["unknownLongPrefix"]),
+      }),
+    )
+  })
+
+  it("cleans illegal characters inside suspected key windows", () => {
+    const result = extractApiCheckCredentialsFromText(
+      "sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg【删除这里]7Hh8Ii9Jj0Kk1",
+    )
+
+    expect(result.apiKey).toBe("sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        cleanupApplied: true,
+        reasons: expect.arrayContaining(["illegalCharsRemoved"]),
+      }),
+    )
+    expect(result.summary.hasCleanup).toBe(true)
+  })
+
+  it("keeps cleaned known-prefix keys ahead of truncated prefix matches", () => {
+    const cleanedKey = "sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1Ll2Mm3Nn"
+    const result = extractApiCheckCredentialsFromText(`
+      https://example.test
+
+      示例测试内容 key：sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg删除这里7Hh8Ii9Jj0Kk1Ll2Mm3Nn （示例结束）
+    `)
+
+    expect(result.apiKey).toBe(cleanedKey)
+    expect(result.apiKeyCandidates[0]).toBe(cleanedKey)
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        cleanupApplied: true,
+        reasons: expect.arrayContaining(["knownPrefix", "illegalCharsRemoved"]),
+      }),
+    )
+  })
+
+  it("cleans illegal ASCII punctuation inside suspected key windows", () => {
+    const result = extractApiCheckCredentialsFromText(
+      "sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg#7Hh8Ii9Jj0Kk1",
+    )
+
+    expect(result.apiKey).toBe("sk-testAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        cleanupApplied: true,
+        reasons: expect.arrayContaining(["illegalCharsRemoved"]),
+      }),
+    )
+    expect(result.summary.hasCleanup).toBe(true)
+  })
+
+  it("does not join unrelated token fields while cleaning", () => {
+    const result = extractApiCheckCredentialsFromText(`
+      token: abc-def
+      next: ghi-jkl
+    `)
+
+    expect(result.apiKeyCandidates).toEqual([])
+  })
+
+  it("keeps pure unseparated long strings manual-only", () => {
+    const result = extractApiCheckCredentialsFromText(
+      "TESTKEYAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1",
+    )
+
+    expect(result.apiKey).toBe("TESTKEYAa1Bb2Cc3Dd4Ee5Ff6Gg7Hh8Ii9Jj0Kk1")
+    expect(result.candidates.apiKeys[0]).toEqual(
+      expect.objectContaining({
+        confidence: "enhancedMedium",
+        autoPromptEligible: false,
+        reasons: expect.arrayContaining(["unseparatedLongToken"]),
+      }),
+    )
   })
 })
