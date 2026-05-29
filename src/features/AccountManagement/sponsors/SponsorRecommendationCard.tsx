@@ -7,6 +7,11 @@ import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testId
 import { cn } from "~/lib/utils"
 
 import {
+  trackSponsorRecommendationClick,
+  type SponsorRecommendationActionKind,
+} from "./analytics"
+import { type SponsorRecommendationSurface } from "./constants"
+import {
   SPONSOR_SUPPORT_STATUS,
   type AddAccountPrefill,
   type SponsorApiCredentialFallbackPrefill,
@@ -16,6 +21,8 @@ import {
 
 interface SponsorRecommendationCardProps {
   item: SponsorRecommendation
+  itemCount: number
+  surface: SponsorRecommendationSurface
   onContinueAddAccount: (prefill: AddAccountPrefill) => void
   onOpenBookmarkManager: (prefill: SponsorBookmarkFallbackPrefill) => void
   onOpenApiCredentialProfiles: (
@@ -65,13 +72,25 @@ function getSupportBadgeVariant(
 /** Renders one compact sponsor recommendation with primary, continue, and fallback actions. */
 export function SponsorRecommendationCard({
   item,
+  itemCount,
+  surface,
   onContinueAddAccount,
   onOpenBookmarkManager,
   onOpenApiCredentialProfiles,
 }: SponsorRecommendationCardProps) {
   const { t } = useTranslation("account")
 
+  const trackClick = (actionKind: SponsorRecommendationActionKind) => {
+    trackSponsorRecommendationClick({
+      actionKind,
+      item,
+      itemCount,
+      surface,
+    })
+  }
+
   const handlePrimaryClick = () => {
+    trackClick("visit_provider")
     window.open(item.primaryAffiliateUrl, "_blank", "noopener,noreferrer")
   }
 
@@ -80,6 +99,7 @@ export function SponsorRecommendationCard({
       return
     }
 
+    trackClick("continue_add_account")
     onContinueAddAccount({
       siteUrl: item.accountPrefill.siteUrl,
       siteType: item.accountPrefill.siteType,
@@ -89,11 +109,12 @@ export function SponsorRecommendationCard({
       source: "sponsor",
       sponsorId: item.id,
     })
-    handlePrimaryClick()
+    window.open(item.primaryAffiliateUrl, "_blank", "noopener,noreferrer")
   }
 
   const handleOpenBookmarkManager = () => {
-    handlePrimaryClick()
+    trackClick("bookmark_fallback")
+    window.open(item.primaryAffiliateUrl, "_blank", "noopener,noreferrer")
     onOpenBookmarkManager({
       name: item.name,
       url: fallbackUrl,
@@ -101,7 +122,8 @@ export function SponsorRecommendationCard({
   }
 
   const handleOpenApiCredentialProfiles = () => {
-    handlePrimaryClick()
+    trackClick("api_credential_profiles_fallback")
+    window.open(item.primaryAffiliateUrl, "_blank", "noopener,noreferrer")
     onOpenApiCredentialProfiles({
       name: item.name,
       baseUrl: fallbackUrl,

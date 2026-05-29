@@ -26,6 +26,10 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
+  PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS,
+  PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES,
+  PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS,
+  PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES,
   PRODUCT_ANALYTICS_STATUS_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
@@ -125,6 +129,53 @@ describe("product analytics privacy filtering", () => {
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       duration_bucket: "1_5s",
+    })
+  })
+
+  it("keeps safe sponsor recommendation fields and drops unsafe sponsor details", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.SponsorRecommendations,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenSponsorProvider,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementAddAccountSponsorRecommendations,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        item_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+        sponsor_action_kind:
+          PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS.VisitProvider,
+        sponsor_catalog_source:
+          PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES.Remote,
+        sponsor_id: "packycode",
+        sponsor_rank_bucket: PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS.One,
+        sponsor_support_status:
+          PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES.Supported,
+        sponsor_supported_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
+        sponsor_unsupported_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero,
+        sponsor_name: "PackyCode",
+        sponsor_url: "https://provider.example/register",
+        sponsor_note: "Use promo code all-api-hub.",
+        promo_code: "all-api-hub",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.SponsorRecommendations,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenSponsorProvider,
+      surface_id:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementAddAccountSponsorRecommendations,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      item_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+      sponsor_action_kind: PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS.VisitProvider,
+      sponsor_catalog_source: PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES.Remote,
+      sponsor_id: "packycode",
+      sponsor_rank_bucket: PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS.One,
+      sponsor_support_status:
+        PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES.Supported,
+      sponsor_supported_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
+      sponsor_unsupported_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero,
     })
   })
 

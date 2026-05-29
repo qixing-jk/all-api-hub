@@ -264,6 +264,7 @@ export const PRODUCT_ANALYTICS_FEATURE_IDS = {
   UsageAnalytics: "usage_analytics",
   WebDavSync: "webdav_sync",
   WebAiApiCheck: "web_ai_api_check",
+  SponsorRecommendations: "sponsor_recommendations",
 } as const
 
 export type ProductAnalyticsFeatureId =
@@ -393,6 +394,10 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   OpenUpdateAccountDialog: "open_update_account_dialog",
   OpenBalanceHistorySettings: "open_balance_history_settings",
   OpenRedeemPage: "open_redeem_page",
+  OpenSponsorAddAccountFollowup: "open_sponsor_add_account_followup",
+  OpenSponsorApiCredentialsFollowup: "open_sponsor_api_credentials_followup",
+  OpenSponsorBookmarkFollowup: "open_sponsor_bookmark_followup",
+  OpenSponsorProvider: "open_sponsor_provider",
   OpenSelectedManagedSiteChannelMigration:
     "open_selected_managed_site_channel_migration",
   OpenUsageSyncSettings: "open_usage_sync_settings",
@@ -495,6 +500,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
     "trigger_redemption_assist_from_context_menu",
   VisitRedemptionAssistSettingsFromPrompt:
     "visit_redemption_assist_settings_from_prompt",
+  ViewSponsorRecommendations: "view_sponsor_recommendations",
 } as const
 
 export type ProductAnalyticsActionId =
@@ -511,6 +517,10 @@ export const PRODUCT_ANALYTICS_SURFACE_IDS = {
   OptionsAccountManagementHeader: "options_account_management_header",
   OptionsAccountManagementPage: "options_account_management_page",
   OptionsAccountManagementRowActions: "options_account_management_row_actions",
+  OptionsAccountManagementAddAccountSponsorRecommendations:
+    "options_account_management_add_account_sponsor_recommendations",
+  OptionsAccountManagementNewcomerSponsorRecommendations:
+    "options_account_management_newcomer_sponsor_recommendations",
   OptionsAccountTokenKiloCodeExportDialog:
     "options_account_token_kilo_code_export_dialog",
   OptionsApiCredentialProfilesDialog: "options_api_credential_profiles_dialog",
@@ -692,6 +702,47 @@ export const PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS = {
 export type ProductAnalyticsPermissionFailureReason =
   (typeof PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS)[keyof typeof PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS]
 
+export const PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS = {
+  ApiCredentialProfilesFallback: "api_credential_profiles_fallback",
+  BookmarkFallback: "bookmark_fallback",
+  ContinueAddAccount: "continue_add_account",
+  VisitProvider: "visit_provider",
+} as const
+
+export type ProductAnalyticsSponsorActionKind =
+  (typeof PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS)[keyof typeof PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS]
+
+export const PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES = {
+  Bundled: "bundled",
+  Cached: "cached",
+  Mixed: "mixed",
+  Remote: "remote",
+} as const
+
+export type ProductAnalyticsSponsorCatalogSource =
+  (typeof PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES)[keyof typeof PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES]
+
+export const PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES = {
+  Supported: "supported",
+  Unsupported: "unsupported",
+} as const
+
+export type ProductAnalyticsSponsorSupportStatus =
+  (typeof PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES)[keyof typeof PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES]
+
+export const PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS = {
+  One: "1",
+  TwoToThree: "2_3",
+  FourToTen: "4_10",
+  TenPlus: "10_plus",
+  Unknown: "unknown",
+} as const
+
+export type ProductAnalyticsSponsorRankBucket =
+  (typeof PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS)[keyof typeof PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS]
+
+export type ProductAnalyticsSponsorId = string
+
 export const PRODUCT_ANALYTICS_SITE_TYPES = [
   ...new Set([...ACCOUNT_SITE_TYPES, ...MANAGED_SITE_TYPES]),
 ] as ReadonlyArray<(typeof ACCOUNT_SITE_TYPES)[number] | ManagedSiteType>
@@ -776,6 +827,13 @@ export type ProductAnalyticsEventPayloadMap = {
     temp_window_fetch_failure_count_bucket?: ProductAnalyticsCountBucket
     temp_window_turnstile_fetch_success_count_bucket?: ProductAnalyticsCountBucket
     temp_window_turnstile_fetch_failure_count_bucket?: ProductAnalyticsCountBucket
+    sponsor_action_kind?: ProductAnalyticsSponsorActionKind
+    sponsor_catalog_source?: ProductAnalyticsSponsorCatalogSource
+    sponsor_id?: ProductAnalyticsSponsorId
+    sponsor_rank_bucket?: ProductAnalyticsSponsorRankBucket
+    sponsor_support_status?: ProductAnalyticsSponsorSupportStatus
+    sponsor_supported_count_bucket?: ProductAnalyticsCountBucket
+    sponsor_unsupported_count_bucket?: ProductAnalyticsCountBucket
     entrypoint: ProductAnalyticsEntrypoint
   }
   [PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured]: {

@@ -2,7 +2,10 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import { SPONSOR_RECOMMENDATION_SURFACES } from "~/features/AccountManagement/sponsors/constants"
+import {
+  SPONSOR_RECOMMENDATION_SURFACES,
+  type SponsorRecommendationSurface,
+} from "~/features/AccountManagement/sponsors/constants"
 import { SponsorRecommendationsSection } from "~/features/AccountManagement/sponsors/SponsorRecommendationsSection"
 import {
   SPONSOR_CATALOG_SOURCES,
@@ -10,17 +13,36 @@ import {
   type SponsorRecommendation,
 } from "~/features/AccountManagement/sponsors/types"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { PRODUCT_ANALYTICS_EVENTS } from "~/services/productAnalytics/events"
 import { AuthTypeEnum } from "~/types"
 import { render, screen } from "~~/tests/test-utils/render"
+
+const { trackProductAnalyticsEventMock } = vi.hoisted(() => ({
+  trackProductAnalyticsEventMock: vi.fn(),
+}))
+
+vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/productAnalytics/events")>()
+
+  return {
+    ...actual,
+    trackProductAnalyticsEvent: (...args: unknown[]) =>
+      trackProductAnalyticsEventMock(...args),
+  }
+})
 
 const onContinueAddAccount = vi.fn()
 const onOpenBookmarkManager = vi.fn()
 const onOpenApiCredentialProfiles = vi.fn()
 
-function renderSection(items: SponsorRecommendation[]) {
+function renderSection(
+  items: SponsorRecommendation[],
+  surface: SponsorRecommendationSurface = SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog,
+) {
   return render(
     <SponsorRecommendationsSection
-      surface={SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog}
+      surface={surface}
       items={items}
       onContinueAddAccount={onContinueAddAccount}
       onOpenBookmarkManager={onOpenBookmarkManager}
@@ -34,9 +56,57 @@ function renderSection(items: SponsorRecommendation[]) {
   )
 }
 
+function createSupportedSponsor(
+  overrides: Partial<SponsorRecommendation> = {},
+): SponsorRecommendation {
+  return {
+    id: "supported-provider",
+    name: "Supported Provider",
+    tagline: "Supported provider.",
+    primaryAffiliateUrl: "https://supported.example.test/register",
+    supportStatus: SPONSOR_SUPPORT_STATUS.Supported,
+    accountPrefill: {
+      siteType: SITE_TYPES.NEW_API,
+      siteUrl: "https://supported.example.test",
+      authType: AuthTypeEnum.Cookie,
+    },
+    fallbackHints: {
+      bookmarkManager: false,
+      apiCredentialProfiles: false,
+    },
+    source: SPONSOR_CATALOG_SOURCES.Bundled,
+    rank: 1,
+    ...overrides,
+  }
+}
+
+function createUnsupportedSponsor(
+  overrides: Partial<SponsorRecommendation> = {},
+): SponsorRecommendation {
+  return {
+    id: "manual-provider",
+    name: "Manual Provider",
+    tagline:
+      "Manual setup required with an extended description for two-line sponsor copy.",
+    primaryAffiliateUrl: "https://manual.example.com/register?aff=all-api-hub",
+    websiteUrl: "https://manual.example.com/dashboard",
+    apiKeyCreateUrl: "https://manual.example.com/keys?aff=all-api-hub",
+    postClickNote: "Use promo code APIHUB after registration.",
+    supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+    fallbackHints: {
+      bookmarkManager: true,
+      apiCredentialProfiles: true,
+    },
+    source: SPONSOR_CATALOG_SOURCES.Bundled,
+    rank: 2,
+    ...overrides,
+  }
+}
+
 describe("SponsorRecommendationsSection", () => {
   beforeEach(() => {
     vi.unstubAllGlobals()
+    trackProductAnalyticsEventMock.mockReset()
     onContinueAddAccount.mockReset()
     onOpenBookmarkManager.mockReset()
     onOpenApiCredentialProfiles.mockReset()
@@ -47,26 +117,7 @@ describe("SponsorRecommendationsSection", () => {
     const openSpy = vi.fn()
     vi.stubGlobal("open", openSpy)
 
-    renderSection([
-      {
-        id: "supported-provider",
-        name: "Supported Provider",
-        tagline: "Supported provider.",
-        primaryAffiliateUrl: "https://supported.example.test/register",
-        supportStatus: SPONSOR_SUPPORT_STATUS.Supported,
-        accountPrefill: {
-          siteType: SITE_TYPES.NEW_API,
-          siteUrl: "https://supported.example.test",
-          authType: AuthTypeEnum.Cookie,
-        },
-        fallbackHints: {
-          bookmarkManager: false,
-          apiCredentialProfiles: false,
-        },
-        source: SPONSOR_CATALOG_SOURCES.Bundled,
-        rank: 1,
-      },
-    ])
+    renderSection([createSupportedSponsor()])
 
     expect(screen.getByText("Supported Provider")).toBeInTheDocument()
     expect(
@@ -109,23 +160,12 @@ describe("SponsorRecommendationsSection", () => {
     vi.stubGlobal("open", openSpy)
 
     renderSection([
-      {
-        id: "supported-provider",
-        name: "Supported Provider",
-        tagline: "Supported provider.",
-        primaryAffiliateUrl: "https://supported.example.test/register",
-        supportStatus: SPONSOR_SUPPORT_STATUS.Supported,
+      createSupportedSponsor({
         accountPrefill: {
           siteType: SITE_TYPES.NEW_API,
           siteUrl: "https://supported.example.test",
         },
-        fallbackHints: {
-          bookmarkManager: false,
-          apiCredentialProfiles: false,
-        },
-        source: SPONSOR_CATALOG_SOURCES.Bundled,
-        rank: 1,
-      },
+      }),
     ])
 
     await user.click(
@@ -147,26 +187,7 @@ describe("SponsorRecommendationsSection", () => {
     const openSpy = vi.fn()
     vi.stubGlobal("open", openSpy)
 
-    renderSection([
-      {
-        id: "manual-provider",
-        name: "Manual Provider",
-        tagline:
-          "Manual setup required with an extended description for two-line sponsor copy.",
-        primaryAffiliateUrl:
-          "https://manual.example.com/register?aff=all-api-hub",
-        websiteUrl: "https://manual.example.com/dashboard",
-        apiKeyCreateUrl: "https://manual.example.com/keys?aff=all-api-hub",
-        postClickNote: "Use promo code APIHUB after registration.",
-        supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
-        fallbackHints: {
-          bookmarkManager: true,
-          apiCredentialProfiles: true,
-        },
-        source: SPONSOR_CATALOG_SOURCES.Bundled,
-        rank: 2,
-      },
-    ])
+    renderSection([createUnsupportedSponsor()])
 
     expect(
       screen.queryByText("account:sponsor.supportStatus.unsupported"),
@@ -235,19 +256,17 @@ describe("SponsorRecommendationsSection", () => {
     vi.stubGlobal("open", openSpy)
 
     renderSection([
-      {
-        id: "manual-provider",
-        name: "Manual Provider",
+      createUnsupportedSponsor({
         tagline: "Manual setup required.",
         primaryAffiliateUrl: "https://manual.example.com/register",
-        supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+        websiteUrl: undefined,
+        apiKeyCreateUrl: undefined,
+        postClickNote: undefined,
         fallbackHints: {
           bookmarkManager: false,
           apiCredentialProfiles: false,
         },
-        source: SPONSOR_CATALOG_SOURCES.Bundled,
-        rank: 2,
-      },
+      }),
     ])
 
     await user.click(
@@ -269,32 +288,33 @@ describe("SponsorRecommendationsSection", () => {
     vi.stubGlobal("open", openSpy)
 
     renderSection([
-      {
+      createUnsupportedSponsor({
         id: "bookmark-provider",
         name: "Bookmark Provider",
         tagline: "Bookmark first.",
         primaryAffiliateUrl: "https://bookmark.example.com/register",
-        supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+        websiteUrl: undefined,
+        apiKeyCreateUrl: undefined,
+        postClickNote: undefined,
         fallbackHints: {
           bookmarkManager: true,
           apiCredentialProfiles: false,
         },
-        source: SPONSOR_CATALOG_SOURCES.Bundled,
-        rank: 2,
-      },
-      {
+      }),
+      createUnsupportedSponsor({
         id: "api-provider",
         name: "API Provider",
         tagline: "API credential first.",
         primaryAffiliateUrl: "https://api.example.com/register",
-        supportStatus: SPONSOR_SUPPORT_STATUS.Unsupported,
+        websiteUrl: undefined,
+        apiKeyCreateUrl: undefined,
+        postClickNote: undefined,
         fallbackHints: {
           bookmarkManager: false,
           apiCredentialProfiles: true,
         },
-        source: SPONSOR_CATALOG_SOURCES.Bundled,
         rank: 3,
-      },
+      }),
     ])
 
     await user.click(
@@ -327,5 +347,189 @@ describe("SponsorRecommendationsSection", () => {
     expect(
       screen.queryByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.sponsorRecommendations),
     ).not.toBeInTheDocument()
+  })
+
+  it("tracks one safe impression for a non-empty rendered recommendation set without rerender duplicates", () => {
+    const { rerender } = renderSection([
+      createSupportedSponsor(),
+      createUnsupportedSponsor({
+        id: "cached-provider",
+        source: SPONSOR_CATALOG_SOURCES.Cached,
+        rank: 2,
+      }),
+    ])
+
+    rerender(
+      <SponsorRecommendationsSection
+        surface={SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog}
+        items={[
+          createSupportedSponsor(),
+          createUnsupportedSponsor({
+            id: "cached-provider",
+            source: SPONSOR_CATALOG_SOURCES.Cached,
+            rank: 2,
+          }),
+        ]}
+        onContinueAddAccount={onContinueAddAccount}
+        onOpenBookmarkManager={onOpenBookmarkManager}
+        onOpenApiCredentialProfiles={onOpenApiCredentialProfiles}
+      />,
+    )
+
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledTimes(1)
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      expect.objectContaining({
+        feature_id: "sponsor_recommendations",
+        action_id: "view_sponsor_recommendations",
+        surface_id:
+          "options_account_management_add_account_sponsor_recommendations",
+        entrypoint: "options",
+        result: "success",
+        item_count_bucket: "2_3",
+        sponsor_catalog_source: "mixed",
+        sponsor_supported_count_bucket: "1",
+        sponsor_unsupported_count_bucket: "1",
+      }),
+    )
+  })
+
+  it("does not track impressions when no recommendations are available", () => {
+    renderSection([])
+
+    expect(trackProductAnalyticsEventMock).not.toHaveBeenCalled()
+  })
+
+  it("tracks newcomer recommendation impressions with a distinct surface", () => {
+    renderSection(
+      [createSupportedSponsor()],
+      SPONSOR_RECOMMENDATION_SURFACES.Newcomer,
+    )
+
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      expect.objectContaining({
+        action_id: "view_sponsor_recommendations",
+        surface_id:
+          "options_account_management_newcomer_sponsor_recommendations",
+      }),
+    )
+  })
+
+  it("tracks safe sponsor click metadata without leaking URLs, provider names, or promo notes", async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal("open", vi.fn())
+    renderSection([
+      createSupportedSponsor(),
+      createUnsupportedSponsor({
+        id: "remote-provider",
+        source: SPONSOR_CATALOG_SOURCES.Remote,
+        rank: 2,
+      }),
+    ])
+    trackProductAnalyticsEventMock.mockClear()
+
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorContinueAddAccountAction,
+      ),
+    )
+    await user.click(
+      screen.getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.sponsorPrimaryAction),
+    )
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorFallbackBookmarkAction,
+      ),
+    )
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorFallbackApiCredentialProfilesAction,
+      ),
+    )
+
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledTimes(4)
+    expect(trackProductAnalyticsEventMock).toHaveBeenNthCalledWith(
+      1,
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      expect.objectContaining({
+        feature_id: "sponsor_recommendations",
+        action_id: "open_sponsor_add_account_followup",
+        surface_id:
+          "options_account_management_add_account_sponsor_recommendations",
+        sponsor_action_kind: "continue_add_account",
+        sponsor_id: "supported-provider",
+        sponsor_support_status: "supported",
+        sponsor_catalog_source: "bundled",
+        sponsor_rank_bucket: "1",
+        item_count_bucket: "2_3",
+      }),
+    )
+    expect(trackProductAnalyticsEventMock).toHaveBeenNthCalledWith(
+      2,
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      expect.objectContaining({
+        action_id: "open_sponsor_provider",
+        sponsor_action_kind: "visit_provider",
+        sponsor_id: "remote-provider",
+        sponsor_support_status: "unsupported",
+        sponsor_catalog_source: "remote",
+        sponsor_rank_bucket: "2_3",
+        item_count_bucket: "2_3",
+      }),
+    )
+    expect(trackProductAnalyticsEventMock).toHaveBeenNthCalledWith(
+      3,
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      expect.objectContaining({
+        action_id: "open_sponsor_bookmark_followup",
+        sponsor_action_kind: "bookmark_fallback",
+        sponsor_id: "remote-provider",
+      }),
+    )
+    expect(trackProductAnalyticsEventMock).toHaveBeenNthCalledWith(
+      4,
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      expect.objectContaining({
+        action_id: "open_sponsor_api_credentials_followup",
+        sponsor_action_kind: "api_credential_profiles_fallback",
+        sponsor_id: "remote-provider",
+      }),
+    )
+
+    const payloadText = JSON.stringify(
+      trackProductAnalyticsEventMock.mock.calls,
+    )
+    expect(payloadText).not.toContain("https://")
+    expect(payloadText).not.toContain("Supported Provider")
+    expect(payloadText).not.toContain("Manual Provider")
+    expect(payloadText).not.toContain("Use promo code APIHUB")
+    expect(payloadText).not.toContain("all-api-hub")
+  })
+
+  it("tracks newcomer recommendation clicks with a distinct surface", async () => {
+    const user = userEvent.setup()
+    vi.stubGlobal("open", vi.fn())
+    renderSection(
+      [createSupportedSponsor()],
+      SPONSOR_RECOMMENDATION_SURFACES.Newcomer,
+    )
+    trackProductAnalyticsEventMock.mockClear()
+
+    await user.click(
+      screen.getByTestId(
+        ACCOUNT_MANAGEMENT_TEST_IDS.sponsorContinueAddAccountAction,
+      ),
+    )
+
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      expect.objectContaining({
+        action_id: "open_sponsor_add_account_followup",
+        surface_id:
+          "options_account_management_newcomer_sponsor_recommendations",
+        sponsor_action_kind: "continue_add_account",
+      }),
+    )
   })
 })

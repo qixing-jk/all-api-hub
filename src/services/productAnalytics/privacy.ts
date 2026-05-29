@@ -25,6 +25,10 @@ import {
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SITE_TYPES,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
+  PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS,
+  PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES,
+  PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS,
+  PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES,
   PRODUCT_ANALYTICS_STATUS_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
@@ -85,6 +89,13 @@ const EVENT_ALLOWED_KEYS = {
     "temp_window_fetch_failure_count_bucket",
     "temp_window_turnstile_fetch_success_count_bucket",
     "temp_window_turnstile_fetch_failure_count_bucket",
+    "sponsor_action_kind",
+    "sponsor_catalog_source",
+    "sponsor_id",
+    "sponsor_rank_bucket",
+    "sponsor_support_status",
+    "sponsor_supported_count_bucket",
+    "sponsor_unsupported_count_bucket",
     "entrypoint",
   ],
   [PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured]: [
@@ -423,6 +434,20 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   skipped_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   source_managed_site_type: Object.values(PRODUCT_ANALYTICS_MANAGED_SITE_TYPES),
   source_kind: Object.values(PRODUCT_ANALYTICS_SOURCE_KINDS),
+  sponsor_action_kind: Object.values(PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS),
+  sponsor_catalog_source: Object.values(
+    PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES,
+  ),
+  sponsor_rank_bucket: Object.values(PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS),
+  sponsor_support_status: Object.values(
+    PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES,
+  ),
+  sponsor_supported_count_bucket: Object.values(
+    PRODUCT_ANALYTICS_COUNT_BUCKETS,
+  ),
+  sponsor_unsupported_count_bucket: Object.values(
+    PRODUCT_ANALYTICS_COUNT_BUCKETS,
+  ),
   status_kind: Object.values(PRODUCT_ANALYTICS_STATUS_KINDS),
   success_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   surface_id: Object.values(PRODUCT_ANALYTICS_SURFACE_IDS),
@@ -490,6 +515,7 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "redemption_assist_allowlist_checkin_redeem_urls_enabled",
   "shield_bypass_prompt_dismissed_count_bucket",
   "shield_bypass_prompt_shown_count_bucket",
+  "sponsor_id",
   "sync_accounts_enabled",
   "source_managed_site_type",
   "target_managed_site_type",
@@ -521,6 +547,10 @@ function isAllowedFieldValue(key: string, value: string | boolean): boolean {
       key.endsWith("_enabled") ||
       key.endsWith("_configured")
     )
+  }
+
+  if (key === "sponsor_id") {
+    return /^[a-z0-9][a-z0-9-]*$/.test(value)
   }
 
   const allowedValues = FIELD_ALLOWED_VALUES[key]
