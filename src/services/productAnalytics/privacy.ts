@@ -562,6 +562,8 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "url_whitelist_enabled",
   "url_whitelist_patterns_configured",
   "task_notifications_balance_history_capture_task_enabled",
+  "webdav_sync_accounts_enabled",
+  "webdav_sync_api_profiles_enabled",
 ])
 
 const RAW_NUMBER_ALLOWED_KEYS = new Set([

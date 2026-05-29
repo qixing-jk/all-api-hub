@@ -442,12 +442,11 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
-  it("keeps full derived settings snapshot coverage and strips configured secrets", () => {
+  it("keeps WebDAV settings snapshot fields and strips configured secrets", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.SettingChanged,
       {
-        setting_id:
-          PRODUCT_ANALYTICS_SETTING_IDS.TaskNotificationsConfigSnapshot,
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebDavConfigSnapshot,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         configured: true,
         auto_sync_enabled: true,
@@ -458,6 +457,89 @@ describe("product analytics privacy filtering", () => {
         sync_bookmarks_enabled: false,
         sync_api_profiles_enabled: true,
         sync_preferences_enabled: false,
+        url: "https://dav.example/private",
+        username: "private-user",
+        password: "private-password",
+        backupEncryptionPassword: "private-encryption-password",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebDavConfigSnapshot,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      configured: true,
+      auto_sync_enabled: true,
+      backup_encryption_enabled: true,
+      sync_strategy: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
+      sync_interval_minutes: 120,
+      sync_accounts_enabled: true,
+      sync_bookmarks_enabled: false,
+      sync_api_profiles_enabled: true,
+      sync_preferences_enabled: false,
+    })
+  })
+
+  it("keeps task notification settings snapshot fields and strips configured secrets", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+      {
+        setting_id:
+          PRODUCT_ANALYTICS_SETTING_IDS.TaskNotificationsConfigSnapshot,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        enabled: true,
+        browser_channel_enabled: true,
+        telegram_channel_enabled: true,
+        feishu_channel_enabled: false,
+        dingtalk_channel_enabled: false,
+        wecom_channel_enabled: false,
+        ntfy_channel_enabled: true,
+        webhook_channel_enabled: true,
+        auto_checkin_task_enabled: true,
+        webdav_auto_sync_task_enabled: true,
+        managed_site_model_sync_task_enabled: true,
+        usage_history_sync_task_enabled: false,
+        balance_history_capture_task_enabled: false,
+        site_announcements_task_enabled: true,
+        third_party_channel_count: 3,
+        task_enabled_count: 4,
+        telegramBotToken: "private-bot-token",
+        telegramChatId: "private-chat",
+        ntfyTopicUrl: "https://ntfy.example/topic",
+        ntfyAccessToken: "private-ntfy-token",
+        webhookUrl: "https://webhook.example/private",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      setting_id: PRODUCT_ANALYTICS_SETTING_IDS.TaskNotificationsConfigSnapshot,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      enabled: true,
+      browser_channel_enabled: true,
+      telegram_channel_enabled: true,
+      feishu_channel_enabled: false,
+      dingtalk_channel_enabled: false,
+      wecom_channel_enabled: false,
+      ntfy_channel_enabled: true,
+      webhook_channel_enabled: true,
+      auto_checkin_task_enabled: true,
+      webdav_auto_sync_task_enabled: true,
+      managed_site_model_sync_task_enabled: true,
+      usage_history_sync_task_enabled: false,
+      balance_history_capture_task_enabled: false,
+      site_announcements_task_enabled: true,
+      third_party_channel_count: 3,
+      task_enabled_count: 4,
+    })
+  })
+
+  it("keeps aggregate settings snapshot fields with reviewed sensitive-looking names", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+      {
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        balance_history_estimated_today_income_enabled: true,
+        webdav_sync_accounts_enabled: true,
+        webdav_sync_api_profiles_enabled: true,
         active_tab: "balance",
         currency_type: "CNY",
         show_today_cashflow_enabled: false,
@@ -471,39 +553,18 @@ describe("product analytics privacy filtering", () => {
         estimated_today_income_enabled: true,
         auto_detect_enhanced_enabled: true,
         reminder_dismissed: true,
-        telegram_channel_enabled: true,
-        feishu_channel_enabled: false,
-        dingtalk_channel_enabled: false,
-        wecom_channel_enabled: false,
-        ntfy_channel_enabled: true,
-        webhook_channel_enabled: true,
-        auto_checkin_task_enabled: true,
-        webdav_auto_sync_task_enabled: true,
-        managed_site_model_sync_task_enabled: true,
-        usage_history_sync_task_enabled: false,
-        balance_history_capture_task_enabled: false,
-        site_announcements_task_enabled: true,
-        url: "https://dav.example/private",
-        username: "private-user",
-        password: "private-password",
-        telegramBotToken: "private-bot-token",
-        ntfyTopicUrl: "https://ntfy.example/topic",
-        backupEncryptionPassword: "private-encryption-password",
+        task_notifications_balance_history_capture_task_enabled: false,
+        webdavUrl: "https://dav.example/private",
+        apiProfileName: "private profile",
+        accountName: "private account",
       },
     )
 
     expect(sanitized).toEqual({
-      setting_id: PRODUCT_ANALYTICS_SETTING_IDS.TaskNotificationsConfigSnapshot,
-      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-      configured: true,
-      auto_sync_enabled: true,
-      backup_encryption_enabled: true,
-      sync_strategy: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
-      sync_interval_minutes: 120,
-      sync_accounts_enabled: true,
-      sync_bookmarks_enabled: false,
-      sync_api_profiles_enabled: true,
-      sync_preferences_enabled: false,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      balance_history_estimated_today_income_enabled: true,
+      webdav_sync_accounts_enabled: true,
+      webdav_sync_api_profiles_enabled: true,
       active_tab: "balance",
       currency_type: "CNY",
       show_today_cashflow_enabled: false,
@@ -517,18 +578,7 @@ describe("product analytics privacy filtering", () => {
       estimated_today_income_enabled: true,
       auto_detect_enhanced_enabled: true,
       reminder_dismissed: true,
-      telegram_channel_enabled: true,
-      feishu_channel_enabled: false,
-      dingtalk_channel_enabled: false,
-      wecom_channel_enabled: false,
-      ntfy_channel_enabled: true,
-      webhook_channel_enabled: true,
-      auto_checkin_task_enabled: true,
-      webdav_auto_sync_task_enabled: true,
-      managed_site_model_sync_task_enabled: true,
-      usage_history_sync_task_enabled: false,
-      balance_history_capture_task_enabled: false,
-      site_announcements_task_enabled: true,
+      task_notifications_balance_history_capture_task_enabled: false,
     })
   })
 
