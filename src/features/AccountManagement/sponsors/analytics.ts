@@ -16,7 +16,6 @@ import {
   type ProductAnalyticsSponsorSupportStatus,
   type ProductAnalyticsSurfaceId,
 } from "~/services/productAnalytics/events"
-import { bucketCount } from "~/services/productAnalytics/privacy"
 
 import {
   SPONSOR_RECOMMENDATION_SURFACES,
@@ -70,18 +69,14 @@ export function trackSponsorRecommendationsImpression({
       surface_id: resolveProductAnalyticsSponsorSurface(surface),
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       result: PRODUCT_ANALYTICS_RESULTS.Success,
-      item_count_bucket: bucketCount(items.length),
+      item_count: items.length,
       sponsor_catalog_source: resolveSponsorCatalogSource(items),
-      sponsor_supported_count_bucket: bucketCount(
-        items.filter(
-          (item) => item.supportStatus === SPONSOR_SUPPORT_STATUS.Supported,
-        ).length,
-      ),
-      sponsor_unsupported_count_bucket: bucketCount(
-        items.filter(
-          (item) => item.supportStatus === SPONSOR_SUPPORT_STATUS.Unsupported,
-        ).length,
-      ),
+      sponsor_supported_count: items.filter(
+        (item) => item.supportStatus === SPONSOR_SUPPORT_STATUS.Supported,
+      ).length,
+      sponsor_unsupported_count: items.filter(
+        (item) => item.supportStatus === SPONSOR_SUPPORT_STATUS.Unsupported,
+      ).length,
     },
   )
 }
@@ -106,7 +101,7 @@ export function trackSponsorRecommendationClick({
       surface_id: resolveProductAnalyticsSponsorSurface(surface),
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       result: PRODUCT_ANALYTICS_RESULTS.Success,
-      item_count_bucket: bucketCount(itemCount),
+      item_count: itemCount,
       sponsor_action_kind: actionKind,
       sponsor_catalog_source: resolveSponsorCatalogSource([item]),
       sponsor_id: item.id,

@@ -13,7 +13,6 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   trackProductAnalyticsEvent,
 } from "~/services/productAnalytics/events"
-import { bucketCount } from "~/services/productAnalytics/privacy"
 import { SiteHealthStatus } from "~/types"
 import { formatTelemetryMoney } from "~/utils/core/money"
 
@@ -103,11 +102,11 @@ export default function ApiCredentialProfilesStatsSection() {
           PRODUCT_ANALYTICS_SURFACE_IDS.PopupApiCredentialProfilesStats,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
         result: PRODUCT_ANALYTICS_RESULTS.Success,
-        item_count_bucket: bucketCount(profiles.length),
-        selected_count_bucket: bucketCount(usedTagsCount),
-        success_count_bucket: bucketCount(telemetryStats.healthyCount),
-        failure_count_bucket: bucketCount(telemetryStats.profileTelemetryCount),
-        model_count_bucket: bucketCount(uniqueBaseUrlsCount),
+        item_count: profiles.length,
+        selected_count: usedTagsCount,
+        success_count: telemetryStats.healthyCount,
+        failure_count: telemetryStats.profileTelemetryCount,
+        model_count: uniqueBaseUrlsCount,
       },
     )
   }, [

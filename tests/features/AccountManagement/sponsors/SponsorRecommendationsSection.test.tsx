@@ -386,10 +386,10 @@ describe("SponsorRecommendationsSection", () => {
           "options_account_management_add_account_sponsor_recommendations",
         entrypoint: "options",
         result: "success",
-        item_count_bucket: "2_3",
+        item_count: 2,
         sponsor_catalog_source: "mixed",
-        sponsor_supported_count_bucket: "1",
-        sponsor_unsupported_count_bucket: "1",
+        sponsor_supported_count: 1,
+        sponsor_unsupported_count: 1,
       }),
     )
   })
@@ -462,7 +462,7 @@ describe("SponsorRecommendationsSection", () => {
         sponsor_support_status: "supported",
         sponsor_catalog_source: "bundled",
         sponsor_rank_bucket: "1",
-        item_count_bucket: "2_3",
+        item_count: 2,
       }),
     )
     expect(trackProductAnalyticsEventMock).toHaveBeenNthCalledWith(
@@ -475,7 +475,7 @@ describe("SponsorRecommendationsSection", () => {
         sponsor_support_status: "unsupported",
         sponsor_catalog_source: "remote",
         sponsor_rank_bucket: "2_3",
-        item_count_bucket: "2_3",
+        item_count: 2,
       }),
     )
     expect(trackProductAnalyticsEventMock).toHaveBeenNthCalledWith(

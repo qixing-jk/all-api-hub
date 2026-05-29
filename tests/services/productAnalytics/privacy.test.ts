@@ -148,7 +148,7 @@ describe("product analytics privacy filtering", () => {
           PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementAddAccountSponsorRecommendations,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         result: PRODUCT_ANALYTICS_RESULTS.Success,
-        item_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+        item_count: 3,
         sponsor_action_kind:
           PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS.VisitProvider,
         sponsor_catalog_source:
@@ -157,8 +157,8 @@ describe("product analytics privacy filtering", () => {
         sponsor_rank_bucket: PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS.One,
         sponsor_support_status:
           PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES.Supported,
-        sponsor_supported_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
-        sponsor_unsupported_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero,
+        sponsor_supported_count: 1,
+        sponsor_unsupported_count: 0,
         sponsor_name: "PackyCode",
         sponsor_url: "https://provider.example/register",
         sponsor_note: "Use promo code all-api-hub.",
@@ -173,15 +173,15 @@ describe("product analytics privacy filtering", () => {
         PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementAddAccountSponsorRecommendations,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       result: PRODUCT_ANALYTICS_RESULTS.Success,
-      item_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+      item_count: 3,
       sponsor_action_kind: PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS.VisitProvider,
       sponsor_catalog_source: PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES.Remote,
       sponsor_id: "packycode",
       sponsor_rank_bucket: PRODUCT_ANALYTICS_SPONSOR_RANK_BUCKETS.One,
       sponsor_support_status:
         PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES.Supported,
-      sponsor_supported_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
-      sponsor_unsupported_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.Zero,
+      sponsor_supported_count: 1,
+      sponsor_unsupported_count: 0,
     })
   })
 
@@ -271,7 +271,7 @@ describe("product analytics privacy filtering", () => {
     },
   )
 
-  it("keeps controlled action insight buckets while dropping sensitive source values", () => {
+  it("keeps controlled action insight counts while dropping sensitive source values", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
       {
@@ -283,13 +283,13 @@ describe("product analytics privacy filtering", () => {
         result: PRODUCT_ANALYTICS_RESULTS.Failure,
         source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.History,
         mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
-        item_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
-        selected_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
-        filter_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
-        result_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
-        success_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
-        failure_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
-        skipped_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
+        item_count: 3,
+        selected_count: 1,
+        filter_count: 2,
+        result_count: 8,
+        success_count: 1,
+        failure_count: 1,
+        skipped_count: 1,
         target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
         target_state: PRODUCT_ANALYTICS_TARGET_STATES.Enabled,
         telemetry_source: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.NewApiTokenUsage,
@@ -297,7 +297,7 @@ describe("product analytics privacy filtering", () => {
         target_value: "private-provider",
         source_url: "https://private.example/path",
         sourceText: "sk-secret",
-        selected_count: 2,
+        bucketed_selected_count: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
         telemetry_endpoint: "/api/usage/token/",
       },
     )
@@ -311,13 +311,13 @@ describe("product analytics privacy filtering", () => {
       result: PRODUCT_ANALYTICS_RESULTS.Failure,
       source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.History,
       mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
-      item_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
-      selected_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
-      filter_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
-      result_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
-      success_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
-      failure_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
-      skipped_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
+      item_count: 3,
+      selected_count: 1,
+      filter_count: 2,
+      result_count: 8,
+      success_count: 1,
+      failure_count: 1,
+      skipped_count: 1,
       target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.ModelFilter,
       target_state: PRODUCT_ANALYTICS_TARGET_STATES.Enabled,
       telemetry_source: PRODUCT_ANALYTICS_TELEMETRY_SOURCES.NewApiTokenUsage,
@@ -798,7 +798,7 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
-  it("keeps managed-site channel analytics dimensions as fixed enums and buckets", () => {
+  it("keeps managed-site channel analytics dimensions as fixed enums and counts", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
       {
@@ -813,13 +813,14 @@ describe("product analytics privacy filtering", () => {
         target_managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.DoneHub,
         failure_stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Preview,
         editor_mode: PRODUCT_ANALYTICS_EDITOR_MODES.Json,
-        warning_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
-        ready_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
-        blocked_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+        warning_count: 1,
+        ready_count: 7,
+        blocked_count: 3,
         sourceSiteUrl: "https://source.example",
         targetSiteUrl: "https://target.example",
         channelName: "Production channel",
         rawWarningCount: 7,
+        warning_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
       },
     )
 
@@ -835,13 +836,13 @@ describe("product analytics privacy filtering", () => {
       target_managed_site_type: PRODUCT_ANALYTICS_MANAGED_SITE_TYPES.DoneHub,
       failure_stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Preview,
       editor_mode: PRODUCT_ANALYTICS_EDITOR_MODES.Json,
-      warning_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.One,
-      ready_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
-      blocked_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.TwoToThree,
+      warning_count: 1,
+      ready_count: 7,
+      blocked_count: 3,
     })
   })
 
-  it("drops raw managed-site channel values that are not fixed enums or buckets", () => {
+  it("drops raw managed-site channel values and invalid counts", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
       {
@@ -856,9 +857,9 @@ describe("product analytics privacy filtering", () => {
         target_managed_site_type: "target-production",
         failure_stage: "validation:missing token",
         editor_mode: "json-with-secret",
-        warning_count_bucket: "7",
-        ready_count_bucket: 3,
-        blocked_count_bucket: "all-blocked",
+        warning_count: -1,
+        ready_count: 1.5,
+        blocked_count: Number.MAX_SAFE_INTEGER + 1,
         sourceSiteUrl: "https://source.example",
         targetSiteUrl: "https://target.example",
         channelName: "Production channel",
@@ -892,7 +893,7 @@ describe("product analytics privacy filtering", () => {
         result: PRODUCT_ANALYTICS_RESULTS.Success,
         source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile,
         mode: PRODUCT_ANALYTICS_MODE_IDS.ProviderFilter,
-        model_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+        model_count: 7,
         accountId: "private-account-id",
         profileName: "Private profile",
         modelName: "private-model",
@@ -908,7 +909,7 @@ describe("product analytics privacy filtering", () => {
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       source_kind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile,
       mode: PRODUCT_ANALYTICS_MODE_IDS.ProviderFilter,
-      model_count_bucket: PRODUCT_ANALYTICS_COUNT_BUCKETS.FourToTen,
+      model_count: 7,
     })
   })
 

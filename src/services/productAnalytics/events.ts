@@ -867,17 +867,17 @@ export type ProductAnalyticsEventPayloadMap = {
     fetch_context_kind?: ProductAnalyticsAccountAutoDetectFetchContextKind
     incognito_context_used?: boolean
     current_tab_matched?: boolean
-    item_count_bucket?: ProductAnalyticsCountBucket
-    selected_count_bucket?: ProductAnalyticsCountBucket
-    success_count_bucket?: ProductAnalyticsCountBucket
-    failure_count_bucket?: ProductAnalyticsCountBucket
-    skipped_count_bucket?: ProductAnalyticsCountBucket
-    warning_count_bucket?: ProductAnalyticsCountBucket
-    ready_count_bucket?: ProductAnalyticsCountBucket
-    blocked_count_bucket?: ProductAnalyticsCountBucket
-    model_count_bucket?: ProductAnalyticsCountBucket
-    filter_count_bucket?: ProductAnalyticsCountBucket
-    result_count_bucket?: ProductAnalyticsCountBucket
+    item_count?: number
+    selected_count?: number
+    success_count?: number
+    failure_count?: number
+    skipped_count?: number
+    warning_count?: number
+    ready_count?: number
+    blocked_count?: number
+    model_count?: number
+    filter_count?: number
+    result_count?: number
     usage_data_present?: boolean
     shield_bypass_prompt_shown_count_bucket?: ProductAnalyticsCountBucket
     shield_bypass_prompt_dismissed_count_bucket?: ProductAnalyticsCountBucket
@@ -891,8 +891,8 @@ export type ProductAnalyticsEventPayloadMap = {
     sponsor_id?: ProductAnalyticsSponsorId
     sponsor_rank_bucket?: ProductAnalyticsSponsorRankBucket
     sponsor_support_status?: ProductAnalyticsSponsorSupportStatus
-    sponsor_supported_count_bucket?: ProductAnalyticsCountBucket
-    sponsor_unsupported_count_bucket?: ProductAnalyticsCountBucket
+    sponsor_supported_count?: number
+    sponsor_unsupported_count?: number
     entrypoint: ProductAnalyticsEntrypoint
   }
   [PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured]: {

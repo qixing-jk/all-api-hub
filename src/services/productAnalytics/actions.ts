@@ -26,7 +26,7 @@ import {
   type ProductAnalyticsTargetState,
   type ProductAnalyticsTelemetrySource,
 } from "./events"
-import { bucketCount, bucketDurationMs } from "./privacy"
+import { bucketDurationMs } from "./privacy"
 
 export {
   resolveProductAnalyticsActionContext,
@@ -272,37 +272,37 @@ function mapProductAnalyticsActionInsights(
       ? { current_tab_matched: insights.currentTabMatched }
       : {}),
     ...(typeof insights.itemCount === "number"
-      ? { item_count_bucket: bucketCount(insights.itemCount) }
+      ? { item_count: insights.itemCount }
       : {}),
     ...(typeof insights.selectedCount === "number"
-      ? { selected_count_bucket: bucketCount(insights.selectedCount) }
+      ? { selected_count: insights.selectedCount }
       : {}),
     ...(typeof insights.successCount === "number"
-      ? { success_count_bucket: bucketCount(insights.successCount) }
+      ? { success_count: insights.successCount }
       : {}),
     ...(typeof insights.failureCount === "number"
-      ? { failure_count_bucket: bucketCount(insights.failureCount) }
+      ? { failure_count: insights.failureCount }
       : {}),
     ...(typeof insights.skippedCount === "number"
-      ? { skipped_count_bucket: bucketCount(insights.skippedCount) }
+      ? { skipped_count: insights.skippedCount }
       : {}),
     ...(typeof insights.warningCount === "number"
-      ? { warning_count_bucket: bucketCount(insights.warningCount) }
+      ? { warning_count: insights.warningCount }
       : {}),
     ...(typeof insights.readyCount === "number"
-      ? { ready_count_bucket: bucketCount(insights.readyCount) }
+      ? { ready_count: insights.readyCount }
       : {}),
     ...(typeof insights.blockedCount === "number"
-      ? { blocked_count_bucket: bucketCount(insights.blockedCount) }
+      ? { blocked_count: insights.blockedCount }
       : {}),
     ...(typeof insights.modelCount === "number"
-      ? { model_count_bucket: bucketCount(insights.modelCount) }
+      ? { model_count: insights.modelCount }
       : {}),
     ...(typeof insights.filterCount === "number"
-      ? { filter_count_bucket: bucketCount(insights.filterCount) }
+      ? { filter_count: insights.filterCount }
       : {}),
     ...(typeof insights.resultCount === "number"
-      ? { result_count_bucket: bucketCount(insights.resultCount) }
+      ? { result_count: insights.resultCount }
       : {}),
     ...(typeof insights.usageDataPresent === "boolean"
       ? { usage_data_present: insights.usageDataPresent }
