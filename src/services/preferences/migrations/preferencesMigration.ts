@@ -4,6 +4,7 @@
  */
 
 import { DATA_TYPE_CASHFLOW, DATA_TYPE_CONSUMPTION } from "~/constants"
+import { DEFAULT_WEB_AI_API_CHECK_PREFERENCES } from "~/services/preferences/contentScriptFeatureDefaults"
 import { migrateAutoRefreshConfig } from "~/services/preferences/migrations/autoRefreshConfigMigration"
 import { migrateNewApiConfig } from "~/services/preferences/migrations/newApiConfigMigration"
 import { migrateWebDavConfig } from "~/services/preferences/migrations/webDavConfigMigration"
@@ -37,7 +38,7 @@ import { migrateSortingConfig } from "./sortingConfigMigration"
 const logger = createLogger("PreferencesMigration")
 
 // Current version of the preferences schema
-export const CURRENT_PREFERENCES_VERSION = 25
+export const CURRENT_PREFERENCES_VERSION = 26
 
 /**
  * Migration function type
@@ -567,6 +568,33 @@ const migrations: Record<number, PreferencesMigrationFunction> = {
         retentionDays: clampBalanceHistoryRetentionDays(stored?.retentionDays),
       },
       preferencesVersion: 25,
+    }
+  },
+
+  // Version 25 -> 26: Add enhanced Web AI API Check auto-detect preference.
+  26: (prefs: UserPreferences): UserPreferences => {
+    logger.debug(
+      "Migrating preferences from v25 to v26 (enhanced Web AI API Check auto-detect)",
+    )
+
+    const storedWebAiApiCheck = (prefs as any).webAiApiCheck
+    const storedAutoDetect = storedWebAiApiCheck?.autoDetect
+
+    return {
+      ...prefs,
+      webAiApiCheck: {
+        ...DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
+        ...(storedWebAiApiCheck ?? {}),
+        autoDetect: {
+          ...DEFAULT_WEB_AI_API_CHECK_PREFERENCES.autoDetect,
+          ...(storedAutoDetect ?? {}),
+          enhanced: {
+            ...DEFAULT_WEB_AI_API_CHECK_PREFERENCES.autoDetect.enhanced,
+            ...(storedAutoDetect?.enhanced ?? {}),
+          },
+        },
+      },
+      preferencesVersion: 26,
     }
   },
 }

@@ -149,6 +149,7 @@ describe("settings product analytics snapshots", () => {
         contextMenu: { enabled: true },
         autoDetect: {
           enabled: true,
+          enhanced: { enabled: true },
           urlWhitelist: {
             patterns: ["https://private.example/api-keys"],
           },

@@ -4,6 +4,7 @@ import { DATA_TYPE_BALANCE, DATA_TYPE_CASHFLOW } from "~/constants"
 import {
   createDefaultPreferences,
   DEFAULT_PREFERENCES,
+  userPreferences,
 } from "~/services/preferences/userPreferences"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
 
@@ -61,6 +62,13 @@ describe("userPreferences", () => {
       expect(DEFAULT_PREFERENCES.accountAutoRefresh.interval).toBeGreaterThan(0)
     })
 
+    it("defaults Web AI API Check automatic and enhanced detection to enabled", () => {
+      expect(DEFAULT_PREFERENCES.webAiApiCheck?.autoDetect.enabled).toBe(true)
+      expect(
+        DEFAULT_PREFERENCES.webAiApiCheck?.autoDetect.enhanced.enabled,
+      ).toBe(true)
+    })
+
     it("has valid webdav config", () => {
       expect(DEFAULT_PREFERENCES.webdav).toBeDefined()
       expect(DEFAULT_PREFERENCES.webdav.autoSync).toBe(false)
@@ -99,6 +107,26 @@ describe("userPreferences", () => {
       } finally {
         vi.useRealTimers()
       }
+    })
+  })
+
+  describe("updateWebAiApiCheck", () => {
+    it("persists nested enhanced auto-detect updates without a React provider", async () => {
+      await userPreferences.resetToDefaults()
+
+      await expect(
+        userPreferences.updateWebAiApiCheck({
+          autoDetect: {
+            enhanced: { enabled: false },
+          },
+        }),
+      ).resolves.toBe(true)
+
+      const preferences = await userPreferences.getPreferences()
+
+      expect(preferences.webAiApiCheck?.autoDetect.enhanced.enabled).toBe(false)
+      expect(preferences.webAiApiCheck?.autoDetect.enabled).toBe(true)
+      expect(preferences.webAiApiCheck?.enabled).toBe(true)
     })
   })
 })

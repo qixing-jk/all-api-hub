@@ -417,7 +417,7 @@ interface UserPreferencesContextType {
     updates: Partial<RedemptionAssistPreferences>,
   ) => Promise<boolean>
   updateWebAiApiCheck: (
-    updates: Partial<WebAiApiCheckPreferences>,
+    updates: DeepPartial<WebAiApiCheckPreferences>,
   ) => Promise<boolean>
   updateWebdavSettings: (
     updates: Partial<WebDAVSettings>,
@@ -1416,7 +1416,7 @@ export const UserPreferencesProvider = ({
   )
 
   const updateWebAiApiCheck = useCallback(
-    async (updates: Partial<WebAiApiCheckPreferences>) => {
+    async (updates: DeepPartial<WebAiApiCheckPreferences>) => {
       const preferenceUpdates = {
         webAiApiCheck: updates,
       }

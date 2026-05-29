@@ -1436,6 +1436,7 @@ describe("UserPreferencesContext", () => {
       ...DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
       autoDetect: {
         enabled: true,
+        enhanced: { enabled: true },
         urlWhitelist: {
           patterns: ["https://allowed.example/*"],
         },
@@ -1512,6 +1513,7 @@ describe("UserPreferencesContext", () => {
       await context.updateWebAiApiCheck({
         autoDetect: {
           enabled: true,
+          enhanced: { enabled: true },
           urlWhitelist: {
             patterns: ["https://api-check.example/*"],
           },
@@ -1552,6 +1554,24 @@ describe("UserPreferencesContext", () => {
     })
     expect(mockedSendRuntimeMessage).not.toHaveBeenCalledWith({
       action: RuntimeActionIds.PreferencesRefreshContextMenus,
+    })
+  })
+
+  it("updates enhanced Web AI API Check auto-detect preferences", async () => {
+    const context = await renderProvider()
+
+    await act(async () => {
+      await context.updateWebAiApiCheck({
+        autoDetect: {
+          enhanced: { enabled: false },
+        },
+      })
+    })
+
+    expect((latestContext as any).preferences.webAiApiCheck).toMatchObject({
+      autoDetect: {
+        enhanced: { enabled: false },
+      },
     })
   })
 
@@ -1790,6 +1810,7 @@ describe("UserPreferencesContext", () => {
       await context.updateWebAiApiCheck({
         autoDetect: {
           enabled: true,
+          enhanced: { enabled: true },
           urlWhitelist: {
             patterns: [],
           },
@@ -2165,6 +2186,7 @@ describe("UserPreferencesContext", () => {
       enabled: true,
       autoDetect: {
         enabled: true,
+        enhanced: { enabled: true },
         urlWhitelist: {
           patterns: ["https://api-check.example/*"],
         },
@@ -2237,6 +2259,7 @@ describe("UserPreferencesContext", () => {
       contextMenu: { enabled: true },
       autoDetect: {
         enabled: false,
+        enhanced: { enabled: true },
         urlWhitelist: {
           patterns: ["https://api-check.example/*"],
         },
@@ -2255,6 +2278,7 @@ describe("UserPreferencesContext", () => {
       await context.updateWebAiApiCheck({
         autoDetect: {
           enabled: true,
+          enhanced: { enabled: true },
           urlWhitelist: {
             patterns: ["https://api-check.example/*", "https://new.example/*"],
           },

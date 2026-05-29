@@ -161,14 +161,21 @@ export interface WebAiApiCheckUrlWhitelistPreferences {
   patterns: string[]
 }
 
+export interface WebAiApiCheckEnhancedAutoDetectPreferences {
+  /**
+   * When enabled, automatic detection may prompt for enhanced extraction
+   * matches such as bare domains, non-standard key formats, or cleaned keys.
+   */
+  enabled: boolean
+}
+
 export interface WebAiApiCheckAutoDetectPreferences {
   /**
    * When enabled, the content script may attempt to detect API credentials
    * from user actions (e.g., copy) on whitelisted pages.
-   *
-   * This MUST ship as disabled by default.
    */
   enabled: boolean
+  enhanced: WebAiApiCheckEnhancedAutoDetectPreferences
   urlWhitelist: WebAiApiCheckUrlWhitelistPreferences
 }
 
@@ -1209,6 +1216,17 @@ class UserPreferencesService {
   async resetWebAiApiCheck(): Promise<boolean> {
     return this.savePreferences({
       webAiApiCheck: DEFAULT_PREFERENCES.webAiApiCheck,
+    })
+  }
+
+  /**
+   * Update Web AI API Check config from extension contexts without a React provider.
+   */
+  async updateWebAiApiCheck(
+    updates: DeepPartial<WebAiApiCheckPreferences>,
+  ): Promise<boolean> {
+    return this.savePreferences({
+      webAiApiCheck: updates,
     })
   }
 

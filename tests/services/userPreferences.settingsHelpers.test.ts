@@ -186,6 +186,7 @@ describe("userPreferences settings helpers", () => {
         contextMenu: { enabled: false },
         autoDetect: {
           enabled: true,
+          enhanced: { enabled: true },
           urlWhitelist: {
             patterns: ["^https://detect.example.com$"],
           },

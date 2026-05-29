@@ -290,6 +290,33 @@ describe("preferencesMigration", () => {
       expect(migrated.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
     })
 
+    it("migrates v25 Web AI API Check preferences with enhanced auto-detect defaults", () => {
+      const prefs = createV0Preferences({
+        preferencesVersion: 25,
+        webAiApiCheck: {
+          enabled: true,
+          contextMenu: { enabled: true },
+          autoDetect: {
+            enabled: false,
+            urlWhitelist: { patterns: ["^https://stored\\.example"] },
+          },
+        },
+      } as any)
+
+      const result = migratePreferences(prefs)
+
+      expect(result.preferencesVersion).toBe(CURRENT_PREFERENCES_VERSION)
+      expect(result.webAiApiCheck).toMatchObject({
+        enabled: true,
+        contextMenu: { enabled: true },
+        autoDetect: {
+          enabled: false,
+          enhanced: { enabled: true },
+          urlWhitelist: { patterns: ["^https://stored\\.example"] },
+        },
+      })
+    })
+
     it("defaults site announcement polling to disabled for new preference snapshots", () => {
       expect(DEFAULT_PREFERENCES.siteAnnouncementNotifications).toEqual(
         DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES,
