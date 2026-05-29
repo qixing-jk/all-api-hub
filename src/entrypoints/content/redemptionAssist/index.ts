@@ -538,11 +538,19 @@ async function redeemCodesSequential(params: {
       const manual = await redeemForAccount(forcedAccountId, code)
       const message =
         manual?.message || t("redemptionAssist:messages.redeemFailed")
+      const success = !!manual?.success
       return {
         code,
         preview: maskCode(code),
-        success: !!manual?.success,
+        success,
         message,
+        ...(!success
+          ? {
+              analyticsErrorCategory: getRedemptionPromptAnalyticsErrorCategory(
+                getFixedRedemptionPromptResultCode(manual?.code),
+              ),
+            }
+          : {}),
       }
     }
 

@@ -960,6 +960,93 @@ describe("setupRedemptionAssistContent", () => {
     cleanup()
   })
 
+  it("maps manual redemption fixed failure codes to validation prompt analytics", async () => {
+    mockShowAccountSelectToast.mockResolvedValueOnce({
+      id: "chosen-account",
+      siteName: "Chosen",
+    })
+    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.RedemptionAssistAutoRedeemByUrl) {
+        return {
+          data: {
+            success: false,
+            code: "MULTIPLE_ACCOUNTS",
+            candidates: [{ id: "chosen-account", siteName: "Chosen" }],
+          },
+        }
+      }
+
+      if (message.action === RuntimeActionIds.RedemptionAssistAutoRedeem) {
+        return {
+          data: {
+            success: false,
+            code: "NO_ACCOUNTS",
+            message: "No account matched this private code",
+          },
+        }
+      }
+
+      return { data: { success: false } }
+    })
+
+    const { setupRedemptionAssistContent } = await import(
+      "~/entrypoints/content/redemptionAssist"
+    )
+
+    const cleanup = setupRedemptionAssistContent({
+      enableDetection: false,
+      enableContextMenu: true,
+    })
+
+    const addListener = globalThis.browser.runtime.onMessage
+      .addListener as ReturnType<typeof vi.fn>
+    const listener = addListener.mock.calls[0]?.[0]
+
+    listener({
+      action: RuntimeActionIds.RedemptionAssistContextMenuTrigger,
+      selectionText: `${codeA}\n${codeB}`,
+      pageUrl: "https://example.com/redeem",
+    })
+
+    await waitFor(() => {
+      expect(mockShowRedeemBatchResultToast).toHaveBeenCalledWith(
+        [
+          {
+            code: codeA,
+            preview: "a1b2****c5d6",
+            success: false,
+            message: "No account matched this private code",
+          },
+        ],
+        expect.any(Function),
+      )
+    })
+
+    expect(mockTrackProductAnalyticsActionCompleted).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.ConfirmRedemptionPrompt,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.ContentRedemptionPromptToast,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Content,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      insights: {
+        itemCount: 1,
+        selectedCount: 1,
+        successCount: 0,
+        failureCount: 1,
+      },
+    })
+
+    const analyticsPayloads = JSON.stringify(
+      mockTrackProductAnalyticsActionCompleted.mock.calls,
+    )
+    expect(analyticsPayloads).not.toContain(codeA)
+    expect(analyticsPayloads).not.toContain("chosen-account")
+    expect(analyticsPayloads).not.toContain("No account matched")
+
+    cleanup()
+  })
+
   it("reuses the user-selected fallback account for later context-menu batch redemptions", async () => {
     mockShowRedemptionPromptToast.mockResolvedValueOnce({
       action: "auto",
