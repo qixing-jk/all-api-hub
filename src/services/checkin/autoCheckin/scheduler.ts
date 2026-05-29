@@ -8,7 +8,10 @@ import {
   userPreferences,
 } from "~/services/preferences/userPreferences"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
-import { trackAutoCheckinConfigSnapshot } from "~/services/productAnalytics/autoCheckin"
+import {
+  trackAutoCheckinConfigSnapshot,
+  trackAutoCheckinRunAnalytics,
+} from "~/services/productAnalytics/autoCheckin"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -396,6 +399,36 @@ class AutoCheckinScheduler {
           ? { failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute }
           : {}),
       },
+    })
+  }
+
+  private trackBackgroundAutoCheckinRunAnalytics(params: {
+    runKind: AutoCheckinRunKind
+    snapshots: AutoCheckinAccountSnapshot[]
+    accounts: SiteAccount[]
+    retryEnabled: boolean
+    retryPendingBefore: number
+    retryAttempted: number
+    retryRescued: number
+    retryPendingAfter: number
+    retryExhausted: number
+  }) {
+    trackAutoCheckinRunAnalytics({
+      runKind: params.runKind,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      snapshots: params.snapshots,
+      accountsById: new Map(
+        params.accounts.map((account) => [
+          account.id,
+          { authType: account.authType },
+        ]),
+      ),
+      retryEnabled: params.retryEnabled,
+      retryPendingBefore: params.retryPendingBefore,
+      retryAttempted: params.retryAttempted,
+      retryRescued: params.retryRescued,
+      retryPendingAfter: params.retryPendingAfter,
+      retryExhausted: params.retryExhausted,
     })
   }
 
@@ -817,6 +850,7 @@ class AutoCheckinScheduler {
     account: SiteAccount,
     accountName: string,
   ): AutoCheckinAccountSnapshot {
+    const disabled = account.disabled === true
     const detectionEnabled = account.checkIn?.enableDetection ?? false
     const autoCheckinEnabled = account.checkIn?.autoCheckInEnabled !== false
     const provider = resolveAutoCheckinProvider(account)
@@ -824,7 +858,9 @@ class AutoCheckinScheduler {
 
     let skipReason: AutoCheckinSkipReason | undefined
 
-    if (!detectionEnabled) {
+    if (disabled) {
+      skipReason = AUTO_CHECKIN_SKIP_REASON.ACCOUNT_DISABLED
+    } else if (!detectionEnabled) {
       skipReason = AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED
     } else if (!autoCheckinEnabled) {
       skipReason = AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED
@@ -856,6 +892,22 @@ class AutoCheckinScheduler {
       ...snapshot,
       lastResult: results[snapshot.accountId],
     }))
+  }
+
+  private buildAnalyticsSnapshots(
+    accounts: SiteAccount[],
+    accountDisplayNameById: Map<string, string>,
+    results: Record<string, CheckinAccountResult>,
+  ): AutoCheckinAccountSnapshot[] {
+    return this.attachResultsToSnapshots(
+      accounts.map((account) =>
+        this.buildAccountSnapshot(
+          account,
+          accountDisplayNameById.get(account.id) ?? account.id,
+        ),
+      ),
+      results,
+    )
   }
 
   /**
@@ -1918,6 +1970,11 @@ class AutoCheckinScheduler {
           accountSnapshots,
           results,
         )
+        const analyticsSnapshots = this.buildAnalyticsSnapshots(
+          allAccounts,
+          accountDisplayNameById,
+          results,
+        )
         const mergedSummary = mergeSummaryIfNeeded(summary, perAccount)
 
         await autoCheckinStorage.saveStatus({
@@ -1950,6 +2007,17 @@ class AutoCheckinScheduler {
             summary: mergedSummary,
             durationMs: Date.now() - startTime,
             mode: PRODUCT_ANALYTICS_MODE_IDS.TelemetryAuto,
+          })
+          this.trackBackgroundAutoCheckinRunAnalytics({
+            runKind: runType,
+            snapshots: analyticsSnapshots,
+            accounts: allAccounts,
+            retryEnabled: config.retryStrategy?.enabled === true,
+            retryPendingBefore: 0,
+            retryAttempted: 0,
+            retryRescued: 0,
+            retryPendingAfter: 0,
+            retryExhausted: 0,
           })
         }
         return
@@ -2054,6 +2122,11 @@ class AutoCheckinScheduler {
         accountSnapshots,
         results,
       )
+      const analyticsSnapshots = this.buildAnalyticsSnapshots(
+        allAccounts,
+        accountDisplayNameById,
+        results,
+      )
       const mergedSummary = mergeSummaryIfNeeded(summary, perAccount)
 
       await autoCheckinStorage.saveStatus({
@@ -2098,6 +2171,17 @@ class AutoCheckinScheduler {
           summary: mergedSummary,
           durationMs: Date.now() - startTime,
           mode: PRODUCT_ANALYTICS_MODE_IDS.TelemetryAuto,
+        })
+        this.trackBackgroundAutoCheckinRunAnalytics({
+          runKind: runType,
+          snapshots: analyticsSnapshots,
+          accounts: allAccounts,
+          retryEnabled: config.retryStrategy?.enabled === true,
+          retryPendingBefore: 0,
+          retryAttempted: 0,
+          retryRescued: 0,
+          retryPendingAfter: retryState?.pendingAccountIds.length ?? 0,
+          retryExhausted: 0,
         })
       }
 
@@ -2203,6 +2287,8 @@ class AutoCheckinScheduler {
     const attemptsByAccount: Record<string, number> = {
       ...(retryState.attemptsByAccount ?? {}),
     }
+    const retryPendingBefore = retryState.pendingAccountIds.length
+    let retryExhausted = 0
 
     const updates: Record<string, CheckinAccountResult> = {}
     const remaining: string[] = []
@@ -2213,6 +2299,7 @@ class AutoCheckinScheduler {
       // Default to 1 to represent the initial daily run failure when the stored map is missing.
       const attempts = attemptsByAccount[accountId] ?? 1
       if (attempts >= maxAttempts) {
+        retryExhausted += 1
         continue
       }
 
@@ -2360,6 +2447,19 @@ class AutoCheckinScheduler {
         },
         durationMs: Date.now() - startTime,
         mode: PRODUCT_ANALYTICS_MODE_IDS.RetryFailed,
+      })
+      this.trackBackgroundAutoCheckinRunAnalytics({
+        runKind: "retry",
+        snapshots:
+          accountsSnapshot?.filter((snapshot) => updates[snapshot.accountId]) ??
+          [],
+        accounts: allAccounts,
+        retryEnabled: config.retryStrategy?.enabled === true,
+        retryPendingBefore,
+        retryAttempted: retryResults.length,
+        retryRescued: retrySuccessCount,
+        retryPendingAfter: nextRetryState?.pendingAccountIds.length ?? 0,
+        retryExhausted,
       })
     }
   }

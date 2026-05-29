@@ -7,7 +7,9 @@ import {
   PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS,
   PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_ATTEMPT_BUCKETS,
   PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_RUN_KINDS,
   PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES,
+  PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS,
   PRODUCT_ANALYTICS_AUTO_CHECKIN_WINDOW_LENGTH_BUCKETS,
   PRODUCT_ANALYTICS_COUNT_BUCKETS,
   PRODUCT_ANALYTICS_DURATION_BUCKETS,
@@ -41,7 +43,7 @@ import {
   type ProductAnalyticsEventName,
 } from "./events"
 
-type SanitizedProperties = Record<string, string | boolean>
+type SanitizedProperties = Record<string, string | boolean | number>
 
 const FORBIDDEN_KEY_PATTERN =
   /(url|uri|origin|host|hostname|domain|path|token|key|cookie|authorization|auth|email|balance|quota|cost|prompt|response|content|stack|trace|name|note|user|account)/i
@@ -120,6 +122,36 @@ const EVENT_ALLOWED_KEYS = {
     "temp_window_fetch_failure_count_bucket",
     "temp_window_turnstile_fetch_success_count_bucket",
     "temp_window_turnstile_fetch_failure_count_bucket",
+  ],
+  [PRODUCT_ANALYTICS_EVENTS.AutoCheckinRunSummaryCaptured]: [
+    "run_kind",
+    "entrypoint",
+    "total_accounts",
+    "detection_enabled_accounts",
+    "auto_checkin_enabled_accounts",
+    "provider_available_accounts",
+    "runnable_accounts",
+    "success_count",
+    "failed_count",
+    "skipped_count",
+    "retry_enabled",
+    "retry_pending_before",
+    "retry_attempted",
+    "retry_rescued",
+    "retry_pending_after",
+    "retry_exhausted",
+  ],
+  [PRODUCT_ANALYTICS_EVENTS.AutoCheckinAccountGroupCaptured]: [
+    "run_kind",
+    "entrypoint",
+    "site_type",
+    "requested_auth_mode",
+    "skip_reason",
+    "total_accounts",
+    "runnable_accounts",
+    "success_count",
+    "failed_count",
+    "skipped_count",
   ],
   [PRODUCT_ANALYTICS_EVENTS.SettingChanged]: [
     "setting_id",
@@ -430,6 +462,7 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   ready_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   result: Object.values(PRODUCT_ANALYTICS_RESULTS),
   result_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
+  run_kind: Object.values(PRODUCT_ANALYTICS_AUTO_CHECKIN_RUN_KINDS),
   retry_interval_bucket: Object.values(
     PRODUCT_ANALYTICS_AUTO_CHECKIN_RETRY_INTERVAL_BUCKETS,
   ),
@@ -453,6 +486,7 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   setting_id: Object.values(PRODUCT_ANALYTICS_SETTING_IDS),
   site_type: PRODUCT_ANALYTICS_SITE_TYPES,
   skipped_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
+  skip_reason: Object.values(PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS),
   source_managed_site_type: Object.values(PRODUCT_ANALYTICS_MANAGED_SITE_TYPES),
   source_kind: Object.values(PRODUCT_ANALYTICS_SOURCE_KINDS),
   sponsor_action_kind: Object.values(PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS),
@@ -525,6 +559,11 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "account_auto_refresh_interval_bucket",
   "account_auto_refresh_min_interval_bucket",
   "account_auto_refresh_on_open_enabled",
+  "auto_checkin_enabled_accounts",
+  "detection_enabled_accounts",
+  "provider_available_accounts",
+  "runnable_accounts",
+  "total_accounts",
   "auto_detect_url_patterns_configured",
   "requested_auth_mode",
   "auto_fill_current_site_url_on_account_add_enabled",
@@ -549,17 +588,47 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "url_whitelist_patterns_configured",
 ])
 
+const RAW_NUMBER_ALLOWED_KEYS = new Set([
+  "auto_checkin_enabled_accounts",
+  "detection_enabled_accounts",
+  "failed_count",
+  "provider_available_accounts",
+  "retry_attempted",
+  "retry_exhausted",
+  "retry_pending_after",
+  "retry_pending_before",
+  "retry_rescued",
+  "runnable_accounts",
+  "skipped_count",
+  "success_count",
+  "total_accounts",
+])
+
 /**
  * Accepts only scalar property values supported by PostHog product analytics.
  */
-function isAllowedScalar(value: unknown): value is string | boolean {
-  return typeof value === "string" || typeof value === "boolean"
+function isAllowedScalar(value: unknown): value is string | boolean | number {
+  return (
+    typeof value === "string" ||
+    typeof value === "boolean" ||
+    (typeof value === "number" &&
+      Number.isInteger(value) &&
+      value >= 0 &&
+      value <= Number.MAX_SAFE_INTEGER)
+  )
 }
 
 /**
  * Confirms a sanitized field uses an approved enum value or the enabled flag.
  */
-function isAllowedFieldValue(key: string, value: string | boolean): boolean {
+function isAllowedFieldValue(
+  key: string,
+  value: string | boolean | number,
+): boolean {
+  if (typeof value === "number") {
+    return RAW_NUMBER_ALLOWED_KEYS.has(key)
+  }
+
   if (typeof value === "boolean") {
     return (
       key === "enabled" ||

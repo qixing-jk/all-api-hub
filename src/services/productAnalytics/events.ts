@@ -24,6 +24,8 @@ export const PRODUCT_ANALYTICS_EVENTS = {
   FeatureActionStarted: "feature_action_started",
   FeatureActionCompleted: "feature_action_completed",
   ShieldBypassSummaryCaptured: "shield_bypass_summary_captured",
+  AutoCheckinRunSummaryCaptured: "auto_checkin_run_summary_captured",
+  AutoCheckinAccountGroupCaptured: "auto_checkin_account_group_captured",
   SettingChanged: "setting_changed",
   SettingsSnapshotCaptured: "settings_snapshot_captured",
   PermissionResult: "permission_result",
@@ -669,6 +671,27 @@ export const PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS = {
 export type ProductAnalyticsAutoCheckinDeterministicTimeBucket =
   (typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS)[keyof typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS]
 
+export const PRODUCT_ANALYTICS_AUTO_CHECKIN_RUN_KINDS = {
+  Daily: "daily",
+  Manual: "manual",
+  Retry: "retry",
+} as const
+
+export type ProductAnalyticsAutoCheckinRunKind =
+  (typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_RUN_KINDS)[keyof typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_RUN_KINDS]
+
+export const PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS = {
+  AccountDisabled: "account_disabled",
+  DetectionDisabled: "detection_disabled",
+  AutoCheckinDisabled: "auto_checkin_disabled",
+  AlreadyCheckedToday: "already_checked_today",
+  NoProvider: "no_provider",
+  ProviderNotReady: "provider_not_ready",
+} as const
+
+export type ProductAnalyticsAutoCheckinSkipReason =
+  (typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS)[keyof typeof PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS]
+
 export const PRODUCT_ANALYTICS_PERMISSION_IDS = {
   Notifications: "notifications",
   Cookies: "cookies",
@@ -883,6 +906,36 @@ export type ProductAnalyticsEventPayloadMap = {
     temp_window_fetch_failure_count_bucket?: ProductAnalyticsCountBucket
     temp_window_turnstile_fetch_success_count_bucket?: ProductAnalyticsCountBucket
     temp_window_turnstile_fetch_failure_count_bucket?: ProductAnalyticsCountBucket
+  }
+  [PRODUCT_ANALYTICS_EVENTS.AutoCheckinRunSummaryCaptured]: {
+    run_kind: ProductAnalyticsAutoCheckinRunKind
+    entrypoint: typeof PRODUCT_ANALYTICS_ENTRYPOINTS.Background
+    total_accounts: number
+    detection_enabled_accounts: number
+    auto_checkin_enabled_accounts: number
+    provider_available_accounts: number
+    runnable_accounts: number
+    success_count: number
+    failed_count: number
+    skipped_count: number
+    retry_enabled: boolean
+    retry_pending_before: number
+    retry_attempted: number
+    retry_rescued: number
+    retry_pending_after: number
+    retry_exhausted: number
+  }
+  [PRODUCT_ANALYTICS_EVENTS.AutoCheckinAccountGroupCaptured]: {
+    run_kind: ProductAnalyticsAutoCheckinRunKind
+    entrypoint: typeof PRODUCT_ANALYTICS_ENTRYPOINTS.Background
+    site_type?: ProductAnalyticsSiteType
+    requested_auth_mode?: ProductAnalyticsRequestedAuthMode
+    skip_reason?: ProductAnalyticsAutoCheckinSkipReason
+    total_accounts: number
+    runnable_accounts: number
+    success_count: number
+    failed_count: number
+    skipped_count: number
   }
   [PRODUCT_ANALYTICS_EVENTS.SettingChanged]: {
     setting_id: ProductAnalyticsSettingId

@@ -717,6 +717,87 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
+  it("keeps Auto Check-in run summaries with raw aggregate numbers only", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.AutoCheckinRunSummaryCaptured,
+      {
+        run_kind: "daily",
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        total_accounts: 12,
+        detection_enabled_accounts: 10,
+        auto_checkin_enabled_accounts: 9,
+        provider_available_accounts: 8,
+        runnable_accounts: 7,
+        success_count: 5,
+        failed_count: 2,
+        skipped_count: 3,
+        retry_enabled: true,
+        retry_pending_before: 0,
+        retry_attempted: 0,
+        retry_rescued: 0,
+        retry_pending_after: 2,
+        retry_exhausted: 0,
+        accountId: "private-account-id",
+        accountName: "private account",
+        siteUrl: "https://private.example",
+        rawMessage: "private backend error",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      run_kind: "daily",
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      total_accounts: 12,
+      detection_enabled_accounts: 10,
+      auto_checkin_enabled_accounts: 9,
+      provider_available_accounts: 8,
+      runnable_accounts: 7,
+      success_count: 5,
+      failed_count: 2,
+      skipped_count: 3,
+      retry_enabled: true,
+      retry_pending_before: 0,
+      retry_attempted: 0,
+      retry_rescued: 0,
+      retry_pending_after: 2,
+      retry_exhausted: 0,
+    })
+  })
+
+  it("keeps Auto Check-in account group summaries with fixed dimensions and raw numbers", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.AutoCheckinAccountGroupCaptured,
+      {
+        run_kind: "retry",
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        site_type: "new-api",
+        requested_auth_mode: "access_token",
+        skip_reason: "provider_not_ready",
+        total_accounts: 4,
+        runnable_accounts: 2,
+        success_count: 1,
+        failed_count: 1,
+        skipped_count: 2,
+        unknown_dimension: "private",
+        retry_attempted: 999,
+        retryRescued: 999,
+      },
+    )
+
+    expect(sanitized).toEqual({
+      run_kind: "retry",
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      site_type: "new-api",
+      requested_auth_mode: "access_token",
+      skip_reason: "provider_not_ready",
+      total_accounts: 4,
+      runnable_accounts: 2,
+      success_count: 1,
+      failed_count: 1,
+      skipped_count: 2,
+    })
+  })
+
   it("keeps managed-site channel analytics dimensions as fixed enums and buckets", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,

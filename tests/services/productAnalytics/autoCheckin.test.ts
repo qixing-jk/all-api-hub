@@ -1,7 +1,9 @@
 import { describe, expect, it, vi } from "vitest"
 
 import {
+  buildAutoCheckinAccountGroupProperties,
   buildAutoCheckinConfigSnapshotProperties,
+  buildAutoCheckinRunSummaryProperties,
   trackAutoCheckinConfigSnapshot,
 } from "~/services/productAnalytics/autoCheckin"
 import {
@@ -9,7 +11,12 @@ import {
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_SETTING_IDS,
 } from "~/services/productAnalytics/events"
-import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
+import { AuthTypeEnum } from "~/types"
+import {
+  AUTO_CHECKIN_SCHEDULE_MODE,
+  AUTO_CHECKIN_SKIP_REASON,
+  CHECKIN_RESULT_STATUS,
+} from "~/types/autoCheckin"
 
 const { trackProductAnalyticsEventMock } = vi.hoisted(() => ({
   trackProductAnalyticsEventMock: vi.fn(),
@@ -172,5 +179,163 @@ describe("auto-checkin product analytics", () => {
         deterministic_time_bucket: "afternoon",
       }),
     )
+  })
+
+  it("builds raw-number run summaries from snapshots, results, and retry state", () => {
+    const properties = buildAutoCheckinRunSummaryProperties({
+      runKind: "daily",
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      retryEnabled: true,
+      retryPendingBefore: 0,
+      retryAttempted: 0,
+      retryRescued: 0,
+      retryPendingAfter: 2,
+      retryExhausted: 0,
+      snapshots: [
+        {
+          accountId: "one",
+          accountName: "One",
+          siteType: "new-api",
+          detectionEnabled: true,
+          autoCheckinEnabled: true,
+          providerAvailable: true,
+          lastResult: {
+            accountId: "one",
+            accountName: "One",
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            timestamp: 1,
+          },
+        },
+        {
+          accountId: "two",
+          accountName: "Two",
+          siteType: "Veloera",
+          detectionEnabled: true,
+          autoCheckinEnabled: true,
+          providerAvailable: true,
+          lastResult: {
+            accountId: "two",
+            accountName: "Two",
+            status: CHECKIN_RESULT_STATUS.FAILED,
+            timestamp: 1,
+          },
+        },
+        {
+          accountId: "three",
+          accountName: "Three",
+          siteType: "one-api",
+          detectionEnabled: true,
+          autoCheckinEnabled: false,
+          providerAvailable: false,
+          skipReason: AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED,
+          lastResult: {
+            accountId: "three",
+            accountName: "Three",
+            status: CHECKIN_RESULT_STATUS.SKIPPED,
+            reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED,
+            timestamp: 1,
+          },
+        },
+        {
+          accountId: "four",
+          accountName: "Four",
+          siteType: "one-hub",
+          detectionEnabled: false,
+          autoCheckinEnabled: true,
+          providerAvailable: false,
+          skipReason: AUTO_CHECKIN_SKIP_REASON.DETECTION_DISABLED,
+        },
+      ],
+    })
+
+    expect(properties).toEqual({
+      run_kind: "daily",
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      total_accounts: 4,
+      detection_enabled_accounts: 3,
+      auto_checkin_enabled_accounts: 3,
+      provider_available_accounts: 2,
+      runnable_accounts: 2,
+      success_count: 1,
+      failed_count: 1,
+      skipped_count: 2,
+      retry_enabled: true,
+      retry_pending_before: 0,
+      retry_attempted: 0,
+      retry_rescued: 0,
+      retry_pending_after: 2,
+      retry_exhausted: 0,
+    })
+    expect(JSON.stringify(properties)).not.toContain("one")
+    expect(JSON.stringify(properties)).not.toContain("One")
+  })
+
+  it("builds grouped Auto Check-in analytics by site type, auth mode, and skip reason", () => {
+    const groups = buildAutoCheckinAccountGroupProperties({
+      runKind: "retry",
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+      accountsById: new Map([
+        ["one", { authType: AuthTypeEnum.AccessToken }],
+        ["two", { authType: AuthTypeEnum.Cookie }],
+      ]),
+      snapshots: [
+        {
+          accountId: "one",
+          accountName: "One",
+          siteType: "new-api",
+          detectionEnabled: true,
+          autoCheckinEnabled: true,
+          providerAvailable: true,
+          lastResult: {
+            accountId: "one",
+            accountName: "One",
+            status: CHECKIN_RESULT_STATUS.SUCCESS,
+            timestamp: 1,
+          },
+        },
+        {
+          accountId: "two",
+          accountName: "Two",
+          siteType: "new-api",
+          detectionEnabled: true,
+          autoCheckinEnabled: false,
+          providerAvailable: false,
+          skipReason: AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED,
+          lastResult: {
+            accountId: "two",
+            accountName: "Two",
+            status: CHECKIN_RESULT_STATUS.SKIPPED,
+            reasonCode: AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED,
+            timestamp: 1,
+          },
+        },
+      ],
+    })
+
+    expect(groups).toEqual([
+      {
+        run_kind: "retry",
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        site_type: "new-api",
+        requested_auth_mode: AuthTypeEnum.AccessToken,
+        total_accounts: 1,
+        runnable_accounts: 1,
+        success_count: 1,
+        failed_count: 0,
+        skipped_count: 0,
+      },
+      {
+        run_kind: "retry",
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        site_type: "new-api",
+        requested_auth_mode: AuthTypeEnum.Cookie,
+        skip_reason: AUTO_CHECKIN_SKIP_REASON.AUTO_CHECKIN_DISABLED,
+        total_accounts: 1,
+        runnable_accounts: 0,
+        success_count: 0,
+        failed_count: 0,
+        skipped_count: 1,
+      },
+    ])
   })
 })
