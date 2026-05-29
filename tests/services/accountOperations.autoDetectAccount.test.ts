@@ -1,6 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AUTO_DETECT_ERROR_CODES } from "~/constants/autoDetect"
+import {
+  AUTO_DETECT_ERROR_CODES,
+  AUTO_DETECT_FETCH_CONTEXT_KINDS,
+  AUTO_DETECT_STRATEGIES,
+} from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
 import { autoDetectAccount } from "~/services/accounts/accountOperations"
@@ -157,6 +161,71 @@ describe("accountOperations autoDetectAccount", () => {
       url: "https://tracked.example.com",
     })
     expect(mockFetchSiteStatus).toHaveBeenCalledTimes(1)
+  })
+
+  it("preserves privacy-safe auto-detect metadata in success responses", async () => {
+    const autoDetectContext = {
+      strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
+      fetchContextKind: AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab,
+      incognitoContextUsed: true,
+      currentTabMatched: true,
+    }
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      autoDetectContext,
+      data: {
+        userId: 7,
+        siteType: SITE_TYPES.NEW_API,
+        fetchContext: incognitoCurrentTabFetchContext(
+          "https://status.example.com",
+        ),
+      },
+    })
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "detected-user",
+      access_token: "detected-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Detected Portal",
+      checkin_enabled: false,
+    })
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(7)
+
+    const result = await autoDetectAccount(
+      "https://status.example.com",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result.success).toBe(true)
+    expect(result.data?.autoDetectContext).toEqual({
+      ...autoDetectContext,
+      siteType: SITE_TYPES.NEW_API,
+    })
+  })
+
+  it("preserves privacy-safe auto-detect metadata in failure responses", async () => {
+    const autoDetectContext = {
+      strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+      siteType: SITE_TYPES.NEW_API,
+      fetchContextKind: AUTO_DETECT_FETCH_CONTEXT_KINDS.BrowserContext,
+      incognitoContextUsed: false,
+      currentTabMatched: false,
+    }
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: false,
+      error: "messages:operations.detection.getUserIdFailed",
+      autoDetectContext,
+    })
+
+    const result = await autoDetectAccount(
+      "https://status.example.com",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result.success).toBe(false)
+    expect(result.autoDetectContext).toEqual(autoDetectContext)
   })
 
   it("passes current-tab context to service requests during auto-detect completion", async () => {
@@ -908,6 +977,48 @@ describe("accountOperations autoDetectAccount", () => {
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 
+  it("uses final hinted site type in metadata when completion validation fails", async () => {
+    mockSendRuntimeMessage.mockResolvedValueOnce(null)
+    mockAutoDetectSmart.mockResolvedValueOnce({
+      success: true,
+      autoDetectContext: {
+        strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
+        siteType: SITE_TYPES.NEW_API,
+        fetchContextKind: AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab,
+        incognitoContextUsed: false,
+        currentTabMatched: true,
+      },
+      data: {
+        userId: 12,
+        user: { id: 12 },
+        siteType: SITE_TYPES.VELOERA,
+        fetchContext: currentTabFetchContext("https://veloera.example.com"),
+      },
+    })
+    mockGetOrCreateAccessToken.mockResolvedValueOnce({
+      username: "",
+      access_token: "veloera-token",
+    })
+    mockFetchSiteStatus.mockResolvedValueOnce({
+      system_name: "Veloera",
+    })
+    mockFetchSupportCheckIn.mockResolvedValueOnce(false)
+    mockExtractDefaultExchangeRate.mockReturnValueOnce(null)
+
+    const result = await autoDetectAccount(
+      "https://veloera.example.com",
+      AuthTypeEnum.AccessToken,
+    )
+
+    expect(result).toMatchObject({
+      success: false,
+      autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.UsernameMissing,
+      autoDetectContext: expect.objectContaining({
+        siteType: SITE_TYPES.VELOERA,
+      }),
+    })
+  })
+
   it("fails AIHubMix auto-detect when token retrieval returns no token", async () => {
     mockSendRuntimeMessage.mockResolvedValueOnce(null)
     mockAutoDetectSmart.mockResolvedValueOnce({
@@ -1059,11 +1170,19 @@ describe("accountOperations autoDetectAccount", () => {
   })
 
   it("maps current-tab content-script failures to a reload hint", async () => {
+    const autoDetectContext = {
+      strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
+      siteType: SITE_TYPES.NEW_API,
+      fetchContextKind: AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab,
+      incognitoContextUsed: true,
+      currentTabMatched: true,
+    }
     mockSendRuntimeMessage.mockResolvedValueOnce(null)
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: false,
       error: "some generic failure",
       errorCode: AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE,
+      autoDetectContext,
     })
 
     const result = await autoDetectAccount(
@@ -1077,5 +1196,6 @@ describe("accountOperations autoDetectAccount", () => {
       message: "messages:autodetect.currentTabNeedsReload",
       actionText: "accountDialog:actions.reloadCurrentPage",
     })
+    expect(result.autoDetectContext).toEqual(autoDetectContext)
   })
 })

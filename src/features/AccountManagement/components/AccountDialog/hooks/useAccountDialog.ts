@@ -56,6 +56,7 @@ import {
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
+  type ProductAnalyticsActionInsights,
 } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -64,9 +65,11 @@ import {
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SITE_TYPES,
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsActionId,
   type ProductAnalyticsErrorCategory,
+  type ProductAnalyticsSiteType,
 } from "~/services/productAnalytics/events"
 import { trackOptionalPermissionRequestResult } from "~/services/productAnalytics/permissions"
 import {
@@ -1350,13 +1353,42 @@ export function useAccountDialog({
     const analyticsAction = startAccountDialogAnalyticsAction(
       PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
     )
+    const createAutoDetectAnalyticsInsights = (
+      result?: Awaited<ReturnType<typeof autoDetectAccount>>,
+    ): ProductAnalyticsActionInsights => {
+      const autoDetectContext =
+        result?.autoDetectContext ?? result?.data?.autoDetectContext
+      const candidateSiteType =
+        result?.data?.siteType ?? autoDetectContext?.siteType
+      const analyticsSiteType = isProductAnalyticsSiteType(candidateSiteType)
+        ? candidateSiteType
+        : undefined
+
+      return {
+        requestedAuthMode: authType,
+        ...(autoDetectContext?.strategy
+          ? { autoDetectStrategy: autoDetectContext.strategy }
+          : {}),
+        ...(autoDetectContext?.fetchContextKind
+          ? { fetchContextKind: autoDetectContext.fetchContextKind }
+          : {}),
+        ...(typeof autoDetectContext?.incognitoContextUsed === "boolean"
+          ? {
+              incognitoContextUsed: autoDetectContext.incognitoContextUsed,
+            }
+          : {}),
+        ...(typeof autoDetectContext?.currentTabMatched === "boolean"
+          ? {
+              currentTabMatched: autoDetectContext.currentTabMatched,
+            }
+          : {}),
+        ...(analyticsSiteType ? { siteType: analyticsSiteType } : {}),
+      }
+    }
 
     if (!url.trim()) {
       analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
-        insights: {
-          failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
-        },
+        insights: createAutoDetectAnalyticsInsights(),
       })
       return
     }
@@ -1365,9 +1397,7 @@ export function useAccountDialog({
       const shouldContinue = await ensureDuplicateAccountAddConfirmation()
       if (!shouldContinue) {
         analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Cancelled, {
-          insights: {
-            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Prompt,
-          },
+          insights: createAutoDetectAnalyticsInsights(),
         })
         return
       }
@@ -1380,6 +1410,7 @@ export function useAccountDialog({
       analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: {
+          ...createAutoDetectAnalyticsInsights(),
           failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
         },
       })
@@ -1401,6 +1432,7 @@ export function useAccountDialog({
             result.detailedError?.type,
           ),
           insights: {
+            ...createAutoDetectAnalyticsInsights(result),
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
             ...(result.autoDetectFailureReason
               ? {
@@ -1518,7 +1550,9 @@ export function useAccountDialog({
         if (mode === DIALOG_MODES.EDIT) {
           toast.success(t("messages.autoDetectSuccess"))
         }
-        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        analyticsAction.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          insights: createAutoDetectAnalyticsInsights(result),
+        })
       }
     } catch (error) {
       logger.error("Auto-detect failed", { error, url: url.trim(), authType })
@@ -1531,6 +1565,7 @@ export function useAccountDialog({
           error,
         ),
         insights: {
+          ...createAutoDetectAnalyticsInsights(),
           failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
         },
       })
@@ -2512,6 +2547,18 @@ function getAutoDetectAnalyticsErrorCategory(
       }
       return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
   }
+}
+
+/**
+ * Checks whether a detected site type is accepted by the analytics whitelist.
+ */
+function isProductAnalyticsSiteType(
+  value: unknown,
+): value is ProductAnalyticsSiteType {
+  return (
+    typeof value === "string" &&
+    (PRODUCT_ANALYTICS_SITE_TYPES as readonly string[]).includes(value)
+  )
 }
 
 /**

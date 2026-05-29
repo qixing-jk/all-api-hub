@@ -26,6 +26,7 @@ import {
   AUTO_DETECT_FAILURE_REASONS,
   AutoDetectErrorType,
   getAutoDetectErrorByCode,
+  type AutoDetectAnalyticsContext,
   type AutoDetectFailureReason,
 } from "~/services/accounts/utils/autoDetectUtils"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
@@ -70,6 +71,19 @@ const isCreatedApiToken = (value: unknown): value is ApiToken =>
   typeof value === "object" &&
   typeof (value as Partial<ApiToken>).id === "number" &&
   typeof (value as Partial<ApiToken>).key === "string"
+
+/**
+ * Pins analytics metadata to the final site type selected for account handling.
+ */
+function withFinalAutoDetectSiteType(
+  autoDetectContext: AutoDetectAnalyticsContext | undefined,
+  siteType: AccountSiteType,
+): AutoDetectAnalyticsContext {
+  return {
+    ...(autoDetectContext ?? {}),
+    siteType,
+  }
+}
 
 /**
  * Maps machine-readable auto-detect service errors into analytics-safe failure reasons.
@@ -258,6 +272,8 @@ export async function autoDetectAccount(
     }
   }
 
+  let autoDetectContext: AutoDetectAnalyticsContext | undefined
+
   try {
     try {
       await sendRuntimeMessage({
@@ -273,6 +289,7 @@ export async function autoDetectAccount(
 
     // 使用智能自动识别服务
     const detectResult = await autoDetectSmart(url.trim())
+    autoDetectContext = detectResult.autoDetectContext
 
     if (!detectResult.success || !detectResult.data) {
       const errorMsg =
@@ -284,6 +301,7 @@ export async function autoDetectAccount(
         success: false,
         message: errorMsg,
         detailedError,
+        autoDetectContext,
         autoDetectFailureReason:
           getAutoDetectFailureReasonByErrorCode(detectResult.errorCode) ??
           AUTO_DETECT_FAILURE_REASONS.UserDataMissing,
@@ -291,6 +309,10 @@ export async function autoDetectAccount(
     }
 
     const { userId, siteType, sub2apiAuth } = detectResult.data
+    autoDetectContext = withFinalAutoDetectSiteType(
+      detectResult.autoDetectContext,
+      siteType,
+    )
     const autoDetectFetchContext = getAutoDetectFetchContext(detectResult.data)
     const isSub2Api = siteType === SITE_TYPES.SUB2API
     const isAIHubMix = siteType === SITE_TYPES.AIHUBMIX
@@ -310,6 +332,7 @@ export async function autoDetectAccount(
           type: AutoDetectErrorType.INVALID_RESPONSE,
           message: t("messages:operations.detection.getUserIdFailedDetailed"),
         },
+        autoDetectContext,
         autoDetectFailureReason: AUTO_DETECT_FAILURE_REASONS.UserIdMissing,
       }
     }
@@ -456,6 +479,7 @@ export async function autoDetectAccount(
           type: AutoDetectErrorType.INVALID_RESPONSE,
           message,
         },
+        autoDetectContext,
         autoDetectFailureReason: failureReason,
       }
     }
@@ -493,6 +517,7 @@ export async function autoDetectAccount(
         ...(autoDetectFetchContext
           ? { fetchContext: autoDetectFetchContext }
           : {}),
+        autoDetectContext,
       },
     }
   } catch (error) {
@@ -511,6 +536,7 @@ export async function autoDetectAccount(
       success: false,
       message,
       detailedError,
+      autoDetectContext,
       autoDetectFailureReason,
     }
   }

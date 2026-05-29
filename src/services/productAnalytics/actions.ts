@@ -9,13 +9,17 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   trackProductAnalyticsEvent,
   type ProductAnalyticsAccountAutoDetectFailureReason,
+  type ProductAnalyticsAccountAutoDetectFetchContextKind,
+  type ProductAnalyticsAccountAutoDetectStrategy,
   type ProductAnalyticsApiType,
   type ProductAnalyticsEditorMode,
   type ProductAnalyticsErrorCategory,
   type ProductAnalyticsFailureStage,
   type ProductAnalyticsManagedSiteType,
   type ProductAnalyticsModeId,
+  type ProductAnalyticsRequestedAuthMode,
   type ProductAnalyticsResult,
+  type ProductAnalyticsSiteType,
   type ProductAnalyticsSourceKind,
   type ProductAnalyticsStatusKind,
   type ProductAnalyticsTargetKind,
@@ -52,6 +56,12 @@ export type ProductAnalyticsActionInsights = {
   targetManagedSiteType?: ProductAnalyticsManagedSiteType
   failureStage?: ProductAnalyticsFailureStage
   accountAutoDetectFailureReason?: ProductAnalyticsAccountAutoDetectFailureReason
+  autoDetectStrategy?: ProductAnalyticsAccountAutoDetectStrategy
+  requestedAuthMode?: ProductAnalyticsRequestedAuthMode
+  siteType?: ProductAnalyticsSiteType
+  fetchContextKind?: ProductAnalyticsAccountAutoDetectFetchContextKind
+  incognitoContextUsed?: boolean
+  currentTabMatched?: boolean
   itemCount?: number
   selectedCount?: number
   successCount?: number
@@ -244,6 +254,22 @@ function mapProductAnalyticsActionInsights(
           account_auto_detect_failure_reason:
             insights.accountAutoDetectFailureReason,
         }
+      : {}),
+    ...(insights.autoDetectStrategy
+      ? { auto_detect_strategy: insights.autoDetectStrategy }
+      : {}),
+    ...(insights.requestedAuthMode
+      ? { requested_auth_mode: insights.requestedAuthMode }
+      : {}),
+    ...(insights.siteType ? { site_type: insights.siteType } : {}),
+    ...(insights.fetchContextKind
+      ? { fetch_context_kind: insights.fetchContextKind }
+      : {}),
+    ...(typeof insights.incognitoContextUsed === "boolean"
+      ? { incognito_context_used: insights.incognitoContextUsed }
+      : {}),
+    ...(typeof insights.currentTabMatched === "boolean"
+      ? { current_tab_matched: insights.currentTabMatched }
       : {}),
     ...(typeof insights.itemCount === "number"
       ? { item_count_bucket: bucketCount(insights.itemCount) }

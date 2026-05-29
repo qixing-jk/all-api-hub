@@ -1,6 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { AUTO_DETECT_ERROR_CODES } from "~/constants/autoDetect"
+import {
+  AUTO_DETECT_ERROR_CODES,
+  AUTO_DETECT_FETCH_CONTEXT_KINDS,
+  AUTO_DETECT_STRATEGIES,
+} from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
 import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
 import { autoDetectSmart } from "~/services/siteDetection/autoDetectService"
@@ -95,7 +99,7 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://example.com/api/user/self")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: true,
       data: {
         userId: 12,
@@ -134,7 +138,7 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://example.com/console")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: true,
       data: {
         userId: 12,
@@ -158,6 +162,34 @@ describe("autoDetectSmart", () => {
     expect(mockGetActiveTabs).not.toHaveBeenCalled()
   })
 
+  it("returns privacy-safe current-tab metadata when current-tab detection succeeds", async () => {
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 101,
+        active: true,
+        url: "https://example.com/dashboard",
+        incognito: true,
+        cookieStoreId: "1-incognito",
+      },
+    ])
+    browserAny.tabs.sendMessage.mockResolvedValue({
+      success: true,
+      data: {
+        userId: 12,
+        user: { id: 12, username: "alice" },
+      },
+    })
+
+    const result = await autoDetectSmart("https://example.com/console")
+
+    expect(result.autoDetectContext).toMatchObject({
+      strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
+      fetchContextKind: AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab,
+      incognitoContextUsed: true,
+      currentTabMatched: true,
+    })
+  })
+
   it("keeps incognito current-tab context on API fallback when content user data is missing", async () => {
     mockGetActiveOrAllTabs.mockResolvedValue([
       {
@@ -179,7 +211,7 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://example.com/console")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: true,
       data: {
         userId: 13,
@@ -301,7 +333,7 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://example.com/console")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: true,
       data: {
         userId: 17,
@@ -397,7 +429,7 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://aihubmix.com")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: true,
       data: {
         userId: 7,
@@ -439,7 +471,7 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://console.aihubmix.com")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: true,
       data: {
         userId: 7,
@@ -479,7 +511,7 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://example.com/api/user/self")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: false,
       error: "messages:autodetect.currentTabNeedsReload",
       errorCode: AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE,
@@ -506,7 +538,7 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://example.com/console")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: true,
       data: {
         userId: 88,
@@ -627,7 +659,7 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://example.com/console")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: true,
       data: {
         userId: 9,
@@ -659,7 +691,7 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://example.com/console")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: true,
       data: {
         userId: 23,
@@ -696,7 +728,7 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://example.com/console")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: true,
       data: {
         userId: 24,
@@ -733,7 +765,7 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://example.com/console")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: true,
       data: {
         userId: 15,
@@ -790,7 +822,7 @@ describe("autoDetectSmart", () => {
 
     await expect(
       autoDetectSmart("https://example.com/console"),
-    ).resolves.toEqual({
+    ).resolves.toMatchObject({
       success: true,
       data: {
         userId: 10,
@@ -807,7 +839,7 @@ describe("autoDetectSmart", () => {
 
     await expect(
       autoDetectSmart("https://example.com/console"),
-    ).resolves.toEqual({
+    ).resolves.toMatchObject({
       success: true,
       data: {
         userId: 11,
@@ -841,7 +873,7 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://example.com/console")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: true,
       data: {
         userId: 21,
@@ -873,7 +905,7 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://example.com/console")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: true,
       data: {
         userId: 22,
@@ -888,6 +920,12 @@ describe("autoDetectSmart", () => {
     })
     expect(result.data).not.toHaveProperty("fetchContext")
     expect(mockFetchUserInfo).toHaveBeenCalledTimes(2)
+    expect(result.autoDetectContext).toMatchObject({
+      strategy: AUTO_DETECT_STRATEGIES.DirectApi,
+      fetchContextKind: AUTO_DETECT_FETCH_CONTEXT_KINDS.None,
+      incognitoContextUsed: false,
+      currentTabMatched: false,
+    })
   })
 
   it("falls back to background after current-tab context creation throws", async () => {
@@ -940,10 +978,48 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://example.com/console")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: false,
       error: "messages:autodetect.currentTabNeedsReload",
       errorCode: AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE,
+      autoDetectContext: {
+        strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
+        siteType: SITE_TYPES.NEW_API,
+        fetchContextKind: AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab,
+        incognitoContextUsed: false,
+        currentTabMatched: true,
+      },
+    })
+  })
+
+  it("keeps safe current-tab context on reload hint failures from incognito tabs", async () => {
+    browserAny.runtime = null
+
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 34,
+        active: true,
+        url: "https://example.com/home",
+        incognito: true,
+        cookieStoreId: "private-store",
+      },
+    ])
+    browserAny.tabs.sendMessage.mockRejectedValueOnce(new Error("no receiver"))
+    mockIsMessageReceiverUnavailableError.mockReturnValue(true)
+    mockFetchUserInfo.mockResolvedValue(null)
+
+    const result = await autoDetectSmart("https://example.com/console")
+
+    expect(result).toMatchObject({
+      success: false,
+      errorCode: AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE,
+      autoDetectContext: {
+        strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
+        siteType: SITE_TYPES.NEW_API,
+        fetchContextKind: AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab,
+        incognitoContextUsed: true,
+        currentTabMatched: true,
+      },
     })
   })
 
@@ -954,7 +1030,7 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("https://example.com")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: false,
       error: "detect failed",
       errorCode: AUTO_DETECT_ERROR_CODES.SITE_TYPE_DETECTION_FAILED,
@@ -971,7 +1047,7 @@ describe("autoDetectSmart", () => {
 
     const result = await autoDetectSmart("not a url")
 
-    expect(result).toEqual({
+    expect(result).toMatchObject({
       success: true,
       data: {
         userId: 42,

@@ -1,5 +1,7 @@
 import {
   AUTO_DETECT_FAILURE_REASONS,
+  AUTO_DETECT_FETCH_CONTEXT_KINDS,
+  AUTO_DETECT_STRATEGIES,
   type AutoDetectFailureReason,
 } from "~/constants/autoDetect"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -10,6 +12,7 @@ import {
   type ManagedSiteType,
 } from "~/constants/siteType"
 import { API_TYPES } from "~/services/verification/aiApiVerification/types"
+import { AuthTypeEnum } from "~/types"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 
@@ -712,6 +715,22 @@ export const PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS =
 export type ProductAnalyticsAccountAutoDetectFailureReason =
   AutoDetectFailureReason
 
+export const PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_STRATEGIES =
+  AUTO_DETECT_STRATEGIES
+
+export type ProductAnalyticsAccountAutoDetectStrategy =
+  (typeof PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_STRATEGIES)[keyof typeof PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_STRATEGIES]
+
+export const PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FETCH_CONTEXT_KINDS =
+  AUTO_DETECT_FETCH_CONTEXT_KINDS
+
+export type ProductAnalyticsAccountAutoDetectFetchContextKind =
+  (typeof PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FETCH_CONTEXT_KINDS)[keyof typeof PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FETCH_CONTEXT_KINDS]
+
+export const PRODUCT_ANALYTICS_REQUESTED_AUTH_MODES = AuthTypeEnum
+
+export type ProductAnalyticsRequestedAuthMode = AuthTypeEnum
+
 export const PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS = {
   ApiCredentialProfilesFallback: "api_credential_profiles_fallback",
   BookmarkFallback: "bookmark_fallback",
@@ -819,6 +838,12 @@ export type ProductAnalyticsEventPayloadMap = {
     target_managed_site_type?: ProductAnalyticsManagedSiteType
     failure_stage?: ProductAnalyticsFailureStage
     account_auto_detect_failure_reason?: ProductAnalyticsAccountAutoDetectFailureReason
+    auto_detect_strategy?: ProductAnalyticsAccountAutoDetectStrategy
+    requested_auth_mode?: ProductAnalyticsRequestedAuthMode
+    site_type?: ProductAnalyticsSiteType
+    fetch_context_kind?: ProductAnalyticsAccountAutoDetectFetchContextKind
+    incognito_context_used?: boolean
+    current_tab_matched?: boolean
     item_count_bucket?: ProductAnalyticsCountBucket
     selected_count_bucket?: ProductAnalyticsCountBucket
     success_count_bucket?: ProductAnalyticsCountBucket

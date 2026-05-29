@@ -1,5 +1,9 @@
 import { describe, expect, it } from "vitest"
 
+import {
+  AUTO_DETECT_FETCH_CONTEXT_KINDS,
+  AUTO_DETECT_STRATEGIES,
+} from "~/constants/autoDetect"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS,
@@ -42,6 +46,7 @@ import {
   bucketDurationMs,
   sanitizeProductAnalyticsEvent,
 } from "~/services/productAnalytics/privacy"
+import { AuthTypeEnum } from "~/types"
 
 describe("product analytics privacy filtering", () => {
   it("keeps whitelisted PageViewed properties and strips unknown keys", () => {
@@ -518,6 +523,44 @@ describe("product analytics privacy filtering", () => {
       failure_stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Detection,
       account_auto_detect_failure_reason:
         PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS.CurrentTabContentScriptUnavailable,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+  })
+
+  it("keeps controlled account auto-detect context without raw diagnostic context", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
+        surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        requested_auth_mode: AuthTypeEnum.Cookie,
+        auto_detect_strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
+        site_type: SITE_TYPES.NEW_API,
+        fetch_context_kind: AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab,
+        incognito_context_used: true,
+        current_tab_matched: true,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        requestedAuthToken: "private-token",
+        rawOrigin: "https://private.example.com",
+        cookieStoreId: "private-store",
+        tabId: 123,
+        auto_detect_strategy_raw: "private-current-tab",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.RunAccountAutoDetect,
+      surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAccountManagementPage,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      requested_auth_mode: AuthTypeEnum.Cookie,
+      auto_detect_strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
+      site_type: SITE_TYPES.NEW_API,
+      fetch_context_kind: AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab,
+      incognito_context_used: true,
+      current_tab_matched: true,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
   })

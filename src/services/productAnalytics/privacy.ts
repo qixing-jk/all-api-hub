@@ -1,5 +1,7 @@
 import {
   PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS,
+  PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FETCH_CONTEXT_KINDS,
+  PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_STRATEGIES,
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_API_TYPES,
   PRODUCT_ANALYTICS_AUTO_CHECKIN_DETERMINISTIC_TIME_BUCKETS,
@@ -22,6 +24,7 @@ import {
   PRODUCT_ANALYTICS_PERMISSION_IDS,
   PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
   PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
+  PRODUCT_ANALYTICS_REQUESTED_AUTH_MODES,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SETTING_IDS,
   PRODUCT_ANALYTICS_SITE_TYPES,
@@ -72,6 +75,12 @@ const EVENT_ALLOWED_KEYS = {
     "target_managed_site_type",
     "failure_stage",
     "account_auto_detect_failure_reason",
+    "auto_detect_strategy",
+    "requested_auth_mode",
+    "site_type",
+    "fetch_context_kind",
+    "incognito_context_used",
+    "current_tab_matched",
     "item_count_bucket",
     "selected_count_bucket",
     "success_count_bucket",
@@ -411,6 +420,13 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   account_auto_detect_failure_reason: Object.values(
     PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS,
   ),
+  auto_detect_strategy: Object.values(
+    PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_STRATEGIES,
+  ),
+  requested_auth_mode: Object.values(PRODUCT_ANALYTICS_REQUESTED_AUTH_MODES),
+  fetch_context_kind: Object.values(
+    PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FETCH_CONTEXT_KINDS,
+  ),
   ready_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
   result: Object.values(PRODUCT_ANALYTICS_RESULTS),
   result_count_bucket: Object.values(PRODUCT_ANALYTICS_COUNT_BUCKETS),
@@ -510,6 +526,7 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "account_auto_refresh_min_interval_bucket",
   "account_auto_refresh_on_open_enabled",
   "auto_detect_url_patterns_configured",
+  "requested_auth_mode",
   "auto_fill_current_site_url_on_account_add_enabled",
   "auto_provision_key_on_account_add_enabled",
   "balance_history_enabled",
@@ -550,6 +567,8 @@ function isAllowedFieldValue(key: string, value: string | boolean): boolean {
       key === "usage_data_present" ||
       key === "was_granted_before" ||
       key === "was_granted_after" ||
+      key === "incognito_context_used" ||
+      key === "current_tab_matched" ||
       key.endsWith("_enabled") ||
       key.endsWith("_configured")
     )

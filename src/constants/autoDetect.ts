@@ -1,3 +1,5 @@
+import type { AccountSiteType } from "~/constants/siteType"
+
 export const AUTO_DETECT_ERROR_CODES = {
   CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE:
     "current_tab_content_script_unavailable",
@@ -22,3 +24,30 @@ export const AUTO_DETECT_FAILURE_REASONS = {
 
 export type AutoDetectFailureReason =
   (typeof AUTO_DETECT_FAILURE_REASONS)[keyof typeof AUTO_DETECT_FAILURE_REASONS]
+
+export const AUTO_DETECT_STRATEGIES = {
+  CurrentTab: "current_tab",
+  BackgroundTempContext: "background_temp_context",
+  DirectApi: "direct_api",
+  FallbackApi: "fallback_api",
+} as const
+
+export type AutoDetectStrategy =
+  (typeof AUTO_DETECT_STRATEGIES)[keyof typeof AUTO_DETECT_STRATEGIES]
+
+export const AUTO_DETECT_FETCH_CONTEXT_KINDS = {
+  CurrentTab: "current_tab",
+  BrowserContext: "browser_context",
+  None: "none",
+} as const
+
+export type AutoDetectFetchContextKind =
+  (typeof AUTO_DETECT_FETCH_CONTEXT_KINDS)[keyof typeof AUTO_DETECT_FETCH_CONTEXT_KINDS]
+
+export interface AutoDetectAnalyticsContext {
+  strategy?: AutoDetectStrategy
+  siteType?: AccountSiteType
+  fetchContextKind?: AutoDetectFetchContextKind
+  incognitoContextUsed?: boolean
+  currentTabMatched?: boolean
+}

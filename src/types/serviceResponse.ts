@@ -1,4 +1,5 @@
 import type {
+  AutoDetectAnalyticsContext,
   AutoDetectError,
   AutoDetectFailureReason,
 } from "~/services/accounts/utils/autoDetectUtils"
@@ -36,9 +37,11 @@ export interface AccountValidationResponse
     authType?: AuthTypeEnum
     sub2apiAuth?: Sub2ApiAuthConfig
     fetchContext?: ApiServiceFetchContext
+    autoDetectContext?: AutoDetectAnalyticsContext
   }> {
   detailedError?: AutoDetectError // Keep for backwards compatibility
   autoDetectFailureReason?: AutoDetectFailureReason
+  autoDetectContext?: AutoDetectAnalyticsContext
 }
 
 /**

@@ -18,6 +18,7 @@
 import {
   AUTO_DETECT_ERROR_CODES,
   AUTO_DETECT_FAILURE_REASONS,
+  type AutoDetectAnalyticsContext,
   type AutoDetectErrorCode,
   type AutoDetectFailureReason,
 } from "~/constants/autoDetect"
@@ -45,7 +46,11 @@ export enum AutoDetectErrorType {
   SERVER_ERROR = "serverError",
 }
 
-export { AUTO_DETECT_FAILURE_REASONS, type AutoDetectFailureReason }
+export {
+  AUTO_DETECT_FAILURE_REASONS,
+  type AutoDetectAnalyticsContext,
+  type AutoDetectFailureReason,
+}
 
 // 自动识别错误信息
 export interface AutoDetectError {

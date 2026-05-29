@@ -9,6 +9,9 @@
  */
 import {
   AUTO_DETECT_ERROR_CODES,
+  AUTO_DETECT_FETCH_CONTEXT_KINDS,
+  AUTO_DETECT_STRATEGIES,
+  type AutoDetectAnalyticsContext,
   type AutoDetectErrorCode,
 } from "~/constants/autoDetect"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -53,6 +56,7 @@ type AutoDetectFetchContext = ApiServiceFetchContext
 
 interface AutoDetectResult {
   success: boolean
+  autoDetectContext?: AutoDetectAnalyticsContext
   data?: {
     userId: number
     user: any
@@ -77,6 +81,8 @@ interface UserDataResult {
 interface CurrentTabUserDataResult {
   userData: UserDataResult | null
   contentScriptUnavailable: boolean
+  strategy: AutoDetectAnalyticsContext["strategy"]
+  fetchContext: AutoDetectFetchContext
 }
 
 /**
@@ -133,6 +139,54 @@ function createBrowserContextFromTab(
     kind: API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
     ...(tab.incognito === true ? { incognito: true } : {}),
     ...(tab.cookieStoreId ? { cookieStoreId: tab.cookieStoreId } : {}),
+  }
+}
+
+/**
+ * Converts operational fetch context into a privacy-safe analytics enum.
+ */
+function getSafeFetchContextKind(
+  fetchContext?: AutoDetectFetchContext,
+): AutoDetectAnalyticsContext["fetchContextKind"] {
+  if (fetchContext?.kind === API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB) {
+    return AUTO_DETECT_FETCH_CONTEXT_KINDS.CurrentTab
+  }
+
+  if (fetchContext?.kind === API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT) {
+    return AUTO_DETECT_FETCH_CONTEXT_KINDS.BrowserContext
+  }
+
+  return AUTO_DETECT_FETCH_CONTEXT_KINDS.None
+}
+
+/**
+ * Builds the safe context dimensions shared by auto-detect analytics events.
+ */
+function createAutoDetectContext(params: {
+  strategy: AutoDetectAnalyticsContext["strategy"]
+  siteType?: AccountSiteType
+  fetchContext?: AutoDetectFetchContext
+  currentTabMatched?: boolean
+}): AutoDetectAnalyticsContext {
+  return {
+    strategy: params.strategy,
+    ...(params.siteType ? { siteType: params.siteType } : {}),
+    fetchContextKind: getSafeFetchContextKind(params.fetchContext),
+    incognitoContextUsed: params.fetchContext?.incognito === true,
+    currentTabMatched: params.currentTabMatched === true,
+  }
+}
+
+/**
+ * Attaches privacy-safe analytics metadata to an auto-detect service result.
+ */
+function withAutoDetectContext(
+  result: AutoDetectResult,
+  autoDetectContext: AutoDetectAnalyticsContext,
+): AutoDetectResult {
+  return {
+    ...result,
+    autoDetectContext,
   }
 }
 
@@ -256,10 +310,19 @@ async function autoDetectDirect(url: string): Promise<AutoDetectResult> {
     const userData = await getUserDataViaAPI(url, siteType)
 
     // 组合用户数据和站点类型（公共逻辑）
-    return await combineUserDataAndSiteType(userData, url)
+    return withAutoDetectContext(
+      await combineUserDataAndSiteType(userData, url),
+      createAutoDetectContext({
+        strategy: AUTO_DETECT_STRATEGIES.DirectApi,
+        siteType,
+      }),
+    )
   } catch (error) {
     return {
       success: false,
+      autoDetectContext: createAutoDetectContext({
+        strategy: AUTO_DETECT_STRATEGIES.DirectApi,
+      }),
       error: getErrorMessage(error),
       errorCode: AUTO_DETECT_ERROR_CODES.SITE_TYPE_DETECTION_FAILED,
     }
@@ -366,7 +429,14 @@ async function autoDetectViaBackground(
   const userData = await getUserDataViaBackground(url, siteType, fetchContext)
 
   // 组合用户数据和站点类型（公共逻辑）
-  return await combineUserDataAndSiteType(userData, url)
+  return withAutoDetectContext(
+    await combineUserDataAndSiteType(userData, url),
+    createAutoDetectContext({
+      strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+      siteType,
+      fetchContext,
+    }),
+  )
 }
 
 /**
@@ -417,6 +487,8 @@ async function getUserDataFromCurrentTab(
             fetchContext,
           },
           contentScriptUnavailable,
+          strategy: AUTO_DETECT_STRATEGIES.CurrentTab,
+          fetchContext,
         }
       }
     } catch (error) {
@@ -449,10 +521,17 @@ async function getUserDataFromCurrentTab(
       return {
         userData: fallbackUserData,
         contentScriptUnavailable,
+        strategy: AUTO_DETECT_STRATEGIES.FallbackApi,
+        fetchContext,
       }
     }
 
-    return { userData: null, contentScriptUnavailable }
+    return {
+      userData: null,
+      contentScriptUnavailable,
+      strategy: AUTO_DETECT_STRATEGIES.FallbackApi,
+      fetchContext,
+    }
   } catch (error) {
     logger.warn("从当前标签页获取用户数据失败", {
       url,
@@ -460,7 +539,12 @@ async function getUserDataFromCurrentTab(
       fetchContext: summarizeApiServiceFetchContext(fetchContext),
       error: getErrorMessage(error),
     })
-    return { userData: null, contentScriptUnavailable }
+    return {
+      userData: null,
+      contentScriptUnavailable,
+      strategy: AUTO_DETECT_STRATEGIES.FallbackApi,
+      fetchContext,
+    }
   }
 }
 
@@ -482,7 +566,7 @@ async function autoDetectFromCurrentTab(
   const siteType = await getAccountSiteType(url)
 
   // 从当前标签页获取用户数据
-  const { userData, contentScriptUnavailable } =
+  const { userData, contentScriptUnavailable, strategy, fetchContext } =
     await getUserDataFromCurrentTab(
       url,
       siteType,
@@ -493,16 +577,26 @@ async function autoDetectFromCurrentTab(
 
   // 组合用户数据和站点类型（公共逻辑）
   const result = await combineUserDataAndSiteType(userData, url)
+  const autoDetectContext = createAutoDetectContext({
+    strategy:
+      contentScriptUnavailable && !result.success
+        ? AUTO_DETECT_STRATEGIES.CurrentTab
+        : strategy,
+    siteType,
+    fetchContext,
+    currentTabMatched: true,
+  })
 
   if (!result.success && contentScriptUnavailable) {
     return {
       ...result,
+      autoDetectContext,
       errorCode: AUTO_DETECT_ERROR_CODES.CURRENT_TAB_CONTENT_SCRIPT_UNAVAILABLE,
       error: t("messages:autodetect.currentTabNeedsReload"),
     }
   }
 
-  return result
+  return withAutoDetectContext(result, autoDetectContext)
 }
 
 /**
@@ -662,5 +756,13 @@ async function autoDetectViaBackgroundWithContext(
 
   const siteType = await getAccountSiteType(url)
   const userData = await getUserDataViaBackground(url, siteType, fetchContext)
-  return await combineUserDataAndSiteType(userData, url)
+  return withAutoDetectContext(
+    await combineUserDataAndSiteType(userData, url),
+    createAutoDetectContext({
+      strategy: AUTO_DETECT_STRATEGIES.BackgroundTempContext,
+      siteType,
+      fetchContext,
+      currentTabMatched: true,
+    }),
+  )
 }
