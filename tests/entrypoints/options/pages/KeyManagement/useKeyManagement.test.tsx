@@ -2721,7 +2721,7 @@ describe("useKeyManagement enabled account filtering", () => {
     expect(trackerCompleteMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
-        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
       },
     )
   })

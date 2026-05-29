@@ -1279,7 +1279,7 @@ export function useKeyManagement(routeParams?: Record<string, string>) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: isClipboardPermissionError(error)
           ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Permission
-          : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          : resolveProductAnalyticsErrorCategoryFromError(error),
       })
     }
   }
