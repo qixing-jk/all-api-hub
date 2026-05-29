@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { WEB_AI_API_CHECK_TARGET_IDS } from "~/features/BasicSettings/components/tabs/WebAiApiCheck/searchTargets"
 import { PRODUCT_ANALYTICS_EVENTS } from "~/services/productAnalytics/events"
 
 type RuntimeMessageListener = (
@@ -299,7 +300,10 @@ describe("setupRuntimeMessageListeners additional routing", () => {
         action: RuntimeActionIds.OpenSettingsWebAiApiCheck,
         expectedArgs: [
           MENU_ITEM_IDS.BASIC,
-          { tab: "webAiApiCheck", anchor: "web-ai-api-check" },
+          {
+            tab: "webAiApiCheck",
+            anchor: WEB_AI_API_CHECK_TARGET_IDS.enhancedAutoDetect,
+          },
         ],
       },
     ]
