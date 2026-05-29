@@ -1,3 +1,4 @@
+import type { SupportedUiLanguage } from "~/constants"
 import {
   AUTO_DETECT_FAILURE_REASONS,
   AUTO_DETECT_FETCH_CONTEXT_KINDS,
@@ -12,7 +13,15 @@ import {
   type ManagedSiteType,
 } from "~/constants/siteType"
 import { API_TYPES } from "~/services/verification/aiApiVerification/types"
-import { AuthTypeEnum } from "~/types"
+import {
+  AuthTypeEnum,
+  type CurrencyType,
+  type DashboardTabType,
+  type SortField,
+  type SortOrder,
+} from "~/types"
+import type { LogLevel } from "~/types/logging"
+import type { ThemeMode } from "~/types/theme"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 
@@ -582,7 +591,10 @@ export type ProductAnalyticsSurfaceId =
 
 export const PRODUCT_ANALYTICS_SETTING_IDS = {
   ProductAnalyticsEnabled: "product_analytics_enabled",
+  AppPreferencesSnapshot: "app_preferences_snapshot",
+  DisplayPreferencesSnapshot: "display_preferences_snapshot",
   AccountBehaviorSnapshot: "account_behavior_snapshot",
+  LoggingPreferencesSnapshot: "logging_preferences_snapshot",
   AutoRefreshConfigSnapshot: "auto_refresh_config_snapshot",
   UsageHistoryConfigSnapshot: "usage_history_config_snapshot",
   BalanceHistoryConfigSnapshot: "balance_history_config_snapshot",
@@ -740,6 +752,14 @@ export const PRODUCT_ANALYTICS_MANAGED_SITE_TYPES = {
 export type ProductAnalyticsManagedSiteType =
   (typeof PRODUCT_ANALYTICS_MANAGED_SITE_TYPES)[keyof typeof PRODUCT_ANALYTICS_MANAGED_SITE_TYPES]
 
+export const PRODUCT_ANALYTICS_TOOLBAR_ACTION_CLICK_BEHAVIORS = {
+  Popup: "popup",
+  Sidepanel: "sidepanel",
+} as const
+
+export type ProductAnalyticsToolbarActionClickBehavior =
+  (typeof PRODUCT_ANALYTICS_TOOLBAR_ACTION_CLICK_BEHAVIORS)[keyof typeof PRODUCT_ANALYTICS_TOOLBAR_ACTION_CLICK_BEHAVIORS]
+
 export const PRODUCT_ANALYTICS_FAILURE_STAGES = {
   Detection: "detection",
   Parse: "parse",
@@ -868,6 +888,19 @@ export type ProductAnalyticsEventPayloadMap = {
     setting_id: ProductAnalyticsSettingId
     enabled?: boolean
     configured?: boolean
+    theme_mode?: ThemeMode
+    normalized_language?: SupportedUiLanguage
+    toolbar_action_click_behavior?: ProductAnalyticsToolbarActionClickBehavior
+    open_changelog_on_update_enabled?: boolean
+    active_tab?: DashboardTabType
+    currency_type?: CurrencyType
+    sort_field?: SortField
+    sort_order?: SortOrder
+    sorting_priority_configured?: boolean
+    sorting_priority_customized?: boolean
+    sorting_priority_enabled_criteria_count?: number
+    console_logging_enabled?: boolean
+    log_level?: LogLevel
     auto_provision_key_on_account_add_enabled?: boolean
     auto_fill_current_site_url_on_account_add_enabled?: boolean
     warn_on_duplicate_account_add_enabled?: boolean
@@ -880,6 +913,7 @@ export type ProductAnalyticsEventPayloadMap = {
     polling_interval_minutes?: number
     retention_days?: number
     end_of_day_capture_enabled?: boolean
+    estimated_today_income_enabled?: boolean
     managed_site_type?: ProductAnalyticsManagedSiteType
     new_api_configured?: boolean
     done_hub_configured?: boolean
@@ -903,12 +937,14 @@ export type ProductAnalyticsEventPayloadMap = {
     url_whitelist_account_urls_enabled?: boolean
     url_whitelist_checkin_redeem_urls_enabled?: boolean
     auto_detect_enabled?: boolean
+    auto_detect_enhanced_enabled?: boolean
     auto_detect_url_patterns_configured?: boolean
     popup_enabled?: boolean
     sidepanel_enabled?: boolean
     options_enabled?: boolean
     auto_refresh_enabled?: boolean
     manual_refresh_enabled?: boolean
+    reminder_dismissed?: boolean
     mode?: ProductAnalyticsModeId
     auto_sync_enabled?: boolean
     backup_encryption_enabled?: boolean
@@ -918,6 +954,18 @@ export type ProductAnalyticsEventPayloadMap = {
     sync_api_profiles_enabled?: boolean
     sync_preferences_enabled?: boolean
     browser_channel_enabled?: boolean
+    telegram_channel_enabled?: boolean
+    feishu_channel_enabled?: boolean
+    dingtalk_channel_enabled?: boolean
+    wecom_channel_enabled?: boolean
+    ntfy_channel_enabled?: boolean
+    webhook_channel_enabled?: boolean
+    auto_checkin_task_enabled?: boolean
+    webdav_auto_sync_task_enabled?: boolean
+    managed_site_model_sync_task_enabled?: boolean
+    usage_history_sync_task_enabled?: boolean
+    balance_history_capture_task_enabled?: boolean
+    site_announcements_task_enabled?: boolean
     third_party_channel_count?: number
     task_enabled_count?: number
     notification_enabled?: boolean
@@ -937,6 +985,19 @@ export type ProductAnalyticsEventPayloadMap = {
     "setting_id"
   > & {
     setting_id?: ProductAnalyticsSettingId
+    theme_mode?: ThemeMode
+    normalized_language?: SupportedUiLanguage
+    toolbar_action_click_behavior?: ProductAnalyticsToolbarActionClickBehavior
+    open_changelog_on_update_enabled?: boolean
+    active_tab?: DashboardTabType
+    currency_type?: CurrencyType
+    sort_field?: SortField
+    sort_order?: SortOrder
+    sorting_priority_configured?: boolean
+    sorting_priority_customized?: boolean
+    sorting_priority_enabled_criteria_count?: number
+    console_logging_enabled?: boolean
+    log_level?: LogLevel
     account_auto_refresh_enabled?: boolean
     account_auto_refresh_on_open_enabled?: boolean
     account_auto_refresh_interval_minutes?: number
@@ -947,6 +1008,7 @@ export type ProductAnalyticsEventPayloadMap = {
     usage_history_retention_days?: number
     balance_history_enabled?: boolean
     balance_history_end_of_day_capture_enabled?: boolean
+    balance_history_estimated_today_income_enabled?: boolean
     balance_history_retention_days?: number
     managed_site_model_sync_enabled?: boolean
     managed_site_model_sync_interval_minutes?: number
@@ -978,6 +1040,7 @@ export type ProductAnalyticsEventPayloadMap = {
     web_ai_api_check_enabled?: boolean
     web_ai_api_check_context_menu_enabled?: boolean
     web_ai_api_check_auto_detect_enabled?: boolean
+    web_ai_api_check_auto_detect_enhanced_enabled?: boolean
     web_ai_api_check_auto_detect_patterns_configured?: boolean
     temp_window_fallback_enabled?: boolean
     temp_window_fallback_popup_enabled?: boolean
@@ -986,6 +1049,7 @@ export type ProductAnalyticsEventPayloadMap = {
     temp_window_fallback_auto_refresh_enabled?: boolean
     temp_window_fallback_manual_refresh_enabled?: boolean
     temp_window_fallback_mode?: ProductAnalyticsModeId
+    temp_window_fallback_reminder_dismissed?: boolean
     webdav_configured?: boolean
     webdav_auto_sync_enabled?: boolean
     webdav_backup_encryption_enabled?: boolean
@@ -997,6 +1061,18 @@ export type ProductAnalyticsEventPayloadMap = {
     webdav_sync_preferences_enabled?: boolean
     task_notifications_enabled?: boolean
     task_notifications_browser_channel_enabled?: boolean
+    task_notifications_telegram_channel_enabled?: boolean
+    task_notifications_feishu_channel_enabled?: boolean
+    task_notifications_dingtalk_channel_enabled?: boolean
+    task_notifications_wecom_channel_enabled?: boolean
+    task_notifications_ntfy_channel_enabled?: boolean
+    task_notifications_webhook_channel_enabled?: boolean
+    task_notifications_auto_checkin_task_enabled?: boolean
+    task_notifications_webdav_auto_sync_task_enabled?: boolean
+    task_notifications_managed_site_model_sync_task_enabled?: boolean
+    task_notifications_usage_history_sync_task_enabled?: boolean
+    task_notifications_balance_history_capture_task_enabled?: boolean
+    task_notifications_site_announcements_task_enabled?: boolean
     task_notifications_third_party_channel_count?: number
     task_notifications_task_enabled_count?: number
     site_announcements_enabled?: boolean

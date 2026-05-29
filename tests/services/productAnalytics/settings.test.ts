@@ -19,6 +19,7 @@ import {
   trackSettingsSnapshotEvents,
 } from "~/services/productAnalytics/settings"
 import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
+import { SortingCriteriaType } from "~/types/sorting"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
 import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 
@@ -50,6 +51,34 @@ describe("settings product analytics snapshots", () => {
 
   it("builds broad privacy-safe settings snapshots for development insights", () => {
     const preferences = createPreferences({
+      themeMode: "dark",
+      language: "zh-Hant-TW",
+      actionClickBehavior: "sidepanel",
+      openChangelogOnUpdate: false,
+      activeTab: "balance",
+      currencyType: "CNY",
+      showTodayCashflow: false,
+      sortField: "income",
+      sortOrder: "asc",
+      sortingPriorityConfig: {
+        criteria: [
+          {
+            id: SortingCriteriaType.USER_SORT_FIELD,
+            enabled: true,
+            priority: 0,
+          },
+          {
+            id: SortingCriteriaType.PINNED,
+            enabled: false,
+            priority: 1,
+          },
+        ],
+        lastModified: 1_700_000_000_000,
+      },
+      logging: {
+        consoleEnabled: false,
+        level: "warn",
+      },
       autoFillCurrentSiteUrlOnAccountAdd: true,
       autoProvisionKeyOnAccountAdd: true,
       warnOnDuplicateAccountAdd: false,
@@ -69,7 +98,7 @@ describe("settings product analytics snapshots", () => {
         enabled: true,
         endOfDayCapture: { enabled: true },
         retentionDays: 730,
-        estimatedTodayIncome: { enabled: false },
+        estimatedTodayIncome: { enabled: true },
       },
       newApi: {
         baseUrl: "https://private-new-api.example",
@@ -164,6 +193,9 @@ describe("settings product analytics snapshots", () => {
         useForManualRefresh: false,
         tempContextMode: "window",
       },
+      tempWindowFallbackReminder: {
+        dismissed: true,
+      },
       webdav: {
         url: "https://dav.example/private",
         username: "private-user",
@@ -226,13 +258,39 @@ describe("settings product analytics snapshots", () => {
 
     expect(events).toEqual([
       {
+        setting_id: "app_preferences_snapshot",
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        theme_mode: "dark",
+        normalized_language: "zh-TW",
+        toolbar_action_click_behavior: "sidepanel",
+        open_changelog_on_update_enabled: false,
+      },
+      {
+        setting_id: "display_preferences_snapshot",
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        active_tab: "balance",
+        currency_type: "CNY",
+        show_today_cashflow_enabled: false,
+        sort_field: "income",
+        sort_order: "asc",
+        sorting_priority_configured: true,
+        sorting_priority_customized: true,
+        sorting_priority_enabled_criteria_count: 1,
+      },
+      {
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AccountBehaviorSnapshot,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         auto_provision_key_on_account_add_enabled: true,
         auto_fill_current_site_url_on_account_add_enabled: true,
         warn_on_duplicate_account_add_enabled: false,
-        show_today_cashflow_enabled: true,
+        show_today_cashflow_enabled: false,
         show_health_status_enabled: true,
+      },
+      {
+        setting_id: "logging_preferences_snapshot",
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        console_logging_enabled: false,
+        log_level: "warn",
       },
       {
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoRefreshConfigSnapshot,
@@ -255,6 +313,7 @@ describe("settings product analytics snapshots", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         enabled: true,
         end_of_day_capture_enabled: true,
+        estimated_today_income_enabled: true,
         retention_days: 730,
       },
       {
@@ -322,6 +381,7 @@ describe("settings product analytics snapshots", () => {
         enabled: true,
         context_menu_enabled: true,
         auto_detect_enabled: true,
+        auto_detect_enhanced_enabled: true,
         auto_detect_url_patterns_configured: true,
       },
       {
@@ -335,6 +395,7 @@ describe("settings product analytics snapshots", () => {
         auto_refresh_enabled: true,
         manual_refresh_enabled: false,
         mode: PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeWindow,
+        reminder_dismissed: true,
       },
       {
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebDavConfigSnapshot,
@@ -355,6 +416,18 @@ describe("settings product analytics snapshots", () => {
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         enabled: true,
         browser_channel_enabled: true,
+        telegram_channel_enabled: true,
+        feishu_channel_enabled: false,
+        dingtalk_channel_enabled: false,
+        wecom_channel_enabled: false,
+        ntfy_channel_enabled: true,
+        webhook_channel_enabled: true,
+        auto_checkin_task_enabled: true,
+        webdav_auto_sync_task_enabled: true,
+        managed_site_model_sync_task_enabled: true,
+        usage_history_sync_task_enabled: false,
+        balance_history_capture_task_enabled: false,
+        site_announcements_task_enabled: true,
         third_party_channel_count: 3,
         task_enabled_count: 4,
       },
@@ -399,6 +472,14 @@ describe("settings product analytics snapshots", () => {
     expect(snapshot).toEqual(
       expect.objectContaining({
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        theme_mode: "system",
+        normalized_language: "en",
+        toolbar_action_click_behavior: "popup",
+        open_changelog_on_update_enabled: true,
+        active_tab: "cashflow",
+        currency_type: "USD",
+        sort_field: "balance",
+        sort_order: "desc",
         account_auto_refresh_enabled: true,
         account_auto_refresh_on_open_enabled: true,
         webdav_configured: true,
@@ -419,20 +500,36 @@ describe("settings product analytics snapshots", () => {
       PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       {
         accountAutoRefresh: { enabled: true },
+        language: "ja-JP",
+        logging: { consoleEnabled: true },
         webdav: { autoSync: true },
       },
     )
 
-    expect(trackProductAnalyticsEventMock).toHaveBeenCalledTimes(2)
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledTimes(4)
     expect(trackProductAnalyticsEventMock).toHaveBeenNthCalledWith(
       1,
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+      expect.objectContaining({
+        setting_id: "app_preferences_snapshot",
+      }),
+    )
+    expect(trackProductAnalyticsEventMock).toHaveBeenNthCalledWith(
+      2,
+      PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+      expect.objectContaining({
+        setting_id: "logging_preferences_snapshot",
+      }),
+    )
+    expect(trackProductAnalyticsEventMock).toHaveBeenNthCalledWith(
+      3,
       PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AutoRefreshConfigSnapshot,
       }),
     )
     expect(trackProductAnalyticsEventMock).toHaveBeenNthCalledWith(
-      2,
+      4,
       PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebDavConfigSnapshot,
@@ -567,6 +664,10 @@ describe("settings product analytics snapshots", () => {
         allowedModels: [],
         globalChannelModelFilters: [],
       },
+      sortingPriorityConfig: {
+        criteria: [],
+        lastModified: 1,
+      },
       tempWindowFallback: {
         enabled: true,
         useInPopup: false,
@@ -582,6 +683,9 @@ describe("settings product analytics snapshots", () => {
       preferences,
       PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       {
+        themeMode: "dark",
+        activeTab: "balance",
+        sortingPriorityConfig: {},
         showHealthStatus: true,
         balanceHistory: {},
         modelRedirect: {},
@@ -594,6 +698,13 @@ describe("settings product analytics snapshots", () => {
     )
 
     expect(events).toEqual([
+      expect.objectContaining({
+        setting_id: "app_preferences_snapshot",
+      }),
+      expect.objectContaining({
+        setting_id: "display_preferences_snapshot",
+        sorting_priority_configured: true,
+      }),
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AccountBehaviorSnapshot,
       }),

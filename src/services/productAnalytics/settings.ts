@@ -4,15 +4,19 @@ import {
   DEFAULT_PREFERENCES,
   type RedemptionAssistPreferences,
   type TempWindowFallbackPreferences,
+  type TempWindowFallbackReminderPreferences,
   type UserPreferences,
   type WebAiApiCheckPreferences,
 } from "~/services/preferences/userPreferences"
+import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
 import type { BalanceHistoryPreferences } from "~/types/dailyBalanceHistory"
 import type { ModelRedirectPreferences } from "~/types/managedSiteModelRedirect"
 import { normalizeSiteAnnouncementPreferences } from "~/types/siteAnnouncements"
+import type { SortingPriorityConfig } from "~/types/sorting"
 import {
   normalizeTaskNotificationPreferences,
   TASK_NOTIFICATION_CHANNELS,
+  TASK_NOTIFICATION_TASKS,
 } from "~/types/taskNotifications"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
 import type { DeepPartial } from "~/types/utils"
@@ -21,6 +25,7 @@ import {
   WEBDAV_SYNC_STRATEGIES,
 } from "~/types/webdav"
 import { deepOverride } from "~/utils"
+import { normalizeAppLanguage } from "~/utils/i18n/language"
 
 import { buildAutoCheckinConfigSnapshotProperties } from "./autoCheckin"
 import {
@@ -48,7 +53,10 @@ type UserManagedSiteModelSyncConfig = NonNullable<
 type PreferencePatch = DeepPartial<UserPreferences>
 
 const ALL_SETTINGS_SNAPSHOT_KEYS = [
+  "app",
+  "display",
   "account",
+  "logging",
   "autoRefresh",
   "usageHistory",
   "balanceHistory",
@@ -65,6 +73,8 @@ const ALL_SETTINGS_SNAPSHOT_KEYS = [
 ] as const
 
 type SettingsSnapshotKey = (typeof ALL_SETTINGS_SNAPSHOT_KEYS)[number]
+
+const FALLBACK_LANGUAGE = "en"
 
 function normalizeNonNegativeInteger(value: number): number {
   return Number.isFinite(value) && Number.isInteger(value) && value >= 0
@@ -92,6 +102,46 @@ function getTempWindowMode(
   if (mode === "window") return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeWindow
   if (mode === "tab") return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeTab
   return PRODUCT_ANALYTICS_MODE_IDS.TempWindowModeComposite
+}
+
+function getActionClickBehavior(
+  behavior: UserPreferences["actionClickBehavior"] | undefined,
+) {
+  return behavior === "sidepanel" ? "sidepanel" : "popup"
+}
+
+function getSortingPriorityPreferences(
+  preferences: UserPreferences,
+): SortingPriorityConfig | undefined {
+  return preferences.sortingPriorityConfig
+}
+
+function isSortingPriorityCustomized(
+  config: SortingPriorityConfig | undefined,
+): boolean {
+  if (!config) return false
+
+  const defaultById = new Map(
+    DEFAULT_SORTING_PRIORITY_CONFIG.criteria.map((criterion) => [
+      criterion.id,
+      criterion,
+    ]),
+  )
+
+  if (
+    config.criteria.length !== DEFAULT_SORTING_PRIORITY_CONFIG.criteria.length
+  ) {
+    return true
+  }
+
+  return config.criteria.some((criterion) => {
+    const defaultCriterion = defaultById.get(criterion.id)
+    return (
+      !defaultCriterion ||
+      defaultCriterion.enabled !== criterion.enabled ||
+      defaultCriterion.priority !== criterion.priority
+    )
+  })
 }
 
 function getWebdavSyncStrategy(
@@ -180,6 +230,73 @@ function getBalanceHistoryPreferences(
   preferences: UserPreferences,
 ): BalanceHistoryPreferences {
   return preferences.balanceHistory ?? DEFAULT_PREFERENCES.balanceHistory!
+}
+
+function getTempWindowFallbackReminderPreferences(
+  preferences: UserPreferences,
+): TempWindowFallbackReminderPreferences {
+  return (
+    preferences.tempWindowFallbackReminder ??
+    DEFAULT_PREFERENCES.tempWindowFallbackReminder!
+  )
+}
+
+function buildAppPreferencesSnapshot(
+  preferences: UserPreferences,
+  entrypoint: ProductAnalyticsEntrypoint,
+): SettingChangedPayload {
+  return {
+    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.AppPreferencesSnapshot,
+    entrypoint,
+    theme_mode: preferences.themeMode ?? DEFAULT_PREFERENCES.themeMode,
+    normalized_language:
+      normalizeAppLanguage(preferences.language) ?? FALLBACK_LANGUAGE,
+    toolbar_action_click_behavior: getActionClickBehavior(
+      preferences.actionClickBehavior,
+    ),
+    open_changelog_on_update_enabled:
+      preferences.openChangelogOnUpdate !== false,
+  }
+}
+
+function buildDisplayPreferencesSnapshot(
+  preferences: UserPreferences,
+  entrypoint: ProductAnalyticsEntrypoint,
+): SettingChangedPayload {
+  const sortingPriorityConfig = getSortingPriorityPreferences(preferences)
+  return {
+    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.DisplayPreferencesSnapshot,
+    entrypoint,
+    active_tab: preferences.activeTab,
+    currency_type: preferences.currencyType,
+    show_today_cashflow_enabled: preferences.showTodayCashflow !== false,
+    sort_field: preferences.sortField,
+    sort_order: preferences.sortOrder,
+    sorting_priority_configured: Boolean(sortingPriorityConfig),
+    sorting_priority_customized: isSortingPriorityCustomized(
+      sortingPriorityConfig,
+    ),
+    sorting_priority_enabled_criteria_count: normalizeNonNegativeInteger(
+      sortingPriorityConfig?.criteria.filter((criterion) => criterion.enabled)
+        .length ??
+        DEFAULT_SORTING_PRIORITY_CONFIG.criteria.filter(
+          (criterion) => criterion.enabled,
+        ).length,
+    ),
+  }
+}
+
+function buildLoggingPreferencesSnapshot(
+  preferences: UserPreferences,
+  entrypoint: ProductAnalyticsEntrypoint,
+): SettingChangedPayload {
+  const config = preferences.logging ?? DEFAULT_PREFERENCES.logging
+  return {
+    setting_id: PRODUCT_ANALYTICS_SETTING_IDS.LoggingPreferencesSnapshot,
+    entrypoint,
+    console_logging_enabled: config.consoleEnabled === true,
+    log_level: config.level,
+  }
 }
 
 function getModelRedirectPreferences(
@@ -273,6 +390,8 @@ function buildBalanceHistorySnapshot(
     entrypoint,
     enabled: config.enabled === true,
     end_of_day_capture_enabled: config.endOfDayCapture?.enabled === true,
+    estimated_today_income_enabled:
+      config.estimatedTodayIncome?.enabled === true,
     retention_days: normalizeNonNegativeInteger(config.retentionDays),
   }
 }
@@ -374,6 +493,7 @@ function buildWebAiApiCheckSnapshot(
     enabled: config.enabled === true,
     context_menu_enabled: config.contextMenu?.enabled === true,
     auto_detect_enabled: config.autoDetect?.enabled === true,
+    auto_detect_enhanced_enabled: config.autoDetect?.enhanced?.enabled === true,
     auto_detect_url_patterns_configured:
       (config.autoDetect?.urlWhitelist?.patterns ?? []).length > 0,
   }
@@ -384,6 +504,7 @@ function buildTempWindowFallbackSnapshot(
   entrypoint: ProductAnalyticsEntrypoint,
 ): SettingChangedPayload {
   const config = getTempWindowFallbackPreferences(preferences)
+  const reminderConfig = getTempWindowFallbackReminderPreferences(preferences)
   return {
     setting_id: PRODUCT_ANALYTICS_SETTING_IDS.TempWindowFallbackConfigSnapshot,
     entrypoint,
@@ -394,6 +515,7 @@ function buildTempWindowFallbackSnapshot(
     auto_refresh_enabled: config.useForAutoRefresh === true,
     manual_refresh_enabled: config.useForManualRefresh === true,
     mode: getTempWindowMode(config.tempContextMode),
+    reminder_dismissed: reminderConfig.dismissed === true,
   }
 }
 
@@ -443,6 +565,30 @@ function buildTaskNotificationsSnapshot(
     enabled: config.enabled === true,
     browser_channel_enabled:
       config.channels[TASK_NOTIFICATION_CHANNELS.Browser].enabled === true,
+    telegram_channel_enabled:
+      config.channels[TASK_NOTIFICATION_CHANNELS.Telegram].enabled === true,
+    feishu_channel_enabled:
+      config.channels[TASK_NOTIFICATION_CHANNELS.Feishu].enabled === true,
+    dingtalk_channel_enabled:
+      config.channels[TASK_NOTIFICATION_CHANNELS.Dingtalk].enabled === true,
+    wecom_channel_enabled:
+      config.channels[TASK_NOTIFICATION_CHANNELS.Wecom].enabled === true,
+    ntfy_channel_enabled:
+      config.channels[TASK_NOTIFICATION_CHANNELS.Ntfy].enabled === true,
+    webhook_channel_enabled:
+      config.channels[TASK_NOTIFICATION_CHANNELS.Webhook].enabled === true,
+    auto_checkin_task_enabled:
+      config.tasks[TASK_NOTIFICATION_TASKS.AutoCheckin] === true,
+    webdav_auto_sync_task_enabled:
+      config.tasks[TASK_NOTIFICATION_TASKS.WebdavAutoSync] === true,
+    managed_site_model_sync_task_enabled:
+      config.tasks[TASK_NOTIFICATION_TASKS.ManagedSiteModelSync] === true,
+    usage_history_sync_task_enabled:
+      config.tasks[TASK_NOTIFICATION_TASKS.UsageHistorySync] === true,
+    balance_history_capture_task_enabled:
+      config.tasks[TASK_NOTIFICATION_TASKS.BalanceHistoryCapture] === true,
+    site_announcements_task_enabled:
+      config.tasks[TASK_NOTIFICATION_TASKS.SiteAnnouncements] === true,
     third_party_channel_count: thirdPartyChannelCount,
     task_enabled_count: taskEnabledCount,
   }
@@ -472,8 +618,14 @@ function buildSnapshotByKey(
   entrypoint: ProductAnalyticsEntrypoint,
 ): SettingChangedPayload {
   switch (key) {
+    case "app":
+      return buildAppPreferencesSnapshot(preferences, entrypoint)
+    case "display":
+      return buildDisplayPreferencesSnapshot(preferences, entrypoint)
     case "account":
       return buildAccountBehaviorSnapshot(preferences, entrypoint)
+    case "logging":
+      return buildLoggingPreferencesSnapshot(preferences, entrypoint)
     case "autoRefresh":
       return buildAutoRefreshSnapshot(preferences, entrypoint)
     case "usageHistory":
@@ -513,6 +665,22 @@ function resolveSnapshotKeysForPatch(patch?: PreferencePatch) {
   if (!patch) return ALL_SETTINGS_SNAPSHOT_KEYS
 
   const keys = new Set<SettingsSnapshotKey>()
+  const appKeys: Array<keyof UserPreferences> = [
+    "themeMode",
+    "language",
+    "actionClickBehavior",
+    "openChangelogOnUpdate",
+  ]
+  if (appKeys.some((key) => key in patch)) keys.add("app")
+  const displayKeys: Array<keyof UserPreferences> = [
+    "activeTab",
+    "currencyType",
+    "showTodayCashflow",
+    "sortField",
+    "sortOrder",
+    "sortingPriorityConfig",
+  ]
+  if (displayKeys.some((key) => key in patch)) keys.add("display")
   const accountKeys: Array<keyof UserPreferences> = [
     "autoProvisionKeyOnAccountAdd",
     "autoFillCurrentSiteUrlOnAccountAdd",
@@ -521,6 +689,7 @@ function resolveSnapshotKeysForPatch(patch?: PreferencePatch) {
     "showHealthStatus",
   ]
   if (accountKeys.some((key) => key in patch)) keys.add("account")
+  if ("logging" in patch) keys.add("logging")
   if ("accountAutoRefresh" in patch) keys.add("autoRefresh")
   if ("usageHistory" in patch) keys.add("usageHistory")
   if ("balanceHistory" in patch) keys.add("balanceHistory")
@@ -544,7 +713,9 @@ function resolveSnapshotKeysForPatch(patch?: PreferencePatch) {
   if ("modelRedirect" in patch) keys.add("modelRedirect")
   if ("redemptionAssist" in patch) keys.add("redemptionAssist")
   if ("webAiApiCheck" in patch) keys.add("webAiApiCheck")
-  if ("tempWindowFallback" in patch) keys.add("tempWindowFallback")
+  if ("tempWindowFallback" in patch || "tempWindowFallbackReminder" in patch) {
+    keys.add("tempWindowFallback")
+  }
   if ("webdav" in patch) keys.add("webdav")
   if ("taskNotifications" in patch) keys.add("taskNotifications")
   if ("siteAnnouncementNotifications" in patch) keys.add("siteAnnouncements")
@@ -581,7 +752,10 @@ export function buildAggregateSettingsSnapshotEvent(
       buildSnapshotByKey(key, preferences, entrypoint),
     ]),
   ) as Record<SettingsSnapshotKey, SettingChangedPayload>
+  const app = snapshots.app
+  const display = snapshots.display
   const account = snapshots.account
+  const logging = snapshots.logging
   const autoRefresh = snapshots.autoRefresh
   const usageHistory = snapshots.usageHistory
   const balanceHistory = snapshots.balanceHistory
@@ -598,13 +772,27 @@ export function buildAggregateSettingsSnapshotEvent(
 
   return {
     entrypoint,
+    theme_mode: app.theme_mode,
+    normalized_language: app.normalized_language,
+    toolbar_action_click_behavior: app.toolbar_action_click_behavior,
+    open_changelog_on_update_enabled: app.open_changelog_on_update_enabled,
+    active_tab: display.active_tab,
+    currency_type: display.currency_type,
+    show_today_cashflow_enabled: display.show_today_cashflow_enabled,
+    sort_field: display.sort_field,
+    sort_order: display.sort_order,
+    sorting_priority_configured: display.sorting_priority_configured,
+    sorting_priority_customized: display.sorting_priority_customized,
+    sorting_priority_enabled_criteria_count:
+      display.sorting_priority_enabled_criteria_count,
+    console_logging_enabled: logging.console_logging_enabled,
+    log_level: logging.log_level,
     auto_provision_key_on_account_add_enabled:
       account.auto_provision_key_on_account_add_enabled,
     auto_fill_current_site_url_on_account_add_enabled:
       account.auto_fill_current_site_url_on_account_add_enabled,
     warn_on_duplicate_account_add_enabled:
       account.warn_on_duplicate_account_add_enabled,
-    show_today_cashflow_enabled: account.show_today_cashflow_enabled,
     show_health_status_enabled: account.show_health_status_enabled,
     account_auto_refresh_enabled: autoRefresh.enabled,
     account_auto_refresh_on_open_enabled: autoRefresh.refresh_on_open_enabled,
@@ -618,6 +806,8 @@ export function buildAggregateSettingsSnapshotEvent(
     balance_history_enabled: balanceHistory.enabled,
     balance_history_end_of_day_capture_enabled:
       balanceHistory.end_of_day_capture_enabled,
+    balance_history_estimated_today_income_enabled:
+      balanceHistory.estimated_today_income_enabled,
     balance_history_retention_days: balanceHistory.retention_days,
     managed_site_type: managedSite.managed_site_type,
     new_api_configured: managedSite.new_api_configured,
@@ -672,6 +862,8 @@ export function buildAggregateSettingsSnapshotEvent(
     web_ai_api_check_enabled: webAiApiCheck.enabled,
     web_ai_api_check_context_menu_enabled: webAiApiCheck.context_menu_enabled,
     web_ai_api_check_auto_detect_enabled: webAiApiCheck.auto_detect_enabled,
+    web_ai_api_check_auto_detect_enhanced_enabled:
+      webAiApiCheck.auto_detect_enhanced_enabled,
     web_ai_api_check_auto_detect_patterns_configured:
       webAiApiCheck.auto_detect_url_patterns_configured,
     temp_window_fallback_enabled: tempWindowFallback.enabled,
@@ -684,6 +876,8 @@ export function buildAggregateSettingsSnapshotEvent(
     temp_window_fallback_manual_refresh_enabled:
       tempWindowFallback.manual_refresh_enabled,
     temp_window_fallback_mode: tempWindowFallback.mode,
+    temp_window_fallback_reminder_dismissed:
+      tempWindowFallback.reminder_dismissed,
     webdav_configured: webdav.configured,
     webdav_auto_sync_enabled: webdav.auto_sync_enabled,
     webdav_backup_encryption_enabled: webdav.backup_encryption_enabled,
@@ -696,6 +890,30 @@ export function buildAggregateSettingsSnapshotEvent(
     task_notifications_enabled: taskNotifications.enabled,
     task_notifications_browser_channel_enabled:
       taskNotifications.browser_channel_enabled,
+    task_notifications_telegram_channel_enabled:
+      taskNotifications.telegram_channel_enabled,
+    task_notifications_feishu_channel_enabled:
+      taskNotifications.feishu_channel_enabled,
+    task_notifications_dingtalk_channel_enabled:
+      taskNotifications.dingtalk_channel_enabled,
+    task_notifications_wecom_channel_enabled:
+      taskNotifications.wecom_channel_enabled,
+    task_notifications_ntfy_channel_enabled:
+      taskNotifications.ntfy_channel_enabled,
+    task_notifications_webhook_channel_enabled:
+      taskNotifications.webhook_channel_enabled,
+    task_notifications_auto_checkin_task_enabled:
+      taskNotifications.auto_checkin_task_enabled,
+    task_notifications_webdav_auto_sync_task_enabled:
+      taskNotifications.webdav_auto_sync_task_enabled,
+    task_notifications_managed_site_model_sync_task_enabled:
+      taskNotifications.managed_site_model_sync_task_enabled,
+    task_notifications_usage_history_sync_task_enabled:
+      taskNotifications.usage_history_sync_task_enabled,
+    task_notifications_balance_history_capture_task_enabled:
+      taskNotifications.balance_history_capture_task_enabled,
+    task_notifications_site_announcements_task_enabled:
+      taskNotifications.site_announcements_task_enabled,
     task_notifications_third_party_channel_count:
       taskNotifications.third_party_channel_count,
     task_notifications_task_enabled_count: taskNotifications.task_enabled_count,
