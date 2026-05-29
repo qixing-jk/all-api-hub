@@ -1005,6 +1005,53 @@ describe("ApiCheckModalHost", () => {
     ).toBeInTheDocument()
   })
 
+  it("uses background validation category for probe-suite analytics", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return { success: true, modelIds: [] }
+      }
+      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
+        return {
+          success: false,
+          error: "Invalid baseUrl",
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        }
+      }
+      return { success: false }
+    })
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-secret-xyz")
+
+    await user.click(
+      await screen.findByText("webAiApiCheck:modal.actions.test"),
+    )
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        expect.objectContaining({
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          insights: expect.objectContaining({
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            apiType: "openai-compatible",
+            mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+          }),
+        }),
+      )
+    })
+  })
+
   it("saves credentials to API profiles", async () => {
     const user = userEvent.setup()
     vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
@@ -1498,6 +1545,46 @@ describe("ApiCheckModalHost", () => {
     expect(
       await screen.findByText("webAiApiCheck:modal.errors.fetchModelsFailed"),
     ).toBeInTheDocument()
+  })
+
+  it("uses background validation category for model fetch analytics", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return {
+          success: false,
+          error: "Invalid baseUrl",
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+        }
+      }
+      return { success: false }
+    })
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-secret-xyz")
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        expect.objectContaining({
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          insights: expect.objectContaining({
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+            apiType: "openai-compatible",
+            modelCount: 0,
+          }),
+        }),
+      )
+    })
   })
 
   it("falls back to local save-profile error when background returns no message", async () => {

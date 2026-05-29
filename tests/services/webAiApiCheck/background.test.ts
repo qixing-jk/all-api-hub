@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/events"
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
@@ -197,6 +198,7 @@ describe("webAiApiCheck background handlers", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "Missing apiType, baseUrl, or apiKey",
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
     })
   })
 
@@ -223,6 +225,7 @@ describe("webAiApiCheck background handlers", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "Invalid baseUrl",
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
     })
   })
 
@@ -464,6 +467,7 @@ describe("webAiApiCheck background handlers", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "Missing apiType, baseUrl, apiKey, or probeId",
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
     })
   })
 
@@ -493,6 +497,7 @@ describe("webAiApiCheck background handlers", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "Invalid baseUrl",
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
     })
   })
 
@@ -766,6 +771,7 @@ describe("webAiApiCheck background handlers", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "Missing apiType, baseUrl, or apiKey",
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
     })
   })
 
@@ -790,6 +796,7 @@ describe("webAiApiCheck background handlers", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "Invalid baseUrl",
+      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
     })
   })
 

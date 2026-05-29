@@ -8,6 +8,7 @@ import {
   userPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
+import { PRODUCT_ANALYTICS_ERROR_CATEGORIES } from "~/services/productAnalytics/events"
 import {
   API_TYPES,
   runApiVerificationProbe,
@@ -161,6 +162,7 @@ export async function handleWebAiApiCheckMessage(
           const response: ApiCheckFetchModelsResponse = {
             success: false,
             error: "Missing apiType, baseUrl, or apiKey",
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
           }
           sendResponse(response)
           return
@@ -171,6 +173,7 @@ export async function handleWebAiApiCheckMessage(
           const response: ApiCheckFetchModelsResponse = {
             success: false,
             error: "Invalid baseUrl",
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
           }
           sendResponse(response)
           return
@@ -237,6 +240,7 @@ export async function handleWebAiApiCheckMessage(
           const response: ApiCheckRunProbeResponse = {
             success: false,
             error: "Missing apiType, baseUrl, apiKey, or probeId",
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
           }
           sendResponse(response)
           return
@@ -247,6 +251,7 @@ export async function handleWebAiApiCheckMessage(
           const response: ApiCheckRunProbeResponse = {
             success: false,
             error: "Invalid baseUrl",
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
           }
           sendResponse(response)
           return
@@ -308,6 +313,7 @@ export async function handleWebAiApiCheckMessage(
           const response: ApiCheckSaveProfileResponse = {
             success: false,
             error: "Missing apiType, baseUrl, or apiKey",
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
           }
           sendResponse(response)
           return
@@ -318,6 +324,7 @@ export async function handleWebAiApiCheckMessage(
           const response: ApiCheckSaveProfileResponse = {
             success: false,
             error: "Invalid baseUrl",
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
           }
           sendResponse(response)
           return

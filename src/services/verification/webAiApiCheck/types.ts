@@ -1,4 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import type { ProductAnalyticsErrorCategory } from "~/services/productAnalytics/events"
 import type {
   ApiVerificationApiType,
   ApiVerificationProbeId,
@@ -53,6 +54,7 @@ export type ApiCheckFetchModelsResponse =
   | {
       success: false
       error?: string
+      errorCategory?: ProductAnalyticsErrorCategory
       errorStatusCode?: number
     }
 
@@ -81,6 +83,7 @@ export type ApiCheckRunProbeResponse =
   | {
       success: false
       error?: string
+      errorCategory?: ProductAnalyticsErrorCategory
     }
 
 /**
@@ -114,6 +117,7 @@ export type ApiCheckSaveProfileResponse =
   | {
       success: false
       error?: string
+      errorCategory?: ProductAnalyticsErrorCategory
     }
 
 /**
