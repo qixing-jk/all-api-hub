@@ -142,14 +142,13 @@ export async function handleExternalCheckInMessage(
 
             if (shouldOpenRedeem) {
               openedRedeem = false
-              const redeemUrl =
-                account.checkIn?.customCheckIn?.redeemUrl ||
-                (await resolveAccountSiteRouteUrl(
-                  { baseUrl: account.site_url, siteType: account.site_type },
-                  SITE_ROUTE_KINDS.Redeem,
-                ))
-
               try {
+                const redeemUrl =
+                  account.checkIn?.customCheckIn?.redeemUrl ||
+                  (await resolveAccountSiteRouteUrl(
+                    { baseUrl: account.site_url, siteType: account.site_type },
+                    SITE_ROUTE_KINDS.Redeem,
+                  ))
                 openedRedeem = await openExternalPage(redeemUrl)
                 if (!openedRedeem) {
                   redeemError = "Failed to open redeem tab"

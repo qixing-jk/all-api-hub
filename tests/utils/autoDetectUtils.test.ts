@@ -441,17 +441,24 @@ describe("autoDetectUtils", () => {
     })
 
     it("uses the New API default frontend sign-in route when a site type hint is available", async () => {
-      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({
-          success: true,
-          data: { theme: "default" },
-        }),
-      } as Response)
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce(
+        new Response(
+          JSON.stringify({
+            success: true,
+            data: { theme: "default" },
+          }),
+          {
+            headers: { "content-type": "application/json" },
+          },
+        ),
+      )
 
       await openLoginTab("https://new-api-login.example", SITE_TYPES.NEW_API)
       expect(fetchSpy).toHaveBeenCalledWith(
         "https://new-api-login.example/api/status",
+        expect.objectContaining({
+          method: "GET",
+        }),
       )
       expect(browser.tabs.create).toHaveBeenCalledWith({
         url: "https://new-api-login.example/sign-in",

@@ -44,8 +44,27 @@ const NEW_API_DEFAULT_THEME_ROUTE_PATHS: Record<
 }
 
 const SITE_ROUTE_THEME_CACHE_TTL_MS = 5 * 60 * 1000
+const SITE_ROUTE_THEME_CACHE_MAX_ENTRIES = 100
 
 const themeCache = new Map<string, { fetchedAt: number; theme?: string }>()
+
+/**
+ * Store a New API theme probe result while bounding the short-lived cache.
+ * @param baseUrl Normalized account site base URL.
+ * @param value Cached theme probe result.
+ */
+function setCachedTheme(
+  baseUrl: string,
+  value: { fetchedAt: number; theme?: string },
+) {
+  themeCache.set(baseUrl, value)
+
+  while (themeCache.size > SITE_ROUTE_THEME_CACHE_MAX_ENTRIES) {
+    const oldestKey = themeCache.keys().next().value
+    if (typeof oldestKey !== "string") return
+    themeCache.delete(oldestKey)
+  }
+}
 
 /**
  * Normalize a configured account site URL so resolved route URLs are stable.
@@ -126,10 +145,10 @@ async function fetchNewApiFrontendTheme(
     })
     const theme =
       typeof statusInfo?.theme === "string" ? statusInfo.theme : undefined
-    themeCache.set(normalizedBaseUrl, { fetchedAt: now, theme })
+    setCachedTheme(normalizedBaseUrl, { fetchedAt: now, theme })
     return theme
   } catch {
-    themeCache.set(normalizedBaseUrl, { fetchedAt: now })
+    setCachedTheme(normalizedBaseUrl, { fetchedAt: now })
     return undefined
   }
 }

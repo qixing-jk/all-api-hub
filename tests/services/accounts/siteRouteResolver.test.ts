@@ -121,6 +121,33 @@ describe("siteRouteResolver", () => {
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 
+  it("bounds cached New API theme probes for many account sites", async () => {
+    const fetchSpy = vi
+      .spyOn(globalThis, "fetch")
+      .mockRejectedValue(new Error("offline"))
+
+    for (let index = 0; index < 101; index += 1) {
+      await resolveAccountSiteRouteUrl(
+        {
+          baseUrl: `https://new-api-${index}.example`,
+          siteType: SITE_TYPES.NEW_API,
+        },
+        SITE_ROUTE_KINDS.Usage,
+      )
+    }
+
+    await resolveAccountSiteRouteUrl(
+      { baseUrl: "https://new-api-0.example", siteType: SITE_TYPES.NEW_API },
+      SITE_ROUTE_KINDS.Usage,
+    )
+    await resolveAccountSiteRouteUrl(
+      { baseUrl: "https://new-api-100.example", siteType: SITE_TYPES.NEW_API },
+      SITE_ROUTE_KINDS.Usage,
+    )
+
+    expect(fetchSpy).toHaveBeenCalledTimes(102)
+  })
+
   it("keeps AIHubMix login routing centralized in the route resolver", async () => {
     const fetchSpy = vi.spyOn(globalThis, "fetch")
 

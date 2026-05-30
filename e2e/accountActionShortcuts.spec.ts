@@ -282,6 +282,9 @@ test("opens provider usage and redeem destinations from the account row menu", a
       },
     }),
   ])
+  await stubNewApiSiteRoutes(context, {
+    baseUrl: "https://shortcut-routes.example.com",
+  })
 
   await page.goto(
     `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}#${MENU_ITEM_IDS.ACCOUNT}`,

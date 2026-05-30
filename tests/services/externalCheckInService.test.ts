@@ -279,6 +279,60 @@ describe("handleExternalCheckInMessage", () => {
     )
   })
 
+  it("marks account when check-in opens even if redeem URL resolution fails", async () => {
+    const sendResponse = vi.fn()
+    mockedAccountStorage.getAccountById.mockResolvedValue({
+      id: "a2-route-error",
+      site_url: "https://example.com",
+      site_type: "one-api",
+      checkIn: {
+        customCheckIn: {
+          url: "https://checkin.example",
+          openRedeemWithCheckIn: true,
+        },
+      },
+    } as any)
+
+    const mockedResolveAccountSiteRouteUrl = await getMockedRouteResolver()
+    mockedResolveAccountSiteRouteUrl.mockRejectedValueOnce(
+      new Error("redeem route missing"),
+    )
+    mockedCreateTab.mockResolvedValueOnce({ id: 23 } as any)
+    mockedAccountStorage.markAccountAsCustomCheckedIn.mockResolvedValue(true)
+
+    await handleExternalCheckInMessage(
+      {
+        action: RuntimeActionIds.ExternalCheckInOpenAndMark,
+        accountIds: ["a2-route-error"],
+      },
+      sendResponse,
+    )
+
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      "https://checkin.example",
+      true,
+    )
+    expect(
+      mockedAccountStorage.markAccountAsCustomCheckedIn,
+    ).toHaveBeenCalledWith("a2-route-error")
+    expect(sendResponse).toHaveBeenCalledWith(
+      expect.objectContaining({
+        success: true,
+        data: expect.objectContaining({
+          results: [
+            expect.objectContaining({
+              accountId: "a2-route-error",
+              openedRedeem: false,
+              openedCheckIn: true,
+              markedCheckedIn: true,
+              redeemError: "redeem route missing",
+            }),
+          ],
+        }),
+      }),
+    )
+  })
+
   it("opens pages in a new window when requested", async () => {
     const sendResponse = vi.fn()
     mockedHasWindowsAPI.mockReturnValue(true)
