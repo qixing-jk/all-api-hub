@@ -37,8 +37,13 @@ import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import {
+  buildWebDavSyncDiagnostics,
+  getWebdavSyncStrategyMode,
+} from "~/services/productAnalytics/webDavSync"
 import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { formatTimestamp } from "~/utils/core/formatters"
@@ -193,13 +198,31 @@ export default function WebDAVAutoSyncSettings() {
 
       if (response.success) {
         await loadPreferences()
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          diagnostics: buildWebDavSyncDiagnostics({
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            mode: getWebdavSyncStrategyMode(savedConfig.syncStrategy),
+            itemCount: 1,
+            successCount: 1,
+            failureCount: 0,
+            skippedCount: 0,
+          }),
+        })
         await loadStatus()
         toast.success(response.message || t("webdav.syncSuccess"))
       } else {
         toast.error(response.message || t("webdav.syncFailed"))
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          diagnostics: buildWebDavSyncDiagnostics({
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            mode: getWebdavSyncStrategyMode(savedConfig.syncStrategy),
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 1,
+            skippedCount: 0,
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          }),
         })
       }
     } catch (error: any) {
@@ -207,6 +230,16 @@ export default function WebDAVAutoSyncSettings() {
       toast.error(error?.message || t("webdav.syncFailed"))
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        diagnostics: buildWebDavSyncDiagnostics({
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          mode: getWebdavSyncStrategyMode(savedConfig.syncStrategy),
+          itemCount: 1,
+          successCount: 0,
+          failureCount: 1,
+          skippedCount: 0,
+          error,
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        }),
       })
     } finally {
       setSyncing(false)

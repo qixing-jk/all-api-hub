@@ -3,13 +3,19 @@ import { describe, expect, it, vi } from "vitest"
 import {
   buildAutoCheckinAccountGroupProperties,
   buildAutoCheckinConfigSnapshotProperties,
+  buildAutoCheckinDiagnostics,
   buildAutoCheckinRunSummaryProperties,
   trackAutoCheckinConfigSnapshot,
 } from "~/services/productAnalytics/autoCheckin"
 import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
+  PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_SETTING_IDS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
 } from "~/services/productAnalytics/events"
 import { AuthTypeEnum } from "~/types"
 import {
@@ -336,5 +342,84 @@ describe("auto-checkin product analytics", () => {
         skipped_count: 1,
       },
     ])
+  })
+
+  it("builds structured action diagnostics from safe Auto Check-in summary fields", () => {
+    const diagnostics = buildAutoCheckinDiagnostics({
+      sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+      mode: PRODUCT_ANALYTICS_MODE_IDS.TelemetryAuto,
+      summary: {
+        totalEligible: 4,
+        executed: 2,
+        successCount: 1,
+        failedCount: 1,
+        skippedCount: 2,
+        needsRetry: true,
+      },
+      backgroundExecution: true,
+      retryAttempted: true,
+      retryCount: 2,
+      tempContextUsed: false,
+      incognitoContextUsed: false,
+    })
+
+    expect(diagnostics).toEqual({
+      context: {
+        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.TelemetryAuto,
+      },
+      execution: {
+        backgroundExecution: true,
+        retryAttempted: true,
+        retryCount: 2,
+        tempContextUsed: false,
+        incognitoContextUsed: false,
+      },
+      outcome: {
+        itemCount: 4,
+        successCount: 1,
+        failureCount: 1,
+        skippedCount: 2,
+      },
+      failure: {
+        category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+        reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+      },
+    })
+    expect(JSON.stringify(diagnostics)).not.toContain("accountId")
+    expect(JSON.stringify(diagnostics)).not.toContain("accountName")
+  })
+
+  it("omits Auto Check-in failure diagnostics when the summary did not fail", () => {
+    const diagnostics = buildAutoCheckinDiagnostics({
+      sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+      mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
+      siteType: "new-api",
+      requestedAuthMode: AuthTypeEnum.AccessToken,
+      summary: {
+        totalEligible: 1,
+        executed: 1,
+        successCount: 1,
+        failedCount: 0,
+        skippedCount: 0,
+        needsRetry: false,
+      },
+    })
+
+    expect(diagnostics).toEqual({
+      context: {
+        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
+        siteType: "new-api",
+        requestedAuthMode: AuthTypeEnum.AccessToken,
+      },
+      outcome: {
+        itemCount: 1,
+        successCount: 1,
+        failureCount: 0,
+        skippedCount: 0,
+      },
+    })
   })
 })

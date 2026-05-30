@@ -10,6 +10,7 @@ import {
   PRODUCT_ANALYTICS_EDITOR_MODES,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
@@ -182,6 +183,41 @@ describe("product analytics event enums", () => {
     expect(PRODUCT_ANALYTICS_EDITOR_MODES).toMatchObject({
       Visual: "visual",
       Json: "json",
+    })
+  })
+
+  it("defines fixed action completion failure reasons", () => {
+    expect(PRODUCT_ANALYTICS_FAILURE_REASONS).toEqual({
+      MissingCredentials: "missing_credentials",
+      MissingSelection: "missing_selection",
+      MissingConfig: "missing_config",
+      FeatureDisabled: "feature_disabled",
+      UnsupportedTarget: "unsupported_target",
+      PermissionDenied: "permission_denied",
+      PermissionUnavailable: "permission_unavailable",
+      IncognitoBlocked: "incognito_blocked",
+      AuthInvalid: "auth_invalid",
+      SessionExpired: "session_expired",
+      TokenSecretUnavailable: "token_secret_unavailable",
+      NetworkUnreachable: "network_unreachable",
+      Timeout: "timeout",
+      RateLimited: "rate_limited",
+      ServerError: "server_error",
+      QuotaInsufficient: "quota_insufficient",
+      ProviderBusinessError: "provider_business_error",
+      InvalidJson: "invalid_json",
+      InvalidResponseShape: "invalid_response_shape",
+      ContentTypeMismatch: "content_type_mismatch",
+      EmptyResponse: "empty_response",
+      StorageReadFailed: "storage_read_failed",
+      StorageWriteFailed: "storage_write_failed",
+      CacheReadFailed: "cache_read_failed",
+      CacheWriteFailed: "cache_write_failed",
+      CancelledByUser: "cancelled_by_user",
+      DuplicateDetected: "duplicate_detected",
+      StaleResponseIgnored: "stale_response_ignored",
+      PartialSuccess: "partial_success",
+      Unknown: "unknown",
     })
   })
 

@@ -3,6 +3,10 @@ import { createLogger } from "~/utils/core/logger"
 import { API_ERROR_CODES } from "../apiService/common/errors"
 import type { ProductAnalyticsActionContext } from "./actionConfig"
 import {
+  resolveProductAnalyticsCategoryFromFailureReason,
+  resolveProductAnalyticsFailureReasonFromLocalMessage,
+} from "./errorPatternDiagnostics"
+import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_EVENTS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
@@ -14,6 +18,7 @@ import {
   type ProductAnalyticsApiType,
   type ProductAnalyticsEditorMode,
   type ProductAnalyticsErrorCategory,
+  type ProductAnalyticsFailureReason,
   type ProductAnalyticsFailureStage,
   type ProductAnalyticsManagedSiteType,
   type ProductAnalyticsModeId,
@@ -39,6 +44,7 @@ type ProductAnalyticsActionCompletion = ProductAnalyticsActionContext & {
   errorCategory?: ProductAnalyticsErrorCategory
   durationMs?: number
   insights?: ProductAnalyticsActionInsights
+  diagnostics?: ProductAnalyticsActionDiagnostics
 }
 
 export type ProductAnalyticsActionInsights = {
@@ -54,12 +60,22 @@ export type ProductAnalyticsActionInsights = {
   sourceManagedSiteType?: ProductAnalyticsManagedSiteType
   targetManagedSiteType?: ProductAnalyticsManagedSiteType
   failureStage?: ProductAnalyticsFailureStage
+  failureReason?: ProductAnalyticsFailureReason
   accountAutoDetectFailureReason?: ProductAnalyticsAccountAutoDetectFailureReason
   autoDetectStrategy?: ProductAnalyticsAccountAutoDetectStrategy
   requestedAuthMode?: ProductAnalyticsRequestedAuthMode
   siteType?: ProductAnalyticsSiteType
   fetchContextKind?: ProductAnalyticsAccountAutoDetectFetchContextKind
+  cacheHit?: boolean
+  cacheUsed?: boolean
+  fallbackAvailable?: boolean
+  fallbackUsed?: boolean
+  retryAttempted?: boolean
+  retryCount?: number
+  tempContextUsed?: boolean
   incognitoContextUsed?: boolean
+  staleResponseIgnored?: boolean
+  backgroundExecution?: boolean
   currentTabMatched?: boolean
   itemCount?: number
   selectedCount?: number
@@ -79,6 +95,60 @@ export type ProductAnalyticsActionCompleteOptions = {
   errorCategory?: ProductAnalyticsErrorCategory
   durationMs?: number
   insights?: ProductAnalyticsActionInsights
+  diagnostics?: ProductAnalyticsActionDiagnostics
+}
+
+export type ProductAnalyticsActionDiagnostics = {
+  context?: {
+    sourceKind?: ProductAnalyticsSourceKind
+    mode?: ProductAnalyticsModeId
+    apiType?: ProductAnalyticsApiType
+    siteType?: ProductAnalyticsSiteType
+    requestedAuthMode?: ProductAnalyticsRequestedAuthMode
+    managedSiteType?: ProductAnalyticsManagedSiteType
+    sourceManagedSiteType?: ProductAnalyticsManagedSiteType
+    targetManagedSiteType?: ProductAnalyticsManagedSiteType
+    targetKind?: ProductAnalyticsTargetKind
+    targetState?: ProductAnalyticsTargetState
+    telemetrySource?: ProductAnalyticsTelemetrySource
+    editorMode?: ProductAnalyticsEditorMode
+    statusKind?: ProductAnalyticsStatusKind
+    fetchContextKind?: ProductAnalyticsAccountAutoDetectFetchContextKind
+    autoDetectStrategy?: ProductAnalyticsAccountAutoDetectStrategy
+  }
+  execution?: {
+    cacheHit?: boolean
+    cacheUsed?: boolean
+    fallbackAvailable?: boolean
+    fallbackUsed?: boolean
+    retryAttempted?: boolean
+    retryCount?: number
+    tempContextUsed?: boolean
+    incognitoContextUsed?: boolean
+    staleResponseIgnored?: boolean
+    backgroundExecution?: boolean
+    currentTabMatched?: boolean
+  }
+  outcome?: {
+    itemCount?: number
+    selectedCount?: number
+    successCount?: number
+    failureCount?: number
+    skippedCount?: number
+    warningCount?: number
+    readyCount?: number
+    blockedCount?: number
+    modelCount?: number
+    filterCount?: number
+    resultCount?: number
+    usageDataPresent?: boolean
+  }
+  failure?: {
+    category?: ProductAnalyticsErrorCategory
+    stage?: ProductAnalyticsFailureStage
+    reason?: ProductAnalyticsFailureReason
+    accountAutoDetectFailureReason?: ProductAnalyticsAccountAutoDetectFailureReason
+  }
 }
 
 type StructuredAnalyticsError = {
@@ -112,17 +182,6 @@ function getStructuredErrorStatusCode(error: StructuredAnalyticsError) {
 function getStructuredErrorCodes(error: StructuredAnalyticsError) {
   return [error.code, error.originalCode].filter(
     (value): value is string => typeof value === "string",
-  )
-}
-
-/** Detects browser fetch failures without using provider/backend text. */
-function isBrowserNetworkError(error: StructuredAnalyticsError) {
-  if (error.name === "NetworkError") return true
-
-  return (
-    error.name === "TypeError" &&
-    error instanceof Error &&
-    /fetch/i.test(error.message)
   )
 }
 
@@ -208,8 +267,15 @@ export function resolveProductAnalyticsErrorCategoryFromError(
     return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported
   }
 
-  if (isBrowserNetworkError(error)) {
+  if (error.name === "NetworkError") {
     return PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network
+  }
+  const messageReason =
+    resolveProductAnalyticsFailureReasonFromLocalMessage(error)
+  if (messageReason) {
+    const category =
+      resolveProductAnalyticsCategoryFromFailureReason(messageReason)
+    if (category) return category
   }
 
   if (error.cause && error.cause !== error) {
@@ -248,6 +314,9 @@ function mapProductAnalyticsActionInsights(
       ? { target_managed_site_type: insights.targetManagedSiteType }
       : {}),
     ...(insights.failureStage ? { failure_stage: insights.failureStage } : {}),
+    ...(insights.failureReason
+      ? { failure_reason: insights.failureReason }
+      : {}),
     ...(insights.accountAutoDetectFailureReason
       ? {
           account_auto_detect_failure_reason:
@@ -264,8 +333,35 @@ function mapProductAnalyticsActionInsights(
     ...(insights.fetchContextKind
       ? { fetch_context_kind: insights.fetchContextKind }
       : {}),
+    ...(typeof insights.cacheHit === "boolean"
+      ? { cache_hit: insights.cacheHit }
+      : {}),
+    ...(typeof insights.cacheUsed === "boolean"
+      ? { cache_used: insights.cacheUsed }
+      : {}),
+    ...(typeof insights.fallbackAvailable === "boolean"
+      ? { fallback_available: insights.fallbackAvailable }
+      : {}),
+    ...(typeof insights.fallbackUsed === "boolean"
+      ? { fallback_used: insights.fallbackUsed }
+      : {}),
+    ...(typeof insights.retryAttempted === "boolean"
+      ? { retry_attempted: insights.retryAttempted }
+      : {}),
+    ...(typeof insights.retryCount === "number"
+      ? { retry_count: insights.retryCount }
+      : {}),
+    ...(typeof insights.tempContextUsed === "boolean"
+      ? { temp_context_used: insights.tempContextUsed }
+      : {}),
     ...(typeof insights.incognitoContextUsed === "boolean"
       ? { incognito_context_used: insights.incognitoContextUsed }
+      : {}),
+    ...(typeof insights.staleResponseIgnored === "boolean"
+      ? { stale_response_ignored: insights.staleResponseIgnored }
+      : {}),
+    ...(typeof insights.backgroundExecution === "boolean"
+      ? { background_execution: insights.backgroundExecution }
       : {}),
     ...(typeof insights.currentTabMatched === "boolean"
       ? { current_tab_matched: insights.currentTabMatched }
@@ -310,15 +406,159 @@ function mapProductAnalyticsActionInsights(
 }
 
 /**
+ * Converts structured action diagnostics into the existing flat analytics shape.
+ */
+function flattenProductAnalyticsActionDiagnostics(
+  diagnostics?: ProductAnalyticsActionDiagnostics,
+) {
+  if (!diagnostics) return {}
+
+  return {
+    ...(diagnostics.context?.apiType
+      ? { api_type: diagnostics.context.apiType }
+      : {}),
+    ...(diagnostics.context?.sourceKind
+      ? { source_kind: diagnostics.context.sourceKind }
+      : {}),
+    ...(diagnostics.context?.mode ? { mode: diagnostics.context.mode } : {}),
+    ...(diagnostics.context?.editorMode
+      ? { editor_mode: diagnostics.context.editorMode }
+      : {}),
+    ...(diagnostics.context?.statusKind
+      ? { status_kind: diagnostics.context.statusKind }
+      : {}),
+    ...(diagnostics.context?.telemetrySource
+      ? { telemetry_source: diagnostics.context.telemetrySource }
+      : {}),
+    ...(diagnostics.context?.targetKind
+      ? { target_kind: diagnostics.context.targetKind }
+      : {}),
+    ...(diagnostics.context?.targetState
+      ? { target_state: diagnostics.context.targetState }
+      : {}),
+    ...(diagnostics.context?.managedSiteType
+      ? { managed_site_type: diagnostics.context.managedSiteType }
+      : {}),
+    ...(diagnostics.context?.sourceManagedSiteType
+      ? { source_managed_site_type: diagnostics.context.sourceManagedSiteType }
+      : {}),
+    ...(diagnostics.context?.targetManagedSiteType
+      ? { target_managed_site_type: diagnostics.context.targetManagedSiteType }
+      : {}),
+    ...(diagnostics.failure?.stage
+      ? { failure_stage: diagnostics.failure.stage }
+      : {}),
+    ...(diagnostics.failure?.reason
+      ? { failure_reason: diagnostics.failure.reason }
+      : {}),
+    ...(diagnostics.failure?.accountAutoDetectFailureReason
+      ? {
+          account_auto_detect_failure_reason:
+            diagnostics.failure.accountAutoDetectFailureReason,
+        }
+      : {}),
+    ...(diagnostics.context?.autoDetectStrategy
+      ? { auto_detect_strategy: diagnostics.context.autoDetectStrategy }
+      : {}),
+    ...(diagnostics.context?.requestedAuthMode
+      ? { requested_auth_mode: diagnostics.context.requestedAuthMode }
+      : {}),
+    ...(diagnostics.context?.siteType
+      ? { site_type: diagnostics.context.siteType }
+      : {}),
+    ...(diagnostics.context?.fetchContextKind
+      ? { fetch_context_kind: diagnostics.context.fetchContextKind }
+      : {}),
+    ...(typeof diagnostics.execution?.cacheHit === "boolean"
+      ? { cache_hit: diagnostics.execution.cacheHit }
+      : {}),
+    ...(typeof diagnostics.execution?.cacheUsed === "boolean"
+      ? { cache_used: diagnostics.execution.cacheUsed }
+      : {}),
+    ...(typeof diagnostics.execution?.fallbackAvailable === "boolean"
+      ? { fallback_available: diagnostics.execution.fallbackAvailable }
+      : {}),
+    ...(typeof diagnostics.execution?.fallbackUsed === "boolean"
+      ? { fallback_used: diagnostics.execution.fallbackUsed }
+      : {}),
+    ...(typeof diagnostics.execution?.retryAttempted === "boolean"
+      ? { retry_attempted: diagnostics.execution.retryAttempted }
+      : {}),
+    ...(typeof diagnostics.execution?.retryCount === "number"
+      ? { retry_count: diagnostics.execution.retryCount }
+      : {}),
+    ...(typeof diagnostics.execution?.tempContextUsed === "boolean"
+      ? { temp_context_used: diagnostics.execution.tempContextUsed }
+      : {}),
+    ...(typeof diagnostics.execution?.incognitoContextUsed === "boolean"
+      ? { incognito_context_used: diagnostics.execution.incognitoContextUsed }
+      : {}),
+    ...(typeof diagnostics.execution?.staleResponseIgnored === "boolean"
+      ? {
+          stale_response_ignored: diagnostics.execution.staleResponseIgnored,
+        }
+      : {}),
+    ...(typeof diagnostics.execution?.backgroundExecution === "boolean"
+      ? { background_execution: diagnostics.execution.backgroundExecution }
+      : {}),
+    ...(typeof diagnostics.execution?.currentTabMatched === "boolean"
+      ? { current_tab_matched: diagnostics.execution.currentTabMatched }
+      : {}),
+    ...(typeof diagnostics.outcome?.itemCount === "number"
+      ? { item_count: diagnostics.outcome.itemCount }
+      : {}),
+    ...(typeof diagnostics.outcome?.selectedCount === "number"
+      ? { selected_count: diagnostics.outcome.selectedCount }
+      : {}),
+    ...(typeof diagnostics.outcome?.successCount === "number"
+      ? { success_count: diagnostics.outcome.successCount }
+      : {}),
+    ...(typeof diagnostics.outcome?.failureCount === "number"
+      ? { failure_count: diagnostics.outcome.failureCount }
+      : {}),
+    ...(typeof diagnostics.outcome?.skippedCount === "number"
+      ? { skipped_count: diagnostics.outcome.skippedCount }
+      : {}),
+    ...(typeof diagnostics.outcome?.warningCount === "number"
+      ? { warning_count: diagnostics.outcome.warningCount }
+      : {}),
+    ...(typeof diagnostics.outcome?.readyCount === "number"
+      ? { ready_count: diagnostics.outcome.readyCount }
+      : {}),
+    ...(typeof diagnostics.outcome?.blockedCount === "number"
+      ? { blocked_count: diagnostics.outcome.blockedCount }
+      : {}),
+    ...(typeof diagnostics.outcome?.modelCount === "number"
+      ? { model_count: diagnostics.outcome.modelCount }
+      : {}),
+    ...(typeof diagnostics.outcome?.filterCount === "number"
+      ? { filter_count: diagnostics.outcome.filterCount }
+      : {}),
+    ...(typeof diagnostics.outcome?.resultCount === "number"
+      ? { result_count: diagnostics.outcome.resultCount }
+      : {}),
+    ...(typeof diagnostics.outcome?.usageDataPresent === "boolean"
+      ? { usage_data_present: diagnostics.outcome.usageDataPresent }
+      : {}),
+    ...(diagnostics.failure?.category
+      ? { error_category: diagnostics.failure.category }
+      : {}),
+  }
+}
+
+/**
  * Resolves an explicit failure stage or applies a coarse fallback for failures.
  */
 function resolveProductAnalyticsFailureStage({
   result,
   insights,
+  diagnostics,
 }: {
   result: ProductAnalyticsResult
   insights?: ProductAnalyticsActionInsights
+  diagnostics?: ProductAnalyticsActionDiagnostics
 }) {
+  if (diagnostics?.failure?.stage) return diagnostics.failure.stage
   if (insights?.failureStage) return insights.failureStage
 
   return result === PRODUCT_ANALYTICS_RESULTS.Failure
@@ -333,11 +573,14 @@ function resolveProductAnalyticsFailureStage({
 function resolveProductAnalyticsErrorCategory({
   result,
   errorCategory,
+  diagnostics,
 }: {
   result: ProductAnalyticsResult
   errorCategory?: ProductAnalyticsErrorCategory
+  diagnostics?: ProductAnalyticsActionDiagnostics
 }) {
   if (errorCategory) return errorCategory
+  if (diagnostics?.failure?.category) return diagnostics.failure.category
 
   return result === PRODUCT_ANALYTICS_RESULTS.Failure
     ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
@@ -380,16 +623,21 @@ export async function trackProductAnalyticsActionCompleted({
   errorCategory,
   durationMs,
   insights,
+  diagnostics,
 }: ProductAnalyticsActionCompletion) {
   try {
     const failureStage = resolveProductAnalyticsFailureStage({
       result,
       insights,
+      diagnostics,
     })
     const resolvedErrorCategory = resolveProductAnalyticsErrorCategory({
       result,
       errorCategory,
+      diagnostics,
     })
+    const diagnosticsFields =
+      flattenProductAnalyticsActionDiagnostics(diagnostics)
 
     await trackProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
@@ -399,11 +647,12 @@ export async function trackProductAnalyticsActionCompleted({
         ...(surfaceId ? { surface_id: surfaceId } : {}),
         entrypoint,
         result,
+        ...(typeof durationMs === "number" ? { duration_ms: durationMs } : {}),
+        ...mapProductAnalyticsActionInsights(insights),
+        ...diagnosticsFields,
         ...(resolvedErrorCategory
           ? { error_category: resolvedErrorCategory }
           : {}),
-        ...(typeof durationMs === "number" ? { duration_ms: durationMs } : {}),
-        ...mapProductAnalyticsActionInsights(insights),
         ...(failureStage ? { failure_stage: failureStage } : {}),
       },
     )
@@ -432,6 +681,7 @@ export function startProductAnalyticsAction(
         errorCategory: options.errorCategory,
         durationMs: options.durationMs ?? Date.now() - startedAt,
         insights: options.insights,
+        diagnostics: options.diagnostics,
       })
     },
   }

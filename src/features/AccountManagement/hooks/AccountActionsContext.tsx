@@ -10,6 +10,7 @@ import toast from "react-hot-toast"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
   startProductAnalyticsAction,
@@ -20,7 +21,9 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import type { DisplaySiteData } from "~/types"
@@ -119,11 +122,33 @@ export const AccountActionsProvider = ({
           refreshPromise().then(async (result) => {
             if (!result.refreshed) {
               analyticsCompleted = true
-              tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+              tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+                diagnostics: buildAccountRefreshDiagnostics({
+                  sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
+                  mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+                  siteType: account.siteType,
+                  requestedAuthMode: account.authType,
+                  itemCount: 1,
+                  successCount: 0,
+                  failureCount: 0,
+                  skippedCount: 1,
+                }),
+              })
               return t("messages:toast.success.refreshSkipped")
             }
             analyticsCompleted = true
-            tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+            tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+              diagnostics: buildAccountRefreshDiagnostics({
+                sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
+                mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+                siteType: account.siteType,
+                requestedAuthMode: account.authType,
+                itemCount: 1,
+                successCount: 1,
+                failureCount: 0,
+                skippedCount: 0,
+              }),
+            })
             return t("messages:toast.success.refreshAccount", {
               accountName: account.name,
             })
@@ -143,6 +168,17 @@ export const AccountActionsProvider = ({
           analyticsCompleted = true
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
             errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            diagnostics: buildAccountRefreshDiagnostics({
+              sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
+              mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+              siteType: account.siteType,
+              requestedAuthMode: account.authType,
+              itemCount: 1,
+              successCount: 0,
+              failureCount: 1,
+              skippedCount: 0,
+              error,
+            }),
           })
         }
         logger.error("Error refreshing account", error)

@@ -15,13 +15,16 @@ import { useAccountDataContext } from "~/features/AccountManagement/hooks/Accoun
 import { AccountManagementProvider } from "~/features/AccountManagement/hooks/AccountManagementProvider"
 import { useDialogStateContext } from "~/features/AccountManagement/hooks/DialogStateContext"
 import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import { createLogger } from "~/utils/core/logger"
@@ -116,20 +119,39 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
         successCount: result.success,
         failureCount: result.failed,
       }
+      const skippedCount = Math.max(
+        refreshInsights.itemCount - result.refreshedCount,
+        0,
+      )
+      const refreshDiagnostics = buildAccountRefreshDiagnostics({
+        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+        itemCount: refreshInsights.itemCount,
+        successCount: result.success,
+        failureCount: result.failed,
+        skippedCount,
+      })
       if (result.failed > 0) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: refreshInsights,
+          diagnostics: refreshDiagnostics,
         })
       } else {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: refreshInsights,
+          diagnostics: refreshDiagnostics,
         })
       }
     } catch (error) {
       logger.error("Error during global refresh", error)
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        diagnostics: buildAccountRefreshDiagnostics({
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+          error,
+        }),
       })
     }
   }, [handleRefresh, t])
@@ -168,20 +190,35 @@ function AccountManagementContent({ searchQuery }: { searchQuery?: string }) {
         successCount: Math.max(result.processedCount - result.failedCount, 0),
         failureCount: result.failedCount,
       }
+      const refreshDiagnostics = buildAccountRefreshDiagnostics({
+        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+        itemCount: refreshInsights.itemCount,
+        successCount: refreshInsights.successCount,
+        failureCount: refreshInsights.failureCount,
+        skippedCount: 0,
+      })
       if (result.failedCount > 0) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: refreshInsights,
+          diagnostics: refreshDiagnostics,
         })
       } else {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
           insights: refreshInsights,
+          diagnostics: refreshDiagnostics,
         })
       }
     } catch (error) {
       logger.error("Error during disabled account refresh", error)
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        diagnostics: buildAccountRefreshDiagnostics({
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+          error,
+        }),
       })
     }
   }, [handleRefreshDisabledAccounts, t])

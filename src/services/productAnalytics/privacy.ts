@@ -21,6 +21,7 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
@@ -80,12 +81,22 @@ const EVENT_ALLOWED_KEYS = {
     "source_managed_site_type",
     "target_managed_site_type",
     "failure_stage",
+    "failure_reason",
     "account_auto_detect_failure_reason",
     "auto_detect_strategy",
     "requested_auth_mode",
     "site_type",
     "fetch_context_kind",
+    "cache_hit",
+    "cache_used",
+    "fallback_available",
+    "fallback_used",
+    "retry_attempted",
+    "retry_count",
+    "temp_context_used",
     "incognito_context_used",
+    "stale_response_ignored",
+    "background_execution",
     "current_tab_matched",
     "item_count",
     "selected_count",
@@ -523,14 +534,20 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "account_auto_refresh_on_open_enabled",
   "account_count",
   "active_tab",
+  "background_execution",
   "auto_checkin_enabled_accounts",
   "detection_enabled_accounts",
   "provider_available_accounts",
   "runnable_accounts",
   "total_accounts",
+  "cache_hit",
+  "cache_used",
   "auto_detect_url_patterns_configured",
+  "fallback_available",
+  "fallback_used",
   "balance_history_capture_task_enabled",
   "balance_history_estimated_today_income_enabled",
+  "failure_reason",
   "requested_auth_mode",
   "auto_fill_current_site_url_on_account_add_enabled",
   "auto_provision_key_on_account_add_enabled",
@@ -540,10 +557,14 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "currency_type",
   "estimated_today_income_enabled",
   "managed_site_type",
+  "retry_attempted",
+  "retry_count",
   "new_api_configured",
   "normalized_language",
+  "stale_response_ignored",
   "redemption_assist_allowlist_account_urls_enabled",
   "redemption_assist_allowlist_checkin_redeem_urls_enabled",
+  "temp_context_used",
   "shield_bypass_prompt_dismissed_count",
   "shield_bypass_prompt_shown_count",
   "sponsor_id",
@@ -593,6 +614,7 @@ const RAW_NUMBER_ALLOWED_KEYS = new Set([
   "refresh_interval_minutes",
   "retention_days",
   "result_count",
+  "retry_count",
   "retry_attempted",
   "retry_exhausted",
   "retry_interval_minutes",
@@ -635,6 +657,23 @@ const RAW_NUMBER_ALLOWED_KEYS = new Set([
   "auto_checkin_deterministic_time_minutes",
 ])
 
+const FEATURE_ACTION_COMPLETED_ALLOWED_FAILURE_REASONS: ReadonlySet<string> =
+  new Set(Object.values(PRODUCT_ANALYTICS_FAILURE_REASONS))
+
+const FEATURE_ACTION_COMPLETED_BOOLEAN_FIELDS = new Set([
+  "cache_hit",
+  "cache_used",
+  "fallback_available",
+  "fallback_used",
+  "retry_attempted",
+  "temp_context_used",
+  "incognito_context_used",
+  "stale_response_ignored",
+  "background_execution",
+  "current_tab_matched",
+  "usage_data_present",
+])
+
 /**
  * Accepts only scalar property values supported by PostHog product analytics.
  */
@@ -653,14 +692,29 @@ function isAllowedScalar(value: unknown): value is string | boolean | number {
  * Confirms a sanitized field uses an approved enum value or the enabled flag.
  */
 function isAllowedFieldValue(
+  eventName: ProductAnalyticsEventName,
   key: string,
   value: string | boolean | number,
 ): boolean {
   if (typeof value === "number") {
+    if (
+      eventName === PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted &&
+      FEATURE_ACTION_COMPLETED_BOOLEAN_FIELDS.has(key)
+    ) {
+      return false
+    }
+
     return RAW_NUMBER_ALLOWED_KEYS.has(key)
   }
 
   if (typeof value === "boolean") {
+    if (
+      eventName === PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted &&
+      FEATURE_ACTION_COMPLETED_BOOLEAN_FIELDS.has(key)
+    ) {
+      return true
+    }
+
     return (
       key === "enabled" ||
       key === "configured" ||
@@ -681,6 +735,13 @@ function isAllowedFieldValue(
     return /^[a-z0-9][a-z0-9-]*$/.test(value)
   }
 
+  if (
+    key === "failure_reason" &&
+    eventName === PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted
+  ) {
+    return FEATURE_ACTION_COMPLETED_ALLOWED_FAILURE_REASONS.has(value)
+  }
+
   const allowedValues = FIELD_ALLOWED_VALUES[key]
   return Array.isArray(allowedValues) && allowedValues.includes(value)
 }
@@ -698,6 +759,7 @@ function isPrivacyReviewedKey(key: string): boolean {
  * Applies every sanitizer gate for one candidate analytics property.
  */
 function shouldKeepProperty(
+  eventName: ProductAnalyticsEventName,
   allowedKeys: Set<string>,
   key: string,
   value: unknown,
@@ -706,7 +768,7 @@ function shouldKeepProperty(
     allowedKeys.has(key) &&
     isPrivacyReviewedKey(key) &&
     isAllowedScalar(value) &&
-    isAllowedFieldValue(key, value)
+    isAllowedFieldValue(eventName, key, value)
   )
 }
 
@@ -723,7 +785,7 @@ export function sanitizeProductAnalyticsEvent(
   const sanitized: SanitizedProperties = {}
 
   for (const [key, value] of Object.entries(rawProperties)) {
-    if (!shouldKeepProperty(allowedKeys, key, value)) continue
+    if (!shouldKeepProperty(eventName, allowedKeys, key, value)) continue
 
     sanitized[key] = value
   }

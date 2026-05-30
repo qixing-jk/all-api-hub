@@ -19,8 +19,12 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
@@ -279,6 +283,20 @@ describe("WebDAVAutoSyncSettings", () => {
     })
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        diagnostics: {
+          context: {
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
+          },
+          outcome: {
+            itemCount: 1,
+            successCount: 1,
+            failureCount: 0,
+            skippedCount: 0,
+          },
+        },
+      },
     )
   })
 
@@ -320,7 +338,59 @@ describe("WebDAVAutoSyncSettings", () => {
       expect(toast.error).toHaveBeenCalledWith("sync failed")
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
-        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          diagnostics: {
+            context: {
+              sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+              mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
+            },
+            outcome: {
+              itemCount: 1,
+              successCount: 0,
+              failureCount: 1,
+              skippedCount: 0,
+            },
+            failure: {
+              category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+              reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+            },
+          },
+        },
+      )
+    })
+  })
+
+  it("uses the saved WebDAV strategy as sync-now diagnostics mode", async () => {
+    mockUserPreferences.getPreferences.mockResolvedValue({
+      lastUpdated: 1,
+      webdav: {
+        autoSync: true,
+        syncInterval: 1800,
+        syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
+      },
+    })
+
+    render(<WebDAVAutoSyncSettings />)
+
+    fireEvent.click(
+      await screen.findByRole("button", {
+        name: "importExport:webdav.autoSync.syncNow",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        expect.objectContaining({
+          diagnostics: expect.objectContaining({
+            context: {
+              sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+              mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavMerge,
+            },
+          }),
+        }),
       )
     })
   })

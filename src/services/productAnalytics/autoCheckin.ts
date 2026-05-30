@@ -9,14 +9,25 @@ import {
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 
+import type { ProductAnalyticsActionDiagnostics } from "./actions"
 import {
   PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
+  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_SETTING_IDS,
   trackProductAnalyticsEvent,
   type ProductAnalyticsAutoCheckinRunKind,
   type ProductAnalyticsEntrypoint,
+  type ProductAnalyticsErrorCategory,
+  type ProductAnalyticsFailureReason,
+  type ProductAnalyticsFailureStage,
+  type ProductAnalyticsModeId,
+  type ProductAnalyticsRequestedAuthMode,
+  type ProductAnalyticsSiteType,
+  type ProductAnalyticsSourceKind,
 } from "./events"
 
 type AutoCheckinRunAnalyticsParams = {
@@ -36,6 +47,31 @@ type AutoCheckinAccountGroupAnalyticsParams = {
   entrypoint: typeof PRODUCT_ANALYTICS_ENTRYPOINTS.Background
   snapshots: AutoCheckinAccountSnapshot[]
   accountsById: Map<string, Pick<SiteAccount, "authType">>
+}
+
+type AutoCheckinDiagnosticsParams = {
+  sourceKind: ProductAnalyticsSourceKind
+  mode: ProductAnalyticsModeId
+  summary: AutoCheckinRunSummaryLike
+  siteType?: ProductAnalyticsSiteType
+  requestedAuthMode?: ProductAnalyticsRequestedAuthMode
+  backgroundExecution?: boolean
+  retryAttempted?: boolean
+  retryCount?: number
+  tempContextUsed?: boolean
+  incognitoContextUsed?: boolean
+  failureCategory?: ProductAnalyticsErrorCategory
+  failureStage?: ProductAnalyticsFailureStage
+  failureReason?: ProductAnalyticsFailureReason
+}
+
+type AutoCheckinRunSummaryLike = {
+  totalEligible?: number
+  executed: number
+  successCount: number
+  failedCount: number
+  skippedCount: number
+  needsRetry?: boolean
 }
 
 type AutoCheckinAccountGroupAccumulator = {
@@ -179,6 +215,74 @@ export function buildAutoCheckinAccountGroupProperties(
   }
 
   return Array.from(groups.values())
+}
+
+/**
+ * Builds structured action diagnostics from already-aggregated Auto Check-in data.
+ */
+export function buildAutoCheckinDiagnostics({
+  sourceKind,
+  mode,
+  summary,
+  siteType,
+  requestedAuthMode,
+  backgroundExecution,
+  retryAttempted,
+  retryCount,
+  tempContextUsed,
+  incognitoContextUsed,
+  failureCategory,
+  failureStage,
+  failureReason,
+}: AutoCheckinDiagnosticsParams): ProductAnalyticsActionDiagnostics {
+  const failed = summary.failedCount > 0
+
+  return {
+    context: {
+      sourceKind,
+      mode,
+      ...(siteType ? { siteType } : {}),
+      ...(requestedAuthMode ? { requestedAuthMode } : {}),
+    },
+    ...(typeof backgroundExecution === "boolean" ||
+    typeof retryAttempted === "boolean" ||
+    typeof retryCount === "number" ||
+    typeof tempContextUsed === "boolean" ||
+    typeof incognitoContextUsed === "boolean"
+      ? {
+          execution: {
+            ...(typeof backgroundExecution === "boolean"
+              ? { backgroundExecution }
+              : {}),
+            ...(typeof retryAttempted === "boolean" ? { retryAttempted } : {}),
+            ...(typeof retryCount === "number" ? { retryCount } : {}),
+            ...(typeof tempContextUsed === "boolean"
+              ? { tempContextUsed }
+              : {}),
+            ...(typeof incognitoContextUsed === "boolean"
+              ? { incognitoContextUsed }
+              : {}),
+          },
+        }
+      : {}),
+    outcome: {
+      itemCount:
+        summary.totalEligible ?? summary.executed + summary.skippedCount,
+      successCount: summary.successCount,
+      failureCount: summary.failedCount,
+      skippedCount: summary.skippedCount,
+    },
+    ...(failed
+      ? {
+          failure: {
+            category:
+              failureCategory ?? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            stage: failureStage ?? PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+            reason: failureReason ?? PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+          },
+        }
+      : {}),
+  }
 }
 
 /**

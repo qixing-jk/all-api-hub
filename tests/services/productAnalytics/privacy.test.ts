@@ -14,6 +14,7 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MANAGED_SITE_TYPES,
@@ -612,6 +613,48 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
+  it("keeps permission failure reasons event-scoped from action completion reasons", () => {
+    expect(
+      sanitizeProductAnalyticsEvent(PRODUCT_ANALYTICS_EVENTS.PermissionResult, {
+        permission_id: "clipboardRead",
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+        outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.Denied,
+        failure_reason: PRODUCT_ANALYTICS_FAILURE_REASONS.SessionExpired,
+        was_granted_before: false,
+        was_granted_after: false,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      }),
+    ).toEqual({
+      permission_id: "clipboardRead",
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      operation: PRODUCT_ANALYTICS_PERMISSION_OPERATIONS.Request,
+      outcome: PRODUCT_ANALYTICS_PERMISSION_OUTCOMES.Denied,
+      was_granted_before: false,
+      was_granted_after: false,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+
+    expect(
+      sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        {
+          feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+          action_id: PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteModels,
+          result: PRODUCT_ANALYTICS_RESULTS.Failure,
+          failure_reason:
+            PRODUCT_ANALYTICS_PERMISSION_FAILURE_REASONS.UserDenied,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        },
+      ),
+    ).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteModels,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+    })
+  })
+
   it("keeps account auto-detect failure reasons without raw diagnostic context", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
@@ -640,6 +683,76 @@ describe("product analytics privacy filtering", () => {
       account_auto_detect_failure_reason:
         PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS.CurrentTabContentScriptUnavailable,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+  })
+
+  it("keeps action completion diagnostics and rejects raw failure reason strings", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteModels,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
+        result: PRODUCT_ANALYTICS_RESULTS.Failure,
+        error_category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+        failure_stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+        failure_reason: PRODUCT_ANALYTICS_FAILURE_REASONS.SessionExpired,
+        cache_hit: false,
+        cache_used: true,
+        fallback_available: true,
+        fallback_used: false,
+        retry_attempted: true,
+        retry_count: 2,
+        stale_response_ignored: true,
+        background_execution: true,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        backend_message: "session expired for account alice",
+        raw_failure_reason: "private backend text",
+        account_name: "Alice",
+        url: "https://private.example.com",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteModels,
+      surface_id:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteModelSyncActionBar,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      error_category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+      failure_stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      failure_reason: PRODUCT_ANALYTICS_FAILURE_REASONS.SessionExpired,
+      cache_hit: false,
+      cache_used: true,
+      fallback_available: true,
+      fallback_used: false,
+      retry_attempted: true,
+      retry_count: 2,
+      stale_response_ignored: true,
+      background_execution: true,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+    })
+
+    expect(
+      sanitizeProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+        {
+          feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+          action_id: PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteModels,
+          result: PRODUCT_ANALYTICS_RESULTS.Failure,
+          retry_attempted: 999,
+          retry_count: 2,
+          failure_reason: "session expired for account alice",
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+        },
+      ),
+    ).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ManagedSiteModelSync,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.SyncSelectedManagedSiteModels,
+      result: PRODUCT_ANALYTICS_RESULTS.Failure,
+      retry_count: 2,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
     })
   })
 

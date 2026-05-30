@@ -19,6 +19,7 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
@@ -161,6 +162,13 @@ const expectLastModelDataAnalyticsCompletion = (expected: {
   failureCount?: number
   errorCategory?: string
   failureStage?: string
+  failureReason?: string
+  siteType?: string
+  requestedAuthMode?: string
+  apiType?: string
+  cacheHit?: boolean
+  fallbackAvailable?: boolean
+  fallbackUsed?: boolean
 }) => {
   const lastCall = mockTrackProductAnalyticsActionCompleted.mock.lastCall?.[0]
 
@@ -173,17 +181,65 @@ const expectLastModelDataAnalyticsCompletion = (expected: {
     ...(expected.errorCategory
       ? { errorCategory: expected.errorCategory }
       : {}),
-    insights: {
-      sourceKind: expected.sourceKind,
-      ...(expected.failureStage ? { failureStage: expected.failureStage } : {}),
-      ...(typeof expected.modelCount === "number"
-        ? { modelCount: expected.modelCount }
+    diagnostics: {
+      context: {
+        sourceKind: expected.sourceKind,
+        ...(expected.siteType ? { siteType: expected.siteType } : {}),
+        ...(expected.requestedAuthMode
+          ? { requestedAuthMode: expected.requestedAuthMode }
+          : {}),
+        ...(expected.apiType ? { apiType: expected.apiType } : {}),
+      },
+      ...(typeof expected.cacheHit === "boolean" ||
+      typeof expected.fallbackAvailable === "boolean" ||
+      typeof expected.fallbackUsed === "boolean"
+        ? {
+            execution: {
+              ...(typeof expected.cacheHit === "boolean"
+                ? { cacheHit: expected.cacheHit }
+                : {}),
+              ...(typeof expected.fallbackAvailable === "boolean"
+                ? { fallbackAvailable: expected.fallbackAvailable }
+                : {}),
+              ...(typeof expected.fallbackUsed === "boolean"
+                ? { fallbackUsed: expected.fallbackUsed }
+                : {}),
+            },
+          }
         : {}),
-      ...(typeof expected.successCount === "number"
-        ? { successCount: expected.successCount }
+      ...(typeof expected.modelCount === "number" ||
+      typeof expected.successCount === "number" ||
+      typeof expected.failureCount === "number"
+        ? {
+            outcome: {
+              ...(typeof expected.modelCount === "number"
+                ? { modelCount: expected.modelCount }
+                : {}),
+              ...(typeof expected.successCount === "number"
+                ? { successCount: expected.successCount }
+                : {}),
+              ...(typeof expected.failureCount === "number"
+                ? { failureCount: expected.failureCount }
+                : {}),
+            },
+          }
         : {}),
-      ...(typeof expected.failureCount === "number"
-        ? { failureCount: expected.failureCount }
+      ...(expected.errorCategory ||
+      expected.failureStage ||
+      expected.failureReason
+        ? {
+            failure: {
+              ...(expected.errorCategory
+                ? { category: expected.errorCategory }
+                : {}),
+              ...(expected.failureStage
+                ? { stage: expected.failureStage }
+                : {}),
+              ...(expected.failureReason
+                ? { reason: expected.failureReason }
+                : {}),
+            },
+          }
         : {}),
     },
   })
@@ -345,6 +401,9 @@ describe("useModelData all-accounts loading", () => {
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
       modelCount: 2,
+      siteType: SITE_TYPES.UNKNOWN,
+      requestedAuthMode: AuthTypeEnum.AccessToken,
+      cacheHit: false,
     })
 
     rerender()
@@ -392,6 +451,9 @@ describe("useModelData all-accounts loading", () => {
       sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
       failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
+      failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.InvalidResponseShape,
+      siteType: SITE_TYPES.UNKNOWN,
+      requestedAuthMode: AuthTypeEnum.AccessToken,
     })
   })
 
@@ -461,10 +523,11 @@ describe("useModelData all-accounts loading", () => {
       failureCount: 1,
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
     })
   })
 
-  it("tracks all-account fetch exceptions as network failures", async () => {
+  it("classifies all-account browser fetch exceptions as network failures", async () => {
     toastSuccessMock.mockReset()
     toastErrorMock.mockReset()
 
@@ -530,6 +593,7 @@ describe("useModelData all-accounts loading", () => {
       failureCount: 1,
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network,
       failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.NetworkUnreachable,
     })
   })
 
@@ -604,6 +668,7 @@ describe("useModelData all-accounts loading", () => {
       failureCount: 1,
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
       failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
+      failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.InvalidResponseShape,
     })
   })
 
@@ -670,6 +735,7 @@ describe("useModelData all-accounts loading", () => {
       failureCount: 2,
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
       failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
+      failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.InvalidResponseShape,
     })
   })
 
@@ -711,6 +777,7 @@ describe("useModelData all-accounts loading", () => {
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile,
       modelCount: 2,
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
     })
 
     rerender({
@@ -733,6 +800,8 @@ describe("useModelData all-accounts loading", () => {
       sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile,
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+      apiType: API_TYPES.OPENAI_COMPATIBLE,
     })
   })
 
@@ -809,6 +878,8 @@ describe("useModelData all-accounts loading", () => {
       result: PRODUCT_ANALYTICS_RESULTS.Success,
       sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelFallbackCatalog,
       modelCount: 1,
+      fallbackAvailable: true,
+      fallbackUsed: true,
     })
 
     await act(async () => {
@@ -820,6 +891,9 @@ describe("useModelData all-accounts loading", () => {
       sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelFallbackCatalog,
       errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+      fallbackAvailable: true,
+      fallbackUsed: true,
     })
   })
 
@@ -985,6 +1059,14 @@ describe("useModelData all-accounts loading", () => {
       )
     })
     expect(fetchModelPricing).not.toHaveBeenCalled()
+    expectLastModelDataAnalyticsCompletion({
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
+      modelCount: 1,
+      siteType: "new-api",
+      requestedAuthMode: AuthTypeEnum.Cookie,
+      cacheHit: true,
+    })
 
     await modelPricingCache.invalidate(cacheKey)
   })
@@ -1695,6 +1777,9 @@ describe("useModelData all-accounts loading", () => {
         sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelFallbackCatalog,
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
         failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+        failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.AuthInvalid,
+        fallbackAvailable: true,
+        fallbackUsed: true,
       })
     })
     expect(

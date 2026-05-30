@@ -80,6 +80,42 @@ export const PRODUCT_ANALYTICS_ERROR_CATEGORIES = {
 export type ProductAnalyticsErrorCategory =
   (typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES)[keyof typeof PRODUCT_ANALYTICS_ERROR_CATEGORIES]
 
+export const PRODUCT_ANALYTICS_FAILURE_REASONS = {
+  MissingCredentials: "missing_credentials",
+  MissingSelection: "missing_selection",
+  MissingConfig: "missing_config",
+  FeatureDisabled: "feature_disabled",
+  UnsupportedTarget: "unsupported_target",
+  PermissionDenied: "permission_denied",
+  PermissionUnavailable: "permission_unavailable",
+  IncognitoBlocked: "incognito_blocked",
+  AuthInvalid: "auth_invalid",
+  SessionExpired: "session_expired",
+  TokenSecretUnavailable: "token_secret_unavailable",
+  NetworkUnreachable: "network_unreachable",
+  Timeout: "timeout",
+  RateLimited: "rate_limited",
+  ServerError: "server_error",
+  QuotaInsufficient: "quota_insufficient",
+  ProviderBusinessError: "provider_business_error",
+  InvalidJson: "invalid_json",
+  InvalidResponseShape: "invalid_response_shape",
+  ContentTypeMismatch: "content_type_mismatch",
+  EmptyResponse: "empty_response",
+  StorageReadFailed: "storage_read_failed",
+  StorageWriteFailed: "storage_write_failed",
+  CacheReadFailed: "cache_read_failed",
+  CacheWriteFailed: "cache_write_failed",
+  CancelledByUser: "cancelled_by_user",
+  DuplicateDetected: "duplicate_detected",
+  StaleResponseIgnored: "stale_response_ignored",
+  PartialSuccess: "partial_success",
+  Unknown: "unknown",
+} as const
+
+export type ProductAnalyticsFailureReason =
+  (typeof PRODUCT_ANALYTICS_FAILURE_REASONS)[keyof typeof PRODUCT_ANALYTICS_FAILURE_REASONS]
+
 export const PRODUCT_ANALYTICS_SOURCE_KINDS = {
   History: "history",
   Manual: "manual",
@@ -763,8 +799,11 @@ export type ProductAnalyticsToolbarActionClickBehavior =
 export const PRODUCT_ANALYTICS_FAILURE_STAGES = {
   Detection: "detection",
   Parse: "parse",
+  Request: "request",
+  Response: "response",
   Permission: "permission",
   Validation: "validation",
+  Fallback: "fallback",
   Prompt: "prompt",
   Persist: "persist",
   Preview: "preview",
@@ -807,12 +846,22 @@ export type ProductAnalyticsEventPayloadMap = {
     source_managed_site_type?: ProductAnalyticsManagedSiteType
     target_managed_site_type?: ProductAnalyticsManagedSiteType
     failure_stage?: ProductAnalyticsFailureStage
+    failure_reason?: ProductAnalyticsFailureReason
     account_auto_detect_failure_reason?: ProductAnalyticsAccountAutoDetectFailureReason
     auto_detect_strategy?: ProductAnalyticsAccountAutoDetectStrategy
     requested_auth_mode?: ProductAnalyticsRequestedAuthMode
     site_type?: ProductAnalyticsSiteType
     fetch_context_kind?: ProductAnalyticsAccountAutoDetectFetchContextKind
+    cache_hit?: boolean
+    cache_used?: boolean
+    fallback_available?: boolean
+    fallback_used?: boolean
+    retry_attempted?: boolean
+    retry_count?: number
+    temp_context_used?: boolean
     incognito_context_used?: boolean
+    stale_response_ignored?: boolean
+    background_execution?: boolean
     current_tab_matched?: boolean
     item_count?: number
     selected_count?: number

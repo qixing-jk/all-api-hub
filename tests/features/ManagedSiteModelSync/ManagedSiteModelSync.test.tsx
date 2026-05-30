@@ -651,6 +651,28 @@ describe("ManagedSiteModelSync page", () => {
       PRODUCT_ANALYTICS_RESULTS.Failure,
       {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        diagnostics: {
+          context: {
+            managedSiteType: "new-api",
+            mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+          },
+          execution: {
+            retryAttempted: true,
+            retryCount: 1,
+          },
+          outcome: {
+            itemCount: 2,
+            successCount: 1,
+            failureCount: 1,
+            skippedCount: 0,
+            modelCount: 0,
+          },
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            stage: "execute",
+            reason: "partial_success",
+          },
+        },
         insights: {
           managedSiteType: "new-api",
           mode: PRODUCT_ANALYTICS_MODE_IDS.All,
@@ -1078,8 +1100,21 @@ describe("ManagedSiteModelSync page", () => {
     )
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
-      {
+      expect.objectContaining({
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        diagnostics: expect.objectContaining({
+          context: {
+            managedSiteType: "new-api",
+            mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
+          },
+          outcome: expect.objectContaining({
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 1,
+            skippedCount: 0,
+          }),
+        }),
         insights: {
           managedSiteType: "new-api",
           mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
@@ -1089,7 +1124,7 @@ describe("ManagedSiteModelSync page", () => {
           successCount: 0,
           failureCount: 1,
         },
-      },
+      }),
     )
   })
 
@@ -1193,7 +1228,20 @@ describe("ManagedSiteModelSync page", () => {
     )
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
-      {
+      expect.objectContaining({
+        diagnostics: expect.objectContaining({
+          context: {
+            managedSiteType: "new-api",
+            mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          },
+          outcome: expect.objectContaining({
+            itemCount: 1,
+            successCount: 1,
+            failureCount: 0,
+            skippedCount: 0,
+          }),
+        }),
         insights: {
           managedSiteType: "new-api",
           mode: PRODUCT_ANALYTICS_MODE_IDS.Selected,
@@ -1203,7 +1251,7 @@ describe("ManagedSiteModelSync page", () => {
           successCount: 1,
           failureCount: 0,
         },
-      },
+      }),
     )
     expect(
       screen.getByRole("button", {
@@ -1432,7 +1480,19 @@ describe("ManagedSiteModelSync page", () => {
     )
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
-      {
+      expect.objectContaining({
+        diagnostics: expect.objectContaining({
+          context: {
+            managedSiteType: "new-api",
+            mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+          },
+          outcome: expect.objectContaining({
+            itemCount: 2,
+            successCount: 2,
+            failureCount: 0,
+            skippedCount: 0,
+          }),
+        }),
         insights: {
           managedSiteType: "new-api",
           mode: PRODUCT_ANALYTICS_MODE_IDS.All,
@@ -1440,7 +1500,7 @@ describe("ManagedSiteModelSync page", () => {
           successCount: 2,
           failureCount: 0,
         },
-      },
+      }),
     )
     expect(toast.success).toHaveBeenCalled()
     await waitFor(() => {
@@ -1535,7 +1595,19 @@ describe("ManagedSiteModelSync page", () => {
     )
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Skipped,
-      {
+      expect.objectContaining({
+        diagnostics: expect.objectContaining({
+          context: {
+            managedSiteType: "new-api",
+            mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+          },
+          outcome: expect.objectContaining({
+            itemCount: 0,
+            successCount: 0,
+            failureCount: 0,
+            skippedCount: 0,
+          }),
+        }),
         insights: {
           managedSiteType: "new-api",
           mode: PRODUCT_ANALYTICS_MODE_IDS.All,
@@ -1543,7 +1615,7 @@ describe("ManagedSiteModelSync page", () => {
           successCount: 0,
           failureCount: 0,
         },
-      },
+      }),
     )
   })
 
@@ -1857,7 +1929,23 @@ describe("ManagedSiteModelSync page", () => {
     )
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
-      {
+      expect.objectContaining({
+        diagnostics: expect.objectContaining({
+          context: {
+            managedSiteType: "new-api",
+            mode: PRODUCT_ANALYTICS_MODE_IDS.RetryFailed,
+          },
+          execution: expect.objectContaining({
+            retryAttempted: true,
+            retryCount: 2,
+          }),
+          outcome: expect.objectContaining({
+            itemCount: 2,
+            successCount: 2,
+            failureCount: 0,
+            skippedCount: 0,
+          }),
+        }),
         insights: {
           managedSiteType: "new-api",
           mode: PRODUCT_ANALYTICS_MODE_IDS.RetryFailed,
@@ -1865,7 +1953,7 @@ describe("ManagedSiteModelSync page", () => {
           successCount: 2,
           failureCount: 0,
         },
-      },
+      }),
     )
     expect(toast.success).toHaveBeenCalled()
     await waitFor(() => {
@@ -1952,7 +2040,20 @@ describe("ManagedSiteModelSync page", () => {
     )
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
-      {
+      expect.objectContaining({
+        diagnostics: expect.objectContaining({
+          context: {
+            managedSiteType: "new-api",
+            mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
+          },
+          outcome: expect.objectContaining({
+            itemCount: 1,
+            successCount: 1,
+            failureCount: 0,
+            skippedCount: 0,
+          }),
+        }),
         insights: {
           managedSiteType: "new-api",
           mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
@@ -1962,7 +2063,7 @@ describe("ManagedSiteModelSync page", () => {
           successCount: 1,
           failureCount: 0,
         },
-      },
+      }),
     )
     expect(toast.success).toHaveBeenCalled()
 

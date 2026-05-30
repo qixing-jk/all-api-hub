@@ -6,8 +6,12 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
@@ -143,6 +147,23 @@ describe("AccountManagement refresh analytics", () => {
             successCount: 2,
             failureCount: 1,
           },
+          diagnostics: {
+            context: {
+              sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+              mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+            },
+            outcome: {
+              itemCount: 3,
+              successCount: 2,
+              failureCount: 1,
+              skippedCount: 1,
+            },
+            failure: {
+              category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+              reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+            },
+          },
         },
       )
     })
@@ -183,6 +204,23 @@ describe("AccountManagement refresh analytics", () => {
             itemCount: 3,
             successCount: 2,
             failureCount: 1,
+          },
+          diagnostics: {
+            context: {
+              sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+              mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+            },
+            outcome: {
+              itemCount: 3,
+              successCount: 2,
+              failureCount: 1,
+              skippedCount: 0,
+            },
+            failure: {
+              category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+              reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+            },
           },
         },
       )

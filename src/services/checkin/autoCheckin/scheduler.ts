@@ -9,14 +9,13 @@ import {
 } from "~/services/preferences/userPreferences"
 import { trackProductAnalyticsActionCompleted } from "~/services/productAnalytics/actions"
 import {
+  buildAutoCheckinDiagnostics,
   trackAutoCheckinConfigSnapshot,
   trackAutoCheckinRunAnalytics,
 } from "~/services/productAnalytics/autoCheckin"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
-  PRODUCT_ANALYTICS_ERROR_CATEGORIES,
-  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
@@ -376,29 +375,27 @@ class AutoCheckinScheduler {
     summary: AutoCheckinRunSummary
     durationMs: number
     mode: (typeof PRODUCT_ANALYTICS_MODE_IDS)[keyof typeof PRODUCT_ANALYTICS_MODE_IDS]
+    retryAttempted?: boolean
+    retryCount?: number
   }) {
     const result = this.mapRunSummaryToProductAnalyticsResult(params.summary)
 
     void trackProductAnalyticsActionCompleted({
       ...AUTO_CHECKIN_BACKGROUND_ANALYTICS_CONTEXT,
       result,
-      ...(result === PRODUCT_ANALYTICS_RESULTS.Failure
-        ? { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown }
-        : {}),
       durationMs: params.durationMs,
-      insights: {
-        itemCount:
-          params.summary.totalEligible ??
-          params.summary.executed + params.summary.skippedCount,
-        successCount: params.summary.successCount,
-        failureCount: params.summary.failedCount,
-        skippedCount: params.summary.skippedCount,
+      diagnostics: buildAutoCheckinDiagnostics({
         sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
         mode: params.mode,
-        ...(result === PRODUCT_ANALYTICS_RESULTS.Failure
-          ? { failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute }
+        summary: params.summary,
+        backgroundExecution: true,
+        ...(typeof params.retryAttempted === "boolean"
+          ? { retryAttempted: params.retryAttempted }
           : {}),
-      },
+        ...(typeof params.retryCount === "number"
+          ? { retryCount: params.retryCount }
+          : {}),
+      }),
     })
   }
 
@@ -2010,6 +2007,8 @@ class AutoCheckinScheduler {
             summary: mergedSummary,
             durationMs: Date.now() - startTime,
             mode: PRODUCT_ANALYTICS_MODE_IDS.TelemetryAuto,
+            retryAttempted: false,
+            retryCount: 0,
           })
           this.trackBackgroundAutoCheckinRunAnalytics({
             runKind: runType,
@@ -2174,6 +2173,8 @@ class AutoCheckinScheduler {
           summary: mergedSummary,
           durationMs: Date.now() - startTime,
           mode: PRODUCT_ANALYTICS_MODE_IDS.TelemetryAuto,
+          retryAttempted: false,
+          retryCount: 0,
         })
         this.trackBackgroundAutoCheckinRunAnalytics({
           runKind: runType,
@@ -2450,6 +2451,8 @@ class AutoCheckinScheduler {
         },
         durationMs: Date.now() - startTime,
         mode: PRODUCT_ANALYTICS_MODE_IDS.RetryFailed,
+        retryAttempted: true,
+        retryCount: retryResults.length,
       })
       this.trackBackgroundAutoCheckinRunAnalytics({
         runKind: "retry",

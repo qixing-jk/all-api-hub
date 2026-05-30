@@ -20,10 +20,7 @@ import {
 } from "~/types/taskNotifications"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
 import type { DeepPartial } from "~/types/utils"
-import {
-  resolveWebdavSyncDataSelection,
-  WEBDAV_SYNC_STRATEGIES,
-} from "~/types/webdav"
+import { resolveWebdavSyncDataSelection } from "~/types/webdav"
 import { deepOverride } from "~/utils"
 import { normalizeAppLanguage } from "~/utils/i18n/language"
 
@@ -38,6 +35,7 @@ import {
   type ProductAnalyticsManagedSiteType,
   type ProductAnalyticsModeId,
 } from "./events"
+import { getWebdavSyncStrategyMode } from "./webDavSync"
 
 type SettingChangedPayload = ProductAnalyticsEventPayload<
   typeof PRODUCT_ANALYTICS_EVENTS.SettingChanged
@@ -142,18 +140,6 @@ function isSortingPriorityCustomized(
       defaultCriterion.priority !== criterion.priority
     )
   })
-}
-
-function getWebdavSyncStrategy(
-  strategy: UserPreferences["webdav"]["syncStrategy"] | undefined,
-): ProductAnalyticsModeId {
-  if (strategy === WEBDAV_SYNC_STRATEGIES.UPLOAD_ONLY) {
-    return PRODUCT_ANALYTICS_MODE_IDS.WebDavUploadOnly
-  }
-  if (strategy === WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY) {
-    return PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly
-  }
-  return PRODUCT_ANALYTICS_MODE_IDS.WebDavMerge
 }
 
 function isManagedSiteType(
@@ -531,7 +517,7 @@ function buildWebdavSnapshot(
     configured: hasText(config.url) && hasText(config.username),
     auto_sync_enabled: config.autoSync === true,
     backup_encryption_enabled: config.backupEncryptionEnabled === true,
-    sync_strategy: getWebdavSyncStrategy(config.syncStrategy),
+    sync_strategy: getWebdavSyncStrategyMode(config.syncStrategy),
     sync_interval_minutes: normalizeNonNegativeMinutes(
       config.syncInterval / 60,
     ),

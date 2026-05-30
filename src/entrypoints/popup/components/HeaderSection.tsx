@@ -17,13 +17,16 @@ import { VersionBadge } from "~/components/VersionBadge"
 import { COLORS } from "~/constants/designTokens"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import { isExtensionSidePanel } from "~/utils/browser"
@@ -92,24 +95,40 @@ export default function HeaderSection({
         error: t("account:refresh.refreshFailed"),
       })
       const refreshInsights = {
+        itemCount: result.success + result.failed,
         successCount: result.success,
         failureCount: result.failed,
       }
+      const refreshDiagnostics = buildAccountRefreshDiagnostics({
+        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+        itemCount: refreshInsights.itemCount,
+        successCount: result.success,
+        failureCount: result.failed,
+        skippedCount: 0,
+      })
       if (result.failed > 0) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: refreshInsights,
+          diagnostics: refreshDiagnostics,
         })
         return
       }
 
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
         insights: refreshInsights,
+        diagnostics: refreshDiagnostics,
       })
     } catch (error) {
       logger.error("Error during global refresh", error)
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        diagnostics: buildAccountRefreshDiagnostics({
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+          error,
+        }),
       })
     }
   }, [entrypoint, handleRefresh, headerSurface, t])

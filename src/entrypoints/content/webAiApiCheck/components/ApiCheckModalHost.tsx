@@ -39,6 +39,7 @@ import {
   type ProductAnalyticsResult,
   type ProductAnalyticsSourceKind,
 } from "~/services/productAnalytics/events"
+import { buildModelListDiagnostics } from "~/services/productAnalytics/modelListDiagnostics"
 import { resolveProductAnalyticsErrorCategoryFromProbeResult } from "~/services/productAnalytics/verification"
 import {
   API_TYPES,
@@ -199,6 +200,7 @@ export function ApiCheckModalHost() {
    * the auto-fetch is debounced and keyed by (apiType + baseUrl + apiKey).
    */
   const lastAutoFetchKeyRef = useRef<string | null>(null)
+  const lastObservedModelFetchKeyRef = useRef<string | null>(null)
   const fetchModelsRequestIdRef = useRef(0)
   const hasSignaledHostReadyRef = useRef(false)
   const skipNextSourceTextExtractionRef = useRef<string | null>(null)
@@ -405,6 +407,7 @@ export function ApiCheckModalHost() {
       trigger,
       reason,
     })
+    fetchModelsRequestIdRef.current += 1
     lastAutoFetchKeyRef.current = null
     setExtractionMetadata(undefined)
     setIsOpen(false)
@@ -497,6 +500,10 @@ export function ApiCheckModalHost() {
             ? PRODUCT_ANALYTICS_ACTION_IDS.AutoFetchApiCredentialModelList
             : PRODUCT_ANALYTICS_ACTION_IDS.FetchApiCredentialModelList,
       })
+      const sourceKind =
+        origin === "auto"
+          ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
+          : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual
 
       const trimmedBaseUrl = baseUrl.trim()
       const trimmedApiKey = apiKey.trim()
@@ -508,19 +515,21 @@ export function ApiCheckModalHost() {
         }
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
-          insights: {
-            sourceKind:
-              origin === "auto"
-                ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
-                : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          diagnostics: buildModelListDiagnostics({
+            sourceKind,
             apiType,
             modelCount: 0,
-          },
+            resultKind: "missing_credentials",
+          }),
         })
         return
       }
 
       const requestId = (fetchModelsRequestIdRef.current += 1)
+      const fetchKey = `${apiType}::${trimmedBaseUrl}::${trimmedApiKey}`
+      if (origin === "manual") {
+        lastAutoFetchKeyRef.current = fetchKey
+      }
       setIsFetchingModels(true)
       try {
         const response: any = await sendRuntimeMessage({
@@ -533,14 +542,12 @@ export function ApiCheckModalHost() {
         // Ignore stale responses when a newer request is already in-flight.
         if (fetchModelsRequestIdRef.current !== requestId) {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
-            insights: {
-              sourceKind:
-                origin === "auto"
-                  ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
-                  : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            diagnostics: buildModelListDiagnostics({
+              sourceKind,
               apiType,
               modelCount: 0,
-            },
+              resultKind: "stale_response_ignored",
+            }),
           })
           return
         }
@@ -553,50 +560,51 @@ export function ApiCheckModalHost() {
             setModelId(ids[0] ?? "")
           }
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
-            insights: {
-              sourceKind:
-                origin === "auto"
-                  ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
-                  : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            diagnostics: buildModelListDiagnostics({
+              sourceKind,
               apiType,
               modelCount: ids.length,
-            },
+            }),
           })
         } else {
+          const responseError = response?.error
           setFetchModelsError(
-            response?.error ||
-              t("webAiApiCheck:modal.errors.fetchModelsFailed"),
+            responseError || t("webAiApiCheck:modal.errors.fetchModelsFailed"),
           )
+          const diagnosticsError =
+            typeof responseError === "string"
+              ? { message: responseError }
+              : undefined
+          const diagnostics = buildModelListDiagnostics({
+            sourceKind,
+            apiType,
+            modelCount: 0,
+            ...(response?.errorCategory
+              ? { errorCategory: response.errorCategory }
+              : {}),
+            ...(diagnosticsError ? { error: diagnosticsError } : {}),
+            ...(typeof response?.errorStatusCode === "number"
+              ? { statusCode: response.errorStatusCode }
+              : {}),
+          })
           const errorCategory =
             response?.errorCategory ??
-            (typeof response?.errorStatusCode === "number"
-              ? resolveProductAnalyticsErrorCategoryFromError({
-                  statusCode: response.errorStatusCode,
-                })
-              : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown)
+            diagnostics.failure?.category ??
+            PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
             errorCategory,
-            insights: {
-              sourceKind:
-                origin === "auto"
-                  ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
-                  : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
-              apiType,
-              modelCount: 0,
-            },
+            diagnostics,
           })
         }
       } catch (error) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
-          insights: {
-            sourceKind:
-              origin === "auto"
-                ? PRODUCT_ANALYTICS_SOURCE_KINDS.Auto
-                : PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          diagnostics: buildModelListDiagnostics({
+            sourceKind,
             apiType,
             modelCount: 0,
-          },
+            error,
+          }),
         })
         throw error
       } finally {
@@ -621,6 +629,19 @@ export function ApiCheckModalHost() {
   // show stale options after the user edits base URL / API key.
   useEffect(() => {
     if (!isOpen) return
+    const trimmedBaseUrl = baseUrl.trim()
+    const trimmedApiKey = apiKey.trim()
+    const currentFetchKey =
+      trimmedBaseUrl && trimmedApiKey
+        ? `${apiType}::${trimmedBaseUrl}::${trimmedApiKey}`
+        : null
+
+    fetchModelsRequestIdRef.current += 1
+    if (lastObservedModelFetchKeyRef.current !== currentFetchKey) {
+      lastAutoFetchKeyRef.current = null
+      lastObservedModelFetchKeyRef.current = currentFetchKey
+    }
+    setIsFetchingModels(false)
     setModelIds([])
     setFetchModelsError(null)
   }, [apiType, baseUrl, apiKey, isOpen])
@@ -629,7 +650,6 @@ export function ApiCheckModalHost() {
   useEffect(() => {
     if (!isOpen) return
     if (!modelListSupported) return
-    if (isFetchingModels) return
 
     const trimmedBaseUrl = baseUrl.trim()
     const trimmedApiKey = apiKey.trim()
@@ -637,11 +657,13 @@ export function ApiCheckModalHost() {
 
     const fetchKey = `${apiType}::${trimmedBaseUrl}::${trimmedApiKey}`
     if (lastAutoFetchKeyRef.current === fetchKey) return
+    if (isFetchingModels) return
 
     const timeoutId = window.setTimeout(() => {
       // Double-check inside timer to avoid firing after state has moved on.
       if (!isOpen) return
       if (lastAutoFetchKeyRef.current === fetchKey) return
+      if (isFetchingModels) return
       lastAutoFetchKeyRef.current = fetchKey
       void fetchModels("auto")
     }, MODEL_AUTO_FETCH_DEBOUNCE_MS)

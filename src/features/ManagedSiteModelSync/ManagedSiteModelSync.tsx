@@ -37,6 +37,7 @@ import {
   type ProductAnalyticsResult,
   type ProductAnalyticsStatusKind,
 } from "~/services/productAnalytics/events"
+import { buildManagedSiteModelSyncDiagnostics } from "~/services/productAnalytics/managedSiteModelSync"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import type {
   ExecutionItemResult,
@@ -238,13 +239,19 @@ export default function ManagedSiteModelSync({
 
       completeModelSyncActionAnalytics(tracker, result, {
         ...options,
+        diagnostics: buildManagedSiteModelSyncDiagnostics({
+          managedSiteType,
+          mode: insights?.mode ?? PRODUCT_ANALYTICS_MODE_IDS.All,
+          sourceKind: insights?.sourceKind,
+          execution,
+        }),
         insights: {
           ...options.insights,
           ...insights,
         },
       })
     },
-    [completeModelSyncActionAnalytics],
+    [completeModelSyncActionAnalytics, managedSiteType],
   )
 
   const trackInstantModelSyncAction = useCallback(

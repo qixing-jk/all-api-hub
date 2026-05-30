@@ -36,11 +36,15 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import { buildWebDavSyncDiagnostics } from "~/services/productAnalytics/webDavSync"
 import { tagStorage } from "~/services/tags/tagStorage"
 import {
   decryptWebdavBackupEnvelope,
@@ -365,6 +369,17 @@ export default function WebDAVSettings() {
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
           },
+          diagnostics: buildWebDavSyncDiagnostics({
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavUploadOnly,
+            itemCount: 0,
+            successCount: 0,
+            failureCount: 1,
+            skippedCount: 0,
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+            failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.MissingSelection,
+          }),
         })
         return
       }
@@ -414,7 +429,16 @@ export default function WebDAVSettings() {
 
       await uploadBackup(JSON.stringify(payload, null, 2), webdavConfig)
       toast.success(t("webdav.uploadSuccess"))
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        diagnostics: buildWebDavSyncDiagnostics({
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavUploadOnly,
+          itemCount: 1,
+          successCount: 1,
+          failureCount: 0,
+          skippedCount: 0,
+        }),
+      })
     } catch (e: any) {
       logger.error("Failed to upload backup to WebDAV", e)
       toast.error(
@@ -427,6 +451,17 @@ export default function WebDAVSettings() {
         insights: {
           failureStage: getWebdavAnalyticsFailureStage(e),
         },
+        diagnostics: buildWebDavSyncDiagnostics({
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavUploadOnly,
+          itemCount: 1,
+          successCount: 0,
+          failureCount: 1,
+          skippedCount: 0,
+          error: e,
+          errorCategory: getWebdavAnalyticsErrorCategory(e),
+          failureStage: getWebdavAnalyticsFailureStage(e),
+        }),
       })
     } finally {
       setUploading(false)
@@ -466,6 +501,17 @@ export default function WebDAVSettings() {
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
           },
+          diagnostics: buildWebDavSyncDiagnostics({
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
+            itemCount: 0,
+            successCount: 0,
+            failureCount: 1,
+            skippedCount: 0,
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+            failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.MissingSelection,
+          }),
         })
         return
       }
@@ -482,7 +528,18 @@ export default function WebDAVSettings() {
           setPendingEnvelope(envelope)
           setDecryptPassword("")
           setDecryptDialogOpen(true)
-          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+            diagnostics: buildWebDavSyncDiagnostics({
+              sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+              mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
+              retryAttempted: true,
+              retryCount: 1,
+              itemCount: 1,
+              successCount: 0,
+              failureCount: 0,
+              skippedCount: 1,
+            }),
+          })
           return
         }
 
@@ -496,7 +553,18 @@ export default function WebDAVSettings() {
           setPendingEnvelope(envelope)
           setDecryptPassword(pwd)
           setDecryptDialogOpen(true)
-          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped)
+          tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+            diagnostics: buildWebDavSyncDiagnostics({
+              sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+              mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
+              retryAttempted: true,
+              retryCount: 1,
+              itemCount: 1,
+              successCount: 0,
+              failureCount: 0,
+              skippedCount: 1,
+            }),
+          })
           return
         }
       }
@@ -510,7 +578,16 @@ export default function WebDAVSettings() {
       if (result.allImported) {
         toast.success(t("importExport:import.importSuccess"))
       }
-      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+      tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+        diagnostics: buildWebDavSyncDiagnostics({
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
+          itemCount: 1,
+          successCount: 1,
+          failureCount: 0,
+          skippedCount: 0,
+        }),
+      })
     } catch (e: any) {
       logger.error("Failed to download/import WebDAV backup", e)
       toast.error(
@@ -523,6 +600,17 @@ export default function WebDAVSettings() {
         insights: {
           failureStage: getWebdavAnalyticsFailureStage(e),
         },
+        diagnostics: buildWebDavSyncDiagnostics({
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
+          itemCount: 1,
+          successCount: 0,
+          failureCount: 1,
+          skippedCount: 0,
+          error: e,
+          errorCategory: getWebdavAnalyticsErrorCategory(e),
+          failureStage: getWebdavAnalyticsFailureStage(e),
+        }),
       })
     } finally {
       setDownloading(false)
@@ -555,6 +643,17 @@ export default function WebDAVSettings() {
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
           },
+          diagnostics: buildWebDavSyncDiagnostics({
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
+            itemCount: 0,
+            successCount: 0,
+            failureCount: 1,
+            skippedCount: 0,
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+            failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.MissingSelection,
+          }),
         })
         return
       }
@@ -612,9 +711,29 @@ export default function WebDAVSettings() {
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
           },
+          diagnostics: buildWebDavSyncDiagnostics({
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 1,
+            skippedCount: 0,
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+            failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
+            failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.StorageWriteFailed,
+          }),
         })
       } else {
-        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+          diagnostics: buildWebDavSyncDiagnostics({
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
+            itemCount: 1,
+            successCount: 1,
+            failureCount: 0,
+            skippedCount: 0,
+          }),
+        })
       }
     } catch (e: any) {
       logger.error("Failed to decrypt/import WebDAV backup", e)
@@ -628,6 +747,21 @@ export default function WebDAVSettings() {
             ? getWebdavAnalyticsFailureStage(e)
             : PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
         },
+        diagnostics: buildWebDavSyncDiagnostics({
+          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+          mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavDownloadOnly,
+          itemCount: 1,
+          successCount: 0,
+          failureCount: 1,
+          skippedCount: 0,
+          error: e,
+          errorCategory: decryptCompleted
+            ? getWebdavAnalyticsErrorCategory(e)
+            : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          failureStage: decryptCompleted
+            ? getWebdavAnalyticsFailureStage(e)
+            : PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+        }),
       })
     } finally {
       setDecrypting(false)

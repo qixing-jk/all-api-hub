@@ -1,5 +1,6 @@
 import {
   act,
+  fireEvent,
   render as renderRtl,
   screen,
   waitFor,
@@ -25,6 +26,8 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
@@ -893,10 +896,14 @@ describe("ApiCheckModalHost", () => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
         {
-          insights: {
-            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
-            apiType: "openai-compatible",
-            modelCount: 2,
+          diagnostics: {
+            context: {
+              sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+              apiType: "openai-compatible",
+            },
+            outcome: {
+              modelCount: 2,
+            },
           },
         },
       )
@@ -946,13 +953,61 @@ describe("ApiCheckModalHost", () => {
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Success,
         {
-          insights: {
-            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
-            apiType: "openai-compatible",
-            modelCount: 2,
+          diagnostics: {
+            context: {
+              sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+              apiType: "openai-compatible",
+            },
+            outcome: {
+              modelCount: 2,
+            },
           },
         },
       )
+    })
+  })
+
+  it("does not start an automatic duplicate while a model fetch is in flight", async () => {
+    let resolveFetch!: (value: unknown) => void
+    vi.mocked(sendRuntimeMessage).mockImplementation((message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return new Promise((resolve) => {
+          resolveFetch = resolve
+        })
+      }
+      return Promise.resolve({ success: false })
+    })
+
+    await openModal({
+      sourceText: "",
+    })
+
+    fireEvent.change(
+      await screen.findByPlaceholderText("https://example.com/api"),
+      {
+        target: { value: "https://proxy.example.com/api" },
+      },
+    )
+    fireEvent.change(await screen.findByPlaceholderText("sk-..."), {
+      target: { value: "sk-test-dedupe-fixture" },
+    })
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.actions.fetchModels",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeMessage).toHaveBeenCalledTimes(1)
+    })
+
+    await act(async () => {
+      await new Promise((resolve) => window.setTimeout(resolve, 0))
+    })
+    expect(sendRuntimeMessage).toHaveBeenCalledTimes(1)
+
+    await act(async () => {
+      resolveFetch({ success: true, modelIds: ["m1"] })
     })
   })
 
@@ -1077,6 +1132,166 @@ describe("ApiCheckModalHost", () => {
       ).toHaveTextContent("claude-3-5-sonnet")
     })
     expect(screen.queryByText("OpenAI result")).not.toBeInTheDocument()
+  })
+
+  it("tracks stale model fetch responses as skipped diagnostics", async () => {
+    const user = userEvent.setup()
+    let resolveFirstFetch!: (value: unknown) => void
+    let resolveSecondFetch!: (value: unknown) => void
+    vi.mocked(sendRuntimeMessage).mockImplementation((message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        if (message.apiType === "openai-compatible" && !resolveFirstFetch) {
+          return new Promise((resolve) => {
+            resolveFirstFetch = resolve
+          })
+        }
+
+        return new Promise((resolve) => {
+          resolveSecondFetch = resolve
+        })
+      }
+
+      return Promise.resolve({ success: false })
+    })
+
+    await openModal()
+
+    await user.type(
+      await screen.findByPlaceholderText("https://example.com/api"),
+      "https://proxy.example.com/api",
+    )
+    await user.type(
+      await screen.findByPlaceholderText("sk-..."),
+      "sk-test-secret-fixture",
+    )
+
+    await waitFor(() => {
+      expect(sendRuntimeMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: RuntimeActionIds.ApiCheckFetchModels,
+          apiType: "openai-compatible",
+        }),
+      )
+    })
+
+    await user.type(await screen.findByPlaceholderText("sk-..."), "-rotated")
+
+    await waitFor(() => {
+      expect(sendRuntimeMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: RuntimeActionIds.ApiCheckFetchModels,
+          apiKey: "sk-test-secret-fixture-rotated",
+        }),
+      )
+    })
+
+    await act(async () => {
+      resolveFirstFetch({ success: true, modelIds: ["stale-private-model"] })
+    })
+
+    await act(async () => {
+      resolveSecondFetch({ success: true, modelIds: ["fresh-private-model"] })
+    })
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+        {
+          diagnostics: {
+            context: {
+              sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+              apiType: "openai-compatible",
+            },
+            execution: {
+              staleResponseIgnored: true,
+            },
+            outcome: {
+              modelCount: 0,
+              skippedCount: 1,
+            },
+            failure: {
+              category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+              reason: PRODUCT_ANALYTICS_FAILURE_REASONS.StaleResponseIgnored,
+            },
+          },
+        },
+      )
+    })
+    expectAnalyticsCallsToExcludeSensitiveValues(["stale-private-model"])
+  })
+
+  it("clears auto-fetch loading when credentials become incomplete before a stale response resolves", async () => {
+    const user = userEvent.setup()
+    let resolveFetch!: (value: unknown) => void
+    let fetchRequestCount = 0
+    vi.mocked(sendRuntimeMessage).mockImplementation((message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        fetchRequestCount += 1
+        return new Promise((resolve) => {
+          resolveFetch = resolve
+        })
+      }
+
+      return Promise.resolve({ success: false })
+    })
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.type(baseUrlInput, "https://proxy.example.com/api")
+    await user.type(apiKeyInput, "sk-test-secret-fixture")
+
+    await waitFor(() => {
+      expect(sendRuntimeMessage).toHaveBeenCalledWith(
+        expect.objectContaining({
+          action: RuntimeActionIds.ApiCheckFetchModels,
+        }),
+      )
+    })
+    expect(
+      screen.getByRole("button", {
+        name: "webAiApiCheck:modal.actions.fetchingModels",
+      }),
+    ).toBeDisabled()
+
+    await user.clear(apiKeyInput)
+
+    await waitFor(() => {
+      expect(
+        screen.getByRole("button", {
+          name: "webAiApiCheck:modal.actions.fetchModels",
+        }),
+      ).toBeEnabled()
+    })
+
+    const fetchCountAfterClear = fetchRequestCount
+
+    await act(async () => {
+      resolveFetch({ success: true, modelIds: ["stale-private-model"] })
+    })
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Skipped,
+        expect.objectContaining({
+          diagnostics: expect.objectContaining({
+            execution: { staleResponseIgnored: true },
+          }),
+        }),
+      )
+    })
+    expect(screen.queryByText("stale-private-model")).not.toBeInTheDocument()
+
+    await user.paste("sk-test-secret-fixture")
+
+    await waitFor(() => {
+      expect(fetchRequestCount).toBeGreaterThan(fetchCountAfterClear)
+    })
   })
 
   it("tracks single unsupported probe completion as skipped", async () => {
@@ -1863,10 +2078,19 @@ describe("ApiCheckModalHost", () => {
       PRODUCT_ANALYTICS_RESULTS.Skipped,
       expect.objectContaining({
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
-        insights: expect.objectContaining({
-          sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
-          apiType: "openai-compatible",
-          modelCount: 0,
+        diagnostics: expect.objectContaining({
+          context: {
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            apiType: "openai-compatible",
+          },
+          outcome: {
+            modelCount: 0,
+          },
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.MissingCredentials,
+          },
         }),
       }),
     )
@@ -1960,14 +2184,76 @@ describe("ApiCheckModalHost", () => {
         PRODUCT_ANALYTICS_RESULTS.Failure,
         expect.objectContaining({
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
-          insights: expect.objectContaining({
-            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
-            apiType: "openai-compatible",
-            modelCount: 0,
+          diagnostics: expect.objectContaining({
+            context: {
+              sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+              apiType: "openai-compatible",
+            },
+            outcome: {
+              modelCount: 0,
+            },
+            failure: {
+              category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+              reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+            },
           }),
         }),
       )
     })
+  })
+
+  it("classifies sanitized background model-fetch messages locally", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
+      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+        return {
+          success: false,
+          error: "Session expired for sanitized account",
+        }
+      }
+      return { success: false }
+    })
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-test-secret-fixture")
+
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        expect.objectContaining({
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+          diagnostics: expect.objectContaining({
+            context: {
+              sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Auto,
+              apiType: "openai-compatible",
+            },
+            outcome: {
+              modelCount: 0,
+            },
+            failure: {
+              category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+              reason: PRODUCT_ANALYTICS_FAILURE_REASONS.SessionExpired,
+            },
+          }),
+        }),
+      )
+    })
+    expectAnalyticsCallsToExcludeSensitiveValues([
+      "Session expired for sanitized account",
+      "sk-test-secret-fixture",
+      "https://proxy.example.com/api",
+    ])
   })
 
   it("falls back to local save-profile error when background returns no message", async () => {

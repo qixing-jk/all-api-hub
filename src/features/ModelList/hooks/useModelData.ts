@@ -32,16 +32,20 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
+  type ProductAnalyticsApiType,
   type ProductAnalyticsErrorCategory,
+  type ProductAnalyticsFailureReason,
   type ProductAnalyticsFailureStage,
   type ProductAnalyticsResult,
   type ProductAnalyticsSourceKind,
 } from "~/services/productAnalytics/events"
+import { buildModelListDiagnostics } from "~/services/productAnalytics/modelListDiagnostics"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { ApiToken, DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
@@ -149,10 +153,21 @@ function getModelDataFailureStage(
 function getModelDataFailureDiagnostics(error: unknown): {
   errorCategory: ProductAnalyticsErrorCategory
   failureStage: ProductAnalyticsFailureStage
+  failureReason?: ProductAnalyticsFailureReason
 } {
+  const code =
+    error && typeof error === "object"
+      ? (error as { code?: unknown }).code
+      : undefined
+
   return {
     errorCategory: getModelDataErrorCategory(error),
     failureStage: getModelDataFailureStage(error),
+    ...(code === MODEL_LIST_DATA_ERROR_CODES.INVALID_FORMAT
+      ? {
+          failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.InvalidResponseShape,
+        }
+      : {}),
   }
 }
 
@@ -160,10 +175,13 @@ function getModelDataFailureDiagnostics(error: unknown): {
 function getAggregateModelDataFailureDiagnostics(errors: unknown[]): {
   errorCategory: ProductAnalyticsErrorCategory
   failureStage: ProductAnalyticsFailureStage
+  failureReason?: ProductAnalyticsFailureReason
+  error?: unknown
 } {
-  const diagnostics = errors.map((error) =>
-    getModelDataFailureDiagnostics(error),
-  )
+  const diagnostics = errors.map((error) => ({
+    ...getModelDataFailureDiagnostics(error),
+    error,
+  }))
   const representativeDiagnostic =
     diagnostics.find(
       (diagnostic) =>
@@ -196,6 +214,14 @@ const MODEL_DATA_ANALYTICS_CONTEXT = {
  * @param params.sourceKind Selected model source kind.
  * @param params.errorCategory Optional sanitized failure category.
  * @param params.failureStage Optional sanitized failure stage.
+ * @param params.failureReason Optional sanitized failure reason.
+ * @param params.error Optional structured error object.
+ * @param params.siteType Optional sanitized site type.
+ * @param params.requestedAuthMode Optional sanitized auth mode.
+ * @param params.apiType Optional sanitized API type.
+ * @param params.cacheHit Whether the pricing cache was hit.
+ * @param params.fallbackAvailable Whether fallback data was available.
+ * @param params.fallbackUsed Whether fallback data was used.
  * @param params.modelCount Number of models loaded, when available.
  * @param params.successCount Number of successful account loads, when available.
  * @param params.failureCount Number of failed account loads, when available.
@@ -205,27 +231,54 @@ function trackModelDataLoadCompletion(params: {
   sourceKind: ProductAnalyticsSourceKind
   errorCategory?: ProductAnalyticsErrorCategory
   failureStage?: ProductAnalyticsFailureStage
+  failureReason?: ProductAnalyticsFailureReason
+  error?: unknown
+  siteType?: DisplaySiteData["siteType"]
+  requestedAuthMode?: DisplaySiteData["authType"]
+  apiType?: ProductAnalyticsApiType
+  cacheHit?: boolean
+  fallbackAvailable?: boolean
+  fallbackUsed?: boolean
   modelCount?: number
   successCount?: number
   failureCount?: number
 }) {
+  const diagnostics = buildModelListDiagnostics({
+    sourceKind: params.sourceKind,
+    ...(params.siteType ? { siteType: params.siteType } : {}),
+    ...(params.requestedAuthMode
+      ? { requestedAuthMode: params.requestedAuthMode }
+      : {}),
+    ...(params.apiType ? { apiType: params.apiType } : {}),
+    ...(typeof params.cacheHit === "boolean"
+      ? { cacheHit: params.cacheHit }
+      : {}),
+    ...(typeof params.fallbackAvailable === "boolean"
+      ? { fallbackAvailable: params.fallbackAvailable }
+      : {}),
+    ...(typeof params.fallbackUsed === "boolean"
+      ? { fallbackUsed: params.fallbackUsed }
+      : {}),
+    ...(typeof params.modelCount === "number"
+      ? { modelCount: params.modelCount }
+      : {}),
+    ...(typeof params.successCount === "number"
+      ? { successCount: params.successCount }
+      : {}),
+    ...(typeof params.failureCount === "number"
+      ? { failureCount: params.failureCount }
+      : {}),
+    ...(params.error ? { error: params.error } : {}),
+    ...(params.errorCategory ? { errorCategory: params.errorCategory } : {}),
+    ...(params.failureStage ? { stage: params.failureStage } : {}),
+    ...(params.failureReason ? { reason: params.failureReason } : {}),
+  })
+
   void trackProductAnalyticsActionCompleted({
     ...MODEL_DATA_ANALYTICS_CONTEXT,
     result: params.result,
-    errorCategory: params.errorCategory,
-    insights: {
-      sourceKind: params.sourceKind,
-      ...(params.failureStage ? { failureStage: params.failureStage } : {}),
-      ...(typeof params.modelCount === "number"
-        ? { modelCount: params.modelCount }
-        : {}),
-      ...(typeof params.successCount === "number"
-        ? { successCount: params.successCount }
-        : {}),
-      ...(typeof params.failureCount === "number"
-        ? { failureCount: params.failureCount }
-        : {}),
-    },
+    ...(params.errorCategory ? { errorCategory: params.errorCategory } : {}),
+    diagnostics,
   })
 }
 
@@ -443,6 +496,7 @@ function useSingleAccountModelData(params: {
     [currentAccount],
   )
   const trackedDirectLoadKeyRef = useRef<string | null>(null)
+  const directLoadCacheHitRef = useRef(false)
 
   const query = useQuery<PricingResponse, Error>({
     queryKey,
@@ -459,8 +513,10 @@ function useSingleAccountModelData(params: {
 
       const cached = await modelPricingCache.get(cacheKey)
       if (cached && Array.isArray(cached.data)) {
+        directLoadCacheHitRef.current = true
         return cached
       }
+      directLoadCacheHitRef.current = false
 
       const data = await getApiService(
         currentAccount.siteType,
@@ -594,6 +650,8 @@ function useSingleAccountModelData(params: {
       trackModelDataLoadCompletion({
         result: PRODUCT_ANALYTICS_RESULTS.Success,
         sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelFallbackCatalog,
+        fallbackAvailable: true,
+        fallbackUsed: true,
         modelCount: getPricingModelCount(pricing),
       })
     } catch (error) {
@@ -615,6 +673,9 @@ function useSingleAccountModelData(params: {
         sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelFallbackCatalog,
         errorCategory: getModelDataErrorCategory(error),
         failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+        error,
+        fallbackAvailable: true,
+        fallbackUsed: true,
       })
     } finally {
       if (isActiveFallbackCatalogRequest(requestScopeKey, requestId)) {
@@ -687,6 +748,9 @@ function useSingleAccountModelData(params: {
         trackModelDataLoadCompletion({
           result: PRODUCT_ANALYTICS_RESULTS.Success,
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
+          siteType: currentAccount.siteType,
+          requestedAuthMode: currentAccount.authType,
+          cacheHit: directLoadCacheHitRef.current,
           modelCount: getPricingModelCount(query.data),
         })
       }
@@ -710,6 +774,9 @@ function useSingleAccountModelData(params: {
             sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
             errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
+            error: query.error,
+            siteType: currentAccount.siteType,
+            requestedAuthMode: currentAccount.authType,
           })
         }
         return
@@ -727,6 +794,9 @@ function useSingleAccountModelData(params: {
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
           errorCategory: getModelDataErrorCategory(query.error),
           failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+          error: query.error,
+          siteType: currentAccount.siteType,
+          requestedAuthMode: currentAccount.authType,
         })
       }
     }
@@ -936,6 +1006,10 @@ function useAllAccountsModelData(
       ...(failureDiagnostics
         ? { failureStage: failureDiagnostics.failureStage }
         : {}),
+      ...(failureDiagnostics?.failureReason
+        ? { failureReason: failureDiagnostics.failureReason }
+        : {}),
+      ...(failureDiagnostics?.error ? { error: failureDiagnostics.error } : {}),
       modelCount,
       successCount,
       failureCount,
@@ -1084,6 +1158,7 @@ function useProfileModelData(
         trackModelDataLoadCompletion({
           result: PRODUCT_ANALYTICS_RESULTS.Success,
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile,
+          apiType: currentProfile.apiType,
           modelCount: getPricingModelCount(query.data),
         })
       }
@@ -1104,6 +1179,8 @@ function useProfileModelData(
           sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelProfile,
           errorCategory: getModelDataErrorCategory(query.error),
           failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+          error: query.error,
+          apiType: currentProfile.apiType,
         })
       }
     }

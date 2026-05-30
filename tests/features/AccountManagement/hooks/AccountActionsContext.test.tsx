@@ -11,8 +11,12 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
+  PRODUCT_ANALYTICS_MODE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
+  PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 
@@ -402,6 +406,22 @@ describe("AccountActionsContext", () => {
     })
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Skipped,
+      {
+        diagnostics: {
+          context: {
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
+            mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+            siteType: account.siteType,
+            requestedAuthMode: account.authType,
+          },
+          outcome: {
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 0,
+            skippedCount: 1,
+          },
+        },
+      },
     )
   })
 
@@ -422,6 +442,20 @@ describe("AccountActionsContext", () => {
     expect(mockLoadAccountData).toHaveBeenCalledTimes(1)
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        diagnostics: {
+          context: {
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
+            mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+          },
+          outcome: {
+            itemCount: 1,
+            successCount: 1,
+            failureCount: 0,
+            skippedCount: 0,
+          },
+        },
+      },
     )
   })
 
@@ -454,7 +488,26 @@ describe("AccountActionsContext", () => {
 
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
-      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        diagnostics: {
+          context: {
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
+            mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+          },
+          outcome: {
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 1,
+            skippedCount: 0,
+          },
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+          },
+        },
+      },
     )
   })
 
@@ -471,7 +524,26 @@ describe("AccountActionsContext", () => {
 
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Failure,
-      { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+      {
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        diagnostics: {
+          context: {
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Row,
+            mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
+          },
+          outcome: {
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 1,
+            skippedCount: 0,
+          },
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+          },
+        },
+      },
     )
   })
 
