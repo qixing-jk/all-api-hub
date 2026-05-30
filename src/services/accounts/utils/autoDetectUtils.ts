@@ -26,7 +26,9 @@ import {
   AIHUBMIX_HOSTNAMES,
   AIHUBMIX_WEB_ORIGIN,
   getAccountSiteApiRouter,
+  isAccountSiteType,
   SITE_TYPES,
+  type AccountSiteType,
 } from "~/constants/siteType"
 import {
   resolveAccountSiteRouteUrl,
@@ -221,6 +223,7 @@ export function analyzeAutoDetectError(error: any): AutoDetectError {
 export interface AutoDetectErrorProps {
   error: AutoDetectError
   siteUrl?: string
+  siteType?: AccountSiteType
   onHelpClick?: () => void
   onActionClick?: () => void
 }
@@ -257,18 +260,30 @@ export function getLoginUrl(siteUrl: string): string {
 /**
  * Open a new browser tab pointing to the site's login page.
  * @param siteUrl Base site URL used to derive the login page.
+ * @param siteTypeHint Optional already-known site type from the caller.
  */
-export async function openLoginTab(siteUrl: string): Promise<void> {
+export async function openLoginTab(
+  siteUrl: string,
+  siteTypeHint?: AccountSiteType,
+): Promise<void> {
   let loginUrl = getLoginUrl(siteUrl)
   try {
     const parsedUrl = new URL(siteUrl)
-    loginUrl = await resolveAccountSiteRouteUrl(
-      {
-        baseUrl: `${parsedUrl.protocol}//${parsedUrl.host}`,
-        siteType: SITE_TYPES.NEW_API,
-      },
-      SITE_ROUTE_KINDS.Login,
-    )
+    const siteType = isAccountSiteType(siteTypeHint)
+      ? siteTypeHint
+      : SITE_TYPES.UNKNOWN
+    if (siteType !== SITE_TYPES.UNKNOWN) {
+      loginUrl = await resolveAccountSiteRouteUrl(
+        {
+          baseUrl:
+            siteType === SITE_TYPES.AIHUBMIX
+              ? AIHUBMIX_WEB_ORIGIN
+              : `${parsedUrl.protocol}//${parsedUrl.host}`,
+          siteType,
+        },
+        SITE_ROUTE_KINDS.Login,
+      )
+    }
   } catch {
     loginUrl = getLoginUrl(siteUrl)
   }

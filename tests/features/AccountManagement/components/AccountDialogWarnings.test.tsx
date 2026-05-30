@@ -1,6 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import AutoDetectErrorAlert from "~/features/AccountManagement/components/AccountDialog/AutoDetectErrorAlert"
 import { DuplicateAccountWarningDialog } from "~/features/AccountManagement/components/AccountDialog/DuplicateAccountWarningDialog"
 import { ManagedSiteConfigPromptDialog } from "~/features/AccountManagement/components/AccountDialog/ManagedSiteConfigPromptDialog"
@@ -116,8 +117,32 @@ describe("AccountDialog warnings", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Retry login" }))
 
-    expect(openLoginTabMock).toHaveBeenCalledWith("https://site.example.com")
+    expect(openLoginTabMock).toHaveBeenCalledWith(
+      "https://site.example.com",
+      undefined,
+    )
     expect(reloadCurrentTabMock).not.toHaveBeenCalled()
+  })
+
+  it("passes the current site type hint to the default login redirect", () => {
+    render(
+      <AutoDetectErrorAlert
+        error={{
+          type: AutoDetectErrorType.UNAUTHORIZED,
+          message: "Please log in",
+          actionText: "Retry login",
+        }}
+        siteUrl="https://site.example.com"
+        siteType={SITE_TYPES.NEW_API}
+      />,
+    )
+
+    fireEvent.click(screen.getByRole("button", { name: "Retry login" }))
+
+    expect(openLoginTabMock).toHaveBeenCalledWith(
+      "https://site.example.com",
+      SITE_TYPES.NEW_API,
+    )
   })
 
   it("does nothing for unauthorized recovery when the site URL is missing", () => {

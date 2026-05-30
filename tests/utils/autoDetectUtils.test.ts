@@ -1,6 +1,7 @@
 import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { AUTO_DETECT_ERROR_CODES } from "~/constants/autoDetect"
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   analyzeAutoDetectError,
   AutoDetectErrorType,
@@ -439,7 +440,7 @@ describe("autoDetectUtils", () => {
       })
     })
 
-    it("uses the New API default frontend sign-in route when available", async () => {
+    it("uses the New API default frontend sign-in route when a site type hint is available", async () => {
       const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
         ok: true,
         json: async () => ({
@@ -448,8 +449,7 @@ describe("autoDetectUtils", () => {
         }),
       } as Response)
 
-      await openLoginTab("https://new-api-login.example")
-
+      await openLoginTab("https://new-api-login.example", SITE_TYPES.NEW_API)
       expect(fetchSpy).toHaveBeenCalledWith(
         "https://new-api-login.example/api/status",
       )
@@ -459,6 +459,29 @@ describe("autoDetectUtils", () => {
       })
 
       fetchSpy.mockRestore()
+    })
+
+    it("uses the hinted non-New API site route without probing New API status", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch")
+
+      await openLoginTab(
+        "https://console.aihubmix.com/statistics",
+        SITE_TYPES.AIHUBMIX,
+      )
+      expect(fetchSpy).not.toHaveBeenCalled()
+      expect(browser.tabs.create).toHaveBeenCalledWith({
+        url: "https://console.aihubmix.com/sign-in",
+        active: true,
+      })
+    })
+
+    it("falls back to the generic login URL when the site type hint is unavailable", async () => {
+      await openLoginTab("https://fallback.example/path", SITE_TYPES.UNKNOWN)
+
+      expect(browser.tabs.create).toHaveBeenCalledWith({
+        url: "https://fallback.example/login",
+        active: true,
+      })
     })
 
     it("should open tab in active state", async () => {

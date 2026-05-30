@@ -15,12 +15,14 @@ import { openSiteSupportRequestPage } from "~/utils/navigation"
  * @param props Component props describing the error context and handlers.
  * @param props.error Error metadata powering the alert content.
  * @param props.siteUrl Optional site URL used for fallback login redirection.
+ * @param props.siteType Optional current site type hint used for login route resolution.
  * @param props.onHelpClick Optional handler invoked when help action is triggered.
  * @param props.onActionClick Optional handler invoked when custom action button is pressed.
  */
 export default function AutoDetectErrorAlert({
   error,
   siteUrl,
+  siteType,
   onHelpClick,
   onActionClick,
 }: AutoDetectErrorProps) {
@@ -31,7 +33,7 @@ export default function AutoDetectErrorAlert({
       onActionClick()
     } else if (error.type === AutoDetectErrorType.UNAUTHORIZED && siteUrl) {
       // 默认行为：打开登录页面
-      await openLoginTab(siteUrl)
+      await openLoginTab(siteUrl, siteType)
     } else if (error.type === AutoDetectErrorType.CURRENT_TAB_RELOAD_REQUIRED) {
       await reloadCurrentTab()
     }

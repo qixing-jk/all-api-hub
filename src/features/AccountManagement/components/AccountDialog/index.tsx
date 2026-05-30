@@ -246,6 +246,7 @@ export default function AccountDialog({
               <AutoDetectErrorAlert
                 error={state.detectionError}
                 siteUrl={state.url}
+                siteType={state.siteType}
               />
             )}
 
