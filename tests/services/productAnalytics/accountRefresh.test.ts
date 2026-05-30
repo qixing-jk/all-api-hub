@@ -95,4 +95,30 @@ describe("account refresh product analytics diagnostics", () => {
       },
     })
   })
+
+  it("includes execution metadata and warning counts when refresh retries use fallback contexts", () => {
+    expect(
+      buildAccountRefreshDiagnostics({
+        tempContextUsed: true,
+        incognitoContextUsed: false,
+        fallbackAvailable: true,
+        fallbackUsed: true,
+        retryAttempted: true,
+        retryCount: 2,
+        warningCount: 1,
+      }),
+    ).toEqual({
+      execution: {
+        tempContextUsed: true,
+        incognitoContextUsed: false,
+        fallbackAvailable: true,
+        fallbackUsed: true,
+        retryAttempted: true,
+        retryCount: 2,
+      },
+      outcome: {
+        warningCount: 1,
+      },
+    })
+  })
 })

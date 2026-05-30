@@ -767,6 +767,7 @@ describe("WebDAVSettings", () => {
             failure: expect.objectContaining({
               category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
               stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
+              reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
             }),
           }),
         }),

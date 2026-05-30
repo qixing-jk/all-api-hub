@@ -5,6 +5,7 @@ import {
   createDefaultPreferences,
   type UserPreferences,
 } from "~/services/preferences/userPreferences"
+import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
 import {
   PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -634,6 +635,53 @@ describe("settings product analytics snapshots", () => {
       expect.objectContaining({
         setting_id: PRODUCT_ANALYTICS_SETTING_IDS.WebDavConfigSnapshot,
         sync_strategy: PRODUCT_ANALYTICS_MODE_IDS.WebDavUploadOnly,
+      }),
+    ])
+  })
+
+  it("treats default sorting priority as not customized", () => {
+    const [displaySnapshot] = buildSettingsSnapshotEvents(
+      createPreferences({
+        sortingPriorityConfig: {
+          criteria: DEFAULT_SORTING_PRIORITY_CONFIG.criteria,
+          lastModified: 1,
+        },
+      }),
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      { sortingPriorityConfig: {} },
+    )
+
+    expect(displaySnapshot).toEqual(
+      expect.objectContaining({
+        setting_id: "display_preferences_snapshot",
+        sorting_priority_configured: true,
+        sorting_priority_customized: false,
+      }),
+    )
+  })
+
+  it("uses default balance history and temp-window reminder preferences when sections are missing", () => {
+    const events = buildSettingsSnapshotEvents(
+      createPreferences({
+        balanceHistory: undefined,
+        tempWindowFallbackReminder: undefined,
+      }),
+      PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      {
+        balanceHistory: {},
+        tempWindowFallback: {},
+      },
+    )
+
+    expect(events).toEqual([
+      expect.objectContaining({
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.BalanceHistoryConfigSnapshot,
+        enabled: false,
+      }),
+      expect.objectContaining({
+        setting_id:
+          PRODUCT_ANALYTICS_SETTING_IDS.TempWindowFallbackConfigSnapshot,
+        reminder_dismissed: false,
       }),
     ])
   })

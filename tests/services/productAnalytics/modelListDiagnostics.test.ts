@@ -17,6 +17,26 @@ describe("model list product analytics diagnostics", () => {
   it("maps structured auth, rate-limit, JSON, response-shape, timeout, and network failures", () => {
     expect(
       buildModelListFailureDiagnostics({
+        error: { statusCode: 408 },
+      }),
+    ).toEqual({
+      category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Timeout,
+      stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Timeout,
+    })
+
+    expect(
+      buildModelListFailureDiagnostics({
+        error: { statusCode: 503 },
+      }),
+    ).toEqual({
+      category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network,
+      stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      reason: PRODUCT_ANALYTICS_FAILURE_REASONS.ServerError,
+    })
+
+    expect(
+      buildModelListFailureDiagnostics({
         error: new ApiError(
           "secret auth text",
           401,
@@ -62,6 +82,56 @@ describe("model list product analytics diagnostics", () => {
 
     expect(
       buildModelListFailureDiagnostics({
+        error: { code: API_ERROR_CODES.TOKEN_SECRET_UNAVAILABLE },
+      }),
+    ).toEqual({
+      category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+      stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      reason: PRODUCT_ANALYTICS_FAILURE_REASONS.TokenSecretUnavailable,
+    })
+
+    expect(
+      buildModelListFailureDiagnostics({
+        error: { originalCode: API_ERROR_CODES.JSON_PARSE_ERROR },
+      }),
+    ).toEqual({
+      category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
+      reason: PRODUCT_ANALYTICS_FAILURE_REASONS.InvalidJson,
+    })
+
+    expect(
+      buildModelListFailureDiagnostics({
+        error: { code: "INVALID_FORMAT" },
+      }),
+    ).toEqual({
+      category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Parse,
+      reason: PRODUCT_ANALYTICS_FAILURE_REASONS.InvalidResponseShape,
+    })
+
+    expect(
+      buildModelListFailureDiagnostics({
+        error: { code: API_ERROR_CODES.CONTENT_TYPE_MISMATCH },
+      }),
+    ).toEqual({
+      category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+      stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Validation,
+      reason: PRODUCT_ANALYTICS_FAILURE_REASONS.ContentTypeMismatch,
+    })
+
+    expect(
+      buildModelListFailureDiagnostics({
+        error: { code: API_ERROR_CODES.FEATURE_UNSUPPORTED },
+      }),
+    ).toEqual({
+      category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unsupported,
+      stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      reason: PRODUCT_ANALYTICS_FAILURE_REASONS.UnsupportedTarget,
+    })
+
+    expect(
+      buildModelListFailureDiagnostics({
         error: { code: API_ERROR_CODES.BUSINESS_ERROR },
       }),
     ).toEqual({
@@ -88,6 +158,26 @@ describe("model list product analytics diagnostics", () => {
       category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network,
       stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
       reason: PRODUCT_ANALYTICS_FAILURE_REASONS.NetworkUnreachable,
+    })
+
+    expect(
+      buildModelListFailureDiagnostics({
+        error: { name: "NetworkError" },
+      }),
+    ).toEqual({
+      category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Network,
+      stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      reason: PRODUCT_ANALYTICS_FAILURE_REASONS.NetworkUnreachable,
+    })
+
+    expect(
+      buildModelListFailureDiagnostics({
+        error: { cause: { statusCode: 403 } },
+      }),
+    ).toEqual({
+      category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+      stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      reason: PRODUCT_ANALYTICS_FAILURE_REASONS.AuthInvalid,
     })
   })
 
@@ -185,6 +275,36 @@ describe("model list product analytics diagnostics", () => {
       },
       outcome: {
         modelCount: 3,
+      },
+    })
+  })
+
+  it("includes retry execution fields and explicit result counts", () => {
+    expect(
+      buildModelListDiagnostics({
+        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
+        cacheUsed: true,
+        retryAttempted: true,
+        retryCount: 2,
+        staleResponseIgnored: false,
+        successCount: 3,
+        failureCount: 1,
+        skippedCount: 0,
+      }),
+    ).toEqual({
+      context: {
+        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.ModelAccount,
+      },
+      execution: {
+        cacheUsed: true,
+        retryAttempted: true,
+        retryCount: 2,
+        staleResponseIgnored: false,
+      },
+      outcome: {
+        successCount: 3,
+        failureCount: 1,
+        skippedCount: 0,
       },
     })
   })
