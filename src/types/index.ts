@@ -390,16 +390,21 @@ export interface ApiResponse<T = any> {
 }
 
 // 用于排序的字段类型
-export type SortField =
-  | "name"
-  | typeof DATA_TYPE_CONSUMPTION
-  | typeof DATA_TYPE_INCOME
-  | typeof DATA_TYPE_BALANCE
-  | typeof DATA_TYPE_CREATED_AT
-export type SortOrder = "asc" | "desc"
+export const SORT_FIELDS = [
+  "name",
+  DATA_TYPE_CONSUMPTION,
+  DATA_TYPE_INCOME,
+  DATA_TYPE_BALANCE,
+  DATA_TYPE_CREATED_AT,
+] as const
+export type SortField = (typeof SORT_FIELDS)[number]
+
+export const SORT_ORDERS = ["asc", "desc"] as const
+export type SortOrder = (typeof SORT_ORDERS)[number]
 
 // 货币类型
-export type CurrencyType = "USD" | "CNY"
+export const CURRENCY_TYPES = ["USD", "CNY"] as const
+export type CurrencyType = (typeof CURRENCY_TYPES)[number]
 
 export type CurrencyAmount = { USD: number; CNY: number }
 
@@ -519,9 +524,11 @@ export interface ApiToken {
   models?: string
 }
 
-export type DashboardTabType =
-  | typeof DATA_TYPE_CASHFLOW
-  | typeof DATA_TYPE_BALANCE
+export const DASHBOARD_TAB_TYPES = [
+  DATA_TYPE_CASHFLOW,
+  DATA_TYPE_BALANCE,
+] as const
+export type DashboardTabType = (typeof DASHBOARD_TAB_TYPES)[number]
 
 export enum AuthTypeEnum {
   AccessToken = "access_token",

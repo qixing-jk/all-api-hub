@@ -1,12 +1,12 @@
+import { SUPPORTED_UI_LANGUAGES } from "~/constants"
 import {
-  DATA_TYPE_BALANCE,
-  DATA_TYPE_CASHFLOW,
-  DATA_TYPE_CONSUMPTION,
-  DATA_TYPE_CREATED_AT,
-  DATA_TYPE_INCOME,
-  SUPPORTED_UI_LANGUAGES,
-} from "~/constants"
+  CURRENCY_TYPES,
+  DASHBOARD_TAB_TYPES,
+  SORT_FIELDS,
+  SORT_ORDERS,
+} from "~/types"
 import { LOG_LEVELS } from "~/types/logging"
+import { THEME_MODES } from "~/types/theme"
 
 import {
   PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS,
@@ -450,7 +450,7 @@ const EVENT_ALLOWED_KEYS = {
 } satisfies Record<ProductAnalyticsEventName, readonly string[]>
 
 const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
-  active_tab: [DATA_TYPE_CASHFLOW, DATA_TYPE_BALANCE],
+  active_tab: DASHBOARD_TAB_TYPES,
   action_id: Object.values(PRODUCT_ANALYTICS_ACTION_IDS),
   auto_checkin_schedule_mode: Object.values(
     PRODUCT_ANALYTICS_AUTO_CHECKIN_SCHEDULE_MODES,
@@ -461,7 +461,7 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   error_category: Object.values(PRODUCT_ANALYTICS_ERROR_CATEGORIES),
   failure_stage: Object.values(PRODUCT_ANALYTICS_FAILURE_STAGES),
   feature_id: Object.values(PRODUCT_ANALYTICS_FEATURE_IDS),
-  currency_type: ["USD", "CNY"],
+  currency_type: CURRENCY_TYPES,
   log_level: LOG_LEVELS,
   managed_site_type: Object.values(PRODUCT_ANALYTICS_MANAGED_SITE_TYPES),
   mode: Object.values(PRODUCT_ANALYTICS_MODE_IDS),
@@ -489,14 +489,8 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   skip_reason: Object.values(PRODUCT_ANALYTICS_AUTO_CHECKIN_SKIP_REASONS),
   source_managed_site_type: Object.values(PRODUCT_ANALYTICS_MANAGED_SITE_TYPES),
   source_kind: Object.values(PRODUCT_ANALYTICS_SOURCE_KINDS),
-  sort_field: [
-    "name",
-    DATA_TYPE_CONSUMPTION,
-    DATA_TYPE_INCOME,
-    DATA_TYPE_BALANCE,
-    DATA_TYPE_CREATED_AT,
-  ],
-  sort_order: ["asc", "desc"],
+  sort_field: SORT_FIELDS,
+  sort_order: SORT_ORDERS,
   sponsor_action_kind: Object.values(PRODUCT_ANALYTICS_SPONSOR_ACTION_KINDS),
   sponsor_catalog_source: Object.values(
     PRODUCT_ANALYTICS_SPONSOR_CATALOG_SOURCES,
@@ -511,7 +505,7 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   target_managed_site_type: Object.values(PRODUCT_ANALYTICS_MANAGED_SITE_TYPES),
   telemetry_source: Object.values(PRODUCT_ANALYTICS_TELEMETRY_SOURCES),
   temp_window_fallback_mode: Object.values(PRODUCT_ANALYTICS_MODE_IDS),
-  theme_mode: ["light", "dark", "system"],
+  theme_mode: THEME_MODES,
   toolbar_action_click_behavior: Object.values(
     PRODUCT_ANALYTICS_TOOLBAR_ACTION_CLICK_BEHAVIORS,
   ),
