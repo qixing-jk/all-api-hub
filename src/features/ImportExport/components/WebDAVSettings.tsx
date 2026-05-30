@@ -668,6 +668,7 @@ export default function WebDAVSettings() {
       const result = await handleImportWithSelection(data)
       let importedPreferencesLastUpdated: number | null = null
       let decryptPasswordPersistFailed = false
+      let decryptPasswordPersistError: unknown
 
       if (result.allImported || result.sections?.preferences) {
         const refreshedPreferences = await userPreferences.getPreferences()
@@ -696,6 +697,7 @@ export default function WebDAVSettings() {
           logger.error("Failed to persist WebDAV decrypt password", error)
           toast.error(t("settings:messages.saveSettingsFailed"))
           decryptPasswordPersistFailed = true
+          decryptPasswordPersistError = error
         }
       }
 
@@ -706,8 +708,11 @@ export default function WebDAVSettings() {
       setDecryptDialogOpen(false)
       setPendingEnvelope(null)
       if (decryptPasswordPersistFailed) {
+        const persistErrorCategory = decryptPasswordPersistError
+          ? getWebdavAnalyticsErrorCategory(decryptPasswordPersistError)
+          : PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          errorCategory: persistErrorCategory,
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
           },
@@ -718,7 +723,8 @@ export default function WebDAVSettings() {
             successCount: 0,
             failureCount: 1,
             skippedCount: 0,
-            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+            error: decryptPasswordPersistError,
+            errorCategory: persistErrorCategory,
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
             failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.StorageWriteFailed,
           }),

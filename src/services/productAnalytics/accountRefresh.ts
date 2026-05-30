@@ -124,7 +124,10 @@ export function buildAccountRefreshDiagnostics({
             statusCode,
             errorCategory:
               errorCategory ??
-              (!error && typeof statusCode !== "number"
+              (!error &&
+              typeof statusCode !== "number" &&
+              !failureReason &&
+              !failureStage
                 ? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown
                 : undefined),
             stage: failureStage,

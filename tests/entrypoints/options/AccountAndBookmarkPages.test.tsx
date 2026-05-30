@@ -7,6 +7,8 @@ import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
+  PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
@@ -266,6 +268,18 @@ describe("options AccountManagement page", () => {
             successCount: 0,
             failureCount: 0,
           },
+          diagnostics: {
+            context: {
+              sourceKind: "manual",
+              mode: "all",
+            },
+            outcome: {
+              itemCount: 0,
+              successCount: 0,
+              failureCount: 0,
+              skippedCount: 0,
+            },
+          },
         },
       )
     })
@@ -297,6 +311,23 @@ describe("options AccountManagement page", () => {
             itemCount: 3,
             successCount: 2,
             failureCount: 1,
+          },
+          diagnostics: {
+            context: {
+              sourceKind: "manual",
+              mode: "all",
+            },
+            failure: {
+              category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+              reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+            },
+            outcome: {
+              itemCount: 3,
+              successCount: 2,
+              failureCount: 1,
+              skippedCount: 1,
+            },
           },
         },
       )
@@ -340,6 +371,18 @@ describe("options AccountManagement page", () => {
             itemCount: 0,
             successCount: 0,
             failureCount: 0,
+          },
+          diagnostics: {
+            context: {
+              sourceKind: "manual",
+              mode: "all",
+            },
+            outcome: {
+              itemCount: 0,
+              successCount: 0,
+              failureCount: 0,
+              skippedCount: 0,
+            },
           },
         },
       )
@@ -467,6 +510,23 @@ describe("options AccountManagement page", () => {
           successCount: 2,
           failureCount: 1,
         },
+        diagnostics: {
+          context: {
+            sourceKind: "manual",
+            mode: "all",
+          },
+          failure: {
+            category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+            stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+          },
+          outcome: {
+            itemCount: 3,
+            successCount: 2,
+            failureCount: 1,
+            skippedCount: 0,
+          },
+        },
       },
     )
   })
@@ -494,7 +554,20 @@ describe("options AccountManagement page", () => {
       )
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
-        { errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown },
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          diagnostics: {
+            context: {
+              sourceKind: "manual",
+              mode: "all",
+            },
+            failure: {
+              category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+              reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+            },
+          },
+        },
       )
     })
   })

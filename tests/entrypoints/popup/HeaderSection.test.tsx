@@ -289,7 +289,11 @@ describe("popup HeaderSection", () => {
   })
 
   it("completes popup header refresh analytics with the default success result", async () => {
-    handleRefreshMock.mockResolvedValueOnce({ success: 4, failed: 0 })
+    handleRefreshMock.mockResolvedValueOnce({
+      success: 4,
+      failed: 0,
+      refreshedCount: 3,
+    })
 
     render(<HeaderSection />, { withReleaseUpdateStatusProvider: false })
 
@@ -320,7 +324,7 @@ describe("popup HeaderSection", () => {
               itemCount: 4,
               successCount: 4,
               failureCount: 0,
-              skippedCount: 0,
+              skippedCount: 1,
             },
           },
         },

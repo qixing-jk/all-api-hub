@@ -1650,10 +1650,16 @@ describe("WebDAVSettings", () => {
       expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
         PRODUCT_ANALYTICS_RESULTS.Failure,
         expect.objectContaining({
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
             failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
           },
+          diagnostics: expect.objectContaining({
+            failure: expect.objectContaining({
+              category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+              stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Persist,
+            }),
+          }),
         }),
       )
     })

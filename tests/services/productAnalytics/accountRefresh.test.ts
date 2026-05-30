@@ -75,4 +75,24 @@ describe("account refresh product analytics diagnostics", () => {
       },
     })
   })
+
+  it("derives failure category from explicit failure reason when no error is available", () => {
+    expect(
+      buildAccountRefreshDiagnostics({
+        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+        failureReason: PRODUCT_ANALYTICS_FAILURE_REASONS.AuthInvalid,
+      }),
+    ).toEqual({
+      context: {
+        sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+        mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+      },
+      failure: {
+        category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Auth,
+        stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Request,
+        reason: PRODUCT_ANALYTICS_FAILURE_REASONS.AuthInvalid,
+      },
+    })
+  })
 })

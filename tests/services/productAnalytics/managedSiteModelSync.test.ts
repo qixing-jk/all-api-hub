@@ -118,4 +118,55 @@ describe("managed site model sync product analytics diagnostics", () => {
       },
     })
   })
+
+  it("does not report total model sync failure as partial success", () => {
+    expect(
+      buildManagedSiteModelSyncDiagnostics({
+        managedSiteType: "new-api",
+        mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+        execution: {
+          items: [
+            {
+              channelId: 102,
+              channelName: "Failed private channel",
+              ok: false,
+              attempts: 1,
+              finishedAt: 1_700_000_002_000,
+              oldModels: [],
+              newModels: [],
+            },
+          ],
+          statistics: {
+            total: 1,
+            successCount: 0,
+            failureCount: 1,
+            durationMs: 2000,
+            startedAt: 1_700_000_000_000,
+            endedAt: 1_700_000_002_000,
+          },
+        },
+      }),
+    ).toEqual({
+      context: {
+        managedSiteType: "new-api",
+        mode: PRODUCT_ANALYTICS_MODE_IDS.All,
+      },
+      execution: {
+        retryAttempted: false,
+        retryCount: 0,
+      },
+      outcome: {
+        itemCount: 1,
+        successCount: 0,
+        failureCount: 1,
+        skippedCount: 0,
+        modelCount: 0,
+      },
+      failure: {
+        category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+        stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+        reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+      },
+    })
+  })
 })

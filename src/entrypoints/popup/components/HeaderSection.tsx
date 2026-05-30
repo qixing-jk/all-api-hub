@@ -99,13 +99,17 @@ export default function HeaderSection({
         successCount: result.success,
         failureCount: result.failed,
       }
+      const skippedCount = Math.max(
+        refreshInsights.itemCount - result.refreshedCount,
+        0,
+      )
       const refreshDiagnostics = buildAccountRefreshDiagnostics({
         sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
         mode: PRODUCT_ANALYTICS_MODE_IDS.All,
         itemCount: refreshInsights.itemCount,
         successCount: result.success,
         failureCount: result.failed,
-        skippedCount: 0,
+        skippedCount,
       })
       if (result.failed > 0) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {

@@ -51,11 +51,9 @@ export function buildManagedSiteModelSyncDiagnostics({
 }: BuildManagedSiteModelSyncDiagnosticsOptions): ProductAnalyticsActionDiagnostics {
   const retryCount = getRetryCount(execution)
   const failureCount = execution.statistics.failureCount
+  const successCount = execution.statistics.successCount
   const itemCount = execution.statistics.total
-  const skippedCount = Math.max(
-    itemCount - execution.statistics.successCount - failureCount,
-    0,
-  )
+  const skippedCount = Math.max(itemCount - successCount - failureCount, 0)
 
   return {
     context: {
@@ -72,7 +70,7 @@ export function buildManagedSiteModelSyncDiagnostics({
     },
     outcome: {
       itemCount,
-      successCount: execution.statistics.successCount,
+      successCount,
       failureCount,
       skippedCount,
       modelCount: getModelCount(execution),
@@ -82,7 +80,10 @@ export function buildManagedSiteModelSyncDiagnostics({
           failure: {
             category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
             stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
-            reason: PRODUCT_ANALYTICS_FAILURE_REASONS.PartialSuccess,
+            reason:
+              successCount > 0
+                ? PRODUCT_ANALYTICS_FAILURE_REASONS.PartialSuccess
+                : PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
           },
         }
       : {}),

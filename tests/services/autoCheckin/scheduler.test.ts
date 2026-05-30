@@ -19,6 +19,7 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_EVENTS,
+  PRODUCT_ANALYTICS_FAILURE_REASONS,
   PRODUCT_ANALYTICS_FAILURE_STAGES,
   PRODUCT_ANALYTICS_FEATURE_IDS,
   PRODUCT_ANALYTICS_RESULTS,
@@ -974,16 +975,28 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundAutoCheckinScheduler,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
       result: PRODUCT_ANALYTICS_RESULTS.Failure,
-      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       durationMs: expect.any(Number),
-      insights: {
-        itemCount: 3,
-        successCount: 1,
-        failureCount: 1,
-        skippedCount: 1,
-        sourceKind: "auto",
-        mode: "telemetry_auto",
-        failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      diagnostics: {
+        context: {
+          sourceKind: "auto",
+          mode: "telemetry_auto",
+        },
+        execution: {
+          backgroundExecution: true,
+          retryAttempted: false,
+          retryCount: 0,
+        },
+        failure: {
+          category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+          stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+        },
+        outcome: {
+          itemCount: 3,
+          successCount: 1,
+          failureCount: 1,
+          skippedCount: 1,
+        },
       },
     })
 
@@ -1871,16 +1884,28 @@ describe("autoCheckinScheduler daily+retry behavior", () => {
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundAutoCheckinScheduler,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
       result: PRODUCT_ANALYTICS_RESULTS.Failure,
-      errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
       durationMs: expect.any(Number),
-      insights: {
-        itemCount: 2,
-        successCount: 1,
-        failureCount: 1,
-        skippedCount: 0,
-        sourceKind: "auto",
-        mode: "retry_failed",
-        failureStage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+      diagnostics: {
+        context: {
+          sourceKind: "auto",
+          mode: "retry_failed",
+        },
+        execution: {
+          backgroundExecution: true,
+          retryAttempted: true,
+          retryCount: 2,
+        },
+        failure: {
+          category: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          reason: PRODUCT_ANALYTICS_FAILURE_REASONS.Unknown,
+          stage: PRODUCT_ANALYTICS_FAILURE_STAGES.Execute,
+        },
+        outcome: {
+          itemCount: 2,
+          successCount: 1,
+          failureCount: 1,
+          skippedCount: 0,
+        },
       },
     })
 
