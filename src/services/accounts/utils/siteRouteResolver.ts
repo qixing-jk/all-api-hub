@@ -18,8 +18,7 @@ export const SITE_ROUTE_KINDS = {
   SiteAnnouncements: "siteAnnouncements",
 } as const
 
-export type SiteRouteKind =
-  (typeof SITE_ROUTE_KINDS)[keyof typeof SITE_ROUTE_KINDS]
+type SiteRouteKind = (typeof SITE_ROUTE_KINDS)[keyof typeof SITE_ROUTE_KINDS]
 
 type RouteTarget = {
   baseUrl: string
@@ -44,7 +43,7 @@ const NEW_API_DEFAULT_THEME_ROUTE_PATHS: Record<
   [SITE_ROUTE_KINDS.Redeem]: "/wallet",
 }
 
-export const SITE_ROUTE_THEME_CACHE_TTL_MS = 5 * 60 * 1000
+const SITE_ROUTE_THEME_CACHE_TTL_MS = 5 * 60 * 1000
 
 const themeCache = new Map<string, { fetchedAt: number; theme?: string }>()
 
@@ -141,7 +140,7 @@ async function fetchNewApiFrontendTheme(
  * @param route Named route kind.
  * @returns Route path for the target site and frontend theme.
  */
-export async function resolveAccountSiteRoutePath(
+async function resolveAccountSiteRoutePath(
   target: Pick<RouteTarget, "baseUrl" | "siteType">,
   route: SiteRouteKind,
 ): Promise<string> {
