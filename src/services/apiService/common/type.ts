@@ -84,6 +84,7 @@ export interface SiteStatusInfo {
   stripe_unit_price?: number
   PaymentUSDRate?: number
   system_name?: string
+  theme?: string
   /**
    * 是否启用签到功能
    */

@@ -5,6 +5,8 @@ import {
   SITE_TYPES,
   type AccountSiteType,
 } from "~/constants/siteType"
+import { getApiService } from "~/services/apiService"
+import { AuthTypeEnum } from "~/types"
 import { joinUrl } from "~/utils/core/url"
 
 export const SITE_ROUTE_KINDS = {
@@ -24,18 +26,10 @@ type RouteTarget = {
   siteType: AccountSiteType
 }
 
-type SiteStatusPayload = {
-  success?: boolean
-  data?: {
-    theme?: string
-  } | null
-}
-
 const NEW_API_FRONTEND_THEMES = {
   Default: "default",
 } as const
 
-const NEW_API_STATUS_ENDPOINT = "/api/status"
 const SITE_ANNOUNCEMENTS_ROUTE_KIND = SITE_ROUTE_KINDS.SiteAnnouncements
 const AIHUBMIX_HOSTNAME_SET: ReadonlySet<string> = new Set(AIHUBMIX_HOSTNAMES)
 
@@ -127,19 +121,12 @@ async function fetchNewApiFrontendTheme(
   }
 
   try {
-    const response = await fetch(
-      joinUrl(normalizedBaseUrl, NEW_API_STATUS_ENDPOINT),
-    )
-    if (!response.ok) {
-      themeCache.set(normalizedBaseUrl, { fetchedAt: now })
-      return undefined
-    }
-
-    const payload = (await response.json()) as SiteStatusPayload
+    const statusInfo = await getApiService(SITE_TYPES.NEW_API).fetchSiteStatus({
+      baseUrl: normalizedBaseUrl,
+      auth: { authType: AuthTypeEnum.None },
+    })
     const theme =
-      payload && typeof payload.data?.theme === "string"
-        ? payload.data.theme
-        : undefined
+      typeof statusInfo?.theme === "string" ? statusInfo.theme : undefined
     themeCache.set(normalizedBaseUrl, { fetchedAt: now, theme })
     return theme
   } catch {

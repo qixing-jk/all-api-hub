@@ -15,14 +15,22 @@ describe("siteRouteResolver", () => {
     vi.restoreAllMocks()
   })
 
+  const mockDefaultNewApiThemeStatus = () =>
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          success: true,
+          message: "",
+          data: { theme: "default" },
+        }),
+        {
+          headers: { "content-type": "application/json" },
+        },
+      ),
+    )
+
   it("uses New API default frontend routes when /api/status reports the default theme", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        success: true,
-        data: { theme: "default" },
-      }),
-    } as Response)
+    mockDefaultNewApiThemeStatus()
 
     await expect(
       resolveAccountSiteRouteUrl(
@@ -93,13 +101,7 @@ describe("siteRouteResolver", () => {
   })
 
   it("resolves login URLs through the route resolver when a site type hint is available", async () => {
-    vi.spyOn(globalThis, "fetch").mockResolvedValue({
-      ok: true,
-      json: async () => ({
-        success: true,
-        data: { theme: "default" },
-      }),
-    } as Response)
+    mockDefaultNewApiThemeStatus()
 
     await expect(
       resolveAccountSiteLoginUrl(
