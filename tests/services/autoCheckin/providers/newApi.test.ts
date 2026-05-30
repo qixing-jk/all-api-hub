@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
+import { SITE_ROUTE_KINDS } from "~/services/accounts/utils/siteRouteResolver"
 import { newApiProvider } from "~/services/checkin/autoCheckin/providers/newApi"
 import { AuthTypeEnum, SiteHealthStatus } from "~/types"
 import { buildSiteAccount } from "~~/tests/test-utils/factories"
@@ -19,6 +20,15 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
     await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return { ...actual, isAllowedIncognitoAccess: vi.fn() }
 })
+
+vi.mock("~/services/accounts/utils/siteRouteResolver", () => ({
+  SITE_ROUTE_KINDS: {
+    CheckIn: "checkIn",
+  },
+  resolveAccountSiteRouteUrl: vi.fn(() =>
+    Promise.resolve("https://test.com/console/personal"),
+  ),
+}))
 
 const mockAccount = buildSiteAccount({
   id: "test-id",
@@ -191,6 +201,49 @@ describe("newApiProvider", () => {
           useIncognito: true,
           turnstileTimeoutMs: 12000,
           turnstilePreTrigger: { kind: "checkinButton" },
+        }),
+      )
+    })
+
+    it("uses the theme-aware New API route for Turnstile-assisted verification pages", async () => {
+      const { fetchApi } = await import("~/services/apiService/common/utils")
+      const { tempWindowTurnstileFetch } = await import(
+        "~/utils/browser/tempWindowFetch"
+      )
+      const { isAllowedIncognitoAccess } = await import(
+        "~/utils/browser/browserApi"
+      )
+      const { resolveAccountSiteRouteUrl } = await import(
+        "~/services/accounts/utils/siteRouteResolver"
+      )
+
+      vi.mocked(fetchApi).mockResolvedValueOnce({
+        success: false,
+        message: "Turnstile token 为空",
+        data: null,
+      })
+      vi.mocked(isAllowedIncognitoAccess).mockResolvedValueOnce(false)
+      vi.mocked(resolveAccountSiteRouteUrl).mockResolvedValueOnce(
+        "https://test.com/profile",
+      )
+      vi.mocked(tempWindowTurnstileFetch).mockResolvedValueOnce({
+        success: false,
+        error: "need manual verification",
+        turnstile: { status: "timeout", hasTurnstile: true },
+      })
+
+      await newApiProvider.checkIn(mockAccount)
+
+      expect(resolveAccountSiteRouteUrl).toHaveBeenCalledWith(
+        {
+          baseUrl: "https://test.com",
+          siteType: SITE_TYPES.NEW_API,
+        },
+        SITE_ROUTE_KINDS.CheckIn,
+      )
+      expect(tempWindowTurnstileFetch).toHaveBeenCalledWith(
+        expect.objectContaining({
+          pageUrl: "https://test.com/profile",
         }),
       )
     })

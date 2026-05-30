@@ -28,6 +28,10 @@ import {
   getAccountSiteApiRouter,
   SITE_TYPES,
 } from "~/constants/siteType"
+import {
+  resolveAccountSiteRouteUrl,
+  SITE_ROUTE_KINDS,
+} from "~/services/accounts/utils/siteRouteResolver"
 import { getErrorMessage } from "~/utils/core/error"
 import { joinUrl } from "~/utils/core/url"
 import { t } from "~/utils/i18n/core"
@@ -255,7 +259,19 @@ export function getLoginUrl(siteUrl: string): string {
  * @param siteUrl Base site URL used to derive the login page.
  */
 export async function openLoginTab(siteUrl: string): Promise<void> {
-  const loginUrl = getLoginUrl(siteUrl)
+  let loginUrl = getLoginUrl(siteUrl)
+  try {
+    const parsedUrl = new URL(siteUrl)
+    loginUrl = await resolveAccountSiteRouteUrl(
+      {
+        baseUrl: `${parsedUrl.protocol}//${parsedUrl.host}`,
+        siteType: SITE_TYPES.NEW_API,
+      },
+      SITE_ROUTE_KINDS.Login,
+    )
+  } catch {
+    loginUrl = getLoginUrl(siteUrl)
+  }
   await browser.tabs.create({ url: loginUrl, active: true })
 }
 

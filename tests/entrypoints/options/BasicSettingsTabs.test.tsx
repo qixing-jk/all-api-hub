@@ -2,9 +2,11 @@ import userEvent from "@testing-library/user-event"
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import CheckinRedeemTab from "~/features/BasicSettings/components/tabs/CheckinRedeem/CheckinRedeemTab"
 import NewApiSettings from "~/features/BasicSettings/components/tabs/ManagedSite/NewApiSettings"
 import WebAiApiCheckTab from "~/features/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckTab"
+import { SITE_ROUTE_KINDS } from "~/services/accounts/utils/siteRouteResolver"
 import {
   fireEvent,
   render,
@@ -13,12 +15,33 @@ import {
   within,
 } from "~~/tests/test-utils/render"
 
-const { mockedUseUserPreferencesContext, showUpdateToastMock } = vi.hoisted(
-  () => ({
-    mockedUseUserPreferencesContext: vi.fn(),
-    showUpdateToastMock: vi.fn(),
-  }),
-)
+const {
+  createTabMock,
+  mockedUseUserPreferencesContext,
+  resolveAccountSiteRouteUrlMock,
+  showUpdateToastMock,
+} = vi.hoisted(() => ({
+  createTabMock: vi.fn(),
+  mockedUseUserPreferencesContext: vi.fn(),
+  resolveAccountSiteRouteUrlMock: vi.fn(),
+  showUpdateToastMock: vi.fn(),
+}))
+
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+  return {
+    ...actual,
+    createTab: createTabMock,
+  }
+})
+
+vi.mock("~/services/accounts/utils/siteRouteResolver", () => ({
+  SITE_ROUTE_KINDS: {
+    AdminCredentials: "adminCredentials",
+  },
+  resolveAccountSiteRouteUrl: resolveAccountSiteRouteUrlMock,
+}))
 
 vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   const actual =
@@ -77,7 +100,12 @@ const createContextValue = (overrides: Record<string, unknown> = {}) => ({
 
 describe("BasicSettings tab layout", () => {
   beforeEach(() => {
+    createTabMock.mockReset()
     mockedUseUserPreferencesContext.mockReset()
+    resolveAccountSiteRouteUrlMock.mockReset()
+    resolveAccountSiteRouteUrlMock.mockResolvedValue(
+      "https://managed.example/profile",
+    )
     showUpdateToastMock.mockReset()
     mockedUseUserPreferencesContext.mockReturnValue(createContextValue())
   })
@@ -239,6 +267,36 @@ describe("BasicSettings tab layout", () => {
     expect(showUpdateToastMock).toHaveBeenCalledWith(
       true,
       "settings:newApi.fields.userIdLabel",
+    )
+  })
+
+  it("opens the New API admin credentials page through the theme-aware route resolver", async () => {
+    const user = userEvent.setup()
+    const contextValue = createContextValue({
+      newApiBaseUrl: "https://managed-new-api.example",
+    })
+    mockedUseUserPreferencesContext.mockReturnValue(contextValue)
+
+    render(<NewApiSettings />)
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "settings:newApi.adminCredentialsLink.open",
+      }),
+    )
+
+    await waitFor(() =>
+      expect(resolveAccountSiteRouteUrlMock).toHaveBeenCalledWith(
+        {
+          baseUrl: "https://managed-new-api.example",
+          siteType: SITE_TYPES.NEW_API,
+        },
+        SITE_ROUTE_KINDS.AdminCredentials,
+      ),
+    )
+    expect(createTabMock).toHaveBeenCalledWith(
+      "https://managed.example/profile",
+      true,
     )
   })
 

@@ -9,6 +9,7 @@ import {
   openLoginTab,
   reloadCurrentTab,
 } from "~/services/accounts/utils/autoDetectUtils"
+import { clearSiteRouteThemeCacheForTests } from "~/services/accounts/utils/siteRouteResolver"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
 const { tMock } = vi.hoisted(() => ({
@@ -39,6 +40,10 @@ afterAll(() => {
 })
 
 describe("autoDetectUtils", () => {
+  beforeEach(() => {
+    vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"))
+  })
+
   describe("analyzeAutoDetectError", () => {
     describe("Timeout errors", () => {
       it("should detect timeout error with Chinese text", () => {
@@ -419,6 +424,8 @@ describe("autoDetectUtils", () => {
   describe("openLoginTab", () => {
     beforeEach(() => {
       vi.clearAllMocks()
+      clearSiteRouteThemeCacheForTests()
+      vi.spyOn(globalThis, "fetch").mockRejectedValue(new Error("offline"))
     })
 
     it("should create new tab with login URL", async () => {
@@ -430,6 +437,28 @@ describe("autoDetectUtils", () => {
         url: "https://example.com/login",
         active: true,
       })
+    })
+
+    it("uses the New API default frontend sign-in route when available", async () => {
+      const fetchSpy = vi.spyOn(globalThis, "fetch").mockResolvedValueOnce({
+        ok: true,
+        json: async () => ({
+          success: true,
+          data: { theme: "default" },
+        }),
+      } as Response)
+
+      await openLoginTab("https://new-api-login.example")
+
+      expect(fetchSpy).toHaveBeenCalledWith(
+        "https://new-api-login.example/api/status",
+      )
+      expect(browser.tabs.create).toHaveBeenCalledWith({
+        url: "https://new-api-login.example/sign-in",
+        active: true,
+      })
+
+      fetchSpy.mockRestore()
     })
 
     it("should open tab in active state", async () => {

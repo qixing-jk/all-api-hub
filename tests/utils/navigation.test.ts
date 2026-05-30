@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { getAccountSiteApiRouter } from "~/constants/siteType"
 import { isExtensionPopup } from "~/utils/browser"
 import {
   createTab as createTabApi,
@@ -10,7 +9,6 @@ import {
   hasWindowsAPI,
   openSidePanel as openSidePanelApi,
 } from "~/utils/browser/browserApi"
-import { joinUrl } from "~/utils/core/url"
 import {
   navigateWithinOptionsPage,
   openAboutPage,
@@ -77,16 +75,22 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
-vi.mock("~/constants/siteType", () => ({
-  getAccountSiteApiRouter: vi.fn(() => ({
-    usagePath: "/usage",
-    checkInPath: "/checkin",
-    redeemPath: "/redeem",
-  })),
-}))
-
-vi.mock("~/utils/core/url", () => ({
-  joinUrl: vi.fn((base: string, path: string) => `${base}${path}`),
+vi.mock("~/services/accounts/utils/siteRouteResolver", () => ({
+  SITE_ROUTE_KINDS: {
+    Usage: "usage",
+    CheckIn: "checkIn",
+    Redeem: "redeem",
+  },
+  resolveAccountSiteRouteUrl: vi.fn(
+    (account: { baseUrl: string }, route: "usage" | "checkIn" | "redeem") => {
+      const routePaths = {
+        usage: "/usage",
+        checkIn: "/checkin",
+        redeem: "/redeem",
+      } as const
+      return Promise.resolve(`${account.baseUrl}${routePaths[route]}`)
+    },
+  ),
 }))
 
 vi.mock("~/utils/navigation/feedbackLinks", () => ({
@@ -115,8 +119,13 @@ const mockedFocusTab = vi.mocked(focusTabApi)
 const mockedGetExtensionURL = vi.mocked(getExtensionURL)
 const mockedHasWindowsAPI = vi.mocked(hasWindowsAPI)
 const mockedOpenSidePanel = vi.mocked(openSidePanelApi)
-const mockedGetAccountSiteApiRouter = vi.mocked(getAccountSiteApiRouter)
-const mockedJoinUrl = vi.mocked(joinUrl)
+
+const getMockedRouteResolver = async () => {
+  const { resolveAccountSiteRouteUrl } = await import(
+    "~/services/accounts/utils/siteRouteResolver"
+  )
+  return vi.mocked(resolveAccountSiteRouteUrl)
+}
 
 describe("navigation utilities", () => {
   beforeEach(() => {
@@ -166,6 +175,10 @@ describe("navigation utilities", () => {
   })
 
   it("openUsagePage should open usage URL built from site router", async () => {
+    const mockedResolveAccountSiteRouteUrl = await getMockedRouteResolver()
+    mockedResolveAccountSiteRouteUrl.mockResolvedValueOnce(
+      "https://example.com/usage-resolved",
+    )
     const account = {
       baseUrl: "https://example.com",
       siteType: "one-api",
@@ -173,10 +186,14 @@ describe("navigation utilities", () => {
 
     await openUsagePage(account)
 
-    expect(mockedGetAccountSiteApiRouter).toHaveBeenCalledWith("one-api")
-    expect(mockedJoinUrl).toHaveBeenCalledWith("https://example.com", "/usage")
-    const url = mockedJoinUrl.mock.results[0].value
-    expect(mockedCreateTab).toHaveBeenCalledWith(url, true)
+    expect(mockedResolveAccountSiteRouteUrl).toHaveBeenCalledWith(
+      account,
+      "usage",
+    )
+    expect(mockedCreateTab).toHaveBeenCalledWith(
+      "https://example.com/usage-resolved",
+      true,
+    )
   })
 
   it("openModelsPage should open models page for the default view, accounts, and stored profiles", async () => {
@@ -406,6 +423,10 @@ describe("navigation utilities", () => {
   })
 
   it("openCheckInPages should open grouped check-in tabs by default", async () => {
+    const mockedResolveAccountSiteRouteUrl = await getMockedRouteResolver()
+    mockedResolveAccountSiteRouteUrl
+      .mockResolvedValueOnce("https://example.com/checkin-resolved")
+      .mockResolvedValueOnce("https://example.org/checkin-resolved")
     mockedCreateTab
       .mockResolvedValueOnce({ id: 11 } as any)
       .mockResolvedValueOnce({ id: 12 } as any)
@@ -422,11 +443,11 @@ describe("navigation utilities", () => {
     ])
 
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://example.com/checkin",
+      "https://example.com/checkin-resolved",
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      "https://example.org/checkin",
+      "https://example.org/checkin-resolved",
       true,
     )
     expect(result).toEqual({ openedCount: 2, failedCount: 0 })

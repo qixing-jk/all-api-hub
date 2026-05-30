@@ -1,6 +1,9 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { getAccountSiteApiRouter } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import {
+  resolveAccountSiteRouteUrl,
+  SITE_ROUTE_KINDS,
+} from "~/services/accounts/utils/siteRouteResolver"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { redeemService } from "~/services/redemption/redeemService"
 import { isPossibleRedemptionCode } from "~/services/redemption/utils/redemptionCode"
@@ -8,7 +11,6 @@ import { searchAccounts } from "~/services/search/accountSearch"
 import type { DisplaySiteData } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { joinUrl } from "~/utils/core/url"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
 import {
   buildOriginWhitelistPattern,
@@ -252,13 +254,18 @@ class RedemptionAssistService {
         const origin = this.getOrigin(account.baseUrl)
         if (!origin) continue
 
-        const router = getAccountSiteApiRouter(account.siteType)
         const resolvedCheckInUrl =
           account.checkIn?.customCheckIn?.url ||
-          joinUrl(origin, router.checkInPath)
+          (await resolveAccountSiteRouteUrl(
+            { baseUrl: origin, siteType: account.siteType },
+            SITE_ROUTE_KINDS.CheckIn,
+          ))
         const resolvedRedeemUrl =
           account.checkIn?.customCheckIn?.redeemUrl ||
-          joinUrl(origin, router.redeemPath)
+          (await resolveAccountSiteRouteUrl(
+            { baseUrl: origin, siteType: account.siteType },
+            SITE_ROUTE_KINDS.Redeem,
+          ))
 
         const checkInPattern = buildOriginWhitelistPattern(resolvedCheckInUrl)
         if (checkInPattern) patterns.push(checkInPattern)

@@ -2,7 +2,10 @@ import {
   MENU_ITEM_IDS,
   type OptionsMenuItemId,
 } from "~/constants/optionsMenuIds"
-import { getAccountSiteApiRouter } from "~/constants/siteType"
+import {
+  resolveAccountSiteRouteUrl,
+  SITE_ROUTE_KINDS,
+} from "~/services/accounts/utils/siteRouteResolver"
 import type { DisplaySiteData } from "~/types"
 import { isExtensionPopup, OPTIONS_PAGE_URL } from "~/utils/browser"
 import {
@@ -15,7 +18,6 @@ import {
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
-import { joinUrl } from "~/utils/core/url"
 import {
   getFeedbackDestinationUrls,
   getSiteSupportRequestUrl,
@@ -624,9 +626,9 @@ const _openAccountBaseUrl = async (
  * @param account Account definition containing base URL and site type.
  */
 const _openUsagePage = async (account: DisplaySiteData) => {
-  const logUrl = joinUrl(
-    account.baseUrl,
-    getAccountSiteApiRouter(account.siteType).usagePath,
+  const logUrl = await resolveAccountSiteRouteUrl(
+    account,
+    SITE_ROUTE_KINDS.Usage,
   )
   await createActiveTab(logUrl)
 }
@@ -636,10 +638,7 @@ const _openUsagePage = async (account: DisplaySiteData) => {
  * @param account Account metadata used to resolve the check-in URL.
  */
 const getCheckInPageUrl = (account: DisplaySiteData) =>
-  joinUrl(
-    account.baseUrl,
-    getAccountSiteApiRouter(account.siteType).checkInPath,
-  )
+  resolveAccountSiteRouteUrl(account, SITE_ROUTE_KINDS.CheckIn)
 
 /**
  * Best-effort URL opener for grouped navigation flows.
@@ -718,7 +717,7 @@ const openUrlsBestEffort = async (
  * @param account Account metadata used to resolve the check-in URL.
  */
 const _openCheckInPage = async (account: DisplaySiteData) => {
-  const checkInUrl = getCheckInPageUrl(account)
+  const checkInUrl = await getCheckInPageUrl(account)
   await createActiveTab(checkInUrl)
 }
 
@@ -730,10 +729,7 @@ const _openCheckInPage = async (account: DisplaySiteData) => {
 const _openCustomCheckInPage = async (account: DisplaySiteData) => {
   const customCheckInUrl =
     account.checkIn?.customCheckIn?.url ||
-    joinUrl(
-      account.baseUrl,
-      getAccountSiteApiRouter(account.siteType).checkInPath,
-    )
+    (await resolveAccountSiteRouteUrl(account, SITE_ROUTE_KINDS.CheckIn))
   await createActiveTab(customCheckInUrl)
 }
 
@@ -744,10 +740,7 @@ const _openCustomCheckInPage = async (account: DisplaySiteData) => {
 const _openRedeemPage = async (account: DisplaySiteData) => {
   const redeemUrl =
     account.checkIn?.customCheckIn?.redeemUrl ||
-    joinUrl(
-      account.baseUrl,
-      getAccountSiteApiRouter(account.siteType).redeemPath,
-    )
+    (await resolveAccountSiteRouteUrl(account, SITE_ROUTE_KINDS.Redeem))
   await createActiveTab(redeemUrl)
 }
 
@@ -947,10 +940,8 @@ export const openCheckInPages = async (
   accounts: DisplaySiteData[],
   options?: { openInNewWindow?: boolean },
 ) => {
-  const result = await openUrlsBestEffort(
-    accounts.map(getCheckInPageUrl),
-    options,
-  )
+  const urls = await Promise.all(accounts.map(getCheckInPageUrl))
+  const result = await openUrlsBestEffort(urls, options)
   closeIfPopup()
   return result
 }

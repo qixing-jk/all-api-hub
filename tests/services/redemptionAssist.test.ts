@@ -1,7 +1,21 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SITE_ROUTE_KINDS } from "~/services/accounts/utils/siteRouteResolver"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+
+vi.mock("~/services/accounts/utils/siteRouteResolver", () => ({
+  SITE_ROUTE_KINDS: {
+    CheckIn: "checkIn",
+    Redeem: "redeem",
+  },
+  resolveAccountSiteRouteUrl: vi.fn(
+    (account: { baseUrl: string }, route: "checkIn" | "redeem") =>
+      Promise.resolve(
+        `${account.baseUrl}${route === "checkIn" ? "/profile" : "/wallet"}`,
+      ),
+  ),
+}))
 
 vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   const actual =
@@ -260,6 +274,85 @@ describe("redemptionAssist shouldPrompt batch filtering", () => {
     })
     expect(getAllAccounts).toHaveBeenCalledTimes(1)
     expect(convertToDisplayData).toHaveBeenCalledTimes(1)
+  })
+
+  it("derives default check-in and redeem whitelist patterns through the site route resolver", async () => {
+    vi.resetModules()
+    const { userPreferences } = await import(
+      "~/services/preferences/userPreferences"
+    )
+    vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+      ...DEFAULT_PREFERENCES,
+      redemptionAssist: {
+        enabled: true,
+        contextMenu: {
+          enabled: true,
+        },
+        urlWhitelist: {
+          enabled: true,
+          patterns: [],
+          includeAccountSiteUrls: false,
+          includeCheckInAndRedeemUrls: true,
+        },
+        relaxedCodeValidation: false,
+      },
+    })
+
+    const getAllAccounts = vi.fn().mockResolvedValue([])
+    const convertToDisplayData = vi.fn().mockReturnValue([
+      {
+        id: "acc_default_routes",
+        siteType: "new-api",
+        baseUrl: "https://new-api-default.example/path",
+        disabled: false,
+      },
+    ])
+
+    vi.doMock("~/services/accounts/accountStorage", () => ({
+      accountStorage: {
+        getAllAccounts,
+        convertToDisplayData,
+      },
+    }))
+
+    const { resolveAccountSiteRouteUrl } = await import(
+      "~/services/accounts/utils/siteRouteResolver"
+    )
+    const { handleRedemptionAssistMessage } = await import(
+      "~/services/redemption/redemptionAssist"
+    )
+
+    const validHex = "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6"
+    const sendResponse = vi.fn()
+
+    await handleRedemptionAssistMessage(
+      {
+        action: RuntimeActionIds.RedemptionAssistShouldPrompt,
+        url: "https://new-api-default.example/wallet/code",
+        codes: [validHex],
+      },
+      { tab: { id: 12 } } as any,
+      sendResponse,
+    )
+
+    expect(resolveAccountSiteRouteUrl).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://new-api-default.example",
+        siteType: "new-api",
+      },
+      SITE_ROUTE_KINDS.CheckIn,
+    )
+    expect(resolveAccountSiteRouteUrl).toHaveBeenCalledWith(
+      {
+        baseUrl: "https://new-api-default.example",
+        siteType: "new-api",
+      },
+      SITE_ROUTE_KINDS.Redeem,
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      promptableCodes: [validHex],
+    })
   })
 
   it("updates runtime settings through the message handler and disables promptability immediately", async () => {

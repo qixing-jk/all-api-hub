@@ -1,5 +1,8 @@
-import { getAccountSiteApiRouter } from "~/constants/siteType"
 import { TURNSTILE_DEFAULT_WAIT_TIMEOUT_MS } from "~/constants/turnstile"
+import {
+  resolveAccountSiteRouteUrl,
+  SITE_ROUTE_KINDS,
+} from "~/services/accounts/utils/siteRouteResolver"
 import { buildCompatUserIdHeaders } from "~/services/apiService/common/compatHeaders"
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
 import { ApiError } from "~/services/apiService/common/errors"
@@ -74,10 +77,10 @@ function isTurnstileRequiredMessage(message: string): boolean {
 /**
  * Resolve a user-openable URL for manual Turnstile verification.
  */
-function resolveCheckInUrl(account: SiteAccount): string {
-  return joinUrl(
-    account.site_url,
-    getAccountSiteApiRouter(account.site_type).checkInPath,
+function resolveCheckInUrl(account: SiteAccount): Promise<string> {
+  return resolveAccountSiteRouteUrl(
+    { baseUrl: account.site_url, siteType: account.site_type },
+    SITE_ROUTE_KINDS.CheckIn,
   )
 }
 
@@ -331,7 +334,7 @@ async function resolveTurnstileAssistedCheckinResult(params: {
   account: SiteAccount
   responseMessage: string
 }): Promise<CheckinResult> {
-  const checkInUrl = resolveCheckInUrl(params.account)
+  const checkInUrl = await resolveCheckInUrl(params.account)
   const assistedParams = buildTurnstileAssistedParams(
     params.account,
     checkInUrl,

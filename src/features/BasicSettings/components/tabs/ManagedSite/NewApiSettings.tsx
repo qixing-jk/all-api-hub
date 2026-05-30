@@ -10,15 +10,18 @@ import {
   Input,
   WorkflowTransitionButton,
 } from "~/components/ui"
-import { getSiteRouteConfigForKey, SITE_TYPES } from "~/constants/siteType"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
+import {
+  resolveAccountSiteRouteUrl,
+  SITE_ROUTE_KINDS,
+} from "~/services/accounts/utils/siteRouteResolver"
 import { isManagedSiteAdminUserIdInputValid } from "~/services/managedSites/utils/adminUserId"
 import { createTab } from "~/utils/browser/browserApi"
 import { showUpdateToast } from "~/utils/core/toastHelpers"
-import { joinUrl } from "~/utils/core/url"
 
 /**
  * Settings panel for configuring New API connection credentials (base URL, admin token, user ID).
@@ -140,15 +143,12 @@ export default function NewApiSettings() {
       ? t("messages:errors.validation.userIdNumeric")
       : undefined
   const shouldShowAdminCredentialsLink = Boolean(trimmedBaseUrl)
-  const adminCredentialsUrl = shouldShowAdminCredentialsLink
-    ? joinUrl(
-        trimmedBaseUrl,
-        getSiteRouteConfigForKey(SITE_TYPES.NEW_API).adminCredentialsPath,
-      )
-    : ""
-
   const handleOpenAdminCredentials = async () => {
-    if (!adminCredentialsUrl) return
+    if (!shouldShowAdminCredentialsLink) return
+    const adminCredentialsUrl = await resolveAccountSiteRouteUrl(
+      { baseUrl: trimmedBaseUrl, siteType: SITE_TYPES.NEW_API },
+      SITE_ROUTE_KINDS.AdminCredentials,
+    )
     try {
       await createTab(adminCredentialsUrl, true)
     } catch {
