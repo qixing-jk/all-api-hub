@@ -1,4 +1,6 @@
 import {
+  AIHUBMIX_HOSTNAMES,
+  AIHUBMIX_WEB_ORIGIN,
   getAccountSiteApiRouter,
   SITE_TYPES,
   type AccountSiteType,
@@ -35,6 +37,7 @@ const NEW_API_FRONTEND_THEMES = {
 
 const NEW_API_STATUS_ENDPOINT = "/api/status"
 const SITE_ANNOUNCEMENTS_ROUTE_KIND = SITE_ROUTE_KINDS.SiteAnnouncements
+const AIHUBMIX_HOSTNAME_SET: ReadonlySet<string> = new Set(AIHUBMIX_HOSTNAMES)
 
 const NEW_API_DEFAULT_THEME_ROUTE_PATHS: Record<
   Exclude<SiteRouteKind, typeof SITE_ANNOUNCEMENTS_ROUTE_KIND>,
@@ -58,6 +61,30 @@ const themeCache = new Map<string, { fetchedAt: number; theme?: string }>()
  */
 function normalizeBaseUrl(baseUrl: string): string {
   return baseUrl.trim().replace(/\/+$/, "")
+}
+
+/**
+ * Resolve the best-effort login URL when no site type hint is available.
+ * @param siteUrl Site URL provided by the caller.
+ * @returns A normalized login page URL or the original URL when parsing fails.
+ */
+export function getBestEffortLoginUrl(siteUrl: string): string {
+  try {
+    const url = new URL(siteUrl)
+    if (AIHUBMIX_HOSTNAME_SET.has(url.hostname.toLowerCase())) {
+      return joinUrl(
+        AIHUBMIX_WEB_ORIGIN,
+        getAccountSiteApiRouter(SITE_TYPES.AIHUBMIX).loginPath,
+      )
+    }
+
+    return joinUrl(
+      `${url.protocol}//${url.host}`,
+      getAccountSiteApiRouter(SITE_TYPES.UNKNOWN).loginPath,
+    )
+  } catch {
+    return siteUrl
+  }
 }
 
 /**
@@ -161,6 +188,38 @@ export async function resolveAccountSiteRouteUrl(
   const baseUrl = normalizeBaseUrl(target.baseUrl)
   const path = await resolveAccountSiteRoutePath(target, route)
   return joinUrl(baseUrl, path)
+}
+
+/**
+ * Resolve the login page URL for a site with optional site type awareness.
+ * @param siteUrl Site URL provided by the caller.
+ * @param siteTypeHint Already-known site type from the caller.
+ * @returns Full URL for the site's login page, or a best-effort fallback.
+ */
+export async function resolveAccountSiteLoginUrl(
+  siteUrl: string,
+  siteTypeHint?: AccountSiteType,
+): Promise<string> {
+  try {
+    const parsedUrl = new URL(siteUrl)
+    if (siteTypeHint && siteTypeHint !== SITE_TYPES.UNKNOWN) {
+      const baseUrl =
+        siteTypeHint === SITE_TYPES.AIHUBMIX
+          ? AIHUBMIX_WEB_ORIGIN
+          : `${parsedUrl.protocol}//${parsedUrl.host}`
+      return resolveAccountSiteRouteUrl(
+        {
+          baseUrl,
+          siteType: siteTypeHint,
+        },
+        SITE_ROUTE_KINDS.Login,
+      )
+    }
+
+    return getBestEffortLoginUrl(siteUrl)
+  } catch {
+    return getBestEffortLoginUrl(siteUrl)
+  }
 }
 
 /**

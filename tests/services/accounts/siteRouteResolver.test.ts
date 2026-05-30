@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   clearSiteRouteThemeCacheForTests,
+  getBestEffortLoginUrl,
+  resolveAccountSiteLoginUrl,
   resolveAccountSiteRouteUrl,
   SITE_ROUTE_KINDS,
 } from "~/services/accounts/utils/siteRouteResolver"
@@ -87,6 +89,48 @@ describe("siteRouteResolver", () => {
       ),
     ).resolves.toBe("https://veloera.example/app/me")
 
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it("resolves login URLs through the route resolver when a site type hint is available", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue({
+      ok: true,
+      json: async () => ({
+        success: true,
+        data: { theme: "default" },
+      }),
+    } as Response)
+
+    await expect(
+      resolveAccountSiteLoginUrl(
+        "https://new-api.example/dashboard",
+        SITE_TYPES.NEW_API,
+      ),
+    ).resolves.toBe("https://new-api.example/sign-in")
+  })
+
+  it("uses best-effort login routing when no site type hint is available", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+
+    await expect(
+      resolveAccountSiteLoginUrl("https://unknown.example/dashboard"),
+    ).resolves.toBe("https://unknown.example/login")
+    expect(getBestEffortLoginUrl("not-a-url")).toBe("not-a-url")
+    expect(fetchSpy).not.toHaveBeenCalled()
+  })
+
+  it("keeps AIHubMix login routing centralized in the route resolver", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch")
+
+    await expect(
+      resolveAccountSiteLoginUrl(
+        "https://aihubmix.com/statistics",
+        SITE_TYPES.AIHUBMIX,
+      ),
+    ).resolves.toBe("https://console.aihubmix.com/sign-in")
+    expect(
+      getBestEffortLoginUrl("https://console.aihubmix.com/statistics"),
+    ).toBe("https://console.aihubmix.com/sign-in")
     expect(fetchSpy).not.toHaveBeenCalled()
   })
 })

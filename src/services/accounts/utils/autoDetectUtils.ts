@@ -22,20 +22,12 @@ import {
   type AutoDetectErrorCode,
   type AutoDetectFailureReason,
 } from "~/constants/autoDetect"
+import { type AccountSiteType } from "~/constants/siteType"
 import {
-  AIHUBMIX_HOSTNAMES,
-  AIHUBMIX_WEB_ORIGIN,
-  getAccountSiteApiRouter,
-  isAccountSiteType,
-  SITE_TYPES,
-  type AccountSiteType,
-} from "~/constants/siteType"
-import {
-  resolveAccountSiteRouteUrl,
-  SITE_ROUTE_KINDS,
+  getBestEffortLoginUrl,
+  resolveAccountSiteLoginUrl,
 } from "~/services/accounts/utils/siteRouteResolver"
 import { getErrorMessage } from "~/utils/core/error"
-import { joinUrl } from "~/utils/core/url"
 import { t } from "~/utils/i18n/core"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
@@ -100,8 +92,6 @@ const ERROR_KEYWORDS: Record<string, string[]> = {
   NOT_FOUND: ["404", "未找到", "Not Found"],
   SERVER_ERROR: ["500", "服务器错误", "Internal Server Error", "server crash"],
 }
-
-const AIHUBMIX_HOSTNAME_SET: ReadonlySet<string> = new Set(AIHUBMIX_HOSTNAMES)
 
 /**
  * Builds the structured UI error shown when the active tab likely needs a
@@ -237,24 +227,7 @@ export interface AutoDetectErrorProps {
  * @returns Login page URL to open in a new tab.
  */
 export function getLoginUrl(siteUrl: string): string {
-  try {
-    const url = new URL(siteUrl)
-    if (AIHUBMIX_HOSTNAME_SET.has(url.hostname.toLowerCase())) {
-      return joinUrl(
-        AIHUBMIX_WEB_ORIGIN,
-        getAccountSiteApiRouter(SITE_TYPES.AIHUBMIX).loginPath,
-      )
-    }
-
-    // 对于 One API 和 New API，通常登录页面在 /login
-    return joinUrl(
-      `${url.protocol}//${url.host}`,
-      getAccountSiteApiRouter(SITE_TYPES.UNKNOWN).loginPath,
-    )
-  } catch {
-    // If parsing fails, fall back to the original URL (best-effort)
-    return siteUrl
-  }
+  return getBestEffortLoginUrl(siteUrl)
 }
 
 /**
@@ -266,27 +239,7 @@ export async function openLoginTab(
   siteUrl: string,
   siteTypeHint?: AccountSiteType,
 ): Promise<void> {
-  let loginUrl = getLoginUrl(siteUrl)
-  try {
-    const parsedUrl = new URL(siteUrl)
-    const siteType = isAccountSiteType(siteTypeHint)
-      ? siteTypeHint
-      : SITE_TYPES.UNKNOWN
-    if (siteType !== SITE_TYPES.UNKNOWN) {
-      loginUrl = await resolveAccountSiteRouteUrl(
-        {
-          baseUrl:
-            siteType === SITE_TYPES.AIHUBMIX
-              ? AIHUBMIX_WEB_ORIGIN
-              : `${parsedUrl.protocol}//${parsedUrl.host}`,
-          siteType,
-        },
-        SITE_ROUTE_KINDS.Login,
-      )
-    }
-  } catch {
-    loginUrl = getLoginUrl(siteUrl)
-  }
+  const loginUrl = await resolveAccountSiteLoginUrl(siteUrl, siteTypeHint)
   await browser.tabs.create({ url: loginUrl, active: true })
 }
 

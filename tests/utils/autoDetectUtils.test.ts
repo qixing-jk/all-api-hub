@@ -536,11 +536,10 @@ describe("autoDetectUtils", () => {
       )
     })
 
-    it("should call getLoginUrl internally", async () => {
+    it("should use the best-effort login route when no hint is available", async () => {
       const siteUrl = "https://example.com/dashboard"
       await openLoginTab(siteUrl)
 
-      // Verify that the /login path is appended correctly
       expect(browser.tabs.create).toHaveBeenCalledWith({
         url: "https://example.com/login",
         active: true,
