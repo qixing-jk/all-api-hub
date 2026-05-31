@@ -1,10 +1,19 @@
-import { afterAll, beforeEach, describe, expect, it, vi } from "vitest"
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest"
 
 import { userPreferences } from "~/services/preferences/userPreferences"
 import {
   downloadBackup,
   downloadBackupRaw,
   isWebdavFileNotFoundError,
+  parseWebdavBackupJson,
   testWebdavConnection,
   uploadBackup,
   WEBDAV_FILE_NOT_FOUND_ERROR_CODE,
@@ -58,6 +67,10 @@ describe("webdavService", () => {
     })
   })
 
+  afterEach(() => {
+    vi.useRealTimers()
+  })
+
   afterAll(() => {
     if (typeof originalFetch === "undefined") {
       delete globalAny.fetch
@@ -89,6 +102,20 @@ describe("webdavService", () => {
       ).toBe(true)
       expect(isWebdavFileNotFoundError("missing")).toBe(false)
       expect(isWebdavFileNotFoundError({ code: "OTHER" })).toBe(false)
+    })
+  })
+
+  describe("parseWebdavBackupJson", () => {
+    it("parses valid backup JSON", () => {
+      expect(parseWebdavBackupJson('{"version":"2.0"}')).toEqual({
+        version: "2.0",
+      })
+    })
+
+    it("throws a stable WebDAV backup error for malformed JSON", () => {
+      expect(() =>
+        parseWebdavBackupJson('{"version":"2.0","accounts":"'),
+      ).toThrow("messages:webdav.invalidBackupJson")
     })
   })
 
@@ -420,27 +447,329 @@ describe("webdavService", () => {
   })
 
   describe("uploadBackup", () => {
-    it("creates backup dir then uploads successfully", async () => {
+    it("cleans up only stale app-owned temp files before uploading", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      vi.setSystemTime(new Date("2026-05-31T04:15:00.000Z"))
 
-      // First call: MKCOL for backup directory
-      // Second call: PUT for actual backup file
       globalAny.fetch
         .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({
+          status: 207,
+          text: vi.fn()
+            .mockResolvedValue(`<?xml version="1.0" encoding="utf-8"?>
+        <d:multistatus xmlns:d="DAV:">
+          <d:response>
+            <d:href>/webdav/all-api-hub-backup/.all-api-hub-1-0.json.tmp.20260529T041400Z.oldone</d:href>
+          </d:response>
+          <d:response>
+            <d:href>/webdav/all-api-hub-backup/.all-api-hub-1-0.json.tmp.20260531T041400Z.newone</d:href>
+          </d:response>
+          <d:response>
+            <d:href>/webdav/all-api-hub-backup/all-api-hub-1-0.json</d:href>
+          </d:response>
+        </d:multistatus>`),
+        })
         .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"cleanup":true}'),
+        })
+        .mockResolvedValueOnce({ status: 201 })
+
+      await uploadBackup('{"cleanup":true}')
+
+      expect((globalAny.fetch.mock.calls[1][1] as RequestInit).method).toBe(
+        "PROPFIND",
+      )
+      expect((globalAny.fetch.mock.calls[2][1] as RequestInit).method).toBe(
+        "DELETE",
+      )
+      expect(globalAny.fetch.mock.calls[2][0]).toBe(
+        "https://example.com/webdav/all-api-hub-backup/.all-api-hub-1-0.json.tmp.20260529T041400Z.oldone",
+      )
+      expect(
+        globalAny.fetch.mock.calls.some(([url]: [unknown]) =>
+          String(url).includes("20260531T041400Z.newone"),
+        ),
+      ).toBe(false)
+    })
+
+    it("continues uploading when stale temp cleanup is unsupported", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({
+          status: 405,
+          text: vi.fn().mockResolvedValue(""),
+        })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"ok":true}'),
+        })
+        .mockResolvedValueOnce({ status: 201 })
+
+      await expect(uploadBackup('{"ok":true}')).resolves.toBe(true)
+
+      expect((globalAny.fetch.mock.calls[1][1] as RequestInit).method).toBe(
+        "PROPFIND",
+      )
+      expect((globalAny.fetch.mock.calls[2][1] as RequestInit).method).toBe(
+        "PUT",
+      )
+    })
+
+    it("ignores temp files with impossible timestamp dates during cleanup", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      vi.setSystemTime(new Date("2026-05-31T04:15:00.000Z"))
+
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({
+          status: 207,
+          text: vi.fn()
+            .mockResolvedValue(`<?xml version="1.0" encoding="utf-8"?>
+        <d:multistatus xmlns:d="DAV:">
+          <d:response>
+            <d:href>/webdav/all-api-hub-backup/.all-api-hub-1-0.json.tmp.20260231T000000Z.invaliddate</d:href>
+          </d:response>
+        </d:multistatus>`),
+        })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"invalidDate":true}'),
+        })
+        .mockResolvedValueOnce({ status: 201 })
+
+      await expect(uploadBackup('{"invalidDate":true}')).resolves.toBe(true)
+
+      expect(
+        globalAny.fetch.mock.calls.some(
+          ([url, init]: [unknown, RequestInit]) =>
+            String(url).includes("20260231T000000Z.invaliddate") &&
+            init?.method === "DELETE",
+        ),
+      ).toBe(false)
+      expect((globalAny.fetch.mock.calls[2][1] as RequestInit).method).toBe(
+        "PUT",
+      )
+    })
+
+    it("ignores stale temp hrefs outside the backup collection", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      vi.setSystemTime(new Date("2026-05-31T04:15:00.000Z"))
+
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({
+          status: 207,
+          text: vi.fn()
+            .mockResolvedValue(`<?xml version="1.0" encoding="utf-8"?>
+        <d:multistatus xmlns:d="DAV:">
+          <d:response>
+            <d:href>/webdav/other/.all-api-hub-1-0.json.tmp.20260529T041400Z.sibling</d:href>
+          </d:response>
+        </d:multistatus>`),
+        })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"outside":true}'),
+        })
+        .mockResolvedValueOnce({ status: 201 })
+
+      await expect(uploadBackup('{"outside":true}')).resolves.toBe(true)
+
+      expect(
+        globalAny.fetch.mock.calls.some(
+          ([url, init]: [unknown, RequestInit]) =>
+            String(url).includes("/webdav/other/") && init?.method === "DELETE",
+        ),
+      ).toBe(false)
+      expect((globalAny.fetch.mock.calls[2][1] as RequestInit).method).toBe(
+        "PUT",
+      )
+    })
+
+    it("uploads to a temp file, verifies it, and moves it into place", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"foo":"bar"}'),
+        })
+        .mockResolvedValueOnce({ status: 201 })
 
       const result = await uploadBackup('{"foo":"bar"}')
 
       expect(result).toBe(true)
-      expect(globalAny.fetch).toHaveBeenCalledTimes(2)
+      expect(globalAny.fetch).toHaveBeenCalledTimes(5)
 
-      const firstCallUrl = globalAny.fetch.mock.calls[0][0] as string
-      const secondCallArgs = globalAny.fetch.mock.calls[1]
-      const secondInit = secondCallArgs[1] as RequestInit
+      const [putUrl, putInit] = globalAny.fetch.mock.calls[2]
+      const [tempUrl, getInit] = globalAny.fetch.mock.calls[3]
+      const [moveUrl, moveInit] = globalAny.fetch.mock.calls[4]
 
-      // Ensure PUT request is issued
-      expect(secondInit.method).toBe("PUT")
-      expect(typeof firstCallUrl).toBe("string")
+      expect((putInit as RequestInit).method).toBe("PUT")
+      expect((putInit as RequestInit).body).toBe('{"foo":"bar"}')
+      expect(String(tempUrl)).toMatch(
+        /^https:\/\/example\.com\/webdav\/all-api-hub-backup\/\.all-api-hub-1-0\.json\.tmp\.\d{8}T\d{6}Z\.[a-z0-9]+$/,
+      )
+      expect(putUrl).toBe(tempUrl)
+      expect((getInit as RequestInit).method).toBe("GET")
+      expect(moveUrl).toBe(tempUrl)
+      expect((moveInit as RequestInit).method).toBe("MOVE")
+      expect((moveInit as RequestInit).headers).toMatchObject({
+        Destination:
+          "https://example.com/webdav/all-api-hub-backup/all-api-hub-1-0.json",
+        Overwrite: "T",
+      })
+    })
+
+    it("does not put directly to the official backup URL", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"safe":true}'),
+        })
+        .mockResolvedValueOnce({ status: 201 })
+
+      await uploadBackup('{"safe":true}')
+
+      const officialUrl =
+        "https://example.com/webdav/all-api-hub-backup/all-api-hub-1-0.json"
+      const officialPut = globalAny.fetch.mock.calls.find(
+        ([url, init]: [unknown, RequestInit]) =>
+          url === officialUrl && init?.method === "PUT",
+      )
+
+      expect(officialPut).toBeUndefined()
+    })
+
+    it("deletes plaintext temp readback mismatch and does not move", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"expected":false}'),
+        })
+        .mockResolvedValueOnce({ status: 204 })
+
+      const error = await uploadBackup('{"expected":true}').catch(
+        (thrown) => thrown,
+      )
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.uploadVerificationFailed")
+      expect(globalAny.fetch).toHaveBeenCalledTimes(5)
+      expect((globalAny.fetch.mock.calls[4][1] as RequestInit).method).toBe(
+        "DELETE",
+      )
+      expect(
+        globalAny.fetch.mock.calls.some(
+          ([, init]: [unknown, RequestInit]) => init?.method === "MOVE",
+        ),
+      ).toBe(false)
+    })
+
+    it("deletes encrypted temp readback mismatch and does not move", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue({
+        webdav: {
+          ...basePrefs.webdav,
+          backupEncryptionEnabled: true,
+          backupEncryptionPassword: "secret",
+        },
+      })
+      const uploadedEnvelope = {
+        type: "all-api-hub-webdav-backup-encrypted",
+        v: 1,
+        kdf: "PBKDF2",
+        cipher: "AES-GCM",
+        iter: 250000,
+        salt: "salt",
+        iv: "iv",
+        ct: "cipher",
+      }
+      const readbackEnvelope = {
+        ...uploadedEnvelope,
+        ct: "different-cipher",
+      }
+      const uploadedContent = JSON.stringify(uploadedEnvelope)
+      const readbackContent = JSON.stringify(readbackEnvelope)
+      mockEncryptWebdavBackupContent.mockResolvedValueOnce(uploadedEnvelope)
+      mockTryParseEncryptedWebdavBackupEnvelope.mockImplementation((content) =>
+        content === uploadedContent || content === readbackContent
+          ? JSON.parse(content)
+          : null,
+      )
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue(readbackContent),
+        })
+        .mockResolvedValueOnce({ status: 204 })
+
+      const error = await uploadBackup('{"secure":true}').catch(
+        (thrown) => thrown,
+      )
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.uploadVerificationFailed")
+      expect((globalAny.fetch.mock.calls[2][1] as RequestInit).body).toBe(
+        uploadedContent,
+      )
+      expect((globalAny.fetch.mock.calls[4][1] as RequestInit).method).toBe(
+        "DELETE",
+      )
+      expect(
+        globalAny.fetch.mock.calls.some(
+          ([, init]: [unknown, RequestInit]) => init?.method === "MOVE",
+        ),
+      ).toBe(false)
+    })
+
+    it("maps non-auth temp readback HTTP failures to upload verification failure", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({ status: 500 })
+        .mockResolvedValueOnce({ status: 204 })
+
+      const error = await uploadBackup('{"readback":true}').catch(
+        (thrown) => thrown,
+      )
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.uploadVerificationFailed")
+      expect(error.statusCode).toBe(500)
+      expect(globalAny.fetch).toHaveBeenCalledTimes(5)
+      expect((globalAny.fetch.mock.calls[4][1] as RequestInit).method).toBe(
+        "DELETE",
+      )
+      expect(
+        globalAny.fetch.mock.calls.some(
+          ([, init]: [unknown, RequestInit]) => init?.method === "MOVE",
+        ),
+      ).toBe(false)
     })
 
     it("throws configIncomplete when credentials missing", async () => {
@@ -457,14 +786,19 @@ describe("webdavService", () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
 
       globalAny.fetch
-        .mockResolvedValueOnce({ status: 201 }) // MKCOL ok
-        .mockResolvedValueOnce({ status: 401 }) // PUT unauthorized
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 401 })
 
       const error = await uploadBackup("{}").catch((thrown) => thrown)
 
       expect(error).toBeInstanceOf(Error)
       expect(error.message).toBe("messages:webdav.authFailed")
       expect(error.statusCode).toBe(401)
+      expect(globalAny.fetch).toHaveBeenCalledTimes(3)
+      expect((globalAny.fetch.mock.calls[2][1] as RequestInit).method).toBe(
+        "PUT",
+      )
     })
 
     it("throws uploadFailed for other error codes from PUT", async () => {
@@ -472,6 +806,7 @@ describe("webdavService", () => {
 
       globalAny.fetch
         .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
         .mockResolvedValueOnce({ status: 500 })
 
       const error = await uploadBackup("{}").catch((thrown) => thrown)
@@ -479,6 +814,10 @@ describe("webdavService", () => {
       expect(error).toBeInstanceOf(Error)
       expect(error.message).toBe("messages:webdav.uploadFailed")
       expect(error.statusCode).toBe(500)
+      expect(globalAny.fetch).toHaveBeenCalledTimes(3)
+      expect((globalAny.fetch.mock.calls[2][1] as RequestInit).method).toBe(
+        "PUT",
+      )
     })
 
     it("encrypts backup content before uploading when backup encryption is enabled", async () => {
@@ -492,14 +831,31 @@ describe("webdavService", () => {
 
       globalAny.fetch
         .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
         .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue(
+            JSON.stringify({
+              type: "all-api-hub-webdav-backup-encrypted",
+              v: 1,
+              kdf: "PBKDF2",
+              cipher: "AES-GCM",
+              iter: 250000,
+              salt: "salt",
+              iv: "iv",
+              ct: "cipher",
+            }),
+          ),
+        })
+        .mockResolvedValueOnce({ status: 201 })
 
       await expect(uploadBackup('{"secure":true}')).resolves.toBe(true)
       expect(mockEncryptWebdavBackupContent).toHaveBeenCalledWith({
         content: '{"secure":true}',
         password: "secret",
       })
-      expect((globalAny.fetch.mock.calls[1][1] as RequestInit).body).toBe(
+      expect((globalAny.fetch.mock.calls[2][1] as RequestInit).body).toBe(
         JSON.stringify({
           type: "all-api-hub-webdav-backup-encrypted",
           v: 1,
@@ -511,6 +867,9 @@ describe("webdavService", () => {
           ct: "cipher",
         }),
       )
+      expect((globalAny.fetch.mock.calls[4][1] as RequestInit).method).toBe(
+        "MOVE",
+      )
     })
 
     it("retries MKCOL with a trailing slash for custom file targets before uploading", async () => {
@@ -518,7 +877,13 @@ describe("webdavService", () => {
       globalAny.fetch
         .mockResolvedValueOnce({ status: 409 })
         .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
         .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"custom":true}'),
+        })
+        .mockResolvedValueOnce({ status: 201 })
 
       await expect(
         uploadBackup('{"custom":true}', {
@@ -526,16 +891,25 @@ describe("webdavService", () => {
         }),
       ).resolves.toBe(true)
 
-      expect(globalAny.fetch).toHaveBeenCalledTimes(3)
+      expect(globalAny.fetch).toHaveBeenCalledTimes(6)
       expect(globalAny.fetch.mock.calls[0][0]).toBe(
         "https://example.com/custom-backups",
       )
       expect(globalAny.fetch.mock.calls[1][0]).toBe(
         "https://example.com/custom-backups/",
       )
-      expect(globalAny.fetch.mock.calls[2][0]).toBe(
-        "https://example.com/custom-backups/custom.json",
+      expect(globalAny.fetch.mock.calls[3][0]).toMatch(
+        /^https:\/\/example\.com\/custom-backups\/\.custom\.json\.tmp\.\d{8}T\d{6}Z\.[a-z0-9]+$/,
       )
+      expect(globalAny.fetch.mock.calls[5][0]).toBe(
+        globalAny.fetch.mock.calls[3][0],
+      )
+      expect(
+        (globalAny.fetch.mock.calls[5][1] as RequestInit).headers,
+      ).toMatchObject({
+        Destination: "https://example.com/custom-backups/custom.json",
+        Overwrite: "T",
+      })
     })
 
     it("keeps uploads permissive when MKCOL still fails for custom file targets", async () => {
@@ -543,7 +917,13 @@ describe("webdavService", () => {
       globalAny.fetch
         .mockResolvedValueOnce({ status: 500 })
         .mockResolvedValueOnce({ status: 500 })
+        .mockResolvedValueOnce({ status: 405 })
         .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"stillUploads":true}'),
+        })
+        .mockResolvedValueOnce({ status: 201 })
 
       await expect(
         uploadBackup('{"stillUploads":true}', {
@@ -551,7 +931,7 @@ describe("webdavService", () => {
         }),
       ).resolves.toBe(true)
 
-      expect(globalAny.fetch).toHaveBeenCalledTimes(3)
+      expect(globalAny.fetch).toHaveBeenCalledTimes(6)
       expect((globalAny.fetch.mock.calls[0][1] as RequestInit).method).toBe(
         "MKCOL",
       )
@@ -559,7 +939,100 @@ describe("webdavService", () => {
         "MKCOL",
       )
       expect((globalAny.fetch.mock.calls[2][1] as RequestInit).method).toBe(
+        "PROPFIND",
+      )
+      expect((globalAny.fetch.mock.calls[3][1] as RequestInit).method).toBe(
         "PUT",
+      )
+      expect((globalAny.fetch.mock.calls[4][1] as RequestInit).method).toBe(
+        "GET",
+      )
+      expect((globalAny.fetch.mock.calls[5][1] as RequestInit).method).toBe(
+        "MOVE",
+      )
+    })
+
+    it("deletes malformed temp readback, reports verification failure, and does not move", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"broken":'),
+        })
+        .mockResolvedValueOnce({ status: 204 })
+
+      const error = await uploadBackup('{"broken":true}').catch(
+        (thrown) => thrown,
+      )
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.uploadVerificationFailed")
+      expect(globalAny.fetch).toHaveBeenCalledTimes(5)
+      expect((globalAny.fetch.mock.calls[4][1] as RequestInit).method).toBe(
+        "DELETE",
+      )
+      expect(
+        globalAny.fetch.mock.calls.some(
+          ([, init]: [unknown, RequestInit]) => init?.method === "MOVE",
+        ),
+      ).toBe(false)
+    })
+
+    it("deletes temp and reports safe commit failure when MOVE is not supported", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"move":false}'),
+        })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+
+      const error = await uploadBackup('{"move":false}').catch(
+        (thrown) => thrown,
+      )
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.safeCommitFailed")
+      expect(error.statusCode).toBe(405)
+      expect(globalAny.fetch).toHaveBeenCalledTimes(6)
+      expect((globalAny.fetch.mock.calls[4][1] as RequestInit).method).toBe(
+        "MOVE",
+      )
+      expect((globalAny.fetch.mock.calls[5][1] as RequestInit).method).toBe(
+        "DELETE",
+      )
+    })
+
+    it("preserves safe commit failure when cleanup DELETE rejects", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"move":false}'),
+        })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockRejectedValueOnce(new Error("cleanup failed"))
+
+      const error = await uploadBackup('{"move":false}').catch(
+        (thrown) => thrown,
+      )
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.safeCommitFailed")
+      expect(error.statusCode).toBe(405)
+      expect(globalAny.fetch).toHaveBeenCalledTimes(6)
+      expect((globalAny.fetch.mock.calls[5][1] as RequestInit).method).toBe(
+        "DELETE",
       )
     })
 

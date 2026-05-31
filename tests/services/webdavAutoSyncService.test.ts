@@ -112,6 +112,7 @@ vi.mock("~/services/tags/tagStorage", () => ({
 const mockTestConnection = vi.fn()
 const mockDownloadBackup = vi.fn()
 const mockUploadBackup = vi.fn()
+const mockParseWebdavBackupJson = vi.fn()
 
 /**
  * Creates a deferred promise helper for tests.
@@ -129,6 +130,7 @@ function createDeferred<T>() {
 vi.mock("~/services/webdav/webdavService", () => ({
   testWebdavConnection: (...args: any[]) => mockTestConnection(...args),
   downloadBackup: (...args: any[]) => mockDownloadBackup(...args),
+  parseWebdavBackupJson: (...args: any[]) => mockParseWebdavBackupJson(...args),
   isWebdavFileNotFoundError: (error: any) =>
     error?.code === "WEBDAV_FILE_NOT_FOUND",
   uploadBackup: (...args: any[]) => mockUploadBackup(...args),
@@ -887,6 +889,9 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
 
     mockTestConnection.mockResolvedValue(true)
     mockUploadBackup.mockResolvedValue(true)
+    mockParseWebdavBackupJson.mockImplementation((content: string) =>
+      JSON.parse(content),
+    )
 
     mockAccountStorageImportData.mockResolvedValue({ migratedCount: 0 })
     mockChannelConfigImport.mockResolvedValue(undefined)
@@ -960,6 +965,79 @@ describe("WebdavAutoSyncService.syncWithWebdav (selective sync)", () => {
       uploaded.accounts.accounts.map((account: any) => account.id),
     ).toEqual(["a1"])
     expect(uploaded.preferences).toBeUndefined()
+  })
+
+  it("surfaces safe commit failure during upload-only first upload", async () => {
+    const service = createService()
+
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        syncStrategy: "upload_only",
+        syncData: {
+          accounts: true,
+          bookmarks: false,
+          apiCredentialProfiles: false,
+          preferences: false,
+        },
+      },
+    } as any)
+
+    mockAccountStorageExportData.mockResolvedValue({
+      accounts: [{ id: "local-account", created_at: 1, updated_at: 10 }],
+      bookmarks: [],
+      pinnedAccountIds: ["local-account"],
+      orderedAccountIds: ["local-account"],
+      last_updated: 100,
+    })
+    mockDownloadBackup.mockRejectedValue({
+      code: "WEBDAV_FILE_NOT_FOUND",
+      message: "messages:webdav.fileNotFound",
+    })
+    mockUploadBackup.mockRejectedValueOnce(
+      new Error("messages:webdav.safeCommitFailed"),
+    )
+
+    await expect(service.syncWithWebdav()).rejects.toThrow(
+      "messages:webdav.safeCommitFailed",
+    )
+
+    expect(mockAccountStorageImportData).not.toHaveBeenCalled()
+    expect(mockUploadBackup).toHaveBeenCalledTimes(1)
+  })
+
+  it("rejects malformed remote backup JSON with a stable WebDAV backup error", async () => {
+    const service = createService()
+
+    mockGetPreferences.mockResolvedValue({
+      webdav: {
+        syncStrategy: "merge",
+        syncData: {
+          accounts: true,
+          bookmarks: false,
+          apiCredentialProfiles: false,
+          preferences: false,
+        },
+      },
+    } as any)
+
+    mockAccountStorageExportData.mockResolvedValue({
+      accounts: [{ id: "a1", created_at: 1, updated_at: 1 }],
+      bookmarks: [],
+      pinnedAccountIds: ["a1"],
+      orderedAccountIds: ["a1"],
+      last_updated: 100,
+    })
+    mockDownloadBackup.mockResolvedValue('{"version":"2.0","accounts":"')
+    mockParseWebdavBackupJson.mockImplementationOnce(() => {
+      throw new Error("messages:webdav.invalidBackupJson")
+    })
+
+    await expect(service.syncWithWebdav()).rejects.toThrow(
+      "messages:webdav.invalidBackupJson",
+    )
+
+    expect(mockAccountStorageImportData).not.toHaveBeenCalled()
+    expect(mockUploadBackup).not.toHaveBeenCalled()
   })
 
   it("download_only preserves local accounts when remote omits the accounts section", async () => {
@@ -1862,6 +1940,9 @@ describe("WebdavAutoSyncService local apply phase", () => {
 
     mockTestConnection.mockResolvedValue(true)
     mockUploadBackup.mockResolvedValue(true)
+    mockParseWebdavBackupJson.mockImplementation((content: string) =>
+      JSON.parse(content),
+    )
 
     mockChannelConfigImport.mockResolvedValue(undefined)
     mockApiCredentialProfilesImport.mockResolvedValue(undefined)

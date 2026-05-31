@@ -72,6 +72,7 @@ import {
 import {
   downloadBackup,
   isWebdavFileNotFoundError,
+  parseWebdavBackupJson,
   testWebdavConnection,
   uploadBackup,
 } from "./webdavService"
@@ -551,7 +552,7 @@ class WebdavAutoSyncService {
       const content = await downloadBackup(undefined, {
         prepareForWrite: true,
       })
-      const remoteData = JSON.parse(content)
+      const remoteData = parseWebdavBackupJson<BackupFullV2>(content)
       logger.info("成功下载远程数据", { timestamp: remoteData?.timestamp })
       return remoteData
     } catch (error: any) {
