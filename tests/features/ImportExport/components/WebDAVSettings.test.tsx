@@ -1496,6 +1496,56 @@ describe("WebDAVSettings", () => {
     expect(mockUploadBackup).not.toHaveBeenCalled()
   })
 
+  it("keeps the rebuild dialog open while a forced rebuild is pending", async () => {
+    mockDownloadBackup.mockResolvedValueOnce('{"version":2,"accounts":"')
+    mockParseWebdavBackupJson.mockImplementationOnce(() => {
+      throw new Error("messages:webdav.invalidBackupJson")
+    })
+    let resolveUpload: () => void = () => {}
+    mockUploadBackup.mockReturnValueOnce(
+      new Promise<void>((resolve) => {
+        resolveUpload = resolve
+      }),
+    )
+
+    render(<WebDAVSettings />)
+
+    expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
+    clickWebdavAction("webdav-upload-backup")
+
+    expect(
+      await screen.findByText("importExport:webdav.rebuildDialog.title"),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.rebuildDialog.confirm",
+      }),
+    )
+
+    expect(
+      screen.getByText("importExport:webdav.rebuildDialog.title"),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole("button", {
+        name: "importExport:webdav.rebuildDialog.cancel",
+      }),
+    ).toBeDisabled()
+
+    fireEvent.click(screen.getByLabelText("common:actions.close"))
+    expect(
+      screen.getByText("importExport:webdav.rebuildDialog.title"),
+    ).toBeInTheDocument()
+
+    resolveUpload()
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("importExport:webdav.rebuildDialog.title"),
+      ).not.toBeInTheDocument()
+    })
+  })
+
   it("rebuilds a malformed WebDAV backup with a one-time full sync selection after confirmation", async () => {
     mockDownloadBackup.mockResolvedValueOnce('{"version":2,"accounts":"')
     mockParseWebdavBackupJson.mockImplementationOnce(() => {
@@ -1561,6 +1611,28 @@ describe("WebDAVSettings", () => {
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith("download failed")
     })
+    expect(mockUploadBackup).not.toHaveBeenCalled()
+  })
+
+  it("surfaces unexpected remote backup parse failures during upload", async () => {
+    const parseError = new Error("unexpected parse failure")
+    mockDownloadBackup.mockResolvedValueOnce('{"version":2}')
+    mockParseWebdavBackupJson.mockImplementationOnce(() => {
+      throw parseError
+    })
+
+    render(<WebDAVSettings />)
+
+    expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
+
+    clickWebdavAction("webdav-upload-backup")
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("unexpected parse failure")
+    })
+    expect(
+      screen.queryByText("importExport:webdav.rebuildDialog.title"),
+    ).not.toBeInTheDocument()
     expect(mockUploadBackup).not.toHaveBeenCalled()
   })
 
@@ -1792,6 +1864,71 @@ describe("WebDAVSettings", () => {
         }),
       )
     })
+  })
+
+  it("imports decrypted content without reporting persist failure when save password is disabled", async () => {
+    mockDownloadBackupRaw.mockResolvedValueOnce("encrypted-payload")
+    mockTryParseEncryptedWebdavBackupEnvelope.mockReturnValue(
+      ENCRYPTED_BACKUP_ENVELOPE,
+    )
+
+    render(<WebDAVSettings />)
+
+    expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
+
+    fireEvent.change(screen.getAllByDisplayValue("stored-secret")[0], {
+      target: { value: "" },
+    })
+    mockCompleteProductAnalyticsAction.mockClear()
+    clickWebdavAction("webdav-download-import")
+
+    await waitFor(() => {
+      expect(document.getElementById("decryptPassword")).toBeTruthy()
+    })
+    const savePasswordCheckbox = screen.getAllByRole("checkbox").at(-1)
+    if (!savePasswordCheckbox) {
+      throw new Error("Save decrypt password checkbox was not rendered")
+    }
+    fireEvent.change(
+      document.getElementById("decryptPassword") as HTMLInputElement,
+      {
+        target: { value: "manual-secret" },
+      },
+    )
+    fireEvent.click(savePasswordCheckbox)
+    expect(savePasswordCheckbox).toHaveAttribute("aria-checked", "false")
+    mockUserPreferences.savePreferencesWithResult.mockClear()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.encryption.decryptAction",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(mockImportFromBackupObject).toHaveBeenCalledWith(
+        { imported: true },
+        { preserveWebdav: true },
+      )
+      expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        expect.objectContaining({
+          diagnostics: expect.objectContaining({
+            outcome: expect.objectContaining({
+              successCount: 1,
+              failureCount: 0,
+            }),
+          }),
+        }),
+      )
+    })
+
+    expect(mockUserPreferences.savePreferencesWithResult).toHaveBeenCalledTimes(
+      0,
+    )
+    expect(toast.error).not.toHaveBeenCalledWith(
+      "settings:messages.saveSettingsFailed",
+    )
   })
 
   it("persists the decrypt password with the current draft version when the imported backup excludes preferences", async () => {
