@@ -36,5 +36,9 @@ export function extractDataFromApiResponseBody<T>(
     throw new ApiError(message, undefined, endpoint)
   }
 
+  if (!("data" in body) || body.data === undefined) {
+    throw new ApiError(invalidResponseMessage, undefined, endpoint)
+  }
+
   return body.data as T
 }

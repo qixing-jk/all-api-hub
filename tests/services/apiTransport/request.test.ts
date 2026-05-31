@@ -1061,6 +1061,24 @@ describe("apiTransport request helpers", () => {
     expect(result).toEqual(apiEnvelope)
   })
 
+  it("fetchApi returns raw non-JSON responses when unwrapping is disabled", async () => {
+    server.use(
+      http.get("https://example.com/base/api/text", () => {
+        return HttpResponse.text("hello world")
+      }),
+    )
+
+    await expect(
+      fetchApi<string>(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        { endpoint: "/api/text", responseType: "text" },
+      ),
+    ).resolves.toBe("hello world")
+  })
+
   it("fetchApiData rejects non-JSON response types before issuing the request", async () => {
     await expect(
       fetchApiData(
@@ -1072,7 +1090,7 @@ describe("apiTransport request helpers", () => {
       ),
     ).rejects.toMatchObject({
       endpoint: ENDPOINT,
-      message: "fetchApiData 仅支持 JSON 响应",
+      message: "messages:errors.api.onlyJsonSupported",
     })
   })
 
@@ -1313,6 +1331,33 @@ describe("apiTransport request helpers", () => {
     })
   })
 
+  it("wraps successful JSON parse failures in ApiError", async () => {
+    server.use(
+      http.get(API_URL, () => {
+        return new HttpResponse("{", {
+          headers: { "Content-Type": "application/json" },
+        })
+      }),
+    )
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        {
+          endpoint: ENDPOINT,
+          tempWindowFallback: { statusCodes: [], codes: [] },
+        },
+      ),
+    ).rejects.toMatchObject({
+      statusCode: 200,
+      endpoint: ENDPOINT,
+      code: ApiErrorCodes.JSON_PARSE_ERROR,
+    })
+  })
+
   it.each(["application/xhtml+xml", "application/xhtml+xml; charset=utf-8"])(
     "classifies 429 XHTML responses with Retry-After (%s) as HTTP_429 for JSON requests",
     async (contentType) => {
@@ -1363,6 +1408,30 @@ describe("apiTransport request helpers", () => {
         { endpoint: ENDPOINT },
       ),
     ).rejects.toMatchObject({ message: "bad request" } as any)
+  })
+
+  it("fetchApiData rejects successful JSON envelopes without data", async () => {
+    server.use(
+      http.get(API_URL, () => {
+        return HttpResponse.json({
+          success: true,
+          message: "ok",
+        })
+      }),
+    )
+
+    await expect(
+      fetchApiData(
+        {
+          baseUrl: BASE_URL,
+          auth: { authType: AuthTypeEnum.AccessToken, accessToken: "token" },
+        },
+        { endpoint: ENDPOINT },
+      ),
+    ).rejects.toMatchObject({
+      endpoint: ENDPOINT,
+      message: "messages:errors.api.invalidResponseFormat",
+    })
   })
 
   it("fetchApiData should tag eligible errors when temp-window fallback is disabled", async () => {

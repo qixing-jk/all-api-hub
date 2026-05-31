@@ -46,7 +46,8 @@ const resolveAccountAwareRequest = async (
   return {
     ...request,
     accountId: accountInfo.id,
-    cookieAuthSessionCookie: accountInfo.cookieAuth?.sessionCookie,
+    cookieAuthSessionCookie:
+      request.cookieAuthSessionCookie ?? accountInfo.cookieAuth?.sessionCookie,
   }
 }
 

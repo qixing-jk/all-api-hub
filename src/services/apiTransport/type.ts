@@ -50,6 +50,9 @@ export type ApiTransportFetchContext =
       kind: typeof API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT
     })
 
+// Legacy apiService aliases kept for downstream imports during the transport
+// boundary migration. New code should use the ApiTransport* names directly.
+// Remove these once src/ and tests/ no longer import the apiService aliases.
 export type ApiServiceFetchContextKind = ApiTransportFetchContextKind
 export type ApiServiceFetchContext = ApiTransportFetchContext
 

@@ -73,6 +73,61 @@ describe("API Service Common Utils", () => {
       )
     })
 
+    it("preserves a caller-provided session cookie when enriching account metadata", async () => {
+      mockGetAccountByBaseUrlAndUserId.mockResolvedValueOnce({
+        id: "account-1",
+        cookieAuth: {
+          sessionCookie: "session=stored",
+        },
+      })
+      mockFetchApiData.mockResolvedValueOnce({ ok: true })
+
+      await expect(
+        fetchApiData(
+          {
+            baseUrl: "https://example.com",
+            cookieAuthSessionCookie: "session=fresh",
+            auth: {
+              authType: AuthTypeEnum.Cookie,
+              userId: 123,
+            },
+          },
+          { endpoint: "/api/test" },
+        ),
+      ).resolves.toEqual({ ok: true })
+
+      expect(mockFetchApiData).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accountId: "account-1",
+          cookieAuthSessionCookie: "session=fresh",
+        }),
+        { endpoint: "/api/test" },
+      )
+    })
+
+    it("delegates the original request unchanged when account lookup misses", async () => {
+      const request = {
+        baseUrl: "https://example.com",
+        auth: {
+          authType: AuthTypeEnum.Cookie,
+          userId: 123,
+        },
+      }
+      const options = { endpoint: "/api/test" }
+      mockGetAccountByBaseUrlAndUserId.mockResolvedValueOnce(undefined)
+      mockFetchApiData.mockResolvedValueOnce({ ok: true })
+
+      await expect(fetchApiData(request, options)).resolves.toEqual({
+        ok: true,
+      })
+
+      expect(mockGetAccountByBaseUrlAndUserId).toHaveBeenCalledWith(
+        "https://example.com",
+        123,
+      )
+      expect(mockFetchApiData).toHaveBeenCalledWith(request, options)
+    })
+
     it("does not look up account metadata when accountId is already present", async () => {
       mockFetchApiData.mockResolvedValueOnce({ ok: true })
 

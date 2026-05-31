@@ -412,14 +412,6 @@ const apiRequestData = async <T>(
   endpoint: string | undefined,
   responseType: TempWindowResponseType,
 ): Promise<T> => {
-  if (responseType !== "json") {
-    throw new ApiError(
-      t("messages:errors.api.onlyJsonSupported"),
-      undefined,
-      endpoint,
-    )
-  }
-
   const res = (await apiRequest<T>(
     url,
     options,
@@ -511,7 +503,7 @@ const apiRequest = async <T>(
     }
   }
 
-  return await parseResponseByType<T>(response, responseType)
+  return await parseResponseByType<T>(response, responseType, endpoint)
 }
 
 /**
@@ -625,7 +617,7 @@ export async function fetchApiData<T>(
 ): Promise<T> {
   if (options.responseType && options.responseType !== "json") {
     throw new ApiError(
-      "fetchApiData 仅支持 JSON 响应",
+      t("messages:errors.api.onlyJsonSupported"),
       undefined,
       options.endpoint,
     )
@@ -653,18 +645,21 @@ export function fetchApi<T>(
   request: ApiTransportRequest,
   options: FetchApiOptions,
   _normalResponseType?: false,
-): Promise<ApiResponse<T>>
+): Promise<ApiResponse<T> | T>
 export async function fetchApi<T>(
   request: ApiTransportRequest,
   options: FetchApiOptions,
   _normalResponseType?: boolean,
 ): Promise<T | ApiResponse<T>> {
   const response = await _fetchApi<T>(request, options)
+  const responseType = options.responseType ?? "json"
   if (!_normalResponseType) {
+    if (responseType !== "json") {
+      return response as T
+    }
     return response as ApiResponse<T>
   }
 
-  const responseType = options.responseType ?? "json"
   if (responseType !== "json") {
     return response as T
   }
@@ -695,6 +690,7 @@ export async function fetchApi<T>(
 async function parseResponseByType<T>(
   response: Response,
   responseType: TempWindowResponseType,
+  endpoint?: string,
 ): Promise<ApiResponse<T> | T> {
   switch (responseType) {
     case "text":
@@ -705,6 +701,15 @@ async function parseResponseByType<T>(
       return (await response.blob()) as T
     case "json":
     default:
-      return (await response.json()) as ApiResponse<T>
+      try {
+        return (await response.json()) as ApiResponse<T>
+      } catch {
+        throw new ApiError(
+          t("messages:errors.api.invalidResponseFormat"),
+          response.status,
+          endpoint,
+          API_ERROR_CODES.JSON_PARSE_ERROR,
+        )
+      }
   }
 }

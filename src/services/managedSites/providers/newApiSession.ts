@@ -1,11 +1,12 @@
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import type { ApiServiceRequest } from "~/services/apiService/common/type"
-import { fetchApiData } from "~/services/apiService/common/utils"
+import { fetchApi, fetchApiData } from "~/services/apiService/common/utils"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import { AuthTypeEnum } from "~/types"
 import type { NewApiConfig } from "~/types/newApiConfig"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
+import { t } from "~/utils/i18n/core"
 
 import { generateNewApiTotpCode, hasNewApiTotpSecret } from "./newApiTotp"
 
@@ -594,7 +595,7 @@ export async function submitNewApiLoginTwoFactorCode(
   const trimmedCode = code.trim()
 
   const request = createCookieAuthRequest(config.baseUrl, config.userId)
-  await fetchApiData(request, {
+  const response = await fetchApi(request, {
     endpoint: "/api/user/login/2fa",
     options: {
       method: "POST",
@@ -603,6 +604,14 @@ export async function submitNewApiLoginTwoFactorCode(
       }),
     },
   })
+
+  if (response.success === false) {
+    throw new ApiError(
+      response.message || t("messages:errors.api.invalidResponseFormat"),
+      undefined,
+      "/api/user/login/2fa",
+    )
+  }
 
   markLoggedIn(config.baseUrl)
 

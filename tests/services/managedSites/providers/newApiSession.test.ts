@@ -78,6 +78,12 @@ const jsonData = (data: unknown) =>
     data,
   })
 
+const jsonSuccessWithoutData = () =>
+  HttpResponse.json({
+    success: true,
+    message: "",
+  })
+
 const unauthorizedResponse = () =>
   new HttpResponse(null, {
     status: 401,
@@ -417,6 +423,31 @@ describe("newApiSession", () => {
         passkeyEnabled: false,
       },
       automaticAttempted: true,
+    })
+  })
+
+  it("accepts login 2FA success responses without a data payload", async () => {
+    server.use(
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/2fa/status`, () =>
+        jsonData({ enabled: false }),
+      ),
+      http.get(`${BASE_CONFIG.baseUrl}/api/user/passkey`, () =>
+        jsonData({ enabled: false }),
+      ),
+      http.post(`${BASE_CONFIG.baseUrl}/api/user/login/2fa`, () =>
+        jsonSuccessWithoutData(),
+      ),
+    )
+
+    await expect(
+      submitNewApiLoginTwoFactorCode(BASE_CONFIG, "123456"),
+    ).resolves.toEqual({
+      status: NEW_API_MANAGED_SESSION_STATUSES.SECURE_VERIFICATION_REQUIRED,
+      methods: {
+        twoFactorEnabled: false,
+        passkeyEnabled: false,
+      },
+      automaticAttempted: false,
     })
   })
 
