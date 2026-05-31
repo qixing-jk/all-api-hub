@@ -1,5 +1,30 @@
 # Changelog
 
+## [3.42.0](https://github.com/qixing-jk/all-api-hub/compare/v3.41.1...v3.42.0) (2026-05-31)
+
+
+### Features
+
+* **account-dialog:** Default AnyRouter account auth to Cookie by URL ([#865](https://github.com/qixing-jk/all-api-hub/issues/865)) ([c81aa3a](https://github.com/qixing-jk/all-api-hub/commit/c81aa3a6bb75e7735863cb3f37f661606ff53b50))
+* **account-dialog:** introduce cookie auth permission recommendation ([#867](https://github.com/qixing-jk/all-api-hub/issues/867)) ([9843294](https://github.com/qixing-jk/all-api-hub/commit/98432949fed0c548153ba8c4c1b51afe53196cf7))
+* **account:** add duplicate warning opt-out action ([#861](https://github.com/qixing-jk/all-api-hub/issues/861)) ([9968ba7](https://github.com/qixing-jk/all-api-hub/commit/9968ba746aea7bff562df3f7e774ef9e6d9a147a))
+* **analytics:** add privacy-aware product analytics state ([#870](https://github.com/qixing-jk/all-api-hub/issues/870)) ([ece4987](https://github.com/qixing-jk/all-api-hub/commit/ece4987aceeb5a26b98170b17eaa79fbbbe4eb88))
+* **analytics:** expand product diagnostics telemetry ([#881](https://github.com/qixing-jk/all-api-hub/issues/881)) ([d7ebf41](https://github.com/qixing-jk/all-api-hub/commit/d7ebf4180447268d86c5dd2b1c4dd662568084ab))
+* **analytics:** improve account auto-detect and auto-checkin telemetry ([#875](https://github.com/qixing-jk/all-api-hub/issues/875)) ([5327ab5](https://github.com/qixing-jk/all-api-hub/commit/5327ab5d545de1c817ef97b05c1ed6b6bf4f2cb1))
+* **api-check:** enhance Web AI API auto-detection ([#876](https://github.com/qixing-jk/all-api-hub/issues/876)) ([3fc6e94](https://github.com/qixing-jk/all-api-hub/commit/3fc6e9433a1e620d44a008f4503aae274c0a328d))
+* **content:** detect selected text on pointer release ([#877](https://github.com/qixing-jk/all-api-hub/issues/877)) ([fdd958d](https://github.com/qixing-jk/all-api-hub/commit/fdd958dd2a0c76813e5593d33fcfbeec688259f6))
+* Improve product analytics failure diagnostics ([#874](https://github.com/qixing-jk/all-api-hub/issues/874)) ([fa99269](https://github.com/qixing-jk/all-api-hub/commit/fa99269d2840b22d215823b4a3856ea4a8133d54))
+* **key-management:** save one-time API keys to credential profiles ([#864](https://github.com/qixing-jk/all-api-hub/issues/864)) ([09c5909](https://github.com/qixing-jk/all-api-hub/commit/09c5909872f8ff14f63e8a7d7c2c4e790c711897))
+
+
+### Bug Fixes
+
+* **account:** add slow detection reload recovery ([#868](https://github.com/qixing-jk/all-api-hub/issues/868)) ([d869669](https://github.com/qixing-jk/all-api-hub/commit/d869669f6dd862a0ae9f4fcba1c524faf5865d63))
+* Fix WebDAV backup replacement recovery ([#883](https://github.com/qixing-jk/all-api-hub/issues/883)) ([42bb4aa](https://github.com/qixing-jk/all-api-hub/commit/42bb4aa115f4728057bc73bf7bfe8485879d4942))
+* **key-management:** use destructive dialog for token deletion ([97098a0](https://github.com/qixing-jk/all-api-hub/commit/97098a0a49885d046eee41db47e4d9c509efd95e))
+* **new-api:** support themed web routes ([#882](https://github.com/qixing-jk/all-api-hub/issues/882)) ([1038350](https://github.com/qixing-jk/all-api-hub/commit/1038350cb7bacb4b2e8aa158527440f7b6761d93))
+* **options:** improve settings search index coverage ([#878](https://github.com/qixing-jk/all-api-hub/issues/878)) ([0f7caac](https://github.com/qixing-jk/all-api-hub/commit/0f7caac406a6eee9eee528863e02b995484a6357))
+
 ## [3.41.1](https://github.com/qixing-jk/all-api-hub/compare/v3.41.0...v3.41.1) (2026-05-26)
 
 
