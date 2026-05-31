@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { createMinIntervalLimiter } from "~/services/apiService/common/minIntervalLimiter"
+import { createMinIntervalLimiter } from "~/services/apiTransport/minIntervalLimiter"
 
 describe("createMinIntervalLimiter", () => {
   beforeEach(() => {

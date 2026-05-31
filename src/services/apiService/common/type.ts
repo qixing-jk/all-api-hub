@@ -2,6 +2,7 @@
  * API 服务 - 用于与 One API/New API 站点进行交互
  */
 import type { AccountSiteType } from "~/constants/siteType"
+import type { ApiServiceRequest } from "~/services/apiTransport/type"
 import type { PerCallPrice } from "~/services/models/utils/modelPricing"
 import {
   ApiToken,
@@ -11,10 +12,25 @@ import {
   TempWindowHealthStatusCode,
   type Sub2ApiAuthConfig,
 } from "~/types"
-import type {
-  TempWindowFallbackAllowlist,
-  TempWindowResponseType,
-} from "~/types/tempWindowFetch"
+
+export {
+  API_SERVICE_FETCH_CONTEXT_KINDS,
+  API_TRANSPORT_FETCH_CONTEXT_KINDS,
+  summarizeApiServiceFetchContext,
+  summarizeApiTransportFetchContext,
+  type ApiResponse,
+  type ApiServiceFetchContext,
+  type ApiServiceFetchContextKind,
+  type ApiServiceRequest,
+  type ApiTransportFetchContext,
+  type ApiTransportFetchContextKind,
+  type ApiTransportRequest,
+  type AuthConfig,
+  type FetchApiOptions,
+  type OpenAIAuthParams,
+  type UpstreamModelItem,
+  type UpstreamModelList,
+} from "~/services/apiTransport/type"
 
 // ============= 类型定义 =============
 export interface UserInfo {
@@ -185,13 +201,6 @@ export interface PaginatedData<T> {
 // 分页令牌响应类型
 export type PaginatedTokenResponse = PaginatedData<ApiToken>
 
-// API 响应的通用格式
-export interface ApiResponse<T = any> {
-  success: boolean
-  data: T
-  message: string
-}
-
 /**
  * 日志类型
  * @see https://github.com/QuantumNous/new-api/blob/8ef99f472875ceeaf20aecb2bb0f2b33ff575feb/model/log.go#L43
@@ -326,106 +335,6 @@ export interface AuthTypeFetchParams extends AuthFetchParams {
 }
 
 /**
- * Unified authentication config for ApiServiceRequest.
- */
-export interface AuthConfig {
-  /** 认证类型: cookie | access_token | none */
-  authType: AuthTypeEnum
-  /**
-   * Cookie 字符串
-   * 因为浏览器无法通过其他方式自定义请求携带的cookie,只能DNR
-   * 但DNR部分已经注入cookie头,所以这里传入的cookie是备用方案，主要避免后续还需从存储中读取cookie
-   */
-  cookie?: string
-  /** 访问令牌（用于 token/access_token 认证） */
-  accessToken?: string
-  /** 用户 ID（用于 cookie 认证或通用标识） */
-  userId?: number | string
-  /**
-   * Sub2API refresh token (optional; used for extension-managed sessions).
-   */
-  refreshToken?: string
-  /**
-   * Sub2API access-token expiry timestamp in milliseconds since epoch (optional).
-   */
-  tokenExpiresAt?: number
-}
-
-export const API_SERVICE_FETCH_CONTEXT_KINDS = {
-  CURRENT_TAB: "current-tab",
-  BROWSER_CONTEXT: "browser-context",
-} as const
-
-export type ApiServiceFetchContextKind =
-  (typeof API_SERVICE_FETCH_CONTEXT_KINDS)[keyof typeof API_SERVICE_FETCH_CONTEXT_KINDS]
-
-type ApiServiceBrowserFetchContext = {
-  incognito?: boolean
-  cookieStoreId?: string
-}
-
-export type ApiServiceFetchContext =
-  | (ApiServiceBrowserFetchContext & {
-      kind: typeof API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB
-      tabId: number
-      origin: string
-    })
-  | (ApiServiceBrowserFetchContext & {
-      kind: typeof API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT
-    })
-
-/**
- * Builds a log-safe summary of a fetch context without exposing cookie-store values.
- */
-export function summarizeApiServiceFetchContext(
-  fetchContext: ApiServiceFetchContext | undefined,
-) {
-  if (!fetchContext) return undefined
-
-  return {
-    kind: fetchContext.kind,
-    incognito: fetchContext.incognito === true,
-    hasCookieStoreId: Boolean(fetchContext.cookieStoreId),
-    ...(fetchContext.kind === API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB
-      ? {
-          tabId: fetchContext.tabId,
-          origin: fetchContext.origin,
-        }
-      : {}),
-  }
-}
-
-/**
- * API 服务请求的统一参数对象。
- *
- * 用于在 apiService 层统一承载认证信息、站点 baseUrl，以及可扩展的业务数据。
- * 后续可以在 `auth.cookie` / `accountId` 上扩展为 cookie 认证的多账号管理。
- */
-export interface ApiServiceRequest {
-  /**
-   * 认证信息
-   */
-  auth: AuthConfig
-  /**
-   * API 基础 URL
-   */
-  baseUrl: string
-  /**
-   * 传入的具体业务数据对象（可选，用于逐步迁移调用方参数）
-   */
-  data?: Record<string, any>
-  /**
-   * 账号 ID（用于后续查询账号信息，目前可选）
-   */
-  accountId?: string
-  /**
-   * Optional transport context from account auto-detect. When present, common
-   * fetch helpers may try the matched tab content script before normal fetch.
-   */
-  fetchContext?: ApiServiceFetchContext
-}
-
-/**
  * Account-data related requests must include check-in config.
  *
  * Note: we keep `ApiServiceRequest` as the minimal/common request DTO, and only
@@ -444,41 +353,6 @@ export type ApiServiceAccountRequest = ApiServiceRequest & {
    */
   includeTodayCashflow?: boolean
 }
-
-/**
- * fetchApi / fetchApiData 的请求配置（除 auth/baseUrl 外）。
- *
- * 该类型从历史 `FetchApiParams` 结构中抽取出来，便于在统一 DTO 路径下复用。
- */
-export interface FetchApiOptions {
-  endpoint: string
-  options?: RequestInit
-  responseType?: TempWindowResponseType
-  tempWindowFallback?: TempWindowFallbackAllowlist
-  currentTabTransport?: "prefer" | "disabled"
-}
-
-/**
- * OpenAI 模型请求认证参数
- */
-export interface OpenAIAuthParams {
-  // API 基础地址
-  baseUrl: string
-  /** API Key */
-  apiKey: string
-  /** Optional cancellation signal for caller-scoped checks. */
-  abortSignal?: AbortSignal
-}
-
-// 上游模型列表（OpenAI格式）
-export type UpstreamModelItem = {
-  id: string
-  object: "model"
-  created: number
-  owned_by: string
-}
-
-export type UpstreamModelList = UpstreamModelItem[]
 
 // 兑换码相关类型
 export interface RedeemCodeRequest {

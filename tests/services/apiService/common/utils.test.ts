@@ -4,10 +4,102 @@ import type { LogItem } from "~/services/apiService/common/type"
 import {
   aggregateUsageData,
   extractAmount,
+  fetchApiData,
   getTodayTimestampRange,
 } from "~/services/apiService/common/utils"
+import { AuthTypeEnum } from "~/types"
+
+const { mockFetchApiData } = vi.hoisted(() => ({
+  mockFetchApiData: vi.fn(),
+}))
+
+const { mockGetAccountByBaseUrlAndUserId } = vi.hoisted(() => ({
+  mockGetAccountByBaseUrlAndUserId: vi.fn(),
+}))
+
+vi.mock("~/services/apiTransport/request", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/apiTransport/request")>()
+  return {
+    ...actual,
+    fetchApiData: mockFetchApiData,
+  }
+})
+
+vi.mock("~/services/accounts/accountStorage", () => ({
+  accountStorage: {
+    getAccountByBaseUrlAndUserId: mockGetAccountByBaseUrlAndUserId,
+  },
+}))
 
 describe("API Service Common Utils", () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+  })
+
+  describe("fetchApiData", () => {
+    it("enriches account metadata before delegating to transport when accountId is absent", async () => {
+      mockGetAccountByBaseUrlAndUserId.mockResolvedValueOnce({
+        id: "account-1",
+        cookieAuth: {
+          sessionCookie: "session=stored",
+        },
+      })
+      mockFetchApiData.mockResolvedValueOnce({ ok: true })
+
+      await expect(
+        fetchApiData(
+          {
+            baseUrl: "https://example.com",
+            auth: {
+              authType: AuthTypeEnum.Cookie,
+              userId: 123,
+            },
+          },
+          { endpoint: "/api/test" },
+        ),
+      ).resolves.toEqual({ ok: true })
+
+      expect(mockGetAccountByBaseUrlAndUserId).toHaveBeenCalledWith(
+        "https://example.com",
+        123,
+      )
+      expect(mockFetchApiData).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accountId: "account-1",
+          cookieAuthSessionCookie: "session=stored",
+        }),
+        { endpoint: "/api/test" },
+      )
+    })
+
+    it("does not look up account metadata when accountId is already present", async () => {
+      mockFetchApiData.mockResolvedValueOnce({ ok: true })
+
+      await expect(
+        fetchApiData(
+          {
+            baseUrl: "https://example.com",
+            accountId: "account-1",
+            auth: {
+              authType: AuthTypeEnum.Cookie,
+              userId: 123,
+            },
+          },
+          { endpoint: "/api/test" },
+        ),
+      ).resolves.toEqual({ ok: true })
+
+      expect(mockGetAccountByBaseUrlAndUserId).not.toHaveBeenCalled()
+      expect(mockFetchApiData).toHaveBeenCalledWith(
+        expect.objectContaining({
+          accountId: "account-1",
+        }),
+        { endpoint: "/api/test" },
+      )
+    })
+  })
+
   describe("getTodayTimestampRange", () => {
     beforeEach(() => {
       vi.useRealTimers()

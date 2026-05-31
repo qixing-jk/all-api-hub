@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest"
 
-import { ApiError } from "~/services/apiService/common/errors"
+import { API_ERROR_CODES, ApiError } from "~/services/apiTransport/errors"
 
 describe("ApiError", () => {
   describe("Constructor", () => {
@@ -45,6 +45,10 @@ describe("ApiError", () => {
       expect(error400.statusCode).toBe(400)
       expect(error500.statusCode).toBe(500)
       expect(error503.statusCode).toBe(503)
+    })
+
+    it("should expose structured error codes", () => {
+      expect(API_ERROR_CODES.HTTP_401).toBe("HTTP_401")
     })
   })
 

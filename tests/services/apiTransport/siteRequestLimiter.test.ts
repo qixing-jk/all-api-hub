@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import {
   createSiteRequestLimiter,
   withSiteApiRequestLimit,
-} from "~/services/apiService/common/siteRequestLimiter"
+} from "~/services/apiTransport/siteRequestLimiter"
 
 const flushMicrotasks = async () => {
   await Promise.resolve()

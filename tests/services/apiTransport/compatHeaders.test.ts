@@ -4,7 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import {
   buildCompatUserIdHeaders,
   COMPAT_USER_ID_ERROR_HEADER_TO_SITE_TYPE,
-} from "~/services/apiService/common/compatHeaders"
+} from "~/services/apiTransport/compatHeaders"
 
 describe("compat user-id headers", () => {
   it("includes the V-API X-Api-User compatibility header", () => {

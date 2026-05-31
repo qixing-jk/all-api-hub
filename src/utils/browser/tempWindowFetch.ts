@@ -8,12 +8,12 @@ import {
   API_ERROR_CODES,
   ApiError,
   type ApiErrorCode,
-} from "~/services/apiService/common/errors"
-import type { ApiResponse } from "~/services/apiService/common/type"
+} from "~/services/apiTransport/errors"
 import {
   extractDataFromApiResponseBody,
   isHttpUrl,
-} from "~/services/apiService/common/utils"
+} from "~/services/apiTransport/response"
+import type { ApiResponse } from "~/services/apiTransport/type"
 import {
   COOKIE_INTERCEPTOR_PERMISSIONS,
   hasCookieInterceptorPermissions,

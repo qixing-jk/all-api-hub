@@ -2,7 +2,7 @@ import { http, HttpResponse } from "msw"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
-import { API_SERVICE_FETCH_CONTEXT_KINDS } from "~/services/apiService/common/type"
+import { API_TRANSPORT_FETCH_CONTEXT_KINDS } from "~/services/apiTransport/type"
 import { AuthTypeEnum, TEMP_WINDOW_HEALTH_STATUS_CODES } from "~/types"
 import {
   COOKIE_AUTH_HEADER_NAME,
@@ -10,12 +10,12 @@ import {
 } from "~/utils/browser/cookieHelper"
 import { server } from "~~/tests/msw/server"
 
-let fetchApiData: typeof import("~/services/apiService/common/utils").fetchApiData
-let fetchApi: typeof import("~/services/apiService/common/utils").fetchApi
-let extractDataFromApiResponseBody: typeof import("~/services/apiService/common/utils").extractDataFromApiResponseBody
-let isHttpUrl: typeof import("~/services/apiService/common/utils").isHttpUrl
-let ApiError: typeof import("~/services/apiService/common/errors").ApiError
-let ApiErrorCodes: typeof import("~/services/apiService/common/errors").API_ERROR_CODES
+let fetchApiData: typeof import("~/services/apiTransport/request").fetchApiData
+let fetchApi: typeof import("~/services/apiTransport/request").fetchApi
+let extractDataFromApiResponseBody: typeof import("~/services/apiTransport/request").extractDataFromApiResponseBody
+let isHttpUrl: typeof import("~/services/apiTransport/request").isHttpUrl
+let ApiError: typeof import("~/services/apiTransport/errors").ApiError
+let ApiErrorCodes: typeof import("~/services/apiTransport/errors").API_ERROR_CODES
 
 const { mockLogRequestRateLimiter, mockCreateMinIntervalLimiter } = vi.hoisted(
   () => {
@@ -83,11 +83,11 @@ vi.mock("~/services/preferences/userPreferences", () => ({
   },
 }))
 
-vi.mock("~/services/apiService/common/minIntervalLimiter", () => ({
+vi.mock("~/services/apiTransport/minIntervalLimiter", () => ({
   createMinIntervalLimiter: mockCreateMinIntervalLimiter,
 }))
 
-vi.mock("~/services/apiService/common/siteRequestLimiter", () => ({
+vi.mock("~/services/apiTransport/siteRequestLimiter", () => ({
   SITE_API_REQUEST_LIMITS: {
     maxConcurrentPerSite: 2,
     requestsPerMinute: 18,
@@ -112,20 +112,20 @@ const BASE_URL = "https://example.com/base/"
 const ENDPOINT = "/api/test"
 const API_URL = "https://example.com/base/api/test"
 
-describe("apiService common fetchApi helpers", () => {
+describe("apiTransport request helpers", () => {
   beforeEach(async () => {
     // Ensure we always use the real implementations even if other tests mock these modules.
-    const utils = await vi.importActual<
-      typeof import("~/services/apiService/common/utils")
-    >("~/services/apiService/common/utils")
-    fetchApiData = utils.fetchApiData
-    fetchApi = utils.fetchApi
-    extractDataFromApiResponseBody = utils.extractDataFromApiResponseBody
-    isHttpUrl = utils.isHttpUrl
+    const request = await vi.importActual<
+      typeof import("~/services/apiTransport/request")
+    >("~/services/apiTransport/request")
+    fetchApiData = request.fetchApiData
+    fetchApi = request.fetchApi
+    extractDataFromApiResponseBody = request.extractDataFromApiResponseBody
+    isHttpUrl = request.isHttpUrl
 
     const errors = await vi.importActual<
-      typeof import("~/services/apiService/common/errors")
-    >("~/services/apiService/common/errors")
+      typeof import("~/services/apiTransport/errors")
+    >("~/services/apiTransport/errors")
     ApiError = errors.ApiError
     ApiErrorCodes = errors.API_ERROR_CODES
   })
@@ -362,7 +362,7 @@ describe("apiService common fetchApi helpers", () => {
             userId: 123,
           },
           fetchContext: {
-            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
             origin: "https://example.com",
           },
@@ -416,7 +416,7 @@ describe("apiService common fetchApi helpers", () => {
             userId: 123,
           },
           fetchContext: {
-            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
             origin: "https://example.com",
           },
@@ -459,7 +459,7 @@ describe("apiService common fetchApi helpers", () => {
             userId: 123,
           },
           fetchContext: {
-            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
             origin: "https://example.com",
           },
@@ -500,7 +500,7 @@ describe("apiService common fetchApi helpers", () => {
             userId: 123,
           },
           fetchContext: {
-            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
             origin: "https://example.com",
           },
@@ -553,7 +553,7 @@ describe("apiService common fetchApi helpers", () => {
             accessToken: "token",
           },
           fetchContext: {
-            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
             origin: "https://other.example.com",
           },
@@ -585,7 +585,7 @@ describe("apiService common fetchApi helpers", () => {
             accessToken: "token",
           },
           fetchContext: {
-            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
             origin: "not a url",
           },
@@ -617,7 +617,7 @@ describe("apiService common fetchApi helpers", () => {
             accessToken: "token",
           },
           fetchContext: {
-            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: "456" as unknown as number,
             origin: "https://example.com",
           },
@@ -655,7 +655,7 @@ describe("apiService common fetchApi helpers", () => {
             accessToken: "token",
           },
           fetchContext: {
-            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
             origin: "https://example.com",
           },
@@ -715,7 +715,7 @@ describe("apiService common fetchApi helpers", () => {
             userId: 123,
           },
           fetchContext: {
-            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
             origin: "https://example.com",
             incognito: true,
@@ -781,7 +781,7 @@ describe("apiService common fetchApi helpers", () => {
             userId: 123,
           },
           fetchContext: {
-            kind: API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
             incognito: true,
             cookieStoreId: "1-incognito",
           },
@@ -846,7 +846,7 @@ describe("apiService common fetchApi helpers", () => {
             userId: 123,
           },
           fetchContext: {
-            kind: API_SERVICE_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
             cookieStoreId: "firefox-container-2",
           },
         },
@@ -886,7 +886,7 @@ describe("apiService common fetchApi helpers", () => {
             accessToken: "token",
           },
           fetchContext: {
-            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
             origin: "https://example.com",
           },
@@ -918,7 +918,7 @@ describe("apiService common fetchApi helpers", () => {
           accessToken: "token",
         },
         fetchContext: {
-          kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+          kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
           tabId: 456,
           origin: "https://example.com",
         },
@@ -947,7 +947,7 @@ describe("apiService common fetchApi helpers", () => {
         baseUrl: BASE_URL,
         auth: { authType: AuthTypeEnum.Cookie, cookie: "session=abc123" },
         fetchContext: {
-          kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+          kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
           tabId: 456,
           origin: "https://example.com",
         },
@@ -971,7 +971,7 @@ describe("apiService common fetchApi helpers", () => {
           baseUrl: BASE_URL,
           auth: { authType: AuthTypeEnum.Cookie, cookie: "session=abc123" },
           fetchContext: {
-            kind: API_SERVICE_FETCH_CONTEXT_KINDS.CURRENT_TAB,
+            kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
             tabId: 456,
             origin: "https://example.com",
           },

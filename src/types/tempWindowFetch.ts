@@ -1,4 +1,4 @@
-import { ApiErrorCode } from "~/services/apiService/common/errors"
+import type { ApiErrorCode } from "~/services/apiTransport/errors"
 import type { AuthTypeEnum } from "~/types/index"
 import type { TurnstilePreTrigger } from "~/types/turnstile"
 
