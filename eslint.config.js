@@ -200,6 +200,34 @@ export default defineConfig([
       "no-restricted-imports": "off",
     },
   },
+  // Guardrails: AI API protocol modules must not depend on account-site apiService internals.
+  {
+    files: ["src/services/aiApi/**/*.{js,cjs,mjs,jsx,ts,tsx}"],
+    rules: {
+      "no-restricted-imports": [
+        "error",
+        {
+          patterns: [
+            {
+              group: ["~/entrypoints/options/pages/**"],
+              message:
+                "Do not import from `~/entrypoints/options/pages/**` outside the options entrypoint. Extract shared code into `~/features/`, `~/services/`, `~/utils/`, or `~/types/` instead.",
+            },
+            {
+              group: [
+                "~/services/apiService/**",
+                "../apiService/**",
+                "../../apiService/**",
+                "../../../apiService/**",
+              ],
+              message:
+                "AI API protocol modules must not depend on the account-site apiService layer. Use ~/services/apiTransport/** for shared transport code.",
+            },
+          ],
+        },
+      ],
+    },
+  },
   { rules },
   eslintConfigPrettier,
 ])

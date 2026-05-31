@@ -73,8 +73,20 @@ const config: KnipConfig = {
     "src/types/managedSiteModelRedirect.ts": ["exports"],
     "src/types/managedSiteModelSync.ts": ["types"],
     "src/types/octopus.ts": ["enumMembers"],
-    "src/services/apiService/common/type.ts": ["types"],
     "src/services/models/modelMetadata/index.ts": ["types"],
+
+    // apiTransport is the preferred service boundary, while selected
+    // apiService/common modules remain as compatibility aliases during the
+    // staged account-site migration.
+    "src/services/apiTransport/type.ts": ["exports", "types", "duplicates"],
+    "src/services/apiService/common/minIntervalLimiter.ts": ["files"],
+    "src/services/apiService/common/siteRequestLimiter.ts": ["files"],
+    "src/services/apiService/common/type.ts": [
+      "exports",
+      "types",
+      "duplicates",
+    ],
+    "src/services/apiService/common/utils.ts": ["exports"],
 
     // Shared hook option typing is part of the hook surface even when callers
     // currently rely on inference instead of importing the interface.
