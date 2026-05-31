@@ -790,6 +790,65 @@ describe("webdavService", () => {
       })
     })
 
+    it("throws authFailed for 401 from temp readback", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({ status: 401 })
+        .mockResolvedValueOnce({ status: 204 })
+
+      const error = await uploadBackup('{"readbackAuth":true}').catch(
+        (thrown) => thrown,
+      )
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.authFailed")
+      expect(error.statusCode).toBe(401)
+      expect(globalAny.fetch).toHaveBeenCalledTimes(5)
+      expect((globalAny.fetch.mock.calls[3][1] as RequestInit).method).toBe(
+        "GET",
+      )
+      expect((globalAny.fetch.mock.calls[4][1] as RequestInit).method).toBe(
+        "DELETE",
+      )
+      expect(
+        globalAny.fetch.mock.calls.some(
+          ([, init]: [unknown, RequestInit]) => init?.method === "MOVE",
+        ),
+      ).toBe(false)
+    })
+
+    it("throws authFailed for 403 from MOVE", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"moveAuth":true}'),
+        })
+        .mockResolvedValueOnce({ status: 403 })
+        .mockResolvedValueOnce({ status: 204 })
+
+      const error = await uploadBackup('{"moveAuth":true}').catch(
+        (thrown) => thrown,
+      )
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.authFailed")
+      expect(error.statusCode).toBe(403)
+      expect(globalAny.fetch).toHaveBeenCalledTimes(6)
+      expect((globalAny.fetch.mock.calls[4][1] as RequestInit).method).toBe(
+        "MOVE",
+      )
+      expect((globalAny.fetch.mock.calls[5][1] as RequestInit).method).toBe(
+        "DELETE",
+      )
+    })
+
     it("does not put directly to the official backup URL", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
 

@@ -45,7 +45,7 @@
      - **合并**：根据 `updated_at` / `lastUpdated` 时间戳保留最新项；账号与书签的删除标记会随同步参与合并，防止已删除条目被旧远程副本恢复。
      - **仅上传/下载**：直接选取本地或远程数据。
    - 将合并结果写回本地（通过 `accountStorage.importData` + `userPreferences.importPreferences`）。
-   - 生成新的 JSON 后，先上传到同目录的临时文件，读回校验内容，再移动到 `all-api-hub-backup/all-api-hub-1-0.json`；超过 24 小时的旧临时文件会在后续上传时尽力清理。
+   - 生成新的 JSON 后，先上传到同目录的临时文件，读回校验内容，再移动到已配置的备份文件；只有当 WebDAV 目标是目录 URL 时，才会使用默认生成路径 `all-api-hub-backup/all-api-hub-1-0.json`。超过 24 小时的旧临时文件会在后续上传时尽力清理。
 3. 同步状态（成功/失败、最后执行时间）会通过 `WEBDAV_AUTO_SYNC_UPDATE` 消息广播，可在前端监听或查看控制台日志。
 
 ## 安全建议

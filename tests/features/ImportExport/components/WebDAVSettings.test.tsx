@@ -1546,6 +1546,30 @@ describe("WebDAVSettings", () => {
     })
   })
 
+  it("closes the rebuild dialog from the modal close button when idle", async () => {
+    mockDownloadBackup.mockResolvedValueOnce('{"version":2,"accounts":"')
+    mockParseWebdavBackupJson.mockImplementationOnce(() => {
+      throw new Error("messages:webdav.invalidBackupJson")
+    })
+
+    render(<WebDAVSettings />)
+
+    expect(await screen.findByDisplayValue("alice")).toBeInTheDocument()
+    clickWebdavAction("webdav-upload-backup")
+
+    expect(
+      await screen.findByText("importExport:webdav.rebuildDialog.title"),
+    ).toBeInTheDocument()
+
+    fireEvent.click(screen.getByLabelText("common:actions.close"))
+
+    await waitFor(() => {
+      expect(
+        screen.queryByText("importExport:webdav.rebuildDialog.title"),
+      ).not.toBeInTheDocument()
+    })
+  })
+
   it("rebuilds a malformed WebDAV backup with a one-time full sync selection after confirmation", async () => {
     mockDownloadBackup.mockResolvedValueOnce('{"version":2,"accounts":"')
     mockParseWebdavBackupJson.mockImplementationOnce(() => {
@@ -1885,10 +1909,9 @@ describe("WebDAVSettings", () => {
     await waitFor(() => {
       expect(document.getElementById("decryptPassword")).toBeTruthy()
     })
-    const savePasswordCheckbox = screen.getAllByRole("checkbox").at(-1)
-    if (!savePasswordCheckbox) {
-      throw new Error("Save decrypt password checkbox was not rendered")
-    }
+    const savePasswordCheckbox = screen.getByRole("checkbox", {
+      name: "importExport:webdav.encryption.savePassword",
+    })
     fireEvent.change(
       document.getElementById("decryptPassword") as HTMLInputElement,
       {

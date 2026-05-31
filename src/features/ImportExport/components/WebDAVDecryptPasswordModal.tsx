@@ -111,7 +111,7 @@ export function WebDAVDecryptPasswordModal({
           />
         </FormField>
 
-        <div className="flex items-center gap-2">
+        <label className="flex items-center gap-2">
           <Checkbox
             checked={savePassword}
             onCheckedChange={(v) => onSavePasswordChange(Boolean(v))}
@@ -119,7 +119,7 @@ export function WebDAVDecryptPasswordModal({
           <span className="text-sm text-gray-700 dark:text-gray-300">
             {t("webdav.encryption.savePassword")}
           </span>
-        </div>
+        </label>
       </div>
     </Modal>
   )
