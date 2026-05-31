@@ -724,11 +724,13 @@ export async function uploadBackup(
 
   // Ensure backup directory exists when using folder-style input
   await prepareWebdavBackupTargetForWrite(context)
-  await cleanupStaleTempBackupsBestEffort({
+  void cleanupStaleTempBackupsBestEffort({
     collectionUrl: getBackupDirUrl(targetUrl),
     tempPrefix: createSafeCommitTempPrefix(targetUrl),
     username: cfg.username,
     password: cfg.password,
+  }).catch(() => {
+    // Stale temp cleanup is maintenance only; uploads must not depend on it.
   })
 
   const tempUrl = createTempBackupUrl(targetUrl)

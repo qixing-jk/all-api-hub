@@ -447,16 +447,48 @@ describe("webdavService", () => {
   })
 
   describe("uploadBackup", () => {
-    it("cleans up only stale app-owned temp files before uploading", async () => {
+    it("starts stale temp cleanup without delaying the upload", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
       vi.setSystemTime(new Date("2026-05-31T04:15:00.000Z"))
+      let resolveCleanupResponse: (response: {
+        status: number
+        text: () => Promise<string>
+      }) => void = () => {}
+      const cleanupResponse = new Promise<{
+        status: number
+        text: () => Promise<string>
+      }>((resolve) => {
+        resolveCleanupResponse = resolve
+      })
 
       globalAny.fetch
         .mockResolvedValueOnce({ status: 201 })
+        .mockReturnValueOnce(cleanupResponse)
+        .mockResolvedValueOnce({ status: 204 })
         .mockResolvedValueOnce({
-          status: 207,
-          text: vi.fn()
-            .mockResolvedValue(`<?xml version="1.0" encoding="utf-8"?>
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"cleanup":true}'),
+        })
+        .mockResolvedValueOnce({ status: 201 })
+
+      await expect(uploadBackup('{"cleanup":true}')).resolves.toBe(true)
+
+      expect((globalAny.fetch.mock.calls[1][1] as RequestInit).method).toBe(
+        "PROPFIND",
+      )
+      expect((globalAny.fetch.mock.calls[2][1] as RequestInit).method).toBe(
+        "PUT",
+      )
+      expect((globalAny.fetch.mock.calls[3][1] as RequestInit).method).toBe(
+        "GET",
+      )
+      expect((globalAny.fetch.mock.calls[4][1] as RequestInit).method).toBe(
+        "MOVE",
+      )
+
+      resolveCleanupResponse({
+        status: 207,
+        text: vi.fn().mockResolvedValue(`<?xml version="1.0" encoding="utf-8"?>
         <d:multistatus xmlns:d="DAV:">
           <d:response>
             <d:href>/webdav/all-api-hub-backup/.all-api-hub-1-0.json.tmp.20260529T041400Z.oldone</d:href>
@@ -468,24 +500,16 @@ describe("webdavService", () => {
             <d:href>/webdav/all-api-hub-backup/all-api-hub-1-0.json</d:href>
           </d:response>
         </d:multistatus>`),
-        })
-        .mockResolvedValueOnce({ status: 204 })
-        .mockResolvedValueOnce({ status: 204 })
-        .mockResolvedValueOnce({
-          status: 200,
-          text: vi.fn().mockResolvedValue('{"cleanup":true}'),
-        })
-        .mockResolvedValueOnce({ status: 201 })
-
-      await uploadBackup('{"cleanup":true}')
-
-      expect((globalAny.fetch.mock.calls[1][1] as RequestInit).method).toBe(
-        "PROPFIND",
-      )
-      expect((globalAny.fetch.mock.calls[2][1] as RequestInit).method).toBe(
+      })
+      await vi.waitFor(() => {
+        expect(globalAny.fetch.mock.calls[5][0]).toBe(
+          "https://example.com/webdav/all-api-hub-backup/.all-api-hub-1-0.json.tmp.20260529T041400Z.oldone",
+        )
+      })
+      expect((globalAny.fetch.mock.calls[5][1] as RequestInit).method).toBe(
         "DELETE",
       )
-      expect(globalAny.fetch.mock.calls[2][0]).toBe(
+      expect(globalAny.fetch.mock.calls[5][0]).toBe(
         "https://example.com/webdav/all-api-hub-backup/.all-api-hub-1-0.json.tmp.20260529T041400Z.oldone",
       )
       expect(

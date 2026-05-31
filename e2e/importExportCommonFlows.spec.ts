@@ -1130,15 +1130,19 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
   const now = Date.parse("2026-03-30T18:00:00.000Z")
   const webdavFileUrl = "https://webdav.example.com/all-api-hub-e2e.json"
   const uploadedPayloads: unknown[] = []
+  const stagedBackups = new Map<string, string>()
   let remoteBackup = ""
 
   await context.route("https://webdav.example.com/**", async (route) => {
     const method = route.request().method()
     const url = new URL(route.request().url())
     const isBackupFile = url.href === webdavFileUrl
+    const isTempBackupFile =
+      url.pathname.startsWith("/.") && url.pathname.includes(".tmp.")
 
-    if (method === "GET" && isBackupFile) {
-      if (!remoteBackup) {
+    if (method === "GET" && (isBackupFile || isTempBackupFile)) {
+      const body = isTempBackupFile ? stagedBackups.get(url.href) : remoteBackup
+      if (!body) {
         await route.fulfill({
           status: 200,
           contentType: "application/json",
@@ -1150,18 +1154,64 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
       await route.fulfill({
         status: 200,
         contentType: "application/json",
-        body: remoteBackup,
+        body,
       })
       return
     }
 
-    if (method === "PUT" && isBackupFile) {
-      remoteBackup = route.request().postData() ?? ""
+    if (method === "PUT" && (isBackupFile || isTempBackupFile)) {
+      const body = route.request().postData() ?? ""
+      if (isTempBackupFile) {
+        stagedBackups.set(url.href, body)
+      } else {
+        remoteBackup = body
+        uploadedPayloads.push(JSON.parse(remoteBackup))
+      }
+      await route.fulfill({
+        status: isTempBackupFile ? 204 : 201,
+        contentType: "application/json",
+        body: "{}",
+      })
+      return
+    }
+
+    if (method === "PROPFIND") {
+      await route.fulfill({
+        status: 207,
+        contentType: "application/xml",
+        body: `<?xml version="1.0" encoding="utf-8"?><d:multistatus xmlns:d="DAV:" />`,
+      })
+      return
+    }
+
+    if (method === "MOVE" && isTempBackupFile) {
+      const body = stagedBackups.get(url.href)
+      if (body === undefined) {
+        await route.fulfill({
+          status: 404,
+          contentType: "application/json",
+          body: JSON.stringify({ error: "missing staged backup" }),
+        })
+        return
+      }
+
+      remoteBackup = body
+      stagedBackups.delete(url.href)
       uploadedPayloads.push(JSON.parse(remoteBackup))
       await route.fulfill({
         status: 201,
         contentType: "application/json",
         body: "{}",
+      })
+      return
+    }
+
+    if (method === "DELETE" && isTempBackupFile) {
+      stagedBackups.delete(url.href)
+      await route.fulfill({
+        status: 204,
+        contentType: "text/plain",
+        body: "",
       })
       return
     }

@@ -52,6 +52,8 @@ const themeCache = new Map<string, { fetchedAt: number; theme?: string }>()
  * Store a New API theme probe result while bounding the short-lived cache.
  * @param baseUrl Normalized account site base URL.
  * @param value Cached theme probe result.
+ * @param value.fetchedAt Timestamp when the theme was fetched.
+ * @param value.theme Optional detected New API theme name.
  */
 function setCachedTheme(
   baseUrl: string,
