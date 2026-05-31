@@ -245,7 +245,10 @@
     "downloadFailed": "Download failed, status code: {{status}}",
     "encryptFailedNoPassword": "Encryption is enabled but no password is set",
     "fileNotFound": "Remote backup file does not exist",
+    "invalidBackupJson": "The cloud backup file is incomplete and cannot be used for sync. Sync was stopped to avoid merging damaged data. If this device has complete local data, use Upload to WebDAV to recreate the cloud backup. If not, upload from another device that has complete data or import a complete backup file first.",
+    "safeCommitFailed": "This WebDAV service could not safely save the backup. Your existing cloud backup was kept. Try again later or use a WebDAV service that supports moving or renaming files.",
     "syncDataSelectionRequired": "Select at least one data domain to sync",
-    "uploadFailed": "Upload failed, status code: {{status}}"
+    "uploadFailed": "Upload failed, status code: {{status}}",
+    "uploadVerificationFailed": "Backup verification failed after upload. The cloud service may not have saved the file completely. Your existing cloud backup was kept."
   }
 }

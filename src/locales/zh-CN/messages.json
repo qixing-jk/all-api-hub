@@ -241,7 +241,10 @@
     "downloadFailed": "下载失败，状态码: {{status}}",
     "encryptFailedNoPassword": "已开启加密，但未设置密码",
     "fileNotFound": "远程备份文件不存在",
+    "invalidBackupJson": "云端备份文件不完整，无法用于同步。为避免合并损坏的数据，本次同步已停止。如果当前设备的数据是完整的，请使用“上传到 WebDAV”重新创建云端备份；如果当前设备数据不完整，请先在另一台数据完整的设备上上传，或导入一份完整备份文件。",
+    "safeCommitFailed": "云盘未能完成安全保存，原有云端备份已保留。请稍后重试，或改用支持移动/重命名文件的 WebDAV 服务。",
     "syncDataSelectionRequired": "请至少选择一个要同步的数据类型",
-    "uploadFailed": "上传失败，状态码: {{status}}"
+    "uploadFailed": "上传失败，状态码: {{status}}",
+    "uploadVerificationFailed": "备份上传后校验未通过，云盘可能未完整保存文件。原有云端备份已保留。"
   }
 }

@@ -89,6 +89,15 @@
     "hidePassword": "Ẩn mật khẩu",
     "notSynced": "Chưa đồng bộ hóa",
     "password": "Mật khẩu",
+    "rebuildDialog": {
+      "cancel": "Chưa tạo lại",
+      "confirm": "Tạo lại từ thiết bị này",
+      "description": "Tệp sao lưu trên WebDAV không đầy đủ. Tiếp tục đồng bộ có thể làm dữ liệu bị trộn sai. Bạn có thể tạo một bản sao lưu đám mây mới từ dữ liệu trên thiết bị này.",
+      "fullSelectionNote": "Lần tạo lại này sẽ bao gồm mọi dữ liệu có thể đồng bộ, chỉ áp dụng cho lần tải lên này. Phạm vi đồng bộ đã lưu của bạn sẽ không bị thay đổi.",
+      "title": "Bản sao lưu đám mây có thể đã hỏng",
+      "warningDescription": "Tạo lại sẽ thay thế bản sao lưu trên WebDAV bằng dữ liệu hiện có trên thiết bị này. Nếu thiết bị này thiếu tài khoản, dấu trang hoặc tùy chọn, hãy tải lên từ một thiết bị khác có dữ liệu đầy đủ hoặc nhập một bản sao lưu hoàn chỉnh trước.",
+      "warningTitle": "Hãy chắc chắn thiết bị này có dữ liệu đầy đủ"
+    },
     "restorePolicy": {
       "description": "WebDAV chủ yếu được sử dụng để đồng bộ hóa dữ liệu được chia sẻ, không tương đương với việc sao lưu toàn bộ thiết bị. Cài đặt kết nối/mã hóa WebDAV của thiết bị hiện tại, lựa chọn dữ liệu đồng bộ hóa và các cài đặt cục bộ như tự động làm mới tài khoản sẽ không được tải lên qua WebDAV và cũng không bị ghi đè bởi máy chủ từ xa. Nếu bạn cần di chuyển các cài đặt cục bộ này, vui lòng sử dụng xuất/nhập thủ công.",
       "title": "Giải thích phạm vi đồng bộ hóa"

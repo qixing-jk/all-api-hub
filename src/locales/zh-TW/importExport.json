@@ -89,6 +89,15 @@
     "hidePassword": "隱藏密碼",
     "notSynced": "未同步",
     "password": "密碼",
+    "rebuildDialog": {
+      "cancel": "先不重建",
+      "confirm": "用這台裝置重建",
+      "description": "WebDAV 上的備份檔案不完整，繼續同步可能造成資料混亂。你可以用目前裝置的資料重新產生一份雲端備份。",
+      "fullSelectionNote": "本次重建會包含所有可同步資料，但不會改變你平時儲存的同步範圍設定。",
+      "title": "雲端備份可能已損壞",
+      "warningDescription": "重建會用這台裝置目前的資料取代 WebDAV 上的備份。如果這台裝置缺少帳號、書籤或偏好設定，請先換一台資料完整的裝置上傳，或先匯入完整備份。",
+      "warningTitle": "請確認這台裝置的資料是完整的"
+    },
     "restorePolicy": {
       "description": "WebDAV 主要用於同步共享資料，不等同於完整裝置備份。當前裝置的 WebDAV 連線/加密設定、同步資料選擇，以及帳號自動重新整理等本地化設定不會透過 WebDAV 上傳，也不會被遠端覆蓋。如需遷移這些本地設定，請使用手動匯出/匯入。",
       "title": "同步範圍說明"

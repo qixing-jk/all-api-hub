@@ -89,6 +89,15 @@
     "hidePassword": "Hide password",
     "notSynced": "Not synced",
     "password": "Password",
+    "rebuildDialog": {
+      "cancel": "Not now",
+      "confirm": "Rebuild from this device",
+      "description": "The backup file on WebDAV is incomplete. Continuing to sync could mix data incorrectly. You can create a new cloud backup from the data on this device.",
+      "fullSelectionNote": "This rebuild will include all syncable data for this upload only. Your saved sync scope will not be changed.",
+      "title": "Your cloud backup may be damaged",
+      "warningDescription": "Rebuilding will replace the WebDAV backup with the current data on this device. If this device is missing accounts, bookmarks, or preferences, upload from another device with complete data or import a complete backup first.",
+      "warningTitle": "Make sure this device has complete data"
+    },
     "restorePolicy": {
       "description": "WebDAV is meant for shared-data sync, not a full device backup. Your current device's WebDAV connection/encryption settings, sync selection, and account auto-refresh settings stay local and will not be uploaded to or overwritten from WebDAV. Use manual export/import when you need to migrate those device-local settings.",
       "title": "Sync scope notice"

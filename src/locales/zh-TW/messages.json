@@ -241,7 +241,10 @@
     "downloadFailed": "下載失敗，狀態碼: {{status}}",
     "encryptFailedNoPassword": "已開啟加密，但未設定密碼",
     "fileNotFound": "遠端備份檔案不存在",
+    "invalidBackupJson": "雲端備份檔案不完整，無法用於同步。為避免合併損壞的資料，本次同步已停止。如果目前裝置的本機資料是完整的，請使用「上傳到 WebDAV」重新建立雲端備份；如果目前裝置資料不完整，請先在另一台資料完整的裝置上傳，或先匯入一份完整備份檔案。",
+    "safeCommitFailed": "雲端硬碟未能完成安全儲存，原有雲端備份已保留。請稍後重試，或改用支援移動/重新命名檔案的 WebDAV 服務。",
     "syncDataSelectionRequired": "請至少選擇一個要同步的資料型別",
-    "uploadFailed": "上傳失敗，狀態碼: {{status}}"
+    "uploadFailed": "上傳失敗，狀態碼: {{status}}",
+    "uploadVerificationFailed": "備份上傳後校驗未通過，雲端硬碟可能未完整儲存檔案。原有雲端備份已保留。"
   }
 }

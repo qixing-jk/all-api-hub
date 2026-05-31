@@ -89,6 +89,15 @@
     "hidePassword": "隐藏密码",
     "notSynced": "未同步",
     "password": "密码",
+    "rebuildDialog": {
+      "cancel": "先不重建",
+      "confirm": "用这台设备重建",
+      "description": "WebDAV 上的备份文件不完整，继续同步可能造成数据混乱。你可以用当前设备的数据重新生成一份云端备份。",
+      "fullSelectionNote": "本次重建会包含所有可同步数据，但不会改变你平时保存的同步范围设置。",
+      "title": "云端备份可能已损坏",
+      "warningDescription": "重建会用这台设备当前的数据替换 WebDAV 上的备份。如果这台设备缺少账号、书签或偏好设置，请先换一台数据完整的设备上传，或先导入完整备份。",
+      "warningTitle": "请确认这台设备的数据是完整的"
+    },
     "restorePolicy": {
       "description": "WebDAV 主要用于同步共享数据，不等同于完整设备备份。当前设备的 WebDAV 连接/加密设置、同步数据选择，以及账号自动刷新等本地化设置不会通过 WebDAV 上传，也不会被远端覆盖。如需迁移这些本地设置，请使用手动导出/导入。",
       "title": "同步范围说明"

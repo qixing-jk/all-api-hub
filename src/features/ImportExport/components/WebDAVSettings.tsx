@@ -18,6 +18,7 @@ import {
   Heading4,
   Input,
   Label,
+  Modal,
   Switch,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
@@ -59,18 +60,22 @@ import {
   downloadBackup,
   downloadBackupRaw,
   isWebdavFileNotFoundError,
+  parseWebdavBackupJson,
   testWebdavConnection,
   uploadBackup,
 } from "~/services/webdav/webdavService"
 import {
+  DEFAULT_WEBDAV_SYNC_DATA_SELECTION,
   isWebdavSyncDataSelectionEmpty,
   resolveWebdavSyncDataSelection,
   WEBDAV_SYNC_DATA_KEYS,
   type WebDAVSettings,
   type WebDAVSyncDataKey,
+  type WebDAVSyncDataSelection,
 } from "~/types/webdav"
 import { createLogger } from "~/utils/core/logger"
 import { applyPreferenceLanguage } from "~/utils/i18n/applyPreferenceLanguage"
+import { t as translate } from "~/utils/i18n/core"
 
 import { WEBDAV_TARGET_IDS } from "../searchTargets"
 import { IMPORT_EXPORT_TEST_IDS } from "../testIds"
@@ -117,6 +122,21 @@ class PersistWebdavConfigError extends Error {
   }
 }
 
+class ExistingWebdavBackupMalformedError extends Error {
+  constructor(cause?: unknown) {
+    super("Existing WebDAV backup is malformed", { cause })
+    this.name = "ExistingWebdavBackupMalformedError"
+    ;(this as Error & { cause?: unknown }).cause = cause
+  }
+}
+
+class WebdavRebuildConfirmationRequired extends Error {
+  constructor() {
+    super("WebDAV backup rebuild confirmation is required")
+    this.name = "WebdavRebuildConfirmationRequired"
+  }
+}
+
 /** Classify WebDAV validation failures without exposing raw error details. */
 function getWebdavAnalyticsErrorCategory(error: unknown) {
   if (error instanceof PersistWebdavConfigError) {
@@ -135,6 +155,14 @@ function getWebdavAnalyticsFailureStage(error: unknown) {
   }
 
   return PRODUCT_ANALYTICS_FAILURE_STAGES.Execute
+}
+
+/** Detects the stable malformed-backup error emitted by WebDAV backup parsing. */
+function isInvalidWebdavBackupError(error: unknown) {
+  return (
+    error instanceof Error &&
+    error.message === translate("messages:webdav.invalidBackupJson")
+  )
 }
 
 /**
@@ -207,6 +235,8 @@ export default function WebDAVSettings() {
   const [saveDecryptPassword, setSaveDecryptPassword] = useState(true)
   const [pendingEnvelope, setPendingEnvelope] =
     useState<EncryptedWebdavBackupEnvelopeV1 | null>(null)
+  const [rebuildDialogOpen, setRebuildDialogOpen] = useState(false)
+  const [rebuildPending, setRebuildPending] = useState(false)
 
   // 独立的动作状态，避免互相影响
   const [saving, setSaving] = useState(false)
@@ -356,7 +386,9 @@ export default function WebDAVSettings() {
    * - The upload service may apply password-based encryption depending on the
    *   current WebDAV encryption settings.
    */
-  const handleUploadBackup = async () => {
+  const uploadWebdavBackup = async (options?: {
+    forceFullRebuild?: boolean
+  }) => {
     const tracker = startProductAnalyticsAction(
       webDavAnalyticsContext(PRODUCT_ANALYTICS_ACTION_IDS.UploadWebDavBackup),
     )
@@ -385,6 +417,10 @@ export default function WebDAVSettings() {
       }
 
       await persistWebdavConfig()
+      const selectionForUpload: WebDAVSyncDataSelection =
+        options?.forceFullRebuild
+          ? DEFAULT_WEBDAV_SYNC_DATA_SELECTION
+          : syncDataSelection
       const [
         accountData,
         tagStore,
@@ -410,20 +446,39 @@ export default function WebDAVSettings() {
 
       let remoteBackup: any | null = null
 
-      try {
-        const remoteContent = await downloadBackup(webdavConfig, {
-          prepareForWrite: true,
-        })
-        remoteBackup = JSON.parse(remoteContent)
-      } catch (error: any) {
-        if (!isWebdavFileNotFoundError(error)) {
-          throw error
+      if (!options?.forceFullRebuild) {
+        try {
+          const remoteContent = await downloadBackup(webdavConfig, {
+            prepareForWrite: true,
+          })
+          try {
+            remoteBackup = parseWebdavBackupJson(remoteContent)
+          } catch (error) {
+            if (isInvalidWebdavBackupError(error)) {
+              throw new ExistingWebdavBackupMalformedError(error)
+            }
+
+            throw error
+          }
+        } catch (error: any) {
+          if (!isWebdavFileNotFoundError(error)) {
+            if (error instanceof ExistingWebdavBackupMalformedError) {
+              logger.warn(
+                "Existing WebDAV backup is malformed; awaiting rebuild confirmation",
+                error,
+              )
+              setRebuildDialogOpen(true)
+              throw new WebdavRebuildConfirmationRequired()
+            } else {
+              throw error
+            }
+          }
         }
       }
 
       const payload = mergeWebdavBackupPayloadBySelection({
         backup: exportData,
-        selection: syncDataSelection,
+        selection: selectionForUpload,
         remoteBackup,
       })
 
@@ -440,6 +495,20 @@ export default function WebDAVSettings() {
         }),
       })
     } catch (e: any) {
+      if (e instanceof WebdavRebuildConfirmationRequired) {
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Skipped, {
+          diagnostics: buildWebDavSyncDiagnostics({
+            sourceKind: PRODUCT_ANALYTICS_SOURCE_KINDS.Manual,
+            mode: PRODUCT_ANALYTICS_MODE_IDS.WebDavUploadOnly,
+            itemCount: 1,
+            successCount: 0,
+            failureCount: 0,
+            skippedCount: 1,
+          }),
+        })
+        return
+      }
+
       logger.error("Failed to upload backup to WebDAV", e)
       toast.error(
         e instanceof PersistWebdavConfigError
@@ -465,6 +534,20 @@ export default function WebDAVSettings() {
       })
     } finally {
       setUploading(false)
+    }
+  }
+
+  const handleUploadBackup = async () => {
+    await uploadWebdavBackup()
+  }
+
+  const handleConfirmRebuildBackup = async () => {
+    setRebuildDialogOpen(false)
+    setRebuildPending(true)
+    try {
+      await uploadWebdavBackup({ forceFullRebuild: true })
+    } finally {
+      setRebuildPending(false)
     }
   }
 
@@ -569,7 +652,7 @@ export default function WebDAVSettings() {
         }
       }
 
-      const data = JSON.parse(content)
+      const data = parseWebdavBackupJson(content)
       const result = await handleImportWithSelection(data)
       if (result.allImported || result.sections?.preferences) {
         await loadPreferences()
@@ -664,7 +747,7 @@ export default function WebDAVSettings() {
       })
       decryptCompleted = true
 
-      const data = JSON.parse(content)
+      const data = parseWebdavBackupJson(content)
       const result = await handleImportWithSelection(data)
       let importedPreferencesLastUpdated: number | null = null
       let decryptPasswordPersistFailed = false
@@ -1032,6 +1115,57 @@ export default function WebDAVSettings() {
           </ProductAnalyticsScope>
         </CardContent>
       </Card>
+
+      <Modal
+        isOpen={rebuildDialogOpen}
+        onClose={() => {
+          if (uploading || rebuildPending) return
+          setRebuildDialogOpen(false)
+        }}
+        size="md"
+        header={
+          <div className="space-y-1">
+            <Heading4 className="m-0">
+              {t("webdav.rebuildDialog.title")}
+            </Heading4>
+            <BodySmall className="m-0">
+              {t("webdav.rebuildDialog.description")}
+            </BodySmall>
+          </div>
+        }
+        footer={
+          <div className="flex w-full justify-end gap-2">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => setRebuildDialogOpen(false)}
+              disabled={uploading || rebuildPending}
+            >
+              {t("webdav.rebuildDialog.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleConfirmRebuildBackup}
+              loading={uploading || rebuildPending}
+              disabled={uploading || rebuildPending}
+            >
+              {t("webdav.rebuildDialog.confirm")}
+            </Button>
+          </div>
+        }
+      >
+        <div className="space-y-3">
+          <Alert
+            variant="warning"
+            title={t("webdav.rebuildDialog.warningTitle")}
+            description={t("webdav.rebuildDialog.warningDescription")}
+          />
+          <BodySmall className="m-0">
+            {t("webdav.rebuildDialog.fullSelectionNote")}
+          </BodySmall>
+        </div>
+      </Modal>
 
       <WebDAVDecryptPasswordModal
         isOpen={decryptDialogOpen}
