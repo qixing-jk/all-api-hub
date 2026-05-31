@@ -17,15 +17,15 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   }
 })
 
-vi.mock("~/services/apiService/openaiCompatible", () => ({
+vi.mock("~/services/aiApi/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/google", () => ({
+vi.mock("~/services/aiApi/google", () => ({
   fetchGoogleModelIds: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/anthropic", () => ({
+vi.mock("~/services/aiApi/anthropic", () => ({
   fetchAnthropicModelIds: vi.fn(),
 }))
 
@@ -209,7 +209,7 @@ describe("webAiApiCheck background handlers", () => {
 
   it("fetchModels rejects invalid base urls before calling providers", async () => {
     vi.resetModules()
-    const { fetchGoogleModelIds } = await import("~/services/apiService/google")
+    const { fetchGoogleModelIds } = await import("~/services/aiApi/google")
 
     const { handleWebAiApiCheckMessage } = await import(
       "~/services/verification/webAiApiCheck/background"
@@ -237,7 +237,7 @@ describe("webAiApiCheck background handlers", () => {
   it("fetchModels normalizes baseUrl and returns model ids", async () => {
     vi.resetModules()
     const { fetchOpenAICompatibleModelIds } = await import(
-      "~/services/apiService/openaiCompatible"
+      "~/services/aiApi/openaiCompatible"
     )
     vi.mocked(fetchOpenAICompatibleModelIds).mockResolvedValue(["m1", "m2"])
 
@@ -268,7 +268,7 @@ describe("webAiApiCheck background handlers", () => {
 
   it("fetchModels supports google and strips /v1beta from baseUrl", async () => {
     vi.resetModules()
-    const { fetchGoogleModelIds } = await import("~/services/apiService/google")
+    const { fetchGoogleModelIds } = await import("~/services/aiApi/google")
     vi.mocked(fetchGoogleModelIds).mockResolvedValue([
       "gemini-1.0",
       "gemini-2.0",
@@ -302,7 +302,7 @@ describe("webAiApiCheck background handlers", () => {
   it("fetchModels supports anthropic and strips /v1 from baseUrl", async () => {
     vi.resetModules()
     const { fetchAnthropicModelIds } = await import(
-      "~/services/apiService/anthropic"
+      "~/services/aiApi/anthropic"
     )
     vi.mocked(fetchAnthropicModelIds).mockResolvedValue([
       "claude-3-7-sonnet-latest",
@@ -337,7 +337,7 @@ describe("webAiApiCheck background handlers", () => {
   it("fetchModels sanitizes apiKey in error messages", async () => {
     vi.resetModules()
     const { fetchOpenAICompatibleModelIds } = await import(
-      "~/services/apiService/openaiCompatible"
+      "~/services/aiApi/openaiCompatible"
     )
     vi.mocked(fetchOpenAICompatibleModelIds).mockRejectedValue(
       new Error("Unauthorized: sk-test-secret-fixture"),
@@ -367,7 +367,7 @@ describe("webAiApiCheck background handlers", () => {
   it("fetchModels does not expose message-derived status codes to analytics", async () => {
     vi.resetModules()
     const { fetchOpenAICompatibleModelIds } = await import(
-      "~/services/apiService/openaiCompatible"
+      "~/services/aiApi/openaiCompatible"
     )
     vi.mocked(fetchOpenAICompatibleModelIds).mockRejectedValue(
       new Error("Unauthorized 401: sk-test-secret-fixture"),
@@ -400,7 +400,7 @@ describe("webAiApiCheck background handlers", () => {
   it("fetchModels returns structured status codes for analytics classification", async () => {
     vi.resetModules()
     const { fetchOpenAICompatibleModelIds } = await import(
-      "~/services/apiService/openaiCompatible"
+      "~/services/aiApi/openaiCompatible"
     )
     vi.mocked(fetchOpenAICompatibleModelIds).mockRejectedValue({
       statusCode: 401,

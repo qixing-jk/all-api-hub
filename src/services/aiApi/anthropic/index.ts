@@ -1,4 +1,4 @@
-import { fetchApi } from "~/services/apiService/common/utils"
+import { fetchApi } from "~/services/apiTransport/request"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
@@ -18,7 +18,7 @@ type AnthropicModelsListResponse = {
   last_id?: unknown
 }
 
-const logger = createLogger("ApiService.Anthropic")
+const logger = createLogger("AiApi.Anthropic")
 
 const ANTHROPIC_VERSION = "2023-06-01"
 const PAGE_LIMIT = 200

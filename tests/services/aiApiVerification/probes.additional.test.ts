@@ -25,15 +25,15 @@ vi.mock("~/services/verification/aiApiVerification/providers", () => ({
   createGoogleProvider: mocks.createGoogleProvider,
 }))
 
-vi.mock("~/services/apiService/openaiCompatible", () => ({
+vi.mock("~/services/aiApi/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: mocks.fetchOpenAICompatibleModelIds,
 }))
 
-vi.mock("~/services/apiService/anthropic", () => ({
+vi.mock("~/services/aiApi/anthropic", () => ({
   fetchAnthropicModelIds: mocks.fetchAnthropicModelIds,
 }))
 
-vi.mock("~/services/apiService/google", () => ({
+vi.mock("~/services/aiApi/google", () => ({
   fetchGoogleModelIds: mocks.fetchGoogleModelIds,
 }))
 

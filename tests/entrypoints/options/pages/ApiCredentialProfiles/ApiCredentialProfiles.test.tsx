@@ -22,7 +22,7 @@ const mockOpenModelsPage = vi.fn()
 const mockFetchOpenAICompatibleModelIds = vi.fn(
   async (
     _params: Parameters<
-      typeof import("~/services/apiService/openaiCompatible").fetchOpenAICompatibleModelIds
+      typeof import("~/services/aiApi/openaiCompatible").fetchOpenAICompatibleModelIds
     >[0],
   ): Promise<string[]> => [],
 )
@@ -142,10 +142,10 @@ vi.mock("~/utils/navigation", () => ({
   openModelsPage: (...args: unknown[]) => mockOpenModelsPage(...args),
 }))
 
-vi.mock("~/services/apiService/openaiCompatible", () => ({
+vi.mock("~/services/aiApi/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: (
     params: Parameters<
-      typeof import("~/services/apiService/openaiCompatible").fetchOpenAICompatibleModelIds
+      typeof import("~/services/aiApi/openaiCompatible").fetchOpenAICompatibleModelIds
     >[0],
   ) => mockFetchOpenAICompatibleModelIds(params),
 }))

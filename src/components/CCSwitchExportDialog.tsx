@@ -17,7 +17,7 @@ import {
   SelectValue,
 } from "~/components/ui"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
-import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
+import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import {
   CCSWITCH_APPS,
   openInCCSwitch,

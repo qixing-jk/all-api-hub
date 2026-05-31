@@ -34,16 +34,16 @@ vi.mock("~/services/apiService", () => ({
   getApiService: (...args: unknown[]) => getApiServiceMock(...args),
 }))
 
-vi.mock("~/services/apiService/anthropic", () => ({
+vi.mock("~/services/aiApi/anthropic", () => ({
   fetchAnthropicModelIds: (...args: unknown[]) =>
     fetchAnthropicModelIdsMock(...args),
 }))
 
-vi.mock("~/services/apiService/google", () => ({
+vi.mock("~/services/aiApi/google", () => ({
   fetchGoogleModelIds: (...args: unknown[]) => fetchGoogleModelIdsMock(...args),
 }))
 
-vi.mock("~/services/apiService/openaiCompatible", () => ({
+vi.mock("~/services/aiApi/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: (...args: unknown[]) =>
     fetchOpenAICompatibleModelIdsMock(...args),
 }))

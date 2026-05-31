@@ -40,7 +40,7 @@ vi.mock("~/services/apiService/veloera", () => ({
   fetchChannel: (...args: unknown[]) => mockFetchVeloeraChannel(...args),
 }))
 
-vi.mock("~/services/apiService/openaiCompatible", () => ({
+vi.mock("~/services/aiApi/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: mockFetchOpenAICompatibleModelIds,
 }))
 

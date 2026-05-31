@@ -1,4 +1,4 @@
-import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
+import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import type { AccountToken, ApiToken, DisplaySiteData } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 import { normalizeList } from "~/utils/core/string"

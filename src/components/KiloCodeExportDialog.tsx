@@ -27,8 +27,8 @@ import {
 } from "~/services/accounts/accountOperations"
 import { compareAccountDisplayNames } from "~/services/accounts/utils/accountDisplayName"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
+import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import { getApiService } from "~/services/apiService"
-import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {
   buildKiloCodeApiConfigs,
   buildKiloCodeSettingsFile,

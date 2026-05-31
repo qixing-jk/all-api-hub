@@ -10,7 +10,7 @@ import {
   Modal,
 } from "~/components/ui"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
-import { fetchOpenAICompatibleModels } from "~/services/apiService/openaiCompatible"
+import { fetchOpenAICompatibleModels } from "~/services/aiApi/openaiCompatible"
 import { importToClaudeCodeRouter } from "~/services/integrations/claudeCodeRouterService"
 import {
   startProductAnalyticsAction,

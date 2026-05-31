@@ -6,7 +6,7 @@ const { fetchOpenAICompatibleModelIdsMock } = vi.hoisted(() => ({
   fetchOpenAICompatibleModelIdsMock: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/openaiCompatible", () => ({
+vi.mock("~/services/aiApi/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: (...args: any[]) =>
     fetchOpenAICompatibleModelIdsMock(...args),
 }))

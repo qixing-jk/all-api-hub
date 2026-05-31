@@ -1,8 +1,8 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { fetchAnthropicModelIds } from "~/services/aiApi/anthropic"
+import { fetchGoogleModelIds } from "~/services/aiApi/google"
+import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import { apiCredentialProfilesStorage } from "~/services/apiCredentialProfiles/apiCredentialProfilesStorage"
-import { fetchAnthropicModelIds } from "~/services/apiService/anthropic"
-import { fetchGoogleModelIds } from "~/services/apiService/google"
-import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,

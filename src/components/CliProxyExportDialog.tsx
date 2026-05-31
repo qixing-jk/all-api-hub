@@ -15,9 +15,9 @@ import {
   SelectValue,
 } from "~/components/ui"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
-import { fetchAnthropicModelIds } from "~/services/apiService/anthropic"
-import { fetchGoogleModelIds } from "~/services/apiService/google"
-import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
+import { fetchAnthropicModelIds } from "~/services/aiApi/anthropic"
+import { fetchGoogleModelIds } from "~/services/aiApi/google"
+import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import {
   buildDefaultCliProxyProviderBaseUrl,
   CLI_PROXY_PROVIDER_METADATA,

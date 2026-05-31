@@ -10,18 +10,16 @@ const mocks = vi.hoisted(() => ({
   },
 }))
 
-vi.mock("~/services/apiService/common/utils", () => ({
+vi.mock("~/services/apiTransport/request", () => ({
   fetchApi: mocks.fetchApi,
 }))
 
 vi.mock("~/utils/core/logger", () => ({
   createLogger: (scope: string) =>
-    scope === "ApiService.Anthropic"
-      ? mocks.anthropicLogger
-      : mocks.googleLogger,
+    scope === "AiApi.Anthropic" ? mocks.anthropicLogger : mocks.googleLogger,
 }))
 
-describe("apiService model fetchers", () => {
+describe("AI API model fetchers", () => {
   beforeEach(() => {
     vi.resetModules()
     vi.clearAllMocks()
@@ -42,27 +40,27 @@ describe("apiService model fetchers", () => {
         })
 
       const { fetchAnthropicModelIds } = await import(
-        "~/services/apiService/anthropic"
+        "~/services/aiApi/anthropic"
       )
 
       await expect(
         fetchAnthropicModelIds({
-          baseUrl: "https://api.anthropic.com",
-          apiKey: "sk-anthropic",
+          baseUrl: "https://anthropic.example.test",
+          apiKey: "synthetic-anthropic-key",
         }),
       ).resolves.toEqual(["claude-3-5-sonnet", "claude-3-7-sonnet"])
 
       expect(mocks.fetchApi).toHaveBeenNthCalledWith(
         1,
         {
-          baseUrl: "https://api.anthropic.com",
+          baseUrl: "https://anthropic.example.test",
           auth: { authType: "none" },
         },
         expect.objectContaining({
           endpoint: "/v1/models?limit=200",
           options: {
             headers: {
-              "x-api-key": "sk-anthropic",
+              "x-api-key": "synthetic-anthropic-key",
               "anthropic-version": "2023-06-01",
             },
           },
@@ -87,13 +85,13 @@ describe("apiService model fetchers", () => {
       })
 
       const { fetchAnthropicModelIds } = await import(
-        "~/services/apiService/anthropic"
+        "~/services/aiApi/anthropic"
       )
 
       await expect(
         fetchAnthropicModelIds({
-          baseUrl: "https://api.anthropic.com",
-          apiKey: "sk-anthropic",
+          baseUrl: "https://anthropic.example.test",
+          apiKey: "synthetic-anthropic-key",
         }),
       ).resolves.toEqual(["claude-3-opus"])
 
@@ -105,13 +103,13 @@ describe("apiService model fetchers", () => {
       mocks.fetchApi.mockRejectedValueOnce(failure)
 
       const { fetchAnthropicModelIds } = await import(
-        "~/services/apiService/anthropic"
+        "~/services/aiApi/anthropic"
       )
 
       await expect(
         fetchAnthropicModelIds({
-          baseUrl: "https://api.anthropic.com",
-          apiKey: "sk-anthropic",
+          baseUrl: "https://anthropic.example.test",
+          apiKey: "synthetic-anthropic-key",
         }),
       ).rejects.toThrow("anthropic down")
 
@@ -134,12 +132,12 @@ describe("apiService model fetchers", () => {
       })
 
       const { fetchAnthropicModelIds } = await import(
-        "~/services/apiService/anthropic"
+        "~/services/aiApi/anthropic"
       )
 
       const result = await fetchAnthropicModelIds({
-        baseUrl: "https://api.anthropic.com",
-        apiKey: "sk-anthropic",
+        baseUrl: "https://anthropic.example.test",
+        apiKey: "synthetic-anthropic-key",
       })
 
       expect(result).toHaveLength(2000)
@@ -165,14 +163,12 @@ describe("apiService model fetchers", () => {
           nextPageToken: "",
         })
 
-      const { fetchGoogleModelIds } = await import(
-        "~/services/apiService/google"
-      )
+      const { fetchGoogleModelIds } = await import("~/services/aiApi/google")
 
       await expect(
         fetchGoogleModelIds({
-          baseUrl: "https://generativelanguage.googleapis.com",
-          apiKey: "AIza-secret",
+          baseUrl: "https://google.example.test",
+          apiKey: "synthetic-google-key",
         }),
       ).resolves.toEqual([
         "gemini-2.5-pro",
@@ -183,14 +179,14 @@ describe("apiService model fetchers", () => {
       expect(mocks.fetchApi).toHaveBeenNthCalledWith(
         1,
         {
-          baseUrl: "https://generativelanguage.googleapis.com",
+          baseUrl: "https://google.example.test",
           auth: { authType: "none" },
         },
         expect.objectContaining({
           endpoint: "/v1beta/models",
           options: {
             headers: {
-              "x-goog-api-key": "AIza-secret",
+              "x-goog-api-key": "synthetic-google-key",
             },
           },
         }),
@@ -217,14 +213,12 @@ describe("apiService model fetchers", () => {
           nextPageToken: "same-token",
         })
 
-      const { fetchGoogleModelIds } = await import(
-        "~/services/apiService/google"
-      )
+      const { fetchGoogleModelIds } = await import("~/services/aiApi/google")
 
       await expect(
         fetchGoogleModelIds({
-          baseUrl: "https://generativelanguage.googleapis.com",
-          apiKey: "AIza-secret",
+          baseUrl: "https://google.example.test",
+          apiKey: "synthetic-google-key",
         }),
       ).resolves.toEqual(["gemini-2.0-flash"])
 
@@ -235,14 +229,12 @@ describe("apiService model fetchers", () => {
       const failure = new Error("google down")
       mocks.fetchApi.mockRejectedValueOnce(failure)
 
-      const { fetchGoogleModelIds } = await import(
-        "~/services/apiService/google"
-      )
+      const { fetchGoogleModelIds } = await import("~/services/aiApi/google")
 
       await expect(
         fetchGoogleModelIds({
-          baseUrl: "https://generativelanguage.googleapis.com",
-          apiKey: "AIza-secret",
+          baseUrl: "https://google.example.test",
+          apiKey: "synthetic-google-key",
         }),
       ).rejects.toThrow("google down")
 
@@ -263,13 +255,11 @@ describe("apiService model fetchers", () => {
         nextPageToken: "page-2",
       })
 
-      const { fetchGoogleModelIds } = await import(
-        "~/services/apiService/google"
-      )
+      const { fetchGoogleModelIds } = await import("~/services/aiApi/google")
 
       const result = await fetchGoogleModelIds({
-        baseUrl: "https://generativelanguage.googleapis.com",
-        apiKey: "AIza-secret",
+        baseUrl: "https://google.example.test",
+        apiKey: "synthetic-google-key",
       })
 
       expect(result).toHaveLength(2000)

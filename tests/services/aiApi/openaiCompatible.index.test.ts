@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import {
   fetchOpenAICompatibleModelIds,
   fetchOpenAICompatibleModels,
-} from "~/services/apiService/openaiCompatible"
+} from "~/services/aiApi/openaiCompatible"
 import { AuthTypeEnum } from "~/types"
 
 const { mockFetchApiData, mockLoggerError } = vi.hoisted(() => ({
@@ -11,7 +11,7 @@ const { mockFetchApiData, mockLoggerError } = vi.hoisted(() => ({
   mockLoggerError: vi.fn(),
 }))
 
-vi.mock("~/services/apiService/common/utils", () => ({
+vi.mock("~/services/apiTransport/request", () => ({
   fetchApiData: mockFetchApiData,
 }))
 
@@ -24,7 +24,7 @@ vi.mock("~/utils/core/logger", () => ({
 describe("OpenAI-compatible model fetchers", () => {
   const params = {
     baseUrl: "https://openai-compatible.example.com",
-    apiKey: "secret-key",
+    apiKey: "synthetic-openai-compatible-key",
   }
 
   beforeEach(() => {
@@ -35,16 +35,14 @@ describe("OpenAI-compatible model fetchers", () => {
     const models = [{ id: "gpt-4.1" }, { id: "gpt-4o-mini" }]
     mockFetchApiData.mockResolvedValueOnce(models)
 
-    await expect(fetchOpenAICompatibleModels(params as any)).resolves.toEqual(
-      models,
-    )
+    await expect(fetchOpenAICompatibleModels(params)).resolves.toEqual(models)
 
     expect(mockFetchApiData).toHaveBeenCalledWith(
       {
         baseUrl: "https://openai-compatible.example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
-          accessToken: "secret-key",
+          accessToken: "synthetic-openai-compatible-key",
         },
       },
       {
@@ -62,7 +60,7 @@ describe("OpenAI-compatible model fetchers", () => {
       fetchOpenAICompatibleModels({
         ...params,
         abortSignal: abortController.signal,
-      } as any),
+      }),
     ).resolves.toEqual(models)
 
     expect(mockFetchApiData).toHaveBeenCalledWith(
@@ -70,7 +68,7 @@ describe("OpenAI-compatible model fetchers", () => {
         baseUrl: "https://openai-compatible.example.com",
         auth: {
           authType: AuthTypeEnum.AccessToken,
-          accessToken: "secret-key",
+          accessToken: "synthetic-openai-compatible-key",
         },
       },
       {
@@ -88,18 +86,17 @@ describe("OpenAI-compatible model fetchers", () => {
       { id: "gpt-4o-mini", owned_by: "openai" },
     ])
 
-    await expect(fetchOpenAICompatibleModelIds(params as any)).resolves.toEqual(
-      ["gpt-4.1", "gpt-4o-mini"],
-    )
+    await expect(fetchOpenAICompatibleModelIds(params)).resolves.toEqual([
+      "gpt-4.1",
+      "gpt-4o-mini",
+    ])
   })
 
   it("logs and rethrows fetch failures", async () => {
     const error = new Error("upstream unavailable")
     mockFetchApiData.mockRejectedValueOnce(error)
 
-    await expect(fetchOpenAICompatibleModels(params as any)).rejects.toThrow(
-      error,
-    )
+    await expect(fetchOpenAICompatibleModels(params)).rejects.toThrow(error)
     expect(mockLoggerError).toHaveBeenCalledWith(
       "Failed to fetch upstream model list",
       error,

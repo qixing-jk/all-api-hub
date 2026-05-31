@@ -1,16 +1,16 @@
+import { fetchApiData } from "~/services/apiTransport/request"
 import type {
   OpenAIAuthParams,
   UpstreamModelItem,
   UpstreamModelList,
-} from "~/services/apiService/common/type"
-import { fetchApiData } from "~/services/apiService/common/utils"
+} from "~/services/apiTransport/type"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to OpenAI-compatible upstream model fetch helpers.
  */
-const logger = createLogger("ApiService.OpenAICompatible")
+const logger = createLogger("AiApi.OpenAICompatible")
 
 const OPENAI_COMPATIBLE_MODELS_ENDPOINT = "/v1/models"
 

@@ -21,7 +21,7 @@ const toastErrorMock = vi.fn()
 const completeProductAnalyticsActionMock = vi.fn()
 const startProductAnalyticsActionMock = vi.fn()
 
-vi.mock("~/services/apiService/openaiCompatible", () => ({
+vi.mock("~/services/aiApi/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: (...args: any[]) =>
     mockFetchOpenAICompatibleModelIds(...args),
 }))

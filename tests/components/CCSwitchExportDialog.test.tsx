@@ -36,7 +36,7 @@ vi.mock(
   },
 )
 
-vi.mock("~/services/apiService/openaiCompatible", () => ({
+vi.mock("~/services/aiApi/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: (...args: any[]) =>
     mockFetchOpenAICompatibleModelIds(...args),
 }))

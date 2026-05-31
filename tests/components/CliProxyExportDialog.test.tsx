@@ -60,16 +60,16 @@ vi.mock(
   },
 )
 
-vi.mock("~/services/apiService/anthropic", () => ({
+vi.mock("~/services/aiApi/anthropic", () => ({
   fetchAnthropicModelIds: (...args: any[]) =>
     mockFetchAnthropicModelIds(...args),
 }))
 
-vi.mock("~/services/apiService/google", () => ({
+vi.mock("~/services/aiApi/google", () => ({
   fetchGoogleModelIds: (...args: any[]) => mockFetchGoogleModelIds(...args),
 }))
 
-vi.mock("~/services/apiService/openaiCompatible", () => ({
+vi.mock("~/services/aiApi/openaiCompatible", () => ({
   fetchOpenAICompatibleModelIds: (...args: any[]) =>
     mockFetchOpenAICompatibleModelIds(...args),
 }))

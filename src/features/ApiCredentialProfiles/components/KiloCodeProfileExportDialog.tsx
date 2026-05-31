@@ -11,7 +11,7 @@ import {
   SearchableSelect,
 } from "~/components/ui"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
-import { fetchOpenAICompatibleModelIds } from "~/services/apiService/openaiCompatible"
+import { fetchOpenAICompatibleModelIds } from "~/services/aiApi/openaiCompatible"
 import {
   buildKiloCodeApiConfigs,
   buildKiloCodeSettingsFile,

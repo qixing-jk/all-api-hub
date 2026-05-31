@@ -76,16 +76,9 @@ vi.mock("~/services/apiService/common", async () => {
   }
 })
 
-vi.mock("~/services/apiService/openaiCompatible", async () => {
-  const actual = await vi.importActual<
-    typeof import("~/services/apiService/openaiCompatible")
-  >("~/services/apiService/openaiCompatible")
-
-  return {
-    ...actual,
-    fetchOpenAICompatibleModelIds: mockFetchOpenAICompatibleModelIds,
-  }
-})
+vi.mock("~/services/aiApi/openaiCompatible", () => ({
+  fetchOpenAICompatibleModelIds: mockFetchOpenAICompatibleModelIds,
+}))
 
 // Mock account storage
 const mockAccountStorageConvertToDisplayData = vi.fn()

@@ -79,7 +79,7 @@ vi.mock("~/features/KeyManagement/components/AddTokenDialog", () => ({
 
 const mockFetchOpenAICompatibleModelIds = vi.fn()
 
-vi.mock("~/services/apiService/openaiCompatible", () => ({
+vi.mock("~/services/aiApi/openaiCompatible", () => ({
   // Forward through a typed wrapper so call sites avoid `any[]`.
   fetchOpenAICompatibleModelIds: (...args: unknown[]) =>
     mockFetchOpenAICompatibleModelIds(...args),

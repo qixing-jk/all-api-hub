@@ -1,4 +1,4 @@
-import { fetchApi } from "~/services/apiService/common/utils"
+import { fetchApi } from "~/services/apiTransport/request"
 import { AuthTypeEnum } from "~/types"
 import { createLogger } from "~/utils/core/logger"
 
@@ -15,7 +15,7 @@ type GoogleModelsListResponse = {
   nextPageToken?: unknown
 }
 
-const logger = createLogger("ApiService.Google")
+const logger = createLogger("AiApi.Google")
 
 const MAX_PAGES = 20
 const MAX_MODELS = 2000
