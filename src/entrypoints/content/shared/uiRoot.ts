@@ -4,6 +4,7 @@ import { createShadowRootUi } from "wxt/utils/content-script-ui/shadow-root"
 
 import { CONTENT_UI_HOST_TAG } from "~/entrypoints/content/shared/contentUi"
 import { createLogger } from "~/utils/core/logger"
+import { ensureContentI18nReady } from "~/utils/i18n/content"
 
 /**
  * Unified logger scoped to mounting the content-script redemption assist UI root.
@@ -59,6 +60,7 @@ export async function ensureRedemptionToastUi(): Promise<void> {
   }
 
   mountingPromise = (async () => {
+    await ensureContentI18nReady()
     const { createElement, ContentReactRoot } = await loadContentUiModules()
 
     const ui = await createShadowRootUi(ctxRef as ContentScriptContext, {

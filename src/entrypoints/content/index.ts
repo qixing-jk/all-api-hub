@@ -12,6 +12,7 @@ import {
   type ContentFeaturePreferenceSource,
 } from "~/services/preferences/contentScriptFeatureDefaults"
 import { createLogger } from "~/utils/core/logger"
+import { ensureContentI18nReady } from "~/utils/i18n/content"
 
 import { setupContentMessageHandlers } from "./messageHandlers"
 import { setContentScriptContext } from "./shared/uiRoot"
@@ -76,6 +77,10 @@ export default defineContentScript({
  */
 function mainLogic() {
   logger.debug("Hello content script", { id: browser.runtime.id })
+
+  void ensureContentI18nReady().catch((error) => {
+    logger.warn("Content i18n initialization failed", error)
+  })
 
   setupContentMessageHandlers()
   return setupContentFeatureControllers()

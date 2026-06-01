@@ -8,6 +8,7 @@ const setupRedemptionAssistContentMock = vi.fn()
 const setupWebAiApiCheckContentMock = vi.fn()
 const setupContentMessageHandlersMock = vi.fn()
 const setContentScriptContextMock = vi.fn()
+const ensureContentI18nReadyMock = vi.fn()
 const logger = {
   debug: vi.fn(),
   warn: vi.fn(),
@@ -43,6 +44,10 @@ vi.mock("~/entrypoints/content/shared/uiRoot", () => ({
   setContentScriptContext: setContentScriptContextMock,
 }))
 
+vi.mock("~/utils/i18n/content", () => ({
+  ensureContentI18nReady: ensureContentI18nReadyMock,
+}))
+
 vi.mock("~/utils/core/logger", () => ({
   createLogger: vi.fn(() => logger),
 }))
@@ -59,6 +64,8 @@ describe("content entrypoint", () => {
     setupWebAiApiCheckContentMock.mockReset()
     setupContentMessageHandlersMock.mockReset()
     setContentScriptContextMock.mockReset()
+    ensureContentI18nReadyMock.mockReset()
+    ensureContentI18nReadyMock.mockResolvedValue(undefined)
     logger.debug.mockReset()
     logger.warn.mockReset()
 
@@ -130,6 +137,7 @@ describe("content entrypoint", () => {
     await module.default.main(ctx)
 
     expect(setContentScriptContextMock).toHaveBeenCalledWith(ctx)
+    expect(ensureContentI18nReadyMock).toHaveBeenCalledTimes(1)
     expect(setupContentMessageHandlersMock).toHaveBeenCalledTimes(1)
     expect(onInvalidated).toHaveBeenCalledTimes(1)
 

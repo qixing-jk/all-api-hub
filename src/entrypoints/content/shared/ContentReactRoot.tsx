@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react"
 
-import "~/utils/i18n"
 import "~/styles/style.css"
 
 import { ApiCheckModalHost } from "~/entrypoints/content/webAiApiCheck/components/ApiCheckModalHost"

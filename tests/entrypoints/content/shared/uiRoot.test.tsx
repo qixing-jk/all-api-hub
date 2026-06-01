@@ -8,11 +8,13 @@ const {
   createRootMock,
   createShadowRootUiMock,
   loggerWarnMock,
+  ensureContentI18nReadyMock,
   mockContentReactRoot,
 } = vi.hoisted(() => ({
   createRootMock: vi.fn(),
   createShadowRootUiMock: vi.fn(),
   loggerWarnMock: vi.fn(),
+  ensureContentI18nReadyMock: vi.fn(),
   mockContentReactRoot: vi.fn(() => null),
 }))
 
@@ -34,6 +36,10 @@ vi.mock("~/utils/core/logger", () => ({
   }),
 }))
 
+vi.mock("~/utils/i18n/content", () => ({
+  ensureContentI18nReady: ensureContentI18nReadyMock,
+}))
+
 vi.mock("~/entrypoints/content/shared/ContentReactRoot", () => ({
   ContentReactRoot: mockContentReactRoot,
 }))
@@ -42,6 +48,7 @@ describe("uiRoot", () => {
   beforeEach(() => {
     vi.resetModules()
     vi.resetAllMocks()
+    ensureContentI18nReadyMock.mockResolvedValue(undefined)
   })
 
   it("warns and does not try to mount when the content-script context has not been set", async () => {
@@ -56,6 +63,39 @@ describe("uiRoot", () => {
     )
     expect(createShadowRootUiMock).not.toHaveBeenCalled()
     expect(createRootMock).not.toHaveBeenCalled()
+  })
+
+  it("waits for persisted UI language readiness before rendering the shared content UI", async () => {
+    const container = document.createElement("div")
+    const root = {
+      render: vi.fn(),
+      unmount: vi.fn(),
+    }
+    const mountMock = vi.fn()
+
+    createRootMock.mockReturnValue(root)
+    createShadowRootUiMock.mockImplementation(async (_ctx, options) => {
+      mountMock.mockImplementation(() => {
+        options.onMount(container)
+      })
+      return {
+        mount: mountMock,
+      }
+    })
+
+    const { ensureRedemptionToastUi, setContentScriptContext } = await import(
+      "~/entrypoints/content/shared/uiRoot"
+    )
+
+    setContentScriptContext({ contentScript: "ctx" } as any)
+
+    await ensureRedemptionToastUi()
+
+    expect(ensureContentI18nReadyMock).toHaveBeenCalledTimes(1)
+    expect(ensureContentI18nReadyMock.mock.invocationCallOrder[0]).toBeLessThan(
+      createShadowRootUiMock.mock.invocationCallOrder[0],
+    )
+    expect(root.render).toHaveBeenCalledTimes(1)
   })
 
   it("mounts the shared content UI once, skips repeat mounts while active, and remounts after removal", async () => {
