@@ -216,6 +216,7 @@ describe("apiService AIHubMix", () => {
           data: {
             id: 7,
             username: "aihubmix-user",
+            display_name: "aihubmix-user",
             access_token: "existing-access-token",
             quota: 900000,
             used_quota: 12345,
@@ -231,7 +232,7 @@ describe("apiService AIHubMix", () => {
 
     expect(capturedCookieAuth).toBe(true)
     expect(userInfo).toMatchObject({
-      id: "7",
+      id: "aihubmix-user",
       username: "aihubmix-user",
       access_token: "existing-access-token",
     })
@@ -245,6 +246,7 @@ describe("apiService AIHubMix", () => {
           message: "",
           data: {
             username: "aihubmix-user",
+            display_name: "aihubmix-user",
             access_token: "existing-access-token",
           },
         }),
@@ -275,6 +277,7 @@ describe("apiService AIHubMix", () => {
           data: {
             id: 7,
             username: "aihubmix-user",
+            display_name: "aihubmix-user",
             access_token: "",
           },
         })
@@ -298,7 +301,7 @@ describe("apiService AIHubMix", () => {
         auth: { authType: AuthTypeEnum.Cookie },
       }),
     ).resolves.toMatchObject({
-      id: "7",
+      id: "aihubmix-user",
       username: "aihubmix-user",
     })
     expect(mainOriginUserInfoCalled).toBe(true)
@@ -318,6 +321,7 @@ describe("apiService AIHubMix", () => {
           data: {
             id: 7,
             username: "aihubmix-user",
+            display_name: "aihubmix-user",
             access_token: "",
             quota: 900000,
           },
@@ -354,7 +358,7 @@ describe("apiService AIHubMix", () => {
         },
       }),
     ).resolves.toMatchObject({
-      id: "7",
+      id: "aihubmix-user",
       username: "aihubmix-user",
     })
     expect(mainOriginUserInfoCalled).toBe(true)
@@ -371,6 +375,7 @@ describe("apiService AIHubMix", () => {
           data: {
             id: 7,
             username: "aihubmix-user",
+            display_name: "aihubmix-user",
             access_token: "existing-access-token",
           },
         }),
@@ -408,6 +413,7 @@ describe("apiService AIHubMix", () => {
           data: {
             id: 7,
             username: "aihubmix-user",
+            display_name: "aihubmix-user",
             access_token: "",
           },
         }),
@@ -451,6 +457,7 @@ describe("apiService AIHubMix", () => {
           data: {
             id: 7,
             username: "aihubmix-user",
+            display_name: "aihubmix-user",
             access_token: "",
           },
         })

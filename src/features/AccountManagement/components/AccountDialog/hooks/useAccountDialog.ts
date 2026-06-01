@@ -1259,6 +1259,9 @@ export function useAccountDialog({
       const targetOrigin = tryParseOrigin(baseUrl)
 
       let imported: any | null = null
+      const hasUsableSub2apiRefreshToken = (value: unknown): boolean =>
+        typeof (value as any)?.sub2apiAuth?.refreshToken === "string" &&
+        (value as any).sub2apiAuth.refreshToken.trim().length > 0
 
       if (targetOrigin && browser?.tabs?.sendMessage) {
         const tabs = await getAllTabs().catch(() => [])
@@ -1281,7 +1284,9 @@ export function useAccountDialog({
             })
             if (response?.success && response.data) {
               imported = response.data
-              break
+              if (hasUsableSub2apiRefreshToken(imported)) {
+                break
+              }
             }
           } catch {
             // Ignore and continue to the next candidate.
@@ -1289,7 +1294,7 @@ export function useAccountDialog({
         }
       }
 
-      if (!imported) {
+      if (!hasUsableSub2apiRefreshToken(imported)) {
         const response = await sendRuntimeMessage({
           action: RuntimeActionIds.AutoDetectSite,
           url: baseUrl,

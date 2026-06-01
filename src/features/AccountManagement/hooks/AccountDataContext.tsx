@@ -18,6 +18,7 @@ import {
   DATA_TYPE_INCOME,
 } from "~/constants"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { accountStorage } from "~/services/accounts/accountStorage"
@@ -425,7 +426,10 @@ export const AccountDataProvider = ({
       const originAccounts = accountsRef.current.filter((account) => {
         return tryParseOrigin(account.site_url) === origin
       })
-      const siteTypeForUserRead = originAccounts[0]?.site_type
+      const siteTypeForUserRead =
+        originAccounts.find(
+          (account) => account.site_type !== SITE_TYPES.UNKNOWN,
+        )?.site_type ?? originAccounts[0]?.site_type
 
       if (seq !== currentTabCheckSeqRef.current) return
       setDetectedSiteAccounts(originAccounts)

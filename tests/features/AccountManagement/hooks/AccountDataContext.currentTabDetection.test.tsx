@@ -3,6 +3,7 @@ import { useEffect } from "react"
 import { I18nextProvider } from "react-i18next"
 import { afterEach, describe, expect, it, vi } from "vitest"
 
+import { SITE_TYPES } from "~/constants/siteType"
 import {
   AccountDataProvider,
   useAccountDataContext,
@@ -126,17 +127,19 @@ function createAccount({
   id,
   baseUrl,
   userId,
+  siteType = SITE_TYPES.UNKNOWN,
 }: {
   id: string
   baseUrl: string
   userId: string
+  siteType?: string
 }) {
   return {
     id,
     site_name: "Test",
     site_url: baseUrl,
     health: { status: SiteHealthStatus.Healthy },
-    site_type: "unknown",
+    site_type: siteType,
     exchange_rate: 7,
     account_info: {
       id: userId,
@@ -246,10 +249,12 @@ describe("AccountDataContext current tab detection", () => {
     })
     mockConvertToDisplayData.mockReturnValue([{ id: "acc-aihubmix" }])
 
-    vi.spyOn(browser.tabs, "sendMessage").mockResolvedValue({
-      success: true,
-      data: { userId: " aihubmix-user ", user: { id: "aihubmix-user" } },
-    } as any)
+    const sendMessageSpy = vi
+      .spyOn(browser.tabs, "sendMessage")
+      .mockResolvedValue({
+        success: true,
+        data: { userId: " aihubmix-user ", user: { id: "aihubmix-user" } },
+      } as any)
 
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
 
@@ -264,6 +269,80 @@ describe("AccountDataContext current tab detection", () => {
     await waitFor(() => {
       expect(latestCtx?.detectedAccount?.id).toBe("acc-aihubmix")
     })
+
+    expect(sendMessageSpy).toHaveBeenCalledWith(
+      102,
+      expect.objectContaining({
+        siteType: SITE_TYPES.UNKNOWN,
+      }),
+    )
+  })
+
+  it("prefers a known same-origin site type for current-tab user verification", async () => {
+    activeTabs = [{ id: 103, url: "https://foo.example.com/dashboard" }]
+
+    const legacyUnknownAccount = createAccount({
+      id: "acc-legacy",
+      baseUrl: "https://foo.example.com",
+      userId: "legacy-user",
+      siteType: SITE_TYPES.UNKNOWN,
+    })
+    const aihubmixAccount = createAccount({
+      id: "acc-aihubmix",
+      baseUrl: "https://foo.example.com",
+      userId: "aihubmix-user",
+      siteType: SITE_TYPES.AIHUBMIX,
+    })
+
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    mockGetAllAccounts.mockResolvedValue([
+      legacyUnknownAccount,
+      aihubmixAccount,
+    ])
+    mockGetAllBookmarks.mockResolvedValue([])
+    mockGetOrderedList.mockResolvedValue([])
+    mockGetPinnedList.mockResolvedValue([])
+    mockGetAccountStats.mockResolvedValue({
+      total_quota: 0,
+      today_total_consumption: 0,
+      today_total_requests: 0,
+      today_total_prompt_tokens: 0,
+      today_total_completion_tokens: 0,
+      today_total_income: 0,
+    })
+    mockConvertToDisplayData.mockReturnValue([
+      { id: "acc-legacy" },
+      { id: "acc-aihubmix" },
+    ])
+
+    const sendMessageSpy = vi
+      .spyOn(browser.tabs, "sendMessage")
+      .mockResolvedValue({
+        success: true,
+        data: { userId: "aihubmix-user", user: { username: "aihubmix-user" } },
+      } as any)
+
+    let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
+
+    render(
+      <I18nextProvider i18n={testI18n}>
+        <AccountDataProvider>
+          <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
+        </AccountDataProvider>
+      </I18nextProvider>,
+    )
+
+    await waitFor(() => {
+      expect(latestCtx?.detectedAccount?.id).toBe("acc-aihubmix")
+    })
+
+    expect(sendMessageSpy).toHaveBeenCalledWith(
+      103,
+      expect.objectContaining({
+        siteType: SITE_TYPES.AIHUBMIX,
+      }),
+    )
   })
 
   it("keeps site-level match when userId does not match any stored account", async () => {

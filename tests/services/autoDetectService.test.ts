@@ -158,6 +158,7 @@ describe("autoDetectSmart", () => {
     expect(browserAny.tabs.sendMessage).toHaveBeenCalledWith(101, {
       action: expect.any(String),
       url: "https://example.com/console",
+      siteType: SITE_TYPES.NEW_API,
     })
     expect(mockGetActiveTabs).not.toHaveBeenCalled()
   })
@@ -391,6 +392,7 @@ describe("autoDetectSmart", () => {
     expect(browserAny.tabs.sendMessage).toHaveBeenCalledWith(101, {
       action: expect.any(String),
       url: "https://example.com/console",
+      siteType: SITE_TYPES.NEW_API,
     })
     expect(browserAny.tabs.sendMessage).not.toHaveBeenCalledWith(
       202,
@@ -490,6 +492,7 @@ describe("autoDetectSmart", () => {
     expect(browserAny.tabs.sendMessage).toHaveBeenCalledWith(2, {
       action: expect.any(String),
       url: "https://aihubmix.com",
+      siteType: SITE_TYPES.AIHUBMIX,
     })
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
