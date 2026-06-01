@@ -226,6 +226,149 @@ describe("useAccountDialog cookie import feedback", () => {
     )
   })
 
+  it("trims and sends the current tab cookie store when importing from a matching origin", async () => {
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
+      success: true,
+      data: "session=container",
+    })
+    ;(globalThis as any).browser.tabs.query = vi.fn(async () => [
+      {
+        id: 43,
+        cookieStoreId: " firefox-container-1 ",
+        incognito: false,
+        url: "https://example.com/dashboard",
+      },
+    ])
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe("https://example.com")
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://example.com")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleImportCookieAuthSessionCookie()
+    })
+
+    expect(sendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+        url: "https://example.com",
+        cookieStoreId: "firefox-container-1",
+        sourceTabId: 43,
+      }),
+    )
+    expect(sendRuntimeMessage).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceTabIncognito: true,
+      }),
+    )
+  })
+
+  it("skips current-tab context when importing cookies for a different origin", async () => {
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
+      success: true,
+      data: "session=other",
+    })
+    ;(globalThis as any).browser.tabs.query = vi.fn(async () => [
+      {
+        id: 44,
+        cookieStoreId: "firefox-container-2",
+        incognito: true,
+        url: "https://current.example.com/dashboard",
+      },
+    ])
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe(
+        "https://current.example.com",
+      )
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://other.example.com")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleImportCookieAuthSessionCookie()
+    })
+
+    expect(sendRuntimeMessage).toHaveBeenCalledWith({
+      action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+      url: "https://other.example.com",
+    })
+  })
+
+  it("sends matching current-tab context without a source tab id when the tab id is unavailable", async () => {
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
+      success: true,
+      data: "session=no-tab-id",
+    })
+    ;(globalThis as any).browser.tabs.query = vi.fn(async () => [
+      {
+        cookieStoreId: "firefox-container-3",
+        url: "https://example.com/dashboard",
+      },
+    ])
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe("https://example.com")
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://example.com")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleImportCookieAuthSessionCookie()
+    })
+
+    expect(sendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+        url: "https://example.com",
+        cookieStoreId: "firefox-container-3",
+      }),
+    )
+    expect(sendRuntimeMessage).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        sourceTabId: expect.any(Number),
+      }),
+    )
+  })
+
   it("drops stale current-tab import context when current-tab queries fail", async () => {
     vi.mocked(toast.success).mockClear()
     const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
