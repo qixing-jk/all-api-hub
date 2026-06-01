@@ -181,6 +181,31 @@ describe("AccountDialog AccountForm", () => {
     expect(props.onAuthTypeChange).toHaveBeenCalledWith(AuthTypeEnum.Cookie)
   })
 
+  it("uses the site-specific account identity input strategy", async () => {
+    const props = createProps()
+
+    const { rerender } = render(<AccountForm {...props} />)
+
+    expect(
+      await screen.findByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput),
+    ).toHaveAttribute("type", "number")
+
+    props.draft.siteType = SITE_TYPES.AIHUBMIX
+    props.draft.userId = "aihubmix-user"
+
+    rerender(<AccountForm {...props} />)
+
+    const userIdInput = screen.getByTestId(
+      ACCOUNT_MANAGEMENT_TEST_IDS.userIdInput,
+    )
+    expect(userIdInput).toHaveAttribute("type", "text")
+    expect(userIdInput).toHaveAttribute("autocomplete", "off")
+    expect(userIdInput).toHaveAttribute(
+      "placeholder",
+      "accountDialog:form.userId",
+    )
+  })
+
   it("only lists account site types in the site type selector", async () => {
     const user = userEvent.setup()
     const props = createProps()
