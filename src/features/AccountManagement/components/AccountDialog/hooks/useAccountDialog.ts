@@ -110,6 +110,30 @@ import {
 
 const AUTO_DETECT_SLOW_HINT_DELAY_MS = 10_000
 
+interface CurrentTabCookieImportContext {
+  origin: string
+  tabId?: number
+  incognito?: boolean
+  cookieStoreId?: string
+}
+
+/**
+ * Captures the current tab context needed to import cookies from the same browser profile.
+ */
+function createCurrentTabCookieImportContext(
+  tab: browser.tabs.Tab,
+  origin: string,
+): CurrentTabCookieImportContext {
+  return {
+    origin,
+    ...(typeof tab.id === "number" ? { tabId: tab.id } : {}),
+    ...(tab.incognito === true ? { incognito: true } : {}),
+    ...(typeof tab.cookieStoreId === "string" && tab.cookieStoreId.trim()
+      ? { cookieStoreId: tab.cookieStoreId.trim() }
+      : {}),
+  }
+}
+
 /**
  * Logger scoped to the account dialog lifecycle. Ensure we never include raw tokens/cookies in log details.
  */
@@ -671,6 +695,8 @@ export function useAccountDialog({
     null,
   )
   const detectedCookieStoreIdRef = useRef<string | null>(null)
+  const currentTabCookieImportContextRef =
+    useRef<CurrentTabCookieImportContext | null>(null)
 
   const { openWithAccount: openChannelDialog, openSub2ApiTokenCreationDialog } =
     useChannelDialog()
@@ -786,6 +812,7 @@ export function useAccountDialog({
     (nextPrefill?: AddAccountPrefill | null) => {
       newAccountRef.current = null
       detectedCookieStoreIdRef.current = null
+      currentTabCookieImportContextRef.current = null
       duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
       hasConsumedAutoFillCurrentSiteUrlRef.current = Boolean(nextPrefill)
       const normalizedPrefillAuthType = normalizeOptionalAccountAuthType(
@@ -895,6 +922,12 @@ export function useAccountDialog({
     if (mode === DIALOG_MODES.EDIT && account) {
       return
     }
+    const clearCurrentTabDetection = () => {
+      currentTabCookieImportContextRef.current = null
+      setCurrentTabUrl(null)
+      setSiteName("")
+    }
+
     try {
       const tabs = await browser.tabs.query({
         active: true,
@@ -906,8 +939,11 @@ export function useAccountDialog({
           const urlObj = new URL(tab.url)
           const baseUrl = `${urlObj.protocol}//${urlObj.host}`
           if (!baseUrl.startsWith("http")) {
+            clearCurrentTabDetection()
             return
           }
+          currentTabCookieImportContextRef.current =
+            createCurrentTabCookieImportContext(tab, baseUrl)
           setCurrentTabUrl(baseUrl)
           setSiteName(await getSiteName(tab))
         } catch (error) {
@@ -915,9 +951,10 @@ export function useAccountDialog({
             error,
             tabUrl: tab.url,
           })
-          setCurrentTabUrl(null)
-          setSiteName("")
+          clearCurrentTabDetection()
         }
+      } else {
+        clearCurrentTabDetection()
       }
     } catch (error) {
       logger.warn("Failed to query current tab, falling back", { error })
@@ -929,9 +966,15 @@ export function useAccountDialog({
           const urlObj = new URL(tab.url)
           const baseUrl = `${urlObj.protocol}//${urlObj.host}`
           if (baseUrl.startsWith("http")) {
+            currentTabCookieImportContextRef.current =
+              createCurrentTabCookieImportContext(tab, baseUrl)
             setCurrentTabUrl(baseUrl)
             setSiteName(await getSiteName(tab))
+          } else {
+            clearCurrentTabDetection()
           }
+        } else {
+          clearCurrentTabDetection()
         }
       } catch (fallbackError) {
         logger.warn("Failed to query current tab in fallback mode", {
@@ -1097,6 +1140,34 @@ export function useAccountDialog({
     void openSettingsTab("permissions")
   }, [])
 
+  const getCookieImportContextForUrl = useCallback((targetUrl: string) => {
+    if (detectedCookieStoreIdRef.current) {
+      return { cookieStoreId: detectedCookieStoreIdRef.current }
+    }
+
+    const currentTabContext = currentTabCookieImportContextRef.current
+    if (!currentTabContext) {
+      return {}
+    }
+
+    const targetOrigin = tryParseOrigin(targetUrl)
+    if (!targetOrigin || targetOrigin !== currentTabContext.origin) {
+      return {}
+    }
+
+    return {
+      ...(currentTabContext.cookieStoreId
+        ? { cookieStoreId: currentTabContext.cookieStoreId }
+        : {}),
+      ...(typeof currentTabContext.tabId === "number"
+        ? { sourceTabId: currentTabContext.tabId }
+        : {}),
+      ...(currentTabContext.incognito === true
+        ? { sourceTabIncognito: true }
+        : {}),
+    }
+  }, [])
+
   const handleRequestCookieAuthPermissions = useCallback(async () => {
     const cookieAuthPermissions = getCookieAuthPermissions()
 
@@ -1193,9 +1264,7 @@ export function useAccountDialog({
       const response = await sendRuntimeMessage<CookieImportResponse>({
         action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
         url: url.trim(),
-        ...(detectedCookieStoreIdRef.current
-          ? { cookieStoreId: detectedCookieStoreIdRef.current }
-          : {}),
+        ...getCookieImportContextForUrl(url.trim()),
       })
       if (response?.success && response.data) {
         setCookieAuthSessionCookie(response.data)
@@ -1585,9 +1654,7 @@ export function useAccountDialog({
               action:
                 RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
               url: url.trim(),
-              ...(detectedCookieStoreIdRef.current
-                ? { cookieStoreId: detectedCookieStoreIdRef.current }
-                : {}),
+              ...getCookieImportContextForUrl(url.trim()),
             })
             const header =
               typeof cookieResponse?.data === "string"

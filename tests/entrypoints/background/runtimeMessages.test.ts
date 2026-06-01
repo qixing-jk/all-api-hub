@@ -276,6 +276,55 @@ describe("setupRuntimeMessageListeners routing", () => {
     })
   })
 
+  it("resolves the cookie store from the source tab for incognito cookie import requests", async () => {
+    getCookieHeaderForUrlResult.mockResolvedValueOnce({
+      header: "session=incognito",
+    })
+    const getAllCookieStores = vi.fn().mockResolvedValueOnce([
+      { id: "0", tabIds: [1] },
+      { id: "1-incognito", tabIds: [42] },
+    ])
+    ;(globalThis as any).browser.cookies = {
+      ...((globalThis as any).browser.cookies ?? {}),
+      getAllCookieStores,
+    }
+
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+
+    setupRuntimeMessageListeners()
+    expect(runtimeMessageListener).toBeTypeOf("function")
+
+    const sendResponse = vi.fn()
+    const result = runtimeMessageListener?.(
+      {
+        action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+        url: "https://example.com",
+        sourceTabId: 42,
+        sourceTabIncognito: true,
+      },
+      {},
+      sendResponse,
+    )
+
+    expect(result).toBe(true)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(getAllCookieStores).toHaveBeenCalledTimes(1)
+    expect(getCookieHeaderForUrlResult).toHaveBeenCalledWith(
+      "https://example.com",
+      {
+        includeSession: true,
+        storeId: "1-incognito",
+      },
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: "session=incognito",
+    })
+  })
+
   it("returns a permission failure before reading cookies when access is missing", async () => {
     hasCookieReadPermissionForUrl.mockResolvedValueOnce(false)
 

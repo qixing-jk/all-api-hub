@@ -53,6 +53,41 @@ import {
 const logger = createLogger("RuntimeMessages")
 
 /**
+ * Resolves the browser cookie store that should be used for a cookie import request.
+ */
+async function resolveCookieStoreIdFromImportRequest(
+  request: Record<string, unknown>,
+): Promise<string | undefined> {
+  if (
+    typeof request.cookieStoreId === "string" &&
+    request.cookieStoreId.trim()
+  ) {
+    return request.cookieStoreId.trim()
+  }
+
+  if (
+    typeof request.sourceTabId !== "number" ||
+    request.sourceTabIncognito !== true ||
+    typeof browser.cookies?.getAllCookieStores !== "function"
+  ) {
+    return undefined
+  }
+
+  try {
+    const cookieStores = await browser.cookies.getAllCookieStores()
+    return cookieStores.find((store) =>
+      store.tabIds?.includes(request.sourceTabId as number),
+    )?.id
+  } catch (error) {
+    logger.warn("Failed to resolve source tab cookie store", {
+      error: getErrorMessage(error),
+      sourceTabId: request.sourceTabId,
+    })
+    return undefined
+  }
+}
+
+/**
  * Registers runtime message handlers for background scripts.
  * Routes browser.runtime messages to feature-specific handlers based on action prefixes.
  */
@@ -181,10 +216,7 @@ export function setupRuntimeMessageListeners() {
             }
 
             const cookieStoreId =
-              typeof request.cookieStoreId === "string" &&
-              request.cookieStoreId.trim()
-                ? request.cookieStoreId
-                : undefined
+              await resolveCookieStoreIdFromImportRequest(request)
             const result = await getCookieHeaderForUrlResult(request.url, {
               includeSession: true,
               ...(cookieStoreId ? { storeId: cookieStoreId } : {}),

@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { DIALOG_MODES } from "~/constants/dialogModes"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useAccountDialog } from "~/features/AccountManagement/components/AccountDialog/hooks/useAccountDialog"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
@@ -160,6 +161,58 @@ describe("useAccountDialog cookie import feedback", () => {
     expect(result.current.state.showCookiePermissionWarning).toBe(false)
     expect(toast.error).toHaveBeenCalledWith(
       "accountDialog:messages.importCookiesEmpty",
+    )
+  })
+
+  it("sends the current incognito tab context when importing cookies manually", async () => {
+    vi.mocked(toast.success).mockClear()
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
+      success: true,
+      data: "session=incognito",
+    })
+    ;(globalThis as any).browser.tabs.query = vi.fn(async () => [
+      {
+        id: 42,
+        incognito: true,
+        url: "https://example.com/dashboard",
+      },
+    ])
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe("https://example.com")
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://example.com")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleImportCookieAuthSessionCookie()
+    })
+
+    expect(sendRuntimeMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+        url: "https://example.com",
+        sourceTabId: 42,
+        sourceTabIncognito: true,
+      }),
+    )
+    expect(result.current.state.cookieAuthSessionCookie).toBe(
+      "session=incognito",
+    )
+    expect(toast.success).toHaveBeenCalledWith(
+      "accountDialog:messages.importCookiesSuccess",
     )
   })
 
