@@ -462,6 +462,49 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     )
   })
 
+  it("falls back on 401 cookie-auth failures even when a request has a custom fallback allowlist", async () => {
+    mocks.sendRuntimeMessageMock.mockResolvedValue({
+      success: true,
+      status: 200,
+      data: {
+        success: true,
+        data: { account: "stored-cookie" },
+        message: "ok",
+      },
+    })
+
+    const result = await executeWithTempWindowFallback(
+      buildContext({
+        onlyData: true,
+        accountId: "acct-1",
+        authType: AuthTypeEnum.Cookie,
+        cookieAuthSessionCookie: "session=stored-account",
+        tempWindowFallback: {
+          statusCodes: [429],
+          codes: [API_ERROR_CODES.HTTP_429],
+        },
+      }),
+      async () => {
+        throw new ApiError(
+          "current browser session is unauthorized",
+          401,
+          "/api/models",
+          API_ERROR_CODES.HTTP_401,
+        )
+      },
+    )
+
+    expect(result).toEqual({ account: "stored-cookie" })
+    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.TempWindowFetch,
+        accountId: "acct-1",
+        authType: AuthTypeEnum.Cookie,
+        cookieAuthSessionCookie: "session=stored-account",
+      }),
+    )
+  })
+
   it("does not fall back on 401 token-auth failures", async () => {
     const error = new ApiError(
       "access token is unauthorized",

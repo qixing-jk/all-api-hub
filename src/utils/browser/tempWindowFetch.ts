@@ -425,7 +425,6 @@ function isCookieAuthUnauthorizedFallback(
   error: ApiError,
   context: TempWindowFallbackContext,
 ): boolean {
-  if (context.tempWindowFallback) return false
   if (context.authType !== AuthTypeEnum.Cookie) return false
   if (!context.cookieAuthSessionCookie?.trim()) return false
 
