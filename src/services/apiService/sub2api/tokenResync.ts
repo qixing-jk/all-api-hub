@@ -1,4 +1,5 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SITE_TYPES } from "~/constants/siteType"
 import { getAllTabs, sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
@@ -34,6 +35,7 @@ async function readUserFromTab(tabId: number, baseUrl: string) {
     return await browser.tabs.sendMessage(tabId, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: baseUrl,
+      siteType: SITE_TYPES.SUB2API,
     })
   } catch (error) {
     logger.debug("Failed to read Sub2API auth state from tab", {

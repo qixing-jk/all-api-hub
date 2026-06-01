@@ -221,6 +221,7 @@ describe("useAccountDialog Sub2API constraints", () => {
           RuntimeActionIds.ContentGetUserFromLocalStorage,
         )
         expect(message.url).toBe("https://sub2.example.com")
+        expect(message).toMatchObject({ siteType: "sub2api" })
 
         if (tabId === 12) {
           return {

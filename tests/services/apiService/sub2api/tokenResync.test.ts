@@ -67,10 +67,12 @@ describe("Sub2API token re-sync", () => {
     expect(mockTabSendMessage).toHaveBeenNthCalledWith(1, 3, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: "https://sub2.example.com",
+      siteType: "sub2api",
     })
     expect(mockTabSendMessage).toHaveBeenNthCalledWith(2, 2, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: "https://sub2.example.com",
+      siteType: "sub2api",
     })
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
   })

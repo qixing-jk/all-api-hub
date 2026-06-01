@@ -939,12 +939,11 @@ export async function handleAutoDetectSite(
       }
     }
 
-    const [userData, siteType] = await Promise.all([
-      getSiteDataFromTab(url, requestId, undefined, {
-        incognito: Boolean(useIncognito),
-      }),
-      getAccountSiteType(url),
-    ])
+    const siteType = await getAccountSiteType(url)
+    const userData = await getSiteDataFromTab(url, requestId, undefined, {
+      incognito: Boolean(useIncognito),
+      siteType,
+    })
 
     let result = null
     if (siteType && userData) {
@@ -1365,7 +1364,7 @@ async function getSiteDataFromTab(
   url: string,
   requestId: string,
   suppressMinimize?: boolean,
-  options: { incognito?: boolean } = {},
+  options: { incognito?: boolean; siteType?: string } = {},
 ) {
   try {
     const context = await acquireTempContext(
@@ -1380,6 +1379,7 @@ async function getSiteDataFromTab(
     const userResponse = await sendTabMessageWithRetry(tabId, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: url,
+      siteType: options.siteType,
     })
 
     await releaseTempContext(requestId)

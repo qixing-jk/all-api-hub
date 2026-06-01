@@ -6,6 +6,7 @@ import {
   isValidManualAccountIdentity,
   normalizeAccountIdentity,
   requiresNumericManualAccountIdentity,
+  resolveStoredAccountUserIdentity,
 } from "~/services/accounts/accountIdentity"
 
 describe("accountIdentity", () => {
@@ -48,5 +49,40 @@ describe("accountIdentity", () => {
     expect(isValidManualAccountIdentity("0", SITE_TYPES.NEW_API)).toBe(false)
     expect(isValidManualAccountIdentity("001", SITE_TYPES.NEW_API)).toBe(false)
     expect(isValidManualAccountIdentity("1", SITE_TYPES.NEW_API)).toBe(true)
+  })
+
+  it("resolves stored user identities from the site-specific identity field", () => {
+    expect(
+      resolveStoredAccountUserIdentity(
+        { id: 42, username: "new-api-user" },
+        SITE_TYPES.NEW_API,
+      ),
+    ).toEqual({
+      userId: "42",
+      user: { id: 42, username: "new-api-user" },
+    })
+
+    expect(
+      resolveStoredAccountUserIdentity(
+        { username: "aihubmix-user", display_name: "AIHubMix User" },
+        SITE_TYPES.AIHUBMIX,
+      ),
+    ).toEqual({
+      userId: "aihubmix-user",
+      user: { username: "aihubmix-user", display_name: "AIHubMix User" },
+    })
+  })
+
+  it("rejects stored user payloads without the site-specific identity field", () => {
+    expect(
+      resolveStoredAccountUserIdentity(
+        { username: "new-api-user" },
+        SITE_TYPES.NEW_API,
+      ),
+    ).toBeNull()
+    expect(
+      resolveStoredAccountUserIdentity({ id: 42 }, SITE_TYPES.AIHUBMIX),
+    ).toBeNull()
+    expect(resolveStoredAccountUserIdentity([], SITE_TYPES.NEW_API)).toBeNull()
   })
 })

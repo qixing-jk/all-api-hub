@@ -486,6 +486,7 @@ async function getUserDataFromCurrentTab(
       const userResponse = await browser.tabs.sendMessage(tabId, {
         action: RuntimeActionIds.ContentGetUserFromLocalStorage,
         url: url,
+        siteType,
       })
 
       const userId = normalizeAccountIdentity(userResponse?.data?.userId)

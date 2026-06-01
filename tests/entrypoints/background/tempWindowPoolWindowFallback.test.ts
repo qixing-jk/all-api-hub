@@ -877,6 +877,14 @@ describe("tempWindowPool window fallback", () => {
     await request
 
     expect(getSiteTypeMock).toHaveBeenCalledWith("https://example.com/account")
+    expect(sendMessageMock).toHaveBeenCalledWith(
+      508,
+      expect.objectContaining({
+        action: RuntimeActionIds.ContentGetUserFromLocalStorage,
+        url: "https://example.com/account",
+        siteType: "new-api",
+      }),
+    )
     expect(sendResponse).toHaveBeenCalledWith({
       success: true,
       data: {
@@ -1008,7 +1016,6 @@ describe("tempWindowPool window fallback", () => {
 
   it("surfaces auto-detect failures when site-type detection throws", async () => {
     tempContextMode = "tab"
-    createTabMock.mockResolvedValueOnce({ id: 510 })
     getSiteTypeMock.mockRejectedValueOnce(new Error("site-type lookup failed"))
 
     const { handleAutoDetectSite } = await import(
@@ -1033,7 +1040,8 @@ describe("tempWindowPool window fallback", () => {
     })
 
     await vi.advanceTimersByTimeAsync(2500)
-    expect(removeTabOrWindowMock).toHaveBeenCalledWith(510)
+    expect(createTabMock).not.toHaveBeenCalled()
+    expect(removeTabOrWindowMock).not.toHaveBeenCalled()
   })
 
   it("returns a safe null auto-detect result when temp-context user data lookup throws", async () => {

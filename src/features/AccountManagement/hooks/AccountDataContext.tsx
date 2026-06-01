@@ -425,6 +425,7 @@ export const AccountDataProvider = ({
       const originAccounts = accountsRef.current.filter((account) => {
         return tryParseOrigin(account.site_url) === origin
       })
+      const siteTypeForUserRead = originAccounts[0]?.site_type
 
       if (seq !== currentTabCheckSeqRef.current) return
       setDetectedSiteAccounts(originAccounts)
@@ -481,6 +482,7 @@ export const AccountDataProvider = ({
           const userResponse = await browser.tabs.sendMessage(tabId, {
             action: RuntimeActionIds.ContentGetUserFromLocalStorage,
             url: origin,
+            siteType: siteTypeForUserRead,
           })
 
           const userIdRaw = userResponse?.success

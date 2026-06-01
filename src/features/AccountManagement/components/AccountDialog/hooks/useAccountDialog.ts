@@ -1277,6 +1277,7 @@ export function useAccountDialog({
             const response = await browser.tabs.sendMessage(tabId, {
               action: RuntimeActionIds.ContentGetUserFromLocalStorage,
               url: baseUrl,
+              siteType: SITE_TYPES.SUB2API,
             })
             if (response?.success && response.data) {
               imported = response.data

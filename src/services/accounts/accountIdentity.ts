@@ -20,6 +20,11 @@ const NUMERIC_MANUAL_ACCOUNT_ID_SITE_TYPES: ReadonlySet<AccountSiteType> =
 
 const POSITIVE_INTEGER_ID_PATTERN = /^[1-9]\d*$/
 
+type StoredAccountUserIdentity = {
+  userId: AccountIdentity
+  user: Record<string, unknown>
+}
+
 /**
  * Normalizes account identity values from storage, auto-detect, and adapters.
  */
@@ -36,6 +41,28 @@ export function normalizeAccountIdentity(
   }
 
   return null
+}
+
+/**
+ * Resolves the account identity from a user object read from site storage.
+ */
+export function resolveStoredAccountUserIdentity(
+  user: unknown,
+  siteType: AccountSiteType,
+): StoredAccountUserIdentity | null {
+  if (!user || typeof user !== "object" || Array.isArray(user)) return null
+
+  const userRecord = user as Record<string, unknown>
+  const identitySource =
+    siteType === SITE_TYPES.AIHUBMIX ? userRecord.username : userRecord.id
+  const userId = normalizeAccountIdentity(identitySource)
+
+  if (!userId) return null
+
+  return {
+    userId,
+    user: userRecord,
+  }
 }
 
 /**
