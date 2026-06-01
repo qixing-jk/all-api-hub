@@ -10,13 +10,19 @@ import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const originalBrowser = globalThis.browser
 
-const { mockGetActiveTabs, onTabActivatedMock, onTabUpdatedMock } = vi.hoisted(
-  () => ({
-    mockGetActiveTabs: vi.fn(),
-    onTabActivatedMock: vi.fn(),
-    onTabUpdatedMock: vi.fn(),
-  }),
-)
+const {
+  mockGetActiveTabs,
+  onTabActivatedMock,
+  onTabUpdatedMock,
+  tabActivatedCallbacks,
+} = vi.hoisted(() => ({
+  mockGetActiveTabs: vi.fn(),
+  onTabActivatedMock: vi.fn(),
+  onTabUpdatedMock: vi.fn(),
+  tabActivatedCallbacks: [] as Array<
+    (activeInfo: browser.tabs._OnActivatedActiveInfo) => void
+  >,
+}))
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
@@ -78,8 +84,73 @@ describe("useAccountDialog sponsor prefill", () => {
       },
     }
     mockGetActiveTabs.mockResolvedValue([])
-    onTabActivatedMock.mockImplementation(() => () => {})
+    tabActivatedCallbacks.splice(0, tabActivatedCallbacks.length)
+    onTabActivatedMock.mockImplementation((callback) => {
+      tabActivatedCallbacks.push(callback)
+      return () => {}
+    })
     onTabUpdatedMock.mockImplementation(() => () => {})
+  })
+
+  it("keeps the current-site prompt live while binding title updates to the selected URL", async () => {
+    const activeTabs = [
+      {
+        id: 1,
+        title: "Current Provider Loading",
+        url: "https://current.example.com/path",
+      },
+      {
+        id: 2,
+        title: "Current Provider Ready",
+        url: "https://current.example.com/dashboard",
+      },
+      {
+        id: 3,
+        title: "Other Provider",
+        url: "https://other.example.com/path",
+      },
+    ] as browser.tabs.Tab[]
+
+    ;(globalThis as any).browser.tabs.query = vi.fn(async () => [activeTabs[0]])
+
+    const { result } = renderAccountDialogHook({
+      mode: DIALOG_MODES.ADD,
+      isOpen: true,
+      onClose: vi.fn(),
+      onSuccess: vi.fn(),
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe(
+        "https://current.example.com",
+      )
+      expect(result.current.state.siteName).toBe("Current Provider Loading")
+    })
+    ;(globalThis as any).browser.tabs.query = vi.fn(async () => [activeTabs[1]])
+
+    await act(async () => {
+      tabActivatedCallbacks[0]?.({ tabId: 2, windowId: 1 })
+    })
+
+    expect(result.current.state.currentTabUrl).toBe(
+      "https://current.example.com",
+    )
+    expect(result.current.state.siteName).toBe("Current Provider Loading")
+    ;(globalThis as any).browser.tabs.query = vi.fn(async () => [activeTabs[2]])
+
+    await act(async () => {
+      tabActivatedCallbacks[0]?.({ tabId: 3, windowId: 1 })
+    })
+
+    expect(result.current.state.currentTabUrl).toBe("https://other.example.com")
+    expect(result.current.state.siteName).toBe("Current Provider Loading")
+
+    await act(async () => {
+      result.current.handlers.handleUseCurrentTabUrl()
+    })
+
+    expect(result.current.state.url).toBe("https://other.example.com")
+    expect(result.current.state.siteName).toBe("Other Provider")
   })
 
   it("initializes add mode from sponsor prefill without waiting for current-tab detection", async () => {

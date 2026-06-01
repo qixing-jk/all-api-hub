@@ -316,6 +316,8 @@ export function useAccountDialog({
   const duplicateAccountWarningAcknowledgedSiteUrlRef = useRef<string | null>(
     null,
   )
+  const selectedSiteUrlRef = useRef("")
+  const currentTabSiteNameRef = useRef("")
   const hasConsumedAutoFillCurrentSiteUrlRef = useRef(false)
   const hasExplicitAuthTypeRef = useRef(false)
   const siteName = draft.siteName
@@ -335,6 +337,7 @@ export function useAccountDialog({
   const sub2apiUseRefreshToken = draft.sub2apiUseRefreshToken
   const sub2apiRefreshToken = draft.sub2apiRefreshToken
   const sub2apiTokenExpiresAt = draft.sub2apiTokenExpiresAt
+  selectedSiteUrlRef.current = url
   const isDetected =
     phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM &&
     formSource === ACCOUNT_DIALOG_FORM_SOURCES.DETECTED
@@ -821,6 +824,7 @@ export function useAccountDialog({
       newAccountRef.current = null
       detectedCookieStoreIdRef.current = null
       currentTabCookieImportContextRef.current = null
+      currentTabSiteNameRef.current = ""
       duplicateAccountWarningAcknowledgedSiteUrlRef.current = null
       hasConsumedAutoFillCurrentSiteUrlRef.current = Boolean(nextPrefill)
       const normalizedPrefillAuthType = normalizeOptionalAccountAuthType(
@@ -932,9 +936,13 @@ export function useAccountDialog({
     }
     const clearCurrentTabDetection = () => {
       currentTabCookieImportContextRef.current = null
+      currentTabSiteNameRef.current = ""
       setCurrentTabUrl(null)
-      setSiteName("")
+      if (!selectedSiteUrlRef.current.trim()) {
+        setSiteName("")
+      }
     }
+    const canApplyCurrentTabTitle = () => !selectedSiteUrlRef.current.trim()
 
     try {
       const tabs = await browser.tabs.query({
@@ -953,7 +961,11 @@ export function useAccountDialog({
           currentTabCookieImportContextRef.current =
             createCurrentTabCookieImportContext(tab, baseUrl)
           setCurrentTabUrl(baseUrl)
-          setSiteName(await getSiteName(tab))
+          const resolvedSiteName = await getSiteName(tab)
+          currentTabSiteNameRef.current = resolvedSiteName
+          if (canApplyCurrentTabTitle()) {
+            setSiteName(resolvedSiteName)
+          }
         } catch (error) {
           logger.warn("Failed to parse current tab URL", {
             error,
@@ -977,7 +989,11 @@ export function useAccountDialog({
             currentTabCookieImportContextRef.current =
               createCurrentTabCookieImportContext(tab, baseUrl)
             setCurrentTabUrl(baseUrl)
-            setSiteName(await getSiteName(tab))
+            const resolvedSiteName = await getSiteName(tab)
+            currentTabSiteNameRef.current = resolvedSiteName
+            if (canApplyCurrentTabTitle()) {
+              setSiteName(resolvedSiteName)
+            }
           } else {
             clearCurrentTabDetection()
           }
@@ -1116,6 +1132,9 @@ export function useAccountDialog({
   const handleUseCurrentTabUrl = () => {
     if (currentTabUrl) {
       handleUrlChange(currentTabUrl)
+      if (currentTabSiteNameRef.current.trim()) {
+        setSiteName(currentTabSiteNameRef.current)
+      }
     }
   }
 
