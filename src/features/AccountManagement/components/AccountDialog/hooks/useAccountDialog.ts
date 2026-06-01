@@ -980,6 +980,7 @@ export function useAccountDialog({
         logger.warn("Failed to query current tab in fallback mode", {
           error: fallbackError,
         })
+        clearCurrentTabDetection()
       }
     }
   }, [account, mode, setSiteName])

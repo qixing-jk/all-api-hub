@@ -325,6 +325,53 @@ describe("setupRuntimeMessageListeners routing", () => {
     })
   })
 
+  it("falls back to the default cookie store when source-tab store lookup fails", async () => {
+    getCookieHeaderForUrlResult.mockResolvedValueOnce({
+      header: "session=regular",
+    })
+    const getAllCookieStores = vi
+      .fn()
+      .mockRejectedValueOnce(new Error("cookie store lookup failed"))
+    ;(globalThis as any).browser.cookies = {
+      ...((globalThis as any).browser.cookies ?? {}),
+      getAllCookieStores,
+    }
+
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+
+    setupRuntimeMessageListeners()
+    expect(runtimeMessageListener).toBeTypeOf("function")
+
+    const sendResponse = vi.fn()
+    const result = runtimeMessageListener?.(
+      {
+        action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+        url: "https://example.com",
+        sourceTabId: 42,
+        sourceTabIncognito: true,
+      },
+      {},
+      sendResponse,
+    )
+
+    expect(result).toBe(true)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+
+    expect(getAllCookieStores).toHaveBeenCalledTimes(1)
+    expect(getCookieHeaderForUrlResult).toHaveBeenCalledWith(
+      "https://example.com",
+      {
+        includeSession: true,
+      },
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: "session=regular",
+    })
+  })
+
   it("returns a permission failure before reading cookies when access is missing", async () => {
     hasCookieReadPermissionForUrl.mockResolvedValueOnce(false)
 

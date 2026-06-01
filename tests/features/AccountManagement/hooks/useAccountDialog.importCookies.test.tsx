@@ -19,6 +19,9 @@ import {
 import { AuthTypeEnum } from "~/types"
 import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
+type OnTabActivated = typeof import("~/utils/browser/browserApi").onTabActivated
+type OnTabUpdated = typeof import("~/utils/browser/browserApi").onTabUpdated
+
 const { mockOpenWithAccount, mockOpenSub2ApiTokenCreationDialog } = vi.hoisted(
   () => ({
     mockOpenWithAccount: vi.fn(),
@@ -40,6 +43,11 @@ const {
   mockHasPermission: vi.fn(),
   mockHasPermissions: vi.fn(),
   mockOnOptionalPermissionsChanged: vi.fn(() => vi.fn()),
+}))
+
+const { mockOnTabActivated, mockOnTabUpdated } = vi.hoisted(() => ({
+  mockOnTabActivated: vi.fn<OnTabActivated>(() => () => {}),
+  mockOnTabUpdated: vi.fn<OnTabUpdated>(() => () => {}),
 }))
 
 const { mockTrackProductAnalyticsEvent } = vi.hoisted(() => ({
@@ -90,8 +98,8 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
     ...actual,
     getActiveTabs: vi.fn(async () => []),
     getAllTabs: vi.fn(async () => []),
-    onTabActivated: vi.fn(() => () => {}),
-    onTabUpdated: vi.fn(() => () => {}),
+    onTabActivated: mockOnTabActivated,
+    onTabUpdated: mockOnTabUpdated,
     sendRuntimeMessage: vi.fn(),
   }
 })
@@ -126,6 +134,8 @@ describe("useAccountDialog cookie import feedback", () => {
       requestedResults: [],
     })
     mockOnOptionalPermissionsChanged.mockReturnValue(vi.fn())
+    mockOnTabActivated.mockReturnValue(vi.fn())
+    mockOnTabUpdated.mockReturnValue(vi.fn())
     await accountStorage.clearAllData()
   })
 
@@ -211,6 +221,68 @@ describe("useAccountDialog cookie import feedback", () => {
     expect(result.current.state.cookieAuthSessionCookie).toBe(
       "session=incognito",
     )
+    expect(toast.success).toHaveBeenCalledWith(
+      "accountDialog:messages.importCookiesSuccess",
+    )
+  })
+
+  it("drops stale current-tab import context when current-tab queries fail", async () => {
+    vi.mocked(toast.success).mockClear()
+    const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+    vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
+      success: true,
+      data: "session=regular",
+    })
+    let onActivated: Parameters<OnTabActivated>[0] | undefined
+    mockOnTabActivated.mockImplementation((listener) => {
+      onActivated = listener
+      return vi.fn()
+    })
+    ;(globalThis as any).browser.tabs.query = vi.fn().mockResolvedValue([
+      {
+        id: 42,
+        incognito: true,
+        url: "https://example.com/dashboard",
+      },
+    ])
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe("https://example.com")
+    })
+
+    vi.mocked(globalThis.browser.tabs.query).mockRejectedValue(
+      new Error("tab query failed"),
+    )
+
+    await act(async () => {
+      await onActivated?.({ tabId: 42, windowId: 1 })
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBeNull()
+    })
+
+    await act(async () => {
+      result.current.setters.setUrl("https://example.com")
+    })
+
+    await act(async () => {
+      await result.current.handlers.handleImportCookieAuthSessionCookie()
+    })
+
+    expect(sendRuntimeMessage).toHaveBeenCalledWith({
+      action: RuntimeActionIds.AccountDialogImportCookieAuthSessionCookie,
+      url: "https://example.com",
+    })
     expect(toast.success).toHaveBeenCalledWith(
       "accountDialog:messages.importCookiesSuccess",
     )
