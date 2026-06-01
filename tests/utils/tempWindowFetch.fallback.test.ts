@@ -423,6 +423,45 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     expect(result).toBe("<html>challenge cleared</html>")
   })
 
+  it("falls back on 401 cookie-auth failures so stored account cookies can be replayed", async () => {
+    mocks.sendRuntimeMessageMock.mockResolvedValue({
+      success: true,
+      status: 200,
+      data: {
+        success: true,
+        data: { account: "stored-cookie" },
+        message: "ok",
+      },
+    })
+
+    const result = await executeWithTempWindowFallback(
+      buildContext({
+        onlyData: true,
+        accountId: "acct-1",
+        authType: AuthTypeEnum.Cookie,
+        cookieAuthSessionCookie: "session=stored-account",
+      }),
+      async () => {
+        throw new ApiError(
+          "current browser session is unauthorized",
+          401,
+          "/api/models",
+          API_ERROR_CODES.HTTP_401,
+        )
+      },
+    )
+
+    expect(result).toEqual({ account: "stored-cookie" })
+    expect(mocks.sendRuntimeMessageMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: RuntimeActionIds.TempWindowFetch,
+        accountId: "acct-1",
+        authType: AuthTypeEnum.Cookie,
+        cookieAuthSessionCookie: "session=stored-account",
+      }),
+    )
+  })
+
   it("surfaces temp-window transport failures as ApiError with a fallback message", async () => {
     mocks.sendRuntimeMessageMock.mockResolvedValue({
       success: false,
