@@ -1,11 +1,6 @@
-import { SITE_TYPES } from "~/constants/siteType"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
-import {
-  isAIHubMixSiteUrl,
-  normalizeAccountSiteUrlForOriginKey,
-} from "~/services/accounts/utils/siteUrlNormalization"
+import { normalizeAccountSiteUrlForDuplicateCheck } from "~/services/accounts/utils/siteUrlNormalization"
 import type { SiteAccount } from "~/types"
-import { sanitizeOriginUrl } from "~/utils/core/url"
 
 export type AccountDedupeKeepStrategy =
   | "keepPinned"
@@ -150,14 +145,10 @@ export function scanDuplicateAccounts(input: {
   >()
 
   for (const account of input.accounts) {
-    const origin =
-      account.site_type === SITE_TYPES.AIHUBMIX ||
-      isAIHubMixSiteUrl(account.site_url)
-        ? normalizeAccountSiteUrlForOriginKey({
-            url: account.site_url,
-            siteType: account.site_type,
-          })
-        : sanitizeOriginUrl(account.site_url)
+    const origin = normalizeAccountSiteUrlForDuplicateCheck({
+      url: account.site_url,
+      siteType: account.site_type,
+    })
     const userId = normalizeAccountIdentity(account.account_info?.id)
 
     if (!origin || userId === null) {

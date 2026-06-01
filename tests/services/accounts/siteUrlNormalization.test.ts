@@ -3,6 +3,8 @@ import { describe, expect, it } from "vitest"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   isAIHubMixSiteUrl,
+  isSameAccountSiteOrigin,
+  normalizeAccountSiteUrlForDuplicateCheck,
   normalizeAccountSiteUrlForManagedChannel,
   normalizeAccountSiteUrlForOriginKey,
   normalizeAccountSiteUrlForStorage,
@@ -46,6 +48,33 @@ describe("siteUrlNormalization", () => {
         url: "https://www.aihubmix.com/statistics",
       }),
     ).toBe("https://aihubmix.com")
+  })
+
+  it("matches AIHubMix account-site origins across main and console hostnames", () => {
+    expect(
+      isSameAccountSiteOrigin(
+        {
+          siteType: SITE_TYPES.AIHUBMIX,
+          url: "https://console.aihubmix.com/dashboard",
+        },
+        {
+          url: "https://aihubmix.com/statistics?tab=detail",
+        },
+      ),
+    ).toBe(true)
+  })
+
+  it("keeps duplicate-check keys scannable and rejects invalid URLs", () => {
+    expect(
+      normalizeAccountSiteUrlForDuplicateCheck({
+        url: "example.com/path",
+      }),
+    ).toBe("https://example.com")
+    expect(
+      normalizeAccountSiteUrlForDuplicateCheck({
+        url: "not a valid url",
+      }),
+    ).toBeUndefined()
   })
 
   it("preserves non-AIHubMix storage URLs and origin keys", () => {

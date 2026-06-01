@@ -5,6 +5,7 @@ import {
   SITE_TYPES,
   type AccountSiteType,
 } from "~/constants/siteType"
+import { sanitizeOriginUrl } from "~/utils/core/url"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 const AIHUBMIX_HOSTNAME_SET: ReadonlySet<string> = new Set(AIHUBMIX_HOSTNAMES)
@@ -107,4 +108,45 @@ export function normalizeAccountSiteUrlForOriginKey(params: {
   }
 
   return normalizeUrlForOriginKey(params.url, { lowerCase: true })
+}
+
+/**
+ * Produces the scannable origin key used by duplicate-site detection.
+ */
+export function normalizeAccountSiteUrlForDuplicateCheck(params: {
+  siteType?: AccountSiteType | string
+  url: string
+}): string | undefined {
+  if (
+    params.siteType === SITE_TYPES.AIHUBMIX &&
+    (!params.url.trim() || isAIHubMixSiteUrl(params.url))
+  ) {
+    return AIHUBMIX_WEB_ORIGIN.toLowerCase()
+  }
+
+  if (isAIHubMixSiteUrl(params.url)) {
+    return AIHUBMIX_WEB_ORIGIN.toLowerCase()
+  }
+
+  return sanitizeOriginUrl(params.url)?.toLowerCase()
+}
+
+/**
+ * Compares account site URLs using the same canonical origin key used by
+ * duplicate-account scans and add-flow warnings.
+ */
+export function isSameAccountSiteOrigin(
+  left: {
+    siteType?: AccountSiteType | string
+    url: string
+  },
+  right: {
+    siteType?: AccountSiteType | string
+    url: string
+  },
+): boolean {
+  const leftKey = normalizeAccountSiteUrlForDuplicateCheck(left)
+  const rightKey = normalizeAccountSiteUrlForDuplicateCheck(right)
+
+  return Boolean(leftKey && rightKey && leftKey === rightKey)
 }

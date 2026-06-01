@@ -22,6 +22,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { isSameAccountSiteOrigin } from "~/services/accounts/utils/siteUrlNormalization"
 import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import {
@@ -58,7 +59,6 @@ import {
   onTabUpdated,
 } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
-import { tryParseOrigin } from "~/utils/core/urlParsing"
 
 /**
  * Unified logger scoped to account data context and refresh orchestration.
@@ -419,12 +419,16 @@ export const AccountDataProvider = ({
         return
       }
 
-      const origin = parsedUrl.origin
-
       // Site-level detection: find any stored accounts that belong to the same origin.
       // This answers "does this site already exist in the user's accounts?".
       const originAccounts = accountsRef.current.filter((account) => {
-        return tryParseOrigin(account.site_url) === origin
+        return isSameAccountSiteOrigin(
+          {
+            url: account.site_url,
+            siteType: account.site_type,
+          },
+          { url: tabUrl },
+        )
       })
       const siteTypeForUserRead =
         originAccounts.find(
@@ -485,7 +489,7 @@ export const AccountDataProvider = ({
           // Ask the content script to read the site's localStorage and return the current userId.
           const userResponse = await browser.tabs.sendMessage(tabId, {
             action: RuntimeActionIds.ContentGetUserFromLocalStorage,
-            url: origin,
+            url: parsedUrl.origin,
             siteType: siteTypeForUserRead,
           })
 
@@ -504,7 +508,7 @@ export const AccountDataProvider = ({
         } catch (error) {
           logger.debug("Failed to re-verify website user ID from active tab", {
             tabId,
-            origin,
+            origin: parsedUrl.origin,
             error,
           })
           verifiedUserId = null

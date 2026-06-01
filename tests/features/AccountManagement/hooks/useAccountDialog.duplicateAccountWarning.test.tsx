@@ -279,6 +279,41 @@ describe("useAccountDialog duplicate account warning", () => {
     )
   })
 
+  it("warns for AIHubMix duplicates before the add draft site type is selected", async () => {
+    await accountStorage.addAccount(
+      buildSiteAccount({
+        site_name: "AIHubMix Existing",
+        site_url: "https://console.aihubmix.com",
+        site_type: SITE_TYPES.AIHUBMIX,
+        account_info: {
+          ...defaultAccountInfo,
+          id: "11",
+          username: "aihubmix-user",
+        },
+      }),
+    )
+
+    const { result } = await renderDuplicateWarningHook()
+
+    await act(async () => {
+      result.current.handlers.handleUrlChange("https://aihubmix.com")
+      result.current.setters.setUserId("11")
+    })
+
+    act(() => {
+      void result.current.handlers.handleShowManualForm()
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.duplicateAccountWarning).toMatchObject({
+        isOpen: true,
+        siteUrl: "https://console.aihubmix.com",
+        existingUserId: "11",
+        existingUsername: "aihubmix-user",
+      })
+    })
+  })
+
   it("normalizes duplicate warning account identities before exact-match detection", async () => {
     await accountStorage.addAccount(
       buildSiteAccount({

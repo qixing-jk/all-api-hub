@@ -42,7 +42,10 @@ import {
   AutoDetectError,
   AutoDetectErrorType,
 } from "~/services/accounts/utils/autoDetectUtils"
-import { normalizeAccountSiteUrlForOriginKey } from "~/services/accounts/utils/siteUrlNormalization"
+import {
+  isSameAccountSiteOrigin,
+  normalizeAccountSiteUrlForDuplicateCheck,
+} from "~/services/accounts/utils/siteUrlNormalization"
 import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import {
   getManagedSiteConfigMissingMessage,
@@ -554,13 +557,18 @@ export function useAccountDialog({
       )
       return true
     }
-    const existingSiteAccounts = accounts.filter(
-      (acc) =>
-        normalizeSiteUrlForDuplicateCheck({
-          value: acc.site_url,
+    const existingSiteAccounts = accounts.filter((acc) => {
+      return isSameAccountSiteOrigin(
+        {
+          url: acc.site_url,
           siteType: acc.site_type,
-        }) === normalizedBaseUrl,
-    )
+        },
+        {
+          url: baseUrl,
+          siteType,
+        },
+      )
+    })
 
     if (existingSiteAccounts.length === 0) {
       return true
@@ -2538,10 +2546,12 @@ function normalizeSiteUrlForDuplicateCheck(params: {
   value: string
   siteType?: AccountSiteType | string
 }): string {
-  return normalizeAccountSiteUrlForOriginKey({
-    url: params.value,
-    siteType: params.siteType,
-  })
+  return (
+    normalizeAccountSiteUrlForDuplicateCheck({
+      url: params.value,
+      siteType: params.siteType,
+    }) ?? params.value.trim().toLowerCase()
+  )
 }
 
 /**
