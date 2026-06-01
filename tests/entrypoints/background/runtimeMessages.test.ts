@@ -16,6 +16,7 @@ describe("setupRuntimeMessageListeners routing", () => {
   let hasCookieReadPermissionForUrl: ReturnType<typeof vi.fn>
   let handleManagedSiteModelSyncMessage: ReturnType<typeof vi.fn>
   let setupContextMenus: ReturnType<typeof vi.fn>
+  let originalBrowserCookies: unknown
 
   beforeEach(() => {
     runtimeMessageListener = undefined
@@ -24,6 +25,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     hasCookieReadPermissionForUrl = vi.fn().mockResolvedValue(true)
     handleManagedSiteModelSyncMessage = vi.fn()
     setupContextMenus = vi.fn().mockResolvedValue(undefined)
+    originalBrowserCookies = (globalThis as any).browser?.cookies
 
     vi.resetModules()
 
@@ -97,6 +99,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/services/redemption/redemptionAssist")
     vi.doUnmock("~/services/history/usageHistory/scheduler")
     vi.doUnmock("~/services/webdav/webdavAutoSyncService")
+    ;(globalThis as any).browser.cookies = originalBrowserCookies
     vi.resetModules()
     vi.restoreAllMocks()
   })

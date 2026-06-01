@@ -138,21 +138,18 @@ describe("useAccountDialog current tab detection", () => {
     const tabsQueryMock = globalThis.browser.tabs.query as ReturnType<
       typeof vi.fn
     >
-    tabsQueryMock
-      .mockRejectedValueOnce(new Error("currentWindow unsupported"))
-      .mockResolvedValueOnce([
+    tabsQueryMock.mockImplementation(async (queryInfo) => {
+      if (queryInfo?.currentWindow) {
+        throw new Error("currentWindow unsupported")
+      }
+
+      return [
         {
           id: 2,
           url: "https://fallback.example.com/dashboard",
         },
-      ])
-      .mockRejectedValueOnce(new Error("currentWindow unsupported"))
-      .mockResolvedValueOnce([
-        {
-          id: 2,
-          url: "https://fallback.example.com/dashboard",
-        },
-      ])
+      ]
+    })
 
     const { result } = renderHook(() =>
       useAccountDialog({
