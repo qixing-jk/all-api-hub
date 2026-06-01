@@ -23,6 +23,7 @@ import {
   TempWindowFallbackPreferences,
   userPreferences,
 } from "~/services/preferences/userPreferences"
+import { AuthTypeEnum } from "~/types"
 import {
   TEMP_WINDOW_HEALTH_STATUS_CODES,
   type TempWindowHealthStatusCode,
@@ -386,9 +387,8 @@ export async function tempWindowGetRenderedTitle(params: {
   return await sendRuntimeMessage(payload)
 }
 
-const TEMP_WINDOW_FALLBACK_STATUS = new Set([401, 403])
+const TEMP_WINDOW_FALLBACK_STATUS = new Set([403])
 const TEMP_WINDOW_FALLBACK_CODES = new Set<ApiErrorCode>([
-  API_ERROR_CODES.HTTP_401,
   API_ERROR_CODES.HTTP_403,
   API_ERROR_CODES.CONTENT_TYPE_MISMATCH,
 ])
@@ -398,7 +398,7 @@ const TEMP_WINDOW_FALLBACK_CODES = new Set<ApiErrorCode>([
  * @param error The error thrown by the primary request, which may contain a `statusCode` and/or `code` property.
  * @param error.statusCode Optional HTTP status code from the failed request, if available.
  * @param error.code Optional API error code from the failed request, if available.
- * @param allowlist Optional allowlist of status codes and error codes that should trigger temp window fallback. When omitted, defaults to HTTP 401/403 and `CONTENT_TYPE_MISMATCH` (plus `HTTP_401`/`HTTP_403`) allowlisting. When provided, it fully overrides defaults: omitted fields (e.g. `statusCodes` or `codes`) are treated as empty lists.
+ * @param allowlist Optional allowlist of status codes and error codes that should trigger temp window fallback. When omitted, defaults to HTTP 403 and `CONTENT_TYPE_MISMATCH` (plus `HTTP_403`) allowlisting. When provided, it fully overrides defaults: omitted fields (e.g. `statusCodes` or `codes`) are treated as empty lists.
  */
 export function matchesTempWindowFallbackAllowlist(
   error: { statusCode?: number; code?: ApiErrorCode },
@@ -416,6 +416,20 @@ export function matchesTempWindowFallbackAllowlist(
     !!error.statusCode && statusAllowlist.has(error.statusCode)
 
   return hasCodeFallback || hasStatusFallback
+}
+
+/**
+ * Allows 401 fallback only for cookie-auth requests that can replay a stored account cookie.
+ */
+function isCookieAuthUnauthorizedFallback(
+  error: ApiError,
+  context: TempWindowFallbackContext,
+): boolean {
+  if (context.tempWindowFallback) return false
+  if (context.authType !== AuthTypeEnum.Cookie) return false
+  if (!context.cookieAuthSessionCookie?.trim()) return false
+
+  return error.statusCode === 401 || error.code === API_ERROR_CODES.HTTP_401
 }
 
 /**
@@ -504,7 +518,10 @@ async function shouldUseTempWindowFallback(
     return false
   }
 
-  if (!matchesTempWindowFallbackAllowlist(error, context.tempWindowFallback)) {
+  if (
+    !matchesTempWindowFallbackAllowlist(error, context.tempWindowFallback) &&
+    !isCookieAuthUnauthorizedFallback(error, context)
+  ) {
     logSkipTempWindowFallback(
       "Error does not match any temp window fallback codes or statuses.",
       context,

@@ -462,6 +462,23 @@ describe("tempWindowFetch runtime helpers and fallback gating", () => {
     )
   })
 
+  it("does not fall back on 401 token-auth failures", async () => {
+    const error = new ApiError(
+      "access token is unauthorized",
+      401,
+      "/api/models",
+      API_ERROR_CODES.HTTP_401,
+    )
+
+    await expect(
+      executeWithTempWindowFallback(buildContext(), async () => {
+        throw error
+      }),
+    ).rejects.toBe(error)
+
+    expect(mocks.sendRuntimeMessageMock).not.toHaveBeenCalled()
+  })
+
   it("surfaces temp-window transport failures as ApiError with a fallback message", async () => {
     mocks.sendRuntimeMessageMock.mockResolvedValue({
       success: false,
