@@ -57,7 +57,7 @@ const createRequest = (
   accountId: "acc-1",
   auth: {
     authType: AuthTypeEnum.AccessToken,
-    userId: 1,
+    userId: "1",
     accessToken: "old-jwt",
   },
   ...overrides,
@@ -311,7 +311,7 @@ describe("apiService sub2api key management service", () => {
   it("uses hydrated auth userId when listing keys without upstream user_id", async () => {
     getAccountByIdMock.mockResolvedValue({
       id: "acc-1",
-      account_info: { id: 42, access_token: "stored-jwt" },
+      account_info: { id: "42", access_token: "stored-jwt" },
     })
 
     fetchApiMock.mockResolvedValueOnce({
@@ -355,7 +355,7 @@ describe("apiService sub2api key management service", () => {
   it("uses hydrated auth userId when fetching key detail without upstream user_id", async () => {
     getAccountByIdMock.mockResolvedValue({
       id: "acc-1",
-      account_info: { id: 42, access_token: "stored-jwt" },
+      account_info: { id: "42", access_token: "stored-jwt" },
     })
 
     fetchApiMock.mockResolvedValueOnce({
@@ -395,7 +395,7 @@ describe("apiService sub2api key management service", () => {
 
     let currentAccount = {
       id: "acc-1",
-      account_info: { id: 1, access_token: "stored-jwt" },
+      account_info: { id: "1", access_token: "stored-jwt" },
       sub2apiAuth: {
         refreshToken: "stored-refresh",
         tokenExpiresAt: now + 30_000,
@@ -445,7 +445,7 @@ describe("apiService sub2api key management service", () => {
         return {
           code: 0,
           message: "ok",
-          data: [{ id: 1, name: "default", description: "Default plan" }],
+          data: [{ id: "1", name: "default", description: "Default plan" }],
         }
       }
 
@@ -479,7 +479,7 @@ describe("apiService sub2api key management service", () => {
 
     getAccountByIdMock.mockResolvedValue({
       id: "acc-1",
-      account_info: { id: 1, access_token: "stored-jwt" },
+      account_info: { id: "1", access_token: "stored-jwt" },
       sub2apiAuth: { refreshToken: "stored-refresh" },
     })
 
@@ -561,7 +561,7 @@ describe("apiService sub2api key management service", () => {
         data: {
           items: [
             {
-              id: 2,
+              id: "2",
               user_id: 1,
               key: "resynced-key",
               name: "resynced",
@@ -600,7 +600,7 @@ describe("apiService sub2api key management service", () => {
   it("surfaces login-required when auth recovery is unavailable", async () => {
     getAccountByIdMock.mockResolvedValue({
       id: "acc-1",
-      account_info: { id: 1, access_token: "stored-jwt" },
+      account_info: { id: "1", access_token: "stored-jwt" },
     })
     resyncSub2ApiAuthTokenMock.mockResolvedValue(null)
 

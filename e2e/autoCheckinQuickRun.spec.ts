@@ -469,7 +469,7 @@ test("auto-checkin UI-open pretrigger runs once through the real MV3 scheduler b
       site_url: PRETRIGGER_SITE_URL,
       site_type: SITE_TYPES.NEW_API,
       account_info: {
-        id: 81,
+        id: "81",
         username: "ui-open-pretrigger-user",
         access_token: "ui-open-pretrigger-token",
       },

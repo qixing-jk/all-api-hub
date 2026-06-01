@@ -118,7 +118,7 @@ const buildSite = (overrides: Record<string, unknown> = {}) =>
     baseUrl: "https://example.com",
     siteType: SITE_TYPES.UNKNOWN,
     token: "token",
-    userId: 1,
+    userId: "1",
     authType: "access_token",
     balance: { USD: 0, CNY: 0 },
     todayConsumption: { USD: 0, CNY: 0 },

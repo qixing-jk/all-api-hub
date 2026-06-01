@@ -765,7 +765,7 @@ describe("useAccountDialog analytics", () => {
       success: true,
       data: {
         accessToken: "private-jwt",
-        userId: 42,
+        userId: "42",
         user: { username: "private-user" },
         sub2apiAuth: {
           refreshToken: "private-refresh-token",
@@ -806,7 +806,7 @@ describe("useAccountDialog analytics", () => {
       success: true,
       data: {
         accessToken: "private-jwt",
-        userId: 42,
+        userId: "42",
         user: { username: "private-user" },
         sub2apiAuth: {
           refreshToken: " ",

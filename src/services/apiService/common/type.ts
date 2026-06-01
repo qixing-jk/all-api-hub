@@ -10,6 +10,7 @@ import {
   CheckInConfig,
   SiteHealthStatus,
   TempWindowHealthStatusCode,
+  type AccountIdentity,
   type Sub2ApiAuthConfig,
 } from "~/types"
 
@@ -34,7 +35,7 @@ export {
 
 // ============= 类型定义 =============
 export interface UserInfo {
-  id: number
+  id: AccountIdentity
   username: string
   access_token: string | null
 }
@@ -80,7 +81,7 @@ export interface RefreshAccountResult {
    */
   authUpdate?: {
     accessToken?: string
-    userId?: number
+    userId?: AccountIdentity
     username?: string
     sub2apiAuth?: Sub2ApiAuthConfig
   }

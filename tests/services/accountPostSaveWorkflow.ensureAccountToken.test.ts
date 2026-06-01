@@ -61,7 +61,7 @@ const buildDisplayAccount = (
     siteType: SITE_TYPES.NEW_API,
     baseUrl: "https://api.example.com",
     token: "access-token",
-    userId: 7,
+    userId: "7",
     authType: AuthTypeEnum.AccessToken,
     checkIn: { enableDetection: false },
     cookieAuthSessionCookie: "",

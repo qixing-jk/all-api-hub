@@ -193,7 +193,7 @@ describe("apiService index wrapper", () => {
 
     const request = {
       baseUrl: "https://aihubmix.com",
-      auth: { authType: "access_token", userId: 1, accessToken: "token" },
+      auth: { authType: "access_token", userId: "1", accessToken: "token" },
     }
 
     await (getApiService(SITE_TYPES.AIHUBMIX).fetchAccountTokens as any)(
@@ -210,7 +210,7 @@ describe("apiService index wrapper", () => {
 
     const request = {
       baseUrl: "https://aihubmix.com",
-      auth: { authType: "access_token", userId: 1, accessToken: "token" },
+      auth: { authType: "access_token", userId: "1", accessToken: "token" },
     }
 
     expect(() =>

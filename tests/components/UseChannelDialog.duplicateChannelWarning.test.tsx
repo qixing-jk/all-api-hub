@@ -69,7 +69,7 @@ const buildSiteAccount = (
   site_type: SITE_TYPES.NEW_API,
   exchange_rate: 7,
   account_info: {
-    id: 1,
+    id: "1",
     access_token: "access-token",
     username: "user",
     quota: 0,
@@ -109,7 +109,7 @@ const buildDisplaySiteData = (
   siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://upstream.example.com",
   token: "access-token",
-  userId: 1,
+  userId: "1",
   authType: AuthTypeEnum.AccessToken,
   checkIn: { enableDetection: false },
   ...overrides,

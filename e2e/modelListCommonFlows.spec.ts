@@ -71,7 +71,7 @@ async function seedModelListAccount(context: BrowserContext) {
       site_name: "Model Catalog Account",
       site_url: MODEL_LIST_BASE_URL,
       account_info: {
-        id: 51,
+        id: "51",
         username: "model-user",
         access_token: "model-token",
       },

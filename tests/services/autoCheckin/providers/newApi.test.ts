@@ -42,7 +42,7 @@ const mockAccount = buildSiteAccount({
   checkIn: { enableDetection: true },
   health: { status: SiteHealthStatus.Healthy },
   account_info: {
-    id: 123,
+    id: "123",
     access_token: "test-token",
     username: "test",
     quota: 1000,
@@ -72,7 +72,7 @@ describe("newApiProvider", () => {
     it("returns false when no user id", () => {
       const account = {
         ...mockAccount,
-        account_info: { ...mockAccount.account_info, id: 0 },
+        account_info: { ...mockAccount.account_info, id: "" },
       }
       expect(newApiProvider.canCheckIn(account)).toBe(false)
     })
@@ -342,7 +342,10 @@ describe("newApiProvider", () => {
         checkIn: {
           ...mockAccount.checkIn,
           customCheckIn: {
-            turnstilePreTrigger: { kind: "selector", selector: "#checkin" },
+            turnstilePreTrigger: {
+              kind: "clickSelector" as const,
+              selector: "#checkin",
+            },
           },
         },
       }
@@ -353,7 +356,10 @@ describe("newApiProvider", () => {
         expect.objectContaining({
           authType: AuthTypeEnum.Cookie,
           cookieAuthSessionCookie: "session=abc",
-          turnstilePreTrigger: { kind: "selector", selector: "#checkin" },
+          turnstilePreTrigger: {
+            kind: "clickSelector",
+            selector: "#checkin",
+          },
           fetchOptions: expect.objectContaining({
             credentials: "include",
           }),

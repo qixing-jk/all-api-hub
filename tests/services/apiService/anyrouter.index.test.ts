@@ -47,7 +47,7 @@ describe("AnyRouter API service", () => {
     baseUrl: "https://anyrouter.example.com",
     auth: {
       authType: "cookie",
-      userId: 42,
+      userId: "42",
     },
     checkIn: {
       enableDetection: true,

@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { parseSub2ApiUserIdentity } from "~/services/apiService/sub2api/parsing"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
@@ -266,8 +267,9 @@ export function handleGetUserFromLocalStorage(
 
       const userStr = localStorage.getItem("user")
       const user = userStr ? JSON.parse(userStr) : null
+      const userId = normalizeAccountIdentity(user?.id)
 
-      if (!user || !user.id) {
+      if (!user || !userId) {
         sendResponse({
           success: false,
           error: t("messages:content.userInfoNotFound"),
@@ -275,7 +277,7 @@ export function handleGetUserFromLocalStorage(
         return
       }
 
-      sendResponse({ success: true, data: { userId: user.id, user } })
+      sendResponse({ success: true, data: { userId, user } })
     } catch (error) {
       sendResponse({ success: false, error: getErrorMessage(error) })
     }

@@ -85,7 +85,7 @@ const ACCOUNT = {
   siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://example.com",
   token: "token",
-  userId: 1,
+  userId: "1",
   authType: AuthTypeEnum.AccessToken,
   checkIn: { enableDetection: false },
   tagIds: ["tag-a"],

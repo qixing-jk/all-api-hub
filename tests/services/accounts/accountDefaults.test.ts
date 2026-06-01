@@ -26,7 +26,7 @@ describe("accountDefaults", () => {
       site_type: SITE_TYPES.UNKNOWN,
       exchange_rate: 7,
       account_info: {
-        id: 1,
+        id: "1",
         access_token: "token",
         username: "user",
         quota: 1000,
@@ -233,7 +233,7 @@ describe("accountDefaults", () => {
         authType: "invalid-auth" as any,
         account_info: {
           ...createSiteAccount().account_info,
-          id: "12" as any,
+          id: 12 as any,
           quota: "15" as any,
           today_income: "invalid" as any,
         },
@@ -255,7 +255,7 @@ describe("accountDefaults", () => {
       expect(normalized.site_type).toBe(SITE_TYPES.UNKNOWN)
       expect(normalized.exchange_rate).toBe(UI_CONSTANTS.EXCHANGE_RATE.DEFAULT)
       expect(normalized.authType).toBe(AuthTypeEnum.AccessToken)
-      expect(normalized.account_info.id).toBe(12)
+      expect(normalized.account_info.id).toBe("12")
       expect(normalized.account_info.quota).toBe(15)
       expect(normalized.account_info.today_income).toBe(0)
       expect(normalized.health.status).toBe(SiteHealthStatus.Unknown)
@@ -266,6 +266,30 @@ describe("accountDefaults", () => {
       expect(normalized.checkIn.customCheckIn?.openRedeemWithCheckIn).toBe(true)
       expect(normalized.tagIds).toEqual(["first", "second"])
       expect(normalized.tags).toBeUndefined()
+    })
+
+    it("preserves string account identity and normalizes legacy numeric ids to strings", () => {
+      expect(
+        normalizeSiteAccount(
+          createSiteAccount({
+            account_info: {
+              ...createSiteAccount().account_info,
+              id: "aihubmix-user" as any,
+            },
+          }),
+        ).account_info.id,
+      ).toBe("aihubmix-user")
+
+      expect(
+        normalizeSiteAccount(
+          createSiteAccount({
+            account_info: {
+              ...createSiteAccount().account_info,
+              id: 42 as any,
+            },
+          }),
+        ).account_info.id,
+      ).toBe("42")
     })
   })
 

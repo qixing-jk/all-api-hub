@@ -181,7 +181,7 @@ describe("apiTransport request helpers", () => {
         baseUrl: BASE_URL,
         auth: {
           authType: AuthTypeEnum.AccessToken,
-          userId: 123,
+          userId: "123",
           accessToken: "token",
         },
       },
@@ -326,7 +326,7 @@ describe("apiTransport request helpers", () => {
           auth: {
             authType: AuthTypeEnum.Cookie,
             cookie: "session=abc123",
-            userId: 123,
+            userId: "123",
           },
         },
         {
@@ -359,7 +359,7 @@ describe("apiTransport request helpers", () => {
           auth: {
             authType: AuthTypeEnum.Cookie,
             cookie: "session=abc123",
-            userId: 123,
+            userId: "123",
           },
           fetchContext: {
             kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
@@ -413,7 +413,7 @@ describe("apiTransport request helpers", () => {
           auth: {
             authType: AuthTypeEnum.Cookie,
             cookie: "session=abc123",
-            userId: 123,
+            userId: "123",
           },
           fetchContext: {
             kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
@@ -456,7 +456,7 @@ describe("apiTransport request helpers", () => {
           auth: {
             authType: AuthTypeEnum.Cookie,
             cookie: "session=abc123",
-            userId: 123,
+            userId: "123",
           },
           fetchContext: {
             kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
@@ -497,7 +497,7 @@ describe("apiTransport request helpers", () => {
           auth: {
             authType: AuthTypeEnum.Cookie,
             cookie: "session=abc123",
-            userId: 123,
+            userId: "123",
           },
           fetchContext: {
             kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
@@ -712,7 +712,7 @@ describe("apiTransport request helpers", () => {
           auth: {
             authType: AuthTypeEnum.Cookie,
             cookie: "session=abc123",
-            userId: 123,
+            userId: "123",
           },
           fetchContext: {
             kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.CURRENT_TAB,
@@ -778,7 +778,7 @@ describe("apiTransport request helpers", () => {
           auth: {
             authType: AuthTypeEnum.Cookie,
             cookie: "session=abc123",
-            userId: 123,
+            userId: "123",
           },
           fetchContext: {
             kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,
@@ -843,7 +843,7 @@ describe("apiTransport request helpers", () => {
           auth: {
             authType: AuthTypeEnum.Cookie,
             cookie: "session=abc123",
-            userId: 123,
+            userId: "123",
           },
           fetchContext: {
             kind: API_TRANSPORT_FETCH_CONTEXT_KINDS.BROWSER_CONTEXT,

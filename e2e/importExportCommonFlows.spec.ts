@@ -164,7 +164,7 @@ test("exports a full backup containing accounts, user preferences, and API crede
       site_name: "Export Account",
       site_url: "https://export.example.com",
       account_info: {
-        id: 101,
+        id: "101",
         username: "export-user",
         access_token: "export-token",
       },
@@ -255,7 +255,7 @@ test("round-trips a full backup through export download and file import", async 
     site_name: "Round Trip Account",
     site_url: "https://round-trip.example.com",
     account_info: {
-      id: 701,
+      id: "701",
       username: "round-trip-user",
       access_token: "round-trip-token",
     },
@@ -393,7 +393,7 @@ test("round-trips a full backup through export download and file import", async 
       site_name: "Round Trip Old Account",
       site_url: "https://round-trip-old.example.com",
       account_info: {
-        id: 702,
+        id: "702",
         username: "round-trip-old-user",
         access_token: "round-trip-old-token",
       },
@@ -515,7 +515,7 @@ test("imports account backup JSON from the preview field and replaces account st
       site_name: "Old Account",
       site_url: "https://old.example.com",
       account_info: {
-        id: 201,
+        id: "201",
         username: "old-user",
         access_token: "old-token",
       },
@@ -528,7 +528,7 @@ test("imports account backup JSON from the preview field and replaces account st
       site_name: "Imported Account",
       site_url: "https://imported.example.com",
       account_info: {
-        id: 301,
+        id: "301",
         username: "imported-user",
         access_token: "imported-token",
       },
@@ -585,7 +585,7 @@ test("imports account backup JSON from a selected file and restores popup accoun
       site_name: "File Import Account",
       site_url: "https://file-import.example.com",
       account_info: {
-        id: 401,
+        id: "401",
         username: "file-import-user",
         access_token: "file-import-token",
       },
@@ -775,7 +775,7 @@ test("restores a full backup and keeps common popup workflows available", async 
       site_name: "Pre Restore Account",
       site_url: "https://pre-restore.example.com",
       account_info: {
-        id: 501,
+        id: "501",
         username: "pre-restore-user",
         access_token: "pre-restore-token",
       },
@@ -792,7 +792,7 @@ test("restores a full backup and keeps common popup workflows available", async 
     site_name: "Full Restore Account",
     site_url: "https://full-restore.example.com",
     account_info: {
-      id: 601,
+      id: "601",
       username: "full-restore-user",
       access_token: "full-restore-token",
     },
@@ -916,7 +916,7 @@ test("restores a full backup and keeps the sidepanel model workflow available", 
     site_name: "Sidepanel Restore Account",
     site_url: "https://sidepanel-restore.example.com",
     account_info: {
-      id: 901,
+      id: "901",
       username: "sidepanel-restore-user",
       access_token: "sidepanel-restore-token",
     },
@@ -1235,7 +1235,7 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
     site_name: "WebDAV Account",
     site_url: "https://webdav-account.example.com",
     account_info: {
-      id: 801,
+      id: "801",
       username: "webdav-user",
       access_token: "webdav-token",
     },
@@ -1326,7 +1326,7 @@ test("uploads a WebDAV backup and restores it through the WebDAV download flow",
       site_name: "WebDAV Old Account",
       site_url: "https://webdav-old.example.com",
       account_info: {
-        id: 802,
+        id: "802",
         username: "webdav-old-user",
         access_token: "webdav-old-token",
       },

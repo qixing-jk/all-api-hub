@@ -146,7 +146,7 @@ test("disables and re-enables a stored account from account management", async (
       site_name: "Toggle Account",
       site_url: "https://toggle.example.com",
       account_info: {
-        id: 11,
+        id: "11",
         username: "toggle-user",
         access_token: "toggle-token",
       },
@@ -215,7 +215,7 @@ test("deletes a stored account from account management and removes it from stora
       site_name: "Delete Account",
       site_url: "https://delete.example.com",
       account_info: {
-        id: 12,
+        id: "12",
         username: "delete-user",
         access_token: "delete-token",
       },
@@ -361,7 +361,7 @@ test("runs quick check-in for the selected eligible account from account managem
       site_name: "Quick Check-in Account",
       site_url: "https://checkin.example.com",
       account_info: {
-        id: 41,
+        id: "41",
         username: "checkin-user",
         access_token: "checkin-token",
       },
@@ -416,7 +416,7 @@ test("pins and unpins an account from account management while persisting pinned
         site_name: "Alpha Account",
         site_url: "https://alpha.example.com",
         account_info: {
-          id: 31,
+          id: "31",
           username: "alpha-user",
           access_token: "alpha-token",
         },
@@ -426,7 +426,7 @@ test("pins and unpins an account from account management while persisting pinned
         site_name: "Pinned Candidate",
         site_url: "https://pinned.example.com",
         account_info: {
-          id: 32,
+          id: "32",
           username: "pinned-user",
           access_token: "pinned-token",
         },
@@ -503,7 +503,7 @@ test("shows the empty duplicate-cleanup state when no duplicate accounts are fou
       site_name: "Unique One",
       site_url: "https://unique-one.example.com",
       account_info: {
-        id: 71,
+        id: "71",
         username: "unique-one-user",
         access_token: "unique-one-token",
       },
@@ -513,7 +513,7 @@ test("shows the empty duplicate-cleanup state when no duplicate accounts are fou
       site_name: "Unique Two",
       site_url: "https://unique-two.example.com",
       account_info: {
-        id: 72,
+        id: "72",
         username: "unique-two-user",
         access_token: "unique-two-token",
       },
@@ -556,7 +556,7 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
         updated_at: 200,
         created_at: 200,
         account_info: {
-          id: 55,
+          id: "55",
           username: "keep-user",
           access_token: "keep-token",
         },
@@ -568,7 +568,7 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
         updated_at: 100,
         created_at: 100,
         account_info: {
-          id: 55,
+          id: "55",
           username: "delete-user",
           access_token: "delete-token",
         },
@@ -578,7 +578,7 @@ test("cleans duplicate accounts after preview confirmation and prunes stale refe
         site_name: "Unique Example",
         site_url: "https://unique.example.com",
         account_info: {
-          id: 99,
+          id: "99",
           username: "unique-user",
           access_token: "unique-token",
         },

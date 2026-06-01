@@ -146,7 +146,7 @@ const baseRequest = {
   auth: {
     authType: AuthTypeEnum.AccessToken,
     accessToken: "token",
-    userId: 7,
+    userId: "7",
   },
 }
 
@@ -326,7 +326,7 @@ describe("apiService common account-data helpers", () => {
     })
 
     await expect(fetchUserInfo(baseRequest)).resolves.toEqual({
-      id: 9,
+      id: "9",
       username: "alice",
       access_token: "",
       user: {
@@ -335,6 +335,19 @@ describe("apiService common account-data helpers", () => {
         access_token: "",
         quota: 123,
       },
+    })
+  })
+
+  it("fetchUserInfo rejects missing upstream user ids", async () => {
+    mockFetchApiData.mockResolvedValueOnce({
+      username: "alice",
+      access_token: "",
+      quota: 123,
+    })
+
+    await expect(fetchUserInfo(baseRequest)).rejects.toMatchObject({
+      name: "ApiError",
+      endpoint: "/api/user/self",
     })
   })
 
@@ -599,7 +612,7 @@ describe("apiService common account-data helpers", () => {
     })
     expect(mockGetAccountByBaseUrlAndUserId).toHaveBeenCalledWith(
       baseRequest.baseUrl,
-      7,
+      "7",
     )
   })
 

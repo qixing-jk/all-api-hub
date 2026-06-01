@@ -48,7 +48,7 @@ describe("useAccountDialog manual balance", () => {
       site_type: "unknown",
       exchange_rate: 7,
       account_info: {
-        id: 1,
+        id: "1",
         access_token: "token",
         username: "user",
         quota: 0,

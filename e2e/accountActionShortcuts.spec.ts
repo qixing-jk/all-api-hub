@@ -121,7 +121,7 @@ test("copies a stored account URL from the account list shortcut", async ({
       site_name: "Shortcut Account",
       site_url: "https://shortcut.example.com",
       account_info: {
-        id: 101,
+        id: "101",
         username: "shortcut-user",
         access_token: "shortcut-token",
       },
@@ -156,7 +156,7 @@ test("copies the only API key directly from the account list shortcut", async ({
       site_name: "Shortcut Account",
       site_url: "https://shortcut.example.com",
       account_info: {
-        id: 101,
+        id: "101",
         username: "shortcut-user",
         access_token: "shortcut-token",
       },
@@ -201,7 +201,7 @@ test("opens per-account key and model management from the row menu", async ({
       site_name: "Shortcut Account",
       site_url: "https://shortcut.example.com",
       account_info: {
-        id: 101,
+        id: "101",
         username: "shortcut-user",
         access_token: "shortcut-token",
       },
@@ -276,7 +276,7 @@ test("opens provider usage and redeem destinations from the account row menu", a
       site_name: "Shortcut Routes Account",
       site_url: "https://shortcut-routes.example.com",
       account_info: {
-        id: 201,
+        id: "201",
         username: "shortcut-routes-user",
         access_token: "shortcut-routes-token",
       },

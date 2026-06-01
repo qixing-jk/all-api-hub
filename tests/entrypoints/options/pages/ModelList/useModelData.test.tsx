@@ -121,7 +121,7 @@ const createDisplayAccount = (
   siteType: SITE_TYPES.UNKNOWN,
   baseUrl: "https://example.com",
   token: "token",
-  userId: 1,
+  userId: "1",
   authType: AuthTypeEnum.AccessToken,
   checkIn: { enableDetection: false },
   ...overrides,
@@ -277,12 +277,12 @@ describe("useModelData all-accounts loading", () => {
       createDisplayAccount({
         id: "a",
         baseUrl: "https://a.example.com",
-        userId: 1,
+        userId: "1",
       }),
       createDisplayAccount({
         id: "b",
         baseUrl: "https://b.example.com",
-        userId: 2,
+        userId: "2",
       }),
     ]
 
@@ -316,12 +316,12 @@ describe("useModelData all-accounts loading", () => {
       createDisplayAccount({
         id: "a",
         baseUrl: "https://a.example.com",
-        userId: 1,
+        userId: "1",
       }),
       createDisplayAccount({
         id: "b",
         baseUrl: "https://b.example.com",
-        userId: 2,
+        userId: "2",
       }),
     ]
 
@@ -377,7 +377,7 @@ describe("useModelData all-accounts loading", () => {
       name: "Private Account",
       baseUrl: "https://private.example.com",
       token: "sk-secret",
-      userId: 71,
+      userId: "71",
     })
 
     const { rerender } = renderHook(
@@ -426,7 +426,7 @@ describe("useModelData all-accounts loading", () => {
     const account = createDisplayAccount({
       id: "analytics-invalid-format",
       baseUrl: "https://invalid-format.example.com",
-      userId: 72,
+      userId: "72",
     })
 
     renderHook(
@@ -489,12 +489,12 @@ describe("useModelData all-accounts loading", () => {
       createDisplayAccount({
         id: "analytics-all-success",
         baseUrl: "https://all-success.example.com",
-        userId: 73,
+        userId: "73",
       }),
       createDisplayAccount({
         id: "analytics-all-failure",
         baseUrl: "https://all-failure.example.com",
-        userId: 74,
+        userId: "74",
       }),
     ]
 
@@ -559,12 +559,12 @@ describe("useModelData all-accounts loading", () => {
       createDisplayAccount({
         id: "analytics-all-success",
         baseUrl: "https://all-success.example.com",
-        userId: 75,
+        userId: "75",
       }),
       createDisplayAccount({
         id: "analytics-all-network-failure",
         baseUrl: "https://all-network-failure.example.com",
-        userId: 76,
+        userId: "76",
       }),
     ]
 
@@ -634,12 +634,12 @@ describe("useModelData all-accounts loading", () => {
       createDisplayAccount({
         id: "analytics-all-valid",
         baseUrl: "https://all-valid.example.com",
-        userId: 81,
+        userId: "81",
       }),
       createDisplayAccount({
         id: "analytics-all-invalid-format",
         baseUrl: "https://all-invalid-format.example.com",
-        userId: 82,
+        userId: "82",
       }),
     ]
 
@@ -701,12 +701,12 @@ describe("useModelData all-accounts loading", () => {
       createDisplayAccount({
         id: "analytics-all-auth-failure",
         baseUrl: "https://all-auth-failure.example.com",
-        userId: 91,
+        userId: "91",
       }),
       createDisplayAccount({
         id: "analytics-all-invalid-format",
         baseUrl: "https://all-invalid-format.example.com",
-        userId: 92,
+        userId: "92",
       }),
     ]
 
@@ -850,7 +850,7 @@ describe("useModelData all-accounts loading", () => {
       id: "analytics-fallback-account",
       baseUrl: "https://fallback-analytics.example.com",
       token: "access-token",
-      userId: 75,
+      userId: "75",
     })
 
     const { result } = renderHook(
@@ -940,14 +940,14 @@ describe("useModelData all-accounts loading", () => {
     const firstAccount = createDisplayAccount({
       id: "credential-change-account",
       baseUrl: "https://credential-change.example.com",
-      userId: 61,
+      userId: "61",
       siteType: SITE_TYPES.UNKNOWN,
       authType: AuthTypeEnum.AccessToken,
     })
     const secondAccount = createDisplayAccount({
       id: "credential-change-account",
       baseUrl: "https://credential-change.example.com",
-      userId: 61,
+      userId: "61",
       siteType: "new-api",
       authType: AuthTypeEnum.Cookie,
       cookieAuthSessionCookie: "session=updated",
@@ -1012,7 +1012,7 @@ describe("useModelData all-accounts loading", () => {
     const account = createDisplayAccount({
       id: "cached-pricing-account",
       baseUrl: "https://cached-pricing.example.com",
-      userId: 64,
+      userId: "64",
       siteType: "new-api",
       authType: AuthTypeEnum.Cookie,
       cookieAuthSessionCookie: "session=cached",
@@ -1096,12 +1096,12 @@ describe("useModelData all-accounts loading", () => {
       createDisplayAccount({
         id: "a",
         baseUrl: "https://a.example.com",
-        userId: 1,
+        userId: "1",
       }),
       createDisplayAccount({
         id: "b",
         baseUrl: "https://b.example.com",
-        userId: 2,
+        userId: "2",
       }),
     ]
 
@@ -1229,7 +1229,7 @@ describe("useModelData all-accounts loading", () => {
     const account = createDisplayAccount({
       id: "error-account",
       baseUrl: "https://error.example.com",
-      userId: 9,
+      userId: "9",
     })
     type HookProps = {
       selectedSource: ReturnType<typeof createAccountSource> | null
@@ -1275,7 +1275,7 @@ describe("useModelData all-accounts loading", () => {
     const account = createDisplayAccount({
       id: "fallback-account",
       baseUrl: "https://fallback.example.com",
-      userId: 11,
+      userId: "11",
     })
 
     const fallbackTokens = [
@@ -1409,7 +1409,7 @@ describe("useModelData all-accounts loading", () => {
     const account = createDisplayAccount({
       id: "fallback-reset-account",
       baseUrl: "https://fallback-reset.example.com",
-      userId: 15,
+      userId: "15",
     })
 
     const fallbackToken = {
@@ -1516,12 +1516,12 @@ describe("useModelData all-accounts loading", () => {
     const firstAccount = createDisplayAccount({
       id: "first-account",
       baseUrl: "https://first.example.com",
-      userId: 21,
+      userId: "21",
     })
     const secondAccount = createDisplayAccount({
       id: "second-account",
       baseUrl: "https://second.example.com",
-      userId: 22,
+      userId: "22",
     })
 
     type HookProps = {
@@ -1605,7 +1605,7 @@ describe("useModelData all-accounts loading", () => {
     const account = createDisplayAccount({
       id: "invalid-token-account",
       baseUrl: "https://invalid-token.example.com",
-      userId: 31,
+      userId: "31",
     })
 
     const { result } = renderHook(
@@ -1663,7 +1663,7 @@ describe("useModelData all-accounts loading", () => {
     const account = createDisplayAccount({
       id: "catalog-error-account",
       baseUrl: "https://catalog-error.example.com",
-      userId: 41,
+      userId: "41",
     })
 
     const { result } = renderHook(
@@ -1741,7 +1741,7 @@ describe("useModelData all-accounts loading", () => {
     const account = createDisplayAccount({
       id: "catalog-auth-error-account",
       baseUrl: "https://catalog-auth-error.example.com",
-      userId: 42,
+      userId: "42",
     })
 
     const { result } = renderHook(
@@ -1809,12 +1809,12 @@ describe("useModelData all-accounts loading", () => {
       createDisplayAccount({
         id: "bad-format",
         baseUrl: "https://bad-format.example.com",
-        userId: 51,
+        userId: "51",
       }),
       createDisplayAccount({
         id: "load-failed",
         baseUrl: "https://load-failed.example.com",
-        userId: 52,
+        userId: "52",
       }),
     ]
 
@@ -1869,7 +1869,7 @@ describe("useModelData all-accounts loading", () => {
     const account = createDisplayAccount({
       id: "single-invalid-format",
       baseUrl: "https://single-invalid-format.example.com",
-      userId: 62,
+      userId: "62",
     })
 
     const { result } = renderHook(

@@ -97,7 +97,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 1,
+        userId: "1",
         user: { id: 1, username: "" },
         siteType: SITE_TYPES.SUB2API,
         accessToken: "jwt-token",
@@ -126,7 +126,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 9,
+        userId: "9",
         siteType: "new-api",
       },
     })
@@ -175,7 +175,7 @@ describe("accountOperations autoDetectAccount", () => {
       success: true,
       autoDetectContext,
       data: {
-        userId: 7,
+        userId: "7",
         siteType: SITE_TYPES.NEW_API,
         fetchContext: incognitoCurrentTabFetchContext(
           "https://status.example.com",
@@ -233,7 +233,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 7,
+        userId: "7",
         siteType: SITE_TYPES.NEW_API,
         fetchContext: currentTabFetchContext("https://status.example.com"),
       },
@@ -268,7 +268,7 @@ describe("accountOperations autoDetectAccount", () => {
       fetchContext: currentTabFetchContext("https://status.example.com"),
       auth: {
         authType: AuthTypeEnum.Cookie,
-        userId: 7,
+        userId: "7",
       },
     })
     expect(mockFetchSiteStatus).toHaveBeenCalledWith({
@@ -292,7 +292,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 8,
+        userId: "8",
         siteType: SITE_TYPES.NEW_API,
         fetchContext,
       },
@@ -319,7 +319,7 @@ describe("accountOperations autoDetectAccount", () => {
       fetchContext,
       auth: {
         authType: AuthTypeEnum.Cookie,
-        userId: 8,
+        userId: "8",
       },
     })
     expect(mockFetchSiteStatus).toHaveBeenCalledWith({
@@ -342,7 +342,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 8,
+        userId: "8",
         siteType: SITE_TYPES.NEW_API,
         fetchContext: malformedFetchContext,
       },
@@ -368,7 +368,7 @@ describe("accountOperations autoDetectAccount", () => {
       baseUrl: "https://malformed.example.com",
       auth: {
         authType: AuthTypeEnum.Cookie,
-        userId: 8,
+        userId: "8",
       },
     })
     expect(mockFetchSiteStatus).toHaveBeenCalledWith({
@@ -388,7 +388,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 8,
+        userId: "8",
         siteType: SITE_TYPES.NEW_API,
         fetchContext: legacyFetchContext,
       },
@@ -415,7 +415,7 @@ describe("accountOperations autoDetectAccount", () => {
       fetchContext: legacyFetchContext,
       auth: {
         authType: AuthTypeEnum.Cookie,
-        userId: 8,
+        userId: "8",
       },
     })
   })
@@ -428,7 +428,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 7,
+        userId: "7",
         siteType: SITE_TYPES.NEW_API,
         fetchContext,
       },
@@ -457,7 +457,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 7,
+        userId: "7",
         siteType: SITE_TYPES.NEW_API,
         fetchContext: currentTabFetchContext("https://status.example.com"),
       },
@@ -508,7 +508,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 0,
+        userId: "",
         siteType: "new-api",
       },
     })
@@ -581,7 +581,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 7,
+        userId: "7",
         siteType: "new-api",
       },
     })
@@ -614,7 +614,7 @@ describe("accountOperations autoDetectAccount", () => {
       baseUrl: "https://cookie.example.com",
       auth: {
         authType: AuthTypeEnum.Cookie,
-        userId: 7,
+        userId: "7",
       },
     })
     expect(mockGetOrCreateAccessToken).not.toHaveBeenCalled()
@@ -626,7 +626,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 7,
+        userId: "7",
         siteType: SITE_TYPES.NEW_API,
         fetchContext: currentTabFetchContext("https://cookie.example.com"),
       },
@@ -658,7 +658,7 @@ describe("accountOperations autoDetectAccount", () => {
       fetchContext: currentTabFetchContext("https://cookie.example.com"),
       auth: {
         authType: AuthTypeEnum.Cookie,
-        userId: 7,
+        userId: "7",
       },
     })
     expect(mockFetchSiteStatus).toHaveBeenCalledWith({
@@ -676,7 +676,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 7,
+        userId: "7",
         siteType: SITE_TYPES.NEW_API,
         fetchContext: currentTabFetchContext("https://cookie.example.com"),
       },
@@ -708,7 +708,7 @@ describe("accountOperations autoDetectAccount", () => {
       fetchContext: currentTabFetchContext("https://cookie.example.com"),
       auth: {
         authType: AuthTypeEnum.Cookie,
-        userId: 7,
+        userId: "7",
       },
     })
     expect(mockFetchSiteStatus).toHaveBeenCalledWith({
@@ -726,7 +726,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 7,
+        userId: "7",
         siteType: SITE_TYPES.NEW_API,
         fetchContext: currentTabFetchContext("https://cookie.example.com"),
       },
@@ -756,7 +756,7 @@ describe("accountOperations autoDetectAccount", () => {
       fetchContext: currentTabFetchContext("https://cookie.example.com"),
       auth: {
         authType: AuthTypeEnum.Cookie,
-        userId: 7,
+        userId: "7",
       },
     })
     expect(mockFetchSupportCheckIn).not.toHaveBeenCalled()
@@ -767,7 +767,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 7,
+        userId: "7",
         siteType: SITE_TYPES.VELOERA,
         fetchContext: currentTabFetchContext("https://veloera.example.com"),
       },
@@ -798,7 +798,7 @@ describe("accountOperations autoDetectAccount", () => {
       fetchContext: currentTabFetchContext("https://veloera.example.com"),
       auth: {
         authType: AuthTypeEnum.Cookie,
-        userId: 7,
+        userId: "7",
       },
     })
     expect(mockFetchSiteStatus).toHaveBeenCalledWith({
@@ -816,7 +816,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 7,
+        userId: "7",
         siteType: SITE_TYPES.ANYROUTER,
         fetchContext: currentTabFetchContext("https://anyrouter.example.com"),
       },
@@ -850,7 +850,7 @@ describe("accountOperations autoDetectAccount", () => {
       fetchContext: currentTabFetchContext("https://anyrouter.example.com"),
       auth: {
         authType: AuthTypeEnum.Cookie,
-        userId: 7,
+        userId: "7",
       },
     })
     expect(mockFetchSupportCheckIn).toHaveBeenCalledWith({
@@ -867,7 +867,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 7,
+        userId: "7",
         siteType: SITE_TYPES.WONG_GONGYI,
         fetchContext: currentTabFetchContext("https://wong.example.com"),
       },
@@ -910,7 +910,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 11,
+        userId: "11",
         user: { id: 11, username: "aihubmix-user" },
         siteType: SITE_TYPES.AIHUBMIX,
         accessToken: "detected-console-token",
@@ -952,7 +952,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 11,
+        userId: "11",
         user: { id: 11 },
         siteType: SITE_TYPES.AIHUBMIX,
         accessToken: "detected-console-token",
@@ -993,7 +993,7 @@ describe("accountOperations autoDetectAccount", () => {
         currentTabMatched: true,
       },
       data: {
-        userId: 12,
+        userId: "12",
         user: { id: 12 },
         siteType: SITE_TYPES.VELOERA,
         fetchContext: currentTabFetchContext("https://veloera.example.com"),
@@ -1028,7 +1028,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 11,
+        userId: "11",
         user: { id: 11, username: "aihubmix-user" },
         siteType: SITE_TYPES.AIHUBMIX,
       },
@@ -1061,7 +1061,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 5,
+        userId: "5",
         siteType: "new-api",
       },
     })
@@ -1095,7 +1095,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 5,
+        userId: "5",
         siteType: SITE_TYPES.NEW_API,
       },
     })
@@ -1126,7 +1126,7 @@ describe("accountOperations autoDetectAccount", () => {
     mockAutoDetectSmart.mockResolvedValueOnce({
       success: true,
       data: {
-        userId: 7,
+        userId: "7",
         siteType: SITE_TYPES.NEW_API,
       },
     })

@@ -23,7 +23,7 @@ const mockAccount: SiteAccount = {
   checkIn: { enableDetection: true },
   health: { status: SiteHealthStatus.Healthy },
   account_info: {
-    id: 12345,
+    id: "12345",
     access_token: "",
     username: "test",
     quota: 1000,
@@ -53,7 +53,7 @@ describe("anyrouterProvider", () => {
     it("returns false when no user id", () => {
       const account = {
         ...mockAccount,
-        account_info: { ...mockAccount.account_info, id: 0 },
+        account_info: { ...mockAccount.account_info, id: "" },
       }
       expect(anyrouterProvider.canCheckIn(account)).toBe(false)
     })

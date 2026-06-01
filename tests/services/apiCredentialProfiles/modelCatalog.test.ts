@@ -76,7 +76,7 @@ const ACCOUNT = {
   siteType: "new-api",
   baseUrl: "https://example.com",
   token: "account-token",
-  userId: 1,
+  userId: "1",
   authType: AuthTypeEnum.AccessToken,
   checkIn: { enableDetection: false },
 } as const
@@ -255,7 +255,7 @@ describe("loadAccountTokenFallbackPricingResponse", () => {
       accountId: "account-1",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "account-token",
         cookie: undefined,
       },

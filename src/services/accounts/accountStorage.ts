@@ -2,6 +2,7 @@ import { Storage } from "@plasmohq/storage"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
   collectDuplicateAccountNameKeys,
   resolveAccountDisplayName,
@@ -308,12 +309,18 @@ class AccountStorageService {
         baseUrl,
         userId,
       })
+      const normalizedUserId = normalizeAccountIdentity(userId)
+      if (!normalizedUserId) {
+        return null
+      }
       const accounts = await this.getAllAccounts()
       const requestedOriginKey = isAIHubMixSiteUrl(baseUrl)
         ? normalizeAccountSiteUrlForOriginKey({ url: baseUrl })
         : null
       const account = accounts.find((acc) => {
-        if (String(acc.account_info.id) !== String(userId)) {
+        if (
+          normalizeAccountIdentity(acc.account_info.id) !== normalizedUserId
+        ) {
           return false
         }
 
@@ -1168,9 +1175,9 @@ class AccountStorageService {
             authUpdate.accessToken.trim()
               ? { access_token: authUpdate.accessToken.trim() }
               : {}),
-            ...(typeof authUpdate.userId === "number" &&
-            Number.isFinite(authUpdate.userId)
-              ? { id: authUpdate.userId }
+            ...(typeof authUpdate.userId === "string" &&
+            authUpdate.userId.trim()
+              ? { id: authUpdate.userId.trim() }
               : {}),
             ...(typeof authUpdate.username === "string" &&
             authUpdate.username.trim()

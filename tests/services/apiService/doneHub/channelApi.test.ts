@@ -109,7 +109,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -158,7 +158,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -191,7 +191,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -215,7 +215,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -235,7 +235,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -293,7 +293,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -341,7 +341,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -375,7 +375,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -411,7 +411,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -441,7 +441,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -475,7 +475,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -501,7 +501,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -523,7 +523,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -557,7 +557,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -606,7 +606,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -633,7 +633,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -659,7 +659,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -706,7 +706,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -732,7 +732,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -786,7 +786,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -820,7 +820,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -854,7 +854,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -902,7 +902,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -929,7 +929,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
       checkIn: {
         enableDetection: false,
@@ -971,7 +971,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
       checkIn: {
         enableDetection: false,
@@ -1005,7 +1005,7 @@ describe("apiService doneHub channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
       checkIn: {
         enableDetection: false,

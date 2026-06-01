@@ -48,7 +48,7 @@ describe("apiService wong", () => {
     baseUrl: "https://wong.example.com",
     auth: {
       authType: AuthTypeEnum.AccessToken,
-      userId: 1,
+      userId: "1",
       accessToken: "token",
     },
     checkIn: {
@@ -114,7 +114,7 @@ describe("apiService wong", () => {
         auth: {
           authType: AuthTypeEnum.None,
           accessToken: "",
-          userId: 1,
+          userId: "1",
         },
       }),
     ).resolves.toBe(true)

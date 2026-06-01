@@ -20,7 +20,7 @@ const createAccount = () => ({
   baseUrl: "https://api.example.com",
   id: "site-1",
   authType: AuthTypeEnum.AccessToken,
-  userId: 1,
+  userId: "1",
   token: "account-access-token",
   cookieAuthSessionCookie: "session=abc",
 })

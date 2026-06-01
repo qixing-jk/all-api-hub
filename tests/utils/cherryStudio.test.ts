@@ -21,7 +21,7 @@ const mockAccount: DisplaySiteData = {
   username: "testuser",
   baseUrl: "https://api.test.com",
   token: "sk-test",
-  userId: 123,
+  userId: "123",
   balance: { USD: 10, CNY: 70 },
   todayConsumption: { USD: 1, CNY: 7 },
   todayIncome: { USD: 0, CNY: 0 },

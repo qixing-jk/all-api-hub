@@ -16,6 +16,10 @@ import {
 import { UI_CONSTANTS } from "~/constants/ui"
 import { AccountUpdateUserTimestampMode } from "~/services/accounts/accountDefaults"
 import {
+  isValidManualAccountIdentity,
+  normalizeAccountIdentity,
+} from "~/services/accounts/accountIdentity"
+import {
   ensureDefaultApiTokenForAccount,
   generateDefaultTokenRequest,
 } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
@@ -65,6 +69,24 @@ import { t } from "~/utils/i18n/core"
 const logger = createLogger("AccountOperations")
 
 export const MANUAL_ADD_ACCOUNT_DATA_FETCH_TIMEOUT_MS = 20000
+
+/**
+ * Keeps legacy numeric-id validation at the explicit manual-input boundary only.
+ */
+function validateManualAccountIdentity(
+  userId: string,
+  siteType: AccountSiteType,
+): AccountSaveResponse | null {
+  const identity = normalizeAccountIdentity(userId)
+  if (!identity || !isValidManualAccountIdentity(identity, siteType)) {
+    return {
+      success: false,
+      message: t("messages:errors.validation.userIdNumeric"),
+    }
+  }
+
+  return null
+}
 
 const isCreatedApiToken = (value: unknown): value is ApiToken =>
   !!value &&
@@ -734,7 +756,7 @@ export async function resolveSub2ApiQuickCreateResolution(
  * @param siteName - Display name for the account.
  * @param username - Username retrieved from the remote site.
  * @param accessToken - Auth token required for API calls.
- * @param userId - Numeric user id in string form.
+ * @param userId - Site-scoped account identity entered by the user.
  * @param exchangeRate - Recharge exchange rate configured in UI.
  * @param notes - Free-form notes provided by user.
  * @param tagIds - Optional tag ids originating from the tag picker.
@@ -790,13 +812,12 @@ export async function validateAndSaveAccount(
     }
   }
 
-  const parsedUserId = parseInt(userId.trim())
-  if (isNaN(parsedUserId)) {
-    return {
-      success: false,
-      message: t("messages:errors.validation.userIdNumeric"),
-    }
-  }
+  const accountIdentity = normalizeAccountIdentity(userId) ?? ""
+  const identityValidationError = validateManualAccountIdentity(
+    accountIdentity,
+    normalizedSiteType,
+  )
+  if (identityValidationError) return identityValidationError
 
   let shouldAutoProvisionKeyOnAccountAdd =
     DEFAULT_PREFERENCES.autoProvisionKeyOnAccountAdd ?? false
@@ -832,7 +853,7 @@ export async function validateAndSaveAccount(
       baseUrl: requestBaseUrl,
       siteType: normalizedSiteType,
       authType,
-      userId: parsedUserId,
+      userId: accountIdentity,
     })
     const freshAccountData = await withTimeout(
       getApiService(normalizedSiteType).fetchAccountData({
@@ -842,7 +863,7 @@ export async function validateAndSaveAccount(
         includeTodayCashflow,
         auth: {
           authType,
-          userId: parsedUserId,
+          userId: accountIdentity,
           accessToken: accessToken.trim(),
           cookie:
             authType === AuthTypeEnum.Cookie
@@ -882,7 +903,7 @@ export async function validateAndSaveAccount(
       tagIds: normalizedTagIds,
       checkIn: freshAccountData.checkIn,
       account_info: {
-        id: parsedUserId,
+        id: accountIdentity,
         access_token: accessToken.trim(),
         username: username.trim(),
         quota: manualQuota ?? freshAccountData.quota,
@@ -948,7 +969,7 @@ export async function validateAndSaveAccount(
         reason: getErrorMessage(error),
       },
       account_info: {
-        id: parsedUserId,
+        id: accountIdentity,
         access_token: accessToken.trim(),
         username: username.trim(),
         quota: manualQuota ?? 0,
@@ -1007,7 +1028,7 @@ export async function validateAndSaveAccount(
  * @param siteName - Updated display name.
  * @param username - Updated username.
  * @param accessToken - Updated auth token.
- * @param userId - Updated user id string.
+ * @param userId - Updated site-scoped account identity.
  * @param exchangeRate - Updated recharge rate string.
  * @param notes - Updated notes.
  * @param tagIds - Updated tag id collection.
@@ -1063,13 +1084,12 @@ export async function validateAndUpdateAccount(
     }
   }
 
-  const parsedUserId = parseInt(userId.trim())
-  if (isNaN(parsedUserId)) {
-    return {
-      success: false,
-      message: t("messages:errors.validation.userIdNumeric"),
-    }
-  }
+  const accountIdentity = normalizeAccountIdentity(userId) ?? ""
+  const identityValidationError = validateManualAccountIdentity(
+    accountIdentity,
+    normalizedSiteType,
+  )
+  if (identityValidationError) return identityValidationError
 
   const manualQuota = parseManualQuotaFromUsd(manualBalanceUsd)
   const normalizedManualBalanceUsd =
@@ -1091,7 +1111,7 @@ export async function validateAndUpdateAccount(
       baseUrl: requestBaseUrl,
       siteType: normalizedSiteType,
       authType,
-      userId: parsedUserId,
+      userId: accountIdentity,
     })
     const includeTodayCashflow =
       (await userPreferences.getPreferences()).showTodayCashflow ?? true
@@ -1104,7 +1124,7 @@ export async function validateAndUpdateAccount(
       includeTodayCashflow,
       auth: {
         authType,
-        userId: parsedUserId,
+        userId: accountIdentity,
         accessToken: accessToken.trim(),
         cookie:
           authType === AuthTypeEnum.Cookie
@@ -1136,7 +1156,7 @@ export async function validateAndUpdateAccount(
       tagIds: normalizedTagIds,
       checkIn: freshAccountData.checkIn,
       account_info: {
-        id: parsedUserId,
+        id: accountIdentity,
         access_token: accessToken.trim(),
         username: username.trim(),
         quota: manualQuota ?? freshAccountData.quota,
@@ -1202,7 +1222,7 @@ export async function validateAndUpdateAccount(
         reason: getErrorMessage(error),
       },
       account_info: {
-        id: parsedUserId,
+        id: accountIdentity,
         access_token: accessToken.trim(),
         username: username.trim(),
         ...(manualQuota === undefined ? {} : { quota: manualQuota }),
@@ -1503,7 +1523,8 @@ async function autoProvisionKeyOnAccountAdd(
       typeof displaySiteData?.siteType !== "string" ||
       displaySiteData.siteType.trim().length === 0 ||
       displaySiteData.authType === AuthTypeEnum.None ||
-      !Number.isFinite(displaySiteData.userId) ||
+      typeof displaySiteData.userId !== "string" ||
+      displaySiteData.userId.trim().length === 0 ||
       (displaySiteData.authType === AuthTypeEnum.AccessToken && !hasToken) ||
       (displaySiteData.authType === AuthTypeEnum.Cookie &&
         !hasToken &&

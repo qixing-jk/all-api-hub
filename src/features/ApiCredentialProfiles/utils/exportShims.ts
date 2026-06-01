@@ -47,7 +47,7 @@ export function createExportAccount(
     siteType: SITE_TYPES.UNKNOWN,
     baseUrl: profile.baseUrl,
     token: "",
-    userId: 0,
+    userId: "",
     notes: profile.notes,
     tagIds: profile.tagIds ?? [],
     authType: AuthTypeEnum.None,

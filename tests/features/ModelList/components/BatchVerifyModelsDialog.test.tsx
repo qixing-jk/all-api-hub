@@ -150,7 +150,7 @@ const account = {
   token: "account-token",
   cookieAuthSessionCookie: "",
   authType: "access_token",
-  userId: 1,
+  userId: "1",
 } as any
 
 function renderDialog(items: any[]) {

@@ -149,7 +149,7 @@ export function useChannelDialog() {
       siteType: SITE_TYPES.UNKNOWN,
       baseUrl: options.baseUrl,
       token: "",
-      userId: 0,
+      userId: "",
       authType: AuthTypeEnum.None,
       checkIn: {
         enableDetection: false,

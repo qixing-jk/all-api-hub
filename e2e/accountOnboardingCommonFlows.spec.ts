@@ -614,7 +614,7 @@ test("requires duplicate-warning confirmation before the manual add flow continu
       site_name: "Existing Example",
       site_url: "https://example.com",
       account_info: {
-        id: 99,
+        id: "99",
         username: "existing-user",
         access_token: "existing-token",
       },

@@ -53,7 +53,7 @@ describe("API Service Common Utils", () => {
             baseUrl: "https://example.com",
             auth: {
               authType: AuthTypeEnum.Cookie,
-              userId: 123,
+              userId: "123",
             },
           },
           { endpoint: "/api/test" },
@@ -62,7 +62,7 @@ describe("API Service Common Utils", () => {
 
       expect(mockGetAccountByBaseUrlAndUserId).toHaveBeenCalledWith(
         "https://example.com",
-        123,
+        "123",
       )
       expect(mockFetchApiData).toHaveBeenCalledWith(
         expect.objectContaining({
@@ -89,7 +89,7 @@ describe("API Service Common Utils", () => {
             cookieAuthSessionCookie: "session=fresh",
             auth: {
               authType: AuthTypeEnum.Cookie,
-              userId: 123,
+              userId: "123",
             },
           },
           { endpoint: "/api/test" },
@@ -110,7 +110,7 @@ describe("API Service Common Utils", () => {
         baseUrl: "https://example.com",
         auth: {
           authType: AuthTypeEnum.Cookie,
-          userId: 123,
+          userId: "123",
         },
       }
       const options = { endpoint: "/api/test" }
@@ -123,7 +123,7 @@ describe("API Service Common Utils", () => {
 
       expect(mockGetAccountByBaseUrlAndUserId).toHaveBeenCalledWith(
         "https://example.com",
-        123,
+        "123",
       )
       expect(mockFetchApiData).toHaveBeenCalledWith(request, options)
     })
@@ -138,7 +138,7 @@ describe("API Service Common Utils", () => {
             accountId: "account-1",
             auth: {
               authType: AuthTypeEnum.Cookie,
-              userId: 123,
+              userId: "123",
             },
           },
           { endpoint: "/api/test" },

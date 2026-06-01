@@ -142,7 +142,7 @@ function createMockDisplaySiteData(
     siteType: SITE_TYPES.UNKNOWN,
     baseUrl: "https://api.example.com",
     token: "test-token-123",
-    userId: 1,
+    userId: "1",
     authType: AuthTypeEnum.AccessToken,
     checkIn: { enableDetection: false },
     ...overrides,
@@ -287,7 +287,7 @@ function createMockSiteAccount(overrides?: Partial<SiteAccount>): SiteAccount {
     disabled: false,
     excludeFromTotalBalance: false,
     account_info: {
-      id: 1,
+      id: "1",
       access_token: "token-123",
       username: "testuser",
       quota: 100,

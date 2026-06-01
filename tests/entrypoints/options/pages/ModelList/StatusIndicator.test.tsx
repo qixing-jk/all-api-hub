@@ -21,7 +21,7 @@ const ACCOUNT = {
   siteType: "new-api",
   baseUrl: "https://example.com",
   token: "token",
-  userId: 1,
+  userId: "1",
   authType: AuthTypeEnum.AccessToken,
   checkIn: { enableDetection: false },
 } as const

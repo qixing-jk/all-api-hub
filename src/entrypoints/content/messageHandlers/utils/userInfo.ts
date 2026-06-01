@@ -1,3 +1,4 @@
+import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
@@ -21,8 +22,9 @@ export async function waitForUserInfo(
       const userStr = localStorage.getItem("user")
       if (userStr) {
         const user = JSON.parse(userStr)
-        if (user.id) {
-          return { userId: user.id, user }
+        const userId = normalizeAccountIdentity(user?.id)
+        if (userId) {
+          return { userId, user }
         }
       }
     } catch (error) {

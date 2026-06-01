@@ -72,7 +72,7 @@ test("sidepanel switches common saved-item tabs and opens the matching managemen
             site_name: "Sidepanel Account",
             site_url: "https://sidepanel-account.example.com",
             account_info: {
-              id: 31,
+              id: "31",
               username: "sidepanel-user",
               access_token: "sidepanel-token",
             },
@@ -178,7 +178,7 @@ test("sidepanel opens saved account and bookmark targets in browser tabs", async
             site_name: "Sidepanel Open Account",
             site_url: "https://sidepanel-open-account.example.com",
             account_info: {
-              id: 41,
+              id: "41",
               username: "sidepanel-open-user",
               access_token: "sidepanel-open-token",
             },

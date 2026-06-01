@@ -18,7 +18,7 @@ describe("checkInMigration", () => {
       site_type: SITE_TYPES.UNKNOWN,
       exchange_rate: 7.0,
       account_info: {
-        id: 1,
+        id: "1",
         access_token: "test-token",
         username: "test-user",
         quota: 1000,

@@ -79,7 +79,7 @@ vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
         siteType: "unknown",
         baseUrl: "https://enabled.example.com",
         token: "token",
-        userId: 1,
+        userId: "1",
         authType: "access_token",
       },
       {
@@ -89,7 +89,7 @@ vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
         siteType: "unknown",
         baseUrl: "https://disabled.example.com",
         token: "token",
-        userId: 1,
+        userId: "1",
         authType: "access_token",
       },
       {
@@ -99,7 +99,7 @@ vi.mock("~/features/KeyManagement/hooks/useKeyManagement", () => ({
         siteType: "sub2api",
         baseUrl: "https://another.example.com",
         token: "jwt-token",
-        userId: 1,
+        userId: "1",
         authType: "access_token",
       },
     ],

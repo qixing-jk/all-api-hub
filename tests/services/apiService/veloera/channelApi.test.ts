@@ -155,7 +155,7 @@ describe("apiService veloera channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -188,7 +188,7 @@ describe("apiService veloera channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -332,7 +332,7 @@ describe("apiService veloera channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -361,7 +361,7 @@ describe("apiService veloera channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -376,7 +376,7 @@ describe("apiService veloera channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -394,7 +394,7 @@ describe("apiService veloera channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -415,7 +415,7 @@ describe("apiService veloera channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
       checkIn: {
         enableDetection: true,
@@ -455,7 +455,7 @@ describe("apiService veloera channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
       checkIn: {
         enableDetection: false,
@@ -483,7 +483,7 @@ describe("apiService veloera channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
       checkIn: { enableDetection: true },
     } as any)
@@ -506,7 +506,7 @@ describe("apiService veloera channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
       checkIn: { enableDetection: false },
     } as any)

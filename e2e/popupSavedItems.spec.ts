@@ -233,7 +233,7 @@ test("opens the account manager from the default popup accounts tab", async ({
       site_name: "Popup Account",
       site_url: "https://popup-account.example.com",
       account_info: {
-        id: 501,
+        id: "501",
         username: "popup-account-user",
         access_token: "popup-account-token",
       },
@@ -282,7 +282,7 @@ test("updates popup account totals after disabling an account from management", 
       site_url: "https://popup-active.example.com",
       exchange_rate: 7,
       account_info: {
-        id: 701,
+        id: "701",
         username: "popup-active-user",
         access_token: "popup-active-token",
         quota: 500000,
@@ -294,7 +294,7 @@ test("updates popup account totals after disabling an account from management", 
       site_url: "https://popup-disable.example.com",
       exchange_rate: 7,
       account_info: {
-        id: 702,
+        id: "702",
         username: "popup-disable-user",
         access_token: "popup-disable-token",
         quota: 1000000,
@@ -385,7 +385,7 @@ test("opens a saved account site from the popup accounts tab", async ({
       site_name: "Open Account",
       site_url: "https://account-open.example.com",
       account_info: {
-        id: 601,
+        id: "601",
         username: "open-account-user",
         access_token: "open-account-token",
       },
@@ -419,7 +419,7 @@ test("opens pending external check-ins from the popup and marks them checked in"
       site_name: "Pending External Check-in",
       site_url: "https://pending-external.example.com",
       account_info: {
-        id: 611,
+        id: "611",
         username: "pending-external-user",
         access_token: "pending-external-token",
       },
@@ -438,7 +438,7 @@ test("opens pending external check-ins from the popup and marks them checked in"
       site_name: "Done External Check-in",
       site_url: "https://done-external.example.com",
       account_info: {
-        id: 612,
+        id: "612",
         username: "done-external-user",
         access_token: "done-external-token",
       },
@@ -506,7 +506,7 @@ test("ctrl-clicking popup external check-ins opens already checked accounts too"
       site_name: "Pending External Check-in",
       site_url: "https://pending-external.example.com",
       account_info: {
-        id: 621,
+        id: "621",
         username: "pending-external-user",
         access_token: "pending-external-token",
       },
@@ -525,7 +525,7 @@ test("ctrl-clicking popup external check-ins opens already checked accounts too"
       site_name: "Done External Check-in",
       site_url: "https://done-external.example.com",
       account_info: {
-        id: 622,
+        id: "622",
         username: "done-external-user",
         access_token: "done-external-token",
       },
@@ -594,7 +594,7 @@ test("shift-clicking popup external check-ins groups opened pages into one brows
       site_name: "Shift Pending External Check-in",
       site_url: "https://shift-pending-external.example.com",
       account_info: {
-        id: 631,
+        id: "631",
         username: "shift-pending-external-user",
         access_token: "shift-pending-external-token",
       },
@@ -613,7 +613,7 @@ test("shift-clicking popup external check-ins groups opened pages into one brows
       site_name: "Shift Done External Check-in",
       site_url: "https://shift-done-external.example.com",
       account_info: {
-        id: 632,
+        id: "632",
         username: "shift-done-external-user",
         access_token: "shift-done-external-token",
       },

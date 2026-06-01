@@ -96,7 +96,7 @@ function createMockDisplaySiteData(
     siteType: SITE_TYPES.VELOERA,
     baseUrl: "https://api.example.com",
     token: "access-token",
-    userId: 1,
+    userId: "1",
     authType: "access_token" as any,
     checkIn: { enableDetection: false },
     ...overrides,

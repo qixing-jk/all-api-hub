@@ -104,7 +104,7 @@ export function buildDisplaySiteData(
     siteType: SITE_TYPES.UNKNOWN,
     baseUrl: "https://example.com",
     token: "test-token",
-    userId: 1,
+    userId: "1",
     authType: AuthTypeEnum.AccessToken,
     checkIn: { enableDetection: false },
   }
@@ -157,7 +157,7 @@ export function buildSub2ApiAccount(
     siteType: "sub2api",
     baseUrl: "https://sub2.example.com",
     token: "jwt-token",
-    userId: 1,
+    userId: "1",
     authType: AuthTypeEnum.AccessToken,
     checkIn: { enableDetection: false },
     ...overrides,
@@ -209,7 +209,7 @@ export function buildSiteAccount(
     health: { status: SiteHealthStatus.Healthy },
     authType: AuthTypeEnum.AccessToken,
     account_info: {
-      id: 1,
+      id: "1",
       access_token: "test-token",
       username: "test-user",
       quota: 1000,

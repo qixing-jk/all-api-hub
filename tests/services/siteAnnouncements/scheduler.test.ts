@@ -91,7 +91,7 @@ function createAccount(overrides: Partial<any> = {}) {
     disabled: false,
     authType: AuthTypeEnum.AccessToken,
     account_info: {
-      id: 1,
+      id: "1",
       access_token: "token",
       username: "user",
       quota: 0,

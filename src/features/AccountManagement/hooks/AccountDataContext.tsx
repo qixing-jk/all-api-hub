@@ -19,6 +19,7 @@ import {
 } from "~/constants"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { getDayKeyFromUnixSeconds } from "~/services/history/dailyBalanceHistory/dayKeys"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
@@ -485,10 +486,7 @@ export const AccountDataProvider = ({
           const userIdRaw = userResponse?.success
             ? userResponse?.data?.userId
             : null
-          verifiedUserId =
-            userIdRaw === undefined || userIdRaw === null
-              ? null
-              : String(userIdRaw)
+          verifiedUserId = normalizeAccountIdentity(userIdRaw)
 
           // Cache the verified user ID by tab+url to prevent duplicate reads.
           currentTabUserCacheRef.current = {
@@ -524,7 +522,9 @@ export const AccountDataProvider = ({
       // If we can verify userId, match it to a specific stored account for this origin.
       const matchedAccount =
         originAccounts.find(
-          (account) => String(account.account_info.id) === verifiedUserId,
+          (account) =>
+            normalizeAccountIdentity(account.account_info.id) ===
+            verifiedUserId,
         ) ?? null
 
       setDetectedAccount(matchedAccount)

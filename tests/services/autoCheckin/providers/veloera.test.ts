@@ -23,7 +23,7 @@ const mockAccount: SiteAccount = {
   checkIn: { enableDetection: true },
   health: { status: SiteHealthStatus.Healthy },
   account_info: {
-    id: 123,
+    id: "123",
     access_token: "test-token",
     username: "test",
     quota: 1000,

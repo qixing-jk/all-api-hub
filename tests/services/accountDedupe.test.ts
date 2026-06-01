@@ -31,7 +31,7 @@ describe("scanDuplicateAccounts", () => {
     expect(result.groups).toHaveLength(1)
     expect(result.groups[0].key).toEqual({
       origin: "https://api.example.com",
-      userId: 1,
+      userId: "1",
     })
     expect(result.groups[0].accounts.map((a) => a.id).sort()).toEqual([
       "acc-1",
@@ -60,7 +60,7 @@ describe("scanDuplicateAccounts", () => {
     expect(result.groups).toHaveLength(1)
     expect(result.groups[0].key).toEqual({
       origin: "https://api.example.com",
-      userId: 1,
+      userId: "1",
     })
   })
 
@@ -87,7 +87,7 @@ describe("scanDuplicateAccounts", () => {
     expect(result.groups).toHaveLength(1)
     expect(result.groups[0].key).toEqual({
       origin: "https://console.aihubmix.com",
-      userId: 1,
+      userId: "1",
     })
   })
 
@@ -217,41 +217,51 @@ describe("scanDuplicateAccounts", () => {
     expect(idResult.groups[0].keepAccountId).toBe("acc-1")
   })
 
-  it("skips accounts with unsafe upstream user ids as unscannable", () => {
-    const unsafeA = buildSiteAccount({
+  it("treats large numeric-looking strings as ordinary upstream user ids", () => {
+    const accountA = buildSiteAccount({
       id: "acc-1",
       site_url: "https://api.example.com",
       account_info: { id: "9007199254740992" } as any,
     })
-    const unsafeB = buildSiteAccount({
+    const accountB = buildSiteAccount({
       id: "acc-2",
       site_url: "https://api.example.com",
       account_info: { id: "9007199254740993" } as any,
     })
+    const duplicateA = buildSiteAccount({
+      id: "acc-3",
+      site_url: "https://api.example.com",
+      account_info: { id: "9007199254740992" } as any,
+    })
 
     const result = scanDuplicateAccounts({
-      accounts: [unsafeA, unsafeB],
+      accounts: [accountA, accountB, duplicateA],
       pinnedAccountIds: [],
       strategy: "keepPinned",
     })
 
-    expect(result.groups).toHaveLength(0)
-    expect(result.unscannable.map((a) => a.id).sort()).toEqual([
+    expect(result.groups).toHaveLength(1)
+    expect(result.groups[0].key).toEqual({
+      origin: "https://api.example.com",
+      userId: "9007199254740992",
+    })
+    expect(result.groups[0].accounts.map((a) => a.id).sort()).toEqual([
       "acc-1",
-      "acc-2",
+      "acc-3",
     ])
+    expect(result.unscannable).toEqual([])
   })
 
   it("skips accounts with invalid URLs as unscannable", () => {
     const ok = buildSiteAccount({
       id: "acc-1",
       site_url: "https://api.example.com/v1",
-      account_info: { id: 1 } as any,
+      account_info: { id: "1" } as any,
     })
     const bad = buildSiteAccount({
       id: "acc-2",
       site_url: "not a url",
-      account_info: { id: 1 } as any,
+      account_info: { id: "1" } as any,
     })
 
     const result = scanDuplicateAccounts({

@@ -1,4 +1,5 @@
 import { SITE_TYPES } from "~/constants/siteType"
+import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
   isAIHubMixSiteUrl,
   normalizeAccountSiteUrlForOriginKey,
@@ -13,7 +14,7 @@ export type AccountDedupeKeepStrategy =
 
 export type DuplicateAccountKey = {
   origin: string
-  userId: number
+  userId: string
 }
 
 export type DuplicateAccountGroup = {
@@ -73,20 +74,6 @@ function compareStringAsc(a: string, b: string): number {
  */
 function getComparableTimestamp(value: unknown): number {
   return typeof value === "number" && Number.isFinite(value) ? value : 0
-}
-
-/**
- * coerces a value to a finite user ID number, returning undefined for invalid inputs
- */
-function coerceFiniteUserId(value: unknown): number | undefined {
-  if (typeof value === "number" && Number.isSafeInteger(value)) return value
-  if (typeof value !== "string") return undefined
-
-  const trimmed = value.trim()
-  if (!/^\d+$/.test(trimmed)) return undefined
-
-  const parsed = Number(trimmed)
-  return Number.isSafeInteger(parsed) ? parsed : undefined
 }
 
 /**
@@ -171,9 +158,9 @@ export function scanDuplicateAccounts(input: {
             siteType: account.site_type,
           })
         : sanitizeOriginUrl(account.site_url)
-    const userId = coerceFiniteUserId(account.account_info?.id)
+    const userId = normalizeAccountIdentity(account.account_info?.id)
 
-    if (!origin || userId === undefined) {
+    if (!origin || userId === null) {
       unscannable.push(account)
       continue
     }
@@ -210,7 +197,7 @@ export function scanDuplicateAccounts(input: {
     .sort((a, b) => {
       const originCompare = a.key.origin.localeCompare(b.key.origin)
       if (originCompare !== 0) return originCompare
-      return a.key.userId - b.key.userId
+      return a.key.userId.localeCompare(b.key.userId)
     })
 
   return { groups, unscannable }

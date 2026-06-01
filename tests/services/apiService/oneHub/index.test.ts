@@ -34,7 +34,7 @@ const baseRequest = {
   baseUrl: "https://example.com",
   auth: {
     authType: "access_token",
-    userId: 1,
+    userId: "1",
     accessToken: "token",
   },
 }

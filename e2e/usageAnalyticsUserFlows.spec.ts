@@ -68,7 +68,7 @@ async function seedUsageAnalyticsJourneyData(
       site_name: "Usage Hub A",
       site_url: "https://usage-a.example.com",
       account_info: {
-        id: 21,
+        id: "21",
         username: "usage-user-a",
         access_token: "usage-token-a",
       },
@@ -78,7 +78,7 @@ async function seedUsageAnalyticsJourneyData(
       site_name: "Usage Hub B",
       site_url: "https://usage-b.example.com",
       account_info: {
-        id: 22,
+        id: "22",
         username: "usage-user-b",
         access_token: "usage-token-b",
       },

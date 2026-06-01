@@ -13,7 +13,7 @@ interface Account {
   name: string
   baseUrl: string
   siteType: AccountSiteType
-  userId: number
+  userId: string
   token: string
 }
 

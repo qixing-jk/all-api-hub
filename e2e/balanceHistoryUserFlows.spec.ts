@@ -108,7 +108,7 @@ test("filters balance history by tag/account and persists the selected currency"
       site_url: "https://balance-a.example.com",
       tagIds: ["production"],
       account_info: {
-        id: 11,
+        id: "11",
         username: "balance-user-a",
         access_token: "balance-token-a",
       },
@@ -119,7 +119,7 @@ test("filters balance history by tag/account and persists the selected currency"
       site_url: "https://balance-b.example.com",
       tagIds: ["sandbox"],
       account_info: {
-        id: 12,
+        id: "12",
         username: "balance-user-b",
         access_token: "balance-token-b",
       },

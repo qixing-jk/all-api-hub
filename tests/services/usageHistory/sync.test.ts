@@ -59,7 +59,7 @@ async function createTestAccount(baseUrl: string): Promise<string> {
     site_type: "new-api",
     exchange_rate: 7.2,
     account_info: {
-      id: 1,
+      id: "1",
       access_token: "mock-token",
       username: "tester",
       quota: 0,

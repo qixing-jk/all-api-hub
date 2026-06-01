@@ -396,6 +396,30 @@ describe("content storage handler", () => {
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
   })
 
+  it("normalizes numeric standard local user ids to string identities", async () => {
+    localStorage.setItem(
+      "user",
+      JSON.stringify({ id: 42, username: "alice", role: "admin" }),
+    )
+
+    const response = await new Promise<any>((resolve) => {
+      handleGetUserFromLocalStorage({ url: "https://example.com" }, resolve)
+    })
+
+    expect(response).toEqual({
+      success: true,
+      data: {
+        userId: "42",
+        user: {
+          id: 42,
+          username: "alice",
+          role: "admin",
+        },
+      },
+    })
+    expect(mockFetchUserInfo).not.toHaveBeenCalled()
+  })
+
   it("returns userInfoNotFound when no user payload exists", async () => {
     const response = await new Promise<any>((resolve) => {
       handleGetUserFromLocalStorage({ url: "https://example.com" }, resolve)

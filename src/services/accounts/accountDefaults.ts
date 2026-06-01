@@ -1,5 +1,6 @@
 import { isAccountSiteType, SITE_TYPES } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import { coerceAccountIdentity } from "~/services/accounts/accountIdentity"
 import { normalizeAccountSiteUrlForStorage } from "~/services/accounts/utils/siteUrlNormalization"
 import {
   AuthTypeEnum,
@@ -16,7 +17,7 @@ import type { DeepPartial } from "~/types/utils"
 import { deepOverride } from "~/utils"
 
 const DEFAULT_ACCOUNT_INFO: AccountInfo = {
-  id: 0,
+  id: "",
   access_token: "",
   username: "",
   quota: 0,
@@ -207,7 +208,7 @@ export function normalizeAccountStorageConfigForWrite(
 function normalizeAccountInfo(raw: Partial<AccountInfo> | undefined) {
   const merged = deepOverride(DEFAULT_ACCOUNT_INFO, raw ?? undefined)
   return {
-    id: coerceNumber(merged.id, 0),
+    id: coerceAccountIdentity(merged.id, ""),
     access_token: coerceString(merged.access_token, ""),
     username: coerceString(merged.username, ""),
     quota: coerceNumber(merged.quota, 0),

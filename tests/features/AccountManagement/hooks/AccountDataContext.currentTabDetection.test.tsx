@@ -129,7 +129,7 @@ function createAccount({
 }: {
   id: string
   baseUrl: string
-  userId: number
+  userId: string
 }) {
   return {
     id,
@@ -172,12 +172,12 @@ describe("AccountDataContext current tab detection", () => {
     const account1 = createAccount({
       id: "acc-1",
       baseUrl: "https://foo.example.com",
-      userId: 1,
+      userId: "1",
     })
     const account2 = createAccount({
       id: "acc-2",
       baseUrl: "https://foo.example.com",
-      userId: 2,
+      userId: "2",
     })
 
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
@@ -200,7 +200,7 @@ describe("AccountDataContext current tab detection", () => {
       .spyOn(browser.tabs, "sendMessage")
       .mockResolvedValue({
         success: true,
-        data: { userId: 2, user: { id: 2 } },
+        data: { userId: "2", user: { id: 2 } },
       } as any)
 
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
@@ -221,18 +221,63 @@ describe("AccountDataContext current tab detection", () => {
     expect(sendMessageSpy).toHaveBeenCalledTimes(1)
   })
 
+  it("normalizes string identities from current-tab user verification before matching", async () => {
+    activeTabs = [{ id: 102, url: "https://foo.example.com/dashboard" }]
+
+    const matchingAccount = createAccount({
+      id: "acc-aihubmix",
+      baseUrl: "https://foo.example.com",
+      userId: "aihubmix-user",
+    })
+
+    mockResetExpiredCheckIns.mockResolvedValue(undefined)
+    mockGetTagStore.mockResolvedValue({ version: 1, tagsById: {} })
+    mockGetAllAccounts.mockResolvedValue([matchingAccount])
+    mockGetAllBookmarks.mockResolvedValue([])
+    mockGetOrderedList.mockResolvedValue([])
+    mockGetPinnedList.mockResolvedValue([])
+    mockGetAccountStats.mockResolvedValue({
+      total_quota: 0,
+      today_total_consumption: 0,
+      today_total_requests: 0,
+      today_total_prompt_tokens: 0,
+      today_total_completion_tokens: 0,
+      today_total_income: 0,
+    })
+    mockConvertToDisplayData.mockReturnValue([{ id: "acc-aihubmix" }])
+
+    vi.spyOn(browser.tabs, "sendMessage").mockResolvedValue({
+      success: true,
+      data: { userId: " aihubmix-user ", user: { id: "aihubmix-user" } },
+    } as any)
+
+    let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
+
+    render(
+      <I18nextProvider i18n={testI18n}>
+        <AccountDataProvider>
+          <ContextProbe onChange={(ctx) => (latestCtx = ctx)} />
+        </AccountDataProvider>
+      </I18nextProvider>,
+    )
+
+    await waitFor(() => {
+      expect(latestCtx?.detectedAccount?.id).toBe("acc-aihubmix")
+    })
+  })
+
   it("keeps site-level match when userId does not match any stored account", async () => {
     activeTabs = [{ id: 202, url: "https://foo.example.com/settings" }]
 
     const account1 = createAccount({
       id: "acc-1",
       baseUrl: "https://foo.example.com",
-      userId: 1,
+      userId: "1",
     })
     const account2 = createAccount({
       id: "acc-2",
       baseUrl: "https://foo.example.com",
-      userId: 2,
+      userId: "2",
     })
 
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
@@ -253,7 +298,7 @@ describe("AccountDataContext current tab detection", () => {
 
     vi.spyOn(browser.tabs, "sendMessage").mockResolvedValue({
       success: true,
-      data: { userId: 999, user: { id: 999 } },
+      data: { userId: "999", user: { id: 999 } },
     } as any)
 
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null
@@ -278,12 +323,12 @@ describe("AccountDataContext current tab detection", () => {
     const account1 = createAccount({
       id: "acc-1",
       baseUrl: "https://foo.example.com",
-      userId: 1,
+      userId: "1",
     })
     const account2 = createAccount({
       id: "acc-2",
       baseUrl: "https://foo.example.com",
-      userId: 2,
+      userId: "2",
     })
 
     mockResetExpiredCheckIns.mockResolvedValue(undefined)
@@ -306,7 +351,7 @@ describe("AccountDataContext current tab detection", () => {
       .spyOn(browser.tabs, "sendMessage")
       .mockResolvedValue({
         success: true,
-        data: { userId: 2, user: { id: 2 } },
+        data: { userId: "2", user: { id: 2 } },
       } as any)
 
     let latestCtx: ReturnType<typeof useAccountDataContext> | null = null

@@ -31,7 +31,7 @@ describe("siteEcosystem analytics", () => {
         site_type: SITE_TYPES.NEW_API,
         notes: "private notes",
         account_info: {
-          id: 1,
+          id: "1",
           access_token: "secret-token",
           username: "private-user",
           quota: 12345,
@@ -49,7 +49,7 @@ describe("siteEcosystem analytics", () => {
         site_type: SITE_TYPES.NEW_API,
         notes: "private notes",
         account_info: {
-          id: 2,
+          id: "2",
           access_token: "secret-token",
           username: "private-user",
           quota: 67890,

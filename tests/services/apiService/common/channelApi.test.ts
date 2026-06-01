@@ -106,7 +106,7 @@ describe("apiService common channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 
@@ -154,7 +154,7 @@ describe("apiService common channel APIs", () => {
       auth: {
         authType: AuthTypeEnum.AccessToken,
         accessToken: "token",
-        userId: 1,
+        userId: "1",
       },
     }
 

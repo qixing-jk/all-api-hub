@@ -726,7 +726,7 @@ const createRefreshSuccessResult = (
   healthStatus: createHealthyHealthStatus(),
   authUpdate: {
     ...authUpdate,
-    userId: currentUser.userId,
+    userId: String(currentUser.userId),
     username: currentUser.username,
   },
 })

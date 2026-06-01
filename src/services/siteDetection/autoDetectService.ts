@@ -21,6 +21,7 @@ import {
   isAccountSiteType,
   type AccountSiteType,
 } from "~/constants/siteType"
+import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import {
   API_SERVICE_FETCH_CONTEXT_KINDS,
   summarizeApiServiceFetchContext,
@@ -58,7 +59,7 @@ interface AutoDetectResult {
   success: boolean
   autoDetectContext?: AutoDetectAnalyticsContext
   data?: {
-    userId: number
+    userId: string
     user: any
     siteType: AccountSiteType
     accessToken?: string
@@ -70,7 +71,7 @@ interface AutoDetectResult {
 }
 
 interface UserDataResult {
-  userId: number
+  userId: string
   user: any
   accessToken?: string
   sub2apiAuth?: Sub2ApiAuthConfig
@@ -262,7 +263,8 @@ async function getUserDataViaAPI(
       },
       ...(fetchContext ? { fetchContext } : {}),
     })
-    if (!userInfo || !userInfo.id) {
+    const userId = normalizeAccountIdentity(userInfo?.id)
+    if (!userInfo || !userId) {
       logger.debug("API auto-detect returned no user id", {
         url,
         siteType,
@@ -271,7 +273,7 @@ async function getUserDataViaAPI(
       return null
     }
     return {
-      userId: userInfo.id,
+      userId,
       user: userInfo,
       accessToken:
         typeof userInfo.access_token === "string"
@@ -388,8 +390,18 @@ async function getUserDataViaBackground(
       siteTypeHint: response.data.siteTypeHint ?? null,
     })
 
+    const userId = normalizeAccountIdentity(response.data.userId)
+    if (!userId) {
+      logger.debug("Background auto-detect returned no usable user id", {
+        url,
+        siteType,
+        requestId,
+      })
+      return await getUserDataViaAPI(url, siteType, fetchContext)
+    }
+
     return {
-      userId: response.data.userId,
+      userId,
       user: response.data.user,
       accessToken: response.data.accessToken,
       sub2apiAuth: response.data.sub2apiAuth,
@@ -476,10 +488,11 @@ async function getUserDataFromCurrentTab(
         url: url,
       })
 
-      if (userResponse?.success && userResponse.data) {
+      const userId = normalizeAccountIdentity(userResponse?.data?.userId)
+      if (userResponse?.success && userResponse.data && userId) {
         return {
           userData: {
-            userId: userResponse.data.userId,
+            userId,
             user: userResponse.data.user,
             accessToken: userResponse.data.accessToken,
             sub2apiAuth: userResponse.data.sub2apiAuth,

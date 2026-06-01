@@ -159,7 +159,7 @@ export const canManageDisplayAccountTokens = (
     !hasNonEmptyString(account.id) ||
     !hasNonEmptyString(account.baseUrl) ||
     !hasNonEmptyString(account.siteType) ||
-    !Number.isFinite(account.userId)
+    !hasNonEmptyString(account.userId)
   ) {
     return false
   }

@@ -131,7 +131,7 @@ describe("apiService common token APIs", () => {
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     }
@@ -160,7 +160,7 @@ describe("apiService common token APIs", () => {
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     }
@@ -176,7 +176,7 @@ describe("apiService common token APIs", () => {
       baseUrl: "https://example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     }
@@ -197,7 +197,7 @@ describe("apiService common token APIs", () => {
       accountId: "account-1",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     }
@@ -227,7 +227,7 @@ describe("apiService common token APIs", () => {
       accountId: "account-get-secret",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     }
@@ -250,7 +250,7 @@ describe("apiService common token APIs", () => {
       accountId: "account-2",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     }
@@ -280,7 +280,7 @@ describe("apiService common token APIs", () => {
       accountId: "account-3",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     }
@@ -313,7 +313,7 @@ describe("apiService common token APIs", () => {
       accountId: "account-custom-fetcher",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     }
@@ -348,7 +348,7 @@ describe("apiService common token APIs", () => {
       accountId: "account-empty",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     }
@@ -371,7 +371,7 @@ describe("apiService common token APIs", () => {
       accountId: "account-plain",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     }
@@ -394,7 +394,7 @@ describe("apiService common token APIs", () => {
       accountId: "account-unresolvable",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     }
@@ -420,7 +420,7 @@ describe("apiService common token APIs", () => {
       accountId: "account-missing-secret",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     }
@@ -438,7 +438,7 @@ describe("apiService common token APIs", () => {
       accountId: "account-missing-key-field",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     }
@@ -458,7 +458,7 @@ describe("apiService common token APIs", () => {
       accountId: "account-invalidate",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     }
@@ -489,7 +489,7 @@ describe("apiService common token APIs", () => {
       accountId: "account-sync",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     }
@@ -537,7 +537,7 @@ describe("apiService common token APIs", () => {
       accountId: "account-scope-b",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 2,
+        userId: "2",
         accessToken: "token-b",
       },
     }
@@ -622,7 +622,7 @@ describe("apiService common token APIs", () => {
       accountId: "account-retry",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     }

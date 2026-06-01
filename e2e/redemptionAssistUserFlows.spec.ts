@@ -112,7 +112,7 @@ test("detects a redemption code on a real page, redeems it for the matched accou
   const redeemedCodes: string[] = []
   await stubNewApiSiteRoutes(context, {
     baseUrl: REDEEM_SITE_URL,
-    userId: 901,
+    userId: "901",
     username: "redeem-user",
     accessToken: "redeem-access-token",
     initialQuota: 1_000_000,
@@ -167,7 +167,7 @@ test("detects a redemption code on a real page, redeems it for the matched accou
       site_url: REDEEM_SITE_URL,
       exchange_rate: 7,
       account_info: {
-        id: 901,
+        id: "901",
         username: "redeem-user",
         access_token: "redeem-access-token",
         quota: 1_000_000,
@@ -249,7 +249,7 @@ test("forwards selected redemption text from the background context-menu path to
   const redeemedCodes: string[] = []
   await stubNewApiSiteRoutes(context, {
     baseUrl: REDEEM_SITE_URL,
-    userId: 902,
+    userId: "902",
     username: "context-menu-user",
     accessToken: "context-menu-access-token",
     initialQuota: 2_000_000,
@@ -303,7 +303,7 @@ test("forwards selected redemption text from the background context-menu path to
       site_url: REDEEM_SITE_URL,
       exchange_rate: 7,
       account_info: {
-        id: 902,
+        id: "902",
         username: "context-menu-user",
         access_token: "context-menu-access-token",
         quota: 2_000_000,

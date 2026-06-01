@@ -13,7 +13,7 @@ export const createAccount = (overrides: Partial<any>) => ({
   siteType: SITE_TYPES.NEW_API,
   baseUrl: "https://example.com/v1",
   token: "token",
-  userId: 1,
+  userId: "1",
   authType: AuthTypeEnum.AccessToken,
   checkIn: { enableDetection: false },
   ...overrides,

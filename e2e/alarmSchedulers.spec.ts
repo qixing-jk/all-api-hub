@@ -831,7 +831,7 @@ test("runs usage-history sync when its MV3 alarm fires", async ({
       site_name: "Usage Alarm Hub",
       site_url: baseUrl,
       account_info: {
-        id: 41,
+        id: "41",
         username: "usage-alarm-user",
         access_token: "usage-alarm-token",
       },
@@ -915,7 +915,7 @@ test("captures daily balance snapshots when its MV3 alarm fires", async ({
       site_name: "Balance Alarm Hub",
       site_url: baseUrl,
       account_info: {
-        id: 52,
+        id: "52",
         username: "balance-alarm-user",
         access_token: "balance-alarm-token",
       },
@@ -923,7 +923,7 @@ test("captures daily balance snapshots when its MV3 alarm fires", async ({
   ])
   await stubNewApiSiteRoutes(context, {
     baseUrl,
-    userId: 52,
+    userId: "52",
     username: "balance-alarm-user",
     accessToken: "balance-alarm-token",
     initialQuota: 9_876_543,
@@ -991,7 +991,7 @@ test("runs WebDAV auto-sync upload when its MV3 alarm fires", async ({
       site_name: "WebDAV Alarm Hub",
       site_url: "https://webdav-account.example.com",
       account_info: {
-        id: 63,
+        id: "63",
         username: "webdav-alarm-user",
         access_token: "webdav-alarm-token",
       },
@@ -1203,7 +1203,7 @@ test("runs auto-checkin retries when its MV3 alarm fires", async ({
       site_url: baseUrl,
       site_type: SITE_TYPES.NEW_API,
       account_info: {
-        id: 74,
+        id: "74",
         username: "retry-alarm-user",
         access_token: "retry-alarm-token",
       },
@@ -1363,7 +1363,7 @@ test("runs auto-checkin daily check-ins when its MV3 alarm fires", async ({
       site_url: baseUrl,
       site_type: SITE_TYPES.NEW_API,
       account_info: {
-        id: 75,
+        id: "75",
         username: "daily-alarm-user",
         access_token: "daily-alarm-token",
       },

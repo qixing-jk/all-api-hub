@@ -68,6 +68,22 @@ describe("waitForUserInfo", () => {
     expect(loggerWarnMock).not.toHaveBeenCalled()
   })
 
+  it("normalizes numeric localStorage user ids to string identities", async () => {
+    globalThis.localStorage.setItem(
+      "user",
+      JSON.stringify({ id: 42, name: "Numeric User" }),
+    )
+
+    const { waitForUserInfo } = await import(
+      "~/entrypoints/content/messageHandlers/utils/userInfo"
+    )
+
+    await expect(waitForUserInfo()).resolves.toEqual({
+      userId: "42",
+      user: { id: 42, name: "Numeric User" },
+    })
+  })
+
   it("keeps polling after parse failures and incomplete payloads until a valid user appears", async () => {
     let attempts = 0
     vi.mocked(globalThis.localStorage.getItem).mockImplementation(

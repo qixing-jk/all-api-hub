@@ -81,7 +81,7 @@ const createNonSub2ApiAccounts = () => {
     siteType: SITE_TYPES.NEW_API,
     baseUrl: "https://new-api.example.com",
     authType: AuthTypeEnum.AccessToken,
-    userId: 456,
+    userId: "456",
     token: "new-api-token",
     cookieAuthSessionCookie: "session-cookie",
   }
@@ -116,7 +116,7 @@ const createAIHubMixAccounts = () => {
     siteType: SITE_TYPES.AIHUBMIX,
     baseUrl: "https://aihubmix.com",
     authType: AuthTypeEnum.AccessToken,
-    userId: 789,
+    userId: "789",
     token: "aihubmix-access-token",
     cookieAuthSessionCookie: "",
   }

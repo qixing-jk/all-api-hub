@@ -16,7 +16,7 @@ function createAccount(id: string, name: string): DisplaySiteData {
     siteType: "new-api",
     baseUrl: `https://${id}.example.com`,
     token: "token",
-    userId: 1,
+    userId: "1",
     authType: AuthTypeEnum.AccessToken,
     checkIn: { enableDetection: false },
   }

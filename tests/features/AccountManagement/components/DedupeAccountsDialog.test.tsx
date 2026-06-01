@@ -30,7 +30,7 @@ const accounts = [
       customCheckIn: { url: "https://checkin.example.com" },
     },
     account_info: {
-      id: 1,
+      id: "1",
       access_token: "token",
       username: "keep",
       quota: 0,
@@ -53,7 +53,7 @@ const accounts = [
     created_at: 100,
     checkIn: { enableDetection: false, autoCheckInEnabled: false },
     account_info: {
-      id: 1,
+      id: "1",
       access_token: "token",
       username: "del",
       quota: 0,

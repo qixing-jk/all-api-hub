@@ -36,7 +36,7 @@ describe("createDynamicSortComparator", () => {
     siteType: SITE_TYPES.UNKNOWN,
     baseUrl: "https://test.com",
     token: "test-token",
-    userId: 1,
+    userId: "1",
     authType: AuthTypeEnum.AccessToken,
     checkIn: {
       enableDetection: false,

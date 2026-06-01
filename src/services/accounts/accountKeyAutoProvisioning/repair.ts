@@ -262,7 +262,8 @@ class AccountKeyRepairRunner {
         typeof displaySiteData?.siteType !== "string" ||
         displaySiteData.siteType.trim().length === 0 ||
         displaySiteData.authType === AuthTypeEnum.None ||
-        !Number.isFinite(displaySiteData.userId) ||
+        typeof displaySiteData.userId !== "string" ||
+        displaySiteData.userId.trim().length === 0 ||
         (displaySiteData.authType === AuthTypeEnum.AccessToken && !hasToken) ||
         (displaySiteData.authType === AuthTypeEnum.Cookie &&
           !hasToken &&

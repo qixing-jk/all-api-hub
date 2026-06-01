@@ -248,7 +248,7 @@ describe("useAccountDialog duplicate account warning", () => {
         site_type: SITE_TYPES.AIHUBMIX,
         account_info: {
           ...defaultAccountInfo,
-          id: 11,
+          id: "11",
           username: "aihubmix-user",
         },
       }),
@@ -274,7 +274,46 @@ describe("useAccountDialog duplicate account warning", () => {
     expect(result.current.state.duplicateAccountWarning.siteUrl).toBe(
       "https://console.aihubmix.com",
     )
-    expect(result.current.state.duplicateAccountWarning.existingUserId).toBe(11)
+    expect(result.current.state.duplicateAccountWarning.existingUserId).toBe(
+      "11",
+    )
+  })
+
+  it("normalizes duplicate warning account identities before exact-match detection", async () => {
+    await accountStorage.addAccount(
+      buildSiteAccount({
+        site_name: "AIHubMix Existing",
+        site_url: "https://aihubmix.com",
+        site_type: SITE_TYPES.AIHUBMIX,
+        account_info: {
+          ...defaultAccountInfo,
+          id: "aihubmix-user",
+          username: "AIHubMix User",
+        },
+      }),
+    )
+
+    const { result } = await renderDuplicateWarningHook()
+
+    await act(async () => {
+      result.current.setters.setUrl("https://console.aihubmix.com")
+      result.current.setters.setSiteType(SITE_TYPES.AIHUBMIX)
+      result.current.setters.setUserId(" aihubmix-user ")
+    })
+
+    act(() => {
+      void result.current.handlers.handleShowManualForm()
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.duplicateAccountWarning.isOpen).toBe(true)
+    })
+    expect(result.current.state.duplicateAccountWarning.existingUserId).toBe(
+      "aihubmix-user",
+    )
+    expect(result.current.state.duplicateAccountWarning.existingUsername).toBe(
+      "AIHubMix User",
+    )
   })
 
   it("skips duplicate warning in edit mode", async () => {
@@ -284,7 +323,7 @@ describe("useAccountDialog duplicate account warning", () => {
       site_url: "https://api.example.com",
       account_info: {
         ...defaultAccountInfo,
-        id: 9,
+        id: "9",
         username: "existing-user",
         access_token: "existing-token",
       },
@@ -629,7 +668,7 @@ describe("useAccountDialog duplicate account warning", () => {
         site_url: "https://api.example.com",
         account_info: {
           ...defaultAccountInfo,
-          id: 42,
+          id: "42",
           username: "matching-user",
           access_token: "matching-token",
         },
@@ -641,7 +680,7 @@ describe("useAccountDialog duplicate account warning", () => {
         site_url: "https://api.example.com",
         account_info: {
           ...defaultAccountInfo,
-          id: 84,
+          id: "84",
           username: "other-user",
           access_token: "other-token",
         },
@@ -664,7 +703,7 @@ describe("useAccountDialog duplicate account warning", () => {
       expect(result.current.state.duplicateAccountWarning).toMatchObject({
         isOpen: true,
         existingAccountsCount: 2,
-        existingUserId: 42,
+        existingUserId: "42",
         existingUsername: "matching-user",
       })
     })
@@ -682,7 +721,7 @@ describe("useAccountDialog duplicate account warning", () => {
         site_url: "https://api.example.com",
         account_info: {
           ...defaultAccountInfo,
-          id: 42,
+          id: "42",
           username: "matching-user",
           access_token: "matching-token",
         },
@@ -694,7 +733,7 @@ describe("useAccountDialog duplicate account warning", () => {
         site_url: "https://api.example.com",
         account_info: {
           ...defaultAccountInfo,
-          id: 84,
+          id: "84",
           username: "other-user",
           access_token: "other-token",
         },

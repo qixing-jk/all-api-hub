@@ -515,7 +515,7 @@ describe("apiService sub2api refreshAccountData", () => {
       baseUrl: "https://sub2.example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "old-jwt",
       },
       checkIn: {
@@ -553,7 +553,7 @@ describe("apiService sub2api refreshAccountData", () => {
     expect(result.success).toBe(true)
     expect(result.data?.quota).toBe(1_000_000)
     expect(result.data?.checkIn.enableDetection).toBe(false)
-    expect(result.authUpdate?.userId).toBe(1)
+    expect(result.authUpdate?.userId).toBe("1")
     expect(result.authUpdate?.username).toBe("alice")
     expect(resyncSub2ApiAuthToken).not.toHaveBeenCalled()
   })
@@ -585,7 +585,7 @@ describe("apiService sub2api refreshAccountData", () => {
     expect(result.success).toBe(true)
     expect(result.data?.quota).toBe(500_000)
     expect(result.authUpdate?.accessToken).toBe("new-jwt")
-    expect(result.authUpdate?.userId).toBe(2)
+    expect(result.authUpdate?.userId).toBe("2")
     expect(result.authUpdate?.username).toBe("bob")
   })
 
@@ -654,7 +654,7 @@ describe("apiService sub2api refreshAccountData", () => {
     const request = createRequest({
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "old-jwt",
         refreshToken: "old-refresh",
         tokenExpiresAt: now + 60_000,
@@ -729,7 +729,7 @@ describe("apiService sub2api refreshAccountData", () => {
     const request = createRequest({
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "old-jwt",
         refreshToken: "old-refresh",
         tokenExpiresAt: now + 60_000,
@@ -794,7 +794,7 @@ describe("apiService sub2api refreshAccountData", () => {
     const request = createRequest({
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "old-jwt",
         refreshToken: "old-refresh",
       },
@@ -813,7 +813,7 @@ describe("apiService sub2api refreshAccountData", () => {
       refreshToken: "new-refresh",
       tokenExpiresAt: now + 3600 * 1000,
     })
-    expect(result.authUpdate?.userId).toBe(2)
+    expect(result.authUpdate?.userId).toBe("2")
     expect(result.authUpdate?.username).toBe("bob")
 
     nowSpy.mockRestore()
@@ -854,7 +854,7 @@ describe("apiService sub2api refreshAccountData", () => {
     const request = createRequest({
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "old-jwt",
         refreshToken: "old-refresh",
       },
@@ -895,7 +895,7 @@ describe("apiService sub2api refreshAccountData", () => {
     const request = createRequest({
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "old-jwt",
         refreshToken: "old-refresh",
       },
@@ -957,7 +957,7 @@ describe("apiService sub2api refreshAccountData", () => {
     const request = createRequest({
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "old-jwt",
         refreshToken: "old-refresh",
       },
@@ -973,7 +973,7 @@ describe("apiService sub2api refreshAccountData", () => {
     ).toBe("resynced-jwt")
     expect(result.success).toBe(true)
     expect(result.authUpdate?.accessToken).toBe("resynced-jwt")
-    expect(result.authUpdate?.userId).toBe(2)
+    expect(result.authUpdate?.userId).toBe("2")
     expect(result.authUpdate?.username).toBe("bob")
   })
 
@@ -998,7 +998,7 @@ describe("apiService sub2api refreshAccountData", () => {
     const request = createRequest({
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "old-jwt",
         refreshToken: "old-refresh",
       },
@@ -1022,7 +1022,7 @@ describe("apiService sub2api refreshAccountData", () => {
 
     mockGetAccountById.mockResolvedValueOnce({
       account_info: {
-        id: 9,
+        id: "9",
         access_token: "stored-jwt",
       },
       sub2apiAuth: {
@@ -1069,7 +1069,7 @@ describe("apiService sub2api refreshAccountData", () => {
         accessToken: "new-jwt",
         refreshToken: "new-refresh",
         tokenExpiresAt: now + 3600 * 1000,
-        userId: 9,
+        userId: "9",
       },
     )
     expect(mockUpdateAccount).toHaveBeenCalledWith(
@@ -1086,7 +1086,7 @@ describe("apiService sub2api refreshAccountData", () => {
       { userTimestampMode: AccountUpdateUserTimestampMode.Preserve },
     )
     expect(result.success).toBe(true)
-    expect(result.authUpdate?.userId).toBe(9)
+    expect(result.authUpdate?.userId).toBe("9")
     expect(result.authUpdate?.username).toBe("stored-user")
 
     nowSpy.mockRestore()
@@ -1110,7 +1110,7 @@ describe("apiService sub2api exported operations", () => {
     baseUrl: "https://sub2.example.com",
     auth: {
       authType: AuthTypeEnum.AccessToken,
-      userId: 7,
+      userId: "7",
       accessToken: "jwt-token",
     },
   } as const
@@ -1148,7 +1148,7 @@ describe("apiService sub2api exported operations", () => {
     vi.mocked(fetchApi).mockResolvedValueOnce({
       code: 0,
       message: "ok",
-      data: { id: 7, username: "alice", balance: 1.5 },
+      data: { id: "7", username: "alice", balance: 1.5 },
     } as any)
 
     const result = await fetchAccountData({
@@ -1360,7 +1360,7 @@ describe("apiService sub2api exported operations", () => {
     mockGetAccountById
       .mockResolvedValueOnce({
         account_info: {
-          id: 7,
+          id: "7",
           access_token: "old-jwt",
         },
         sub2apiAuth: {
@@ -1370,7 +1370,7 @@ describe("apiService sub2api exported operations", () => {
       })
       .mockResolvedValueOnce({
         account_info: {
-          id: 7,
+          id: "7",
           access_token: "external-jwt",
         },
         sub2apiAuth: {
@@ -1409,7 +1409,7 @@ describe("apiService sub2api exported operations", () => {
         accessToken: "external-jwt",
         refreshToken: "external-refresh",
         tokenExpiresAt: now + 3600 * 1000,
-        userId: 7,
+        userId: "7",
       },
     )
 

@@ -98,7 +98,7 @@ test.beforeEach(async ({ context, page }) => {
     baseUrl: JOURNEY_SITE_URL,
     title: SITE_TYPES.NEW_API,
     systemName: SITE_TYPES.NEW_API,
-    userId: 77,
+    userId: "77",
     username: "journey-user",
     accessToken: "journey-access-token",
     models: ["gpt-journey-mini", "gpt-journey-pro"],

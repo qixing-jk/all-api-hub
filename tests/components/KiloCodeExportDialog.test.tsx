@@ -119,7 +119,7 @@ const createDisplayAccount = (
   siteType: SITE_TYPES.UNKNOWN,
   baseUrl: "https://example.com",
   token: "access-token",
-  userId: 1,
+  userId: "1",
   authType: AuthTypeEnum.AccessToken,
   checkIn: { enableDetection: false },
   ...overrides,
@@ -229,7 +229,7 @@ describe("KiloCodeExportDialog", () => {
     ).toBeDisabled()
 
     mockFetchAccountTokens.mockResolvedValueOnce([
-      { id: 1, name: "Default", key: "sk-test" },
+      { id: "1", name: "Default", key: "sk-test" },
     ])
     mockGetApiService.mockReturnValue({
       fetchAccountTokens: mockFetchAccountTokens,

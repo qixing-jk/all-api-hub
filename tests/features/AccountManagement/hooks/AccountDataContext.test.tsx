@@ -1491,7 +1491,7 @@ describe("AccountDataContext current tab detection", () => {
     const sameSiteDifferentUser = {
       id: "acc-1",
       site_url: "https://api.example.com/dashboard",
-      account_info: { id: 7 },
+      account_info: { id: "7" },
       last_sync_time: 0,
     }
     const otherSite = {
@@ -1511,7 +1511,7 @@ describe("AccountDataContext current tab detection", () => {
     ])
     vi.mocked(globalThis.browser.tabs.sendMessage).mockResolvedValue({
       success: true,
-      data: { userId: 42 },
+      data: { userId: "42" },
     } as any)
 
     const getLatestCtx = await renderAccountDataProvider()
@@ -1606,7 +1606,7 @@ describe("AccountDataContext current tab detection", () => {
     })
     vi.mocked(globalThis.browser.tabs.sendMessage).mockResolvedValue({
       success: true,
-      data: { userId: 7 },
+      data: { userId: "7" },
     } as any)
 
     const getLatestCtx = await renderAccountDataProvider()
@@ -1661,7 +1661,7 @@ describe("AccountDataContext current tab detection", () => {
     })
     vi.mocked(globalThis.browser.tabs.sendMessage).mockResolvedValue({
       success: true,
-      data: { userId: 7 },
+      data: { userId: "7" },
     } as any)
 
     const getLatestCtx = await renderAccountDataProvider()

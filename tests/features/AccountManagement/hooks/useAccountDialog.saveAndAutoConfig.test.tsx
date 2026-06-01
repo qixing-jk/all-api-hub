@@ -249,7 +249,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       siteType: SITE_TYPES.NEW_API,
       baseUrl: "https://api.example.com",
       token: "saved-token",
-      userId: 12,
+      userId: "12",
       authType: AuthTypeEnum.AccessToken,
       checkIn: { enableDetection: false },
       cookieAuthSessionCookie: "",
@@ -985,7 +985,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 13,
+        id: "13",
         username: "aihubmix-user",
         access_token: "aihubmix-access-token",
       },
@@ -1055,7 +1055,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 13,
+        id: "13",
         username: "aihubmix-user",
         access_token: "aihubmix-access-token",
       },
@@ -1115,7 +1115,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 13,
+        id: "13",
         username: "aihubmix-user",
         access_token: "aihubmix-access-token",
       },
@@ -1256,7 +1256,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 13,
+        id: "13",
         username: "aihubmix-user",
         access_token: "aihubmix-access-token",
       },
@@ -1352,7 +1352,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 13,
+        id: "13",
         username: "aihubmix-user",
         access_token: "aihubmix-access-token",
       },
@@ -1437,7 +1437,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 12,
+        id: "12",
         username: "saved-user",
         access_token: "saved-token",
       },
@@ -1524,7 +1524,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 13,
+        id: "13",
         username: "aihubmix-user",
         access_token: "aihubmix-access-token",
       },
@@ -1534,7 +1534,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       siteType: SITE_TYPES.AIHUBMIX,
       baseUrl: "https://aihubmix.com",
       token: "aihubmix-access-token",
-      userId: 13,
+      userId: "13",
     })
     const oneTimeToken = buildToken({
       id: 102,
@@ -1609,7 +1609,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 13,
+        id: "13",
         username: "aihubmix-user",
         access_token: "aihubmix-access-token",
       },
@@ -1619,7 +1619,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       siteType: SITE_TYPES.AIHUBMIX,
       baseUrl: "https://aihubmix.com",
       token: "aihubmix-access-token",
-      userId: 13,
+      userId: "13",
     })
     const oneTimeToken = buildToken({
       id: 102,
@@ -1685,7 +1685,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 13,
+        id: "13",
         username: "aihubmix-user",
         access_token: "aihubmix-access-token",
       },
@@ -1695,7 +1695,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       siteType: SITE_TYPES.AIHUBMIX,
       baseUrl: "https://aihubmix.com",
       token: "aihubmix-access-token",
-      userId: 13,
+      userId: "13",
     })
     const oneTimeToken = buildToken({
       id: 108,
@@ -1806,7 +1806,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 13,
+        id: "13",
         username: "aihubmix-user",
         access_token: "aihubmix-access-token",
       },
@@ -1816,7 +1816,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       siteType: SITE_TYPES.AIHUBMIX,
       baseUrl: "https://aihubmix.com",
       token: "aihubmix-access-token",
-      userId: 13,
+      userId: "13",
     })
     const oneTimeToken = buildToken({
       id: 102,
@@ -1891,7 +1891,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 14,
+        id: "14",
         username: "sub-user",
         access_token: "sub-token",
       },
@@ -1901,7 +1901,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       siteType: SITE_TYPES.SUB2API,
       baseUrl: "https://sub2.example.com",
       token: "sub-token",
-      userId: 14,
+      userId: "14",
     })
     const createdToken = buildToken({
       id: 103,
@@ -1980,7 +1980,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 14,
+        id: "14",
         username: "sub-user",
         access_token: "sub-token",
       },
@@ -1990,7 +1990,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       siteType: SITE_TYPES.SUB2API,
       baseUrl: "https://sub2.example.com",
       token: "sub-token",
-      userId: 14,
+      userId: "14",
     })
     const existingToken = buildToken({
       id: 88,
@@ -2082,7 +2082,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 14,
+        id: "14",
         username: "sub-user",
         access_token: "sub-token",
       },
@@ -2092,7 +2092,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       siteType: SITE_TYPES.SUB2API,
       baseUrl: "https://sub2.example.com",
       token: "sub-token",
-      userId: 14,
+      userId: "14",
     })
     const existingToken = buildToken({
       id: 88,
@@ -2169,7 +2169,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 14,
+        id: "14",
         username: "sub-user",
         access_token: "sub-token",
       },
@@ -2179,7 +2179,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       siteType: SITE_TYPES.SUB2API,
       baseUrl: "https://sub2.example.com",
       token: "sub-token",
-      userId: 14,
+      userId: "14",
     })
     const existingToken = buildToken({
       id: 88,
@@ -2307,7 +2307,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 14,
+        id: "14",
         username: "sub-user",
         access_token: "sub-token",
       },
@@ -2317,7 +2317,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       siteType: SITE_TYPES.SUB2API,
       baseUrl: "https://sub2.example.com",
       token: "sub-token",
-      userId: 14,
+      userId: "14",
     })
     const createdToken = buildToken({
       id: 103,
@@ -2393,7 +2393,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 14,
+        id: "14",
         username: "sub-user",
         access_token: "sub-token",
       },
@@ -2403,7 +2403,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       siteType: SITE_TYPES.SUB2API,
       baseUrl: "https://sub2.example.com",
       token: "sub-token",
-      userId: 14,
+      userId: "14",
     })
 
     vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
@@ -2466,7 +2466,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 14,
+        id: "14",
         username: "sub-user",
         access_token: "sub-token",
       },
@@ -2476,7 +2476,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       siteType: SITE_TYPES.SUB2API,
       baseUrl: "https://sub2.example.com",
       token: "sub-token",
-      userId: 14,
+      userId: "14",
     })
 
     vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
@@ -2536,7 +2536,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 21,
+        id: "21",
         username: "first-user",
         access_token: "first-token",
       },
@@ -2551,7 +2551,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 22,
+        id: "22",
         username: "second-user",
         access_token: "second-token",
       },
@@ -2562,7 +2562,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       siteType: SITE_TYPES.SUB2API,
       baseUrl: "https://first-sub2.example.com",
       token: "first-token",
-      userId: 21,
+      userId: "21",
     })
     const secondDisplayData = buildDisplayAccount({
       id: "second-account-id",
@@ -2570,7 +2570,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       siteType: SITE_TYPES.SUB2API,
       baseUrl: "https://second-sub2.example.com",
       token: "second-token",
-      userId: 22,
+      userId: "22",
     })
 
     vi.spyOn(accountStorage, "getAccountById").mockImplementation(
@@ -2857,7 +2857,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 9,
+        id: "9",
         username: "saved-user",
         access_token: "saved-token",
       },
@@ -2984,7 +2984,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 11,
+        id: "11",
         username: "sub-user",
         access_token: "jwt-token",
       },
@@ -3077,7 +3077,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 12,
+        id: "12",
         username: "saved-user",
         access_token: "saved-token",
       },
@@ -3131,7 +3131,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 18,
+        id: "18",
         username: "saved-user",
         access_token: "saved-token",
       },
@@ -3189,7 +3189,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 18,
+        id: "18",
         username: "first-user",
         access_token: "first-token",
       },
@@ -3204,7 +3204,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 19,
+        id: "19",
         username: "second-user",
         access_token: "second-token",
       },
@@ -3352,7 +3352,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 31,
+        id: "31",
         username: "first-user",
         access_token: "first-token",
       },
@@ -3367,7 +3367,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       authType: AuthTypeEnum.AccessToken,
       account_info: {
         ...buildSiteAccount().account_info,
-        id: 32,
+        id: "32",
         username: "second-user",
         access_token: "second-token",
       },

@@ -31,9 +31,11 @@ export interface HealthStatus {
  */
 export type HealthStatusCode = TempWindowHealthStatusCode
 
+export type AccountIdentity = string
+
 // 账号基础信息
 export interface AccountInfo {
-  id: number // 账号 ID（整数）
+  id: AccountIdentity // 账号身份标识（站点内稳定字符串）
   access_token: string
   username: string
   quota: number // 总余额点数
@@ -434,7 +436,7 @@ export interface DisplaySiteData {
   siteType: AccountSiteType // 账号站点类型
   baseUrl: string // 站点 URL，用于复制功能
   token: string // 访问令牌，用于复制功能
-  userId: number // 真实的用户 ID，用于 API 调用
+  userId: AccountIdentity // 站点内稳定账号身份标识
   notes?: string
   /**
    * Tag ids associated with this account (stable identifiers).

@@ -124,7 +124,7 @@ async function seedPollingAnnouncementScenario(
       site_url: POLLING_SITE_URL,
       site_type: SITE_TYPES.NEW_API,
       account_info: {
-        id: 42,
+        id: "42",
         username: "announcement-polling-user",
         access_token: "announcement-polling-token",
       },

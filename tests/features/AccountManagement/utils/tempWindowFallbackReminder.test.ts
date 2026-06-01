@@ -27,7 +27,7 @@ function makeSite(overrides: Partial<DisplaySiteData>): DisplaySiteData {
     siteType: SITE_TYPES.ONE_HUB,
     baseUrl: "https://example.com",
     token: "token",
-    userId: 1,
+    userId: "1",
     authType: "access_token" as any,
     checkIn: { enableDetection: false },
     ...overrides,

@@ -1,4 +1,5 @@
 import { UI_CONSTANTS } from "~/constants/ui"
+import { normalizeAccountIdentity } from "~/services/accounts/accountIdentity"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { normalizeApiTokenKey } from "~/services/apiService/common/apiKey"
 import { REQUEST_CONFIG } from "~/services/apiService/common/constant"
@@ -380,7 +381,7 @@ export async function updateChannelModelMapping(
  * @returns Minimal user profile plus access token if present.
  */
 export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
-  id: number
+  id: string
   username: string
   access_token: string
   user: UserInfo
@@ -388,9 +389,18 @@ export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
   const userData = await fetchApiData<UserInfo>(request, {
     endpoint: "/api/user/self",
   })
+  const userId = normalizeAccountIdentity(userData.id)
+
+  if (!userId) {
+    throw new ApiError(
+      t("messages:errors.api.invalidResponseFormat"),
+      undefined,
+      "/api/user/self",
+    )
+  }
 
   return {
-    id: userData.id,
+    id: userId,
     username: userData.username,
     access_token: userData.access_token || "",
     user: userData,

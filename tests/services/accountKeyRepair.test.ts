@@ -159,7 +159,7 @@ describe("accountKeyRepair", () => {
       authType: AuthTypeEnum.AccessToken,
       disabled: false,
       account_info: {
-        id: 101,
+        id: "101",
         access_token: "access-token",
         username: "valid",
         quota: 0,
@@ -177,7 +177,7 @@ describe("accountKeyRepair", () => {
       authType: AuthTypeEnum.Cookie,
       disabled: false,
       account_info: {
-        id: 202,
+        id: "202",
         access_token: "",
         username: "cookie-user",
         quota: 0,
@@ -202,7 +202,7 @@ describe("accountKeyRepair", () => {
         baseUrl: sub2apiAccount.site_url,
         siteType: sub2apiAccount.site_type,
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         token: "sub2api-token",
       }),
       buildDisplaySiteData({
@@ -211,7 +211,7 @@ describe("accountKeyRepair", () => {
         baseUrl: aihubmixAccount.site_url,
         siteType: aihubmixAccount.site_type,
         authType: AuthTypeEnum.AccessToken,
-        userId: 2,
+        userId: "2",
         token: "aihubmix-token",
       }),
       buildDisplaySiteData({
@@ -220,7 +220,7 @@ describe("accountKeyRepair", () => {
         baseUrl: validAccount.site_url,
         siteType: "new-api",
         authType: AuthTypeEnum.AccessToken,
-        userId: 101,
+        userId: "101",
         token: "access-token",
       }),
       buildDisplaySiteData({
@@ -229,7 +229,7 @@ describe("accountKeyRepair", () => {
         baseUrl: invalidDisplayAccount.site_url,
         siteType: "new-api",
         authType: AuthTypeEnum.Cookie,
-        userId: 202,
+        userId: "202",
         token: "",
         cookieAuthSessionCookie: "",
       }),
@@ -327,7 +327,7 @@ describe("accountKeyRepair", () => {
       authType: AuthTypeEnum.Cookie,
       disabled: false,
       account_info: {
-        id: 404,
+        id: "404",
         access_token: "",
         username: "cookie-user",
         quota: 0,
@@ -353,7 +353,7 @@ describe("accountKeyRepair", () => {
             baseUrl: noneAuthAccount.site_url,
             siteType: "new-api",
             authType: AuthTypeEnum.None,
-            userId: 1,
+            userId: "1",
           }),
         ]
       }
@@ -364,7 +364,7 @@ describe("accountKeyRepair", () => {
         baseUrl: cookieAccount.site_url,
         siteType: "new-api",
         authType: AuthTypeEnum.Cookie,
-        userId: 404,
+        userId: "404",
         token: "",
         cookieAuthSessionCookie: "session=abc",
       })
@@ -434,7 +434,7 @@ describe("accountKeyRepair", () => {
         authType: AuthTypeEnum.AccessToken,
         disabled: false,
         account_info: {
-          id: 303,
+          id: "303",
           access_token: "queued-token",
           username: "queued",
           quota: 0,
@@ -453,7 +453,7 @@ describe("accountKeyRepair", () => {
         baseUrl: "https://queued.example.com",
         siteType: "new-api",
         authType: AuthTypeEnum.AccessToken,
-        userId: 303,
+        userId: "303",
         token: "queued-token",
       }),
     ])

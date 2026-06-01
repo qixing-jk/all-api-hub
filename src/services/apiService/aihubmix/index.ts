@@ -59,6 +59,7 @@ type AIHubMixUserInfo = UserInfo & {
   quota?: number | string
   used_quota?: number | string
   request_count?: number | string
+  display_name: string
 }
 
 type AIHubMixTokenRaw = Partial<ApiToken> & {
@@ -409,7 +410,7 @@ const buildAIHubMixModelPricing = (
  * AccessToken mode and `/api/user/self`.
  */
 export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
-  id: number
+  id: string
   username: string
   access_token: string
   user: UserInfo
@@ -434,8 +435,11 @@ export async function fetchUserInfo(request: ApiServiceRequest): Promise<{
         )
 
   return {
-    id: userData.id,
-    username: userData.username,
+    // AIHubMix intentionally omits database ids from web-session user info.
+    // Upstream confirms username is unique and stable for third-party account ids:
+    // https://github.com/jerlinn/inferHub/issues/2
+    id: userData.username,
+    username: userData.display_name,
     access_token: normalizeAccessToken(userData.access_token),
     user: userData,
   }

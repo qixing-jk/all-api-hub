@@ -34,7 +34,7 @@ const createDisplayAccount = (
   siteType: SITE_TYPES.UNKNOWN,
   baseUrl: "https://example.com",
   token: "token",
-  userId: 1,
+  userId: "1",
   authType: AuthTypeEnum.AccessToken,
   checkIn: { enableDetection: false },
   ...overrides,
@@ -122,7 +122,7 @@ describe("useFilteredModels", () => {
       id: "account-single",
       name: "Single Account",
       baseUrl: "https://single.example.com",
-      userId: 1,
+      userId: "1",
     })
 
     const { result } = renderUseFilteredModels({
@@ -144,13 +144,13 @@ describe("useFilteredModels", () => {
       id: "account-a",
       name: "Account A",
       baseUrl: "https://a.example.com",
-      userId: 1,
+      userId: "1",
     })
     const accountB = createDisplayAccount({
       id: "account-b",
       name: "Account B",
       baseUrl: "https://b.example.com",
-      userId: 2,
+      userId: "2",
     })
 
     const { result } = renderUseFilteredModels({
@@ -182,19 +182,19 @@ describe("useFilteredModels", () => {
       id: "account-a",
       name: "Account A",
       baseUrl: "https://a.example.com",
-      userId: 1,
+      userId: "1",
     })
     const accountB = createDisplayAccount({
       id: "account-b",
       name: "Account B",
       baseUrl: "https://b.example.com",
-      userId: 2,
+      userId: "2",
     })
     const accountC = createDisplayAccount({
       id: "account-c",
       name: "Account C",
       baseUrl: "https://c.example.com",
-      userId: 3,
+      userId: "3",
     })
 
     const { result } = renderUseFilteredModels({

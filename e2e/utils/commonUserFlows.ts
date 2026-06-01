@@ -67,7 +67,7 @@ type StubNewApiSiteRoutesOptions = {
   /** Quota credited by the mocked redemption-code top-up endpoint. */
   redemptionCreditQuota?: number
   onRedeemCode?: (code: string) => void | Promise<void>
-  userId?: number
+  userId?: string | number
   username?: string
   accessToken?: string
   models?: string[]
@@ -186,7 +186,7 @@ export function createStoredAccount(
     site_type: SITE_TYPES.NEW_API,
     exchange_rate: 7,
     account_info: {
-      id: 1,
+      id: "1",
       access_token: "e2e-token",
       username: "e2e-user",
       quota: 1000,
@@ -726,7 +726,7 @@ export async function stubNewApiSiteRoutes(
       tokens.push(
         buildStubToken({
           id: nextTokenId,
-          userId,
+          userId: Number(userId),
           name: payload.name?.trim() || `e2e-token-${nextTokenId}`,
           key: `sk-created-${nextTokenId}`,
           group: payload.group?.trim() || "default",

@@ -123,7 +123,7 @@ const createAccount = (overrides: Partial<SiteAccount> = {}): SiteAccount => {
     site_type: overrides.site_type || SITE_TYPES.UNKNOWN,
     exchange_rate: overrides.exchange_rate ?? 7.2,
     account_info: {
-      id: overrides.account_info?.id ?? Number(numericId),
+      id: String(overrides.account_info?.id ?? numericId),
       access_token: overrides.account_info?.access_token || "token",
       username: overrides.account_info?.username || "tester",
       quota: overrides.account_info?.quota ?? 1_000_000,
@@ -288,7 +288,7 @@ describe("accountStorage core behaviors", () => {
       created_at: 1_700_000_000_000,
       exchange_rate: 7,
       account_info: {
-        id: 1,
+        id: "1",
         access_token: "token",
         username: "tester",
         quota: 1_500_000,
@@ -330,7 +330,7 @@ describe("accountStorage core behaviors", () => {
       id: "duplicate-a",
       site_name: "My Site",
       account_info: {
-        id: 1,
+        id: "1",
         access_token: "token-a",
         username: "alice",
         quota: 100,
@@ -345,7 +345,7 @@ describe("accountStorage core behaviors", () => {
       id: "duplicate-b",
       site_name: "ｍｙ　 site",
       account_info: {
-        id: 2,
+        id: "2",
         access_token: "token-b",
         username: "   ",
         quota: 100,
@@ -360,7 +360,7 @@ describe("accountStorage core behaviors", () => {
       id: "unique-c",
       site_name: "Unique Site",
       account_info: {
-        id: 3,
+        id: "3",
         access_token: "token-c",
         username: "carol",
         quota: 100,
@@ -390,7 +390,7 @@ describe("accountStorage core behaviors", () => {
       id: "visible-a",
       site_name: "Shared Site",
       account_info: {
-        id: 1,
+        id: "1",
         access_token: "token-a",
         username: "alice",
         quota: 100,
@@ -406,7 +406,7 @@ describe("accountStorage core behaviors", () => {
       site_name: " shared   site ",
       disabled: true,
       account_info: {
-        id: 2,
+        id: "2",
         access_token: "token-b",
         username: "bob",
         quota: 100,
@@ -432,7 +432,7 @@ describe("accountStorage core behaviors", () => {
     const account = createAccount({
       site_name: "My Site",
       account_info: {
-        id: 1,
+        id: "1",
         access_token: "token",
         username: "alice",
         quota: 100,
@@ -987,7 +987,7 @@ describe("accountStorage core behaviors", () => {
     const accountA = createAccount({
       id: "stats-a",
       account_info: {
-        id: 1,
+        id: "1",
         access_token: "token",
         username: "userA",
         quota: 1_000_000,
@@ -1002,7 +1002,7 @@ describe("accountStorage core behaviors", () => {
     const accountB = createAccount({
       id: "stats-b",
       account_info: {
-        id: 2,
+        id: "2",
         access_token: "token",
         username: "userB",
         quota: 2_500_000,
@@ -1033,7 +1033,7 @@ describe("accountStorage core behaviors", () => {
       id: "stats-disabled",
       disabled: true,
       account_info: {
-        id: 1,
+        id: "1",
         access_token: "token",
         username: "userDisabled",
         quota: 1_000_000,
@@ -1048,7 +1048,7 @@ describe("accountStorage core behaviors", () => {
     const enabledAccount = createAccount({
       id: "stats-enabled",
       account_info: {
-        id: 2,
+        id: "2",
         access_token: "token",
         username: "userEnabled",
         quota: 2_500_000,
@@ -1106,7 +1106,7 @@ describe("accountStorage core behaviors", () => {
       id: "target",
       site_url: "https://foo.example.com/api",
       account_info: {
-        id: 123,
+        id: "123",
         access_token: "token",
         username: "target-user",
         quota: 100,
@@ -1121,7 +1121,7 @@ describe("accountStorage core behaviors", () => {
       id: "other",
       site_url: "https://bar.example.com",
       account_info: {
-        id: 999,
+        id: "999",
         access_token: "token",
         username: "other",
         quota: 200,
@@ -1155,7 +1155,7 @@ describe("accountStorage core behaviors", () => {
         site_url: "https://aihubmix.com",
         site_type: SITE_TYPES.AIHUBMIX,
         account_info: {
-          id: 123,
+          id: "123",
           access_token: "token",
           username: "aihubmix-user",
           quota: 100,
@@ -1175,6 +1175,34 @@ describe("accountStorage core behaviors", () => {
 
     expect(found?.id).toBe("aihubmix-target")
     expect(found?.site_url).toBe("https://console.aihubmix.com")
+  })
+
+  it("getAccountByBaseUrlAndUserId normalizes string account identities before matching", async () => {
+    seedStorage([
+      createAccount({
+        id: "aihubmix-username-target",
+        site_url: "https://aihubmix.com",
+        site_type: SITE_TYPES.AIHUBMIX,
+        account_info: {
+          id: "aihubmix-user",
+          access_token: "token",
+          username: "aihubmix-user",
+          quota: 100,
+          today_prompt_tokens: 0,
+          today_completion_tokens: 0,
+          today_quota_consumption: 0,
+          today_requests_count: 0,
+          today_income: 0,
+        },
+      }),
+    ])
+
+    const found = await accountStorage.getAccountByBaseUrlAndUserId(
+      "https://console.aihubmix.com/statistics?tab=detail",
+      " aihubmix-user ",
+    )
+
+    expect(found?.id).toBe("aihubmix-username-target")
   })
 
   it("deleteAccount should remove account data and pinned references", async () => {
@@ -1618,7 +1646,7 @@ describe("accountStorage core behaviors", () => {
       baseUrl: "https://foo.example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     })
@@ -1672,7 +1700,7 @@ describe("accountStorage core behaviors", () => {
       baseUrl: "https://revive.example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
         cookie: undefined,
         refreshToken: undefined,
@@ -1782,7 +1810,7 @@ describe("accountStorage core behaviors", () => {
       baseUrl: "https://bar.example.com",
       auth: {
         authType: AuthTypeEnum.AccessToken,
-        userId: 1,
+        userId: "1",
         accessToken: "token",
       },
     })
@@ -1874,7 +1902,7 @@ describe("accountStorage core behaviors", () => {
       site_url: "https://sub2.example.com",
       site_type: "sub2api",
       account_info: {
-        id: 1,
+        id: "1",
         username: "alice",
         access_token: "old-jwt",
         quota: 1_000_000,
@@ -1915,7 +1943,7 @@ describe("accountStorage core behaviors", () => {
           refreshToken: "new-refresh",
           tokenExpiresAt: 456,
         },
-        userId: 1,
+        userId: "1",
         username: "alice",
       },
     })
@@ -1947,7 +1975,7 @@ describe("accountStorage core behaviors", () => {
       site_url: "https://sub2.example.com",
       site_type: "sub2api",
       account_info: {
-        id: 7,
+        id: "7",
         access_token: "old-jwt",
         username: "old-user",
         quota: 1_000_000,
@@ -1998,7 +2026,7 @@ describe("accountStorage core behaviors", () => {
     const updatedAccount =
       await accountStorage.getAccountById("sub2api-blank-auth")
     expect(updatedAccount?.account_info.access_token).toBe("old-jwt")
-    expect(updatedAccount?.account_info.id).toBe(7)
+    expect(updatedAccount?.account_info.id).toBe("7")
     expect(updatedAccount?.account_info.username).toBe("old-user")
     expect(updatedAccount?.sub2apiAuth).toEqual({
       refreshToken: "old-refresh",
@@ -2704,7 +2732,7 @@ describe("accountStorage bookmarks", () => {
         id: "legacy-target",
         site_url: "https://legacy.example.com",
         account_info: {
-          id: 321,
+          id: "321",
           access_token: "token",
           username: "legacy-user",
           quota: 100,
@@ -2776,7 +2804,7 @@ describe("accountStorage bookmarks", () => {
           updated_at: 200,
           user_updated_at: 200,
           account_info: {
-            id: 987,
+            id: "987",
             access_token: "token",
             username: "legacy-user",
             quota: 100,

@@ -321,7 +321,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
       newApi: {
         baseUrl: "https://example.com",
         adminToken: "token",
-        userId: 1,
+        userId: "1",
       },
       modelRedirect: {
         ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
@@ -342,7 +342,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
       newApi: {
         baseUrl: "https://example.com",
         adminToken: "token",
-        userId: 1,
+        userId: "1",
       },
       modelRedirect: {
         ...DEFAULT_MODEL_REDIRECT_PREFERENCES,
@@ -396,7 +396,7 @@ describe("ModelRedirectService.applyModelRedirect", () => {
       newApi: {
         baseUrl: "https://example.com",
         adminToken: "token",
-        userId: 1,
+        userId: "1",
       },
       modelRedirect: {
         ...DEFAULT_MODEL_REDIRECT_PREFERENCES,

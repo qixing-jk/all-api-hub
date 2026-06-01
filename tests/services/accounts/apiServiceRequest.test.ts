@@ -19,7 +19,7 @@ const ACCOUNT = {
   siteType: "new-api",
   baseUrl: "https://example.com",
   authType: AuthTypeEnum.AccessToken,
-  userId: 1,
+  userId: "1",
   token: "token",
   cookieAuthSessionCookie: "",
 } as const
@@ -46,7 +46,7 @@ describe("fetchDisplayAccountTokens", () => {
         accountId: "account-1",
         auth: {
           authType: AuthTypeEnum.AccessToken,
-          userId: 1,
+          userId: "1",
           accessToken: "token",
           cookie: "",
         },

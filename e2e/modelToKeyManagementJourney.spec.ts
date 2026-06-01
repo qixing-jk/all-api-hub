@@ -48,7 +48,7 @@ test("creates a model-scoped key from Model List and continues in Key Management
       site_name: "Model Key Account",
       site_url: MODEL_KEY_BASE_URL,
       account_info: {
-        id: 301,
+        id: "301",
         username: "model-key-user",
         access_token: "model-key-token",
       },

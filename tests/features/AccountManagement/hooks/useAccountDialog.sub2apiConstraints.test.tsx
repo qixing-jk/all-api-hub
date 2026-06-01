@@ -227,7 +227,7 @@ describe("useAccountDialog Sub2API constraints", () => {
             success: true,
             data: {
               accessToken: "jwt-from-tab",
-              userId: 42,
+              userId: "42",
               user: { username: "tab-user" },
               sub2apiAuth: {
                 refreshToken: "refresh-from-tab",
@@ -296,7 +296,7 @@ describe("useAccountDialog Sub2API constraints", () => {
       success: true,
       data: {
         accessToken: "jwt-from-background",
-        userId: 7,
+        userId: "7",
         user: { username: "bg-user" },
         sub2apiAuth: {
           refreshToken: "   ",
@@ -361,7 +361,7 @@ describe("useAccountDialog Sub2API constraints", () => {
       success: true,
       data: {
         accessToken: "jwt-from-background",
-        userId: 7,
+        userId: "7",
         user: { username: "bg-user" },
         sub2apiAuth: {
           refreshToken: "refresh-from-background",
@@ -502,7 +502,7 @@ describe("useAccountDialog Sub2API constraints", () => {
           tokenExpiresAt: 654321,
         },
         account_info: {
-          id: 88,
+          id: "88",
           access_token: "stored-jwt",
           username: "stored-user",
           quota: 0,
@@ -575,7 +575,7 @@ describe("useAccountDialog Sub2API constraints", () => {
           tokenExpiresAt: 654321,
         },
         account_info: {
-          id: 88,
+          id: "88",
           access_token: "stored-jwt",
           username: "stored-user",
           quota: 0,
@@ -644,7 +644,7 @@ describe("useAccountDialog Sub2API constraints", () => {
           sessionCookie: "session=stored",
         },
         account_info: {
-          id: 89,
+          id: "89",
           access_token: "",
           username: "stored-cookie-user",
           quota: 0,
@@ -694,7 +694,7 @@ describe("useAccountDialog Sub2API constraints", () => {
       success: true,
       data: {
         accessToken: "jwt-from-background",
-        userId: 77,
+        userId: "77",
         user: { username: "bg-user" },
         sub2apiAuth: {
           refreshToken: "refresh-from-background",

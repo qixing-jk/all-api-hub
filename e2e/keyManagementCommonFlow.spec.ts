@@ -200,7 +200,7 @@ test("saves a key to API credential profiles and opens the profiles page", async
       site_url: "https://profile-source.example.com",
       tagIds: ["team-shared"],
       account_info: {
-        id: 31,
+        id: "31",
         username: "profile-user",
         access_token: "profile-token",
       },

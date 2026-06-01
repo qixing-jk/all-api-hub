@@ -216,7 +216,7 @@ describe("VerifyCliSupportDialog", () => {
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
-          userId: 1,
+          userId: "1",
           authType: "access_token" as any,
           checkIn: { enableDetection: false } as any,
         }}
@@ -264,7 +264,7 @@ describe("VerifyCliSupportDialog", () => {
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
-          userId: 1,
+          userId: "1",
           authType: "access_token" as any,
           checkIn: { enableDetection: false } as any,
         }}
@@ -319,7 +319,7 @@ describe("VerifyCliSupportDialog", () => {
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
-          userId: 1,
+          userId: "1",
           authType: "access_token" as any,
           checkIn: { enableDetection: false } as any,
         }}
@@ -412,7 +412,7 @@ describe("VerifyCliSupportDialog", () => {
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
-          userId: 1,
+          userId: "1",
           authType: "access_token" as any,
           checkIn: { enableDetection: false } as any,
         }}
@@ -477,7 +477,7 @@ describe("VerifyCliSupportDialog", () => {
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
-          userId: 1,
+          userId: "1",
           authType: "access_token" as any,
           checkIn: { enableDetection: false } as any,
         }}
@@ -542,7 +542,7 @@ describe("VerifyCliSupportDialog", () => {
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
-          userId: 1,
+          userId: "1",
           authType: "access_token" as any,
           checkIn: { enableDetection: false } as any,
         }}
@@ -606,7 +606,7 @@ describe("VerifyCliSupportDialog", () => {
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
-          userId: 1,
+          userId: "1",
           authType: "access_token" as any,
           checkIn: { enableDetection: false } as any,
         }}
@@ -680,7 +680,7 @@ describe("VerifyCliSupportDialog", () => {
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
-          userId: 1,
+          userId: "1",
           authType: "access_token" as any,
           checkIn: { enableDetection: false } as any,
         }}
@@ -785,7 +785,7 @@ describe("VerifyCliSupportDialog", () => {
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
-          userId: 1,
+          userId: "1",
           authType: "access_token" as any,
           checkIn: { enableDetection: false } as any,
         }}
@@ -825,7 +825,7 @@ describe("VerifyCliSupportDialog", () => {
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
-          userId: 1,
+          userId: "1",
           authType: "access_token" as any,
           checkIn: { enableDetection: false } as any,
         }}
@@ -878,7 +878,7 @@ describe("VerifyCliSupportDialog", () => {
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
-          userId: 1,
+          userId: "1",
           authType: "access_token" as any,
           checkIn: { enableDetection: false } as any,
         }}
@@ -947,7 +947,7 @@ describe("VerifyCliSupportDialog", () => {
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
-          userId: 1,
+          userId: "1",
           authType: "access_token" as any,
           checkIn: { enableDetection: false } as any,
         }}
@@ -1018,7 +1018,7 @@ describe("VerifyCliSupportDialog", () => {
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
-          userId: 1,
+          userId: "1",
           authType: "access_token" as any,
           checkIn: { enableDetection: false } as any,
         }}
@@ -1252,7 +1252,7 @@ describe("VerifyCliSupportDialog", () => {
           siteType: SITE_TYPES.NEW_API,
           baseUrl: "https://example.com",
           token: "t",
-          userId: 1,
+          userId: "1",
           authType: "access_token" as any,
           checkIn: { enableDetection: false } as any,
         }}

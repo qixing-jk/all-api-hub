@@ -76,7 +76,7 @@ describe("accountDisplayName helpers", () => {
         id: "a",
         site_name: "Shared",
         account_info: {
-          id: 1,
+          id: "1",
           access_token: "token-a",
           username: "alice",
           quota: 0,
@@ -91,7 +91,7 @@ describe("accountDisplayName helpers", () => {
         id: "b",
         site_name: "shared",
         account_info: {
-          id: 2,
+          id: "2",
           access_token: "token-b",
           username: "bob",
           quota: 0,
@@ -106,7 +106,7 @@ describe("accountDisplayName helpers", () => {
         id: "c",
         site_name: "Unique",
         account_info: {
-          id: 3,
+          id: "3",
           access_token: "token-c",
           username: "carol",
           quota: 0,
