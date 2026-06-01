@@ -8,6 +8,7 @@ import { useAccountDialog } from "~/features/AccountManagement/components/Accoun
 import {
   ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES,
   ACCOUNT_POST_SAVE_WORKFLOW_STEPS,
+  ACCOUNT_TOKEN_INVENTORY_STATE_KINDS,
   ENSURE_ACCOUNT_TOKEN_RESULT_KINDS,
 } from "~/services/accounts/accountPostSaveWorkflow"
 import { accountStorage } from "~/services/accounts/accountStorage"
@@ -173,7 +174,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       feedbackLevel: "success",
     })
     mockInspectAccountTokenInventory.mockResolvedValue({
-      kind: "missing",
+      kind: ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Missing,
       existingTokenIds: [],
     })
     mockEnsureAccountTokenForPostSaveWorkflow.mockResolvedValue({
@@ -970,7 +971,7 @@ describe("useAccountDialog save and auto-config flows", () => {
       savedDisplayData,
     )
     mockInspectAccountTokenInventory.mockResolvedValueOnce({
-      kind: "present",
+      kind: ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Present,
       token: existingToken,
       existingTokenIds: [existingToken.id],
       hasUsableSecret: false,

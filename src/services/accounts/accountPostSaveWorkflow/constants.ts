@@ -17,6 +17,23 @@ export const ACCOUNT_POST_SAVE_WORKFLOW_STEPS = {
 export type AccountPostSaveWorkflowStep =
   (typeof ACCOUNT_POST_SAVE_WORKFLOW_STEPS)[keyof typeof ACCOUNT_POST_SAVE_WORKFLOW_STEPS]
 
+export const ACCOUNT_TOKEN_INVENTORY_STATE_KINDS = {
+  Missing: "missing",
+  Present: "present",
+} as const
+
+export type AccountTokenInventoryState =
+  | {
+      kind: typeof ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Missing
+      existingTokenIds: number[]
+    }
+  | {
+      kind: typeof ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Present
+      token: ApiToken
+      existingTokenIds: number[]
+      hasUsableSecret: boolean
+    }
+
 export const ENSURE_ACCOUNT_TOKEN_RESULT_KINDS = {
   Ready: "ready",
   Created: "created",

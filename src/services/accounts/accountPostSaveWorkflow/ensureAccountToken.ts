@@ -12,7 +12,9 @@ import { t } from "~/utils/i18n/core"
 
 import {
   ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES,
+  ACCOUNT_TOKEN_INVENTORY_STATE_KINDS,
   ENSURE_ACCOUNT_TOKEN_RESULT_KINDS,
+  type AccountTokenInventoryState,
   type EnsureAccountTokenResult,
 } from "./constants"
 
@@ -75,18 +77,6 @@ const buildDisplayAccountRequest = (
   },
 })
 
-export type AccountTokenInventoryState =
-  | {
-      kind: "missing"
-      existingTokenIds: number[]
-    }
-  | {
-      kind: "present"
-      token: ApiToken
-      existingTokenIds: number[]
-      hasUsableSecret: boolean
-    }
-
 /**
  * Inspects whether the saved account already has a token and whether that
  * inventory value is usable as a secret for follow-up automation.
@@ -105,13 +95,13 @@ export async function inspectAccountTokenInventory(params: {
 
   if (!existingToken) {
     return {
-      kind: "missing",
+      kind: ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Missing,
       existingTokenIds,
     }
   }
 
   return {
-    kind: "present",
+    kind: ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Present,
     token: existingToken,
     existingTokenIds,
     hasUsableSecret:
@@ -178,7 +168,10 @@ export async function ensureAccountTokenForPostSaveWorkflow(params: {
   const inventoryState = await inspectAccountTokenInventory({ displaySiteData })
   const existingTokenIds = inventoryState.existingTokenIds
 
-  if (inventoryState.kind === "present" && inventoryState.hasUsableSecret) {
+  if (
+    inventoryState.kind === ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Present &&
+    inventoryState.hasUsableSecret
+  ) {
     return {
       kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready,
       token: inventoryState.token,

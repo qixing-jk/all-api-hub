@@ -28,6 +28,7 @@ import {
 } from "~/services/accounts/accountOperations"
 import {
   ACCOUNT_POST_SAVE_WORKFLOW_STEPS,
+  ACCOUNT_TOKEN_INVENTORY_STATE_KINDS,
   ENSURE_ACCOUNT_TOKEN_RESULT_KINDS,
   ensureAccountTokenForPostSaveWorkflow,
   inspectAccountTokenInventory,
@@ -757,7 +758,9 @@ export function useAccountDialog({
           displaySiteData,
         })
 
-        if (inventoryState.kind === "present") {
+        if (
+          inventoryState.kind === ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Present
+        ) {
           onSuccess?.(savedAccountId)
           return
         }

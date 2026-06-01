@@ -4,6 +4,7 @@ import { SITE_TYPES } from "~/constants/siteType"
 import { DEFAULT_AUTO_PROVISION_TOKEN_NAME } from "~/services/accounts/accountKeyAutoProvisioning/ensureDefaultToken"
 import {
   ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES,
+  ACCOUNT_TOKEN_INVENTORY_STATE_KINDS,
   ENSURE_ACCOUNT_TOKEN_RESULT_KINDS,
   ensureAccountTokenForPostSaveWorkflow,
   inspectAccountTokenInventory,
@@ -181,7 +182,7 @@ describe("ensureAccountTokenForPostSaveWorkflow", () => {
         displaySiteData: displayAccount,
       }),
     ).resolves.toEqual({
-      kind: "present",
+      kind: ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Present,
       token: maskedToken,
       existingTokenIds: [maskedToken.id],
       hasUsableSecret: false,
