@@ -997,6 +997,82 @@ describe("useAccountDialog save and auto-config flows", () => {
     expect(onSuccess).toHaveBeenCalledWith("saved-account-id")
   })
 
+  it("ignores stale AIHubMix foreground key prompt completions after close", async () => {
+    mockAutoProvisionKeyOnAccountAdd(true)
+    const onSuccess = vi.fn()
+    const savedSiteAccount = buildSiteAccount({
+      id: "saved-account-id",
+      site_name: "AIHubMix",
+      site_url: "https://console.aihubmix.com",
+      health: { status: SiteHealthStatus.Healthy },
+      site_type: SITE_TYPES.AIHUBMIX,
+      exchange_rate: 7,
+      authType: AuthTypeEnum.AccessToken,
+      account_info: {
+        ...buildSiteAccount().account_info,
+        id: "13",
+        username: "aihubmix-user",
+        access_token: "aihubmix-access-token",
+      },
+    }) as SiteAccount
+    const savedDisplayData =
+      accountStorage.convertToDisplayData(savedSiteAccount)
+    let resolveInventory:
+      | ((
+          value: Awaited<ReturnType<typeof mockInspectAccountTokenInventory>>,
+        ) => void)
+      | undefined
+    const pendingInventory = new Promise<
+      Awaited<ReturnType<typeof mockInspectAccountTokenInventory>>
+    >((resolve) => {
+      resolveInventory = resolve
+    })
+
+    vi.spyOn(accountStorage, "getAccountById").mockResolvedValue(
+      savedSiteAccount,
+    )
+    vi.spyOn(accountStorage, "getDisplayDataById").mockResolvedValue(
+      savedDisplayData,
+    )
+    mockInspectAccountTokenInventory.mockReturnValueOnce(pendingInventory)
+
+    const { result } = renderAddHook({ onSuccess })
+
+    await waitFor(() => {
+      expect(result.current.state).toBeTruthy()
+    })
+
+    await fillAihubmixAccountDraft(result)
+
+    let savePromise: ReturnType<
+      typeof result.current.handlers.handleSaveAccount
+    >
+    act(() => {
+      savePromise = result.current.handlers.handleSaveAccount()
+    })
+
+    await waitFor(() => {
+      expect(mockInspectAccountTokenInventory).toHaveBeenCalledWith({
+        displaySiteData: savedDisplayData,
+      })
+    })
+
+    act(() => {
+      result.current.handlers.handleClose()
+    })
+
+    await act(async () => {
+      resolveInventory?.({
+        kind: ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Missing,
+        existingTokenIds: [],
+      })
+      await savePromise
+    })
+
+    expect(result.current.state.aihubmixPostSaveKeyPrompt.isOpen).toBe(false)
+    expect(onSuccess).not.toHaveBeenCalled()
+  })
+
   it("does not open the AIHubMix foreground key prompt when auto-provision is disabled", async () => {
     const { result } = renderAddHook()
 

@@ -734,10 +734,14 @@ export function useAccountDialog({
 
   const handleAihubmixNormalSaveForegroundKeyFlow = useCallback(
     async (params: { accountId: string; accountName: string }) => {
+      const runId = aihubmixPostSaveKeyRunRef.current
+      const isCurrentRun = () => aihubmixPostSaveKeyRunRef.current === runId
       const savedAccountId = params.accountId.trim()
       if (!savedAccountId) return
 
       const openPrompt = () => {
+        if (!isCurrentRun()) return
+
         openAihubmixPostSaveKeyPrompt({
           accountId: savedAccountId,
           accountName: params.accountName,
@@ -746,6 +750,8 @@ export function useAccountDialog({
 
       try {
         const savedAccount = await accountStorage.getAccountById(savedAccountId)
+        if (!isCurrentRun()) return
+
         if (!savedAccount) {
           openPrompt()
           return
@@ -754,9 +760,12 @@ export function useAccountDialog({
         const displaySiteData =
           (await accountStorage.getDisplayDataById(savedAccountId)) ??
           accountStorage.convertToDisplayData(savedAccount)
+        if (!isCurrentRun()) return
+
         const inventoryState = await inspectAccountTokenInventory({
           displaySiteData,
         })
+        if (!isCurrentRun()) return
 
         if (
           inventoryState.kind === ACCOUNT_TOKEN_INVENTORY_STATE_KINDS.Present
