@@ -117,4 +117,38 @@ describe("content i18n initialization", () => {
     expect(getLanguageMock).toHaveBeenCalledTimes(2)
     expect(i18nCoreMock.changeLanguage).toHaveBeenLastCalledWith("en")
   })
+
+  it("retries initialization after a failed attempt", async () => {
+    const initError = new Error("init failed")
+    i18nCoreMock.init
+      .mockRejectedValueOnce(initError)
+      .mockResolvedValueOnce(undefined)
+    getLanguageMock.mockResolvedValueOnce("ja")
+    resolveInitialAppLanguageMock.mockReturnValueOnce("ja")
+
+    const { ensureContentI18nReady } = await import("~/utils/i18n/content")
+
+    await expect(ensureContentI18nReady()).rejects.toThrow(initError)
+    await ensureContentI18nReady()
+
+    expect(i18nCoreMock.init).toHaveBeenCalledTimes(2)
+    expect(i18nCoreMock.changeLanguage).toHaveBeenCalledWith("ja")
+  })
+
+  it("keeps dayjs locale aligned with later i18n language changes", async () => {
+    const localeSpy = vi.spyOn(dayjs, "locale").mockReturnValue("en")
+
+    await import("~/utils/i18n/content")
+
+    const languageChangedHandler = i18nCoreMock.on.mock.calls.find(
+      ([eventName]) => eventName === "languageChanged",
+    )?.[1]
+    expect(languageChangedHandler).toBeTypeOf("function")
+
+    languageChangedHandler("zh-TW")
+
+    expect(localeSpy).toHaveBeenCalledWith("zh-tw")
+
+    localeSpy.mockRestore()
+  })
 })

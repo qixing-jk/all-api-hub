@@ -246,6 +246,42 @@ describe("content entrypoint", () => {
     expect(apiCheckCleanup).toHaveBeenCalledTimes(1)
   })
 
+  it("logs and continues when content i18n initialization fails", async () => {
+    const initError = new Error("i18n unavailable")
+
+    ensureContentI18nReadyMock.mockRejectedValueOnce(initError)
+    setupRedemptionAssistContentMock.mockReturnValue(vi.fn())
+    setupWebAiApiCheckContentMock.mockReturnValue(vi.fn())
+    storageGetMock.mockResolvedValueOnce({
+      redemptionAssist: {
+        enabled: true,
+        contextMenu: { enabled: true },
+      },
+      webAiApiCheck: {
+        enabled: true,
+        contextMenu: { enabled: true },
+        autoDetect: { enabled: true },
+      },
+    })
+
+    const module = await import("~/entrypoints/content/index")
+    const onInvalidated = vi.fn()
+
+    await module.default.main({ onInvalidated } as any)
+
+    await waitFor(() => {
+      expect(logger.warn).toHaveBeenCalledWith(
+        "Content i18n initialization failed",
+        initError,
+      )
+    })
+    expect(setupContentMessageHandlersMock).toHaveBeenCalledTimes(1)
+    expect(setupRedemptionAssistContentMock).toHaveBeenCalledTimes(1)
+    expect(setupWebAiApiCheckContentMock).toHaveBeenCalledTimes(1)
+
+    onInvalidated.mock.calls[0]?.[0]()
+  })
+
   it("ignores unrelated local storage changes that do not include user preferences", async () => {
     const preferences = {
       redemptionAssist: {

@@ -50,7 +50,10 @@ export async function ensureContentI18nReady() {
   const shouldRefreshLanguage = contentI18nInitialized
 
   if (!contentI18nReadyPromise) {
-    contentI18nReadyPromise = initContentI18n()
+    contentI18nReadyPromise = initContentI18n().catch((error) => {
+      contentI18nReadyPromise = null
+      throw error
+    })
   }
 
   await contentI18nReadyPromise
