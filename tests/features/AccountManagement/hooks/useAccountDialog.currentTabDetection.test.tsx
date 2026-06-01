@@ -8,6 +8,15 @@ import { act, renderHook, waitFor } from "~~/tests/test-utils/render"
 
 const originalBrowser = globalThis.browser
 
+const createDeferred = <T,>() => {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve
+  })
+
+  return { promise, resolve }
+}
+
 const {
   mockGetSiteName,
   mockGetActiveTabs,
@@ -792,5 +801,195 @@ describe("useAccountDialog current tab detection", () => {
       )
       expect(result.current.state.siteName).toBe("Detected Site")
     })
+  })
+
+  it("ignores stale current-tab title resolutions after a newer active-tab detection wins", async () => {
+    const tabsQueryMock = globalThis.browser.tabs.query as ReturnType<
+      typeof vi.fn
+    >
+    let activeTab = {
+      id: 20,
+      url: "https://initial.example.com/path",
+    }
+    tabsQueryMock.mockImplementation(async () => [activeTab])
+
+    let activatedListener: (() => void | Promise<void>) | undefined
+    onTabActivatedMock.mockImplementation((listener) => {
+      activatedListener = listener
+      return () => {}
+    })
+
+    const slowTitle = createDeferred<string>()
+    const fastTitle = createDeferred<string>()
+    mockGetSiteName.mockImplementation((tab: browser.tabs.Tab) => {
+      if (tab.id === 21) return slowTitle.promise
+      if (tab.id === 22) return fastTitle.promise
+
+      return Promise.resolve("Initial Site")
+    })
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe(
+        "https://initial.example.com",
+      )
+      expect(result.current.state.siteName).toBe("Initial Site")
+    })
+
+    activeTab = {
+      id: 21,
+      url: "https://slow.example.com/path",
+    }
+    act(() => {
+      void activatedListener?.()
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe(
+        "https://slow.example.com",
+      )
+    })
+
+    activeTab = {
+      id: 22,
+      url: "https://fast.example.com/path",
+    }
+    act(() => {
+      void activatedListener?.()
+    })
+
+    await act(async () => {
+      fastTitle.resolve("Fast Site")
+      await fastTitle.promise
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe(
+        "https://fast.example.com",
+      )
+      expect(result.current.state.siteName).toBe("Fast Site")
+    })
+
+    await act(async () => {
+      slowTitle.resolve("Slow Site")
+      await slowTitle.promise
+    })
+
+    expect(result.current.state.currentTabUrl).toBe("https://fast.example.com")
+    expect(result.current.state.siteName).toBe("Fast Site")
+
+    await act(async () => {
+      result.current.handlers.handleUseCurrentTabUrl()
+    })
+
+    expect(result.current.state.url).toBe("https://fast.example.com")
+    expect(result.current.state.siteName).toBe("Fast Site")
+  })
+
+  it("ignores stale fallback active-tab title resolutions after a newer detection wins", async () => {
+    const tabsQueryMock = globalThis.browser.tabs.query as ReturnType<
+      typeof vi.fn
+    >
+    let activeTab = {
+      id: 23,
+      url: "https://fallback-initial.example.com/path",
+    }
+    tabsQueryMock.mockImplementation(async (queryInfo) => {
+      if (queryInfo?.currentWindow) {
+        throw new Error("currentWindow unsupported")
+      }
+
+      return [activeTab]
+    })
+
+    let activatedListener: (() => void | Promise<void>) | undefined
+    onTabActivatedMock.mockImplementation((listener) => {
+      activatedListener = listener
+      return () => {}
+    })
+
+    const slowTitle = createDeferred<string>()
+    const fastTitle = createDeferred<string>()
+    mockGetSiteName.mockImplementation((tab: browser.tabs.Tab) => {
+      if (tab.id === 24) return slowTitle.promise
+      if (tab.id === 25) return fastTitle.promise
+
+      return Promise.resolve("Fallback Initial Site")
+    })
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe(
+        "https://fallback-initial.example.com",
+      )
+      expect(result.current.state.siteName).toBe("Fallback Initial Site")
+    })
+
+    activeTab = {
+      id: 24,
+      url: "https://fallback-slow.example.com/path",
+    }
+    act(() => {
+      void activatedListener?.()
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe(
+        "https://fallback-slow.example.com",
+      )
+    })
+
+    activeTab = {
+      id: 25,
+      url: "https://fallback-fast.example.com/path",
+    }
+    act(() => {
+      void activatedListener?.()
+    })
+
+    await act(async () => {
+      fastTitle.resolve("Fallback Fast Site")
+      await fastTitle.promise
+    })
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBe(
+        "https://fallback-fast.example.com",
+      )
+      expect(result.current.state.siteName).toBe("Fallback Fast Site")
+    })
+
+    await act(async () => {
+      slowTitle.resolve("Fallback Slow Site")
+      await slowTitle.promise
+    })
+
+    expect(result.current.state.currentTabUrl).toBe(
+      "https://fallback-fast.example.com",
+    )
+    expect(result.current.state.siteName).toBe("Fallback Fast Site")
+
+    await act(async () => {
+      result.current.handlers.handleUseCurrentTabUrl()
+    })
+
+    expect(result.current.state.url).toBe("https://fallback-fast.example.com")
+    expect(result.current.state.siteName).toBe("Fallback Fast Site")
   })
 })

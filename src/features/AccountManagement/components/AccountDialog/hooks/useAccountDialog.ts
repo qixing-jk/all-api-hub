@@ -337,6 +337,7 @@ export function useAccountDialog({
   const sub2apiUseRefreshToken = draft.sub2apiUseRefreshToken
   const sub2apiRefreshToken = draft.sub2apiRefreshToken
   const sub2apiTokenExpiresAt = draft.sub2apiTokenExpiresAt
+  // Keep URL state readable inside async tab-detection guards without rerendering.
   selectedSiteUrlRef.current = url
   const isDetected =
     phase === ACCOUNT_DIALOG_PHASES.ACCOUNT_FORM &&
@@ -705,6 +706,7 @@ export function useAccountDialog({
   const detectSlowHintTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(
     null,
   )
+  const currentTabDetectionRunRef = useRef(0)
   const detectedCookieStoreIdRef = useRef<string | null>(null)
   const currentTabCookieImportContextRef =
     useRef<CurrentTabCookieImportContext | null>(null)
@@ -934,10 +936,17 @@ export function useAccountDialog({
     if (mode === DIALOG_MODES.EDIT && account) {
       return
     }
+    const runId = currentTabDetectionRunRef.current + 1
+    currentTabDetectionRunRef.current = runId
+    const isCurrentDetectionRun = () =>
+      currentTabDetectionRunRef.current === runId
     const clearCurrentTabDetection = () => {
+      if (!isCurrentDetectionRun()) return
+
       currentTabCookieImportContextRef.current = null
       currentTabSiteNameRef.current = ""
       setCurrentTabUrl(null)
+      // Preserve a user-selected or typed site name when the URL field is already owned by the user.
       if (!selectedSiteUrlRef.current.trim()) {
         setSiteName("")
       }
@@ -962,6 +971,8 @@ export function useAccountDialog({
             createCurrentTabCookieImportContext(tab, baseUrl)
           setCurrentTabUrl(baseUrl)
           const resolvedSiteName = await getSiteName(tab)
+          if (!isCurrentDetectionRun()) return
+
           currentTabSiteNameRef.current = resolvedSiteName
           if (canApplyCurrentTabTitle()) {
             setSiteName(resolvedSiteName)
@@ -990,6 +1001,8 @@ export function useAccountDialog({
               createCurrentTabCookieImportContext(tab, baseUrl)
             setCurrentTabUrl(baseUrl)
             const resolvedSiteName = await getSiteName(tab)
+            if (!isCurrentDetectionRun()) return
+
             currentTabSiteNameRef.current = resolvedSiteName
             if (canApplyCurrentTabTitle()) {
               setSiteName(resolvedSiteName)
