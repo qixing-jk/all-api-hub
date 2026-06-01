@@ -30,6 +30,7 @@ import {
   ACCOUNT_POST_SAVE_WORKFLOW_STEPS,
   ENSURE_ACCOUNT_TOKEN_RESULT_KINDS,
   ensureAccountTokenForPostSaveWorkflow,
+  inspectAccountTokenInventory,
   selectSingleNewApiTokenByIdDiff,
   type AccountPostSaveWorkflowStep,
 } from "~/services/accounts/accountPostSaveWorkflow"
@@ -715,6 +716,59 @@ export function useAccountDialog({
       onSuccess?.(savedAccountId)
     }
   }, [onSuccess])
+
+  const openAihubmixPostSaveKeyPrompt = useCallback(
+    (params: { accountId: string; accountName: string }) => {
+      aihubmixPostSaveKeyRunRef.current += 1
+      pendingAihubmixPostSaveSuccessRef.current = params.accountId
+      setAihubmixPostSaveKeyPrompt({
+        isOpen: true,
+        accountId: params.accountId,
+        accountName: params.accountName,
+        isCreating: false,
+      })
+    },
+    [],
+  )
+
+  const handleAihubmixNormalSaveForegroundKeyFlow = useCallback(
+    async (params: { accountId: string; accountName: string }) => {
+      const savedAccountId = params.accountId.trim()
+      if (!savedAccountId) return
+
+      const openPrompt = () => {
+        openAihubmixPostSaveKeyPrompt({
+          accountId: savedAccountId,
+          accountName: params.accountName,
+        })
+      }
+
+      try {
+        const savedAccount = await accountStorage.getAccountById(savedAccountId)
+        if (!savedAccount) {
+          openPrompt()
+          return
+        }
+
+        const displaySiteData =
+          (await accountStorage.getDisplayDataById(savedAccountId)) ??
+          accountStorage.convertToDisplayData(savedAccount)
+        const inventoryState = await inspectAccountTokenInventory({
+          displaySiteData,
+        })
+
+        if (inventoryState.kind === "present") {
+          onSuccess?.(savedAccountId)
+          return
+        }
+
+        openPrompt()
+      } catch {
+        openPrompt()
+      }
+    },
+    [onSuccess, openAihubmixPostSaveKeyPrompt],
+  )
 
   const resetForm = useCallback(
     (nextPrefill?: AddAccountPrefill | null) => {
@@ -1756,14 +1810,9 @@ export function useAccountDialog({
         typeof result.accountId === "string" &&
         result.accountId.trim().length > 0
       ) {
-        const savedAccountId = result.accountId.trim()
-        aihubmixPostSaveKeyRunRef.current += 1
-        pendingAihubmixPostSaveSuccessRef.current = savedAccountId
-        setAihubmixPostSaveKeyPrompt({
-          isOpen: true,
-          accountId: savedAccountId,
+        await handleAihubmixNormalSaveForegroundKeyFlow({
+          accountId: result.accountId,
           accountName: siteName.trim() || SITE_TYPES.AIHUBMIX,
-          isCreating: false,
         })
       }
 

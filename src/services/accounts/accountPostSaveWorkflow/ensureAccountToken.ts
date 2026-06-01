@@ -75,6 +75,51 @@ const buildDisplayAccountRequest = (
   },
 })
 
+export type AccountTokenInventoryState =
+  | {
+      kind: "missing"
+      existingTokenIds: number[]
+    }
+  | {
+      kind: "present"
+      token: ApiToken
+      existingTokenIds: number[]
+      hasUsableSecret: boolean
+    }
+
+/**
+ * Inspects whether the saved account already has a token and whether that
+ * inventory value is usable as a secret for follow-up automation.
+ */
+export async function inspectAccountTokenInventory(params: {
+  displaySiteData: DisplaySiteData
+}): Promise<AccountTokenInventoryState> {
+  const { displaySiteData } = params
+  const service = getApiService(displaySiteData.siteType)
+  const tokens = await service.fetchAccountTokens(
+    buildDisplayAccountRequest(displaySiteData),
+  )
+  const existingTokens = sanitizeApiTokens(tokens)
+  const existingTokenIds = getTokenIds(existingTokens)
+  const existingToken = existingTokens.at(-1)
+
+  if (!existingToken) {
+    return {
+      kind: "missing",
+      existingTokenIds,
+    }
+  }
+
+  return {
+    kind: "present",
+    token: existingToken,
+    existingTokenIds,
+    hasUsableSecret:
+      displaySiteData.siteType !== SITE_TYPES.AIHUBMIX ||
+      hasUsableFullTokenSecret(existingToken),
+  }
+}
+
 /**
  * Creates a default token and resolves the created token when the API omits it.
  */
@@ -130,29 +175,13 @@ export async function ensureAccountTokenForPostSaveWorkflow(params: {
   displaySiteData: DisplaySiteData
 }): Promise<EnsureAccountTokenResult> {
   const { account, displaySiteData } = params
-  const service = getApiService(displaySiteData.siteType)
-  const tokens = await service.fetchAccountTokens(
-    buildDisplayAccountRequest(displaySiteData),
-  )
-  const existingTokens = sanitizeApiTokens(tokens)
-  const existingTokenIds = getTokenIds(existingTokens)
+  const inventoryState = await inspectAccountTokenInventory({ displaySiteData })
+  const existingTokenIds = inventoryState.existingTokenIds
 
-  const existingToken = existingTokens.at(-1)
-  if (existingToken) {
-    if (
-      displaySiteData.siteType === SITE_TYPES.AIHUBMIX &&
-      !hasUsableFullTokenSecret(existingToken)
-    ) {
-      return {
-        kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Blocked,
-        code: ACCOUNT_POST_SAVE_WORKFLOW_ERROR_CODES.TokenSecretUnavailable,
-        message: t("messages:aihubmix.createRequiresOneTimeKeyDialog"),
-      }
-    }
-
+  if (inventoryState.kind === "present" && inventoryState.hasUsableSecret) {
     return {
       kind: ENSURE_ACCOUNT_TOKEN_RESULT_KINDS.Ready,
-      token: existingToken,
+      token: inventoryState.token,
       created: false,
     }
   }
