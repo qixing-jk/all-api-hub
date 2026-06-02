@@ -1174,16 +1174,26 @@ export async function trackProductAnalyticsEvent<
       eventName,
       properties,
     } satisfies ProductAnalyticsTrackRequest<TEventName>
-    const response = await sendProductAnalyticsMessage(
-      ProductAnalyticsMessageTypes.TrackEvent,
-      request as ProductAnalyticsTrackRequestDiscriminated,
+    void Promise.resolve(
+      sendProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackEvent,
+        request as ProductAnalyticsTrackRequestDiscriminated,
+      ),
     )
-    return !(
-      response &&
-      typeof response === "object" &&
-      "success" in response &&
-      response.success === false
-    )
+      .then((response) => {
+        if (
+          response &&
+          typeof response === "object" &&
+          "success" in response &&
+          response.success === false
+        ) {
+          logger.warn("Product analytics event dispatch was rejected")
+        }
+      })
+      .catch((error) => {
+        logger.warn("Product analytics event dispatch failed", error)
+      })
+    return true
   } catch (error) {
     logger.warn("Product analytics event dispatch failed", error)
     return false

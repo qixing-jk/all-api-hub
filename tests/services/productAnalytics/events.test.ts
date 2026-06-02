@@ -345,7 +345,38 @@ describe("trackProductAnalyticsEvent", () => {
     )
   })
 
-  it("returns false instead of throwing when analytics dispatch rejects", async () => {
+  it("does not wait for an in-flight background analytics response", async () => {
+    let resolveDispatch!: (response: { success: boolean }) => void
+    sendProductAnalyticsMessageMock.mockReturnValue(
+      new Promise((resolve) => {
+        resolveDispatch = resolve
+      }),
+    )
+
+    await expect(
+      trackProductAnalyticsEvent(PRODUCT_ANALYTICS_EVENTS.SettingChanged, {
+        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ProductAnalyticsEnabled,
+        enabled: true,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      }),
+    ).resolves.toBe(true)
+
+    expect(sendProductAnalyticsMessageMock).toHaveBeenCalledWith(
+      ProductAnalyticsMessageTypes.TrackEvent,
+      {
+        eventName: PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+        properties: {
+          setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ProductAnalyticsEnabled,
+          enabled: true,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        },
+      },
+    )
+
+    resolveDispatch({ success: true })
+  })
+
+  it("returns before async analytics dispatch failures settle", async () => {
     sendProductAnalyticsMessageMock.mockRejectedValue(
       new Error("analytics unavailable"),
     )
@@ -356,10 +387,10 @@ describe("trackProductAnalyticsEvent", () => {
         enabled: true,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       }),
-    ).resolves.toBe(false)
+    ).resolves.toBe(true)
   })
 
-  it("returns false without retry delays when the runtime receiver is not ready", async () => {
+  it("does not wait or retry when the runtime receiver is not ready", async () => {
     vi.useFakeTimers()
     try {
       sendProductAnalyticsMessageMock.mockRejectedValue(
@@ -372,7 +403,7 @@ describe("trackProductAnalyticsEvent", () => {
           enabled: true,
           entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         }),
-      ).resolves.toBe(false)
+      ).resolves.toBe(true)
       expect(sendProductAnalyticsMessageMock).toHaveBeenCalledTimes(1)
       expect(sendProductAnalyticsMessageMock).toHaveBeenCalledWith(
         ProductAnalyticsMessageTypes.TrackEvent,
@@ -391,7 +422,7 @@ describe("trackProductAnalyticsEvent", () => {
     }
   })
 
-  it("returns false when the background runtime rejects the analytics event", async () => {
+  it("does not block when the background runtime rejects the analytics event", async () => {
     sendProductAnalyticsMessageMock.mockResolvedValue({ success: false })
 
     await expect(
@@ -400,7 +431,7 @@ describe("trackProductAnalyticsEvent", () => {
         enabled: true,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
       }),
-    ).resolves.toBe(false)
+    ).resolves.toBe(true)
   })
 
   it("returns false instead of throwing when analytics dispatch throws synchronously", async () => {
