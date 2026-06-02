@@ -17,16 +17,9 @@ export interface WebdavAutoSyncUpdateSettingsRequest {
 export type WebdavAutoSyncMutationResponse =
   RuntimeMessageResponse<UserPreferences>
 
-export type WebdavAutoSyncSyncNowResponse =
-  | {
-      success: true
-      message?: string
-    }
-  | {
-      success: false
-      message?: string
-      error?: string
-    }
+export type WebdavAutoSyncSyncNowResponse = RuntimeMessageResponse<{
+  message?: string
+}>
 
 export type WebdavAutoSyncStatusResponse = RuntimeMessageResponse<{
   isRunning: boolean

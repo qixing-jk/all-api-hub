@@ -60,15 +60,23 @@ class AutoRefreshService {
    * Respects accountAutoRefresh.enabled/interval from user preferences.
    */
   async setupAutoRefresh() {
+    // 获取用户偏好设置（可能关闭自动刷新）
+    const preferences = await userPreferences.getPreferences()
+
+    const nextConfig = preferences.accountAutoRefresh
+    if (nextConfig?.enabled) {
+      const intervalSeconds = Number(nextConfig.interval)
+      if (!Number.isFinite(intervalSeconds) || intervalSeconds <= 0) {
+        throw new Error("Invalid auto-refresh interval")
+      }
+    }
+
     // 清除现有定时器
     if (this.refreshTimer) {
       clearInterval(this.refreshTimer)
       this.refreshTimer = null
       logger.debug("已清除现有定时器")
     }
-
-    // 获取用户偏好设置（可能关闭自动刷新）
-    const preferences = await userPreferences.getPreferences()
 
     if (!preferences.accountAutoRefresh?.enabled) {
       logger.info("自动刷新已关闭")

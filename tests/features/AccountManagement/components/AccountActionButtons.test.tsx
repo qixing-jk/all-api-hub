@@ -1003,7 +1003,7 @@ describe("AccountActionButtons", () => {
     })
   })
 
-  it("shows a completion fallback toast when quick check-in finishes without a per-account result", async () => {
+  it("shows a failure toast when quick check-in finishes without a per-account result", async () => {
     toastLoadingMock.mockReturnValue("toast-quick-checkin-fallback")
     sendRuntimeMessageMock
       .mockResolvedValueOnce({ success: true })
@@ -1039,14 +1039,66 @@ describe("AccountActionButtons", () => {
       expect(toastDismissMock).toHaveBeenCalledWith(
         "toast-quick-checkin-fallback",
       )
-      expect(toastSuccessMock).toHaveBeenCalledWith(
-        "autoCheckin:messages.success.runCompleted",
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "autoCheckin:messages.error.runFailed",
       )
       expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-        PRODUCT_ANALYTICS_RESULTS.Success,
+        PRODUCT_ANALYTICS_RESULTS.Failure,
         {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           insights: {
-            statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Healthy,
+            statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
+          },
+        },
+      )
+    })
+  })
+
+  it("shows a failure toast when quick check-in status lookup fails", async () => {
+    toastLoadingMock.mockReturnValue("toast-quick-checkin-status-failed")
+    sendRuntimeMessageMock
+      .mockResolvedValueOnce({ success: true })
+      .mockResolvedValueOnce({ success: false, error: "status unavailable" })
+
+    const user = userEvent.setup()
+
+    render(
+      <AccountActionButtons
+        site={buildDisplaySiteData({
+          id: "acc-quick-status-failed",
+          disabled: false,
+          name: "Status Failed Site",
+          checkIn: { enableDetection: true },
+        })}
+        onCopyKey={vi.fn()}
+        onDeleteAccount={vi.fn()}
+      />,
+    )
+
+    await user.click(
+      screen.getByRole("button", { name: "common:actions.more" }),
+    )
+
+    const menu = await screen.findByRole("menu")
+    const label = await within(menu).findByText("account:actions.quickCheckin")
+    const button = label.closest("button")
+    expect(button).not.toBeNull()
+
+    await user.click(button!)
+
+    await waitFor(() => {
+      expect(toastDismissMock).toHaveBeenCalledWith(
+        "toast-quick-checkin-status-failed",
+      )
+      expect(toastErrorMock).toHaveBeenCalledWith(
+        "autoCheckin:messages.error.runFailed",
+      )
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Failure,
+        {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
           },
         },
       )

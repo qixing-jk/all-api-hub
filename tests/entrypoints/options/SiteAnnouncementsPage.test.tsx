@@ -574,6 +574,12 @@ describe("SiteAnnouncementsPage", () => {
         errorFallback: "siteAnnouncements:messages.loadFailed",
       })
     })
+    expect(
+      await screen.findByText("siteAnnouncements:messages.loadFailed"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("siteAnnouncements:empty.title"),
+    ).not.toBeInTheDocument()
   })
 
   it("disables manual checks while announcements are loading", async () => {

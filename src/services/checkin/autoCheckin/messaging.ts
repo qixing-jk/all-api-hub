@@ -66,7 +66,7 @@ export interface AutoCheckinUpdateSettingsRequest {
   }
 }
 
-type AutoCheckinBasicResponse =
+export type AutoCheckinBasicResponse =
   | {
       success: true
       summary?: AutoCheckinRunSummary

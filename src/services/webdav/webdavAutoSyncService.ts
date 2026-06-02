@@ -1707,7 +1707,9 @@ export async function resolveWebdavAutoSyncSetupMessage(): Promise<
 export async function resolveWebdavAutoSyncSyncNowMessage(): Promise<WebdavAutoSyncSyncNowResponse> {
   try {
     const result = await webdavAutoSyncService.syncNow()
-    return { success: result.success, message: result.message }
+    return result.success
+      ? { success: true, data: { message: result.message } }
+      : { success: false, error: result.message ?? "" }
   } catch (error) {
     logger.error("处理消息失败", error)
     return { success: false, error: getErrorMessage(error) }

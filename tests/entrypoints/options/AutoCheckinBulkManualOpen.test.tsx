@@ -12,6 +12,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -85,7 +86,7 @@ describe("AutoCheckin bulk manual open", () => {
     const sendAutoCheckinMessageSpy = vi
       .mocked(sendAutoCheckinMessage)
       .mockImplementation(async (type: string, data?: any) => {
-        if (type === "autoCheckin:getStatus") {
+        if (type === AutoCheckinMessageTypes.GetStatus) {
           return {
             success: true,
             data: {
@@ -116,7 +117,7 @@ describe("AutoCheckin bulk manual open", () => {
           }
         }
 
-        if (type === "autoCheckin:getAccountInfo") {
+        if (type === AutoCheckinMessageTypes.GetAccountInfo) {
           return {
             success: true,
             data: { id: data?.accountId },
@@ -159,11 +160,11 @@ describe("AutoCheckin bulk manual open", () => {
     })
 
     expect(sendAutoCheckinMessageSpy).toHaveBeenCalledWith(
-      "autoCheckin:getAccountInfo",
+      AutoCheckinMessageTypes.GetAccountInfo,
       { accountId: "alpha" },
     )
     expect(sendAutoCheckinMessageSpy).toHaveBeenCalledWith(
-      "autoCheckin:getAccountInfo",
+      AutoCheckinMessageTypes.GetAccountInfo,
       { accountId: "beta" },
     )
     expect(toast.success).toHaveBeenCalledWith(
@@ -194,7 +195,7 @@ describe("AutoCheckin bulk manual open", () => {
 
     vi.mocked(sendAutoCheckinMessage).mockImplementation(
       async (type: string, data?: any) => {
-        if (type === "autoCheckin:getStatus") {
+        if (type === AutoCheckinMessageTypes.GetStatus) {
           return {
             success: true,
             data: {
@@ -218,7 +219,7 @@ describe("AutoCheckin bulk manual open", () => {
           }
         }
 
-        if (type === "autoCheckin:getAccountInfo") {
+        if (type === AutoCheckinMessageTypes.GetAccountInfo) {
           return {
             success: true,
             data: { id: data?.accountId },
@@ -270,7 +271,7 @@ describe("AutoCheckin bulk manual open", () => {
 
     vi.mocked(sendAutoCheckinMessage).mockImplementation(
       async (type: string, data?: any) => {
-        if (type === "autoCheckin:getStatus") {
+        if (type === AutoCheckinMessageTypes.GetStatus) {
           return {
             success: true,
             data: {
@@ -287,7 +288,7 @@ describe("AutoCheckin bulk manual open", () => {
           }
         }
 
-        if (type === "autoCheckin:getAccountInfo") {
+        if (type === AutoCheckinMessageTypes.GetAccountInfo) {
           return {
             success: true,
             data: { id: data?.accountId },

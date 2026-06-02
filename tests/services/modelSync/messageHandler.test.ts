@@ -8,6 +8,7 @@ import {
   getModelSyncProgress,
   listModelSyncChannels,
   modelSyncScheduler,
+  setupManagedSiteModelSyncMessagingListeners,
   triggerAllModelSync,
   triggerFailedOnlyModelSync,
   triggerSelectedModelSync,
@@ -24,6 +25,21 @@ import {
   hasAlarmsAPI,
   onAlarm,
 } from "~/utils/browser/browserApi"
+
+const modelSyncMessageHandlers = vi.hoisted(
+  () =>
+    new Map<
+      string,
+      (message: { data: Record<string, unknown> }) => Promise<unknown> | unknown
+    >(),
+)
+
+vi.mock("~/services/models/modelSync/messaging", () => ({
+  onModelSyncMessage: vi.fn((type, handler) => {
+    modelSyncMessageHandlers.set(type, handler)
+    return vi.fn()
+  }),
+}))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
   DEFAULT_PREFERENCES: {
@@ -88,6 +104,9 @@ describe("ManagedSiteModelSync operation helpers", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.clearAllMocks()
+    modelSyncMessageHandlers.clear()
+    ;(modelSyncScheduler as any).isInitialized = false
+    ;(globalThis as any).__modelSyncMessagingCleanup = null
 
     mockedUserPreferences.getPreferences.mockResolvedValue({
       managedSiteModelSync: {
@@ -223,6 +242,20 @@ describe("ManagedSiteModelSync operation helpers", () => {
     )
 
     await expect(triggerAllModelSync()).rejects.toThrow("scheduler exploded")
+  })
+
+  it("returns app-owned listener failure copy instead of raw scheduler errors", async () => {
+    vi.spyOn(modelSyncScheduler, "executeSync").mockRejectedValue(
+      new Error("upstream token secret leaked"),
+    )
+
+    setupManagedSiteModelSyncMessagingListeners()
+    const handler = modelSyncMessageHandlers.get("modelSync:triggerAll")
+
+    await expect(handler?.({ data: {} })).resolves.toEqual({
+      success: false,
+      error: "settings:messages.runtimeRequestFailed",
+    })
   })
 })
 

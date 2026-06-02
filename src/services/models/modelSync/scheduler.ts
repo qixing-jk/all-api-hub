@@ -966,7 +966,10 @@ export async function listModelSyncChannels() {
  */
 function toModelSyncFailure(error: unknown) {
   logger.error("Message handling failed", error)
-  return { success: false as const, error: getErrorMessage(error) }
+  return {
+    success: false as const,
+    error: "settings:messages.runtimeRequestFailed",
+  }
 }
 
 let modelSyncMessagingCleanup: (() => void)[] | null = null

@@ -440,6 +440,17 @@ describe("handleUsageHistoryMessage", () => {
     })
   })
 
+  it("returns a failure response when a manual sync is already running", async () => {
+    vi.spyOn(usageHistoryScheduler, "runManualSync").mockResolvedValue(null)
+
+    const response = await resolveUsageHistorySyncNowMessage({})
+
+    expect(response).toEqual({
+      success: false,
+      error: "Usage-history sync is already running",
+    })
+  })
+
   it("returns an error response when the scheduler throws", async () => {
     vi.spyOn(usageHistoryScheduler, "updateSettings").mockRejectedValue(
       new Error("scheduler exploded"),

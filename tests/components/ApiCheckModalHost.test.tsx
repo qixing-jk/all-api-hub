@@ -2207,6 +2207,40 @@ describe("ApiCheckModalHost", () => {
     ).toBeInTheDocument()
   })
 
+  it("shows a local fetch-models error when the background request rejects", async () => {
+    const user = userEvent.setup()
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          throw new Error("runtime unavailable")
+        }
+        return { success: false }
+      },
+    )
+
+    await openModal()
+
+    const baseUrlInput = await screen.findByPlaceholderText(
+      "https://example.com/api",
+    )
+    const apiKeyInput = await screen.findByPlaceholderText("sk-...")
+
+    await user.click(baseUrlInput)
+    await user.paste("https://proxy.example.com/api")
+    await user.click(apiKeyInput)
+    await user.paste("sk-test-secret-fixture")
+
+    expect(
+      await screen.findByText("webAiApiCheck:modal.errors.fetchModelsFailed"),
+    ).toBeInTheDocument()
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Failure,
+      expect.objectContaining({
+        errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      }),
+    )
+  })
+
   it("uses background validation category for model fetch analytics", async () => {
     const user = userEvent.setup()
     vi.mocked(sendWebAiApiCheckMessage).mockImplementation(

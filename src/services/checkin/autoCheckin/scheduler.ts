@@ -1,6 +1,14 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
+import {
+  onAutoCheckinMessage,
+  type AutoCheckinDebugScheduleDailyAlarmForTodayRequest,
+  type AutoCheckinGetAccountInfoRequest,
+  type AutoCheckinPretriggerDailyOnUiOpenRequest,
+  type AutoCheckinRunNowRequest,
+  type AutoCheckinUpdateSettingsRequest,
+} from "~/services/checkin/autoCheckin/messaging"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import {
@@ -63,14 +71,6 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
-import {
-  onAutoCheckinMessage,
-  type AutoCheckinDebugScheduleDailyAlarmForTodayRequest,
-  type AutoCheckinGetAccountInfoRequest,
-  type AutoCheckinPretriggerDailyOnUiOpenRequest,
-  type AutoCheckinRunNowRequest,
-  type AutoCheckinUpdateSettingsRequest,
-} from "./messaging"
 import { resolveAutoCheckinProvider } from "./providers"
 import { AUTO_CHECKIN_STATUS_STORAGE_LOCK, autoCheckinStorage } from "./storage"
 

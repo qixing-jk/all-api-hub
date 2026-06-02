@@ -359,28 +359,22 @@ describe("trackProductAnalyticsEvent", () => {
     ).resolves.toBe(false)
   })
 
-  it("retries typed analytics dispatch when the runtime receiver is not ready", async () => {
+  it("returns false without retry delays when the runtime receiver is not ready", async () => {
     vi.useFakeTimers()
     try {
-      sendProductAnalyticsMessageMock
-        .mockRejectedValueOnce(new Error("Could not establish connection"))
-        .mockResolvedValueOnce({ success: true })
+      sendProductAnalyticsMessageMock.mockRejectedValue(
+        new Error("Could not establish connection"),
+      )
 
-      const resultPromise = trackProductAnalyticsEvent(
-        PRODUCT_ANALYTICS_EVENTS.SettingChanged,
-        {
+      await expect(
+        trackProductAnalyticsEvent(PRODUCT_ANALYTICS_EVENTS.SettingChanged, {
           setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ProductAnalyticsEnabled,
           enabled: true,
           entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-        },
-      )
-
-      await vi.advanceTimersByTimeAsync(500)
-
-      await expect(resultPromise).resolves.toBe(true)
-      expect(sendProductAnalyticsMessageMock).toHaveBeenCalledTimes(2)
-      expect(sendProductAnalyticsMessageMock).toHaveBeenNthCalledWith(
-        2,
+        }),
+      ).resolves.toBe(false)
+      expect(sendProductAnalyticsMessageMock).toHaveBeenCalledTimes(1)
+      expect(sendProductAnalyticsMessageMock).toHaveBeenCalledWith(
         ProductAnalyticsMessageTypes.TrackEvent,
         {
           eventName: PRODUCT_ANALYTICS_EVENTS.SettingChanged,
@@ -391,6 +385,7 @@ describe("trackProductAnalyticsEvent", () => {
           },
         },
       )
+      expect(vi.getTimerCount()).toBe(0)
     } finally {
       vi.useRealTimers()
     }

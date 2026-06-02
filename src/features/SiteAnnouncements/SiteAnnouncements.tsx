@@ -73,9 +73,11 @@ export default function SiteAnnouncementsPage({
   const [expandedIds, setExpandedIds] = useState<Set<string>>(
     () => new Set(routeParams?.recordId ? [routeParams.recordId] : []),
   )
+  const [loadError, setLoadError] = useState<string | null>(null)
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
+    setLoadError(null)
     try {
       const [recordsResponse, statusResponse] = await Promise.all([
         sendSiteAnnouncementsMessage(SiteAnnouncementsMessageTypes.ListRecords),
@@ -91,6 +93,7 @@ export default function SiteAnnouncementsPage({
           ),
           errorFallback: t("messages.loadFailed"),
         })
+        setLoadError(t("messages.loadFailed"))
         return
       }
 
@@ -103,12 +106,14 @@ export default function SiteAnnouncementsPage({
           ),
           errorFallback: t("messages.loadFailed"),
         })
+        setLoadError(t("messages.loadFailed"))
         return
       }
 
       setRecords(recordsResponse.data)
       setStatus(statusResponse.data)
     } catch (error) {
+      setLoadError(t("messages.loadFailed"))
       showResultToast({
         success: false,
         message: getErrorMessage(error),
@@ -470,6 +475,21 @@ export default function SiteAnnouncementsPage({
         <EmptyState
           icon={<RefreshCcw className="h-10 w-10 animate-spin" />}
           title={t("loading")}
+        />
+      ) : loadError ? (
+        <EmptyState
+          icon={<Megaphone className="h-10 w-10" />}
+          title={loadError}
+          action={{
+            label: t("actions.checkNow"),
+            onClick: () =>
+              void handleCheckNow(
+                PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementsEmptyState,
+              ),
+            disabled: !canRunManualCheck,
+            loading: isChecking,
+            leftIcon: <RefreshCcw className="h-4 w-4" />,
+          }}
         />
       ) : filteredRecords.length === 0 ? (
         <ProductAnalyticsScope

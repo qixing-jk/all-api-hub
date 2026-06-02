@@ -1430,6 +1430,14 @@ describe("UserPreferencesContext", () => {
       DEFAULT_PREFERENCES.newApi.baseUrl,
     )
     expect(mockedSendRuntimeMessage).not.toHaveBeenCalled()
+    expect(mockedSendAutoRefreshMessage).not.toHaveBeenCalled()
+    expect(mockedSendAutoCheckinMessage).not.toHaveBeenCalled()
+    expect(mockedSendBalanceHistoryMessage).not.toHaveBeenCalled()
+    expect(mockedSendModelSyncMessage).not.toHaveBeenCalled()
+    expect(mockedSendPreferencesMessage).not.toHaveBeenCalled()
+    expect(mockedSendRedemptionAssistMessage).not.toHaveBeenCalled()
+    expect(mockedSendSiteAnnouncementsMessage).not.toHaveBeenCalled()
+    expect(mockedSendWebdavAutoSyncMessage).not.toHaveBeenCalled()
   })
 
   it("keeps stored backend credentials untouched when credential writes fail", async () => {

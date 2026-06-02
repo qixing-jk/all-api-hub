@@ -1580,6 +1580,7 @@ describe("setupRedemptionAssistContent", () => {
       "Context menu trigger missing selection",
     )
     expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+    expect(mockSendRedemptionAssistMessage).not.toHaveBeenCalled()
 
     cleanup()
 

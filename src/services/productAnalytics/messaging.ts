@@ -20,6 +20,10 @@ export type ProductAnalyticsTrackRequest<
   properties: ProductAnalyticsEventPayload<TEventName>
 }
 
+export type ProductAnalyticsTrackRequestDiscriminated = {
+  [TEventName in ProductAnalyticsEventName]: ProductAnalyticsTrackRequest<TEventName>
+}[ProductAnalyticsEventName]
+
 type ProductAnalyticsTrackSiteEcosystemRequest = {
   reason: "startup" | "account_changed" | "manual"
 }
@@ -35,7 +39,7 @@ export type ProductAnalyticsRuntimeResponse = {
 
 interface ProductAnalyticsProtocolMap {
   [ProductAnalyticsMessageTypes.TrackEvent](
-    data: ProductAnalyticsTrackRequest,
+    data: ProductAnalyticsTrackRequestDiscriminated,
   ): ProductAnalyticsRuntimeResponse
   [ProductAnalyticsMessageTypes.TrackSiteEcosystemSnapshot](
     data: ProductAnalyticsTrackSiteEcosystemRequest,

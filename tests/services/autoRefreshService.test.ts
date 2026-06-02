@@ -260,6 +260,49 @@ describe("AutoRefreshService", () => {
 
       expect(autoRefreshService.getStatus().isRunning).toBe(false)
     })
+
+    it("preserves a running timer when reloading preferences fails", async () => {
+      const clearIntervalSpy = vi.spyOn(globalThis, "clearInterval")
+      vi.mocked(userPreferences.getPreferences)
+        .mockResolvedValueOnce({
+          accountAutoRefresh: {
+            ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+            enabled: true,
+            interval: 300,
+          },
+          preferencesVersion: 5,
+        } as UserPreferences)
+        .mockRejectedValueOnce(new Error("preferences unavailable"))
+
+      await autoRefreshService.setupAutoRefresh()
+      const statusBeforeReload = autoRefreshService.getStatus()
+
+      await expect(autoRefreshService.setupAutoRefresh()).rejects.toThrow(
+        "preferences unavailable",
+      )
+
+      expect(statusBeforeReload.isRunning).toBe(true)
+      expect(autoRefreshService.getStatus().isRunning).toBe(true)
+      expect(clearIntervalSpy).not.toHaveBeenCalled()
+      clearIntervalSpy.mockRestore()
+    })
+
+    it("does not start a timer for invalid persisted intervals", async () => {
+      vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+        accountAutoRefresh: {
+          ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+          enabled: true,
+          interval: 0,
+        },
+        preferencesVersion: 5,
+      } as UserPreferences)
+
+      await expect(autoRefreshService.setupAutoRefresh()).rejects.toThrow(
+        "Invalid auto-refresh interval",
+      )
+
+      expect(autoRefreshService.getStatus().isRunning).toBe(false)
+    })
   })
 
   describe("refreshNow", () => {
@@ -461,6 +504,24 @@ describe("auto-refresh typed message resolvers", () => {
       expect(response).toEqual({
         success: false,
         error: "Error: Setup failed",
+      })
+    })
+
+    it("should return a failure response when setup sees an invalid interval", async () => {
+      vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+        accountAutoRefresh: {
+          ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+          enabled: true,
+          interval: Number.NaN,
+        },
+        preferencesVersion: 5,
+      } as UserPreferences)
+
+      const response = await resolveAutoRefreshSetupMessage()
+
+      expect(response).toEqual({
+        success: false,
+        error: "Error: Invalid auto-refresh interval",
       })
     })
   })

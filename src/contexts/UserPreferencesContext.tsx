@@ -1300,7 +1300,7 @@ export const UserPreferencesProvider = ({
         trackOptionsSettingsSnapshots(nextPreferences, preferenceUpdates)
 
         // Notify background to update alarm
-        await sendAutoCheckinMessage(AutoCheckinMessageTypes.UpdateSettings, {
+        void sendAutoCheckinMessage(AutoCheckinMessageTypes.UpdateSettings, {
           settings: updates,
         })
       }
@@ -1329,7 +1329,7 @@ export const UserPreferencesProvider = ({
         setPreferences(nextPreferences)
         trackOptionsSettingsSnapshots(nextPreferences, preferenceUpdates)
 
-        await sendBalanceHistoryMessage(
+        void sendBalanceHistoryMessage(
           BalanceHistoryMessageTypes.UpdateSettings,
           {
             settings: updates,
@@ -1362,7 +1362,7 @@ export const UserPreferencesProvider = ({
         trackOptionsSettingsSnapshots(nextPreferences, preferenceUpdates)
 
         // Notify background to update alarm
-        await sendModelSyncMessage(ModelSyncMessageTypes.UpdateSettings, {
+        void sendModelSyncMessage(ModelSyncMessageTypes.UpdateSettings, {
           settings: updates,
         })
       }
@@ -1414,7 +1414,7 @@ export const UserPreferencesProvider = ({
         setPreferences(nextPreferences)
         trackOptionsSettingsSnapshots(nextPreferences, preferenceUpdates)
 
-        await sendRedemptionAssistMessage(
+        void sendRedemptionAssistMessage(
           RedemptionAssistMessageTypes.UpdateSettings,
           {
             settings: updates,
@@ -1645,6 +1645,48 @@ export const UserPreferencesProvider = ({
           settings: defaults.managedSiteModelSync,
         })
       }
+
+      if (defaults.balanceHistory) {
+        void sendBalanceHistoryMessage(
+          BalanceHistoryMessageTypes.UpdateSettings,
+          {
+            settings: defaults.balanceHistory,
+          },
+        )
+      }
+
+      if (defaults.redemptionAssist) {
+        void sendRedemptionAssistMessage(
+          RedemptionAssistMessageTypes.UpdateSettings,
+          {
+            settings: defaults.redemptionAssist,
+          },
+        )
+      }
+
+      if (defaults.webdav) {
+        void sendWebdavAutoSyncMessage(
+          WebdavAutoSyncMessageTypes.UpdateSettings,
+          {
+            settings: {
+              autoSync: defaults.webdav.autoSync,
+              syncInterval: defaults.webdav.syncInterval,
+              syncStrategy: defaults.webdav.syncStrategy,
+            },
+          },
+        )
+      }
+
+      if (defaults.siteAnnouncementNotifications) {
+        void sendSiteAnnouncementsMessage(
+          SiteAnnouncementsMessageTypes.UpdatePreferences,
+          {
+            settings: defaults.siteAnnouncementNotifications,
+          },
+        )
+      }
+
+      void sendPreferencesMessage(PreferencesMessageTypes.RefreshContextMenus)
     }
     return success
   }, [loadPreferences])

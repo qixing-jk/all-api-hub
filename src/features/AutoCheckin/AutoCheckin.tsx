@@ -20,7 +20,10 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
 import { accountStorage } from "~/services/accounts/accountStorage"
-import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
+import {
+  sendAutoCheckinMessage,
+  type AutoCheckinBasicResponse,
+} from "~/services/checkin/autoCheckin/messaging"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   startProductAnalyticsAction,
@@ -39,6 +42,7 @@ import {
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { DisplaySiteData } from "~/types"
 import {
+  AUTO_CHECKIN_RUN_RESULT,
   AutoCheckinRunSummary,
   AutoCheckinStatus,
   CHECKIN_RESULT_STATUS,
@@ -116,23 +120,33 @@ const getAutoCheckinStatusAnalyticsInsights = (
   }
 }
 
-const isNoRunnableAutoCheckinResponse = (response: any): boolean => {
-  const summary = response?.summary
+const isNoRunnableAutoCheckinResponse = (
+  response: AutoCheckinBasicResponse,
+): boolean => {
+  const summary = response.success ? response.summary : undefined
+  if (!summary) {
+    return false
+  }
 
   return (
     response?.success === true &&
-    summary &&
     summary.executed === 0 &&
     summary.totalEligible === 0
   )
 }
 
-const getRetryAnalyticsResult = (response: any): ProductAnalyticsResult => {
+const getRetryAnalyticsResult = (
+  response: AutoCheckinBasicResponse,
+): ProductAnalyticsResult => {
   if (!response?.success) {
     return PRODUCT_ANALYTICS_RESULTS.Failure
   }
 
-  if (response?.result?.status === CHECKIN_RESULT_STATUS.SKIPPED) {
+  if (response.lastRunResult === AUTO_CHECKIN_RUN_RESULT.FAILED) {
+    return PRODUCT_ANALYTICS_RESULTS.Failure
+  }
+
+  if (!response.lastRunResult && response.pendingRetry) {
     return PRODUCT_ANALYTICS_RESULTS.Skipped
   }
 

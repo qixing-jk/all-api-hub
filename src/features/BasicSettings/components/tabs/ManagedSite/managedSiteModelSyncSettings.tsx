@@ -178,11 +178,7 @@ export default function ManagedSiteModelSyncSettings() {
           ModelSyncMessageTypes.GetChannelUpstreamModelOptions,
         )
 
-        if (
-          response?.success &&
-          Array.isArray(response.data) &&
-          response.data.length > 0
-        ) {
+        if (response?.success && Array.isArray(response.data)) {
           if (isMounted) {
             setChannelUpstreamModelOptions(buildOptionsFromIds(response.data))
           }

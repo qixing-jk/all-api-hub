@@ -146,16 +146,18 @@ describe("Context menu visibility toggles", () => {
         },
       })
     })
-    expect(mockSendRedemptionAssistMessage).toHaveBeenCalledWith(
-      RedemptionAssistMessageTypes.UpdateSettings,
-      {
-        settings: {
-          contextMenu: {
-            enabled: false,
+    await waitFor(() => {
+      expect(mockSendRedemptionAssistMessage).toHaveBeenCalledWith(
+        RedemptionAssistMessageTypes.UpdateSettings,
+        {
+          settings: {
+            contextMenu: {
+              enabled: false,
+            },
           },
         },
-      },
-    )
+      )
+    })
 
     await waitFor(() => {
       expect(sendPreferencesMessage).toHaveBeenCalledWith(

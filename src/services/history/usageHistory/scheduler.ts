@@ -367,6 +367,11 @@ export async function resolveUsageHistorySyncNowMessage(
       ? request.accountIds
       : undefined
     const result = await usageHistoryScheduler.runManualSync(accountIds)
+    if (!result) {
+      return createRuntimeMessageFailure(
+        "Usage-history sync is already running",
+      )
+    }
     return { success: true, data: result }
   } catch (error) {
     logger.error("Message handling failed", error)

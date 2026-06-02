@@ -755,7 +755,23 @@ export default function AccountActionButtons({
           ? statusResponse.data.perAccount[site.id]
           : null
 
-      const status = result?.status
+      if (!result) {
+        toast.error(
+          t("autoCheckin:messages.error.runFailed", {
+            error: statusResponse?.success ? "" : statusResponse?.error ?? "",
+          }),
+        )
+        tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
+          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          insights: {
+            statusKind: PRODUCT_ANALYTICS_STATUS_KINDS.Error,
+          },
+        })
+        void loadAccountData()
+        return
+      }
+
+      const status = result.status
 
       const displayMessage = resolveAutoCheckinResultMessage({
         t,

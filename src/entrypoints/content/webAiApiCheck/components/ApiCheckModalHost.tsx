@@ -603,6 +603,9 @@ export function ApiCheckModalHost() {
           })
         }
       } catch (error) {
+        if (fetchModelsRequestIdRef.current === requestId) {
+          setFetchModelsError(t("webAiApiCheck:modal.errors.fetchModelsFailed"))
+        }
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: resolveProductAnalyticsErrorCategoryFromError(error),
           diagnostics: buildModelListDiagnostics({
@@ -612,7 +615,6 @@ export function ApiCheckModalHost() {
             error,
           }),
         })
-        throw error
       } finally {
         if (fetchModelsRequestIdRef.current === requestId) {
           setIsFetchingModels(false)

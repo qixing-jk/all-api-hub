@@ -366,7 +366,7 @@ describe("webdavAutoSyncService lifecycle", () => {
       },
       {
         request: { type: WebdavAutoSyncMessageTypes.SyncNow },
-        expected: { success: true, message: "ok" },
+        expected: { success: true, data: { message: "ok" } },
       },
       {
         request: { type: WebdavAutoSyncMessageTypes.Stop },
@@ -419,6 +419,32 @@ describe("webdavAutoSyncService lifecycle", () => {
     expect(syncNowSpy).toHaveBeenCalledTimes(1)
     expect(stopSpy).toHaveBeenCalledTimes(1)
     expect(updateSpy).toHaveBeenCalledWith({ autoSync: false }, undefined)
+
+    syncNowSpy.mockResolvedValueOnce({
+      success: false,
+      message: "manual sync failed",
+    })
+    await expect(
+      resolveWebdavAutoSyncTestMessage({
+        type: WebdavAutoSyncMessageTypes.SyncNow,
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "manual sync failed",
+    })
+
+    syncNowSpy.mockResolvedValueOnce({
+      success: true,
+      message: "manual sync ok",
+    })
+    await expect(
+      resolveWebdavAutoSyncTestMessage({
+        type: WebdavAutoSyncMessageTypes.SyncNow,
+      }),
+    ).resolves.toEqual({
+      success: true,
+      data: { message: "manual sync ok" },
+    })
 
     setupSpy.mockRejectedValueOnce(new Error("handler exploded"))
     await expect(

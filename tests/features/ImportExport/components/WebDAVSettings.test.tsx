@@ -354,7 +354,7 @@ describe("WebDAVSettings", () => {
             ...latestPreferences,
             lastUpdated: latestPreferences.lastUpdated + 1,
           })
-          return { success: true, message: "custom sync ok" }
+          return { success: true, data: { message: "custom sync ok" } }
         }
         default:
           return { success: true }

@@ -436,7 +436,7 @@ describe("ManagedSiteModelSyncSettings", () => {
     )
   })
 
-  it("falls back to model metadata when runtime options are unavailable", async () => {
+  it("honors an empty successful runtime model option list", async () => {
     mockedSendModelSyncMessage.mockResolvedValue({
       success: true,
       data: [],
@@ -449,11 +449,14 @@ describe("ManagedSiteModelSyncSettings", () => {
     render(<ManagedSiteModelSyncSettings />)
 
     await waitFor(() => {
-      expect(mockedModelMetadataService.initialize).toHaveBeenCalledTimes(1)
+      expect(
+        screen.getByText("managedSiteModelSync:settings.allowedModelsHint"),
+      ).toBeInTheDocument()
     })
 
+    expect(mockedModelMetadataService.initialize).not.toHaveBeenCalled()
     expect(screen.getByTestId(TEST_IDS.allowedModelOptions)).toHaveTextContent(
-      "alpha-model,zeta-model",
+      "",
     )
   })
 

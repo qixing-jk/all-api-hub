@@ -11,6 +11,12 @@ import {
   SITE_TYPES,
   type ManagedSiteType,
 } from "~/constants/siteType"
+import {
+  ProductAnalyticsMessageTypes,
+  sendProductAnalyticsMessage,
+  type ProductAnalyticsTrackRequest,
+  type ProductAnalyticsTrackRequestDiscriminated,
+} from "~/services/productAnalytics/messaging"
 import { API_TYPES } from "~/services/verification/aiApiVerification/types"
 import {
   AuthTypeEnum,
@@ -21,18 +27,9 @@ import {
 } from "~/types"
 import type { LogLevel } from "~/types/logging"
 import type { ThemeMode } from "~/types/theme"
-import { isMessageReceiverUnavailableError } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 
-import {
-  ProductAnalyticsMessageTypes,
-  sendProductAnalyticsMessage,
-  type ProductAnalyticsTrackRequest,
-} from "./messaging"
-
 const logger = createLogger("ProductAnalyticsEvents")
-const PRODUCT_ANALYTICS_MESSAGE_RETRY_ATTEMPTS = 3
-const PRODUCT_ANALYTICS_MESSAGE_RETRY_DELAY_MS = 500
 
 export const PRODUCT_ANALYTICS_EVENTS = {
   AppOpened: "app_opened",
@@ -1163,43 +1160,6 @@ export type ProductAnalyticsEventPayload<
 > = ProductAnalyticsEventPayloadMap[TEventName]
 
 /**
- * Sends typed analytics messages with transient receiver retry behavior.
- */
-async function sendProductAnalyticsTrackEventWithRetry<
-  TEventName extends ProductAnalyticsEventName,
->(data: ProductAnalyticsTrackRequest<TEventName>) {
-  for (
-    let attempt = 0;
-    attempt < PRODUCT_ANALYTICS_MESSAGE_RETRY_ATTEMPTS;
-    attempt++
-  ) {
-    try {
-      return await sendProductAnalyticsMessage(
-        ProductAnalyticsMessageTypes.TrackEvent,
-        data,
-      )
-    } catch (error) {
-      const shouldRetry =
-        attempt < PRODUCT_ANALYTICS_MESSAGE_RETRY_ATTEMPTS - 1 &&
-        isMessageReceiverUnavailableError(error)
-
-      if (!shouldRetry) {
-        throw error
-      }
-
-      await new Promise((resolve) =>
-        setTimeout(
-          resolve,
-          PRODUCT_ANALYTICS_MESSAGE_RETRY_DELAY_MS * Math.pow(2, attempt),
-        ),
-      )
-    }
-  }
-
-  throw new Error("Product analytics message retry exhausted")
-}
-
-/**
  * Sends a typed product analytics event to the background runtime handler.
  * Telemetry dispatch is best-effort and must not block product flows.
  */
@@ -1210,10 +1170,14 @@ export async function trackProductAnalyticsEvent<
   properties: ProductAnalyticsEventPayload<TEventName>,
 ): Promise<boolean> {
   try {
-    const response = await sendProductAnalyticsTrackEventWithRetry({
+    const request = {
       eventName,
       properties,
-    } satisfies ProductAnalyticsTrackRequest<TEventName>)
+    } satisfies ProductAnalyticsTrackRequest<TEventName>
+    const response = await sendProductAnalyticsMessage(
+      ProductAnalyticsMessageTypes.TrackEvent,
+      request as ProductAnalyticsTrackRequestDiscriminated,
+    )
     return !(
       response &&
       typeof response === "object" &&

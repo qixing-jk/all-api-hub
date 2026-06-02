@@ -209,9 +209,9 @@ export default function WebDAVAutoSyncSettings() {
           }),
         })
         await loadStatus()
-        toast.success(response.message || t("webdav.syncSuccess"))
+        toast.success(response.data?.message || t("webdav.syncSuccess"))
       } else {
-        toast.error(response.message || t("webdav.syncFailed"))
+        toast.error(response.error || t("webdav.syncFailed"))
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           diagnostics: buildWebDavSyncDiagnostics({

@@ -378,6 +378,41 @@ describe("TaskNotificationSettings", () => {
     })
   })
 
+  it("surfaces resolved browser test notification failures", async () => {
+    hasPermissionMock.mockResolvedValue(true)
+    sendTaskNotificationMessageMock.mockResolvedValueOnce({
+      success: false,
+      error: "delivery failed",
+    })
+
+    render(<TaskNotificationSettings />, {
+      withUserPreferencesProvider: false,
+      withThemeProvider: false,
+    })
+
+    await screen.findByText("settings:taskNotifications.channels.browser.title")
+    const browserChannel = document.getElementById(
+      SETTINGS_ANCHORS.TASK_NOTIFICATIONS_CHANNEL_BROWSER,
+    )
+    if (!browserChannel) {
+      throw new Error("Expected browser channel settings row")
+    }
+    const testButton = within(browserChannel).getByRole("button", {
+      name: "settings:taskNotifications.test.action",
+    })
+
+    fireEvent.click(testButton)
+
+    await waitFor(() => {
+      expect(showResultToastMock).toHaveBeenCalledWith({
+        success: false,
+        message: "delivery failed",
+        successFallback: "settings:taskNotifications.test.sent",
+        errorFallback: "settings:taskNotifications.test.failed",
+      })
+    })
+  })
+
   it("sends Telegram and webhook test notifications through their own channels", async () => {
     hasPermissionMock.mockResolvedValue(false)
     taskNotificationsMock.current = {

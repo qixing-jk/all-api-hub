@@ -161,7 +161,7 @@ describe("WebDAVAutoSyncSettings", () => {
         case WebdavAutoSyncMessageTypes.UpdateSettings:
           return { success: true }
         case WebdavAutoSyncMessageTypes.SyncNow:
-          return { success: true, message: "custom sync ok" }
+          return { success: true, data: { message: "custom sync ok" } }
         default:
           return { success: true }
       }
@@ -439,7 +439,7 @@ describe("WebDAVAutoSyncSettings", () => {
         case WebdavAutoSyncMessageTypes.UpdateSettings:
           throw new Error("save exploded")
         case WebdavAutoSyncMessageTypes.SyncNow:
-          return { success: false, message: "sync rejected" }
+          return { success: false, error: "sync rejected" }
         default:
           return { success: true }
       }

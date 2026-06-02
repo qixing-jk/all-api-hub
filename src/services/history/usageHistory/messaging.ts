@@ -5,6 +5,8 @@ import { UsageHistoryMessageTypes } from "~/services/runtimeMessaging/messageTyp
 import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"
 import type { UsageHistoryPreferences } from "~/types/usageHistory"
 
+import type { syncUsageHistoryForAccount } from "./sync"
+
 export interface UsageHistoryUpdateSettingsRequest {
   settings: Partial<
     Pick<
@@ -22,6 +24,10 @@ export type UsageHistoryUpdateSettingsResponse = RuntimeMessageResponse<{
   warning?: string
 }>
 
+export type UsageHistorySyncNowAccountResult = Awaited<
+  ReturnType<typeof syncUsageHistoryForAccount>
+>
+
 export type UsageHistorySyncNowResponse = RuntimeMessageResponse<{
   totals: {
     success: number
@@ -29,7 +35,7 @@ export type UsageHistorySyncNowResponse = RuntimeMessageResponse<{
     error: number
     unsupported: number
   }
-  perAccount: unknown[]
+  perAccount: UsageHistorySyncNowAccountResult[]
 } | null>
 
 interface UsageHistoryProtocolMap {
