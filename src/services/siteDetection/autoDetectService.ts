@@ -33,6 +33,7 @@ import {
   isMessageReceiverUnavailableError,
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
+import { isExtensionPopup } from "~/utils/browser/index"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -356,10 +357,14 @@ async function getUserDataViaBackground(
       fetchContext: summarizeApiServiceFetchContext(fetchContext),
     })
 
+    const shouldSuppressMinimize =
+      typeof window !== "undefined" && isExtensionPopup()
+
     const response = await sendRuntimeMessage({
       action: RuntimeActionIds.AutoDetectSite,
       url: url,
       requestId: requestId,
+      ...(shouldSuppressMinimize ? { suppressMinimize: true } : {}),
       ...(fetchContext?.incognito === true ? { useIncognito: true } : {}),
       ...(fetchContext?.cookieStoreId
         ? { cookieStoreId: fetchContext.cookieStoreId }

@@ -942,6 +942,52 @@ describe("tempWindowPool window fallback", () => {
     })
   })
 
+  it("does not minimize auto-detect temp windows when minimization is suppressed", async () => {
+    tempContextMode = "window"
+    createWindowMock.mockResolvedValueOnce({ id: 610, tabs: [{ id: 611 }] })
+    tabsQueryMock.mockResolvedValueOnce([{ id: 611 }])
+
+    const { handleAutoDetectSite } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const sendResponse = vi.fn()
+    const request = handleAutoDetectSite(
+      {
+        url: "https://aihubmix.com",
+        requestId: "req-auto-detect-suppress-minimize",
+        suppressMinimize: true,
+      },
+      sendResponse,
+    )
+
+    await vi.advanceTimersByTimeAsync(500)
+    await request
+
+    expect(createWindowMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        url: "https://aihubmix.com",
+        focused: false,
+      }),
+    )
+    expect((globalThis as any).browser.windows.update).not.toHaveBeenCalledWith(
+      610,
+      {
+        state: "minimized",
+      },
+    )
+    expect(sendResponse).toHaveBeenCalledWith({
+      success: true,
+      data: {
+        siteType: "new-api",
+        userId: "user-1",
+        user: "alice",
+        accessToken: "access-token",
+        siteTypeHint: "new-api",
+      },
+    })
+  })
+
   it("rejects incognito auto-detect requests when incognito access is unavailable", async () => {
     isAllowedIncognitoAccessMock.mockResolvedValueOnce(false)
 

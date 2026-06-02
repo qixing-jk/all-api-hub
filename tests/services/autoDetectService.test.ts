@@ -52,9 +52,16 @@ describe("autoDetectSmart", () => {
   const browserAny = globalThis.browser as any
   const originalRuntime = browserAny.runtime
   const originalTabs = browserAny.tabs
+  const originalWindow = (globalThis as any).window
 
   beforeEach(() => {
     vi.clearAllMocks()
+
+    if (originalWindow === undefined) {
+      delete (globalThis as any).window
+    } else {
+      ;(globalThis as any).window = originalWindow
+    }
 
     browserAny.runtime = originalRuntime ?? {}
     browserAny.tabs = {
@@ -74,6 +81,11 @@ describe("autoDetectSmart", () => {
   })
 
   afterEach(() => {
+    if (originalWindow === undefined) {
+      delete (globalThis as any).window
+    } else {
+      ;(globalThis as any).window = originalWindow
+    }
     browserAny.runtime = originalRuntime
     browserAny.tabs = originalTabs
   })
@@ -450,6 +462,41 @@ describe("autoDetectSmart", () => {
       url: "https://aihubmix.com",
     })
     expect(mockFetchUserInfo).not.toHaveBeenCalled()
+  })
+
+  it("suppresses temp-window minimization when background detection starts from the extension popup", async () => {
+    ;(globalThis as any).window = {
+      location: {
+        href: "chrome-extension://extension-id/popup.html",
+      },
+    }
+    mockGetAccountSiteType.mockResolvedValue(SITE_TYPES.AIHUBMIX)
+    mockGetActiveOrAllTabs.mockResolvedValue([
+      {
+        id: 2,
+        active: true,
+        url: "https://console.aihubmix.com/statistics",
+      },
+    ])
+    mockSendRuntimeMessage.mockResolvedValue({
+      success: true,
+      data: {
+        userId: "7",
+        user: { id: 7, username: "aihubmix-user" },
+        accessToken: "console-session-token",
+        siteTypeHint: SITE_TYPES.AIHUBMIX,
+      },
+    })
+
+    const result = await autoDetectSmart("https://aihubmix.com")
+
+    expect(result.success).toBe(true)
+    expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
+      action: expect.any(String),
+      requestId: expect.any(String),
+      url: "https://aihubmix.com",
+      suppressMinimize: true,
+    })
   })
 
   it("uses current-tab detection for AIHubMix when the active tab is the API origin", async () => {

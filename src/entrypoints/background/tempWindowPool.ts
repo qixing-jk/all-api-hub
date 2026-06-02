@@ -925,7 +925,7 @@ export async function handleAutoDetectSite(
   request: any,
   sendResponse: (response?: any) => void,
 ) {
-  const { url, requestId, useIncognito } = request
+  const { url, requestId, useIncognito, suppressMinimize } = request
 
   try {
     if (useIncognito) {
@@ -940,10 +940,15 @@ export async function handleAutoDetectSite(
     }
 
     const siteType = await getAccountSiteType(url)
-    const userData = await getSiteDataFromTab(url, requestId, undefined, {
-      incognito: Boolean(useIncognito),
-      siteType,
-    })
+    const userData = await getSiteDataFromTab(
+      url,
+      requestId,
+      suppressMinimize,
+      {
+        incognito: Boolean(useIncognito),
+        siteType,
+      },
+    )
 
     let result = null
     if (siteType && userData) {
