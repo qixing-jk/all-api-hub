@@ -56,7 +56,7 @@ describe("typed runtime messaging setup", () => {
     expect(getPreferencesHandler).toBeTypeOf("function")
     await expect(getPreferencesHandler!()).resolves.toEqual({
       success: false,
-      error: "boom",
+      error: "settings:messages.runtimeRequestFailed",
     })
   })
 
