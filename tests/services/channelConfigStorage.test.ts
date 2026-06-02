@@ -1,14 +1,17 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { ChannelConfigMessageTypes } from "~/services/managedSites/channelConfigMessaging"
 import {
   channelConfigStorage,
   resolveChannelConfigGetMessage,
   resolveChannelConfigUpsertFiltersMessage,
+  setupChannelConfigMessagingListeners,
 } from "~/services/managedSites/channelConfigStorage"
 
 const storageData = new Map<string, any>()
 
-const { mockSafeRandomUUID } = vi.hoisted(() => ({
+const { mockOnChannelConfigMessage, mockSafeRandomUUID } = vi.hoisted(() => ({
+  mockOnChannelConfigMessage: vi.fn(() => vi.fn()),
   mockSafeRandomUUID: vi.fn(() => "generated-filter-id"),
 }))
 
@@ -29,6 +32,20 @@ vi.mock("@plasmohq/storage", () => {
 vi.mock("~/utils/core/identifier", () => ({
   safeRandomUUID: mockSafeRandomUUID,
 }))
+
+vi.mock(
+  "~/services/managedSites/channelConfigMessaging",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/managedSites/channelConfigMessaging")
+      >()
+    return {
+      ...actual,
+      onChannelConfigMessage: mockOnChannelConfigMessage,
+    }
+  },
+)
 
 describe("channelConfigStorage", () => {
   beforeEach(() => {
@@ -341,6 +358,23 @@ describe("channelConfigStorage", () => {
     })
   })
 
+  it("registers typed channel config listeners once", () => {
+    setupChannelConfigMessagingListeners()
+    setupChannelConfigMessagingListeners()
+
+    expect(mockOnChannelConfigMessage).toHaveBeenCalledTimes(2)
+    expect(mockOnChannelConfigMessage).toHaveBeenNthCalledWith(
+      1,
+      ChannelConfigMessageTypes.Get,
+      expect.any(Function),
+    )
+    expect(mockOnChannelConfigMessage).toHaveBeenNthCalledWith(
+      2,
+      ChannelConfigMessageTypes.UpsertFilters,
+      expect.any(Function),
+    )
+  })
+
   it("sanitizes empty imports and preserves explicit rule timestamps when provided", async () => {
     await expect(channelConfigStorage.importConfigs(null)).resolves.toBe(0)
     expect(storageData.get("channel_configs")).toEqual({})
@@ -416,6 +450,24 @@ describe("channelConfigStorage", () => {
       success: false,
       error: expect.stringContaining("Invalid regex pattern"),
     })
+  })
+
+  it("returns a typed failure when filter persistence is rejected", async () => {
+    const saveSpy = vi
+      .spyOn(channelConfigStorage, "upsertFilters")
+      .mockResolvedValueOnce(false)
+
+    await expect(
+      resolveChannelConfigUpsertFiltersMessage({
+        channelId: 12,
+        filters: [],
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Failed to save channel filters",
+    })
+
+    saveSpy.mockRestore()
   })
 
   it("normalizes probe rules and drops imported credential fields", async () => {

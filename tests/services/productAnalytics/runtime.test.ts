@@ -8,6 +8,7 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
   setupProductAnalyticsAccountChangeListener,
+  setupProductAnalyticsMessagingListeners,
   setupProductAnalyticsPreferencesChangeListener,
 } from "~/services/productAnalytics"
 import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/messaging"
@@ -16,12 +17,18 @@ const {
   captureMock,
   getAllAccountsMock,
   getPreferencesMock,
+  mockIsDevelopmentMode,
+  mockLoggerDebug,
+  mockOnProductAnalyticsMessage,
   preferenceMocks,
   stateMocks,
 } = vi.hoisted(() => ({
   captureMock: vi.fn(),
   getAllAccountsMock: vi.fn(),
   getPreferencesMock: vi.fn(),
+  mockIsDevelopmentMode: vi.fn(() => false),
+  mockLoggerDebug: vi.fn(),
+  mockOnProductAnalyticsMessage: vi.fn(() => vi.fn()),
   preferenceMocks: {
     isEnabled: vi.fn(),
   },
@@ -37,6 +44,30 @@ vi.mock("~/services/productAnalytics/client", () => ({
     capture: captureMock,
   },
 }))
+
+vi.mock("~/utils/core/environment", () => ({
+  isDevelopmentMode: mockIsDevelopmentMode,
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    debug: mockLoggerDebug,
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  }),
+}))
+
+vi.mock("~/services/productAnalytics/messaging", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/productAnalytics/messaging")
+    >()
+  return {
+    ...actual,
+    onProductAnalyticsMessage: mockOnProductAnalyticsMessage,
+  }
+})
 
 vi.mock("~/services/productAnalytics/preferences", async (importOriginal) => {
   const actual =
@@ -101,6 +132,7 @@ describe("product analytics runtime", () => {
     stateMocks.setLastSiteEcosystemSnapshotAt.mockResolvedValue(true)
     getAllAccountsMock.mockResolvedValue([])
     getPreferencesMock.mockResolvedValue(createDefaultPreferences())
+    mockIsDevelopmentMode.mockReturnValue(false)
   })
 
   afterEach(() => {
@@ -198,6 +230,51 @@ describe("product analytics runtime", () => {
     ).resolves.toEqual({ success: false })
 
     expect(captureMock).not.toHaveBeenCalled()
+  })
+
+  it("returns a runtime failure when event capture throws", async () => {
+    captureMock.mockRejectedValueOnce(new Error("capture unavailable"))
+    mockIsDevelopmentMode.mockReturnValue(true)
+
+    await expect(
+      handleProductAnalyticsMessage(ProductAnalyticsMessageTypes.TrackEvent, {
+        eventName: PRODUCT_ANALYTICS_EVENTS.PageViewed,
+        properties: {
+          page_id: "options_basic_settings",
+          entrypoint: "options",
+        },
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "capture unavailable",
+    })
+
+    expect(mockLoggerDebug).toHaveBeenCalledWith(
+      "Product analytics runtime request failed",
+      expect.any(Error),
+    )
+  })
+
+  it("registers typed product analytics listeners once", () => {
+    setupProductAnalyticsMessagingListeners()
+    setupProductAnalyticsMessagingListeners()
+
+    expect(mockOnProductAnalyticsMessage).toHaveBeenCalledTimes(3)
+    expect(mockOnProductAnalyticsMessage).toHaveBeenNthCalledWith(
+      1,
+      ProductAnalyticsMessageTypes.TrackEvent,
+      expect.any(Function),
+    )
+    expect(mockOnProductAnalyticsMessage).toHaveBeenNthCalledWith(
+      2,
+      ProductAnalyticsMessageTypes.TrackSiteEcosystemSnapshot,
+      expect.any(Function),
+    )
+    expect(mockOnProductAnalyticsMessage).toHaveBeenNthCalledWith(
+      3,
+      ProductAnalyticsMessageTypes.TrackSettingsSnapshot,
+      expect.any(Function),
+    )
   })
 
   it("sends rate-limited site ecosystem snapshots", async () => {

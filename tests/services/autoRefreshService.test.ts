@@ -9,6 +9,7 @@ import {
 } from "vitest"
 
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { AutoRefreshMessageTypes } from "~/services/accounts/autoRefreshMessaging"
 import {
   autoRefreshService,
   resolveAutoRefreshGetStatusMessage,
@@ -16,11 +17,16 @@ import {
   resolveAutoRefreshSetupMessage,
   resolveAutoRefreshStopMessage,
   resolveAutoRefreshUpdateSettingsMessage,
+  setupAutoRefreshMessagingListeners,
 } from "~/services/accounts/autoRefreshService"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
 import { userPreferences } from "~/services/preferences/userPreferences"
 import { DEFAULT_ACCOUNT_AUTO_REFRESH } from "~/types/accountAutoRefresh"
+
+const { mockOnAutoRefreshMessage } = vi.hoisted(() => ({
+  mockOnAutoRefreshMessage: vi.fn(() => vi.fn()),
+}))
 
 // Mock dependencies.
 //
@@ -48,6 +54,17 @@ vi.mock("~/services/history/usageHistory/scheduler", () => ({
     runAfterRefreshSync: vi.fn(),
   },
 }))
+
+vi.mock("~/services/accounts/autoRefreshMessaging", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/accounts/autoRefreshMessaging")
+    >()
+  return {
+    ...actual,
+    onAutoRefreshMessage: mockOnAutoRefreshMessage,
+  }
+})
 
 // Mock browser runtime using vi.stubGlobal like other tests
 const mockSendMessage = vi.fn()
@@ -615,5 +632,37 @@ describe("auto-refresh typed message resolvers", () => {
         },
       })
     })
+  })
+
+  it("registers typed message listeners once", () => {
+    setupAutoRefreshMessagingListeners()
+    setupAutoRefreshMessagingListeners()
+
+    expect(mockOnAutoRefreshMessage).toHaveBeenCalledTimes(5)
+    expect(mockOnAutoRefreshMessage).toHaveBeenNthCalledWith(
+      1,
+      AutoRefreshMessageTypes.Setup,
+      expect.any(Function),
+    )
+    expect(mockOnAutoRefreshMessage).toHaveBeenNthCalledWith(
+      2,
+      AutoRefreshMessageTypes.RefreshNow,
+      expect.any(Function),
+    )
+    expect(mockOnAutoRefreshMessage).toHaveBeenNthCalledWith(
+      3,
+      AutoRefreshMessageTypes.Stop,
+      expect.any(Function),
+    )
+    expect(mockOnAutoRefreshMessage).toHaveBeenNthCalledWith(
+      4,
+      AutoRefreshMessageTypes.UpdateSettings,
+      expect.any(Function),
+    )
+    expect(mockOnAutoRefreshMessage).toHaveBeenNthCalledWith(
+      5,
+      AutoRefreshMessageTypes.GetStatus,
+      expect.any(Function),
+    )
   })
 })
