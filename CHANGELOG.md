@@ -1,5 +1,24 @@
 # Changelog
 
+## [3.43.0](https://github.com/qixing-jk/all-api-hub/compare/v3.42.0...v3.43.0) (2026-06-02)
+
+
+### Features
+
+* Support site-specific string account identities ([#890](https://github.com/qixing-jk/all-api-hub/issues/890)) ([b55a9a1](https://github.com/qixing-jk/all-api-hub/commit/b55a9a19e8c925ee85e5da201868350f8562468e))
+
+
+### Bug Fixes
+
+* **account-dialog:** import cookies from source tab ([#894](https://github.com/qixing-jk/all-api-hub/issues/894)) ([c8dcfa8](https://github.com/qixing-jk/all-api-hub/commit/c8dcfa8b55cc5483458d90fac96712821e07dbbf))
+* **aihubmix:** skip default key prompt when token exists ([#892](https://github.com/qixing-jk/all-api-hub/issues/892)) ([4df322e](https://github.com/qixing-jk/all-api-hub/commit/4df322e4d6915fa1e82bc3ef394ebeaa4a0d098b))
+* **autodetect:** avoid minimizing popup-launched temp windows ([#901](https://github.com/qixing-jk/all-api-hub/issues/901)) ([31e8ec7](https://github.com/qixing-jk/all-api-hub/commit/31e8ec709e2dc74e4fe3c1e455d3eb22b0d7a608))
+* **content:** initialize i18n for content UI ([#897](https://github.com/qixing-jk/all-api-hub/issues/897)) ([836ca8a](https://github.com/qixing-jk/all-api-hub/commit/836ca8aeffcbb46ad8987c9c11937031a117cb23))
+* **cookie-auth:** restore scoped 401 temp-window fallback ([#895](https://github.com/qixing-jk/all-api-hub/issues/895)) ([2e28184](https://github.com/qixing-jk/all-api-hub/commit/2e281841dcfe08197fbf83b1f3ab1a4d30ae4c4e))
+* Fix account dialog current-tab title prefill ([#898](https://github.com/qixing-jk/all-api-hub/issues/898)) ([75dbe9a](https://github.com/qixing-jk/all-api-hub/commit/75dbe9adaba0482b750b78ffb5ec4e6c88d009c4))
+* Fix AIHubMix duplicate site detection ([#896](https://github.com/qixing-jk/all-api-hub/issues/896)) ([bd675e9](https://github.com/qixing-jk/all-api-hub/commit/bd675e9238076d04742ba564abae77774bda11fa))
+* **model-list:** wait for created compatible keys to appear ([707055a](https://github.com/qixing-jk/all-api-hub/commit/707055a4c2813de6601b6e4612331fbeaac7505b))
+
 ## [3.42.0](https://github.com/qixing-jk/all-api-hub/compare/v3.41.1...v3.42.0) (2026-05-31)
 
 
