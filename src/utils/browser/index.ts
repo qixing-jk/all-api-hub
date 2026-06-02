@@ -98,6 +98,10 @@ export function isExtensionPage(url: URL) {
  * @returns True when running inside popup.html.
  */
 export function isExtensionPopup() {
+  if (typeof window === "undefined") {
+    return false
+  }
+
   try {
     const url = new URL(window.location.href)
     return isExtensionPage(url) && url.pathname.endsWith(`/${POPUP_PAGE_PATH}`)

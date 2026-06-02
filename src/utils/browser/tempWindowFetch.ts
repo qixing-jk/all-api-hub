@@ -547,11 +547,7 @@ async function shouldUseTempWindowFallback(
   }
 
   try {
-    if (
-      typeof window !== "undefined" &&
-      isProtectionBypassFirefoxEnv() &&
-      isExtensionPopup()
-    ) {
+    if (isProtectionBypassFirefoxEnv() && isExtensionPopup()) {
       logSkipTempWindowFallback(
         "Running in Firefox popup; temp window fallback is forcibly disabled to avoid closing the popup.",
         context,
