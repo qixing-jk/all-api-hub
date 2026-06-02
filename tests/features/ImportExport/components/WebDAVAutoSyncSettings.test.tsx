@@ -478,6 +478,60 @@ describe("WebDAVAutoSyncSettings", () => {
     })
   })
 
+  it("uses local sync-now toast fallbacks when the runtime omits message copy", async () => {
+    mockSendWebdavAutoSyncMessage.mockImplementation(async (type: string) => {
+      switch (type) {
+        case WebdavAutoSyncMessageTypes.GetStatus:
+          return { success: true, data: null }
+        case WebdavAutoSyncMessageTypes.SyncNow:
+          return { success: true, data: {} }
+        default:
+          return { success: true }
+      }
+    })
+
+    render(<WebDAVAutoSyncSettings />)
+
+    expect(
+      await screen.findByRole("button", {
+        name: "importExport:webdav.autoSync.syncNow",
+      }),
+    ).toBeInTheDocument()
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.autoSync.syncNow",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.success).toHaveBeenCalledWith(
+        "importExport:webdav.syncSuccess",
+      )
+    })
+
+    mockSendWebdavAutoSyncMessage.mockImplementation(async (type: string) => {
+      switch (type) {
+        case WebdavAutoSyncMessageTypes.GetStatus:
+          return { success: true, data: null }
+        case WebdavAutoSyncMessageTypes.SyncNow:
+          return { success: false }
+        default:
+          return { success: true }
+      }
+    })
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "importExport:webdav.autoSync.syncNow",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(toast.error).toHaveBeenCalledWith("importExport:webdav.syncFailed")
+    })
+  })
+
   it("saves edited interval and strategy values from the local draft", async () => {
     const user = userEvent.setup()
 

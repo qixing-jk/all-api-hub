@@ -582,6 +582,37 @@ describe("SiteAnnouncementsPage", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("shows the load-error state when the typed announcement status response is unsuccessful", async () => {
+    sendSiteAnnouncementsMessageMock.mockImplementation(
+      async (type: string) => {
+        switch (type) {
+          case SiteAnnouncementsMessageTypes.ListRecords:
+            return { success: true, data: records }
+          case SiteAnnouncementsMessageTypes.GetStatus:
+            return { success: false, error: "status rejected" }
+          default:
+            return { success: true }
+        }
+      },
+    )
+
+    render(<SiteAnnouncementsPage />)
+
+    await waitFor(() => {
+      expect(showResultToast).toHaveBeenCalledWith({
+        success: false,
+        message: "status rejected",
+        errorFallback: "siteAnnouncements:messages.loadFailed",
+      })
+    })
+    expect(
+      await screen.findByText("siteAnnouncements:messages.loadFailed"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("Full maintenance window"),
+    ).not.toBeInTheDocument()
+  })
+
   it("disables manual checks while announcements are loading", async () => {
     let resolveRecords!: (response: {
       success: true

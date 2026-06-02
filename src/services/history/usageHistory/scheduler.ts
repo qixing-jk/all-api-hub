@@ -363,6 +363,16 @@ export async function resolveUsageHistorySyncNowMessage(
   request?: UsageHistorySyncNowRequest,
 ): Promise<UsageHistorySyncNowResponse> {
   try {
+    if (
+      request &&
+      request.accountIds !== undefined &&
+      !Array.isArray(request.accountIds)
+    ) {
+      return createRuntimeMessageFailure(
+        "accountIds must be an array when provided",
+      )
+    }
+
     const accountIds = Array.isArray(request?.accountIds)
       ? request.accountIds
       : undefined

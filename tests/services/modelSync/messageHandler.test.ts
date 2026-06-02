@@ -245,14 +245,24 @@ describe("ManagedSiteModelSync operation helpers", () => {
   })
 
   it("returns app-owned listener failure copy instead of raw scheduler errors", async () => {
-    vi.spyOn(modelSyncScheduler, "executeSync").mockRejectedValue(
-      new Error("upstream token secret leaked"),
-    )
+    const executeSyncSpy = vi.spyOn(modelSyncScheduler, "executeSync")
 
     setupManagedSiteModelSyncMessagingListeners()
-    const handler = modelSyncMessageHandlers.get("modelSync:triggerAll")
+    const selectedHandler = modelSyncMessageHandlers.get(
+      "modelSync:triggerSelected",
+    )
+    await expect(selectedHandler?.({ data: {} })).resolves.toEqual({
+      success: false,
+      error: "channelIds must be a non-empty array for selected sync",
+    })
+    expect(executeSyncSpy).not.toHaveBeenCalled()
 
-    await expect(handler?.({ data: {} })).resolves.toEqual({
+    executeSyncSpy.mockRejectedValue(new Error("upstream token secret leaked"))
+    const triggerAllHandler = modelSyncMessageHandlers.get(
+      "modelSync:triggerAll",
+    )
+
+    await expect(triggerAllHandler?.({ data: {} })).resolves.toEqual({
       success: false,
       error: "settings:messages.runtimeRequestFailed",
     })

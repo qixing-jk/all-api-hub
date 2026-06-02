@@ -440,6 +440,20 @@ describe("handleUsageHistoryMessage", () => {
     })
   })
 
+  it("rejects malformed scoped sync payloads instead of syncing every account", async () => {
+    const runManualSyncSpy = vi.spyOn(usageHistoryScheduler, "runManualSync")
+
+    const response = await resolveUsageHistorySyncNowMessage({
+      accountIds: "not-an-array" as any,
+    })
+
+    expect(response).toEqual({
+      success: false,
+      error: "accountIds must be an array when provided",
+    })
+    expect(runManualSyncSpy).not.toHaveBeenCalled()
+  })
+
   it("returns a failure response when a manual sync is already running", async () => {
     vi.spyOn(usageHistoryScheduler, "runManualSync").mockResolvedValue(null)
 
