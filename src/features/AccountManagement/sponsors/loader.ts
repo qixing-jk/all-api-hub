@@ -1,6 +1,9 @@
 import { createLogger } from "~/utils/core/logger"
 
-import { getBundledSponsorCatalog } from "./bundledCatalog"
+import {
+  getBundledSponsorCatalog,
+  getDevelopmentSponsorCatalog,
+} from "./bundledCatalog"
 import { normalizeSponsorCatalog } from "./catalog"
 import { SPONSOR_REMOTE_CATALOG_URL } from "./constants"
 import { sponsorCatalogStorage } from "./storage"
@@ -21,6 +24,31 @@ interface LoadSponsorRecommendationsOptions {
 export interface LoadSponsorRecommendationsResult {
   items: SponsorRecommendation[]
   source: SponsorCatalogSource
+}
+
+/** Appends local development examples to display results without persisting them as remote cache. */
+function mergeDevelopmentSponsorRecommendations(
+  items: SponsorRecommendation[],
+  options: LoadSponsorRecommendationsOptions,
+): SponsorRecommendation[] {
+  const developmentCatalog = getDevelopmentSponsorCatalog()
+  if (!developmentCatalog) {
+    return items
+  }
+
+  const normalized = normalizeSponsorCatalog(developmentCatalog, {
+    ...options,
+    source: SPONSOR_CATALOG_SOURCES.Bundled,
+  })
+
+  if (!normalized.ok) {
+    logger.warn("Development sponsor catalog examples are invalid", {
+      errors: normalized.errors,
+    })
+    return items
+  }
+
+  return [...items, ...normalized.items]
 }
 
 /**
@@ -76,7 +104,7 @@ export async function refreshSponsorRecommendations(
   }
 
   return {
-    items: normalized.items,
+    items: mergeDevelopmentSponsorRecommendations(normalized.items, options),
     source: SPONSOR_CATALOG_SOURCES.Remote,
   }
 }
@@ -113,7 +141,7 @@ export async function loadSponsorRecommendations(
 
     if (cached.ok) {
       return {
-        items: cached.items,
+        items: mergeDevelopmentSponsorRecommendations(cached.items, options),
         source: SPONSOR_CATALOG_SOURCES.Cached,
       }
     }

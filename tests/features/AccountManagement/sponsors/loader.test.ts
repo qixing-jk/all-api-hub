@@ -228,6 +228,39 @@ describe("sponsor recommendation loader", () => {
     expect(fetchMock).not.toHaveBeenCalled()
   })
 
+  it("merges development examples with cached recommendations in development", async () => {
+    vi.stubEnv("MODE", "development")
+    const fetchMock = vi.fn()
+    vi.stubGlobal("fetch", fetchMock)
+    vi.mocked(sponsorCatalogStorage.getCachedRemoteCatalog).mockResolvedValue(
+      validRemoteCatalog,
+    )
+
+    const result = await loadSponsorRecommendations({ locale: "zh-CN", now })
+
+    expect(result.source).toBe(SPONSOR_CATALOG_SOURCES.Cached)
+    expect(result.items.map((item) => item.id)).toEqual([
+      "remote-provider",
+      "dev-supported-direct",
+      "dev-supported-access-token",
+      "dev-unsupported-all-fallbacks",
+    ])
+    expect(
+      result.items.find((item) => item.id === "remote-provider"),
+    ).toMatchObject({
+      source: SPONSOR_CATALOG_SOURCES.Cached,
+    })
+    expect(
+      result.items.find((item) => item.id === "dev-supported-direct"),
+    ).toMatchObject({
+      source: SPONSOR_CATALOG_SOURCES.Bundled,
+      accountPrefill: {
+        authType: AuthTypeEnum.Cookie,
+      },
+    })
+    expect(fetchMock).not.toHaveBeenCalled()
+  })
+
   it("refreshes and caches valid remote recommendations separately", async () => {
     const fetchMock = mockFetchJson(validRemoteCatalog)
 
@@ -241,6 +274,40 @@ describe("sponsor recommendation loader", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(fetchMock).toHaveBeenCalledWith(SPONSOR_REMOTE_CATALOG_URL, {
       cache: "no-store",
+    })
+    expect(sponsorCatalogStorage.setCachedRemoteCatalog).toHaveBeenCalledWith(
+      validRemoteCatalog,
+    )
+  })
+
+  it("merges development examples with refreshed remote recommendations in development", async () => {
+    vi.stubEnv("MODE", "development")
+    mockFetchJson(validRemoteCatalog)
+
+    const result = await refreshSponsorRecommendations({
+      locale: "zh-CN",
+      now,
+    })
+
+    expect(result?.source).toBe(SPONSOR_CATALOG_SOURCES.Remote)
+    expect(result?.items.map((item) => item.id)).toEqual([
+      "remote-provider",
+      "dev-supported-direct",
+      "dev-supported-access-token",
+      "dev-unsupported-all-fallbacks",
+    ])
+    expect(
+      result?.items.find((item) => item.id === "remote-provider"),
+    ).toMatchObject({
+      source: SPONSOR_CATALOG_SOURCES.Remote,
+    })
+    expect(
+      result?.items.find((item) => item.id === "dev-supported-direct"),
+    ).toMatchObject({
+      source: SPONSOR_CATALOG_SOURCES.Bundled,
+      accountPrefill: {
+        authType: AuthTypeEnum.Cookie,
+      },
     })
     expect(sponsorCatalogStorage.setCachedRemoteCatalog).toHaveBeenCalledWith(
       validRemoteCatalog,
