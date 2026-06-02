@@ -357,8 +357,7 @@ async function getUserDataViaBackground(
       fetchContext: summarizeApiServiceFetchContext(fetchContext),
     })
 
-    const shouldSuppressMinimize =
-      typeof window !== "undefined" && isExtensionPopup()
+    const shouldSuppressMinimize = isExtensionPopup()
 
     const response = await sendRuntimeMessage({
       action: RuntimeActionIds.AutoDetectSite,

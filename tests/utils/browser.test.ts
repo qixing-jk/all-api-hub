@@ -247,6 +247,13 @@ describe("browser", () => {
       expect(isExtensionPopup()).toBe(false)
       expect(isExtensionSidePanel()).toBe(false)
     })
+
+    it("returns false when window is unavailable", () => {
+      vi.stubGlobal("window", undefined)
+
+      expect(isExtensionPopup()).toBe(false)
+      expect(isExtensionSidePanel()).toBe(false)
+    })
   })
 
   describe("isExtensionBackground", () => {

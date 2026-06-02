@@ -236,9 +236,7 @@ export async function getTempWindowFallbackBlockStatus(
 export async function tempWindowFetch(
   params: TempWindowFetchParams,
 ): Promise<TempWindowFetch> {
-  const suppressMinimize =
-    params.suppressMinimize ??
-    (typeof window !== "undefined" && isExtensionPopup())
+  const suppressMinimize = params.suppressMinimize ?? isExtensionPopup()
 
   const payload: TempWindowFetchParams = {
     ...params,
@@ -284,9 +282,7 @@ export async function tempWindowFetch(
 export async function tempWindowTurnstileFetch(
   params: TempWindowTurnstileFetchParams,
 ): Promise<TempWindowTurnstileFetch> {
-  const suppressMinimize =
-    params.suppressMinimize ??
-    (typeof window !== "undefined" && isExtensionPopup())
+  const suppressMinimize = params.suppressMinimize ?? isExtensionPopup()
 
   const payload: TempWindowTurnstileFetchParams = {
     ...params,
@@ -339,9 +335,7 @@ export async function tempWindowGetRenderedTitle(params: {
   const payload = {
     action: RuntimeActionIds.TempWindowGetRenderedTitle,
     ...params,
-    suppressMinimize:
-      params.suppressMinimize ??
-      (typeof window !== "undefined" && isExtensionPopup()),
+    suppressMinimize: params.suppressMinimize ?? isExtensionPopup(),
   }
 
   // Make sure works normally in all contexts, including background
