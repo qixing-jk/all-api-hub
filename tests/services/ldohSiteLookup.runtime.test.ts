@@ -1,8 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-const { sendLdohSiteLookupMessageMock } = vi.hoisted(() => ({
-  sendLdohSiteLookupMessageMock: vi.fn(),
-}))
+const { sendLdohSiteLookupMessageMock, isReceiverUnavailableMock } = vi.hoisted(
+  () => ({
+    isReceiverUnavailableMock: vi.fn(() => false),
+    sendLdohSiteLookupMessageMock: vi.fn(),
+  }),
+)
 
 vi.mock("@webext-core/messaging", () => ({
   defineExtensionMessaging: () => ({
@@ -12,12 +15,14 @@ vi.mock("@webext-core/messaging", () => ({
 }))
 
 vi.mock("~/utils/browser/browserApi", () => ({
-  isMessageReceiverUnavailableError: vi.fn(() => false),
+  isMessageReceiverUnavailableError: isReceiverUnavailableMock,
 }))
 
 describe("ldohSiteLookup runtime", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.useRealTimers()
+    isReceiverUnavailableMock.mockReturnValue(false)
   })
 
   it("returns a validated success response from background", async () => {
@@ -88,6 +93,56 @@ describe("ldohSiteLookup runtime", () => {
     await expect(requestLdohSiteLookupRefreshSites()).resolves.toEqual({
       success: false,
       error: "Invalid response from background.",
+    })
+  })
+
+  it("retries transient receiver failures before returning success", async () => {
+    vi.useFakeTimers()
+    isReceiverUnavailableMock.mockReturnValue(true)
+    sendLdohSiteLookupMessageMock
+      .mockRejectedValueOnce(new Error("receiver unavailable"))
+      .mockResolvedValueOnce({
+        success: true,
+        cachedCount: 2,
+      })
+
+    const { requestLdohSiteLookupRefreshSites } = await import(
+      "~/services/integrations/ldohSiteLookup/runtime"
+    )
+
+    const request = requestLdohSiteLookupRefreshSites({
+      maxAttempts: 2,
+      delayMs: 10,
+    })
+    await vi.advanceTimersByTimeAsync(10)
+
+    await expect(request).resolves.toEqual({
+      success: true,
+      cachedCount: 2,
+    })
+    expect(sendLdohSiteLookupMessageMock).toHaveBeenCalledTimes(2)
+  })
+
+  it("normalizes runtime send failures into failure responses", async () => {
+    sendLdohSiteLookupMessageMock
+      .mockRejectedValueOnce(new Error("background failed"))
+      .mockRejectedValueOnce("unknown failure")
+
+    const { requestLdohSiteLookupRefreshSites } = await import(
+      "~/services/integrations/ldohSiteLookup/runtime"
+    )
+
+    await expect(
+      requestLdohSiteLookupRefreshSites({ maxAttempts: 1 }),
+    ).resolves.toEqual({
+      success: false,
+      error: "background failed",
+    })
+    await expect(
+      requestLdohSiteLookupRefreshSites({ maxAttempts: 1 }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Background request failed.",
     })
   })
 })
