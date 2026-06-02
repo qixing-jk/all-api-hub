@@ -30,14 +30,6 @@
 | **Minimum Refresh Interval (seconds)** | Minimum refresh interval protection for the same account in "non-forced refresh" scenarios; minimum 30 seconds. |
 | **Restore Defaults** | Calls `resetAutoRefreshConfig()` to restore to the built-in default auto-refresh configuration. |
 
-## How It Works
-
-1. After the user saves the settings, `accountAutoRefresh` is written to local preferences via `UserPreferencesContext`.
-2. The background page receives the `RuntimeActionIds.AutoRefreshUpdateSettings` (wire: `autoRefresh:updateSettings`) message and calls `autoRefreshService.setupAutoRefresh()`:
-   - If the switch is off or the configuration is incomplete, the timer is stopped.
-   - Otherwise, `setInterval` is created based on the interval, periodically executing `accountStorage.refreshAllAccounts(false)`.
-3. Refresh results (success/failure) are broadcast to the frontend via the `AUTO_REFRESH_UPDATE` message; if the pop-up is not open, it is silently ignored.
-
 ## Recommended Strategies
 
 - **High-Frequency Check**: For core accounts, an interval of 300-600 seconds is recommended to ensure timely balance alerts.

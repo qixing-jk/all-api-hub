@@ -30,14 +30,6 @@
 | **最小更新間隔（秒）** | 「非強制更新」シナリオにおける、同一アカウントの最小更新間隔保護。最低30秒。 |
 | **デフォルトに戻す** | `resetAutoRefreshConfig()` を呼び出し、組み込みのデフォルトの自動更新設定に戻します。 |
 
-## 動作原理
-
-1. ユーザーが設定を保存すると、`UserPreferencesContext` を介して `accountAutoRefresh` がローカル設定に書き込まれます。
-2. バックグラウンドページが `RuntimeActionIds.AutoRefreshUpdateSettings`（wire: `autoRefresh:updateSettings`）メッセージを受信すると、`autoRefreshService.setupAutoRefresh()` を呼び出します。
-   - スイッチがオフになっているか、設定が不完全な場合はタイマーを停止します。
-   - それ以外の場合は、間隔に基づいて `setInterval` を作成し、定期的に `accountStorage.refreshAllAccounts(false)` を実行します。
-3. 更新結果（成功/失敗）は `AUTO_REFRESH_UPDATE` メッセージを介してフロントエンドにブロードキャストされます。ポップアップが開いていない場合は、サイレントに無視されます。
-
 ## 推奨戦略
 
 - **高頻度チェック**: 主要アカウントは300～600秒に設定することをお勧めします。これにより、残高アラートがタイムリーに通知されます。
