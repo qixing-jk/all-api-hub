@@ -1,12 +1,13 @@
 import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import UsageHistorySyncTab from "~/features/BasicSettings/components/tabs/UsageHistorySync/UsageHistorySyncTab"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { sendUsageHistoryMessage } from "~/services/history/usageHistory/messaging"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
-import { hasAlarmsAPI, sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { UsageHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { hasAlarmsAPI } from "~/utils/browser/browserApi"
 import {
   fireEvent,
   render,
@@ -48,9 +49,15 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   return {
     ...actual,
     hasAlarmsAPI: vi.fn(() => true),
-    sendRuntimeMessage: vi.fn(),
   }
 })
+
+vi.mock("~/services/history/usageHistory/messaging", () => ({
+  sendUsageHistoryMessage: vi.fn(),
+}))
+
+const mockedSendUsageHistoryMessage =
+  sendUsageHistoryMessage as unknown as ReturnType<typeof vi.fn>
 
 vi.mock("react-hot-toast", () => ({
   default: mockToast,
@@ -114,7 +121,7 @@ describe("UsageHistorySyncTab", () => {
     )
     vi.mocked(usageHistoryStorage.getStore).mockResolvedValue(createStore())
     vi.mocked(hasAlarmsAPI).mockReturnValue(true)
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({ success: true } as any)
+    mockedSendUsageHistoryMessage.mockResolvedValue({ success: true } as any)
     vi.mocked(toast.loading).mockReturnValue("sync-toast")
   })
 
@@ -140,7 +147,7 @@ describe("UsageHistorySyncTab", () => {
       accounts: {},
     } as any)
 
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({ success: true } as any)
+    mockedSendUsageHistoryMessage.mockResolvedValue({ success: true } as any)
 
     renderSubject()
 
@@ -150,15 +157,17 @@ describe("UsageHistorySyncTab", () => {
     fireEvent.click(applyButton)
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.UsageHistoryUpdateSettings,
-        settings: {
-          enabled: true,
-          retentionDays: 14,
-          scheduleMode: "afterRefresh",
-          syncIntervalMinutes: 180,
+      expect(mockedSendUsageHistoryMessage).toHaveBeenCalledWith(
+        UsageHistoryMessageTypes.UpdateSettings,
+        {
+          settings: {
+            enabled: true,
+            retentionDays: 14,
+            scheduleMode: "afterRefresh",
+            syncIntervalMinutes: 180,
+          },
         },
-      })
+      )
     })
 
     await waitFor(() => {
@@ -171,7 +180,7 @@ describe("UsageHistorySyncTab", () => {
     vi.mocked(useUserPreferencesContext).mockReturnValue(
       createContextValue({ loadPreferences }) as any,
     )
-    vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
+    mockedSendUsageHistoryMessage.mockResolvedValueOnce({
       success: true,
       data: { warning: "alarms unavailable" },
     } as any)
@@ -201,7 +210,7 @@ describe("UsageHistorySyncTab", () => {
     vi.mocked(useUserPreferencesContext).mockReturnValue(
       createContextValue({ loadPreferences }) as any,
     )
-    vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
+    mockedSendUsageHistoryMessage.mockResolvedValueOnce({
       success: false,
       error: "bad config",
     } as any)
@@ -261,15 +270,17 @@ describe("UsageHistorySyncTab", () => {
     )
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.UsageHistoryUpdateSettings,
-        settings: {
-          enabled: true,
-          retentionDays: 45,
-          scheduleMode: "afterRefresh",
-          syncIntervalMinutes: 120,
+      expect(mockedSendUsageHistoryMessage).toHaveBeenCalledWith(
+        UsageHistoryMessageTypes.UpdateSettings,
+        {
+          settings: {
+            enabled: true,
+            retentionDays: 45,
+            scheduleMode: "afterRefresh",
+            syncIntervalMinutes: 120,
+          },
         },
-      })
+      )
     })
   })
 
@@ -298,7 +309,7 @@ describe("UsageHistorySyncTab", () => {
       },
     } as any)
 
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    mockedSendUsageHistoryMessage.mockResolvedValue({
       success: true,
       data: { totals: { success: 1, skipped: 0, error: 0, unsupported: 0 } },
     } as any)
@@ -324,15 +335,15 @@ describe("UsageHistorySyncTab", () => {
     fireEvent.click(syncSelectedButton)
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.UsageHistorySyncNow,
-        accountIds: ["a1"],
-      })
+      expect(mockedSendUsageHistoryMessage).toHaveBeenCalledWith(
+        UsageHistoryMessageTypes.SyncNow,
+        { accountIds: ["a1"] },
+      )
     })
   })
 
   it("shows the no-summary success path when syncing all accounts", async () => {
-    vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
+    mockedSendUsageHistoryMessage.mockResolvedValueOnce({
       success: true,
       data: {},
     } as any)
@@ -346,9 +357,10 @@ describe("UsageHistorySyncTab", () => {
     )
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.UsageHistorySyncNow,
-      })
+      expect(mockedSendUsageHistoryMessage).toHaveBeenCalledWith(
+        UsageHistoryMessageTypes.SyncNow,
+        undefined,
+      )
       expect(toast.loading).toHaveBeenCalledWith(
         "usageAnalytics:messages.loading.syncing",
       )
@@ -403,7 +415,7 @@ describe("UsageHistorySyncTab", () => {
   })
 
   it("uses a warning toast when manual sync finishes with skipped or unsupported accounts", async () => {
-    vi.mocked(sendRuntimeMessage).mockResolvedValueOnce({
+    mockedSendUsageHistoryMessage.mockResolvedValueOnce({
       success: true,
       data: {
         totals: { success: 1, skipped: 1, error: 0, unsupported: 1 },
@@ -454,7 +466,7 @@ describe("UsageHistorySyncTab", () => {
 
   it("clears the syncing state and shows an error toast when a full sync fails", async () => {
     const deferredResponse = createDeferred<any>()
-    vi.mocked(sendRuntimeMessage).mockReturnValueOnce(deferredResponse.promise)
+    mockedSendUsageHistoryMessage.mockReturnValueOnce(deferredResponse.promise)
 
     renderSubject()
 
@@ -518,7 +530,7 @@ describe("UsageHistorySyncTab", () => {
       },
     } as any)
 
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    mockedSendUsageHistoryMessage.mockResolvedValue({
       success: true,
       data: { totals: { success: 1, skipped: 0, error: 0, unsupported: 0 } },
     } as any)
@@ -539,10 +551,10 @@ describe("UsageHistorySyncTab", () => {
     )
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.UsageHistorySyncNow,
-        accountIds: ["a1"],
-      })
+      expect(mockedSendUsageHistoryMessage).toHaveBeenCalledWith(
+        UsageHistoryMessageTypes.SyncNow,
+        { accountIds: ["a1"] },
+      )
     })
   })
 

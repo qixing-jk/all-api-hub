@@ -23,6 +23,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsResult,
 } from "~/services/productAnalytics/events"
+import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { DisplaySiteData, SiteAccount } from "~/types"
 import {
   AUTO_CHECKIN_RUN_RESULT,
@@ -62,6 +63,14 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
 
+import {
+  onAutoCheckinMessage,
+  type AutoCheckinDebugScheduleDailyAlarmForTodayRequest,
+  type AutoCheckinGetAccountInfoRequest,
+  type AutoCheckinPretriggerDailyOnUiOpenRequest,
+  type AutoCheckinRunNowRequest,
+  type AutoCheckinUpdateSettingsRequest,
+} from "./messaging"
 import { resolveAutoCheckinProvider } from "./providers"
 import { AUTO_CHECKIN_STATUS_STORAGE_LOCK, autoCheckinStorage } from "./storage"
 
@@ -2676,161 +2685,274 @@ function parseTargetAccountIds(accountIds: unknown):
 }
 
 /**
- * Message handler for Auto Check-in actions (run, retry, get status/settings).
- * Keeps background-only logic centralized for content scripts/options UI calls.
- * @param request Incoming message with action/payload.
- * @param sendResponse Callback to reply to sender.
+ * Run auto check-in immediately for all or selected accounts.
  */
-export const handleAutoCheckinMessage = async (
-  request: any,
-  sendResponse: (response: any) => void,
-) => {
-  try {
-    switch (request.action) {
-      case RuntimeActionIds.AutoCheckinRunNow: {
-        const targetIdsResult = parseTargetAccountIds(request.accountIds)
-        if (!targetIdsResult.success) {
-          sendResponse({ success: false, error: targetIdsResult.error })
-          break
-        }
-
-        try {
-          await autoCheckinScheduler.runCheckins({
-            runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
-            targetAccountIds: targetIdsResult.targetAccountIds,
-          })
-          sendResponse({ success: true })
-        } catch (e) {
-          // Propagate the error to the caller (options UI/content scripts) for user-visible feedback.
-          logger.error("Manual run failed", e)
-          sendResponse({ success: false, error: getErrorMessage(e) })
-        } finally {
-          try {
-            await autoCheckinScheduler.scheduleNextRun({
-              preserveExisting: true,
-            })
-          } catch (error) {
-            logger.warn("Failed to reschedule after manual run", error)
-          }
-        }
-        break
-      }
-
-      case RuntimeActionIds.AutoCheckinDebugTriggerDailyAlarmNow: {
-        if (
-          import.meta.env.MODE !== "development" &&
-          import.meta.env.MODE !== "test"
-        ) {
-          sendResponse({
-            success: false,
-            error: `Debug action is only available in development/test mode (${RuntimeActionIds.AutoCheckinDebugTriggerDailyAlarmNow})`,
-          })
-          break
-        }
-        await autoCheckinScheduler.debugTriggerDailyAlarmNow()
-        sendResponse({ success: true })
-        break
-      }
-
-      case RuntimeActionIds.AutoCheckinDebugTriggerRetryAlarmNow: {
-        if (
-          import.meta.env.MODE !== "development" &&
-          import.meta.env.MODE !== "test"
-        ) {
-          sendResponse({
-            success: false,
-            error: `Debug action is only available in development/test mode (${RuntimeActionIds.AutoCheckinDebugTriggerRetryAlarmNow})`,
-          })
-          break
-        }
-        await autoCheckinScheduler.debugTriggerRetryAlarmNow()
-        sendResponse({ success: true })
-        break
-      }
-
-      case RuntimeActionIds.AutoCheckinDebugResetLastDailyRunDay: {
-        if (
-          import.meta.env.MODE !== "development" &&
-          import.meta.env.MODE !== "test"
-        ) {
-          sendResponse({
-            success: false,
-            error: `Debug action is only available in development/test mode (${RuntimeActionIds.AutoCheckinDebugResetLastDailyRunDay})`,
-          })
-          break
-        }
-        await autoCheckinScheduler.debugResetLastDailyRunDay()
-        sendResponse({ success: true })
-        break
-      }
-
-      case RuntimeActionIds.AutoCheckinDebugScheduleDailyAlarmForToday: {
-        if (
-          import.meta.env.MODE !== "development" &&
-          import.meta.env.MODE !== "test"
-        ) {
-          sendResponse({
-            success: false,
-            error: `Debug action is only available in development/test mode (${RuntimeActionIds.AutoCheckinDebugScheduleDailyAlarmForToday})`,
-          })
-          break
-        }
-        const scheduledTime =
-          await autoCheckinScheduler.debugScheduleDailyAlarmForToday({
-            minutesFromNow: request.minutesFromNow,
-          })
-        sendResponse({ success: true, scheduledTime })
-        break
-      }
-
-      case RuntimeActionIds.AutoCheckinPretriggerDailyOnUiOpen: {
-        const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
-          requestId: request.requestId,
-          dryRun: request.dryRun,
-          debug: request.debug,
-        })
-        sendResponse({ success: true, ...result })
-        break
-      }
-
-      case RuntimeActionIds.AutoCheckinRetryAccount:
-        if (!request.accountId) {
-          sendResponse({ success: false, error: "Missing accountId" })
-          break
-        }
-        await autoCheckinScheduler.retryAccount(request.accountId)
-        sendResponse({ success: true })
-        break
-
-      case RuntimeActionIds.AutoCheckinGetAccountInfo: {
-        if (!request.accountId) {
-          sendResponse({ success: false, error: "Missing accountId" })
-          break
-        }
-        const displayData = await autoCheckinScheduler.getAccountDisplayData(
-          request.accountId,
-          { includeDisabled: request.includeDisabled === true },
-        )
-        sendResponse({ success: true, data: displayData })
-        break
-      }
-
-      case RuntimeActionIds.AutoCheckinGetStatus: {
-        const status = await autoCheckinStorage.getStatus()
-        sendResponse({ success: true, data: status })
-        break
-      }
-
-      case RuntimeActionIds.AutoCheckinUpdateSettings:
-        await autoCheckinScheduler.updateSettings(request.settings)
-        sendResponse({ success: true })
-        break
-
-      default:
-        sendResponse({ success: false, error: "Unknown action" })
-    }
-  } catch (error) {
-    logger.error("Message handling failed", error)
-    sendResponse({ success: false, error: getErrorMessage(error) })
+export async function runAutoCheckinNow(data: AutoCheckinRunNowRequest = {}) {
+  const targetIdsResult = parseTargetAccountIds(data.accountIds)
+  if (!targetIdsResult.success) {
+    return { success: false as const, error: targetIdsResult.error }
   }
+
+  try {
+    await autoCheckinScheduler.runCheckins({
+      runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
+      targetAccountIds: targetIdsResult.targetAccountIds,
+    })
+    return { success: true as const }
+  } catch (e) {
+    logger.error("Manual run failed", e)
+    return { success: false as const, error: getErrorMessage(e) }
+  } finally {
+    try {
+      await autoCheckinScheduler.scheduleNextRun({
+        preserveExisting: true,
+      })
+    } catch (error) {
+      logger.warn("Failed to reschedule after manual run", error)
+    }
+  }
+}
+
+/**
+ * Reject debug-only auto check-in actions outside development and test modes.
+ */
+function ensureAutoCheckinDebugAvailable(action: string) {
+  if (
+    import.meta.env.MODE !== "development" &&
+    import.meta.env.MODE !== "test"
+  ) {
+    return {
+      success: false as const,
+      error: `Debug action is only available in development/test mode (${action})`,
+    }
+  }
+  return null
+}
+
+/**
+ * Trigger the daily auto check-in alarm immediately in debug contexts.
+ */
+export async function triggerAutoCheckinDailyAlarmNow() {
+  const unavailable = ensureAutoCheckinDebugAvailable(
+    AutoCheckinMessageTypes.DebugTriggerDailyAlarmNow,
+  )
+  if (unavailable) return unavailable
+  await autoCheckinScheduler.debugTriggerDailyAlarmNow()
+  return { success: true as const }
+}
+
+/**
+ * Trigger the retry auto check-in alarm immediately in debug contexts.
+ */
+export async function triggerAutoCheckinRetryAlarmNow() {
+  const unavailable = ensureAutoCheckinDebugAvailable(
+    AutoCheckinMessageTypes.DebugTriggerRetryAlarmNow,
+  )
+  if (unavailable) return unavailable
+  await autoCheckinScheduler.debugTriggerRetryAlarmNow()
+  return { success: true as const }
+}
+
+/**
+ * Clear the stored last daily-run day in debug contexts.
+ */
+export async function resetAutoCheckinLastDailyRunDay() {
+  const unavailable = ensureAutoCheckinDebugAvailable(
+    AutoCheckinMessageTypes.DebugResetLastDailyRunDay,
+  )
+  if (unavailable) return unavailable
+  await autoCheckinScheduler.debugResetLastDailyRunDay()
+  return { success: true as const }
+}
+
+/**
+ * Schedule today's daily auto check-in alarm in debug contexts.
+ */
+export async function scheduleAutoCheckinDailyAlarmForToday(
+  data: AutoCheckinDebugScheduleDailyAlarmForTodayRequest = {},
+) {
+  const unavailable = ensureAutoCheckinDebugAvailable(
+    AutoCheckinMessageTypes.DebugScheduleDailyAlarmForToday,
+  )
+  if (unavailable) return unavailable
+  const scheduledTime =
+    await autoCheckinScheduler.debugScheduleDailyAlarmForToday({
+      minutesFromNow: data.minutesFromNow,
+    })
+  return { success: true as const, scheduledTime }
+}
+
+/**
+ * Pretrigger the daily auto check-in flow when the UI opens.
+ */
+export async function pretriggerAutoCheckinDailyOnUiOpen(
+  data: AutoCheckinPretriggerDailyOnUiOpenRequest = {},
+) {
+  const result = await autoCheckinScheduler.pretriggerDailyOnUiOpen({
+    requestId: data.requestId,
+    dryRun: data.dryRun,
+    debug: data.debug,
+  })
+  return { success: true as const, ...result }
+}
+
+/**
+ * Retry auto check-in for one failed account.
+ */
+export async function retryAutoCheckinAccount(accountId?: string) {
+  if (!accountId) {
+    return { success: false as const, error: "Missing accountId" }
+  }
+  await autoCheckinScheduler.retryAccount(accountId)
+  return { success: true as const }
+}
+
+/**
+ * Load display data for one account before opening manual check-in pages.
+ */
+export async function getAutoCheckinAccountInfo(
+  data: AutoCheckinGetAccountInfoRequest,
+) {
+  if (!data.accountId) {
+    return { success: false as const, error: "Missing accountId" }
+  }
+  const displayData = await autoCheckinScheduler.getAccountDisplayData(
+    data.accountId,
+    { includeDisabled: data.includeDisabled === true },
+  )
+  return { success: true as const, data: displayData }
+}
+
+/**
+ * Load the latest persisted auto check-in status.
+ */
+export async function getAutoCheckinStatus() {
+  const status = await autoCheckinStorage.getStatus()
+  return { success: true as const, data: status }
+}
+
+/**
+ * Persist auto check-in scheduler settings.
+ */
+export async function updateAutoCheckinSettings(
+  settings: AutoCheckinUpdateSettingsRequest["settings"],
+) {
+  await autoCheckinScheduler.updateSettings(settings)
+  return { success: true as const }
+}
+
+/**
+ * Convert auto check-in listener errors into runtime responses.
+ */
+function toAutoCheckinFailure(error: unknown) {
+  logger.error("Message handling failed", error)
+  return { success: false as const, error: getErrorMessage(error) }
+}
+
+let autoCheckinMessagingCleanup: (() => void)[] | null = null
+
+/**
+ * Register typed background listeners for auto check-in runtime messages.
+ */
+export function setupAutoCheckinMessagingListeners() {
+  if (autoCheckinMessagingCleanup) {
+    return
+  }
+
+  autoCheckinMessagingCleanup = [
+    onAutoCheckinMessage(AutoCheckinMessageTypes.RunNow, async ({ data }) => {
+      try {
+        return await runAutoCheckinNow(data)
+      } catch (error) {
+        return toAutoCheckinFailure(error)
+      }
+    }),
+    onAutoCheckinMessage(
+      AutoCheckinMessageTypes.DebugTriggerDailyAlarmNow,
+      async () => {
+        try {
+          return await triggerAutoCheckinDailyAlarmNow()
+        } catch (error) {
+          return toAutoCheckinFailure(error)
+        }
+      },
+    ),
+    onAutoCheckinMessage(
+      AutoCheckinMessageTypes.DebugTriggerRetryAlarmNow,
+      async () => {
+        try {
+          return await triggerAutoCheckinRetryAlarmNow()
+        } catch (error) {
+          return toAutoCheckinFailure(error)
+        }
+      },
+    ),
+    onAutoCheckinMessage(
+      AutoCheckinMessageTypes.DebugResetLastDailyRunDay,
+      async () => {
+        try {
+          return await resetAutoCheckinLastDailyRunDay()
+        } catch (error) {
+          return toAutoCheckinFailure(error)
+        }
+      },
+    ),
+    onAutoCheckinMessage(
+      AutoCheckinMessageTypes.DebugScheduleDailyAlarmForToday,
+      async ({ data }) => {
+        try {
+          return await scheduleAutoCheckinDailyAlarmForToday(data)
+        } catch (error) {
+          return toAutoCheckinFailure(error)
+        }
+      },
+    ),
+    onAutoCheckinMessage(
+      AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
+      async ({ data }) => {
+        try {
+          return await pretriggerAutoCheckinDailyOnUiOpen(data)
+        } catch (error) {
+          return toAutoCheckinFailure(error)
+        }
+      },
+    ),
+    onAutoCheckinMessage(
+      AutoCheckinMessageTypes.RetryAccount,
+      async ({ data }) => {
+        try {
+          return await retryAutoCheckinAccount(data.accountId)
+        } catch (error) {
+          return toAutoCheckinFailure(error)
+        }
+      },
+    ),
+    onAutoCheckinMessage(
+      AutoCheckinMessageTypes.GetAccountInfo,
+      async ({ data }) => {
+        try {
+          return await getAutoCheckinAccountInfo(data)
+        } catch (error) {
+          return toAutoCheckinFailure(error)
+        }
+      },
+    ),
+    onAutoCheckinMessage(AutoCheckinMessageTypes.GetStatus, async () => {
+      try {
+        return await getAutoCheckinStatus()
+      } catch (error) {
+        return toAutoCheckinFailure(error)
+      }
+    }),
+    onAutoCheckinMessage(
+      AutoCheckinMessageTypes.UpdateSettings,
+      async ({ data }) => {
+        try {
+          return await updateAutoCheckinSettings(data.settings)
+        } catch (error) {
+          return toAutoCheckinFailure(error)
+        }
+      },
+    ),
+  ]
 }

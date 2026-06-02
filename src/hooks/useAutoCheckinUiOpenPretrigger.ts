@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   trackProductAnalyticsActionCompleted,
@@ -17,15 +18,13 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type {
   AutoCheckinRunResult,
   AutoCheckinRunSummary,
 } from "~/types/autoCheckin"
 import { AUTO_CHECKIN_RUN_RESULT } from "~/types/autoCheckin"
-import {
-  onRuntimeMessage,
-  sendRuntimeMessage,
-} from "~/utils/browser/browserApi"
+import { onRuntimeMessage } from "~/utils/browser/browserApi"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 
@@ -135,20 +134,24 @@ export function useAutoCheckinUiOpenPretrigger(): {
 
     void (async () => {
       try {
-        const response = await sendRuntimeMessage({
-          action: RuntimeActionIds.AutoCheckinPretriggerDailyOnUiOpen,
-          requestId,
-        })
+        const response = await sendAutoCheckinMessage(
+          AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
+          {
+            requestId,
+          },
+        )
+
+        const responseSummary = response.success ? response.summary : undefined
 
         void trackProductAnalyticsActionCompleted({
           ...UI_OPEN_PRETRIGGER_ANALYTICS_CONTEXT,
           result: toAnalyticsResult(response),
-          insights: response?.summary
+          insights: responseSummary
             ? {
-                itemCount: response.summary.totalEligible,
-                successCount: response.summary.successCount,
-                failureCount: response.summary.failedCount,
-                skippedCount: response.summary.skippedCount,
+                itemCount: responseSummary.totalEligible,
+                successCount: responseSummary.successCount,
+                failureCount: responseSummary.failedCount,
+                skippedCount: responseSummary.skippedCount,
               }
             : undefined,
         })

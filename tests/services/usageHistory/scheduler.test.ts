@@ -1,9 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
-  handleUsageHistoryMessage,
+  resolveUsageHistoryPruneMessage,
+  resolveUsageHistorySyncNowMessage,
+  resolveUsageHistoryUpdateSettingsMessage,
   usageHistoryScheduler,
 } from "~/services/history/usageHistory/scheduler"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
@@ -387,7 +388,7 @@ describe("handleUsageHistoryMessage", () => {
     })
   })
 
-  it("routes update, manual sync, prune, and unknown actions", async () => {
+  it("resolves update, manual sync, and prune typed messages", async () => {
     vi.spyOn(usageHistoryScheduler, "updateSettings").mockResolvedValue({
       warning: "warning",
     })
@@ -397,28 +398,18 @@ describe("handleUsageHistoryMessage", () => {
     })
     vi.mocked(usageHistoryStorage.pruneAllAccounts).mockResolvedValue(true)
 
-    const updateResponse = vi.fn()
-    await handleUsageHistoryMessage(
-      {
-        action: RuntimeActionIds.UsageHistoryUpdateSettings,
-        settings: { enabled: false },
-      },
-      updateResponse,
-    )
-    expect(updateResponse).toHaveBeenCalledWith({
+    const updateResponse = await resolveUsageHistoryUpdateSettingsMessage({
+      settings: { enabled: false },
+    })
+    expect(updateResponse).toEqual({
       success: true,
       data: { warning: "warning" },
     })
 
-    const syncResponse = vi.fn()
-    await handleUsageHistoryMessage(
-      {
-        action: RuntimeActionIds.UsageHistorySyncNow,
-        accountIds: ["account-1"],
-      },
-      syncResponse,
-    )
-    expect(syncResponse).toHaveBeenCalledWith({
+    const syncResponse = await resolveUsageHistorySyncNowMessage({
+      accountIds: ["account-1"],
+    })
+    expect(syncResponse).toEqual({
       success: true,
       data: {
         totals: { success: 1, skipped: 0, error: 0, unsupported: 0 },
@@ -426,42 +417,21 @@ describe("handleUsageHistoryMessage", () => {
       },
     })
 
-    const pruneResponse = vi.fn()
-    await handleUsageHistoryMessage(
-      { action: RuntimeActionIds.UsageHistoryPrune },
-      pruneResponse,
-    )
-    expect(pruneResponse).toHaveBeenCalledWith({ success: true })
+    const pruneResponse = await resolveUsageHistoryPruneMessage()
+    expect(pruneResponse).toEqual({ success: true, data: undefined })
     expect(usageHistoryStorage.pruneAllAccounts).toHaveBeenCalledWith(14)
-
-    const unknownResponse = vi.fn()
-    await handleUsageHistoryMessage(
-      { action: "unknown-action" },
-      unknownResponse,
-    )
-    expect(unknownResponse).toHaveBeenCalledWith({
-      success: false,
-      error: "Unknown action",
-    })
   })
 
-  it("treats non-array sync-now accountIds as a full manual sync request", async () => {
+  it("passes omitted sync-now accountIds as a full manual sync request", async () => {
     vi.spyOn(usageHistoryScheduler, "runManualSync").mockResolvedValue({
       totals: { success: 2, skipped: 0, error: 0, unsupported: 0 },
       perAccount: [],
     })
 
-    const sendResponse = vi.fn()
-    await handleUsageHistoryMessage(
-      {
-        action: RuntimeActionIds.UsageHistorySyncNow,
-        accountIds: "account-1",
-      },
-      sendResponse,
-    )
+    const response = await resolveUsageHistorySyncNowMessage({})
 
     expect(usageHistoryScheduler.runManualSync).toHaveBeenCalledWith(undefined)
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: true,
       data: {
         totals: { success: 2, skipped: 0, error: 0, unsupported: 0 },
@@ -475,15 +445,11 @@ describe("handleUsageHistoryMessage", () => {
       new Error("scheduler exploded"),
     )
 
-    const sendResponse = vi.fn()
-    await handleUsageHistoryMessage(
-      {
-        action: RuntimeActionIds.UsageHistoryUpdateSettings,
-      },
-      sendResponse,
-    )
+    const response = await resolveUsageHistoryUpdateSettingsMessage({
+      settings: {},
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "scheduler exploded",
     })

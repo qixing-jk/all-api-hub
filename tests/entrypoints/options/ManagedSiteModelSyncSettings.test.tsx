@@ -3,9 +3,9 @@ import toast from "react-hot-toast"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import ManagedSiteModelSyncSettings from "~/features/BasicSettings/components/tabs/ManagedSite/managedSiteModelSyncSettings"
 import { modelMetadataService } from "~/services/models/modelMetadata"
+import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -13,7 +13,7 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -51,13 +51,15 @@ vi.mock("~/contexts/UserPreferencesContext", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+vi.mock("~/services/models/modelSync/messaging", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+    await importOriginal<
+      typeof import("~/services/models/modelSync/messaging")
+    >()
 
   return {
     ...actual,
-    sendRuntimeMessage: vi.fn(),
+    sendModelSyncMessage: vi.fn(),
   }
 })
 
@@ -310,9 +312,8 @@ vi.mock("~/components/ui", () => ({
   ),
 }))
 
-const mockedSendRuntimeMessage = sendRuntimeMessage as unknown as ReturnType<
-  typeof vi.fn
->
+const mockedSendModelSyncMessage =
+  sendModelSyncMessage as unknown as ReturnType<typeof vi.fn>
 const mockedModelMetadataService = modelMetadataService as unknown as {
   initialize: ReturnType<typeof vi.fn>
   getAllMetadata: ReturnType<typeof vi.fn>
@@ -356,7 +357,7 @@ describe("ManagedSiteModelSyncSettings", () => {
     mockResetNewApiModelSyncConfig.mockResolvedValue(true)
     mockedUseUserPreferencesContext.mockReturnValue(createContextValue())
 
-    mockedSendRuntimeMessage.mockResolvedValue({
+    mockedSendModelSyncMessage.mockResolvedValue({
       success: true,
       data: ["z-model", "a-model"],
     })
@@ -372,9 +373,9 @@ describe("ManagedSiteModelSyncSettings", () => {
     render(<ManagedSiteModelSyncSettings />)
 
     await waitFor(() => {
-      expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.ModelSyncGetChannelUpstreamModelOptions,
-      })
+      expect(mockedSendModelSyncMessage).toHaveBeenCalledWith(
+        ModelSyncMessageTypes.GetChannelUpstreamModelOptions,
+      )
     })
 
     expect(screen.getByTestId(TEST_IDS.allowedModelOptions)).toHaveTextContent(
@@ -436,7 +437,7 @@ describe("ManagedSiteModelSyncSettings", () => {
   })
 
   it("falls back to model metadata when runtime options are unavailable", async () => {
-    mockedSendRuntimeMessage.mockResolvedValue({
+    mockedSendModelSyncMessage.mockResolvedValue({
       success: true,
       data: [],
     })
@@ -487,7 +488,7 @@ describe("ManagedSiteModelSyncSettings", () => {
     render(<ManagedSiteModelSyncSettings />)
 
     await waitFor(() => {
-      expect(mockedSendRuntimeMessage).toHaveBeenCalled()
+      expect(mockedSendModelSyncMessage).toHaveBeenCalled()
     })
 
     expect(
@@ -504,7 +505,7 @@ describe("ManagedSiteModelSyncSettings", () => {
   })
 
   it("falls back to model metadata when the runtime response is unsuccessful", async () => {
-    mockedSendRuntimeMessage.mockResolvedValue({
+    mockedSendModelSyncMessage.mockResolvedValue({
       success: false,
       error: "runtime unavailable",
     })
@@ -530,7 +531,7 @@ describe("ManagedSiteModelSyncSettings", () => {
   })
 
   it("shows a load error when both runtime and metadata fallback fail", async () => {
-    mockedSendRuntimeMessage.mockRejectedValue(new Error("runtime down"))
+    mockedSendModelSyncMessage.mockRejectedValue(new Error("runtime down"))
 
     render(<ManagedSiteModelSyncSettings />)
 
@@ -551,7 +552,7 @@ describe("ManagedSiteModelSyncSettings", () => {
     render(<ManagedSiteModelSyncSettings />)
 
     await waitFor(() => {
-      expect(mockedSendRuntimeMessage).toHaveBeenCalled()
+      expect(mockedSendModelSyncMessage).toHaveBeenCalled()
     })
 
     vi.clearAllMocks()
@@ -578,7 +579,7 @@ describe("ManagedSiteModelSyncSettings", () => {
     render(<ManagedSiteModelSyncSettings />)
 
     await waitFor(() => {
-      expect(mockedSendRuntimeMessage).toHaveBeenCalled()
+      expect(mockedSendModelSyncMessage).toHaveBeenCalled()
     })
 
     vi.clearAllMocks()

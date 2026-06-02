@@ -15,14 +15,15 @@ import {
   Switch,
 } from "~/components/ui"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
+import type { UsageHistoryScheduleMode } from "~/types/usageHistory"
 
 interface UsageHistorySyncSettingsSectionProps {
   enabled: boolean
   onEnabledChange: (value: boolean) => void
   retentionDays: number
   onRetentionDaysChange: (value: number) => void
-  scheduleMode: string
-  onScheduleModeChange: (value: string) => void
+  scheduleMode: UsageHistoryScheduleMode
+  onScheduleModeChange: (value: UsageHistoryScheduleMode) => void
   syncIntervalMinutes: number
   onSyncIntervalMinutesChange: (value: number) => void
   alarmsSupported: boolean
@@ -99,7 +100,12 @@ export default function UsageHistorySyncSettingsSection({
             >
               {t("settings.scheduleMode")}
             </Label>
-            <Select value={scheduleMode} onValueChange={onScheduleModeChange}>
+            <Select
+              value={scheduleMode}
+              onValueChange={(value) =>
+                onScheduleModeChange(value as UsageHistoryScheduleMode)
+              }
+            >
               <SelectTrigger id="usage-history-sync-schedule-mode">
                 <SelectValue
                   placeholder={t("settings.scheduleModePlaceholder")}

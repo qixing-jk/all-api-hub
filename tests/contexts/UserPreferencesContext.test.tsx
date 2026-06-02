@@ -8,7 +8,6 @@ import {
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_INCOME,
 } from "~/constants"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   UserPreferencesProvider,
@@ -32,7 +31,6 @@ import { DEFAULT_SITE_ANNOUNCEMENT_PREFERENCES } from "~/types/siteAnnouncements
 import { SortingCriteriaType } from "~/types/sorting"
 import { DEFAULT_TASK_NOTIFICATION_PREFERENCES } from "~/types/taskNotifications"
 import { deepOverride } from "~/utils"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import {
   createPersistedPreferencesFixture,
   setupMockPreferencePersistence,
@@ -51,6 +49,21 @@ const { trackSettingsSnapshotEventsMock } = vi.hoisted(() => ({
   trackSettingsSnapshotEventsMock: vi.fn(),
 }))
 
+const { sendRuntimeMessageMock } = vi.hoisted(() => ({
+  sendRuntimeMessageMock: vi.fn(),
+}))
+
+const typedMessageMocks = vi.hoisted(() => ({
+  sendAutoCheckinMessageMock: vi.fn(),
+  sendAutoRefreshMessageMock: vi.fn(),
+  sendBalanceHistoryMessageMock: vi.fn(),
+  sendModelSyncMessageMock: vi.fn(),
+  sendPreferencesMessageMock: vi.fn(),
+  sendRedemptionAssistMessageMock: vi.fn(),
+  sendSiteAnnouncementsMessageMock: vi.fn(),
+  sendWebdavAutoSyncMessageMock: vi.fn(),
+}))
+
 vi.mock("~/utils/core/logger", () => ({
   createLogger: () => loggerMocks,
 }))
@@ -61,9 +74,53 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
 
   return {
     ...actual,
-    sendRuntimeMessage: vi.fn(),
+    sendRuntimeMessage: sendRuntimeMessageMock,
   }
 })
+
+vi.mock("~/services/accounts/autoRefreshMessaging", () => ({
+  AutoRefreshMessageTypes: {
+    UpdateSettings: "autoRefresh:updateSettings",
+  },
+  sendAutoRefreshMessage: typedMessageMocks.sendAutoRefreshMessageMock,
+}))
+
+vi.mock("~/services/checkin/autoCheckin/messaging", () => ({
+  sendAutoCheckinMessage: typedMessageMocks.sendAutoCheckinMessageMock,
+}))
+
+vi.mock("~/services/history/dailyBalanceHistory/messaging", () => ({
+  sendBalanceHistoryMessage: typedMessageMocks.sendBalanceHistoryMessageMock,
+}))
+
+vi.mock("~/services/models/modelSync/messaging", () => ({
+  sendModelSyncMessage: typedMessageMocks.sendModelSyncMessageMock,
+}))
+
+vi.mock("~/services/preferences/messaging", () => ({
+  PreferencesMessageTypes: {
+    UpdateActionClickBehavior: "preferences:updateActionClickBehavior",
+    RefreshContextMenus: "preferences:refreshContextMenus",
+  },
+  sendPreferencesMessage: typedMessageMocks.sendPreferencesMessageMock,
+}))
+
+vi.mock("~/services/redemption/redemptionAssistMessaging", () => ({
+  RedemptionAssistMessageTypes: {
+    UpdateSettings: "redemptionAssist:updateSettings",
+  },
+  sendRedemptionAssistMessage:
+    typedMessageMocks.sendRedemptionAssistMessageMock,
+}))
+
+vi.mock("~/services/siteAnnouncements/messaging", () => ({
+  sendSiteAnnouncementsMessage:
+    typedMessageMocks.sendSiteAnnouncementsMessageMock,
+}))
+
+vi.mock("~/services/webdav/webdavAutoSyncMessaging", () => ({
+  sendWebdavAutoSyncMessage: typedMessageMocks.sendWebdavAutoSyncMessageMock,
+}))
 
 vi.mock("~/services/productAnalytics/settings", () => ({
   trackSettingsSnapshotEvents: (...args: unknown[]) =>
@@ -121,9 +178,17 @@ const mockedUserPreferences = userPreferences as unknown as Record<
   string,
   ReturnType<typeof vi.fn>
 >
-const mockedSendRuntimeMessage = sendRuntimeMessage as unknown as ReturnType<
-  typeof vi.fn
->
+const mockedSendRuntimeMessage = sendRuntimeMessageMock
+const {
+  sendAutoCheckinMessageMock: mockedSendAutoCheckinMessage,
+  sendAutoRefreshMessageMock: mockedSendAutoRefreshMessage,
+  sendBalanceHistoryMessageMock: mockedSendBalanceHistoryMessage,
+  sendModelSyncMessageMock: mockedSendModelSyncMessage,
+  sendPreferencesMessageMock: mockedSendPreferencesMessage,
+  sendRedemptionAssistMessageMock: mockedSendRedemptionAssistMessage,
+  sendSiteAnnouncementsMessageMock: mockedSendSiteAnnouncementsMessage,
+  sendWebdavAutoSyncMessageMock: mockedSendWebdavAutoSyncMessage,
+} = typedMessageMocks
 
 const TEST_IDS = {
   activeTab: "active-tab",
@@ -344,6 +409,14 @@ describe("UserPreferencesContext", () => {
       }),
     )
     mockedSendRuntimeMessage.mockResolvedValue(undefined)
+    mockedSendAutoCheckinMessage.mockResolvedValue(undefined)
+    mockedSendAutoRefreshMessage.mockResolvedValue(undefined)
+    mockedSendBalanceHistoryMessage.mockResolvedValue(undefined)
+    mockedSendModelSyncMessage.mockResolvedValue(undefined)
+    mockedSendPreferencesMessage.mockResolvedValue(undefined)
+    mockedSendRedemptionAssistMessage.mockResolvedValue(undefined)
+    mockedSendSiteAnnouncementsMessage.mockResolvedValue(undefined)
+    mockedSendWebdavAutoSyncMessage.mockResolvedValue(undefined)
   })
 
   it("throws when the hook is used without the provider", () => {
@@ -676,63 +749,79 @@ describe("UserPreferencesContext", () => {
       channels: DEFAULT_TASK_NOTIFICATION_PREFERENCES.channels,
     })
 
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.PreferencesUpdateActionClickBehavior,
-      behavior: "sidepanel",
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.AutoRefreshUpdateSettings,
-      settings: { accountAutoRefresh: { enabled: true } },
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.AutoRefreshUpdateSettings,
-      settings: { accountAutoRefresh: { interval: 60_000 } },
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.AutoRefreshUpdateSettings,
-      settings: { accountAutoRefresh: { minInterval: 15_000 } },
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.AutoRefreshUpdateSettings,
-      settings: { accountAutoRefresh: { refreshOnOpen: true } },
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.AutoCheckinUpdateSettings,
-      settings: {
-        globalEnabled: false,
-        retryStrategy: {
-          enabled: true,
-          intervalMinutes: 15,
-          maxAttemptsPerDay: 2,
+    expect(mockedSendPreferencesMessage).toHaveBeenCalledWith(
+      "preferences:updateActionClickBehavior",
+      { behavior: "sidepanel" },
+    )
+    expect(mockedSendAutoRefreshMessage).toHaveBeenCalledWith(
+      "autoRefresh:updateSettings",
+      {
+        settings: { accountAutoRefresh: { enabled: true } },
+      },
+    )
+    expect(mockedSendAutoRefreshMessage).toHaveBeenCalledWith(
+      "autoRefresh:updateSettings",
+      {
+        settings: { accountAutoRefresh: { interval: 60_000 } },
+      },
+    )
+    expect(mockedSendAutoRefreshMessage).toHaveBeenCalledWith(
+      "autoRefresh:updateSettings",
+      {
+        settings: { accountAutoRefresh: { minInterval: 15_000 } },
+      },
+    )
+    expect(mockedSendAutoRefreshMessage).toHaveBeenCalledWith(
+      "autoRefresh:updateSettings",
+      {
+        settings: { accountAutoRefresh: { refreshOnOpen: true } },
+      },
+    )
+    expect(mockedSendAutoCheckinMessage).toHaveBeenCalledWith(
+      "autoCheckin:updateSettings",
+      {
+        settings: {
+          globalEnabled: false,
+          retryStrategy: {
+            enabled: true,
+            intervalMinutes: 15,
+            maxAttemptsPerDay: 2,
+          },
         },
       },
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.BalanceHistoryUpdateSettings,
-      settings: {
-        enabled: true,
-        retentionDays: 30,
-        endOfDayCapture: { enabled: true },
+    )
+    expect(mockedSendBalanceHistoryMessage).toHaveBeenCalledWith(
+      "balanceHistory:updateSettings",
+      {
+        settings: {
+          enabled: true,
+          retentionDays: 30,
+          endOfDayCapture: { enabled: true },
+        },
       },
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.ModelSyncUpdateSettings,
-      settings: {
-        enabled: false,
-        allowedModels: ["gpt-4o"],
-        rateLimit: { requestsPerMinute: 15, burst: 3 },
+    )
+    expect(mockedSendModelSyncMessage).toHaveBeenCalledWith(
+      "modelSync:updateSettings",
+      {
+        settings: {
+          enabled: false,
+          allowedModels: ["gpt-4o"],
+          rateLimit: { requestsPerMinute: 15, burst: 3 },
+        },
       },
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.RedemptionAssistUpdateSettings,
-      settings: {
-        enabled: false,
-        contextMenu: { enabled: false },
+    )
+    expect(mockedSendRedemptionAssistMessage).toHaveBeenCalledWith(
+      "redemptionAssist:updateSettings",
+      {
+        settings: {
+          enabled: false,
+          contextMenu: { enabled: false },
+        },
       },
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.PreferencesRefreshContextMenus,
-    })
+    )
+    expect(mockedSendPreferencesMessage).toHaveBeenCalledWith(
+      "preferences:refreshContextMenus",
+    )
   })
 
   it("persists active tab changes through both tab update helpers", async () => {
@@ -871,33 +960,41 @@ describe("UserPreferencesContext", () => {
       dismissed: true,
     })
 
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.AutoCheckinUpdateSettings,
-      settings: {
-        globalEnabled: false,
+    expect(mockedSendAutoCheckinMessage).toHaveBeenCalledWith(
+      "autoCheckin:updateSettings",
+      {
+        settings: {
+          globalEnabled: false,
+        },
       },
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.BalanceHistoryUpdateSettings,
-      settings: {
-        retentionDays: 14,
+    )
+    expect(mockedSendBalanceHistoryMessage).toHaveBeenCalledWith(
+      "balanceHistory:updateSettings",
+      {
+        settings: {
+          retentionDays: 14,
+        },
       },
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.ModelSyncUpdateSettings,
-      settings: {
-        allowedModels: ["gpt-4.1"],
+    )
+    expect(mockedSendModelSyncMessage).toHaveBeenCalledWith(
+      "modelSync:updateSettings",
+      {
+        settings: {
+          allowedModels: ["gpt-4.1"],
+        },
       },
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.RedemptionAssistUpdateSettings,
-      settings: {
-        enabled: false,
+    )
+    expect(mockedSendRedemptionAssistMessage).toHaveBeenCalledWith(
+      "redemptionAssist:updateSettings",
+      {
+        settings: {
+          enabled: false,
+        },
       },
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.PreferencesRefreshContextMenus,
-    })
+    )
+    expect(mockedSendPreferencesMessage).toHaveBeenCalledWith(
+      "preferences:refreshContextMenus",
+    )
   })
 
   it("normalizes missing estimated today income preferences to disabled", async () => {
@@ -1079,22 +1176,32 @@ describe("UserPreferencesContext", () => {
       DEFAULT_PREFERENCES.taskNotifications,
     )
 
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.AutoRefreshUpdateSettings,
-      settings: { accountAutoRefresh: DEFAULT_PREFERENCES.accountAutoRefresh },
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.ModelSyncUpdateSettings,
-      settings: DEFAULT_PREFERENCES.managedSiteModelSync,
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.AutoCheckinUpdateSettings,
-      settings: DEFAULT_PREFERENCES.autoCheckin,
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.RedemptionAssistUpdateSettings,
-      settings: DEFAULT_PREFERENCES.redemptionAssist,
-    })
+    expect(mockedSendAutoRefreshMessage).toHaveBeenCalledWith(
+      "autoRefresh:updateSettings",
+      {
+        settings: {
+          accountAutoRefresh: DEFAULT_PREFERENCES.accountAutoRefresh,
+        },
+      },
+    )
+    expect(mockedSendModelSyncMessage).toHaveBeenCalledWith(
+      "modelSync:updateSettings",
+      {
+        settings: DEFAULT_PREFERENCES.managedSiteModelSync,
+      },
+    )
+    expect(mockedSendAutoCheckinMessage).toHaveBeenCalledWith(
+      "autoCheckin:updateSettings",
+      {
+        settings: DEFAULT_PREFERENCES.autoCheckin,
+      },
+    )
+    expect(mockedSendRedemptionAssistMessage).toHaveBeenCalledWith(
+      "redemptionAssist:updateSettings",
+      {
+        settings: DEFAULT_PREFERENCES.redemptionAssist,
+      },
+    )
   })
 
   it("tracks settings snapshots after reset paths that reload persisted preferences", async () => {
@@ -1155,18 +1262,26 @@ describe("UserPreferencesContext", () => {
     expect((latestContext as any)?.preferences.currencyType).toBe(
       DEFAULT_PREFERENCES.currencyType,
     )
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.AutoRefreshUpdateSettings,
-      settings: { accountAutoRefresh: DEFAULT_PREFERENCES.accountAutoRefresh },
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.AutoCheckinUpdateSettings,
-      settings: DEFAULT_PREFERENCES.autoCheckin,
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.ModelSyncUpdateSettings,
-      settings: DEFAULT_PREFERENCES.managedSiteModelSync,
-    })
+    expect(mockedSendAutoRefreshMessage).toHaveBeenCalledWith(
+      "autoRefresh:updateSettings",
+      {
+        settings: {
+          accountAutoRefresh: DEFAULT_PREFERENCES.accountAutoRefresh,
+        },
+      },
+    )
+    expect(mockedSendAutoCheckinMessage).toHaveBeenCalledWith(
+      "autoCheckin:updateSettings",
+      {
+        settings: DEFAULT_PREFERENCES.autoCheckin,
+      },
+    )
+    expect(mockedSendModelSyncMessage).toHaveBeenCalledWith(
+      "modelSync:updateSettings",
+      {
+        settings: DEFAULT_PREFERENCES.managedSiteModelSync,
+      },
+    )
   })
 
   it("keeps existing consumers mounted while preferences reload in the background", async () => {
@@ -1539,22 +1654,24 @@ describe("UserPreferencesContext", () => {
       }),
     )
 
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledTimes(1)
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.RedemptionAssistUpdateSettings,
-      settings: {
-        relaxedCodeValidation: false,
-        urlWhitelist: {
-          enabled: true,
-          patterns: ["https://redeem.example/*"],
-          includeAccountSiteUrls: true,
-          includeCheckInAndRedeemUrls: false,
+    expect(mockedSendRedemptionAssistMessage).toHaveBeenCalledTimes(1)
+    expect(mockedSendRedemptionAssistMessage).toHaveBeenCalledWith(
+      "redemptionAssist:updateSettings",
+      {
+        settings: {
+          relaxedCodeValidation: false,
+          urlWhitelist: {
+            enabled: true,
+            patterns: ["https://redeem.example/*"],
+            includeAccountSiteUrls: true,
+            includeCheckInAndRedeemUrls: false,
+          },
         },
       },
-    })
-    expect(mockedSendRuntimeMessage).not.toHaveBeenCalledWith({
-      action: RuntimeActionIds.PreferencesRefreshContextMenus,
-    })
+    )
+    expect(mockedSendPreferencesMessage).not.toHaveBeenCalledWith(
+      "preferences:refreshContextMenus",
+    )
   })
 
   it("updates enhanced Web AI API Check auto-detect preferences", async () => {
@@ -1614,17 +1731,18 @@ describe("UserPreferencesContext", () => {
       }),
     )
 
-    const refreshCalls = mockedSendRuntimeMessage.mock.calls.filter(
-      ([message]) =>
-        message?.action === RuntimeActionIds.PreferencesRefreshContextMenus,
+    const refreshCalls = mockedSendPreferencesMessage.mock.calls.filter(
+      ([type]) => type === "preferences:refreshContextMenus",
     )
     expect(refreshCalls).toHaveLength(2)
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.RedemptionAssistUpdateSettings,
-      settings: {
-        contextMenu: { enabled: false },
+    expect(mockedSendRedemptionAssistMessage).toHaveBeenCalledWith(
+      "redemptionAssist:updateSettings",
+      {
+        settings: {
+          contextMenu: { enabled: false },
+        },
       },
-    })
+    )
   })
 
   it("normalizes hidden cashflow selections only when disabling would leave the UI on hidden tabs or sort fields", async () => {
@@ -1862,14 +1980,18 @@ describe("UserPreferencesContext", () => {
       (latestContext as any)?.preferences.tempWindowFallbackReminder,
     ).toEqual(expect.objectContaining({ dismissed: true }))
 
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.BalanceHistoryUpdateSettings,
-      settings: { enabled: true, retentionDays: 30 },
-    })
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.ModelSyncUpdateSettings,
-      settings: { enabled: true, allowedModels: ["gpt-4o"] },
-    })
+    expect(mockedSendBalanceHistoryMessage).toHaveBeenCalledWith(
+      "balanceHistory:updateSettings",
+      {
+        settings: { enabled: true, retentionDays: 30 },
+      },
+    )
+    expect(mockedSendModelSyncMessage).toHaveBeenCalledWith(
+      "modelSync:updateSettings",
+      {
+        settings: { enabled: true, allowedModels: ["gpt-4o"] },
+      },
+    )
   })
 
   it("returns a safe fallback when the WebDAV auto-sync runtime response is invalid", async () => {
@@ -1879,7 +2001,7 @@ describe("UserPreferencesContext", () => {
       autoSync: true,
       syncInterval: 300,
     }
-    mockedSendRuntimeMessage.mockResolvedValue(undefined)
+    mockedSendWebdavAutoSyncMessage.mockResolvedValue(undefined)
 
     const context = await renderProvider(preferences)
 
@@ -1995,7 +2117,7 @@ describe("UserPreferencesContext", () => {
       },
       lastUpdated: preferences.lastUpdated + 5,
     })
-    mockedSendRuntimeMessage.mockResolvedValue({
+    mockedSendWebdavAutoSyncMessage.mockResolvedValue({
       success: true,
       data: savedPreferences,
     })
@@ -2013,15 +2135,17 @@ describe("UserPreferencesContext", () => {
       )
     })
 
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
-      settings: {
-        autoSync: false,
-        syncInterval: 900,
-        syncStrategy: "upload_only",
+    expect(mockedSendWebdavAutoSyncMessage).toHaveBeenCalledWith(
+      "webdavAutoSync:updateSettings",
+      {
+        settings: {
+          autoSync: false,
+          syncInterval: 900,
+          syncStrategy: "upload_only",
+        },
+        expectedLastUpdated: preferences.lastUpdated,
       },
-      expectedLastUpdated: preferences.lastUpdated,
-    })
+    )
     expect((latestContext as any)?.preferences).toEqual(savedPreferences)
   })
 
@@ -2033,7 +2157,7 @@ describe("UserPreferencesContext", () => {
       syncInterval: 300,
       syncStrategy: "merge",
     }
-    mockedSendRuntimeMessage.mockResolvedValue({
+    mockedSendWebdavAutoSyncMessage.mockResolvedValue({
       success: true,
     })
 
@@ -2065,7 +2189,7 @@ describe("UserPreferencesContext", () => {
       },
       lastUpdated: preferences.lastUpdated + 10,
     })
-    mockedSendRuntimeMessage.mockResolvedValue({
+    mockedSendSiteAnnouncementsMessage.mockResolvedValue({
       success: true,
       data: savedPreferences,
     })
@@ -2080,14 +2204,16 @@ describe("UserPreferencesContext", () => {
       })
     })
 
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.SiteAnnouncementsUpdatePreferences,
-      settings: {
-        enabled: false,
-        notificationEnabled: false,
-        intervalMinutes: 120,
+    expect(mockedSendSiteAnnouncementsMessage).toHaveBeenCalledWith(
+      "siteAnnouncements:updatePreferences",
+      {
+        settings: {
+          enabled: false,
+          notificationEnabled: false,
+          intervalMinutes: 120,
+        },
       },
-    })
+    )
     expect((latestContext as any)?.preferences).toEqual({
       ...savedPreferences,
       siteAnnouncementNotifications: {
@@ -2104,7 +2230,7 @@ describe("UserPreferencesContext", () => {
     preferences.siteAnnouncementNotifications = {
       enabled: true,
     } as typeof preferences.siteAnnouncementNotifications
-    mockedSendRuntimeMessage.mockResolvedValue({
+    mockedSendSiteAnnouncementsMessage.mockResolvedValue({
       success: true,
     })
 
@@ -2139,7 +2265,7 @@ describe("UserPreferencesContext", () => {
     const originalSiteAnnouncementNotifications = structuredClone(
       preferences.siteAnnouncementNotifications,
     )
-    mockedSendRuntimeMessage.mockResolvedValue({
+    mockedSendSiteAnnouncementsMessage.mockResolvedValue({
       success: false,
     })
 
@@ -2153,12 +2279,14 @@ describe("UserPreferencesContext", () => {
     })
 
     expect(success).toBe(false)
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.SiteAnnouncementsUpdatePreferences,
-      settings: {
-        enabled: false,
+    expect(mockedSendSiteAnnouncementsMessage).toHaveBeenCalledWith(
+      "siteAnnouncements:updatePreferences",
+      {
+        settings: {
+          enabled: false,
+        },
       },
-    })
+    )
     expect(
       (latestContext as any)?.preferences.siteAnnouncementNotifications,
     ).toEqual(originalSiteAnnouncementNotifications)
@@ -2228,16 +2356,17 @@ describe("UserPreferencesContext", () => {
       }),
     )
 
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.RedemptionAssistUpdateSettings,
-      settings: {
-        enabled: false,
+    expect(mockedSendRedemptionAssistMessage).toHaveBeenCalledWith(
+      "redemptionAssist:updateSettings",
+      {
+        settings: {
+          enabled: false,
+        },
       },
-    })
+    )
 
-    const refreshCalls = mockedSendRuntimeMessage.mock.calls.filter(
-      ([message]) =>
-        message?.action === RuntimeActionIds.PreferencesRefreshContextMenus,
+    const refreshCalls = mockedSendPreferencesMessage.mock.calls.filter(
+      ([type]) => type === "preferences:refreshContextMenus",
     )
     expect(refreshCalls).toHaveLength(2)
   })
@@ -2313,21 +2442,22 @@ describe("UserPreferencesContext", () => {
       }),
     )
 
-    expect(mockedSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.RedemptionAssistUpdateSettings,
-      settings: {
-        urlWhitelist: {
-          enabled: true,
-          includeAccountSiteUrls: true,
-          includeCheckInAndRedeemUrls: false,
-          patterns: ["https://redeem.example/*", "https://extra.example/*"],
+    expect(mockedSendRedemptionAssistMessage).toHaveBeenCalledWith(
+      "redemptionAssist:updateSettings",
+      {
+        settings: {
+          urlWhitelist: {
+            enabled: true,
+            includeAccountSiteUrls: true,
+            includeCheckInAndRedeemUrls: false,
+            patterns: ["https://redeem.example/*", "https://extra.example/*"],
+          },
         },
       },
-    })
+    )
 
-    const refreshCalls = mockedSendRuntimeMessage.mock.calls.filter(
-      ([message]) =>
-        message?.action === RuntimeActionIds.PreferencesRefreshContextMenus,
+    const refreshCalls = mockedSendPreferencesMessage.mock.calls.filter(
+      ([type]) => type === "preferences:refreshContextMenus",
     )
     expect(refreshCalls).toHaveLength(0)
   })

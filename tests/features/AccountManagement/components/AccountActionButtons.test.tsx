@@ -2,7 +2,6 @@ import { screen, waitFor, within } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import AccountActionButtons from "~/features/AccountManagement/components/AccountActionButtons"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
@@ -16,6 +15,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_STATES,
 } from "~/services/productAnalytics/events"
+import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { buildDisplaySiteData } from "~~/tests/test-utils/factories"
 import { render } from "~~/tests/test-utils/render"
@@ -113,6 +113,19 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   return {
     ...actual,
     sendRuntimeMessage: sendRuntimeMessageMock,
+  }
+})
+
+vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/checkin/autoCheckin/messaging")
+    >()
+
+  return {
+    ...actual,
+    sendAutoCheckinMessage: (type: string, data?: Record<string, unknown>) =>
+      sendRuntimeMessageMock(type, data),
   }
 })
 
@@ -957,13 +970,16 @@ describe("AccountActionButtons", () => {
       "autoCheckin:messages.loading.running",
     )
     await waitFor(() => {
-      expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(1, {
-        action: RuntimeActionIds.AutoCheckinRunNow,
-        accountIds: ["acc-5"],
-      })
-      expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(2, {
-        action: RuntimeActionIds.AutoCheckinGetStatus,
-      })
+      expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(
+        1,
+        AutoCheckinMessageTypes.RunNow,
+        { accountIds: ["acc-5"] },
+      )
+      expect(sendRuntimeMessageMock).toHaveBeenNthCalledWith(
+        2,
+        AutoCheckinMessageTypes.GetStatus,
+        undefined,
+      )
       expect(toastDismissMock).toHaveBeenCalledWith("toast-quick-checkin")
       expect(toastSuccessMock).toHaveBeenCalledWith(
         "Site: autoCheckin:providerFallback.checkinSuccessful",

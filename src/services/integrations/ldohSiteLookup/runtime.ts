@@ -1,18 +1,29 @@
-import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { defineExtensionMessaging } from "@webext-core/messaging"
+
+import { createRuntimeMessagingLogger } from "~/services/runtimeMessaging/logger"
 import {
-  sendRuntimeActionMessage,
+  createRuntimeMessageFailure,
+  type RuntimeMessageFailure,
+} from "~/services/runtimeMessaging/result"
+import {
+  isMessageReceiverUnavailableError,
   type SendMessageRetryOptions,
 } from "~/utils/browser/browserApi"
 
 /**
- * Runtime request to refresh the cached LDOH site directory (background-only work).
+ * Typed runtime message types for the LDOH site lookup feature.
  */
-export type LdohSiteLookupRefreshSitesRequest = {
-  action: typeof RuntimeActionIds.LdohSiteLookupRefreshSites
-}
+export const LdohSiteLookupMessageTypes = {
+  RefreshSites: "ldohSiteLookup:refreshSites",
+} as const
 
 /**
- * Runtime response for {@link LdohSiteLookupRefreshSitesRequest}.
+ * Runtime request to refresh the cached LDOH site directory (background-only work).
+ */
+type LdohSiteLookupRefreshSitesRequest = Record<string, never>
+
+/**
+ * Runtime response for LDOH site directory refresh requests.
  */
 export type LdohSiteLookupRefreshSitesResponse =
   | {
@@ -25,26 +36,84 @@ export type LdohSiteLookupRefreshSitesResponse =
       error: string
     }
 
+interface LdohSiteLookupProtocolMap {
+  [LdohSiteLookupMessageTypes.RefreshSites](
+    data: LdohSiteLookupRefreshSitesRequest,
+  ): LdohSiteLookupRefreshSitesResponse
+}
+
+const ldohSiteLookupMessaging =
+  defineExtensionMessaging<LdohSiteLookupProtocolMap>({
+    logger: createRuntimeMessagingLogger("LdohSiteLookupMessaging"),
+  })
+
+const sendLdohSiteLookupMessage = ldohSiteLookupMessaging.sendMessage
+export const onLdohSiteLookupMessage = ldohSiteLookupMessaging.onMessage
+
+type LdohSiteLookupMessageType =
+  (typeof LdohSiteLookupMessageTypes)[keyof typeof LdohSiteLookupMessageTypes]
+
 /**
- * Union of LDOH site lookup runtime requests handled by the background router.
+ * Normalize send failures into the shared runtime response shape.
  */
-export type LdohSiteLookupRuntimeRequest = LdohSiteLookupRefreshSitesRequest
+function toFailureResponse(error: string): RuntimeMessageFailure {
+  return createRuntimeMessageFailure(error)
+}
+
+/**
+ * Preserve transient receiver retry behavior for typed LDOH lookup messages.
+ */
+async function sendLdohSiteLookupMessageWithRetry(
+  type: LdohSiteLookupMessageType,
+  data: LdohSiteLookupRefreshSitesRequest,
+  options?: SendMessageRetryOptions,
+): Promise<unknown> {
+  const maxAttempts = Math.max(1, options?.maxAttempts ?? 3)
+  const delayMs = options?.delayMs ?? 500
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    try {
+      return await sendLdohSiteLookupMessage(type, data)
+    } catch (error) {
+      const shouldRetry =
+        attempt < maxAttempts - 1 && isMessageReceiverUnavailableError(error)
+
+      if (!shouldRetry) {
+        throw error
+      }
+
+      await new Promise((resolve) =>
+        setTimeout(resolve, delayMs * Math.pow(2, attempt)),
+      )
+    }
+  }
+
+  throw new Error("sendLdohSiteLookupMessageWithRetry: exhausted retries")
+}
 
 /**
  * Requests the background script to refresh the LDOH site directory cache.
  *
- * This is intentionally a thin wrapper around {@link sendRuntimeActionMessage} so
- * UI code does not depend on raw runtime action IDs.
+ * UI code does not depend on raw runtime message transport details.
  */
 export async function requestLdohSiteLookupRefreshSites(
   options?: SendMessageRetryOptions,
 ): Promise<LdohSiteLookupRefreshSitesResponse> {
-  const response = await sendRuntimeActionMessage(
-    {
-      action: RuntimeActionIds.LdohSiteLookupRefreshSites,
-    },
-    options,
-  )
+  let response: unknown
+
+  try {
+    response = await sendLdohSiteLookupMessageWithRetry(
+      LdohSiteLookupMessageTypes.RefreshSites,
+      {},
+      options,
+    )
+  } catch (error) {
+    return toFailureResponse(
+      error instanceof Error && error.message
+        ? error.message
+        : "Background request failed.",
+    )
+  }
 
   if (!response || typeof response !== "object") {
     return { success: false, error: "No response from background." }

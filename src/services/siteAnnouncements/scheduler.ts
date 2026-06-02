@@ -1,8 +1,10 @@
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { SiteAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
+import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"
 import type { SiteAccount } from "~/types"
 import type {
   SiteAnnouncement,
@@ -30,6 +32,13 @@ import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
 import { SITE_ANNOUNCEMENTS_ALARM_NAME } from "./constants"
+import {
+  onSiteAnnouncementsMessage,
+  type SiteAnnouncementsCheckNowRequest,
+  type SiteAnnouncementsMarkAllReadRequest,
+  type SiteAnnouncementsMarkReadRequest,
+  type SiteAnnouncementsUpdatePreferencesRequest,
+} from "./messaging"
 import { notifySiteAnnouncements } from "./notificationService"
 import { getSiteAnnouncementProvider } from "./providers"
 import { siteAnnouncementStorage } from "./storage"
@@ -570,6 +579,42 @@ class SiteAnnouncementScheduler {
 
 export const siteAnnouncementScheduler = new SiteAnnouncementScheduler()
 
+let siteAnnouncementsMessagingCleanup: (() => void)[] | null = null
+
+/**
+ * Register typed background listeners for site-announcement messages.
+ */
+export function setupSiteAnnouncementsMessagingListeners() {
+  if (siteAnnouncementsMessagingCleanup) {
+    return
+  }
+
+  siteAnnouncementsMessagingCleanup = [
+    onSiteAnnouncementsMessage(SiteAnnouncementsMessageTypes.GetStatus, () =>
+      resolveSiteAnnouncementsGetStatusMessage(),
+    ),
+    onSiteAnnouncementsMessage(SiteAnnouncementsMessageTypes.ListRecords, () =>
+      resolveSiteAnnouncementsListRecordsMessage(),
+    ),
+    onSiteAnnouncementsMessage(
+      SiteAnnouncementsMessageTypes.CheckNow,
+      ({ data }) => resolveSiteAnnouncementsCheckNowMessage(data),
+    ),
+    onSiteAnnouncementsMessage(
+      SiteAnnouncementsMessageTypes.MarkRead,
+      ({ data }) => resolveSiteAnnouncementsMarkReadMessage(data),
+    ),
+    onSiteAnnouncementsMessage(
+      SiteAnnouncementsMessageTypes.MarkAllRead,
+      ({ data }) => resolveSiteAnnouncementsMarkAllReadMessage(data),
+    ),
+    onSiteAnnouncementsMessage(
+      SiteAnnouncementsMessageTypes.UpdatePreferences,
+      ({ data }) => resolveSiteAnnouncementsUpdatePreferencesMessage(data),
+    ),
+  ]
+}
+
 /**
  * Mirrors local Sub2API read actions back to the upstream announcement API.
  */
@@ -604,69 +649,114 @@ async function syncSub2ApiAnnouncementRead(recordId: string): Promise<void> {
   ])
 }
 
-export const handleSiteAnnouncementMessage = async (
-  request: any,
-  sendResponse: (response: any) => void,
-) => {
+/**
+ * Resolve a typed request for site-announcement status.
+ */
+export async function resolveSiteAnnouncementsGetStatusMessage(): Promise<
+  RuntimeMessageResponse<SiteAnnouncementSiteState[]>
+> {
   try {
-    switch (request.action) {
-      case RuntimeActionIds.SiteAnnouncementsGetStatus: {
-        try {
-          await siteAnnouncementScheduler.reconcileScheduleFromPreferences()
-        } catch (error) {
-          logger.warn("Failed to reconcile site announcement schedule", error)
-        }
-        sendResponse({
-          success: true,
-          data: await siteAnnouncementStorage.getStatus(),
-        })
-        break
-      }
-      case RuntimeActionIds.SiteAnnouncementsListRecords: {
-        sendResponse({
-          success: true,
-          data: await siteAnnouncementStorage.listRecords(),
-        })
-        break
-      }
-      case RuntimeActionIds.SiteAnnouncementsCheckNow: {
-        const accountIds = Array.isArray(request.accountIds)
-          ? (request.accountIds as string[])
-          : undefined
-        sendResponse({
-          success: true,
-          data: await siteAnnouncementScheduler.runManualCheck(accountIds),
-        })
-        break
-      }
-      case RuntimeActionIds.SiteAnnouncementsMarkRead: {
-        await syncSub2ApiAnnouncementRead(request.recordId)
-        sendResponse({
-          success: await siteAnnouncementStorage.markRead(request.recordId),
-        })
-        break
-      }
-      case RuntimeActionIds.SiteAnnouncementsMarkAllRead: {
-        sendResponse({
-          success: true,
-          data: await siteAnnouncementStorage.markAllRead(request.siteKey),
-        })
-        break
-      }
-      case RuntimeActionIds.SiteAnnouncementsUpdatePreferences: {
-        sendResponse({
-          success: true,
-          data: await siteAnnouncementScheduler.updateSettings(
-            request.settings ?? {},
-          ),
-        })
-        break
-      }
-      default:
-        sendResponse({ success: false, error: "Unknown action" })
+    try {
+      await siteAnnouncementScheduler.reconcileScheduleFromPreferences()
+    } catch (error) {
+      logger.warn("Failed to reconcile site announcement schedule", error)
+    }
+    return {
+      success: true,
+      data: await siteAnnouncementStorage.getStatus(),
     }
   } catch (error) {
     logger.error("Message handling failed", error)
-    sendResponse({ success: false, error: getErrorMessage(error) })
+    return createRuntimeMessageFailure(getErrorMessage(error))
+  }
+}
+
+/**
+ * Resolve a typed request for locally cached announcement records.
+ */
+export async function resolveSiteAnnouncementsListRecordsMessage(): Promise<
+  RuntimeMessageResponse<SiteAnnouncementRecord[]>
+> {
+  try {
+    return {
+      success: true,
+      data: await siteAnnouncementStorage.listRecords(),
+    }
+  } catch (error) {
+    logger.error("Message handling failed", error)
+    return createRuntimeMessageFailure(getErrorMessage(error))
+  }
+}
+
+/**
+ * Resolve a typed request to check site announcements immediately.
+ */
+export async function resolveSiteAnnouncementsCheckNowMessage(
+  request?: SiteAnnouncementsCheckNowRequest,
+): Promise<RuntimeMessageResponse<SiteAnnouncementCheckResult | null>> {
+  try {
+    const accountIds = Array.isArray(request?.accountIds)
+      ? request.accountIds
+      : undefined
+    return {
+      success: true,
+      data: await siteAnnouncementScheduler.runManualCheck(accountIds),
+    }
+  } catch (error) {
+    logger.error("Message handling failed", error)
+    return createRuntimeMessageFailure(getErrorMessage(error))
+  }
+}
+
+/**
+ * Resolve a typed request to mark one announcement record as read.
+ */
+export async function resolveSiteAnnouncementsMarkReadMessage(
+  request: SiteAnnouncementsMarkReadRequest,
+): Promise<RuntimeMessageResponse<undefined>> {
+  try {
+    await syncSub2ApiAnnouncementRead(request.recordId)
+    return (await siteAnnouncementStorage.markRead(request.recordId))
+      ? ({ success: true, data: undefined } as const)
+      : createRuntimeMessageFailure("Failed to mark announcement as read")
+  } catch (error) {
+    logger.error("Message handling failed", error)
+    return createRuntimeMessageFailure(getErrorMessage(error))
+  }
+}
+
+/**
+ * Resolve a typed request to mark all matching announcement records as read.
+ */
+export async function resolveSiteAnnouncementsMarkAllReadMessage(
+  request: SiteAnnouncementsMarkAllReadRequest,
+): Promise<RuntimeMessageResponse<number>> {
+  try {
+    return {
+      success: true,
+      data: await siteAnnouncementStorage.markAllRead(request.siteKey),
+    }
+  } catch (error) {
+    logger.error("Message handling failed", error)
+    return createRuntimeMessageFailure(getErrorMessage(error))
+  }
+}
+
+/**
+ * Resolve a typed request to update site-announcement preferences.
+ */
+export async function resolveSiteAnnouncementsUpdatePreferencesMessage(
+  request: SiteAnnouncementsUpdatePreferencesRequest,
+): Promise<RuntimeMessageResponse<SiteAnnouncementPreferences>> {
+  try {
+    return {
+      success: true,
+      data: await siteAnnouncementScheduler.updateSettings(
+        request.settings ?? {},
+      ),
+    }
+  } catch (error) {
+    logger.error("Message handling failed", error)
+    return createRuntimeMessageFailure(getErrorMessage(error))
   }
 }

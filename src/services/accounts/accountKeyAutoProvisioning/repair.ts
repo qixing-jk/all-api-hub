@@ -1,9 +1,6 @@
 import { Storage } from "@plasmohq/storage"
 
-import {
-  RuntimeActionIds,
-  RuntimeMessageTypes,
-} from "~/constants/runtimeActions"
+import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { ACCOUNT_KEY_AUTO_PROVISIONING_STORAGE_KEYS } from "~/services/core/storageKeys"
@@ -21,6 +18,10 @@ import { createLogger } from "~/utils/core/logger"
 import { normalizeUrlForOriginKey } from "~/utils/core/urlParsing"
 
 import { ensureDefaultApiTokenForAccount } from "./ensureDefaultToken"
+import {
+  AccountKeyRepairMessageTypes,
+  onAccountKeyRepairMessage,
+} from "./messaging"
 import { runPerKeySequential } from "./perOriginQueue"
 
 const logger = createLogger("AccountKeyRepair")
@@ -393,29 +394,57 @@ class AccountKeyRepairRunner {
 
 export const accountKeyRepairRunner = new AccountKeyRepairRunner()
 
-export const handleAccountKeyRepairMessage = async (
-  request: any,
-  sendResponse: (response: any) => void,
-) => {
-  try {
-    switch (request.action) {
-      case RuntimeActionIds.AccountKeyRepairStart: {
-        const progress = await accountKeyRepairRunner.start()
-        sendResponse({ success: true, data: progress })
-        break
-      }
+/**
+ * Start a background repair job for missing account API keys.
+ */
+export async function startAccountKeyRepair() {
+  const progress = await accountKeyRepairRunner.start()
+  return { success: true as const, data: progress }
+}
 
-      case RuntimeActionIds.AccountKeyRepairGetProgress: {
-        const progress = await accountKeyRepairRunner.getProgress()
-        sendResponse({ success: true, data: progress })
-        break
-      }
+/**
+ * Read the latest account-key repair progress snapshot.
+ */
+export async function getAccountKeyRepairProgress() {
+  const progress = await accountKeyRepairRunner.getProgress()
+  return { success: true as const, data: progress }
+}
 
-      default:
-        sendResponse({ success: false, error: "Unknown action" })
-    }
-  } catch (error) {
-    logger.error("Message handling failed", error)
-    sendResponse({ success: false, error: getErrorMessage(error) })
+/**
+ * Convert account-key repair listener errors into runtime responses.
+ */
+function toAccountKeyRepairFailure(error: unknown) {
+  logger.error("Message handling failed", error)
+  return { success: false as const, error: getErrorMessage(error) }
+}
+
+let accountKeyRepairMessagingCleanup: (() => void)[] | null = null
+
+/**
+ * Register typed background listeners for account-key repair messages.
+ */
+export function setupAccountKeyRepairMessagingListeners() {
+  if (accountKeyRepairMessagingCleanup) {
+    return
   }
+
+  accountKeyRepairMessagingCleanup = [
+    onAccountKeyRepairMessage(AccountKeyRepairMessageTypes.Start, async () => {
+      try {
+        return await startAccountKeyRepair()
+      } catch (error) {
+        return toAccountKeyRepairFailure(error)
+      }
+    }),
+    onAccountKeyRepairMessage(
+      AccountKeyRepairMessageTypes.GetProgress,
+      async () => {
+        try {
+          return await getAccountKeyRepairProgress()
+        } catch (error) {
+          return toAccountKeyRepairFailure(error)
+        }
+      },
+    ),
+  ]
 }

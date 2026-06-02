@@ -5,6 +5,9 @@ import { DAILY_BALANCE_HISTORY_ALARM_NAME } from "~/services/history/dailyBalanc
 import {
   dailyBalanceHistoryScheduler,
   handleDailyBalanceHistoryMessage,
+  resolveBalanceHistoryPruneMessage,
+  resolveBalanceHistoryRefreshNowMessage,
+  resolveBalanceHistoryUpdateSettingsMessage,
 } from "~/services/history/dailyBalanceHistory/scheduler"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import {
@@ -358,28 +361,20 @@ describe("dailyBalanceHistoryScheduler", () => {
   })
 
   it("routes runtime messages to the correct handlers", async () => {
-    const updateResponse = vi.fn()
-    await handleDailyBalanceHistoryMessage(
-      {
-        action: RuntimeActionIds.BalanceHistoryUpdateSettings,
+    await expect(
+      resolveBalanceHistoryUpdateSettingsMessage({
         settings: { retentionDays: 7 },
-      },
-      updateResponse,
-    )
-    expect(updateResponse).toHaveBeenCalledWith({
+      }),
+    ).resolves.toEqual({
       success: true,
       data: { warning: undefined },
     })
 
-    const refreshResponse = vi.fn()
-    await handleDailyBalanceHistoryMessage(
-      {
-        action: RuntimeActionIds.BalanceHistoryRefreshNow,
+    await expect(
+      resolveBalanceHistoryRefreshNowMessage({
         accountIds: ["a"],
-      },
-      refreshResponse,
-    )
-    expect(refreshResponse).toHaveBeenCalledWith({
+      }),
+    ).resolves.toEqual({
       success: true,
       data: {
         success: 1,
@@ -388,14 +383,10 @@ describe("dailyBalanceHistoryScheduler", () => {
       },
     })
 
-    const pruneResponse = vi.fn()
-    await handleDailyBalanceHistoryMessage(
-      {
-        action: RuntimeActionIds.BalanceHistoryPrune,
-      },
-      pruneResponse,
-    )
-    expect(pruneResponse).toHaveBeenCalledWith({ success: true })
+    await expect(resolveBalanceHistoryPruneMessage()).resolves.toEqual({
+      success: true,
+      data: undefined,
+    })
 
     const unknownResponse = vi.fn()
     await handleDailyBalanceHistoryMessage(
@@ -657,18 +648,12 @@ describe("dailyBalanceHistoryScheduler", () => {
   })
 
   it("routes malformed refresh message account ids to a full refresh", async () => {
-    const response = vi.fn()
-
-    await handleDailyBalanceHistoryMessage(
-      {
-        action: RuntimeActionIds.BalanceHistoryRefreshNow,
-        accountIds: "not-an-array",
-      },
-      response,
-    )
+    const response = await resolveBalanceHistoryRefreshNowMessage({
+      accountIds: undefined,
+    })
 
     expect(mockRefreshAllAccounts).toHaveBeenCalledWith(true)
-    expect(response).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: true,
       data: {
         success: 2,
@@ -680,16 +665,8 @@ describe("dailyBalanceHistoryScheduler", () => {
 
   it("returns a runtime error response when message handling throws", async () => {
     mockPruneAll.mockRejectedValueOnce(new Error("storage closed"))
-    const response = vi.fn()
 
-    await handleDailyBalanceHistoryMessage(
-      {
-        action: RuntimeActionIds.BalanceHistoryPrune,
-      },
-      response,
-    )
-
-    expect(response).toHaveBeenCalledWith({
+    await expect(resolveBalanceHistoryPruneMessage()).resolves.toEqual({
       success: false,
       error: "storage closed",
     })

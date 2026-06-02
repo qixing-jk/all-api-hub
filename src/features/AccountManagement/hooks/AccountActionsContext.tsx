@@ -8,8 +8,11 @@ import {
 } from "react"
 import toast from "react-hot-toast"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import {
+  ExternalCheckInMessageTypes,
+  sendExternalCheckInMessage,
+} from "~/services/checkin/externalCheckInMessaging"
 import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
 import {
   resolveProductAnalyticsErrorCategoryFromError,
@@ -27,7 +30,6 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import type { DisplaySiteData } from "~/types"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -367,18 +369,22 @@ export const AccountActionsProvider = ({
       }
 
       try {
-        const response = await sendRuntimeMessage({
-          action: RuntimeActionIds.ExternalCheckInOpenAndMark,
-          accountIds: accountsToOpen.map((account) => account.id),
-          openInNewWindow: Boolean(options?.openInNewWindow),
-        })
+        const response = await sendExternalCheckInMessage(
+          ExternalCheckInMessageTypes.OpenAndMark,
+          {
+            accountIds: accountsToOpen.map((account) => account.id),
+            openInNewWindow: Boolean(options?.openInNewWindow),
+          },
+        )
 
         if (!response?.success || !response.data) {
           analyticsCompleted = true
           tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
             errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
           })
-          throw new Error(response?.error || "Empty response")
+          throw new Error(
+            response?.success === false ? response.error : "Empty response",
+          )
         }
 
         await loadAccountData()

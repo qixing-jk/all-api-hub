@@ -16,15 +16,13 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsErrorCategory,
 } from "~/services/productAnalytics/events"
-import type {
-  RedemptionAssistShouldPromptRequest,
-  RedemptionAssistShouldPromptResponse,
-} from "~/services/redemption/redemptionAssist"
-import { extractRedemptionCodesFromText } from "~/services/redemption/utils/redemptionCode"
+import type { RedemptionAssistShouldPromptResponse } from "~/services/redemption/redemptionAssist"
 import {
-  checkPermissionViaMessage,
-  sendRuntimeMessage,
-} from "~/utils/browser/browserApi"
+  RedemptionAssistMessageTypes,
+  sendRedemptionAssistMessage,
+} from "~/services/redemption/redemptionAssistMessaging"
+import { extractRedemptionCodesFromText } from "~/services/redemption/utils/redemptionCode"
+import { checkPermissionViaMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 import { isHttpUrl } from "~/utils/core/urlParsing"
 import { t } from "~/utils/i18n/core"
@@ -295,11 +293,13 @@ async function scheduleRedemptionScan(sourceText: string) {
 async function requestPromptableCodes(url: string, codes: string[]) {
   if (codes.length === 0) return []
 
-  const response = (await sendRuntimeMessage({
-    action: RuntimeActionIds.RedemptionAssistShouldPrompt,
-    url,
-    codes,
-  } as RedemptionAssistShouldPromptRequest)) as RedemptionAssistShouldPromptResponse
+  const response = (await sendRedemptionAssistMessage(
+    RedemptionAssistMessageTypes.ShouldPrompt,
+    {
+      url,
+      codes,
+    },
+  )) as RedemptionAssistShouldPromptResponse
 
   if (!response?.success) {
     return []
@@ -413,11 +413,13 @@ function maskCode(code: string): string {
  * @returns Redeem result payload from background.
  */
 async function redeemForAccount(accountId: string, code: string) {
-  const manualResp: any = await sendRuntimeMessage({
-    action: RuntimeActionIds.RedemptionAssistAutoRedeem,
-    accountId,
-    code,
-  })
+  const manualResp: any = await sendRedemptionAssistMessage(
+    RedemptionAssistMessageTypes.AutoRedeem,
+    {
+      accountId,
+      code,
+    },
+  )
   return manualResp?.data
 }
 
@@ -557,11 +559,13 @@ async function redeemCodesSequential(params: {
       }
     }
 
-    const redeemResp: any = await sendRuntimeMessage({
-      action: RuntimeActionIds.RedemptionAssistAutoRedeemByUrl,
-      url: params.url,
-      code,
-    })
+    const redeemResp: any = await sendRedemptionAssistMessage(
+      RedemptionAssistMessageTypes.AutoRedeemByUrl,
+      {
+        url: params.url,
+        code,
+      },
+    )
 
     const result = redeemResp?.data
 

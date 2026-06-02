@@ -1,7 +1,6 @@
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -12,6 +11,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   PRODUCT_ANALYTICS_TARGET_KINDS,
 } from "~/services/productAnalytics/events"
+import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { openSettingsTab } from "~/utils/navigation"
 import { render, screen, waitFor, within } from "~~/tests/test-utils/render"
@@ -95,6 +95,24 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
   }
 })
 
+vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/checkin/autoCheckin/messaging")
+    >()
+
+  return {
+    ...actual,
+    sendAutoCheckinMessage: async (
+      type: string,
+      data?: Record<string, unknown>,
+    ) => {
+      const { sendRuntimeMessage } = await import("~/utils/browser/browserApi")
+      return sendRuntimeMessage(type, data)
+    },
+  }
+})
+
 afterEach(() => {
   vi.restoreAllMocks()
   vi.clearAllMocks()
@@ -114,7 +132,7 @@ describe("AutoCheckin account actions", () => {
 
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {
-        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+        if (message === AutoCheckinMessageTypes.GetStatus) {
           return {
             success: true,
             data: { perAccount: {} },
@@ -146,7 +164,7 @@ describe("AutoCheckin account actions", () => {
     const sendRuntimeMessageSpy = vi
       .spyOn(browserApi, "sendRuntimeMessage")
       .mockImplementation(async (message: any) => {
-        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+        if (message === AutoCheckinMessageTypes.GetStatus) {
           statusCalls += 1
 
           return {
@@ -168,7 +186,7 @@ describe("AutoCheckin account actions", () => {
           }
         }
 
-        if (message.action === RuntimeActionIds.AutoCheckinRetryAccount) {
+        if (message === AutoCheckinMessageTypes.RetryAccount) {
           return { success: true }
         }
 
@@ -184,10 +202,10 @@ describe("AutoCheckin account actions", () => {
     )
 
     await waitFor(() => {
-      expect(sendRuntimeMessageSpy).toHaveBeenCalledWith({
-        action: RuntimeActionIds.AutoCheckinRetryAccount,
-        accountId: "alpha",
-      })
+      expect(sendRuntimeMessageSpy).toHaveBeenCalledWith(
+        AutoCheckinMessageTypes.RetryAccount,
+        { accountId: "alpha" },
+      )
     })
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith(
@@ -231,7 +249,7 @@ describe("AutoCheckin account actions", () => {
       | undefined
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {
-        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+        if (message === AutoCheckinMessageTypes.GetStatus) {
           return {
             success: true,
             data: {
@@ -248,7 +266,7 @@ describe("AutoCheckin account actions", () => {
           }
         }
 
-        if (message.action === RuntimeActionIds.AutoCheckinRetryAccount) {
+        if (message === AutoCheckinMessageTypes.RetryAccount) {
           return await new Promise<{ success: boolean; error?: string }>(
             (resolve) => {
               resolveRetry = resolve
@@ -297,7 +315,7 @@ describe("AutoCheckin account actions", () => {
     let rejectOpen: ((reason?: unknown) => void) | undefined
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {
-        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+        if (message === AutoCheckinMessageTypes.GetStatus) {
           return {
             success: true,
             data: {
@@ -314,7 +332,7 @@ describe("AutoCheckin account actions", () => {
           }
         }
 
-        if (message.action === RuntimeActionIds.AutoCheckinGetAccountInfo) {
+        if (message === AutoCheckinMessageTypes.GetAccountInfo) {
           return { success: true, data: { id: "alpha", name: "Alpha" } }
         }
 
@@ -375,8 +393,8 @@ describe("AutoCheckin account actions", () => {
 
     const sendRuntimeMessageSpy = vi
       .spyOn(browserApi, "sendRuntimeMessage")
-      .mockImplementation(async (message: any) => {
-        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+      .mockImplementation(async (message: any, data?: any) => {
+        if (message === AutoCheckinMessageTypes.GetStatus) {
           return {
             success: true,
             data: {
@@ -400,8 +418,8 @@ describe("AutoCheckin account actions", () => {
           }
         }
 
-        if (message.action === RuntimeActionIds.AutoCheckinGetAccountInfo) {
-          if (message.accountId === "beta") {
+        if (message === AutoCheckinMessageTypes.GetAccountInfo) {
+          if (data?.accountId === "beta") {
             return {
               success: true,
               data: {
@@ -480,24 +498,19 @@ describe("AutoCheckin account actions", () => {
       )
     })
 
-    const accountInfoRequests = sendRuntimeMessageSpy.mock.calls
-      .map(([message]) => message as any)
-      .filter(
-        (message) =>
-          message.action === RuntimeActionIds.AutoCheckinGetAccountInfo,
-      )
+    const accountInfoRequests = sendRuntimeMessageSpy.mock.calls.filter(
+      ([message]) => message === AutoCheckinMessageTypes.GetAccountInfo,
+    )
 
     expect(accountInfoRequests).toEqual([
-      {
-        action: RuntimeActionIds.AutoCheckinGetAccountInfo,
-        accountId: "alpha",
-        includeDisabled: true,
-      },
-      {
-        action: RuntimeActionIds.AutoCheckinGetAccountInfo,
-        accountId: "beta",
-        includeDisabled: true,
-      },
+      [
+        AutoCheckinMessageTypes.GetAccountInfo,
+        { accountId: "alpha", includeDisabled: true },
+      ],
+      [
+        AutoCheckinMessageTypes.GetAccountInfo,
+        { accountId: "beta", includeDisabled: true },
+      ],
     ])
     expect(openAccountBaseUrlSpy).toHaveBeenCalledTimes(2)
     expect(
@@ -544,7 +557,7 @@ describe("AutoCheckin account actions", () => {
     let rejectOpen: ((reason?: unknown) => void) | undefined
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {
-        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+        if (message === AutoCheckinMessageTypes.GetStatus) {
           return {
             success: true,
             data: {
@@ -561,7 +574,7 @@ describe("AutoCheckin account actions", () => {
           }
         }
 
-        if (message.action === RuntimeActionIds.AutoCheckinGetAccountInfo) {
+        if (message === AutoCheckinMessageTypes.GetAccountInfo) {
           return {
             success: true,
             data: {
@@ -630,7 +643,7 @@ describe("AutoCheckin account actions", () => {
 
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {
-        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+        if (message === AutoCheckinMessageTypes.GetStatus) {
           statusCalls += 1
 
           return {
@@ -662,7 +675,7 @@ describe("AutoCheckin account actions", () => {
           }
         }
 
-        if (message.action === RuntimeActionIds.AutoCheckinGetAccountInfo) {
+        if (message === AutoCheckinMessageTypes.GetAccountInfo) {
           return {
             success: true,
             data: {
@@ -718,7 +731,7 @@ describe("AutoCheckin account actions", () => {
 
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {
-        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+        if (message === AutoCheckinMessageTypes.GetStatus) {
           return {
             success: true,
             data: {
@@ -735,7 +748,7 @@ describe("AutoCheckin account actions", () => {
           }
         }
 
-        if (message.action === RuntimeActionIds.AutoCheckinGetAccountInfo) {
+        if (message === AutoCheckinMessageTypes.GetAccountInfo) {
           return {
             success: true,
             data: {
@@ -786,7 +799,7 @@ describe("AutoCheckin account actions", () => {
 
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {
-        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+        if (message === AutoCheckinMessageTypes.GetStatus) {
           statusCalls += 1
 
           return {
@@ -810,7 +823,7 @@ describe("AutoCheckin account actions", () => {
           }
         }
 
-        if (message.action === RuntimeActionIds.AutoCheckinGetAccountInfo) {
+        if (message === AutoCheckinMessageTypes.GetAccountInfo) {
           return {
             success: true,
             data: {
@@ -881,7 +894,7 @@ describe("AutoCheckin account actions", () => {
 
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {
-        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+        if (message === AutoCheckinMessageTypes.GetStatus) {
           statusCalls += 1
           return {
             success: true,
@@ -899,7 +912,7 @@ describe("AutoCheckin account actions", () => {
           }
         }
 
-        if (message.action === RuntimeActionIds.AutoCheckinGetAccountInfo) {
+        if (message === AutoCheckinMessageTypes.GetAccountInfo) {
           return {
             success: true,
             data: {
@@ -952,8 +965,8 @@ describe("AutoCheckin account actions", () => {
     const navigation = await import("~/utils/navigation")
     const sendRuntimeMessageSpy = vi
       .spyOn(browserApi, "sendRuntimeMessage")
-      .mockImplementation(async (message: any) => {
-        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+      .mockImplementation(async (message: any, data?: any) => {
+        if (message === AutoCheckinMessageTypes.GetStatus) {
           return {
             success: true,
             data: {
@@ -977,8 +990,8 @@ describe("AutoCheckin account actions", () => {
           }
         }
 
-        if (message.action === RuntimeActionIds.AutoCheckinGetAccountInfo) {
-          return { success: false, error: `missing-${message.accountId}` }
+        if (message === AutoCheckinMessageTypes.GetAccountInfo) {
+          return { success: false, error: `missing-${data?.accountId}` }
         }
 
         return { success: true }
@@ -1000,14 +1013,14 @@ describe("AutoCheckin account actions", () => {
     })
 
     expect(openCheckInPagesSpy).not.toHaveBeenCalled()
-    expect(sendRuntimeMessageSpy).toHaveBeenCalledWith({
-      action: RuntimeActionIds.AutoCheckinGetAccountInfo,
-      accountId: "alpha",
-    })
-    expect(sendRuntimeMessageSpy).toHaveBeenCalledWith({
-      action: RuntimeActionIds.AutoCheckinGetAccountInfo,
-      accountId: "beta",
-    })
+    expect(sendRuntimeMessageSpy).toHaveBeenCalledWith(
+      AutoCheckinMessageTypes.GetAccountInfo,
+      { accountId: "alpha" },
+    )
+    expect(sendRuntimeMessageSpy).toHaveBeenCalledWith(
+      AutoCheckinMessageTypes.GetAccountInfo,
+      { accountId: "beta" },
+    )
   })
 
   it("filters already-checked results as success, searches translated message keys, and renders snapshots", async () => {
@@ -1109,7 +1122,7 @@ describe("AutoCheckin account actions", () => {
 
     vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
       async (message: any) => {
-        if (message.action !== RuntimeActionIds.AutoCheckinGetStatus) {
+        if (message !== AutoCheckinMessageTypes.GetStatus) {
           return { success: true }
         }
 

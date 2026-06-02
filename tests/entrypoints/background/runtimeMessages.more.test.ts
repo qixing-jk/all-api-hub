@@ -4,7 +4,8 @@ import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { WEB_AI_API_CHECK_TARGET_IDS } from "~/features/BasicSettings/components/tabs/WebAiApiCheck/searchTargets"
-import { PRODUCT_ANALYTICS_EVENTS } from "~/services/productAnalytics/events"
+import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/messaging"
+import { RedemptionAssistMessageTypes } from "~/services/redemption/redemptionAssistMessaging"
 
 type RuntimeMessageListener = (
   request: any,
@@ -17,22 +18,24 @@ const mocks = vi.hoisted(() => ({
   applyActionClickBehavior: vi.fn(),
   getCookieHeaderForUrlResult: vi.fn(),
   hasCookieReadPermissionForUrl: vi.fn(),
-  handleManagedSiteModelSyncMessage: vi.fn(),
-  handleReleaseUpdateMessage: vi.fn(),
-  handleAutoCheckinMessage: vi.fn(),
-  handleAutoRefreshMessage: vi.fn(),
-  handleChannelConfigMessage: vi.fn(),
-  handleExternalCheckInMessage: vi.fn(),
-  handleRedemptionAssistMessage: vi.fn(),
-  handleUsageHistoryMessage: vi.fn(),
-  handleWebdavAutoSyncMessage: vi.fn(),
+  setupManagedSiteModelSyncMessagingListeners: vi.fn(),
+  setupReleaseUpdateMessagingListeners: vi.fn(),
+  setupAutoCheckinMessagingListeners: vi.fn(),
+  setupAutoRefreshMessagingListeners: vi.fn(),
+  setupChannelConfigMessagingListeners: vi.fn(),
+  setupExternalCheckInMessagingListeners: vi.fn(),
+  setupRedemptionAssistMessagingListeners: vi.fn(),
+  setupUsageHistoryMessagingListeners: vi.fn(),
+  setupWebdavAutoSyncMessagingListeners: vi.fn(),
   handleDailyBalanceHistoryMessage: vi.fn(),
-  handleTaskNotificationMessage: vi.fn(),
-  handleSiteAnnouncementMessage: vi.fn(),
-  handleLdohSiteLookupMessage: vi.fn(),
-  handleWebAiApiCheckMessage: vi.fn(),
-  handleAccountKeyRepairMessage: vi.fn(),
-  handleProductAnalyticsMessage: vi.fn(),
+  setupDailyBalanceHistoryMessagingListeners: vi.fn(),
+  setupTaskNotificationMessagingListeners: vi.fn(),
+  setupSiteAnnouncementsMessagingListeners: vi.fn(),
+  setupPreferencesMessagingListeners: vi.fn(),
+  setupLdohSiteLookupMessagingListeners: vi.fn(),
+  setupWebAiApiCheckMessagingListeners: vi.fn(),
+  setupAccountKeyRepairMessagingListeners: vi.fn(),
+  setupProductAnalyticsMessagingListeners: vi.fn(),
   setupContextMenus: vi.fn(),
   trackCookieInterceptorUrl: vi.fn(),
   openOrFocusOptionsMenuItem: vi.fn(),
@@ -81,67 +84,86 @@ vi.mock("~/entrypoints/background/tempWindowPool", () => ({
 }))
 
 vi.mock("~/services/models/modelSync", () => ({
-  handleManagedSiteModelSyncMessage: mocks.handleManagedSiteModelSyncMessage,
+  setupManagedSiteModelSyncMessagingListeners:
+    mocks.setupManagedSiteModelSyncMessagingListeners,
 }))
 
 vi.mock("~/services/updates/releaseUpdateService", () => ({
-  handleReleaseUpdateMessage: mocks.handleReleaseUpdateMessage,
+  setupReleaseUpdateMessagingListeners:
+    mocks.setupReleaseUpdateMessagingListeners,
 }))
 
 vi.mock("~/services/checkin/autoCheckin/scheduler", () => ({
-  handleAutoCheckinMessage: mocks.handleAutoCheckinMessage,
+  setupAutoCheckinMessagingListeners: mocks.setupAutoCheckinMessagingListeners,
 }))
 
 vi.mock("~/services/accounts/autoRefreshService", () => ({
-  handleAutoRefreshMessage: mocks.handleAutoRefreshMessage,
+  setupAutoRefreshMessagingListeners: mocks.setupAutoRefreshMessagingListeners,
 }))
 
 vi.mock("~/services/managedSites/channelConfigStorage", () => ({
-  handleChannelConfigMessage: mocks.handleChannelConfigMessage,
+  setupChannelConfigMessagingListeners:
+    mocks.setupChannelConfigMessagingListeners,
 }))
 
 vi.mock("~/services/checkin/externalCheckInService", () => ({
-  handleExternalCheckInMessage: mocks.handleExternalCheckInMessage,
+  setupExternalCheckInMessagingListeners:
+    mocks.setupExternalCheckInMessagingListeners,
 }))
 
 vi.mock("~/services/redemption/redemptionAssist", () => ({
-  handleRedemptionAssistMessage: mocks.handleRedemptionAssistMessage,
+  setupRedemptionAssistMessagingListeners:
+    mocks.setupRedemptionAssistMessagingListeners,
 }))
 
 vi.mock("~/services/history/usageHistory/scheduler", () => ({
-  handleUsageHistoryMessage: mocks.handleUsageHistoryMessage,
+  setupUsageHistoryMessagingListeners:
+    mocks.setupUsageHistoryMessagingListeners,
 }))
 
 vi.mock("~/services/history/dailyBalanceHistory/scheduler", () => ({
   handleDailyBalanceHistoryMessage: mocks.handleDailyBalanceHistoryMessage,
+  setupDailyBalanceHistoryMessagingListeners:
+    mocks.setupDailyBalanceHistoryMessagingListeners,
 }))
 
 vi.mock("~/services/webdav/webdavAutoSyncService", () => ({
-  handleWebdavAutoSyncMessage: mocks.handleWebdavAutoSyncMessage,
+  setupWebdavAutoSyncMessagingListeners:
+    mocks.setupWebdavAutoSyncMessagingListeners,
 }))
 
 vi.mock("~/services/notifications/taskNotificationService", () => ({
-  handleTaskNotificationMessage: mocks.handleTaskNotificationMessage,
+  setupTaskNotificationMessagingListeners:
+    mocks.setupTaskNotificationMessagingListeners,
 }))
 
 vi.mock("~/services/siteAnnouncements/scheduler", () => ({
-  handleSiteAnnouncementMessage: mocks.handleSiteAnnouncementMessage,
+  setupSiteAnnouncementsMessagingListeners:
+    mocks.setupSiteAnnouncementsMessagingListeners,
+}))
+
+vi.mock("~/services/preferences/runtimePreferencesService", () => ({
+  setupPreferencesMessagingListeners: mocks.setupPreferencesMessagingListeners,
 }))
 
 vi.mock("~/services/integrations/ldohSiteLookup/background", () => ({
-  handleLdohSiteLookupMessage: mocks.handleLdohSiteLookupMessage,
+  setupLdohSiteLookupMessagingListeners:
+    mocks.setupLdohSiteLookupMessagingListeners,
 }))
 
 vi.mock("~/services/verification/webAiApiCheck/background", () => ({
-  handleWebAiApiCheckMessage: mocks.handleWebAiApiCheckMessage,
+  setupWebAiApiCheckMessagingListeners:
+    mocks.setupWebAiApiCheckMessagingListeners,
 }))
 
 vi.mock("~/services/accounts/accountKeyAutoProvisioning", () => ({
-  handleAccountKeyRepairMessage: mocks.handleAccountKeyRepairMessage,
+  setupAccountKeyRepairMessagingListeners:
+    mocks.setupAccountKeyRepairMessagingListeners,
 }))
 
 vi.mock("~/services/productAnalytics/runtime", () => ({
-  handleProductAnalyticsMessage: mocks.handleProductAnalyticsMessage,
+  setupProductAnalyticsMessagingListeners:
+    mocks.setupProductAnalyticsMessagingListeners,
 }))
 
 describe("setupRuntimeMessageListeners additional routing", () => {
@@ -180,6 +202,39 @@ describe("setupRuntimeMessageListeners additional routing", () => {
 
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
+    expect(mocks.setupReleaseUpdateMessagingListeners).toHaveBeenCalledTimes(1)
+    expect(mocks.setupLdohSiteLookupMessagingListeners).toHaveBeenCalledTimes(1)
+    expect(mocks.setupTaskNotificationMessagingListeners).toHaveBeenCalledTimes(
+      1,
+    )
+    expect(mocks.setupChannelConfigMessagingListeners).toHaveBeenCalledTimes(1)
+    expect(mocks.setupExternalCheckInMessagingListeners).toHaveBeenCalledTimes(
+      1,
+    )
+    expect(mocks.setupAutoRefreshMessagingListeners).toHaveBeenCalledTimes(1)
+    expect(mocks.setupWebdavAutoSyncMessagingListeners).toHaveBeenCalledTimes(1)
+    expect(mocks.setupUsageHistoryMessagingListeners).toHaveBeenCalledTimes(1)
+    expect(
+      mocks.setupDailyBalanceHistoryMessagingListeners,
+    ).toHaveBeenCalledTimes(1)
+    expect(
+      mocks.setupSiteAnnouncementsMessagingListeners,
+    ).toHaveBeenCalledTimes(1)
+    expect(mocks.setupPreferencesMessagingListeners).toHaveBeenCalledTimes(1)
+    expect(
+      mocks.setupManagedSiteModelSyncMessagingListeners,
+    ).toHaveBeenCalledTimes(1)
+    expect(mocks.setupAccountKeyRepairMessagingListeners).toHaveBeenCalledTimes(
+      1,
+    )
+    expect(mocks.setupAutoCheckinMessagingListeners).toHaveBeenCalledTimes(1)
+    expect(mocks.setupWebAiApiCheckMessagingListeners).toHaveBeenCalledTimes(1)
+    expect(mocks.setupRedemptionAssistMessagingListeners).toHaveBeenCalledTimes(
+      1,
+    )
+    expect(mocks.setupProductAnalyticsMessagingListeners).toHaveBeenCalledTimes(
+      1,
+    )
     return runtimeMessageListener!
   }
 
@@ -358,85 +413,15 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     })
   })
 
-  it("routes release update actions to the dedicated handler", async () => {
-    const listener = await loadListener()
-    const sendResponse = vi.fn()
-
-    expect(
-      listener(
-        {
-          action: RuntimeActionIds.ReleaseUpdateGetStatus,
-        },
-        {},
-        sendResponse,
-      ),
-    ).toBe(true)
-
-    expect(mocks.handleReleaseUpdateMessage).toHaveBeenCalledWith(
-      {
-        action: RuntimeActionIds.ReleaseUpdateGetStatus,
-      },
-      sendResponse,
-    )
-  })
-
-  it("routes additional prefix-based actions to their feature handlers", async () => {
+  it("routes additional raw runtime actions to their feature handlers", async () => {
     const listener = await loadListener()
 
     const cases = [
       {
-        request: { action: RuntimeActionIds.AutoRefreshRefreshNow },
-        expected: mocks.handleAutoRefreshMessage,
-      },
-      {
-        request: { action: RuntimeActionIds.WebdavAutoSyncSyncNow },
-        expected: mocks.handleWebdavAutoSyncMessage,
-      },
-      {
-        request: { action: RuntimeActionIds.AutoCheckinGetStatus },
-        expected: mocks.handleAutoCheckinMessage,
-      },
-      {
-        request: { action: RuntimeActionIds.ExternalCheckInOpenAndMark },
-        expected: mocks.handleExternalCheckInMessage,
-      },
-      {
-        request: { action: RuntimeActionIds.AccountKeyRepairStart },
-        expected: mocks.handleAccountKeyRepairMessage,
-      },
-      {
-        request: { action: RuntimeActionIds.ApiCheckRunProbe },
-        expected: mocks.handleWebAiApiCheckMessage,
-      },
-      {
         request: {
-          action: RuntimeActionIds.RedemptionAssistContextMenuTrigger,
+          action: RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots,
         },
-        expected: mocks.handleRedemptionAssistMessage,
-      },
-      {
-        request: { action: RuntimeActionIds.ChannelConfigGet },
-        expected: mocks.handleChannelConfigMessage,
-      },
-      {
-        request: { action: RuntimeActionIds.UsageHistorySyncNow },
-        expected: mocks.handleUsageHistoryMessage,
-      },
-      {
-        request: { action: RuntimeActionIds.BalanceHistoryRefreshNow },
         expected: mocks.handleDailyBalanceHistoryMessage,
-      },
-      {
-        request: { action: RuntimeActionIds.LdohSiteLookupRefreshSites },
-        expected: mocks.handleLdohSiteLookupMessage,
-      },
-      {
-        request: { action: RuntimeActionIds.TaskNotificationsTest },
-        expected: mocks.handleTaskNotificationMessage,
-      },
-      {
-        request: { action: RuntimeActionIds.SiteAnnouncementsGetStatus },
-        expected: mocks.handleSiteAnnouncementMessage,
       },
     ]
 
@@ -446,29 +431,43 @@ describe("setupRuntimeMessageListeners additional routing", () => {
       const result = listener(request, sender, sendResponse)
 
       expect(result).toBe(true)
-
-      if (expected === mocks.handleRedemptionAssistMessage) {
-        expect(expected).toHaveBeenLastCalledWith(request, sender, sendResponse)
-      } else {
-        expect(expected).toHaveBeenLastCalledWith(request, sendResponse)
-      }
+      expect(expected).toHaveBeenLastCalledWith(request, sendResponse)
     }
   })
 
-  it("routes product analytics runtime messages", async () => {
+  it("does not route typed Redemption Assist RPCs through the raw runtime listener", async () => {
+    const listener = await loadListener()
+    const sendResponse = vi.fn()
+
+    const result = listener(
+      {
+        type: RedemptionAssistMessageTypes.ShouldPrompt,
+        data: {
+          url: "https://example.com/redeem",
+          codes: ["CODE_1"],
+        },
+      },
+      { tab: { id: 42 }, frameId: 0, url: "https://example.com" },
+      sendResponse,
+    )
+
+    expect(result).toBeUndefined()
+    expect(sendResponse).not.toHaveBeenCalled()
+  })
+
+  it("does not route typed-only product analytics actions through the raw runtime listener", async () => {
     const listener = await loadListener()
     const sendResponse = vi.fn()
     const request = {
-      action: RuntimeActionIds.ProductAnalyticsTrackEvent,
-      eventName: PRODUCT_ANALYTICS_EVENTS.AppOpened,
-      properties: { entrypoint: "popup" },
+      type: ProductAnalyticsMessageTypes.TrackEvent,
+      data: {
+        eventName: "app_opened",
+        properties: { entrypoint: "popup" },
+      },
     }
 
-    expect(listener(request, {}, sendResponse)).toBe(true)
-    expect(mocks.handleProductAnalyticsMessage).toHaveBeenCalledWith(
-      request,
-      sendResponse,
-    )
+    expect(listener(request, {}, sendResponse)).toBeUndefined()
+    expect(sendResponse).not.toHaveBeenCalled()
   })
 
   it("returns cookie import success when a session cookie can be extracted", async () => {
@@ -520,31 +519,6 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     expect(sendResponse).toHaveBeenCalledWith({
       success: false,
       error: "permission lookup failed",
-    })
-  })
-
-  it("surfaces outer handler errors as structured failures", async () => {
-    mocks.applyActionClickBehavior.mockImplementationOnce(() => {
-      throw new Error("apply boom")
-    })
-
-    const listener = await loadListener()
-    const sendResponse = vi.fn()
-
-    expect(
-      listener(
-        {
-          action: RuntimeActionIds.PreferencesUpdateActionClickBehavior,
-          behavior: "openPopup",
-        },
-        {},
-        sendResponse,
-      ),
-    ).toBe(true)
-
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: false,
-      error: "apply boom",
     })
   })
 

@@ -10,13 +10,13 @@ import ManagedSiteTypeSwitcher from "~/components/ManagedSiteTypeSwitcher"
 import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettingsTitleAction"
 import { PageHeader } from "~/components/PageHeader"
 import { Button, EmptyState, Input } from "~/components/ui"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteService"
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteMessagesKeyFromSiteType,
 } from "~/services/managedSites/utils/managedSite"
+import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
 import {
   startProductAnalyticsAction,
   trackProductAnalyticsActionCompleted,
@@ -38,13 +38,13 @@ import {
   type ProductAnalyticsStatusKind,
 } from "~/services/productAnalytics/events"
 import { buildManagedSiteModelSyncDiagnostics } from "~/services/productAnalytics/managedSiteModelSync"
+import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { ManagedSiteChannel } from "~/types/managedSite"
 import type {
   ExecutionItemResult,
   ExecutionProgress,
   ExecutionResult,
 } from "~/types/managedSiteModelSync"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 import { showWarningToast } from "~/utils/core/toastHelpers"
 
@@ -274,9 +274,9 @@ export default function ManagedSiteModelSync({
   const loadLastExecution = useCallback(async () => {
     try {
       setIsLoading(true)
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.ModelSyncGetLastExecution,
-      })
+      const response = await sendModelSyncMessage(
+        ModelSyncMessageTypes.GetLastExecution,
+      )
 
       if (response.success) {
         setLastExecution(response.data)
@@ -293,9 +293,9 @@ export default function ManagedSiteModelSync({
 
   const loadProgress = useCallback(async () => {
     try {
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.ModelSyncGetProgress,
-      })
+      const response = await sendModelSyncMessage(
+        ModelSyncMessageTypes.GetProgress,
+      )
 
       if (response.success) {
         setProgress(response.data)
@@ -307,9 +307,9 @@ export default function ManagedSiteModelSync({
 
   const loadNextRun = useCallback(async () => {
     try {
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.ModelSyncGetNextRun,
-      })
+      const response = await sendModelSyncMessage(
+        ModelSyncMessageTypes.GetNextRun,
+      )
 
       if (response.success) {
         setNextScheduledAt(response.data?.nextScheduledAt ?? null)
@@ -321,9 +321,9 @@ export default function ManagedSiteModelSync({
 
   const loadPreferences = useCallback(async () => {
     try {
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.ModelSyncGetPreferences,
-      })
+      const response = await sendModelSyncMessage(
+        ModelSyncMessageTypes.GetPreferences,
+      )
 
       if (response.success) {
         setIsAutoSyncEnabled(!!response.data?.enableSync)
@@ -343,9 +343,9 @@ export default function ManagedSiteModelSync({
     try {
       setIsChannelsLoading(true)
       setChannelsError(null)
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.ModelSyncListChannels,
-      })
+      const response = await sendModelSyncMessage(
+        ModelSyncMessageTypes.ListChannels,
+      )
 
       if (response.success) {
         const items = response.data?.items ?? []
@@ -619,9 +619,9 @@ export default function ManagedSiteModelSync({
     })
 
     try {
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.ModelSyncTriggerFailedOnly,
-      })
+      const response = await sendModelSyncMessage(
+        ModelSyncMessageTypes.TriggerFailedOnly,
+      )
 
       if (response.success) {
         notifySyncCompletion(response.data)
@@ -658,9 +658,9 @@ export default function ManagedSiteModelSync({
     })
 
     try {
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.ModelSyncTriggerAll,
-      })
+      const response = await sendModelSyncMessage(
+        ModelSyncMessageTypes.TriggerAll,
+      )
 
       if (response.success) {
         notifySyncCompletion(response.data)
@@ -721,10 +721,12 @@ export default function ManagedSiteModelSync({
     }
 
     try {
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.ModelSyncTriggerSelected,
-        channelIds: Array.from(selectedSet),
-      })
+      const response = await sendModelSyncMessage(
+        ModelSyncMessageTypes.TriggerSelected,
+        {
+          channelIds: Array.from(selectedSet),
+        },
+      )
 
       if (response.success) {
         notifySyncCompletion(response.data)
@@ -772,10 +774,12 @@ export default function ManagedSiteModelSync({
 
     setRunningChannelId(channelId)
     try {
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.ModelSyncTriggerSelected,
-        channelIds: [channelId],
-      })
+      const response = await sendModelSyncMessage(
+        ModelSyncMessageTypes.TriggerSelected,
+        {
+          channelIds: [channelId],
+        },
+      )
 
       if (response.success) {
         const newItem = response.data.items[0]

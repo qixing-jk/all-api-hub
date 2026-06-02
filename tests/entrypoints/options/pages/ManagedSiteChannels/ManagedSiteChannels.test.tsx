@@ -5,7 +5,6 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { ChannelDialogContainer } from "~/components/dialogs/ChannelDialog"
 import { AXON_HUB_CHANNEL_TYPE } from "~/constants/axonHub"
 import { CLAUDE_CODE_HUB_PROVIDER_TYPE } from "~/constants/claudeCodeHub"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import ManagedSiteChannels from "~/entrypoints/options/pages/ManagedSiteChannels"
@@ -20,6 +19,7 @@ import {
   isNewApiVerifiedSessionActive,
   NEW_API_MANAGED_SESSION_STATUSES,
 } from "~/services/managedSites/providers/newApiSession"
+import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -29,7 +29,6 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import {
   navigateWithinOptionsPage,
   openManagedSiteModelSyncForChannel,
@@ -43,10 +42,9 @@ import {
   within,
 } from "~~/tests/test-utils/render"
 
-vi.mock("~/utils/browser/browserApi", async (importActual) => {
-  const actual = (await importActual()) as any
-  return { ...actual, sendRuntimeMessage: vi.fn() }
-})
+vi.mock("~/services/models/modelSync/messaging", () => ({
+  sendModelSyncMessage: vi.fn(),
+}))
 
 vi.mock("~/services/managedSites/managedSiteService", async (importActual) => {
   const actual = (await importActual()) as any
@@ -419,7 +417,7 @@ describe("ManagedSiteChannels", () => {
       fetchChannelSecretKey: options?.fetchChannelSecretKey,
     } as any)
 
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    vi.mocked(sendModelSyncMessage).mockResolvedValue({
       success: true,
       data: { items: channels },
     } as any)
@@ -589,7 +587,7 @@ describe("ManagedSiteChannels", () => {
         }) as any,
     )
 
-    vi.mocked(sendRuntimeMessage)
+    vi.mocked(sendModelSyncMessage)
       .mockResolvedValueOnce({
         success: true,
         data: {
@@ -598,7 +596,7 @@ describe("ManagedSiteChannels", () => {
       } as any)
       .mockImplementationOnce(
         () =>
-          new Promise((resolve) => {
+          new Promise<any>((resolve) => {
             resolveDoneHubChannels = resolve
           }),
       )
@@ -616,10 +614,8 @@ describe("ManagedSiteChannels", () => {
     rerender(<ManagedSiteChannels />)
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenLastCalledWith(
-        expect.objectContaining({
-          action: RuntimeActionIds.ModelSyncListChannels,
-        }),
+      expect(sendModelSyncMessage).toHaveBeenLastCalledWith(
+        "modelSync:listChannels",
       )
       expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
       expect(
@@ -642,7 +638,7 @@ describe("ManagedSiteChannels", () => {
 
   it("reloads the channel list when refreshKey changes to a truthy value", async () => {
     mockChannels([{ id: 1, name: "Alpha", base_url: "https://alpha.example" }])
-    vi.mocked(sendRuntimeMessage)
+    vi.mocked(sendModelSyncMessage)
       .mockResolvedValueOnce({
         success: true,
         data: {
@@ -667,7 +663,7 @@ describe("ManagedSiteChannels", () => {
       expect(screen.queryByText("Alpha")).not.toBeInTheDocument()
     })
 
-    expect(vi.mocked(sendRuntimeMessage)).toHaveBeenCalledTimes(2)
+    expect(vi.mocked(sendModelSyncMessage)).toHaveBeenCalledTimes(2)
   })
 
   it("keeps the current channel rows visible while a manual refresh is loading", async () => {
@@ -677,7 +673,7 @@ describe("ManagedSiteChannels", () => {
       | undefined
 
     mockChannels([{ id: 1, name: "Alpha", base_url: "https://alpha.example" }])
-    vi.mocked(sendRuntimeMessage)
+    vi.mocked(sendModelSyncMessage)
       .mockResolvedValueOnce({
         success: true,
         data: {
@@ -706,7 +702,7 @@ describe("ManagedSiteChannels", () => {
       PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
     )
     await waitFor(() => {
-      expect(vi.mocked(sendRuntimeMessage)).toHaveBeenCalledTimes(2)
+      expect(vi.mocked(sendModelSyncMessage)).toHaveBeenCalledTimes(2)
     })
 
     expect(screen.getByText("Alpha")).toBeInTheDocument()
@@ -728,7 +724,7 @@ describe("ManagedSiteChannels", () => {
     const user = userEvent.setup()
 
     mockChannels([])
-    vi.mocked(sendRuntimeMessage)
+    vi.mocked(sendModelSyncMessage)
       .mockResolvedValueOnce({
         success: true,
         data: { items: [] },
@@ -774,7 +770,7 @@ describe("ManagedSiteChannels", () => {
     const user = userEvent.setup()
 
     mockChannels([])
-    vi.mocked(sendRuntimeMessage)
+    vi.mocked(sendModelSyncMessage)
       .mockResolvedValueOnce({
         success: true,
         data: { items: [] },
@@ -850,7 +846,7 @@ describe("ManagedSiteChannels", () => {
       { id: 1, name: "Alpha", base_url: "https://alpha.example" },
       { id: 2, name: "Beta", base_url: "https://beta.example" },
     ])
-    vi.mocked(sendRuntimeMessage)
+    vi.mocked(sendModelSyncMessage)
       .mockResolvedValueOnce({
         success: true,
         data: {
@@ -958,7 +954,7 @@ describe("ManagedSiteChannels", () => {
     expect(
       screen.getByRole("button", { name: "common:actions.goToSettings" }),
     ).toBeInTheDocument()
-    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+    expect(sendModelSyncMessage).not.toHaveBeenCalled()
     expect(toast.error).not.toHaveBeenCalled()
 
     fireEvent.click(
@@ -972,7 +968,7 @@ describe("ManagedSiteChannels", () => {
 
   it("shows a load error alert when fetching channels fails", async () => {
     mockChannels([])
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    vi.mocked(sendModelSyncMessage).mockResolvedValue({
       success: false,
       error: "backend exploded",
     } as any)
@@ -990,9 +986,7 @@ describe("ManagedSiteChannels", () => {
     expect(toast.error).toHaveBeenCalledWith(
       "managedSiteChannels:alerts.loadError.description",
     )
-    expect(sendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.ModelSyncListChannels,
-    })
+    expect(sendModelSyncMessage).toHaveBeenCalledWith("modelSync:listChannels")
   })
 
   it("renders base_url as a clickable link", async () => {
@@ -1316,15 +1310,15 @@ describe("ManagedSiteChannels", () => {
     ]
 
     mockChannels(channels)
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (payload: any) => {
-      if (payload.action === RuntimeActionIds.ModelSyncListChannels) {
+    vi.mocked(sendModelSyncMessage).mockImplementation(async (type: string) => {
+      if (type === "modelSync:listChannels") {
         return {
           success: true,
           data: { items: channels },
         } as any
       }
 
-      if (payload.action === RuntimeActionIds.ModelSyncTriggerSelected) {
+      if (type === "modelSync:triggerSelected") {
         return {
           success: false,
           error: "sync failed",
@@ -1353,10 +1347,10 @@ describe("ManagedSiteChannels", () => {
       PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
     )
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.ModelSyncTriggerSelected,
-        channelIds: [1],
-      })
+      expect(sendModelSyncMessage).toHaveBeenCalledWith(
+        "modelSync:triggerSelected",
+        { channelIds: [1] },
+      )
     })
 
     expect(toast.error).toHaveBeenCalledWith(
@@ -1401,8 +1395,8 @@ describe("ManagedSiteChannels", () => {
     ]
 
     mockChannels(channels)
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (payload: any) => {
-      if (payload.action === RuntimeActionIds.ModelSyncListChannels) {
+    vi.mocked(sendModelSyncMessage).mockImplementation(async (type: string) => {
+      if (type === "modelSync:listChannels") {
         return {
           success: true,
           data: { items: channels },
@@ -1430,10 +1424,10 @@ describe("ManagedSiteChannels", () => {
       PRODUCT_ANALYTICS_ACTION_IDS.SyncManagedSiteChannel,
       PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsRowActions,
     )
-    expect(sendRuntimeMessage).not.toHaveBeenCalledWith({
-      action: RuntimeActionIds.ModelSyncTriggerSelected,
-      channelIds: [0],
-    })
+    expect(sendModelSyncMessage).not.toHaveBeenCalledWith(
+      "modelSync:triggerSelected",
+      { channelIds: [0] },
+    )
     expect(mockCompleteProductAnalyticsAction).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Skipped,
       {
@@ -1714,15 +1708,15 @@ describe("ManagedSiteChannels", () => {
     ]
 
     mockChannels(initialChannels)
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (payload: any) => {
-      if (payload.action === RuntimeActionIds.ModelSyncListChannels) {
+    vi.mocked(sendModelSyncMessage).mockImplementation(async (type: string) => {
+      if (type === "modelSync:listChannels") {
         return {
           success: true,
           data: { items: initialChannels },
         } as any
       }
 
-      if (payload.action === RuntimeActionIds.ModelSyncTriggerSelected) {
+      if (type === "modelSync:triggerSelected") {
         return {
           success: true,
           data: {
@@ -1788,10 +1782,10 @@ describe("ManagedSiteChannels", () => {
       PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
     )
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.ModelSyncTriggerSelected,
-        channelIds: [1, 2],
-      })
+      expect(sendModelSyncMessage).toHaveBeenCalledWith(
+        "modelSync:triggerSelected",
+        { channelIds: [1, 2] },
+      )
     })
 
     expect(toast.success).toHaveBeenCalledWith(
@@ -2191,7 +2185,7 @@ describe("ManagedSiteChannels", () => {
           newApiTotpSecret: currentPreferences.newApi.totpSecret,
         }) as any,
     )
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    vi.mocked(sendModelSyncMessage).mockResolvedValue({
       success: true,
       data: {
         items: [
@@ -2501,7 +2495,8 @@ describe("ManagedSiteChannels", () => {
 
     await waitForRowText("Alpha")
     await waitForRowText("Beta")
-    const initialRequestCount = vi.mocked(sendRuntimeMessage).mock.calls.length
+    const initialRequestCount =
+      vi.mocked(sendModelSyncMessage).mock.calls.length
 
     expect(
       screen.queryByRole("button", {
@@ -2542,7 +2537,9 @@ describe("ManagedSiteChannels", () => {
       PRODUCT_ANALYTICS_SURFACE_IDS.OptionsManagedSiteChannelsToolbar,
     )
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledTimes(initialRequestCount + 1)
+      expect(sendModelSyncMessage).toHaveBeenCalledTimes(
+        initialRequestCount + 1,
+      )
     })
 
     const betaRow = screen.getByText("Beta").closest("tr")

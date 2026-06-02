@@ -4,15 +4,19 @@ import { useTranslation } from "react-i18next"
 
 import { SettingSection } from "~/components/SettingSection"
 import { Card, CardContent, Input } from "~/components/ui"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { buildAccountDisplayNameMap } from "~/services/accounts/utils/accountDisplayName"
+import { sendUsageHistoryMessage } from "~/services/history/usageHistory/messaging"
 import { usageHistoryStorage } from "~/services/history/usageHistory/storage"
+import { UsageHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { SiteAccount } from "~/types"
 import { USAGE_HISTORY_SCHEDULE_MODE } from "~/types/usageHistory"
-import type { UsageHistoryStore } from "~/types/usageHistory"
-import { hasAlarmsAPI, sendRuntimeMessage } from "~/utils/browser/browserApi"
+import type {
+  UsageHistoryScheduleMode,
+  UsageHistoryStore,
+} from "~/types/usageHistory"
+import { hasAlarmsAPI } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { formatLocaleDateTime } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
@@ -67,7 +71,7 @@ export default function UsageHistorySyncTab() {
   const [retentionDays, setRetentionDays] = useState<number>(
     preferences.usageHistory?.retentionDays ?? 30,
   )
-  const [scheduleMode, setScheduleMode] = useState<string>(
+  const [scheduleMode, setScheduleMode] = useState<UsageHistoryScheduleMode>(
     preferences.usageHistory?.scheduleMode ??
       USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH,
   )
@@ -149,15 +153,17 @@ export default function UsageHistorySyncTab() {
 
   const handleApplySettings = useCallback(async () => {
     try {
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.UsageHistoryUpdateSettings,
-        settings: {
-          enabled,
-          retentionDays,
-          scheduleMode,
-          syncIntervalMinutes,
+      const response = await sendUsageHistoryMessage(
+        UsageHistoryMessageTypes.UpdateSettings,
+        {
+          settings: {
+            enabled,
+            retentionDays,
+            scheduleMode,
+            syncIntervalMinutes,
+          },
         },
-      })
+      )
 
       if (!response?.success) {
         throw new Error(response?.error || "Unknown error")
@@ -214,10 +220,10 @@ export default function UsageHistorySyncTab() {
       let toastId: string | undefined
       try {
         toastId = toast.loading(t("messages.loading.syncing"))
-        const response = await sendRuntimeMessage({
-          action: RuntimeActionIds.UsageHistorySyncNow,
-          ...(nextAccountIds ? { accountIds: nextAccountIds } : {}),
-        })
+        const response = await sendUsageHistoryMessage(
+          UsageHistoryMessageTypes.SyncNow,
+          nextAccountIds ? { accountIds: nextAccountIds } : undefined,
+        )
 
         if (!response?.success) {
           throw new Error(response?.error || "Unknown error")

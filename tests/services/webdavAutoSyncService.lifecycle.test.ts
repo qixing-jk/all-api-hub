@@ -1,8 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { WebdavAutoSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import {
-  handleWebdavAutoSyncMessage,
+  resolveWebdavAutoSyncGetStatusMessage,
+  resolveWebdavAutoSyncSetupMessage,
+  resolveWebdavAutoSyncStopMessage,
+  resolveWebdavAutoSyncSyncNowMessage,
+  resolveWebdavAutoSyncUpdateSettingsMessage,
   webdavAutoSyncService,
 } from "~/services/webdav/webdavAutoSyncService"
 
@@ -23,6 +27,26 @@ vi.mock("~/utils/core/error", () => ({
   getErrorMessage: (error: unknown) =>
     error instanceof Error ? error.message : String(error),
 }))
+
+async function resolveWebdavAutoSyncTestMessage(request: any) {
+  switch (request.type) {
+    case WebdavAutoSyncMessageTypes.Setup:
+      return await resolveWebdavAutoSyncSetupMessage()
+    case WebdavAutoSyncMessageTypes.SyncNow:
+      return await resolveWebdavAutoSyncSyncNowMessage()
+    case WebdavAutoSyncMessageTypes.Stop:
+      return await resolveWebdavAutoSyncStopMessage()
+    case WebdavAutoSyncMessageTypes.UpdateSettings:
+      return await resolveWebdavAutoSyncUpdateSettingsMessage({
+        settings: request.data?.settings,
+        expectedLastUpdated: request.data?.expectedLastUpdated,
+      })
+    case WebdavAutoSyncMessageTypes.GetStatus:
+      return await resolveWebdavAutoSyncGetStatusMessage()
+    default:
+      return { success: false, error: "未知的操作" }
+  }
+}
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   const actual =
@@ -337,21 +361,21 @@ describe("webdavAutoSyncService lifecycle", () => {
 
     const cases = [
       {
-        request: { action: RuntimeActionIds.WebdavAutoSyncSetup },
+        request: { type: WebdavAutoSyncMessageTypes.Setup },
         expected: { success: true },
       },
       {
-        request: { action: RuntimeActionIds.WebdavAutoSyncSyncNow },
+        request: { type: WebdavAutoSyncMessageTypes.SyncNow },
         expected: { success: true, message: "ok" },
       },
       {
-        request: { action: RuntimeActionIds.WebdavAutoSyncStop },
+        request: { type: WebdavAutoSyncMessageTypes.Stop },
         expected: { success: true },
       },
       {
         request: {
-          action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
-          settings: { autoSync: false },
+          type: WebdavAutoSyncMessageTypes.UpdateSettings,
+          data: { settings: { autoSync: false } },
         },
         expected: {
           success: true,
@@ -366,7 +390,7 @@ describe("webdavAutoSyncService lifecycle", () => {
         },
       },
       {
-        request: { action: RuntimeActionIds.WebdavAutoSyncGetStatus },
+        request: { type: WebdavAutoSyncMessageTypes.GetStatus },
         expected: {
           success: true,
           data: {
@@ -380,15 +404,15 @@ describe("webdavAutoSyncService lifecycle", () => {
         },
       },
       {
-        request: { action: "webdav:unknown" },
+        request: { type: "webdav:unknown" },
         expected: { success: false, error: "未知的操作" },
       },
     ]
 
     for (const { request, expected } of cases) {
-      const sendResponse = vi.fn()
-      await handleWebdavAutoSyncMessage(request, sendResponse)
-      expect(sendResponse).toHaveBeenCalledWith(expected)
+      await expect(resolveWebdavAutoSyncTestMessage(request)).resolves.toEqual(
+        expected,
+      )
     }
 
     expect(setupSpy).toHaveBeenCalledTimes(1)
@@ -397,12 +421,11 @@ describe("webdavAutoSyncService lifecycle", () => {
     expect(updateSpy).toHaveBeenCalledWith({ autoSync: false }, undefined)
 
     setupSpy.mockRejectedValueOnce(new Error("handler exploded"))
-    const sendResponse = vi.fn()
-    await handleWebdavAutoSyncMessage(
-      { action: RuntimeActionIds.WebdavAutoSyncSetup },
-      sendResponse,
-    )
-    expect(sendResponse).toHaveBeenCalledWith({
+    await expect(
+      resolveWebdavAutoSyncTestMessage({
+        type: WebdavAutoSyncMessageTypes.Setup,
+      }),
+    ).resolves.toEqual({
       success: false,
       error: "handler exploded",
     })
@@ -492,29 +515,21 @@ describe("webdavAutoSyncService lifecycle", () => {
         reason: "error",
       } as any)
 
-    const conflictResponse = vi.fn()
-    await handleWebdavAutoSyncMessage(
-      {
-        action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
-        settings: { autoSync: false },
-      },
-      conflictResponse,
-    )
+    const conflictResponse = await resolveWebdavAutoSyncTestMessage({
+      type: WebdavAutoSyncMessageTypes.UpdateSettings,
+      data: { settings: { autoSync: false } },
+    })
 
-    const errorResponse = vi.fn()
-    await handleWebdavAutoSyncMessage(
-      {
-        action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
-        settings: { autoSync: true },
-      },
-      errorResponse,
-    )
+    const errorResponse = await resolveWebdavAutoSyncTestMessage({
+      type: WebdavAutoSyncMessageTypes.UpdateSettings,
+      data: { settings: { autoSync: true } },
+    })
 
-    expect(conflictResponse).toHaveBeenCalledWith({
+    expect(conflictResponse).toEqual({
       success: false,
       error: "settings:messages.preferencesChangedExternally",
     })
-    expect(errorResponse).toHaveBeenCalledWith({
+    expect(errorResponse).toEqual({
       success: false,
       error: "settings:messages.saveSettingsFailed",
     })
@@ -537,21 +552,19 @@ describe("webdavAutoSyncService lifecycle", () => {
         },
       } as any)
 
-    const sendResponse = vi.fn()
-    await handleWebdavAutoSyncMessage(
-      {
-        action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
+    const response = await resolveWebdavAutoSyncTestMessage({
+      type: WebdavAutoSyncMessageTypes.UpdateSettings,
+      data: {
         settings: { autoSync: false, syncInterval: 900 },
         expectedLastUpdated: 7,
       },
-      sendResponse,
-    )
+    })
 
     expect(updateSpy).toHaveBeenCalledWith(
       { autoSync: false, syncInterval: 900 },
       { expectedLastUpdated: 7 },
     )
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: true,
       data: {
         lastUpdated: 9,

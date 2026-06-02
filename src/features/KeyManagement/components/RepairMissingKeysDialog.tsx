@@ -19,10 +19,11 @@ import {
   Spinner,
   TagFilter,
 } from "~/components/ui"
+import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import {
-  RuntimeActionIds,
-  RuntimeMessageTypes,
-} from "~/constants/runtimeActions"
+  AccountKeyRepairMessageTypes,
+  sendAccountKeyRepairMessage,
+} from "~/services/accounts/accountKeyAutoProvisioning/messaging"
 import {
   trackProductAnalyticsActionCompleted,
   trackProductAnalyticsActionStarted,
@@ -42,10 +43,7 @@ import type {
   AccountKeyRepairProgress,
   AccountKeyRepairSkipReason,
 } from "~/types/accountKeyAutoProvisioning"
-import {
-  onRuntimeMessage,
-  sendRuntimeActionMessage,
-} from "~/utils/browser/browserApi"
+import { onRuntimeMessage } from "~/utils/browser/browserApi"
 
 const repairMissingKeysAnalyticsContext = {
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.KeyManagement,
@@ -335,9 +333,9 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
 
     void (async () => {
       try {
-        const response = await sendRuntimeActionMessage({
-          action: RuntimeActionIds.AccountKeyRepairGetProgress,
-        })
+        const response = await sendAccountKeyRepairMessage(
+          AccountKeyRepairMessageTypes.GetProgress,
+        )
         if (cancelled) return
         if (response?.success && response.data) {
           setProgress(response.data)
@@ -362,9 +360,9 @@ export function RepairMissingKeysDialog(props: RepairMissingKeysDialogProps) {
 
     void (async () => {
       try {
-        const response = await sendRuntimeActionMessage({
-          action: RuntimeActionIds.AccountKeyRepairStart,
-        })
+        const response = await sendAccountKeyRepairMessage(
+          AccountKeyRepairMessageTypes.Start,
+        )
         if (cancelled) return
         if (response?.success && response.data) {
           startedAnalyticsJobIdRef.current = response.data.jobId

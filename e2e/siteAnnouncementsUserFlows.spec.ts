@@ -1,8 +1,8 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { SiteAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { SITE_ANNOUNCEMENTS_ALARM_NAME } from "~/services/siteAnnouncements/constants"
 import {
   SITE_ANNOUNCEMENT_PROVIDER_IDS,
@@ -132,14 +132,24 @@ async function seedPollingAnnouncementScenario(
   ])
 }
 
-async function sendRuntimeActionFromPage<TResponse>(
+async function sendTypedRuntimeMessageFromPage<TResponse>(
   page: Parameters<typeof forceExtensionLanguage>[0],
-  message: Record<string, unknown>,
+  type: string,
+  data?: Record<string, unknown>,
 ): Promise<TResponse> {
-  return await page.evaluate(async (payload) => {
-    const chromeApi = (globalThis as any).chrome
-    return await chromeApi.runtime.sendMessage(payload)
-  }, message)
+  return await page.evaluate(
+    async ({ type, data }) => {
+      const chromeApi = (globalThis as any).chrome
+      const response = await chromeApi.runtime.sendMessage({
+        id: Date.now(),
+        type,
+        data,
+        timestamp: Date.now(),
+      })
+      return response?.res ?? response
+    },
+    { type, data },
+  )
 }
 
 function createAnnouncementStore(): SiteAnnouncementStoreState["sites"] {
@@ -291,20 +301,17 @@ test("polls site announcements through the MV3 alarm scheduler and stores fetche
   await waitForExtensionRoot(page)
   await expectPermissionOnboardingHidden(page)
 
-  const statusResponse = await sendRuntimeActionFromPage<{
+  const statusResponse = await sendTypedRuntimeMessageFromPage<{
     success: boolean
     data?: unknown[]
     error?: string
-  }>(page, {
-    action: RuntimeActionIds.SiteAnnouncementsGetStatus,
-  })
+  }>(page, SiteAnnouncementsMessageTypes.GetStatus)
   expect(statusResponse).toMatchObject({ success: true })
-  const settingsResponse = await sendRuntimeActionFromPage<{
+  const settingsResponse = await sendTypedRuntimeMessageFromPage<{
     success: boolean
     data?: unknown
     error?: string
-  }>(page, {
-    action: RuntimeActionIds.SiteAnnouncementsUpdatePreferences,
+  }>(page, SiteAnnouncementsMessageTypes.UpdatePreferences, {
     settings: {
       enabled: true,
       notificationEnabled: false,
@@ -385,10 +392,9 @@ test("reconciles, filters, and clears site announcement MV3 alarms", async ({
   await waitForExtensionRoot(page)
   await expectPermissionOnboardingHidden(page)
 
-  const settingsResponse = await sendRuntimeActionFromPage<{
+  const settingsResponse = await sendTypedRuntimeMessageFromPage<{
     success: boolean
-  }>(page, {
-    action: RuntimeActionIds.SiteAnnouncementsUpdatePreferences,
+  }>(page, SiteAnnouncementsMessageTypes.UpdatePreferences, {
     settings: {
       enabled: true,
       notificationEnabled: false,
@@ -397,11 +403,9 @@ test("reconciles, filters, and clears site announcement MV3 alarms", async ({
   })
   expect(settingsResponse).toMatchObject({ success: true })
 
-  const statusResponse = await sendRuntimeActionFromPage<{
+  const statusResponse = await sendTypedRuntimeMessageFromPage<{
     success: boolean
-  }>(page, {
-    action: RuntimeActionIds.SiteAnnouncementsGetStatus,
-  })
+  }>(page, SiteAnnouncementsMessageTypes.GetStatus)
   expect(statusResponse).toMatchObject({ success: true })
 
   await expect
@@ -421,11 +425,9 @@ test("reconciles, filters, and clears site announcement MV3 alarms", async ({
     })
     .toBeNull()
 
-  const reconcileResponse = await sendRuntimeActionFromPage<{
+  const reconcileResponse = await sendTypedRuntimeMessageFromPage<{
     success: boolean
-  }>(page, {
-    action: RuntimeActionIds.SiteAnnouncementsGetStatus,
-  })
+  }>(page, SiteAnnouncementsMessageTypes.GetStatus)
   expect(reconcileResponse).toMatchObject({ success: true })
   await expect
     .poll(() => getSiteAnnouncementAlarm(serviceWorker), {
@@ -459,10 +461,9 @@ test("reconciles, filters, and clears site announcement MV3 alarms", async ({
     })
     .toBe(0)
 
-  const disableResponse = await sendRuntimeActionFromPage<{
+  const disableResponse = await sendTypedRuntimeMessageFromPage<{
     success: boolean
-  }>(page, {
-    action: RuntimeActionIds.SiteAnnouncementsUpdatePreferences,
+  }>(page, SiteAnnouncementsMessageTypes.UpdatePreferences, {
     settings: {
       enabled: false,
       notificationEnabled: false,
@@ -490,10 +491,9 @@ test("preserves matching site announcement alarms across repeated reconciliation
   await waitForExtensionRoot(page)
   await expectPermissionOnboardingHidden(page)
 
-  const settingsResponse = await sendRuntimeActionFromPage<{
+  const settingsResponse = await sendTypedRuntimeMessageFromPage<{
     success: boolean
-  }>(page, {
-    action: RuntimeActionIds.SiteAnnouncementsUpdatePreferences,
+  }>(page, SiteAnnouncementsMessageTypes.UpdatePreferences, {
     settings: {
       enabled: true,
       notificationEnabled: false,
@@ -514,11 +514,9 @@ test("preserves matching site announcement alarms across repeated reconciliation
   const initialAlarm = await getSiteAnnouncementAlarm(serviceWorker)
   expect(initialAlarm?.scheduledTime).toBeTruthy()
 
-  const statusResponse = await sendRuntimeActionFromPage<{
+  const statusResponse = await sendTypedRuntimeMessageFromPage<{
     success: boolean
-  }>(page, {
-    action: RuntimeActionIds.SiteAnnouncementsGetStatus,
-  })
+  }>(page, SiteAnnouncementsMessageTypes.GetStatus)
   expect(statusResponse).toMatchObject({ success: true })
 
   await expect
@@ -531,10 +529,9 @@ test("preserves matching site announcement alarms across repeated reconciliation
       periodInMinutes: POLLING_INTERVAL_MINUTES,
     })
 
-  const repeatedSettingsResponse = await sendRuntimeActionFromPage<{
+  const repeatedSettingsResponse = await sendTypedRuntimeMessageFromPage<{
     success: boolean
-  }>(page, {
-    action: RuntimeActionIds.SiteAnnouncementsUpdatePreferences,
+  }>(page, SiteAnnouncementsMessageTypes.UpdatePreferences, {
     settings: {
       enabled: true,
       notificationEnabled: false,
@@ -596,10 +593,9 @@ test("skips early site announcement alarms while persisted cooldown is active", 
   await waitForExtensionRoot(page)
   await expectPermissionOnboardingHidden(page)
 
-  const settingsResponse = await sendRuntimeActionFromPage<{
+  const settingsResponse = await sendTypedRuntimeMessageFromPage<{
     success: boolean
-  }>(page, {
-    action: RuntimeActionIds.SiteAnnouncementsUpdatePreferences,
+  }>(page, SiteAnnouncementsMessageTypes.UpdatePreferences, {
     settings: {
       enabled: true,
       notificationEnabled: false,

@@ -2,7 +2,6 @@ import type { BrowserContext, Page, Route, Worker } from "@playwright/test"
 
 import { ChannelType } from "~/constants"
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { LogType } from "~/services/apiService/common/type"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
@@ -14,6 +13,14 @@ import {
 } from "~/services/history/usageHistory/constants"
 import { getDayKeyFromUnixSeconds as getUsageHistoryDayKeyFromUnixSeconds } from "~/services/history/usageHistory/core"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import {
+  AutoCheckinMessageTypes,
+  BalanceHistoryMessageTypes,
+  ModelSyncMessageTypes,
+  SiteAnnouncementsMessageTypes,
+  UsageHistoryMessageTypes,
+  WebdavAutoSyncMessageTypes,
+} from "~/services/runtimeMessaging/messageTypes"
 import { SITE_ANNOUNCEMENTS_ALARM_NAME } from "~/services/siteAnnouncements/constants"
 import { AUTO_CHECKIN_SCHEDULE_MODE } from "~/types/autoCheckin"
 import type { AutoCheckinStatus } from "~/types/autoCheckin"
@@ -146,14 +153,24 @@ async function openExtensionPage(page: Page, extensionId: string) {
   await expectPermissionOnboardingHidden(page)
 }
 
-async function sendRuntimeActionFromPage<TResponse>(
+async function sendTypedRuntimeMessageFromPage<TResponse>(
   page: Page,
-  message: Record<string, unknown>,
+  type: string,
+  data?: Record<string, unknown>,
 ): Promise<TResponse> {
-  return await page.evaluate(async (payload) => {
-    const chromeApi = (globalThis as any).chrome
-    return await chromeApi.runtime.sendMessage(payload)
-  }, message)
+  return await page.evaluate(
+    async ({ type, data }) => {
+      const chromeApi = (globalThis as any).chrome
+      const response = await chromeApi.runtime.sendMessage({
+        id: Date.now(),
+        type,
+        data,
+        timestamp: Date.now(),
+      })
+      return response?.res ?? response
+    },
+    { type, data },
+  )
 }
 
 async function getAlarm(
@@ -537,62 +554,80 @@ async function enableAlarmBackedFeatures(page: Page, serviceWorker: Worker) {
   })
 
   const responses = [
-    await sendRuntimeActionFromPage<{ success: boolean }>(page, {
-      action: RuntimeActionIds.UsageHistoryUpdateSettings,
-      settings: {
-        enabled: true,
-        scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.ALARM,
-        syncIntervalMinutes: 17,
-      },
-    }),
-    await sendRuntimeActionFromPage<{ success: boolean }>(page, {
-      action: RuntimeActionIds.BalanceHistoryUpdateSettings,
-      settings: {
-        enabled: true,
-        endOfDayCapture: { enabled: true },
-        retentionDays: 365,
-      },
-    }),
-    await sendRuntimeActionFromPage<{ success: boolean }>(page, {
-      action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
-      settings: {
-        autoSync: true,
-        syncInterval: 120,
-        syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
-      },
-    }),
-    await sendRuntimeActionFromPage<{ success: boolean }>(page, {
-      action: RuntimeActionIds.ModelSyncUpdateSettings,
-      settings: {
-        enableSync: true,
-        intervalMs: 5 * 60 * 1000,
-      },
-    }),
-    await sendRuntimeActionFromPage<{ success: boolean }>(page, {
-      action: RuntimeActionIds.AutoCheckinUpdateSettings,
-      settings: {
-        globalEnabled: true,
-        pretriggerDailyOnUiOpen: false,
-        notifyUiOnCompletion: true,
-        windowStart: "00:00",
-        windowEnd: "23:59",
-        scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC,
-        deterministicTime: "23:58",
-        retryStrategy: {
-          enabled: false,
-          intervalMinutes: 30,
-          maxAttemptsPerDay: 1,
+    await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
+      page,
+      UsageHistoryMessageTypes.UpdateSettings,
+      {
+        settings: {
+          enabled: true,
+          scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.ALARM,
+          syncIntervalMinutes: 17,
         },
       },
-    }),
-    await sendRuntimeActionFromPage<{ success: boolean }>(page, {
-      action: RuntimeActionIds.SiteAnnouncementsUpdatePreferences,
-      settings: {
-        enabled: true,
-        notificationEnabled: false,
-        intervalMinutes: 15,
+    ),
+    await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
+      page,
+      BalanceHistoryMessageTypes.UpdateSettings,
+      {
+        settings: {
+          enabled: true,
+          endOfDayCapture: { enabled: true },
+          retentionDays: 365,
+        },
       },
-    }),
+    ),
+    await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
+      page,
+      WebdavAutoSyncMessageTypes.UpdateSettings,
+      {
+        settings: {
+          autoSync: true,
+          syncInterval: 120,
+          syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
+        },
+      },
+    ),
+    await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
+      page,
+      ModelSyncMessageTypes.UpdateSettings,
+      {
+        settings: {
+          enableSync: true,
+          intervalMs: 5 * 60 * 1000,
+        },
+      },
+    ),
+    await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
+      page,
+      AutoCheckinMessageTypes.UpdateSettings,
+      {
+        settings: {
+          globalEnabled: true,
+          pretriggerDailyOnUiOpen: false,
+          notifyUiOnCompletion: true,
+          windowStart: "00:00",
+          windowEnd: "23:59",
+          scheduleMode: AUTO_CHECKIN_SCHEDULE_MODE.DETERMINISTIC,
+          deterministicTime: "23:58",
+          retryStrategy: {
+            enabled: false,
+            intervalMinutes: 30,
+            maxAttemptsPerDay: 1,
+          },
+        },
+      },
+    ),
+    await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
+      page,
+      SiteAnnouncementsMessageTypes.UpdatePreferences,
+      {
+        settings: {
+          enabled: true,
+          notificationEnabled: false,
+          intervalMinutes: 15,
+        },
+      },
+    ),
   ]
 
   expect(responses).toEqual(
@@ -602,44 +637,62 @@ async function enableAlarmBackedFeatures(page: Page, serviceWorker: Worker) {
 
 async function disableConfigurableAlarmFeatures(page: Page) {
   const responses = [
-    await sendRuntimeActionFromPage<{ success: boolean }>(page, {
-      action: RuntimeActionIds.UsageHistoryUpdateSettings,
-      settings: {
-        enabled: false,
-        scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH,
+    await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
+      page,
+      UsageHistoryMessageTypes.UpdateSettings,
+      {
+        settings: {
+          enabled: false,
+          scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.AFTER_REFRESH,
+        },
       },
-    }),
-    await sendRuntimeActionFromPage<{ success: boolean }>(page, {
-      action: RuntimeActionIds.BalanceHistoryUpdateSettings,
-      settings: {
-        enabled: false,
-        endOfDayCapture: { enabled: false },
+    ),
+    await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
+      page,
+      BalanceHistoryMessageTypes.UpdateSettings,
+      {
+        settings: {
+          enabled: false,
+          endOfDayCapture: { enabled: false },
+        },
       },
-    }),
-    await sendRuntimeActionFromPage<{ success: boolean }>(page, {
-      action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
-      settings: {
-        autoSync: false,
+    ),
+    await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
+      page,
+      WebdavAutoSyncMessageTypes.UpdateSettings,
+      {
+        settings: {
+          autoSync: false,
+        },
       },
-    }),
-    await sendRuntimeActionFromPage<{ success: boolean }>(page, {
-      action: RuntimeActionIds.ModelSyncUpdateSettings,
-      settings: {
-        enableSync: false,
+    ),
+    await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
+      page,
+      ModelSyncMessageTypes.UpdateSettings,
+      {
+        settings: {
+          enableSync: false,
+        },
       },
-    }),
-    await sendRuntimeActionFromPage<{ success: boolean }>(page, {
-      action: RuntimeActionIds.AutoCheckinUpdateSettings,
-      settings: {
-        globalEnabled: false,
+    ),
+    await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
+      page,
+      AutoCheckinMessageTypes.UpdateSettings,
+      {
+        settings: {
+          globalEnabled: false,
+        },
       },
-    }),
-    await sendRuntimeActionFromPage<{ success: boolean }>(page, {
-      action: RuntimeActionIds.SiteAnnouncementsUpdatePreferences,
-      settings: {
-        enabled: false,
+    ),
+    await sendTypedRuntimeMessageFromPage<{ success: boolean }>(
+      page,
+      SiteAnnouncementsMessageTypes.UpdatePreferences,
+      {
+        settings: {
+          enabled: false,
+        },
       },
-    }),
+    ),
   ]
 
   expect(responses).toEqual(
@@ -839,10 +892,9 @@ test("runs usage-history sync when its MV3 alarm fires", async ({
   ])
 
   await openExtensionPage(page, extensionId)
-  const settingsResponse = await sendRuntimeActionFromPage<{
+  const settingsResponse = await sendTypedRuntimeMessageFromPage<{
     success: boolean
-  }>(page, {
-    action: RuntimeActionIds.UsageHistoryUpdateSettings,
+  }>(page, UsageHistoryMessageTypes.UpdateSettings, {
     settings: {
       enabled: true,
       scheduleMode: USAGE_HISTORY_SCHEDULE_MODE.ALARM,
@@ -931,10 +983,9 @@ test("captures daily balance snapshots when its MV3 alarm fires", async ({
   })
 
   await openExtensionPage(page, extensionId)
-  const settingsResponse = await sendRuntimeActionFromPage<{
+  const settingsResponse = await sendTypedRuntimeMessageFromPage<{
     success: boolean
-  }>(page, {
-    action: RuntimeActionIds.BalanceHistoryUpdateSettings,
+  }>(page, BalanceHistoryMessageTypes.UpdateSettings, {
     settings: {
       enabled: true,
       endOfDayCapture: { enabled: true },
@@ -1016,10 +1067,9 @@ test("runs WebDAV auto-sync upload when its MV3 alarm fires", async ({
   })
 
   await openExtensionPage(page, extensionId)
-  const settingsResponse = await sendRuntimeActionFromPage<{
+  const settingsResponse = await sendTypedRuntimeMessageFromPage<{
     success: boolean
-  }>(page, {
-    action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
+  }>(page, WebdavAutoSyncMessageTypes.UpdateSettings, {
     settings: {
       autoSync: true,
       syncInterval: 120,
@@ -1067,12 +1117,10 @@ test("runs WebDAV auto-sync upload when its MV3 alarm fires", async ({
 
   expect(tempDeleteUrls).toEqual([])
 
-  const statusResponse = await sendRuntimeActionFromPage<{
+  const statusResponse = await sendTypedRuntimeMessageFromPage<{
     success: boolean
     data: { lastSyncStatus: string; lastSyncError: string | null }
-  }>(page, {
-    action: RuntimeActionIds.WebdavAutoSyncGetStatus,
-  })
+  }>(page, WebdavAutoSyncMessageTypes.GetStatus)
   expect(statusResponse).toEqual(
     expect.objectContaining({
       success: true,
@@ -1154,12 +1202,10 @@ test("runs WebDAV best-effort upload when its dedicated MV3 alarm fires", async 
 
   expect(tempDeleteUrls).toEqual([])
 
-  const statusResponse = await sendRuntimeActionFromPage<{
+  const statusResponse = await sendTypedRuntimeMessageFromPage<{
     success: boolean
     data: { lastSyncStatus: string; lastSyncError: string | null }
-  }>(page, {
-    action: RuntimeActionIds.WebdavAutoSyncGetStatus,
-  })
+  }>(page, WebdavAutoSyncMessageTypes.GetStatus)
   expect(statusResponse).toEqual(
     expect.objectContaining({
       success: true,

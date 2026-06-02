@@ -1,12 +1,11 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   __resetTaskNotificationServiceForTesting,
-  handleTaskNotificationMessage,
   initializeTaskNotificationService,
   notifyTaskResult,
+  resolveTaskNotificationTestMessage,
 } from "~/services/notifications/taskNotificationService"
 import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1064,12 +1063,7 @@ describe("taskNotificationService", () => {
   })
 
   it("handles test notification runtime messages", async () => {
-    const sendResponse = vi.fn()
-
-    await handleTaskNotificationMessage(
-      { action: RuntimeActionIds.TaskNotificationsTest },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({})
 
     expect(createNotificationMock).toHaveBeenCalledWith(
       getTaskNotificationId(TASK_NOTIFICATION_TASKS.AutoCheckin),
@@ -1078,14 +1072,10 @@ describe("taskNotificationService", () => {
         message: "settings:taskNotifications.test.message",
       }),
     )
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: true,
-      error: undefined,
-    })
+    expect(response).toEqual({ success: true, data: undefined })
   })
 
   it("does not require the auto-check-in task switch for test notification runtime messages", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1096,20 +1086,13 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      { action: RuntimeActionIds.TaskNotificationsTest },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({})
 
     expect(createNotificationMock).toHaveBeenCalled()
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: true,
-      error: undefined,
-    })
+    expect(response).toEqual({ success: true, data: undefined })
   })
 
   it("handles channel-specific test notification runtime messages", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1124,13 +1107,9 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Telegram,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Telegram,
+    })
 
     expect(createNotificationMock).not.toHaveBeenCalled()
     expect(fetchMock).toHaveBeenCalledWith(
@@ -1140,14 +1119,10 @@ describe("taskNotificationService", () => {
         body: expect.stringContaining("123456789"),
       }),
     )
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: true,
-      error: undefined,
-    })
+    expect(response).toEqual({ success: true, data: undefined })
   })
 
   it("handles Feishu channel-specific test notification runtime messages", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1161,13 +1136,9 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Feishu,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Feishu,
+    })
 
     expect(createNotificationMock).not.toHaveBeenCalled()
     expect(fetchMock).toHaveBeenCalledWith(
@@ -1177,14 +1148,10 @@ describe("taskNotificationService", () => {
         body: expect.stringContaining("settings:taskNotifications.test.title"),
       }),
     )
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: true,
-      error: undefined,
-    })
+    expect(response).toEqual({ success: true, data: undefined })
   })
 
   it("handles DingTalk channel-specific test notification runtime messages", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1207,13 +1174,9 @@ describe("taskNotificationService", () => {
       }),
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
+    })
 
     expect(createNotificationMock).not.toHaveBeenCalled()
     expect(fetchMock).toHaveBeenCalledWith(
@@ -1223,14 +1186,10 @@ describe("taskNotificationService", () => {
         body: expect.stringContaining("settings:taskNotifications.test.title"),
       }),
     )
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: true,
-      error: undefined,
-    })
+    expect(response).toEqual({ success: true, data: undefined })
   })
 
   it("handles WeCom channel-specific test notification runtime messages", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1252,13 +1211,9 @@ describe("taskNotificationService", () => {
       }),
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Wecom,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Wecom,
+    })
 
     expect(createNotificationMock).not.toHaveBeenCalled()
     expect(fetchMock).toHaveBeenCalledWith(
@@ -1268,14 +1223,10 @@ describe("taskNotificationService", () => {
         body: expect.stringContaining("settings:taskNotifications.test.title"),
       }),
     )
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: true,
-      error: undefined,
-    })
+    expect(response).toEqual({ success: true, data: undefined })
   })
 
   it("returns Telegram API response descriptions for channel-specific tests", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1302,15 +1253,11 @@ describe("taskNotificationService", () => {
       }),
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Telegram,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Telegram,
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error:
         "Telegram Bot returned HTTP 403: Forbidden: the bot can't send messages to the bot",
@@ -1318,7 +1265,6 @@ describe("taskNotificationService", () => {
   })
 
   it("returns webhook response text for channel-specific tests", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1340,22 +1286,17 @@ describe("taskNotificationService", () => {
       text: async () => "bad gateway",
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Webhook,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Webhook,
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "Generic webhook returned HTTP 502: bad gateway",
     })
   })
 
   it("returns Feishu response details for channel-specific tests", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1380,22 +1321,17 @@ describe("taskNotificationService", () => {
       }),
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Feishu,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Feishu,
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "Feishu Bot returned HTTP 400: Bad Request",
     })
   })
 
   it("treats Feishu business error responses as channel-specific test failures", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1421,15 +1357,11 @@ describe("taskNotificationService", () => {
       }),
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Feishu,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Feishu,
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error:
         "Feishu Bot returned HTTP 200: param invalid: incoming webhook access token invalid",
@@ -1437,7 +1369,6 @@ describe("taskNotificationService", () => {
   })
 
   it("treats WeCom business error responses as channel-specific test failures", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1462,22 +1393,17 @@ describe("taskNotificationService", () => {
       }),
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Wecom,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Wecom,
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "WeCom Bot returned HTTP 200: invalid webhook url",
     })
   })
 
   it("falls back to an HTTP status when WeCom error response JSON cannot be read", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1501,22 +1427,17 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Wecom,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Wecom,
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "WeCom Bot returned HTTP 500",
     })
   })
 
   it("treats DingTalk business error responses as channel-specific test failures", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1542,22 +1463,17 @@ describe("taskNotificationService", () => {
       }),
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "DingTalk Bot returned HTTP 200: keywords not in content",
     })
   })
 
   it("surfaces DingTalk msgtype validation failures from channel-specific tests", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1583,13 +1499,9 @@ describe("taskNotificationService", () => {
       }),
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
+    })
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://oapi.dingtalk.com/robot/send?access_token=dingtalk-access-token",
@@ -1597,14 +1509,13 @@ describe("taskNotificationService", () => {
         body: expect.stringContaining('"msgtype":"text"'),
       }),
     )
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "DingTalk Bot returned HTTP 200: msgtype  is null",
     })
   })
 
   it("accepts DingTalk success responses with errcode returned as a string", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1630,22 +1541,14 @@ describe("taskNotificationService", () => {
       }),
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
-      },
-      sendResponse,
-    )
-
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: true,
-      error: undefined,
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
     })
+
+    expect(response).toEqual({ success: true, data: undefined })
   })
 
   it("treats unparseable DingTalk errcode values as channel-specific failures", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1671,22 +1574,17 @@ describe("taskNotificationService", () => {
       }),
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "DingTalk Bot returned HTTP 200",
     })
   })
 
   it("treats DingTalk responses without errcode as channel-specific failures", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1711,22 +1609,17 @@ describe("taskNotificationService", () => {
       }),
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "DingTalk Bot returned HTTP 200: missing errcode",
     })
   })
 
   it("falls back to an HTTP status when DingTalk error response JSON cannot be read", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1751,22 +1644,17 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "DingTalk Bot returned HTTP 400",
     })
   })
 
   it("accepts Feishu success responses with StatusCode and code set to zero", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1794,22 +1682,14 @@ describe("taskNotificationService", () => {
       }),
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Feishu,
-      },
-      sendResponse,
-    )
-
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: true,
-      error: undefined,
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Feishu,
     })
+
+    expect(response).toEqual({ success: true, data: undefined })
   })
 
   it("uses legacy Feishu StatusMessage details when msg is unavailable", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1834,22 +1714,17 @@ describe("taskNotificationService", () => {
       }),
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Feishu,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Feishu,
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "Feishu Bot returned HTTP 400: legacy bad request",
     })
   })
 
   it("falls back to an HTTP status when Feishu response JSON cannot be read", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1873,22 +1748,17 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Feishu,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Feishu,
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "Feishu Bot returned HTTP 200",
     })
   })
 
   it("prioritizes Feishu code over legacy StatusCode when judging business success", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1916,15 +1786,11 @@ describe("taskNotificationService", () => {
       }),
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Feishu,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Feishu,
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error:
         "Feishu Bot returned HTTP 200: param invalid: incoming webhook access token invalid",
@@ -1932,7 +1798,6 @@ describe("taskNotificationService", () => {
   })
 
   it("falls back to an HTTP status when JSON response details are blank", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1957,22 +1822,17 @@ describe("taskNotificationService", () => {
       }),
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Telegram,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Telegram,
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "Telegram Bot returned HTTP 429",
     })
   })
 
   it("falls back to a localized HTTP status when response details cannot be read", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -1997,22 +1857,17 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Telegram,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Telegram,
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "Telegram Bot returned HTTP 429",
     })
   })
 
   it("returns ntfy response details for channel-specific tests", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -2037,22 +1892,17 @@ describe("taskNotificationService", () => {
       }),
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Ntfy,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Ntfy,
+    })
 
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "ntfy returned HTTP 401: unauthorized",
     })
   })
 
   it("normalizes ntfy host and topic inputs without an explicit scheme", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -2071,13 +1921,9 @@ describe("taskNotificationService", () => {
       status: 200,
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Ntfy,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Ntfy,
+    })
 
     expect(fetchMock).toHaveBeenCalledWith(
       "https://ntfy.example.com/all-api-hub-topic",
@@ -2085,14 +1931,10 @@ describe("taskNotificationService", () => {
         method: "POST",
       }),
     )
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: true,
-      error: undefined,
-    })
+    expect(response).toEqual({ success: true, data: undefined })
   })
 
   it("rejects ntfy server URLs without a topic path", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -2107,23 +1949,18 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Ntfy,
-      },
-      sendResponse,
-    )
+    const response = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Ntfy,
+    })
 
     expect(fetchMock).not.toHaveBeenCalled()
-    expect(sendResponse).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "settings:taskNotifications.test.ntfyInvalidUrl",
     })
   })
 
   it("reports disabled or unavailable channel-specific test notifications", async () => {
-    const disabledChannelResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -2137,38 +1974,28 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Webhook,
-      },
-      disabledChannelResponse,
-    )
+    const disabledChannelResponse = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Webhook,
+    })
 
-    expect(disabledChannelResponse).toHaveBeenCalledWith({
+    expect(disabledChannelResponse).toEqual({
       success: false,
       error: "settings:taskNotifications.test.channelDisabled",
     })
 
-    const unavailableBrowserResponse = vi.fn()
     hasNotificationsAPIMock.mockReturnValueOnce(false)
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Browser,
-      },
-      unavailableBrowserResponse,
+    const unavailableBrowserResponse = await resolveTaskNotificationTestMessage(
+      { channel: TASK_NOTIFICATION_CHANNELS.Browser },
     )
 
-    expect(unavailableBrowserResponse).toHaveBeenCalledWith({
+    expect(unavailableBrowserResponse).toEqual({
       success: false,
       error: "settings:taskNotifications.test.browserFailed",
     })
   })
 
   it("validates missing and invalid third-party channel configuration", async () => {
-    const missingTelegramResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -2183,20 +2010,15 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Telegram,
-      },
-      missingTelegramResponse,
-    )
+    const missingTelegramResponse = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Telegram,
+    })
 
-    expect(missingTelegramResponse).toHaveBeenCalledWith({
+    expect(missingTelegramResponse).toEqual({
       success: false,
       error: "settings:taskNotifications.test.telegramMissingConfig",
     })
 
-    const missingWebhookResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -2210,20 +2032,15 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Webhook,
-      },
-      missingWebhookResponse,
-    )
+    const missingWebhookResponse = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Webhook,
+    })
 
-    expect(missingWebhookResponse).toHaveBeenCalledWith({
+    expect(missingWebhookResponse).toEqual({
       success: false,
       error: "settings:taskNotifications.test.webhookMissingConfig",
     })
 
-    const missingFeishuResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -2237,20 +2054,15 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Feishu,
-      },
-      missingFeishuResponse,
-    )
+    const missingFeishuResponse = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Feishu,
+    })
 
-    expect(missingFeishuResponse).toHaveBeenCalledWith({
+    expect(missingFeishuResponse).toEqual({
       success: false,
       error: "settings:taskNotifications.test.feishuMissingConfig",
     })
 
-    const missingDingtalkResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -2265,20 +2077,15 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
-      },
-      missingDingtalkResponse,
-    )
+    const missingDingtalkResponse = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Dingtalk,
+    })
 
-    expect(missingDingtalkResponse).toHaveBeenCalledWith({
+    expect(missingDingtalkResponse).toEqual({
       success: false,
       error: "settings:taskNotifications.test.dingtalkMissingConfig",
     })
 
-    const missingWecomResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -2292,20 +2099,15 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Wecom,
-      },
-      missingWecomResponse,
-    )
+    const missingWecomResponse = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Wecom,
+    })
 
-    expect(missingWecomResponse).toHaveBeenCalledWith({
+    expect(missingWecomResponse).toEqual({
       success: false,
       error: "settings:taskNotifications.test.wecomMissingConfig",
     })
 
-    const missingNtfyResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -2320,20 +2122,15 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Ntfy,
-      },
-      missingNtfyResponse,
-    )
+    const missingNtfyResponse = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Ntfy,
+    })
 
-    expect(missingNtfyResponse).toHaveBeenCalledWith({
+    expect(missingNtfyResponse).toEqual({
       success: false,
       error: "settings:taskNotifications.test.ntfyMissingConfig",
     })
 
-    const invalidNtfyResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -2348,20 +2145,15 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Ntfy,
-      },
-      invalidNtfyResponse,
-    )
+    const invalidNtfyResponse = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Ntfy,
+    })
 
-    expect(invalidNtfyResponse).toHaveBeenCalledWith({
+    expect(invalidNtfyResponse).toEqual({
       success: false,
       error: "settings:taskNotifications.test.ntfyInvalidUrl",
     })
 
-    const invalidWebhookResponse = vi.fn()
     getPreferencesMock.mockResolvedValueOnce({
       taskNotifications: {
         ...DEFAULT_TASK_NOTIFICATION_PREFERENCES,
@@ -2375,31 +2167,13 @@ describe("taskNotificationService", () => {
       },
     })
 
-    await handleTaskNotificationMessage(
-      {
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel: TASK_NOTIFICATION_CHANNELS.Webhook,
-      },
-      invalidWebhookResponse,
-    )
+    const invalidWebhookResponse = await resolveTaskNotificationTestMessage({
+      channel: TASK_NOTIFICATION_CHANNELS.Webhook,
+    })
 
-    expect(invalidWebhookResponse).toHaveBeenCalledWith({
+    expect(invalidWebhookResponse).toEqual({
       success: false,
       error: "settings:taskNotifications.test.webhookInvalidUrl",
-    })
-  })
-
-  it("rejects unknown runtime actions", async () => {
-    const sendResponse = vi.fn()
-
-    await handleTaskNotificationMessage(
-      { action: "taskNotifications:unknown" },
-      sendResponse,
-    )
-
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: false,
-      error: "Unknown action",
     })
   })
 

@@ -1,16 +1,27 @@
 import { describe, expect, it, vi } from "vitest"
 
-const { sendRuntimeActionMessageMock } = vi.hoisted(() => ({
-  sendRuntimeActionMessageMock: vi.fn(),
+const { sendReleaseUpdateMessageMock } = vi.hoisted(() => ({
+  sendReleaseUpdateMessageMock: vi.fn(),
 }))
 
+vi.mock("~/services/updates/messaging", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/services/updates/messaging")>()
+  return {
+    ...actual,
+    sendReleaseUpdateMessage: sendReleaseUpdateMessageMock,
+  }
+})
+
 vi.mock("~/utils/browser/browserApi", () => ({
-  sendRuntimeActionMessage: sendRuntimeActionMessageMock,
+  isMessageReceiverUnavailableError: (error: unknown) =>
+    error instanceof Error &&
+    error.message.includes("Receiving end does not exist"),
 }))
 
 describe("release update runtime client", () => {
   it("returns a parsed success response when the background request succeeds", async () => {
-    sendRuntimeActionMessageMock.mockResolvedValueOnce({
+    sendReleaseUpdateMessageMock.mockResolvedValueOnce({
       success: true,
       data: {
         eligible: true,
@@ -43,10 +54,13 @@ describe("release update runtime client", () => {
         lastError: null,
       },
     })
+    expect(sendReleaseUpdateMessageMock).toHaveBeenCalledWith(
+      "releaseUpdate:getStatus",
+    )
   })
 
   it("returns a failure response when the background request throws", async () => {
-    sendRuntimeActionMessageMock.mockRejectedValueOnce(
+    sendReleaseUpdateMessageMock.mockRejectedValueOnce(
       new Error("No listeners available"),
     )
 
@@ -58,5 +72,29 @@ describe("release update runtime client", () => {
       success: false,
       error: "No listeners available",
     })
+  })
+
+  it("retries transient receiver-missing failures before returning success", async () => {
+    sendReleaseUpdateMessageMock
+      .mockRejectedValueOnce(new Error("Receiving end does not exist."))
+      .mockResolvedValueOnce({
+        success: false,
+        error: "Invalid response from background.",
+      })
+
+    const { requestReleaseUpdateCheckNow } = await import(
+      "~/services/updates/runtime"
+    )
+
+    await expect(
+      requestReleaseUpdateCheckNow({ maxAttempts: 2, delayMs: 1 }),
+    ).resolves.toEqual({
+      success: false,
+      error: "Invalid response from background.",
+    })
+    expect(sendReleaseUpdateMessageMock).toHaveBeenCalledTimes(2)
+    expect(sendReleaseUpdateMessageMock).toHaveBeenLastCalledWith(
+      "releaseUpdate:checkNow",
+    )
   })
 })

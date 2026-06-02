@@ -1,4 +1,3 @@
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   ACCOUNT_STORAGE_KEYS,
@@ -14,8 +13,13 @@ import {
   PRODUCT_ANALYTICS_ENTRYPOINTS,
   PRODUCT_ANALYTICS_EVENTS,
   type ProductAnalyticsEventName,
-  type ProductAnalyticsRuntimeRequest,
 } from "./events"
+import {
+  onProductAnalyticsMessage,
+  ProductAnalyticsMessageTypes,
+  type ProductAnalyticsRuntimeResponse,
+  type ProductAnalyticsTrackRequest,
+} from "./messaging"
 import { productAnalyticsPreferences } from "./preferences"
 import { buildAggregateSettingsSnapshotEvent } from "./settings"
 import { shouldSendSettingsSnapshot } from "./settingsSnapshot"
@@ -31,6 +35,7 @@ const ACCOUNT_CHANGE_SNAPSHOT_DEBOUNCE_MS = 2_000
 const PREFERENCES_CHANGE_SNAPSHOT_DEBOUNCE_MS = 2_000
 let cleanupAccountChangeListener: (() => void) | null = null
 let cleanupPreferencesChangeListener: (() => void) | null = null
+let productAnalyticsMessagingCleanup: (() => void)[] | null = null
 
 /**
  * Checks whether an incoming runtime event name is one of the fixed analytics enums.
@@ -107,7 +112,7 @@ async function captureSettingsSnapshot(): Promise<boolean> {
 async function handleTrackEventRequest(
   eventName: unknown,
   properties: unknown,
-) {
+): Promise<ProductAnalyticsRuntimeResponse> {
   if (!isKnownEventName(eventName)) {
     return { success: false }
   }
@@ -133,41 +138,81 @@ async function handleSettingsSnapshotRequest() {
 }
 
 /**
- * Routes product analytics runtime actions to their focused handlers.
+ * Routes typed product analytics runtime requests to their focused handlers.
  */
 async function resolveProductAnalyticsResponse(
-  request: ProductAnalyticsRuntimeRequest | Record<string, unknown>,
-) {
-  switch (request.action) {
-    case RuntimeActionIds.ProductAnalyticsTrackEvent:
+  type: ProductAnalyticsMessageType,
+  request: ProductAnalyticsTrackRequest | Record<string, unknown>,
+): Promise<ProductAnalyticsRuntimeResponse> {
+  switch (type) {
+    case ProductAnalyticsMessageTypes.TrackEvent:
       return await handleTrackEventRequest(
         request.eventName,
         request.properties,
       )
-    case RuntimeActionIds.ProductAnalyticsTrackSiteEcosystemSnapshot:
+    case ProductAnalyticsMessageTypes.TrackSiteEcosystemSnapshot:
       return await handleSiteEcosystemSnapshotRequest()
-    case RuntimeActionIds.ProductAnalyticsTrackSettingsSnapshot:
+    case ProductAnalyticsMessageTypes.TrackSettingsSnapshot:
       return await handleSettingsSnapshotRequest()
     default:
       return { success: false }
   }
 }
 
+type ProductAnalyticsMessageType =
+  (typeof ProductAnalyticsMessageTypes)[keyof typeof ProductAnalyticsMessageTypes]
+
 /**
- * Handles product analytics runtime messages from extension UI contexts.
+ * Handles typed product analytics runtime messages from extension UI contexts.
  */
 export async function handleProductAnalyticsMessage(
-  request: ProductAnalyticsRuntimeRequest | Record<string, unknown>,
-  sendResponse: (response?: unknown) => void,
-) {
+  type: ProductAnalyticsMessageType,
+  request: ProductAnalyticsTrackRequest | Record<string, unknown>,
+): Promise<ProductAnalyticsRuntimeResponse> {
   try {
-    sendResponse(await resolveProductAnalyticsResponse(request))
+    return await resolveProductAnalyticsResponse(type, request)
   } catch (error) {
     if (isDevelopmentMode()) {
       logger.debug("Product analytics runtime request failed", error)
     }
-    sendResponse({ success: false, error: getErrorMessage(error) })
+    return { success: false, error: getErrorMessage(error) }
   }
+}
+
+/**
+ * Background listeners for typed product analytics messaging.
+ */
+export function setupProductAnalyticsMessagingListeners() {
+  if (productAnalyticsMessagingCleanup) {
+    return
+  }
+
+  productAnalyticsMessagingCleanup = [
+    onProductAnalyticsMessage(
+      ProductAnalyticsMessageTypes.TrackEvent,
+      ({ data }) =>
+        handleProductAnalyticsMessage(
+          ProductAnalyticsMessageTypes.TrackEvent,
+          data,
+        ),
+    ),
+    onProductAnalyticsMessage(
+      ProductAnalyticsMessageTypes.TrackSiteEcosystemSnapshot,
+      ({ data }) =>
+        handleProductAnalyticsMessage(
+          ProductAnalyticsMessageTypes.TrackSiteEcosystemSnapshot,
+          data,
+        ),
+    ),
+    onProductAnalyticsMessage(
+      ProductAnalyticsMessageTypes.TrackSettingsSnapshot,
+      ({ data }) =>
+        handleProductAnalyticsMessage(
+          ProductAnalyticsMessageTypes.TrackSettingsSnapshot,
+          data,
+        ),
+    ),
+  ]
 }
 
 /**

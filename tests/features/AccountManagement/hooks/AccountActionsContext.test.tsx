@@ -2,11 +2,11 @@ import { act, render, waitFor } from "@testing-library/react"
 import { useEffect } from "react"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   AccountActionsProvider,
   useAccountActionsContext,
 } from "~/features/AccountManagement/hooks/AccountActionsContext"
+import { ExternalCheckInMessageTypes } from "~/services/checkin/externalCheckInMessaging"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -25,7 +25,7 @@ import {
 // check-in feedback.
 const {
   mockLoadAccountData,
-  mockSendRuntimeMessage,
+  mockSendExternalCheckInMessage,
   mockToast,
   mockDeleteAccounts,
   mockRefreshAccount,
@@ -37,7 +37,7 @@ const {
   mockCompleteProductAnalyticsAction,
 } = vi.hoisted(() => ({
   mockLoadAccountData: vi.fn(),
-  mockSendRuntimeMessage: vi.fn(),
+  mockSendExternalCheckInMessage: vi.fn(),
   mockToast: {
     success: vi.fn(),
     error: vi.fn(),
@@ -67,11 +67,19 @@ vi.mock("~/services/accounts/accountStorage", () => ({
   },
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
-  const actual =
-    await importOriginal<typeof import("~/utils/browser/browserApi")>()
-  return { ...actual, sendRuntimeMessage: mockSendRuntimeMessage }
-})
+vi.mock(
+  "~/services/checkin/externalCheckInMessaging",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/checkin/externalCheckInMessaging")
+      >()
+    return {
+      ...actual,
+      sendExternalCheckInMessage: mockSendExternalCheckInMessage,
+    }
+  },
+)
 
 vi.mock("~/features/AccountManagement/hooks/AccountDataContext", () => ({
   useAccountDataContext: () => ({
@@ -198,7 +206,7 @@ describe("AccountActionsContext", () => {
     ] as any
 
     await act(async () => {
-      mockSendRuntimeMessage.mockResolvedValueOnce({
+      mockSendExternalCheckInMessage.mockResolvedValueOnce({
         success: true,
         data: {
           results: [],
@@ -214,12 +222,14 @@ describe("AccountActionsContext", () => {
       )
     })
 
-    expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
-    expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.ExternalCheckInOpenAndMark,
-      accountIds: ["a2", "a3"],
-      openInNewWindow: false,
-    })
+    expect(mockSendExternalCheckInMessage).toHaveBeenCalledTimes(1)
+    expect(mockSendExternalCheckInMessage).toHaveBeenCalledWith(
+      ExternalCheckInMessageTypes.OpenAndMark,
+      {
+        accountIds: ["a2", "a3"],
+        openInNewWindow: false,
+      },
+    )
     expect(mockLoadAccountData).toHaveBeenCalled()
     expect(mockToast.success).toHaveBeenCalled()
     expectExternalCheckInAnalyticsStarted()
@@ -243,7 +253,7 @@ describe("AccountActionsContext", () => {
     ] as any
 
     await act(async () => {
-      mockSendRuntimeMessage.mockResolvedValueOnce({
+      mockSendExternalCheckInMessage.mockResolvedValueOnce({
         success: true,
         data: {
           results: [],
@@ -259,12 +269,14 @@ describe("AccountActionsContext", () => {
       )
     })
 
-    expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
-    expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.ExternalCheckInOpenAndMark,
-      accountIds: ["b1", "b2"],
-      openInNewWindow: false,
-    })
+    expect(mockSendExternalCheckInMessage).toHaveBeenCalledTimes(1)
+    expect(mockSendExternalCheckInMessage).toHaveBeenCalledWith(
+      ExternalCheckInMessageTypes.OpenAndMark,
+      {
+        accountIds: ["b1", "b2"],
+        openInNewWindow: false,
+      },
+    )
     expect(mockLoadAccountData).toHaveBeenCalled()
     expect(mockToast.success).toHaveBeenCalled()
     expectExternalCheckInAnalyticsStarted()
@@ -288,7 +300,7 @@ describe("AccountActionsContext", () => {
     ] as any
 
     await act(async () => {
-      mockSendRuntimeMessage.mockResolvedValueOnce({
+      mockSendExternalCheckInMessage.mockResolvedValueOnce({
         success: true,
         data: {
           results: [],
@@ -304,12 +316,14 @@ describe("AccountActionsContext", () => {
       )
     })
 
-    expect(mockSendRuntimeMessage).toHaveBeenCalledTimes(1)
-    expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.ExternalCheckInOpenAndMark,
-      accountIds: ["w2"],
-      openInNewWindow: true,
-    })
+    expect(mockSendExternalCheckInMessage).toHaveBeenCalledTimes(1)
+    expect(mockSendExternalCheckInMessage).toHaveBeenCalledWith(
+      ExternalCheckInMessageTypes.OpenAndMark,
+      {
+        accountIds: ["w2"],
+        openInNewWindow: true,
+      },
+    )
     expect(mockLoadAccountData).toHaveBeenCalled()
     expect(mockToast.success).toHaveBeenCalled()
     expectExternalCheckInAnalyticsStarted()
@@ -339,7 +353,7 @@ describe("AccountActionsContext", () => {
       )
     })
 
-    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+    expect(mockSendExternalCheckInMessage).not.toHaveBeenCalled()
     expect(mockLoadAccountData).not.toHaveBeenCalled()
     expect(mockToast.error).toHaveBeenCalledWith(
       "messages:toast.error.externalCheckInNonePending",
@@ -776,7 +790,7 @@ describe("AccountActionsContext", () => {
     const { getContext } = await renderContext()
 
     await act(async () => {
-      mockSendRuntimeMessage.mockResolvedValueOnce({
+      mockSendExternalCheckInMessage.mockResolvedValueOnce({
         success: true,
         data: {
           results: [],
@@ -808,7 +822,7 @@ describe("AccountActionsContext", () => {
     const { getContext } = await renderContext()
 
     await act(async () => {
-      mockSendRuntimeMessage.mockResolvedValueOnce({
+      mockSendExternalCheckInMessage.mockResolvedValueOnce({
         success: false,
         error: "Background unavailable",
       })
@@ -837,7 +851,7 @@ describe("AccountActionsContext", () => {
     const { getContext } = await renderContext()
 
     await act(async () => {
-      mockSendRuntimeMessage.mockRejectedValueOnce(
+      mockSendExternalCheckInMessage.mockRejectedValueOnce(
         Object.assign(new Error("private runtime failure"), {
           code: "TEMP_WINDOW_PERMISSION_REQUIRED",
         }),
@@ -864,7 +878,9 @@ describe("AccountActionsContext", () => {
     const { getContext } = await renderContext()
 
     await act(async () => {
-      mockSendRuntimeMessage.mockRejectedValueOnce(new Error("open failed"))
+      mockSendExternalCheckInMessage.mockRejectedValueOnce(
+        new Error("open failed"),
+      )
       mockCompleteProductAnalyticsAction.mockRejectedValueOnce(
         new Error("analytics failed"),
       )

@@ -8,11 +8,14 @@ import {
   vi,
 } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   autoRefreshService,
-  handleAutoRefreshMessage,
+  resolveAutoRefreshGetStatusMessage,
+  resolveAutoRefreshRefreshNowMessage,
+  resolveAutoRefreshSetupMessage,
+  resolveAutoRefreshStopMessage,
+  resolveAutoRefreshUpdateSettingsMessage,
 } from "~/services/accounts/autoRefreshService"
 import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler"
 import type { UserPreferences } from "~/services/preferences/userPreferences"
@@ -413,11 +416,8 @@ describe("AutoRefreshService", () => {
   })
 })
 
-describe("handleAutoRefreshMessage", () => {
-  let mockSendResponse: ReturnType<typeof vi.fn>
-
+describe("auto-refresh typed message resolvers", () => {
   beforeEach(() => {
-    mockSendResponse = vi.fn()
     vi.clearAllMocks()
     autoRefreshService.destroy()
   })
@@ -436,26 +436,20 @@ describe("handleAutoRefreshMessage", () => {
         mockPreferences,
       )
 
-      await handleAutoRefreshMessage(
-        { action: RuntimeActionIds.AutoRefreshSetup },
-        mockSendResponse,
-      )
+      const response = await resolveAutoRefreshSetupMessage()
 
       expect(autoRefreshService.getStatus().isRunning).toBe(true)
-      expect(mockSendResponse).toHaveBeenCalledWith({ success: true })
+      expect(response).toEqual({ success: true, data: undefined })
     })
 
     it("should handle setup errors gracefully and still send success response", async () => {
       const error = new Error("Setup failed")
       vi.mocked(userPreferences.getPreferences).mockRejectedValue(error)
 
-      await handleAutoRefreshMessage(
-        { action: RuntimeActionIds.AutoRefreshSetup },
-        mockSendResponse,
-      )
+      const response = await resolveAutoRefreshSetupMessage()
 
       // setupAutoRefresh catches errors internally, so message handler still succeeds
-      expect(mockSendResponse).toHaveBeenCalledWith({ success: true })
+      expect(response).toEqual({ success: true, data: undefined })
     })
   })
 
@@ -469,13 +463,10 @@ describe("handleAutoRefreshMessage", () => {
       }
       vi.mocked(accountStorage.refreshAllAccounts).mockResolvedValue(mockResult)
 
-      await handleAutoRefreshMessage(
-        { action: RuntimeActionIds.AutoRefreshRefreshNow },
-        mockSendResponse,
-      )
+      const response = await resolveAutoRefreshRefreshNowMessage()
 
       expect(accountStorage.refreshAllAccounts).toHaveBeenCalledWith(true)
-      expect(mockSendResponse).toHaveBeenCalledWith({
+      expect(response).toEqual({
         success: true,
         data: mockResult,
       })
@@ -485,12 +476,9 @@ describe("handleAutoRefreshMessage", () => {
       const error = new Error("Refresh failed")
       vi.mocked(accountStorage.refreshAllAccounts).mockRejectedValue(error)
 
-      await handleAutoRefreshMessage(
-        { action: RuntimeActionIds.AutoRefreshRefreshNow },
-        mockSendResponse,
-      )
+      const response = await resolveAutoRefreshRefreshNowMessage()
 
-      expect(mockSendResponse).toHaveBeenCalledWith({
+      expect(response).toEqual({
         success: false,
         error: "Error: Refresh failed",
       })
@@ -499,13 +487,10 @@ describe("handleAutoRefreshMessage", () => {
 
   describe("autoRefresh:stop action", () => {
     it("should stop auto refresh and send success response", async () => {
-      await handleAutoRefreshMessage(
-        { action: RuntimeActionIds.AutoRefreshStop },
-        mockSendResponse,
-      )
+      const response = await resolveAutoRefreshStopMessage()
 
       expect(autoRefreshService.getStatus().isRunning).toBe(false)
-      expect(mockSendResponse).toHaveBeenCalledWith({ success: true })
+      expect(response).toEqual({ success: true, data: undefined })
     })
   })
 
@@ -521,13 +506,12 @@ describe("handleAutoRefreshMessage", () => {
         preferencesVersion: 5,
       } as UserPreferences)
 
-      await handleAutoRefreshMessage(
-        { action: RuntimeActionIds.AutoRefreshUpdateSettings, settings },
-        mockSendResponse,
-      )
+      const response = await resolveAutoRefreshUpdateSettingsMessage({
+        settings,
+      })
 
       expect(userPreferences.savePreferences).toHaveBeenCalledWith(settings)
-      expect(mockSendResponse).toHaveBeenCalledWith({ success: true })
+      expect(response).toEqual({ success: true, data: undefined })
     })
 
     it("should handle update errors gracefully and still send success response", async () => {
@@ -535,43 +519,25 @@ describe("handleAutoRefreshMessage", () => {
       const settings = { accountAutoRefresh: { enabled: true } }
       vi.mocked(userPreferences.savePreferences).mockRejectedValue(error)
 
-      await handleAutoRefreshMessage(
-        { action: RuntimeActionIds.AutoRefreshUpdateSettings, settings },
-        mockSendResponse,
-      )
+      const response = await resolveAutoRefreshUpdateSettingsMessage({
+        settings,
+      })
 
       // updateSettings catches errors internally, so message handler still succeeds
-      expect(mockSendResponse).toHaveBeenCalledWith({ success: true })
+      expect(response).toEqual({ success: true, data: undefined })
     })
   })
 
   describe("autoRefresh:getStatus action", () => {
     it("should return current status", async () => {
-      await handleAutoRefreshMessage(
-        { action: RuntimeActionIds.AutoRefreshGetStatus },
-        mockSendResponse,
-      )
+      const response = await resolveAutoRefreshGetStatusMessage()
 
-      expect(mockSendResponse).toHaveBeenCalledWith({
+      expect(response).toEqual({
         success: true,
         data: {
           isRunning: false,
           isInitialized: false,
         },
-      })
-    })
-  })
-
-  describe("default action", () => {
-    it("should send error response for unknown action", async () => {
-      await handleAutoRefreshMessage(
-        { action: "unknownAction" },
-        mockSendResponse,
-      )
-
-      expect(mockSendResponse).toHaveBeenCalledWith({
-        success: false,
-        error: "未知的操作",
       })
     })
   })

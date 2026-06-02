@@ -2,6 +2,9 @@ import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { accountStorage } from "~/services/accounts/accountStorage"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { BalanceHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
+import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"
 import {
   DEFAULT_BALANCE_HISTORY_PREFERENCES,
   type BalanceHistoryPreferences,
@@ -24,6 +27,13 @@ import { createLogger } from "~/utils/core/logger"
 
 import { DAILY_BALANCE_HISTORY_ALARM_NAME } from "./constants"
 import { getDayKeyFromUnixSeconds, subtractDaysFromDayKey } from "./dayKeys"
+import {
+  onBalanceHistoryMessage,
+  type BalanceHistoryRefreshNowRequest,
+  type BalanceHistoryRefreshNowResponse,
+  type BalanceHistoryUpdateSettingsRequest,
+  type BalanceHistoryUpdateSettingsResponse,
+} from "./messaging"
 import { dailyBalanceHistoryStorage } from "./storage"
 import { clampBalanceHistoryRetentionDays } from "./utils"
 
@@ -385,50 +395,103 @@ class DailyBalanceHistoryScheduler {
 
 export const dailyBalanceHistoryScheduler = new DailyBalanceHistoryScheduler()
 
+let balanceHistoryMessagingCleanup: (() => void)[] | null = null
+
+/**
+ * Register typed background listeners for balance-history scheduler messages.
+ */
+export function setupDailyBalanceHistoryMessagingListeners() {
+  if (balanceHistoryMessagingCleanup) {
+    return
+  }
+
+  balanceHistoryMessagingCleanup = [
+    onBalanceHistoryMessage(
+      BalanceHistoryMessageTypes.UpdateSettings,
+      ({ data }) => resolveBalanceHistoryUpdateSettingsMessage(data),
+    ),
+    onBalanceHistoryMessage(BalanceHistoryMessageTypes.RefreshNow, ({ data }) =>
+      resolveBalanceHistoryRefreshNowMessage(data),
+    ),
+    onBalanceHistoryMessage(BalanceHistoryMessageTypes.Prune, () =>
+      resolveBalanceHistoryPruneMessage(),
+    ),
+  ]
+}
+
+/**
+ * Resolve a typed request to persist balance-history scheduler settings.
+ */
+export async function resolveBalanceHistoryUpdateSettingsMessage(
+  request: BalanceHistoryUpdateSettingsRequest,
+): Promise<BalanceHistoryUpdateSettingsResponse> {
+  try {
+    const result = await dailyBalanceHistoryScheduler.updateSettings(
+      request.settings ?? {},
+    )
+    return { success: true, data: result }
+  } catch (error) {
+    logger.error("Message handling failed", error)
+    return createRuntimeMessageFailure(getErrorMessage(error))
+  }
+}
+
+/**
+ * Resolve a typed request to refresh balance snapshots immediately.
+ */
+export async function resolveBalanceHistoryRefreshNowMessage(
+  request?: BalanceHistoryRefreshNowRequest,
+): Promise<BalanceHistoryRefreshNowResponse> {
+  try {
+    const accountIds = Array.isArray(request?.accountIds)
+      ? request.accountIds
+      : undefined
+    const result = await dailyBalanceHistoryScheduler.refreshNow(accountIds)
+    return { success: true, data: result }
+  } catch (error) {
+    logger.error("Message handling failed", error)
+    return createRuntimeMessageFailure(getErrorMessage(error))
+  }
+}
+
+/**
+ * Resolve a typed request to prune retained balance-history snapshots.
+ */
+export async function resolveBalanceHistoryPruneMessage(): Promise<
+  RuntimeMessageResponse<undefined>
+> {
+  try {
+    const ok = await dailyBalanceHistoryScheduler.pruneNow()
+    return ok
+      ? ({ success: true, data: undefined } as const)
+      : createRuntimeMessageFailure("Failed to prune balance history")
+  } catch (error) {
+    logger.error("Message handling failed", error)
+    return createRuntimeMessageFailure(getErrorMessage(error))
+  }
+}
+
 export const handleDailyBalanceHistoryMessage = async (
   request: any,
   sendResponse: (response: any) => void,
 ) => {
   try {
-    switch (request.action) {
-      case RuntimeActionIds.BalanceHistoryUpdateSettings: {
-        const result = await dailyBalanceHistoryScheduler.updateSettings(
-          request.settings ?? {},
-        )
-        sendResponse({ success: true, data: result })
-        break
-      }
-
-      case RuntimeActionIds.BalanceHistoryRefreshNow: {
-        const accountIds = Array.isArray(request.accountIds)
-          ? (request.accountIds as string[])
-          : undefined
-        const result = await dailyBalanceHistoryScheduler.refreshNow(accountIds)
-        sendResponse({ success: true, data: result })
-        break
-      }
-
-      case RuntimeActionIds.BalanceHistoryPrune: {
-        const ok = await dailyBalanceHistoryScheduler.pruneNow()
-        sendResponse({ success: ok })
-        break
-      }
-
-      case RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots: {
-        if (import.meta.env.MODE !== "development") {
-          sendResponse({ success: false, error: "Debug action unavailable" })
-          break
-        }
-
-        const result =
-          await dailyBalanceHistoryScheduler.debugSeedEstimateSnapshots()
-        sendResponse({ success: true, data: result })
-        break
-      }
-
-      default:
-        sendResponse({ success: false, error: "Unknown action" })
+    if (
+      request.action !==
+      RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots
+    ) {
+      sendResponse({ success: false, error: "Unknown action" })
+      return
     }
+
+    if (import.meta.env.MODE !== "development") {
+      sendResponse({ success: false, error: "Debug action unavailable" })
+      return
+    }
+
+    const result =
+      await dailyBalanceHistoryScheduler.debugSeedEstimateSnapshots()
+    sendResponse({ success: true, data: result })
   } catch (error) {
     logger.error("Message handling failed", error)
     sendResponse({ success: false, error: getErrorMessage(error) })

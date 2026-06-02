@@ -93,7 +93,6 @@ import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { ChannelTypeNames } from "~/constants/managedSite"
 import { OctopusOutboundTypeNames } from "~/constants/octopus"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -111,6 +110,7 @@ import {
   getManagedSiteTargetOptions,
   needsManagedSiteChannelKeyResolution,
 } from "~/services/managedSites/utils/managedSite"
+import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
 import {
   startProductAnalyticsAction,
   trackProductAnalyticsActionCompleted,
@@ -125,8 +125,8 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import { resolveProductAnalyticsManagedSiteType } from "~/services/productAnalytics/managedSite"
+import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { ExecutionItemResult } from "~/types/managedSiteModelSync"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import {
   navigateWithinOptionsPage,
@@ -308,9 +308,9 @@ export default function ManagedSiteChannels({
       setIsLoading(true)
       setError(null)
       try {
-        const response = await sendRuntimeMessage({
-          action: RuntimeActionIds.ModelSyncListChannels,
-        })
+        const response = await sendModelSyncMessage(
+          ModelSyncMessageTypes.ListChannels,
+        )
         if (!response?.success) {
           throw new Error(response?.error || "Failed to load channels")
         }
@@ -683,10 +683,12 @@ export default function ManagedSiteChannels({
         return next
       })
       try {
-        const response = await sendRuntimeMessage({
-          action: RuntimeActionIds.ModelSyncTriggerSelected,
-          channelIds: eligibleChannelIds,
-        })
+        const response = await sendModelSyncMessage(
+          ModelSyncMessageTypes.TriggerSelected,
+          {
+            channelIds: eligibleChannelIds,
+          },
+        )
         if (!response?.success) {
           throw new Error(response?.error || "Failed to sync channels")
         }

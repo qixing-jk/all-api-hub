@@ -1,7 +1,9 @@
-import { RuntimeActionIds } from "~/constants/runtimeActions"
+import {
+  ChannelConfigMessageTypes,
+  sendChannelConfigMessage,
+} from "~/services/managedSites/channelConfigMessaging"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -22,14 +24,18 @@ export async function fetchChannelFilters(
   channelId: number,
 ): Promise<ChannelModelFilterRule[]> {
   try {
-    const response = await sendRuntimeMessage({
-      action: RuntimeActionIds.ChannelConfigGet,
-      channelId,
-    })
+    const response = await sendChannelConfigMessage(
+      ChannelConfigMessageTypes.Get,
+      { channelId },
+    )
     if (response?.success) {
       return response.data?.modelFilterSettings?.rules ?? []
     }
-    throw new Error(response?.error || "Failed to load channel filters")
+    throw new Error(
+      response?.success === false
+        ? response.error
+        : "Failed to load channel filters",
+    )
   } catch (runtimeError) {
     logger.warn("Runtime fetch failed for channel, using fallback storage", {
       channelId,
@@ -52,13 +58,16 @@ export async function saveChannelFilters(
   filters: ChannelModelFilterRule[],
 ): Promise<void> {
   try {
-    const response = await sendRuntimeMessage({
-      action: RuntimeActionIds.ChannelConfigUpsertFilters,
-      channelId,
-      filters,
-    })
-    if (!response?.success) {
-      throw new Error(response?.error || "Failed to save channel filters")
+    const response = await sendChannelConfigMessage(
+      ChannelConfigMessageTypes.UpsertFilters,
+      { channelId, filters },
+    )
+    if (response?.success !== true) {
+      throw new Error(
+        response?.success === false
+          ? response.error
+          : "Failed to save channel filters",
+      )
     }
   } catch (runtimeError) {
     logger.warn("Runtime save failed for channel, persisting locally", {

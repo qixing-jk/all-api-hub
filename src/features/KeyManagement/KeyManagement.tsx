@@ -3,13 +3,16 @@ import { useTranslation } from "react-i18next"
 
 import { DestructiveConfirmDialog } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import AddTokenDialog from "~/features/KeyManagement/components/AddTokenDialog"
 import { loadNewApiChannelKeyWithVerification } from "~/features/ManagedSiteVerification/loadNewApiChannelKeyWithVerification"
 import { NewApiManagedVerificationDialog } from "~/features/ManagedSiteVerification/NewApiManagedVerificationDialog"
 import { useNewApiManagedVerification } from "~/features/ManagedSiteVerification/useNewApiManagedVerification"
+import {
+  AccountKeyRepairMessageTypes,
+  sendAccountKeyRepairMessage,
+} from "~/services/accounts/accountKeyAutoProvisioning/messaging"
 import { getRecoverableManagedSiteChannelCandidate } from "~/services/managedSites/channelMatch"
 import {
   MANAGED_SITE_TOKEN_CHANNEL_STATUS_UNKNOWN_REASONS,
@@ -17,7 +20,6 @@ import {
   type ManagedSiteTokenChannelStatus,
 } from "~/services/managedSites/tokenChannelStatus"
 import type { AccountToken } from "~/types"
-import { sendRuntimeActionMessage } from "~/utils/browser/browserApi"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
 import { AccountSelectorPanel } from "./components/AccountSelectorPanel"
@@ -155,9 +157,9 @@ export default function KeyManagement(props: {
 
     void (async () => {
       try {
-        const response = await sendRuntimeActionMessage({
-          action: RuntimeActionIds.AccountKeyRepairGetProgress,
-        })
+        const response = await sendAccountKeyRepairMessage(
+          AccountKeyRepairMessageTypes.GetProgress,
+        )
 
         if (cancelled) return
         if (!response?.success || !response?.data) return

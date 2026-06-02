@@ -6,7 +6,16 @@ import { accountStorage } from "~/services/accounts/accountStorage"
 import { resolveAutoCheckinProvider } from "~/services/checkin/autoCheckin/providers"
 import {
   autoCheckinScheduler,
-  handleAutoCheckinMessage,
+  getAutoCheckinAccountInfo,
+  getAutoCheckinStatus,
+  pretriggerAutoCheckinDailyOnUiOpen,
+  resetAutoCheckinLastDailyRunDay,
+  retryAutoCheckinAccount,
+  runAutoCheckinNow,
+  scheduleAutoCheckinDailyAlarmForToday,
+  triggerAutoCheckinDailyAlarmNow,
+  triggerAutoCheckinRetryAlarmNow,
+  updateAutoCheckinSettings,
 } from "~/services/checkin/autoCheckin/scheduler"
 import { autoCheckinStorage } from "~/services/checkin/autoCheckin/storage"
 import {
@@ -3291,7 +3300,7 @@ describe("autoCheckinScheduler run-completed notifications", () => {
   })
 })
 
-describe("handleAutoCheckinMessage", () => {
+describe("auto check-in operation helpers", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.clearAllMocks()
@@ -3301,178 +3310,122 @@ describe("handleAutoCheckinMessage", () => {
     const runSpy = vi
       .spyOn(autoCheckinScheduler as any, "runCheckins")
       .mockResolvedValueOnce(undefined)
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      { action: RuntimeActionIds.AutoCheckinRunNow },
-      sendResponse,
-    )
+    await expect(runAutoCheckinNow()).resolves.toEqual({ success: true })
 
     expect(runSpy).toHaveBeenCalledWith({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: undefined,
     })
-    expect(sendResponse).toHaveBeenCalledWith({ success: true })
   })
 
   it("should pass accountIds for targeted manual runs", async () => {
     const runSpy = vi
       .spyOn(autoCheckinScheduler as any, "runCheckins")
       .mockResolvedValueOnce(undefined)
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      { action: RuntimeActionIds.AutoCheckinRunNow, accountIds: ["a"] },
-      sendResponse,
-    )
+    await expect(runAutoCheckinNow({ accountIds: ["a"] })).resolves.toEqual({
+      success: true,
+    })
 
     expect(runSpy).toHaveBeenCalledWith({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: ["a"],
     })
-    expect(sendResponse).toHaveBeenCalledWith({ success: true })
   })
 
   it("should trim and dedupe targeted accountIds before running", async () => {
     const runSpy = vi
       .spyOn(autoCheckinScheduler as any, "runCheckins")
       .mockResolvedValueOnce(undefined)
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      {
-        action: RuntimeActionIds.AutoCheckinRunNow,
-        accountIds: [" a ", "a", "b "],
-      },
-      sendResponse,
-    )
+    await expect(
+      runAutoCheckinNow({ accountIds: [" a ", "a", "b "] }),
+    ).resolves.toEqual({ success: true })
 
     expect(runSpy).toHaveBeenCalledWith({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: ["a", "b"],
     })
-    expect(sendResponse).toHaveBeenCalledWith({ success: true })
   })
 
   it("should return an error for invalid accountIds payload", async () => {
     const runSpy = vi
       .spyOn(autoCheckinScheduler as any, "runCheckins")
       .mockResolvedValueOnce(undefined)
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      { action: RuntimeActionIds.AutoCheckinRunNow, accountIds: [] },
-      sendResponse,
-    )
-
-    expect(runSpy).not.toHaveBeenCalled()
-    expect(sendResponse).toHaveBeenCalledWith({
+    await expect(runAutoCheckinNow({ accountIds: [] })).resolves.toEqual({
       success: false,
       error: "Invalid payload: accountIds must be a non-empty string[]",
     })
+
+    expect(runSpy).not.toHaveBeenCalled()
   })
 
   it("should reject non-array accountIds payloads before running", async () => {
     const runSpy = vi
       .spyOn(autoCheckinScheduler as any, "runCheckins")
       .mockResolvedValueOnce(undefined)
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      {
-        action: RuntimeActionIds.AutoCheckinRunNow,
-        accountIds: "account-1",
-      },
-      sendResponse,
-    )
-
-    expect(runSpy).not.toHaveBeenCalled()
-    expect(sendResponse).toHaveBeenCalledWith({
+    await expect(
+      runAutoCheckinNow({ accountIds: "account-1" as any }),
+    ).resolves.toEqual({
       success: false,
       error: "Invalid payload: accountIds must be a non-empty string[]",
     })
+
+    expect(runSpy).not.toHaveBeenCalled()
   })
 
   it("should reject targeted manual runs when accountIds contain blank or non-string values", async () => {
     const runSpy = vi
       .spyOn(autoCheckinScheduler as any, "runCheckins")
       .mockResolvedValueOnce(undefined)
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      {
-        action: RuntimeActionIds.AutoCheckinRunNow,
-        accountIds: ["account-1", " ", 42],
-      },
-      sendResponse,
-    )
-
-    expect(runSpy).not.toHaveBeenCalled()
-    expect(sendResponse).toHaveBeenCalledWith({
+    await expect(
+      runAutoCheckinNow({ accountIds: ["account-1", " ", 42] as any }),
+    ).resolves.toEqual({
       success: false,
       error: "Invalid payload: accountIds must be a non-empty string[]",
     })
+
+    expect(runSpy).not.toHaveBeenCalled()
   })
 
   it("should trigger daily alarm handler on autoCheckin:debugTriggerDailyAlarmNow", async () => {
     const debugSpy = vi
       .spyOn(autoCheckinScheduler as any, "debugTriggerDailyAlarmNow")
       .mockResolvedValueOnce(undefined)
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      { action: RuntimeActionIds.AutoCheckinDebugTriggerDailyAlarmNow },
-      sendResponse,
-    )
+    await expect(triggerAutoCheckinDailyAlarmNow()).resolves.toEqual({
+      success: true,
+    })
 
     expect(debugSpy).toHaveBeenCalled()
-    expect(sendResponse).toHaveBeenCalledWith({ success: true })
   })
 
   it("should trigger retry alarm handler on autoCheckin:debugTriggerRetryAlarmNow", async () => {
     const debugSpy = vi
       .spyOn(autoCheckinScheduler as any, "debugTriggerRetryAlarmNow")
       .mockResolvedValueOnce(undefined)
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      { action: RuntimeActionIds.AutoCheckinDebugTriggerRetryAlarmNow },
-      sendResponse,
-    )
+    await expect(triggerAutoCheckinRetryAlarmNow()).resolves.toEqual({
+      success: true,
+    })
 
     expect(debugSpy).toHaveBeenCalled()
-    expect(sendResponse).toHaveBeenCalledWith({ success: true })
   })
 
   it("should return status on autoCheckin:getStatus", async () => {
     const status = { lastRunResult: "success" }
     mockedAutoCheckinStorage.getStatus.mockResolvedValue(status as any)
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      { action: RuntimeActionIds.AutoCheckinGetStatus },
-      sendResponse,
-    )
-
-    expect(sendResponse).toHaveBeenCalledWith({ success: true, data: status })
+    await expect(getAutoCheckinStatus()).resolves.toEqual({
+      success: true,
+      data: status,
+    })
   })
 
   it("should retry a specific account on autoCheckin:retryAccount", async () => {
     const retrySpy = vi
       .spyOn(autoCheckinScheduler as any, "retryAccount")
       .mockResolvedValueOnce(undefined)
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      {
-        action: RuntimeActionIds.AutoCheckinRetryAccount,
-        accountId: "account-1",
-      },
-      sendResponse,
-    )
+    await expect(retryAutoCheckinAccount("account-1")).resolves.toEqual({
+      success: true,
+    })
 
     expect(retrySpy).toHaveBeenCalledWith("account-1")
-    expect(sendResponse).toHaveBeenCalledWith({ success: true })
   })
 
   it("should surface retryAccount failures back to the caller", async () => {
@@ -3481,38 +3434,24 @@ describe("handleAutoCheckinMessage", () => {
       .mockRejectedValueOnce(new Error("retry failed"))
     ;(
       getErrorMessage as unknown as ReturnType<typeof vi.fn>
-    ).mockReturnValueOnce("retry failed")
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      {
-        action: RuntimeActionIds.AutoCheckinRetryAccount,
-        accountId: "account-1",
-      },
-      sendResponse,
+    ).mockImplementation((error: unknown) =>
+      error instanceof Error ? error.message : String(error),
+    )
+    await expect(retryAutoCheckinAccount("account-1")).rejects.toThrow(
+      "retry failed",
     )
 
     expect(retrySpy).toHaveBeenCalledWith("account-1")
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: false,
-      error: "retry failed",
-    })
   })
 
   it("should reject retry requests without an accountId", async () => {
     const retrySpy = vi.spyOn(autoCheckinScheduler as any, "retryAccount")
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      { action: RuntimeActionIds.AutoCheckinRetryAccount },
-      sendResponse,
-    )
-
-    expect(retrySpy).not.toHaveBeenCalled()
-    expect(sendResponse).toHaveBeenCalledWith({
+    await expect(retryAutoCheckinAccount()).resolves.toEqual({
       success: false,
       error: "Missing accountId",
     })
+
+    expect(retrySpy).not.toHaveBeenCalled()
   })
 
   it("should return account display data on autoCheckin:getAccountInfo", async () => {
@@ -3520,22 +3459,15 @@ describe("handleAutoCheckinMessage", () => {
     const displaySpy = vi
       .spyOn(autoCheckinScheduler as any, "getAccountDisplayData")
       .mockResolvedValueOnce(displayData)
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      {
-        action: RuntimeActionIds.AutoCheckinGetAccountInfo,
-        accountId: "account-1",
-      },
-      sendResponse,
-    )
+    await expect(
+      getAutoCheckinAccountInfo({ accountId: "account-1" }),
+    ).resolves.toEqual({
+      success: true,
+      data: displayData,
+    })
 
     expect(displaySpy).toHaveBeenCalledWith("account-1", {
       includeDisabled: false,
-    })
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: true,
-      data: displayData,
     })
   })
 
@@ -3544,23 +3476,18 @@ describe("handleAutoCheckinMessage", () => {
     const displaySpy = vi
       .spyOn(autoCheckinScheduler as any, "getAccountDisplayData")
       .mockResolvedValueOnce(displayData)
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      {
-        action: RuntimeActionIds.AutoCheckinGetAccountInfo,
+    await expect(
+      getAutoCheckinAccountInfo({
         accountId: "disabled-1",
         includeDisabled: true,
-      },
-      sendResponse,
-    )
+      }),
+    ).resolves.toEqual({
+      success: true,
+      data: displayData,
+    })
 
     expect(displaySpy).toHaveBeenCalledWith("disabled-1", {
       includeDisabled: true,
-    })
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: true,
-      data: displayData,
     })
   })
 
@@ -3570,23 +3497,15 @@ describe("handleAutoCheckinMessage", () => {
       .mockRejectedValueOnce(new Error("lookup failed"))
     ;(
       getErrorMessage as unknown as ReturnType<typeof vi.fn>
-    ).mockReturnValueOnce("lookup failed")
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      {
-        action: RuntimeActionIds.AutoCheckinGetAccountInfo,
-        accountId: "account-1",
-      },
-      sendResponse,
+    ).mockImplementation((error: unknown) =>
+      error instanceof Error ? error.message : String(error),
     )
+    await expect(
+      getAutoCheckinAccountInfo({ accountId: "account-1" }),
+    ).rejects.toThrow("lookup failed")
 
     expect(displaySpy).toHaveBeenCalledWith("account-1", {
       includeDisabled: false,
-    })
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: false,
-      error: "lookup failed",
     })
   })
 
@@ -3595,105 +3514,71 @@ describe("handleAutoCheckinMessage", () => {
       autoCheckinScheduler as any,
       "getAccountDisplayData",
     )
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      { action: RuntimeActionIds.AutoCheckinGetAccountInfo },
-      sendResponse,
-    )
-
-    expect(displaySpy).not.toHaveBeenCalled()
-    expect(sendResponse).toHaveBeenCalledWith({
+    await expect(getAutoCheckinAccountInfo({} as any)).resolves.toEqual({
       success: false,
       error: "Missing accountId",
     })
+
+    expect(displaySpy).not.toHaveBeenCalled()
   })
 
   it("should update settings on autoCheckin:updateSettings", async () => {
     const updateSpy = vi
       .spyOn(autoCheckinScheduler as any, "updateSettings")
       .mockResolvedValueOnce(undefined)
-    const sendResponse = vi.fn()
     const settings = { globalEnabled: false }
 
-    await handleAutoCheckinMessage(
-      { action: RuntimeActionIds.AutoCheckinUpdateSettings, settings },
-      sendResponse,
-    )
+    await expect(updateAutoCheckinSettings(settings)).resolves.toEqual({
+      success: true,
+    })
 
     expect(updateSpy).toHaveBeenCalledWith(settings)
-    expect(sendResponse).toHaveBeenCalledWith({ success: true })
   })
 
   it("should pretrigger daily run on autoCheckin:pretriggerDailyOnUiOpen", async () => {
     const pretriggerSpy = vi
       .spyOn(autoCheckinScheduler as any, "pretriggerDailyOnUiOpen")
       .mockResolvedValueOnce({ started: false, eligible: false })
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      {
-        action: RuntimeActionIds.AutoCheckinPretriggerDailyOnUiOpen,
+    await expect(
+      pretriggerAutoCheckinDailyOnUiOpen({
         requestId: "req-1",
-      },
-      sendResponse,
-    )
-
-    expect(pretriggerSpy).toHaveBeenCalledWith(
-      expect.objectContaining({ requestId: "req-1" }),
-    )
-    expect(sendResponse).toHaveBeenCalledWith({
+      }),
+    ).resolves.toEqual({
       success: true,
       started: false,
       eligible: false,
     })
+
+    expect(pretriggerSpy).toHaveBeenCalledWith(
+      expect.objectContaining({ requestId: "req-1" }),
+    )
   })
 
   it("should reset lastDailyRunDay on autoCheckin:debugResetLastDailyRunDay", async () => {
     const debugSpy = vi
       .spyOn(autoCheckinScheduler as any, "debugResetLastDailyRunDay")
       .mockResolvedValueOnce(undefined)
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      { action: RuntimeActionIds.AutoCheckinDebugResetLastDailyRunDay },
-      sendResponse,
-    )
+    await expect(resetAutoCheckinLastDailyRunDay()).resolves.toEqual({
+      success: true,
+    })
 
     expect(debugSpy).toHaveBeenCalled()
-    expect(sendResponse).toHaveBeenCalledWith({ success: true })
   })
 
   it("should schedule the daily alarm for today on autoCheckin:debugScheduleDailyAlarmForToday", async () => {
     const debugSpy = vi
       .spyOn(autoCheckinScheduler as any, "debugScheduleDailyAlarmForToday")
       .mockResolvedValueOnce(123)
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      {
-        action: RuntimeActionIds.AutoCheckinDebugScheduleDailyAlarmForToday,
+    await expect(
+      scheduleAutoCheckinDailyAlarmForToday({
         minutesFromNow: 5,
-      },
-      sendResponse,
-    )
-
-    expect(debugSpy).toHaveBeenCalledWith({ minutesFromNow: 5 })
-    expect(sendResponse).toHaveBeenCalledWith({
+      }),
+    ).resolves.toEqual({
       success: true,
       scheduledTime: 123,
     })
-  })
 
-  it("should return error for unknown action", async () => {
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage({ action: "unknown" }, sendResponse)
-
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: false,
-      error: "Unknown action",
-    })
+    expect(debugSpy).toHaveBeenCalledWith({ minutesFromNow: 5 })
   })
 
   it("should catch errors and respond with error message", async () => {
@@ -3701,18 +3586,17 @@ describe("handleAutoCheckinMessage", () => {
     const runSpy = vi
       .spyOn(autoCheckinScheduler as any, "runCheckins")
       .mockRejectedValueOnce(error)
-    ;(getErrorMessage as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
-      "boom",
+    ;(
+      getErrorMessage as unknown as ReturnType<typeof vi.fn>
+    ).mockImplementation((error: unknown) =>
+      error instanceof Error ? error.message : String(error),
     )
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      { action: RuntimeActionIds.AutoCheckinRunNow },
-      sendResponse,
-    )
+    await expect(runAutoCheckinNow()).resolves.toEqual({
+      success: false,
+      error: "boom",
+    })
 
     expect(runSpy).toHaveBeenCalled()
-    expect(sendResponse).toHaveBeenCalledWith({ success: false, error: "boom" })
   })
 
   it("should still reschedule after a manual run failure", async () => {
@@ -3722,19 +3606,18 @@ describe("handleAutoCheckinMessage", () => {
     const scheduleSpy = vi
       .spyOn(autoCheckinScheduler as any, "scheduleNextRun")
       .mockResolvedValueOnce(undefined)
-    ;(getErrorMessage as unknown as ReturnType<typeof vi.fn>).mockReturnValue(
-      "boom",
+    ;(
+      getErrorMessage as unknown as ReturnType<typeof vi.fn>
+    ).mockImplementation((error: unknown) =>
+      error instanceof Error ? error.message : String(error),
     )
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      { action: RuntimeActionIds.AutoCheckinRunNow },
-      sendResponse,
-    )
+    await expect(runAutoCheckinNow()).resolves.toEqual({
+      success: false,
+      error: "boom",
+    })
 
     expect(runSpy).toHaveBeenCalled()
     expect(scheduleSpy).toHaveBeenCalledWith({ preserveExisting: true })
-    expect(sendResponse).toHaveBeenCalledWith({ success: false, error: "boom" })
   })
 
   it("should keep the manual run response successful when post-run rescheduling fails", async () => {
@@ -3744,19 +3627,13 @@ describe("handleAutoCheckinMessage", () => {
     const scheduleSpy = vi
       .spyOn(autoCheckinScheduler as any, "scheduleNextRun")
       .mockRejectedValueOnce(new Error("reschedule failed"))
-    const sendResponse = vi.fn()
-
-    await handleAutoCheckinMessage(
-      { action: RuntimeActionIds.AutoCheckinRunNow },
-      sendResponse,
-    )
+    await expect(runAutoCheckinNow()).resolves.toEqual({ success: true })
 
     expect(runSpy).toHaveBeenCalledWith({
       runType: AUTO_CHECKIN_RUN_TYPE.MANUAL,
       targetAccountIds: undefined,
     })
     expect(scheduleSpy).toHaveBeenCalledWith({ preserveExisting: true })
-    expect(sendResponse).toHaveBeenCalledWith({ success: true })
   })
 })
 

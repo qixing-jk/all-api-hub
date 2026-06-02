@@ -1,7 +1,6 @@
 import type { Page } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   ACCOUNT_MANAGEMENT_TEST_IDS,
   getAccountManagementListItemTestId,
@@ -11,6 +10,7 @@ import {
   normalizeAccountStorageConfigForWrite,
 } from "~/services/accounts/accountDefaults"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { AccountStorageConfig, SiteAccount } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
@@ -33,7 +33,7 @@ const ACCOUNT_QUICK_CHECKIN_E2E_STATE_KEY =
 
 type AccountQuickCheckinRuntimeState = {
   calls: Array<{
-    action: string
+    type: string
     accountIds: string[]
   }>
 }
@@ -290,45 +290,51 @@ test("runs quick check-in for the selected eligible account from account managem
           configurable: true,
           writable: true,
           value: async (message: unknown) => {
-            const action =
+            const type =
               typeof message === "object" &&
               message !== null &&
-              "action" in message
-                ? String((message as { action?: unknown }).action ?? "unknown")
+              "type" in message
+                ? String((message as { type?: unknown }).type ?? "unknown")
                 : "unknown"
 
-            if (action !== runNowAction && action !== getStatusAction) {
+            if (type !== runNowAction && type !== getStatusAction) {
               return await originalSendMessage(message)
             }
 
             const accountIds =
               typeof message === "object" &&
               message !== null &&
-              "accountIds" in message &&
-              Array.isArray((message as { accountIds?: unknown }).accountIds)
-                ? (message as { accountIds: string[] }).accountIds
+              "data" in message &&
+              typeof (message as { data?: unknown }).data === "object" &&
+              (message as { data?: unknown }).data !== null &&
+              "accountIds" in (message as { data: any }).data &&
+              Array.isArray((message as { data: any }).data.accountIds)
+                ? (message as { data: { accountIds: string[] } }).data
+                    .accountIds
                 : []
 
             const nextState = {
-              calls: [...readState().calls, { action, accountIds }],
+              calls: [...readState().calls, { type, accountIds }],
             }
 
             writeState(nextState)
 
-            if (action === runNowAction) {
-              return { success: true }
+            if (type === runNowAction) {
+              return { res: { success: true } }
             }
 
             return {
-              success: true,
-              data: {
-                perAccount: {
-                  "quick-checkin-account": {
-                    accountId: "quick-checkin-account",
-                    accountName: "Quick Check-in Account",
-                    status: "success",
-                    message: "check-in completed",
-                    timestamp: Date.parse("2026-03-29T12:00:00.000Z"),
+              res: {
+                success: true,
+                data: {
+                  perAccount: {
+                    "quick-checkin-account": {
+                      accountId: "quick-checkin-account",
+                      accountName: "Quick Check-in Account",
+                      status: "success",
+                      message: "check-in completed",
+                      timestamp: Date.parse("2026-03-29T12:00:00.000Z"),
+                    },
                   },
                 },
               },
@@ -348,8 +354,8 @@ test("runs quick check-in for the selected eligible account from account managem
       }
     },
     {
-      getStatusAction: RuntimeActionIds.AutoCheckinGetStatus,
-      runNowAction: RuntimeActionIds.AutoCheckinRunNow,
+      getStatusAction: AutoCheckinMessageTypes.GetStatus,
+      runNowAction: AutoCheckinMessageTypes.RunNow,
       stateKey: ACCOUNT_QUICK_CHECKIN_E2E_STATE_KEY,
     },
   )
@@ -388,11 +394,11 @@ test("runs quick check-in for the selected eligible account from account managem
     .toEqual({
       calls: [
         {
-          action: RuntimeActionIds.AutoCheckinRunNow,
+          type: AutoCheckinMessageTypes.RunNow,
           accountIds: ["quick-checkin-account"],
         },
         {
-          action: RuntimeActionIds.AutoCheckinGetStatus,
+          type: AutoCheckinMessageTypes.GetStatus,
           accountIds: [],
         },
       ],

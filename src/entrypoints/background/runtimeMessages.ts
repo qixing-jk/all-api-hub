@@ -1,28 +1,27 @@
 import { COOKIE_IMPORT_FAILURE_REASONS } from "~/constants/cookieImport"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import {
-  hasRuntimeActionPrefix,
-  RuntimeActionIds,
-  RuntimeActionPrefixes,
-} from "~/constants/runtimeActions"
-import { applyActionClickBehavior } from "~/entrypoints/background/actionClickBehavior"
+import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { WEB_AI_API_CHECK_TARGET_IDS } from "~/features/BasicSettings/components/tabs/WebAiApiCheck/searchTargets"
-import { handleAccountKeyRepairMessage } from "~/services/accounts/accountKeyAutoProvisioning"
-import { handleAutoRefreshMessage } from "~/services/accounts/autoRefreshService"
-import { handleAutoCheckinMessage } from "~/services/checkin/autoCheckin/scheduler"
-import { handleExternalCheckInMessage } from "~/services/checkin/externalCheckInService"
-import { handleDailyBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/scheduler"
-import { handleUsageHistoryMessage } from "~/services/history/usageHistory/scheduler"
-import { handleLdohSiteLookupMessage } from "~/services/integrations/ldohSiteLookup/background"
-import { handleChannelConfigMessage } from "~/services/managedSites/channelConfigStorage"
-import { handleManagedSiteModelSyncMessage } from "~/services/models/modelSync"
-import { handleTaskNotificationMessage } from "~/services/notifications/taskNotificationService"
-import { handleProductAnalyticsMessage } from "~/services/productAnalytics/runtime"
-import { handleRedemptionAssistMessage } from "~/services/redemption/redemptionAssist"
-import { handleSiteAnnouncementMessage } from "~/services/siteAnnouncements/scheduler"
-import { handleReleaseUpdateMessage } from "~/services/updates/releaseUpdateService"
-import { handleWebAiApiCheckMessage } from "~/services/verification/webAiApiCheck/background"
-import { handleWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncService"
+import { setupAccountKeyRepairMessagingListeners } from "~/services/accounts/accountKeyAutoProvisioning"
+import { setupAutoRefreshMessagingListeners } from "~/services/accounts/autoRefreshService"
+import { setupAutoCheckinMessagingListeners } from "~/services/checkin/autoCheckin/scheduler"
+import { setupExternalCheckInMessagingListeners } from "~/services/checkin/externalCheckInService"
+import {
+  handleDailyBalanceHistoryMessage,
+  setupDailyBalanceHistoryMessagingListeners,
+} from "~/services/history/dailyBalanceHistory/scheduler"
+import { setupUsageHistoryMessagingListeners } from "~/services/history/usageHistory/scheduler"
+import { setupLdohSiteLookupMessagingListeners } from "~/services/integrations/ldohSiteLookup/background"
+import { setupChannelConfigMessagingListeners } from "~/services/managedSites/channelConfigStorage"
+import { setupManagedSiteModelSyncMessagingListeners } from "~/services/models/modelSync"
+import { setupTaskNotificationMessagingListeners } from "~/services/notifications/taskNotificationService"
+import { setupPreferencesMessagingListeners } from "~/services/preferences/runtimePreferencesService"
+import { setupProductAnalyticsMessagingListeners } from "~/services/productAnalytics/runtime"
+import { setupRedemptionAssistMessagingListeners } from "~/services/redemption/redemptionAssist"
+import { setupSiteAnnouncementsMessagingListeners } from "~/services/siteAnnouncements/scheduler"
+import { setupReleaseUpdateMessagingListeners } from "~/services/updates/releaseUpdateService"
+import { setupWebAiApiCheckMessagingListeners } from "~/services/verification/webAiApiCheck/background"
+import { setupWebdavAutoSyncMessagingListeners } from "~/services/webdav/webdavAutoSyncService"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
 import {
   getCookieHeaderForUrlResult,
@@ -36,7 +35,6 @@ import {
   openOrFocusOptionsMenuItem,
 } from "~/utils/navigation"
 
-import { setupContextMenus } from "./contextMenus"
 import { trackCookieInterceptorUrl } from "./cookieInterceptor"
 import {
   handleAutoDetectSite,
@@ -92,6 +90,24 @@ async function resolveCookieStoreIdFromImportRequest(
  * Routes browser.runtime messages to feature-specific handlers based on action prefixes.
  */
 export function setupRuntimeMessageListeners() {
+  setupReleaseUpdateMessagingListeners()
+  setupLdohSiteLookupMessagingListeners()
+  setupTaskNotificationMessagingListeners()
+  setupChannelConfigMessagingListeners()
+  setupExternalCheckInMessagingListeners()
+  setupAutoRefreshMessagingListeners()
+  setupWebdavAutoSyncMessagingListeners()
+  setupUsageHistoryMessagingListeners()
+  setupDailyBalanceHistoryMessagingListeners()
+  setupSiteAnnouncementsMessagingListeners()
+  setupPreferencesMessagingListeners()
+  setupManagedSiteModelSyncMessagingListeners()
+  setupAccountKeyRepairMessagingListeners()
+  setupAutoCheckinMessagingListeners()
+  setupWebAiApiCheckMessagingListeners()
+  setupRedemptionAssistMessagingListeners()
+  setupProductAnalyticsMessagingListeners()
+
   // 处理来自 popup 的消息
   onRuntimeMessage((request, sender, sendResponse) => {
     try {
@@ -173,27 +189,6 @@ export function setupRuntimeMessageListeners() {
           .catch((error) => {
             sendResponse({ success: false, error: getErrorMessage(error) })
           })
-        return true
-      }
-
-      // Bulk external check-in must run in background so it isn't interrupted by popup teardown.
-      if (
-        hasRuntimeActionPrefix(
-          request.action,
-          RuntimeActionPrefixes.ExternalCheckIn,
-        )
-      ) {
-        void handleExternalCheckInMessage(request, sendResponse)
-        return true
-      }
-
-      if (
-        hasRuntimeActionPrefix(
-          request.action,
-          RuntimeActionPrefixes.LdohSiteLookup,
-        )
-      ) {
-        void handleLdohSiteLookupMessage(request, sendResponse)
         return true
       }
 
@@ -287,165 +282,10 @@ export function setupRuntimeMessageListeners() {
       }
 
       if (
-        request.action === RuntimeActionIds.PreferencesUpdateActionClickBehavior
-      ) {
-        applyActionClickBehavior(request.behavior)
-        sendResponse({ success: true })
-        return true
-      }
-
-      if (request.action === RuntimeActionIds.PreferencesRefreshContextMenus) {
-        void setupContextMenus()
-          .then(() => {
-            sendResponse({ success: true })
-          })
-          .catch((error) => {
-            sendResponse({ success: false, error: getErrorMessage(error) })
-          })
-        return true
-      }
-
-      // 处理 release-update 相关消息，路由到 handleReleaseUpdateMessage
-      if (
-        hasRuntimeActionPrefix(
-          request.action,
-          RuntimeActionPrefixes.ReleaseUpdate,
-        )
-      ) {
-        void handleReleaseUpdateMessage(request, sendResponse)
-        return true
-      }
-
-      if (
-        hasRuntimeActionPrefix(
-          request.action,
-          RuntimeActionPrefixes.AutoRefresh,
-        )
-      ) {
-        handleAutoRefreshMessage(request, sendResponse)
-        return true
-      }
-
-      // 处理WebDAV自动同步相关消息
-      if (
-        hasRuntimeActionPrefix(
-          request.action,
-          RuntimeActionPrefixes.WebdavAutoSync,
-        )
-      ) {
-        handleWebdavAutoSyncMessage(request, sendResponse)
-        return true
-      }
-
-      // 处理模型同步相关消息
-      if (
-        hasRuntimeActionPrefix(request.action, RuntimeActionPrefixes.ModelSync)
-      ) {
-        handleManagedSiteModelSyncMessage(request, sendResponse)
-        return true
-      }
-
-      // Bulk "Repair missing keys" must run in background so it isn't interrupted by options page teardown.
-      if (
-        hasRuntimeActionPrefix(
-          request.action,
-          RuntimeActionPrefixes.AccountKeyRepair,
-        )
-      ) {
-        void handleAccountKeyRepairMessage(request, sendResponse)
-        return true
-      }
-
-      // 处理Auto Check-in相关消息
-      if (
-        hasRuntimeActionPrefix(
-          request.action,
-          RuntimeActionPrefixes.AutoCheckin,
-        )
-      ) {
-        handleAutoCheckinMessage(request, sendResponse)
-        return true
-      }
-
-      // Web AI API Check runtime actions
-      if (
-        hasRuntimeActionPrefix(request.action, RuntimeActionPrefixes.ApiCheck)
-      ) {
-        void handleWebAiApiCheckMessage(request as any, sendResponse)
-        return true
-      }
-
-      // 处理 Redemption Assist 相关消息
-      if (
-        hasRuntimeActionPrefix(
-          request.action,
-          RuntimeActionPrefixes.RedemptionAssist,
-        )
-      ) {
-        void handleRedemptionAssistMessage(request, sender, sendResponse)
-        return true
-      }
-
-      if (
-        hasRuntimeActionPrefix(
-          request.action,
-          RuntimeActionPrefixes.TaskNotifications,
-        )
-      ) {
-        void handleTaskNotificationMessage(request, sendResponse)
-        return true
-      }
-
-      if (
-        hasRuntimeActionPrefix(
-          request.action,
-          RuntimeActionPrefixes.SiteAnnouncements,
-        )
-      ) {
-        void handleSiteAnnouncementMessage(request, sendResponse)
-        return true
-      }
-
-      // 处理Channel Config相关消息
-      if (
-        hasRuntimeActionPrefix(
-          request.action,
-          RuntimeActionPrefixes.ChannelConfig,
-        )
-      ) {
-        handleChannelConfigMessage(request, sendResponse)
-        return true
-      }
-
-      // 处理 usage-history 相关消息
-      if (
-        hasRuntimeActionPrefix(
-          request.action,
-          RuntimeActionPrefixes.UsageHistory,
-        )
-      ) {
-        handleUsageHistoryMessage(request, sendResponse)
-        return true
-      }
-
-      // 处理 balance-history 相关消息
-      if (
-        hasRuntimeActionPrefix(
-          request.action,
-          RuntimeActionPrefixes.BalanceHistory,
-        )
+        request.action ===
+        RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots
       ) {
         handleDailyBalanceHistoryMessage(request, sendResponse)
-        return true
-      }
-
-      if (
-        hasRuntimeActionPrefix(
-          request.action,
-          RuntimeActionPrefixes.ProductAnalytics,
-        )
-      ) {
-        void handleProductAnalyticsMessage(request, sendResponse)
         return true
       }
 

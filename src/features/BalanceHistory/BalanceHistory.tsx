@@ -32,7 +32,6 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { ANIMATIONS, COLORS } from "~/constants/designTokens"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useTheme } from "~/contexts/ThemeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { accountStorage } from "~/services/accounts/accountStorage"
@@ -46,6 +45,7 @@ import {
   listDayKeysInRange,
   subtractDaysFromDayKey,
 } from "~/services/history/dailyBalanceHistory/dayKeys"
+import { sendBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/messaging"
 import {
   buildAccountRangeSummaries,
   buildPerAccountDailyBalanceMoneySeries,
@@ -62,12 +62,12 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import { BalanceHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { listTagsSorted } from "~/services/tags/tagStoreUtils"
 import type { CurrencyType, SiteAccount, TagStore } from "~/types"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import type { DailyBalanceHistoryStore } from "~/types/dailyBalanceHistory"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { assertNever } from "~/utils/core/assert"
 import { getErrorMessage } from "~/utils/core/error"
 import { getCurrencySymbol } from "~/utils/core/formatters"
@@ -252,12 +252,12 @@ export default function BalanceHistory() {
     let toastId: string | undefined
     try {
       toastId = toast.loading(t("messages.loading.refreshing"))
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.BalanceHistoryRefreshNow,
-        ...(selectedAccountIds.length
+      const response = await sendBalanceHistoryMessage(
+        BalanceHistoryMessageTypes.RefreshNow,
+        selectedAccountIds.length
           ? { accountIds: selectedAccountIds }
-          : {}),
-      })
+          : undefined,
+      )
 
       if (!response?.success) {
         throw new Error(response?.error || "Unknown error")
@@ -287,9 +287,9 @@ export default function BalanceHistory() {
     let toastId: string | undefined
     try {
       toastId = toast.loading(t("messages.loading.pruning"))
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.BalanceHistoryPrune,
-      })
+      const response = await sendBalanceHistoryMessage(
+        BalanceHistoryMessageTypes.Prune,
+      )
 
       if (!response?.success) {
         throw new Error(response?.error || "Unknown error")

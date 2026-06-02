@@ -53,6 +53,10 @@ import {
   translateApiVerificationSummary,
 } from "~/services/verification/aiApiVerification/i18n"
 import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
+import {
+  sendWebAiApiCheckMessage,
+  WebAiApiCheckMessageTypes,
+} from "~/services/verification/webAiApiCheck/messaging"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 
 import {
@@ -532,12 +536,14 @@ export function ApiCheckModalHost() {
       }
       setIsFetchingModels(true)
       try {
-        const response: any = await sendRuntimeMessage({
-          action: RuntimeActionIds.ApiCheckFetchModels,
-          apiType,
-          baseUrl: trimmedBaseUrl,
-          apiKey: trimmedApiKey,
-        })
+        const response = await sendWebAiApiCheckMessage(
+          WebAiApiCheckMessageTypes.FetchModels,
+          {
+            apiType,
+            baseUrl: trimmedBaseUrl,
+            apiKey: trimmedApiKey,
+          },
+        )
 
         // Ignore stale responses when a newer request is already in-flight.
         if (fetchModelsRequestIdRef.current !== requestId) {
@@ -722,19 +728,20 @@ export function ApiCheckModalHost() {
     )
 
     try {
-      const response: any = await sendRuntimeMessage({
-        action: RuntimeActionIds.ApiCheckRunProbe,
-        apiType,
-        baseUrl: trimmedBaseUrl,
-        apiKey: trimmedApiKey,
-        modelId: modelId.trim() || undefined,
-        probeId,
-      })
+      const response = await sendWebAiApiCheckMessage(
+        WebAiApiCheckMessageTypes.RunProbe,
+        {
+          apiType,
+          baseUrl: trimmedBaseUrl,
+          apiKey: trimmedApiKey,
+          modelId: modelId.trim() || undefined,
+          probeId,
+        },
+      )
 
-      const result = response?.result as
-        | ApiCheckProbeResultWithAnalyticsCategory
-        | undefined
-      if (response?.success && result) {
+      if (response.success && response.result) {
+        const result =
+          response.result as ApiCheckProbeResultWithAnalyticsCategory
         setProbes((prev) =>
           prev.map((probe) =>
             probe.id === probeId
@@ -757,15 +764,16 @@ export function ApiCheckModalHost() {
         return result
       }
 
+      const failedResponse = response.success ? undefined : response
       const message =
-        response?.error || t("webAiApiCheck:modal.errors.runProbeFailed")
+        failedResponse?.error || t("webAiApiCheck:modal.errors.runProbeFailed")
 
       const fallback: ApiCheckProbeResultWithAnalyticsCategory = {
         id: probeId,
         status: "fail",
         latencyMs: 0,
         summary: message,
-        analyticsErrorCategory: response?.errorCategory,
+        analyticsErrorCategory: failedResponse?.errorCategory,
         input: {
           apiType,
           baseUrl: trimmedBaseUrl,
@@ -781,7 +789,8 @@ export function ApiCheckModalHost() {
       )
       tracker?.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory:
-          response?.errorCategory ?? PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+          failedResponse?.errorCategory ??
+          PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         insights: buildApiCheckAnalyticsInsights(apiType, trigger, {
           mode: PRODUCT_ANALYTICS_MODE_IDS.Single,
         }),
@@ -917,13 +926,15 @@ export function ApiCheckModalHost() {
 
     setIsSavingProfile(true)
     try {
-      const response: any = await sendRuntimeMessage({
-        action: RuntimeActionIds.ApiCheckSaveProfile,
-        apiType,
-        baseUrl: trimmedBaseUrl,
-        apiKey: trimmedApiKey,
-        pageUrl: pageUrl || window.location.href,
-      })
+      const response = await sendWebAiApiCheckMessage(
+        WebAiApiCheckMessageTypes.SaveProfile,
+        {
+          apiType,
+          baseUrl: trimmedBaseUrl,
+          apiKey: trimmedApiKey,
+          pageUrl: pageUrl || window.location.href,
+        },
+      )
 
       if (response?.success) {
         toast.success(

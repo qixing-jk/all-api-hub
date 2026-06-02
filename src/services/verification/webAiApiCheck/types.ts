@@ -1,4 +1,3 @@
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import type { ProductAnalyticsErrorCategory } from "~/services/productAnalytics/events"
 import type {
   ApiVerificationApiType,
@@ -7,10 +6,9 @@ import type {
 } from "~/services/verification/aiApiVerification"
 
 /**
- * Runtime request from content → background to decide whether auto-detect can prompt.
+ * Runtime data from content → background to decide whether auto-detect can prompt.
  */
 export type ApiCheckShouldPromptRequest = {
-  action: typeof RuntimeActionIds.ApiCheckShouldPrompt
   pageUrl: string
 }
 
@@ -23,7 +21,7 @@ export type ApiCheckShouldPromptResponse =
   | {
       success: true
       shouldPrompt: boolean
-      enhancedShouldPrompt: boolean
+      enhancedShouldPrompt?: boolean
     }
   | {
       success: false
@@ -31,12 +29,11 @@ export type ApiCheckShouldPromptResponse =
     }
 
 /**
- * Runtime request from content → background to fetch upstream model ids.
+ * Runtime data from content → background to fetch upstream model ids.
  *
  * NOTE: apiKey is transient and must never be persisted or returned in any response payload.
  */
 export type ApiCheckFetchModelsRequest = {
-  action: typeof RuntimeActionIds.ApiCheckFetchModels
   apiType: ApiVerificationApiType
   baseUrl: string
   apiKey: string
@@ -60,12 +57,11 @@ export type ApiCheckFetchModelsResponse =
     }
 
 /**
- * Runtime request from content → background to run one API verification probe.
+ * Runtime data from content → background to run one API verification probe.
  *
  * The returned result must never include secrets (apiKey), and error summaries must be sanitized.
  */
 export type ApiCheckRunProbeRequest = {
-  action: typeof RuntimeActionIds.ApiCheckRunProbe
   apiType: ApiVerificationApiType
   baseUrl: string
   apiKey: string
@@ -86,15 +82,13 @@ export type ApiCheckRunProbeResponse =
       error?: string
       errorCategory?: ProductAnalyticsErrorCategory
     }
-
 /**
- * Runtime request from content → background to persist the current credentials
+ * Runtime data from content → background to persist the current credentials
  * as an API credential profile.
  *
  * NOTE: apiKey is sensitive and must never be echoed back in any response payload.
  */
 export type ApiCheckSaveProfileRequest = {
-  action: typeof RuntimeActionIds.ApiCheckSaveProfile
   apiType: ApiVerificationApiType
   baseUrl: string
   apiKey: string
@@ -120,12 +114,3 @@ export type ApiCheckSaveProfileResponse =
       error?: string
       errorCategory?: ProductAnalyticsErrorCategory
     }
-
-/**
- * Union of ApiCheck runtime requests handled by the background router.
- */
-export type ApiCheckRuntimeRequest =
-  | ApiCheckShouldPromptRequest
-  | ApiCheckFetchModelsRequest
-  | ApiCheckRunProbeRequest
-  | ApiCheckSaveProfileRequest

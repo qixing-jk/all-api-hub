@@ -1,11 +1,10 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { getManagedSiteServiceForType } from "~/services/managedSites/managedSiteService"
 import { ModelSyncService } from "~/services/models/modelSync/modelSyncService"
 import {
-  handleManagedSiteModelSyncMessage,
+  getModelSyncNextRun,
   modelSyncScheduler,
 } from "~/services/models/modelSync/scheduler"
 import {
@@ -164,7 +163,7 @@ describe("modelSyncScheduler.setupAlarm", () => {
   })
 })
 
-describe("handleManagedSiteModelSyncMessage", () => {
+describe("model sync operation helpers", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mockedBrowserApi.hasAlarmsAPI.mockReturnValue(true)
@@ -183,13 +182,7 @@ describe("handleManagedSiteModelSyncMessage", () => {
       periodInMinutes: 1,
     })
 
-    const sendResponse = vi.fn()
-    await handleManagedSiteModelSyncMessage(
-      { action: RuntimeActionIds.ModelSyncGetNextRun },
-      sendResponse,
-    )
-
-    expect(sendResponse).toHaveBeenCalledWith({
+    await expect(getModelSyncNextRun()).resolves.toEqual({
       success: true,
       data: {
         nextScheduledAt: new Date(scheduledTime).toISOString(),

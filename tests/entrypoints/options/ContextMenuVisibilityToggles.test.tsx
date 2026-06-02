@@ -1,14 +1,23 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import RedemptionAssistSettings from "~/features/BasicSettings/components/tabs/CheckinRedeem/RedemptionAssistSettings"
 import WebAiApiCheckSettings from "~/features/BasicSettings/components/tabs/WebAiApiCheck/WebAiApiCheckSettings"
+import {
+  PreferencesMessageTypes,
+  sendPreferencesMessage,
+} from "~/services/preferences/messaging"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
 } from "~/services/preferences/userPreferences"
-import * as browserApi from "~/utils/browser/browserApi"
+import { RedemptionAssistMessageTypes } from "~/services/redemption/redemptionAssistMessaging"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
+
+const { mockSendPreferencesMessage, mockSendRedemptionAssistMessage } =
+  vi.hoisted(() => ({
+    mockSendPreferencesMessage: vi.fn(),
+    mockSendRedemptionAssistMessage: vi.fn(),
+  }))
 
 vi.mock("react-hot-toast", () => {
   const toast = Object.assign(vi.fn(), {
@@ -20,16 +29,38 @@ vi.mock("react-hot-toast", () => {
   return { default: toast }
 })
 
+vi.mock("~/services/preferences/messaging", () => ({
+  PreferencesMessageTypes: {
+    UpdateActionClickBehavior: "preferences:updateActionClickBehavior",
+    RefreshContextMenus: "preferences:refreshContextMenus",
+  },
+  sendPreferencesMessage: mockSendPreferencesMessage,
+}))
+
+vi.mock("~/services/redemption/redemptionAssistMessaging", () => ({
+  RedemptionAssistMessageTypes: {
+    UpdateSettings: "redemptionAssist:updateSettings",
+    ShouldPrompt: "redemptionAssist:shouldPrompt",
+    AutoRedeem: "redemptionAssist:autoRedeem",
+    AutoRedeemByUrl: "redemptionAssist:autoRedeemByUrl",
+  },
+  sendRedemptionAssistMessage: mockSendRedemptionAssistMessage,
+}))
+
 describe("Context menu visibility toggles", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    mockSendPreferencesMessage.mockResolvedValue({
+      success: true,
+      data: undefined,
+    })
+    mockSendRedemptionAssistMessage.mockResolvedValue({
+      success: true,
+      data: undefined,
+    })
   })
 
   it("persists Web AI API Check visibility updates and triggers refresh", async () => {
-    const sendRuntimeMessageSpy = vi
-      .spyOn(browserApi, "sendRuntimeMessage")
-      .mockResolvedValue({ success: true } as any)
-
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
       ...structuredClone(DEFAULT_PREFERENCES),
       webAiApiCheck: {
@@ -70,17 +101,13 @@ describe("Context menu visibility toggles", () => {
     })
 
     await waitFor(() => {
-      expect(sendRuntimeMessageSpy).toHaveBeenCalledWith({
-        action: RuntimeActionIds.PreferencesRefreshContextMenus,
-      })
+      expect(sendPreferencesMessage).toHaveBeenCalledWith(
+        PreferencesMessageTypes.RefreshContextMenus,
+      )
     })
   })
 
   it("persists Redemption Assist visibility updates and triggers refresh", async () => {
-    const sendRuntimeMessageSpy = vi
-      .spyOn(browserApi, "sendRuntimeMessage")
-      .mockResolvedValue({ success: true } as any)
-
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue({
       ...structuredClone(DEFAULT_PREFERENCES),
       redemptionAssist: {
@@ -119,11 +146,21 @@ describe("Context menu visibility toggles", () => {
         },
       })
     })
+    expect(mockSendRedemptionAssistMessage).toHaveBeenCalledWith(
+      RedemptionAssistMessageTypes.UpdateSettings,
+      {
+        settings: {
+          contextMenu: {
+            enabled: false,
+          },
+        },
+      },
+    )
 
     await waitFor(() => {
-      expect(sendRuntimeMessageSpy).toHaveBeenCalledWith({
-        action: RuntimeActionIds.PreferencesRefreshContextMenus,
-      })
+      expect(sendPreferencesMessage).toHaveBeenCalledWith(
+        PreferencesMessageTypes.RefreshContextMenus,
+      )
     })
   })
 })

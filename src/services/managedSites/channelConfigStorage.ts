@@ -1,6 +1,14 @@
 import { Storage } from "@plasmohq/storage"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
+import {
+  ChannelConfigMessageTypes,
+  onChannelConfigMessage,
+  type ChannelConfigGetRequest,
+  type ChannelConfigGetResponse,
+  type ChannelConfigUpsertFiltersRequest,
+  type ChannelConfigUpsertFiltersResponse,
+} from "~/services/managedSites/channelConfigMessaging"
+import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
 import {
   createDefaultChannelConfig,
   type ChannelConfig,
@@ -113,63 +121,80 @@ export const channelConfigStorage = new ChannelConfigStorage()
  * @returns Sanitized filter rules ready for persistence.
  */
 function normalizeFilters(
-  filters: IncomingChannelFilter[],
+  filters: Array<IncomingChannelFilter | ChannelModelFilterRule>,
 ): ChannelModelFilterRule[] {
-  return normalizeChannelFilters(filters, {
+  return normalizeChannelFilters(filters as IncomingChannelFilter[], {
     idPrefix: "channel-filter",
   })
 }
 
+let channelConfigMessagingCleanup: (() => void)[] | null = null
+
 /**
- * Handle runtime messages related to channel configuration CRUD operations.
- * Supports fetching configs and upserting filter rules.
- * @param request Message payload containing action and arguments.
- * @param sendResponse Response callback for the runtime message.
+ * Background listeners for typed channel configuration messaging.
  */
-export async function handleChannelConfigMessage(
-  request: any,
-  sendResponse: (response: any) => void,
-) {
+export function setupChannelConfigMessagingListeners() {
+  if (channelConfigMessagingCleanup) {
+    return
+  }
+
+  channelConfigMessagingCleanup = [
+    onChannelConfigMessage(ChannelConfigMessageTypes.Get, ({ data }) =>
+      resolveChannelConfigGetMessage(data),
+    ),
+    onChannelConfigMessage(
+      ChannelConfigMessageTypes.UpsertFilters,
+      ({ data }) => resolveChannelConfigUpsertFiltersMessage(data),
+    ),
+  ]
+}
+
+/**
+ * Resolve typed runtime requests that fetch a channel configuration.
+ */
+export async function resolveChannelConfigGetMessage(
+  request: ChannelConfigGetRequest,
+): Promise<ChannelConfigGetResponse> {
   try {
-    switch (request.action) {
-      case RuntimeActionIds.ChannelConfigGet: {
-        const channelId = Number(request.channelId)
-        if (!Number.isFinite(channelId) || channelId <= 0) {
-          throw new Error("channelId is required")
-        }
-
-        const config = await channelConfigStorage.getConfig(channelId)
-        sendResponse({ success: true, data: config })
-        break
-      }
-
-      case RuntimeActionIds.ChannelConfigUpsertFilters: {
-        const channelId = Number(request.channelId)
-        if (!Number.isFinite(channelId) || channelId <= 0) {
-          throw new Error("channelId is required")
-        }
-
-        const normalizedFilters = normalizeFilters(request.filters ?? [])
-        const success = await channelConfigStorage.upsertFilters(
-          channelId,
-          normalizedFilters,
-        )
-
-        if (!success) {
-          throw new Error("Failed to save channel filters")
-        }
-
-        sendResponse({ success: true, data: normalizedFilters })
-        break
-      }
-
-      default: {
-        sendResponse({ success: false, error: "Unknown action" })
-      }
+    const channelId = Number(request.channelId)
+    if (!Number.isFinite(channelId) || channelId <= 0) {
+      throw new Error("channelId is required")
     }
+
+    const config = await channelConfigStorage.getConfig(channelId)
+    return { success: true, data: config }
   } catch (error) {
     logger.error("Message handling failed", error)
-    sendResponse({ success: false, error: getErrorMessage(error) })
+    return createRuntimeMessageFailure(getErrorMessage(error))
+  }
+}
+
+/**
+ * Resolve typed runtime requests that persist channel filter rules.
+ */
+export async function resolveChannelConfigUpsertFiltersMessage(
+  request: ChannelConfigUpsertFiltersRequest,
+): Promise<ChannelConfigUpsertFiltersResponse> {
+  try {
+    const channelId = Number(request.channelId)
+    if (!Number.isFinite(channelId) || channelId <= 0) {
+      throw new Error("channelId is required")
+    }
+
+    const normalizedFilters = normalizeFilters(request.filters ?? [])
+    const success = await channelConfigStorage.upsertFilters(
+      channelId,
+      normalizedFilters,
+    )
+
+    if (!success) {
+      throw new Error("Failed to save channel filters")
+    }
+
+    return { success: true, data: normalizedFilters }
+  } catch (error) {
+    logger.error("Message handling failed", error)
+    return createRuntimeMessageFailure(getErrorMessage(error))
   }
 }
 

@@ -18,9 +18,12 @@ import {
   Separator,
   Switch,
 } from "~/components/ui"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import {
+  sendTaskNotificationMessage,
+  TaskNotificationMessageTypes,
+} from "~/services/notifications/messaging"
 import {
   hasPermission,
   onOptionalPermissionsChanged,
@@ -35,7 +38,6 @@ import {
   type TaskNotificationChannelPreferences,
   type TaskNotificationTask,
 } from "~/types/taskNotifications"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast, showUpdateToast } from "~/utils/core/toastHelpers"
@@ -585,13 +587,13 @@ export default function TaskNotificationSettings() {
         throw new Error(t("messages.saveSettingsFailed"))
       }
 
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.TaskNotificationsTest,
-        channel,
-      })
+      const response = await sendTaskNotificationMessage(
+        TaskNotificationMessageTypes.Test,
+        { channel },
+      )
       showResultToast({
         success: response?.success === true,
-        message: response?.error,
+        message: response?.success === false ? response.error : undefined,
         successFallback: t("taskNotifications.test.sent"),
         errorFallback: t("taskNotifications.test.failed"),
       })

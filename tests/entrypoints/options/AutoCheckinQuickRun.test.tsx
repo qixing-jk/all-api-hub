@@ -1,7 +1,6 @@
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -10,16 +9,19 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
-import { render, screen } from "~~/tests/test-utils/render"
+import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
   startProductAnalyticsActionMock,
   completeProductAnalyticsActionMock,
   trackProductAnalyticsActionStartedMock,
+  sendAutoCheckinMessageMock,
 } = vi.hoisted(() => ({
   startProductAnalyticsActionMock: vi.fn(),
   completeProductAnalyticsActionMock: vi.fn(),
   trackProductAnalyticsActionStartedMock: vi.fn(),
+  sendAutoCheckinMessageMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -36,6 +38,18 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   trackProductAnalyticsActionStarted: trackProductAnalyticsActionStartedMock,
 }))
 
+vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
+  const actual =
+    await importOriginal<
+      typeof import("~/services/checkin/autoCheckin/messaging")
+    >()
+
+  return {
+    ...actual,
+    sendAutoCheckinMessage: sendAutoCheckinMessageMock,
+  }
+})
+
 afterEach(() => {
   vi.restoreAllMocks()
   vi.clearAllMocks()
@@ -49,17 +63,14 @@ describe("AutoCheckin quick run", () => {
   })
 
   it("auto-triggers runNow when routeParams.runNow is present", async () => {
-    const browserApi = await import("~/utils/browser/browserApi")
-    const sendRuntimeMessageSpy = vi.spyOn(browserApi, "sendRuntimeMessage")
-
     const navigation = await import("~/utils/navigation")
     const navigateWithinOptionsPageSpy = vi
       .spyOn(navigation, "navigateWithinOptionsPage")
       .mockImplementation(vi.fn() as any)
 
     let statusCalls = 0
-    sendRuntimeMessageSpy.mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+    sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
+      if (type === AutoCheckinMessageTypes.GetStatus) {
         statusCalls += 1
         return {
           success: true,
@@ -79,7 +90,7 @@ describe("AutoCheckin quick run", () => {
                 },
         }
       }
-      if (message.action === RuntimeActionIds.AutoCheckinRunNow) {
+      if (type === AutoCheckinMessageTypes.RunNow) {
         return { success: true }
       }
       return { success: true }
@@ -89,12 +100,13 @@ describe("AutoCheckin quick run", () => {
 
     await screen.findByRole("button", { name: /execution\.runNow/i })
 
-    expect(sendRuntimeMessageSpy).toHaveBeenCalledWith({
-      action: RuntimeActionIds.AutoCheckinGetStatus,
-    })
-    expect(sendRuntimeMessageSpy).toHaveBeenCalledWith({
-      action: RuntimeActionIds.AutoCheckinRunNow,
-    })
+    expect(sendAutoCheckinMessageMock).toHaveBeenCalledWith(
+      AutoCheckinMessageTypes.GetStatus,
+    )
+    expect(sendAutoCheckinMessageMock).toHaveBeenCalledWith(
+      AutoCheckinMessageTypes.RunNow,
+      {},
+    )
     expect(navigateWithinOptionsPageSpy).toHaveBeenCalled()
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
@@ -102,66 +114,63 @@ describe("AutoCheckin quick run", () => {
       surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinActionBar,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
-    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
-      PRODUCT_ANALYTICS_RESULTS.Success,
-      {
-        insights: {
-          itemCount: 3,
-          successCount: 2,
-          failureCount: 1,
-          skippedCount: 0,
+    await waitFor(() => {
+      expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+        PRODUCT_ANALYTICS_RESULTS.Success,
+        {
+          insights: {
+            itemCount: 3,
+            successCount: 2,
+            failureCount: 1,
+            skippedCount: 0,
+          },
         },
-      },
-    )
+      )
+    })
   })
 
   it("does not auto-trigger runNow when routeParams.runNow is absent", async () => {
-    const browserApi = await import("~/utils/browser/browserApi")
-    const sendRuntimeMessageSpy = vi
-      .spyOn(browserApi, "sendRuntimeMessage")
-      .mockResolvedValue({
-        success: true,
-        data: { perAccount: {} },
-      })
+    sendAutoCheckinMessageMock.mockResolvedValue({
+      success: true,
+      data: { perAccount: {} },
+    })
 
     render(<AutoCheckin routeParams={{}} />)
 
     await screen.findByRole("button", { name: /execution\.runNow/i })
 
-    expect(sendRuntimeMessageSpy).toHaveBeenCalledWith({
-      action: RuntimeActionIds.AutoCheckinGetStatus,
-    })
-    expect(sendRuntimeMessageSpy).not.toHaveBeenCalledWith({
-      action: RuntimeActionIds.AutoCheckinRunNow,
-    })
+    expect(sendAutoCheckinMessageMock).toHaveBeenCalledWith(
+      AutoCheckinMessageTypes.GetStatus,
+    )
+    expect(sendAutoCheckinMessageMock).not.toHaveBeenCalledWith(
+      AutoCheckinMessageTypes.RunNow,
+      expect.anything(),
+    )
     expect(startProductAnalyticsActionMock).not.toHaveBeenCalled()
   })
 
   it("completes run-now analytics as skipped when the runtime surfaces no runnable work", async () => {
     const user = userEvent.setup()
-    const browserApi = await import("~/utils/browser/browserApi")
 
-    vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
-      async (message: any) => {
-        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
-          return { success: true, data: { perAccount: {} } }
+    sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
+      if (type === AutoCheckinMessageTypes.GetStatus) {
+        return { success: true, data: { perAccount: {} } }
+      }
+      if (type === AutoCheckinMessageTypes.RunNow) {
+        return {
+          success: true,
+          summary: {
+            totalEligible: 0,
+            executed: 0,
+            successCount: 0,
+            failedCount: 0,
+            skippedCount: 0,
+            needsRetry: false,
+          },
         }
-        if (message.action === RuntimeActionIds.AutoCheckinRunNow) {
-          return {
-            success: true,
-            summary: {
-              totalEligible: 0,
-              executed: 0,
-              successCount: 0,
-              failedCount: 0,
-              skippedCount: 0,
-              needsRetry: false,
-            },
-          }
-        }
-        return { success: true }
-      },
-    )
+      }
+      return { success: true }
+    })
 
     render(<AutoCheckin routeParams={{}} />)
 

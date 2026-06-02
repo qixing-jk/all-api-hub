@@ -2,10 +2,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { Storage } from "@plasmohq/storage"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
-  handleSiteAnnouncementMessage,
+  resolveSiteAnnouncementsCheckNowMessage,
+  resolveSiteAnnouncementsGetStatusMessage,
+  resolveSiteAnnouncementsListRecordsMessage,
+  resolveSiteAnnouncementsMarkAllReadMessage,
+  resolveSiteAnnouncementsMarkReadMessage,
+  resolveSiteAnnouncementsUpdatePreferencesMessage,
   siteAnnouncementScheduler,
 } from "~/services/siteAnnouncements/scheduler"
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
@@ -188,17 +192,13 @@ describe("siteAnnouncementScheduler", () => {
     await siteAnnouncementScheduler.initialize()
     expect(createAlarmMock).not.toHaveBeenCalled()
 
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsGetStatus },
-      response,
-    )
+    const response = await resolveSiteAnnouncementsGetStatusMessage()
 
     expect(createAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck", {
       periodInMinutes: 360,
       delayInMinutes: 1,
     })
-    expect(response.mock.calls[0][0]).toMatchObject({
+    expect(response).toMatchObject({
       success: true,
       data: [],
     })
@@ -233,17 +233,13 @@ describe("siteAnnouncementScheduler", () => {
     createAlarmMock.mockClear()
     clearAlarmMock.mockClear()
 
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsGetStatus },
-      response,
-    )
+    const response = await resolveSiteAnnouncementsGetStatusMessage()
 
     expect(createAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck", {
       periodInMinutes: intervalMinutes,
       delayInMinutes: 1,
     })
-    expect(response.mock.calls[0][0]).toMatchObject({
+    expect(response).toMatchObject({
       success: true,
       data: [
         expect.objectContaining({
@@ -287,11 +283,7 @@ describe("siteAnnouncementScheduler", () => {
     createAlarmMock.mockClear()
     clearAlarmMock.mockClear()
 
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsGetStatus },
-      response,
-    )
+    await resolveSiteAnnouncementsGetStatusMessage()
 
     expect(createAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck", {
       periodInMinutes: intervalMinutes,
@@ -341,11 +333,7 @@ describe("siteAnnouncementScheduler", () => {
     createAlarmMock.mockClear()
     clearAlarmMock.mockClear()
 
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsGetStatus },
-      response,
-    )
+    await resolveSiteAnnouncementsGetStatusMessage()
 
     expect(clearAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck")
     expect(createAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck", {
@@ -402,15 +390,11 @@ describe("siteAnnouncementScheduler", () => {
     createAlarmMock.mockClear()
     clearAlarmMock.mockClear()
 
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsGetStatus },
-      response,
-    )
+    const response = await resolveSiteAnnouncementsGetStatusMessage()
 
     expect(clearAlarmMock).not.toHaveBeenCalled()
     expect(createAlarmMock).not.toHaveBeenCalled()
-    expect(response.mock.calls[0][0]).toMatchObject({
+    expect(response).toMatchObject({
       success: true,
     })
     nowSpy.mockRestore()
@@ -425,15 +409,11 @@ describe("siteAnnouncementScheduler", () => {
       },
     })
 
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsGetStatus },
-      response,
-    )
+    const response = await resolveSiteAnnouncementsGetStatusMessage()
 
     expect(clearAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck")
     expect(createAlarmMock).not.toHaveBeenCalled()
-    expect(response.mock.calls[0][0]).toMatchObject({
+    expect(response).toMatchObject({
       success: true,
       data: [],
     })
@@ -478,13 +458,9 @@ describe("siteAnnouncementScheduler", () => {
       },
     })
 
-    await handleSiteAnnouncementMessage(
-      {
-        action: RuntimeActionIds.SiteAnnouncementsUpdatePreferences,
-        settings: { enabled: false },
-      },
-      vi.fn(),
-    )
+    await resolveSiteAnnouncementsUpdatePreferencesMessage({
+      settings: { enabled: false },
+    })
 
     expect(clearAlarmMock).toHaveBeenCalledWith("siteAnnouncementsCheck")
     expect(createAlarmMock).not.toHaveBeenCalled()
@@ -603,22 +579,21 @@ describe("siteAnnouncementScheduler", () => {
       return null
     })
 
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      {
-        action: RuntimeActionIds.SiteAnnouncementsCheckNow,
-        accountIds: ["enabled", "missing", "disabled"],
-      },
-      response,
-    )
+    const response = await resolveSiteAnnouncementsCheckNowMessage({
+      accountIds: ["enabled", "missing", "disabled"],
+    })
 
     expect(providerFetchMock).toHaveBeenCalledTimes(1)
-    expect(response.mock.calls[0][0].data).toMatchObject({
-      checked: 1,
-      created: 0,
-      failed: 0,
-      unsupported: 0,
-    })
+    if (response.success) {
+      expect(response.data).toMatchObject({
+        checked: 1,
+        created: 0,
+        failed: 0,
+        unsupported: 0,
+      })
+    } else {
+      expect.fail(response.error)
+    }
   })
 
   it("dedupes common site checks but keeps Sub2API account-scoped checks", async () => {
@@ -648,18 +623,18 @@ describe("siteAnnouncementScheduler", () => {
       }),
     ])
 
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsCheckNow },
-      response,
-    )
+    const response = await resolveSiteAnnouncementsCheckNowMessage({})
 
     expect(providerFetchMock).toHaveBeenCalledTimes(3)
-    expect(response.mock.calls[0][0].data).toMatchObject({
-      checked: 3,
-      created: 3,
-      notified: 3,
-    })
+    if (response.success) {
+      expect(response.data).toMatchObject({
+        checked: 3,
+        created: 3,
+        notified: 3,
+      })
+    } else {
+      expect.fail(response.error)
+    }
   })
 
   it("tracks unsupported and error provider results separately", async () => {
@@ -685,18 +660,18 @@ describe("siteAnnouncementScheduler", () => {
       }),
     ])
 
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsCheckNow },
-      response,
-    )
+    const response = await resolveSiteAnnouncementsCheckNowMessage({})
 
-    expect(response.mock.calls[0][0].data).toMatchObject({
-      checked: 2,
-      failed: 1,
-      unsupported: 1,
-      created: 0,
-    })
+    if (response.success) {
+      expect(response.data).toMatchObject({
+        checked: 2,
+        failed: 1,
+        unsupported: 1,
+        created: 0,
+      })
+    } else {
+      expect.fail(response.error)
+    }
   })
 
   it("records provider fetch failures and keeps checking remaining accounts", async () => {
@@ -716,17 +691,17 @@ describe("siteAnnouncementScheduler", () => {
       }),
     ])
 
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsCheckNow },
-      response,
-    )
+    const response = await resolveSiteAnnouncementsCheckNowMessage({})
 
-    expect(response.mock.calls[0][0].data).toMatchObject({
-      checked: 2,
-      failed: 1,
-      created: 1,
-    })
+    if (response.success) {
+      expect(response.data).toMatchObject({
+        checked: 2,
+        failed: 1,
+        created: 1,
+      })
+    } else {
+      expect.fail(response.error)
+    }
     await expect(siteAnnouncementStorage.getStatus()).resolves.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -741,13 +716,9 @@ describe("siteAnnouncementScheduler", () => {
   it("returns null when the outer account fetch fails", async () => {
     getEnabledAccountsMock.mockRejectedValueOnce(new Error("db unavailable"))
 
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsCheckNow },
-      response,
-    )
+    const response = await resolveSiteAnnouncementsCheckNowMessage({})
 
-    expect(response).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: true,
       data: null,
     })
@@ -756,13 +727,9 @@ describe("siteAnnouncementScheduler", () => {
   it("returns null immediately when a check is already in progress", async () => {
     ;(siteAnnouncementScheduler as any).isRunning = true
 
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsCheckNow },
-      response,
-    )
+    const response = await resolveSiteAnnouncementsCheckNowMessage({})
 
-    expect(response).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: true,
       data: null,
     })
@@ -777,19 +744,17 @@ describe("siteAnnouncementScheduler", () => {
     })
     getEnabledAccountsMock.mockResolvedValue([createAccount()])
 
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsCheckNow },
-      response,
-    )
+    const response = await resolveSiteAnnouncementsCheckNowMessage({})
 
-    expect(response.mock.calls[0][0].data.records[0]).toMatchObject({
-      title: "",
-      content: "Only body text",
-    })
-    expect(response.mock.calls[0][0].data.records[0]).not.toHaveProperty(
-      "summary",
-    )
+    if (response.success) {
+      expect(response.data?.records[0]).toMatchObject({
+        title: "",
+        content: "Only body text",
+      })
+      expect(response.data?.records[0]).not.toHaveProperty("summary")
+    } else {
+      expect.fail(response.error)
+    }
   })
 
   it("syncs Sub2API upstream read state before marking the local record read", async () => {
@@ -814,24 +779,21 @@ describe("siteAnnouncementScheduler", () => {
     getEnabledAccountsMock.mockResolvedValue([account])
     getAccountByIdMock.mockResolvedValue(account)
 
-    const checkResponse = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsCheckNow },
-      checkResponse,
-    )
+    const checkResponse = await resolveSiteAnnouncementsCheckNowMessage({})
 
-    const recordId = checkResponse.mock.calls[0][0].data.records[0].id
-    const readResponse = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsMarkRead, recordId },
-      readResponse,
-    )
+    if (!checkResponse.success) {
+      expect.fail(checkResponse.error)
+    }
+    const recordId = checkResponse.data!.records[0]!.id
+    const readResponse = await resolveSiteAnnouncementsMarkReadMessage({
+      recordId,
+    })
 
     expect(providerMarkReadMock).toHaveBeenCalledWith(
       expect.objectContaining({ accountId: "sub-1" }),
       [{ id: "42" }],
     )
-    expect(readResponse).toHaveBeenCalledWith({ success: true })
+    expect(readResponse).toEqual({ success: true })
   })
 
   it("stores notification errors without acknowledging upstream announcements when delivery fails", async () => {
@@ -847,16 +809,16 @@ describe("siteAnnouncementScheduler", () => {
     })
     getEnabledAccountsMock.mockResolvedValue([createAccount()])
 
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsCheckNow },
-      response,
-    )
+    const response = await resolveSiteAnnouncementsCheckNowMessage({})
 
-    expect(response.mock.calls[0][0].data).toMatchObject({
-      created: 1,
-      notified: 0,
-    })
+    if (response.success) {
+      expect(response.data).toMatchObject({
+        created: 1,
+        notified: 0,
+      })
+    } else {
+      expect.fail(response.error)
+    }
     await expect(siteAnnouncementStorage.listRecords()).resolves.toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -868,17 +830,15 @@ describe("siteAnnouncementScheduler", () => {
   })
 
   it("skips upstream sync when mark-read targets an unknown local record", async () => {
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      {
-        action: RuntimeActionIds.SiteAnnouncementsMarkRead,
-        recordId: "missing-record",
-      },
-      response,
-    )
+    const response = await resolveSiteAnnouncementsMarkReadMessage({
+      recordId: "missing-record",
+    })
 
     expect(providerMarkReadMock).not.toHaveBeenCalled()
-    expect(response).toHaveBeenCalledWith({ success: false })
+    expect(response).toEqual({
+      success: false,
+      error: "Failed to mark announcement as read",
+    })
   })
 
   it("marks local Sub2API records read even when the backing account can no longer be loaded", async () => {
@@ -910,20 +870,15 @@ describe("siteAnnouncementScheduler", () => {
     getAccountByIdMock.mockResolvedValueOnce(null)
 
     const [record] = await siteAnnouncementStorage.listRecords()
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      {
-        action: RuntimeActionIds.SiteAnnouncementsMarkRead,
-        recordId: record!.id,
-      },
-      response,
-    )
+    const response = await resolveSiteAnnouncementsMarkReadMessage({
+      recordId: record!.id,
+    })
 
     expect(providerMarkReadMock).not.toHaveBeenCalled()
-    expect(response).toHaveBeenCalledWith({ success: true })
+    expect(response).toEqual({ success: true })
   })
 
-  it("returns current status, records, mark-all counts, and unknown-action errors", async () => {
+  it("resolves current status, records, and mark-all typed messages", async () => {
     await siteAnnouncementStorage.upsertDiscoveredRecords({
       site: {
         siteKey: "notice:new-api:https://example.com",
@@ -949,12 +904,8 @@ describe("siteAnnouncementScheduler", () => {
       ],
     })
 
-    const statusResponse = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsGetStatus },
-      statusResponse,
-    )
-    expect(statusResponse.mock.calls[0][0]).toMatchObject({
+    const statusResponse = await resolveSiteAnnouncementsGetStatusMessage()
+    expect(statusResponse).toMatchObject({
       success: true,
       data: [
         expect.objectContaining({
@@ -963,12 +914,8 @@ describe("siteAnnouncementScheduler", () => {
       ],
     })
 
-    const listResponse = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsListRecords },
-      listResponse,
-    )
-    expect(listResponse.mock.calls[0][0]).toMatchObject({
+    const listResponse = await resolveSiteAnnouncementsListRecordsMessage()
+    expect(listResponse).toMatchObject({
       success: true,
       data: [
         expect.objectContaining({
@@ -977,27 +924,12 @@ describe("siteAnnouncementScheduler", () => {
       ],
     })
 
-    const markAllResponse = vi.fn()
-    await handleSiteAnnouncementMessage(
-      {
-        action: RuntimeActionIds.SiteAnnouncementsMarkAllRead,
-        siteKey: "notice:new-api:https://example.com",
-      },
-      markAllResponse,
-    )
-    expect(markAllResponse).toHaveBeenCalledWith({
+    const markAllResponse = await resolveSiteAnnouncementsMarkAllReadMessage({
+      siteKey: "notice:new-api:https://example.com",
+    })
+    expect(markAllResponse).toEqual({
       success: true,
       data: 1,
-    })
-
-    const unknownResponse = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: "siteAnnouncements:unknown" },
-      unknownResponse,
-    )
-    expect(unknownResponse).toHaveBeenCalledWith({
-      success: false,
-      error: "Unknown action",
     })
   })
 
@@ -1013,13 +945,9 @@ describe("siteAnnouncementScheduler", () => {
     })
     getPreferencesMock.mockRejectedValueOnce(new Error("prefs failed"))
 
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsGetStatus },
-      response,
-    )
+    const response = await resolveSiteAnnouncementsGetStatusMessage()
 
-    expect(response.mock.calls[0][0]).toMatchObject({
+    expect(response).toMatchObject({
       success: true,
       data: [
         expect.objectContaining({
@@ -1034,13 +962,9 @@ describe("siteAnnouncementScheduler", () => {
       new Error("boom"),
     )
 
-    const response = vi.fn()
-    await handleSiteAnnouncementMessage(
-      { action: RuntimeActionIds.SiteAnnouncementsListRecords },
-      response,
-    )
+    const response = await resolveSiteAnnouncementsListRecordsMessage()
 
-    expect(response).toHaveBeenCalledWith({
+    expect(response).toEqual({
       success: false,
       error: "boom",
     })

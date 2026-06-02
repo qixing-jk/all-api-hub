@@ -1,9 +1,10 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { extractApiCheckCredentialsFromText } from "~/services/verification/webAiApiCheck/extractCredentials"
 import {
-  checkPermissionViaMessage,
-  sendRuntimeMessage,
-} from "~/utils/browser/browserApi"
+  sendWebAiApiCheckMessage,
+  WebAiApiCheckMessageTypes,
+} from "~/services/verification/webAiApiCheck/messaging"
+import { checkPermissionViaMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 import { isHttpUrl } from "~/utils/core/urlParsing"
 
@@ -122,10 +123,10 @@ function setupWebAiApiCheckDetection() {
     pageUrl: string,
   ): Promise<{ shouldPrompt: boolean; enhancedShouldPrompt: boolean }> => {
     try {
-      const response: any = await sendRuntimeMessage({
-        action: RuntimeActionIds.ApiCheckShouldPrompt,
-        pageUrl,
-      })
+      const response = await sendWebAiApiCheckMessage(
+        WebAiApiCheckMessageTypes.ShouldPrompt,
+        { pageUrl },
+      )
       return {
         shouldPrompt: !!response?.success && !!response?.shouldPrompt,
         enhancedShouldPrompt:

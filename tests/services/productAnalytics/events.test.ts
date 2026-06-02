@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_API_TYPES,
@@ -20,19 +19,22 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   trackProductAnalyticsEvent,
 } from "~/services/productAnalytics/events"
+import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/messaging"
 
-const { sendRuntimeMessageMock } = vi.hoisted(() => ({
-  sendRuntimeMessageMock: vi.fn(),
+const { sendProductAnalyticsMessageMock } = vi.hoisted(() => ({
+  sendProductAnalyticsMessageMock: vi.fn(),
 }))
 
-vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
-  ...(await importOriginal<typeof import("~/utils/browser/browserApi")>()),
-  sendRuntimeMessage: sendRuntimeMessageMock,
+vi.mock("~/services/productAnalytics/messaging", async (importOriginal) => ({
+  ...(await importOriginal<
+    typeof import("~/services/productAnalytics/messaging")
+  >()),
+  sendProductAnalyticsMessage: sendProductAnalyticsMessageMock,
 }))
 
 beforeEach(() => {
   vi.clearAllMocks()
-  sendRuntimeMessageMock.mockResolvedValue({ success: true })
+  sendProductAnalyticsMessageMock.mockResolvedValue({ success: true })
 })
 
 describe("product analytics event enums", () => {
@@ -330,19 +332,23 @@ describe("trackProductAnalyticsEvent", () => {
       ),
     ).resolves.toBe(true)
 
-    expect(sendRuntimeMessageMock).toHaveBeenCalledWith({
-      action: RuntimeActionIds.ProductAnalyticsTrackEvent,
-      eventName: PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
-      properties: {
-        setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ProductAnalyticsEnabled,
-        enabled: true,
-        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    expect(sendProductAnalyticsMessageMock).toHaveBeenCalledWith(
+      ProductAnalyticsMessageTypes.TrackEvent,
+      {
+        eventName: PRODUCT_ANALYTICS_EVENTS.SettingsSnapshotCaptured,
+        properties: {
+          setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ProductAnalyticsEnabled,
+          enabled: true,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        },
       },
-    })
+    )
   })
 
   it("returns false instead of throwing when analytics dispatch rejects", async () => {
-    sendRuntimeMessageMock.mockRejectedValue(new Error("analytics unavailable"))
+    sendProductAnalyticsMessageMock.mockRejectedValue(
+      new Error("analytics unavailable"),
+    )
 
     await expect(
       trackProductAnalyticsEvent(PRODUCT_ANALYTICS_EVENTS.SettingChanged, {
@@ -353,8 +359,45 @@ describe("trackProductAnalyticsEvent", () => {
     ).resolves.toBe(false)
   })
 
+  it("retries typed analytics dispatch when the runtime receiver is not ready", async () => {
+    vi.useFakeTimers()
+    try {
+      sendProductAnalyticsMessageMock
+        .mockRejectedValueOnce(new Error("Could not establish connection"))
+        .mockResolvedValueOnce({ success: true })
+
+      const resultPromise = trackProductAnalyticsEvent(
+        PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+        {
+          setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ProductAnalyticsEnabled,
+          enabled: true,
+          entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        },
+      )
+
+      await vi.advanceTimersByTimeAsync(500)
+
+      await expect(resultPromise).resolves.toBe(true)
+      expect(sendProductAnalyticsMessageMock).toHaveBeenCalledTimes(2)
+      expect(sendProductAnalyticsMessageMock).toHaveBeenNthCalledWith(
+        2,
+        ProductAnalyticsMessageTypes.TrackEvent,
+        {
+          eventName: PRODUCT_ANALYTICS_EVENTS.SettingChanged,
+          properties: {
+            setting_id: PRODUCT_ANALYTICS_SETTING_IDS.ProductAnalyticsEnabled,
+            enabled: true,
+            entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+          },
+        },
+      )
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
   it("returns false when the background runtime rejects the analytics event", async () => {
-    sendRuntimeMessageMock.mockResolvedValue({ success: false })
+    sendProductAnalyticsMessageMock.mockResolvedValue({ success: false })
 
     await expect(
       trackProductAnalyticsEvent(PRODUCT_ANALYTICS_EVENTS.SettingChanged, {
@@ -366,7 +409,7 @@ describe("trackProductAnalyticsEvent", () => {
   })
 
   it("returns false instead of throwing when analytics dispatch throws synchronously", async () => {
-    sendRuntimeMessageMock.mockImplementation(() => {
+    sendProductAnalyticsMessageMock.mockImplementation(() => {
       throw new Error("analytics unavailable")
     })
 

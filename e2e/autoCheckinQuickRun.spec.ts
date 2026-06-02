@@ -2,9 +2,9 @@ import type { Page, Worker } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
+import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import {
   AUTO_CHECKIN_SCHEDULE_MODE,
   type AutoCheckinStatus,
@@ -96,14 +96,24 @@ async function getDailyAlarm(
   }, AUTO_CHECKIN_DAILY_ALARM_NAME)
 }
 
-async function sendRuntimeActionFromPage<TResponse>(
+async function sendTypedRuntimeMessageFromPage<TResponse>(
   page: Page,
-  message: Record<string, unknown>,
+  type: string,
+  data?: Record<string, unknown>,
 ): Promise<TResponse> {
-  return await page.evaluate(async (payload) => {
-    const chromeApi = (globalThis as any).chrome
-    return await chromeApi.runtime.sendMessage(payload)
-  }, message)
+  return await page.evaluate(
+    async ({ type, data }) => {
+      const chromeApi = (globalThis as any).chrome
+      const response = await chromeApi.runtime.sendMessage({
+        id: Date.now(),
+        type,
+        data,
+        timestamp: Date.now(),
+      })
+      return response?.res ?? response
+    },
+    { type, data },
+  )
 }
 
 async function openAutoCheckinOptionsPage(page: Page, extensionId: string) {
@@ -148,14 +158,12 @@ async function installUiOpenPretriggerObservation(page: Page) {
         configurable: true,
         writable: true,
         value: async (message: unknown) => {
-          const action =
-            typeof message === "object" &&
-            message !== null &&
-            "action" in message
-              ? String((message as { action?: unknown }).action ?? "")
+          const type =
+            typeof message === "object" && message !== null && "type" in message
+              ? String((message as { type?: unknown }).type ?? "")
               : ""
 
-          if (action !== pretriggerAction) {
+          if (type !== pretriggerAction) {
             return await originalSendMessage(message)
           }
 
@@ -166,11 +174,15 @@ async function installUiOpenPretriggerObservation(page: Page) {
           })
 
           const response = await originalSendMessage(message)
+          const observedResponse =
+            response && typeof response === "object" && "res" in response
+              ? (response as { res?: unknown }).res
+              : response
           const observation = readObservation()
           writeObservation({
             ...observation,
             completedCount: observation.completedCount + 1,
-            responses: [...observation.responses, response],
+            responses: [...observation.responses, observedResponse],
           })
 
           return response
@@ -187,7 +199,7 @@ async function installUiOpenPretriggerObservation(page: Page) {
     if (browserRuntime && browserRuntime !== globalThis.chrome?.runtime) {
       patchRuntime(browserRuntime)
     }
-  }, RuntimeActionIds.AutoCheckinPretriggerDailyOnUiOpen)
+  }, AutoCheckinMessageTypes.PretriggerDailyOnUiOpen)
 }
 
 async function readUiOpenPretriggerObservation(
@@ -249,8 +261,8 @@ async function readAutoCheckinRuntimeSnapshot(
     },
     {
       stateKey: AUTO_CHECKIN_E2E_STATE_KEY,
-      getStatusAction: RuntimeActionIds.AutoCheckinGetStatus,
-      runNowAction: RuntimeActionIds.AutoCheckinRunNow,
+      getStatusAction: AutoCheckinMessageTypes.GetStatus,
+      runNowAction: AutoCheckinMessageTypes.RunNow,
     },
   )
 }
@@ -333,29 +345,31 @@ test("auto-checkin quick-run route triggers the runtime action once and consumes
           writable: true,
           value: async (message: unknown) => {
             const state = readState()
-            const action =
+            const type =
               typeof message === "object" &&
               message !== null &&
-              "action" in message
-                ? String((message as { action?: unknown }).action ?? "unknown")
+              "type" in message
+                ? String((message as { type?: unknown }).type ?? "unknown")
                 : "unknown"
             const nextState = {
               ...state,
-              calls: [...state.calls, action],
+              calls: [...state.calls, type],
             }
 
-            if (action === getStatusAction) {
+            if (type === getStatusAction) {
               writeState(nextState)
               return {
-                success: true,
-                data: buildStatus(nextState),
+                res: {
+                  success: true,
+                  data: buildStatus(nextState),
+                },
               }
             }
 
-            if (action === runNowAction) {
+            if (type === runNowAction) {
               nextState.runNowCount += 1
               writeState(nextState)
-              return { success: true }
+              return { res: { success: true } }
             }
 
             writeState(nextState)
@@ -376,8 +390,8 @@ test("auto-checkin quick-run route triggers the runtime action once and consumes
     },
     {
       stateKey: AUTO_CHECKIN_E2E_STATE_KEY,
-      getStatusAction: RuntimeActionIds.AutoCheckinGetStatus,
-      runNowAction: RuntimeActionIds.AutoCheckinRunNow,
+      getStatusAction: AutoCheckinMessageTypes.GetStatus,
+      runNowAction: AutoCheckinMessageTypes.RunNow,
       siteType: SITE_TYPES.NEW_API,
     },
   )
@@ -398,9 +412,7 @@ test("auto-checkin quick-run route triggers the runtime action once and consumes
     })
 
   const initialRuntimeSnapshot = await readAutoCheckinRuntimeSnapshot(page)
-  expect(initialRuntimeSnapshot.calls).toContain(
-    RuntimeActionIds.AutoCheckinRunNow,
-  )
+  expect(initialRuntimeSnapshot.calls).toContain(AutoCheckinMessageTypes.RunNow)
   expect(initialRuntimeSnapshot.getStatusCount).toBeGreaterThanOrEqual(2)
 
   await expect(page.getByText("E2E Example").first()).toBeVisible()
@@ -417,10 +429,10 @@ test("auto-checkin quick-run route triggers the runtime action once and consumes
 
   const postReloadRuntimeSnapshot = await readAutoCheckinRuntimeSnapshot(page)
   expect(postReloadRuntimeSnapshot.calls).toContain(
-    RuntimeActionIds.AutoCheckinGetStatus,
+    AutoCheckinMessageTypes.GetStatus,
   )
   expect(postReloadRuntimeSnapshot.calls).toContain(
-    RuntimeActionIds.AutoCheckinRunNow,
+    AutoCheckinMessageTypes.RunNow,
   )
 })
 
@@ -489,12 +501,11 @@ test("auto-checkin UI-open pretrigger runs once through the real MV3 scheduler b
   await schedulerPage.goto(autoCheckinOptionsUrl(extensionId))
   await waitForExtensionRoot(schedulerPage)
 
-  const scheduleResponse = await sendRuntimeActionFromPage<{
+  const scheduleResponse = await sendTypedRuntimeMessageFromPage<{
     success: boolean
     scheduledTime?: number
     error?: string
-  }>(schedulerPage, {
-    action: RuntimeActionIds.AutoCheckinDebugScheduleDailyAlarmForToday,
+  }>(schedulerPage, AutoCheckinMessageTypes.DebugScheduleDailyAlarmForToday, {
     minutesFromNow: 60,
   })
   await schedulerPage.close()

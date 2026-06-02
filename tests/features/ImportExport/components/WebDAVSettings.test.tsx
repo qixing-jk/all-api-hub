@@ -9,7 +9,6 @@ import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
 import WebDAVAutoSyncSettings from "~/features/ImportExport/components/WebDAVAutoSyncSettings"
@@ -28,6 +27,7 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import { WebdavAutoSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { testI18n } from "~~/tests/test-utils/i18n"
 import {
   createPersistedPreferencesFixture,
@@ -54,7 +54,7 @@ const {
   mockTestWebdavConnection,
   mockUploadBackup,
   mockImportFromBackupObject,
-  mockSendRuntimeMessage,
+  mockSendWebdavAutoSyncMessage,
   loggerMocks,
 } = vi.hoisted(() => ({
   mockApplyPreferenceLanguage: vi.fn(),
@@ -82,7 +82,7 @@ const {
   mockTestWebdavConnection: vi.fn(),
   mockUploadBackup: vi.fn(),
   mockImportFromBackupObject: vi.fn(),
-  mockSendRuntimeMessage: vi.fn(),
+  mockSendWebdavAutoSyncMessage: vi.fn(),
   loggerMocks: {
     error: vi.fn(),
     info: vi.fn(),
@@ -160,8 +160,10 @@ vi.mock("~/services/webdav/webdavService", () => ({
   uploadBackup: mockUploadBackup,
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
-  sendRuntimeMessage: mockSendRuntimeMessage,
+vi.mock("~/utils/browser/browserApi", () => ({}))
+
+vi.mock("~/services/webdav/webdavAutoSyncMessaging", () => ({
+  sendWebdavAutoSyncMessage: mockSendWebdavAutoSyncMessage,
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
@@ -333,9 +335,9 @@ describe("WebDAVSettings", () => {
     mockDecryptWebdavBackupEnvelope.mockResolvedValue('{"version":2}')
     mockTestWebdavConnection.mockResolvedValue(undefined)
     mockUploadBackup.mockResolvedValue(undefined)
-    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
-      switch (message.action) {
-        case RuntimeActionIds.WebdavAutoSyncGetStatus:
+    mockSendWebdavAutoSyncMessage.mockImplementation(async (type: string) => {
+      switch (type) {
+        case WebdavAutoSyncMessageTypes.GetStatus:
           return {
             success: true,
             data: {
@@ -345,7 +347,7 @@ describe("WebDAVSettings", () => {
               lastSyncError: null,
             },
           }
-        case RuntimeActionIds.WebdavAutoSyncSyncNow: {
+        case WebdavAutoSyncMessageTypes.SyncNow: {
           const latestPreferences =
             preferencePersistence.getPersistedPreferences()
           preferencePersistence.setPersistedPreferences({

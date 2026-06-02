@@ -10,7 +10,6 @@ import toast from "react-hot-toast"
 import { I18nextProvider } from "react-i18next"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { UserPreferencesProvider } from "~/contexts/UserPreferencesContext"
 import WebDAVAutoSyncSettings from "~/features/ImportExport/components/WebDAVAutoSyncSettings"
@@ -27,12 +26,14 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import { WebdavAutoSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { sendWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncMessaging"
 import { WEBDAV_SYNC_STRATEGIES } from "~/types/webdav"
 import { testI18n } from "~~/tests/test-utils/i18n"
 
 const {
   mockUserPreferences,
-  mockSendRuntimeMessage,
+  mockSendWebdavAutoSyncMessage,
   mockStartProductAnalyticsAction,
   mockCompleteProductAnalyticsAction,
   loggerMocks,
@@ -41,7 +42,7 @@ const {
     getPreferences: vi.fn(),
     savePreferences: vi.fn(),
   },
-  mockSendRuntimeMessage: vi.fn(),
+  mockSendWebdavAutoSyncMessage: vi.fn(),
   mockStartProductAnalyticsAction: vi.fn(),
   mockCompleteProductAnalyticsAction: vi.fn(),
   loggerMocks: {
@@ -77,8 +78,10 @@ vi.mock("~/services/preferences/userPreferences", async (importOriginal) => {
   }
 })
 
-vi.mock("~/utils/browser/browserApi", () => ({
-  sendRuntimeMessage: mockSendRuntimeMessage,
+vi.mock("~/utils/browser/browserApi", () => ({}))
+
+vi.mock("~/services/webdav/webdavAutoSyncMessaging", () => ({
+  sendWebdavAutoSyncMessage: mockSendWebdavAutoSyncMessage,
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
@@ -143,9 +146,9 @@ describe("WebDAVAutoSyncSettings", () => {
         syncStrategy: WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY,
       },
     })
-    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
-      switch (message.action) {
-        case RuntimeActionIds.WebdavAutoSyncGetStatus:
+    mockSendWebdavAutoSyncMessage.mockImplementation(async (type: string) => {
+      switch (type) {
+        case WebdavAutoSyncMessageTypes.GetStatus:
           return {
             success: true,
             data: {
@@ -155,9 +158,9 @@ describe("WebDAVAutoSyncSettings", () => {
               lastSyncError: "sync boom",
             },
           }
-        case RuntimeActionIds.WebdavAutoSyncUpdateSettings:
+        case WebdavAutoSyncMessageTypes.UpdateSettings:
           return { success: true }
-        case RuntimeActionIds.WebdavAutoSyncSyncNow:
+        case WebdavAutoSyncMessageTypes.SyncNow:
           return { success: true, message: "custom sync ok" }
         default:
           return { success: true }
@@ -201,11 +204,11 @@ describe("WebDAVAutoSyncSettings", () => {
   })
 
   it("completes WebDAV auto-sync settings save analytics as unknown failure when persistence rejects the update", async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
-      switch (message.action) {
-        case RuntimeActionIds.WebdavAutoSyncGetStatus:
+    mockSendWebdavAutoSyncMessage.mockImplementation(async (type: string) => {
+      switch (type) {
+        case WebdavAutoSyncMessageTypes.GetStatus:
           return { success: true, data: null }
-        case RuntimeActionIds.WebdavAutoSyncUpdateSettings:
+        case WebdavAutoSyncMessageTypes.UpdateSettings:
           return { success: false, error: "save failed" }
         default:
           return { success: true }
@@ -249,15 +252,17 @@ describe("WebDAVAutoSyncSettings", () => {
     )
 
     await waitFor(() => {
-      expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
-        expectedLastUpdated: 1,
-        settings: {
-          autoSync: false,
-          syncInterval: 1800,
-          syncStrategy: WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY,
+      expect(sendWebdavAutoSyncMessage).toHaveBeenCalledWith(
+        WebdavAutoSyncMessageTypes.UpdateSettings,
+        {
+          expectedLastUpdated: 1,
+          settings: {
+            autoSync: false,
+            syncInterval: 1800,
+            syncStrategy: WEBDAV_SYNC_STRATEGIES.DOWNLOAD_ONLY,
+          },
         },
-      })
+      )
     })
     expect(toast.success).toHaveBeenCalledWith(
       "settings:messages.updateSuccess",
@@ -270,9 +275,9 @@ describe("WebDAVAutoSyncSettings", () => {
     )
 
     await waitFor(() => {
-      expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.WebdavAutoSyncSyncNow,
-      })
+      expect(sendWebdavAutoSyncMessage).toHaveBeenCalledWith(
+        WebdavAutoSyncMessageTypes.SyncNow,
+      )
     })
     expect(toast.success).toHaveBeenCalledWith("custom sync ok")
     expect(mockStartProductAnalyticsAction).toHaveBeenCalledWith({
@@ -301,13 +306,13 @@ describe("WebDAVAutoSyncSettings", () => {
   })
 
   it("surfaces status, save, and sync errors", async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
-      switch (message.action) {
-        case RuntimeActionIds.WebdavAutoSyncGetStatus:
+    mockSendWebdavAutoSyncMessage.mockImplementation(async (type: string) => {
+      switch (type) {
+        case WebdavAutoSyncMessageTypes.GetStatus:
           throw new Error("status failed")
-        case RuntimeActionIds.WebdavAutoSyncUpdateSettings:
+        case WebdavAutoSyncMessageTypes.UpdateSettings:
           return { success: false, error: "save failed" }
-        case RuntimeActionIds.WebdavAutoSyncSyncNow:
+        case WebdavAutoSyncMessageTypes.SyncNow:
           throw new Error("sync failed")
         default:
           return { success: true }
@@ -396,11 +401,11 @@ describe("WebDAVAutoSyncSettings", () => {
   })
 
   it("falls back to the local update-failed copy when the runtime omits an error", async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
-      switch (message.action) {
-        case RuntimeActionIds.WebdavAutoSyncGetStatus:
+    mockSendWebdavAutoSyncMessage.mockImplementation(async (type: string) => {
+      switch (type) {
+        case WebdavAutoSyncMessageTypes.GetStatus:
           return { success: true, data: null }
-        case RuntimeActionIds.WebdavAutoSyncUpdateSettings:
+        case WebdavAutoSyncMessageTypes.UpdateSettings:
           return { success: false }
         default:
           return { success: true }
@@ -427,13 +432,13 @@ describe("WebDAVAutoSyncSettings", () => {
   })
 
   it("surfaces thrown save failures and unsuccessful sync responses", async () => {
-    mockSendRuntimeMessage.mockImplementation(async (message: any) => {
-      switch (message.action) {
-        case RuntimeActionIds.WebdavAutoSyncGetStatus:
+    mockSendWebdavAutoSyncMessage.mockImplementation(async (type: string) => {
+      switch (type) {
+        case WebdavAutoSyncMessageTypes.GetStatus:
           return { success: true, data: null }
-        case RuntimeActionIds.WebdavAutoSyncUpdateSettings:
+        case WebdavAutoSyncMessageTypes.UpdateSettings:
           throw new Error("save exploded")
-        case RuntimeActionIds.WebdavAutoSyncSyncNow:
+        case WebdavAutoSyncMessageTypes.SyncNow:
           return { success: false, message: "sync rejected" }
         default:
           return { success: true }
@@ -498,15 +503,17 @@ describe("WebDAVAutoSyncSettings", () => {
     )
 
     await waitFor(() => {
-      expect(mockSendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
-        expectedLastUpdated: 1,
-        settings: {
-          autoSync: true,
-          syncInterval: 900,
-          syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
+      expect(sendWebdavAutoSyncMessage).toHaveBeenCalledWith(
+        WebdavAutoSyncMessageTypes.UpdateSettings,
+        {
+          expectedLastUpdated: 1,
+          settings: {
+            autoSync: true,
+            syncInterval: 900,
+            syncStrategy: WEBDAV_SYNC_STRATEGIES.MERGE,
+          },
         },
-      })
+      )
     })
   })
 

@@ -1,6 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 
 const mocks = vi.hoisted(() => ({
@@ -228,7 +227,7 @@ describe("modelSyncScheduler additional scheduler flows", () => {
   })
 })
 
-describe("handleManagedSiteModelSyncMessage additional actions", () => {
+describe("model sync operation helpers additional actions", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     mocks.hasAlarmsAPI.mockReturnValue(true)
@@ -241,8 +240,18 @@ describe("handleManagedSiteModelSyncMessage additional actions", () => {
   })
 
   it("routes execution, storage, and preference actions through the scheduler control plane", async () => {
-    const { handleManagedSiteModelSyncMessage, modelSyncScheduler } =
-      await import("~/services/models/modelSync/scheduler")
+    const {
+      getModelSyncChannelUpstreamModelOptions,
+      getModelSyncLastExecution,
+      getModelSyncPreferences,
+      getModelSyncProgress,
+      listModelSyncChannels,
+      modelSyncScheduler,
+      triggerAllModelSync,
+      triggerFailedOnlyModelSync,
+      triggerSelectedModelSync,
+      updateModelSyncSettings,
+    } = await import("~/services/models/modelSync/scheduler")
 
     const executeSyncSpy = vi
       .spyOn(modelSyncScheduler, "executeSync")
@@ -264,84 +273,48 @@ describe("handleManagedSiteModelSyncMessage additional actions", () => {
         type_counts: {},
       } as any)
 
-    const cases = [
-      {
-        request: { action: RuntimeActionIds.ModelSyncTriggerAll },
-        expected: {
-          success: true,
-          data: { items: [], statistics: { total: 0 } },
-        },
+    await expect(triggerAllModelSync()).resolves.toEqual({
+      success: true,
+      data: { items: [], statistics: { total: 0 } },
+    })
+    await expect(triggerSelectedModelSync([1, 2])).resolves.toEqual({
+      success: true,
+      data: { items: [], statistics: { total: 0 } },
+    })
+    await expect(triggerFailedOnlyModelSync()).resolves.toEqual({
+      success: true,
+      data: { items: [], statistics: { total: 0 } },
+    })
+    await expect(getModelSyncLastExecution()).resolves.toEqual({
+      success: true,
+      data: {
+        items: [{ channelId: 1, ok: false }],
+        statistics: { total: 1, successCount: 0, failureCount: 1 },
       },
-      {
-        request: {
-          action: RuntimeActionIds.ModelSyncTriggerSelected,
-          channelIds: [1, 2],
-        },
-        expected: {
-          success: true,
-          data: { items: [], statistics: { total: 0 } },
-        },
+    })
+    expect(getModelSyncProgress()).toEqual({
+      success: true,
+      data: { isRunning: true },
+    })
+    await expect(
+      updateModelSyncSettings({ enableSync: false }),
+    ).resolves.toEqual({ success: true })
+    await expect(getModelSyncPreferences()).resolves.toEqual({
+      success: true,
+      data: { enabled: true },
+    })
+    await expect(getModelSyncChannelUpstreamModelOptions()).resolves.toEqual({
+      success: true,
+      data: ["gpt-4o"],
+    })
+    await expect(listModelSyncChannels()).resolves.toEqual({
+      success: true,
+      data: {
+        items: [{ id: 1, name: "Channel 1" }],
+        total: 1,
+        type_counts: {},
       },
-      {
-        request: { action: RuntimeActionIds.ModelSyncTriggerFailedOnly },
-        expected: {
-          success: true,
-          data: { items: [], statistics: { total: 0 } },
-        },
-      },
-      {
-        request: { action: RuntimeActionIds.ModelSyncGetLastExecution },
-        expected: {
-          success: true,
-          data: {
-            items: [{ channelId: 1, ok: false }],
-            statistics: { total: 1, successCount: 0, failureCount: 1 },
-          },
-        },
-      },
-      {
-        request: { action: RuntimeActionIds.ModelSyncGetProgress },
-        expected: { success: true, data: { isRunning: true } },
-      },
-      {
-        request: {
-          action: RuntimeActionIds.ModelSyncUpdateSettings,
-          settings: { enableSync: false },
-        },
-        expected: { success: true },
-      },
-      {
-        request: { action: RuntimeActionIds.ModelSyncGetPreferences },
-        expected: { success: true, data: { enabled: true } },
-      },
-      {
-        request: {
-          action: RuntimeActionIds.ModelSyncGetChannelUpstreamModelOptions,
-        },
-        expected: { success: true, data: ["gpt-4o"] },
-      },
-      {
-        request: { action: RuntimeActionIds.ModelSyncListChannels },
-        expected: {
-          success: true,
-          data: {
-            items: [{ id: 1, name: "Channel 1" }],
-            total: 1,
-            type_counts: {},
-          },
-        },
-      },
-      {
-        request: { action: "modelSync:unknown" },
-        expected: { success: false, error: "Unknown action" },
-      },
-    ]
-
-    for (const { request, expected } of cases) {
-      const sendResponse = vi.fn()
-      await handleManagedSiteModelSyncMessage(request, sendResponse)
-      expect(sendResponse).toHaveBeenCalledWith(expected)
-    }
+    })
 
     expect(executeSyncSpy).toHaveBeenNthCalledWith(1)
     expect(executeSyncSpy).toHaveBeenNthCalledWith(2, [1, 2])
@@ -352,22 +325,14 @@ describe("handleManagedSiteModelSyncMessage additional actions", () => {
   })
 
   it("returns structured errors when a model-sync action throws", async () => {
-    const { handleManagedSiteModelSyncMessage, modelSyncScheduler } =
-      await import("~/services/models/modelSync/scheduler")
+    const { modelSyncScheduler, triggerAllModelSync } = await import(
+      "~/services/models/modelSync/scheduler"
+    )
 
     vi.spyOn(modelSyncScheduler, "executeSync").mockRejectedValueOnce(
       new Error("sync boom"),
     )
 
-    const sendResponse = vi.fn()
-    await handleManagedSiteModelSyncMessage(
-      { action: RuntimeActionIds.ModelSyncTriggerAll },
-      sendResponse,
-    )
-
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: false,
-      error: "sync boom",
-    })
+    await expect(triggerAllModelSync()).rejects.toThrow("sync boom")
   })
 })

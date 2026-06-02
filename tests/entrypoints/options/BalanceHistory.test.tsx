@@ -13,6 +13,7 @@ import {
   getDayKeyFromUnixSeconds,
   subtractDaysFromDayKey,
 } from "~/services/history/dailyBalanceHistory/dayKeys"
+import { sendBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/messaging"
 import { dailyBalanceHistoryStorage } from "~/services/history/dailyBalanceHistory/storage"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -22,9 +23,9 @@ import {
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import { BalanceHistoryMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { tagStorage } from "~/services/tags/tagStorage"
 import { DAILY_BALANCE_HISTORY_STORE_SCHEMA_VERSION } from "~/types/dailyBalanceHistory"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
 import { fireEvent, render, screen, waitFor } from "~~/tests/test-utils/render"
 
@@ -77,6 +78,10 @@ vi.mock("~/services/history/dailyBalanceHistory/storage", () => ({
   dailyBalanceHistoryStorage: { getStore: vi.fn() },
 }))
 
+vi.mock("~/services/history/dailyBalanceHistory/messaging", () => ({
+  sendBalanceHistoryMessage: vi.fn(),
+}))
+
 vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: startProductAnalyticsActionMock,
   trackProductAnalyticsActionStarted: trackProductAnalyticsActionStartedMock,
@@ -96,7 +101,6 @@ vi.mock("~/utils/browser/browserApi", async () => {
   return {
     ...actual,
     hasAlarmsAPI: vi.fn(() => true),
-    sendRuntimeMessage: vi.fn(),
   }
 })
 
@@ -744,7 +748,9 @@ describe("BalanceHistory options page", () => {
           },
         },
       } as any)
-      vi.mocked(sendRuntimeMessage).mockResolvedValue({ success: true } as any)
+      vi.mocked(sendBalanceHistoryMessage).mockResolvedValue({
+        success: true,
+      } as any)
 
       render(<BalanceHistory />)
 
@@ -759,10 +765,10 @@ describe("BalanceHistory options page", () => {
       )
 
       await waitFor(() => {
-        expect(vi.mocked(sendRuntimeMessage)).toHaveBeenCalledWith({
-          action: "balanceHistory:refreshNow",
-          accountIds: ["a1"],
-        })
+        expect(vi.mocked(sendBalanceHistoryMessage)).toHaveBeenCalledWith(
+          BalanceHistoryMessageTypes.RefreshNow,
+          { accountIds: ["a1"] },
+        )
       })
 
       expect(
@@ -826,7 +832,9 @@ describe("BalanceHistory options page", () => {
         } as any)
         .mockReturnValueOnce(deferredStore.promise)
 
-      vi.mocked(sendRuntimeMessage).mockResolvedValue({ success: true } as any)
+      vi.mocked(sendBalanceHistoryMessage).mockResolvedValue({
+        success: true,
+      } as any)
 
       render(<BalanceHistory />)
 
@@ -924,7 +932,9 @@ describe("BalanceHistory options page", () => {
           },
         },
       } as any)
-      vi.mocked(sendRuntimeMessage).mockResolvedValue({ success: false } as any)
+      vi.mocked(sendBalanceHistoryMessage).mockResolvedValue({
+        success: false,
+      } as any)
 
       render(<BalanceHistory />)
 
@@ -938,9 +948,10 @@ describe("BalanceHistory options page", () => {
       )
 
       await waitFor(() => {
-        expect(vi.mocked(sendRuntimeMessage)).toHaveBeenCalledWith({
-          action: "balanceHistory:refreshNow",
-        })
+        expect(vi.mocked(sendBalanceHistoryMessage)).toHaveBeenCalledWith(
+          BalanceHistoryMessageTypes.RefreshNow,
+          undefined,
+        )
       })
 
       expect(vi.mocked(toast.error)).toHaveBeenCalledWith(
@@ -963,7 +974,9 @@ describe("BalanceHistory options page", () => {
   })
 
   it("prunes balance history and reloads the page after a successful runtime request", async () => {
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({ success: true } as any)
+    vi.mocked(sendBalanceHistoryMessage).mockResolvedValue({
+      success: true,
+    } as any)
 
     render(<BalanceHistory />)
 
@@ -977,9 +990,9 @@ describe("BalanceHistory options page", () => {
     )
 
     await waitFor(() => {
-      expect(vi.mocked(sendRuntimeMessage)).toHaveBeenCalledWith({
-        action: "balanceHistory:prune",
-      })
+      expect(vi.mocked(sendBalanceHistoryMessage)).toHaveBeenCalledWith(
+        BalanceHistoryMessageTypes.Prune,
+      )
     })
 
     expect(
@@ -1004,7 +1017,9 @@ describe("BalanceHistory options page", () => {
   })
 
   it("shows a fallback runtime error when prune fails without a server message", async () => {
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({ success: false } as any)
+    vi.mocked(sendBalanceHistoryMessage).mockResolvedValue({
+      success: false,
+    } as any)
 
     render(<BalanceHistory />)
 
@@ -1018,9 +1033,9 @@ describe("BalanceHistory options page", () => {
     )
 
     await waitFor(() => {
-      expect(vi.mocked(sendRuntimeMessage)).toHaveBeenCalledWith({
-        action: "balanceHistory:prune",
-      })
+      expect(vi.mocked(sendBalanceHistoryMessage)).toHaveBeenCalledWith(
+        BalanceHistoryMessageTypes.Prune,
+      )
     })
 
     expect(vi.mocked(toast.error)).toHaveBeenCalledWith(

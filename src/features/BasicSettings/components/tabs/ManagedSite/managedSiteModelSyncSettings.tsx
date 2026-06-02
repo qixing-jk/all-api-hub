@@ -19,11 +19,11 @@ import {
   type CompactMultiSelectOption,
 } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { normalizeChannelFilters } from "~/services/managedSites/channelModelFilterRules"
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import type { ModelMetadata } from "~/services/models/modelMetadata/types"
+import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -35,13 +35,13 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsActionId,
 } from "~/services/productAnalytics/events"
+import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import {
   DEFAULT_CHANNEL_MODEL_FILTER_PROBE_IDS,
   isProbeChannelModelFilterRule,
 } from "~/types/channelModelFilters"
 import type { ManagedSiteModelSyncPreferences } from "~/types/managedSiteModelSync"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
@@ -174,9 +174,9 @@ export default function ManagedSiteModelSyncSettings() {
         setOptionsLoading(true)
         setOptionsError(null)
 
-        const response = await sendRuntimeMessage({
-          action: RuntimeActionIds.ModelSyncGetChannelUpstreamModelOptions,
-        })
+        const response = await sendModelSyncMessage(
+          ModelSyncMessageTypes.GetChannelUpstreamModelOptions,
+        )
 
         if (
           response?.success &&

@@ -1,9 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   channelConfigStorage,
-  handleChannelConfigMessage,
+  resolveChannelConfigGetMessage,
+  resolveChannelConfigUpsertFiltersMessage,
 } from "~/services/managedSites/channelConfigStorage"
 
 const storageData = new Map<string, any>()
@@ -305,39 +305,29 @@ describe("channelConfigStorage", () => {
     setSpy.mockRestore()
   })
 
-  it("handles get and upsert runtime messages", async () => {
-    const getResponse = vi.fn()
-    await handleChannelConfigMessage(
-      {
-        action: RuntimeActionIds.ChannelConfigGet,
-        channelId: 12,
-      },
-      getResponse,
-    )
+  it("handles typed get and upsert runtime messages", async () => {
+    const getResponse = await resolveChannelConfigGetMessage({
+      channelId: 12,
+    })
 
-    expect(getResponse).toHaveBeenCalledWith({
+    expect(getResponse).toEqual({
       success: true,
       data: expect.objectContaining({ channelId: 12 }),
     })
 
-    const upsertResponse = vi.fn()
-    await handleChannelConfigMessage(
-      {
-        action: RuntimeActionIds.ChannelConfigUpsertFilters,
-        channelId: 12,
-        filters: [
-          {
-            name: " Include GPT ",
-            pattern: "gpt",
-            isRegex: false,
-            enabled: true,
-          },
-        ],
-      },
-      upsertResponse,
-    )
+    const upsertResponse = await resolveChannelConfigUpsertFiltersMessage({
+      channelId: 12,
+      filters: [
+        {
+          name: " Include GPT ",
+          pattern: "gpt",
+          isRegex: false,
+          enabled: true,
+        },
+      ],
+    })
 
-    expect(upsertResponse).toHaveBeenCalledWith({
+    expect(upsertResponse).toEqual({
       success: true,
       data: [
         expect.objectContaining({
@@ -402,23 +392,17 @@ describe("channelConfigStorage", () => {
   })
 
   it("rejects invalid message payloads and unknown actions", async () => {
-    const invalidIdResponse = vi.fn()
-    await handleChannelConfigMessage(
-      {
-        action: RuntimeActionIds.ChannelConfigGet,
+    await expect(
+      resolveChannelConfigGetMessage({
         channelId: 0,
-      },
-      invalidIdResponse,
-    )
-    expect(invalidIdResponse).toHaveBeenCalledWith({
+      }),
+    ).resolves.toEqual({
       success: false,
       error: "channelId is required",
     })
 
-    const invalidRegexResponse = vi.fn()
-    await handleChannelConfigMessage(
-      {
-        action: RuntimeActionIds.ChannelConfigUpsertFilters,
+    await expect(
+      resolveChannelConfigUpsertFiltersMessage({
         channelId: 12,
         filters: [
           {
@@ -427,22 +411,10 @@ describe("channelConfigStorage", () => {
             isRegex: true,
           },
         ],
-      },
-      invalidRegexResponse,
-    )
-    expect(invalidRegexResponse).toHaveBeenCalledWith({
+      }),
+    ).resolves.toEqual({
       success: false,
       error: expect.stringContaining("Invalid regex pattern"),
-    })
-
-    const unknownActionResponse = vi.fn()
-    await handleChannelConfigMessage(
-      { action: "channelConfig:unknown" },
-      unknownActionResponse,
-    )
-    expect(unknownActionResponse).toHaveBeenCalledWith({
-      success: false,
-      error: "Unknown action",
     })
   })
 
@@ -495,24 +467,18 @@ describe("channelConfigStorage", () => {
   })
 
   it("surfaces non-array and missing-field filter validation errors through the message handler", async () => {
-    const nonArrayResponse = vi.fn()
-    await handleChannelConfigMessage(
-      {
-        action: RuntimeActionIds.ChannelConfigUpsertFilters,
+    await expect(
+      resolveChannelConfigUpsertFiltersMessage({
         channelId: 12,
-        filters: "not-an-array",
-      },
-      nonArrayResponse,
-    )
-    expect(nonArrayResponse).toHaveBeenCalledWith({
+        filters: "not-an-array" as any,
+      }),
+    ).resolves.toEqual({
       success: false,
       error: "Filters must be an array",
     })
 
-    const missingPatternResponse = vi.fn()
-    await handleChannelConfigMessage(
-      {
-        action: RuntimeActionIds.ChannelConfigUpsertFilters,
+    await expect(
+      resolveChannelConfigUpsertFiltersMessage({
         channelId: 12,
         filters: [
           {
@@ -520,10 +486,8 @@ describe("channelConfigStorage", () => {
             pattern: "   ",
           },
         ],
-      },
-      missingPatternResponse,
-    )
-    expect(missingPatternResponse).toHaveBeenCalledWith({
+      }),
+    ).resolves.toEqual({
       success: false,
       error: "Filter pattern is required",
     })

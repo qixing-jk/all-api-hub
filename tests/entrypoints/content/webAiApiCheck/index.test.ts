@@ -11,9 +11,10 @@ import {
 } from "~/entrypoints/content/webAiApiCheck/events"
 import { showApiCheckConfirmToast } from "~/entrypoints/content/webAiApiCheck/utils/apiCheckToasts"
 import {
-  checkPermissionViaMessage,
-  sendRuntimeMessage,
-} from "~/utils/browser/browserApi"
+  sendWebAiApiCheckMessage,
+  WebAiApiCheckMessageTypes,
+} from "~/services/verification/webAiApiCheck/messaging"
+import { checkPermissionViaMessage } from "~/utils/browser/browserApi"
 import {
   buildApiCheckClipboardText,
   buildApiKey,
@@ -32,10 +33,19 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
     await importOriginal<typeof import("~/utils/browser/browserApi")>()
   return {
     ...actual,
-    sendRuntimeMessage: vi.fn(),
     checkPermissionViaMessage: vi.fn(),
   }
 })
+
+vi.mock("~/services/verification/webAiApiCheck/messaging", () => ({
+  WebAiApiCheckMessageTypes: {
+    ShouldPrompt: "webAiApiCheck:shouldPrompt",
+    FetchModels: "webAiApiCheck:fetchModels",
+    RunProbe: "webAiApiCheck:runProbe",
+    SaveProfile: "webAiApiCheck:saveProfile",
+  },
+  sendWebAiApiCheckMessage: vi.fn(),
+}))
 
 vi.mock("~/entrypoints/content/webAiApiCheck/utils/apiCheckToasts", () => ({
   showApiCheckConfirmToast: vi.fn(),
@@ -163,12 +173,14 @@ describe("setupWebAiApiCheckContent", () => {
 
   it("opens modal from auto-detect on copy when whitelisted + confirmed", async () => {
     const apiKey = buildApiKey()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckShouldPrompt) {
-        return { success: true, shouldPrompt: true }
-      }
-      return { success: false }
-    })
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.ShouldPrompt) {
+          return { success: true, shouldPrompt: true }
+        }
+        return { success: false }
+      },
+    )
     vi.mocked(showApiCheckConfirmToast).mockResolvedValue(true)
 
     const cleanup = setupWebAiApiCheckContent()
@@ -187,16 +199,18 @@ describe("setupWebAiApiCheckContent", () => {
   })
 
   it("opens auto-detect for enhanced matches when enhanced auto-detect is enabled", async () => {
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckShouldPrompt) {
-        return {
-          success: true,
-          shouldPrompt: true,
-          enhancedShouldPrompt: true,
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.ShouldPrompt) {
+          return {
+            success: true,
+            shouldPrompt: true,
+            enhancedShouldPrompt: true,
+          }
         }
-      }
-      return { success: false }
-    })
+        return { success: false }
+      },
+    )
     vi.mocked(showApiCheckConfirmToast).mockResolvedValue(true)
 
     const cleanup = setupWebAiApiCheckContent()
@@ -239,16 +253,18 @@ describe("setupWebAiApiCheckContent", () => {
       toString: () => selectedText,
     } as any)
 
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckShouldPrompt) {
-        return {
-          success: true,
-          shouldPrompt: true,
-          enhancedShouldPrompt: false,
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.ShouldPrompt) {
+          return {
+            success: true,
+            shouldPrompt: true,
+            enhancedShouldPrompt: false,
+          }
         }
-      }
-      return { success: false }
-    })
+        return { success: false }
+      },
+    )
     vi.mocked(showApiCheckConfirmToast).mockResolvedValue(true)
 
     const cleanup = setupWebAiApiCheckContent({
@@ -267,16 +283,16 @@ describe("setupWebAiApiCheckContent", () => {
       ),
     )
 
-    expect(sendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.ApiCheckShouldPrompt,
-      pageUrl: window.location.href,
-    })
+    expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(
+      WebAiApiCheckMessageTypes.ShouldPrompt,
+      { pageUrl: window.location.href },
+    )
     expect(showApiCheckConfirmToast).toHaveBeenCalledWith({
       usesEnhancedResult: false,
     })
 
     cleanup()
-    vi.mocked(sendRuntimeMessage).mockClear()
+    vi.mocked(sendWebAiApiCheckMessage).mockClear()
     vi.mocked(showApiCheckConfirmToast).mockClear()
     vi.mocked(dispatchOpenApiCheckModal).mockClear()
     getSelectionSpy.mockReturnValue({
@@ -290,22 +306,24 @@ describe("setupWebAiApiCheckContent", () => {
     document.dispatchEvent(new Event("pointerup", { bubbles: true }))
     await flushMicrotasks()
 
-    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+    expect(sendWebAiApiCheckMessage).not.toHaveBeenCalled()
     expect(showApiCheckConfirmToast).not.toHaveBeenCalled()
     expect(dispatchOpenApiCheckModal).not.toHaveBeenCalled()
   })
 
   it("does not prompt for enhanced-only matches when enhanced auto-detect is disabled", async () => {
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckShouldPrompt) {
-        return {
-          success: true,
-          shouldPrompt: true,
-          enhancedShouldPrompt: false,
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.ShouldPrompt) {
+          return {
+            success: true,
+            shouldPrompt: true,
+            enhancedShouldPrompt: false,
+          }
         }
-      }
-      return { success: false }
-    })
+        return { success: false }
+      },
+    )
 
     const cleanup = setupWebAiApiCheckContent()
 
@@ -319,7 +337,7 @@ describe("setupWebAiApiCheckContent", () => {
       ),
     )
 
-    await waitFor(() => expect(sendRuntimeMessage).toHaveBeenCalled())
+    await waitFor(() => expect(sendWebAiApiCheckMessage).toHaveBeenCalled())
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(showApiCheckConfirmToast).not.toHaveBeenCalled()
@@ -329,7 +347,7 @@ describe("setupWebAiApiCheckContent", () => {
   })
 
   it("does not auto-prompt for manual-only unseparated long keys", async () => {
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
       success: true,
       shouldPrompt: true,
       enhancedShouldPrompt: true,
@@ -357,7 +375,7 @@ describe("setupWebAiApiCheckContent", () => {
 
   it("does not open modal when the auto-detect confirmation toast is dismissed", async () => {
     const apiKey = buildApiKey()
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
       success: true,
       shouldPrompt: true,
     })
@@ -378,7 +396,7 @@ describe("setupWebAiApiCheckContent", () => {
 
   it("does not open modal when background vetoes shouldPrompt", async () => {
     const apiKey = buildApiKey()
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
       success: true,
       shouldPrompt: false,
     })
@@ -395,7 +413,7 @@ describe("setupWebAiApiCheckContent", () => {
       ),
     )
 
-    await waitFor(() => expect(sendRuntimeMessage).toHaveBeenCalled())
+    await waitFor(() => expect(sendWebAiApiCheckMessage).toHaveBeenCalled())
     await new Promise((resolve) => setTimeout(resolve, 0))
 
     expect(showApiCheckConfirmToast).not.toHaveBeenCalled()
@@ -406,7 +424,7 @@ describe("setupWebAiApiCheckContent", () => {
 
   it("logs warn and skips auto-detect when shouldPrompt lookup fails", async () => {
     const lookupError = new Error("storage unavailable")
-    vi.mocked(sendRuntimeMessage).mockRejectedValue(lookupError)
+    vi.mocked(sendWebAiApiCheckMessage).mockRejectedValue(lookupError)
 
     const cleanup = setupWebAiApiCheckContent()
 
@@ -435,7 +453,7 @@ describe("setupWebAiApiCheckContent", () => {
 
   it("reads clipboard on click for copy-like targets and opens modal", async () => {
     const apiKey = buildApiKey()
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
       success: true,
       shouldPrompt: true,
     })
@@ -485,7 +503,7 @@ describe("setupWebAiApiCheckContent", () => {
     vi.spyOn(window, "getSelection").mockReturnValue({
       toString: () => selectedText,
     } as any)
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
       success: true,
       shouldPrompt: true,
     })
@@ -524,7 +542,7 @@ describe("setupWebAiApiCheckContent", () => {
 
   it("ignores events originating from the content UI host element", async () => {
     const apiKey = buildApiKey()
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
       success: true,
       shouldPrompt: true,
     })
@@ -549,7 +567,7 @@ describe("setupWebAiApiCheckContent", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+    expect(sendWebAiApiCheckMessage).not.toHaveBeenCalled()
     expect(dispatchOpenApiCheckModal).not.toHaveBeenCalled()
 
     cleanup()
@@ -585,7 +603,7 @@ describe("setupWebAiApiCheckContent", () => {
     await vi.advanceTimersByTimeAsync(500)
     await flushMicrotasks()
 
-    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+    expect(sendWebAiApiCheckMessage).not.toHaveBeenCalled()
     expect(checkPermissionViaMessage).not.toHaveBeenCalled()
     expect(readText).not.toHaveBeenCalled()
     expect(dispatchOpenApiCheckModal).not.toHaveBeenCalled()
@@ -612,7 +630,7 @@ describe("setupWebAiApiCheckContent", () => {
     await vi.advanceTimersByTimeAsync(500)
     await flushMicrotasks()
 
-    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+    expect(sendWebAiApiCheckMessage).not.toHaveBeenCalled()
     expect(checkPermissionViaMessage).not.toHaveBeenCalled()
     expect(dispatchOpenApiCheckModal).not.toHaveBeenCalled()
 
@@ -623,7 +641,7 @@ describe("setupWebAiApiCheckContent", () => {
     vi.useFakeTimers()
 
     const readText = vi.fn()
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
       success: true,
       shouldPrompt: false,
       enhancedShouldPrompt: false,
@@ -647,10 +665,10 @@ describe("setupWebAiApiCheckContent", () => {
     await vi.advanceTimersByTimeAsync(500)
     await flushMicrotasks()
 
-    expect(sendRuntimeMessage).toHaveBeenCalledWith({
-      action: RuntimeActionIds.ApiCheckShouldPrompt,
-      pageUrl: window.location.href,
-    })
+    expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(
+      WebAiApiCheckMessageTypes.ShouldPrompt,
+      { pageUrl: window.location.href },
+    )
     expect(checkPermissionViaMessage).not.toHaveBeenCalled()
     expect(readText).not.toHaveBeenCalled()
     expect(dispatchOpenApiCheckModal).not.toHaveBeenCalled()
@@ -699,7 +717,7 @@ describe("setupWebAiApiCheckContent", () => {
     const clipboardError = new Error("clipboard read blocked")
     const readText = vi.fn().mockRejectedValue(clipboardError)
 
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
       success: true,
       shouldPrompt: true,
     })
@@ -744,7 +762,7 @@ describe("setupWebAiApiCheckContent", () => {
       }),
     )
 
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
       success: true,
       shouldPrompt: true,
     })
@@ -786,7 +804,7 @@ describe("setupWebAiApiCheckContent", () => {
       apiKey: buildApiKey(),
     })
 
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
       success: true,
       shouldPrompt: false,
     })
@@ -795,12 +813,12 @@ describe("setupWebAiApiCheckContent", () => {
 
     document.dispatchEvent(makeClipboardEvent("copy", clipboardText))
     await flushMicrotasks()
-    expect(sendRuntimeMessage).toHaveBeenCalledTimes(1)
+    expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(1)
 
     vi.setSystemTime(new Date("2025-01-01T00:00:00.500Z"))
     document.dispatchEvent(makeClipboardEvent("copy", clipboardText))
     await flushMicrotasks()
-    expect(sendRuntimeMessage).toHaveBeenCalledTimes(1)
+    expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(1)
 
     expect(showApiCheckConfirmToast).not.toHaveBeenCalled()
     expect(dispatchOpenApiCheckModal).not.toHaveBeenCalled()
@@ -814,7 +832,7 @@ describe("setupWebAiApiCheckContent", () => {
 
     const openError = new Error("host mount failed")
 
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
       success: true,
       shouldPrompt: true,
     })
@@ -862,7 +880,7 @@ describe("setupWebAiApiCheckContent", () => {
   it("suppresses repeat auto-detect prompts during modal-close cooldown", async () => {
     const nowSpy = vi.spyOn(Date, "now")
     const apiKey = buildApiKey()
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
       success: true,
       shouldPrompt: true,
     })
@@ -889,7 +907,7 @@ describe("setupWebAiApiCheckContent", () => {
       }),
     )
 
-    vi.mocked(sendRuntimeMessage).mockResolvedValue({
+    vi.mocked(sendWebAiApiCheckMessage).mockResolvedValue({
       success: true,
       shouldPrompt: true,
     })
@@ -908,7 +926,7 @@ describe("setupWebAiApiCheckContent", () => {
 
     await new Promise((resolve) => setTimeout(resolve, 0))
 
-    expect(sendRuntimeMessage).toHaveBeenCalledTimes(1)
+    expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(1)
     expect(showApiCheckConfirmToast).toHaveBeenCalledTimes(1)
     expect(dispatchOpenApiCheckModal).toHaveBeenCalledTimes(1)
 

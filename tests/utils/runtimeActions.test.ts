@@ -5,6 +5,7 @@ import {
   hasRuntimeActionPrefix,
   RuntimeActionIds,
   RuntimeActionPrefixes,
+  RuntimeMessageTypes,
 } from "~/constants/runtimeActions"
 
 describe("runtimeActions registry and helpers", () => {
@@ -28,92 +29,64 @@ describe("runtimeActions registry and helpers", () => {
 
   it("matches prefixes safely (null/undefined/non-string never match)", () => {
     expect(
-      hasRuntimeActionPrefix(undefined, RuntimeActionPrefixes.ModelSync),
+      hasRuntimeActionPrefix(undefined, RuntimeActionPrefixes.OpenSettings),
     ).toBe(false)
-    expect(hasRuntimeActionPrefix(null, RuntimeActionPrefixes.ModelSync)).toBe(
-      false,
-    )
-    expect(hasRuntimeActionPrefix(123, RuntimeActionPrefixes.ModelSync)).toBe(
-      false,
-    )
+    expect(
+      hasRuntimeActionPrefix(null, RuntimeActionPrefixes.OpenSettings),
+    ).toBe(false)
+    expect(
+      hasRuntimeActionPrefix(123, RuntimeActionPrefixes.OpenSettings),
+    ).toBe(false)
     expect(
       hasRuntimeActionPrefix(
-        RuntimeActionIds.ModelSyncGetNextRun,
-        RuntimeActionPrefixes.ModelSync,
+        "openSettings:webAiApiCheck",
+        RuntimeActionPrefixes.OpenSettings,
       ),
     ).toBe(true)
     expect(
       hasRuntimeActionPrefix(
-        "modelSyncX:getNextRun",
-        RuntimeActionPrefixes.ModelSync,
+        "openSettingsX:webAiApiCheck",
+        RuntimeActionPrefixes.OpenSettings,
       ),
     ).toBe(false)
   })
 
   it("composes stable on-the-wire action IDs", () => {
     expect(
-      composeRuntimeAction(
-        RuntimeActionPrefixes.ExternalCheckIn,
-        "openAndMark",
-      ),
-    ).toBe(RuntimeActionIds.ExternalCheckInOpenAndMark)
+      composeRuntimeAction(RuntimeActionPrefixes.CookieInterceptor, "trackUrl"),
+    ).toBe("cookieInterceptor:trackUrl")
     expect(RuntimeActionIds.PermissionsCheck).toBe("permissions:check")
-    expect(RuntimeActionIds.ApiCheckShouldPrompt).toBe("apiCheck:shouldPrompt")
-    expect(RuntimeActionIds.ApiCheckSaveProfile).toBe("apiCheck:saveProfile")
+    expect(RuntimeActionIds.ApiCheckContextMenuTrigger).toBe(
+      "apiCheck:contextMenuTrigger",
+    )
+    expect(RuntimeActionIds.RedemptionAssistContextMenuTrigger).toBe(
+      "redemptionAssist:contextMenuTrigger",
+    )
   })
 
-  it("routes auto-refresh actions via a single namespaced prefix", () => {
-    expect(
-      hasRuntimeActionPrefix(undefined, RuntimeActionPrefixes.AutoRefresh),
-    ).toBe(false)
-    expect(
-      hasRuntimeActionPrefix(null, RuntimeActionPrefixes.AutoRefresh),
-    ).toBe(false)
-    expect(hasRuntimeActionPrefix(123, RuntimeActionPrefixes.AutoRefresh)).toBe(
-      false,
+  it("keeps raw runtime action IDs for non-typed runtime routes", () => {
+    expect(RuntimeActionIds.ContentGetLocalStorage).toBe("getLocalStorage")
+    expect(RuntimeActionIds.ContentPerformTempWindowFetch).toBe(
+      "performTempWindowFetch",
     )
+    expect(RuntimeActionIds.OpenTempWindow).toBe("openTempWindow")
+    expect(RuntimeActionIds.TempWindowFetch).toBe("tempWindowFetch")
+    expect(RuntimeActionIds.CloudflareGuardLog).toBe("cloudflareGuardLog")
+    expect(RuntimeActionIds.OpenSettingsWebAiApiCheck).toBe(
+      "openSettings:webAiApiCheck",
+    )
+    expect(RuntimeActionIds.OpenFeedbackBugReport).toBe(
+      "feedback:openBugReport",
+    )
+    expect(RuntimeActionIds.BalanceHistoryDebugSeedEstimateSnapshots).toBe(
+      "balanceHistory:debugSeedEstimateSnapshots",
+    )
+  })
 
-    expect(
-      hasRuntimeActionPrefix(
-        "autoRefresh:ping",
-        RuntimeActionPrefixes.AutoRefresh,
-      ),
-    ).toBe(true)
-    expect(
-      hasRuntimeActionPrefix(
-        RuntimeActionIds.AutoRefreshSetup,
-        RuntimeActionPrefixes.AutoRefresh,
-      ),
-    ).toBe(true)
-    expect(
-      hasRuntimeActionPrefix(
-        RuntimeActionIds.AutoRefreshRefreshNow,
-        RuntimeActionPrefixes.AutoRefresh,
-      ),
-    ).toBe(true)
-    expect(
-      hasRuntimeActionPrefix(
-        RuntimeActionIds.AutoRefreshStop,
-        RuntimeActionPrefixes.AutoRefresh,
-      ),
-    ).toBe(true)
-    expect(
-      hasRuntimeActionPrefix(
-        RuntimeActionIds.AutoRefreshUpdateSettings,
-        RuntimeActionPrefixes.AutoRefresh,
-      ),
-    ).toBe(true)
-    expect(
-      hasRuntimeActionPrefix(
-        RuntimeActionIds.AutoRefreshGetStatus,
-        RuntimeActionPrefixes.AutoRefresh,
-      ),
-    ).toBe(true)
-    expect(
-      hasRuntimeActionPrefix(
-        RuntimeActionIds.AutoCheckinGetStatus,
-        RuntimeActionPrefixes.AutoRefresh,
-      ),
-    ).toBe(false)
+  it("keeps broadcast runtime message types stable", () => {
+    expect(RuntimeMessageTypes.AccountKeyRepairProgress).toBe(
+      "ACCOUNT_KEY_REPAIR_PROGRESS",
+    )
+    expect(RuntimeMessageTypes.TAG_STORE_UPDATE).toBe("TAG_STORE_UPDATE")
   })
 })

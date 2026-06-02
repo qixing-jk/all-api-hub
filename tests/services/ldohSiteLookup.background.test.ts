@@ -262,24 +262,4 @@ describe("ldohSiteLookup background refresh", () => {
     await expect(first).resolves.toEqual({ success: true, cachedCount: 1 })
     await expect(second).resolves.toEqual({ success: true, cachedCount: 1 })
   })
-
-  it("returns an error for unknown runtime actions", async () => {
-    vi.resetModules()
-
-    const { handleLdohSiteLookupMessage } = await import(
-      "~/services/integrations/ldohSiteLookup/background"
-    )
-
-    const sendResponse = vi.fn()
-
-    await handleLdohSiteLookupMessage(
-      { action: "unknown-action" } as any,
-      sendResponse,
-    )
-
-    expect(sendResponse).toHaveBeenCalledWith({
-      success: false,
-      error: "Unknown LDOH site lookup action.",
-    })
-  })
 })

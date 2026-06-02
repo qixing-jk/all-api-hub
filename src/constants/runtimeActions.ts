@@ -9,28 +9,15 @@
  */
 export const RuntimeActionPrefixes = {
   AccountDialog: "accountDialog:",
-  AccountKeyRepair: "accountKeyRepair:",
   ApiCheck: "apiCheck:",
   AutoCheckin: "autoCheckin:",
   AutoCheckinPretrigger: "autoCheckinPretrigger:",
-  AutoRefresh: "autoRefresh:",
   BalanceHistory: "balanceHistory:",
-  ChannelConfig: "channelConfig:",
   CookieInterceptor: "cookieInterceptor:",
-  ExternalCheckIn: "externalCheckIn:",
   Feedback: "feedback:",
-  LdohSiteLookup: "ldohSiteLookup:",
-  ModelSync: "modelSync:",
   OpenSettings: "openSettings:",
   Permissions: "permissions:",
-  Preferences: "preferences:",
-  ProductAnalytics: "productAnalytics:",
-  ReleaseUpdate: "releaseUpdate:",
   RedemptionAssist: "redemptionAssist:",
-  SiteAnnouncements: "siteAnnouncements:",
-  TaskNotifications: "taskNotifications:",
-  UsageHistory: "usageHistory:",
-  WebdavAutoSync: "webdavAutoSync:",
 } as const
 
 type RuntimeActionPrefix =
@@ -57,34 +44,9 @@ export const RuntimeActionIds = {
     "importCookieAuthSessionCookie",
   ),
 
-  AccountKeyRepairStart: composeRuntimeAction(
-    RuntimeActionPrefixes.AccountKeyRepair,
-    "start",
-  ),
-  AccountKeyRepairGetProgress: composeRuntimeAction(
-    RuntimeActionPrefixes.AccountKeyRepair,
-    "getProgress",
-  ),
-
   ApiCheckContextMenuTrigger: composeRuntimeAction(
     RuntimeActionPrefixes.ApiCheck,
     "contextMenuTrigger",
-  ),
-  ApiCheckShouldPrompt: composeRuntimeAction(
-    RuntimeActionPrefixes.ApiCheck,
-    "shouldPrompt",
-  ),
-  ApiCheckFetchModels: composeRuntimeAction(
-    RuntimeActionPrefixes.ApiCheck,
-    "fetchModels",
-  ),
-  ApiCheckRunProbe: composeRuntimeAction(
-    RuntimeActionPrefixes.ApiCheck,
-    "runProbe",
-  ),
-  ApiCheckSaveProfile: composeRuntimeAction(
-    RuntimeActionPrefixes.ApiCheck,
-    "saveProfile",
   ),
 
   PermissionsCheck: composeRuntimeAction(
@@ -126,267 +88,23 @@ export const RuntimeActionIds = {
     "openBugReport",
   ),
 
-  PreferencesUpdateActionClickBehavior: composeRuntimeAction(
-    RuntimeActionPrefixes.Preferences,
-    "updateActionClickBehavior",
-  ),
-  PreferencesRefreshContextMenus: composeRuntimeAction(
-    RuntimeActionPrefixes.Preferences,
-    "refreshContextMenus",
-  ),
-
-  ProductAnalyticsTrackEvent: composeRuntimeAction(
-    RuntimeActionPrefixes.ProductAnalytics,
-    "trackEvent",
-  ),
-  ProductAnalyticsTrackSiteEcosystemSnapshot: composeRuntimeAction(
-    RuntimeActionPrefixes.ProductAnalytics,
-    "trackSiteEcosystemSnapshot",
-  ),
-  ProductAnalyticsTrackSettingsSnapshot: composeRuntimeAction(
-    RuntimeActionPrefixes.ProductAnalytics,
-    "trackSettingsSnapshot",
-  ),
-
-  ReleaseUpdateGetStatus: composeRuntimeAction(
-    RuntimeActionPrefixes.ReleaseUpdate,
-    "getStatus",
-  ),
-  ReleaseUpdateCheckNow: composeRuntimeAction(
-    RuntimeActionPrefixes.ReleaseUpdate,
-    "checkNow",
-  ),
-
-  AutoRefreshSetup: composeRuntimeAction(
-    RuntimeActionPrefixes.AutoRefresh,
-    "setup",
-  ),
-  AutoRefreshRefreshNow: composeRuntimeAction(
-    RuntimeActionPrefixes.AutoRefresh,
-    "refreshNow",
-  ),
-  AutoRefreshStop: composeRuntimeAction(
-    RuntimeActionPrefixes.AutoRefresh,
-    "stop",
-  ),
-  AutoRefreshUpdateSettings: composeRuntimeAction(
-    RuntimeActionPrefixes.AutoRefresh,
-    "updateSettings",
-  ),
-  AutoRefreshGetStatus: composeRuntimeAction(
-    RuntimeActionPrefixes.AutoRefresh,
-    "getStatus",
-  ),
-
-  AutoCheckinRunNow: composeRuntimeAction(
-    RuntimeActionPrefixes.AutoCheckin,
-    "runNow",
-  ),
   AutoCheckinRunCompleted: composeRuntimeAction(
     RuntimeActionPrefixes.AutoCheckin,
     "runCompleted",
-  ),
-  AutoCheckinDebugTriggerDailyAlarmNow: composeRuntimeAction(
-    RuntimeActionPrefixes.AutoCheckin,
-    "debugTriggerDailyAlarmNow",
-  ),
-  AutoCheckinDebugTriggerRetryAlarmNow: composeRuntimeAction(
-    RuntimeActionPrefixes.AutoCheckin,
-    "debugTriggerRetryAlarmNow",
-  ),
-  AutoCheckinDebugResetLastDailyRunDay: composeRuntimeAction(
-    RuntimeActionPrefixes.AutoCheckin,
-    "debugResetLastDailyRunDay",
-  ),
-  AutoCheckinDebugScheduleDailyAlarmForToday: composeRuntimeAction(
-    RuntimeActionPrefixes.AutoCheckin,
-    "debugScheduleDailyAlarmForToday",
-  ),
-  AutoCheckinPretriggerDailyOnUiOpen: composeRuntimeAction(
-    RuntimeActionPrefixes.AutoCheckin,
-    "pretriggerDailyOnUiOpen",
-  ),
-  AutoCheckinRetryAccount: composeRuntimeAction(
-    RuntimeActionPrefixes.AutoCheckin,
-    "retryAccount",
-  ),
-  AutoCheckinGetAccountInfo: composeRuntimeAction(
-    RuntimeActionPrefixes.AutoCheckin,
-    "getAccountInfo",
-  ),
-  AutoCheckinGetStatus: composeRuntimeAction(
-    RuntimeActionPrefixes.AutoCheckin,
-    "getStatus",
-  ),
-  AutoCheckinUpdateSettings: composeRuntimeAction(
-    RuntimeActionPrefixes.AutoCheckin,
-    "updateSettings",
   ),
   AutoCheckinPretriggerStarted: composeRuntimeAction(
     RuntimeActionPrefixes.AutoCheckinPretrigger,
     "started",
   ),
 
-  ChannelConfigGet: composeRuntimeAction(
-    RuntimeActionPrefixes.ChannelConfig,
-    "get",
-  ),
-  ChannelConfigUpsertFilters: composeRuntimeAction(
-    RuntimeActionPrefixes.ChannelConfig,
-    "upsertFilters",
-  ),
-
-  ExternalCheckInOpenAndMark: composeRuntimeAction(
-    RuntimeActionPrefixes.ExternalCheckIn,
-    "openAndMark",
-  ),
-
-  LdohSiteLookupRefreshSites: composeRuntimeAction(
-    RuntimeActionPrefixes.LdohSiteLookup,
-    "refreshSites",
-  ),
-
-  ModelSyncGetNextRun: composeRuntimeAction(
-    RuntimeActionPrefixes.ModelSync,
-    "getNextRun",
-  ),
-  ModelSyncTriggerAll: composeRuntimeAction(
-    RuntimeActionPrefixes.ModelSync,
-    "triggerAll",
-  ),
-  ModelSyncTriggerSelected: composeRuntimeAction(
-    RuntimeActionPrefixes.ModelSync,
-    "triggerSelected",
-  ),
-  ModelSyncTriggerFailedOnly: composeRuntimeAction(
-    RuntimeActionPrefixes.ModelSync,
-    "triggerFailedOnly",
-  ),
-  ModelSyncGetLastExecution: composeRuntimeAction(
-    RuntimeActionPrefixes.ModelSync,
-    "getLastExecution",
-  ),
-  ModelSyncGetProgress: composeRuntimeAction(
-    RuntimeActionPrefixes.ModelSync,
-    "getProgress",
-  ),
-  ModelSyncUpdateSettings: composeRuntimeAction(
-    RuntimeActionPrefixes.ModelSync,
-    "updateSettings",
-  ),
-  ModelSyncGetPreferences: composeRuntimeAction(
-    RuntimeActionPrefixes.ModelSync,
-    "getPreferences",
-  ),
-  ModelSyncGetChannelUpstreamModelOptions: composeRuntimeAction(
-    RuntimeActionPrefixes.ModelSync,
-    "getChannelUpstreamModelOptions",
-  ),
-  ModelSyncListChannels: composeRuntimeAction(
-    RuntimeActionPrefixes.ModelSync,
-    "listChannels",
-  ),
-
-  RedemptionAssistUpdateSettings: composeRuntimeAction(
-    RuntimeActionPrefixes.RedemptionAssist,
-    "updateSettings",
-  ),
-  RedemptionAssistShouldPrompt: composeRuntimeAction(
-    RuntimeActionPrefixes.RedemptionAssist,
-    "shouldPrompt",
-  ),
-  RedemptionAssistAutoRedeem: composeRuntimeAction(
-    RuntimeActionPrefixes.RedemptionAssist,
-    "autoRedeem",
-  ),
-  RedemptionAssistAutoRedeemByUrl: composeRuntimeAction(
-    RuntimeActionPrefixes.RedemptionAssist,
-    "autoRedeemByUrl",
-  ),
   RedemptionAssistContextMenuTrigger: composeRuntimeAction(
     RuntimeActionPrefixes.RedemptionAssist,
     "contextMenuTrigger",
   ),
 
-  SiteAnnouncementsGetStatus: composeRuntimeAction(
-    RuntimeActionPrefixes.SiteAnnouncements,
-    "getStatus",
-  ),
-  SiteAnnouncementsListRecords: composeRuntimeAction(
-    RuntimeActionPrefixes.SiteAnnouncements,
-    "listRecords",
-  ),
-  SiteAnnouncementsCheckNow: composeRuntimeAction(
-    RuntimeActionPrefixes.SiteAnnouncements,
-    "checkNow",
-  ),
-  SiteAnnouncementsMarkRead: composeRuntimeAction(
-    RuntimeActionPrefixes.SiteAnnouncements,
-    "markRead",
-  ),
-  SiteAnnouncementsMarkAllRead: composeRuntimeAction(
-    RuntimeActionPrefixes.SiteAnnouncements,
-    "markAllRead",
-  ),
-  SiteAnnouncementsUpdatePreferences: composeRuntimeAction(
-    RuntimeActionPrefixes.SiteAnnouncements,
-    "updatePreferences",
-  ),
-
-  TaskNotificationsTest: composeRuntimeAction(
-    RuntimeActionPrefixes.TaskNotifications,
-    "test",
-  ),
-
-  UsageHistoryUpdateSettings: composeRuntimeAction(
-    RuntimeActionPrefixes.UsageHistory,
-    "updateSettings",
-  ),
-  UsageHistorySyncNow: composeRuntimeAction(
-    RuntimeActionPrefixes.UsageHistory,
-    "syncNow",
-  ),
-  UsageHistoryPrune: composeRuntimeAction(
-    RuntimeActionPrefixes.UsageHistory,
-    "prune",
-  ),
-
-  BalanceHistoryUpdateSettings: composeRuntimeAction(
-    RuntimeActionPrefixes.BalanceHistory,
-    "updateSettings",
-  ),
-  BalanceHistoryRefreshNow: composeRuntimeAction(
-    RuntimeActionPrefixes.BalanceHistory,
-    "refreshNow",
-  ),
-  BalanceHistoryPrune: composeRuntimeAction(
-    RuntimeActionPrefixes.BalanceHistory,
-    "prune",
-  ),
   BalanceHistoryDebugSeedEstimateSnapshots: composeRuntimeAction(
     RuntimeActionPrefixes.BalanceHistory,
     "debugSeedEstimateSnapshots",
-  ),
-
-  WebdavAutoSyncSetup: composeRuntimeAction(
-    RuntimeActionPrefixes.WebdavAutoSync,
-    "setup",
-  ),
-  WebdavAutoSyncSyncNow: composeRuntimeAction(
-    RuntimeActionPrefixes.WebdavAutoSync,
-    "syncNow",
-  ),
-  WebdavAutoSyncStop: composeRuntimeAction(
-    RuntimeActionPrefixes.WebdavAutoSync,
-    "stop",
-  ),
-  WebdavAutoSyncUpdateSettings: composeRuntimeAction(
-    RuntimeActionPrefixes.WebdavAutoSync,
-    "updateSettings",
-  ),
-  WebdavAutoSyncGetStatus: composeRuntimeAction(
-    RuntimeActionPrefixes.WebdavAutoSync,
-    "getStatus",
   ),
 
   ContentGetLocalStorage: "getLocalStorage",

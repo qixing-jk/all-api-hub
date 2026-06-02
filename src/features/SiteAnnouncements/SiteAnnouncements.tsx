@@ -6,7 +6,6 @@ import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettings
 import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
 import { EmptyState } from "~/components/ui/EmptyState"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
@@ -20,12 +19,13 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
   type ProductAnalyticsSurfaceId,
 } from "~/services/productAnalytics/events"
+import { SiteAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { sendSiteAnnouncementsMessage } from "~/services/siteAnnouncements/messaging"
 import type {
   SiteAnnouncementCheckResult,
   SiteAnnouncementRecord,
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { showResultToast } from "~/utils/core/toastHelpers"
 import { openSettingsTab } from "~/utils/navigation"
@@ -74,16 +74,12 @@ export default function SiteAnnouncementsPage({
     setIsLoading(true)
     try {
       const [recordsResponse, statusResponse] = await Promise.all([
-        sendRuntimeMessage({
-          action: RuntimeActionIds.SiteAnnouncementsListRecords,
-        }),
-        sendRuntimeMessage({
-          action: RuntimeActionIds.SiteAnnouncementsGetStatus,
-        }),
+        sendSiteAnnouncementsMessage(SiteAnnouncementsMessageTypes.ListRecords),
+        sendSiteAnnouncementsMessage(SiteAnnouncementsMessageTypes.GetStatus),
       ])
 
-      setRecords(recordsResponse?.data ?? [])
-      setStatus(statusResponse?.data ?? [])
+      setRecords(recordsResponse.success ? recordsResponse.data : [])
+      setStatus(statusResponse.success ? statusResponse.data : [])
     } catch (error) {
       showResultToast({
         success: false,
@@ -171,20 +167,15 @@ export default function SiteAnnouncementsPage({
     })
     setIsChecking(true)
     try {
-      const checkRequest = shouldScopeManualCheck
-        ? {
-            action: RuntimeActionIds.SiteAnnouncementsCheckNow,
-            accountIds: manualCheckAccountIds,
-          }
-        : {
-            action: RuntimeActionIds.SiteAnnouncementsCheckNow,
-          }
-      const response = await sendRuntimeMessage(checkRequest)
+      const response = await sendSiteAnnouncementsMessage(
+        SiteAnnouncementsMessageTypes.CheckNow,
+        shouldScopeManualCheck
+          ? { accountIds: manualCheckAccountIds }
+          : undefined,
+      )
       const success = response?.success === true
-      const checkResult = response?.data as
-        | SiteAnnouncementCheckResult
-        | null
-        | undefined
+      const checkResult: SiteAnnouncementCheckResult | null | undefined =
+        response.success ? response.data : undefined
       const checkInsights =
         checkResult && typeof checkResult.checked === "number"
           ? {
@@ -225,7 +216,10 @@ export default function SiteAnnouncementsPage({
       showResultToast({
         success,
         successFallback: t("messages.checkCompleted"),
-        errorFallback: response?.error ?? t("messages.checkFailed"),
+        errorFallback:
+          response.success === false
+            ? response.error
+            : t("messages.checkFailed"),
       })
       await loadData()
     } catch (error) {
@@ -250,10 +244,12 @@ export default function SiteAnnouncementsPage({
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
     try {
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.SiteAnnouncementsMarkRead,
-        recordId,
-      })
+      const response = await sendSiteAnnouncementsMessage(
+        SiteAnnouncementsMessageTypes.MarkRead,
+        {
+          recordId,
+        },
+      )
       if (response?.success) {
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success)
         await loadData()
@@ -277,10 +273,12 @@ export default function SiteAnnouncementsPage({
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
     try {
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.SiteAnnouncementsMarkAllRead,
-        siteKey: siteKey === "all" ? undefined : siteKey,
-      })
+      const response = await sendSiteAnnouncementsMessage(
+        SiteAnnouncementsMessageTypes.MarkAllRead,
+        {
+          siteKey: siteKey === "all" ? undefined : siteKey,
+        },
+      )
       if (response?.success) {
         if (typeof response.data === "number") {
           tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {

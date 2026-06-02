@@ -7,6 +7,7 @@ import type { TFunction } from "i18next"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import type { AccountSiteType } from "~/constants/siteType"
+import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 
 /**
  * Check-in result status
@@ -179,8 +180,10 @@ export interface AutoCheckinRunSummary {
  * When omitted, the background runs the full eligible set (backward compatible).
  */
 export type AutoCheckinRunNowRuntimeMessage = {
-  action: typeof RuntimeActionIds.AutoCheckinRunNow
-  accountIds?: string[]
+  type: typeof AutoCheckinMessageTypes.RunNow
+  data?: {
+    accountIds?: string[]
+  }
 }
 
 /**

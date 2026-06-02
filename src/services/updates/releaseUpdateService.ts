@@ -1,9 +1,9 @@
 import { Storage } from "@plasmohq/storage"
 
 import { EXTENSION_STORE_IDS } from "~/constants/extensionStores"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { STORAGE_KEYS, STORAGE_LOCKS } from "~/services/core/storageKeys"
 import { withExtensionStorageWriteLock } from "~/services/core/storageWriteLock"
+import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
 import {
   createAlarm,
   getAlarm,
@@ -14,6 +14,11 @@ import {
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
+import {
+  onReleaseUpdateMessage,
+  ReleaseUpdateMessageTypes,
+  type ReleaseUpdateRuntimeResponse,
+} from "./messaging"
 import {
   createDefaultReleaseUpdateStatus,
   LATEST_STABLE_RELEASE_URL,
@@ -430,41 +435,52 @@ function areStatusesEquivalent(
 
 export const releaseUpdateService = new ReleaseUpdateService()
 
+let releaseUpdateMessagingCleanup: (() => void)[] | null = null
+
 /**
- * Background runtime handler for release-update status queries and manual checks.
+ * Background listeners for typed release-update messaging.
  */
-export const handleReleaseUpdateMessage = async (
-  request: { action?: string },
-  sendResponse: (response: {
-    success: boolean
-    data?: ReleaseUpdateStatus
-    error?: string
-  }) => void,
-) => {
+export function setupReleaseUpdateMessagingListeners() {
+  if (releaseUpdateMessagingCleanup) {
+    return
+  }
+
+  releaseUpdateMessagingCleanup = [
+    onReleaseUpdateMessage(ReleaseUpdateMessageTypes.GetStatus, () =>
+      resolveReleaseUpdateRuntimeResponse(ReleaseUpdateMessageTypes.GetStatus),
+    ),
+    onReleaseUpdateMessage(ReleaseUpdateMessageTypes.CheckNow, () =>
+      resolveReleaseUpdateRuntimeResponse(ReleaseUpdateMessageTypes.CheckNow),
+    ),
+  ]
+}
+
+type ReleaseUpdateMessageType =
+  (typeof ReleaseUpdateMessageTypes)[keyof typeof ReleaseUpdateMessageTypes]
+
+/**
+ * Resolve typed release-update messages through the shared service logic.
+ */
+async function resolveReleaseUpdateRuntimeResponse(
+  type: ReleaseUpdateMessageType,
+): Promise<ReleaseUpdateRuntimeResponse> {
   try {
-    switch (request.action) {
-      case RuntimeActionIds.ReleaseUpdateGetStatus: {
-        sendResponse({
+    switch (type) {
+      case ReleaseUpdateMessageTypes.GetStatus:
+        return {
           success: true,
           data: await releaseUpdateService.getStatus(),
-        })
-        break
-      }
-      case RuntimeActionIds.ReleaseUpdateCheckNow: {
-        sendResponse({
+        }
+      case ReleaseUpdateMessageTypes.CheckNow:
+        return {
           success: true,
           data: await releaseUpdateService.checkNow(),
-        })
-        break
-      }
+        }
       default:
-        sendResponse({ success: false, error: "Unknown action" })
+        return createRuntimeMessageFailure("Unknown message type")
     }
   } catch (error) {
     logger.error("Release update message handling failed", error)
-    sendResponse({
-      success: false,
-      error: getErrorMessage(error),
-    })
+    return createRuntimeMessageFailure(getErrorMessage(error))
   }
 }

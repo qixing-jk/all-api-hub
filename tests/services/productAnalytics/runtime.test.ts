@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 import { fakeBrowser } from "wxt/testing/fake-browser"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
 import { createDefaultPreferences } from "~/services/preferences/userPreferences"
 import {
@@ -11,6 +10,7 @@ import {
   setupProductAnalyticsAccountChangeListener,
   setupProductAnalyticsPreferencesChangeListener,
 } from "~/services/productAnalytics"
+import { ProductAnalyticsMessageTypes } from "~/services/productAnalytics/messaging"
 
 const {
   captureMock,
@@ -109,40 +109,35 @@ describe("product analytics runtime", () => {
   })
 
   it("captures valid runtime events and responds success", async () => {
-    const sendResponse = vi.fn()
-
-    await handleProductAnalyticsMessage(
-      {
-        action: RuntimeActionIds.ProductAnalyticsTrackEvent,
+    await expect(
+      handleProductAnalyticsMessage(ProductAnalyticsMessageTypes.TrackEvent, {
         eventName: PRODUCT_ANALYTICS_EVENTS.PageViewed,
         properties: {
           page_id: "options_basic_settings",
           entrypoint: "options",
         },
-      },
-      sendResponse,
-    )
+      }),
+    ).resolves.toEqual({ success: true })
 
     expect(captureMock).toHaveBeenCalledWith("page_viewed", {
       page_id: "options_basic_settings",
       entrypoint: "options",
     })
-    expect(sendResponse).toHaveBeenCalledWith({ success: true })
   })
 
   it("sends one rate-limited aggregate settings snapshot", async () => {
-    const sendResponse = vi.fn()
     getPreferencesMock.mockResolvedValue(
       createDefaultPreferences(Date.parse("2026-05-12T00:00:00.000Z")),
     )
 
-    await handleProductAnalyticsMessage(
-      {
-        action: RuntimeActionIds.ProductAnalyticsTrackSettingsSnapshot,
-        reason: "startup",
-      },
-      sendResponse,
-    )
+    await expect(
+      handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackSettingsSnapshot,
+        {
+          reason: "startup",
+        },
+      ),
+    ).resolves.toEqual({ success: true })
 
     expect(captureMock).toHaveBeenCalledTimes(1)
     expect(captureMock).toHaveBeenCalledWith(
@@ -156,8 +151,6 @@ describe("product analytics runtime", () => {
     expect(stateMocks.setLastSettingsSnapshotAt).toHaveBeenCalledWith(
       Date.parse("2026-05-12T00:00:00.000Z"),
     )
-    expect(sendResponse).toHaveBeenCalledWith({ success: true })
-
     vi.clearAllMocks()
     preferenceMocks.isEnabled.mockResolvedValue(true)
     stateMocks.getState.mockResolvedValue({
@@ -166,13 +159,14 @@ describe("product analytics runtime", () => {
     stateMocks.setLastSiteEcosystemSnapshotAt.mockResolvedValue(true)
     stateMocks.setLastSettingsSnapshotAt.mockResolvedValue(true)
 
-    await handleProductAnalyticsMessage(
-      {
-        action: RuntimeActionIds.ProductAnalyticsTrackSettingsSnapshot,
-        reason: "manual",
-      },
-      sendResponse,
-    )
+    await expect(
+      handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackSettingsSnapshot,
+        {
+          reason: "manual",
+        },
+      ),
+    ).resolves.toEqual({ success: false })
 
     expect(getPreferencesMock).not.toHaveBeenCalled()
     expect(captureMock).not.toHaveBeenCalled()
@@ -180,40 +174,33 @@ describe("product analytics runtime", () => {
   })
 
   it("does not update settings snapshot cadence when aggregate snapshot capture returns false", async () => {
-    const sendResponse = vi.fn()
     captureMock.mockResolvedValueOnce(false)
 
-    await handleProductAnalyticsMessage(
-      {
-        action: RuntimeActionIds.ProductAnalyticsTrackSettingsSnapshot,
-        reason: "startup",
-      },
-      sendResponse,
-    )
+    await expect(
+      handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackSettingsSnapshot,
+        {
+          reason: "startup",
+        },
+      ),
+    ).resolves.toEqual({ success: false })
 
     expect(captureMock).toHaveBeenCalledTimes(1)
     expect(stateMocks.setLastSettingsSnapshotAt).not.toHaveBeenCalled()
-    expect(sendResponse).toHaveBeenCalledWith({ success: false })
   })
 
   it("ignores invalid runtime events", async () => {
-    const sendResponse = vi.fn()
-
-    await handleProductAnalyticsMessage(
-      {
-        action: RuntimeActionIds.ProductAnalyticsTrackEvent,
+    await expect(
+      handleProductAnalyticsMessage(ProductAnalyticsMessageTypes.TrackEvent, {
         eventName: "unknown_event",
         properties: {},
-      },
-      sendResponse,
-    )
+      }),
+    ).resolves.toEqual({ success: false })
 
     expect(captureMock).not.toHaveBeenCalled()
-    expect(sendResponse).toHaveBeenCalledWith({ success: false })
   })
 
   it("sends rate-limited site ecosystem snapshots", async () => {
-    const sendResponse = vi.fn()
     getAllAccountsMock.mockResolvedValue([
       {
         id: "a1",
@@ -222,13 +209,14 @@ describe("product analytics runtime", () => {
       },
     ])
 
-    await handleProductAnalyticsMessage(
-      {
-        action: RuntimeActionIds.ProductAnalyticsTrackSiteEcosystemSnapshot,
-        reason: "startup",
-      },
-      sendResponse,
-    )
+    await expect(
+      handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackSiteEcosystemSnapshot,
+        {
+          reason: "startup",
+        },
+      ),
+    ).resolves.toEqual({ success: true })
 
     expect(captureMock).toHaveBeenCalledWith(
       "site_ecosystem_snapshot",
@@ -244,21 +232,20 @@ describe("product analytics runtime", () => {
     expect(stateMocks.setLastSiteEcosystemSnapshotAt).toHaveBeenCalledWith(
       Date.parse("2026-05-12T00:00:00.000Z"),
     )
-    expect(sendResponse).toHaveBeenCalledWith({ success: true })
-
     vi.clearAllMocks()
     preferenceMocks.isEnabled.mockResolvedValue(true)
     stateMocks.getState.mockResolvedValue({
       lastSiteEcosystemSnapshotAt: Date.parse("2026-05-12T00:00:00.000Z"),
     })
 
-    await handleProductAnalyticsMessage(
-      {
-        action: RuntimeActionIds.ProductAnalyticsTrackSiteEcosystemSnapshot,
-        reason: "manual",
-      },
-      sendResponse,
-    )
+    await expect(
+      handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackSiteEcosystemSnapshot,
+        {
+          reason: "manual",
+        },
+      ),
+    ).resolves.toEqual({ success: false })
 
     expect(getAllAccountsMock).not.toHaveBeenCalled()
     expect(captureMock).not.toHaveBeenCalled()
@@ -266,24 +253,22 @@ describe("product analytics runtime", () => {
   })
 
   it("does not load accounts when analytics is disabled", async () => {
-    const sendResponse = vi.fn()
     preferenceMocks.isEnabled.mockResolvedValue(false)
 
-    await handleProductAnalyticsMessage(
-      {
-        action: RuntimeActionIds.ProductAnalyticsTrackSiteEcosystemSnapshot,
-        reason: "startup",
-      },
-      sendResponse,
-    )
+    await expect(
+      handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackSiteEcosystemSnapshot,
+        {
+          reason: "startup",
+        },
+      ),
+    ).resolves.toEqual({ success: false })
 
     expect(getAllAccountsMock).not.toHaveBeenCalled()
     expect(captureMock).not.toHaveBeenCalled()
-    expect(sendResponse).toHaveBeenCalledWith({ success: false })
   })
 
   it("does not update snapshot cadence when the aggregate event capture returns false", async () => {
-    const sendResponse = vi.fn()
     getAllAccountsMock.mockResolvedValue([
       {
         id: "a1",
@@ -293,21 +278,20 @@ describe("product analytics runtime", () => {
     ])
     captureMock.mockResolvedValueOnce(false)
 
-    await handleProductAnalyticsMessage(
-      {
-        action: RuntimeActionIds.ProductAnalyticsTrackSiteEcosystemSnapshot,
-        reason: "startup",
-      },
-      sendResponse,
-    )
+    await expect(
+      handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackSiteEcosystemSnapshot,
+        {
+          reason: "startup",
+        },
+      ),
+    ).resolves.toEqual({ success: false })
 
     expect(captureMock).toHaveBeenCalledTimes(1)
     expect(stateMocks.setLastSiteEcosystemSnapshotAt).not.toHaveBeenCalled()
-    expect(sendResponse).toHaveBeenCalledWith({ success: false })
   })
 
   it("does not update snapshot cadence when a later per-site event capture returns false", async () => {
-    const sendResponse = vi.fn()
     getAllAccountsMock.mockResolvedValue([
       {
         id: "a1",
@@ -325,17 +309,17 @@ describe("product analytics runtime", () => {
       .mockResolvedValueOnce(false)
       .mockResolvedValue(true)
 
-    await handleProductAnalyticsMessage(
-      {
-        action: RuntimeActionIds.ProductAnalyticsTrackSiteEcosystemSnapshot,
-        reason: "startup",
-      },
-      sendResponse,
-    )
+    await expect(
+      handleProductAnalyticsMessage(
+        ProductAnalyticsMessageTypes.TrackSiteEcosystemSnapshot,
+        {
+          reason: "startup",
+        },
+      ),
+    ).resolves.toEqual({ success: false })
 
     expect(captureMock).toHaveBeenCalledTimes(2)
     expect(stateMocks.setLastSiteEcosystemSnapshotAt).not.toHaveBeenCalled()
-    expect(sendResponse).toHaveBeenCalledWith({ success: false })
   })
 
   it("debounces local account storage changes and cleanup removes the listener", async () => {

@@ -20,6 +20,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import DelAccountDialog from "~/features/AccountManagement/components/DelAccountDialog"
 import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/autoCheckin"
 import { accountStorage } from "~/services/accounts/accountStorage"
+import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import { DEFAULT_PREFERENCES } from "~/services/preferences/userPreferences"
 import {
   startProductAnalyticsAction,
@@ -35,16 +36,14 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
   type ProductAnalyticsResult,
 } from "~/services/productAnalytics/events"
+import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { DisplaySiteData } from "~/types"
 import {
   AutoCheckinRunSummary,
   AutoCheckinStatus,
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
-import {
-  onRuntimeMessage,
-  sendRuntimeMessage,
-} from "~/utils/browser/browserApi"
+import { onRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
@@ -203,9 +202,9 @@ export default function AutoCheckin(props: {
   const loadStatus = useCallback(async () => {
     try {
       setIsLoading(true)
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.AutoCheckinGetStatus,
-      })
+      const response = await sendAutoCheckinMessage(
+        AutoCheckinMessageTypes.GetStatus,
+      )
 
       if (response.success) {
         setStatus(response.data)
@@ -244,9 +243,10 @@ export default function AutoCheckin(props: {
       setIsRunning(true)
       toast.loading(t("messages.loading.running"))
 
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.AutoCheckinRunNow,
-      })
+      const response = await sendAutoCheckinMessage(
+        AutoCheckinMessageTypes.RunNow,
+        {},
+      )
 
       toast.dismiss()
 
@@ -289,9 +289,9 @@ export default function AutoCheckin(props: {
       setIsDebugTriggering(true)
       toast.loading(t("messages.loading.triggeringDailyAlarm"))
 
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.AutoCheckinDebugTriggerDailyAlarmNow,
-      })
+      const response = await sendAutoCheckinMessage(
+        AutoCheckinMessageTypes.DebugTriggerDailyAlarmNow,
+      )
 
       toast.dismiss()
 
@@ -322,9 +322,9 @@ export default function AutoCheckin(props: {
       setIsDebugTriggering(true)
       toast.loading(t("messages.loading.triggeringRetryAlarm"))
 
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.AutoCheckinDebugTriggerRetryAlarmNow,
-      })
+      const response = await sendAutoCheckinMessage(
+        AutoCheckinMessageTypes.DebugTriggerRetryAlarmNow,
+      )
 
       toast.dismiss()
 
@@ -356,10 +356,12 @@ export default function AutoCheckin(props: {
       setIsDebugTriggering(true)
       toast.loading(t("messages.loading.schedulingDailyAlarmForToday"))
 
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.AutoCheckinDebugScheduleDailyAlarmForToday,
-        minutesFromNow: 60,
-      })
+      const response = await sendAutoCheckinMessage(
+        AutoCheckinMessageTypes.DebugScheduleDailyAlarmForToday,
+        {
+          minutesFromNow: 60,
+        },
+      )
 
       toast.dismiss()
 
@@ -391,11 +393,13 @@ export default function AutoCheckin(props: {
       setIsDebugTriggering(true)
       toast.loading(t("messages.loading.evaluatingUiOpenPretrigger"))
 
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.AutoCheckinPretriggerDailyOnUiOpen,
-        dryRun: true,
-        debug: true,
-      })
+      const response = await sendAutoCheckinMessage(
+        AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
+        {
+          dryRun: true,
+          debug: true,
+        },
+      )
 
       toast.dismiss()
 
@@ -451,11 +455,13 @@ export default function AutoCheckin(props: {
         }
       })
 
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.AutoCheckinPretriggerDailyOnUiOpen,
-        requestId,
-        debug: true,
-      })
+      const response = await sendAutoCheckinMessage(
+        AutoCheckinMessageTypes.PretriggerDailyOnUiOpen,
+        {
+          requestId,
+          debug: true,
+        },
+      )
 
       toast.dismiss()
 
@@ -506,9 +512,9 @@ export default function AutoCheckin(props: {
       setIsDebugTriggering(true)
       toast.loading(t("messages.loading.resettingLastDailyRunDay"))
 
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.AutoCheckinDebugResetLastDailyRunDay,
-      })
+      const response = await sendAutoCheckinMessage(
+        AutoCheckinMessageTypes.DebugResetLastDailyRunDay,
+      )
 
       toast.dismiss()
 
@@ -596,17 +602,20 @@ export default function AutoCheckin(props: {
 
     try {
       setRetryingAccountId(accountId)
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.AutoCheckinRetryAccount,
-        accountId,
-      })
+      const response = await sendAutoCheckinMessage(
+        AutoCheckinMessageTypes.RetryAccount,
+        {
+          accountId,
+        },
+      )
 
       if (response.success) {
         toast.success(t("messages.success.retryCompleted"))
         const updatedStatus = await loadStatus()
+        const responseSummary = response.success ? response.summary : undefined
         tracker.complete(getRetryAnalyticsResult(response), {
           insights:
-            getAutoCheckinSummaryAnalyticsInsights(response.summary) ??
+            getAutoCheckinSummaryAnalyticsInsights(responseSummary) ??
             getAutoCheckinStatusAnalyticsInsights(updatedStatus),
         })
       } else {
@@ -634,22 +643,17 @@ export default function AutoCheckin(props: {
       accountId: string,
       options?: { includeDisabled?: boolean },
     ): Promise<DisplaySiteData> => {
-      const message = {
-        action: RuntimeActionIds.AutoCheckinGetAccountInfo,
-        accountId,
-      } as {
-        action: typeof RuntimeActionIds.AutoCheckinGetAccountInfo
-        accountId: string
-        includeDisabled?: boolean
-      }
+      const response = await sendAutoCheckinMessage(
+        AutoCheckinMessageTypes.GetAccountInfo,
+        {
+          accountId,
+          ...(typeof options?.includeDisabled !== "undefined"
+            ? { includeDisabled: options.includeDisabled }
+            : {}),
+        },
+      )
 
-      if (typeof options?.includeDisabled !== "undefined") {
-        message.includeDisabled = options.includeDisabled
-      }
-
-      const response = await sendRuntimeMessage(message)
-
-      if (!response.success || !response.data) {
+      if (!response.success) {
         throw new Error(response.error || "Unknown error")
       }
 

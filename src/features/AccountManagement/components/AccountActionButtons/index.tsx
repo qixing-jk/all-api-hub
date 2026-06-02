@@ -22,7 +22,6 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { IconButton } from "~/components/ui"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { useAccountActionsContext } from "~/features/AccountManagement/hooks/AccountActionsContext"
@@ -33,6 +32,7 @@ import { translateAutoCheckinMessageKey } from "~/features/AutoCheckin/utils/aut
 import { exportShareSnapshotWithToast } from "~/features/ShareSnapshots/utils/exportShareSnapshotWithToast"
 import { resolveDisplayAccountTokenForSecret } from "~/services/accounts/utils/apiServiceRequest"
 import { getApiService } from "~/services/apiService"
+import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import {
   getManagedSiteChannelExactMatch,
   MANAGED_SITE_CHANNEL_MODELS_MATCH_REASONS,
@@ -66,11 +66,11 @@ import {
   type ProductAnalyticsResult,
   type ProductAnalyticsStatusKind,
 } from "~/services/productAnalytics/events"
+import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import { buildAccountShareSnapshotPayload } from "~/services/sharing/shareSnapshots"
 import { toSanitizedErrorSummary } from "~/services/verification/aiApiVerification/utils"
 import type { DisplaySiteData } from "~/types"
 import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { showWarningToast } from "~/utils/core/toastHelpers"
@@ -724,10 +724,12 @@ export default function AccountActionButtons({
     try {
       toastId = toast.loading(t("autoCheckin:messages.loading.running"))
 
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.AutoCheckinRunNow,
-        accountIds: [site.id],
-      })
+      const response = await sendAutoCheckinMessage(
+        AutoCheckinMessageTypes.RunNow,
+        {
+          accountIds: [site.id],
+        },
+      )
 
       if (toastId) toast.dismiss(toastId)
 
@@ -744,9 +746,9 @@ export default function AccountActionButtons({
         return
       }
 
-      const statusResponse = await sendRuntimeMessage({
-        action: RuntimeActionIds.AutoCheckinGetStatus,
-      })
+      const statusResponse = await sendAutoCheckinMessage(
+        AutoCheckinMessageTypes.GetStatus,
+      )
 
       const result =
         statusResponse?.success && statusResponse?.data?.perAccount

@@ -13,13 +13,23 @@ import {
   DATA_TYPE_CONSUMPTION,
   DATA_TYPE_INCOME,
 } from "~/constants"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES, type ManagedSiteType } from "~/constants/siteType"
 import { UI_CONSTANTS } from "~/constants/ui"
+import {
+  AutoRefreshMessageTypes,
+  sendAutoRefreshMessage,
+} from "~/services/accounts/autoRefreshMessaging"
+import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
+import { sendBalanceHistoryMessage } from "~/services/history/dailyBalanceHistory/messaging"
+import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
 import {
   DEFAULT_REDEMPTION_ASSIST_PREFERENCES,
   DEFAULT_WEB_AI_API_CHECK_PREFERENCES,
 } from "~/services/preferences/contentScriptFeatureDefaults"
+import {
+  PreferencesMessageTypes,
+  sendPreferencesMessage,
+} from "~/services/preferences/messaging"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -32,6 +42,19 @@ import {
 import { DEFAULT_SORTING_PRIORITY_CONFIG } from "~/services/preferences/utils/sortingPriority"
 import { PRODUCT_ANALYTICS_ENTRYPOINTS } from "~/services/productAnalytics/events"
 import { trackSettingsSnapshotEvents } from "~/services/productAnalytics/settings"
+import {
+  RedemptionAssistMessageTypes,
+  sendRedemptionAssistMessage,
+} from "~/services/redemption/redemptionAssistMessaging"
+import {
+  AutoCheckinMessageTypes,
+  BalanceHistoryMessageTypes,
+  ModelSyncMessageTypes,
+  SiteAnnouncementsMessageTypes,
+  WebdavAutoSyncMessageTypes,
+} from "~/services/runtimeMessaging/messageTypes"
+import { sendSiteAnnouncementsMessage } from "~/services/siteAnnouncements/messaging"
+import { sendWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncMessaging"
 import type {
   CurrencyType,
   DashboardTabType,
@@ -69,7 +92,6 @@ import type { ThemeMode } from "~/types/theme"
 import type { DeepPartial } from "~/types/utils"
 import type { WebDAVSettings } from "~/types/webdav"
 import { deepOverride } from "~/utils"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("UserPreferencesContext")
@@ -576,10 +598,12 @@ export const UserPreferencesProvider = ({
             : prev,
         )
 
-        await sendRuntimeMessage({
-          action: RuntimeActionIds.PreferencesUpdateActionClickBehavior,
-          behavior,
-        })
+        await sendPreferencesMessage(
+          PreferencesMessageTypes.UpdateActionClickBehavior,
+          {
+            behavior,
+          },
+        )
       }
       return success
     },
@@ -869,8 +893,7 @@ export const UserPreferencesProvider = ({
         normalizeContextPreferenceSnapshot(savedPreferences)
       setPreferences(nextPreferences)
       trackOptionsSettingsSnapshots(nextPreferences, updates)
-      sendRuntimeMessage({
-        action: RuntimeActionIds.AutoRefreshUpdateSettings,
+      void sendAutoRefreshMessage(AutoRefreshMessageTypes.UpdateSettings, {
         settings: updates,
       })
     }
@@ -888,8 +911,7 @@ export const UserPreferencesProvider = ({
         normalizeContextPreferenceSnapshot(savedPreferences)
       setPreferences(nextPreferences)
       trackOptionsSettingsSnapshots(nextPreferences, updates)
-      sendRuntimeMessage({
-        action: RuntimeActionIds.AutoRefreshUpdateSettings,
+      void sendAutoRefreshMessage(AutoRefreshMessageTypes.UpdateSettings, {
         settings: updates,
       })
     }
@@ -907,8 +929,7 @@ export const UserPreferencesProvider = ({
         normalizeContextPreferenceSnapshot(savedPreferences)
       setPreferences(nextPreferences)
       trackOptionsSettingsSnapshots(nextPreferences, updates)
-      sendRuntimeMessage({
-        action: RuntimeActionIds.AutoRefreshUpdateSettings,
+      void sendAutoRefreshMessage(AutoRefreshMessageTypes.UpdateSettings, {
         settings: updates,
       })
     }
@@ -926,8 +947,7 @@ export const UserPreferencesProvider = ({
         normalizeContextPreferenceSnapshot(savedPreferences)
       setPreferences(nextPreferences)
       trackOptionsSettingsSnapshots(nextPreferences, updates)
-      sendRuntimeMessage({
-        action: RuntimeActionIds.AutoRefreshUpdateSettings,
+      void sendAutoRefreshMessage(AutoRefreshMessageTypes.UpdateSettings, {
         settings: updates,
       })
     }
@@ -1280,8 +1300,7 @@ export const UserPreferencesProvider = ({
         trackOptionsSettingsSnapshots(nextPreferences, preferenceUpdates)
 
         // Notify background to update alarm
-        await sendRuntimeMessage({
-          action: RuntimeActionIds.AutoCheckinUpdateSettings,
+        await sendAutoCheckinMessage(AutoCheckinMessageTypes.UpdateSettings, {
           settings: updates,
         })
       }
@@ -1310,10 +1329,12 @@ export const UserPreferencesProvider = ({
         setPreferences(nextPreferences)
         trackOptionsSettingsSnapshots(nextPreferences, preferenceUpdates)
 
-        await sendRuntimeMessage({
-          action: RuntimeActionIds.BalanceHistoryUpdateSettings,
-          settings: updates,
-        })
+        await sendBalanceHistoryMessage(
+          BalanceHistoryMessageTypes.UpdateSettings,
+          {
+            settings: updates,
+          },
+        )
       }
 
       return savedPreferences !== null
@@ -1341,8 +1362,7 @@ export const UserPreferencesProvider = ({
         trackOptionsSettingsSnapshots(nextPreferences, preferenceUpdates)
 
         // Notify background to update alarm
-        await sendRuntimeMessage({
-          action: RuntimeActionIds.ModelSyncUpdateSettings,
+        await sendModelSyncMessage(ModelSyncMessageTypes.UpdateSettings, {
           settings: updates,
         })
       }
@@ -1394,19 +1414,21 @@ export const UserPreferencesProvider = ({
         setPreferences(nextPreferences)
         trackOptionsSettingsSnapshots(nextPreferences, preferenceUpdates)
 
-        await sendRuntimeMessage({
-          action: RuntimeActionIds.RedemptionAssistUpdateSettings,
-          settings: updates,
-        })
+        await sendRedemptionAssistMessage(
+          RedemptionAssistMessageTypes.UpdateSettings,
+          {
+            settings: updates,
+          },
+        )
 
         const shouldRefreshContextMenus =
           typeof updates.contextMenu?.enabled === "boolean" ||
           typeof updates.enabled === "boolean"
 
         if (shouldRefreshContextMenus) {
-          void sendRuntimeMessage({
-            action: RuntimeActionIds.PreferencesRefreshContextMenus,
-          })
+          void sendPreferencesMessage(
+            PreferencesMessageTypes.RefreshContextMenus,
+          )
         }
       }
 
@@ -1440,9 +1462,9 @@ export const UserPreferencesProvider = ({
           typeof updates.enabled === "boolean"
 
         if (shouldRefreshContextMenus) {
-          void sendRuntimeMessage({
-            action: RuntimeActionIds.PreferencesRefreshContextMenus,
-          })
+          void sendPreferencesMessage(
+            PreferencesMessageTypes.RefreshContextMenus,
+          )
         }
       }
 
@@ -1475,15 +1497,14 @@ export const UserPreferencesProvider = ({
       options?: PreferenceSaveOptions,
     ) => {
       const response = normalizeRuntimeMutationResponse(
-        await sendRuntimeMessage(
+        await sendWebdavAutoSyncMessage(
+          WebdavAutoSyncMessageTypes.UpdateSettings,
           typeof options?.expectedLastUpdated === "number"
             ? {
-                action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
                 settings: updates,
                 expectedLastUpdated: options.expectedLastUpdated,
               }
             : {
-                action: RuntimeActionIds.WebdavAutoSyncUpdateSettings,
                 settings: updates,
               },
         ),
@@ -1554,10 +1575,12 @@ export const UserPreferencesProvider = ({
   const updateSiteAnnouncementNotifications = useCallback(
     async (updates: Partial<SiteAnnouncementPreferences>) => {
       const response = normalizeRuntimeMutationResponse(
-        await sendRuntimeMessage({
-          action: RuntimeActionIds.SiteAnnouncementsUpdatePreferences,
-          settings: updates,
-        }),
+        await sendSiteAnnouncementsMessage(
+          SiteAnnouncementsMessageTypes.UpdatePreferences,
+          {
+            settings: updates,
+          },
+        ),
       )
 
       if (response.success && isUserPreferencesSnapshot(response.data)) {
@@ -1605,23 +1628,20 @@ export const UserPreferencesProvider = ({
       trackOptionsSettingsSnapshots(defaults)
 
       // Notify auto-refresh service
-      sendRuntimeMessage({
-        action: RuntimeActionIds.AutoRefreshUpdateSettings,
+      void sendAutoRefreshMessage(AutoRefreshMessageTypes.UpdateSettings, {
         settings: { accountAutoRefresh: defaults.accountAutoRefresh },
       })
 
       // Notify auto-checkin service
       if (defaults.autoCheckin) {
-        void sendRuntimeMessage({
-          action: RuntimeActionIds.AutoCheckinUpdateSettings,
+        void sendAutoCheckinMessage(AutoCheckinMessageTypes.UpdateSettings, {
           settings: defaults.autoCheckin,
         })
       }
 
       // Notify New API model sync service
       if (defaults.managedSiteModelSync) {
-        void sendRuntimeMessage({
-          action: RuntimeActionIds.ModelSyncUpdateSettings,
+        void sendModelSyncMessage(ModelSyncMessageTypes.UpdateSettings, {
           settings: defaults.managedSiteModelSync,
         })
       }
@@ -1668,8 +1688,7 @@ export const UserPreferencesProvider = ({
             })
           : prev,
       )
-      sendRuntimeMessage({
-        action: RuntimeActionIds.AutoRefreshUpdateSettings,
+      void sendAutoRefreshMessage(AutoRefreshMessageTypes.UpdateSettings, {
         settings: { accountAutoRefresh: defaults },
       })
       trackOptionsSettingsSnapshots(
@@ -1753,8 +1772,7 @@ export const UserPreferencesProvider = ({
           : prev,
       )
       if (defaults) {
-        void sendRuntimeMessage({
-          action: RuntimeActionIds.ModelSyncUpdateSettings,
+        void sendModelSyncMessage(ModelSyncMessageTypes.UpdateSettings, {
           settings: defaults,
         })
       }
@@ -1789,8 +1807,7 @@ export const UserPreferencesProvider = ({
           : prev,
       )
       if (defaults) {
-        void sendRuntimeMessage({
-          action: RuntimeActionIds.AutoCheckinUpdateSettings,
+        void sendAutoCheckinMessage(AutoCheckinMessageTypes.UpdateSettings, {
           settings: defaults,
         })
       }
@@ -1815,10 +1832,12 @@ export const UserPreferencesProvider = ({
           : prev,
       )
       if (defaults) {
-        void sendRuntimeMessage({
-          action: RuntimeActionIds.RedemptionAssistUpdateSettings,
-          settings: defaults,
-        })
+        void sendRedemptionAssistMessage(
+          RedemptionAssistMessageTypes.UpdateSettings,
+          {
+            settings: defaults,
+          },
+        )
       }
       trackOptionsSettingsSnapshots(
         deepOverride(DEFAULT_PREFERENCES, { redemptionAssist: defaults }),

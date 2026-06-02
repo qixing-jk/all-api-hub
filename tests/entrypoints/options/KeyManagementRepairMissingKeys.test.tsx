@@ -1,11 +1,9 @@
 import type { ReactNode } from "react"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
-import {
-  RuntimeActionIds,
-  RuntimeMessageTypes,
-} from "~/constants/runtimeActions"
+import { RuntimeMessageTypes } from "~/constants/runtimeActions"
 import KeyManagement from "~/entrypoints/options/pages/KeyManagement"
+import { AccountKeyRepairMessageTypes } from "~/services/accounts/accountKeyAutoProvisioning/messaging"
 import {
   PRODUCT_ANALYTICS_ERROR_CATEGORIES,
   PRODUCT_ANALYTICS_RESULTS,
@@ -55,6 +53,22 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
     }),
   }
 })
+
+vi.mock(
+  "~/services/accounts/accountKeyAutoProvisioning/messaging",
+  async (importOriginal) => {
+    const actual =
+      await importOriginal<
+        typeof import("~/services/accounts/accountKeyAutoProvisioning/messaging")
+      >()
+
+    return {
+      ...actual,
+      sendAccountKeyRepairMessage: (type: string, data?: unknown) =>
+        sendRuntimeActionMessageMock(type, data),
+    }
+  },
+)
 
 vi.mock("~/components/dialogs/ChannelDialog", () => ({
   ChannelDialogProvider: ({ children }: { children: ReactNode }) => children,
@@ -416,10 +430,10 @@ describe("KeyManagement repair missing keys entry point", () => {
 
   it("opens dialog, subscribes to progress, and hides disabled accounts", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
-      if (message?.action === RuntimeActionIds.AccountKeyRepairGetProgress) {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
         return { success: true, data: idleProgress }
       }
-      if (message?.action === RuntimeActionIds.AccountKeyRepairStart) {
+      if (message === AccountKeyRepairMessageTypes.Start) {
         return { success: true, data: startProgress }
       }
       return { success: false }
@@ -437,9 +451,10 @@ describe("KeyManagement repair missing keys entry point", () => {
     ).toBeInTheDocument()
 
     await waitFor(() => {
-      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith({
-        action: RuntimeActionIds.AccountKeyRepairStart,
-      })
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        AccountKeyRepairMessageTypes.Start,
+        undefined,
+      )
     })
 
     expect(runtimeMessageState.listener).toBeTypeOf("function")
@@ -478,10 +493,10 @@ describe("KeyManagement repair missing keys entry point", () => {
 
   it("uses processed eligible totals for progress UI", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
-      if (message?.action === RuntimeActionIds.AccountKeyRepairGetProgress) {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
         return { success: true, data: idleProgress }
       }
-      if (message?.action === RuntimeActionIds.AccountKeyRepairStart) {
+      if (message === AccountKeyRepairMessageTypes.Start) {
         return { success: true, data: inflatedProgress }
       }
       return { success: false }
@@ -496,9 +511,10 @@ describe("KeyManagement repair missing keys entry point", () => {
     )
 
     await waitFor(() => {
-      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith({
-        action: RuntimeActionIds.AccountKeyRepairStart,
-      })
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        AccountKeyRepairMessageTypes.Start,
+        undefined,
+      )
     })
 
     expect(screen.getByText("3/3 (100%)")).toBeInTheDocument()
@@ -514,10 +530,10 @@ describe("KeyManagement repair missing keys entry point", () => {
 
   it("supports search and outcome filtering in the dialog", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
-      if (message?.action === RuntimeActionIds.AccountKeyRepairGetProgress) {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
         return { success: true, data: idleProgress }
       }
-      if (message?.action === RuntimeActionIds.AccountKeyRepairStart) {
+      if (message === AccountKeyRepairMessageTypes.Start) {
         return { success: true, data: multiOutcomeProgress }
       }
       return { success: false }
@@ -532,9 +548,10 @@ describe("KeyManagement repair missing keys entry point", () => {
     )
 
     await waitFor(() => {
-      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith({
-        action: RuntimeActionIds.AccountKeyRepairStart,
-      })
+      expect(sendRuntimeActionMessageMock).toHaveBeenCalledWith(
+        AccountKeyRepairMessageTypes.Start,
+        undefined,
+      )
     })
 
     expect(await screen.findByText("Enabled Site")).toBeInTheDocument()
@@ -587,10 +604,10 @@ describe("KeyManagement repair missing keys entry point", () => {
 
   it("offers a create-key action for skipped Sub2API accounts", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
-      if (message?.action === RuntimeActionIds.AccountKeyRepairGetProgress) {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
         return { success: true, data: idleProgress }
       }
-      if (message?.action === RuntimeActionIds.AccountKeyRepairStart) {
+      if (message === AccountKeyRepairMessageTypes.Start) {
         return { success: true, data: sub2apiSkippedProgress }
       }
       return { success: false }
@@ -627,10 +644,10 @@ describe("KeyManagement repair missing keys entry point", () => {
 
   it("shows the AIHubMix one-time-key skip reason without a direct create action", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
-      if (message?.action === RuntimeActionIds.AccountKeyRepairGetProgress) {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
         return { success: true, data: idleProgress }
       }
-      if (message?.action === RuntimeActionIds.AccountKeyRepairStart) {
+      if (message === AccountKeyRepairMessageTypes.Start) {
         return { success: true, data: aihubmixSkippedProgress }
       }
       return { success: false }
@@ -660,10 +677,10 @@ describe("KeyManagement repair missing keys entry point", () => {
 
   it("tracks started and successful completion analytics for start-on-open repair", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
-      if (message?.action === RuntimeActionIds.AccountKeyRepairGetProgress) {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
         return { success: true, data: idleProgress }
       }
-      if (message?.action === RuntimeActionIds.AccountKeyRepairStart) {
+      if (message === AccountKeyRepairMessageTypes.Start) {
         return { success: true, data: startProgress }
       }
       return { success: false }
@@ -718,10 +735,10 @@ describe("KeyManagement repair missing keys entry point", () => {
 
   it("tracks immediate start failure without raw error details", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
-      if (message?.action === RuntimeActionIds.AccountKeyRepairGetProgress) {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
         return { success: true, data: idleProgress }
       }
-      if (message?.action === RuntimeActionIds.AccountKeyRepairStart) {
+      if (message === AccountKeyRepairMessageTypes.Start) {
         return { success: false, error: "raw backend detail" }
       }
       return { success: false }
@@ -760,10 +777,10 @@ describe("KeyManagement repair missing keys entry point", () => {
 
   it("tracks failed progress completion once without raw progress errors", async () => {
     sendRuntimeActionMessageMock.mockImplementation(async (message: any) => {
-      if (message?.action === RuntimeActionIds.AccountKeyRepairGetProgress) {
+      if (message === AccountKeyRepairMessageTypes.GetProgress) {
         return { success: true, data: idleProgress }
       }
-      if (message?.action === RuntimeActionIds.AccountKeyRepairStart) {
+      if (message === AccountKeyRepairMessageTypes.Start) {
         return { success: true, data: startProgress }
       }
       return { success: false }

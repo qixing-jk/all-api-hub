@@ -34,6 +34,10 @@ import {
   PRODUCT_ANALYTICS_SOURCE_KINDS,
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
+import {
+  sendWebAiApiCheckMessage,
+  WebAiApiCheckMessageTypes,
+} from "~/services/verification/webAiApiCheck/messaging"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { render } from "~~/tests/test-utils/render"
 
@@ -88,6 +92,16 @@ vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
   }
 })
 
+vi.mock("~/services/verification/webAiApiCheck/messaging", () => ({
+  WebAiApiCheckMessageTypes: {
+    ShouldPrompt: "webAiApiCheck:shouldPrompt",
+    FetchModels: "webAiApiCheck:fetchModels",
+    RunProbe: "webAiApiCheck:runProbe",
+    SaveProfile: "webAiApiCheck:saveProfile",
+  },
+  sendWebAiApiCheckMessage: vi.fn(),
+}))
+
 describe("ApiCheckModalHost", () => {
   const expectAnalyticsCallsToExcludeSensitiveValues = (
     values: readonly string[],
@@ -102,6 +116,13 @@ describe("ApiCheckModalHost", () => {
     }
   }
 
+  const expectTypedApiCheckMessage = (
+    type: (typeof WebAiApiCheckMessageTypes)[keyof typeof WebAiApiCheckMessageTypes],
+    data: Record<string, unknown>,
+  ) => {
+    expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(type, data)
+  }
+
   beforeEach(() => {
     ;(toast.success as any).mockReset()
     ;(toast.error as any).mockReset()
@@ -113,12 +134,16 @@ describe("ApiCheckModalHost", () => {
     })
     updateWebAiApiCheckMock.mockReset()
     updateWebAiApiCheckMock.mockResolvedValue(true)
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: [] }
-      }
-      return { success: false }
-    })
+    vi.mocked(sendRuntimeMessage).mockReset()
+    vi.mocked(sendRuntimeMessage).mockResolvedValue({ success: false })
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
+        }
+        return { success: false }
+      },
+    )
   })
 
   const renderSubject = () =>
@@ -823,12 +848,14 @@ describe("ApiCheckModalHost", () => {
 
   it("auto-fetches models and preselects the first model id", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: ["m1", "m2"] }
-      }
-      return { success: false }
-    })
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: ["m1", "m2"] }
+        }
+        return { success: false }
+      },
+    )
 
     await openModal()
 
@@ -843,8 +870,7 @@ describe("ApiCheckModalHost", () => {
     await user.paste("sk-test-modal-save-fixture-12345")
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.ApiCheckFetchModels,
+      expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.FetchModels, {
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api",
         apiKey: "sk-test-modal-save-fixture-12345",
@@ -873,12 +899,14 @@ describe("ApiCheckModalHost", () => {
     const pageUrl = "https://console.example.com/settings?token=secret"
     const modelId = "gpt-4o-sensitive"
 
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: [modelId, "gpt-4o-mini"] }
-      }
-      return { success: false }
-    })
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [modelId, "gpt-4o-mini"] }
+        }
+        return { success: false }
+      },
+    )
 
     await openModal({
       sourceText,
@@ -919,12 +947,14 @@ describe("ApiCheckModalHost", () => {
 
   it("tracks manual model fetch completion with model-count insights", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: ["m1", "m2"] }
-      }
-      return { success: false }
-    })
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: ["m1", "m2"] }
+        }
+        return { success: false }
+      },
+    )
 
     await openModal()
 
@@ -968,9 +998,9 @@ describe("ApiCheckModalHost", () => {
   })
 
   it("does not start an automatic duplicate while a model fetch is in flight", async () => {
-    let resolveFetch!: (value: unknown) => void
-    vi.mocked(sendRuntimeMessage).mockImplementation((message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+    let resolveFetch!: (value: { success: true; modelIds: string[] }) => void
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation((type: any) => {
+      if (type === WebAiApiCheckMessageTypes.FetchModels) {
         return new Promise((resolve) => {
           resolveFetch = resolve
         })
@@ -998,13 +1028,13 @@ describe("ApiCheckModalHost", () => {
     )
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledTimes(1)
+      expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(1)
     })
 
     await act(async () => {
       await new Promise((resolve) => window.setTimeout(resolve, 0))
     })
-    expect(sendRuntimeMessage).toHaveBeenCalledTimes(1)
+    expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(1)
 
     await act(async () => {
       resolveFetch({ success: true, modelIds: ["m1"] })
@@ -1023,14 +1053,13 @@ describe("ApiCheckModalHost", () => {
     await openModal(detail)
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.ApiCheckFetchModels,
+      expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.FetchModels, {
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api",
         apiKey: "sk-test-secret-fixture",
       })
     })
-    expect(sendRuntimeMessage).toHaveBeenCalledTimes(1)
+    expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(1)
 
     const baseUrlInput = screen.getByPlaceholderText(
       "https://example.com/api",
@@ -1039,7 +1068,7 @@ describe("ApiCheckModalHost", () => {
     await user.type(baseUrlInput, "  ")
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledTimes(1)
+      expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(1)
     })
 
     await user.click(
@@ -1051,37 +1080,39 @@ describe("ApiCheckModalHost", () => {
     })
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledTimes(2)
+      expect(sendWebAiApiCheckMessage).toHaveBeenCalledTimes(2)
     })
   })
 
   it("switches api types, clears stale probe results, and refetches provider models", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return {
-          success: true,
-          modelIds:
-            message.apiType === "anthropic"
-              ? ["claude-3-5-sonnet"]
-              : ["gpt-4o-mini"],
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return {
+            success: true,
+            modelIds:
+              message.apiType === "anthropic"
+                ? ["claude-3-5-sonnet"]
+                : ["gpt-4o-mini"],
+          }
         }
-      }
 
-      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
-        return {
-          success: true,
-          result: {
-            id: message.probeId,
-            status: "pass",
-            latencyMs: 5,
-            summary: "OpenAI result",
-          },
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return {
+            success: true,
+            result: {
+              id: message.probeId,
+              status: "pass",
+              latencyMs: 5,
+              summary: "OpenAI result",
+            },
+          }
         }
-      }
 
-      return { success: false }
-    })
+        return { success: false }
+      },
+    )
 
     await openModal()
 
@@ -1118,8 +1149,7 @@ describe("ApiCheckModalHost", () => {
     )
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.ApiCheckFetchModels,
+      expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.FetchModels, {
         apiType: "anthropic",
         baseUrl: "https://proxy.example.com/api",
         apiKey: "sk-test-secret-fixture",
@@ -1136,23 +1166,31 @@ describe("ApiCheckModalHost", () => {
 
   it("tracks stale model fetch responses as skipped diagnostics", async () => {
     const user = userEvent.setup()
-    let resolveFirstFetch!: (value: unknown) => void
-    let resolveSecondFetch!: (value: unknown) => void
-    vi.mocked(sendRuntimeMessage).mockImplementation((message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        if (message.apiType === "openai-compatible" && !resolveFirstFetch) {
+    let resolveFirstFetch!: (value: {
+      success: true
+      modelIds: string[]
+    }) => void
+    let resolveSecondFetch!: (value: {
+      success: true
+      modelIds: string[]
+    }) => void
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          if (message.apiType === "openai-compatible" && !resolveFirstFetch) {
+            return new Promise((resolve) => {
+              resolveFirstFetch = resolve
+            })
+          }
+
           return new Promise((resolve) => {
-            resolveFirstFetch = resolve
+            resolveSecondFetch = resolve
           })
         }
 
-        return new Promise((resolve) => {
-          resolveSecondFetch = resolve
-        })
-      }
-
-      return Promise.resolve({ success: false })
-    })
+        return Promise.resolve({ success: false })
+      },
+    )
 
     await openModal()
 
@@ -1166,9 +1204,9 @@ describe("ApiCheckModalHost", () => {
     )
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith(
+      expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(
+        WebAiApiCheckMessageTypes.FetchModels,
         expect.objectContaining({
-          action: RuntimeActionIds.ApiCheckFetchModels,
           apiType: "openai-compatible",
         }),
       )
@@ -1177,9 +1215,9 @@ describe("ApiCheckModalHost", () => {
     await user.type(await screen.findByPlaceholderText("sk-..."), "-rotated")
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith(
+      expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(
+        WebAiApiCheckMessageTypes.FetchModels,
         expect.objectContaining({
-          action: RuntimeActionIds.ApiCheckFetchModels,
           apiKey: "sk-test-secret-fixture-rotated",
         }),
       )
@@ -1223,10 +1261,10 @@ describe("ApiCheckModalHost", () => {
 
   it("clears auto-fetch loading when credentials become incomplete before a stale response resolves", async () => {
     const user = userEvent.setup()
-    let resolveFetch!: (value: unknown) => void
+    let resolveFetch!: (value: { success: true; modelIds: string[] }) => void
     let fetchRequestCount = 0
-    vi.mocked(sendRuntimeMessage).mockImplementation((message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation((type: any) => {
+      if (type === WebAiApiCheckMessageTypes.FetchModels) {
         fetchRequestCount += 1
         return new Promise((resolve) => {
           resolveFetch = resolve
@@ -1247,10 +1285,9 @@ describe("ApiCheckModalHost", () => {
     await user.type(apiKeyInput, "sk-test-secret-fixture")
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith(
-        expect.objectContaining({
-          action: RuntimeActionIds.ApiCheckFetchModels,
-        }),
+      expect(sendWebAiApiCheckMessage).toHaveBeenCalledWith(
+        WebAiApiCheckMessageTypes.FetchModels,
+        expect.any(Object),
       )
     })
     expect(
@@ -1296,25 +1333,27 @@ describe("ApiCheckModalHost", () => {
 
   it("tracks single unsupported probe completion as skipped", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: [] }
-      }
-
-      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
-        return {
-          success: true,
-          result: {
-            id: message.probeId,
-            status: "unsupported",
-            latencyMs: 0,
-            summary: "Streaming is not supported",
-          },
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
         }
-      }
 
-      return { success: false }
-    })
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return {
+            success: true,
+            result: {
+              id: message.probeId,
+              status: "unsupported",
+              latencyMs: 0,
+              summary: "Streaming is not supported",
+            },
+          }
+        }
+
+        return { success: false }
+      },
+    )
 
     await openModal()
 
@@ -1361,26 +1400,28 @@ describe("ApiCheckModalHost", () => {
 
   it("maps structured probe HTTP status to an auth analytics failure", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: [] }
-      }
-
-      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
-        return {
-          success: true,
-          result: {
-            id: message.probeId,
-            status: "fail",
-            latencyMs: 0,
-            summary: "Request failed",
-            output: { inferredHttpStatus: 401 },
-          },
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
         }
-      }
 
-      return { success: false }
-    })
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return {
+            success: true,
+            result: {
+              id: message.probeId,
+              status: "fail",
+              latencyMs: 0,
+              summary: "Request failed",
+              output: { inferredHttpStatus: 401 },
+            },
+          }
+        }
+
+        return { success: false }
+      },
+    )
 
     await openModal()
 
@@ -1423,25 +1464,27 @@ describe("ApiCheckModalHost", () => {
     const apiKey = "sk-test-secret-fixture"
     const modelId = "gpt-4o-sensitive"
 
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: [modelId] }
-      }
-
-      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
-        return {
-          success: true,
-          result: {
-            id: message.probeId,
-            status: "pass",
-            latencyMs: 5,
-            summary: "Probe OK",
-          },
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [modelId] }
         }
-      }
 
-      return { success: false }
-    })
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return {
+            success: true,
+            result: {
+              id: message.probeId,
+              status: "pass",
+              latencyMs: 5,
+              summary: "Probe OK",
+            },
+          }
+        }
+
+        return { success: false }
+      },
+    )
 
     await openModal({
       sourceText,
@@ -1450,8 +1493,7 @@ describe("ApiCheckModalHost", () => {
     })
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.ApiCheckFetchModels,
+      expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.FetchModels, {
         apiType: "openai-compatible",
         baseUrl,
         apiKey,
@@ -1500,23 +1542,25 @@ describe("ApiCheckModalHost", () => {
 
   it("test displays sanitized errors returned from background", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: [] }
-      }
-      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
-        return {
-          success: true,
-          result: {
-            id: message.probeId,
-            status: "fail",
-            latencyMs: 0,
-            summary: "Unauthorized: [REDACTED]",
-          },
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
         }
-      }
-      return { success: false }
-    })
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return {
+            success: true,
+            result: {
+              id: message.probeId,
+              status: "fail",
+              latencyMs: 0,
+              summary: "Unauthorized: [REDACTED]",
+            },
+          }
+        }
+        return { success: false }
+      },
+    )
 
     await openModal()
 
@@ -1566,15 +1610,17 @@ describe("ApiCheckModalHost", () => {
 
   it("falls back to the local probe error when the background probe call throws", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: [] }
-      }
-      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
-        throw new Error("probe transport failed")
-      }
-      return { success: false }
-    })
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
+        }
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          throw new Error("probe transport failed")
+        }
+        return { success: false }
+      },
+    )
 
     await openModal()
 
@@ -1605,19 +1651,21 @@ describe("ApiCheckModalHost", () => {
 
   it("uses background validation category for probe-suite analytics", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: [] }
-      }
-      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
-        return {
-          success: false,
-          error: "Invalid baseUrl",
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
         }
-      }
-      return { success: false }
-    })
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return {
+            success: false,
+            error: "Invalid baseUrl",
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          }
+        }
+        return { success: false }
+      },
+    )
 
     await openModal()
 
@@ -1652,32 +1700,34 @@ describe("ApiCheckModalHost", () => {
 
   it("saves credentials to API profiles", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: [] }
-      }
-      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
-        return {
-          success: true,
-          result: {
-            id: message.probeId,
-            status: "success",
-            latencyMs: 1,
-            summary: "OK",
-          },
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
         }
-      }
-      if (message.action === RuntimeActionIds.ApiCheckSaveProfile) {
-        return {
-          success: true,
-          profileId: "p-1",
-          name: "proxy.example.com",
-          apiType: message.apiType,
-          baseUrl: "https://proxy.example.com/api",
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return {
+            success: true,
+            result: {
+              id: message.probeId,
+              status: "pass",
+              latencyMs: 1,
+              summary: "OK",
+            },
+          }
         }
-      }
-      return { success: false }
-    })
+        if (type === WebAiApiCheckMessageTypes.SaveProfile) {
+          return {
+            success: true,
+            profileId: "p-1",
+            name: "proxy.example.com",
+            apiType: message.apiType,
+            baseUrl: "https://proxy.example.com/api",
+          }
+        }
+        return { success: false }
+      },
+    )
 
     await openModal()
 
@@ -1692,8 +1742,7 @@ describe("ApiCheckModalHost", () => {
     await user.paste("sk-test-secret-fixture")
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.ApiCheckFetchModels,
+      expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.FetchModels, {
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api",
         apiKey: "sk-test-secret-fixture",
@@ -1711,8 +1760,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(saveButton)
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.ApiCheckSaveProfile,
+      expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.SaveProfile, {
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api",
         apiKey: "sk-test-secret-fixture",
@@ -1738,26 +1786,24 @@ describe("ApiCheckModalHost", () => {
 
   it("shows a quick-open button after saving to profiles", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: [] }
-      }
-      if (message.action === RuntimeActionIds.ApiCheckSaveProfile) {
-        return {
-          success: true,
-          profileId: "p-1",
-          name: "proxy.example.com",
-          apiType: message.apiType,
-          baseUrl: "https://proxy.example.com/api",
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
         }
-      }
-      if (
-        message.action === RuntimeActionIds.OpenSettingsApiCredentialProfiles
-      ) {
-        return { success: true }
-      }
-      return { success: false }
-    })
+        if (type === WebAiApiCheckMessageTypes.SaveProfile) {
+          return {
+            success: true,
+            profileId: "p-1",
+            name: "proxy.example.com",
+            apiType: message.apiType,
+            baseUrl: "https://proxy.example.com/api",
+          }
+        }
+        return { success: false }
+      },
+    )
+    vi.mocked(sendRuntimeMessage).mockResolvedValue({ success: true })
 
     await openModal()
 
@@ -1807,26 +1853,26 @@ describe("ApiCheckModalHost", () => {
 
   it("still dismisses the success toast when opening profiles from the toast fails", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: [] }
-      }
-      if (message.action === RuntimeActionIds.ApiCheckSaveProfile) {
-        return {
-          success: true,
-          profileId: "p-1",
-          name: "proxy.example.com",
-          apiType: message.apiType,
-          baseUrl: "https://proxy.example.com/api",
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
         }
-      }
-      if (
-        message.action === RuntimeActionIds.OpenSettingsApiCredentialProfiles
-      ) {
-        throw new Error("settings page failed")
-      }
-      return { success: false }
-    })
+        if (type === WebAiApiCheckMessageTypes.SaveProfile) {
+          return {
+            success: true,
+            profileId: "p-1",
+            name: "proxy.example.com",
+            apiType: message.apiType,
+            baseUrl: "https://proxy.example.com/api",
+          }
+        }
+        return { success: false }
+      },
+    )
+    vi.mocked(sendRuntimeMessage).mockRejectedValue(
+      new Error("settings page failed"),
+    )
 
     await openModal()
 
@@ -1880,15 +1926,17 @@ describe("ApiCheckModalHost", () => {
 
   it("falls back to the local save-profile error when the background call throws", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: [] }
-      }
-      if (message.action === RuntimeActionIds.ApiCheckSaveProfile) {
-        throw new Error("save exploded")
-      }
-      return { success: false }
-    })
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
+        }
+        if (type === WebAiApiCheckMessageTypes.SaveProfile) {
+          throw new Error("save exploded")
+        }
+        return { success: false }
+      },
+    )
 
     await openModal()
 
@@ -1922,46 +1970,48 @@ describe("ApiCheckModalHost", () => {
   it("allows saving credentials while tests are running", async () => {
     const user = userEvent.setup()
 
-    let resolveModelsProbe: ((value: unknown) => void) | null = null
+    let resolveModelsProbe: ((value: any) => void) | null = null
 
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: [] }
-      }
-
-      if (
-        message.action === RuntimeActionIds.ApiCheckRunProbe &&
-        message.probeId === "models"
-      ) {
-        return await new Promise((resolve) => {
-          resolveModelsProbe = resolve
-        })
-      }
-
-      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
-        return {
-          success: true,
-          result: {
-            id: message.probeId,
-            status: "pass",
-            latencyMs: 1,
-            summary: "OK",
-          },
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
         }
-      }
 
-      if (message.action === RuntimeActionIds.ApiCheckSaveProfile) {
-        return {
-          success: true,
-          profileId: "p-1",
-          name: "proxy.example.com",
-          apiType: message.apiType,
-          baseUrl: message.baseUrl,
+        if (
+          type === WebAiApiCheckMessageTypes.RunProbe &&
+          message.probeId === "models"
+        ) {
+          return await new Promise<any>((resolve) => {
+            resolveModelsProbe = resolve
+          })
         }
-      }
 
-      return { success: false }
-    })
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return {
+            success: true,
+            result: {
+              id: message.probeId,
+              status: "pass",
+              latencyMs: 1,
+              summary: "OK",
+            },
+          }
+        }
+
+        if (type === WebAiApiCheckMessageTypes.SaveProfile) {
+          return {
+            success: true,
+            profileId: "p-1",
+            name: "proxy.example.com",
+            apiType: message.apiType,
+            baseUrl: message.baseUrl,
+          }
+        }
+
+        return { success: false }
+      },
+    )
 
     await openModal()
 
@@ -1992,7 +2042,7 @@ describe("ApiCheckModalHost", () => {
       expect(saveButton).not.toBeDisabled()
     })
 
-    const resolveProbe = resolveModelsProbe as ((value: unknown) => void) | null
+    const resolveProbe = resolveModelsProbe as ((value: any) => void) | null
     if (!resolveProbe) {
       throw new Error("Expected models probe resolver to be available")
     }
@@ -2010,8 +2060,7 @@ describe("ApiCheckModalHost", () => {
     await user.click(saveButton)
 
     await waitFor(() => {
-      expect(sendRuntimeMessage).toHaveBeenCalledWith({
-        action: RuntimeActionIds.ApiCheckSaveProfile,
+      expectTypedApiCheckMessage(WebAiApiCheckMessageTypes.SaveProfile, {
         apiType: "openai-compatible",
         baseUrl: "https://proxy.example.com/api",
         apiKey: "sk-test-secret-fixture",
@@ -2022,15 +2071,17 @@ describe("ApiCheckModalHost", () => {
 
   it("falls back to the local probe error when background returns no result payload", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: [] }
-      }
-      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
+        }
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return { success: false }
+        }
         return { success: false }
-      }
-      return { success: false }
-    })
+      },
+    )
 
     await openModal()
 
@@ -2073,7 +2124,7 @@ describe("ApiCheckModalHost", () => {
     expect(
       await screen.findByText("webAiApiCheck:modal.errors.missingBaseUrlOrKey"),
     ).toBeInTheDocument()
-    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+    expect(sendWebAiApiCheckMessage).not.toHaveBeenCalled()
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Skipped,
       expect.objectContaining({
@@ -2114,7 +2165,7 @@ describe("ApiCheckModalHost", () => {
     expect(
       await screen.findByText("webAiApiCheck:modal.errors.missingBaseUrlOrKey"),
     ).toBeInTheDocument()
-    expect(sendRuntimeMessage).not.toHaveBeenCalled()
+    expect(sendWebAiApiCheckMessage).not.toHaveBeenCalled()
     expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
       PRODUCT_ANALYTICS_RESULTS.Skipped,
       expect.objectContaining({
@@ -2130,12 +2181,14 @@ describe("ApiCheckModalHost", () => {
 
   it("falls back to local fetch-models error when background returns no message", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: false }
+        }
         return { success: false }
-      }
-      return { success: false }
-    })
+      },
+    )
 
     await openModal()
 
@@ -2156,16 +2209,18 @@ describe("ApiCheckModalHost", () => {
 
   it("uses background validation category for model fetch analytics", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return {
-          success: false,
-          error: "Invalid baseUrl",
-          errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return {
+            success: false,
+            error: "Invalid baseUrl",
+            errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Validation,
+          }
         }
-      }
-      return { success: false }
-    })
+        return { success: false }
+      },
+    )
 
     await openModal()
 
@@ -2205,15 +2260,17 @@ describe("ApiCheckModalHost", () => {
 
   it("classifies sanitized background model-fetch messages locally", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return {
-          success: false,
-          error: "Session expired for sanitized account",
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return {
+            success: false,
+            error: "Session expired for sanitized account",
+          }
         }
-      }
-      return { success: false }
-    })
+        return { success: false }
+      },
+    )
 
     await openModal()
 
@@ -2258,15 +2315,17 @@ describe("ApiCheckModalHost", () => {
 
   it("falls back to local save-profile error when background returns no message", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: [] }
-      }
-      if (message.action === RuntimeActionIds.ApiCheckSaveProfile) {
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
+        }
+        if (type === WebAiApiCheckMessageTypes.SaveProfile) {
+          return { success: false }
+        }
         return { success: false }
-      }
-      return { success: false }
-    })
+      },
+    )
 
     await openModal()
 
@@ -2299,23 +2358,25 @@ describe("ApiCheckModalHost", () => {
 
   it("dispatches a completed close event after a probe result succeeds without fetched models", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: [] }
-      }
-      if (message.action === RuntimeActionIds.ApiCheckRunProbe) {
-        return {
-          success: true,
-          result: {
-            id: message.probeId,
-            status: "pass",
-            latencyMs: 5,
-            summary: "Probe OK",
-          },
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any, message: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: [] }
         }
-      }
-      return { success: false }
-    })
+        if (type === WebAiApiCheckMessageTypes.RunProbe) {
+          return {
+            success: true,
+            result: {
+              id: message.probeId,
+              status: "pass",
+              latencyMs: 5,
+              summary: "Probe OK",
+            },
+          }
+        }
+        return { success: false }
+      },
+    )
 
     const closedDetailPromise = new Promise<any>((resolve) => {
       window.addEventListener(
@@ -2362,12 +2423,14 @@ describe("ApiCheckModalHost", () => {
 
   it("dispatches a completed close event after model fetch succeeds", async () => {
     const user = userEvent.setup()
-    vi.mocked(sendRuntimeMessage).mockImplementation(async (message: any) => {
-      if (message.action === RuntimeActionIds.ApiCheckFetchModels) {
-        return { success: true, modelIds: ["gpt-4o-mini"] }
-      }
-      return { success: false }
-    })
+    vi.mocked(sendWebAiApiCheckMessage).mockImplementation(
+      async (type: any) => {
+        if (type === WebAiApiCheckMessageTypes.FetchModels) {
+          return { success: true, modelIds: ["gpt-4o-mini"] }
+        }
+        return { success: false }
+      },
+    )
 
     const closedDetailPromise = new Promise<any>((resolve) => {
       window.addEventListener(

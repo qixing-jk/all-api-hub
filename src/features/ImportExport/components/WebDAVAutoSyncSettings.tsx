@@ -26,7 +26,6 @@ import {
   SelectValue,
   Switch,
 } from "~/components/ui"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { usePreferenceDraft } from "~/hooks/usePreferenceDraft"
@@ -44,8 +43,9 @@ import {
   buildWebDavSyncDiagnostics,
   getWebdavSyncStrategyMode,
 } from "~/services/productAnalytics/webDavSync"
+import { WebdavAutoSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { sendWebdavAutoSyncMessage } from "~/services/webdav/webdavAutoSyncMessaging"
 import { WEBDAV_SYNC_STRATEGIES, WebDAVSettings } from "~/types/webdav"
-import { sendRuntimeMessage } from "~/utils/browser/browserApi"
 import { formatTimestamp } from "~/utils/core/formatters"
 import { createLogger } from "~/utils/core/logger"
 
@@ -108,9 +108,9 @@ export default function WebDAVAutoSyncSettings() {
 
   const loadStatus = useCallback(async () => {
     try {
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.WebdavAutoSyncGetStatus,
-      })
+      const response = await sendWebdavAutoSyncMessage(
+        WebdavAutoSyncMessageTypes.GetStatus,
+      )
       if (response.success && response.data) {
         setIsSyncing(response.data.isSyncing)
         setLastSyncTime(response.data.lastSyncTime)
@@ -192,9 +192,9 @@ export default function WebDAVAutoSyncSettings() {
 
     setSyncing(true)
     try {
-      const response = await sendRuntimeMessage({
-        action: RuntimeActionIds.WebdavAutoSyncSyncNow,
-      })
+      const response = await sendWebdavAutoSyncMessage(
+        WebdavAutoSyncMessageTypes.SyncNow,
+      )
 
       if (response.success) {
         await loadPreferences()

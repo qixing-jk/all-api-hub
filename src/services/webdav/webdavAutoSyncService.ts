@@ -1,4 +1,3 @@
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import {
   apiCredentialProfilesStorage,
   mergeApiCredentialProfilesConfigs,
@@ -64,6 +63,18 @@ import {
   userPreferences,
   type UserPreferences,
 } from "../preferences/userPreferences"
+import { WebdavAutoSyncMessageTypes } from "../runtimeMessaging/messageTypes"
+import {
+  createRuntimeMessageFailure,
+  type RuntimeMessageResponse,
+} from "../runtimeMessaging/result"
+import {
+  onWebdavAutoSyncMessage,
+  type WebdavAutoSyncMutationResponse,
+  type WebdavAutoSyncStatusResponse,
+  type WebdavAutoSyncSyncNowResponse,
+  type WebdavAutoSyncUpdateSettingsRequest,
+} from "./webdavAutoSyncMessaging"
 import {
   detectWebdavBackupPresence,
   mergeWebdavBackupPayloadBySelection,
@@ -1645,70 +1656,120 @@ class WebdavAutoSyncService {
 // 创建单例实例
 export const webdavAutoSyncService = new WebdavAutoSyncService()
 
+let webdavAutoSyncMessagingCleanup: (() => void)[] | null = null
+
 /**
- * Message handler for WebDAV auto-sync actions (setup, syncNow, stop, update).
- * @param request Incoming message with action + payload.
- * @param sendResponse Callback to respond to sender.
+ * Register typed background listeners for WebDAV auto-sync messages.
  */
-export const handleWebdavAutoSyncMessage = async (
-  request: any,
-  sendResponse: (response: any) => void,
-) => {
+export function setupWebdavAutoSyncMessagingListeners() {
+  if (webdavAutoSyncMessagingCleanup) {
+    return
+  }
+
+  webdavAutoSyncMessagingCleanup = [
+    onWebdavAutoSyncMessage(WebdavAutoSyncMessageTypes.Setup, () =>
+      resolveWebdavAutoSyncSetupMessage(),
+    ),
+    onWebdavAutoSyncMessage(WebdavAutoSyncMessageTypes.SyncNow, () =>
+      resolveWebdavAutoSyncSyncNowMessage(),
+    ),
+    onWebdavAutoSyncMessage(WebdavAutoSyncMessageTypes.Stop, () =>
+      resolveWebdavAutoSyncStopMessage(),
+    ),
+    onWebdavAutoSyncMessage(
+      WebdavAutoSyncMessageTypes.UpdateSettings,
+      ({ data }) => resolveWebdavAutoSyncUpdateSettingsMessage(data),
+    ),
+    onWebdavAutoSyncMessage(WebdavAutoSyncMessageTypes.GetStatus, () =>
+      resolveWebdavAutoSyncGetStatusMessage(),
+    ),
+  ]
+}
+
+/**
+ * Resolve a typed request to reapply the WebDAV auto-sync schedule.
+ */
+export async function resolveWebdavAutoSyncSetupMessage(): Promise<
+  RuntimeMessageResponse<undefined>
+> {
   try {
-    switch (request.action) {
-      case RuntimeActionIds.WebdavAutoSyncSetup:
-        await webdavAutoSyncService.setupAutoSync()
-        sendResponse({ success: true })
-        break
-
-      case RuntimeActionIds.WebdavAutoSyncSyncNow: {
-        const result = await webdavAutoSyncService.syncNow()
-        sendResponse({ success: result.success, message: result.message })
-        break
-      }
-
-      case RuntimeActionIds.WebdavAutoSyncStop:
-        await webdavAutoSyncService.stopAutoSync()
-        sendResponse({ success: true })
-        break
-
-      case RuntimeActionIds.WebdavAutoSyncUpdateSettings: {
-        const result = await webdavAutoSyncService.updateSettings(
-          request.settings,
-          typeof request.expectedLastUpdated === "number"
-            ? {
-                expectedLastUpdated: request.expectedLastUpdated,
-              }
-            : undefined,
-        )
-        sendResponse(
-          result.ok
-            ? {
-                success: true,
-                data: result.savedPreferences,
-              }
-            : {
-                success: false,
-                error:
-                  result.reason === "conflict"
-                    ? t("settings:messages.preferencesChangedExternally")
-                    : t("settings:messages.saveSettingsFailed"),
-              },
-        )
-        break
-      }
-
-      case RuntimeActionIds.WebdavAutoSyncGetStatus: {
-        const status = webdavAutoSyncService.getStatus()
-        sendResponse({ success: true, data: status })
-        break
-      }
-
-      default:
-        sendResponse({ success: false, error: "未知的操作" })
-    }
+    await webdavAutoSyncService.setupAutoSync()
+    return { success: true, data: undefined }
   } catch (error) {
     logger.error("处理消息失败", error)
-    sendResponse({ success: false, error: getErrorMessage(error) })
+    return createRuntimeMessageFailure(getErrorMessage(error))
+  }
+}
+
+/**
+ * Resolve a typed request to run WebDAV auto-sync immediately.
+ */
+export async function resolveWebdavAutoSyncSyncNowMessage(): Promise<WebdavAutoSyncSyncNowResponse> {
+  try {
+    const result = await webdavAutoSyncService.syncNow()
+    return { success: result.success, message: result.message }
+  } catch (error) {
+    logger.error("处理消息失败", error)
+    return { success: false, error: getErrorMessage(error) }
+  }
+}
+
+/**
+ * Resolve a typed request to stop WebDAV auto-sync scheduling.
+ */
+export async function resolveWebdavAutoSyncStopMessage(): Promise<
+  RuntimeMessageResponse<undefined>
+> {
+  try {
+    await webdavAutoSyncService.stopAutoSync()
+    return { success: true, data: undefined }
+  } catch (error) {
+    logger.error("处理消息失败", error)
+    return createRuntimeMessageFailure(getErrorMessage(error))
+  }
+}
+
+/**
+ * Resolve a typed request to persist and apply WebDAV auto-sync settings.
+ */
+export async function resolveWebdavAutoSyncUpdateSettingsMessage(
+  request: WebdavAutoSyncUpdateSettingsRequest,
+): Promise<WebdavAutoSyncMutationResponse> {
+  try {
+    const result = await webdavAutoSyncService.updateSettings(
+      request.settings,
+      typeof request.expectedLastUpdated === "number"
+        ? {
+            expectedLastUpdated: request.expectedLastUpdated,
+          }
+        : undefined,
+    )
+    return result.ok
+      ? {
+          success: true,
+          data: result.savedPreferences,
+        }
+      : {
+          success: false,
+          error:
+            result.reason === "conflict"
+              ? t("settings:messages.preferencesChangedExternally")
+              : t("settings:messages.saveSettingsFailed"),
+        }
+  } catch (error) {
+    logger.error("处理消息失败", error)
+    return createRuntimeMessageFailure(getErrorMessage(error))
+  }
+}
+
+/**
+ * Resolve a typed request for WebDAV auto-sync runtime status.
+ */
+export async function resolveWebdavAutoSyncGetStatusMessage(): Promise<WebdavAutoSyncStatusResponse> {
+  try {
+    return { success: true, data: webdavAutoSyncService.getStatus() }
+  } catch (error) {
+    logger.error("处理消息失败", error)
+    return createRuntimeMessageFailure(getErrorMessage(error))
   }
 }

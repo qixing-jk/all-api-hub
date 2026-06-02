@@ -1,4 +1,3 @@
-import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { API_ERROR_CODES, ApiError } from "~/services/apiService/common/errors"
 import type { ApiServiceRequest } from "~/services/apiService/common/type"
 import { fetchApi } from "~/services/apiService/common/utils"
@@ -7,11 +6,13 @@ import {
   LDOH_ORIGIN,
   LDOH_SITES_ENDPOINT,
 } from "~/services/integrations/ldohSiteLookup/constants"
-import type {
-  LdohSiteLookupRefreshSitesResponse,
-  LdohSiteLookupRuntimeRequest,
+import type { LdohSiteLookupRefreshSitesResponse } from "~/services/integrations/ldohSiteLookup/runtime"
+import {
+  LdohSiteLookupMessageTypes,
+  onLdohSiteLookupMessage,
 } from "~/services/integrations/ldohSiteLookup/runtime"
 import type { LdohSitesApiResponse } from "~/services/integrations/ldohSiteLookup/types"
+import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
 import { AuthTypeEnum } from "~/types"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -111,32 +112,30 @@ export async function refreshLdohSiteListCache(): Promise<LdohSiteLookupRefreshS
   }
 }
 
+let ldohSiteLookupMessagingCleanup: (() => void)[] | null = null
+
 /**
- * Handles runtime messages for the LDOH site lookup feature.
- *
- * Message contract:
- * - Request: `{ action: RuntimeActionIds.LdohSiteLookupRefreshSites }`
- * - Response: `{ success: boolean, cachedCount?: number, unauthenticated?: boolean, error?: string }`
+ * Background listeners for typed LDOH site lookup messaging.
  */
-export async function handleLdohSiteLookupMessage(
-  request: LdohSiteLookupRuntimeRequest,
-  sendResponse: (response: LdohSiteLookupRefreshSitesResponse) => void,
-) {
+export function setupLdohSiteLookupMessagingListeners() {
+  if (ldohSiteLookupMessagingCleanup) {
+    return
+  }
+
+  ldohSiteLookupMessagingCleanup = [
+    onLdohSiteLookupMessage(LdohSiteLookupMessageTypes.RefreshSites, () =>
+      resolveLdohSiteLookupRefreshSitesMessage(),
+    ),
+  ]
+}
+
+/**
+ * Resolve typed LDOH site lookup refresh messages through the shared service logic.
+ */
+async function resolveLdohSiteLookupRefreshSitesMessage(): Promise<LdohSiteLookupRefreshSitesResponse> {
   try {
-    switch (request.action) {
-      case RuntimeActionIds.LdohSiteLookupRefreshSites: {
-        const result = await refreshLdohSiteListCache()
-        sendResponse(result)
-        return
-      }
-      default: {
-        sendResponse({
-          success: false,
-          error: "Unknown LDOH site lookup action.",
-        })
-      }
-    }
+    return await refreshLdohSiteListCache()
   } catch (error) {
-    sendResponse({ success: false, error: getErrorMessage(error) })
+    return createRuntimeMessageFailure(getErrorMessage(error))
   }
 }

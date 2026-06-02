@@ -1,11 +1,17 @@
 import iconUrl from "~/assets/icon.png"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { RuntimeActionIds } from "~/constants/runtimeActions"
+import {
+  onTaskNotificationMessage,
+  TaskNotificationMessageTypes,
+  type TaskNotificationTestRequest,
+  type TaskNotificationTestResponse,
+} from "~/services/notifications/messaging"
 import {
   hasPermission,
   OPTIONAL_PERMISSION_IDS,
 } from "~/services/permissions/permissionManager"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
 import {
   DEFAULT_TASK_NOTIFICATION_PREFERENCES,
   getTaskNotificationId,
@@ -45,16 +51,6 @@ interface TaskNotificationPayload {
   counts?: TaskNotificationCounts
   title?: string
   message?: string
-}
-
-interface TaskNotificationMessageRequest {
-  action: string
-  channel?: TaskNotificationChannel
-}
-
-interface TaskNotificationMessageResponse {
-  success: boolean
-  error?: string
 }
 
 interface TaskNotificationContent {
@@ -1034,18 +1030,29 @@ export function __resetTaskNotificationServiceForTesting(): void {
   unsubscribeNotificationClicked = null
 }
 
+let taskNotificationMessagingCleanup: (() => void)[] | null = null
+
 /**
- * Handles runtime requests that trigger a test task notification.
+ * Background listeners for typed task-notification messaging.
  */
-export async function handleTaskNotificationMessage(
-  request: TaskNotificationMessageRequest,
-  sendResponse: (response: TaskNotificationMessageResponse) => void,
-): Promise<void> {
-  if (request.action !== RuntimeActionIds.TaskNotificationsTest) {
-    sendResponse({ success: false, error: "Unknown action" })
+export function setupTaskNotificationMessagingListeners(): void {
+  if (taskNotificationMessagingCleanup) {
     return
   }
 
+  taskNotificationMessagingCleanup = [
+    onTaskNotificationMessage(TaskNotificationMessageTypes.Test, ({ data }) =>
+      resolveTaskNotificationTestMessage(data),
+    ),
+  ]
+}
+
+/**
+ * Handles typed runtime requests that trigger a test task notification.
+ */
+export async function resolveTaskNotificationTestMessage(
+  request: TaskNotificationTestRequest,
+): Promise<TaskNotificationTestResponse> {
   try {
     const success = await notifyTaskResult(
       {
@@ -1063,14 +1070,10 @@ export async function handleTaskNotificationMessage(
         : { ignoreTaskPreference: true },
     )
 
-    sendResponse({
-      success,
-      error: success ? undefined : t("settings:taskNotifications.test.failed"),
-    })
+    return success
+      ? { success: true, data: undefined }
+      : createRuntimeMessageFailure(t("settings:taskNotifications.test.failed"))
   } catch (error) {
-    sendResponse({
-      success: false,
-      error: getErrorMessage(error),
-    })
+    return createRuntimeMessageFailure(getErrorMessage(error))
   }
 }

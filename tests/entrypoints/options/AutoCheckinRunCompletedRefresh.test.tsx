@@ -2,6 +2,7 @@ import { afterEach, describe, expect, it, vi } from "vitest"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
+import { sendAutoCheckinMessage } from "~/services/checkin/autoCheckin/messaging"
 import { act, render, screen, waitFor } from "~~/tests/test-utils/render"
 
 vi.mock("react-hot-toast", () => ({
@@ -13,6 +14,10 @@ vi.mock("react-hot-toast", () => ({
   },
 }))
 
+vi.mock("~/services/checkin/autoCheckin/messaging", () => ({
+  sendAutoCheckinMessage: vi.fn(),
+}))
+
 afterEach(() => {
   vi.restoreAllMocks()
 })
@@ -21,10 +26,10 @@ describe("AutoCheckin status view refresh", () => {
   it("reloads status when autoCheckin:runCompleted is received", async () => {
     const browserApi = await import("~/utils/browser/browserApi")
 
-    const sendRuntimeMessageSpy = vi
-      .spyOn(browserApi, "sendRuntimeMessage")
-      .mockImplementation(async (message: any) => {
-        if (message.action === RuntimeActionIds.AutoCheckinGetStatus) {
+    const sendAutoCheckinMessageSpy = vi
+      .mocked(sendAutoCheckinMessage)
+      .mockImplementation(async (type: string) => {
+        if (type === "autoCheckin:getStatus") {
           return { success: true, data: { perAccount: {} } }
         }
         return { success: true }
@@ -40,12 +45,12 @@ describe("AutoCheckin status view refresh", () => {
 
     await screen.findByRole("button", { name: /execution\.runNow/i })
     await waitFor(() => {
-      expect(sendRuntimeMessageSpy).toHaveBeenCalledWith({
-        action: RuntimeActionIds.AutoCheckinGetStatus,
-      })
+      expect(sendAutoCheckinMessageSpy).toHaveBeenCalledWith(
+        "autoCheckin:getStatus",
+      )
     })
 
-    sendRuntimeMessageSpy.mockClear()
+    sendAutoCheckinMessageSpy.mockClear()
     expect(runtimeListener).toBeTypeOf("function")
 
     await act(async () => {
@@ -58,9 +63,9 @@ describe("AutoCheckin status view refresh", () => {
     })
 
     await waitFor(() => {
-      expect(sendRuntimeMessageSpy).toHaveBeenCalledWith({
-        action: RuntimeActionIds.AutoCheckinGetStatus,
-      })
+      expect(sendAutoCheckinMessageSpy).toHaveBeenCalledWith(
+        "autoCheckin:getStatus",
+      )
     })
   })
 })
