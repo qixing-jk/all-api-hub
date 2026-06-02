@@ -67,6 +67,7 @@ import {
   onAlarm,
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
+import { isDevelopmentMode, isTestMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { t } from "~/utils/i18n/core"
@@ -2717,10 +2718,7 @@ export async function runAutoCheckinNow(data: AutoCheckinRunNowRequest = {}) {
  * Reject debug-only auto check-in actions outside development and test modes.
  */
 function ensureAutoCheckinDebugAvailable(action: string) {
-  if (
-    import.meta.env.MODE !== "development" &&
-    import.meta.env.MODE !== "test"
-  ) {
+  if (!isDevelopmentMode() && !isTestMode()) {
     return {
       success: false as const,
       error: `Debug action is only available in development/test mode (${action})`,

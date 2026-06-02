@@ -31,6 +31,7 @@ import {
   COOKIE_SESSION_OVERRIDE_HEADER_NAME,
 } from "~/utils/browser/cookieHelper"
 import { executeWithTempWindowFallback } from "~/utils/browser/tempWindowFetch"
+import { isTestMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
@@ -60,8 +61,7 @@ const logger = createLogger("ApiTransportRequest")
 const LOG_REQUEST_MIN_INTERVAL_MS = 200
 
 const logRequestRateLimiter = createMinIntervalLimiter({
-  minIntervalMs:
-    import.meta.env.MODE === "test" ? 0 : LOG_REQUEST_MIN_INTERVAL_MS,
+  minIntervalMs: isTestMode() ? 0 : LOG_REQUEST_MIN_INTERVAL_MS,
 })
 
 /**

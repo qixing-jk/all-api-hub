@@ -22,6 +22,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import type { ApiVerificationHistorySummary } from "~/services/verification/verificationResultHistory"
+import { isProductionMode } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
 import { tryParseUrl } from "~/utils/core/urlParsing"
 
@@ -113,7 +114,7 @@ export default function ModelItem(props: ModelItemProps) {
     : uncontrolledIsExpanded
 
   useEffect(() => {
-    if (!hasExpansionPropMismatch || process.env.NODE_ENV === "production") {
+    if (!hasExpansionPropMismatch || isProductionMode()) {
       return
     }
 

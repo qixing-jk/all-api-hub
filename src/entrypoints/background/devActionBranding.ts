@@ -1,5 +1,6 @@
 import { getManifest } from "~/utils/browser/browserApi"
 import { formatDevActionTitle, getDevBadgeText } from "~/utils/core/devBranding"
+import { isDevelopmentMode } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -15,7 +16,7 @@ const logger = createLogger("DevActionBranding")
  * background script.
  */
 export async function applyDevActionBranding() {
-  if (import.meta.env.MODE !== "development") return
+  if (!isDevelopmentMode()) return
 
   const actionApi = (browser as any).action ?? (browser as any).browserAction
   if (!actionApi) return

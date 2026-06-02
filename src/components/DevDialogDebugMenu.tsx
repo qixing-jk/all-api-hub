@@ -17,6 +17,7 @@ import {
 } from "~/components/ui/dropdown-menu"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import { getManifest } from "~/utils/browser/browserApi"
+import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import { openPermissionsOnboardingPage } from "~/utils/navigation"
@@ -89,7 +90,7 @@ function DevDialogDebugMenuContent() {
  * Development-only menu for manually reopening first-run/update dialogs.
  */
 export function DevDialogDebugMenu() {
-  if (import.meta.env.MODE !== "development") {
+  if (!isDevelopmentMode()) {
     return null
   }
 

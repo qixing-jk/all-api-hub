@@ -36,6 +36,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import type { ApiToken, DisplaySiteData } from "~/types"
+import { isTestMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 import {
@@ -61,8 +62,7 @@ const DEFAULT_APP: CCSwitchApp = "claude"
 const APP_LIMITATION_NOTICE_ID = "ccswitch-app-limitation"
 // Preserve the real debounce in dev/prod so endpoint edits do not spam model-list
 // requests, but skip the wall-clock delay in Vitest.
-const UPSTREAM_MODEL_FETCH_DEBOUNCE_MS =
-  import.meta.env.MODE === "test" ? 0 : 300
+const UPSTREAM_MODEL_FETCH_DEBOUNCE_MS = isTestMode() ? 0 : 300
 
 const getCCSwitchAppLabel = (t: TFunction, app: CCSwitchApp) => {
   switch (app) {

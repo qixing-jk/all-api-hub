@@ -48,6 +48,7 @@ import {
   CHECKIN_RESULT_STATUS,
 } from "~/types/autoCheckin"
 import { onRuntimeMessage } from "~/utils/browser/browserApi"
+import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
@@ -194,7 +195,7 @@ export default function AutoCheckin(props: {
     useState<DisplaySiteData | null>(null)
 
   // Dev-only: diagnostics and simulation state for the UI-open pre-trigger flow.
-  // These controls are shown only when `import.meta.env.MODE === "development"`.
+  // These controls are shown only in development mode.
   const [uiOpenPretriggerDiagnostics, setUiOpenPretriggerDiagnostics] =
     useState<{
       isOpen: boolean
@@ -296,7 +297,7 @@ export default function AutoCheckin(props: {
     }
   }, [loadStatus, t])
 
-  const showDebugButtons = import.meta.env.MODE === "development"
+  const showDebugButtons = isDevelopmentMode()
 
   const handleDebugTriggerDailyAlarmNow = useCallback(async () => {
     try {

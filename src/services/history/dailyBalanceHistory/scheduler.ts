@@ -22,6 +22,7 @@ import {
   hasAlarmsAPI,
   onAlarm,
 } from "~/utils/browser/browserApi"
+import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -494,7 +495,7 @@ export const handleDailyBalanceHistoryMessage = async (
       return
     }
 
-    if (import.meta.env.MODE !== "development") {
+    if (!isDevelopmentMode()) {
       sendResponse({ success: false, error: "Debug action unavailable" })
       return
     }

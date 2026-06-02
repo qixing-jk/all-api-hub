@@ -24,6 +24,7 @@ import {
   type OptionsMenuCategoryId,
   type OptionsPageMenuItemId,
 } from "~/constants/optionsMenuIds"
+import { isDevelopmentMode } from "~/utils/core/environment"
 
 import BasicSettings from "./pages/BasicSettings"
 
@@ -168,7 +169,7 @@ const BASE_MENU_ITEMS: MenuItem[] = [
 
 const DEV_MENU_ITEMS: MenuItem[] = []
 
-if (import.meta.env.MODE === "development") {
+if (isDevelopmentMode()) {
   const MeshGradientLab = lazy(() => import("./pages/MeshGradientLab"))
 
   const MeshGradientLabComponent: ComponentType<any> = (props) =>

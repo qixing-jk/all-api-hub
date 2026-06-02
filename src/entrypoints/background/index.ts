@@ -30,6 +30,7 @@ import {
   onStartup,
   onSuspend,
 } from "~/utils/browser/browserApi"
+import { isTestMode } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
 import { openOrFocusOptionsMenuItem } from "~/utils/navigation"
 
@@ -53,7 +54,7 @@ const logger = createLogger("BackgroundEntrypoint")
  * lifecycle before they can drive a target page.
  */
 function shouldAutoOpenPermissionsOnboarding(): boolean {
-  return import.meta.env.MODE !== "test"
+  return !isTestMode()
 }
 
 export default defineBackground(() => {

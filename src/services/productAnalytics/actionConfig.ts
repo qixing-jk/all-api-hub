@@ -4,6 +4,7 @@ import {
   type ProductAnalyticsFeatureId,
   type ProductAnalyticsSurfaceId,
 } from "~/services/productAnalytics/events"
+import { isDevelopmentMode } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
 
 const logger = createLogger("ProductAnalyticsActionConfig")
@@ -84,7 +85,7 @@ function normalizeScopedActionConfig(
  * Emits a development-only diagnostic when a provided action is incomplete.
  */
 function logUnresolvedScopedAction() {
-  if (import.meta.env.DEV) {
+  if (isDevelopmentMode()) {
     logger.debug("Product analytics action config could not be resolved")
   }
 }

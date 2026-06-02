@@ -1,3 +1,5 @@
+import { isTestMode } from "~/utils/core/environment"
+
 type SiteRequestLimiterConfig = {
   enabled?: boolean
   maxConcurrentPerSite: number
@@ -206,7 +208,7 @@ export function createSiteRequestLimiter(config: SiteRequestLimiterConfig) {
 
 const productionSiteRequestLimiter = createSiteRequestLimiter({
   ...SITE_API_REQUEST_LIMITS,
-  enabled: import.meta.env.MODE !== "test",
+  enabled: !isTestMode(),
 })
 
 /**

@@ -16,6 +16,7 @@ import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
 import { clampBalanceHistoryRetentionDays } from "~/services/history/dailyBalanceHistory/utils"
 import { DEFAULT_BALANCE_HISTORY_PREFERENCES } from "~/types/dailyBalanceHistory"
 import { hasAlarmsAPI, sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { isDevelopmentMode } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -59,7 +60,7 @@ export default function BalanceHistorySettings() {
   }, [preferences.balanceHistory])
 
   const alarmsSupported = hasAlarmsAPI()
-  const showDebugSeedAction = import.meta.env.MODE === "development"
+  const showDebugSeedAction = isDevelopmentMode()
 
   const safeRetentionDays = useMemo(
     () => clampBalanceHistoryRetentionDays(retentionDays),

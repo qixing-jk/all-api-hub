@@ -58,6 +58,7 @@ import {
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
 import { sendRuntimeMessage } from "~/utils/browser/browserApi"
+import { isTestMode } from "~/utils/core/environment"
 
 import {
   API_CHECK_OPEN_MODAL_EVENT,
@@ -88,7 +89,7 @@ type ApiCheckExtractionMetadata = NonNullable<
 
 // Preserve the real debounce in dev/prod to avoid bursty background requests
 // while typing, but skip the wall-clock delay in Vitest.
-const MODEL_AUTO_FETCH_DEBOUNCE_MS = import.meta.env.MODE === "test" ? 0 : 300
+const MODEL_AUTO_FETCH_DEBOUNCE_MS = isTestMode() ? 0 : 300
 
 const contentApiCheckAnalyticsScope = {
   featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,

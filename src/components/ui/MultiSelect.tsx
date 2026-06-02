@@ -18,6 +18,7 @@ import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
 import { cn } from "~/lib/utils"
+import { isTestMode } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
 
 /**
@@ -157,7 +158,7 @@ export function MultiSelect({
   // Headless UI's Combobox `virtual` mode is great for large lists in real browsers,
   // but it doesn't reliably render options in jsdom (tests). Disable virtualization
   // in `test` mode to keep component tests stable and user-event compatible.
-  const shouldUseVirtualOptions = import.meta.env.MODE !== "test"
+  const shouldUseVirtualOptions = !isTestMode()
 
   const handleSelect = (newSelected: MultiSelectOption[]) => {
     onChange(newSelected.map((opt) => opt.value))
