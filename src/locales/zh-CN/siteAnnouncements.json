@@ -40,7 +40,9 @@
   "messages": {
     "checkCompleted": "公告检查已完成",
     "checkFailed": "公告检查失败",
-    "loadFailed": "加载公告失败"
+    "loadFailed": "加载公告失败",
+    "markAllReadFailed": "批量标记公告已读失败",
+    "markReadFailed": "标记公告已读失败"
   },
   "notification": {
     "multipleUnread": "{{title}}，还有 {{count}} 条未读公告",

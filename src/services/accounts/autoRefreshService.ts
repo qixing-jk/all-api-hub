@@ -60,34 +60,30 @@ class AutoRefreshService {
    * Respects accountAutoRefresh.enabled/interval from user preferences.
    */
   async setupAutoRefresh() {
-    try {
-      // 清除现有定时器
-      if (this.refreshTimer) {
-        clearInterval(this.refreshTimer)
-        this.refreshTimer = null
-        logger.debug("已清除现有定时器")
-      }
-
-      // 获取用户偏好设置（可能关闭自动刷新）
-      const preferences = await userPreferences.getPreferences()
-
-      if (!preferences.accountAutoRefresh?.enabled) {
-        logger.info("自动刷新已关闭")
-        return
-      }
-
-      // 启动定时刷新；使用 setInterval 保存引用以便后续清理
-      const intervalMs = preferences.accountAutoRefresh.interval * 1000
-      this.refreshTimer = setInterval(async () => {
-        await this.performBackgroundRefresh()
-      }, intervalMs)
-
-      logger.info("自动刷新已启动", {
-        intervalSeconds: preferences.accountAutoRefresh.interval,
-      })
-    } catch (error) {
-      logger.error("设置自动刷新失败", error)
+    // 清除现有定时器
+    if (this.refreshTimer) {
+      clearInterval(this.refreshTimer)
+      this.refreshTimer = null
+      logger.debug("已清除现有定时器")
     }
+
+    // 获取用户偏好设置（可能关闭自动刷新）
+    const preferences = await userPreferences.getPreferences()
+
+    if (!preferences.accountAutoRefresh?.enabled) {
+      logger.info("自动刷新已关闭")
+      return
+    }
+
+    // 启动定时刷新；使用 setInterval 保存引用以便后续清理
+    const intervalMs = preferences.accountAutoRefresh.interval * 1000
+    this.refreshTimer = setInterval(async () => {
+      await this.performBackgroundRefresh()
+    }, intervalMs)
+
+    logger.info("自动刷新已启动", {
+      intervalSeconds: preferences.accountAutoRefresh.interval,
+    })
   }
 
   /**
@@ -160,14 +156,10 @@ class AutoRefreshService {
   async updateSettings(updates: {
     accountAutoRefresh: Partial<AccountAutoRefresh>
   }) {
-    try {
-      await userPreferences.savePreferences(updates)
-      // 重新设置定时器
-      await this.setupAutoRefresh()
-      logger.info("设置已更新", updates)
-    } catch (error) {
-      logger.error("更新设置失败", error)
-    }
+    await userPreferences.savePreferences(updates)
+    // 重新设置定时器
+    await this.setupAutoRefresh()
+    logger.info("设置已更新", updates)
   }
 
   /**

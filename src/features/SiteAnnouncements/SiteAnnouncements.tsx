@@ -51,6 +51,20 @@ const textLinkClassName =
   "font-medium text-blue-600 underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none dark:text-blue-400"
 
 /**
+ * Converts typed runtime failures into load errors instead of empty page data.
+ */
+function assertRuntimeSuccess<T>(
+  response: { success: true; data: T } | { success: false; error: string },
+  fallbackMessage: string,
+): T {
+  if (response.success) {
+    return response.data
+  }
+
+  throw new Error(response.error?.trim() || fallbackMessage)
+}
+
+/**
  * Options page for locally cached provider-site announcements.
  */
 export default function SiteAnnouncementsPage({
@@ -78,8 +92,10 @@ export default function SiteAnnouncementsPage({
         sendSiteAnnouncementsMessage(SiteAnnouncementsMessageTypes.GetStatus),
       ])
 
-      setRecords(recordsResponse.success ? recordsResponse.data : [])
-      setStatus(statusResponse.success ? statusResponse.data : [])
+      setRecords(
+        assertRuntimeSuccess(recordsResponse, t("messages.loadFailed")),
+      )
+      setStatus(assertRuntimeSuccess(statusResponse, t("messages.loadFailed")))
     } catch (error) {
       showResultToast({
         success: false,
@@ -215,11 +231,9 @@ export default function SiteAnnouncementsPage({
       }
       showResultToast({
         success,
+        message: response.success === false ? response.error : undefined,
         successFallback: t("messages.checkCompleted"),
-        errorFallback:
-          response.success === false
-            ? response.error
-            : t("messages.checkFailed"),
+        errorFallback: t("messages.checkFailed"),
       })
       await loadData()
     } catch (error) {
@@ -257,10 +271,20 @@ export default function SiteAnnouncementsPage({
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
+        showResultToast({
+          success: false,
+          message: response?.success === false ? response.error : undefined,
+          errorFallback: t("messages.markReadFailed"),
+        })
       }
-    } catch {
+    } catch (error) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
+      showResultToast({
+        success: false,
+        message: getErrorMessage(error),
+        errorFallback: t("messages.markReadFailed"),
       })
     }
   }
@@ -292,10 +316,20 @@ export default function SiteAnnouncementsPage({
         tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
           errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
         })
+        showResultToast({
+          success: false,
+          message: response?.success === false ? response.error : undefined,
+          errorFallback: t("messages.markAllReadFailed"),
+        })
       }
-    } catch {
+    } catch (error) {
       tracker.complete(PRODUCT_ANALYTICS_RESULTS.Failure, {
         errorCategory: PRODUCT_ANALYTICS_ERROR_CATEGORIES.Unknown,
+      })
+      showResultToast({
+        success: false,
+        message: getErrorMessage(error),
+        errorFallback: t("messages.markAllReadFailed"),
       })
     }
   }

@@ -4,12 +4,23 @@ import {
 } from "~/services/managedSites/channelConfigMessaging"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
+import { isMessageReceiverUnavailableError } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 
 /**
  * Unified logger scoped to channel filter load/save helpers in the options UI.
  */
 const logger = createLogger("ChannelFilters")
+
+/**
+ * Builds an error from an explicit runtime failure while preserving local copy.
+ */
+function createRuntimeResponseError(
+  fallbackMessage: string,
+  error?: string,
+): Error {
+  return new Error(error?.trim() || fallbackMessage)
+}
 
 /**
  * Load channel filter rules for the given channel.
@@ -31,12 +42,18 @@ export async function fetchChannelFilters(
     if (response?.success) {
       return response.data?.modelFilterSettings?.rules ?? []
     }
-    throw new Error(
-      response?.success === false
-        ? response.error
-        : "Failed to load channel filters",
-    )
+    if (response?.success === false) {
+      throw createRuntimeResponseError(
+        "Failed to load channel filters",
+        response.error,
+      )
+    }
+    throw new Error("Failed to load channel filters")
   } catch (runtimeError) {
+    if (!isMessageReceiverUnavailableError(runtimeError)) {
+      throw runtimeError
+    }
+
     logger.warn("Runtime fetch failed for channel, using fallback storage", {
       channelId,
       error: runtimeError,
@@ -63,13 +80,19 @@ export async function saveChannelFilters(
       { channelId, filters },
     )
     if (response?.success !== true) {
-      throw new Error(
-        response?.success === false
-          ? response.error
-          : "Failed to save channel filters",
-      )
+      if (response?.success === false) {
+        throw createRuntimeResponseError(
+          "Failed to save channel filters",
+          response.error,
+        )
+      }
+      throw new Error("Failed to save channel filters")
     }
   } catch (runtimeError) {
+    if (!isMessageReceiverUnavailableError(runtimeError)) {
+      throw runtimeError
+    }
+
     logger.warn("Runtime save failed for channel, persisting locally", {
       channelId,
       error: runtimeError,

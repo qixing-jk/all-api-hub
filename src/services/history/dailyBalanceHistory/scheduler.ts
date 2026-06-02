@@ -443,6 +443,16 @@ export async function resolveBalanceHistoryRefreshNowMessage(
   request?: BalanceHistoryRefreshNowRequest,
 ): Promise<BalanceHistoryRefreshNowResponse> {
   try {
+    if (
+      request &&
+      request.accountIds !== undefined &&
+      !Array.isArray(request.accountIds)
+    ) {
+      return createRuntimeMessageFailure(
+        "accountIds must be an array when provided",
+      )
+    }
+
     const accountIds = Array.isArray(request?.accountIds)
       ? request.accountIds
       : undefined

@@ -83,11 +83,22 @@ describe("channelFilters", () => {
     expect(mockGetConfig).not.toHaveBeenCalled()
   })
 
-  it("falls back to local storage when runtime loading fails", async () => {
+  it("throws explicit runtime load failures instead of falling back to local storage", async () => {
     mockSendChannelConfigMessage.mockResolvedValue({
       success: false,
       error: "runtime unavailable",
     })
+
+    await expect(fetchChannelFilters(11)).rejects.toThrow("runtime unavailable")
+
+    expect(mockGetConfig).not.toHaveBeenCalled()
+    expect(mockWarn).not.toHaveBeenCalled()
+  })
+
+  it("falls back to local storage when runtime loading is unavailable", async () => {
+    mockSendChannelConfigMessage.mockRejectedValue(
+      new Error("Receiving end does not exist"),
+    )
     mockGetConfig.mockResolvedValue({
       modelFilterSettings: {
         rules: sampleRules,
@@ -116,7 +127,9 @@ describe("channelFilters", () => {
   })
 
   it("falls back to local persistence when runtime saving fails", async () => {
-    mockSendChannelConfigMessage.mockRejectedValue(new Error("no runtime"))
+    mockSendChannelConfigMessage.mockRejectedValue(
+      new Error("Receiving end does not exist"),
+    )
     mockUpsertFilters.mockResolvedValue(true)
 
     await expect(saveChannelFilters(19, sampleRules)).resolves.toBeUndefined()
@@ -125,11 +138,24 @@ describe("channelFilters", () => {
     expect(mockWarn).toHaveBeenCalledTimes(1)
   })
 
-  it("throws when both runtime and local persistence fail", async () => {
+  it("throws explicit runtime save failures instead of falling back locally", async () => {
     mockSendChannelConfigMessage.mockResolvedValue({
       success: false,
       error: "save rejected",
     })
+
+    await expect(saveChannelFilters(21, sampleRules)).rejects.toThrow(
+      "save rejected",
+    )
+
+    expect(mockUpsertFilters).not.toHaveBeenCalled()
+    expect(mockWarn).not.toHaveBeenCalled()
+  })
+
+  it("throws when runtime is unavailable and local persistence fails", async () => {
+    mockSendChannelConfigMessage.mockRejectedValue(
+      new Error("Receiving end does not exist"),
+    )
     mockUpsertFilters.mockResolvedValue(false)
 
     await expect(saveChannelFilters(21, sampleRules)).rejects.toThrow(

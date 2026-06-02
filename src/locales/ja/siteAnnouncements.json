@@ -40,7 +40,9 @@
   "messages": {
     "checkCompleted": "公告確認が完了しました",
     "checkFailed": "公告確認に失敗しました",
-    "loadFailed": "公告の読み込みに失敗しました"
+    "loadFailed": "公告の読み込みに失敗しました",
+    "markAllReadFailed": "公告をすべて既読にできませんでした",
+    "markReadFailed": "公告を既読にできませんでした"
   },
   "notification": {
     "multipleUnread_other": "{{title}}、ほかに {{count}} 件の未読公告があります",

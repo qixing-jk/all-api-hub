@@ -891,6 +891,13 @@ export async function triggerAllModelSync() {
  * Run model sync for the selected managed-site channels.
  */
 export async function triggerSelectedModelSync(channelIds?: number[]) {
+  if (!Array.isArray(channelIds) || channelIds.length === 0) {
+    return {
+      success: false as const,
+      error: "channelIds must be a non-empty array for selected sync",
+    }
+  }
+
   const resultSelected = await modelSyncScheduler.executeSync(channelIds)
   return { success: true as const, data: resultSelected }
 }

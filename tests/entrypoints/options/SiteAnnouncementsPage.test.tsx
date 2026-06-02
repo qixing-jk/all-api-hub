@@ -551,6 +551,31 @@ describe("SiteAnnouncementsPage", () => {
     })
   })
 
+  it("shows a toast when the typed announcement list response is unsuccessful", async () => {
+    sendSiteAnnouncementsMessageMock.mockImplementation(
+      async (type: string) => {
+        switch (type) {
+          case SiteAnnouncementsMessageTypes.ListRecords:
+            return { success: false, error: "list rejected" }
+          case SiteAnnouncementsMessageTypes.GetStatus:
+            return { success: true, data: status }
+          default:
+            return { success: true }
+        }
+      },
+    )
+
+    render(<SiteAnnouncementsPage />)
+
+    await waitFor(() => {
+      expect(showResultToast).toHaveBeenCalledWith({
+        success: false,
+        message: "list rejected",
+        errorFallback: "siteAnnouncements:messages.loadFailed",
+      })
+    })
+  })
+
   it("disables manual checks while announcements are loading", async () => {
     let resolveRecords!: (response: {
       success: true
@@ -848,8 +873,46 @@ describe("SiteAnnouncementsPage", () => {
       )
       expect(showResultToast).toHaveBeenCalledWith({
         success: false,
+        message: "check rejected",
         successFallback: "siteAnnouncements:messages.checkCompleted",
-        errorFallback: "check rejected",
+        errorFallback: "siteAnnouncements:messages.checkFailed",
+      })
+    })
+  })
+
+  it("uses local failure fallback copy when the manual check runtime error is blank", async () => {
+    const user = userEvent.setup()
+
+    sendSiteAnnouncementsMessageMock.mockImplementation(
+      async (type: string) => {
+        switch (type) {
+          case SiteAnnouncementsMessageTypes.ListRecords:
+            return { success: true, data: records }
+          case SiteAnnouncementsMessageTypes.GetStatus:
+            return { success: true, data: status }
+          case SiteAnnouncementsMessageTypes.CheckNow:
+            return { success: false, error: "" }
+          default:
+            return { success: true }
+        }
+      },
+    )
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:title")
+    await user.click(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:actions.checkNow",
+      }),
+    )
+
+    await waitFor(() => {
+      expect(showResultToast).toHaveBeenCalledWith({
+        success: false,
+        message: "",
+        successFallback: "siteAnnouncements:messages.checkCompleted",
+        errorFallback: "siteAnnouncements:messages.checkFailed",
       })
     })
   })

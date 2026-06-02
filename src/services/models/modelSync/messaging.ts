@@ -13,7 +13,7 @@ import type {
 import type { managedSiteModelSyncStorage } from "./storage"
 
 interface ModelSyncTriggerSelectedRequest {
-  channelIds?: number[]
+  channelIds: number[]
 }
 
 export interface ModelSyncUpdateSettingsRequest {

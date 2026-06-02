@@ -399,6 +399,19 @@ describe("dailyBalanceHistoryScheduler", () => {
     })
   })
 
+  it("rejects malformed scoped refresh payloads instead of refreshing every account", async () => {
+    const response = await resolveBalanceHistoryRefreshNowMessage({
+      accountIds: "not-an-array" as any,
+    })
+
+    expect(response).toEqual({
+      success: false,
+      error: "accountIds must be an array when provided",
+    })
+    expect(mockRefreshAllAccounts).not.toHaveBeenCalled()
+    expect(mockRefreshAccount).not.toHaveBeenCalled()
+  })
+
   it("seeds development snapshots for enabled accounts that can be estimated", async () => {
     mockGetEnabledAccounts.mockResolvedValue([
       {
@@ -647,7 +660,7 @@ describe("dailyBalanceHistoryScheduler", () => {
     expect(mockGetPreferences).not.toHaveBeenCalled()
   })
 
-  it("routes malformed refresh message account ids to a full refresh", async () => {
+  it("routes omitted refresh message account ids to a full refresh", async () => {
     const response = await resolveBalanceHistoryRefreshNowMessage({
       accountIds: undefined,
     })

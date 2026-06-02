@@ -40,7 +40,9 @@
   "messages": {
     "checkCompleted": "Kiểm tra thông báo đã hoàn tất",
     "checkFailed": "Kiểm tra thông báo thất bại",
-    "loadFailed": "Tải thông báo thất bại"
+    "loadFailed": "Tải thông báo thất bại",
+    "markAllReadFailed": "Không thể đánh dấu tất cả thông báo là đã đọc",
+    "markReadFailed": "Không thể đánh dấu thông báo là đã đọc"
   },
   "notification": {
     "multipleUnread_other": "{{title}}, còn {{count}} thông báo chưa đọc",

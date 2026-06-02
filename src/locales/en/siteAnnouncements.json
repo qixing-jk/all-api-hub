@@ -40,7 +40,9 @@
   "messages": {
     "checkCompleted": "Announcement check completed",
     "checkFailed": "Announcement check failed",
-    "loadFailed": "Failed to load announcements"
+    "loadFailed": "Failed to load announcements",
+    "markAllReadFailed": "Failed to mark announcements as read",
+    "markReadFailed": "Failed to mark announcement as read"
   },
   "notification": {
     "multipleUnread_one": "{{title}}, plus {{count}} unread announcement",

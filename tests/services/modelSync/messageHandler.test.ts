@@ -189,6 +189,17 @@ describe("ManagedSiteModelSync operation helpers", () => {
     })
   })
 
+  it("rejects selected sync requests without channel ids", async () => {
+    const executeSyncSpy = vi.spyOn(modelSyncScheduler, "executeSync")
+
+    await expect(triggerSelectedModelSync()).resolves.toEqual({
+      success: false,
+      error: "channelIds must be a non-empty array for selected sync",
+    })
+
+    expect(executeSyncSpy).not.toHaveBeenCalled()
+  })
+
   it("returns next-run metadata when an alarm exists", async () => {
     const scheduledTime = Date.UTC(2026, 2, 28, 4, 0, 0)
     mockedBrowserApi.getAlarm.mockResolvedValue({

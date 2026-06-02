@@ -78,6 +78,14 @@ describe("AutoRefreshService", () => {
 
   describe("initialize", () => {
     it("should short-circuit if already initialized", async () => {
+      vi.mocked(userPreferences.getPreferences).mockResolvedValue({
+        accountAutoRefresh: {
+          ...DEFAULT_ACCOUNT_AUTO_REFRESH,
+          enabled: false,
+        },
+        preferencesVersion: 5,
+      } as UserPreferences)
+
       await autoRefreshService.initialize()
       await autoRefreshService.initialize() // Second call should short-circuit
 
@@ -117,7 +125,7 @@ describe("AutoRefreshService", () => {
 
       await autoRefreshService.initialize()
 
-      expect(autoRefreshService.getStatus().isInitialized).toBe(true) // Still sets isInitialized = true even on error
+      expect(autoRefreshService.getStatus().isInitialized).toBe(false)
     })
   })
 
@@ -243,12 +251,12 @@ describe("AutoRefreshService", () => {
       notifyFrontendSpy.mockRestore()
     })
 
-    it("should handle setup errors gracefully", async () => {
+    it("should propagate setup errors", async () => {
       const error = new Error("Setup failed")
 
       vi.mocked(userPreferences.getPreferences).mockRejectedValue(error)
 
-      await autoRefreshService.setupAutoRefresh()
+      await expect(autoRefreshService.setupAutoRefresh()).rejects.toThrow(error)
 
       expect(autoRefreshService.getStatus().isRunning).toBe(false)
     })
@@ -329,13 +337,15 @@ describe("AutoRefreshService", () => {
       expect(userPreferences.savePreferences).toHaveBeenCalledWith(updates)
     })
 
-    it("should handle update errors gracefully", async () => {
+    it("should propagate update errors", async () => {
       const error = new Error("Update failed")
       const updates = { accountAutoRefresh: { enabled: true } }
 
       vi.mocked(userPreferences.savePreferences).mockRejectedValue(error)
 
-      await autoRefreshService.updateSettings(updates)
+      await expect(autoRefreshService.updateSettings(updates)).rejects.toThrow(
+        error,
+      )
     })
   })
 
@@ -442,14 +452,16 @@ describe("auto-refresh typed message resolvers", () => {
       expect(response).toEqual({ success: true, data: undefined })
     })
 
-    it("should handle setup errors gracefully and still send success response", async () => {
+    it("should return a failure response when setup cannot load preferences", async () => {
       const error = new Error("Setup failed")
       vi.mocked(userPreferences.getPreferences).mockRejectedValue(error)
 
       const response = await resolveAutoRefreshSetupMessage()
 
-      // setupAutoRefresh catches errors internally, so message handler still succeeds
-      expect(response).toEqual({ success: true, data: undefined })
+      expect(response).toEqual({
+        success: false,
+        error: "Error: Setup failed",
+      })
     })
   })
 
@@ -514,7 +526,7 @@ describe("auto-refresh typed message resolvers", () => {
       expect(response).toEqual({ success: true, data: undefined })
     })
 
-    it("should handle update errors gracefully and still send success response", async () => {
+    it("should return a failure response when update cannot save preferences", async () => {
       const error = new Error("Update failed")
       const settings = { accountAutoRefresh: { enabled: true } }
       vi.mocked(userPreferences.savePreferences).mockRejectedValue(error)
@@ -523,8 +535,10 @@ describe("auto-refresh typed message resolvers", () => {
         settings,
       })
 
-      // updateSettings catches errors internally, so message handler still succeeds
-      expect(response).toEqual({ success: true, data: undefined })
+      expect(response).toEqual({
+        success: false,
+        error: "Error: Update failed",
+      })
     })
   })
 
