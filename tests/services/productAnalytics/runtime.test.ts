@@ -34,6 +34,7 @@ const {
   },
   stateMocks: {
     getState: vi.fn(),
+    getShieldBypassSummaryState: vi.fn(),
     setLastSettingsSnapshotAt: vi.fn(),
     setLastSiteEcosystemSnapshotAt: vi.fn(),
   },
@@ -128,6 +129,7 @@ describe("product analytics runtime", () => {
     captureMock.mockResolvedValue(true)
     preferenceMocks.isEnabled.mockResolvedValue(true)
     stateMocks.getState.mockResolvedValue({})
+    stateMocks.getShieldBypassSummaryState.mockResolvedValue({})
     stateMocks.setLastSettingsSnapshotAt.mockResolvedValue(true)
     stateMocks.setLastSiteEcosystemSnapshotAt.mockResolvedValue(true)
     getAllAccountsMock.mockResolvedValue([])
@@ -232,9 +234,19 @@ describe("product analytics runtime", () => {
     expect(captureMock).not.toHaveBeenCalled()
   })
 
+  it("ignores unsupported runtime message types", async () => {
+    await expect(
+      handleProductAnalyticsMessage(
+        "unknown" as Parameters<typeof handleProductAnalyticsMessage>[0],
+        {},
+      ),
+    ).resolves.toEqual({ success: false })
+
+    expect(captureMock).not.toHaveBeenCalled()
+  })
+
   it("returns a runtime failure when event capture throws", async () => {
     captureMock.mockRejectedValueOnce(new Error("capture unavailable"))
-    mockIsDevBuild.mockReturnValue(true)
 
     await expect(
       handleProductAnalyticsMessage(ProductAnalyticsMessageTypes.TrackEvent, {
@@ -249,10 +261,7 @@ describe("product analytics runtime", () => {
       error: "capture unavailable",
     })
 
-    expect(mockLoggerDebug).toHaveBeenCalledWith(
-      "Product analytics runtime request failed",
-      expect.any(Error),
-    )
+    expect(mockLoggerDebug).not.toHaveBeenCalled()
   })
 
   it("logs runtime capture failures in custom development build modes", async () => {
@@ -420,6 +429,59 @@ describe("product analytics runtime", () => {
 
     expect(captureMock).toHaveBeenCalledTimes(2)
     expect(stateMocks.setLastSiteEcosystemSnapshotAt).not.toHaveBeenCalled()
+  })
+
+  it("logs startup site ecosystem snapshot failures in dev builds", async () => {
+    getAllAccountsMock.mockRejectedValueOnce(new Error("accounts unavailable"))
+    mockIsDevBuild.mockReturnValue(true)
+
+    const { triggerStartupSiteEcosystemSnapshot } = await import(
+      "~/services/productAnalytics/runtime"
+    )
+
+    triggerStartupSiteEcosystemSnapshot()
+    await vi.runAllTimersAsync()
+
+    expect(mockLoggerDebug).toHaveBeenCalledWith(
+      "Product analytics snapshot failed",
+      expect.any(Error),
+    )
+  })
+
+  it("logs startup settings snapshot failures in dev builds", async () => {
+    stateMocks.getState.mockRejectedValueOnce(new Error("state unavailable"))
+    mockIsDevBuild.mockReturnValue(true)
+
+    const { triggerStartupSettingsSnapshot } = await import(
+      "~/services/productAnalytics/runtime"
+    )
+
+    triggerStartupSettingsSnapshot()
+    await vi.runAllTimersAsync()
+
+    expect(mockLoggerDebug).toHaveBeenCalledWith(
+      "Product analytics settings snapshot failed",
+      expect.any(Error),
+    )
+  })
+
+  it("logs startup shield bypass summary failures in dev builds", async () => {
+    mockIsDevBuild.mockReturnValue(true)
+    stateMocks.getShieldBypassSummaryState.mockRejectedValueOnce(
+      new Error("shield summary unavailable"),
+    )
+
+    const { triggerStartupShieldBypassDailySummary } = await import(
+      "~/services/productAnalytics/runtime"
+    )
+
+    triggerStartupShieldBypassDailySummary()
+    await vi.runAllTimersAsync()
+
+    expect(mockLoggerDebug).toHaveBeenCalledWith(
+      "Product analytics shield bypass summary failed",
+      expect.any(Error),
+    )
   })
 
   it("debounces local account storage changes and cleanup removes the listener", async () => {

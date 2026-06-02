@@ -9,25 +9,33 @@ import {
   PRODUCT_ANALYTICS_PAGE_IDS,
 } from "~/services/productAnalytics/events"
 
-const { posthogMocks, preferenceMocks, getManifestMock, i18nCoreMock } =
-  vi.hoisted(() => ({
-    posthogMocks: {
-      init: vi.fn(),
-      capture: vi.fn(),
-      getFeatureFlagPayload: vi.fn(),
-    },
-    preferenceMocks: {
-      isEnabled: vi.fn(),
-      getOrCreateAnonymousId: vi.fn(),
-      getAnonymousIdIfEnabled: vi.fn(),
-      withAnonymousIdIfEnabled: vi.fn(),
-    },
-    getManifestMock: vi.fn(() => ({ version: "3.37.0" })),
-    i18nCoreMock: {
-      resolvedLanguage: "en" as string | undefined,
-      language: "en",
-    },
-  }))
+const {
+  posthogMocks,
+  preferenceMocks,
+  getManifestMock,
+  i18nCoreMock,
+  mockIsDevBuild,
+  mockLoggerDebug,
+} = vi.hoisted(() => ({
+  posthogMocks: {
+    init: vi.fn(),
+    capture: vi.fn(),
+    getFeatureFlagPayload: vi.fn(),
+  },
+  preferenceMocks: {
+    isEnabled: vi.fn(),
+    getOrCreateAnonymousId: vi.fn(),
+    getAnonymousIdIfEnabled: vi.fn(),
+    withAnonymousIdIfEnabled: vi.fn(),
+  },
+  getManifestMock: vi.fn(() => ({ version: "3.37.0" })),
+  i18nCoreMock: {
+    resolvedLanguage: "en" as string | undefined,
+    language: "en",
+  },
+  mockIsDevBuild: vi.fn(() => false),
+  mockLoggerDebug: vi.fn(),
+}))
 
 vi.mock("posthog-js/dist/module.no-external", () => ({
   default: posthogMocks,
@@ -39,6 +47,19 @@ vi.mock("~/services/productAnalytics/preferences", () => ({
 
 vi.mock("~/utils/browser/browserApi", () => ({
   getManifest: getManifestMock,
+}))
+
+vi.mock("~/utils/core/environment", () => ({
+  isDevBuild: mockIsDevBuild,
+}))
+
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    debug: mockLoggerDebug,
+    info: vi.fn(),
+    warn: vi.fn(),
+    error: vi.fn(),
+  }),
 }))
 
 vi.mock("~/utils/i18n/core", () => ({
@@ -71,6 +92,7 @@ describe("productAnalyticsClient", () => {
     getManifestMock.mockReturnValue({ version: "3.37.0" })
     i18nCoreMock.resolvedLanguage = "en"
     i18nCoreMock.language = "en"
+    mockIsDevBuild.mockReturnValue(false)
     vi.stubGlobal("navigator", {
       language: "en-US",
       userAgent:
@@ -214,6 +236,7 @@ describe("productAnalyticsClient", () => {
   it("uses a fixed distinct id in development builds", async () => {
     vi.stubEnv("MODE", "development")
     vi.stubEnv("DEV", true)
+    mockIsDevBuild.mockReturnValue(true)
     vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
     vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")
 
@@ -244,6 +267,7 @@ describe("productAnalyticsClient", () => {
   it("uses the development distinct id in custom development build modes", async () => {
     vi.stubEnv("MODE", "local")
     vi.stubEnv("DEV", true)
+    mockIsDevBuild.mockReturnValue(true)
     vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
     vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")
 
@@ -411,6 +435,48 @@ describe("productAnalyticsClient", () => {
     expect(preferenceMocks.withAnonymousIdIfEnabled).toHaveBeenCalledTimes(1)
     expect(posthogMocks.init).not.toHaveBeenCalled()
     expect(posthogMocks.capture).not.toHaveBeenCalled()
+  })
+
+  it("returns false without debug logging when capture work throws outside dev builds", async () => {
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")
+    preferenceMocks.withAnonymousIdIfEnabled.mockRejectedValueOnce(
+      new Error("anonymous id unavailable"),
+    )
+
+    const client = await importClient()
+
+    await expect(
+      client.capture(PRODUCT_ANALYTICS_EVENTS.AppOpened, {
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+      }),
+    ).resolves.toBe(false)
+
+    expect(mockLoggerDebug).not.toHaveBeenCalled()
+  })
+
+  it("logs capture work failures in custom development build modes", async () => {
+    vi.stubEnv("MODE", "local")
+    vi.stubEnv("DEV", true)
+    mockIsDevBuild.mockReturnValue(true)
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")
+    preferenceMocks.withAnonymousIdIfEnabled.mockRejectedValueOnce(
+      new Error("anonymous id unavailable"),
+    )
+
+    const client = await importClient()
+
+    await expect(
+      client.capture(PRODUCT_ANALYTICS_EVENTS.AppOpened, {
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+      }),
+    ).resolves.toBe(false)
+
+    expect(mockLoggerDebug).toHaveBeenCalledWith(
+      "Failed to capture product analytics event",
+      expect.any(Error),
+    )
   })
 
   it("runs PostHog initialization and capture inside the enabled anonymous-id work", async () => {
