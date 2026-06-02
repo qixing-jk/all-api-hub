@@ -9,7 +9,6 @@ import type { AuthTypeEnum } from "~/types"
 import {
   SPONSOR_CATALOG_SCHEMA_VERSION,
   SPONSOR_LOCALE_FALLBACKS,
-  SPONSOR_RECOMMENDATION_LIMITS,
   type SponsorRecommendationSurface,
 } from "./constants"
 import {
@@ -84,7 +83,8 @@ export function selectSponsorRecommendations(
   items: SponsorRecommendation[],
   surface: SponsorRecommendationSurface,
 ): SponsorRecommendation[] {
-  return items.slice(0, SPONSOR_RECOMMENDATION_LIMITS[surface])
+  void surface
+  return items
 }
 
 /** Validates and normalizes one raw sponsor catalog item. */

@@ -14,11 +14,3 @@ export const SPONSOR_RECOMMENDATION_SURFACES = {
 
 export type SponsorRecommendationSurface =
   (typeof SPONSOR_RECOMMENDATION_SURFACES)[keyof typeof SPONSOR_RECOMMENDATION_SURFACES]
-
-export const SPONSOR_RECOMMENDATION_LIMITS: Record<
-  SponsorRecommendationSurface,
-  number
-> = {
-  [SPONSOR_RECOMMENDATION_SURFACES.Newcomer]: 2,
-  [SPONSOR_RECOMMENDATION_SURFACES.AddAccountDialog]: 3,
-}

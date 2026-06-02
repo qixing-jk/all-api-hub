@@ -105,7 +105,7 @@ describe("useSponsorRecommendations", () => {
     expect(mockRefreshSponsorRecommendations).not.toHaveBeenCalled()
   })
 
-  it("loads, limits, and refreshes sponsor recommendations for the selected locale", async () => {
+  it("loads all recommendations and refreshes them for the selected locale", async () => {
     let resolveRefresh:
       | ((result: {
           items: SponsorRecommendation[]
@@ -142,6 +142,7 @@ describe("useSponsorRecommendations", () => {
         "first-provider",
         "second-provider",
         "third-provider",
+        "fourth-provider",
       ])
     })
 
@@ -197,6 +198,8 @@ describe("useSponsorRecommendations", () => {
       expect(result.current.items.map((item) => item.id)).toEqual([
         "first-provider",
         "second-provider",
+        "third-provider",
+        "fourth-provider",
       ])
     })
   })

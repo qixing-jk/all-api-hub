@@ -753,7 +753,7 @@ describe("sponsor catalog normalization", () => {
     expect(result.items.map((item) => item.id)).toEqual(["padded-id", "z"])
   })
 
-  it("applies surface-specific recommendation limits while preserving ordering", () => {
+  it("returns all recommendations for each surface while preserving ordering", () => {
     const catalog: RawSponsorCatalog = {
       schemaVersion: SPONSOR_CATALOG_SCHEMA_VERSION,
       items: [
@@ -807,7 +807,7 @@ describe("sponsor catalog normalization", () => {
         result.items,
         SPONSOR_RECOMMENDATION_SURFACES.Newcomer,
       ).map((item) => item.id),
-    ).toEqual(["a", "b"])
+    ).toEqual(["a", "b", "c"])
     expect(
       selectSponsorRecommendations(
         result.items,
