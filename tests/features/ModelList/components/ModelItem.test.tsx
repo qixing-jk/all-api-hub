@@ -185,6 +185,7 @@ function createDefaultProps() {
 describe("ModelItem", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.unstubAllEnvs()
   })
 
   it("falls back to the default group label when an unavailable model has no selected or effective group", () => {
@@ -376,4 +377,13 @@ describe("ModelItem", () => {
       }
     },
   )
+
+  it("suppresses expansion prop mismatch warnings in custom production build modes", () => {
+    vi.stubEnv("MODE", "staging")
+    vi.stubEnv("PROD", true)
+
+    render(<ModelItem {...createDefaultProps()} isExpanded={true} />)
+
+    expect(loggerWarnSpy).not.toHaveBeenCalled()
+  })
 })

@@ -50,6 +50,15 @@ describe("environment helpers", () => {
     expect(getRuntimeMode()).toBe("staging")
   })
 
+  it("treats custom production modes as prod builds, not production mode names", () => {
+    vi.stubEnv("MODE", "staging")
+    vi.stubEnv("DEV", false)
+    vi.stubEnv("PROD", true)
+
+    expect(isProductionMode()).toBe(false)
+    expect(isProdBuild()).toBe(true)
+  })
+
   it("detects Vite dev and production build flags separately from mode names", () => {
     vi.stubEnv("MODE", "development")
     vi.stubEnv("DEV", false)

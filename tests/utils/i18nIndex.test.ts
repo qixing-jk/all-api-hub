@@ -82,7 +82,7 @@ describe("app i18n initialization", () => {
   })
 
   it("registers plugins, initializes i18n, changes language when preferences win, and syncs dayjs", async () => {
-    vi.stubEnv("NODE_ENV", "development")
+    vi.stubEnv("MODE", "development")
 
     const localeSpy = vi.spyOn(dayjs, "locale").mockReturnValue("en")
     getLanguageMock.mockResolvedValueOnce("ja")

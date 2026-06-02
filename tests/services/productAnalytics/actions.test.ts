@@ -29,6 +29,11 @@ const { trackMock } = vi.hoisted(() => ({
   trackMock: vi.fn(),
 }))
 
+const { loggerDebugSpy, loggerWarnSpy } = vi.hoisted(() => ({
+  loggerDebugSpy: vi.fn(),
+  loggerWarnSpy: vi.fn(),
+}))
+
 vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
   const actual =
     await importOriginal<typeof import("~/services/productAnalytics/events")>()
@@ -38,9 +43,19 @@ vi.mock("~/services/productAnalytics/events", async (importOriginal) => {
   }
 })
 
+vi.mock("~/utils/core/logger", () => ({
+  createLogger: () => ({
+    debug: loggerDebugSpy,
+    info: vi.fn(),
+    warn: loggerWarnSpy,
+    error: vi.fn(),
+  }),
+}))
+
 describe("product analytics action helpers", () => {
   beforeEach(() => {
     vi.clearAllMocks()
+    vi.unstubAllEnvs()
     trackMock.mockResolvedValue({ success: true })
   })
 
@@ -154,6 +169,26 @@ describe("product analytics action helpers", () => {
         {},
       ),
     ).toBeUndefined()
+  })
+
+  it("logs incomplete scoped actions in custom development build modes", async () => {
+    vi.stubEnv("MODE", "staging")
+    vi.stubEnv("DEV", true)
+    const { resolveProductAnalyticsActionContext } = await import(
+      "~/services/productAnalytics/actions"
+    )
+
+    expect(
+      resolveProductAnalyticsActionContext(
+        PRODUCT_ANALYTICS_ACTION_IDS.RefreshAccount,
+        {
+          featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AccountManagement,
+        },
+      ),
+    ).toBeUndefined()
+    expect(loggerDebugSpy).toHaveBeenCalledWith(
+      "Product analytics action config could not be resolved",
+    )
   })
 
   it("resolves a scoped action without a surface id", async () => {
