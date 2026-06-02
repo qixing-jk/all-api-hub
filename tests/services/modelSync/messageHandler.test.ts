@@ -33,12 +33,15 @@ const modelSyncMessageHandlers = vi.hoisted(
       (message: { data: Record<string, unknown> }) => Promise<unknown> | unknown
     >(),
 )
+const onModelSyncMessageMock = vi.hoisted(() => vi.fn())
 
 vi.mock("~/services/models/modelSync/messaging", () => ({
-  onModelSyncMessage: vi.fn((type, handler) => {
-    modelSyncMessageHandlers.set(type, handler)
-    return vi.fn()
-  }),
+  onModelSyncMessage: onModelSyncMessageMock.mockImplementation(
+    (type, handler) => {
+      modelSyncMessageHandlers.set(type, handler)
+      return vi.fn()
+    },
+  ),
 }))
 
 vi.mock("~/services/preferences/userPreferences", () => ({
@@ -104,7 +107,6 @@ describe("ManagedSiteModelSync operation helpers", () => {
   beforeEach(() => {
     vi.restoreAllMocks()
     vi.clearAllMocks()
-    modelSyncMessageHandlers.clear()
     ;(modelSyncScheduler as any).isInitialized = false
     ;(globalThis as any).__modelSyncMessagingCleanup = null
 
@@ -266,6 +268,66 @@ describe("ManagedSiteModelSync operation helpers", () => {
       success: false,
       error: "settings:messages.runtimeRequestFailed",
     })
+  })
+
+  it("wires typed model sync messages through registered listeners", async () => {
+    const executionResult = {
+      items: [{ channelId: 1, channelName: "Alpha", ok: true }],
+      statistics: { total: 1, successCount: 1, failureCount: 0 },
+    }
+    const failedOnlyResult = {
+      items: [{ channelId: 2, channelName: "Beta", ok: false }],
+      statistics: { total: 1, successCount: 0, failureCount: 1 },
+    }
+    const progress = { isRunning: false, total: 1, completed: 1, failed: 0 }
+    const channels = { items: [{ id: 1, name: "Alpha" }], total: 1 }
+    vi.spyOn(modelSyncScheduler, "executeSync").mockResolvedValue(
+      executionResult as any,
+    )
+    vi.spyOn(modelSyncScheduler, "executeFailedOnly").mockResolvedValue(
+      failedOnlyResult as any,
+    )
+    vi.spyOn(modelSyncScheduler, "getProgress").mockReturnValue(progress as any)
+    vi.spyOn(modelSyncScheduler, "updateSettings").mockResolvedValue(undefined)
+    vi.spyOn(modelSyncScheduler, "listChannels").mockResolvedValue(
+      channels as any,
+    )
+
+    setupManagedSiteModelSyncMessagingListeners()
+
+    expect([...modelSyncMessageHandlers.keys()]).toEqual([
+      "modelSync:getNextRun",
+      "modelSync:triggerAll",
+      "modelSync:triggerSelected",
+      "modelSync:triggerFailedOnly",
+      "modelSync:getLastExecution",
+      "modelSync:getProgress",
+      "modelSync:updateSettings",
+      "modelSync:getPreferences",
+      "modelSync:getChannelUpstreamModelOptions",
+      "modelSync:listChannels",
+    ])
+    await expect(
+      modelSyncMessageHandlers.get("modelSync:triggerSelected")?.({
+        data: { channelIds: [1] },
+      }),
+    ).resolves.toEqual({ success: true, data: executionResult })
+    await expect(
+      modelSyncMessageHandlers.get("modelSync:triggerFailedOnly")?.({
+        data: {},
+      }),
+    ).resolves.toEqual({ success: true, data: failedOnlyResult })
+    await expect(
+      modelSyncMessageHandlers.get("modelSync:getProgress")?.({ data: {} }),
+    ).resolves.toEqual({ success: true, data: progress })
+    await expect(
+      modelSyncMessageHandlers.get("modelSync:updateSettings")?.({
+        data: { settings: { enableSync: false } },
+      }),
+    ).resolves.toEqual({ success: true })
+    await expect(
+      modelSyncMessageHandlers.get("modelSync:listChannels")?.({ data: {} }),
+    ).resolves.toEqual({ success: true, data: channels })
   })
 })
 

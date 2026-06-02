@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { Storage } from "@plasmohq/storage"
 
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
+import { SiteAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import {
   resolveSiteAnnouncementsCheckNowMessage,
   resolveSiteAnnouncementsGetStatusMessage,
@@ -10,6 +11,7 @@ import {
   resolveSiteAnnouncementsMarkAllReadMessage,
   resolveSiteAnnouncementsMarkReadMessage,
   resolveSiteAnnouncementsUpdatePreferencesMessage,
+  setupSiteAnnouncementsMessagingListeners,
   siteAnnouncementScheduler,
 } from "~/services/siteAnnouncements/scheduler"
 import { siteAnnouncementStorage } from "~/services/siteAnnouncements/storage"
@@ -25,10 +27,12 @@ const {
   hasAlarmsAPIMock,
   getPreferencesMock,
   notifySiteAnnouncementsMock,
+  onSiteAnnouncementsMessageMock,
   onAlarmMock,
   providerFetchMock,
   providerMarkReadMock,
   savePreferencesMock,
+  siteAnnouncementsMessageHandlers,
 } = vi.hoisted(() => ({
   clearAlarmMock: vi.fn(),
   createAlarmMock: vi.fn(),
@@ -38,10 +42,15 @@ const {
   hasAlarmsAPIMock: vi.fn(() => true),
   getPreferencesMock: vi.fn(),
   notifySiteAnnouncementsMock: vi.fn(),
+  onSiteAnnouncementsMessageMock: vi.fn(),
   onAlarmMock: vi.fn(),
   providerFetchMock: vi.fn(),
   providerMarkReadMock: vi.fn(),
   savePreferencesMock: vi.fn(),
+  siteAnnouncementsMessageHandlers: new Map<
+    string,
+    (message: { data: Record<string, unknown> }) => Promise<unknown> | unknown
+  >(),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => ({
@@ -69,6 +78,15 @@ vi.mock("~/services/preferences/userPreferences", () => ({
 
 vi.mock("~/services/siteAnnouncements/notificationService", () => ({
   notifySiteAnnouncements: notifySiteAnnouncementsMock,
+}))
+
+vi.mock("~/services/siteAnnouncements/messaging", () => ({
+  onSiteAnnouncementsMessage: onSiteAnnouncementsMessageMock.mockImplementation(
+    (type, handler) => {
+      siteAnnouncementsMessageHandlers.set(type, handler)
+      return vi.fn()
+    },
+  ),
 }))
 
 vi.mock("~/services/siteAnnouncements/providers", () => ({
@@ -933,6 +951,80 @@ describe("siteAnnouncementScheduler", () => {
     })
   })
 
+  it("wires typed site announcement messages through registered listeners", async () => {
+    await siteAnnouncementStorage.upsertDiscoveredRecords({
+      site: {
+        siteKey: "notice:new-api:https://example.com",
+        siteName: "Example",
+        siteType: "new-api",
+        baseUrl: "https://example.com",
+        accountId: "account-1",
+        providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+        status: "success",
+      },
+      records: [
+        {
+          siteKey: "notice:new-api:https://example.com",
+          siteName: "Example",
+          siteType: "new-api",
+          baseUrl: "https://example.com",
+          accountId: "account-1",
+          providerId: SITE_ANNOUNCEMENT_PROVIDER_IDS.Common,
+          title: "Notice",
+          content: "Body",
+          fingerprint: "listener-record",
+        },
+      ],
+    })
+    getEnabledAccountsMock.mockResolvedValue([createAccount()])
+    providerFetchMock.mockResolvedValue({
+      siteKey: "notice:new-api:https://example.com",
+      status: "success",
+      announcements: [{ title: "New", content: "Fresh body" }],
+    })
+
+    setupSiteAnnouncementsMessagingListeners()
+
+    expect([...siteAnnouncementsMessageHandlers.keys()]).toEqual([
+      SiteAnnouncementsMessageTypes.GetStatus,
+      SiteAnnouncementsMessageTypes.ListRecords,
+      SiteAnnouncementsMessageTypes.CheckNow,
+      SiteAnnouncementsMessageTypes.MarkRead,
+      SiteAnnouncementsMessageTypes.MarkAllRead,
+      SiteAnnouncementsMessageTypes.UpdatePreferences,
+    ])
+    expect(onSiteAnnouncementsMessageMock).toHaveBeenCalledTimes(6)
+
+    await expect(
+      siteAnnouncementsMessageHandlers.get(
+        SiteAnnouncementsMessageTypes.GetStatus,
+      )?.({ data: {} }),
+    ).resolves.toMatchObject({ success: true })
+    await expect(
+      siteAnnouncementsMessageHandlers.get(
+        SiteAnnouncementsMessageTypes.ListRecords,
+      )?.({ data: {} }),
+    ).resolves.toMatchObject({ success: true })
+    await expect(
+      siteAnnouncementsMessageHandlers.get(
+        SiteAnnouncementsMessageTypes.CheckNow,
+      )?.({ data: { accountIds: ["account-1"] } }),
+    ).resolves.toMatchObject({ success: true })
+    await expect(
+      siteAnnouncementsMessageHandlers.get(
+        SiteAnnouncementsMessageTypes.MarkAllRead,
+      )?.({ data: { siteKey: "notice:new-api:https://example.com" } }),
+    ).resolves.toMatchObject({ success: true, data: expect.any(Number) })
+    await expect(
+      siteAnnouncementsMessageHandlers.get(
+        SiteAnnouncementsMessageTypes.UpdatePreferences,
+      )?.({ data: { settings: { enabled: false } } }),
+    ).resolves.toMatchObject({
+      success: true,
+      data: expect.objectContaining({ enabled: false }),
+    })
+  })
+
   it("returns current status when schedule reconciliation fails", async () => {
     await siteAnnouncementStorage.upsertSiteStatus({
       siteKey: "notice:new-api:https://example.com",
@@ -967,6 +1059,40 @@ describe("siteAnnouncementScheduler", () => {
     expect(response).toEqual({
       success: false,
       error: "boom",
+    })
+  })
+
+  it("converts thrown site announcement resolver errors into failure responses", async () => {
+    vi.spyOn(siteAnnouncementScheduler, "runManualCheck").mockRejectedValueOnce(
+      new Error("check failed"),
+    )
+    await expect(resolveSiteAnnouncementsCheckNowMessage({})).resolves.toEqual({
+      success: false,
+      error: "check failed",
+    })
+
+    vi.spyOn(siteAnnouncementStorage, "markAllRead").mockRejectedValueOnce(
+      new Error("mark all failed"),
+    )
+    await expect(
+      resolveSiteAnnouncementsMarkAllReadMessage({
+        siteKey: "notice:new-api:https://example.com",
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "mark all failed",
+    })
+
+    vi.spyOn(siteAnnouncementScheduler, "updateSettings").mockRejectedValueOnce(
+      new Error("preferences failed"),
+    )
+    await expect(
+      resolveSiteAnnouncementsUpdatePreferencesMessage({
+        settings: { enabled: true },
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "preferences failed",
     })
   })
 })
