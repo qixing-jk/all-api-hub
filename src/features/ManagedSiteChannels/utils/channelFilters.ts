@@ -3,6 +3,7 @@ import {
   sendChannelConfigMessage,
 } from "~/services/managedSites/channelConfigMessaging"
 import { channelConfigStorage } from "~/services/managedSites/channelConfigStorage"
+import { getRuntimeMessageFailureMessage } from "~/services/runtimeMessaging/result"
 import type { ChannelModelFilterRule } from "~/types/channelModelFilters"
 import { isMessageReceiverUnavailableError } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
@@ -11,16 +12,6 @@ import { createLogger } from "~/utils/core/logger"
  * Unified logger scoped to channel filter load/save helpers in the options UI.
  */
 const logger = createLogger("ChannelFilters")
-
-/**
- * Builds an error from an explicit runtime failure while preserving local copy.
- */
-function createRuntimeResponseError(
-  fallbackMessage: string,
-  error?: string,
-): Error {
-  return new Error(error?.trim() || fallbackMessage)
-}
 
 /**
  * Load channel filter rules for the given channel.
@@ -34,21 +25,12 @@ function createRuntimeResponseError(
 export async function fetchChannelFilters(
   channelId: number,
 ): Promise<ChannelModelFilterRule[]> {
+  let response: Awaited<ReturnType<typeof sendChannelConfigMessage>>
+
   try {
-    const response = await sendChannelConfigMessage(
-      ChannelConfigMessageTypes.Get,
-      { channelId },
-    )
-    if (response?.success) {
-      return response.data?.modelFilterSettings?.rules ?? []
-    }
-    if (response?.success === false) {
-      throw createRuntimeResponseError(
-        "Failed to load channel filters",
-        response.error,
-      )
-    }
-    throw new Error("Failed to load channel filters")
+    response = await sendChannelConfigMessage(ChannelConfigMessageTypes.Get, {
+      channelId,
+    })
   } catch (runtimeError) {
     if (!isMessageReceiverUnavailableError(runtimeError)) {
       throw runtimeError
@@ -61,6 +43,14 @@ export async function fetchChannelFilters(
     const config = await channelConfigStorage.getConfig(channelId)
     return config.modelFilterSettings?.rules ?? []
   }
+
+  if (response.success) {
+    return response.data?.modelFilterSettings?.rules ?? []
+  }
+
+  throw new Error(
+    getRuntimeMessageFailureMessage(response, "Failed to load channel filters"),
+  )
 }
 
 /**
@@ -74,20 +64,13 @@ export async function saveChannelFilters(
   channelId: number,
   filters: ChannelModelFilterRule[],
 ): Promise<void> {
+  let response: Awaited<ReturnType<typeof sendChannelConfigMessage>>
+
   try {
-    const response = await sendChannelConfigMessage(
+    response = await sendChannelConfigMessage(
       ChannelConfigMessageTypes.UpsertFilters,
       { channelId, filters },
     )
-    if (response?.success !== true) {
-      if (response?.success === false) {
-        throw createRuntimeResponseError(
-          "Failed to save channel filters",
-          response.error,
-        )
-      }
-      throw new Error("Failed to save channel filters")
-    }
   } catch (runtimeError) {
     if (!isMessageReceiverUnavailableError(runtimeError)) {
       throw runtimeError
@@ -101,5 +84,15 @@ export async function saveChannelFilters(
     if (!success) {
       throw new Error("Failed to persist filters locally")
     }
+    return
+  }
+
+  if (!response.success) {
+    throw new Error(
+      getRuntimeMessageFailureMessage(
+        response,
+        "Failed to save channel filters",
+      ),
+    )
   }
 }

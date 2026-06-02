@@ -20,6 +20,10 @@ import {
   type ProductAnalyticsSurfaceId,
 } from "~/services/productAnalytics/events"
 import { SiteAnnouncementsMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import {
+  getRuntimeMessageFailureMessage,
+  getRuntimeMessageToastMessage,
+} from "~/services/runtimeMessaging/result"
 import { sendSiteAnnouncementsMessage } from "~/services/siteAnnouncements/messaging"
 import type {
   SiteAnnouncementCheckResult,
@@ -51,20 +55,6 @@ const textLinkClassName =
   "font-medium text-blue-600 underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none dark:text-blue-400"
 
 /**
- * Converts typed runtime failures into load errors instead of empty page data.
- */
-function assertRuntimeSuccess<T>(
-  response: { success: true; data: T } | { success: false; error: string },
-  fallbackMessage: string,
-): T {
-  if (response.success) {
-    return response.data
-  }
-
-  throw new Error(response.error?.trim() || fallbackMessage)
-}
-
-/**
  * Options page for locally cached provider-site announcements.
  */
 export default function SiteAnnouncementsPage({
@@ -92,10 +82,32 @@ export default function SiteAnnouncementsPage({
         sendSiteAnnouncementsMessage(SiteAnnouncementsMessageTypes.GetStatus),
       ])
 
-      setRecords(
-        assertRuntimeSuccess(recordsResponse, t("messages.loadFailed")),
-      )
-      setStatus(assertRuntimeSuccess(statusResponse, t("messages.loadFailed")))
+      if (!recordsResponse.success) {
+        showResultToast({
+          success: false,
+          message: getRuntimeMessageFailureMessage(
+            recordsResponse,
+            t("messages.loadFailed"),
+          ),
+          errorFallback: t("messages.loadFailed"),
+        })
+        return
+      }
+
+      if (!statusResponse.success) {
+        showResultToast({
+          success: false,
+          message: getRuntimeMessageFailureMessage(
+            statusResponse,
+            t("messages.loadFailed"),
+          ),
+          errorFallback: t("messages.loadFailed"),
+        })
+        return
+      }
+
+      setRecords(recordsResponse.data)
+      setStatus(statusResponse.data)
     } catch (error) {
       showResultToast({
         success: false,
@@ -231,7 +243,7 @@ export default function SiteAnnouncementsPage({
       }
       showResultToast({
         success,
-        message: response.success === false ? response.error : undefined,
+        message: getRuntimeMessageToastMessage(response),
         successFallback: t("messages.checkCompleted"),
         errorFallback: t("messages.checkFailed"),
       })
@@ -273,7 +285,7 @@ export default function SiteAnnouncementsPage({
         })
         showResultToast({
           success: false,
-          message: response?.success === false ? response.error : undefined,
+          message: getRuntimeMessageToastMessage(response),
           errorFallback: t("messages.markReadFailed"),
         })
       }
@@ -318,7 +330,7 @@ export default function SiteAnnouncementsPage({
         })
         showResultToast({
           success: false,
-          message: response?.success === false ? response.error : undefined,
+          message: getRuntimeMessageToastMessage(response),
           errorFallback: t("messages.markAllReadFailed"),
         })
       }

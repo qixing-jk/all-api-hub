@@ -910,7 +910,7 @@ describe("SiteAnnouncementsPage", () => {
     await waitFor(() => {
       expect(showResultToast).toHaveBeenCalledWith({
         success: false,
-        message: "",
+        message: undefined,
         successFallback: "siteAnnouncements:messages.checkCompleted",
         errorFallback: "siteAnnouncements:messages.checkFailed",
       })
