@@ -48,7 +48,9 @@ function mergeDevelopmentSponsorRecommendations(
     return items
   }
 
-  return [...items, ...normalized.items]
+  return [...items, ...normalized.items].sort(
+    (a, b) => a.rank - b.rank || a.id.localeCompare(b.id),
+  )
 }
 
 /**

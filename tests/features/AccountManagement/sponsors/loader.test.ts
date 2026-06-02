@@ -18,6 +18,80 @@ import {
 import { AuthTypeEnum } from "~/types"
 
 const sponsorLoaderFixtures = vi.hoisted(() => ({
+  developmentSponsors: [
+    {
+      id: "dev-supported-direct",
+      enabled: true,
+      rank: 9000,
+      supportStatus: "supported",
+      urls: {
+        primaryAffiliate: "https://dev-supported.example.test/register",
+        website: "https://dev-supported.example.test",
+      },
+      locales: {
+        "zh-CN": {
+          name: "[DEV] 可直接添加",
+          tagline: "测试 Cookie 认证的 accountPrefill 主按钮和添加账号预填。",
+          postClickNote:
+            "测试 Cookie 认证预填后的提示，会显示在新建账号 URL 下方。",
+        },
+      },
+      accountPrefill: {
+        siteType: "new-api",
+        siteUrl: "https://dev-supported.example.test",
+        authType: "cookie",
+      },
+    },
+    {
+      id: "dev-supported-access-token",
+      enabled: true,
+      rank: 9010,
+      supportStatus: "supported",
+      urls: {
+        primaryAffiliate: "https://dev-token.example.test/register",
+        website: "https://dev-token.example.test",
+        apiKeyCreate:
+          "https://dev-token.example.test/dashboard/api-keys?utm_source=all-api-hub",
+      },
+      locales: {
+        "zh-CN": {
+          name: "[DEV] 访问令牌",
+          tagline: "测试 access token 认证预填。",
+          postClickNote:
+            "测试访问令牌认证预填后的提示，会显示在新建账号 URL 下方。",
+        },
+      },
+      accountPrefill: {
+        siteType: "new-api",
+        siteUrl: "https://dev-token.example.test",
+        authType: "access_token",
+      },
+    },
+    {
+      id: "dev-unsupported-all-fallbacks",
+      enabled: true,
+      rank: 9020,
+      supportStatus: "unsupported",
+      urls: {
+        primaryAffiliate: "https://dev-all-fallbacks.example.test/register",
+        website: "https://dev-all-fallbacks.example.test",
+        apiKeyCreate:
+          "https://dev-all-fallbacks.example.test/dashboard/api-keys?utm_source=all-api-hub",
+      },
+      locales: {
+        "zh-CN": {
+          name: "[DEV] 全部兜底",
+          tagline: "测试全部兜底入口。",
+          postClickNote:
+            "测试赞助商提供的活动提示，可同时显示在添加账号和获取 API Key 的引导中。",
+        },
+      },
+      fallbackHints: {
+        bookmarkManager: true,
+        apiCredentialProfiles: true,
+      },
+    },
+  ],
   bundledCatalog: {
     schemaVersion: 3,
     items: [
@@ -48,84 +122,13 @@ const sponsorLoaderFixtures = vi.hoisted(() => ({
       },
     ],
     _examples: {
-      devSponsors: [
-        {
-          id: "dev-supported-direct",
-          enabled: true,
-          rank: 9000,
-          supportStatus: "supported",
-          urls: {
-            primaryAffiliate: "https://dev-supported.example.test/register",
-            website: "https://dev-supported.example.test",
-          },
-          locales: {
-            "zh-CN": {
-              name: "[DEV] 可直接添加",
-              tagline:
-                "测试 Cookie 认证的 accountPrefill 主按钮和添加账号预填。",
-              postClickNote:
-                "测试 Cookie 认证预填后的提示，会显示在新建账号 URL 下方。",
-            },
-          },
-          accountPrefill: {
-            siteType: "new-api",
-            siteUrl: "https://dev-supported.example.test",
-            authType: "cookie",
-          },
-        },
-        {
-          id: "dev-supported-access-token",
-          enabled: true,
-          rank: 9010,
-          supportStatus: "supported",
-          urls: {
-            primaryAffiliate: "https://dev-token.example.test/register",
-            website: "https://dev-token.example.test",
-            apiKeyCreate:
-              "https://dev-token.example.test/dashboard/api-keys?utm_source=all-api-hub",
-          },
-          locales: {
-            "zh-CN": {
-              name: "[DEV] 访问令牌",
-              tagline: "测试 access token 认证预填。",
-              postClickNote:
-                "测试访问令牌认证预填后的提示，会显示在新建账号 URL 下方。",
-            },
-          },
-          accountPrefill: {
-            siteType: "new-api",
-            siteUrl: "https://dev-token.example.test",
-            authType: "access_token",
-          },
-        },
-        {
-          id: "dev-unsupported-all-fallbacks",
-          enabled: true,
-          rank: 9020,
-          supportStatus: "unsupported",
-          urls: {
-            primaryAffiliate: "https://dev-all-fallbacks.example.test/register",
-            website: "https://dev-all-fallbacks.example.test",
-            apiKeyCreate:
-              "https://dev-all-fallbacks.example.test/dashboard/api-keys?utm_source=all-api-hub",
-          },
-          locales: {
-            "zh-CN": {
-              name: "[DEV] 全部兜底",
-              tagline: "测试全部兜底入口。",
-              postClickNote:
-                "测试赞助商提供的活动提示，可同时显示在添加账号和获取 API Key 的引导中。",
-            },
-          },
-          fallbackHints: {
-            bookmarkManager: true,
-            apiCredentialProfiles: true,
-          },
-        },
-      ],
+      devSponsors: [] as RawSponsorCatalog["items"],
     },
   },
 }))
+
+sponsorLoaderFixtures.bundledCatalog._examples.devSponsors =
+  sponsorLoaderFixtures.developmentSponsors
 
 vi.mock("~~/public/sponsor-catalog.json", () => ({
   default: sponsorLoaderFixtures.bundledCatalog,
@@ -210,6 +213,8 @@ describe("sponsor recommendation loader", () => {
   beforeEach(() => {
     vi.unstubAllGlobals()
     vi.unstubAllEnvs()
+    sponsorLoaderFixtures.bundledCatalog._examples.devSponsors =
+      sponsorLoaderFixtures.developmentSponsors
     vi.mocked(sponsorCatalogStorage.getCachedRemoteCatalog).mockReset()
     vi.mocked(sponsorCatalogStorage.setCachedRemoteCatalog).mockReset()
   })
@@ -259,6 +264,51 @@ describe("sponsor recommendation loader", () => {
       },
     })
     expect(fetchMock).not.toHaveBeenCalled()
+  })
+
+  it("preserves rank ordering when development examples merge with cached recommendations", async () => {
+    vi.stubEnv("MODE", "development")
+    sponsorLoaderFixtures.bundledCatalog._examples.devSponsors = [
+      {
+        ...sponsorLoaderFixtures.developmentSponsors[0],
+        id: "dev-first",
+        rank: 0,
+      },
+      {
+        ...sponsorLoaderFixtures.developmentSponsors[1],
+        id: "dev-later",
+        rank: 20,
+      },
+    ]
+    vi.mocked(sponsorCatalogStorage.getCachedRemoteCatalog).mockResolvedValue(
+      validRemoteCatalog,
+    )
+
+    const result = await loadSponsorRecommendations({ locale: "zh-CN", now })
+
+    expect(result.items.map((item) => item.id)).toEqual([
+      "dev-first",
+      "remote-provider",
+      "dev-later",
+    ])
+  })
+
+  it("keeps cached recommendations when development examples are invalid", async () => {
+    vi.stubEnv("MODE", "development")
+    sponsorLoaderFixtures.bundledCatalog._examples.devSponsors = [
+      {
+        ...sponsorLoaderFixtures.developmentSponsors[0],
+        enabled: "yes",
+      } as unknown as RawSponsorCatalog["items"][number],
+    ]
+    vi.mocked(sponsorCatalogStorage.getCachedRemoteCatalog).mockResolvedValue(
+      validRemoteCatalog,
+    )
+
+    const result = await loadSponsorRecommendations({ locale: "zh-CN", now })
+
+    expect(result.source).toBe(SPONSOR_CATALOG_SOURCES.Cached)
+    expect(result.items.map((item) => item.id)).toEqual(["remote-provider"])
   })
 
   it("refreshes and caches valid remote recommendations separately", async () => {
@@ -431,6 +481,18 @@ describe("sponsor recommendation loader", () => {
     expect(result.items.map((item) => item.id)).not.toContain(
       "dev-supported-direct",
     )
+  })
+
+  it("does not inject development examples when none are configured", async () => {
+    vi.stubEnv("MODE", "development")
+    sponsorLoaderFixtures.bundledCatalog._examples.devSponsors = []
+    vi.mocked(sponsorCatalogStorage.getCachedRemoteCatalog).mockResolvedValue(
+      null,
+    )
+
+    const result = await loadSponsorRecommendations({ locale: "zh-CN", now })
+
+    expectBundledSponsorFallback(result)
   })
 
   it("returns null when remote refresh fails", async () => {
