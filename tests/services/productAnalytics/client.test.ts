@@ -114,6 +114,7 @@ describe("productAnalyticsClient", () => {
   })
 
   it("initializes PostHog with privacy-sensitive defaults disabled", async () => {
+    vi.stubEnv("DEV", false)
     vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
     vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")
 
@@ -210,8 +211,9 @@ describe("productAnalyticsClient", () => {
     })
   })
 
-  it("uses a fixed distinct id in development mode", async () => {
+  it("uses a fixed distinct id in development builds", async () => {
     vi.stubEnv("MODE", "development")
+    vi.stubEnv("DEV", true)
     vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
     vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")
 
@@ -229,6 +231,30 @@ describe("productAnalyticsClient", () => {
       ui_language: "en",
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
     })
+    expect(posthogMocks.init).toHaveBeenCalledWith(
+      "phc_test",
+      expect.objectContaining({
+        bootstrap: {
+          distinctID: "analytics-development",
+        },
+      }),
+    )
+  })
+
+  it("uses the development distinct id in custom development build modes", async () => {
+    vi.stubEnv("MODE", "local")
+    vi.stubEnv("DEV", true)
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test")
+    vi.stubEnv("VITE_PUBLIC_POSTHOG_HOST", "https://posthog.example")
+
+    const client = await importClient()
+
+    await expect(
+      client.capture(PRODUCT_ANALYTICS_EVENTS.AppOpened, {
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Popup,
+      }),
+    ).resolves.toBe(true)
+
     expect(posthogMocks.init).toHaveBeenCalledWith(
       "phc_test",
       expect.objectContaining({

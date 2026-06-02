@@ -106,6 +106,7 @@ describe("useProductAnalyticsPageView", () => {
 
   it("dedupes initial StrictMode remount app_opened and page_viewed effects", async () => {
     vi.stubEnv("MODE", "development")
+    vi.stubEnv("DEV", true)
 
     function StrictModeHarness() {
       useProductAnalyticsPageView({
@@ -152,8 +153,48 @@ describe("useProductAnalyticsPageView", () => {
     ).toHaveLength(1)
   })
 
+  it("dedupes StrictMode remounts in custom development build modes", async () => {
+    vi.stubEnv("MODE", "local")
+    vi.stubEnv("DEV", true)
+
+    function StrictModeHarness() {
+      useProductAnalyticsPageView({
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        pageId: PRODUCT_ANALYTICS_PAGE_IDS.OptionsBasicSettings,
+      })
+
+      return null
+    }
+
+    const firstRender = render(
+      <StrictMode>
+        <StrictModeHarness />
+      </StrictMode>,
+    )
+
+    await waitFor(() => {
+      expect(trackProductAnalyticsEventMock).toHaveBeenCalledTimes(2)
+    })
+
+    firstRender.unmount()
+
+    render(
+      <StrictMode>
+        <StrictModeHarness />
+      </StrictMode>,
+    )
+
+    await act(async () => {
+      await Promise.resolve()
+      await Promise.resolve()
+    })
+
+    expect(trackProductAnalyticsEventMock).toHaveBeenCalledTimes(2)
+  })
+
   it("does not dedupe non-development remounts", async () => {
     vi.stubEnv("MODE", "production")
+    vi.stubEnv("DEV", false)
 
     function Harness() {
       useProductAnalyticsPageView({

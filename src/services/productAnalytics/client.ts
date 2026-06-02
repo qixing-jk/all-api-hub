@@ -3,7 +3,7 @@ import posthog, { type Properties } from "posthog-js/dist/module.no-external"
 
 import { getManifest } from "~/utils/browser/browserApi"
 import { detectBrowserFamily } from "~/utils/browser/userAgent"
-import { isDevelopmentMode } from "~/utils/core/environment"
+import { isDevBuild } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
 import i18n from "~/utils/i18n/core"
 
@@ -156,7 +156,7 @@ function isDisabledByPolicy(
  * Collapses local development traffic into one stable PostHog profile.
  */
 function resolveDistinctId(anonymousId: string): string {
-  if (isDevelopmentMode()) {
+  if (isDevBuild()) {
     return DEVELOPMENT_DISTINCT_ID
   }
 
@@ -227,7 +227,7 @@ class ProductAnalyticsClient {
 
       return await captureWithAnonymousId(eventName, capture)
     } catch (error) {
-      if (isDevelopmentMode()) {
+      if (isDevBuild()) {
         logger.debug("Failed to capture product analytics event", error)
       }
       return false

@@ -11,7 +11,7 @@ import { initReactI18next } from "react-i18next"
 import { DEFAULT_LANG } from "~/constants"
 import { I18NEXT_LANGUAGE_STORAGE_KEY } from "~/services/core/storageKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import { isDevelopmentMode } from "~/utils/core/environment"
+import { isDevBuild } from "~/utils/core/environment"
 
 import i18n from "./core"
 import { resolveInitialAppLanguage } from "./language"
@@ -21,7 +21,7 @@ i18n
   .use(LanguageDetector)
   .use(initReactI18next)
   .init({
-    debug: isDevelopmentMode(),
+    debug: isDevBuild(),
     fallbackLng: DEFAULT_LANG,
     defaultNS: "common",
     // default config: https://github.com/i18next/i18next-browser-languageDetector#detector-options

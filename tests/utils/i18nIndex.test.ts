@@ -83,6 +83,7 @@ describe("app i18n initialization", () => {
 
   it("registers plugins, initializes i18n, changes language when preferences win, and syncs dayjs", async () => {
     vi.stubEnv("MODE", "development")
+    vi.stubEnv("DEV", true)
 
     const localeSpy = vi.spyOn(dayjs, "locale").mockReturnValue("en")
     getLanguageMock.mockResolvedValueOnce("ja")
@@ -143,7 +144,25 @@ describe("app i18n initialization", () => {
     }
   })
 
+  it("enables i18n debug output in custom development build modes", async () => {
+    vi.stubEnv("MODE", "local")
+    vi.stubEnv("DEV", true)
+    getLanguageMock.mockResolvedValueOnce(undefined)
+    resolveInitialAppLanguageMock.mockReturnValueOnce("en")
+
+    await import("~/utils/i18n/index")
+
+    await vi.waitFor(() => {
+      expect(i18nCoreMock.init).toHaveBeenCalledWith(
+        expect.objectContaining({
+          debug: true,
+        }),
+      )
+    })
+  })
+
   it("keeps the current resolved language without calling changeLanguage again", async () => {
+    vi.stubEnv("DEV", false)
     const localeSpy = vi.spyOn(dayjs, "locale").mockReturnValue("ja")
     i18nCoreMock.resolvedLanguage = "ja"
     i18nCoreMock.language = "en"

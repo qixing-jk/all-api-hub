@@ -17,7 +17,7 @@ const {
   captureMock,
   getAllAccountsMock,
   getPreferencesMock,
-  mockIsDevelopmentMode,
+  mockIsDevBuild,
   mockLoggerDebug,
   mockOnProductAnalyticsMessage,
   preferenceMocks,
@@ -26,7 +26,7 @@ const {
   captureMock: vi.fn(),
   getAllAccountsMock: vi.fn(),
   getPreferencesMock: vi.fn(),
-  mockIsDevelopmentMode: vi.fn(() => false),
+  mockIsDevBuild: vi.fn(() => false),
   mockLoggerDebug: vi.fn(),
   mockOnProductAnalyticsMessage: vi.fn(() => vi.fn()),
   preferenceMocks: {
@@ -46,7 +46,7 @@ vi.mock("~/services/productAnalytics/client", () => ({
 }))
 
 vi.mock("~/utils/core/environment", () => ({
-  isDevelopmentMode: mockIsDevelopmentMode,
+  isDevBuild: mockIsDevBuild,
 }))
 
 vi.mock("~/utils/core/logger", () => ({
@@ -132,7 +132,7 @@ describe("product analytics runtime", () => {
     stateMocks.setLastSiteEcosystemSnapshotAt.mockResolvedValue(true)
     getAllAccountsMock.mockResolvedValue([])
     getPreferencesMock.mockResolvedValue(createDefaultPreferences())
-    mockIsDevelopmentMode.mockReturnValue(false)
+    mockIsDevBuild.mockReturnValue(false)
   })
 
   afterEach(() => {
@@ -234,7 +234,30 @@ describe("product analytics runtime", () => {
 
   it("returns a runtime failure when event capture throws", async () => {
     captureMock.mockRejectedValueOnce(new Error("capture unavailable"))
-    mockIsDevelopmentMode.mockReturnValue(true)
+    mockIsDevBuild.mockReturnValue(true)
+
+    await expect(
+      handleProductAnalyticsMessage(ProductAnalyticsMessageTypes.TrackEvent, {
+        eventName: PRODUCT_ANALYTICS_EVENTS.PageViewed,
+        properties: {
+          page_id: "options_basic_settings",
+          entrypoint: "options",
+        },
+      }),
+    ).resolves.toEqual({
+      success: false,
+      error: "capture unavailable",
+    })
+
+    expect(mockLoggerDebug).toHaveBeenCalledWith(
+      "Product analytics runtime request failed",
+      expect.any(Error),
+    )
+  })
+
+  it("logs runtime capture failures in custom development build modes", async () => {
+    captureMock.mockRejectedValueOnce(new Error("capture unavailable"))
+    mockIsDevBuild.mockReturnValue(true)
 
     await expect(
       handleProductAnalyticsMessage(ProductAnalyticsMessageTypes.TrackEvent, {

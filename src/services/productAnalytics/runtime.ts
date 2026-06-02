@@ -4,7 +4,7 @@ import {
   USER_PREFERENCES_STORAGE_KEYS,
 } from "~/services/core/storageKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"
-import { isDevelopmentMode } from "~/utils/core/environment"
+import { isDevBuild } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
 
@@ -172,7 +172,7 @@ export async function handleProductAnalyticsMessage(
   try {
     return await resolveProductAnalyticsResponse(type, request)
   } catch (error) {
-    if (isDevelopmentMode()) {
+    if (isDevBuild()) {
       logger.debug("Product analytics runtime request failed", error)
     }
     return { success: false, error: getErrorMessage(error) }
@@ -220,7 +220,7 @@ export function setupProductAnalyticsMessagingListeners() {
  */
 function captureSiteEcosystemSnapshotBestEffort() {
   void captureSiteEcosystemSnapshot().catch((error) => {
-    if (isDevelopmentMode()) {
+    if (isDevBuild()) {
       logger.debug("Product analytics snapshot failed", error)
     }
   })
@@ -231,7 +231,7 @@ function captureSiteEcosystemSnapshotBestEffort() {
  */
 function captureSettingsSnapshotBestEffort() {
   void captureSettingsSnapshot().catch((error) => {
-    if (isDevelopmentMode()) {
+    if (isDevBuild()) {
       logger.debug("Product analytics settings snapshot failed", error)
     }
   })
@@ -242,7 +242,7 @@ function captureSettingsSnapshotBestEffort() {
  */
 function flushShieldBypassDailySummaryBestEffort() {
   void flushShieldBypassDailySummary().catch((error) => {
-    if (isDevelopmentMode()) {
+    if (isDevBuild()) {
       logger.debug("Product analytics shield bypass summary failed", error)
     }
   })
