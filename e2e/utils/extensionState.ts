@@ -104,6 +104,98 @@ export async function getPlasmoStorageRawValue<T>(
   }, key)
 }
 
+async function getManifestPermissionsField(
+  page: Page,
+  field: "permissions" | "optional_permissions",
+): Promise<string[]> {
+  return await page.evaluate((field) => {
+    const chromeApi = (
+      globalThis as typeof globalThis & { chrome?: typeof chrome }
+    ).chrome
+
+    if (!chromeApi?.runtime?.getManifest) {
+      throw new Error("chrome.runtime.getManifest is unavailable")
+    }
+
+    return [...(chromeApi.runtime.getManifest()[field] ?? [])]
+  }, field)
+}
+
+/**
+ * Read required permissions declared by the built extension manifest.
+ */
+export async function getManifestRequiredPermissions(
+  page: Page,
+): Promise<string[]> {
+  return await getManifestPermissionsField(page, "permissions")
+}
+
+/**
+ * Read optional permissions declared by the built extension manifest.
+ */
+export async function getManifestOptionalPermissions(
+  page: Page,
+): Promise<string[]> {
+  return await getManifestPermissionsField(page, "optional_permissions")
+}
+
+/**
+ * Check whether a specific extension optional permission is currently granted.
+ */
+export async function hasOptionalPermission(
+  page: Page,
+  permission: string,
+): Promise<boolean> {
+  return await page.evaluate(async (permission) => {
+    const chromeApi = (
+      globalThis as typeof globalThis & { chrome?: typeof chrome }
+    ).chrome
+
+    if (!chromeApi?.permissions) {
+      throw new Error("chrome.permissions is unavailable in extension context")
+    }
+
+    return await chromeApi.permissions.contains({
+      permissions: [permission],
+    })
+  }, permission)
+}
+
+/**
+ * Request optional permissions from the extension page and verify the browser
+ * actually grants each requested permission.
+ */
+export async function requestAndExpectOptionalPermissions(
+  page: Page,
+  permissions: string[],
+) {
+  if (permissions.length === 0) {
+    return
+  }
+
+  const granted = await page.evaluate(async (permissions) => {
+    const chromeApi = (
+      globalThis as typeof globalThis & { chrome?: typeof chrome }
+    ).chrome
+
+    if (!chromeApi?.permissions) {
+      throw new Error("chrome.permissions is unavailable in extension context")
+    }
+
+    return await chromeApi.permissions.request({ permissions })
+  }, permissions)
+
+  expect(granted).toBe(true)
+
+  for (const permission of permissions) {
+    await expect
+      .poll(() => hasOptionalPermission(page, permission), {
+        message: `${permission} permission should be granted`,
+      })
+      .toBe(true)
+  }
+}
+
 /**
  * Close every page in the context except the one the test actively drives.
  */

@@ -41,6 +41,7 @@ export const ACCOUNT_MANAGEMENT_TEST_IDS = {
   rowRedeemMenuItem: "account-management-row-redeem-menu-item",
   rowPinToggleMenuItem: "account-management-row-pin-toggle-menu-item",
   rowQuickCheckinMenuItem: "account-management-row-quick-checkin-menu-item",
+  rowRefreshMenuItem: "account-management-row-refresh-menu-item",
   rowDisableToggleMenuItem: "account-management-row-disable-toggle-menu-item",
   rowDeleteMenuItem: "account-management-row-delete-menu-item",
   deleteConfirmButton: "account-management-delete-confirm-button",

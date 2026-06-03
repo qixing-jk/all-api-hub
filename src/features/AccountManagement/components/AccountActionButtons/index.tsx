@@ -1018,6 +1018,7 @@ export default function AccountActionButtons({
                   icon={ArrowPathIcon}
                   label={t("actions.refresh")}
                   disabled={refreshingAccountId === site.id}
+                  testId={ACCOUNT_MANAGEMENT_TEST_IDS.rowRefreshMenuItem}
                 />
 
                 {isQuickCheckinEligible && (

@@ -1,4 +1,4 @@
-import type { Page, Worker } from "@playwright/test"
+import type { Worker } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
@@ -11,42 +11,15 @@ import {
 } from "~~/e2e/utils/commonUserFlows"
 import {
   expectPermissionOnboardingHidden,
+  getManifestOptionalPermissions,
   getPlasmoStorageRawValue,
   getServiceWorker,
+  hasOptionalPermission,
 } from "~~/e2e/utils/extensionState"
 import { waitForExtensionRoot } from "~~/e2e/utils/lazyLoading"
 
 const OPTIONAL_PERMISSIONS_STORAGE_KEY = "optional_permissions_state"
 const COOKIE_PERMISSION = "cookies"
-async function hasOptionalPermission(page: Page, permission: string) {
-  return await page.evaluate(async (permission) => {
-    const chromeApi = (
-      globalThis as typeof globalThis & { chrome?: typeof chrome }
-    ).chrome
-
-    if (!chromeApi?.permissions) {
-      throw new Error("chrome.permissions is unavailable in extension context")
-    }
-
-    return await chromeApi.permissions.contains({
-      permissions: [permission],
-    })
-  }, permission)
-}
-
-async function getManifestOptionalPermissions(page: Page) {
-  return await page.evaluate(() => {
-    const chromeApi = (
-      globalThis as typeof globalThis & { chrome?: typeof chrome }
-    ).chrome
-
-    if (!chromeApi?.runtime?.getManifest) {
-      throw new Error("chrome.runtime.getManifest is unavailable")
-    }
-
-    return [...(chromeApi.runtime.getManifest().optional_permissions ?? [])]
-  })
-}
 
 async function getLastSeenOptionalPermissions(serviceWorker: Worker) {
   const raw = await getPlasmoStorageRawValue<unknown>(
