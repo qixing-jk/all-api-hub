@@ -2,6 +2,8 @@
   "src",
   "public",
   "e2e/e2e-build-variants.json",
+  "e2e/utils/e2eBuildVariants.shared.d.ts",
+  "e2e/utils/e2eBuildVariants.shared.js",
   "e2e/utils/e2eBuildVariants.ts",
   "e2e/utils/e2eBuildMetadata.ts",
   "e2e/utils/extension.ts",

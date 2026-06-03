@@ -122,6 +122,7 @@ describe("E2E build metadata", () => {
           builtAt: "2026-05-18T00:00:00.000Z",
         },
         {
+          buildVariant: "default",
           gitHead: "new-head",
           inputHash: "same-hash",
           inputPaths: ["src"],
@@ -141,6 +142,7 @@ describe("E2E build metadata", () => {
           builtAt: "2026-05-18T00:00:00.000Z",
         },
         {
+          buildVariant: "default",
           gitHead: "same-head",
           inputHash: "new-hash",
           inputPaths: ["src"],
@@ -160,6 +162,7 @@ describe("E2E build metadata", () => {
           builtAt: "2026-05-18T00:00:00.000Z",
         },
         {
+          buildVariant: "default",
           gitHead: "new-head",
           inputHash: "new-hash",
           inputPaths: ["src"],
@@ -182,6 +185,7 @@ describe("E2E build metadata", () => {
           builtAt: "2026-05-18T00:00:00.000Z",
         },
         {
+          buildVariant: "default",
           gitHead: "same-head",
           inputHash: "same-hash",
           inputPaths: ["src"],

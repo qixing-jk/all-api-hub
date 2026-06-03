@@ -12,6 +12,31 @@ import { reactDevToolsAuto } from "./plugins/react-devtools-auto"
 type BrowserTarget = "chrome" | "firefox" | "safari" | string
 type ManifestPermission = string
 
+const MANIFEST_DESCRIPTION_MAX_LEN = 132
+const MANIFEST_BROWSER_TARGETS = {
+  Firefox: "firefox",
+  Safari: "safari",
+} as const
+const PRODUCTION_OUT_DIR_TEMPLATE =
+  "{{browser}}-mv{{manifestVersion}}{{modeSuffix}}"
+const CORE_EXTENSION_PERMISSIONS = [
+  "tabs",
+  "storage",
+  "alarms",
+  "contextMenus",
+] as const
+const CHROMIUM_ONLY_REQUIRED_PERMISSIONS = ["sidePanel"] as const
+const FIREFOX_COOKIE_OPTIONAL_PERMISSIONS = [
+  "cookies",
+  "webRequest",
+  "webRequestBlocking",
+] as const
+const CHROMIUM_COOKIE_DNR_OPTIONAL_PERMISSIONS = [
+  "cookies",
+  "declarativeNetRequestWithHostAccess",
+] as const
+const COMMON_OPTIONAL_PERMISSIONS = ["clipboardRead", "notifications"] as const
+
 const requestedMode = readWxtCliMode()
 const isTestBuild = requestedMode === "test"
 const e2eBuildVariant = readE2eBuildVariant()
@@ -74,31 +99,6 @@ export default defineConfig({
     }
   },
 })
-
-const MANIFEST_DESCRIPTION_MAX_LEN = 132
-const MANIFEST_BROWSER_TARGETS = {
-  Firefox: "firefox",
-  Safari: "safari",
-} as const
-const PRODUCTION_OUT_DIR_TEMPLATE =
-  "{{browser}}-mv{{manifestVersion}}{{modeSuffix}}"
-const CORE_EXTENSION_PERMISSIONS = [
-  "tabs",
-  "storage",
-  "alarms",
-  "contextMenus",
-] as const
-const CHROMIUM_ONLY_REQUIRED_PERMISSIONS = ["sidePanel"] as const
-const FIREFOX_COOKIE_OPTIONAL_PERMISSIONS = [
-  "cookies",
-  "webRequest",
-  "webRequestBlocking",
-] as const
-const CHROMIUM_COOKIE_DNR_OPTIONAL_PERMISSIONS = [
-  "cookies",
-  "declarativeNetRequestWithHostAccess",
-] as const
-const COMMON_OPTIONAL_PERMISSIONS = ["clipboardRead", "notifications"] as const
 
 function getOutDirTemplate() {
   if (!isTestBuild) return PRODUCTION_OUT_DIR_TEMPLATE
