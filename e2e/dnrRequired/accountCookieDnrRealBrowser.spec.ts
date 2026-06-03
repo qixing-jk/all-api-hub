@@ -232,6 +232,15 @@ test("isolates same-site cookie and access-token accounts through account refres
     const authenticatedSelfRequests = localSite.selfRequests.filter(
       (request) => request.matchedSessionCookie || request.matchedAccessToken,
     )
+    const cookieAccountASequence = expectCookieDnrFallbackSequence(
+      localSite.selfRequests,
+      ACCOUNT_A_SESSION_COOKIE,
+    )
+    expectCookieDnrFallbackSequence(
+      localSite.selfRequests,
+      ACCOUNT_B_SESSION_COOKIE,
+      cookieAccountASequence.successIndex + 1,
+    )
     expect(authenticatedSelfRequests).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
@@ -302,6 +311,7 @@ type CapturedSelfRequest = {
   cookieHeader: string
   matchedSessionCookie: string | null
   matchedAccessToken: string | null
+  responseStatus: number
 }
 
 type DnrCaptureNewApiServer = {
@@ -380,14 +390,6 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
       const authorizationHeader = request.headers.authorization ?? ""
       const matchedSessionCookie = matchAccountSessionCookie(cookieHeader)
       const matchedAccessToken = matchAccessToken(authorizationHeader)
-      const captured: CapturedSelfRequest = {
-        cookieHeader,
-        matchedSessionCookie,
-        matchedAccessToken,
-      }
-      selfRequests.push(captured)
-      resolveMatchingWaiters(captured)
-
       const account =
         (matchedSessionCookie
           ? ACCOUNT_BY_SESSION_COOKIE[matchedSessionCookie]
@@ -395,6 +397,15 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
         (matchedAccessToken
           ? ACCOUNT_BY_ACCESS_TOKEN[matchedAccessToken]
           : null)
+      const captured: CapturedSelfRequest = {
+        cookieHeader,
+        matchedSessionCookie,
+        matchedAccessToken,
+        responseStatus: account ? 200 : 401,
+      }
+      selfRequests.push(captured)
+      resolveMatchingWaiters(captured)
+
       if (!account) {
         sendJson(401, {
           success: false,
@@ -556,6 +567,47 @@ function matchAccountSessionCookie(cookieHeader: string) {
     return ACCOUNT_B_SESSION_COOKIE
   }
   return null
+}
+
+function expectCookieDnrFallbackSequence(
+  requests: CapturedSelfRequest[],
+  targetSessionCookie: string,
+  startIndex = 0,
+) {
+  const successIndex = requests.findIndex(
+    (request, index) =>
+      index >= startIndex &&
+      request.responseStatus === 200 &&
+      request.matchedSessionCookie === targetSessionCookie,
+  )
+  expect(
+    successIndex,
+    `${targetSessionCookie} DNR success request`,
+  ).toBeGreaterThanOrEqual(startIndex)
+
+  const primaryFailureIndex = requests.findIndex(
+    (request, index) =>
+      index >= startIndex &&
+      index < successIndex &&
+      request.responseStatus === 401 &&
+      request.cookieHeader.includes(BROWSER_CURRENT_SESSION_COOKIE) &&
+      !request.matchedSessionCookie &&
+      !request.matchedAccessToken,
+  )
+  expect(
+    primaryFailureIndex,
+    `${targetSessionCookie} primary browser-cookie 401 request`,
+  ).toBeGreaterThanOrEqual(startIndex)
+
+  expect(requests[successIndex].cookieHeader).toContain(targetSessionCookie)
+  expect(requests[successIndex].cookieHeader).not.toContain(
+    BROWSER_CURRENT_SESSION_COOKIE,
+  )
+
+  return {
+    primaryFailureIndex,
+    successIndex,
+  }
 }
 
 function matchAccessToken(authorizationHeader: string) {
