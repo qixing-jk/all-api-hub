@@ -50,7 +50,7 @@ describe("dnrCookieInjector", () => {
     }
 
     expect(rule.condition.tabIds).toEqual([123])
-    expect(rule.condition.urlFilter).toBe("||example.com/")
+    expect(rule.condition.regexFilter).toBe("^https://example\\.com/")
   })
 
   it("buildTempWindowCookieRule falls back to the base rule id when tab id is unavailable", () => {
@@ -61,7 +61,17 @@ describe("dnrCookieInjector", () => {
     })
 
     expect(rule.id).toBe(TEMP_WINDOW_DNR_RULE_ID_BASE)
-    expect(rule.condition.urlFilter).toBe("||example.com/")
+    expect(rule.condition.regexFilter).toBe("^https://example\\.com/")
+  })
+
+  it("buildTempWindowCookieRule preserves URL ports in the DNR filter", () => {
+    const rule = buildTempWindowCookieRule({
+      tabId: 9,
+      url: "http://127.0.0.1:3100/api/user/self",
+      cookieHeader: "session=user-a",
+    })
+
+    expect(rule.condition.regexFilter).toBe("^http://127\\.0\\.0\\.1:3100/")
   })
 
   it("applyTempWindowCookieRule should call updateSessionRules with remove+add", async () => {

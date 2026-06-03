@@ -48,6 +48,13 @@ function buildRuleId(tabId: number): number {
 }
 
 /**
+ * Escape a URL origin so it can be embedded safely in a DNR regex filter.
+ */
+function escapeRegExp(value: string): string {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")
+}
+
+/**
  * Build a session-scoped DNR rule that forces the Cookie header for a specific
  * tab and URL.
  */
@@ -67,9 +74,8 @@ export function buildTempWindowCookieRule(params: TempWindowCookieRuleParams) {
     },
     condition: {
       tabIds: [params.tabId],
-      urlFilter: `||${new URL(params.url).hostname}/`,
-      isUrlFilterCaseSensitive: true,
-      resourceTypes: ["xmlhttprequest"],
+      regexFilter: `^${escapeRegExp(new URL(params.url).origin)}/`,
+      resourceTypes: ["xmlhttprequest", "other"],
     },
   } as const
 }
