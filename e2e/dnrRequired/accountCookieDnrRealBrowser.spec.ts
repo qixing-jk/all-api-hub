@@ -2,13 +2,19 @@ import http from "node:http"
 import type { AddressInfo, Socket } from "node:net"
 import type { BrowserContext, Page } from "@playwright/test"
 
-import { RuntimeActionIds } from "~/constants/runtimeActions"
+import { SITE_TYPES } from "~/constants/siteType"
 import { OPTIONAL_PERMISSION_IDS } from "~/services/permissions/permissionManager"
 import { AuthTypeEnum } from "~/types"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
+  refreshAccountRowsAndReadStorage,
+  saveManualAccountFromApp,
+} from "~~/e2e/scenarios/accountManualAdd"
+import {
   forceExtensionLanguage,
   installExtensionPageGuards,
+  seedStoredAccounts,
+  seedUserPreferences,
   stubLlmMetadataIndex,
 } from "~~/e2e/utils/commonUserFlows"
 import {
@@ -20,6 +26,7 @@ import {
   expectPermissionOnboardingHidden,
   getManifestOptionalPermissions,
   getManifestRequiredPermissions,
+  getServiceWorker,
   requestAndExpectOptionalPermissions,
 } from "~~/e2e/utils/extensionState"
 import { openAccountManagementPage } from "~~/e2e/utils/realSite/accountAdd"
@@ -62,7 +69,7 @@ test("grants the Chromium cookie/DNR optional permissions needed for cookie auth
   }
 })
 
-test("isolates same-site cookie and access-token accounts through production temp-window fetch", async ({
+test("isolates same-site cookie and access-token accounts through account refresh UI", async ({
   context,
   extensionId,
   page,
@@ -72,6 +79,24 @@ test("isolates same-site cookie and access-token accounts through production tem
 
   const localSite = await startDnrCaptureNewApiServer()
   try {
+    const serviceWorker = await getServiceWorker(context)
+    await seedStoredAccounts(serviceWorker, [])
+    await seedUserPreferences(serviceWorker, {
+      tempWindowFallback: {
+        enabled: true,
+        useInPopup: true,
+        useInSidePanel: true,
+        useInOptions: true,
+        useForAutoRefresh: true,
+        useForManualRefresh: true,
+        tempContextMode: "composite",
+      },
+      tempWindowFallbackReminder: {
+        dismissed: true,
+      },
+      warnOnDuplicateAccountAdd: false,
+    })
+
     await test.step("open extension and verify cookie/DNR permissions", async () => {
       await openAccountManagementPage({ page, extensionId })
       await expectPermissionOnboardingHidden(page)
@@ -82,98 +107,126 @@ test("isolates same-site cookie and access-token accounts through production tem
       await seedBrowserCurrentLoginCookie(context, localSite.origin)
     })
 
-    await test.step("fetch account A with real Chromium DNR cookie injection", async () => {
-      const response = await runTempWindowAccountFetch(page, {
-        originUrl: localSite.origin,
-        accountId: "e2e-cookie-account-a",
-        authType: AuthTypeEnum.Cookie,
-        cookieAuthSessionCookie: ACCOUNT_A_SESSION_COOKIE,
-        fetchOptions: { credentials: "include" },
-      })
-      expect(response).toMatchObject({
-        success: true,
-        status: 200,
-        data: expect.objectContaining({
-          success: true,
-          data: expect.objectContaining({
-            id: "201",
+    const savedAccounts =
+      await test.step("save cookie and access-token accounts through the account UI", async () => {
+        const cookieAccountA = await saveManualAccountFromApp({
+          page,
+          extensionId,
+          serviceWorker,
+          baseUrl: localSite.origin,
+          siteType: SITE_TYPES.NEW_API,
+          account: {
+            authType: AuthTypeEnum.Cookie,
+            siteName: "Local DNR New API",
             username: "cookie-user-a",
-            quota: 33_000,
-          }),
-        }),
-      })
-      await localSite.waitForAuthenticatedSelfRequest(ACCOUNT_A_SESSION_COOKIE)
-    })
-
-    await test.step("fetch account B with real Chromium DNR cookie injection", async () => {
-      const response = await runTempWindowAccountFetch(page, {
-        originUrl: localSite.origin,
-        accountId: "e2e-cookie-account-b",
-        authType: AuthTypeEnum.Cookie,
-        cookieAuthSessionCookie: ACCOUNT_B_SESSION_COOKIE,
-        fetchOptions: { credentials: "include" },
-      })
-      expect(response).toMatchObject({
-        success: true,
-        status: 200,
-        data: expect.objectContaining({
-          success: true,
-          data: expect.objectContaining({
-            id: "202",
+            userId: "201",
+            cookieAuthSessionCookie: ACCOUNT_A_SESSION_COOKIE,
+          },
+        })
+        const cookieAccountB = await saveManualAccountFromApp({
+          page,
+          extensionId,
+          serviceWorker,
+          baseUrl: localSite.origin,
+          siteType: SITE_TYPES.NEW_API,
+          account: {
+            authType: AuthTypeEnum.Cookie,
+            siteName: "Local DNR New API",
             username: "cookie-user-b",
-            quota: 44_000,
-          }),
-        }),
+            userId: "202",
+            cookieAuthSessionCookie: ACCOUNT_B_SESSION_COOKIE,
+          },
+        })
+        const tokenAccountA = await saveManualAccountFromApp({
+          page,
+          extensionId,
+          serviceWorker,
+          baseUrl: localSite.origin,
+          siteType: SITE_TYPES.NEW_API,
+          account: {
+            authType: AuthTypeEnum.AccessToken,
+            siteName: "Local DNR New API",
+            username: "token-user-a",
+            userId: "301",
+            accessToken: ACCESS_TOKEN_A,
+          },
+        })
+        const tokenAccountB = await saveManualAccountFromApp({
+          page,
+          extensionId,
+          serviceWorker,
+          baseUrl: localSite.origin,
+          siteType: SITE_TYPES.NEW_API,
+          account: {
+            authType: AuthTypeEnum.AccessToken,
+            siteName: "Local DNR New API",
+            username: "token-user-b",
+            userId: "302",
+            accessToken: ACCESS_TOKEN_B,
+          },
+        })
+
+        return [cookieAccountA, cookieAccountB, tokenAccountA, tokenAccountB]
       })
-      await localSite.waitForAuthenticatedSelfRequest(ACCOUNT_B_SESSION_COOKIE)
+
+    await test.step("reset captured requests and stored balances before final UI refresh", async () => {
+      localSite.clearSelfRequests()
+      await seedStoredAccounts(
+        serviceWorker,
+        savedAccounts.map((account, index) => ({
+          ...account,
+          account_info: {
+            ...account.account_info,
+            quota: 1_000 + index,
+          },
+        })),
+      )
     })
 
-    await test.step("fetch access-token accounts without cookie auth contamination", async () => {
-      const responseA = await runTempWindowAccountFetch(page, {
-        originUrl: localSite.origin,
-        accountId: "e2e-access-token-account-a",
-        authType: AuthTypeEnum.AccessToken,
-        fetchOptions: {
-          credentials: "omit",
-          headers: {
-            Authorization: `Bearer ${ACCESS_TOKEN_A}`,
-          },
-        },
-      })
-      const responseB = await runTempWindowAccountFetch(page, {
-        originUrl: localSite.origin,
-        accountId: "e2e-access-token-account-b",
-        authType: AuthTypeEnum.AccessToken,
-        fetchOptions: {
-          credentials: "omit",
-          headers: {
-            Authorization: `Bearer ${ACCESS_TOKEN_B}`,
-          },
-        },
+    await test.step("refresh the saved accounts from the account management UI", async () => {
+      const refreshedAccounts = await refreshAccountRowsAndReadStorage({
+        page,
+        serviceWorker,
+        accountIds: savedAccounts.map((account) => account.id),
+        expectedQuotas: [33_000, 44_000, 55_000, 66_000],
       })
 
-      expect(responseA).toMatchObject({
-        success: true,
-        status: 200,
-        data: expect.objectContaining({
-          data: expect.objectContaining({
-            id: "301",
-            username: "token-user-a",
-            quota: 55_000,
+      expect(refreshedAccounts).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            authType: AuthTypeEnum.Cookie,
+            account_info: expect.objectContaining({
+              id: "201",
+              username: "cookie-user-a",
+              quota: 33_000,
+            }),
           }),
-        }),
-      })
-      expect(responseB).toMatchObject({
-        success: true,
-        status: 200,
-        data: expect.objectContaining({
-          data: expect.objectContaining({
-            id: "302",
-            username: "token-user-b",
-            quota: 66_000,
+          expect.objectContaining({
+            authType: AuthTypeEnum.Cookie,
+            account_info: expect.objectContaining({
+              id: "202",
+              username: "cookie-user-b",
+              quota: 44_000,
+            }),
           }),
-        }),
-      })
+          expect.objectContaining({
+            authType: AuthTypeEnum.AccessToken,
+            account_info: expect.objectContaining({
+              id: "301",
+              username: "token-user-a",
+              quota: 55_000,
+            }),
+          }),
+          expect.objectContaining({
+            authType: AuthTypeEnum.AccessToken,
+            account_info: expect.objectContaining({
+              id: "302",
+              username: "token-user-b",
+              quota: 66_000,
+            }),
+          }),
+        ]),
+      )
     })
 
     const authenticatedSelfRequests = localSite.selfRequests.filter(
@@ -245,79 +298,6 @@ async function grantCookieDnrPermissions(page: Page, origin: string) {
   expect(hasOriginPermission, `${originPattern} host access`).toBe(true)
 }
 
-async function runTempWindowAccountFetch(
-  page: Page,
-  params: {
-    originUrl: string
-    accountId: string
-    authType: AuthTypeEnum
-    cookieAuthSessionCookie?: string
-    fetchOptions: RequestInit
-  },
-) {
-  return await page.evaluate(
-    async ({
-      action,
-      accountId,
-      authType,
-      cookieAuthSessionCookie,
-      fetchOptions,
-      originUrl,
-    }) => {
-      const chromeApi = (
-        globalThis as typeof globalThis & { chrome?: typeof chrome }
-      ).chrome
-
-      if (!chromeApi?.runtime?.sendMessage) {
-        throw new Error("chrome.runtime.sendMessage is unavailable")
-      }
-
-      const requestId = `e2e-temp-window-${accountId}-${Date.now()}`
-      const message = {
-        action,
-        originUrl,
-        fetchUrl: `${originUrl}/api/user/self`,
-        fetchOptions,
-        requestId,
-        responseType: "json",
-        suppressMinimize: true,
-        accountId,
-        authType,
-        cookieAuthSessionCookie,
-      }
-
-      const timeout = new Promise<never>((_, reject) => {
-        setTimeout(() => {
-          reject(
-            new Error(`Timed out waiting for tempWindowFetch ${requestId}`),
-          )
-        }, 30_000)
-      })
-
-      const response = new Promise((resolve, reject) => {
-        chromeApi.runtime.sendMessage(message, (result) => {
-          const error = chromeApi.runtime.lastError
-          if (error) {
-            reject(new Error(error.message))
-            return
-          }
-          resolve(result)
-        })
-      })
-
-      return await Promise.race([response, timeout])
-    },
-    {
-      action: RuntimeActionIds.TempWindowFetch,
-      accountId: params.accountId,
-      authType: params.authType,
-      cookieAuthSessionCookie: params.cookieAuthSessionCookie,
-      fetchOptions: params.fetchOptions,
-      originUrl: params.originUrl,
-    },
-  )
-}
-
 type CapturedSelfRequest = {
   cookieHeader: string
   matchedSessionCookie: string | null
@@ -327,6 +307,7 @@ type CapturedSelfRequest = {
 type DnrCaptureNewApiServer = {
   origin: string
   selfRequests: CapturedSelfRequest[]
+  clearSelfRequests: () => void
   waitForAuthenticatedSelfRequest: (
     sessionCookie: string,
   ) => Promise<CapturedSelfRequest>
@@ -527,6 +508,9 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
   return {
     origin,
     selfRequests,
+    clearSelfRequests: () => {
+      selfRequests.splice(0)
+    },
     waitForAuthenticatedSelfRequest,
     close,
   }

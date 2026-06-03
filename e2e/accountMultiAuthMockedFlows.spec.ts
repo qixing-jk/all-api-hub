@@ -1,16 +1,13 @@
-import type { BrowserContext, Page, Route, Worker } from "@playwright/test"
+import type { BrowserContext, Route, Worker } from "@playwright/test"
 
 import { SITE_TYPES } from "~/constants/siteType"
-import {
-  ACCOUNT_MANAGEMENT_TEST_IDS,
-  getAccountManagementListItemTestId,
-} from "~/features/AccountManagement/testIds"
 import { OPTIONAL_PERMISSION_IDS } from "~/services/permissions/permissionManager"
 import { AuthTypeEnum } from "~/types"
 import { extractSessionCookieHeader } from "~/utils/browser/cookieString"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   readStoredAccounts,
+  refreshAccountRowsAndReadStorage,
   saveManualAccountFromApp,
 } from "~~/e2e/scenarios/accountManualAdd"
 import {
@@ -550,43 +547,4 @@ function resolveMockedAuthenticatedAccount(headers: Record<string, string>) {
   }
 
   return null
-}
-
-async function refreshAccountRowsAndReadStorage(params: {
-  page: Page
-  serviceWorker: Worker
-  accountIds: string[]
-  expectedQuotas: number[]
-}) {
-  for (const accountId of params.accountIds) {
-    const row = params.page.getByTestId(
-      getAccountManagementListItemTestId(accountId),
-    )
-    await row.hover()
-    await row
-      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
-      .click()
-    await params.page
-      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowRefreshMenuItem)
-      .click()
-  }
-
-  await expect
-    .poll(async () => {
-      const accounts = await readStoredAccounts(params.serviceWorker)
-      return params.accountIds.map((id) => {
-        const account = accounts.find((candidate) => candidate.id === id)
-        return account?.account_info.quota ?? null
-      })
-    })
-    .toEqual(params.expectedQuotas)
-
-  const accounts = await readStoredAccounts(params.serviceWorker)
-  return params.accountIds.map((id) => {
-    const account = accounts.find((candidate) => candidate.id === id)
-    if (!account) {
-      throw new Error(`Refreshed account ${id} was not found`)
-    }
-    return account
-  })
 }

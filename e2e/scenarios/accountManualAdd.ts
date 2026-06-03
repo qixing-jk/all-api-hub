@@ -1,7 +1,10 @@
 import type { Locator, Page, Worker } from "@playwright/test"
 
 import { SITE_TYPES, type AccountSiteType } from "~/constants/siteType"
-import { ACCOUNT_MANAGEMENT_TEST_IDS } from "~/features/AccountManagement/testIds"
+import {
+  ACCOUNT_MANAGEMENT_TEST_IDS,
+  getAccountManagementListItemTestId,
+} from "~/features/AccountManagement/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   AuthTypeEnum,
@@ -99,6 +102,59 @@ export async function saveManualAccountFromApp(params: {
   })
   await expectAccountListItemVisible(params.page, savedAccount.id)
   return savedAccount
+}
+
+export async function refreshAccountRowsAndReadStorage(params: {
+  page: Page
+  serviceWorker: Worker
+  accountIds: string[]
+  expectedQuotas: number[]
+}) {
+  expect(params.accountIds.length).toBe(params.expectedQuotas.length)
+
+  for (const [index, accountId] of params.accountIds.entries()) {
+    const row = params.page.getByTestId(
+      getAccountManagementListItemTestId(accountId),
+    )
+    await row.hover()
+    await row
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowMoreActionsButton)
+      .click()
+    await params.page
+      .getByTestId(ACCOUNT_MANAGEMENT_TEST_IDS.rowRefreshMenuItem)
+      .click()
+
+    await waitForStoredAccountQuota({
+      serviceWorker: params.serviceWorker,
+      accountId,
+      expectedQuota: params.expectedQuotas[index],
+    })
+  }
+
+  const accounts = await readStoredAccounts(params.serviceWorker)
+  return params.accountIds.map((id) => {
+    const account = accounts.find((candidate) => candidate.id === id)
+    if (!account) {
+      throw new Error(`Refreshed account ${id} was not found`)
+    }
+    return account
+  })
+}
+
+async function waitForStoredAccountQuota(params: {
+  serviceWorker: Worker
+  accountId: string
+  expectedQuota: number
+}) {
+  await expect
+    .poll(async () => {
+      const accounts = await readStoredAccounts(params.serviceWorker)
+      const account = accounts.find(
+        (candidate) => candidate.id === params.accountId,
+      )
+      return account?.account_info.quota ?? null
+    })
+    .toEqual(params.expectedQuota)
 }
 
 async function waitForManualSavedAccount(params: {
