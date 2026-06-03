@@ -1,0 +1,19 @@
+{
+  "envName": "AAH_E2E_BUILD_VARIANT",
+  "defaultVariant": "default",
+  "variants": {
+    "default": {
+      "extensionDirName": "chrome-mv3-test",
+      "testOutDirTemplate": "{{browser}}-mv{{manifestVersion}}-test",
+      "requiredChromiumPermissions": []
+    },
+    "dnr-required": {
+      "extensionDirName": "chrome-mv3-test-dnr-required",
+      "testOutDirTemplate": "{{browser}}-mv{{manifestVersion}}-test-dnr-required",
+      "requiredChromiumPermissions": [
+        "cookies",
+        "declarativeNetRequestWithHostAccess"
+      ]
+    }
+  }
+}

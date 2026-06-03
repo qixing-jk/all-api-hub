@@ -2,18 +2,25 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 import { defineConfig } from "wxt"
 
+import {
+  getE2eRequiredChromiumPermissions,
+  getE2eTestOutDirTemplate,
+  readE2eBuildVariant,
+} from "./e2e/utils/e2eBuildVariants"
 import { reactDevToolsAuto } from "./plugins/react-devtools-auto"
+
+type BrowserTarget = "chrome" | "firefox" | "safari" | string
+type ManifestPermission = string
 
 const requestedMode = readWxtCliMode()
 const isTestBuild = requestedMode === "test"
+const e2eBuildVariant = readE2eBuildVariant()
 
 // See https://wxt.dev/api/config.html
 export default defineConfig({
   srcDir: "src",
   publicDir: "src/public",
-  outDirTemplate: isTestBuild
-    ? "{{browser}}-mv{{manifestVersion}}-test"
-    : "{{browser}}-mv{{manifestVersion}}{{modeSuffix}}",
+  outDirTemplate: getOutDirTemplate(),
   modules: ["@wxt-dev/auto-icons", "@wxt-dev/module-react"],
   manifest: (env) => {
     const projectPath = getProjectRootPath()
@@ -21,38 +28,15 @@ export default defineConfig({
       env.command === "serve"
         ? buildDevManifestDescription(projectPath)
         : "__MSG_manifest_description__"
+    const requiredPermissions = getManifestRequiredPermissions(env.browser)
+    const optionalPermissions = getManifestOptionalPermissions(env.browser)
 
     return {
       name: "__MSG_manifest_name__",
       description,
       default_locale: "en",
-      permissions: [
-        "tabs",
-        "storage",
-        "alarms",
-        "contextMenus",
-        ...(env.browser === "firefox" || env.browser === "safari"
-          ? []
-          : ["sidePanel"]),
-      ],
-      ...(env.browser === "firefox"
-        ? {
-            optional_permissions: [
-              "cookies",
-              "webRequest",
-              "webRequestBlocking",
-              "clipboardRead",
-              "notifications",
-            ],
-          }
-        : {
-            optional_permissions: [
-              "cookies",
-              "declarativeNetRequestWithHostAccess",
-              "clipboardRead",
-              "notifications",
-            ],
-          }),
+      permissions: requiredPermissions,
+      optional_permissions: optionalPermissions,
       // ensure can get site cookies, please refer to https://stackoverflow.com/a/70070106/22460724
       host_permissions: ["<all_urls>"],
       browser_specific_settings: {
@@ -92,6 +76,73 @@ export default defineConfig({
 })
 
 const MANIFEST_DESCRIPTION_MAX_LEN = 132
+const MANIFEST_BROWSER_TARGETS = {
+  Firefox: "firefox",
+  Safari: "safari",
+} as const
+const PRODUCTION_OUT_DIR_TEMPLATE =
+  "{{browser}}-mv{{manifestVersion}}{{modeSuffix}}"
+const CORE_EXTENSION_PERMISSIONS = [
+  "tabs",
+  "storage",
+  "alarms",
+  "contextMenus",
+] as const
+const CHROMIUM_ONLY_REQUIRED_PERMISSIONS = ["sidePanel"] as const
+const FIREFOX_COOKIE_OPTIONAL_PERMISSIONS = [
+  "cookies",
+  "webRequest",
+  "webRequestBlocking",
+] as const
+const CHROMIUM_COOKIE_DNR_OPTIONAL_PERMISSIONS = [
+  "cookies",
+  "declarativeNetRequestWithHostAccess",
+] as const
+const COMMON_OPTIONAL_PERMISSIONS = ["clipboardRead", "notifications"] as const
+
+function getOutDirTemplate() {
+  if (!isTestBuild) return PRODUCTION_OUT_DIR_TEMPLATE
+
+  return getE2eTestOutDirTemplate(e2eBuildVariant)
+}
+
+function getManifestRequiredPermissions(browser: BrowserTarget) {
+  const permissions: ManifestPermission[] = [...CORE_EXTENSION_PERMISSIONS]
+
+  if (isChromiumManifestTarget(browser)) {
+    permissions.push(...CHROMIUM_ONLY_REQUIRED_PERMISSIONS)
+    permissions.push(...getE2eRequiredChromiumPermissions(e2eBuildVariant))
+  }
+
+  return permissions
+}
+
+function getManifestOptionalPermissions(browser: BrowserTarget) {
+  const browserOptionalPermissions = isFirefoxManifestTarget(browser)
+    ? FIREFOX_COOKIE_OPTIONAL_PERMISSIONS
+    : getChromiumOptionalPermissions()
+
+  return [...browserOptionalPermissions, ...COMMON_OPTIONAL_PERMISSIONS]
+}
+
+function getChromiumOptionalPermissions() {
+  const requiredPermissions = getE2eRequiredChromiumPermissions(e2eBuildVariant)
+
+  return CHROMIUM_COOKIE_DNR_OPTIONAL_PERMISSIONS.filter(
+    (permission) => !requiredPermissions.includes(permission),
+  )
+}
+
+function isFirefoxManifestTarget(browser: BrowserTarget) {
+  return browser === MANIFEST_BROWSER_TARGETS.Firefox
+}
+
+function isChromiumManifestTarget(browser: BrowserTarget) {
+  return (
+    browser !== MANIFEST_BROWSER_TARGETS.Firefox &&
+    browser !== MANIFEST_BROWSER_TARGETS.Safari
+  )
+}
 
 /**
  * Get the absolute path to the project root directory.

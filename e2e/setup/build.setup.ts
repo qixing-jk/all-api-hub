@@ -4,13 +4,14 @@ import { fileURLToPath } from "node:url"
 import { test as setup } from "@playwright/test"
 
 import { isE2eBuildCurrent } from "~~/e2e/utils/e2eBuildMetadata"
+import { getE2eExtensionDirName } from "~~/e2e/utils/e2eBuildVariants"
 
 const rootDir = path.resolve(
   path.dirname(fileURLToPath(import.meta.url)),
   "..",
   "..",
 )
-const extensionDir = path.join(rootDir, ".output", "chrome-mv3-test")
+const extensionDir = path.join(rootDir, ".output", getE2eExtensionDirName())
 
 setup("build extension for e2e", async () => {
   if (process.env.AAH_SKIP_E2E_BUILD === "1") {

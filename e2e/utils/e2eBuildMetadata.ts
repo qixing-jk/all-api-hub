@@ -4,6 +4,8 @@ import fs from "node:fs/promises"
 import path from "node:path"
 import { promisify } from "node:util"
 
+import { readE2eBuildVariant } from "~~/e2e/utils/e2eBuildVariants"
+
 const execFileAsync = promisify(execFile)
 
 const E2E_BUILD_METADATA_FILE = ".aah-e2e-build.json"
@@ -12,6 +14,7 @@ const IGNORED_DIRECTORY_NAMES = new Set(["node_modules", ".git", ".output"])
 
 type E2eBuildMetadata = {
   version: 1
+  buildVariant?: string
   gitHead: string
   inputHash: string
   inputPaths: string[]
@@ -20,7 +23,7 @@ type E2eBuildMetadata = {
 
 type E2eBuildMetadataSnapshot = Pick<
   E2eBuildMetadata,
-  "gitHead" | "inputHash" | "inputPaths"
+  "buildVariant" | "gitHead" | "inputHash" | "inputPaths"
 >
 
 type E2eBuildMetadataOptions = {
@@ -53,6 +56,7 @@ async function createE2eBuildMetadataSnapshot(
   ])
 
   return {
+    buildVariant: readE2eBuildVariant(),
     gitHead,
     inputHash,
     inputPaths,
@@ -133,6 +137,12 @@ export function getE2eBuildMetadataMismatches(
   if (metadata.gitHead !== current.gitHead) {
     mismatches.push(
       `Built from git HEAD ${metadata.gitHead}, current HEAD is ${current.gitHead}.`,
+    )
+  }
+
+  if ((metadata.buildVariant ?? "default") !== current.buildVariant) {
+    mismatches.push(
+      `Built for E2E variant ${metadata.buildVariant ?? "default"}, current variant is ${current.buildVariant}.`,
     )
   }
 

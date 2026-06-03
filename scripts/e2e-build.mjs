@@ -5,7 +5,13 @@ import path from "node:path"
 import { fileURLToPath } from "node:url"
 
 const rootDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..")
-const extensionDir = path.join(rootDir, ".output", "chrome-mv3-test")
+const buildVariantConfig = readE2eBuildVariantConfig()
+const buildVariant = getE2eBuildVariant(buildVariantConfig)
+const extensionDir = path.join(
+  rootDir,
+  ".output",
+  getExtensionDirName(buildVariantConfig, buildVariant),
+)
 const metadataPath = path.join(extensionDir, ".aah-e2e-build.json")
 const inputPaths = JSON.parse(
   fs.readFileSync(path.join(rootDir, "e2e", "e2e-build-inputs.json"), "utf8"),
@@ -31,6 +37,7 @@ fs.writeFileSync(
   `${JSON.stringify(
     {
       version: 1,
+      buildVariant,
       gitHead: getGitHead(),
       inputHash: createInputHash(),
       inputPaths,
@@ -59,6 +66,42 @@ function run(command, args) {
     }
     process.exit(result.status ?? 1)
   }
+}
+
+/**
+ * Returns the requested E2E build variant.
+ * @param config E2E build variant config.
+ * @returns The stable build variant identifier.
+ */
+function getE2eBuildVariant(config) {
+  const value = process.env[config.envName]?.trim()
+  if (!value) return config.defaultVariant
+  if (Object.prototype.hasOwnProperty.call(config.variants, value)) return value
+
+  throw new Error(`Unsupported ${config.envName} '${value}'`)
+}
+
+/**
+ * Maps the selected E2E variant to its output extension directory.
+ * @param config E2E build variant config.
+ * @param variant Selected E2E build variant.
+ * @returns The output directory name under .output.
+ */
+function getExtensionDirName(config, variant) {
+  return config.variants[variant].extensionDirName
+}
+
+/**
+ * Reads the E2E build variant config shared with TS build/test helpers.
+ * @returns Parsed E2E build variant config.
+ */
+function readE2eBuildVariantConfig() {
+  return JSON.parse(
+    fs.readFileSync(
+      path.join(rootDir, "e2e", "e2e-build-variants.json"),
+      "utf8",
+    ),
+  )
 }
 
 /**
