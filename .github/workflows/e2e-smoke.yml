@@ -42,10 +42,21 @@ concurrency:
 
 jobs:
   e2e-smoke:
+    name: E2E smoke (${{ matrix.name }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
     if: ${{ github.event_name != 'pull_request' || !contains(github.event.pull_request.labels.*.name, 'skip-e2e') }}
     continue-on-error: ${{ github.event_name == 'pull_request' && contains(github.event.pull_request.labels.*.name, 'e2e-optional') }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: default
+            build_variant: ""
+            command: pnpm e2e
+          - name: dnr-required
+            build_variant: dnr-required
+            command: timeout 180s pnpm exec playwright test e2e/accountCookieDnrRealBrowser.spec.ts --project=chromium --workers=1 --timeout=120000 --grep "isolates same-site"
 
     steps:
       - name: Checkout code
@@ -68,6 +79,8 @@ jobs:
         run: pnpm install --frozen-lockfile --prefer-offline
 
       - name: Build extension
+        env:
+          AAH_E2E_BUILD_VARIANT: ${{ matrix.build_variant }}
         run: pnpm build:e2e
 
       - name: Get Playwright version
@@ -87,13 +100,16 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run E2E smoke
-        run: pnpm e2e
+        env:
+          AAH_E2E_BUILD_VARIANT: ${{ matrix.build_variant }}
+          AAH_SKIP_E2E_BUILD: "1"
+        run: ${{ matrix.command }}
 
       - name: Upload Playwright artifacts (failure)
         if: failure()
         uses: actions/upload-artifact@v7
         with:
-          name: playwright-report-${{ github.run_attempt }}
+          name: playwright-report-${{ matrix.name }}-${{ github.run_attempt }}
           path: |
             playwright-report/
             test-results/
