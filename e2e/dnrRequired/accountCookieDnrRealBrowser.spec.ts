@@ -1,5 +1,5 @@
 import http from "node:http"
-import type { AddressInfo } from "node:net"
+import type { AddressInfo, Socket } from "node:net"
 import type { BrowserContext, Page } from "@playwright/test"
 
 import { RuntimeActionIds } from "~/constants/runtimeActions"
@@ -50,6 +50,8 @@ test("grants the Chromium cookie/DNR optional permissions needed for cookie auth
   extensionId,
   page,
 }) => {
+  skipUnlessDnrRequiredVariant()
+
   const localSite = await startDnrCaptureNewApiServer()
   try {
     await openAccountManagementPage({ page, extensionId })
@@ -66,13 +68,7 @@ test("isolates same-site cookie and access-token accounts through production tem
   page,
 }) => {
   test.slow()
-  test.skip(
-    process.env[E2E_BUILD_VARIANT_ENV] !== E2E_BUILD_VARIANTS.DnrRequired,
-    [
-      "Real Chromium DNR cookie isolation requires the E2E-only dnr-required manifest variant.",
-      `Run with ${E2E_BUILD_VARIANT_ENV}=${E2E_BUILD_VARIANTS.DnrRequired}.`,
-    ].join(" "),
-  )
+  skipUnlessDnrRequiredVariant()
 
   const localSite = await startDnrCaptureNewApiServer()
   try {
@@ -208,6 +204,16 @@ test("isolates same-site cookie and access-token accounts through production tem
   }
 })
 
+function skipUnlessDnrRequiredVariant() {
+  test.skip(
+    process.env[E2E_BUILD_VARIANT_ENV] !== E2E_BUILD_VARIANTS.DnrRequired,
+    [
+      "Real Chromium DNR cookie isolation requires the E2E-only dnr-required manifest variant.",
+      `Run with ${E2E_BUILD_VARIANT_ENV}=${E2E_BUILD_VARIANTS.DnrRequired}.`,
+    ].join(" "),
+  )
+}
+
 async function grantCookieDnrPermissions(page: Page, origin: string) {
   const optionalPermissions = await getManifestOptionalPermissions(page)
   const requiredPermissions = await getManifestRequiredPermissions(page)
@@ -329,6 +335,7 @@ type DnrCaptureNewApiServer = {
 
 async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
   const selfRequests: CapturedSelfRequest[] = []
+  const sockets = new Set<Socket>()
   const waiters: Array<{
     sessionCookie: string
     resolve: (request: CapturedSelfRequest) => void
@@ -461,6 +468,11 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
     })
   })
 
+  server.on("connection", (socket) => {
+    sockets.add(socket)
+    socket.on("close", () => sockets.delete(socket))
+  })
+
   const origin = await new Promise<string>((resolve, reject) => {
     server.on("error", reject)
     server.listen(0, "127.0.0.1", () => {
@@ -506,6 +518,9 @@ async function startDnrCaptureNewApiServer(): Promise<DnrCaptureNewApiServer> {
         if (error) reject(error)
         else resolve()
       })
+      for (const socket of sockets) {
+        socket.destroy()
+      }
     })
   }
 

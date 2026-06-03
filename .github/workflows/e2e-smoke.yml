@@ -52,11 +52,13 @@ jobs:
       matrix:
         include:
           - name: default
+            e2e_type: default
             build_variant: ""
-            command: pnpm e2e
+            timeout_minutes: 20
           - name: dnr-required
+            e2e_type: dnr-required
             build_variant: dnr-required
-            command: timeout 180s pnpm exec playwright test e2e/accountCookieDnrRealBrowser.spec.ts --project=chromium --workers=1 --timeout=120000 --grep "isolates same-site"
+            timeout_minutes: 5
 
     steps:
       - name: Checkout code
@@ -100,10 +102,11 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Run E2E smoke
+        timeout-minutes: ${{ matrix.timeout_minutes }}
         env:
           AAH_E2E_BUILD_VARIANT: ${{ matrix.build_variant }}
           AAH_SKIP_E2E_BUILD: "1"
-        run: ${{ matrix.command }}
+        run: pnpm run e2e:${{ matrix.e2e_type }}
 
       - name: Upload Playwright artifacts (failure)
         if: failure()
