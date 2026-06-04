@@ -10,6 +10,7 @@ import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "~/components/ui/Card"
 import { BodySmall, Heading3, Link } from "~/components/ui/Typography"
+import { PermissionList } from "~/features/Permissions/components/PermissionList"
 import {
   ensurePermissionsDetailed,
   hasPermission,
@@ -22,8 +23,7 @@ import { trackOptionalPermissionRequestResult } from "~/services/productAnalytic
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
 
-import { BASIC_SETTINGS_TEST_IDS } from "../../testIds"
-import { PermissionList } from "../tabs/Permissions/PermissionList"
+import { OPTIONS_OVERVIEW_TEST_IDS } from "../../testIds"
 
 /**
  * Unified logger scoped to the optional-permissions onboarding dialog.
@@ -255,7 +255,7 @@ export function PermissionOnboardingDialog({
     >
       <div
         className="space-y-4"
-        data-testid={BASIC_SETTINGS_TEST_IDS.permissionOnboardingDialog}
+        data-testid={OPTIONS_OVERVIEW_TEST_IDS.permissionOnboardingDialog}
       >
         <Card padding="none" className="overflow-hidden">
           <CardHeader

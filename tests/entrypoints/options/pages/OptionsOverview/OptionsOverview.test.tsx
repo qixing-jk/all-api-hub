@@ -17,7 +17,7 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
   trackProductAnalyticsEvent,
 } from "~/services/productAnalytics/events"
-import { render, screen } from "~~/tests/test-utils/render"
+import { act, render, screen } from "~~/tests/test-utils/render"
 
 const {
   pushWithinOptionsPageMock,
@@ -61,6 +61,20 @@ vi.mock("~/components/icons/WorkflowTransitionIcon", () => ({
     />
   ),
 }))
+
+vi.mock(
+  "~/features/OptionsOverview/components/dialogs/PermissionOnboardingDialog",
+  () => ({
+    PermissionOnboardingDialog: ({
+      open,
+      reason,
+    }: {
+      open: boolean
+      reason: string | null
+    }) =>
+      open ? <div data-testid="permission-onboarding">{reason}</div> : null,
+  }),
+)
 
 const setupViewModel: OptionsOverviewViewModel = {
   statusCards: [
@@ -299,6 +313,7 @@ describe("OptionsOverview", () => {
   beforeEach(() => {
     vi.clearAllMocks()
     trackProductAnalyticsEventMock.mockResolvedValue(true)
+    window.history.replaceState(null, "", "/")
   })
 
   it("renders loading state while overview data loads", () => {
@@ -334,6 +349,34 @@ describe("OptionsOverview", () => {
         name: "optionsOverview:configurationOverview.open",
       }),
     ).not.toBeInTheDocument()
+  })
+
+  it("opens permissions onboarding from Overview URL state", async () => {
+    useOptionsOverviewDataMock.mockReturnValue({
+      isLoading: false,
+      error: null,
+      viewModel: setupViewModel,
+      reload: vi.fn(),
+    })
+
+    renderOverview()
+
+    expect(
+      screen.queryByTestId("permission-onboarding"),
+    ).not.toBeInTheDocument()
+
+    act(() => {
+      window.history.replaceState(
+        null,
+        "",
+        "/?onboarding=permissions&reason=debug#overview",
+      )
+      window.dispatchEvent(new Event("hashchange"))
+    })
+
+    expect(
+      await screen.findByTestId("permission-onboarding"),
+    ).toHaveTextContent("debug")
   })
 
   it("keeps overview status surfaces compact without repeated helper copy", () => {

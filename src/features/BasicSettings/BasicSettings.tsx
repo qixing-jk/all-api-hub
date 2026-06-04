@@ -40,7 +40,6 @@ import {
   highlightSearchTarget,
   OPTIONS_SEARCH_HIGHLIGHT_PARAM,
 } from "~/entrypoints/options/search/navigation"
-import { setLastSeenOptionalPermissions } from "~/services/permissions/optionalPermissionState"
 import { OPTIONAL_PERMISSIONS } from "~/services/permissions/permissionManager"
 import { assertNever } from "~/utils/core/assert"
 import {
@@ -49,7 +48,6 @@ import {
   updateUrlWithTab,
 } from "~/utils/core/url"
 
-import { PermissionOnboardingDialog } from "./components/dialogs/PermissionOnboardingDialog"
 import LoadingSkeleton from "./components/shared/LoadingSkeleton"
 import GeneralTab from "./components/tabs/General/GeneralTab"
 import { BASIC_SETTINGS_TEST_IDS } from "./testIds"
@@ -491,7 +489,7 @@ function SettingsTabContentFallback() {
 }
 
 /**
- * Basic Settings page: renders tabs for all settings sections and handles URL syncing/onboarding.
+ * Basic Settings page: renders tabs for all settings sections and handles URL syncing.
  */
 export default function BasicSettings() {
   const { t } = useTranslation("settings")
@@ -517,10 +515,6 @@ export default function BasicSettings() {
   const [mountedTabIds, setMountedTabIds] = useState<TabId[]>([
     initialSelectedTabId,
   ])
-  const [showPermissionsOnboarding, setShowPermissionsOnboarding] =
-    useState(false)
-  const [permissionsOnboardingReason, setPermissionsOnboardingReason] =
-    useState<string | null>(null)
   const [hasResolvedInitialLoad, setHasResolvedInitialLoad] = useState(false)
 
   useEffect(() => {
@@ -569,17 +563,6 @@ export default function BasicSettings() {
         }, 220)
       }
     }
-
-    if (hasOptionalPermissions) {
-      const onboarding = searchParams.get("onboarding")
-      if (onboarding === "permissions") {
-        setPermissionsOnboardingReason(searchParams.get("reason"))
-        setShowPermissionsOnboarding(true)
-      } else {
-        setPermissionsOnboardingReason(null)
-        setShowPermissionsOnboarding(false)
-      }
-    }
   }, [])
 
   useEffect(() => {
@@ -591,15 +574,6 @@ export default function BasicSettings() {
       window.removeEventListener("hashchange", applyUrlState)
     }
   }, [applyUrlState])
-
-  const handleCloseOnboarding = useCallback(() => {
-    setShowPermissionsOnboarding(false)
-    void setLastSeenOptionalPermissions()
-    const url = new URL(window.location.href)
-    url.searchParams.delete("onboarding")
-    url.searchParams.delete("reason")
-    window.history.replaceState(null, "", url.toString())
-  }, [])
 
   const getTabIndexFromId = useCallback(
     (tabId: string) => TAB_CONFIGS.findIndex((cfg) => cfg.id === tabId),
@@ -685,14 +659,6 @@ export default function BasicSettings() {
           })}
         </Tab.Panels>
       </Tab.Group>
-
-      {hasOptionalPermissions && (
-        <PermissionOnboardingDialog
-          open={showPermissionsOnboarding}
-          onClose={handleCloseOnboarding}
-          reason={permissionsOnboardingReason}
-        />
-      )}
     </div>
   )
 }

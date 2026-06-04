@@ -2,7 +2,7 @@ import type { Worker } from "@playwright/test"
 
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
+import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 import { expect, test } from "~~/e2e/fixtures/extensionTest"
 import {
   forceExtensionLanguage,
@@ -43,7 +43,7 @@ test.beforeEach(async ({ context, page }) => {
   await stubLlmMetadataIndex(context)
 })
 
-test("lets first-use users defer recommended permissions and continue into settings", async ({
+test("lets first-use users defer recommended permissions and continue into overview", async ({
   context,
   extensionId,
   page,
@@ -51,12 +51,12 @@ test("lets first-use users defer recommended permissions and continue into setti
   const serviceWorker = await getServiceWorker(context)
 
   await page.goto(
-    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?tab=permissions&onboarding=permissions#${MENU_ITEM_IDS.BASIC}`,
+    `chrome-extension://${extensionId}/${OPTIONS_PAGE_PATH}?onboarding=permissions#${MENU_ITEM_IDS.OVERVIEW}`,
   )
   await waitForExtensionRoot(page)
 
   const dialog = page.getByTestId(
-    BASIC_SETTINGS_TEST_IDS.permissionOnboardingDialog,
+    OPTIONS_OVERVIEW_TEST_IDS.permissionOnboardingDialog,
   )
   await expect(dialog).toBeVisible()
   await expect(
@@ -70,8 +70,8 @@ test("lets first-use users defer recommended permissions and continue into setti
   await page.getByRole("button", { name: "Maybe later" }).click()
 
   await expectPermissionOnboardingHidden(page)
-  await expect(page).toHaveURL(/options\.html\?tab=permissions#basic$/)
-  await expect(page.getByRole("heading", { name: "Permissions" })).toBeVisible()
+  await expect(page).toHaveURL(/options\.html#overview$/)
+  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible()
 
   await expect
     .poll(() => getLastSeenOptionalPermissions(serviceWorker))

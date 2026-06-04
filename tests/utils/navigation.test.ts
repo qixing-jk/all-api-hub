@@ -744,7 +744,7 @@ describe("navigation utilities", () => {
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(
-      `${OPTIONS_PAGE_URL}?onboarding=permissions&reason=debug#basic`,
+      `${OPTIONS_PAGE_URL}?onboarding=permissions&reason=debug#overview`,
       true,
     )
     expect(mockedCreateTab).toHaveBeenCalledWith(

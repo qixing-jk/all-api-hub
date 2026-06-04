@@ -459,20 +459,21 @@ const _openSettingsPage = () => {
 }
 
 /**
- * Opens the optional-permissions onboarding dialog through the Basic settings URL.
+ * Opens the optional-permissions onboarding dialog through the Overview URL.
  */
 const _openPermissionsOnboardingPage = (params?: { reason?: string }) => {
   const searchParams = {
     onboarding: "permissions",
     reason: params?.reason,
   }
+  const targetHash = `#${MENU_ITEM_IDS.OVERVIEW}`
 
   if (isOnOptionsPage()) {
-    replaceWithinOptionsPage(getBasicSettingsHash(), searchParams)
+    replaceWithinOptionsPage(targetHash, searchParams)
     return
   }
 
-  return openOrFocusOptionsPage(getBasicSettingsHash(), searchParams)
+  return openOrFocusOptionsPage(targetHash, searchParams)
 }
 
 /**

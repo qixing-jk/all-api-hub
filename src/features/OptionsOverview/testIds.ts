@@ -5,4 +5,5 @@ export const OPTIONS_OVERVIEW_TEST_IDS = {
   automationOverview: "options-overview-automation-overview",
   recentUsage: "options-overview-recent-usage",
   actionCenter: "options-overview-action-center",
+  permissionOnboardingDialog: "permission-onboarding-dialog",
 } as const

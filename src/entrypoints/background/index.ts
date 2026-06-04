@@ -115,8 +115,7 @@ export default defineBackground(() => {
           shouldAutoOpenPermissionsOnboarding()
         ) {
           logger.info("First install detected, opening permissions onboarding")
-          openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC, {
-            tab: "permissions",
+          openOrFocusOptionsMenuItem(MENU_ITEM_IDS.OVERVIEW, {
             onboarding: "permissions",
           })
         } else if (
@@ -149,8 +148,7 @@ export default defineBackground(() => {
               logger.info(
                 "Update detected with new optional permissions; prompting user to re-confirm",
               )
-              openOrFocusOptionsMenuItem(MENU_ITEM_IDS.BASIC, {
-                tab: "permissions",
+              openOrFocusOptionsMenuItem(MENU_ITEM_IDS.OVERVIEW, {
                 onboarding: "permissions",
                 reason: "new-permissions",
               })

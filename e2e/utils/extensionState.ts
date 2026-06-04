@@ -1,7 +1,7 @@
 import type { BrowserContext, Page, Worker } from "@playwright/test"
 import { expect } from "@playwright/test"
 
-import { BASIC_SETTINGS_TEST_IDS } from "~/features/BasicSettings/testIds"
+import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
 
 /**
  * Detect whether a page URL is an options page carrying the permissions
@@ -222,6 +222,6 @@ export async function expectPermissionOnboardingHidden(page: Page) {
     .toBe(false)
 
   await expect(
-    page.getByTestId(BASIC_SETTINGS_TEST_IDS.permissionOnboardingDialog),
+    page.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.permissionOnboardingDialog),
   ).toHaveCount(0)
 }

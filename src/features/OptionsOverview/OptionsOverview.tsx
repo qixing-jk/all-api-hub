@@ -1,8 +1,11 @@
 import { AlertTriangle, LayoutDashboard } from "lucide-react"
+import { useCallback, useEffect, useState } from "react"
 import { useTranslation } from "react-i18next"
 
 import { PageHeader } from "~/components/PageHeader"
 import { Alert, Button, Spinner } from "~/components/ui"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { setLastSeenOptionalPermissions } from "~/services/permissions/optionalPermissionState"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -15,6 +18,7 @@ import {
 } from "~/services/productAnalytics/events"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
+import { PermissionOnboardingDialog } from "./components/dialogs/PermissionOnboardingDialog"
 import { OptionsOverviewGrid } from "./components/OptionsOverviewGrid"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "./testIds"
 import type { OptionsOverviewNavigationIntent } from "./types"
@@ -30,11 +34,56 @@ const overviewWidgetSurfaceIds = {
 } as const
 
 /**
+ * Reads the Overview-owned permissions onboarding state from the current URL.
+ */
+function getPermissionsOnboardingReasonFromUrl(): string | null {
+  if (typeof window === "undefined") {
+    return null
+  }
+
+  const url = new URL(window.location.href)
+  if (url.hash !== `#${MENU_ITEM_IDS.OVERVIEW}`) {
+    return null
+  }
+
+  return url.searchParams.get("onboarding") === "permissions"
+    ? url.searchParams.get("reason") ?? ""
+    : null
+}
+
+/**
  * Options default overview workbench for local account, usage, and setup status.
  */
 export default function OptionsOverview() {
   const { t } = useTranslation(["optionsOverview", "common"])
   const { isLoading, error, viewModel, reload } = useOptionsOverviewData()
+  const [permissionsOnboardingReason, setPermissionsOnboardingReason] =
+    useState<string | null>(() => getPermissionsOnboardingReasonFromUrl())
+  const showPermissionsOnboarding = permissionsOnboardingReason !== null
+
+  useEffect(() => {
+    const applyUrlState = () => {
+      setPermissionsOnboardingReason(getPermissionsOnboardingReasonFromUrl())
+    }
+
+    applyUrlState()
+    window.addEventListener("popstate", applyUrlState)
+    window.addEventListener("hashchange", applyUrlState)
+    return () => {
+      window.removeEventListener("popstate", applyUrlState)
+      window.removeEventListener("hashchange", applyUrlState)
+    }
+  }, [])
+
+  const handleClosePermissionsOnboarding = useCallback(() => {
+    setPermissionsOnboardingReason(null)
+    void setLastSeenOptionalPermissions()
+
+    const url = new URL(window.location.href)
+    url.searchParams.delete("onboarding")
+    url.searchParams.delete("reason")
+    window.history.replaceState(null, "", url.toString())
+  }, [])
 
   const handleRetry = () => {
     void trackProductAnalyticsEvent(
@@ -116,6 +165,12 @@ export default function OptionsOverview() {
           onNavigate={handleNavigate}
         />
       ) : null}
+
+      <PermissionOnboardingDialog
+        open={showPermissionsOnboarding}
+        onClose={handleClosePermissionsOnboarding}
+        reason={permissionsOnboardingReason}
+      />
     </div>
   )
 }

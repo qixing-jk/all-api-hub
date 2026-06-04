@@ -8,6 +8,7 @@ import { Badge } from "~/components/ui/badge"
 import { Button } from "~/components/ui/button"
 import { Card } from "~/components/ui/Card"
 import { BodySmall } from "~/components/ui/Typography"
+import { PermissionList } from "~/features/Permissions/components/PermissionList"
 import {
   hasPermission,
   ManifestOptionalPermissions,
@@ -27,8 +28,6 @@ import {
 } from "~/services/productAnalytics/permissions"
 import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
-
-import { PermissionList } from "./PermissionList"
 
 interface PermissionState {
   statuses: Record<ManifestOptionalPermissions, boolean | null>
