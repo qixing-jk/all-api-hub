@@ -8,7 +8,7 @@
 - **Automatic Synchronization**: Background scheduled synchronization (default 1 hour), automatically merging or overwriting data based on the strategy.
 - **Multi-Strategy Support**: Choose "Merge / Upload Only / Download Only" to meet differentiated needs for primary and secondary devices.
 - **Conflict Merging**: In merge mode, retain the newer accounts, bookmarks, and preferences by update time; when deleting accounts or bookmarks, a deletion marker is recorded to prevent old backups from reintroducing them after the next sync.
-- **Secure Writing**: When uploading backups, a temporary file in the same directory is written first. After verification, it is moved to the official backup file, reducing the risk of remote backup corruption due to upload interruptions.
+- **Secure Writing**: When uploading backups, a temporary file in the same directory is written first. After verification, it is moved to the official backup file, reducing the risk of remote backup corruption due to upload interruptions. If Nutstore returns 409 for `MOVE` when the target file already exists, the extension will delete the official backup first and then retry the move.
 
 ## Prerequisites
 
@@ -62,6 +62,7 @@ Enable "Automatic Synchronization" on the same page for scheduled background syn
 | Automatic synchronization unresponsive | Possibly due to the browser being put to sleep by the system or automatic synchronization not being enabled; reopen the extension and save settings. |
 | Duplicate accounts or bookmarks after merging | Manually delete duplicates and re-upload; for strict control, use the "Upload Only" strategy. Deleted accounts and bookmarks participate in subsequent merges via deletion markers and are typically not restored by old backups. |
 | Remote backup corrupted prompt before upload | Indicates that the existing WebDAV backup is not a valid JSON. After confirming the data on this device is complete, you can rebuild the remote backup with all shared data from the current device as prompted; if the data on this device is incomplete, please upload or import a complete backup from a device with complete data first. |
+| Nutstore returns 409 during overwrite upload | Nutstore may return 409 for `MOVE` with `Overwrite: T` when the official backup file already exists. The extension will automatically delete the target file and retry the move, usually requiring no manual intervention. |
 | JSON file too large | It is recommended to regularly clean up expired accounts or export in batches to avoid exceeding WebDAV limits. |
 
 ## Related Documents
