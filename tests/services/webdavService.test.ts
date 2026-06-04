@@ -889,6 +889,72 @@ describe("webdavService", () => {
       })
     })
 
+    it("reports safe commit failure when the Nutstore overwrite fallback delete fails", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"nutstoreDelete":true}'),
+        })
+        .mockResolvedValueOnce({ status: 409 })
+        .mockResolvedValueOnce({ status: 500 })
+        .mockResolvedValueOnce({ status: 204 })
+
+      const error = await uploadBackup('{"nutstoreDelete":true}').catch(
+        (thrown) => thrown,
+      )
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.safeCommitFailed")
+      expect(error.statusCode).toBe(500)
+      expect(globalAny.fetch).toHaveBeenCalledTimes(7)
+      expect((globalAny.fetch.mock.calls[4][1] as RequestInit).method).toBe(
+        "MOVE",
+      )
+      expect((globalAny.fetch.mock.calls[5][1] as RequestInit).method).toBe(
+        "DELETE",
+      )
+      expect((globalAny.fetch.mock.calls[6][1] as RequestInit).method).toBe(
+        "DELETE",
+      )
+    })
+
+    it("reports auth failure when the Nutstore overwrite fallback delete is unauthorized", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"nutstoreAuth":true}'),
+        })
+        .mockResolvedValueOnce({ status: 409 })
+        .mockResolvedValueOnce({ status: 403 })
+        .mockResolvedValueOnce({ status: 204 })
+
+      const error = await uploadBackup('{"nutstoreAuth":true}').catch(
+        (thrown) => thrown,
+      )
+
+      expect(error).toBeInstanceOf(Error)
+      expect(error.message).toBe("messages:webdav.authFailed")
+      expect(error.statusCode).toBe(403)
+      expect(globalAny.fetch).toHaveBeenCalledTimes(7)
+      expect((globalAny.fetch.mock.calls[4][1] as RequestInit).method).toBe(
+        "MOVE",
+      )
+      expect((globalAny.fetch.mock.calls[5][1] as RequestInit).method).toBe(
+        "DELETE",
+      )
+      expect((globalAny.fetch.mock.calls[6][1] as RequestInit).method).toBe(
+        "DELETE",
+      )
+    })
+
     it("does not put directly to the official backup URL", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
 
