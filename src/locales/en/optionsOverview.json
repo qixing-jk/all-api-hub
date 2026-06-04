@@ -106,9 +106,7 @@
         "disabled": "Account status cannot be read yet. Check that the account setup is complete.",
         "needs_setup": "Add at least one account so the overview can summarize balances, usage, and automation status for you.",
         "not_applicable": "You can continue without adding an account in this environment."
-      },
-      "summary_one": "{{count}} enabled account",
-      "summary_other": "{{count}} enabled accounts"
+      }
     },
     "automation": {
       "description": "Whether auto check-in and announcement polling are ready to run.",
@@ -117,9 +115,7 @@
         "disabled": "No tasks will run automatically for now. Turn on check-in or announcement polling when you need them.",
         "needs_setup": "Automation still needs an eligible account or detection setup before it can run.",
         "not_applicable": "There are no automation tasks available in this environment yet."
-      },
-      "summary_one": "{{count}} automation capability",
-      "summary_other": "{{count}} automation capabilities"
+      }
     },
     "backupSync": {
       "description": "Local data backup and cross-device sync configuration.",
@@ -128,9 +124,7 @@
         "disabled": "Your data stays on this device. Turn on WebDAV sync when you want a cross-device backup.",
         "needs_setup": "Connect WebDAV first so local data can be backed up remotely.",
         "not_applicable": "Backup sync is not available in this environment yet."
-      },
-      "summary_one": "{{count}} sync configuration",
-      "summary_other": "{{count}} sync configurations"
+      }
     },
     "credentialAssets": {
       "description": "API profiles and account keys prepared for use.",
@@ -139,9 +133,7 @@
         "disabled": "There are no reusable credentials yet. Check account or API profile setup.",
         "needs_setup": "Add API profiles so tools and export flows can reuse them directly.",
         "not_applicable": "This environment does not need separate API profiles."
-      },
-      "summary_one": "{{count}} API profile",
-      "summary_other": "{{count}} API profiles"
+      }
     },
     "dataHistory": {
       "description": "Whether usage and balance history have data to inspect.",
@@ -150,9 +142,7 @@
         "disabled": "History is not being saved yet. Turn it on to keep future usage and balance changes.",
         "needs_setup": "History is enabled, but it still needs an account or first data point. This section will update after data appears.",
         "not_applicable": "There is no data history to view in this environment yet."
-      },
-      "summary_one": "{{count}} history source",
-      "summary_other": "{{count}} history sources"
+      }
     },
     "managedSite": {
       "description": "Managed-site channel administration and model sync capabilities.",
@@ -161,9 +151,7 @@
         "disabled": "No managed site is connected yet. Connect one when you need channel or model management.",
         "needs_setup": "Connect a managed site first, then you can manage channels or sync models here.",
         "not_applicable": "This site type does not support managed-site administration yet."
-      },
-      "summary_one": "{{count}} management capability",
-      "summary_other": "{{count}} management capabilities"
+      }
     },
     "subItems": {
       "accounts": "Accounts",
@@ -190,8 +178,7 @@
     "automationOverview": "Automation runs",
     "configurationOverview": "Configuration Overview",
     "needsAttention": "Needs Attention",
-    "recentUsage": "Recent Usage",
-    "statusSummary": "Status Summary"
+    "recentUsage": "Recent Usage"
   },
   "severity": {
     "error": "Error",
@@ -205,19 +192,15 @@
   },
   "status": {
     "accounts": {
-      "description": "Usable account count",
       "label": "Accounts"
     },
     "attention": {
-      "description": "Items to check",
       "label": "Attention"
     },
     "profiles": {
-      "description": "Saved standalone credentials",
       "label": "Profiles"
     },
     "todayUsage": {
-      "description": "Requests today",
       "label": "Today"
     }
   },

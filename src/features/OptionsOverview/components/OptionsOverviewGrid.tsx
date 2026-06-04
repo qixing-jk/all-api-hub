@@ -45,9 +45,11 @@ export function OptionsOverviewGrid({
     <div className="grid grid-cols-1 items-stretch gap-6 xl:grid-cols-3">
       {OVERVIEW_WIDGET_LAYOUT.map((item) => (
         <section key={item.id} className={columnSpanClass[item.columnSpan]}>
-          <h3 className="dark:text-dark-text-secondary mb-3 text-xs font-semibold text-gray-500 uppercase">
-            {getOverviewSectionTitle(item.id, t)}
-          </h3>
+          {item.id === OPTIONS_OVERVIEW_WIDGET_IDS.statusSummary ? null : (
+            <h3 className="dark:text-dark-text-secondary mb-3 text-xs font-semibold text-gray-500 uppercase">
+              {getOverviewSectionTitle(item.id, t)}
+            </h3>
+          )}
           {renderWidget(item.id, viewModel, t, onNavigate)}
         </section>
       ))}

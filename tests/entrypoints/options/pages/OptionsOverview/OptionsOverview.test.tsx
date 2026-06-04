@@ -260,7 +260,6 @@ const setupViewModel: OptionsOverviewViewModel = {
     {
       id: "accountFoundation",
       status: "needs_setup",
-      summaryValue: 0,
       subItems: [
         {
           id: "accounts",
@@ -278,7 +277,6 @@ const setupViewModel: OptionsOverviewViewModel = {
     {
       id: "automation",
       status: "disabled",
-      summaryValue: 0,
       subItems: [
         {
           id: "autoCheckin",
@@ -335,6 +333,44 @@ describe("OptionsOverview", () => {
       screen.queryByRole("button", {
         name: "optionsOverview:configurationOverview.open",
       }),
+    ).not.toBeInTheDocument()
+  })
+
+  it("keeps overview status surfaces compact without repeated helper copy", () => {
+    useOptionsOverviewDataMock.mockReturnValue({
+      isLoading: false,
+      error: null,
+      viewModel: setupViewModel,
+      reload: vi.fn(),
+    })
+
+    renderOverview()
+
+    const statusSummary = screen.getByTestId(
+      OPTIONS_OVERVIEW_TEST_IDS.statusSummary,
+    )
+
+    expect(statusSummary).toHaveTextContent(
+      "optionsOverview:status.accounts.label",
+    )
+    expect(
+      screen.queryByText("optionsOverview:sections.statusSummary"),
+    ).not.toBeInTheDocument()
+    expect(statusSummary).not.toHaveTextContent(
+      "optionsOverview:status.accounts.description",
+    )
+    expect(statusSummary).not.toHaveTextContent(
+      "optionsOverview:status.attention.description",
+    )
+    expect(
+      screen.queryByText(
+        "optionsOverview:configurationOverview.accountFoundation.summary",
+      ),
+    ).not.toBeInTheDocument()
+    expect(
+      screen.queryByText(
+        "optionsOverview:configurationOverview.automation.summary",
+      ),
     ).not.toBeInTheDocument()
   })
 

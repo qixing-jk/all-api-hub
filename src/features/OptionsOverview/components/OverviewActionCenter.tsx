@@ -13,7 +13,6 @@ import {
   getActionCenterLabel,
   getActionCenterStateDescription,
   getActionCenterStatusLabel,
-  getActionCenterSummary,
   getConfigurationSubItemLabel,
 } from "./actionCenterText"
 import { OVERVIEW_CONFIGURATION_BADGE_VARIANTS } from "./overviewPresentation"
@@ -70,9 +69,6 @@ export function OverviewActionCenter({
                 </div>
                 <div className="dark:text-dark-text-secondary text-sm leading-6 text-slate-600">
                   {getActionCenterDescription(item.id, t)}
-                </div>
-                <div className="dark:text-dark-text-tertiary text-xs font-medium text-slate-500">
-                  {getActionCenterSummary(item.id, item.summaryValue, t)}
                 </div>
                 {item.status !== CONFIGURATION_STATUSES.configured ? (
                   <div className="dark:text-dark-text-tertiary text-xs leading-5 text-slate-500">

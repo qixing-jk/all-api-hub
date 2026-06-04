@@ -15,15 +15,6 @@ interface ManagedSiteConfigurationStatus {
 }
 
 /**
- * Counts sub-capabilities that are actually configured.
- */
-export function countConfiguredStatuses(statuses: ConfigurationStatus[]) {
-  return statuses.filter(
-    (status) => status === CONFIGURATION_STATUSES.configured,
-  ).length
-}
-
-/**
  * Promotes child statuses into a single card-level status.
  */
 export function summarizeConfigurationStatuses(

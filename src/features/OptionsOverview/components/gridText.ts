@@ -4,10 +4,12 @@ import { OPTIONS_OVERVIEW_WIDGET_IDS } from "../ids"
 import type { OptionsOverviewWidgetId } from "../types"
 
 type GridTextResolver = (t: TFunction) => string
+type TitledOverviewWidgetId = Exclude<
+  OptionsOverviewWidgetId,
+  typeof OPTIONS_OVERVIEW_WIDGET_IDS.statusSummary
+>
 
 const sectionTitleResolvers = {
-  [OPTIONS_OVERVIEW_WIDGET_IDS.statusSummary]: (t: TFunction) =>
-    t("optionsOverview:sections.statusSummary"),
   [OPTIONS_OVERVIEW_WIDGET_IDS.needsAttention]: (t: TFunction) =>
     t("optionsOverview:sections.needsAttention"),
   [OPTIONS_OVERVIEW_WIDGET_IDS.automationOverview]: (t: TFunction) =>
@@ -16,13 +18,13 @@ const sectionTitleResolvers = {
     t("optionsOverview:sections.recentUsage"),
   [OPTIONS_OVERVIEW_WIDGET_IDS.actionCenter]: (t: TFunction) =>
     t("optionsOverview:sections.configurationOverview"),
-} as const satisfies Record<OptionsOverviewWidgetId, GridTextResolver>
+} as const satisfies Record<TitledOverviewWidgetId, GridTextResolver>
 
 /**
  * Resolves static section headings from stable widget ids.
  */
 export function getOverviewSectionTitle(
-  id: OptionsOverviewWidgetId,
+  id: TitledOverviewWidgetId,
   t: TFunction,
 ) {
   return sectionTitleResolvers[id](t)

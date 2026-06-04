@@ -77,7 +77,6 @@ export interface OptionsOverviewUsageSnapshot {
 export interface OptionsOverviewActionCenterItem {
   id: ValueOf<typeof OPTIONS_OVERVIEW_ACTION_CENTER_ITEM_IDS>
   status: OptionsOverviewConfigurationStatus
-  summaryValue: number
   subItems: OptionsOverviewConfigurationSubItem[]
   isVisible: boolean
 }

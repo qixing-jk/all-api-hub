@@ -106,8 +106,7 @@
         "disabled": "まだアカウント状態を読み取れません。アカウント設定が完了しているか確認してください。",
         "needs_setup": "まずアカウントを 1 つ追加すると、概要で残高、利用状況、自動タスクの状態をまとめて確認できます。",
         "not_applicable": "この環境ではアカウントを追加しなくても続行できます。"
-      },
-      "summary_other": "有効なアカウント {{count}} 件"
+      }
     },
     "automation": {
       "description": "自動チェックインと公告取得が利用可能かを示します。",
@@ -116,8 +115,7 @@
         "disabled": "今はタスクが自動実行されません。必要なときに自動チェックインや公告取得をオンにできます。",
         "needs_setup": "自動タスクには実行できるアカウントまたは検出設定がまだ必要です。先に関連設定を完了してください。",
         "not_applicable": "この環境では利用できる自動タスクがまだありません。"
-      },
-      "summary_other": "自動化機能 {{count}} 件"
+      }
     },
     "backupSync": {
       "description": "ローカルデータのバックアップと端末間同期の設定です。",
@@ -126,8 +124,7 @@
         "disabled": "データはこの端末にのみ保存されています。端末間でバックアップしたいときは WebDAV 同期をオンにできます。",
         "needs_setup": "まず WebDAV に接続すると、ローカルデータをリモートへバックアップできます。",
         "not_applicable": "この環境ではバックアップ同期をまだ利用できません。"
-      },
-      "summary_other": "同期設定 {{count}} 件"
+      }
     },
     "credentialAssets": {
       "description": "API 認証情報とアカウントキーが利用可能かを示します。",
@@ -136,8 +133,7 @@
         "disabled": "まだ再利用できる認証情報がありません。アカウントまたは API 認証情報の設定を確認してください。",
         "needs_setup": "API 認証情報を追加すると、ツールやエクスポートでそのまま再利用できます。",
         "not_applicable": "この環境では API 認証情報を個別に管理する必要はありません。"
-      },
-      "summary_other": "API 認証情報 {{count}} 件"
+      }
     },
     "dataHistory": {
       "description": "利用履歴と残高履歴に確認できるデータがあるかを示します。",
@@ -146,8 +142,7 @@
         "disabled": "今は履歴を保存していません。オンにすると、今後の利用状況や残高の変化が蓄積されます。",
         "needs_setup": "履歴はオンですが、アカウントまたは最初のデータがまだ必要です。データが発生するとここに反映されます。",
         "not_applicable": "この環境では確認できるデータ履歴がまだありません。"
-      },
-      "summary_other": "履歴データ {{count}} 件"
+      }
     },
     "managedSite": {
       "description": "自建サイトのチャネル管理とモデル同期機能です。",
@@ -156,8 +151,7 @@
         "disabled": "自建サイトはまだ接続されていません。必要になったら先にサイト設定を完了してください。",
         "needs_setup": "まず自建サイトに接続すると、ここでチャネル管理やモデル同期を使えます。",
         "not_applicable": "このサイト種別では自建サイト管理をまだ利用できません。"
-      },
-      "summary_other": "管理機能 {{count}} 件"
+      }
     },
     "subItems": {
       "accounts": "アカウント管理",
@@ -184,8 +178,7 @@
     "automationOverview": "自動化実行",
     "configurationOverview": "設定概要",
     "needsAttention": "対応が必要",
-    "recentUsage": "最近の利用",
-    "statusSummary": "状態サマリー"
+    "recentUsage": "最近の利用"
   },
   "severity": {
     "error": "エラー",
@@ -199,19 +192,15 @@
   },
   "status": {
     "accounts": {
-      "description": "利用可能なアカウント数",
       "label": "アカウント"
     },
     "attention": {
-      "description": "確認が必要な項目",
       "label": "対応"
     },
     "profiles": {
-      "description": "保存済みの独立認証情報",
       "label": "認証情報"
     },
     "todayUsage": {
-      "description": "今日のリクエスト数",
       "label": "今日"
     }
   },

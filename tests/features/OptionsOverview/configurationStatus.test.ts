@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest"
 
 import { SITE_TYPES } from "~/constants/siteType"
 import {
-  countConfiguredStatuses,
   resolveAutoCheckinConfigurationStatus,
   resolveBalanceHistoryConfigurationStatus,
   resolveManagedSiteConfigurationStatus,
@@ -28,18 +27,6 @@ const disabledCheckinAccount = {
 } as SiteAccount
 
 describe("configuration status helpers", () => {
-  it("counts only configured child statuses", () => {
-    expect(
-      countConfiguredStatuses([
-        "configured",
-        "disabled",
-        "needs_setup",
-        "configured",
-        "not_applicable",
-      ]),
-    ).toBe(2)
-  })
-
   it("promotes child statuses by configured, setup, disabled, then not-applicable priority", () => {
     expect(
       summarizeConfigurationStatuses(["disabled", "configured", "needs_setup"]),

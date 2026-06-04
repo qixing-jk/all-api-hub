@@ -106,8 +106,7 @@
         "disabled": "Hiện chưa đọc được trạng thái tài khoản. Hãy kiểm tra cấu hình tài khoản đã hoàn tất hay chưa.",
         "needs_setup": "Thêm ít nhất một tài khoản để trang tổng quan có thể tóm tắt số dư, sử dụng và trạng thái tác vụ tự động cho bạn.",
         "not_applicable": "Bạn có thể tiếp tục mà không cần thêm tài khoản trong môi trường này."
-      },
-      "summary_other": "{{count}} tài khoản đang bật"
+      }
     },
     "automation": {
       "description": "Tự động điểm danh và lấy thông báo đã sẵn sàng hay chưa.",
@@ -116,8 +115,7 @@
         "disabled": "Hiện chưa có tác vụ nào tự chạy. Khi cần, bạn có thể bật tự động điểm danh hoặc lấy thông báo.",
         "needs_setup": "Tác vụ tự động còn cần tài khoản có thể chạy hoặc cấu hình phát hiện. Hoàn tất thiết lập liên quan trước khi bật.",
         "not_applicable": "Môi trường này hiện chưa có tác vụ tự động khả dụng."
-      },
-      "summary_other": "{{count}} tính năng tự động hóa"
+      }
     },
     "backupSync": {
       "description": "Cấu hình sao lưu dữ liệu cục bộ và đồng bộ giữa thiết bị.",
@@ -126,8 +124,7 @@
         "disabled": "Dữ liệu hiện chỉ lưu trên thiết bị này. Khi cần sao lưu giữa thiết bị, bạn có thể bật đồng bộ WebDAV.",
         "needs_setup": "Kết nối WebDAV trước để sao lưu dữ liệu cục bộ lên nơi lưu trữ từ xa.",
         "not_applicable": "Môi trường này hiện chưa dùng được đồng bộ sao lưu."
-      },
-      "summary_other": "{{count}} cấu hình đồng bộ"
+      }
     },
     "credentialAssets": {
       "description": "Hồ sơ API và key tài khoản đã sẵn sàng để sử dụng.",
@@ -136,8 +133,7 @@
         "disabled": "Hiện chưa có thông tin xác thực có thể dùng lại. Hãy kiểm tra thiết lập tài khoản hoặc hồ sơ API.",
         "needs_setup": "Thêm hồ sơ API để các công cụ và luồng xuất có thể dùng lại trực tiếp.",
         "not_applicable": "Môi trường này không cần quản lý hồ sơ API riêng."
-      },
-      "summary_other": "{{count}} hồ sơ API"
+      }
     },
     "dataHistory": {
       "description": "Lịch sử sử dụng và số dư có dữ liệu để xem hay chưa.",
@@ -146,8 +142,7 @@
         "disabled": "Hiện chưa lưu lịch sử. Khi bật, các thay đổi sử dụng và số dư sau này sẽ được ghi lại.",
         "needs_setup": "Lịch sử đã bật nhưng vẫn cần tài khoản hoặc dữ liệu đầu tiên; sau khi có dữ liệu, mục này sẽ tự cập nhật.",
         "not_applicable": "Môi trường này hiện chưa có lịch sử dữ liệu để xem."
-      },
-      "summary_other": "{{count}} nguồn lịch sử"
+      }
     },
     "managedSite": {
       "description": "Quản lý kênh và đồng bộ model cho trang tự quản.",
@@ -156,8 +151,7 @@
         "disabled": "Chưa kết nối trang tự quản. Khi cần, hãy hoàn tất cấu hình trang trước.",
         "needs_setup": "Kết nối trang tự quản trước, rồi bạn có thể quản lý kênh hoặc đồng bộ model tại đây.",
         "not_applicable": "Loại trang này hiện chưa hỗ trợ quản lý trang tự quản."
-      },
-      "summary_other": "{{count}} tính năng quản lý"
+      }
     },
     "subItems": {
       "accounts": "Quản lý tài khoản",
@@ -184,8 +178,7 @@
     "automationOverview": "Tác vụ tự động",
     "configurationOverview": "Tổng quan cấu hình",
     "needsAttention": "Cần xử lý",
-    "recentUsage": "Sử dụng gần đây",
-    "statusSummary": "Tóm tắt trạng thái"
+    "recentUsage": "Sử dụng gần đây"
   },
   "severity": {
     "error": "Lỗi",
@@ -199,19 +192,15 @@
   },
   "status": {
     "accounts": {
-      "description": "Số tài khoản có thể dùng",
       "label": "Tài khoản"
     },
     "attention": {
-      "description": "Mục cần kiểm tra",
       "label": "Cần xử lý"
     },
     "profiles": {
-      "description": "Thông tin độc lập đã lưu",
       "label": "Hồ sơ"
     },
     "todayUsage": {
-      "description": "Yêu cầu hôm nay",
       "label": "Hôm nay"
     }
   },

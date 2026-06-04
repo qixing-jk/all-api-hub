@@ -5,7 +5,7 @@ import { Button, Card } from "~/components/ui"
 import { cn } from "~/lib/utils"
 
 import type { OptionsOverviewStatusCard } from "../types"
-import { getStatusCardDescription, getStatusCardLabel } from "./statusCardText"
+import { getStatusCardLabel } from "./statusCardText"
 
 const severityClasses = {
   error: "bg-red-500 shadow-red-500/30",
@@ -22,7 +22,7 @@ interface OverviewStatusSummaryProps {
 }
 
 /**
- * Renders the top aggregate metrics as one anchored status surface.
+ * Renders aggregate metrics as a compact status and navigation strip.
  */
 export function OverviewStatusSummary({
   items,
@@ -32,10 +32,10 @@ export function OverviewStatusSummary({
 }: OverviewStatusSummaryProps) {
   return (
     <Card
-      className="dark:from-dark-bg-secondary overflow-hidden border-slate-200/80 bg-gradient-to-br from-white via-slate-50/90 to-blue-50/60 shadow-sm shadow-slate-200/70 dark:border-white/10 dark:bg-gradient-to-br dark:via-slate-900/90 dark:to-blue-950/15 dark:shadow-black/20"
+      className="overflow-hidden border-slate-200/80 bg-white/90 shadow-sm shadow-slate-200/50 dark:border-white/10 dark:bg-white/[0.03] dark:shadow-black/20"
       data-testid={dataTestId}
     >
-      <div className="grid grid-cols-1 divide-y divide-slate-200/70 sm:grid-cols-2 sm:divide-x sm:divide-y-0 xl:grid-cols-4 dark:divide-white/10">
+      <div className="grid grid-cols-2 divide-x divide-y divide-slate-200/70 md:grid-cols-4 md:divide-y-0 dark:divide-white/10">
         {items.map((item) => (
           <StatusMetric
             key={item.id}
@@ -67,7 +67,7 @@ function StatusMetric({ item, t, onNavigate }: StatusMetricProps) {
     <Button
       type="button"
       variant="ghost"
-      className="group block h-full min-w-0 rounded-none px-0 py-0 text-left whitespace-normal transition-colors hover:bg-white/55 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset dark:hover:bg-white/[0.04]"
+      className="group block h-full min-w-0 rounded-none px-0 py-0 text-left whitespace-normal transition-colors hover:bg-slate-50/85 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-inset dark:hover:bg-white/[0.04]"
       onClick={() => onNavigate(item.target!)}
     >
       <StatusMetricContent item={item} t={t} />
@@ -86,35 +86,35 @@ function StatusMetricContent({
   t: TFunction
 }) {
   const label = getStatusCardLabel(item.id, t)
-  const description = getStatusCardDescription(item.id, t)
 
   return (
-    <div className="flex h-full min-h-32 items-start justify-between gap-4 p-5">
-      <div className="min-w-0 space-y-3">
-        <div className="flex items-center gap-2">
-          <span
-            className={cn(
-              "h-2 w-2 rounded-full shadow-[0_0_0_4px]",
-              severityClasses[item.severity],
-            )}
-          />
-          <div className="dark:text-dark-text-tertiary text-xs font-medium text-slate-500 uppercase">
+    <div className="flex min-h-16 items-center justify-between gap-3 px-4 py-3">
+      <div className="flex min-w-0 items-center gap-3.5">
+        <span
+          className={cn(
+            "h-2 w-2 shrink-0 rounded-full shadow-[0_0_0_4px]",
+            severityClasses[item.severity],
+          )}
+        />
+        <div className="min-w-0">
+          <div className="dark:text-dark-text-tertiary truncate text-xs font-medium text-slate-500 uppercase">
             {label}
           </div>
-        </div>
-        <div className="text-3xl leading-none font-semibold text-slate-950 dark:text-white">
-          {item.value}
-        </div>
-        <div className="dark:text-dark-text-secondary max-w-48 text-xs leading-5 text-slate-500">
-          {description}
+          <div className="mt-1 flex items-baseline gap-1.5">
+            <span className="text-base leading-none font-semibold text-slate-950 dark:text-white">
+              {item.value}
+            </span>
+          </div>
         </div>
       </div>
-      {item.target ? (
-        <WorkflowTransitionIcon
-          aria-hidden="true"
-          className="mt-1 h-4 w-4 shrink-0 text-slate-300 transition-colors group-hover:text-blue-600 dark:text-gray-600 dark:group-hover:text-blue-300"
-        />
-      ) : null}
+      <div className="flex shrink-0 items-center gap-2">
+        {item.target ? (
+          <WorkflowTransitionIcon
+            aria-hidden="true"
+            className="h-4 w-4 text-slate-300 transition-colors group-hover:text-blue-600 dark:text-gray-600 dark:group-hover:text-blue-300"
+          />
+        ) : null}
+      </div>
     </div>
   )
 }

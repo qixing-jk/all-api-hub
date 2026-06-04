@@ -21,10 +21,6 @@ const actionCenterTextResolvers = {
       t("optionsOverview:configurationOverview.accountFoundation.label"),
     description: (t: TFunction) =>
       t("optionsOverview:configurationOverview.accountFoundation.description"),
-    summary: (t: TFunction, count: number) =>
-      t("optionsOverview:configurationOverview.accountFoundation.summary", {
-        count,
-      }),
     state: {
       [CONFIGURATION_STATUSES.needsSetup]: (t: TFunction) =>
         t(
@@ -45,10 +41,6 @@ const actionCenterTextResolvers = {
       t("optionsOverview:configurationOverview.credentialAssets.label"),
     description: (t: TFunction) =>
       t("optionsOverview:configurationOverview.credentialAssets.description"),
-    summary: (t: TFunction, count: number) =>
-      t("optionsOverview:configurationOverview.credentialAssets.summary", {
-        count,
-      }),
     state: {
       [CONFIGURATION_STATUSES.needsSetup]: (t: TFunction) =>
         t(
@@ -69,10 +61,6 @@ const actionCenterTextResolvers = {
       t("optionsOverview:configurationOverview.automation.label"),
     description: (t: TFunction) =>
       t("optionsOverview:configurationOverview.automation.description"),
-    summary: (t: TFunction, count: number) =>
-      t("optionsOverview:configurationOverview.automation.summary", {
-        count,
-      }),
     state: {
       [CONFIGURATION_STATUSES.needsSetup]: (t: TFunction) =>
         t("optionsOverview:configurationOverview.automation.state.needs_setup"),
@@ -89,10 +77,6 @@ const actionCenterTextResolvers = {
       t("optionsOverview:configurationOverview.dataHistory.label"),
     description: (t: TFunction) =>
       t("optionsOverview:configurationOverview.dataHistory.description"),
-    summary: (t: TFunction, count: number) =>
-      t("optionsOverview:configurationOverview.dataHistory.summary", {
-        count,
-      }),
     state: {
       [CONFIGURATION_STATUSES.needsSetup]: (t: TFunction) =>
         t(
@@ -111,10 +95,6 @@ const actionCenterTextResolvers = {
       t("optionsOverview:configurationOverview.backupSync.label"),
     description: (t: TFunction) =>
       t("optionsOverview:configurationOverview.backupSync.description"),
-    summary: (t: TFunction, count: number) =>
-      t("optionsOverview:configurationOverview.backupSync.summary", {
-        count,
-      }),
     state: {
       [CONFIGURATION_STATUSES.needsSetup]: (t: TFunction) =>
         t("optionsOverview:configurationOverview.backupSync.state.needs_setup"),
@@ -131,10 +111,6 @@ const actionCenterTextResolvers = {
       t("optionsOverview:configurationOverview.managedSite.label"),
     description: (t: TFunction) =>
       t("optionsOverview:configurationOverview.managedSite.description"),
-    summary: (t: TFunction, count: number) =>
-      t("optionsOverview:configurationOverview.managedSite.summary", {
-        count,
-      }),
     state: {
       [CONFIGURATION_STATUSES.needsSetup]: (t: TFunction) =>
         t(
@@ -153,7 +129,6 @@ const actionCenterTextResolvers = {
   {
     label: (t: TFunction) => string
     description: (t: TFunction) => string
-    summary: (t: TFunction, count: number) => string
     state: Record<
       Exclude<ConfigurationStatus, typeof CONFIGURATION_STATUSES.configured>,
       (t: TFunction) => string
@@ -232,17 +207,6 @@ export function getActionCenterStateDescription(
   }
 
   return actionCenterTextResolvers[item.id].state[item.status](t)
-}
-
-/**
- * Resolves per-capability summary labels so this card is not just navigation.
- */
-export function getActionCenterSummary(
-  id: ActionCenterItemId,
-  count: number,
-  t: TFunction,
-) {
-  return actionCenterTextResolvers[id].summary(t, count)
 }
 
 /**

@@ -37,15 +37,13 @@ describe("overview configuration model", () => {
       hasUsageData: false,
     })
 
-    expect(
-      items.map((item) => [item.id, item.status, item.summaryValue]),
-    ).toEqual([
-      ["accountFoundation", "needs_setup", 0],
-      ["credentialAssets", "needs_setup", 0],
-      ["automation", "needs_setup", 0],
-      ["dataHistory", "needs_setup", 0],
-      ["backupSync", "disabled", 0],
-      ["managedSite", "not_applicable", 0],
+    expect(items.map((item) => [item.id, item.status])).toEqual([
+      ["accountFoundation", "needs_setup"],
+      ["credentialAssets", "needs_setup"],
+      ["automation", "needs_setup"],
+      ["dataHistory", "needs_setup"],
+      ["backupSync", "disabled"],
+      ["managedSite", "not_applicable"],
     ])
     expect(items.find((item) => item.id === "managedSite")?.isVisible).toBe(
       false,
@@ -125,15 +123,13 @@ describe("overview configuration model", () => {
       hasUsageData: true,
     })
 
-    expect(
-      items.map((item) => [item.id, item.status, item.summaryValue]),
-    ).toEqual([
-      ["accountFoundation", "configured", 1],
-      ["credentialAssets", "configured", 2],
-      ["automation", "configured", 2],
-      ["dataHistory", "configured", 2],
-      ["backupSync", "configured", 2],
-      ["managedSite", "not_applicable", 0],
+    expect(items.map((item) => [item.id, item.status])).toEqual([
+      ["accountFoundation", "configured"],
+      ["credentialAssets", "configured"],
+      ["automation", "configured"],
+      ["dataHistory", "configured"],
+      ["backupSync", "configured"],
+      ["managedSite", "not_applicable"],
     ])
     expect(
       items
@@ -191,7 +187,6 @@ describe("overview configuration model", () => {
       missingConfigItems.find((item) => item.id === "managedSite"),
     ).toMatchObject({
       status: "needs_setup",
-      summaryValue: 0,
       isVisible: true,
       subItems: [
         {
@@ -246,7 +241,6 @@ describe("overview configuration model", () => {
       configuredItems.find((item) => item.id === "managedSite"),
     ).toMatchObject({
       status: "configured",
-      summaryValue: 2,
       isVisible: true,
       subItems: [
         {

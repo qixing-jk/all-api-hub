@@ -1,12 +1,11 @@
 import type { TFunction } from "i18next"
-import { describe, expect, it, vi } from "vitest"
+import { describe, expect, it } from "vitest"
 
 import {
   getActionCenterDescription,
   getActionCenterLabel,
   getActionCenterStateDescription,
   getActionCenterStatusLabel,
-  getActionCenterSummary,
   getConfigurationSubItemLabel,
 } from "~/features/OptionsOverview/components/actionCenterText"
 import {
@@ -21,15 +20,12 @@ const t = ((key: string) => key) as TFunction
 const baseActionCenterItem: OptionsOverviewActionCenterItem = {
   id: OPTIONS_OVERVIEW_ACTION_CENTER_ITEM_IDS.accountFoundation,
   status: OPTIONS_OVERVIEW_CONFIGURATION_STATUSES.needsSetup,
-  summaryValue: 0,
   subItems: [],
   isVisible: true,
 }
 
 describe("action center text helpers", () => {
-  it("resolves action center labels, descriptions, and summaries", () => {
-    const summaryT = vi.fn((key: string) => key) as unknown as TFunction
-
+  it("resolves action center labels and descriptions", () => {
     for (const id of Object.values(OPTIONS_OVERVIEW_ACTION_CENTER_ITEM_IDS)) {
       expect(getActionCenterLabel(id, t)).toBe(
         `optionsOverview:configurationOverview.${id}.label`,
@@ -37,14 +33,7 @@ describe("action center text helpers", () => {
       expect(getActionCenterDescription(id, t)).toBe(
         `optionsOverview:configurationOverview.${id}.description`,
       )
-      expect(getActionCenterSummary(id, 2, summaryT)).toBe(
-        `optionsOverview:configurationOverview.${id}.summary`,
-      )
     }
-    expect(summaryT).toHaveBeenCalledWith(
-      "optionsOverview:configurationOverview.backupSync.summary",
-      { count: 2 },
-    )
   })
 
   it("resolves non-configured state descriptions and suppresses configured ones", () => {

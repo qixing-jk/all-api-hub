@@ -415,13 +415,11 @@ describe("Options overview selectors", () => {
       ),
     ).toMatchObject({
       status: "needs_setup",
-      summaryValue: 0,
     })
     expect(
       view.configurationOverviewItems.find((item) => item.id === "automation"),
     ).toMatchObject({
       status: "disabled",
-      summaryValue: 0,
     })
     expect(
       view.configurationOverviewItems
@@ -539,7 +537,6 @@ describe("Options overview selectors", () => {
       view.configurationOverviewItems.find((item) => item.id === "backupSync"),
     ).toMatchObject({
       status: "configured",
-      summaryValue: 1,
     })
     expect(
       view.configurationOverviewItems
@@ -592,7 +589,6 @@ describe("Options overview selectors", () => {
       view.configurationOverviewItems.find((item) => item.id === "automation"),
     ).toMatchObject({
       status: "configured",
-      summaryValue: 1,
     })
     expect(
       view.configurationOverviewItems
@@ -878,7 +874,6 @@ describe("Options overview selectors", () => {
       ),
     ).toMatchObject({
       status: "needs_setup",
-      summaryValue: 0,
       isVisible: true,
     })
     expect(
@@ -937,7 +932,6 @@ describe("Options overview selectors", () => {
       ),
     ).toMatchObject({
       status: "configured",
-      summaryValue: 1,
     })
     expect(
       configuredView.configurationOverviewItems
@@ -995,7 +989,6 @@ describe("Options overview selectors", () => {
       view.configurationOverviewItems.find((item) => item.id === "managedSite"),
     ).toMatchObject({
       status: "needs_setup",
-      summaryValue: 0,
     })
     expect(
       view.configurationOverviewItems

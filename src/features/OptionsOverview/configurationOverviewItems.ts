@@ -9,7 +9,6 @@ import type { UserPreferences } from "~/services/preferences/userPreferences"
 import type { SiteAccount } from "~/types"
 
 import {
-  countConfiguredStatuses,
   resolveAutoCheckinConfigurationStatus,
   resolveBalanceHistoryConfigurationStatus,
   resolveManagedSiteConfigurationStatus,
@@ -45,14 +44,12 @@ type ConfigurationTarget = ConfigurationSubItem["target"]
 function buildConfigurationGroup(input: {
   id: ConfigurationGroupId
   status: ConfigurationStatus
-  summaryValue: number
   subItems: ConfigurationSubItem[]
   isVisible?: boolean
 }): OptionsOverviewActionCenterItem {
   return {
     id: input.id,
     status: input.status,
-    summaryValue: input.summaryValue,
     subItems: input.subItems,
     isVisible: input.isVisible ?? true,
   }
@@ -85,7 +82,6 @@ function buildSummarizedConfigurationGroup(input: {
   return buildConfigurationGroup({
     id: input.id,
     status: summarizeConfigurationStatuses(input.statuses),
-    summaryValue: countConfiguredStatuses(input.statuses),
     subItems: input.subItems,
     isVisible: input.isVisible,
   })
@@ -142,7 +138,6 @@ export function buildConfigurationOverviewItems(input: {
         input.enabledAccountCount > 0
           ? CONFIGURATION_STATUSES.configured
           : CONFIGURATION_STATUSES.needsSetup,
-      summaryValue: input.enabledAccountCount,
       subItems: [
         buildConfigurationSubItem({
           id: OPTIONS_OVERVIEW_CONFIGURATION_SUB_ITEM_IDS.accounts,
@@ -160,7 +155,6 @@ export function buildConfigurationOverviewItems(input: {
         input.profileCount > 0
           ? CONFIGURATION_STATUSES.configured
           : CONFIGURATION_STATUSES.needsSetup,
-      summaryValue: input.profileCount,
       subItems: [
         buildConfigurationSubItem({
           id: OPTIONS_OVERVIEW_CONFIGURATION_SUB_ITEM_IDS.apiProfiles,
@@ -229,11 +223,9 @@ export function buildConfigurationOverviewItems(input: {
     }),
     buildConfigurationGroup({
       id: OPTIONS_OVERVIEW_ACTION_CENTER_ITEM_IDS.backupSync,
-      status:
-        backupSyncStatus.configuredCount > 0
-          ? CONFIGURATION_STATUSES.configured
-          : CONFIGURATION_STATUSES.disabled,
-      summaryValue: backupSyncStatus.configuredCount,
+      status: backupSyncStatus.hasConfiguredSync
+        ? CONFIGURATION_STATUSES.configured
+        : CONFIGURATION_STATUSES.disabled,
       subItems: [
         buildConfigurationSubItem({
           id: OPTIONS_OVERVIEW_CONFIGURATION_SUB_ITEM_IDS.webdavManual,
@@ -282,7 +274,7 @@ export function buildConfigurationOverviewItems(input: {
 function resolveBackupSyncStatus(
   preferences: UserPreferences | null | undefined,
 ): {
-  configuredCount: number
+  hasConfiguredSync: boolean
   manualStatus: ConfigurationStatus
   autoSyncStatus: ConfigurationStatus
 } {
@@ -297,7 +289,9 @@ function resolveBackupSyncStatus(
       : CONFIGURATION_STATUSES.disabled
 
   return {
-    configuredCount: countConfiguredStatuses([manualStatus, autoSyncStatus]),
+    hasConfiguredSync:
+      manualStatus === CONFIGURATION_STATUSES.configured ||
+      autoSyncStatus === CONFIGURATION_STATUSES.configured,
     manualStatus,
     autoSyncStatus,
   }

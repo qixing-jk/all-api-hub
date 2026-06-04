@@ -106,8 +106,7 @@
         "disabled": "目前還不能讀取帳戶狀態，請先檢查帳戶設定是否完整。",
         "needs_setup": "先新增至少一個帳戶，總覽才能幫你彙總餘額、用量和自動任務狀態。",
         "not_applicable": "目前環境不需要新增帳戶也可以繼續使用。"
-      },
-      "summary_other": "{{count}} 個啟用帳戶"
+      }
     },
     "automation": {
       "description": "自動簽到與公告抓取是否處於可用狀態。",
@@ -116,8 +115,7 @@
         "disabled": "暫時不會自動執行任務。需要時可以開啟自動簽到或公告抓取。",
         "needs_setup": "自動任務還缺少可執行帳戶或偵測設定，先完成對應設定後再開啟。",
         "not_applicable": "目前環境暫時沒有可用的自動任務。"
-      },
-      "summary_other": "{{count}} 項自動化能力"
+      }
     },
     "backupSync": {
       "description": "本機資料備份與跨裝置同步設定。",
@@ -126,8 +124,7 @@
         "disabled": "資料只保存在本機。需要跨裝置備份時，可以開啟 WebDAV 同步。",
         "needs_setup": "先連接 WebDAV，才能把本機資料備份到遠端。",
         "not_applicable": "目前環境暫時不能使用備份同步。"
-      },
-      "summary_other": "{{count}} 項同步設定"
+      }
     },
     "credentialAssets": {
       "description": "API 憑據與帳戶金鑰是否已經準備好。",
@@ -136,8 +133,7 @@
         "disabled": "目前還沒有可重複使用的憑據，請先檢查帳戶或 API 憑據設定。",
         "needs_setup": "新增 API 憑據後，就能在工具和匯出流程中直接重複使用。",
         "not_applicable": "目前環境不需要單獨維護 API 憑據。"
-      },
-      "summary_other": "{{count}} 個 API 憑據"
+      }
     },
     "dataHistory": {
       "description": "用量與餘額歷史是否已有可查看資料。",
@@ -146,8 +142,7 @@
         "disabled": "暫時不會保存歷史記錄。開啟後，後續用量和餘額變化會持續沉澱。",
         "needs_setup": "歷史記錄已開啟，但還需要帳戶或首批資料；產生資料後這裡會自動更新。",
         "not_applicable": "目前環境暫時沒有可查看的資料歷史。"
-      },
-      "summary_other": "{{count}} 項歷史資料"
+      }
     },
     "managedSite": {
       "description": "自建站點的渠道管理與模型同步能力。",
@@ -156,8 +151,7 @@
         "disabled": "還沒有連接自建站點，需要時可以先完成站點設定。",
         "needs_setup": "先連接自建站點，才能在這裡管理渠道或同步模型。",
         "not_applicable": "目前站點類型暫不支援自建站點管理。"
-      },
-      "summary_other": "{{count}} 項管理能力"
+      }
     },
     "subItems": {
       "accounts": "帳戶管理",
@@ -184,8 +178,7 @@
     "automationOverview": "自動化執行",
     "configurationOverview": "配置概覽",
     "needsAttention": "需要處理",
-    "recentUsage": "近期使用",
-    "statusSummary": "狀態摘要"
+    "recentUsage": "近期使用"
   },
   "severity": {
     "error": "錯誤",
@@ -199,19 +192,15 @@
   },
   "status": {
     "accounts": {
-      "description": "可用帳戶數量",
       "label": "帳戶"
     },
     "attention": {
-      "description": "需要檢查的事項",
       "label": "待處理"
     },
     "profiles": {
-      "description": "已儲存的獨立憑據",
       "label": "憑據庫"
     },
     "todayUsage": {
-      "description": "今日請求次數",
       "label": "今日用量"
     }
   },

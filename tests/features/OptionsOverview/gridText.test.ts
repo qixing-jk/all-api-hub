@@ -9,9 +9,6 @@ const t = ((key: string) => key) as TFunction
 describe("overview grid text helpers", () => {
   it("resolves section titles from widget ids", () => {
     expect(
-      getOverviewSectionTitle(OPTIONS_OVERVIEW_WIDGET_IDS.statusSummary, t),
-    ).toBe("optionsOverview:sections.statusSummary")
-    expect(
       getOverviewSectionTitle(OPTIONS_OVERVIEW_WIDGET_IDS.needsAttention, t),
     ).toBe("optionsOverview:sections.needsAttention")
     expect(
