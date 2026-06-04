@@ -71,7 +71,7 @@ test("lets first-use users defer recommended permissions and continue into overv
 
   await expectPermissionOnboardingHidden(page)
   await expect(page).toHaveURL(/options\.html#overview$/)
-  await expect(page.getByRole("heading", { name: "Overview" })).toBeVisible()
+  await expect(page.getByTestId(OPTIONS_OVERVIEW_TEST_IDS.page)).toBeVisible()
 
   await expect
     .poll(() => getLastSeenOptionalPermissions(serviceWorker))

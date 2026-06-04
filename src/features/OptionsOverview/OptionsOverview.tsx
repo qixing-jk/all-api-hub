@@ -5,6 +5,7 @@ import { useTranslation } from "react-i18next"
 import { PageHeader } from "~/components/PageHeader"
 import { Alert, Button, Spinner } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { PermissionOnboardingDialog } from "~/features/OptionsOverview/components/dialogs/PermissionOnboardingDialog"
 import { setLastSeenOptionalPermissions } from "~/services/permissions/optionalPermissionState"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -18,7 +19,6 @@ import {
 } from "~/services/productAnalytics/events"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
-import { PermissionOnboardingDialog } from "./components/dialogs/PermissionOnboardingDialog"
 import { OptionsOverviewGrid } from "./components/OptionsOverviewGrid"
 import { OPTIONS_OVERVIEW_TEST_IDS } from "./testIds"
 import type { OptionsOverviewNavigationIntent } from "./types"
