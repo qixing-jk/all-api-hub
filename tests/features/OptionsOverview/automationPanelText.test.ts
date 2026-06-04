@@ -57,14 +57,29 @@ describe("automation panel text helpers", () => {
     expect(getAutomationSummaryRowLabel("autoCheckin", "lastRun", t)).toBe(
       "optionsOverview:autoCheckin.lastRun",
     )
+    expect(getAutomationSummaryRowLabel("autoCheckin", "nextRun", t)).toBe(
+      "optionsOverview:autoCheckin.nextRun",
+    )
+    expect(getAutomationSummaryRowLabel("autoCheckin", "nextRetry", t)).toBe(
+      "optionsOverview:autoCheckin.nextRetry",
+    )
     expect(
       getAutomationSummaryRowLabel("siteAnnouncements", "lastChecked", t),
     ).toBe("optionsOverview:automation.items.siteAnnouncements.lastChecked")
+    expect(
+      getAutomationSummaryRowLabel("siteAnnouncements", "interval", t),
+    ).toBe("optionsOverview:automation.items.siteAnnouncements.interval")
     expect(
       getAutomationSummaryRowLabel("managedSiteModelSync", "allowedModels", t),
     ).toBe(
       "optionsOverview:automation.items.managedSiteModelSync.allowedModels",
     )
+    expect(
+      getAutomationSummaryRowLabel("managedSiteModelSync", "interval", t),
+    ).toBe("optionsOverview:automation.items.managedSiteModelSync.interval")
+    expect(
+      getAutomationSummaryRowLabel("managedSiteModelSync", "concurrency", t),
+    ).toBe("optionsOverview:automation.items.managedSiteModelSync.concurrency")
     expect(getAutomationSummaryRowLabel("webdavAutoSync", "domains", t)).toBe(
       "optionsOverview:automation.items.webdavAutoSync.domains",
     )
@@ -118,6 +133,17 @@ describe("automation panel text helpers", () => {
     expect(
       formatSummaryValue("autoCheckin", { id: "nextRetry", value: "" }, t),
     ).toBe("optionsOverview:autoCheckin.notScheduled")
+    expect(
+      formatSummaryValue(
+        "autoCheckin",
+        {
+          id: "lastRun",
+          value: "2026-06-04T00:00:00.000Z",
+          valueType: SUMMARY_VALUE_TYPES.datetime,
+        },
+        t,
+      ),
+    ).toBe(new Date("2026-06-04T00:00:00.000Z").toLocaleString())
     expect(
       formatSummaryValue(
         "siteAnnouncements",

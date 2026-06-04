@@ -1,5 +1,6 @@
 import { OPTIONS_PAGE_PATH } from "~/constants/extensionPages"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
+import { BALANCE_HISTORY_TEST_IDS } from "~/features/BalanceHistory/testIds"
 import { STORAGE_KEYS } from "~/services/core/storageKeys"
 import {
   getDayKeyFromUnixSeconds,
@@ -148,8 +149,12 @@ test("filters balance history by tag/account and persists the selected currency"
     page.getByRole("heading", { name: "Balance History" }),
   ).toBeVisible()
   const main = page.getByRole("main")
-  await expect(main.getByText("Overview")).toBeVisible()
-  await expect(main.getByText("Account summary")).toBeVisible()
+  await expect(
+    main.getByTestId(BALANCE_HISTORY_TEST_IDS.overview),
+  ).toBeVisible()
+  await expect(
+    main.getByTestId(BALANCE_HISTORY_TEST_IDS.accountSummary),
+  ).toBeVisible()
   await expect(page.getByRole("button", { name: "Production" })).toBeVisible()
   await expect(
     page.getByRole("button", { name: "Balance Hub A", exact: true }),

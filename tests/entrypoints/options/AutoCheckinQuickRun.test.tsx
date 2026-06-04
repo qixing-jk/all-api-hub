@@ -127,6 +127,45 @@ describe("AutoCheckin quick run", () => {
     )
   })
 
+  it("shows an account setup empty state when no enabled account supports detection", async () => {
+    const user = userEvent.setup()
+    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+      {
+        id: "manual-account",
+        disabled: false,
+        checkIn: { enableDetection: false },
+      },
+    ] as any)
+    sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
+      if (type === AutoCheckinMessageTypes.GetStatus) {
+        return {
+          success: true,
+          data: { perAccount: {} },
+        }
+      }
+
+      return { success: true }
+    })
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    expect(
+      await screen.findByText(
+        "autoCheckin:execution.empty.noDetectionAccounts",
+      ),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "autoCheckin:execution.empty.openAccounts",
+      }),
+    )
+
+    expect(pushWithinOptionsPageMock).toHaveBeenCalledWith(
+      `#${MENU_ITEM_IDS.ACCOUNT}`,
+    )
+  })
+
   it("does not block auto check-in results when account setup lookup fails", async () => {
     vi.mocked(accountStorage.getAllAccounts).mockRejectedValue(
       new Error("account storage unavailable"),

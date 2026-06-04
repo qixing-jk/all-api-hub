@@ -84,6 +84,7 @@ import {
   buildMultiSeriesTrendOption,
   type BalanceHistoryTrendChartType,
 } from "./echartsOptions"
+import { BALANCE_HISTORY_TEST_IDS } from "./testIds"
 
 const logger = createLogger("BalanceHistoryPage")
 const optionsEntrypoint = PRODUCT_ANALYTICS_ENTRYPOINTS.Options
@@ -1260,7 +1261,10 @@ export default function BalanceHistory() {
             </Card>
           ) : (
             <div className="space-y-6">
-              <Card padding="md">
+              <Card
+                padding="md"
+                data-testid={BALANCE_HISTORY_TEST_IDS.overview}
+              >
                 <div className="space-y-4">
                   <div className="text-sm font-medium">
                     {t("overview.title")}
@@ -1617,7 +1621,10 @@ export default function BalanceHistory() {
                 </Card>
               </div>
 
-              <Card padding="md">
+              <Card
+                padding="md"
+                data-testid={BALANCE_HISTORY_TEST_IDS.accountSummary}
+              >
                 <div className="space-y-3">
                   <div className="text-sm font-medium">{t("table.title")}</div>
                   <BalanceHistoryAccountSummaryTable
