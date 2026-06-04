@@ -849,6 +849,46 @@ describe("webdavService", () => {
       )
     })
 
+    it("falls back by deleting the existing destination when Nutstore rejects overwrite MOVE with 409", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"nutstore":true}'),
+        })
+        .mockResolvedValueOnce({ status: 409 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({ status: 201 })
+
+      await expect(uploadBackup('{"nutstore":true}')).resolves.toBe(true)
+
+      const officialUrl =
+        "https://example.com/webdav/all-api-hub-backup/all-api-hub-1-0.json"
+      expect(globalAny.fetch).toHaveBeenCalledTimes(7)
+      expect((globalAny.fetch.mock.calls[4][1] as RequestInit).method).toBe(
+        "MOVE",
+      )
+      expect(globalAny.fetch.mock.calls[5][0]).toBe(officialUrl)
+      expect((globalAny.fetch.mock.calls[5][1] as RequestInit).method).toBe(
+        "DELETE",
+      )
+      expect(globalAny.fetch.mock.calls[6][0]).toBe(
+        globalAny.fetch.mock.calls[4][0],
+      )
+      expect((globalAny.fetch.mock.calls[6][1] as RequestInit).method).toBe(
+        "MOVE",
+      )
+      expect(
+        (globalAny.fetch.mock.calls[6][1] as RequestInit).headers,
+      ).toMatchObject({
+        Destination: officialUrl,
+        Overwrite: "T",
+      })
+    })
+
     it("does not put directly to the official backup URL", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
 

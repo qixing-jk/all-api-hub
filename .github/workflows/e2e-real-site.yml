@@ -37,6 +37,12 @@ jobs:
           - label: Sub2API
             env_prefix: SUB2API
             spec: e2e/realSite/sub2apiAccountAdd.spec.ts
+          - label: Nutstore WebDAV
+            env_prefix: NUTSTORE_WEBDAV
+            kind: webdav
+            provider_name: Nutstore
+            provider_account_prefix: nutstore
+            spec: e2e/realSite/webdavProviderFlow.spec.ts
 
     steps:
       - name: Checkout code
@@ -91,6 +97,12 @@ jobs:
           REAL_SITE_PASSWORD_SELECTOR: ${{ secrets[format('AAH_E2E_{0}_PASSWORD_SELECTOR', matrix.env_prefix)] }}
           REAL_SITE_SUBMIT_SELECTOR: ${{ secrets[format('AAH_E2E_{0}_SUBMIT_SELECTOR', matrix.env_prefix)] }}
           REAL_SITE_AGREE_SELECTOR: ${{ secrets[format('AAH_E2E_{0}_AGREE_SELECTOR', matrix.env_prefix)] }}
+          REAL_SITE_KIND: ${{ matrix.kind || 'account' }}
+          WEBDAV_PROVIDER_NAME: ${{ matrix.provider_name }}
+          WEBDAV_PROVIDER_ACCOUNT_PREFIX: ${{ matrix.provider_account_prefix }}
+          WEBDAV_URL: ${{ secrets[format('AAH_E2E_{0}_URL', matrix.env_prefix)] }}
+          WEBDAV_USERNAME: ${{ secrets[format('AAH_E2E_{0}_USERNAME', matrix.env_prefix)] }}
+          WEBDAV_PASSWORD: ${{ secrets[format('AAH_E2E_{0}_PASSWORD', matrix.env_prefix)] }}
         run: |
           write_env() {
             local key="$1"
@@ -101,22 +113,33 @@ jobs:
           }
 
           prefix="$REAL_SITE_ENV_PREFIX"
-          write_env "AAH_E2E_${prefix}_BASE_URL" "$REAL_SITE_BASE_URL"
-          write_env "AAH_E2E_${prefix}_USERNAME" "$REAL_SITE_USERNAME"
-          write_env "AAH_E2E_${prefix}_PASSWORD" "$REAL_SITE_PASSWORD"
-          write_env "AAH_E2E_${prefix}_TOTP_SECRET" "$REAL_SITE_TOTP_SECRET"
-          write_env "AAH_E2E_${prefix}_LOGIN_PATH" "$REAL_SITE_LOGIN_PATH"
-          write_env "AAH_E2E_${prefix}_LOGIN_API_PATH" "$REAL_SITE_LOGIN_API_PATH"
-          write_env "AAH_E2E_${prefix}_LOGIN_2FA_API_PATH" "$REAL_SITE_LOGIN_2FA_API_PATH"
-          write_env "AAH_E2E_${prefix}_USERNAME_SELECTOR" "$REAL_SITE_USERNAME_SELECTOR"
-          write_env "AAH_E2E_${prefix}_PASSWORD_SELECTOR" "$REAL_SITE_PASSWORD_SELECTOR"
-          write_env "AAH_E2E_${prefix}_SUBMIT_SELECTOR" "$REAL_SITE_SUBMIT_SELECTOR"
-          write_env "AAH_E2E_${prefix}_AGREE_SELECTOR" "$REAL_SITE_AGREE_SELECTOR"
-
           missing=()
-          [ -z "$REAL_SITE_BASE_URL" ] && missing+=("AAH_E2E_${prefix}_BASE_URL")
-          [ -z "$REAL_SITE_USERNAME" ] && missing+=("AAH_E2E_${prefix}_USERNAME")
-          [ -z "$REAL_SITE_PASSWORD" ] && missing+=("AAH_E2E_${prefix}_PASSWORD")
+          if [ "$REAL_SITE_KIND" = "webdav" ]; then
+            write_env "AAH_E2E_WEBDAV_PROVIDER_PREFIX" "$prefix"
+            write_env "AAH_E2E_WEBDAV_PROVIDER_NAME" "$WEBDAV_PROVIDER_NAME"
+            write_env "AAH_E2E_WEBDAV_ACCOUNT_PREFIX" "$WEBDAV_PROVIDER_ACCOUNT_PREFIX"
+            write_env "AAH_E2E_WEBDAV_URL" "$WEBDAV_URL"
+            write_env "AAH_E2E_WEBDAV_USERNAME" "$WEBDAV_USERNAME"
+            write_env "AAH_E2E_WEBDAV_PASSWORD" "$WEBDAV_PASSWORD"
+            [ -z "$WEBDAV_URL" ] && missing+=("AAH_E2E_${prefix}_URL")
+            [ -z "$WEBDAV_USERNAME" ] && missing+=("AAH_E2E_${prefix}_USERNAME")
+            [ -z "$WEBDAV_PASSWORD" ] && missing+=("AAH_E2E_${prefix}_PASSWORD")
+          else
+            write_env "AAH_E2E_${prefix}_BASE_URL" "$REAL_SITE_BASE_URL"
+            write_env "AAH_E2E_${prefix}_USERNAME" "$REAL_SITE_USERNAME"
+            write_env "AAH_E2E_${prefix}_PASSWORD" "$REAL_SITE_PASSWORD"
+            write_env "AAH_E2E_${prefix}_TOTP_SECRET" "$REAL_SITE_TOTP_SECRET"
+            write_env "AAH_E2E_${prefix}_LOGIN_PATH" "$REAL_SITE_LOGIN_PATH"
+            write_env "AAH_E2E_${prefix}_LOGIN_API_PATH" "$REAL_SITE_LOGIN_API_PATH"
+            write_env "AAH_E2E_${prefix}_LOGIN_2FA_API_PATH" "$REAL_SITE_LOGIN_2FA_API_PATH"
+            write_env "AAH_E2E_${prefix}_USERNAME_SELECTOR" "$REAL_SITE_USERNAME_SELECTOR"
+            write_env "AAH_E2E_${prefix}_PASSWORD_SELECTOR" "$REAL_SITE_PASSWORD_SELECTOR"
+            write_env "AAH_E2E_${prefix}_SUBMIT_SELECTOR" "$REAL_SITE_SUBMIT_SELECTOR"
+            write_env "AAH_E2E_${prefix}_AGREE_SELECTOR" "$REAL_SITE_AGREE_SELECTOR"
+            [ -z "$REAL_SITE_BASE_URL" ] && missing+=("AAH_E2E_${prefix}_BASE_URL")
+            [ -z "$REAL_SITE_USERNAME" ] && missing+=("AAH_E2E_${prefix}_USERNAME")
+            [ -z "$REAL_SITE_PASSWORD" ] && missing+=("AAH_E2E_${prefix}_PASSWORD")
+          fi
 
           if [ "${#missing[@]}" -gt 0 ]; then
             echo "::warning::${prefix} real-site E2E will skip without required secrets: ${missing[*]}"

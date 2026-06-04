@@ -16,6 +16,12 @@ Confirmed source-available targets in this suite:
 - Veloera: Go server source, web source, Docker/deployment files.
 - Sub2API: dedicated auth model and real-site helper.
 
+Provider compatibility checks:
+
+- WebDAV providers: verify the live provider's UI-driven save, connection
+  test, upload overwrite, and download/import flow. Nutstore is included as a
+  regression target for existing-file `MOVE` compatibility.
+
 For current coverage details, inspect the specs in this directory and the shared
 helpers under `e2e/scenarios/`.
 
@@ -28,6 +34,13 @@ Run all real-site specs:
 
 ```bash
 pnpm e2e:real-site
+```
+
+Run the shared WebDAV provider flow locally:
+
+```bash
+pnpm e2e:real-site:nutstore
+pnpm e2e:real-site:webdav
 ```
 
 Playwright loads `.env` and `.env.local` from the repo root. Shell or CI
@@ -111,4 +124,40 @@ AAH_E2E_SUB2API_PASSWORD=replace-with-test-password
 # AAH_E2E_SUB2API_PASSWORD_SELECTOR=input#password
 # AAH_E2E_SUB2API_SUBMIT_SELECTOR=form button[type="submit"]
 # AAH_E2E_SUB2API_AGREE_SELECTOR=input[type="checkbox"]
+```
+
+## Nutstore WebDAV
+
+Use a dedicated low-value Nutstore app password and a test-only JSON file URL.
+The spec deletes this exact file before and after the run. The local WebDAV
+runner selects these variables by default.
+
+```env
+AAH_E2E_NUTSTORE_WEBDAV_URL=https://dav.jianguoyun.com/dav/all-api-hub-e2e/all-api-hub-nutstore-move.json
+AAH_E2E_NUTSTORE_WEBDAV_USERNAME=test-user@example.com
+AAH_E2E_NUTSTORE_WEBDAV_PASSWORD=replace-with-nutstore-app-password
+```
+
+## Additional WebDAV Providers
+
+The shared WebDAV provider spec is UI-driven and can run against another real
+WebDAV backend by setting the generic variables directly:
+
+```env
+AAH_E2E_WEBDAV_PROVIDER_NAME=Nextcloud
+AAH_E2E_WEBDAV_ACCOUNT_PREFIX=nextcloud
+AAH_E2E_WEBDAV_URL=https://nextcloud.example.com/remote.php/dav/files/test-user/all-api-hub-e2e.json
+AAH_E2E_WEBDAV_USERNAME=test-user
+AAH_E2E_WEBDAV_PASSWORD=replace-with-test-password
+```
+
+CI can also add a matrix entry with a provider-specific prefix such as
+`CUSTOM_WEBDAV`, then provide `AAH_E2E_CUSTOM_WEBDAV_URL`,
+`AAH_E2E_CUSTOM_WEBDAV_USERNAME`, and `AAH_E2E_CUSTOM_WEBDAV_PASSWORD`.
+
+For local provider-prefixed variables beyond Nutstore, pass the prefix to the
+runner only after that provider has real test credentials:
+
+```bash
+pnpm e2e:real-site:webdav CUSTOM_WEBDAV
 ```

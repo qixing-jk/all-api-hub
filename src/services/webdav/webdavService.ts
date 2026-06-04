@@ -358,18 +358,52 @@ async function moveWebdavContent(params: {
   username: string
   password: string
 }) {
-  const res = await fetch(params.sourceUrl, {
-    method: "MOVE",
-    headers: {
-      Authorization: buildAuthHeader(params.username, params.password),
-      Destination: params.destinationUrl,
-      Overwrite: "T",
-    },
-  })
+  const move = () =>
+    fetch(params.sourceUrl, {
+      method: "MOVE",
+      headers: {
+        Authorization: buildAuthHeader(params.username, params.password),
+        Destination: params.destinationUrl,
+        Overwrite: "T",
+      },
+    })
+
+  let res = await move()
+
+  if (res.status === 409) {
+    // RFC 4918 section 9.9.3 requires Overwrite:T to delete the destination
+    // before MOVE; Nutstore returns 409 instead when the destination exists.
+    await deleteWebdavDestinationBeforeMoveRetry(params)
+    res = await move()
+  }
 
   if (res.status >= 200 && res.status < 300) return true
   if (res.status === 401 || res.status === 403)
     throw new WebdavHttpError(t("messages:webdav.authFailed"), res.status)
+  throw new WebdavHttpError(t("messages:webdav.safeCommitFailed"), res.status)
+}
+
+/**
+ * Applies the RFC-equivalent overwrite step when a provider rejects MOVE.
+ */
+async function deleteWebdavDestinationBeforeMoveRetry(params: {
+  destinationUrl: string
+  username: string
+  password: string
+}) {
+  const res = await fetch(params.destinationUrl, {
+    method: "DELETE",
+    headers: {
+      Authorization: buildAuthHeader(params.username, params.password),
+    },
+  })
+
+  if ((res.status >= 200 && res.status < 300) || res.status === 404) {
+    return true
+  }
+  if (res.status === 401 || res.status === 403) {
+    throw new WebdavHttpError(t("messages:webdav.authFailed"), res.status)
+  }
   throw new WebdavHttpError(t("messages:webdav.safeCommitFailed"), res.status)
 }
 
