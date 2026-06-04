@@ -1,22 +1,9 @@
-import {
-  ArrowLeftRight,
-  BarChart3,
-  Bookmark,
-  CalendarCheck2,
-  Cpu,
-  Info,
-  KeyRound,
-  Layers,
-  LineChart,
-  Megaphone,
-  Palette,
-  RefreshCcw,
-  Settings,
-  UserRound,
-  UserRoundKey,
-} from "lucide-react"
 import { createElement, lazy, Suspense, type ComponentType } from "react"
 
+import {
+  DEV_OPTIONS_MENU_ITEM_ICONS,
+  OPTIONS_MENU_ITEM_ICONS,
+} from "~/components/icons/optionsPageIcons"
 import { DEV_MENU_ITEM_IDS } from "~/constants/devOptionsMenuIds"
 import {
   MENU_ITEM_IDS,
@@ -38,6 +25,9 @@ function createLazyMenuComponent(
 }
 
 const About = createLazyMenuComponent(() => import("./pages/About"))
+const OptionsOverview = createLazyMenuComponent(
+  () => import("./pages/OptionsOverview"),
+)
 const AccountManagement = createLazyMenuComponent(
   () => import("./pages/AccountManagement"),
 )
@@ -82,86 +72,92 @@ interface MenuItem {
 // 菜单配置
 const BASE_MENU_ITEMS: MenuItem[] = [
   {
+    id: MENU_ITEM_IDS.OVERVIEW,
+    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.OVERVIEW],
+    component: OptionsOverview,
+    category: OPTIONS_MENU_CATEGORY_IDS.GENERAL,
+  },
+  {
     id: MENU_ITEM_IDS.BASIC,
-    icon: Settings,
+    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.BASIC],
     component: BasicSettings,
     category: OPTIONS_MENU_CATEGORY_IDS.GENERAL,
   },
   {
     id: MENU_ITEM_IDS.ACCOUNT,
-    icon: UserRound,
+    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.ACCOUNT],
     component: AccountManagement,
     category: OPTIONS_MENU_CATEGORY_IDS.GENERAL,
   },
   {
     id: MENU_ITEM_IDS.API_CREDENTIAL_PROFILES,
-    icon: KeyRound,
+    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.API_CREDENTIAL_PROFILES],
     component: ApiCredentialProfiles,
     category: OPTIONS_MENU_CATEGORY_IDS.GENERAL,
   },
   {
     id: MENU_ITEM_IDS.BOOKMARK,
-    icon: Bookmark,
+    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.BOOKMARK],
     component: BookmarkManagement,
     category: OPTIONS_MENU_CATEGORY_IDS.GENERAL,
   },
   {
     id: MENU_ITEM_IDS.MODELS,
-    icon: Cpu,
+    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.MODELS],
     component: ModelList,
     category: OPTIONS_MENU_CATEGORY_IDS.API,
   },
   {
     id: MENU_ITEM_IDS.KEYS,
-    icon: UserRoundKey,
+    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.KEYS],
     component: KeyManagement,
     category: OPTIONS_MENU_CATEGORY_IDS.API,
   },
   {
     id: MENU_ITEM_IDS.AUTO_CHECKIN,
-    icon: CalendarCheck2,
+    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.AUTO_CHECKIN],
     component: AutoCheckin,
     category: OPTIONS_MENU_CATEGORY_IDS.AUTOMATION,
   },
   {
     id: MENU_ITEM_IDS.SITE_ANNOUNCEMENTS,
-    icon: Megaphone,
+    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.SITE_ANNOUNCEMENTS],
     component: SiteAnnouncements,
     category: OPTIONS_MENU_CATEGORY_IDS.AUTOMATION,
   },
   {
     id: MENU_ITEM_IDS.BALANCE_HISTORY,
-    icon: LineChart,
+    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.BALANCE_HISTORY],
     component: BalanceHistory,
     category: OPTIONS_MENU_CATEGORY_IDS.INSIGHTS,
   },
   {
     id: MENU_ITEM_IDS.USAGE_ANALYTICS,
-    icon: BarChart3,
+    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.USAGE_ANALYTICS],
     component: UsageAnalytics,
     category: OPTIONS_MENU_CATEGORY_IDS.INSIGHTS,
   },
   {
     id: MENU_ITEM_IDS.MANAGED_SITE_CHANNELS,
-    icon: Layers,
+    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.MANAGED_SITE_CHANNELS],
     component: ManagedSiteChannels,
     category: OPTIONS_MENU_CATEGORY_IDS.SITE_MANAGEMENT,
   },
   {
     id: MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC,
-    icon: RefreshCcw,
+    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.MANAGED_SITE_MODEL_SYNC],
     component: ManagedSiteModelSync,
     category: OPTIONS_MENU_CATEGORY_IDS.SITE_MANAGEMENT,
   },
   {
     id: MENU_ITEM_IDS.IMPORT_EXPORT,
-    icon: ArrowLeftRight,
+    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.IMPORT_EXPORT],
     component: ImportExport,
     category: OPTIONS_MENU_CATEGORY_IDS.SYSTEM,
   },
   {
     id: MENU_ITEM_IDS.ABOUT,
-    icon: Info,
+    icon: OPTIONS_MENU_ITEM_ICONS[MENU_ITEM_IDS.ABOUT],
     component: About,
     category: OPTIONS_MENU_CATEGORY_IDS.SYSTEM,
   },
@@ -181,7 +177,7 @@ if (isDevelopmentMode()) {
 
   DEV_MENU_ITEMS.push({
     id: DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB,
-    icon: Palette,
+    icon: DEV_OPTIONS_MENU_ITEM_ICONS[DEV_MENU_ITEM_IDS.MESH_GRADIENT_LAB],
     component: MeshGradientLabComponent,
   })
 }

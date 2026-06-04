@@ -6,6 +6,10 @@ import {
   type AutoDetectFailureReason,
 } from "~/constants/autoDetect"
 import {
+  MENU_ITEM_IDS,
+  type OptionsMenuItemId,
+} from "~/constants/optionsMenuIds"
+import {
   ACCOUNT_SITE_TYPES,
   MANAGED_SITE_TYPES,
   SITE_TYPES,
@@ -151,6 +155,7 @@ export const PRODUCT_ANALYTICS_TARGET_KINDS = {
   ModelFilter: "model_filter",
   ResultFilter: "result_filter",
   ModelSource: "model_source",
+  OptionsPage: "options_page",
 } as const
 
 export type ProductAnalyticsTargetKind =
@@ -163,6 +168,10 @@ export const PRODUCT_ANALYTICS_TARGET_STATES = {
 
 export type ProductAnalyticsTargetState =
   (typeof PRODUCT_ANALYTICS_TARGET_STATES)[keyof typeof PRODUCT_ANALYTICS_TARGET_STATES]
+
+export const PRODUCT_ANALYTICS_OPTIONS_PAGE_TARGET_IDS = MENU_ITEM_IDS
+
+export type ProductAnalyticsOptionsPageTargetId = OptionsMenuItemId
 
 export const PRODUCT_ANALYTICS_MODE_IDS = {
   All: "all",
@@ -257,6 +266,7 @@ export const PRODUCT_ANALYTICS_PAGE_IDS = {
   PopupAccounts: "popup_accounts",
   PopupBookmarks: "popup_bookmarks",
   PopupApiCredentialProfiles: "popup_api_credential_profiles",
+  OptionsOverview: "options_overview",
   OptionsBasicSettings: "options_basic_settings",
   OptionsAccountManagement: "options_account_management",
   OptionsBookmarkManagement: "options_bookmark_management",
@@ -289,6 +299,7 @@ export const PRODUCT_ANALYTICS_FEATURE_IDS = {
   ManagedSiteChannels: "managed_site_channels",
   ManagedSiteModelSync: "managed_site_model_sync",
   ModelList: "model_list",
+  OptionsOverview: "options_overview",
   PermissionRequest: "permission_request",
   ProductAnalyticsSettings: "product_analytics_settings",
   RedemptionAssist: "redemption_assist",
@@ -416,6 +427,7 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
     "open_managed_site_model_sync_config_required",
   OpenModelKeyDialog: "open_model_key_dialog",
   OpenModelManagement: "open_model_management",
+  OpenOptionsOverviewTarget: "open_options_overview_target",
   OpenPopupExternalCheckIns: "open_popup_external_check_ins",
   OpenPopupAccountManagementPage: "open_popup_account_management_page",
   OpenPopupApiCredentialProfilesPage: "open_popup_api_credential_profiles_page",
@@ -598,6 +610,11 @@ export const PRODUCT_ANALYTICS_SURFACE_IDS = {
   OptionsModelListKeyDialog: "options_model_list_key_dialog",
   OptionsModelListPage: "options_model_list_page",
   OptionsModelListRowActions: "options_model_list_row_actions",
+  OptionsOverviewActionCenter: "options_overview_action_center",
+  OptionsOverviewAttentionList: "options_overview_attention_list",
+  OptionsOverviewAutomationOverview: "options_overview_automation_overview",
+  OptionsOverviewRecentUsage: "options_overview_recent_usage",
+  OptionsOverviewStatusSummary: "options_overview_status_summary",
   OptionsSiteAnnouncementCard: "options_site_announcement_card",
   OptionsSiteAnnouncementsEmptyState: "options_site_announcements_empty_state",
   OptionsSiteAnnouncementsPage: "options_site_announcements_page",
@@ -846,6 +863,7 @@ export type ProductAnalyticsEventPayloadMap = {
     telemetry_source?: ProductAnalyticsTelemetrySource
     target_kind?: ProductAnalyticsTargetKind
     target_state?: ProductAnalyticsTargetState
+    target_page_id?: ProductAnalyticsOptionsPageTargetId
     managed_site_type?: ProductAnalyticsManagedSiteType
     source_managed_site_type?: ProductAnalyticsManagedSiteType
     target_managed_site_type?: ProductAnalyticsManagedSiteType
@@ -879,6 +897,7 @@ export type ProductAnalyticsEventPayloadMap = {
     filter_count?: number
     result_count?: number
     usage_data_present?: boolean
+    route_params_present?: boolean
     shield_bypass_prompt_shown_count?: number
     shield_bypass_prompt_dismissed_count?: number
     shield_bypass_settings_visited_count?: number

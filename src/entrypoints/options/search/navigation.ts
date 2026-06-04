@@ -55,7 +55,7 @@ export function clearHighlightSearchParam() {
 
   url.searchParams.delete(OPTIONS_SEARCH_HIGHLIGHT_PARAM)
   replaceWithinOptionsPage(
-    url.hash || `#${MENU_ITEM_IDS.BASIC}`,
+    url.hash || `#${MENU_ITEM_IDS.OVERVIEW}`,
     Object.fromEntries(url.searchParams.entries()),
   )
 }

@@ -1,0 +1,235 @@
+{
+  "actions": {
+    "open": "開啟"
+  },
+  "attention": {
+    "accountUnhealthy": {
+      "description": "{{reason}}",
+      "title": "{{name}} 狀態異常"
+    },
+    "addAccount": {
+      "description": "先新增帳戶，才能彙總餘額、用量和自動任務狀態。",
+      "title": "還沒有帳戶"
+    },
+    "addProfile": {
+      "description": "新增 API 憑據後，可在工具和匯出流程中重複使用。",
+      "title": "還沒有 API 憑據"
+    }
+  },
+  "autoCheckin": {
+    "actions": {
+      "open": "查看簽到",
+      "retryFailed": "重試失敗"
+    },
+    "empty": {
+      "disabled": {
+        "description": "你已關閉自動簽到。需要自動領取簽到獎勵時，可以在設定中重新開啟。"
+      },
+      "notRun": {
+        "description": "還沒有簽到記錄。確認帳戶已開啟簽到偵測後，系統會在下次計畫時間執行，也可以進入自動簽到頁手動處理。"
+      }
+    },
+    "lastRun": "上次執行",
+    "metrics": {
+      "failed": "失敗",
+      "skipped": "跳過",
+      "success": "成功"
+    },
+    "nextRetry": "下次重試",
+    "nextRun": "下次計畫",
+    "notRunYet": "尚未執行",
+    "notScheduled": "未計畫",
+    "status": {
+      "disabled": "已停用",
+      "failed": "全部失敗",
+      "not_run": "等待首次執行",
+      "partial": "部分成功",
+      "ready": "已就緒",
+      "success": "執行成功"
+    },
+    "summary": "自動簽到執行概況"
+  },
+  "automation": {
+    "empty": {
+      "autoCheckin": {
+        "disabled": "想自動領取簽到獎勵時，先開啟自動簽到。之後這裡會顯示下次計畫和執行結果。"
+      },
+      "managedSiteModelSync": {
+        "disabled": "需要自動同步自建站點模型時，先開啟模型同步。之後這裡會顯示同步間隔和範圍。"
+      },
+      "siteAnnouncements": {
+        "disabled": "想即時看到站點公告時，先開啟公告抓取。之後這裡會顯示最近檢查時間和公告數量。"
+      },
+      "webdavAutoSync": {
+        "disabled": "想跨裝置備份資料時，先設定 WebDAV 自動同步。之後這裡會顯示同步策略和範圍。"
+      }
+    },
+    "items": {
+      "autoCheckin": {
+        "label": "自動簽到"
+      },
+      "managedSiteModelSync": {
+        "allowedModels": "限定模型數",
+        "concurrency": "並發數",
+        "interval": "同步間隔（小時）",
+        "label": "託管站點模型同步",
+        "open": "開啟同步"
+      },
+      "siteAnnouncements": {
+        "interval": "抓取間隔（分鐘）",
+        "label": "網站公告抓取",
+        "lastChecked": "最近檢查",
+        "openPage": "查看公告",
+        "openSettings": "設定抓取",
+        "records": "公告總數",
+        "unread": "未讀公告"
+      },
+      "webdavAutoSync": {
+        "domains": "同步範圍數",
+        "interval": "同步間隔（分鐘）",
+        "label": "WebDAV 備份同步",
+        "open": "開啟備份同步",
+        "strategy": "同步策略"
+      }
+    },
+    "neverChecked": "尚未檢查",
+    "openItem": "開啟 {{name}}",
+    "status": {
+      "enabled": "已啟用"
+    }
+  },
+  "configurationOverview": {
+    "accountFoundation": {
+      "description": "帳戶、餘額與健康狀態，是其他能力的基礎。",
+      "label": "帳戶基礎",
+      "state": {
+        "disabled": "目前還不能讀取帳戶狀態，請先檢查帳戶設定是否完整。",
+        "needs_setup": "先新增至少一個帳戶，總覽才能幫你彙總餘額、用量和自動任務狀態。",
+        "not_applicable": "目前環境不需要新增帳戶也可以繼續使用。"
+      },
+      "summary_other": "{{count}} 個啟用帳戶"
+    },
+    "automation": {
+      "description": "自動簽到與公告抓取是否處於可用狀態。",
+      "label": "自動化",
+      "state": {
+        "disabled": "暫時不會自動執行任務。需要時可以開啟自動簽到或公告抓取。",
+        "needs_setup": "自動任務還缺少可執行帳戶或偵測設定，先完成對應設定後再開啟。",
+        "not_applicable": "目前環境暫時沒有可用的自動任務。"
+      },
+      "summary_other": "{{count}} 項自動化能力"
+    },
+    "backupSync": {
+      "description": "本機資料備份與跨裝置同步設定。",
+      "label": "備份同步",
+      "state": {
+        "disabled": "資料只保存在本機。需要跨裝置備份時，可以開啟 WebDAV 同步。",
+        "needs_setup": "先連接 WebDAV，才能把本機資料備份到遠端。",
+        "not_applicable": "目前環境暫時不能使用備份同步。"
+      },
+      "summary_other": "{{count}} 項同步設定"
+    },
+    "credentialAssets": {
+      "description": "API 憑據與帳戶金鑰是否已經準備好。",
+      "label": "憑據資產",
+      "state": {
+        "disabled": "目前還沒有可重複使用的憑據，請先檢查帳戶或 API 憑據設定。",
+        "needs_setup": "新增 API 憑據後，就能在工具和匯出流程中直接重複使用。",
+        "not_applicable": "目前環境不需要單獨維護 API 憑據。"
+      },
+      "summary_other": "{{count}} 個 API 憑據"
+    },
+    "dataHistory": {
+      "description": "用量與餘額歷史是否已有可查看資料。",
+      "label": "資料歷史",
+      "state": {
+        "disabled": "暫時不會保存歷史記錄。開啟後，後續用量和餘額變化會持續沉澱。",
+        "needs_setup": "歷史記錄已開啟，但還需要帳戶或首批資料；產生資料後這裡會自動更新。",
+        "not_applicable": "目前環境暫時沒有可查看的資料歷史。"
+      },
+      "summary_other": "{{count}} 項歷史資料"
+    },
+    "managedSite": {
+      "description": "自建站點的渠道管理與模型同步能力。",
+      "label": "自建站點",
+      "state": {
+        "disabled": "還沒有連接自建站點，需要時可以先完成站點設定。",
+        "needs_setup": "先連接自建站點，才能在這裡管理渠道或同步模型。",
+        "not_applicable": "目前站點類型暫不支援自建站點管理。"
+      },
+      "summary_other": "{{count}} 項管理能力"
+    },
+    "subItems": {
+      "accounts": "帳戶管理",
+      "apiKeys": "API 金鑰",
+      "apiProfiles": "API 憑據",
+      "autoCheckin": "自動簽到",
+      "balanceHistory": "餘額歷史",
+      "managedSiteChannels": "渠道管理",
+      "managedSiteModelSync": "模型同步",
+      "siteAnnouncements": "網站公告",
+      "usageAnalytics": "用量分析",
+      "webdavAutoSync": "WebDAV 自動同步",
+      "webdavManual": "WebDAV 手動備份"
+    }
+  },
+  "coverageStatus": {
+    "configured": "已設定",
+    "disabled": "未啟用",
+    "needs_setup": "待設定",
+    "not_applicable": "不適用"
+  },
+  "description": "查看帳戶、金鑰、用量和自動任務的目前狀態。",
+  "sections": {
+    "automationOverview": "自動化執行",
+    "configurationOverview": "配置概覽",
+    "needsAttention": "需要處理",
+    "recentUsage": "近期使用",
+    "statusSummary": "狀態摘要"
+  },
+  "severity": {
+    "error": "錯誤",
+    "info": "提示",
+    "warning": "警告"
+  },
+  "states": {
+    "allClear": "目前沒有需要處理的事項。",
+    "loadedWithError": "部分資訊載入失敗，已顯示可用資料。",
+    "loading": "正在載入總覽..."
+  },
+  "status": {
+    "accounts": {
+      "description": "可用帳戶數量",
+      "label": "帳戶"
+    },
+    "attention": {
+      "description": "需要檢查的事項",
+      "label": "待處理"
+    },
+    "profiles": {
+      "description": "已儲存的獨立憑據",
+      "label": "憑據庫"
+    },
+    "todayUsage": {
+      "description": "今日請求次數",
+      "label": "今日用量"
+    }
+  },
+  "title": "總覽",
+  "usage": {
+    "activityMix": "近期趨勢",
+    "empty": {
+      "description": "發起一次請求或完成用量歷史同步後，這裡會自動彙總今日請求、Token、消耗和近 7 日趨勢。",
+      "title": "還沒有用量記錄"
+    },
+    "noRecentActivity": "暫無近期用量記錄。",
+    "requestShare": "請求占比",
+    "sevenDayRequests": "近 7 日請求",
+    "sevenDayTokens": "近 7 日 Token",
+    "todayCost": "今日消耗",
+    "todayRequests": "今日請求",
+    "todayShare": "今日在近 7 日中的占比",
+    "todayTokens": "今日 Token",
+    "tokenShare": "Token 占比"
+  }
+}

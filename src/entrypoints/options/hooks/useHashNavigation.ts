@@ -1,7 +1,10 @@
 import { useEffect, useState } from "react"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import {
+  pushWithinOptionsPage,
+  replaceWithinOptionsPage,
+} from "~/utils/navigation"
 
 import { menuItems } from "../constants"
 
@@ -19,7 +22,7 @@ function parseHash() {
   }
 
   if (!hash) {
-    return { page: MENU_ITEM_IDS.BASIC, params }
+    return { page: MENU_ITEM_IDS.OVERVIEW, params, shouldCanonicalize: true }
   }
 
   const [page, ...paramParts] = hash.split("?")
@@ -32,7 +35,11 @@ function parseHash() {
     }
   }
 
-  return { page: page || MENU_ITEM_IDS.BASIC, params }
+  return {
+    page: page || MENU_ITEM_IDS.OVERVIEW,
+    params,
+    shouldCanonicalize: !page,
+  }
 }
 
 /**
@@ -51,12 +58,21 @@ function updateHash(page: string, params?: Record<string, string | undefined>) {
 }
 
 /**
+ * Resolves unknown route ids to the default Overview page.
+ */
+function getCanonicalPage(page: string) {
+  return menuItems.find((item) => item.id === page)
+    ? page
+    : MENU_ITEM_IDS.OVERVIEW
+}
+
+/**
  * Hook that synchronizes menu navigation with the URL hash/query parameters.
  * Exposes current page, params, a handler to change pages, and refreshKey bumps.
  */
 export function useHashNavigation() {
   const [activeMenuItem, setActiveMenuItem] = useState<string>(
-    MENU_ITEM_IDS.BASIC,
+    MENU_ITEM_IDS.OVERVIEW,
   )
   const [routeParams, setRouteParams] = useState<Record<string, string>>({})
   const [refreshKey, setRefreshKey] = useState(0)
@@ -64,22 +80,25 @@ export function useHashNavigation() {
   // 初始化路由
   useEffect(() => {
     const applyUrlState = () => {
-      const { page, params } = parseHash()
+      const { page, params, shouldCanonicalize } = parseHash()
+      const validPage = getCanonicalPage(page)
+      if (shouldCanonicalize || page !== validPage) {
+        replaceWithinOptionsPage(`#${validPage}`, params)
+        return
+      }
+
       if (params.refresh === "true") {
         setRefreshKey((prev) => prev + 1)
       }
-      const validPage = menuItems.find((item) => item.id === page)
-        ? page
-        : MENU_ITEM_IDS.BASIC
       setActiveMenuItem(validPage)
       setRouteParams(params)
     }
 
-    applyUrlState()
-
     // Listen to both hash/search-only changes and browser history traversal.
     window.addEventListener("hashchange", applyUrlState)
     window.addEventListener("popstate", applyUrlState)
+    applyUrlState()
+
     return () => {
       window.removeEventListener("hashchange", applyUrlState)
       window.removeEventListener("popstate", applyUrlState)

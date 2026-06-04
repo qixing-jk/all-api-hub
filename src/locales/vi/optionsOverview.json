@@ -1,0 +1,235 @@
+{
+  "actions": {
+    "open": "Mở"
+  },
+  "attention": {
+    "accountUnhealthy": {
+      "description": "{{reason}}",
+      "title": "{{name}} có vấn đề trạng thái"
+    },
+    "addAccount": {
+      "description": "Hãy thêm tài khoản trước khi tổng hợp số dư, sử dụng và tác vụ tự động.",
+      "title": "Chưa có tài khoản"
+    },
+    "addProfile": {
+      "description": "Thêm thông tin API để các công cụ và luồng xuất có thể dùng lại.",
+      "title": "Chưa có hồ sơ API"
+    }
+  },
+  "autoCheckin": {
+    "actions": {
+      "open": "Xem điểm danh",
+      "retryFailed": "Thử lại lỗi"
+    },
+    "empty": {
+      "disabled": {
+        "description": "Bạn đã tắt tự động điểm danh. Khi muốn tiện ích tự nhận phần thưởng điểm danh, bạn có thể bật lại trong phần cài đặt."
+      },
+      "notRun": {
+        "description": "Chưa có bản ghi điểm danh. Sau khi bật phát hiện điểm danh cho tài khoản, hệ thống sẽ chạy ở lịch kế tiếp, hoặc bạn có thể mở trang tự động điểm danh để xử lý thủ công."
+      }
+    },
+    "lastRun": "Lần chạy trước",
+    "metrics": {
+      "failed": "Lỗi",
+      "skipped": "Bỏ qua",
+      "success": "Thành công"
+    },
+    "nextRetry": "Lần thử lại kế tiếp",
+    "nextRun": "Lần chạy kế tiếp",
+    "notRunYet": "Chưa chạy",
+    "notScheduled": "Chưa lên lịch",
+    "status": {
+      "disabled": "Đã tắt",
+      "failed": "Thất bại",
+      "not_run": "Chờ lần chạy đầu",
+      "partial": "Thành công một phần",
+      "ready": "Sẵn sàng",
+      "success": "Thành công"
+    },
+    "summary": "Tóm tắt chạy tự động điểm danh"
+  },
+  "automation": {
+    "empty": {
+      "autoCheckin": {
+        "disabled": "Khi muốn tự động nhận phần thưởng điểm danh, hãy bật tự động điểm danh. Lịch kế tiếp và kết quả sẽ xuất hiện tại đây."
+      },
+      "managedSiteModelSync": {
+        "disabled": "Khi muốn tự động cập nhật model của trang tự quản, hãy bật đồng bộ model. Khoảng đồng bộ và phạm vi sẽ xuất hiện tại đây."
+      },
+      "siteAnnouncements": {
+        "disabled": "Khi muốn theo dõi thông báo trang kịp thời, hãy bật lấy thông báo. Lần kiểm tra gần nhất và số thông báo sẽ xuất hiện tại đây."
+      },
+      "webdavAutoSync": {
+        "disabled": "Khi muốn sao lưu dữ liệu giữa thiết bị, hãy cấu hình tự động đồng bộ WebDAV. Chiến lược và phạm vi đồng bộ sẽ xuất hiện tại đây."
+      }
+    },
+    "items": {
+      "autoCheckin": {
+        "label": "Tự động điểm danh"
+      },
+      "managedSiteModelSync": {
+        "allowedModels": "Model giới hạn",
+        "concurrency": "Số luồng",
+        "interval": "Khoảng đồng bộ (giờ)",
+        "label": "Đồng bộ model trang quản lý",
+        "open": "Mở đồng bộ"
+      },
+      "siteAnnouncements": {
+        "interval": "Khoảng kiểm tra (phút)",
+        "label": "Lấy thông báo trang",
+        "lastChecked": "Lần kiểm tra gần nhất",
+        "openPage": "Xem thông báo",
+        "openSettings": "Cài đặt kiểm tra",
+        "records": "Tổng thông báo",
+        "unread": "Thông báo chưa đọc"
+      },
+      "webdavAutoSync": {
+        "domains": "Phạm vi đồng bộ",
+        "interval": "Khoảng đồng bộ (phút)",
+        "label": "Đồng bộ sao lưu WebDAV",
+        "open": "Mở sao lưu",
+        "strategy": "Chiến lược đồng bộ"
+      }
+    },
+    "neverChecked": "Chưa kiểm tra",
+    "openItem": "Mở {{name}}",
+    "status": {
+      "enabled": "Đã bật"
+    }
+  },
+  "configurationOverview": {
+    "accountFoundation": {
+      "description": "Tài khoản, số dư và trạng thái sức khỏe là nền tảng cho các tính năng khác.",
+      "label": "Nền tảng tài khoản",
+      "state": {
+        "disabled": "Hiện chưa đọc được trạng thái tài khoản. Hãy kiểm tra cấu hình tài khoản đã hoàn tất hay chưa.",
+        "needs_setup": "Thêm ít nhất một tài khoản để trang tổng quan có thể tóm tắt số dư, sử dụng và trạng thái tác vụ tự động cho bạn.",
+        "not_applicable": "Bạn có thể tiếp tục mà không cần thêm tài khoản trong môi trường này."
+      },
+      "summary_other": "{{count}} tài khoản đang bật"
+    },
+    "automation": {
+      "description": "Tự động điểm danh và lấy thông báo đã sẵn sàng hay chưa.",
+      "label": "Tự động hóa",
+      "state": {
+        "disabled": "Hiện chưa có tác vụ nào tự chạy. Khi cần, bạn có thể bật tự động điểm danh hoặc lấy thông báo.",
+        "needs_setup": "Tác vụ tự động còn cần tài khoản có thể chạy hoặc cấu hình phát hiện. Hoàn tất thiết lập liên quan trước khi bật.",
+        "not_applicable": "Môi trường này hiện chưa có tác vụ tự động khả dụng."
+      },
+      "summary_other": "{{count}} tính năng tự động hóa"
+    },
+    "backupSync": {
+      "description": "Cấu hình sao lưu dữ liệu cục bộ và đồng bộ giữa thiết bị.",
+      "label": "Đồng bộ sao lưu",
+      "state": {
+        "disabled": "Dữ liệu hiện chỉ lưu trên thiết bị này. Khi cần sao lưu giữa thiết bị, bạn có thể bật đồng bộ WebDAV.",
+        "needs_setup": "Kết nối WebDAV trước để sao lưu dữ liệu cục bộ lên nơi lưu trữ từ xa.",
+        "not_applicable": "Môi trường này hiện chưa dùng được đồng bộ sao lưu."
+      },
+      "summary_other": "{{count}} cấu hình đồng bộ"
+    },
+    "credentialAssets": {
+      "description": "Hồ sơ API và key tài khoản đã sẵn sàng để sử dụng.",
+      "label": "Tài sản xác thực",
+      "state": {
+        "disabled": "Hiện chưa có thông tin xác thực có thể dùng lại. Hãy kiểm tra thiết lập tài khoản hoặc hồ sơ API.",
+        "needs_setup": "Thêm hồ sơ API để các công cụ và luồng xuất có thể dùng lại trực tiếp.",
+        "not_applicable": "Môi trường này không cần quản lý hồ sơ API riêng."
+      },
+      "summary_other": "{{count}} hồ sơ API"
+    },
+    "dataHistory": {
+      "description": "Lịch sử sử dụng và số dư có dữ liệu để xem hay chưa.",
+      "label": "Lịch sử dữ liệu",
+      "state": {
+        "disabled": "Hiện chưa lưu lịch sử. Khi bật, các thay đổi sử dụng và số dư sau này sẽ được ghi lại.",
+        "needs_setup": "Lịch sử đã bật nhưng vẫn cần tài khoản hoặc dữ liệu đầu tiên; sau khi có dữ liệu, mục này sẽ tự cập nhật.",
+        "not_applicable": "Môi trường này hiện chưa có lịch sử dữ liệu để xem."
+      },
+      "summary_other": "{{count}} nguồn lịch sử"
+    },
+    "managedSite": {
+      "description": "Quản lý kênh và đồng bộ model cho trang tự quản.",
+      "label": "Trang tự quản",
+      "state": {
+        "disabled": "Chưa kết nối trang tự quản. Khi cần, hãy hoàn tất cấu hình trang trước.",
+        "needs_setup": "Kết nối trang tự quản trước, rồi bạn có thể quản lý kênh hoặc đồng bộ model tại đây.",
+        "not_applicable": "Loại trang này hiện chưa hỗ trợ quản lý trang tự quản."
+      },
+      "summary_other": "{{count}} tính năng quản lý"
+    },
+    "subItems": {
+      "accounts": "Quản lý tài khoản",
+      "apiKeys": "API key",
+      "apiProfiles": "Hồ sơ API",
+      "autoCheckin": "Tự động điểm danh",
+      "balanceHistory": "Lịch sử số dư",
+      "managedSiteChannels": "Quản lý kênh",
+      "managedSiteModelSync": "Đồng bộ model",
+      "siteAnnouncements": "Thông báo trang",
+      "usageAnalytics": "Phân tích sử dụng",
+      "webdavAutoSync": "Tự động đồng bộ WebDAV",
+      "webdavManual": "Sao lưu WebDAV thủ công"
+    }
+  },
+  "coverageStatus": {
+    "configured": "Đã cấu hình",
+    "disabled": "Chưa bật",
+    "needs_setup": "Cần thiết lập",
+    "not_applicable": "Không áp dụng"
+  },
+  "description": "Xem trạng thái hiện tại của tài khoản, khóa, sử dụng và tác vụ tự động.",
+  "sections": {
+    "automationOverview": "Tác vụ tự động",
+    "configurationOverview": "Tổng quan cấu hình",
+    "needsAttention": "Cần xử lý",
+    "recentUsage": "Sử dụng gần đây",
+    "statusSummary": "Tóm tắt trạng thái"
+  },
+  "severity": {
+    "error": "Lỗi",
+    "info": "Thông tin",
+    "warning": "Cảnh báo"
+  },
+  "states": {
+    "allClear": "Hiện không có mục nào cần xử lý.",
+    "loadedWithError": "Một số thông tin tải thất bại. Đang hiển thị dữ liệu có sẵn.",
+    "loading": "Đang tải tổng quan..."
+  },
+  "status": {
+    "accounts": {
+      "description": "Số tài khoản có thể dùng",
+      "label": "Tài khoản"
+    },
+    "attention": {
+      "description": "Mục cần kiểm tra",
+      "label": "Cần xử lý"
+    },
+    "profiles": {
+      "description": "Thông tin độc lập đã lưu",
+      "label": "Hồ sơ"
+    },
+    "todayUsage": {
+      "description": "Yêu cầu hôm nay",
+      "label": "Hôm nay"
+    }
+  },
+  "title": "Tổng quan",
+  "usage": {
+    "activityMix": "Xu hướng gần đây",
+    "empty": {
+      "description": "Sau khi bạn gửi một yêu cầu hoặc đồng bộ lịch sử sử dụng, thẻ này sẽ tự tóm tắt yêu cầu, Token, chi phí hôm nay và xu hướng 7 ngày gần nhất.",
+      "title": "Chưa có bản ghi sử dụng"
+    },
+    "noRecentActivity": "Chưa ghi nhận sử dụng gần đây.",
+    "requestShare": "Tỷ trọng yêu cầu",
+    "sevenDayRequests": "Yêu cầu 7 ngày",
+    "sevenDayTokens": "Token 7 ngày",
+    "todayCost": "Chi phí hôm nay",
+    "todayRequests": "Yêu cầu hôm nay",
+    "todayShare": "Tỷ trọng hôm nay trong 7 ngày gần nhất",
+    "todayTokens": "Token hôm nay",
+    "tokenShare": "Tỷ trọng token"
+  }
+}

@@ -38,4 +38,9 @@ export const SETTINGS_ANCHORS = {
   SITE_ANNOUNCEMENT_NOTIFICATIONS_INTERVAL:
     "site-announcement-notifications-interval",
   SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE: "site-announcement-notifications-page",
+  AUTO_CHECKIN: "auto-checkin",
+  BALANCE_HISTORY: "balance-history",
+  MANAGED_SITE_MODEL_SYNC: "managed-site-model-sync",
+  MANAGED_SITE_SELECTOR: "managed-site-selector",
+  USAGE_HISTORY_SYNC: "usage-history-sync",
 } as const

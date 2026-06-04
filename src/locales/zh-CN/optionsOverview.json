@@ -1,0 +1,235 @@
+{
+  "actions": {
+    "open": "打开"
+  },
+  "attention": {
+    "accountUnhealthy": {
+      "description": "{{reason}}",
+      "title": "{{name}} 状态异常"
+    },
+    "addAccount": {
+      "description": "先添加账号，才能汇总余额、用量和自动任务状态。",
+      "title": "还没有账号"
+    },
+    "addProfile": {
+      "description": "添加 API 凭据后，可在工具和导出流程中复用。",
+      "title": "还没有 API 凭据"
+    }
+  },
+  "autoCheckin": {
+    "actions": {
+      "open": "查看签到",
+      "retryFailed": "重试失败"
+    },
+    "empty": {
+      "disabled": {
+        "description": "你已关闭自动签到。需要自动领取签到奖励时，可以在设置中重新开启。"
+      },
+      "notRun": {
+        "description": "还没有签到记录。确认账号已开启签到检测后，系统会在下次计划时间执行，也可以进入自动签到页手动处理。"
+      }
+    },
+    "lastRun": "上次运行",
+    "metrics": {
+      "failed": "失败",
+      "skipped": "跳过",
+      "success": "成功"
+    },
+    "nextRetry": "下次重试",
+    "nextRun": "下次计划",
+    "notRunYet": "尚未运行",
+    "notScheduled": "未计划",
+    "status": {
+      "disabled": "已停用",
+      "failed": "全部失败",
+      "not_run": "等待首次运行",
+      "partial": "部分成功",
+      "ready": "已就绪",
+      "success": "运行成功"
+    },
+    "summary": "自动签到运行概况"
+  },
+  "automation": {
+    "empty": {
+      "autoCheckin": {
+        "disabled": "想自动领取签到奖励时，先开启自动签到。之后这里会显示下次计划和执行结果。"
+      },
+      "managedSiteModelSync": {
+        "disabled": "需要自动同步自建站点模型时，先开启模型同步。之后这里会显示同步间隔和范围。"
+      },
+      "siteAnnouncements": {
+        "disabled": "想及时看到站点公告时，先开启公告抓取。之后这里会显示最近检查时间和公告数量。"
+      },
+      "webdavAutoSync": {
+        "disabled": "想跨设备备份数据时，先配置 WebDAV 自动同步。之后这里会显示同步策略和范围。"
+      }
+    },
+    "items": {
+      "autoCheckin": {
+        "label": "自动签到"
+      },
+      "managedSiteModelSync": {
+        "allowedModels": "限定模型数",
+        "concurrency": "并发数",
+        "interval": "同步间隔（小时）",
+        "label": "托管站点模型同步",
+        "open": "打开同步"
+      },
+      "siteAnnouncements": {
+        "interval": "抓取间隔（分钟）",
+        "label": "网站公告抓取",
+        "lastChecked": "最近检查",
+        "openPage": "查看公告",
+        "openSettings": "设置抓取",
+        "records": "公告总数",
+        "unread": "未读公告"
+      },
+      "webdavAutoSync": {
+        "domains": "同步范围数",
+        "interval": "同步间隔（分钟）",
+        "label": "WebDAV 备份同步",
+        "open": "打开备份同步",
+        "strategy": "同步策略"
+      }
+    },
+    "neverChecked": "尚未检查",
+    "openItem": "打开 {{name}}",
+    "status": {
+      "enabled": "已启用"
+    }
+  },
+  "configurationOverview": {
+    "accountFoundation": {
+      "description": "账号、余额与健康状态，是其他能力的基础。",
+      "label": "账号基础",
+      "state": {
+        "disabled": "当前还不能读取账号状态，请先检查账号配置是否完整。",
+        "needs_setup": "先添加至少一个账号，总览才能帮你汇总余额、用量和自动任务状态。",
+        "not_applicable": "当前环境不需要添加账号也可以继续使用。"
+      },
+      "summary": "{{count}} 个启用账号"
+    },
+    "automation": {
+      "description": "自动签到与公告抓取是否处于可用状态。",
+      "label": "自动化",
+      "state": {
+        "disabled": "暂时不会自动执行任务。需要时可以开启自动签到或公告抓取。",
+        "needs_setup": "自动任务还缺少可执行账号或检测配置，先完成对应设置后再开启。",
+        "not_applicable": "当前环境暂时没有可用的自动任务。"
+      },
+      "summary": "{{count}} 项自动化能力"
+    },
+    "backupSync": {
+      "description": "本地数据备份与跨设备同步配置。",
+      "label": "备份同步",
+      "state": {
+        "disabled": "数据只保存在本机。需要跨设备备份时，可以开启 WebDAV 同步。",
+        "needs_setup": "先连接 WebDAV，才能把本地数据备份到远端。",
+        "not_applicable": "当前环境暂时不能使用备份同步。"
+      },
+      "summary": "{{count}} 项同步配置"
+    },
+    "credentialAssets": {
+      "description": "API 凭据与账号密钥是否已经准备好。",
+      "label": "凭据资产",
+      "state": {
+        "disabled": "当前还没有可复用的凭据，请先检查账号或 API 凭据配置。",
+        "needs_setup": "添加 API 凭据后，就能在工具和导出流程中直接复用。",
+        "not_applicable": "当前环境不需要单独维护 API 凭据。"
+      },
+      "summary": "{{count}} 个 API 凭据"
+    },
+    "dataHistory": {
+      "description": "用量与余额历史是否已有可查看数据。",
+      "label": "数据历史",
+      "state": {
+        "disabled": "暂时不会保存历史记录。开启后，后续用量和余额变化会持续沉淀。",
+        "needs_setup": "历史记录已开启，但还需要账号或首批数据；产生数据后这里会自动更新。",
+        "not_applicable": "当前环境暂时没有可查看的数据历史。"
+      },
+      "summary": "{{count}} 项历史数据"
+    },
+    "managedSite": {
+      "description": "自建站点的渠道管理与模型同步能力。",
+      "label": "自建站点",
+      "state": {
+        "disabled": "还没有连接自建站点，需要时可以先完成站点配置。",
+        "needs_setup": "先连接自建站点，才能在这里管理渠道或同步模型。",
+        "not_applicable": "当前站点类型暂不支持自建站点管理。"
+      },
+      "summary": "{{count}} 项管理能力"
+    },
+    "subItems": {
+      "accounts": "账号管理",
+      "apiKeys": "API 密钥",
+      "apiProfiles": "API 凭据",
+      "autoCheckin": "自动签到",
+      "balanceHistory": "余额历史",
+      "managedSiteChannels": "渠道管理",
+      "managedSiteModelSync": "模型同步",
+      "siteAnnouncements": "网站公告",
+      "usageAnalytics": "用量分析",
+      "webdavAutoSync": "WebDAV 自动同步",
+      "webdavManual": "WebDAV 手动备份"
+    }
+  },
+  "coverageStatus": {
+    "configured": "已配置",
+    "disabled": "未启用",
+    "needs_setup": "待设置",
+    "not_applicable": "不适用"
+  },
+  "description": "查看账号、密钥、用量和自动任务的当前状态。",
+  "sections": {
+    "automationOverview": "自动化执行",
+    "configurationOverview": "配置概览",
+    "needsAttention": "需要处理",
+    "recentUsage": "近期使用",
+    "statusSummary": "状态摘要"
+  },
+  "severity": {
+    "error": "错误",
+    "info": "提示",
+    "warning": "警告"
+  },
+  "states": {
+    "allClear": "当前没有需要处理的事项。",
+    "loadedWithError": "部分信息加载失败，已显示可用数据。",
+    "loading": "正在加载总览..."
+  },
+  "status": {
+    "accounts": {
+      "description": "可用账号数量",
+      "label": "账号"
+    },
+    "attention": {
+      "description": "需要检查的事项",
+      "label": "待处理"
+    },
+    "profiles": {
+      "description": "已保存的独立凭据",
+      "label": "凭据库"
+    },
+    "todayUsage": {
+      "description": "今日请求次数",
+      "label": "今日用量"
+    }
+  },
+  "title": "总览",
+  "usage": {
+    "activityMix": "近期趋势",
+    "empty": {
+      "description": "发起一次请求或完成用量历史同步后，这里会自动汇总今日请求、Token、消耗和近 7 日趋势。",
+      "title": "还没有用量记录"
+    },
+    "noRecentActivity": "暂无近期用量记录。",
+    "requestShare": "请求占比",
+    "sevenDayRequests": "近 7 日请求",
+    "sevenDayTokens": "近 7 日 Token",
+    "todayCost": "今日消耗",
+    "todayRequests": "今日请求",
+    "todayShare": "今日在近 7 日中的占比",
+    "todayTokens": "今日 Token",
+    "tokenShare": "Token 占比"
+  }
+}

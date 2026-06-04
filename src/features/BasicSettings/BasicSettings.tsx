@@ -167,24 +167,26 @@ const ANCHOR_TO_TAB: Record<string, TabId> = {
   [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED]: "general",
   [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_INTERVAL]: "general",
   [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_PAGE]: "general",
-  "balance-history": "balanceHistory",
+  [SETTINGS_ANCHORS.BALANCE_HISTORY]: "balanceHistory",
   "account-management": "accountManagement",
   "auto-provision-key-on-account-add": "accountManagement",
   "sorting-priority": "accountManagement",
   sorting: "accountManagement",
   "auto-refresh": "refresh",
   refresh: "refresh",
-  "auto-checkin": "checkinRedeem",
+  [SETTINGS_ANCHORS.AUTO_CHECKIN]: "checkinRedeem",
   "checkin-redeem": "checkinRedeem",
   checkin: "checkinRedeem",
   "web-ai-api-check": "webAiApiCheck",
-  "usage-history-sync": "accountUsage",
+  [SETTINGS_ANCHORS.USAGE_HISTORY_SYNC]: "accountUsage",
   "usage-history-sync-state": "accountUsage",
   webdav: "dataBackup",
   "webdav-auto-sync": "dataBackup",
   "import-export-entry": "dataBackup",
   "new-api": "managedSite",
   "new-api-model-sync": "managedSite",
+  [SETTINGS_ANCHORS.MANAGED_SITE_MODEL_SYNC]: "managedSite",
+  [SETTINGS_ANCHORS.MANAGED_SITE_SELECTOR]: "managedSite",
   "cli-proxy": "cliProxy",
   "claude-code-router": "claudeCodeRouter",
   "dangerous-zone": "general",
@@ -225,6 +227,21 @@ function getDesktopTabRowWidth(
 }
 
 /**
+ * Resolve legacy anchor-only Basic Settings links to the tab that owns them.
+ */
+function getTabFromSearchAnchor(): TabId | null {
+  if (typeof window === "undefined") {
+    return null
+  }
+
+  const anchor = new URLSearchParams(window.location.search)
+    .get("anchor")
+    ?.trim()
+
+  return anchor ? ANCHOR_TO_TAB[anchor] ?? null : null
+}
+
+/**
  * Resolve the currently requested Basic Settings tab from the URL state.
  */
 function resolveSelectedTabIndexFromUrl(): number {
@@ -240,6 +257,16 @@ function resolveSelectedTabIndexFromUrl(): number {
   if (tab) {
     const normalizedTab = tab === "sync" ? "accountUsage" : tab
     const index = TAB_CONFIGS.findIndex((config) => config.id === normalizedTab)
+    if (index >= 0) {
+      return index
+    }
+  }
+
+  const tabFromSearchAnchor = getTabFromSearchAnchor()
+  if (tabFromSearchAnchor) {
+    const index = TAB_CONFIGS.findIndex(
+      (config) => config.id === tabFromSearchAnchor,
+    )
     if (index >= 0) {
       return index
     }

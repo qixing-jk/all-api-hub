@@ -1,9 +1,9 @@
-import { ArrowPathIcon } from "@heroicons/react/24/outline"
 import type { TFunction } from "i18next"
 import { useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { OPTIONS_CAPABILITY_ICONS } from "~/components/icons/optionsPageIcons"
 import {
   Alert,
   BodySmall,
@@ -92,6 +92,7 @@ import { WebDAVDecryptPasswordModal } from "./WebDAVDecryptPasswordModal"
 const logger = createLogger("WebDAVSettings")
 const webDavSettingsSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsWebDavSettings
+const WebdavSyncIcon = OPTIONS_CAPABILITY_ICONS.webdavSync
 const webDavAnalyticsContext = (
   actionId:
     | typeof PRODUCT_ANALYTICS_ACTION_IDS.DecryptImportWebDavBackup
@@ -862,7 +863,7 @@ export default function WebDAVSettings() {
       <Card id={WEBDAV_TARGET_IDS.root} padding="none">
         <CardHeader>
           <div className="mb-1 flex items-center space-x-2">
-            <ArrowPathIcon className="h-5 w-5 text-indigo-600 dark:text-indigo-400" />
+            <WebdavSyncIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
             <CardTitle className="mb-0">{t("webdav.title")}</CardTitle>
           </div>
           <CardDescription>{t("webdav.configDesc")}</CardDescription>

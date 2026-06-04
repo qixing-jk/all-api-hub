@@ -1,4 +1,4 @@
-import { ArrowTopRightOnSquareIcon } from "@heroicons/react/24/outline"
+import { ArrowUpRight } from "lucide-react"
 import type { ComponentProps } from "react"
 
 /**
@@ -7,7 +7,7 @@ import type { ComponentProps } from "react"
  * extension rather than a separate browser tab.
  */
 export function WorkflowTransitionIcon(
-  props: ComponentProps<typeof ArrowTopRightOnSquareIcon>,
+  props: ComponentProps<typeof ArrowUpRight>,
 ) {
-  return <ArrowTopRightOnSquareIcon {...props} />
+  return <ArrowUpRight {...props} />
 }

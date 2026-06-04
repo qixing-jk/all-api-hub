@@ -7,6 +7,7 @@ import type { DevOptionsMenuItemId } from "./devOptionsMenuIds"
  * consistent across the options UI, background scripts, and navigation helpers.
  */
 export const MENU_ITEM_IDS = {
+  OVERVIEW: "overview",
   BASIC: "basic",
   ACCOUNT: "account",
   BOOKMARK: "bookmark",

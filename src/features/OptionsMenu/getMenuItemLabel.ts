@@ -17,6 +17,8 @@ export function getMenuItemLabel(
   itemId: OptionsPageMenuItemId,
 ): string {
   switch (itemId) {
+    case MENU_ITEM_IDS.OVERVIEW:
+      return t("ui:navigation.overview")
     case MENU_ITEM_IDS.BASIC:
       return t("ui:navigation.basic")
     case MENU_ITEM_IDS.ACCOUNT:

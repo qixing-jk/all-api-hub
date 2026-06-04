@@ -1,0 +1,235 @@
+{
+  "actions": {
+    "open": "開く"
+  },
+  "attention": {
+    "accountUnhealthy": {
+      "description": "{{reason}}",
+      "title": "{{name}} に状態の問題があります"
+    },
+    "addAccount": {
+      "description": "残高、利用状況、自動タスクを集計するには、まずアカウントを追加してください。",
+      "title": "アカウントがありません"
+    },
+    "addProfile": {
+      "description": "API 認証情報を追加すると、ツールやエクスポートで再利用できます。",
+      "title": "API 認証情報がありません"
+    }
+  },
+  "autoCheckin": {
+    "actions": {
+      "open": "チェックインを見る",
+      "retryFailed": "失敗を再試行"
+    },
+    "empty": {
+      "disabled": {
+        "description": "自動チェックインはオフです。チェックイン報酬を自動で受け取りたいときは、設定で再度オンにできます。"
+      },
+      "notRun": {
+        "description": "まだチェックイン記録がありません。アカウントのチェックイン検出を有効にすると、次回予定で実行されます。自動チェックインページで手動処理することもできます。"
+      }
+    },
+    "lastRun": "前回実行",
+    "metrics": {
+      "failed": "失敗",
+      "skipped": "スキップ",
+      "success": "成功"
+    },
+    "nextRetry": "次回再試行",
+    "nextRun": "次回予定",
+    "notRunYet": "未実行",
+    "notScheduled": "未予定",
+    "status": {
+      "disabled": "無効",
+      "failed": "失敗",
+      "not_run": "初回実行待ち",
+      "partial": "一部成功",
+      "ready": "準備完了",
+      "success": "成功"
+    },
+    "summary": "自動チェックイン実行サマリー"
+  },
+  "automation": {
+    "empty": {
+      "autoCheckin": {
+        "disabled": "チェックイン報酬を自動で受け取りたいときは、自動チェックインをオンにしてください。以後の予定と結果がここに表示されます。"
+      },
+      "managedSiteModelSync": {
+        "disabled": "自建サイトのモデルを自動更新したいときは、モデル同期をオンにしてください。同期間隔と範囲がここに表示されます。"
+      },
+      "siteAnnouncements": {
+        "disabled": "サイトのお知らせを見逃したくないときは、公告取得をオンにしてください。最近の確認時刻と公告数がここに表示されます。"
+      },
+      "webdavAutoSync": {
+        "disabled": "端末間でバックアップしたいときは、WebDAV 自動同期を設定してください。同期戦略と範囲がここに表示されます。"
+      }
+    },
+    "items": {
+      "autoCheckin": {
+        "label": "自動チェックイン"
+      },
+      "managedSiteModelSync": {
+        "allowedModels": "限定モデル数",
+        "concurrency": "並行数",
+        "interval": "同期間隔（時間）",
+        "label": "管理サイトモデル同期",
+        "open": "同期を開く"
+      },
+      "siteAnnouncements": {
+        "interval": "取得間隔（分）",
+        "label": "サイト公告の取得",
+        "lastChecked": "最終チェック",
+        "openPage": "公告を表示",
+        "openSettings": "取得設定",
+        "records": "公告総数",
+        "unread": "未読公告"
+      },
+      "webdavAutoSync": {
+        "domains": "同期範囲数",
+        "interval": "同期間隔（分）",
+        "label": "WebDAV バックアップ同期",
+        "open": "バックアップ同期を開く",
+        "strategy": "同期戦略"
+      }
+    },
+    "neverChecked": "未チェック",
+    "openItem": "{{name}}を開く",
+    "status": {
+      "enabled": "有効"
+    }
+  },
+  "configurationOverview": {
+    "accountFoundation": {
+      "description": "アカウント、残高、ヘルス状態は他の機能の土台です。",
+      "label": "アカウント基盤",
+      "state": {
+        "disabled": "まだアカウント状態を読み取れません。アカウント設定が完了しているか確認してください。",
+        "needs_setup": "まずアカウントを 1 つ追加すると、概要で残高、利用状況、自動タスクの状態をまとめて確認できます。",
+        "not_applicable": "この環境ではアカウントを追加しなくても続行できます。"
+      },
+      "summary_other": "有効なアカウント {{count}} 件"
+    },
+    "automation": {
+      "description": "自動チェックインと公告取得が利用可能かを示します。",
+      "label": "自動化",
+      "state": {
+        "disabled": "今はタスクが自動実行されません。必要なときに自動チェックインや公告取得をオンにできます。",
+        "needs_setup": "自動タスクには実行できるアカウントまたは検出設定がまだ必要です。先に関連設定を完了してください。",
+        "not_applicable": "この環境では利用できる自動タスクがまだありません。"
+      },
+      "summary_other": "自動化機能 {{count}} 件"
+    },
+    "backupSync": {
+      "description": "ローカルデータのバックアップと端末間同期の設定です。",
+      "label": "バックアップ同期",
+      "state": {
+        "disabled": "データはこの端末にのみ保存されています。端末間でバックアップしたいときは WebDAV 同期をオンにできます。",
+        "needs_setup": "まず WebDAV に接続すると、ローカルデータをリモートへバックアップできます。",
+        "not_applicable": "この環境ではバックアップ同期をまだ利用できません。"
+      },
+      "summary_other": "同期設定 {{count}} 件"
+    },
+    "credentialAssets": {
+      "description": "API 認証情報とアカウントキーが利用可能かを示します。",
+      "label": "認証情報資産",
+      "state": {
+        "disabled": "まだ再利用できる認証情報がありません。アカウントまたは API 認証情報の設定を確認してください。",
+        "needs_setup": "API 認証情報を追加すると、ツールやエクスポートでそのまま再利用できます。",
+        "not_applicable": "この環境では API 認証情報を個別に管理する必要はありません。"
+      },
+      "summary_other": "API 認証情報 {{count}} 件"
+    },
+    "dataHistory": {
+      "description": "利用履歴と残高履歴に確認できるデータがあるかを示します。",
+      "label": "データ履歴",
+      "state": {
+        "disabled": "今は履歴を保存していません。オンにすると、今後の利用状況や残高の変化が蓄積されます。",
+        "needs_setup": "履歴はオンですが、アカウントまたは最初のデータがまだ必要です。データが発生するとここに反映されます。",
+        "not_applicable": "この環境では確認できるデータ履歴がまだありません。"
+      },
+      "summary_other": "履歴データ {{count}} 件"
+    },
+    "managedSite": {
+      "description": "自建サイトのチャネル管理とモデル同期機能です。",
+      "label": "自建サイト",
+      "state": {
+        "disabled": "自建サイトはまだ接続されていません。必要になったら先にサイト設定を完了してください。",
+        "needs_setup": "まず自建サイトに接続すると、ここでチャネル管理やモデル同期を使えます。",
+        "not_applicable": "このサイト種別では自建サイト管理をまだ利用できません。"
+      },
+      "summary_other": "管理機能 {{count}} 件"
+    },
+    "subItems": {
+      "accounts": "アカウント管理",
+      "apiKeys": "API キー",
+      "apiProfiles": "API 認証情報",
+      "autoCheckin": "自動チェックイン",
+      "balanceHistory": "残高履歴",
+      "managedSiteChannels": "チャネル管理",
+      "managedSiteModelSync": "モデル同期",
+      "siteAnnouncements": "サイト公告",
+      "usageAnalytics": "利用分析",
+      "webdavAutoSync": "WebDAV 自動同期",
+      "webdavManual": "WebDAV 手動バックアップ"
+    }
+  },
+  "coverageStatus": {
+    "configured": "設定済み",
+    "disabled": "未有効化",
+    "needs_setup": "設定が必要",
+    "not_applicable": "対象外"
+  },
+  "description": "アカウント、キー、利用状況、自動タスクの現在の状態を確認します。",
+  "sections": {
+    "automationOverview": "自動化実行",
+    "configurationOverview": "設定概要",
+    "needsAttention": "対応が必要",
+    "recentUsage": "最近の利用",
+    "statusSummary": "状態サマリー"
+  },
+  "severity": {
+    "error": "エラー",
+    "info": "情報",
+    "warning": "警告"
+  },
+  "states": {
+    "allClear": "現在対応が必要な項目はありません。",
+    "loadedWithError": "一部の情報を読み込めませんでした。利用可能なデータを表示しています。",
+    "loading": "概要を読み込み中..."
+  },
+  "status": {
+    "accounts": {
+      "description": "利用可能なアカウント数",
+      "label": "アカウント"
+    },
+    "attention": {
+      "description": "確認が必要な項目",
+      "label": "対応"
+    },
+    "profiles": {
+      "description": "保存済みの独立認証情報",
+      "label": "認証情報"
+    },
+    "todayUsage": {
+      "description": "今日のリクエスト数",
+      "label": "今日"
+    }
+  },
+  "title": "概要",
+  "usage": {
+    "activityMix": "最近の傾向",
+    "empty": {
+      "description": "リクエストを送信するか利用履歴を同期すると、今日のリクエスト、Token、消費量、直近 7 日間の傾向がここに自動でまとまります。",
+      "title": "利用記録はまだありません"
+    },
+    "noRecentActivity": "最近の利用記録はありません。",
+    "requestShare": "リクエスト比率",
+    "sevenDayRequests": "7日間のリクエスト",
+    "sevenDayTokens": "7日間のトークン",
+    "todayCost": "今日の消費",
+    "todayRequests": "今日のリクエスト",
+    "todayShare": "直近7日間に占める今日の割合",
+    "todayTokens": "今日のトークン",
+    "tokenShare": "トークン比率"
+  }
+}

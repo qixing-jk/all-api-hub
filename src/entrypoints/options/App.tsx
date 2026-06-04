@@ -30,6 +30,8 @@ function mapOptionsMenuItemToAnalyticsPageId(
   menuItem: string,
 ): ProductAnalyticsPageId {
   switch (menuItem) {
+    case MENU_ITEM_IDS.OVERVIEW:
+      return PRODUCT_ANALYTICS_PAGE_IDS.OptionsOverview
     case MENU_ITEM_IDS.ACCOUNT:
       return PRODUCT_ANALYTICS_PAGE_IDS.OptionsAccountManagement
     case MENU_ITEM_IDS.BOOKMARK:
@@ -112,7 +114,7 @@ function OptionsPage() {
   })
 
   const handleTitleClick = () => {
-    handleMenuItemChange(MENU_ITEM_IDS.BASIC)
+    handleMenuItemChange(MENU_ITEM_IDS.OVERVIEW)
   }
 
   const handleMenuItemClick = (itemId: string) => {

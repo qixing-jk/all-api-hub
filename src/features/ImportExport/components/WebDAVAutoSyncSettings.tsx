@@ -8,6 +8,7 @@ import { useCallback, useEffect, useMemo, useState } from "react"
 import toast from "react-hot-toast"
 import { useTranslation } from "react-i18next"
 
+import { OPTIONS_CAPABILITY_ICONS } from "~/components/icons/optionsPageIcons"
 import {
   Alert,
   Badge,
@@ -57,6 +58,7 @@ import { WEBDAV_AUTO_SYNC_TARGET_IDS } from "../searchTargets"
 const logger = createLogger("WebDAVAutoSyncSettings")
 const autoSyncSurface =
   PRODUCT_ANALYTICS_SURFACE_IDS.OptionsWebDavAutoSyncSettings
+const WebdavSyncIcon = OPTIONS_CAPABILITY_ICONS.webdavSync
 
 /**
  * WebDAV automatic sync configuration card: toggles auto-sync, schedule, strategy, and shows status/actions.
@@ -287,7 +289,7 @@ export default function WebDAVAutoSyncSettings() {
       <CardHeader>
         <div className="mb-1 flex items-center justify-between">
           <div className="flex items-center space-x-2">
-            <ArrowPathIcon className="h-5 w-5 text-green-600 dark:text-green-400" />
+            <WebdavSyncIcon className="h-5 w-5 text-sky-600 dark:text-sky-400" />
             <CardTitle className="mb-0">{t("webdav.autoSync.title")}</CardTitle>
           </div>
           {getStatusBadge()}

@@ -1,0 +1,241 @@
+{
+  "actions": {
+    "open": "Open"
+  },
+  "attention": {
+    "accountUnhealthy": {
+      "description": "{{reason}}",
+      "title": "{{name}} has a health issue"
+    },
+    "addAccount": {
+      "description": "Add an account before balances, usage, and automation can be summarized.",
+      "title": "No accounts yet"
+    },
+    "addProfile": {
+      "description": "Add API credentials so tools and export flows can reuse them.",
+      "title": "No API profiles yet"
+    }
+  },
+  "autoCheckin": {
+    "actions": {
+      "open": "View check-in",
+      "retryFailed": "Retry failed"
+    },
+    "empty": {
+      "disabled": {
+        "description": "Auto check-in is turned off. Turn it back on when you want the extension to claim check-in rewards for you."
+      },
+      "notRun": {
+        "description": "No check-in has run yet. After account detection is enabled, the next schedule will handle it, or you can open auto check-in to run it manually."
+      }
+    },
+    "lastRun": "Last run",
+    "metrics": {
+      "failed": "Failed",
+      "skipped": "Skipped",
+      "success": "Success"
+    },
+    "nextRetry": "Next retry",
+    "nextRun": "Next run",
+    "notRunYet": "Not run yet",
+    "notScheduled": "Not scheduled",
+    "status": {
+      "disabled": "Disabled",
+      "failed": "Failed",
+      "not_run": "Waiting for first run",
+      "partial": "Partial success",
+      "ready": "Ready",
+      "success": "Successful"
+    },
+    "summary": "Auto check-in run summary"
+  },
+  "automation": {
+    "empty": {
+      "autoCheckin": {
+        "disabled": "Turn on auto check-in when you want rewards claimed automatically. Future schedules and results will appear here."
+      },
+      "managedSiteModelSync": {
+        "disabled": "Turn on model sync when you want managed-site models refreshed automatically. Sync interval and scope will appear here."
+      },
+      "siteAnnouncements": {
+        "disabled": "Turn on announcement polling when you want site updates surfaced here. Recent checks and announcement counts will appear here."
+      },
+      "webdavAutoSync": {
+        "disabled": "Configure WebDAV auto sync when you want cross-device backups. Sync strategy and scope will appear here."
+      }
+    },
+    "items": {
+      "autoCheckin": {
+        "label": "Auto check-in"
+      },
+      "managedSiteModelSync": {
+        "allowedModels": "Allowed models",
+        "concurrency": "Concurrency",
+        "interval": "Sync interval (hours)",
+        "label": "Managed site model sync",
+        "open": "Open sync"
+      },
+      "siteAnnouncements": {
+        "interval": "Polling interval (minutes)",
+        "label": "Site announcement polling",
+        "lastChecked": "Last checked",
+        "openPage": "View announcements",
+        "openSettings": "Polling settings",
+        "records": "Total announcements",
+        "unread": "Unread announcements"
+      },
+      "webdavAutoSync": {
+        "domains": "Sync scopes",
+        "interval": "Sync interval (minutes)",
+        "label": "WebDAV backup sync",
+        "open": "Open backup sync",
+        "strategy": "Sync strategy"
+      }
+    },
+    "neverChecked": "Not checked yet",
+    "openItem": "Open {{name}}",
+    "status": {
+      "enabled": "Enabled"
+    }
+  },
+  "configurationOverview": {
+    "accountFoundation": {
+      "description": "Accounts, balances, and health state that other features depend on.",
+      "label": "Account foundation",
+      "state": {
+        "disabled": "Account status cannot be read yet. Check that the account setup is complete.",
+        "needs_setup": "Add at least one account so the overview can summarize balances, usage, and automation status for you.",
+        "not_applicable": "You can continue without adding an account in this environment."
+      },
+      "summary_one": "{{count}} enabled account",
+      "summary_other": "{{count}} enabled accounts"
+    },
+    "automation": {
+      "description": "Whether auto check-in and announcement polling are ready to run.",
+      "label": "Automation",
+      "state": {
+        "disabled": "No tasks will run automatically for now. Turn on check-in or announcement polling when you need them.",
+        "needs_setup": "Automation still needs an eligible account or detection setup before it can run.",
+        "not_applicable": "There are no automation tasks available in this environment yet."
+      },
+      "summary_one": "{{count}} automation capability",
+      "summary_other": "{{count}} automation capabilities"
+    },
+    "backupSync": {
+      "description": "Local data backup and cross-device sync configuration.",
+      "label": "Backup sync",
+      "state": {
+        "disabled": "Your data stays on this device. Turn on WebDAV sync when you want a cross-device backup.",
+        "needs_setup": "Connect WebDAV first so local data can be backed up remotely.",
+        "not_applicable": "Backup sync is not available in this environment yet."
+      },
+      "summary_one": "{{count}} sync configuration",
+      "summary_other": "{{count}} sync configurations"
+    },
+    "credentialAssets": {
+      "description": "API profiles and account keys prepared for use.",
+      "label": "Credential assets",
+      "state": {
+        "disabled": "There are no reusable credentials yet. Check account or API profile setup.",
+        "needs_setup": "Add API profiles so tools and export flows can reuse them directly.",
+        "not_applicable": "This environment does not need separate API profiles."
+      },
+      "summary_one": "{{count}} API profile",
+      "summary_other": "{{count}} API profiles"
+    },
+    "dataHistory": {
+      "description": "Whether usage and balance history have data to inspect.",
+      "label": "Data history",
+      "state": {
+        "disabled": "History is not being saved yet. Turn it on to keep future usage and balance changes.",
+        "needs_setup": "History is enabled, but it still needs an account or first data point. This section will update after data appears.",
+        "not_applicable": "There is no data history to view in this environment yet."
+      },
+      "summary_one": "{{count}} history source",
+      "summary_other": "{{count}} history sources"
+    },
+    "managedSite": {
+      "description": "Managed-site channel administration and model sync capabilities.",
+      "label": "Managed site",
+      "state": {
+        "disabled": "No managed site is connected yet. Connect one when you need channel or model management.",
+        "needs_setup": "Connect a managed site first, then you can manage channels or sync models here.",
+        "not_applicable": "This site type does not support managed-site administration yet."
+      },
+      "summary_one": "{{count}} management capability",
+      "summary_other": "{{count}} management capabilities"
+    },
+    "subItems": {
+      "accounts": "Accounts",
+      "apiKeys": "API keys",
+      "apiProfiles": "API profiles",
+      "autoCheckin": "Auto check-in",
+      "balanceHistory": "Balance history",
+      "managedSiteChannels": "Channel management",
+      "managedSiteModelSync": "Model sync",
+      "siteAnnouncements": "Site announcements",
+      "usageAnalytics": "Usage analytics",
+      "webdavAutoSync": "WebDAV auto sync",
+      "webdavManual": "WebDAV manual backup"
+    }
+  },
+  "coverageStatus": {
+    "configured": "Configured",
+    "disabled": "Not enabled",
+    "needs_setup": "Needs setup",
+    "not_applicable": "Not applicable"
+  },
+  "description": "Review the current state of accounts, keys, usage, and automated tasks.",
+  "sections": {
+    "automationOverview": "Automation runs",
+    "configurationOverview": "Configuration Overview",
+    "needsAttention": "Needs Attention",
+    "recentUsage": "Recent Usage",
+    "statusSummary": "Status Summary"
+  },
+  "severity": {
+    "error": "Error",
+    "info": "Info",
+    "warning": "Warning"
+  },
+  "states": {
+    "allClear": "There is nothing that needs attention right now.",
+    "loadedWithError": "Some information failed to load. Showing available data.",
+    "loading": "Loading overview..."
+  },
+  "status": {
+    "accounts": {
+      "description": "Usable account count",
+      "label": "Accounts"
+    },
+    "attention": {
+      "description": "Items to check",
+      "label": "Attention"
+    },
+    "profiles": {
+      "description": "Saved standalone credentials",
+      "label": "Profiles"
+    },
+    "todayUsage": {
+      "description": "Requests today",
+      "label": "Today"
+    }
+  },
+  "title": "Overview",
+  "usage": {
+    "activityMix": "Recent trend",
+    "empty": {
+      "description": "After you send a request or sync usage history, this card will summarize today's requests, tokens, cost, and the latest 7-day trend.",
+      "title": "No usage recorded yet"
+    },
+    "noRecentActivity": "No recent usage recorded.",
+    "requestShare": "Request share",
+    "sevenDayRequests": "7-day requests",
+    "sevenDayTokens": "7-day tokens",
+    "todayCost": "Today cost",
+    "todayRequests": "Today requests",
+    "todayShare": "Today's share of the latest 7 days",
+    "todayTokens": "Today tokens",
+    "tokenShare": "Token share"
+  }
+}
