@@ -208,6 +208,25 @@ describe("model sync operation helpers", () => {
     )
   })
 
+  it("rejects model sync for AxonHub because model fetch and writeback are not supported", async () => {
+    mockedUserPreferences.getPreferences.mockResolvedValueOnce({
+      managedSiteType: SITE_TYPES.AXON_HUB,
+      axonHub: {
+        baseUrl: "https://axon.example.com",
+        email: "admin@example.com",
+        password: "admin-password",
+      },
+      managedSiteModelSync: {
+        ...(DEFAULT_PREFERENCES as any).managedSiteModelSync,
+      },
+    })
+
+    await expect(modelSyncScheduler.executeSync()).rejects.toThrow(
+      "messages:axonhub.unsupportedModelSync",
+    )
+    expect(mockedModelSyncService).not.toHaveBeenCalled()
+  })
+
   it("throws the config-missing message when Claude Code Hub admin config is unavailable", async () => {
     mockedUserPreferences.getPreferences.mockResolvedValueOnce({
       managedSiteType: SITE_TYPES.CLAUDE_CODE_HUB,

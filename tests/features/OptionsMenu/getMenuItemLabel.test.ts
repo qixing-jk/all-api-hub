@@ -14,6 +14,9 @@ describe("getMenuItemLabel", () => {
   const t = (key: string) => key
 
   it("returns the expected translation key for every stable menu item", () => {
+    expect(getMenuItemLabel(t as any, MENU_ITEM_IDS.OVERVIEW)).toBe(
+      "ui:navigation.overview",
+    )
     expect(getMenuItemLabel(t as any, MENU_ITEM_IDS.BASIC)).toBe(
       "ui:navigation.basic",
     )

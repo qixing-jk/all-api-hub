@@ -19,9 +19,12 @@
     "pollingSettingsLink": "自動取得を設定"
   },
   "empty": {
+    "addAccount": "アカウントを追加",
     "description": "バックグラウンド確認で新しい公告が見つかるとここに表示されます。",
     "descriptionWhenPollingDisabled": "今すぐ手動確認できます。自動取得は設定で管理できます。",
     "filtered": "現在のフィルターに一致する公告はありません",
+    "noAccounts": "公告確認の前にアカウントを追加してください",
+    "noAccountsDesc": "公告確認には、どのサイトを取得対象にするか判断するため、有効なアカウントが少なくとも 1 つ必要です。",
     "pollingSettingsLink": "自動取得を設定",
     "title": "公告記録はありません"
   },

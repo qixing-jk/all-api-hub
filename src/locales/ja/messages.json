@@ -38,7 +38,8 @@
     "importFailed": "インポートに失敗しました。不明なエラーが発生しました",
     "importSuccess": "新しいチャネル {{channelName}} を正常にインポートしました",
     "modelsMissing": "少なくとも 1 つのモデルを指定してください",
-    "noChannelsToSync": "同期するチャネルがありません"
+    "noChannelsToSync": "同期するチャネルがありません",
+    "unsupportedModelSync": "このバージョンでは AxonHub の管理サイトモデル同期はサポートされていません"
   },
   "background": {
     "cannotCreateWindow": "ウィンドウを作成できません",

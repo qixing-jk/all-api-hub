@@ -9,7 +9,9 @@ import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteContext,
   getManagedSiteNoChannelsToSyncMessage,
+  getManagedSiteUnsupportedModelSyncMessage,
   ManagedSiteMessagesKey,
+  supportsManagedSiteModelSync,
 } from "~/services/managedSites/utils/managedSite"
 import { ModelRedirectService } from "~/services/models/modelRedirect"
 import { notifyTaskResult } from "~/services/notifications/taskNotificationService"
@@ -448,8 +450,8 @@ class ModelSyncScheduler {
       )
     }
 
-    if (siteType === SITE_TYPES.CLAUDE_CODE_HUB) {
-      throw new Error(t("messages:claudecodehub.unsupportedModelSync"))
+    if (!supportsManagedSiteModelSync(siteType)) {
+      throw new Error(getManagedSiteUnsupportedModelSyncMessage(t, messagesKey))
     }
 
     // Initialize service (for non-Octopus sites)

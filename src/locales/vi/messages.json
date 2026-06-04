@@ -38,7 +38,8 @@
     "importFailed": "Nhập thất bại, đã xảy ra lỗi không xác định",
     "importSuccess": "Đã nhập thành công kênh mới {{channelName}}",
     "modelsMissing": "Vui lòng điền ít nhất một mô hình",
-    "noChannelsToSync": "Không có kênh nào để đồng bộ"
+    "noChannelsToSync": "Không có kênh nào để đồng bộ",
+    "unsupportedModelSync": "Phiên bản hiện tại không hỗ trợ đồng bộ mô hình trạm quản lý AxonHub"
   },
   "background": {
     "cannotCreateWindow": "Không thể tạo cửa sổ",

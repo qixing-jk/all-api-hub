@@ -6,9 +6,11 @@ import { OptionsPageSettingsTitleAction } from "~/components/OptionsPageSettings
 import { PageHeader } from "~/components/PageHeader"
 import { Button } from "~/components/ui"
 import { EmptyState } from "~/components/ui/EmptyState"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useUserPreferencesContext } from "~/contexts/UserPreferencesContext"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -31,8 +33,9 @@ import type {
   SiteAnnouncementSiteState,
 } from "~/types/siteAnnouncements"
 import { getErrorMessage } from "~/utils/core/error"
+import { createLogger } from "~/utils/core/logger"
 import { showResultToast } from "~/utils/core/toastHelpers"
-import { openSettingsTab } from "~/utils/navigation"
+import { openSettingsTab, pushWithinOptionsPage } from "~/utils/navigation"
 
 import { SiteAnnouncementsFiltersCard } from "./components/SiteAnnouncementsFiltersCard"
 import { SiteAnnouncementsList } from "./components/SiteAnnouncementsList"
@@ -54,6 +57,24 @@ interface SiteAnnouncementsPageProps {
 const textLinkClassName =
   "font-medium text-blue-600 underline-offset-2 hover:underline focus-visible:rounded-sm focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:outline-none dark:text-blue-400"
 
+const logger = createLogger("SiteAnnouncementsPage")
+
+/**
+ * Counts enabled accounts for announcement empty-state routing.
+ */
+async function resolveEnabledAccountCount(): Promise<number | null> {
+  try {
+    const accounts = await accountStorage.getAllAccounts()
+    return accounts.filter((account) => account.disabled !== true).length
+  } catch (error) {
+    logger.warn(
+      "Failed to load accounts for site announcements empty state",
+      error,
+    )
+    return null
+  }
+}
+
 /**
  * Options page for locally cached provider-site announcements.
  */
@@ -74,15 +95,23 @@ export default function SiteAnnouncementsPage({
     () => new Set(routeParams?.recordId ? [routeParams.recordId] : []),
   )
   const [loadError, setLoadError] = useState<string | null>(null)
+  const [enabledAccountCount, setEnabledAccountCount] = useState<number | null>(
+    null,
+  )
 
   const loadData = useCallback(async () => {
     setIsLoading(true)
     setLoadError(null)
     try {
-      const [recordsResponse, statusResponse] = await Promise.all([
-        sendSiteAnnouncementsMessage(SiteAnnouncementsMessageTypes.ListRecords),
-        sendSiteAnnouncementsMessage(SiteAnnouncementsMessageTypes.GetStatus),
-      ])
+      const [recordsResponse, statusResponse, nextEnabledAccountCount] =
+        await Promise.all([
+          sendSiteAnnouncementsMessage(
+            SiteAnnouncementsMessageTypes.ListRecords,
+          ),
+          sendSiteAnnouncementsMessage(SiteAnnouncementsMessageTypes.GetStatus),
+          resolveEnabledAccountCount(),
+        ])
+      setEnabledAccountCount(nextEnabledAccountCount)
 
       if (!recordsResponse.success) {
         showResultToast({
@@ -376,6 +405,10 @@ export default function SiteAnnouncementsPage({
     })
   }, [])
 
+  const handleOpenAccountManagement = useCallback(() => {
+    pushWithinOptionsPage(`#${MENU_ITEM_IDS.ACCOUNT}`)
+  }, [])
+
   return (
     <div className="p-4 sm:p-6">
       <PageHeader
@@ -502,10 +535,16 @@ export default function SiteAnnouncementsPage({
           <EmptyState
             icon={<Megaphone className="h-10 w-10" />}
             title={
-              records.length === 0 ? t("empty.title") : t("empty.filtered")
+              enabledAccountCount === 0
+                ? t("empty.noAccounts")
+                : records.length === 0
+                  ? t("empty.title")
+                  : t("empty.filtered")
             }
             description={
-              records.length === 0 ? (
+              enabledAccountCount === 0 ? (
+                t("empty.noAccountsDesc")
+              ) : records.length === 0 ? (
                 isPollingDisabled ? (
                   <>
                     <span>{t("empty.descriptionWhenPollingDisabled")}</span>{" "}
@@ -523,14 +562,23 @@ export default function SiteAnnouncementsPage({
               ) : null
             }
             action={{
-              label: t("actions.checkNow"),
-              onClick: () =>
-                void handleCheckNow(
-                  PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementsEmptyState,
+              label:
+                enabledAccountCount === 0
+                  ? t("empty.addAccount")
+                  : t("actions.checkNow"),
+              onClick:
+                enabledAccountCount === 0
+                  ? handleOpenAccountManagement
+                  : () =>
+                      void handleCheckNow(
+                        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementsEmptyState,
+                      ),
+              disabled: enabledAccountCount === 0 ? false : !canRunManualCheck,
+              loading: enabledAccountCount === 0 ? false : isChecking,
+              leftIcon:
+                enabledAccountCount === 0 ? undefined : (
+                  <RefreshCcw className="h-4 w-4" />
                 ),
-              disabled: !canRunManualCheck,
-              loading: isChecking,
-              leftIcon: <RefreshCcw className="h-4 w-4" />,
             }}
           />
         </ProductAnalyticsScope>

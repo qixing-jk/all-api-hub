@@ -72,7 +72,10 @@
       "history": "Lịch sử thực thi",
       "manual": "Thực thi thủ công"
     },
-    "title": "Thực thi đồng bộ hóa danh sách mô hình"
+    "title": "Thực thi đồng bộ hóa danh sách mô hình",
+    "unsupported": {
+      "title": "Trang web này chưa hỗ trợ đồng bộ mô hình"
+    }
   },
   "messages": {
     "error": {

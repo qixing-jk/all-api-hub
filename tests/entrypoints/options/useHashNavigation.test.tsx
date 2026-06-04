@@ -3,7 +3,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { useHashNavigation } from "~/entrypoints/options/hooks/useHashNavigation"
-import { pushWithinOptionsPage } from "~/utils/navigation"
+import {
+  pushWithinOptionsPage,
+  replaceWithinOptionsPage,
+} from "~/utils/navigation"
 
 vi.mock("~/utils/navigation", async (importOriginal) => {
   const actual = await importOriginal<typeof import("~/utils/navigation")>()
@@ -11,6 +14,7 @@ vi.mock("~/utils/navigation", async (importOriginal) => {
   return {
     ...actual,
     pushWithinOptionsPage: vi.fn(),
+    replaceWithinOptionsPage: vi.fn(),
   }
 })
 
@@ -43,19 +47,20 @@ describe("useHashNavigation", () => {
     window.history.replaceState(null, "", "/options.html")
   })
 
-  it("falls back to the basic page and preserves search params when no hash exists", () => {
+  it("canonicalizes the overview page and preserves search params when no hash exists", () => {
     window.history.replaceState(null, "", "/options.html?source=test")
 
     render(<Probe />)
 
-    expect(screen.getByTestId("active-menu")).toHaveTextContent(
-      MENU_ITEM_IDS.BASIC,
+    expect(replaceWithinOptionsPage).toHaveBeenCalledWith(
+      `#${MENU_ITEM_IDS.OVERVIEW}`,
+      {
+        source: "test",
+      },
     )
-    expect(parseRouteParams()).toEqual({ source: "test" })
-    expect(screen.getByTestId("refresh-key")).toHaveTextContent("0")
   })
 
-  it("normalizes invalid pages, merges hash params, and increments refreshKey on hashchange", () => {
+  it("canonicalizes invalid pages and preserves merged params", () => {
     window.history.replaceState(
       null,
       "",
@@ -64,8 +69,27 @@ describe("useHashNavigation", () => {
 
     render(<Probe />)
 
+    expect(replaceWithinOptionsPage).toHaveBeenCalledWith(
+      `#${MENU_ITEM_IDS.OVERVIEW}`,
+      {
+        from: "search",
+        refresh: "false",
+        tab: "managed",
+      },
+    )
+  })
+
+  it("normalizes invalid pages, merges hash params, and increments refreshKey on hashchange", () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/options.html?from=search#overview?tab=managed&refresh=false",
+    )
+
+    render(<Probe />)
+
     expect(screen.getByTestId("active-menu")).toHaveTextContent(
-      MENU_ITEM_IDS.BASIC,
+      MENU_ITEM_IDS.OVERVIEW,
     )
     expect(parseRouteParams()).toEqual({
       from: "search",
@@ -111,6 +135,18 @@ describe("useHashNavigation", () => {
       MENU_ITEM_IDS.ACCOUNT,
     )
     expect(parseRouteParams()).toEqual({ search: "beta" })
+  })
+
+  it("preserves explicit basic links", () => {
+    window.history.replaceState(null, "", "/options.html#basic?tab=display")
+
+    render(<Probe />)
+
+    expect(replaceWithinOptionsPage).not.toHaveBeenCalled()
+    expect(screen.getByTestId("active-menu")).toHaveTextContent(
+      MENU_ITEM_IDS.BASIC,
+    )
+    expect(parseRouteParams()).toEqual({ tab: "display" })
   })
 
   it("updates local state and delegates navigation when changing menu items", async () => {

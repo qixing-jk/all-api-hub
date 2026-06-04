@@ -19,10 +19,16 @@
       "uiOpenPretriggerDiagnosticsTitle": "開啟介面時提前觸發今日簽到"
     },
     "empty": {
+      "addAccount": "新增帳號",
+      "noAccounts": "先新增帳號後才能自動簽到",
+      "noAccountsDesc": "自動簽到需要至少一個已啟用帳號，新增帳號後才能執行。",
+      "noDetectionAccounts": "為帳號啟用簽到偵測",
+      "noDetectionAccountsDesc": "現有帳號尚未啟用簽到偵測。開啟帳號管理，為需要參與自動簽到的帳號啟用簽到偵測。",
       "noHistory": "暫無執行歷史",
       "noHistoryDesc": "目前還沒有簽到執行記錄。點擊「立即執行」後，符合條件的帳號會開始簽到，完成後才會出現在結果列表中。",
       "noResults": "沒有匹配的結果",
-      "noResultsDesc": "嘗試修改篩選條件或搜尋關鍵字"
+      "noResultsDesc": "嘗試修改篩選條件或搜尋關鍵字",
+      "openAccounts": "開啟帳號管理"
     },
     "filters": {
       "all": "全部",

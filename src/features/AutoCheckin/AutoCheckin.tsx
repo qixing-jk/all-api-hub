@@ -58,6 +58,7 @@ import {
   openAccountBaseUrl,
   openCheckInPage,
   openCheckInPages,
+  pushWithinOptionsPage,
 } from "~/utils/navigation"
 
 import AccountSnapshotTable from "./components/AccountSnapshotTable"
@@ -155,6 +156,33 @@ const getRetryAnalyticsResult = (
 }
 
 /**
+ * Resolves saved-account setup state for auto check-in empty-state guidance.
+ */
+async function resolveAutoCheckinAccountSetupState(): Promise<
+  "ready" | "no_accounts" | "no_detection_accounts" | null
+> {
+  try {
+    const accounts = await accountStorage.getAllAccounts()
+    const enabledAccounts = accounts.filter(
+      (account) => account.disabled !== true,
+    )
+
+    if (enabledAccounts.length === 0) {
+      return "no_accounts"
+    }
+
+    return enabledAccounts.some(
+      (account) => account.checkIn?.enableDetection === true,
+    )
+      ? "ready"
+      : "no_detection_accounts"
+  } catch (error) {
+    logger.warn("Failed to load accounts for auto check-in empty state", error)
+    return null
+  }
+}
+
+/**
  * Auto Check-in dashboard page: fetches status, runs jobs, filters/searches results, and shows snapshots.
  */
 export default function AutoCheckin(props: {
@@ -168,6 +196,9 @@ export default function AutoCheckin(props: {
   const QUICK_RUN_PARAM = "runNow" as const
   const QUICK_RUN_VALUE = "true" as const
   const [status, setStatus] = useState<AutoCheckinStatus | null>(null)
+  const [accountSetupState, setAccountSetupState] = useState<
+    "ready" | "no_accounts" | "no_detection_accounts" | null
+  >(null)
   const [filterStatus, setFilterStatus] = useState<FilterStatus>(
     FILTER_STATUS.ALL,
   )
@@ -217,9 +248,11 @@ export default function AutoCheckin(props: {
   const loadStatus = useCallback(async () => {
     try {
       setIsLoading(true)
-      const response = await sendAutoCheckinMessage(
-        AutoCheckinMessageTypes.GetStatus,
-      )
+      const [response, nextAccountSetupState] = await Promise.all([
+        sendAutoCheckinMessage(AutoCheckinMessageTypes.GetStatus),
+        resolveAutoCheckinAccountSetupState(),
+      ])
+      setAccountSetupState(nextAccountSetupState)
 
       if (response.success) {
         setStatus(response.data)
@@ -605,6 +638,10 @@ export default function AutoCheckin(props: {
         },
       )
     })
+  }
+
+  const handleOpenAccountManagement = () => {
+    pushWithinOptionsPage(`#${MENU_ITEM_IDS.ACCOUNT}`)
   }
 
   const handleRetryAccount = async (accountId: string) => {
@@ -1082,7 +1119,11 @@ export default function AutoCheckin(props: {
       )}
 
       {!hasResults ? (
-        <EmptyResults hasHistory={hasHistory} />
+        <EmptyResults
+          hasHistory={hasHistory}
+          setupState={accountSetupState ?? "ready"}
+          onOpenAccounts={handleOpenAccountManagement}
+        />
       ) : (
         <ResultsTable
           results={filteredResults}

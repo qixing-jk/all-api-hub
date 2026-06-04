@@ -15,6 +15,8 @@ import { hasValidManagedSiteConfig } from "~/services/managedSites/managedSiteSe
 import {
   getManagedSiteConfigMissingMessage,
   getManagedSiteMessagesKeyFromSiteType,
+  getManagedSiteUnsupportedModelSyncMessage,
+  supportsManagedSiteModelSync,
 } from "~/services/managedSites/utils/managedSite"
 import { sendModelSyncMessage } from "~/services/models/modelSync/messaging"
 import {
@@ -179,6 +181,7 @@ export default function ManagedSiteModelSync({
     preferences,
     managedSiteType,
   )
+  const isModelSyncUnsupported = !supportsManagedSiteModelSync(managedSiteType)
   const [lastExecution, setLastExecution] = useState<ExecutionResult | null>(
     null,
   )
@@ -412,6 +415,11 @@ export default function ManagedSiteModelSync({
   }
 
   useEffect(() => {
+    if (isModelSyncUnsupported) {
+      setIsLoading(false)
+      return
+    }
+
     if (isConfigMissing) {
       setIsLoading(false)
       if (configMissingTrackedFor.current !== managedSiteType) {
@@ -456,6 +464,7 @@ export default function ManagedSiteModelSync({
   }, [
     completeModelSyncActionAnalytics,
     isConfigMissing,
+    isModelSyncUnsupported,
     loadLastExecution,
     loadNextRun,
     loadPreferences,
@@ -476,8 +485,8 @@ export default function ManagedSiteModelSync({
     setChannels([])
     setChannelsError(null)
     setHasAttemptedChannelsLoad(false)
-    setIsLoading(!isConfigMissing)
-  }, [isConfigMissing, managedSiteType])
+    setIsLoading(!isConfigMissing && !isModelSyncUnsupported)
+  }, [isConfigMissing, isModelSyncUnsupported, managedSiteType])
 
   useEffect(() => {
     if (!progress?.isRunning) {
@@ -499,6 +508,7 @@ export default function ManagedSiteModelSync({
   useEffect(() => {
     if (
       !isConfigMissing &&
+      !isModelSyncUnsupported &&
       selectedTab === TAB_INDEX.manual &&
       channels.length === 0 &&
       !isChannelsLoading &&
@@ -510,13 +520,14 @@ export default function ManagedSiteModelSync({
     channels.length,
     hasAttemptedChannelsLoad,
     isConfigMissing,
+    isModelSyncUnsupported,
     isChannelsLoading,
     loadChannels,
     selectedTab,
   ])
 
   useEffect(() => {
-    if (isConfigMissing) {
+    if (isConfigMissing || isModelSyncUnsupported) {
       return
     }
 
@@ -528,6 +539,7 @@ export default function ManagedSiteModelSync({
     }
   }, [
     isConfigMissing,
+    isModelSyncUnsupported,
     loadLastExecution,
     loadNextRun,
     loadPreferences,
@@ -536,7 +548,7 @@ export default function ManagedSiteModelSync({
   ])
 
   useEffect(() => {
-    if (isConfigMissing) {
+    if (isConfigMissing || isModelSyncUnsupported) {
       return
     }
 
@@ -573,6 +585,7 @@ export default function ManagedSiteModelSync({
     channels.length,
     hasAttemptedChannelsLoad,
     isConfigMissing,
+    isModelSyncUnsupported,
     isChannelsLoading,
     loadChannels,
     routeParams?.channelId,
@@ -1257,7 +1270,17 @@ export default function ManagedSiteModelSync({
         spacing="compact"
       />
 
-      {isConfigMissing ? (
+      {isModelSyncUnsupported ? (
+        <EmptyState
+          className="mt-6"
+          icon={<RefreshCcw className="h-12 w-12 text-slate-400" />}
+          title={t("managedSiteModelSync:execution.unsupported.title")}
+          description={getManagedSiteUnsupportedModelSyncMessage(
+            t,
+            getManagedSiteMessagesKeyFromSiteType(managedSiteType),
+          )}
+        />
+      ) : isConfigMissing ? (
         <ManagedSiteConfigRequiredState
           description={getManagedSiteConfigMissingMessage(
             t,

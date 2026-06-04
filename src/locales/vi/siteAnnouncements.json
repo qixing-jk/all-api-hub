@@ -19,9 +19,12 @@
     "pollingSettingsLink": "Cấu hình tự động lấy"
   },
   "empty": {
+    "addAccount": "Thêm tài khoản",
     "description": "Thông báo mới sẽ được hiển thị ở đây sau khi được kiểm tra dưới nền.",
     "descriptionWhenPollingDisabled": "Bạn có thể kiểm tra thủ công ngay bây giờ; tự động lấy có thể được quản lý trong cài đặt.",
     "filtered": "Không có thông báo nào với các bộ lọc hiện tại",
+    "noAccounts": "Thêm tài khoản trước khi kiểm tra thông báo",
+    "noAccountsDesc": "Kiểm tra thông báo cần ít nhất một tài khoản đang bật để biết nên lấy thông báo từ những trang nào.",
     "pollingSettingsLink": "Cấu hình tự động lấy",
     "title": "Chưa có bản ghi thông báo nào"
   },

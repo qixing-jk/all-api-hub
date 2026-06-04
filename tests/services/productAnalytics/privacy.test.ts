@@ -4,6 +4,7 @@ import {
   AUTO_DETECT_FETCH_CONTEXT_KINDS,
   AUTO_DETECT_STRATEGIES,
 } from "~/constants/autoDetect"
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SITE_TYPES } from "~/constants/siteType"
 import {
   PRODUCT_ANALYTICS_ACCOUNT_AUTO_DETECT_FAILURE_REASONS,
@@ -43,7 +44,7 @@ describe("product analytics privacy filtering", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.PageViewed,
       {
-        page_id: PRODUCT_ANALYTICS_PAGE_IDS.OptionsBasicSettings,
+        page_id: PRODUCT_ANALYTICS_PAGE_IDS.OptionsOverview,
         entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
         accountName: "Secret Account",
         domain: "example.com",
@@ -51,7 +52,7 @@ describe("product analytics privacy filtering", () => {
     )
 
     expect(sanitized).toEqual({
-      page_id: PRODUCT_ANALYTICS_PAGE_IDS.OptionsBasicSettings,
+      page_id: PRODUCT_ANALYTICS_PAGE_IDS.OptionsOverview,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
   })
@@ -753,6 +754,36 @@ describe("product analytics privacy filtering", () => {
       result: PRODUCT_ANALYTICS_RESULTS.Failure,
       retry_count: 2,
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+    })
+  })
+
+  it("keeps Options Overview navigation targets without raw route params", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.OptionsOverview,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenOptionsOverviewTarget,
+        surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewAttentionList,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.OptionsPage,
+        target_page_id: MENU_ITEM_IDS.ACCOUNT,
+        route_params_present: true,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        search: "private account search",
+        anchor: "private-anchor",
+        highlight: "private-highlight",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.OptionsOverview,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenOptionsOverviewTarget,
+      surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewAttentionList,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      target_kind: PRODUCT_ANALYTICS_TARGET_KINDS.OptionsPage,
+      target_page_id: MENU_ITEM_IDS.ACCOUNT,
+      route_params_present: true,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
     })
   })
 

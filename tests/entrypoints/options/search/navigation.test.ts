@@ -2,15 +2,27 @@
 
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import {
   clearHighlightSearchParam,
   highlightSearchTarget,
   OPTIONS_SEARCH_HIGHLIGHT_PARAM,
 } from "~/entrypoints/options/search/navigation"
+import { replaceWithinOptionsPage } from "~/utils/navigation"
+
+vi.mock("~/utils/navigation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+
+  return {
+    ...actual,
+    replaceWithinOptionsPage: vi.fn(),
+  }
+})
 
 describe("options search navigation helpers", () => {
   beforeEach(() => {
     vi.useFakeTimers()
+    vi.clearAllMocks()
     document.body.innerHTML = ""
     window.history.replaceState(
       null,
@@ -30,7 +42,24 @@ describe("options search navigation helpers", () => {
   it("removes the highlight search param when it is present", () => {
     clearHighlightSearchParam()
 
-    expect(window.location.search).not.toContain(OPTIONS_SEARCH_HIGHLIGHT_PARAM)
+    expect(replaceWithinOptionsPage).toHaveBeenCalledWith("#basic", {})
+  })
+
+  it("falls back to overview when clearing highlights from a URL without a hash", () => {
+    window.history.replaceState(
+      null,
+      "",
+      `/options.html?anchor=x&${OPTIONS_SEARCH_HIGHLIGHT_PARAM}=x`,
+    )
+
+    clearHighlightSearchParam()
+
+    expect(replaceWithinOptionsPage).toHaveBeenCalledWith(
+      `#${MENU_ITEM_IDS.OVERVIEW}`,
+      {
+        anchor: "x",
+      },
+    )
   })
 
   it("returns false when the highlight target does not exist", () => {

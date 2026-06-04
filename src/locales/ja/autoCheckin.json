@@ -19,10 +19,16 @@
       "uiOpenPretriggerDiagnosticsTitle": "UI 起動時の今日のチェックイン事前起動"
     },
     "empty": {
+      "addAccount": "アカウントを追加",
+      "noAccounts": "自動チェックインの前にアカウントを追加してください",
+      "noAccountsDesc": "自動チェックインを実行するには、有効なアカウントが少なくとも 1 つ必要です。",
+      "noDetectionAccounts": "アカウントのチェックイン検出を有効にしてください",
+      "noDetectionAccountsDesc": "既存のアカウントではチェックイン検出がまだ有効になっていません。アカウント管理を開き、自動チェックインに含めるアカウントでチェックイン検出を有効にしてください。",
       "noHistory": "実行履歴がありません",
       "noHistoryDesc": "チェックイン実行記録はまだありません。「今すぐ実行」をクリックすると対象アカウントのチェックインが開始され、完了後に結果一覧へ表示されます。",
       "noResults": "一致する結果がありません",
-      "noResultsDesc": "フィルターや検索条件を調整してください"
+      "noResultsDesc": "フィルターや検索条件を調整してください",
+      "openAccounts": "アカウント管理を開く"
     },
     "filters": {
       "all": "すべて",

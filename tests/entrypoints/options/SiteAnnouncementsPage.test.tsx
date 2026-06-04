@@ -1,8 +1,10 @@
 import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 import SiteAnnouncementsPage from "~/entrypoints/options/pages/SiteAnnouncements"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   DEFAULT_PREFERENCES,
   userPreferences,
@@ -31,11 +33,13 @@ const {
   startProductAnalyticsActionMock,
   trackProductAnalyticsActionStartedMock,
   completeProductAnalyticsActionMock,
+  pushWithinOptionsPageMock,
 } = vi.hoisted(() => ({
   sendSiteAnnouncementsMessageMock: vi.fn(),
   startProductAnalyticsActionMock: vi.fn(),
   trackProductAnalyticsActionStartedMock: vi.fn(),
   completeProductAnalyticsActionMock: vi.fn(),
+  pushWithinOptionsPageMock: vi.fn(),
 }))
 
 vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
@@ -50,12 +54,19 @@ vi.mock("~/services/siteAnnouncements/messaging", () => ({
   sendSiteAnnouncementsMessage: sendSiteAnnouncementsMessageMock,
 }))
 
+vi.mock("~/services/accounts/accountStorage", () => ({
+  accountStorage: {
+    getAllAccounts: vi.fn(),
+  },
+}))
+
 vi.mock("~/utils/core/toastHelpers", () => ({
   showResultToast: vi.fn(),
 }))
 
 vi.mock("~/utils/navigation", () => ({
   openSettingsTab: vi.fn(),
+  pushWithinOptionsPage: pushWithinOptionsPageMock,
 }))
 
 vi.mock("~/services/productAnalytics/actions", () => ({
@@ -132,6 +143,12 @@ describe("SiteAnnouncementsPage", () => {
     vi.spyOn(userPreferences, "getPreferences").mockResolvedValue(
       structuredClone(DEFAULT_PREFERENCES),
     )
+    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([
+      {
+        id: "account-1",
+        disabled: false,
+      },
+    ] as any)
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
@@ -278,6 +295,52 @@ describe("SiteAnnouncementsPage", () => {
       anchor: SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED,
       preserveHistory: true,
     })
+  })
+
+  it("routes the empty announcement setup state to account management when no account exists", async () => {
+    const user = userEvent.setup()
+    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+    sendSiteAnnouncementsMessageMock.mockImplementation(
+      async (type: string) => {
+        switch (type) {
+          case SiteAnnouncementsMessageTypes.ListRecords:
+            return { success: true, data: [] }
+          case SiteAnnouncementsMessageTypes.GetStatus:
+            return { success: true, data: [] }
+          default:
+            return { success: true }
+        }
+      },
+    )
+
+    render(<SiteAnnouncementsPage />)
+
+    expect(
+      await screen.findByText("siteAnnouncements:empty.noAccounts"),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "siteAnnouncements:empty.addAccount",
+      }),
+    )
+
+    expect(pushWithinOptionsPageMock).toHaveBeenCalledWith(
+      `#${MENU_ITEM_IDS.ACCOUNT}`,
+    )
+  })
+
+  it("does not block announcement records when account setup lookup fails", async () => {
+    vi.mocked(accountStorage.getAllAccounts).mockRejectedValue(
+      new Error("account storage unavailable"),
+    )
+
+    render(<SiteAnnouncementsPage />)
+
+    expect(await screen.findByText("Alpha API")).toBeInTheDocument()
+    expect(
+      screen.queryByText("siteAnnouncements:messages.loadFailed"),
+    ).not.toBeInTheDocument()
   })
 
   it("links the disabled page description to announcement polling settings", async () => {

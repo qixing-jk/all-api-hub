@@ -324,6 +324,32 @@ describe("BasicSettings tab mounting", () => {
     ).not.toBeInTheDocument()
   })
 
+  it("seeds the selected tab from explicit tab parameters when a settings anchor is present", async () => {
+    window.history.replaceState(
+      null,
+      "",
+      "/?tab=checkinRedeem&anchor=auto-checkin#basic",
+    )
+
+    render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
+
+    expect(
+      await screen.findByTestId("checkin-redeem-tab-content"),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId("general-tab-content")).not.toBeInTheDocument()
+  })
+
+  it("falls back to the anchor's settings tab when the tab parameter is missing", async () => {
+    window.history.replaceState(null, "", "/?anchor=auto-checkin#basic")
+
+    render(<BasicSettings />, { withReleaseUpdateStatusProvider: false })
+
+    expect(
+      await screen.findByTestId("checkin-redeem-tab-content"),
+    ).toBeInTheDocument()
+    expect(screen.queryByTestId("general-tab-content")).not.toBeInTheDocument()
+  })
+
   it("seeds the selected and mounted tab from the URL tab parameter", async () => {
     window.history.replaceState(null, "", "/?tab=managedSite#basic")
 

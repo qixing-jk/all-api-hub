@@ -25,7 +25,7 @@ const {
   mockedUseProductAnalyticsPageView: vi.fn(),
   mockedUseSearchHotkeys: vi.fn(),
   mockUseHashNavigationState: {
-    activeMenuItem: "basic",
+    activeMenuItem: "overview",
     routeParams: { source: "test" },
     refreshKey: 7,
   },
@@ -70,7 +70,7 @@ vi.mock("~/entrypoints/options/components/Header", () => ({
   }) => (
     <div>
       <button onClick={onSearchOpen}>open search</button>
-      <button onClick={onTitleClick}>go basic</button>
+      <button onClick={onTitleClick}>go overview</button>
     </div>
   ),
 }))
@@ -148,7 +148,7 @@ vi.mock("~/entrypoints/options/constants", () => ({
     return {
       id,
       component:
-        id === MENU_ITEM_IDS.BASIC
+        id === MENU_ITEM_IDS.OVERVIEW
           ? lazy(async () => ({ default: MockPage }))
           : MockPage,
     }
@@ -161,7 +161,7 @@ describe("options App", () => {
     mockedOptionsSearchDialog.mockReset()
     mockedUseProductAnalyticsPageView.mockReset()
     mockedUseSearchHotkeys.mockReset()
-    mockUseHashNavigationState.activeMenuItem = "basic"
+    mockUseHashNavigationState.activeMenuItem = "overview"
     mockUseHashNavigationState.routeParams = { source: "test" }
     mockUseHashNavigationState.refreshKey = 7
   })
@@ -180,7 +180,7 @@ describe("options App", () => {
     expect(screen.getByText("refresh:7")).toBeInTheDocument()
     expect(mockedUseProductAnalyticsPageView).toHaveBeenCalledWith({
       entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
-      pageId: PRODUCT_ANALYTICS_PAGE_IDS.OptionsBasicSettings,
+      pageId: PRODUCT_ANALYTICS_PAGE_IDS.OptionsOverview,
     })
 
     await user.click(screen.getByText("open search"))
@@ -191,8 +191,10 @@ describe("options App", () => {
       anchor: "bookmarks",
     })
 
-    await user.click(screen.getByText("go basic"))
-    expect(mockedHandleMenuItemChange).toHaveBeenCalledWith(MENU_ITEM_IDS.BASIC)
+    await user.click(screen.getByText("go overview"))
+    expect(mockedHandleMenuItemChange).toHaveBeenCalledWith(
+      MENU_ITEM_IDS.OVERVIEW,
+    )
   })
 
   it("opens the search dialog from the registered hotkey callback", async () => {
@@ -213,6 +215,7 @@ describe("options App", () => {
   })
 
   it.each([
+    [MENU_ITEM_IDS.OVERVIEW, PRODUCT_ANALYTICS_PAGE_IDS.OptionsOverview],
     [
       MENU_ITEM_IDS.ACCOUNT,
       PRODUCT_ANALYTICS_PAGE_IDS.OptionsAccountManagement,

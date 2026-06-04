@@ -19,9 +19,12 @@
     "pollingSettingsLink": "設定自動抓取"
   },
   "empty": {
+    "addAccount": "新增帳號",
     "description": "背景檢查到新公告後會顯示在這裡。",
     "descriptionWhenPollingDisabled": "你可以立即手動檢查；自動抓取可在設定中管理。",
     "filtered": "目前篩選條件下沒有公告",
+    "noAccounts": "先新增帳號後才能檢查公告",
+    "noAccountsDesc": "公告檢查需要至少一個已啟用帳號，才能知道要抓取哪些站點。",
     "pollingSettingsLink": "設定自動抓取",
     "title": "暫無公告記錄"
   },

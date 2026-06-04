@@ -71,15 +71,16 @@ describe("Options Sidebar", () => {
     })
 
     expect(
-      within(nav).getByRole("button", { name: "ui:navigation.basic" }),
+      within(nav).getByRole("button", { name: "ui:navigation.overview" }),
     ).toBeInTheDocument()
 
     expect(
       within(nav)
         .getAllByRole("button")
-        .slice(0, 9)
+        .slice(0, 10)
         .map((button) => button.textContent),
     ).toEqual([
+      "ui:navigation.overview",
       "ui:navigation.basic",
       "ui:navigation.account",
       "ui:navigation.apiCredentialProfiles",

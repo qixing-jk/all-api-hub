@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest"
 
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import type { OptionsSearchContext } from "~/entrypoints/options/search/types"
 import {
   useOptionsSearch,
@@ -45,6 +46,23 @@ describe("useOptionsSearch", () => {
     )
 
     expect(result.current.results[0]?.title).toBe("ui:navigation.bookmark")
+  })
+
+  it("includes the overview page in settings search", () => {
+    const { result } = renderHook(
+      () => useOptionsSearch(context, "ui:navigation.overview"),
+      {
+        withReleaseUpdateStatusProvider: false,
+        withThemeProvider: false,
+        withUserPreferencesProvider: false,
+      },
+    )
+
+    expect(result.current.results[0]).toMatchObject({
+      id: "page:overview",
+      pageId: MENU_ITEM_IDS.OVERVIEW,
+      kind: "page",
+    })
   })
 
   it("matches breadcrumb-only queries", () => {

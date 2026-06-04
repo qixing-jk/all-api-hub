@@ -407,6 +407,32 @@ describe("ManagedSiteModelSync page", () => {
     })
   })
 
+  it("shows an unsupported empty state and skips model-sync loading for unsupported managed sites", async () => {
+    mockUseUserPreferencesContext.mockReturnValue({
+      preferences: {
+        managedSiteType: "axonhub",
+        axonHub: {
+          baseUrl: "https://axon.example",
+          email: "admin@example.com",
+          password: "admin-password",
+        },
+      },
+      managedSiteType: "axonhub",
+    })
+
+    render(<ManagedSiteModelSync />)
+
+    expect(
+      await screen.findByText(
+        "managedSiteModelSync:execution.unsupported.title",
+      ),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByText("messages:axonhub.unsupportedModelSync"),
+    ).toBeInTheDocument()
+    expect(mockSendRuntimeMessage).not.toHaveBeenCalled()
+  })
+
   it("keeps the current history snapshot rendered while a manual refresh is loading", async () => {
     let lastExecutionCalls = 0
     let resolveRefresh:

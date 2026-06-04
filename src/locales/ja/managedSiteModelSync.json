@@ -72,7 +72,10 @@
       "history": "実行履歴",
       "manual": "手動実行"
     },
-    "title": "モデル一覧同期"
+    "title": "モデル一覧同期",
+    "unsupported": {
+      "title": "このサイトではモデル同期はサポートされていません"
+    }
   },
   "messages": {
     "error": {

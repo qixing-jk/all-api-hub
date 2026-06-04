@@ -19,9 +19,12 @@
     "pollingSettingsLink": "Configure automatic polling"
   },
   "empty": {
+    "addAccount": "Add account",
     "description": "New announcements discovered by background checks will appear here.",
     "descriptionWhenPollingDisabled": "You can check manually now; automatic polling can be managed in settings.",
     "filtered": "No announcements match the current filters",
+    "noAccounts": "Add an account before checking announcements",
+    "noAccountsDesc": "Announcement checks need at least one enabled account to know which sites should be polled.",
     "pollingSettingsLink": "Configure automatic polling",
     "title": "No announcement records"
   },

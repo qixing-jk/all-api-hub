@@ -1,7 +1,16 @@
 import { render, screen } from "@testing-library/react"
 import { describe, expect, it } from "vitest"
 
+import { WorkflowTransitionIcon } from "~/components/icons/WorkflowTransitionIcon"
 import { WorkflowTransitionButton } from "~/components/ui"
+
+describe("WorkflowTransitionIcon", () => {
+  it("uses the lightweight internal workflow arrow", () => {
+    const { container } = render(<WorkflowTransitionIcon className="h-4 w-4" />)
+
+    expect(container.querySelector(".lucide-arrow-up-right")).not.toBeNull()
+  })
+})
 
 describe("WorkflowTransitionButton", () => {
   it("renders the default workflow transition icon", () => {

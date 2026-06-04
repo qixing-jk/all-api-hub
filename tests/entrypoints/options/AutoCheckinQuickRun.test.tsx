@@ -1,7 +1,9 @@
 import userEvent from "@testing-library/user-event"
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest"
 
+import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import AutoCheckin from "~/entrypoints/options/pages/AutoCheckin"
+import { accountStorage } from "~/services/accounts/accountStorage"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
   PRODUCT_ANALYTICS_ENTRYPOINTS,
@@ -10,6 +12,7 @@ import {
   PRODUCT_ANALYTICS_SURFACE_IDS,
 } from "~/services/productAnalytics/events"
 import { AutoCheckinMessageTypes } from "~/services/runtimeMessaging/messageTypes"
+import { CHECKIN_RESULT_STATUS } from "~/types/autoCheckin"
 import { render, screen, waitFor } from "~~/tests/test-utils/render"
 
 const {
@@ -17,11 +20,13 @@ const {
   completeProductAnalyticsActionMock,
   trackProductAnalyticsActionStartedMock,
   sendAutoCheckinMessageMock,
+  pushWithinOptionsPageMock,
 } = vi.hoisted(() => ({
   startProductAnalyticsActionMock: vi.fn(),
   completeProductAnalyticsActionMock: vi.fn(),
   trackProductAnalyticsActionStartedMock: vi.fn(),
   sendAutoCheckinMessageMock: vi.fn(),
+  pushWithinOptionsPageMock: vi.fn(),
 }))
 
 vi.mock("react-hot-toast", () => ({
@@ -37,6 +42,21 @@ vi.mock("~/services/productAnalytics/actions", () => ({
   startProductAnalyticsAction: startProductAnalyticsActionMock,
   trackProductAnalyticsActionStarted: trackProductAnalyticsActionStartedMock,
 }))
+
+vi.mock("~/services/accounts/accountStorage", () => ({
+  accountStorage: {
+    getAllAccounts: vi.fn(),
+  },
+}))
+
+vi.mock("~/utils/navigation", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("~/utils/navigation")>()
+
+  return {
+    ...actual,
+    pushWithinOptionsPage: pushWithinOptionsPageMock,
+  }
+})
 
 vi.mock("~/services/checkin/autoCheckin/messaging", async (importOriginal) => {
   const actual =
@@ -60,6 +80,70 @@ describe("AutoCheckin quick run", () => {
     startProductAnalyticsActionMock.mockReturnValue({
       complete: completeProductAnalyticsActionMock,
     })
+    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+  })
+
+  it("shows an account setup empty state when no account can run auto check-in", async () => {
+    const user = userEvent.setup()
+    sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
+      if (type === AutoCheckinMessageTypes.GetStatus) {
+        return {
+          success: true,
+          data: { perAccount: {} },
+        }
+      }
+
+      return { success: true }
+    })
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    expect(
+      await screen.findByText("autoCheckin:execution.empty.noAccounts"),
+    ).toBeInTheDocument()
+
+    await user.click(
+      screen.getByRole("button", {
+        name: "autoCheckin:execution.empty.addAccount",
+      }),
+    )
+
+    expect(pushWithinOptionsPageMock).toHaveBeenCalledWith(
+      `#${MENU_ITEM_IDS.ACCOUNT}`,
+    )
+  })
+
+  it("does not block auto check-in results when account setup lookup fails", async () => {
+    vi.mocked(accountStorage.getAllAccounts).mockRejectedValue(
+      new Error("account storage unavailable"),
+    )
+    sendAutoCheckinMessageMock.mockImplementation(async (type: string) => {
+      if (type === AutoCheckinMessageTypes.GetStatus) {
+        return {
+          success: true,
+          data: {
+            perAccount: {
+              alpha: {
+                accountId: "alpha",
+                accountName: "Alpha",
+                status: CHECKIN_RESULT_STATUS.SUCCESS,
+                timestamp: 1700000000000,
+                message: "ok",
+              },
+            },
+          },
+        }
+      }
+
+      return { success: true }
+    })
+
+    render(<AutoCheckin routeParams={{}} />)
+
+    expect(await screen.findByText("Alpha")).toBeInTheDocument()
+    expect(
+      screen.queryByText("autoCheckin:execution.empty.noAccounts"),
+    ).not.toBeInTheDocument()
   })
 
   it("auto-triggers runNow when routeParams.runNow is present", async () => {

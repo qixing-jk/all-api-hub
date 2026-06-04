@@ -38,7 +38,8 @@
     "importFailed": "Import failed, an unknown error occurred",
     "importSuccess": "Successfully imported new channel {{channelName}}",
     "modelsMissing": "Please provide at least one model",
-    "noChannelsToSync": "No channels to sync"
+    "noChannelsToSync": "No channels to sync",
+    "unsupportedModelSync": "AxonHub does not support managed-site model sync in this version"
   },
   "background": {
     "cannotCreateWindow": "Unable to create window",

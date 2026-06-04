@@ -72,7 +72,10 @@
       "history": "執行記錄",
       "manual": "手動執行"
     },
-    "title": "模型列表同步執行"
+    "title": "模型列表同步執行",
+    "unsupported": {
+      "title": "目前站點暫不支援模型同步"
+    }
   },
   "messages": {
     "error": {

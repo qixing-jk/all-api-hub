@@ -170,6 +170,21 @@ export function supportsManagedSiteBaseUrlChannelLookup(
 }
 
 /**
+ * Whether the managed-site provider supports reading upstream models and
+ * writing them back to channel definitions through the model-sync executor.
+ */
+export function supportsManagedSiteModelSync(
+  siteType: ManagedSiteType,
+): boolean {
+  return (
+    siteType === SITE_TYPES.NEW_API ||
+    siteType === SITE_TYPES.VELOERA ||
+    siteType === SITE_TYPES.DONE_HUB ||
+    siteType === SITE_TYPES.OCTOPUS
+  )
+}
+
+/**
  * Returns both the selected managed site type and its corresponding i18n messages key.
  */
 export function getManagedSiteContext(prefs: UserPreferences): {
@@ -293,5 +308,21 @@ export function getManagedSiteNoChannelsToSyncMessage(
     case "newapi":
     default:
       return t("messages:newapi.noChannelsToSync")
+  }
+}
+
+/**
+ * Returns the translated unsupported model-sync message for the selected
+ * managed-site backend.
+ */
+export function getManagedSiteUnsupportedModelSyncMessage(
+  t: TFunction,
+  messagesKey: ManagedSiteMessagesKey,
+) {
+  switch (messagesKey) {
+    case "axonhub":
+      return t("messages:axonhub.unsupportedModelSync")
+    default:
+      return t("messages:claudecodehub.unsupportedModelSync")
   }
 }

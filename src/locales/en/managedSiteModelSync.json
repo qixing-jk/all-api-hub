@@ -74,7 +74,10 @@
       "history": "Execution History",
       "manual": "Manual Execution"
     },
-    "title": "Model List Synchronization"
+    "title": "Model List Synchronization",
+    "unsupported": {
+      "title": "Model sync is not supported for this site"
+    }
   },
   "messages": {
     "error": {

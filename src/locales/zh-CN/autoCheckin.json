@@ -19,10 +19,16 @@
       "uiOpenPretriggerDiagnosticsTitle": "打开界面时提前触发今日签到"
     },
     "empty": {
+      "addAccount": "添加账号",
+      "noAccounts": "先添加账号后才能自动签到",
+      "noAccountsDesc": "自动签到需要至少一个已启用账号，添加账号后才能执行。",
+      "noDetectionAccounts": "为账号启用签到检测",
+      "noDetectionAccountsDesc": "现有账号还没有启用签到检测。打开账号管理，为需要参与自动签到的账号启用签到检测。",
       "noHistory": "暂无执行历史",
       "noHistoryDesc": "当前还没有签到执行记录。点击“立即执行”后，符合条件的账号会开始签到，完成后才会出现在结果列表中。",
       "noResults": "没有匹配的结果",
-      "noResultsDesc": "尝试修改筛选条件或搜索关键字"
+      "noResultsDesc": "尝试修改筛选条件或搜索关键字",
+      "openAccounts": "打开账号管理"
     },
     "filters": {
       "all": "全部",

@@ -19,10 +19,16 @@
       "uiOpenPretriggerDiagnosticsTitle": "Pre-trigger today's check-in when UI opens"
     },
     "empty": {
+      "addAccount": "Add account",
+      "noAccounts": "Add an account before auto check-in",
+      "noAccountsDesc": "Auto check-in needs at least one enabled account before it can run.",
+      "noDetectionAccounts": "Enable check-in detection for an account",
+      "noDetectionAccountsDesc": "Existing accounts are not configured for check-in detection yet. Open account management and enable check-in detection on the accounts you want to include.",
       "noHistory": "No execution history",
       "noHistoryDesc": "There are no check-in run records yet. Click \"Run now\" to start eligible accounts; they appear in the result list after the run finishes.",
       "noResults": "No matching results",
-      "noResultsDesc": "Try adjusting your filters or search query"
+      "noResultsDesc": "Try adjusting your filters or search query",
+      "openAccounts": "Open accounts"
     },
     "filters": {
       "all": "All",

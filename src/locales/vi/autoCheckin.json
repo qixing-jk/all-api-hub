@@ -19,10 +19,16 @@
       "uiOpenPretriggerDiagnosticsTitle": "Kích hoạt sớm điểm danh hôm nay khi mở giao diện"
     },
     "empty": {
+      "addAccount": "Thêm tài khoản",
+      "noAccounts": "Thêm tài khoản trước khi tự động điểm danh",
+      "noAccountsDesc": "Tự động điểm danh cần ít nhất một tài khoản đang bật trước khi có thể chạy.",
+      "noDetectionAccounts": "Bật phát hiện điểm danh cho tài khoản",
+      "noDetectionAccountsDesc": "Các tài khoản hiện có chưa bật phát hiện điểm danh. Mở quản lý tài khoản và bật phát hiện điểm danh cho những tài khoản bạn muốn đưa vào.",
       "noHistory": "Chưa có lịch sử thực hiện",
       "noHistoryDesc": "Hiện tại chưa có hồ sơ thực hiện điểm danh. Sau khi nhấp vào \"Thực hiện ngay\", các tài khoản đủ điều kiện sẽ bắt đầu điểm danh, và sẽ xuất hiện trong danh sách kết quả sau khi hoàn thành.",
       "noResults": "Không có kết quả phù hợp",
-      "noResultsDesc": "Thử sửa đổi điều kiện lọc hoặc từ khóa tìm kiếm"
+      "noResultsDesc": "Thử sửa đổi điều kiện lọc hoặc từ khóa tìm kiếm",
+      "openAccounts": "Mở quản lý tài khoản"
     },
     "filters": {
       "all": "Tất cả",

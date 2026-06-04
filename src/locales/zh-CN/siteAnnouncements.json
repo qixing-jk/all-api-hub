@@ -19,9 +19,12 @@
     "pollingSettingsLink": "配置自动抓取"
   },
   "empty": {
+    "addAccount": "添加账号",
     "description": "后台检查到新公告后会显示在这里。",
     "descriptionWhenPollingDisabled": "你可以立即手动检查；自动抓取可在设置中管理。",
     "filtered": "当前筛选条件下没有公告",
+    "noAccounts": "先添加账号后才能检查公告",
+    "noAccountsDesc": "公告检查需要至少一个已启用账号，才能知道要抓取哪些站点。",
     "pollingSettingsLink": "配置自动抓取",
     "title": "暂无公告记录"
   },

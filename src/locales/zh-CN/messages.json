@@ -38,7 +38,8 @@
     "importFailed": "导入失败，发生未知错误",
     "importSuccess": "成功导入新渠道 {{channelName}}",
     "modelsMissing": "请至少填写一个模型",
-    "noChannelsToSync": "没有可同步的渠道"
+    "noChannelsToSync": "没有可同步的渠道",
+    "unsupportedModelSync": "当前版本不支持 AxonHub 管理站点模型同步"
   },
   "background": {
     "cannotCreateWindow": "无法创建窗口",
