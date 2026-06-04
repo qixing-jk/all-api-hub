@@ -1,3 +1,4 @@
+import { BASIC_SETTINGS_ANCHOR_TO_TAB } from "~/constants/basicSettingsTabs"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { SETTINGS_ANCHORS } from "~/constants/settingsAnchors"
 
@@ -14,15 +15,6 @@ type BasicSettingsAnchor =
   | typeof SETTINGS_ANCHORS.BALANCE_HISTORY
   | typeof SETTINGS_ANCHORS.MANAGED_SITE_MODEL_SYNC
   | typeof SETTINGS_ANCHORS.MANAGED_SITE_SELECTOR
-
-const BASIC_SETTINGS_ANCHOR_TAB = {
-  [SETTINGS_ANCHORS.AUTO_CHECKIN]: "checkinRedeem",
-  [SETTINGS_ANCHORS.SITE_ANNOUNCEMENT_NOTIFICATIONS_ENABLED]: "general",
-  [SETTINGS_ANCHORS.USAGE_HISTORY_SYNC]: "accountUsage",
-  [SETTINGS_ANCHORS.BALANCE_HISTORY]: "balanceHistory",
-  [SETTINGS_ANCHORS.MANAGED_SITE_MODEL_SYNC]: "managedSite",
-  [SETTINGS_ANCHORS.MANAGED_SITE_SELECTOR]: "managedSite",
-} as const satisfies Record<BasicSettingsAnchor, string>
 
 /**
  * Builds a deep link to an import/export section and applies the same highlight
@@ -49,7 +41,7 @@ export function buildBasicSettingsAnchorTarget(
   return {
     menuItemId: MENU_ITEM_IDS.BASIC,
     params: {
-      tab: BASIC_SETTINGS_ANCHOR_TAB[anchor],
+      tab: BASIC_SETTINGS_ANCHOR_TO_TAB[anchor],
       anchor,
       highlight: anchor,
     },

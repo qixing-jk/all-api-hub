@@ -886,6 +886,56 @@ describe("SiteAnnouncementsPage", () => {
     ).toBe(false)
   })
 
+  it("keeps filtered empty copy when cached records exist without enabled accounts", async () => {
+    const user = userEvent.setup()
+    vi.mocked(accountStorage.getAllAccounts).mockResolvedValue([] as any)
+
+    sendSiteAnnouncementsMessageMock.mockImplementation(
+      async (type: string) => {
+        switch (type) {
+          case SiteAnnouncementsMessageTypes.ListRecords:
+            return { success: true, data: records }
+          case SiteAnnouncementsMessageTypes.GetStatus:
+            return {
+              success: true,
+              data: [
+                ...status,
+                {
+                  siteKey: "site-3",
+                  siteName: "Gamma API",
+                  siteType: "new-api",
+                  baseUrl: "https://gamma.example.com",
+                  accountId: "account-3",
+                  providerId: "common",
+                  status: "success",
+                  records: [],
+                },
+              ],
+            }
+          default:
+            return { success: true }
+        }
+      },
+    )
+
+    render(<SiteAnnouncementsPage />)
+
+    await screen.findByText("siteAnnouncements:title")
+    await user.click(
+      screen.getByRole("combobox", {
+        name: "siteAnnouncements:filters.site",
+      }),
+    )
+    await user.click(screen.getByRole("option", { name: "Gamma API" }))
+
+    expect(
+      await screen.findByText("siteAnnouncements:empty.filtered"),
+    ).toBeInTheDocument()
+    expect(
+      screen.queryByText("siteAnnouncements:empty.noAccounts"),
+    ).not.toBeInTheDocument()
+  })
+
   it("shows failure feedback when the manual check throws", async () => {
     const user = userEvent.setup()
 

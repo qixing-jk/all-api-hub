@@ -132,12 +132,13 @@ function buildSiteAnnouncementsAutomationItem(input: {
   ).length
   const unreadCount = input.records.filter((record) => !record.read).length
   const readiness = resolveAutomationReadiness(enabled)
-  const status =
-    failedStatusCount > 0
+  const status = enabled
+    ? failedStatusCount > 0
       ? "error"
       : unsupportedStatusCount > 0
         ? "warning"
         : readiness.status
+    : readiness.status
 
   return {
     id: OPTIONS_OVERVIEW_AUTOMATION_ITEM_IDS.siteAnnouncements,

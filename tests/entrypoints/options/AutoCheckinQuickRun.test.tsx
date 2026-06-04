@@ -111,6 +111,20 @@ describe("AutoCheckin quick run", () => {
     expect(pushWithinOptionsPageMock).toHaveBeenCalledWith(
       `#${MENU_ITEM_IDS.ACCOUNT}`,
     )
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountSetup,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinEmptyState,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    expect(completeProductAnalyticsActionMock).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_RESULTS.Success,
+      {
+        insights: {
+          targetKind: "options_page",
+        },
+      },
+    )
   })
 
   it("does not block auto check-in results when account setup lookup fails", async () => {

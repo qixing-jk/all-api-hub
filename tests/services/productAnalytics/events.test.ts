@@ -281,10 +281,13 @@ describe("product analytics event enums", () => {
     })
 
     expect(PRODUCT_ANALYTICS_ACTION_IDS).toMatchObject({
+      OpenAutoCheckinAccountSetup: "open_auto_checkin_account_setup",
       OpenOptionsOverviewTarget: "open_options_overview_target",
+      RefreshOptionsOverviewData: "refresh_options_overview_data",
     })
 
     expect(PRODUCT_ANALYTICS_SURFACE_IDS).toMatchObject({
+      OptionsAutoCheckinEmptyState: "options_auto_checkin_empty_state",
       OptionsOverviewActionCenter: "options_overview_action_center",
       OptionsOverviewAttentionList: "options_overview_attention_list",
       OptionsOverviewAutomationOverview: "options_overview_automation_overview",

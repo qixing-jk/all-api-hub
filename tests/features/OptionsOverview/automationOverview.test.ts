@@ -233,8 +233,30 @@ describe("overview automation model", () => {
       }).items.map((item) => [item.id, item.status, item.statusLabel]),
     ).toEqual([
       ["autoCheckin", "warning", "enabled"],
-      ["siteAnnouncements", "warning", "disabled"],
+      ["siteAnnouncements", "info", "disabled"],
       ["webdavAutoSync", "info", "disabled"],
     ])
+  })
+
+  it("keeps disabled announcement polling informational despite stale site statuses", () => {
+    expect(
+      buildAutomationOverview({
+        autoCheckinPanel,
+        preferences: {
+          ...basePreferences,
+          siteAnnouncementNotifications: {
+            enabled: false,
+            notificationEnabled: false,
+            intervalMinutes: 180,
+          },
+        },
+        managedSiteType: undefined,
+        siteAnnouncementRecords: [announcementRecord],
+        siteAnnouncementStatuses: [announcementStatus],
+      }).items.find((item) => item.id === "siteAnnouncements"),
+    ).toMatchObject({
+      status: "info",
+      statusLabel: "disabled",
+    })
   })
 })

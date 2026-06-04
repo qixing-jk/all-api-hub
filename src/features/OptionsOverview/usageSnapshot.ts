@@ -69,5 +69,5 @@ function formatQuotaCost(quota: number): string {
   if (!Number.isFinite(quota) || quota <= 0) {
     return "-"
   }
-  return quota.toLocaleString("en-US", { maximumFractionDigits: 0 })
+  return quota.toLocaleString(undefined, { maximumFractionDigits: 0 })
 }

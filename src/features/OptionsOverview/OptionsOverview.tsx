@@ -36,6 +36,20 @@ export default function OptionsOverview() {
   const { t } = useTranslation(["optionsOverview", "common"])
   const { isLoading, error, viewModel, reload } = useOptionsOverviewData()
 
+  const handleRetry = () => {
+    void trackProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.OptionsOverview,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.RefreshOptionsOverviewData,
+        surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewStatusSummary,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+      },
+    )
+    reload()
+  }
+
   const handleNavigate = ({
     target,
     sourceWidgetId,
@@ -86,7 +100,7 @@ export default function OptionsOverview() {
               type="button"
               variant="outline"
               size="sm"
-              onClick={reload}
+              onClick={handleRetry}
               leftIcon={<AlertTriangle className="h-4 w-4" />}
             >
               {t("common:actions.retry")}

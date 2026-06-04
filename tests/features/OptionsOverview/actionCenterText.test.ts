@@ -30,25 +30,17 @@ describe("action center text helpers", () => {
   it("resolves action center labels, descriptions, and summaries", () => {
     const summaryT = vi.fn((key: string) => key) as unknown as TFunction
 
-    expect(
-      getActionCenterLabel(
-        OPTIONS_OVERVIEW_ACTION_CENTER_ITEM_IDS.accountFoundation,
-        t,
-      ),
-    ).toBe("optionsOverview:configurationOverview.accountFoundation.label")
-    expect(
-      getActionCenterDescription(
-        OPTIONS_OVERVIEW_ACTION_CENTER_ITEM_IDS.automation,
-        t,
-      ),
-    ).toBe("optionsOverview:configurationOverview.automation.description")
-    expect(
-      getActionCenterSummary(
-        OPTIONS_OVERVIEW_ACTION_CENTER_ITEM_IDS.backupSync,
-        2,
-        summaryT,
-      ),
-    ).toBe("optionsOverview:configurationOverview.backupSync.summary")
+    for (const id of Object.values(OPTIONS_OVERVIEW_ACTION_CENTER_ITEM_IDS)) {
+      expect(getActionCenterLabel(id, t)).toBe(
+        `optionsOverview:configurationOverview.${id}.label`,
+      )
+      expect(getActionCenterDescription(id, t)).toBe(
+        `optionsOverview:configurationOverview.${id}.description`,
+      )
+      expect(getActionCenterSummary(id, 2, summaryT)).toBe(
+        `optionsOverview:configurationOverview.${id}.summary`,
+      )
+    }
     expect(summaryT).toHaveBeenCalledWith(
       "optionsOverview:configurationOverview.backupSync.summary",
       { count: 2 },
@@ -56,19 +48,38 @@ describe("action center text helpers", () => {
   })
 
   it("resolves non-configured state descriptions and suppresses configured ones", () => {
-    expect(getActionCenterStateDescription(baseActionCenterItem, t)).toBe(
-      "optionsOverview:configurationOverview.accountFoundation.state.needs_setup",
-    )
-    expect(
-      getActionCenterStateDescription(
-        {
-          ...baseActionCenterItem,
-          id: OPTIONS_OVERVIEW_ACTION_CENTER_ITEM_IDS.automation,
-          status: OPTIONS_OVERVIEW_CONFIGURATION_STATUSES.disabled,
-        },
-        t,
-      ),
-    ).toBe("optionsOverview:configurationOverview.automation.state.disabled")
+    for (const id of Object.values(OPTIONS_OVERVIEW_ACTION_CENTER_ITEM_IDS)) {
+      expect(
+        getActionCenterStateDescription(
+          {
+            ...baseActionCenterItem,
+            id,
+            status: OPTIONS_OVERVIEW_CONFIGURATION_STATUSES.needsSetup,
+          },
+          t,
+        ),
+      ).toBe(`optionsOverview:configurationOverview.${id}.state.needs_setup`)
+      expect(
+        getActionCenterStateDescription(
+          {
+            ...baseActionCenterItem,
+            id,
+            status: OPTIONS_OVERVIEW_CONFIGURATION_STATUSES.disabled,
+          },
+          t,
+        ),
+      ).toBe(`optionsOverview:configurationOverview.${id}.state.disabled`)
+      expect(
+        getActionCenterStateDescription(
+          {
+            ...baseActionCenterItem,
+            id,
+            status: OPTIONS_OVERVIEW_CONFIGURATION_STATUSES.notApplicable,
+          },
+          t,
+        ),
+      ).toBe(`optionsOverview:configurationOverview.${id}.state.not_applicable`)
+    }
     expect(
       getActionCenterStateDescription(
         {
@@ -81,20 +92,13 @@ describe("action center text helpers", () => {
   })
 
   it("resolves configuration sub item labels", () => {
-    expect(
-      getConfigurationSubItemLabel(
-        OPTIONS_OVERVIEW_CONFIGURATION_SUB_ITEM_IDS.accounts,
-        t,
-      ),
-    ).toBe("optionsOverview:configurationOverview.subItems.accounts")
-    expect(
-      getConfigurationSubItemLabel(
-        OPTIONS_OVERVIEW_CONFIGURATION_SUB_ITEM_IDS.managedSiteModelSync,
-        t,
-      ),
-    ).toBe(
-      "optionsOverview:configurationOverview.subItems.managedSiteModelSync",
-    )
+    for (const id of Object.values(
+      OPTIONS_OVERVIEW_CONFIGURATION_SUB_ITEM_IDS,
+    )) {
+      expect(getConfigurationSubItemLabel(id, t)).toBe(
+        `optionsOverview:configurationOverview.subItems.${id}`,
+      )
+    }
   })
 
   it("resolves coverage status labels", () => {

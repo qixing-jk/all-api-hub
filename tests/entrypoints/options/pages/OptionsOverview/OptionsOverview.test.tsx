@@ -826,6 +826,16 @@ describe("OptionsOverview", () => {
       screen.getByRole("button", { name: "common:actions.retry" }),
     )
     expect(reload).toHaveBeenCalledTimes(1)
+    expect(trackProductAnalyticsEvent).toHaveBeenCalledWith(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.OptionsOverview,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.RefreshOptionsOverviewData,
+        surface_id: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsOverviewStatusSummary,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+      },
+    )
   })
 })
 

@@ -641,6 +641,17 @@ export default function AutoCheckin(props: {
   }
 
   const handleOpenAccountManagement = () => {
+    const tracker = startProductAnalyticsAction({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.AutoCheckin,
+      actionId: PRODUCT_ANALYTICS_ACTION_IDS.OpenAutoCheckinAccountSetup,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.OptionsAutoCheckinEmptyState,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+    })
+    tracker.complete(PRODUCT_ANALYTICS_RESULTS.Success, {
+      insights: {
+        targetKind: PRODUCT_ANALYTICS_TARGET_KINDS.OptionsPage,
+      },
+    })
     pushWithinOptionsPage(`#${MENU_ITEM_IDS.ACCOUNT}`)
   }
 

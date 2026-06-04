@@ -1,21 +1,9 @@
+import type { BasicSettingsTabId } from "~/constants/basicSettingsTabs"
 import type { ManagedSiteType } from "~/constants/siteType"
 
-export type OptionsSearchItemKind = "page" | "tab" | "section" | "control"
+export type { BasicSettingsTabId } from "~/constants/basicSettingsTabs"
 
-export type BasicSettingsTabId =
-  | "general"
-  | "notifications"
-  | "balanceHistory"
-  | "accountManagement"
-  | "refresh"
-  | "checkinRedeem"
-  | "webAiApiCheck"
-  | "accountUsage"
-  | "dataBackup"
-  | "managedSite"
-  | "cliProxy"
-  | "claudeCodeRouter"
-  | "permissions"
+export type OptionsSearchItemKind = "page" | "tab" | "section" | "control"
 
 export interface OptionsSearchContext {
   autoCheckinEnabled: boolean

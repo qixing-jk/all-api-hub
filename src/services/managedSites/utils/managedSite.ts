@@ -172,6 +172,10 @@ export function supportsManagedSiteBaseUrlChannelLookup(
 /**
  * Whether the managed-site provider supports reading upstream models and
  * writing them back to channel definitions through the model-sync executor.
+ * Contract: AxonHub and Claude Code Hub expose dedicated admin integrations
+ * without the One API/New API channel model required by model sync.
+ * Sources: https://github.com/looplj/axonhub and
+ * https://github.com/ding113/claude-code-hub
  */
 export function supportsManagedSiteModelSync(
   siteType: ManagedSiteType,

@@ -192,6 +192,8 @@ export default function SiteAnnouncementsPage({
     (option) => option.announcementCount > 0,
   ).length
   const isPollingDisabled = !siteAnnouncementNotifications.enabled
+  const hasCachedRecords = records.length > 0
+  const showNoAccountsSetup = enabledAccountCount === 0 && !hasCachedRecords
 
   const metrics = useMemo<AnnouncementMetric[]>(
     () => [
@@ -535,16 +537,16 @@ export default function SiteAnnouncementsPage({
           <EmptyState
             icon={<Megaphone className="h-10 w-10" />}
             title={
-              enabledAccountCount === 0
+              showNoAccountsSetup
                 ? t("empty.noAccounts")
-                : records.length === 0
+                : !hasCachedRecords
                   ? t("empty.title")
                   : t("empty.filtered")
             }
             description={
-              enabledAccountCount === 0 ? (
+              showNoAccountsSetup ? (
                 t("empty.noAccountsDesc")
-              ) : records.length === 0 ? (
+              ) : !hasCachedRecords ? (
                 isPollingDisabled ? (
                   <>
                     <span>{t("empty.descriptionWhenPollingDisabled")}</span>{" "}
@@ -562,23 +564,20 @@ export default function SiteAnnouncementsPage({
               ) : null
             }
             action={{
-              label:
-                enabledAccountCount === 0
-                  ? t("empty.addAccount")
-                  : t("actions.checkNow"),
-              onClick:
-                enabledAccountCount === 0
-                  ? handleOpenAccountManagement
-                  : () =>
-                      void handleCheckNow(
-                        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementsEmptyState,
-                      ),
-              disabled: enabledAccountCount === 0 ? false : !canRunManualCheck,
-              loading: enabledAccountCount === 0 ? false : isChecking,
-              leftIcon:
-                enabledAccountCount === 0 ? undefined : (
-                  <RefreshCcw className="h-4 w-4" />
-                ),
+              label: showNoAccountsSetup
+                ? t("empty.addAccount")
+                : t("actions.checkNow"),
+              onClick: showNoAccountsSetup
+                ? handleOpenAccountManagement
+                : () =>
+                    void handleCheckNow(
+                      PRODUCT_ANALYTICS_SURFACE_IDS.OptionsSiteAnnouncementsEmptyState,
+                    ),
+              disabled: showNoAccountsSetup ? false : !canRunManualCheck,
+              loading: showNoAccountsSetup ? false : isChecking,
+              leftIcon: showNoAccountsSetup ? undefined : (
+                <RefreshCcw className="h-4 w-4" />
+              ),
             }}
           />
         </ProductAnalyticsScope>

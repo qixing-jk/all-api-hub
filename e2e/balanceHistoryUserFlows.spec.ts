@@ -147,8 +147,9 @@ test("filters balance history by tag/account and persists the selected currency"
   await expect(
     page.getByRole("heading", { name: "Balance History" }),
   ).toBeVisible()
-  await expect(page.getByText("Overview")).toBeVisible()
-  await expect(page.getByText("Account summary")).toBeVisible()
+  const main = page.getByRole("main")
+  await expect(main.getByText("Overview")).toBeVisible()
+  await expect(main.getByText("Account summary")).toBeVisible()
   await expect(page.getByRole("button", { name: "Production" })).toBeVisible()
   await expect(
     page.getByRole("button", { name: "Balance Hub A", exact: true }),
