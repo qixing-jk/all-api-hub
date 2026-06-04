@@ -36,7 +36,7 @@ const overviewWidgetSurfaceIds = {
 /**
  * Reads the Overview-owned permissions onboarding state from the current URL.
  */
-function getPermissionsOnboardingReasonFromUrl(): string | null {
+export function getPermissionsOnboardingReasonFromUrl(): string | null {
   if (typeof window === "undefined") {
     return null
   }

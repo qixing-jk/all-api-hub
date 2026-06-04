@@ -908,6 +908,22 @@ describe("navigation utilities", () => {
     pushStateSpy.mockRestore()
   })
 
+  it("opens permissions onboarding in-place when already on the options page", async () => {
+    window.history.replaceState(null, "", `${OPTIONS_PAGE_URL}#account`)
+    const replaceStateSpy = vi.spyOn(window.history, "replaceState")
+
+    await openPermissionsOnboardingPage({ reason: "debug" })
+
+    expect(replaceStateSpy).toHaveBeenCalledWith(
+      null,
+      "",
+      `${OPTIONS_PAGE_URL}?onboarding=permissions&reason=debug#overview`,
+    )
+    expect(mockedCreateTab).not.toHaveBeenCalled()
+
+    replaceStateSpy.mockRestore()
+  })
+
   it("opens the remaining wrapper destinations in fresh tabs", async () => {
     const account = {
       baseUrl: "https://example.com",
