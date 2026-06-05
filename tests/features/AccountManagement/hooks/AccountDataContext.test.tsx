@@ -99,8 +99,15 @@ const {
   mockToastPromise: vi.fn(),
   mockGetActiveTabs: vi.fn<() => Promise<browser.tabs.Tab[]>>(async () => []),
   mockGetAllTabs: vi.fn<() => Promise<browser.tabs.Tab[]>>(async () => []),
-  mockSendTabMessage: vi.fn((tabId: number, message: unknown) =>
-    globalThis.browser.tabs.sendMessage(tabId, message),
+  mockSendTabMessage: vi.fn(
+    (
+      tabId: number,
+      message: unknown,
+      options?: browser.tabs._SendMessageOptions,
+    ) =>
+      typeof options === "undefined"
+        ? globalThis.browser.tabs.sendMessage(tabId, message)
+        : globalThis.browser.tabs.sendMessage(tabId, message, options),
   ),
   mockOnRuntimeMessage: vi.fn<
     (

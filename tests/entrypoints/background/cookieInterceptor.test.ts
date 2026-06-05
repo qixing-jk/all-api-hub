@@ -100,6 +100,7 @@ describe("cookieInterceptor", () => {
           addListener: vi.fn((listener) => {
             storageChangeListeners.push(listener)
           }),
+          removeListener: vi.fn(),
         },
       },
     })

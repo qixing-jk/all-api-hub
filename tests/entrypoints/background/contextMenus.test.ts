@@ -146,8 +146,9 @@ describe("background context menu refresh", () => {
       123,
       expect.objectContaining({
         action: RuntimeActionIds.ApiCheckContextMenuTrigger,
+        pageUrl: "https://example.com",
+        selectionText: "sk-test",
       }),
-      undefined,
     )
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
@@ -223,8 +224,9 @@ describe("background context menu refresh", () => {
       123,
       expect.objectContaining({
         action: RuntimeActionIds.ApiCheckContextMenuTrigger,
+        pageUrl: "https://example.com",
+        selectionText: "sk-test",
       }),
-      undefined,
     )
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,

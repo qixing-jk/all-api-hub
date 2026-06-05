@@ -78,7 +78,14 @@ function registerContextMenuTriggerListener() {
     })
   }
 
-  return onRuntimeMessage(listener)
+  const cleanup = onRuntimeMessage(listener)
+  return () => {
+    try {
+      cleanup()
+    } catch (error) {
+      logger.debug("Failed to remove ApiCheck context menu listener", error)
+    }
+  }
 }
 
 /**
