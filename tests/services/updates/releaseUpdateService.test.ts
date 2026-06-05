@@ -159,6 +159,90 @@ describe("releaseUpdateService", () => {
     expect(globalThis.fetch).not.toHaveBeenCalled()
   })
 
+  it("classifies Chromium installs as API-unavailable when management self lookup fails", async () => {
+    ;(globalThis as any).browser.management.getSelf.mockRejectedValueOnce(
+      new Error("management unavailable"),
+    )
+
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+
+    const status = await releaseUpdateService.getStatus()
+
+    expect(status).toMatchObject({
+      eligible: false,
+      reason: "api-unavailable",
+      currentVersion: "3.32.0",
+      latestVersion: null,
+      updateAvailable: false,
+    })
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+
+  it("classifies Chromium installs as API-unavailable when management self returns no info", async () => {
+    ;(globalThis as any).browser.management.getSelf.mockResolvedValueOnce(null)
+
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+
+    const status = await releaseUpdateService.getStatus()
+
+    expect(status).toMatchObject({
+      eligible: false,
+      reason: "api-unavailable",
+      currentVersion: "3.32.0",
+      latestVersion: null,
+      updateAvailable: false,
+    })
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+
+  it("keeps Firefox installs ambiguous even when management self reports development", async () => {
+    browserAny.runtime.id = "{bc73541a-133d-4b50-b261-36ea20df0d24}"
+    browserAny.runtime.getURL = vi.fn(
+      () => "moz-extension://firefox-extension/",
+    )
+    ;(globalThis as any).browser.management.getSelf.mockResolvedValueOnce({
+      installType: "development",
+    })
+
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+
+    const status = await releaseUpdateService.getStatus()
+
+    expect(status).toMatchObject({
+      eligible: false,
+      reason: "firefox-ambiguous",
+      currentVersion: "3.32.0",
+      latestVersion: null,
+      updateAvailable: false,
+    })
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+
+  it("classifies known Chromium store builds as ineligible", async () => {
+    browserAny.runtime.id = "lapnciffpekdengooeolaienkeoilfeo"
+
+    const { releaseUpdateService } = await import(
+      "~/services/updates/releaseUpdateService"
+    )
+
+    const status = await releaseUpdateService.getStatus()
+
+    expect(status).toMatchObject({
+      eligible: false,
+      reason: "store-build",
+      currentVersion: "3.32.0",
+      latestVersion: null,
+      updateAvailable: false,
+    })
+    expect(globalThis.fetch).not.toHaveBeenCalled()
+  })
+
   it("registers the daily alarm once and preserves an existing matching schedule", async () => {
     getAlarmMock.mockResolvedValueOnce({
       name: "releaseUpdateDailyCheck",

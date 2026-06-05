@@ -324,6 +324,25 @@ describe("useAccountDialog current tab detection", () => {
     expect(mockGetSiteName).not.toHaveBeenCalled()
   })
 
+  it("clears current-tab detection when active-tab lookup fails", async () => {
+    mockGetActiveTabs.mockRejectedValueOnce(new Error("tabs unavailable"))
+
+    const { result } = renderHook(() =>
+      useAccountDialog({
+        mode: DIALOG_MODES.ADD,
+        isOpen: true,
+        onClose: vi.fn(),
+        onSuccess: vi.fn(),
+      }),
+    )
+
+    await waitFor(() => {
+      expect(result.current.state.currentTabUrl).toBeNull()
+      expect(result.current.state.siteName).toBe("")
+    })
+    expect(mockGetSiteName).not.toHaveBeenCalled()
+  })
+
   it("clears current-tab detection when fallback finds a non-http tab", async () => {
     const tabsQueryMock = globalThis.browser.tabs.query as ReturnType<
       typeof vi.fn

@@ -226,6 +226,48 @@ describe("tempWindowPool open/close handlers", () => {
     })
   })
 
+  it("recreates the composite window when the existing window handle is unavailable", async () => {
+    tempContextMode = "composite"
+    createWindowMock
+      .mockResolvedValueOnce({ id: 901 })
+      .mockResolvedValueOnce({ id: 905 })
+    windowsGetMock.mockResolvedValueOnce(null)
+    tabsQueryMock
+      .mockResolvedValueOnce([{ id: 902 }])
+      .mockResolvedValueOnce([{ id: 906 }])
+
+    const { handleOpenTempWindow } = await import(
+      "~/entrypoints/background/tempWindowPool"
+    )
+
+    const firstResponse = vi.fn()
+    await handleOpenTempWindow(
+      {
+        requestId: "req-composite-null-window-initial",
+        url: "https://example.com/composite/null-window/initial",
+      },
+      firstResponse,
+    )
+
+    const secondResponse = vi.fn()
+    await handleOpenTempWindow(
+      {
+        requestId: "req-composite-null-window-recreated",
+        url: "https://example.com/composite/null-window/recreated",
+      },
+      secondResponse,
+    )
+
+    expect(windowsGetMock).toHaveBeenCalledWith(901)
+    expect(createWindowMock).toHaveBeenCalledTimes(2)
+    expect(removeTabOrWindowMock).not.toHaveBeenCalled()
+    expect(secondResponse).toHaveBeenCalledWith({
+      success: true,
+      windowId: 905,
+      tabId: 906,
+    })
+  })
+
   it("recreates the composite window even when stale-window cleanup fails", async () => {
     tempContextMode = "composite"
     createWindowMock

@@ -196,6 +196,47 @@ describe("background context menu refresh", () => {
     )
   })
 
+  it("forwards selected text from the redemption context-menu action", async () => {
+    const { refreshContextMenus } = await import(
+      "~/entrypoints/background/contextMenus"
+    )
+
+    await refreshContextMenus({
+      redemptionAssist: { enabled: true, contextMenu: { enabled: true } },
+      webAiApiCheck: { enabled: true, contextMenu: { enabled: true } },
+    } as any)
+
+    await Promise.all(
+      listeners.map((listener) =>
+        listener(
+          {
+            menuItemId: "redemption-assist-context-menu",
+            selectionText: "coupon-code",
+            pageUrl: "https://example.com",
+          },
+          { id: 123, url: "https://example.com" },
+        ),
+      ),
+    )
+
+    expect(tabsSendMessage).toHaveBeenCalledWith(
+      123,
+      expect.objectContaining({
+        action: RuntimeActionIds.RedemptionAssistContextMenuTrigger,
+        pageUrl: "https://example.com",
+        selectionText: "coupon-code",
+      }),
+    )
+    expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
+      featureId: PRODUCT_ANALYTICS_FEATURE_IDS.RedemptionAssist,
+      actionId:
+        PRODUCT_ANALYTICS_ACTION_IDS.TriggerRedemptionAssistFromContextMenu,
+      surfaceId: PRODUCT_ANALYTICS_SURFACE_IDS.BackgroundContextMenu,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Background,
+    })
+    expect(trackerCompleteMock).toHaveBeenCalledWith()
+  })
+
   it("reports a failed AI API Check context-menu action when forwarding fails", async () => {
     tabsSendMessage.mockRejectedValueOnce(new Error("content unavailable"))
     const { refreshContextMenus } = await import(
