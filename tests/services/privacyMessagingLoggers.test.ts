@@ -19,7 +19,7 @@ const messagingMock = vi.hoisted(() => ({
     | undefined,
 }))
 
-vi.mock("@webext-core/messaging", () => ({
+vi.mock("~/services/runtimeMessaging/extensionMessaging", () => ({
   defineExtensionMessaging: messagingMock.defineExtensionMessaging,
 }))
 

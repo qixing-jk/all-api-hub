@@ -1,5 +1,4 @@
-import type { Logger } from "@webext-core/messaging"
-
+import type { Logger } from "~/services/runtimeMessaging/extensionMessaging"
 import { createLogger } from "~/utils/core/logger"
 
 /**

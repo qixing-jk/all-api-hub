@@ -1,6 +1,5 @@
-import { defineExtensionMessaging } from "@webext-core/messaging"
-
 import type { UserPreferences } from "~/services/preferences/userPreferences"
+import { defineExtensionMessaging } from "~/services/runtimeMessaging/extensionMessaging"
 import { createRuntimeMessagingLogger } from "~/services/runtimeMessaging/logger"
 import { WebdavAutoSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"

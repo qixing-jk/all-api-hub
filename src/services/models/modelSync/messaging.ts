@@ -1,5 +1,4 @@
-import { defineExtensionMessaging } from "@webext-core/messaging"
-
+import { defineExtensionMessaging } from "~/services/runtimeMessaging/extensionMessaging"
 import { createRuntimeMessagingLogger } from "~/services/runtimeMessaging/logger"
 import { ModelSyncMessageTypes } from "~/services/runtimeMessaging/messageTypes"
 import type { RuntimeMessageResponse } from "~/services/runtimeMessaging/result"

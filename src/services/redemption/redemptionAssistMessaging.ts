@@ -1,6 +1,8 @@
-import { defineExtensionMessaging, type Logger } from "@webext-core/messaging"
-
 import type { RedemptionAssistPreferences } from "~/services/preferences/userPreferences"
+import {
+  defineExtensionMessaging,
+  type Logger,
+} from "~/services/runtimeMessaging/extensionMessaging"
 import { createLogger } from "~/utils/core/logger"
 
 import type {

@@ -7,7 +7,7 @@ const { sendLdohSiteLookupMessageMock, isReceiverUnavailableMock } = vi.hoisted(
   }),
 )
 
-vi.mock("@webext-core/messaging", () => ({
+vi.mock("~/services/runtimeMessaging/extensionMessaging", () => ({
   defineExtensionMessaging: () => ({
     sendMessage: sendLdohSiteLookupMessageMock,
     onMessage: vi.fn(),
