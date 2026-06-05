@@ -114,6 +114,22 @@ describe("extension messaging transport", () => {
     ).toBe(false)
   })
 
+  it("throws on malformed envelopes when strict format validation is enabled", () => {
+    const runtime = createRuntimeMock()
+    const messenger = defineExtensionMessaging<TestProtocolMap>({
+      throwOnUnknownMessageFormat: true,
+    })
+    messenger.onMessage("test:ping", vi.fn())
+    const listener = runtime.getListener()
+
+    expect(() => listener("not-object", {}, vi.fn())).toThrow(
+      "Unknown message format",
+    )
+    expect(() => listener({ action: "legacy" }, {}, vi.fn())).toThrow(
+      "Unknown message format",
+    )
+  })
+
   it("serializes listener failures so senders reject with a readable error", async () => {
     const runtime = createRuntimeMock()
     const messenger = defineExtensionMessaging<TestProtocolMap>()

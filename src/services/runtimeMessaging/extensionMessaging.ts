@@ -118,6 +118,11 @@ function createNoResponseError(): SerializedRuntimeMessagingError {
 /**
  * Browser extension messaging transport that keeps Chrome/Edge async response
  * channels open with `sendResponse` + `return true`.
+ *
+ * Chrome runtime messaging contract:
+ * https://developer.chrome.com/docs/extensions/develop/concepts/messaging#responses
+ * This transport intentionally uses the non-fallback `sendResponse`/`return true`
+ * path because async handlers must keep the response channel open in Chrome/Edge.
  */
 export function defineExtensionMessaging<
   TProtocolMap extends Record<string, any> = Record<string, any>,
