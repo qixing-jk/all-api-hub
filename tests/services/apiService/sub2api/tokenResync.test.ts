@@ -3,26 +3,37 @@ import { beforeEach, describe, expect, it, vi } from "vitest"
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { resyncSub2ApiAuthToken } from "~/services/apiService/sub2api/tokenResync"
 
-const { mockGetAllTabs, mockSendRuntimeMessage } = vi.hoisted(() => ({
+const {
+  mockGetAllTabs,
+  mockGetBrowserApiCapabilities,
+  mockSendRuntimeMessage,
+  mockSendTabMessage,
+} = vi.hoisted(() => ({
   mockGetAllTabs: vi.fn(),
+  mockGetBrowserApiCapabilities: vi.fn(),
   mockSendRuntimeMessage: vi.fn(),
+  mockSendTabMessage: vi.fn(),
 }))
 
 vi.mock("~/utils/browser/browserApi", () => ({
   getAllTabs: mockGetAllTabs,
+  getBrowserApiCapabilities: mockGetBrowserApiCapabilities,
   sendRuntimeMessage: mockSendRuntimeMessage,
+  sendTabMessage: mockSendTabMessage,
 }))
 
 describe("Sub2API token re-sync", () => {
-  const mockTabSendMessage = vi.fn()
-
   beforeEach(() => {
     vi.clearAllMocks()
     vi.unstubAllGlobals()
+    mockGetBrowserApiCapabilities.mockReturnValue({
+      hasWindows: true,
+      hasTabs: true,
+      hasBackgroundMessaging: true,
+    })
     vi.stubGlobal("browser", {
       tabs: {
         query: vi.fn(),
-        sendMessage: mockTabSendMessage,
       },
     })
   })
@@ -48,7 +59,7 @@ describe("Sub2API token re-sync", () => {
       { id: 3, url: "https://sub2.example.com/console", active: true },
     ])
 
-    mockTabSendMessage
+    mockSendTabMessage
       .mockResolvedValueOnce({
         success: true,
         data: { accessToken: "   " },
@@ -64,12 +75,12 @@ describe("Sub2API token re-sync", () => {
       accessToken: "token-from-tab",
       source: "existing_tab",
     })
-    expect(mockTabSendMessage).toHaveBeenNthCalledWith(1, 3, {
+    expect(mockSendTabMessage).toHaveBeenNthCalledWith(1, 3, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: "https://sub2.example.com",
       siteType: "sub2api",
     })
-    expect(mockTabSendMessage).toHaveBeenNthCalledWith(2, 2, {
+    expect(mockSendTabMessage).toHaveBeenNthCalledWith(2, 2, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: "https://sub2.example.com",
       siteType: "sub2api",
@@ -81,7 +92,7 @@ describe("Sub2API token re-sync", () => {
     mockGetAllTabs.mockResolvedValueOnce([
       { id: 10, url: "https://sub2.example.com/dashboard", active: true },
     ])
-    mockTabSendMessage.mockResolvedValueOnce({
+    mockSendTabMessage.mockResolvedValueOnce({
       success: false,
     })
     mockSendRuntimeMessage.mockResolvedValueOnce({
@@ -106,7 +117,7 @@ describe("Sub2API token re-sync", () => {
     mockGetAllTabs.mockResolvedValueOnce([
       { id: 11, url: "https://sub2.example.com/dashboard", active: true },
     ])
-    mockTabSendMessage.mockRejectedValueOnce(new Error("receiver missing"))
+    mockSendTabMessage.mockRejectedValueOnce(new Error("receiver missing"))
     mockSendRuntimeMessage.mockRejectedValueOnce(new Error("window blocked"))
 
     await expect(

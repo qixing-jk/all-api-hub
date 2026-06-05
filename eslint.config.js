@@ -171,7 +171,7 @@ export default defineConfig([
       "no-console": "off",
     },
   },
-  // Guardrails: keep version-sensitive extension API access inside browser adapter modules.
+  // Guardrails: keep runtime extension API access inside browser adapter modules.
   {
     files: [srcJsFamilyFilePattern],
     ignores: [
@@ -182,6 +182,11 @@ export default defineConfig([
       "no-restricted-globals": [
         "error",
         {
+          name: "browser",
+          message:
+            "Do not access the global WebExtension API directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+        },
+        {
           name: "chrome",
           message:
             "Do not access the global Chrome extension API directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
@@ -190,34 +195,27 @@ export default defineConfig([
       "no-restricted-syntax": [
         "error",
         {
-          selector:
-            "MemberExpression[object.name=/^(globalThis|window)$/][property.name='chrome']",
+          selector: "MemberExpression[object.name=/^(browser|chrome)$/]",
           message:
-            "Do not access the global Chrome extension API directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+            "Do not access global WebExtension APIs directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
         },
         {
           selector:
-            "MemberExpression[object.type='TSAsExpression'][object.expression.name='globalThis'][property.name='chrome']",
+            "MemberExpression[object.type='TSAsExpression'][object.expression.name=/^(browser|chrome)$/]",
           message:
-            "Do not access the global Chrome extension API directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+            "Do not access casted global WebExtension APIs directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
         },
         {
           selector:
-            "MemberExpression[object.name='browser'][property.name=/^(action|browserAction|sidebarAction|permissions)$/]",
+            "MemberExpression[object.name=/^(globalThis|window)$/][property.name=/^(browser|chrome)$/]:not(MemberExpression[object.name=/^(globalThis|window)$/][property.name=/^(browser|chrome)$/] MemberExpression)",
           message:
-            "Do not access version-sensitive `browser.*` extension APIs directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+            "Do not access global WebExtension APIs through `globalThis` or `window` in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
         },
         {
           selector:
-            "MemberExpression[object.type='MemberExpression'][object.object.name=/^(globalThis|window)$/][object.property.name='browser'][property.name=/^(action|browserAction|sidebarAction|permissions)$/]",
+            "MemberExpression[object.type='TSAsExpression'][object.expression.name=/^(globalThis|window)$/][property.name=/^(browser|chrome)$/]:not(MemberExpression[object.type='TSAsExpression'][object.expression.name=/^(globalThis|window)$/][property.name=/^(browser|chrome)$/] MemberExpression)",
           message:
-            "Do not access version-sensitive `browser.*` extension APIs directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
-        },
-        {
-          selector:
-            "MemberExpression[object.type='MemberExpression'][object.object.type='TSAsExpression'][object.object.expression.name=/^(globalThis|window)$/][object.property.name='browser'][property.name=/^(action|browserAction|sidebarAction|permissions)$/]",
-          message:
-            "Do not access version-sensitive `browser.*` extension APIs directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+            "Do not access casted global WebExtension APIs through `globalThis` or `window` in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
         },
       ],
     },

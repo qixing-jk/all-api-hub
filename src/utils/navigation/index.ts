@@ -15,6 +15,8 @@ import {
   focusTab,
   getExtensionURL,
   hasWindowsAPI,
+  queryTabs as queryTabsApi,
+  updateTab as updateTabApi,
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -207,7 +209,7 @@ const updateTab = async (
   tabId: number,
   updateInfo: browser.tabs._UpdateUpdateProperties,
 ): Promise<void> => {
-  await browser.tabs.update(tabId, updateInfo)
+  await updateTabApi(tabId, updateInfo)
 }
 
 /**
@@ -226,7 +228,7 @@ const queryTabs = async (
   queryInfo: browser.tabs._QueryQueryInfo,
 ): Promise<browser.tabs.Tab[]> => {
   try {
-    return (await browser.tabs.query(queryInfo)) || []
+    return (await queryTabsApi(queryInfo)) || []
   } catch (error) {
     logger.warn("Failed to query tabs", error)
     return []

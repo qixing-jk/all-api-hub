@@ -91,9 +91,11 @@ import { deepOverride } from "~/utils"
 import {
   getActiveTabs,
   getAllTabs,
+  getBrowserApiCapabilities,
   onTabActivated,
   onTabUpdated,
   sendRuntimeMessage,
+  sendTabMessage,
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -954,12 +956,9 @@ export function useAccountDialog({
     const canApplyCurrentTabTitle = () => !selectedSiteUrlRef.current.trim()
 
     try {
-      const tabs = await browser.tabs.query({
-        active: true,
-        currentWindow: true,
-      })
+      const tabs = await getActiveTabs()
       const tab = tabs[0]
-      if (tab.url) {
+      if (tab?.url) {
         try {
           const urlObj = new URL(tab.url)
           const baseUrl = `${urlObj.protocol}//${urlObj.host}`
@@ -988,37 +987,8 @@ export function useAccountDialog({
         clearCurrentTabDetection()
       }
     } catch (error) {
-      logger.warn("Failed to query current tab, falling back", { error })
-      // Fallback for Firefox Android
-      try {
-        const tabs = await browser.tabs.query({ active: true })
-        const tab = tabs[0]
-        if (tab.url) {
-          const urlObj = new URL(tab.url)
-          const baseUrl = `${urlObj.protocol}//${urlObj.host}`
-          if (baseUrl.startsWith("http")) {
-            currentTabCookieImportContextRef.current =
-              createCurrentTabCookieImportContext(tab, baseUrl)
-            setCurrentTabUrl(baseUrl)
-            const resolvedSiteName = await getSiteName(tab)
-            if (!isCurrentDetectionRun()) return
-
-            currentTabSiteNameRef.current = resolvedSiteName
-            if (canApplyCurrentTabTitle()) {
-              setSiteName(resolvedSiteName)
-            }
-          } else {
-            clearCurrentTabDetection()
-          }
-        } else {
-          clearCurrentTabDetection()
-        }
-      } catch (fallbackError) {
-        logger.warn("Failed to query current tab in fallback mode", {
-          error: fallbackError,
-        })
-        clearCurrentTabDetection()
-      }
+      logger.warn("Failed to query current tab", { error })
+      clearCurrentTabDetection()
     }
   }, [account, mode, setSiteName])
 
@@ -1439,7 +1409,7 @@ export function useAccountDialog({
         typeof (value as any)?.sub2apiAuth?.refreshToken === "string" &&
         (value as any).sub2apiAuth.refreshToken.trim().length > 0
 
-      if (targetOrigin && browser?.tabs?.sendMessage) {
+      if (targetOrigin && getBrowserApiCapabilities().hasTabs) {
         const tabs = await getAllTabs().catch(() => [])
         const candidates = tabs
           .filter((tab) => {
@@ -1453,7 +1423,7 @@ export function useAccountDialog({
           if (typeof tabId !== "number") continue
 
           try {
-            const response = await browser.tabs.sendMessage(tabId, {
+            const response = await sendTabMessage(tabId, {
               action: RuntimeActionIds.ContentGetUserFromLocalStorage,
               url: baseUrl,
               siteType: SITE_TYPES.SUB2API,

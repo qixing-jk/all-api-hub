@@ -7,7 +7,7 @@ import { useTranslation } from "react-i18next"
 
 import { Alert, Button } from "~/components/ui"
 import { DestructiveConfirmDialog } from "~/components/ui/Dialog/DestructiveConfirmDialog"
-import { reloadRuntime } from "~/utils/browser/browserApi"
+import { createTab, reloadRuntime } from "~/utils/browser/browserApi"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
 
 export interface AutoDetectSlowHintAlertProps {
@@ -31,7 +31,7 @@ export default function AutoDetectSlowHintAlert({
       onHelpClick()
       return
     }
-    browser.tabs.create({ url: helpDocUrl, active: true })
+    void createTab(helpDocUrl, true)
   }
 
   const handleReloadExtension = () => {

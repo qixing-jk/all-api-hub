@@ -35,6 +35,7 @@ describe("background context menu refresh", () => {
 
   const contextMenusCreate = vi.fn()
   const contextMenusRemove = vi.fn().mockResolvedValue(undefined)
+  const contextMenusRemoveListener = vi.fn()
   const contextMenusAddListener = vi.fn(
     (listener: (info: any, tab: any) => unknown) => {
       listeners.push(listener)
@@ -48,6 +49,7 @@ describe("background context menu refresh", () => {
       remove: contextMenusRemove,
       onClicked: {
         addListener: contextMenusAddListener,
+        removeListener: contextMenusRemoveListener,
       },
     },
     tabs: {
@@ -64,6 +66,7 @@ describe("background context menu refresh", () => {
     contextMenusCreate.mockClear()
     contextMenusRemove.mockClear()
     contextMenusAddListener.mockClear()
+    contextMenusRemoveListener.mockClear()
     tabsSendMessage.mockClear()
     startProductAnalyticsActionMock.mockReset()
     trackerCompleteMock.mockReset()
@@ -144,6 +147,7 @@ describe("background context menu refresh", () => {
       expect.objectContaining({
         action: RuntimeActionIds.ApiCheckContextMenuTrigger,
       }),
+      undefined,
     )
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,
@@ -220,6 +224,7 @@ describe("background context menu refresh", () => {
       expect.objectContaining({
         action: RuntimeActionIds.ApiCheckContextMenuTrigger,
       }),
+      undefined,
     )
     expect(startProductAnalyticsActionMock).toHaveBeenCalledWith({
       featureId: PRODUCT_ANALYTICS_FEATURE_IDS.WebAiApiCheck,

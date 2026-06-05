@@ -6,6 +6,12 @@ import type {
   Message,
 } from "@webext-core/messaging"
 
+import {
+  onRuntimeMessage,
+  sendRuntimeMessageOnce,
+  sendTabMessage,
+} from "~/utils/browser/browserApi"
+
 export type { Logger } from "@webext-core/messaging"
 
 interface RuntimeMessagingResponse {
@@ -216,10 +222,7 @@ export function defineExtensionMessaging<
       return true
     }
 
-    browser.runtime.onMessage.addListener(listener)
-    return () => {
-      browser.runtime.onMessage.removeListener(listener)
-    }
+    return onRuntimeMessage(listener)
   }
 
   return {
@@ -234,8 +237,8 @@ export function defineExtensionMessaging<
 
       const response =
         arg == null
-          ? await browser.runtime.sendMessage(message)
-          : await browser.tabs.sendMessage(
+          ? await sendRuntimeMessageOnce(message)
+          : await sendTabMessage(
               typeof arg === "number" ? arg : arg.tabId,
               message,
               typeof arg === "object" && arg.frameId != null

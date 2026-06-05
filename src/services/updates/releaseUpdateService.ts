@@ -7,7 +7,10 @@ import { createRuntimeMessageFailure } from "~/services/runtimeMessaging/result"
 import {
   createAlarm,
   getAlarm,
+  getExtensionURL,
+  getManagementSelf,
   getManifest,
+  getRuntimeId,
   hasAlarmsAPI,
   onAlarm,
 } from "~/utils/browser/browserApi"
@@ -256,42 +259,9 @@ async function detectInstallEligibility(): Promise<DetectInstallEligibilityResul
     return { eligible: false, reason: RELEASE_UPDATE_REASONS.SafariUnsupported }
   }
 
-  const getSelf = (browser as any)?.management?.getSelf as
-    | (() => Promise<{ installType?: string }>)
-    | undefined
-
-  if (typeof getSelf !== "function") {
-    return {
-      eligible: false,
-      reason: runtimeUrl.startsWith("moz-extension://")
-        ? RELEASE_UPDATE_REASONS.FirefoxAmbiguous
-        : RELEASE_UPDATE_REASONS.ApiUnavailable,
-    }
-  }
-
+  let info: Awaited<ReturnType<typeof getManagementSelf>> = null
   try {
-    const info = await getSelf()
-    const installType = info?.installType
-
-    if (runtimeUrl.startsWith("moz-extension://")) {
-      return {
-        eligible: false,
-        reason: RELEASE_UPDATE_REASONS.FirefoxAmbiguous,
-      }
-    }
-
-    if (installType === "development") {
-      return {
-        eligible: true,
-        reason: RELEASE_UPDATE_REASONS.ChromiumDevelopment,
-      }
-    }
-
-    if (isKnownChromiumStoreBuild()) {
-      return { eligible: false, reason: RELEASE_UPDATE_REASONS.StoreBuild }
-    }
-
-    return { eligible: false, reason: RELEASE_UPDATE_REASONS.Unknown }
+    info = await getManagementSelf()
   } catch (error) {
     logger.debug("management.getSelf failed", error)
     return {
@@ -301,6 +271,37 @@ async function detectInstallEligibility(): Promise<DetectInstallEligibilityResul
         : RELEASE_UPDATE_REASONS.ApiUnavailable,
     }
   }
+
+  if (!info) {
+    return {
+      eligible: false,
+      reason: runtimeUrl.startsWith("moz-extension://")
+        ? RELEASE_UPDATE_REASONS.FirefoxAmbiguous
+        : RELEASE_UPDATE_REASONS.ApiUnavailable,
+    }
+  }
+
+  const installType = info.installType
+
+  if (runtimeUrl.startsWith("moz-extension://")) {
+    return {
+      eligible: false,
+      reason: RELEASE_UPDATE_REASONS.FirefoxAmbiguous,
+    }
+  }
+
+  if (installType === "development") {
+    return {
+      eligible: true,
+      reason: RELEASE_UPDATE_REASONS.ChromiumDevelopment,
+    }
+  }
+
+  if (isKnownChromiumStoreBuild()) {
+    return { eligible: false, reason: RELEASE_UPDATE_REASONS.StoreBuild }
+  }
+
+  return { eligible: false, reason: RELEASE_UPDATE_REASONS.Unknown }
 }
 
 /**
@@ -315,7 +316,7 @@ function getCurrentManifestVersion(): string {
  */
 function getRuntimeBaseUrl(): string {
   try {
-    return browser.runtime.getURL("")
+    return getExtensionURL("")
   } catch {
     return ""
   }
@@ -325,7 +326,7 @@ function getRuntimeBaseUrl(): string {
  * Check whether the current Chromium runtime ID matches a known store build.
  */
 function isKnownChromiumStoreBuild(): boolean {
-  const runtimeId = browser.runtime?.id
+  const runtimeId = getRuntimeId()
   if (typeof runtimeId !== "string" || !runtimeId) {
     return false
   }

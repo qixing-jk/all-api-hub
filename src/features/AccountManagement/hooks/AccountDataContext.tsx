@@ -57,6 +57,7 @@ import {
   onTabActivated,
   onTabRemoved,
   onTabUpdated,
+  sendTabMessage,
 } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 
@@ -487,7 +488,7 @@ export const AccountDataProvider = ({
 
         try {
           // Ask the content script to read the site's localStorage and return the current userId.
-          const userResponse = await browser.tabs.sendMessage(tabId, {
+          const userResponse = await sendTabMessage(tabId, {
             action: RuntimeActionIds.ContentGetUserFromLocalStorage,
             url: parsedUrl.origin,
             siteType: siteTypeForUserRead,

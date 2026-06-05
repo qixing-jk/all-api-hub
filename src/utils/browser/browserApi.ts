@@ -121,6 +121,22 @@ export async function updateTab(
 }
 
 /**
+ * Retrieves a tab by id.
+ * @param tabId Target tab ID.
+ */
+export async function getTab(tabId: number): Promise<browser.tabs.Tab> {
+  return await browser.tabs.get(tabId)
+}
+
+/**
+ * Reloads a tab by id.
+ * @param tabId Target tab ID.
+ */
+export async function reloadTab(tabId: number): Promise<void> {
+  await browser.tabs.reload(tabId)
+}
+
+/**
  * 查询标签页
  * @param queryInfo 标签查询条件对象。
  */
@@ -128,6 +144,19 @@ export async function queryTabs(
   queryInfo: browser.tabs._QueryQueryInfo,
 ): Promise<browser.tabs.Tab[]> {
   return await browser.tabs.query(queryInfo)
+}
+
+/**
+ * Sends a message to a tab without retrying.
+ *
+ * Use this when a caller intentionally owns missing-receiver fallback behavior.
+ */
+export async function sendTabMessage<TResponse = any>(
+  tabId: number,
+  message: unknown,
+  options?: browser.tabs._SendMessageOptions,
+): Promise<TResponse> {
+  return (await browser.tabs.sendMessage(tabId, message, options)) as TResponse
 }
 
 /**
@@ -166,6 +195,31 @@ export async function createWindow(
 ): Promise<browser.windows.Window | null> {
   if (hasWindowsAPI()) {
     return await browser.windows.create(createData)
+  }
+  return null
+}
+
+/**
+ * Retrieves a browser window by id when the windows API is available.
+ */
+export async function getWindow(
+  windowId: number,
+): Promise<browser.windows.Window | null> {
+  if (hasWindowsAPI()) {
+    return await browser.windows.get(windowId)
+  }
+  return null
+}
+
+/**
+ * Updates a browser window when the windows API is available.
+ */
+export async function updateWindow(
+  windowId: number,
+  updateInfo: browser.windows._UpdateUpdateInfo,
+): Promise<browser.windows.Window | null> {
+  if (hasWindowsAPI()) {
+    return await browser.windows.update(windowId, updateInfo)
   }
   return null
 }
@@ -282,6 +336,19 @@ export async function sendRuntimeMessage<TResponse>(
   options?: SendMessageRetryOptions,
 ): Promise<TResponse> {
   return await sendMessageWithRetry<TResponse>(message, options)
+}
+
+/**
+ * Sends a runtime message without retrying.
+ *
+ * Use this for transports that need to preserve the raw WebExtension messaging
+ * contract and handle missing responses themselves.
+ */
+export async function sendRuntimeMessageOnce<TResponse = any>(
+  message: unknown,
+  options?: browser.runtime._SendMessageOptions,
+): Promise<TResponse> {
+  return (await browser.runtime.sendMessage(message, options)) as TResponse
 }
 
 /**
@@ -441,6 +508,51 @@ export function getExtensionURL(path: string): string {
 }
 
 /**
+ * Returns the current extension runtime id when available.
+ */
+export function getRuntimeId(): string | undefined {
+  const runtimeId = (globalThis as any).browser?.runtime?.id
+  return typeof runtimeId === "string" ? runtimeId : undefined
+}
+
+export interface BrowserApiCapabilities {
+  hasWindows: boolean
+  hasTabs: boolean
+  hasBackgroundMessaging: boolean
+}
+
+/**
+ * Detects the currently exposed high-level WebExtension APIs.
+ */
+export function getBrowserApiCapabilities(): BrowserApiCapabilities {
+  const runtimeBrowser = (globalThis as any).browser
+  return {
+    hasWindows: !!runtimeBrowser?.windows,
+    hasTabs: !!runtimeBrowser?.tabs,
+    hasBackgroundMessaging: !!runtimeBrowser?.runtime,
+  }
+}
+
+export interface BrowserManagementSelfInfo {
+  installType?: string
+}
+
+/**
+ * Reads extension installation metadata when the management API is available.
+ */
+export async function getManagementSelf(): Promise<BrowserManagementSelfInfo | null> {
+  const getSelf = (globalThis as any).browser?.management?.getSelf as
+    | (() => Promise<BrowserManagementSelfInfo>)
+    | undefined
+
+  if (typeof getSelf !== "function") {
+    return null
+  }
+
+  return await getSelf()
+}
+
+/**
  * 监听 runtime 消息
  * 返回清理函数
  *
@@ -458,6 +570,46 @@ export function onRuntimeMessage(
   return () => {
     browser.runtime.onMessage.removeListener(callback)
   }
+}
+
+/**
+ * Subscribes to local/browser storage changes when the API is available.
+ */
+export function onStorageChanged(
+  callback: (
+    changes: Record<string, browser.storage.StorageChange>,
+    areaName: string,
+  ) => void,
+): () => void {
+  const onChanged = (globalThis as any).browser?.storage?.onChanged as
+    | {
+        addListener?: (listener: typeof callback) => void
+        removeListener?: (listener: typeof callback) => void
+      }
+    | undefined
+
+  if (
+    typeof onChanged?.addListener !== "function" ||
+    typeof onChanged?.removeListener !== "function"
+  ) {
+    return () => {}
+  }
+
+  onChanged.addListener(callback)
+  return () => {
+    onChanged.removeListener?.(callback)
+  }
+}
+
+/**
+ * Returns whether storage change subscriptions are available.
+ */
+export function hasStorageChangedListener(): boolean {
+  const onChanged = (globalThis as any).browser?.storage?.onChanged
+  return (
+    typeof onChanged?.addListener === "function" &&
+    typeof onChanged?.removeListener === "function"
+  )
 }
 
 /**
@@ -845,6 +997,106 @@ export function hasNotificationsAPI(): boolean {
 }
 
 /**
+ * Checks whether the context menus API is available.
+ */
+export function hasContextMenusAPI(): boolean {
+  return !!(globalThis as any).browser?.contextMenus
+}
+
+/**
+ * Subscribes to context menu click events when supported.
+ */
+export function onContextMenuClicked(
+  callback: (
+    info: browser.contextMenus.OnClickData,
+    tab?: browser.tabs.Tab,
+  ) => void | Promise<void>,
+): () => void {
+  const onClicked = (globalThis as any).browser?.contextMenus?.onClicked as
+    | {
+        addListener?: (listener: typeof callback) => void
+        removeListener?: (listener: typeof callback) => void
+      }
+    | undefined
+
+  if (
+    typeof onClicked?.addListener !== "function" ||
+    typeof onClicked?.removeListener !== "function"
+  ) {
+    return () => {}
+  }
+
+  onClicked.addListener(callback)
+  return () => {
+    onClicked.removeListener?.(callback)
+  }
+}
+
+/**
+ * Creates a context menu item.
+ */
+export function createContextMenu(
+  createProperties: browser.contextMenus._CreateCreateProperties,
+): number | string | undefined {
+  if (!hasContextMenusAPI()) {
+    return undefined
+  }
+
+  return browser.contextMenus.create(createProperties)
+}
+
+/**
+ * Removes a context menu item.
+ */
+export async function removeContextMenu(
+  menuItemId: number | string,
+): Promise<void> {
+  if (!hasContextMenusAPI()) {
+    return
+  }
+
+  await browser.contextMenus.remove(menuItemId)
+}
+
+/**
+ * Reads a localized browser message from the extension manifest locale bundle.
+ */
+export function getBrowserI18nMessage(
+  messageName: string,
+  substitutions?: string | Array<string | number>,
+): string {
+  const getMessage = (globalThis as any).browser?.i18n?.getMessage
+  if (typeof getMessage !== "function") {
+    return ""
+  }
+
+  return getMessage(messageName, substitutions)
+}
+
+/**
+ * Checks whether browser cookie-store enumeration is available.
+ */
+export function hasCookieStoresAPI(): boolean {
+  return (
+    typeof (globalThis as any).browser?.cookies?.getAllCookieStores ===
+    "function"
+  )
+}
+
+/**
+ * Lists browser cookie stores when supported.
+ */
+export async function getAllCookieStores(): Promise<
+  browser.cookies.CookieStore[]
+> {
+  if (!hasCookieStoresAPI()) {
+    return []
+  }
+
+  return await browser.cookies.getAllCookieStores()
+}
+
+/**
  * Creates or replaces a browser notification. Returns the created id, or null
  * when notifications are unavailable or creation fails.
  */
@@ -974,6 +1226,11 @@ type ActionClickListener = (tab: browser.tabs.Tab, info?: any) => void
 
 type ActionAPI = {
   setPopup: (details: { popup?: string }) => Promise<void> | void
+  setBadgeText?: (details: { text: string }) => Promise<void> | void
+  setBadgeBackgroundColor?: (details: {
+    color: string | [number, number, number, number]
+  }) => Promise<void> | void
+  setTitle?: (details: { title: string }) => Promise<void> | void
   onClicked: {
     addListener: (listener: ActionClickListener) => void
     removeListener: (listener: ActionClickListener) => void

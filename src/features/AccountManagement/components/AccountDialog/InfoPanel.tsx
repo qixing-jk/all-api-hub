@@ -5,6 +5,7 @@ import { LdohIcon } from "~/components/icons/LdohIcon"
 import { Button } from "~/components/ui"
 import { DIALOG_MODES, type DialogMode } from "~/constants/dialogModes"
 import { LDOH_ORIGIN } from "~/services/integrations/ldohSiteLookup/constants"
+import { createTab } from "~/utils/browser/browserApi"
 
 import {
   ACCOUNT_DIALOG_FORM_SOURCES,
@@ -37,7 +38,7 @@ export default function InfoPanel({ mode, phase, formSource }: InfoPanelProps) {
     isAddMode && phase === ACCOUNT_DIALOG_PHASES.SITE_INPUT
 
   const handleOpenLdohSiteList = () => {
-    browser.tabs.create({ url: LDOH_ORIGIN, active: true })
+    void createTab(LDOH_ORIGIN, true)
   }
 
   const getTitle = () => {

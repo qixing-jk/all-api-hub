@@ -27,6 +27,7 @@ import {
   getBestEffortLoginUrl,
   resolveAccountSiteLoginUrl,
 } from "~/services/accounts/utils/siteRouteResolver"
+import { createTab, queryTabs, reloadTab } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
 import { t } from "~/utils/i18n/core"
 import { getDocsAutoDetectUrl } from "~/utils/navigation/docsLinks"
@@ -240,7 +241,7 @@ export async function openLoginTab(
   siteTypeHint?: AccountSiteType,
 ): Promise<void> {
   const loginUrl = await resolveAccountSiteLoginUrl(siteUrl, siteTypeHint)
-  await browser.tabs.create({ url: loginUrl, active: true })
+  await createTab(loginUrl, true)
 }
 
 /**
@@ -248,13 +249,13 @@ export async function openLoginTab(
  * script can attach before the next auto-detect attempt.
  */
 export async function reloadCurrentTab(): Promise<void> {
-  const tabs = await browser.tabs.query({
+  const tabs = await queryTabs({
     active: true,
     currentWindow: true,
   })
 
   const activeTab = tabs[0]
   if (typeof activeTab?.id === "number") {
-    await browser.tabs.reload(activeTab.id)
+    await reloadTab(activeTab.id)
   }
 }

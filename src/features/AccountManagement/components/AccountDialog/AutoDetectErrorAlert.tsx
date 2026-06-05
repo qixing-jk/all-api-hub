@@ -8,6 +8,7 @@ import {
   reloadCurrentTab,
   type AutoDetectErrorProps,
 } from "~/services/accounts/utils/autoDetectUtils"
+import { createTab } from "~/utils/browser/browserApi"
 import { openSiteSupportRequestPage } from "~/utils/navigation"
 
 /**
@@ -44,7 +45,7 @@ export default function AutoDetectErrorAlert({
       onHelpClick()
     } else if (error.helpDocUrl) {
       // 默认行为：打开帮助文档
-      browser.tabs.create({ url: error.helpDocUrl, active: true })
+      void createTab(error.helpDocUrl, true)
     }
   }
 

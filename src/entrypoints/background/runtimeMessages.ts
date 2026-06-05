@@ -24,6 +24,8 @@ import { setupWebAiApiCheckMessagingListeners } from "~/services/verification/we
 import { setupWebdavAutoSyncMessagingListeners } from "~/services/webdav/webdavAutoSyncService"
 import {
   containsPermissions,
+  getAllCookieStores,
+  hasCookieStoresAPI,
   onRuntimeMessage,
 } from "~/utils/browser/browserApi"
 import {
@@ -69,13 +71,13 @@ async function resolveCookieStoreIdFromImportRequest(
   if (
     typeof request.sourceTabId !== "number" ||
     request.sourceTabIncognito !== true ||
-    typeof browser.cookies?.getAllCookieStores !== "function"
+    !hasCookieStoresAPI()
   ) {
     return undefined
   }
 
   try {
-    const cookieStores = await browser.cookies.getAllCookieStores()
+    const cookieStores = await getAllCookieStores()
     return cookieStores.find((store) =>
       store.tabIds?.includes(request.sourceTabId as number),
     )?.id

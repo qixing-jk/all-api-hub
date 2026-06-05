@@ -49,6 +49,7 @@ import {
   hasAlarmsAPI,
   isMessageReceiverUnavailableError,
   onAlarm,
+  onStorageChanged,
   sendRuntimeMessage,
 } from "~/utils/browser/browserApi"
 import { getErrorMessage } from "~/utils/core/error"
@@ -347,8 +348,7 @@ class WebdavAutoSyncService {
       void this.handleSharedAccountStorageChanged()
     }
 
-    browser.storage.onChanged.addListener(listener)
-    return () => browser.storage.onChanged.removeListener(listener)
+    return onStorageChanged(listener)
   }
 
   private hasDeletedSharedEntries(change: browser.storage.StorageChange) {

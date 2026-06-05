@@ -4,7 +4,10 @@ import {
   sendWebAiApiCheckMessage,
   WebAiApiCheckMessageTypes,
 } from "~/services/verification/webAiApiCheck/messaging"
-import { checkPermissionViaMessage } from "~/utils/browser/browserApi"
+import {
+  checkPermissionViaMessage,
+  onRuntimeMessage,
+} from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 import { isHttpUrl } from "~/utils/core/urlParsing"
 
@@ -75,14 +78,7 @@ function registerContextMenuTriggerListener() {
     })
   }
 
-  browser.runtime.onMessage.addListener(listener)
-  return () => {
-    try {
-      browser.runtime.onMessage.removeListener(listener)
-    } catch (error) {
-      logger.debug("Failed to remove ApiCheck context menu listener", error)
-    }
-  }
+  return onRuntimeMessage(listener)
 }
 
 /**

@@ -9,6 +9,7 @@ import {
   clearNotification,
   containsPermissions,
   createAlarm,
+  createContextMenu,
   createNotification,
   createWindow,
   disableNativeSidePanelActionClick,
@@ -19,21 +20,33 @@ import {
   getActiveTabs,
   getAlarm,
   getAllAlarms,
+  getAllCookieStores,
   getAllTabs,
+  getBrowserApiCapabilities,
+  getBrowserI18nMessage,
   getExtensionURL,
+  getManagementSelf,
   getManifest,
   getManifestVersion,
+  getRuntimeId,
+  getTab,
+  getWindow,
   hasAlarmsAPI,
+  hasContextMenusAPI,
+  hasCookieStoresAPI,
   hasNotificationsAPI,
+  hasStorageChangedListener,
   isAllowedIncognitoAccess,
   isMessageReceiverUnavailableError,
   onAlarm,
+  onContextMenuClicked,
   onInstalled,
   onNotificationClicked,
   onPermissionsAdded,
   onPermissionsRemoved,
   onRuntimeMessage,
   onStartup,
+  onStorageChanged,
   onSuspend,
   onTabActivated,
   onTabRemoved,
@@ -41,15 +54,20 @@ import {
   onWindowRemoved,
   PERMISSION_OPERATION_FAILURE_REASONS,
   reloadRuntime,
+  reloadTab,
   removeActionClickListener,
+  removeContextMenu,
   removePermissions,
   removePermissionsDetailed,
   removeTabOrWindow,
   requestPermissions,
   requestPermissionsDetailed,
   sendRuntimeActionMessage,
+  sendRuntimeMessageOnce,
+  sendTabMessage,
   sendTabMessageWithRetry,
   setActionPopup,
+  updateWindow,
   WINDOW_CREATION_FAILURE_REASONS,
 } from "~/utils/browser/browserApi"
 
@@ -513,6 +531,187 @@ describe("browserApi sendTabMessageWithRetry", () => {
         return result
       })(),
     ).resolves.toEqual({ ok: true })
+  })
+})
+
+describe("browserApi direct adapter helpers", () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    ;(globalThis as any).browser = {
+      runtime: {
+        id: "runtime-1",
+        sendMessage: vi.fn().mockResolvedValue({ ok: true }),
+      },
+      tabs: {
+        get: vi.fn().mockResolvedValue({ id: 3 }),
+        reload: vi.fn().mockResolvedValue(undefined),
+        sendMessage: vi.fn().mockResolvedValue({ received: true }),
+      },
+      windows: {
+        get: vi.fn().mockResolvedValue({ id: 5 }),
+        update: vi.fn().mockResolvedValue({ id: 5, focused: true }),
+      },
+      storage: {
+        onChanged: {
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+        },
+      },
+      contextMenus: {
+        create: vi.fn(() => "menu-1"),
+        remove: vi.fn().mockResolvedValue(undefined),
+        onClicked: {
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+        },
+      },
+      i18n: {
+        getMessage: vi.fn(() => "Localized title"),
+      },
+      cookies: {
+        getAllCookieStores: vi.fn().mockResolvedValue([{ id: "default" }]),
+      },
+    }
+  })
+
+  afterAll(() => {
+    ;(globalThis as any).browser = originalBrowser
+    ;(globalThis as any).chrome = originalChrome
+  })
+
+  it("delegates one-shot tab and runtime operations to the exposed browser APIs", async () => {
+    const message = { action: "test" }
+
+    await expect(getTab(3)).resolves.toEqual({ id: 3 })
+    await expect(reloadTab(3)).resolves.toBeUndefined()
+    await expect(sendTabMessage(3, message)).resolves.toEqual({
+      received: true,
+    })
+    await expect(sendRuntimeMessageOnce(message)).resolves.toEqual({
+      ok: true,
+    })
+
+    expect((globalThis as any).browser.tabs.get).toHaveBeenCalledWith(3)
+    expect((globalThis as any).browser.tabs.reload).toHaveBeenCalledWith(3)
+    expect((globalThis as any).browser.tabs.sendMessage).toHaveBeenCalledWith(
+      3,
+      message,
+      undefined,
+    )
+    expect(
+      (globalThis as any).browser.runtime.sendMessage,
+    ).toHaveBeenCalledWith(message, undefined)
+  })
+
+  it("reports runtime id and high-level API capabilities", () => {
+    expect(getRuntimeId()).toBe("runtime-1")
+    expect(getBrowserApiCapabilities()).toEqual({
+      hasWindows: true,
+      hasTabs: true,
+      hasBackgroundMessaging: true,
+    })
+  })
+
+  it("reads management self info when the management API is available", async () => {
+    ;(globalThis as any).browser.management = {
+      getSelf: vi.fn().mockResolvedValue({ installType: "development" }),
+    }
+
+    await expect(getManagementSelf()).resolves.toEqual({
+      installType: "development",
+    })
+    expect((globalThis as any).browser.management.getSelf).toHaveBeenCalled()
+  })
+
+  it("returns null when management self info is unavailable", async () => {
+    ;(globalThis as any).browser.management = {}
+
+    await expect(getManagementSelf()).resolves.toBeNull()
+  })
+
+  it("returns undefined runtime id and false capabilities when browser is missing", () => {
+    ;(globalThis as any).browser = undefined
+
+    expect(getRuntimeId()).toBeUndefined()
+    expect(getBrowserApiCapabilities()).toEqual({
+      hasWindows: false,
+      hasTabs: false,
+      hasBackgroundMessaging: false,
+    })
+  })
+
+  it("delegates guarded window helpers and falls back when windows are unavailable", async () => {
+    await expect(getWindow(5)).resolves.toEqual({ id: 5 })
+    await expect(updateWindow(5, { focused: true })).resolves.toEqual({
+      id: 5,
+      focused: true,
+    })
+
+    expect((globalThis as any).browser.windows.get).toHaveBeenCalledWith(5)
+    expect((globalThis as any).browser.windows.update).toHaveBeenCalledWith(5, {
+      focused: true,
+    })
+    ;(globalThis as any).browser.windows = undefined
+    await expect(getWindow(5)).resolves.toBeNull()
+    await expect(updateWindow(5, { focused: true })).resolves.toBeNull()
+  })
+
+  it("subscribes to storage changes and returns no-op cleanup when unavailable", () => {
+    const listener = vi.fn()
+    const cleanup = onStorageChanged(listener)
+
+    expect(hasStorageChangedListener()).toBe(true)
+    expect(
+      (globalThis as any).browser.storage.onChanged.addListener,
+    ).toHaveBeenCalledWith(listener)
+
+    cleanup()
+    expect(
+      (globalThis as any).browser.storage.onChanged.removeListener,
+    ).toHaveBeenCalledWith(listener)
+    ;(globalThis as any).browser.storage = {}
+    expect(hasStorageChangedListener()).toBe(false)
+    expect(() => onStorageChanged(listener)()).not.toThrow()
+  })
+
+  it("wraps context menu availability, creation, removal, and click listeners", async () => {
+    const listener = vi.fn()
+
+    expect(hasContextMenusAPI()).toBe(true)
+    expect(createContextMenu({ id: "menu-1", title: "Menu" })).toBe("menu-1")
+    await expect(removeContextMenu("menu-1")).resolves.toBeUndefined()
+
+    const cleanup = onContextMenuClicked(listener)
+    expect(
+      (globalThis as any).browser.contextMenus.onClicked.addListener,
+    ).toHaveBeenCalledWith(listener)
+    cleanup()
+    expect(
+      (globalThis as any).browser.contextMenus.onClicked.removeListener,
+    ).toHaveBeenCalledWith(listener)
+    ;(globalThis as any).browser.contextMenus = undefined
+    expect(hasContextMenusAPI()).toBe(false)
+    expect(createContextMenu({ id: "menu-2", title: "Menu" })).toBeUndefined()
+    await expect(removeContextMenu("menu-2")).resolves.toBeUndefined()
+    expect(() => onContextMenuClicked(listener)()).not.toThrow()
+  })
+
+  it("wraps browser i18n messages and cookie-store enumeration", async () => {
+    expect(getBrowserI18nMessage("context_menu", ["name"])).toBe(
+      "Localized title",
+    )
+    expect((globalThis as any).browser.i18n.getMessage).toHaveBeenCalledWith(
+      "context_menu",
+      ["name"],
+    )
+
+    expect(hasCookieStoresAPI()).toBe(true)
+    await expect(getAllCookieStores()).resolves.toEqual([{ id: "default" }])
+    ;(globalThis as any).browser.i18n = {}
+    ;(globalThis as any).browser.cookies = {}
+    expect(getBrowserI18nMessage("missing")).toBe("")
+    expect(hasCookieStoresAPI()).toBe(false)
+    await expect(getAllCookieStores()).resolves.toEqual([])
   })
 })
 

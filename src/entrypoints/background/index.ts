@@ -26,6 +26,7 @@ import { tagStorage } from "~/services/tags/tagStorage"
 import { changelogOnUpdateState } from "~/services/updates/changelogOnUpdateState"
 import {
   getManifest,
+  getRuntimeId,
   onInstalled,
   onStartup,
   onSuspend,
@@ -58,7 +59,7 @@ function shouldAutoOpenPermissionsOnboarding(): boolean {
 }
 
 export default defineBackground(() => {
-  logger.debug("Hello background", { id: browser.runtime.id })
+  logger.debug("Hello background", { id: getRuntimeId() })
 
   // Apply dev-only branding early so the toolbar action is visually distinguishable.
   void applyDevActionBranding()

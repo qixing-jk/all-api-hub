@@ -47,6 +47,7 @@ import type {
   ExecutionProgress,
   ExecutionResult,
 } from "~/types/managedSiteModelSync"
+import { onRuntimeMessage } from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 import { showWarningToast } from "~/utils/core/toastHelpers"
 
@@ -457,10 +458,7 @@ export default function ManagedSiteModelSync({
       }
     }
 
-    browser.runtime.onMessage.addListener(handleMessage)
-    return () => {
-      browser.runtime.onMessage.removeListener(handleMessage)
-    }
+    return onRuntimeMessage(handleMessage)
   }, [
     completeModelSyncActionAnalytics,
     isConfigMissing,

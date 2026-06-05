@@ -1,6 +1,11 @@
 import { RuntimeActionIds } from "~/constants/runtimeActions"
 import { SITE_TYPES } from "~/constants/siteType"
-import { getAllTabs, sendRuntimeMessage } from "~/utils/browser/browserApi"
+import {
+  getAllTabs,
+  getBrowserApiCapabilities,
+  sendRuntimeMessage,
+  sendTabMessage,
+} from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 import { tryParseOrigin } from "~/utils/core/urlParsing"
 
@@ -32,7 +37,7 @@ type Sub2ApiResyncedToken = {
  */
 async function readUserFromTab(tabId: number, baseUrl: string) {
   try {
-    return await browser.tabs.sendMessage(tabId, {
+    return await sendTabMessage(tabId, {
       action: RuntimeActionIds.ContentGetUserFromLocalStorage,
       url: baseUrl,
       siteType: SITE_TYPES.SUB2API,
@@ -55,7 +60,7 @@ async function readSub2ApiAuthTokenFromExistingTab(
   const origin = tryParseOrigin(baseUrl)
   if (!origin) return null
 
-  if (!browser?.tabs?.query) return null
+  if (!getBrowserApiCapabilities().hasTabs) return null
 
   const tabs = await getAllTabs().catch(() => [])
   const candidates = tabs

@@ -7,6 +7,7 @@ import { isSameStringSet } from "~/utils"
 import {
   onPermissionsAdded,
   onPermissionsRemoved,
+  onStorageChanged,
 } from "~/utils/browser/browserApi"
 import {
   checkCookieInterceptorRequirement,
@@ -249,7 +250,7 @@ async function handleStorageChanged(
  */
 export function setupCookieInterceptorListeners() {
   // Listen for storage changes
-  browser.storage.onChanged.addListener(handleStorageChanged)
+  onStorageChanged(handleStorageChanged)
 
   // Listen for permission additions and removals
   onPermissionsAdded(updateCookieInterceptor)

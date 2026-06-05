@@ -30,8 +30,10 @@ import {
 import { AuthTypeEnum, type Sub2ApiAuthConfig } from "~/types"
 import {
   getActiveOrAllTabs,
+  getBrowserApiCapabilities,
   isMessageReceiverUnavailableError,
   sendRuntimeMessage,
+  sendTabMessage,
 } from "~/utils/browser/browserApi"
 import { isExtensionPopup } from "~/utils/browser/index"
 import { getErrorMessage } from "~/utils/core/error"
@@ -103,12 +105,7 @@ function isGenericUserDataMissingError(error?: string): boolean {
  * @returns Capability flags indicating windows/tabs/runtime availability.
  */
 function detectPlatformCapabilities() {
-  const b = (globalThis as any).browser
-  return {
-    hasWindows: !!b?.windows,
-    hasTabs: !!b?.tabs,
-    hasBackgroundMessaging: !!b?.runtime,
-  }
+  return getBrowserApiCapabilities()
 }
 
 /**
@@ -487,7 +484,7 @@ async function getUserDataFromCurrentTab(
   try {
     // 通过 content script 获取用户信息
     try {
-      const userResponse = await browser.tabs.sendMessage(tabId, {
+      const userResponse = await sendTabMessage(tabId, {
         action: RuntimeActionIds.ContentGetUserFromLocalStorage,
         url: url,
         siteType,

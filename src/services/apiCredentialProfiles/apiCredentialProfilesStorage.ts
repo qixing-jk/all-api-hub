@@ -27,6 +27,7 @@ import {
   API_CREDENTIAL_TELEMETRY_CAPABILITY_MODES,
   DEFAULT_API_CREDENTIAL_TELEMETRY_CONFIG,
 } from "~/types/apiCredentialProfiles"
+import { onStorageChanged } from "~/utils/browser/browserApi"
 import { safeRandomUUID } from "~/utils/core/identifier"
 import { createLogger } from "~/utils/core/logger"
 
@@ -73,8 +74,7 @@ export function subscribeToApiCredentialProfilesChanges(
     callback()
   }
 
-  browser.storage.onChanged.addListener(listener)
-  return () => browser.storage.onChanged.removeListener(listener)
+  return onStorageChanged(listener)
 }
 
 /**

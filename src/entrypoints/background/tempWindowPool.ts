@@ -41,12 +41,18 @@ import {
   classifyRecoverableWindowCreationFailure,
   createTab,
   createWindow,
+  getTab,
+  getWindow,
   hasWindowsAPI,
   isAllowedIncognitoAccess,
   onTabRemoved,
   onWindowRemoved,
+  queryTabs,
   removeTabOrWindow,
+  sendTabMessage,
   sendTabMessageWithRetry,
+  updateTab,
+  updateWindow,
   WINDOW_CREATION_FAILURE_REASONS,
   type WindowCreationFailureReason,
 } from "~/utils/browser/browserApi"
@@ -113,7 +119,7 @@ async function showShieldBypassUiInTab(meta: {
 }) {
   for (let attempt = 1; attempt <= SHIELD_BYPASS_UI_MAX_RETRIES; attempt += 1) {
     try {
-      await browser.tabs.sendMessage(meta.tabId, {
+      await sendTabMessage(meta.tabId, {
         action: RuntimeActionIds.ContentShowShieldBypassUi,
         origin: meta.origin,
         requestId: meta.requestId,
@@ -1225,7 +1231,7 @@ export async function handleTempWindowTurnstileFetch(
     const { tabId } = context
 
     // Ensure the temp tab is on the requested page URL so Turnstile can render.
-    await browser.tabs.update(tabId, { url: pageUrl })
+    await updateTab(tabId, { url: pageUrl })
     await waitForTabComplete(tabId, {
       requestId: tempRequestId,
       origin: normalizeOrigin(originUrl),
@@ -1803,7 +1809,7 @@ async function openPopupWindowTempContext(params: {
 
     windowId = popupWindowId
 
-    const tabs = await browser.tabs.query({
+    const tabs = await queryTabs({
       windowId,
       active: true,
     })
@@ -1822,7 +1828,7 @@ async function openPopupWindowTempContext(params: {
     // Best-effort minimize to reduce disturbance unless suppressed (e.g., popup context).
     if (!params.suppressMinimize) {
       try {
-        await browser.windows.update(windowId, { state: "minimized" })
+        await updateWindow(windowId, { state: "minimized" })
         logTempWindow("quietWindowMinimized", {
           requestId: params.requestId,
           origin: params.origin,
@@ -2068,7 +2074,12 @@ async function openTabInCompositeWindow(params: {
     let existingCompositeWindowConfirmed = false
 
     try {
-      await browser.windows.get(previousCompositeWindowId)
+      const existingCompositeWindow = await getWindow(previousCompositeWindowId)
+      if (!existingCompositeWindow) {
+        throw createRecoverableWindowCreationError(
+          WINDOW_CREATION_FAILURE_REASONS.WINDOWS_API_UNAVAILABLE,
+        )
+      }
       existingCompositeWindowConfirmed = true
       const tab = await createTab(params.url, false, {
         windowId: previousCompositeWindowId,
@@ -2163,7 +2174,7 @@ async function openTabInCompositeWindow(params: {
 
       if (!params.suppressMinimize) {
         try {
-          await browser.windows.update(windowId, { state: "minimized" })
+          await updateWindow(windowId, { state: "minimized" })
           logTempWindow("compositeWindowMinimized", {
             requestId: params.requestId,
             origin: params.origin,
@@ -2179,7 +2190,7 @@ async function openTabInCompositeWindow(params: {
         }
       }
 
-      const tabs = await browser.tabs.query({
+      const tabs = await queryTabs({
         windowId,
         active: true,
       })
@@ -2405,7 +2416,7 @@ function clearStaleTempRequestMappings() {
  */
 async function isContextAlive(context: TempContext) {
   try {
-    await browser.tabs.get(context.tabId)
+    await getTab(context.tabId)
     return true
   } catch {
     return false
@@ -2533,7 +2544,7 @@ function waitForTabComplete(
 
     const checkStatus = async () => {
       try {
-        const tab = await browser.tabs.get(tabId)
+        const tab = await getTab(tabId)
 
         attempts += 1
         if (tab.status !== lastTabStatus) {

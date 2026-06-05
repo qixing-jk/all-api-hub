@@ -4,6 +4,10 @@ import {
   USER_PREFERENCES_STORAGE_KEYS,
 } from "~/services/core/storageKeys"
 import { userPreferences } from "~/services/preferences/userPreferences"
+import {
+  hasStorageChangedListener,
+  onStorageChanged,
+} from "~/utils/browser/browserApi"
 import { isDevBuild } from "~/utils/core/environment"
 import { getErrorMessage } from "~/utils/core/error"
 import { createLogger } from "~/utils/core/logger"
@@ -256,7 +260,7 @@ export function setupProductAnalyticsAccountChangeListener() {
     return cleanupAccountChangeListener
   }
 
-  if (!browser.storage?.onChanged) {
+  if (!hasStorageChangedListener()) {
     return () => {}
   }
 
@@ -281,7 +285,7 @@ export function setupProductAnalyticsAccountChangeListener() {
     schedule()
   }
 
-  browser.storage.onChanged.addListener(handleStorageChanged)
+  const cleanupStorageChanged = onStorageChanged(handleStorageChanged)
 
   cleanupAccountChangeListener = () => {
     if (!cleanupAccountChangeListener) {
@@ -293,7 +297,7 @@ export function setupProductAnalyticsAccountChangeListener() {
       clearTimeout(timer)
       timer = null
     }
-    browser.storage.onChanged.removeListener(handleStorageChanged)
+    cleanupStorageChanged()
     cleanupAccountChangeListener = null
   }
 
@@ -308,7 +312,7 @@ export function setupProductAnalyticsPreferencesChangeListener() {
     return cleanupPreferencesChangeListener
   }
 
-  if (!browser.storage?.onChanged) {
+  if (!hasStorageChangedListener()) {
     return () => {}
   }
 
@@ -333,7 +337,7 @@ export function setupProductAnalyticsPreferencesChangeListener() {
     schedule()
   }
 
-  browser.storage.onChanged.addListener(handleStorageChanged)
+  const cleanupStorageChanged = onStorageChanged(handleStorageChanged)
 
   cleanupPreferencesChangeListener = () => {
     if (!cleanupPreferencesChangeListener) {
@@ -345,7 +349,7 @@ export function setupProductAnalyticsPreferencesChangeListener() {
       clearTimeout(timer)
       timer = null
     }
-    browser.storage.onChanged.removeListener(handleStorageChanged)
+    cleanupStorageChanged()
     cleanupPreferencesChangeListener = null
   }
 

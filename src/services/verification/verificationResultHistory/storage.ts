@@ -10,6 +10,7 @@ import type {
   ApiVerificationProbeStatus,
 } from "~/services/verification/aiApiVerification"
 import { apiVerificationProbeRegistry } from "~/services/verification/aiApiVerification/probeRegistry"
+import { onStorageChanged } from "~/utils/browser/browserApi"
 
 import {
   API_VERIFICATION_RESULT_HISTORY_CONFIG_VERSION,
@@ -57,8 +58,7 @@ export function subscribeToVerificationResultHistoryChanges(
     callback()
   }
 
-  browser.storage.onChanged.addListener(listener)
-  return () => browser.storage.onChanged.removeListener(listener)
+  return onStorageChanged(listener)
 }
 
 /**

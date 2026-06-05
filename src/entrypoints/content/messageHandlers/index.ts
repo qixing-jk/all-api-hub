@@ -10,6 +10,7 @@ import {
   handleWaitAndGetUserInfo,
   handleWaitForTurnstileToken,
 } from "~/entrypoints/content/messageHandlers/handlers"
+import { onRuntimeMessage } from "~/utils/browser/browserApi"
 
 /**
  * Registers content-script message handlers for fetching storage data,
@@ -17,7 +18,7 @@ import {
  * Each branch replies via sendResponse so browser.runtime ports stay alive.
  */
 export function setupContentMessageHandlers() {
-  browser.runtime.onMessage.addListener((request, _sender, sendResponse) => {
+  return onRuntimeMessage((request, _sender, sendResponse) => {
     if (request.action === RuntimeActionIds.ContentGetLocalStorage) {
       return handleGetLocalStorage(request, sendResponse)
     }

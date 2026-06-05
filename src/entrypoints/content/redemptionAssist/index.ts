@@ -22,7 +22,10 @@ import {
   sendRedemptionAssistMessage,
 } from "~/services/redemption/redemptionAssistMessaging"
 import { extractRedemptionCodesFromText } from "~/services/redemption/utils/redemptionCode"
-import { checkPermissionViaMessage } from "~/utils/browser/browserApi"
+import {
+  checkPermissionViaMessage,
+  onRuntimeMessage,
+} from "~/utils/browser/browserApi"
 import { createLogger } from "~/utils/core/logger"
 import { isHttpUrl } from "~/utils/core/urlParsing"
 import { t } from "~/utils/i18n/core"
@@ -175,14 +178,7 @@ function registerContextMenuTriggerListener() {
     void handleContextMenuRedemption(selectionText, pageUrl)
   }
 
-  browser.runtime.onMessage.addListener(listener)
-  return () => {
-    try {
-      browser.runtime.onMessage.removeListener(listener)
-    } catch (error) {
-      logger.debug("Failed to remove redemption context menu listener", error)
-    }
-  }
+  return onRuntimeMessage(listener)
 }
 
 /**

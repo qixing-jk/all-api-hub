@@ -1,4 +1,4 @@
-import { getManifest } from "~/utils/browser/browserApi"
+import { getActionApi, getManifest } from "~/utils/browser/browserApi"
 import { formatDevActionTitle, getDevBadgeText } from "~/utils/core/devBranding"
 import { isDevelopmentMode } from "~/utils/core/environment"
 import { createLogger } from "~/utils/core/logger"
@@ -18,10 +18,8 @@ const logger = createLogger("DevActionBranding")
 export async function applyDevActionBranding() {
   if (!isDevelopmentMode()) return
 
-  const actionApi = (browser as any).action ?? (browser as any).browserAction
-  if (!actionApi) return
-
   try {
+    const actionApi = getActionApi()
     const manifest = getManifest()
     const versionName = (manifest as any).version_name as string | undefined
     const title = formatDevActionTitle(manifest.name, versionName)
