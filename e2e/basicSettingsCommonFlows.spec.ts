@@ -89,6 +89,15 @@ async function expectConfiguredActionPopup(
     .toBe(expectedPopup)
 }
 
+async function hasSidePanelOpenSupport(
+  serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
+): Promise<boolean> {
+  return await serviceWorker.evaluate(() => {
+    const chromeApi = (globalThis as any).chrome
+    return typeof chromeApi?.sidePanel?.open === "function"
+  })
+}
+
 async function hasActionClickListeners(
   serviceWorker: Awaited<ReturnType<typeof getServiceWorker>>,
 ): Promise<boolean> {
@@ -173,8 +182,12 @@ test("updates toolbar action behavior from settings into the live extension acti
     "actionClickBehavior",
     "sidepanel",
   )
-  await expectConfiguredActionPopup(serviceWorker, "")
-  await expectActionClickListenerState(serviceWorker, true)
+  const sidePanelOpenSupported = await hasSidePanelOpenSupport(serviceWorker)
+  await expectConfiguredActionPopup(
+    serviceWorker,
+    sidePanelOpenSupported ? "" : POPUP_PAGE_PATH,
+  )
+  await expectActionClickListenerState(serviceWorker, sidePanelOpenSupported)
 
   await page.getByRole("button", { name: "Popup" }).click()
 

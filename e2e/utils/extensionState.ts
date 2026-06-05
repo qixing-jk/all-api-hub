@@ -2,6 +2,7 @@ import type { BrowserContext, Page, Worker } from "@playwright/test"
 import { expect } from "@playwright/test"
 
 import { OPTIONS_OVERVIEW_TEST_IDS } from "~/features/OptionsOverview/testIds"
+import { getExtensionServiceWorker } from "~~/e2e/utils/extension"
 
 /**
  * Detect whether a page URL is an options page carrying the permissions
@@ -22,10 +23,7 @@ function isPermissionOnboardingPage(page: Page): boolean {
 export async function getServiceWorker(
   context: BrowserContext,
 ): Promise<Worker> {
-  return (
-    context.serviceWorkers()[0] ??
-    (await context.waitForEvent("serviceworker", { timeout: 15_000 }))
-  )
+  return await getExtensionServiceWorker(context)
 }
 
 /**

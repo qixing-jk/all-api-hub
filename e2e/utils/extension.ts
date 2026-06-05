@@ -1,10 +1,146 @@
 import fs from "node:fs/promises"
 import path from "node:path"
-import type { BrowserContext } from "@playwright/test"
+import type { BrowserContext, Worker } from "@playwright/test"
 
 import { assertE2eBuildMetadataCurrent } from "~~/e2e/utils/e2eBuildMetadata"
 
 const verifiedExtensionDirs = new Set<string>()
+const extensionServiceWorkerProtocols = new Set([
+  "chrome-extension:",
+  "moz-extension:",
+])
+
+type ExtensionServiceWorkerOptions = {
+  extensionId?: string
+  timeoutMs?: number
+}
+
+type ExtensionServiceWorkerProbe = {
+  hasAlarms: boolean
+  hasRuntimeGetManifest: boolean
+  hasStorageLocal: boolean
+  runtimeId: string | null
+}
+
+/**
+ * Checks whether a Playwright worker URL belongs to a browser extension.
+ */
+export function isExtensionServiceWorkerUrl(workerUrl: string): boolean {
+  try {
+    return extensionServiceWorkerProtocols.has(new URL(workerUrl).protocol)
+  } catch {
+    return false
+  }
+}
+
+async function probeExtensionServiceWorker(
+  worker: Worker,
+): Promise<ExtensionServiceWorkerProbe> {
+  return await worker.evaluate(() => {
+    const chromeApi = (
+      globalThis as typeof globalThis & { chrome?: typeof chrome }
+    ).chrome
+
+    return {
+      hasAlarms: typeof chromeApi?.alarms?.clear === "function",
+      hasRuntimeGetManifest:
+        typeof chromeApi?.runtime?.getManifest === "function",
+      hasStorageLocal: typeof chromeApi?.storage?.local?.get === "function",
+      runtimeId: chromeApi?.runtime?.id ?? null,
+    }
+  })
+}
+
+async function describeServiceWorkerReadiness(
+  worker: Worker,
+  expectedExtensionId?: string,
+): Promise<{ reason: string; ready: boolean }> {
+  const workerUrl = worker.url()
+
+  if (!isExtensionServiceWorkerUrl(workerUrl)) {
+    return { ready: false, reason: "not an extension service worker" }
+  }
+
+  const workerExtensionId = new URL(workerUrl).host
+  if (expectedExtensionId && workerExtensionId !== expectedExtensionId) {
+    return {
+      ready: false,
+      reason: `extension id ${workerExtensionId} did not match ${expectedExtensionId}`,
+    }
+  }
+
+  try {
+    const probe = await probeExtensionServiceWorker(worker)
+    const missingApis = [
+      probe.runtimeId ? null : "chrome.runtime.id",
+      probe.hasRuntimeGetManifest ? null : "chrome.runtime.getManifest",
+      probe.hasStorageLocal ? null : "chrome.storage.local",
+      probe.hasAlarms ? null : "chrome.alarms",
+    ].filter((api): api is string => Boolean(api))
+
+    if (missingApis.length > 0) {
+      return {
+        ready: false,
+        reason: `missing ${missingApis.join(", ")}`,
+      }
+    }
+
+    return { ready: true, reason: "ready" }
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    return { ready: false, reason: `probe failed: ${message}` }
+  }
+}
+
+/**
+ * Resolve the production MV3 service worker and wait until Chrome has attached
+ * the extension APIs used by the E2E storage/alarm helpers.
+ */
+export async function getExtensionServiceWorker(
+  context: BrowserContext,
+  options: ExtensionServiceWorkerOptions = {},
+): Promise<Worker> {
+  const timeoutMs = options.timeoutMs ?? 15_000
+  const deadline = Date.now() + timeoutMs
+  const observedWorkers = new Map<string, string>()
+
+  while (Date.now() <= deadline) {
+    for (const worker of context.serviceWorkers()) {
+      const readiness = await describeServiceWorkerReadiness(
+        worker,
+        options.extensionId,
+      )
+      observedWorkers.set(worker.url(), readiness.reason)
+
+      if (readiness.ready) {
+        return worker
+      }
+    }
+
+    const remainingMs = deadline - Date.now()
+    if (remainingMs <= 0) {
+      break
+    }
+
+    await context
+      .waitForEvent("serviceworker", {
+        timeout: Math.min(250, remainingMs),
+      })
+      .catch(() => undefined)
+  }
+
+  const observedSummary =
+    [...observedWorkers.entries()]
+      .map(([workerUrl, reason]) => `${workerUrl} (${reason})`)
+      .join("; ") || "none"
+
+  throw new Error(
+    [
+      "Timed out waiting for an extension service worker with ready browser APIs.",
+      `Observed service workers: ${observedSummary}.`,
+    ].join(" "),
+  )
+}
 
 /**
  * Ensures the built MV3 extension output exists before running E2E.
@@ -40,13 +176,7 @@ export async function getExtensionIdFromServiceWorker(
   context: BrowserContext,
   options?: { timeoutMs?: number },
 ): Promise<string> {
-  const timeoutMs = options?.timeoutMs ?? 15_000
-
-  const existing = context.serviceWorkers()[0]
-  const serviceWorker =
-    existing ??
-    (await context.waitForEvent("serviceworker", { timeout: timeoutMs }))
-
+  const serviceWorker = await getExtensionServiceWorker(context, options)
   return new URL(serviceWorker.url()).host
 }
 
