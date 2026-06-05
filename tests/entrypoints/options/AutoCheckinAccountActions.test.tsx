@@ -247,8 +247,9 @@ describe("AutoCheckin account actions", () => {
     let resolveRetry:
       | ((value: { success: boolean; error?: string }) => void)
       | undefined
-    vi.spyOn(browserApi, "sendRuntimeMessage").mockImplementation(
-      async (message: any) => {
+    const sendRuntimeMessageSpy = vi
+      .spyOn(browserApi, "sendRuntimeMessage")
+      .mockImplementation(async (message: unknown, data?: unknown) => {
         if (message === AutoCheckinMessageTypes.GetStatus) {
           return {
             success: true,
@@ -267,6 +268,7 @@ describe("AutoCheckin account actions", () => {
         }
 
         if (message === AutoCheckinMessageTypes.RetryAccount) {
+          expect(data).toEqual({ accountId: "alpha" })
           return await new Promise<{ success: boolean; error?: string }>(
             (resolve) => {
               resolveRetry = resolve
@@ -275,8 +277,7 @@ describe("AutoCheckin account actions", () => {
         }
 
         return { success: true }
-      },
-    )
+      })
 
     render(<AutoCheckin routeParams={{}} />)
 
@@ -288,8 +289,18 @@ describe("AutoCheckin account actions", () => {
     await waitFor(() => {
       expect(retryButton).toBeDisabled()
     })
+    await waitFor(() => {
+      expect(sendRuntimeMessageSpy).toHaveBeenCalledWith(
+        AutoCheckinMessageTypes.RetryAccount,
+        { accountId: "alpha" },
+      )
+    })
 
-    resolveRetry?.({ success: false, error: "backend rejected retry" })
+    if (!resolveRetry) {
+      throw new Error("Retry request resolver was not assigned")
+    }
+
+    resolveRetry({ success: false, error: "backend rejected retry" })
 
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith(
