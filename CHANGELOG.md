@@ -1,5 +1,25 @@
 # Changelog
 
+## [3.44.0](https://github.com/qixing-jk/all-api-hub/compare/v3.43.0...v3.44.0) (2026-06-05)
+
+
+### Features
+
+* **options-overview:** own permissions onboarding ([#917](https://github.com/qixing-jk/all-api-hub/issues/917)) ([8fbe700](https://github.com/qixing-jk/all-api-hub/commit/8fbe7008c2305cffcaf5998f5c2a1a388ad3ebbe))
+* **options:** add overview dashboard ([#915](https://github.com/qixing-jk/all-api-hub/issues/915)) ([24ddf89](https://github.com/qixing-jk/all-api-hub/commit/24ddf8917690bb83ab77667c6900da5ac5e25a6c))
+
+
+### Bug Fixes
+
+* **api-credentials:** clarify add credential CTA ([f7bd179](https://github.com/qixing-jk/all-api-hub/commit/f7bd179d9ba5379136a379597464f72c4406ba11))
+* **e2e:** force modern headless for Chrome compat runs ([bb14575](https://github.com/qixing-jk/all-api-hub/commit/bb1457546d59f0ba076fcd03d1b45add67f0135c))
+* **options:** let overview automation yield page scroll ([d1ddfb3](https://github.com/qixing-jk/all-api-hub/commit/d1ddfb303d12b8fd17b4996ddeb72a705c20ab01))
+* **popup:** stack api credential money stats ([e752a98](https://github.com/qixing-jk/all-api-hub/commit/e752a98d02fef9a62175ddfe0bce19d98fa76bb9))
+* **runtime-messaging:** use callback-based extension transport ([#919](https://github.com/qixing-jk/all-api-hub/issues/919)) ([f264124](https://github.com/qixing-jk/all-api-hub/commit/f264124842cc4918614c5aec18bbd23a97f866b4))
+* **sponsors:** keep dev recommendations visible ([#907](https://github.com/qixing-jk/all-api-hub/issues/907)) ([1dad176](https://github.com/qixing-jk/all-api-hub/commit/1dad17670d66650993182c3c5065573615850b0b))
+* **webdav:** retry cstcloud overwrite moves ([#921](https://github.com/qixing-jk/all-api-hub/issues/921)) ([2b16f96](https://github.com/qixing-jk/all-api-hub/commit/2b16f96a0f3d92510f8e3dab18dee96920865a07))
+* **webdav:** support Nutstore overwrite uploads ([#914](https://github.com/qixing-jk/all-api-hub/issues/914)) ([7ce3f8b](https://github.com/qixing-jk/all-api-hub/commit/7ce3f8beb657239c52498c546c43c508abeab512))
+
 ## [3.43.0](https://github.com/qixing-jk/all-api-hub/compare/v3.42.0...v3.43.0) (2026-06-02)
 
 
