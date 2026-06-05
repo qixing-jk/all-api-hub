@@ -889,6 +889,49 @@ describe("webdavService", () => {
       })
     })
 
+    it("falls back by deleting the existing destination when cstcloud rejects overwrite MOVE with 500", async () => {
+      mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
+      globalAny.fetch
+        .mockResolvedValueOnce({ status: 201 })
+        .mockResolvedValueOnce({ status: 405 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({
+          status: 200,
+          text: vi.fn().mockResolvedValue('{"cstcloud":true}'),
+        })
+        .mockResolvedValueOnce({ status: 500 })
+        .mockResolvedValueOnce({ status: 204 })
+        .mockResolvedValueOnce({ status: 201 })
+
+      await expect(uploadBackup('{"cstcloud":true}')).resolves.toBe(true)
+
+      const officialUrl =
+        "https://example.com/webdav/all-api-hub-backup/all-api-hub-1-0.json"
+      expect(globalAny.fetch).toHaveBeenCalledTimes(7)
+      expect((globalAny.fetch.mock.calls[3][1] as RequestInit).method).toBe(
+        "GET",
+      )
+      expect((globalAny.fetch.mock.calls[4][1] as RequestInit).method).toBe(
+        "MOVE",
+      )
+      expect(globalAny.fetch.mock.calls[5][0]).toBe(officialUrl)
+      expect((globalAny.fetch.mock.calls[5][1] as RequestInit).method).toBe(
+        "DELETE",
+      )
+      expect(globalAny.fetch.mock.calls[6][0]).toBe(
+        globalAny.fetch.mock.calls[4][0],
+      )
+      expect((globalAny.fetch.mock.calls[6][1] as RequestInit).method).toBe(
+        "MOVE",
+      )
+      expect(
+        (globalAny.fetch.mock.calls[6][1] as RequestInit).headers,
+      ).toMatchObject({
+        Destination: officialUrl,
+        Overwrite: "T",
+      })
+    })
+
     it("reports safe commit failure when the Nutstore overwrite fallback delete fails", async () => {
       mockedUserPreferences.getPreferences.mockResolvedValue(basePrefs)
       globalAny.fetch

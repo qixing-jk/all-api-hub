@@ -370,9 +370,10 @@ async function moveWebdavContent(params: {
 
   let res = await move()
 
-  if (res.status === 409) {
+  if (shouldRetryMoveAfterDeletingDestination(res.status)) {
     // RFC 4918 section 9.9.3 requires Overwrite:T to delete the destination
-    // before MOVE; Nutstore returns 409 instead when the destination exists.
+    // before MOVE. Some providers reject that overwrite step instead:
+    // Nutstore returns 409 and cstcloud returns 500 when the destination exists.
     await deleteWebdavDestinationBeforeMoveRetry(params)
     res = await move()
   }
@@ -381,6 +382,13 @@ async function moveWebdavContent(params: {
   if (res.status === 401 || res.status === 403)
     throw new WebdavHttpError(t("messages:webdav.authFailed"), res.status)
   throw new WebdavHttpError(t("messages:webdav.safeCommitFailed"), res.status)
+}
+
+/**
+ * Detects provider overwrite failures that can safely retry after deleting the destination.
+ */
+function shouldRetryMoveAfterDeletingDestination(status: number) {
+  return status === 409 || status === 500
 }
 
 /**
