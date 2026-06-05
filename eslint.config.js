@@ -207,6 +207,18 @@ export default defineConfig([
           message:
             "Do not access version-sensitive `browser.*` extension APIs directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
         },
+        {
+          selector:
+            "MemberExpression[object.type='MemberExpression'][object.object.name=/^(globalThis|window)$/][object.property.name='browser'][property.name=/^(action|browserAction|sidebarAction|permissions)$/]",
+          message:
+            "Do not access version-sensitive `browser.*` extension APIs directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+        },
+        {
+          selector:
+            "MemberExpression[object.type='MemberExpression'][object.object.type='TSAsExpression'][object.object.expression.name=/^(globalThis|window)$/][object.property.name='browser'][property.name=/^(action|browserAction|sidebarAction|permissions)$/]",
+          message:
+            "Do not access version-sensitive `browser.*` extension APIs directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+        },
       ],
     },
   },
