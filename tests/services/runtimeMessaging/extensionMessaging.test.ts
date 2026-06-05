@@ -11,6 +11,7 @@ type RuntimeMessageListener = (
 interface TestProtocolMap {
   "test:ping"(data: { value: string }): { echoed: string }
   "test:fail"(): { ok: boolean }
+  "test:other"(): { ok: boolean }
   "test:void"(): undefined
 }
 
@@ -192,6 +193,71 @@ describe("extension messaging transport", () => {
     })
   })
 
+  it.each([
+    ["string failure", "string failure"],
+    [{ code: "bad-input" }, '{"code":"bad-input"}'],
+  ])("serializes non-error listener failures: %s", async (failure, message) => {
+    const runtime = createRuntimeMock()
+    const messenger = defineExtensionMessaging<TestProtocolMap>()
+    messenger.onMessage("test:fail", () => {
+      throw failure
+    })
+    const sendResponse = vi.fn()
+
+    expect(
+      runtime.getListener()(
+        {
+          id: 1,
+          type: "test:fail",
+          timestamp: Date.now(),
+        },
+        {},
+        sendResponse,
+      ),
+    ).toBe(true)
+
+    await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith({
+        err: expect.objectContaining({
+          message,
+          name: "Error",
+        }),
+      })
+    })
+  })
+
+  it("serializes circular non-error listener failures", async () => {
+    const runtime = createRuntimeMock()
+    const messenger = defineExtensionMessaging<TestProtocolMap>()
+    const failure: Record<string, unknown> = { code: "circular" }
+    failure.self = failure
+    messenger.onMessage("test:fail", () => {
+      throw failure
+    })
+    const sendResponse = vi.fn()
+
+    expect(
+      runtime.getListener()(
+        {
+          id: 1,
+          type: "test:fail",
+          timestamp: Date.now(),
+        },
+        {},
+        sendResponse,
+      ),
+    ).toBe(true)
+
+    await vi.waitFor(() => {
+      expect(sendResponse).toHaveBeenCalledWith({
+        err: expect.objectContaining({
+          message: "[object Object]",
+          name: "Error",
+        }),
+      })
+    })
+  })
+
   it("rejects when the browser returns no response", async () => {
     const runtime = createRuntimeMock()
     const messenger = defineExtensionMessaging<TestProtocolMap>()
@@ -218,5 +284,41 @@ describe("extension messaging transport", () => {
       }),
       { frameId: 3 },
     )
+  })
+
+  it("keeps the root listener until the last typed listener is removed", () => {
+    const runtime = createRuntimeMock()
+    const messenger = defineExtensionMessaging<TestProtocolMap>()
+
+    const removePing = messenger.onMessage("test:ping", vi.fn())
+    const removeOther = messenger.onMessage("test:other", vi.fn())
+
+    removePing()
+    expect(runtime.removeListener).not.toHaveBeenCalled()
+
+    removeOther()
+    expect(runtime.removeListener).toHaveBeenCalledTimes(1)
+  })
+
+  it("throws when registering duplicate listeners for the same type", () => {
+    createRuntimeMock()
+    const messenger = defineExtensionMessaging<TestProtocolMap>()
+
+    messenger.onMessage("test:ping", vi.fn())
+
+    expect(() => messenger.onMessage("test:ping", vi.fn())).toThrow(
+      "only one listener can be setup",
+    )
+  })
+
+  it("removes the root listener when all typed listeners are cleared", () => {
+    const runtime = createRuntimeMock()
+    const messenger = defineExtensionMessaging<TestProtocolMap>()
+
+    messenger.onMessage("test:ping", vi.fn())
+    messenger.onMessage("test:other", vi.fn())
+    messenger.removeAllListeners()
+
+    expect(runtime.removeListener).toHaveBeenCalledTimes(1)
   })
 })

@@ -37,13 +37,9 @@ type RuntimeMessageHandler<
 ) => MaybePromise<GetReturnType<TProtocolMap[TType]>>
 
 /**
- * Converts unknown thrown values into a stable message for runtime transport.
+ * Converts non-Error thrown values into a stable message for runtime transport.
  */
-function getErrorMessage(error: unknown): string {
-  if (error instanceof Error) {
-    return error.message
-  }
-
+function getNonErrorMessage(error: unknown): string {
   if (typeof error === "string") {
     return error
   }
@@ -68,7 +64,7 @@ function serializeError(error: unknown): SerializedRuntimeMessagingError {
   }
 
   return {
-    message: getErrorMessage(error),
+    message: getNonErrorMessage(error),
     name: "Error",
   }
 }
@@ -158,47 +154,31 @@ export function defineExtensionMessaging<
    * Runs a registered typed listener and responds through the callback channel.
    */
   function processMessage(
-    rawMessage: unknown,
+    message: Record<string, unknown> & { type: string; timestamp: number },
     sender: browser.runtime.MessageSender,
     sendResponse: (response?: RuntimeMessagingResponse) => void,
   ) {
-    if (!isTypedRuntimeMessage(rawMessage)) {
-      if (config.throwOnUnknownMessageFormat) {
-        const error = new Error(
-          `[messaging] Unknown message format, must include the 'type' & 'timestamp' fields, received: ${JSON.stringify(
-            rawMessage,
-          )}`,
-        )
-        config.logger?.error(error)
-        throw error
-      }
-
-      return false
-    }
-
-    const listener = perTypeListeners[rawMessage.type as MessageType]
-    if (!listener) {
-      return false
-    }
-
-    config.logger?.debug("[messaging] Received message", rawMessage)
+    const listener = perTypeListeners[
+      message.type as MessageType
+    ] as RuntimeMessageHandler<TProtocolMap, MessageType>
+    config.logger?.debug("[messaging] Received message", message)
 
     Promise.resolve()
       .then(() =>
         listener({
-          ...rawMessage,
+          ...message,
           sender,
         } as Message<TProtocolMap, MessageType> & ExtensionMessage),
       )
       .then((res) => {
-        config.logger?.debug(`[messaging] onMessage {id=${rawMessage.id}} ->`, {
+        config.logger?.debug(`[messaging] onMessage {id=${message.id}} ->`, {
           res,
         })
         sendResponse({ res })
       })
       .catch((error) => {
         const err = serializeError(error)
-        config.logger?.debug(`[messaging] onMessage {id=${rawMessage.id}} ->`, {
+        config.logger?.debug(`[messaging] onMessage {id=${message.id}} ->`, {
           err,
         })
         sendResponse({ err })
