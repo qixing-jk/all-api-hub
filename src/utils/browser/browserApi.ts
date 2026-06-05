@@ -156,6 +156,10 @@ export async function sendTabMessage<TResponse = any>(
   message: unknown,
   options?: browser.tabs._SendMessageOptions,
 ): Promise<TResponse> {
+  if (typeof options === "undefined") {
+    return (await browser.tabs.sendMessage(tabId, message)) as TResponse
+  }
+
   return (await browser.tabs.sendMessage(tabId, message, options)) as TResponse
 }
 
@@ -527,9 +531,10 @@ export interface BrowserApiCapabilities {
 export function getBrowserApiCapabilities(): BrowserApiCapabilities {
   const runtimeBrowser = (globalThis as any).browser
   return {
-    hasWindows: !!runtimeBrowser?.windows,
-    hasTabs: !!runtimeBrowser?.tabs,
-    hasBackgroundMessaging: !!runtimeBrowser?.runtime,
+    hasWindows: typeof runtimeBrowser?.windows?.create === "function",
+    hasTabs: typeof runtimeBrowser?.tabs?.query === "function",
+    hasBackgroundMessaging:
+      typeof runtimeBrowser?.runtime?.sendMessage === "function",
   }
 }
 
@@ -1000,7 +1005,13 @@ export function hasNotificationsAPI(): boolean {
  * Checks whether the context menus API is available.
  */
 export function hasContextMenusAPI(): boolean {
-  return !!(globalThis as any).browser?.contextMenus
+  const contextMenus = (globalThis as any).browser?.contextMenus
+  return (
+    typeof contextMenus?.create === "function" &&
+    typeof contextMenus?.remove === "function" &&
+    typeof contextMenus?.onClicked?.addListener === "function" &&
+    typeof contextMenus?.onClicked?.removeListener === "function"
+  )
 }
 
 /**
@@ -1038,11 +1049,17 @@ export function onContextMenuClicked(
 export function createContextMenu(
   createProperties: browser.contextMenus._CreateCreateProperties,
 ): number | string | undefined {
-  if (!hasContextMenusAPI()) {
+  const create = (globalThis as any).browser?.contextMenus?.create as
+    | ((
+        properties: browser.contextMenus._CreateCreateProperties,
+      ) => number | string | undefined)
+    | undefined
+
+  if (typeof create !== "function") {
     return undefined
   }
 
-  return browser.contextMenus.create(createProperties)
+  return create(createProperties)
 }
 
 /**
@@ -1051,11 +1068,15 @@ export function createContextMenu(
 export async function removeContextMenu(
   menuItemId: number | string,
 ): Promise<void> {
-  if (!hasContextMenusAPI()) {
+  const remove = (globalThis as any).browser?.contextMenus?.remove as
+    | ((id: number | string) => Promise<void> | void)
+    | undefined
+
+  if (typeof remove !== "function") {
     return
   }
 
-  await browser.contextMenus.remove(menuItemId)
+  await remove(menuItemId)
 }
 
 /**

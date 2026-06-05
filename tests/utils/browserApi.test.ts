@@ -543,11 +543,13 @@ describe("browserApi direct adapter helpers", () => {
         sendMessage: vi.fn().mockResolvedValue({ ok: true }),
       },
       tabs: {
+        query: vi.fn().mockResolvedValue([]),
         get: vi.fn().mockResolvedValue({ id: 3 }),
         reload: vi.fn().mockResolvedValue(undefined),
         sendMessage: vi.fn().mockResolvedValue({ received: true }),
       },
       windows: {
+        create: vi.fn().mockResolvedValue({ id: 5 }),
         get: vi.fn().mockResolvedValue({ id: 5 }),
         update: vi.fn().mockResolvedValue({ id: 5, focused: true }),
       },
@@ -596,7 +598,6 @@ describe("browserApi direct adapter helpers", () => {
     expect((globalThis as any).browser.tabs.sendMessage).toHaveBeenCalledWith(
       3,
       message,
-      undefined,
     )
     expect(
       (globalThis as any).browser.runtime.sendMessage,
@@ -609,6 +610,20 @@ describe("browserApi direct adapter helpers", () => {
       hasWindows: true,
       hasTabs: true,
       hasBackgroundMessaging: true,
+    })
+  })
+
+  it("reports browser API capabilities only when required methods are callable", () => {
+    ;(globalThis as any).browser = {
+      windows: {},
+      tabs: {},
+      runtime: {},
+    }
+
+    expect(getBrowserApiCapabilities()).toEqual({
+      hasWindows: false,
+      hasTabs: false,
+      hasBackgroundMessaging: false,
     })
   })
 
@@ -694,6 +709,26 @@ describe("browserApi direct adapter helpers", () => {
     expect(createContextMenu({ id: "menu-2", title: "Menu" })).toBeUndefined()
     await expect(removeContextMenu("menu-2")).resolves.toBeUndefined()
     expect(() => onContextMenuClicked(listener)()).not.toThrow()
+  })
+
+  it("guards context menu helpers by method availability", async () => {
+    ;(globalThis as any).browser.contextMenus = {
+      onClicked: {
+        addListener: vi.fn(),
+        removeListener: vi.fn(),
+      },
+    }
+
+    expect(hasContextMenusAPI()).toBe(false)
+    expect(createContextMenu({ id: "menu-3", title: "Menu" })).toBeUndefined()
+    await expect(removeContextMenu("menu-3")).resolves.toBeUndefined()
+    ;(globalThis as any).browser.contextMenus = {
+      create: vi.fn(() => "menu-4"),
+    }
+
+    expect(hasContextMenusAPI()).toBe(false)
+    expect(createContextMenu({ id: "menu-4", title: "Menu" })).toBe("menu-4")
+    await expect(removeContextMenu("menu-4")).resolves.toBeUndefined()
   })
 
   it("wraps browser i18n messages and cookie-store enumeration", async () => {

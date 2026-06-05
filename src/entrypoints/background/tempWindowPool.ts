@@ -2077,7 +2077,7 @@ async function openTabInCompositeWindow(params: {
       const existingCompositeWindow = await getWindow(previousCompositeWindowId)
       if (!existingCompositeWindow) {
         throw createRecoverableWindowCreationError(
-          WINDOW_CREATION_FAILURE_REASONS.WINDOWS_API_UNAVAILABLE,
+          WINDOW_CREATION_FAILURE_REASONS.WINDOW_HANDLE_UNAVAILABLE,
         )
       }
       existingCompositeWindowConfirmed = true

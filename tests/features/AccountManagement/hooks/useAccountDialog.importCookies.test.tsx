@@ -136,6 +136,28 @@ describe("useAccountDialog cookie import feedback", () => {
     mockOnOptionalPermissionsChanged.mockReturnValue(vi.fn())
     mockOnTabActivated.mockReturnValue(vi.fn())
     mockOnTabUpdated.mockReturnValue(vi.fn())
+    const { getActiveTabs } = await import("~/utils/browser/browserApi")
+    vi.mocked(getActiveTabs).mockImplementation(async () => {
+      const query = (globalThis as any).browser?.tabs?.query
+      if (typeof query !== "function") {
+        return []
+      }
+
+      try {
+        const tabs = await query({ active: true, currentWindow: true })
+        if (tabs?.length) {
+          return tabs
+        }
+      } catch {
+        // Mirror getActiveTabs fallback behavior for tests that model Firefox Android.
+      }
+
+      try {
+        return (await query({ active: true })) ?? []
+      } catch {
+        return []
+      }
+    })
     await accountStorage.clearAllData()
   })
 

@@ -66,6 +66,7 @@ describe("autoDetectSmart", () => {
     browserAny.runtime = originalRuntime ?? {}
     browserAny.tabs = {
       ...(typeof originalTabs === "object" && originalTabs ? originalTabs : {}),
+      query: vi.fn().mockResolvedValue([]),
       sendMessage: vi.fn(),
     }
 

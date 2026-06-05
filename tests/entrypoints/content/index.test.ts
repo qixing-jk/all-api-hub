@@ -63,6 +63,7 @@ describe("content entrypoint", () => {
     setupRedemptionAssistContentMock.mockReset()
     setupWebAiApiCheckContentMock.mockReset()
     setupContentMessageHandlersMock.mockReset()
+    setupContentMessageHandlersMock.mockReturnValue(vi.fn())
     setContentScriptContextMock.mockReset()
     ensureContentI18nReadyMock.mockReset()
     ensureContentI18nReadyMock.mockResolvedValue(undefined)
@@ -208,6 +209,48 @@ describe("content entrypoint", () => {
     )
     expect(secondRedemptionCleanup).toHaveBeenCalledTimes(1)
     expect(secondApiCheckCleanup).toHaveBeenCalledTimes(1)
+  })
+
+  it("cleans up message handlers when the content context is invalidated", async () => {
+    const cleanupMessageHandlers = vi.fn()
+    const cleanupRedemption = vi.fn()
+    const cleanupApiCheck = vi.fn()
+
+    setupContentMessageHandlersMock.mockReturnValue(cleanupMessageHandlers)
+    setupRedemptionAssistContentMock.mockReturnValue(cleanupRedemption)
+    setupWebAiApiCheckContentMock.mockReturnValue(cleanupApiCheck)
+    storageGetMock.mockResolvedValueOnce({
+      redemptionAssist: {
+        enabled: true,
+        contextMenu: { enabled: true },
+      },
+      webAiApiCheck: {
+        enabled: true,
+        contextMenu: { enabled: true },
+        autoDetect: { enabled: true },
+      },
+    })
+
+    const module = await import("~/entrypoints/content/index")
+    const onInvalidated = vi.fn()
+
+    await module.default.main({ onInvalidated } as any)
+
+    const cleanup = onInvalidated.mock.calls[0]?.[0]
+    expect(cleanup).toBeTypeOf("function")
+
+    await waitFor(() => {
+      expect(setupRedemptionAssistContentMock).toHaveBeenCalledTimes(1)
+      expect(setupWebAiApiCheckContentMock).toHaveBeenCalledTimes(1)
+    })
+
+    cleanup()
+
+    expect(cleanupMessageHandlers).toHaveBeenCalledTimes(1)
+    await waitFor(() => {
+      expect(cleanupRedemption).toHaveBeenCalledTimes(1)
+      expect(cleanupApiCheck).toHaveBeenCalledTimes(1)
+    })
   })
 
   it("falls back to default feature preferences when storage lookup fails", async () => {

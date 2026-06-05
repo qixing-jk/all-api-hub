@@ -103,6 +103,9 @@ vi.mock("~/utils/browser/browserApi", () => ({
       tabUpdatedListener = null
     }
   }),
+  sendTabMessage: vi.fn((tabId: number, message: unknown) =>
+    globalThis.browser.tabs.sendMessage(tabId, message),
+  ),
 }))
 
 /**

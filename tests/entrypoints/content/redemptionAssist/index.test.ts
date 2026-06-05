@@ -56,10 +56,16 @@ vi.mock("~/services/productAnalytics/actions", () => ({
     mockTrackProductAnalyticsActionCompleted(...args),
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
-  checkPermissionViaMessage: mockCheckPermissionViaMessage,
-  sendRuntimeMessage: mockSendRuntimeMessage,
-}))
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+
+  return {
+    ...actual,
+    checkPermissionViaMessage: mockCheckPermissionViaMessage,
+    sendRuntimeMessage: mockSendRuntimeMessage,
+  }
+})
 
 vi.mock("~/services/redemption/redemptionAssistMessaging", () => ({
   RedemptionAssistMessageTypes,
@@ -163,7 +169,7 @@ describe("setupRedemptionAssistContent", () => {
     expect(removeListener).toHaveBeenCalledWith(listener)
   })
 
-  it("logs debug when removing the context-menu listener fails", async () => {
+  it("propagates context-menu listener removal failures through the shared adapter", async () => {
     const removeListenerError = new Error("remove failed")
     ;(globalThis as any).browser = {
       runtime: {
@@ -185,11 +191,7 @@ describe("setupRedemptionAssistContent", () => {
       enableContextMenu: true,
     })
 
-    expect(() => cleanup()).not.toThrow()
-    expect(logger.debug).toHaveBeenCalledWith(
-      "Failed to remove redemption context menu listener",
-      removeListenerError,
-    )
+    expect(() => cleanup()).toThrow(removeListenerError)
   })
 
   it("deduplicates repeated clipboard scans and auto-redeems a single selected code", async () => {

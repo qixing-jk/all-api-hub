@@ -83,8 +83,13 @@ function mainLogic() {
     logger.warn("Content i18n initialization failed", error)
   })
 
-  setupContentMessageHandlers()
-  return setupContentFeatureControllers()
+  const cleanupMessageHandlers = setupContentMessageHandlers()
+  const cleanupFeatureControllers = setupContentFeatureControllers()
+
+  return () => {
+    cleanupMessageHandlers()
+    cleanupFeatureControllers()
+  }
 }
 
 /**

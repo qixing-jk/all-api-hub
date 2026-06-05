@@ -60,6 +60,7 @@ const {
   mockToastPromise,
   mockGetActiveTabs,
   mockGetAllTabs,
+  mockSendTabMessage,
   mockOnRuntimeMessage,
   mockOnTabActivated,
   mockOnTabRemoved,
@@ -98,6 +99,9 @@ const {
   mockToastPromise: vi.fn(),
   mockGetActiveTabs: vi.fn<() => Promise<browser.tabs.Tab[]>>(async () => []),
   mockGetAllTabs: vi.fn<() => Promise<browser.tabs.Tab[]>>(async () => []),
+  mockSendTabMessage: vi.fn((tabId: number, message: unknown) =>
+    globalThis.browser.tabs.sendMessage(tabId, message),
+  ),
   mockOnRuntimeMessage: vi.fn<
     (
       listener: (
@@ -221,6 +225,7 @@ vi.mock("~/utils/core/logger", () => ({
 vi.mock("~/utils/browser/browserApi", () => ({
   getActiveTabs: mockGetActiveTabs,
   getAllTabs: mockGetAllTabs,
+  sendTabMessage: mockSendTabMessage,
   onRuntimeMessage: mockOnRuntimeMessage,
   onTabActivated: mockOnTabActivated,
   onTabRemoved: mockOnTabRemoved,

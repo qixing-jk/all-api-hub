@@ -12,9 +12,15 @@ const {
   loggerDebugMock: vi.fn(),
 }))
 
-vi.mock("~/utils/browser/browserApi", () => ({
-  getManifest: (...args: unknown[]) => getManifestMock(...args),
-}))
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    await importOriginal<typeof import("~/utils/browser/browserApi")>()
+
+  return {
+    ...actual,
+    getManifest: (...args: unknown[]) => getManifestMock(...args),
+  }
+})
 
 vi.mock("~/utils/core/devBranding", () => ({
   formatDevActionTitle: (...args: unknown[]) =>

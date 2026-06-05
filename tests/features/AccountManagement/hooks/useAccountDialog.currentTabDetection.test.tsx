@@ -106,7 +106,27 @@ describe("useAccountDialog current tab detection", () => {
     }
 
     mockGetSiteName.mockResolvedValue("Detected Site")
-    mockGetActiveTabs.mockResolvedValue([])
+    mockGetActiveTabs.mockImplementation(async () => {
+      const query = (globalThis as any).browser?.tabs?.query
+      if (typeof query !== "function") {
+        return []
+      }
+
+      try {
+        const tabs = await query({ active: true, currentWindow: true })
+        if (tabs?.length) {
+          return tabs
+        }
+      } catch {
+        // Mirror getActiveTabs fallback behavior for tests that model Firefox Android.
+      }
+
+      try {
+        return (await query({ active: true })) ?? []
+      } catch {
+        return []
+      }
+    })
     onTabActivatedMock.mockImplementation(() => () => {})
     onTabUpdatedMock.mockImplementation(() => () => {})
   })
@@ -425,29 +445,33 @@ describe("useAccountDialog current tab detection", () => {
     const tabsQueryMock = globalThis.browser.tabs.query as ReturnType<
       typeof vi.fn
     >
-    tabsQueryMock
-      .mockResolvedValueOnce([
-        {
-          id: 3,
-          url: "chrome://extensions",
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          id: 3,
-          url: "chrome://extensions",
-        },
-      ])
-      .mockResolvedValueOnce([
-        {
-          id: 4,
-          url: "https://active.example.com/dashboard",
-        },
-      ])
+    let activeTab = {
+      id: 3,
+      url: "chrome://extensions",
+    }
+    tabsQueryMock.mockImplementation(async () => [activeTab])
 
-    mockGetActiveTabs
-      .mockResolvedValueOnce([{ id: 999 } as any])
-      .mockResolvedValueOnce([{ id: 4 } as any])
+    mockGetActiveTabs.mockImplementation(async () => {
+      const query = (globalThis as any).browser?.tabs?.query
+      if (typeof query !== "function") {
+        return []
+      }
+
+      try {
+        const tabs = await query({ active: true, currentWindow: true })
+        if (tabs?.length) {
+          return tabs
+        }
+      } catch {
+        // Mirror getActiveTabs fallback behavior for tests that model Firefox Android.
+      }
+
+      try {
+        return (await query({ active: true })) ?? []
+      } catch {
+        return []
+      }
+    })
 
     let updatedListener: ((tabId: number) => void | Promise<void>) | undefined
     onTabUpdatedMock.mockImplementation((listener) => {
@@ -477,6 +501,17 @@ describe("useAccountDialog current tab detection", () => {
     expect(mockGetSiteName).not.toHaveBeenCalledWith(
       expect.objectContaining({ id: 123 }),
     )
+
+    await waitFor(() => {
+      expect(mockGetSiteName).not.toHaveBeenCalledWith(
+        expect.objectContaining({ id: 4 }),
+      )
+    })
+
+    activeTab = {
+      id: 4,
+      url: "https://active.example.com/dashboard",
+    }
 
     await act(async () => {
       await updatedListener?.(4)
