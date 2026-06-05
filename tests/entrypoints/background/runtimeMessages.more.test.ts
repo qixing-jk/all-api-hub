@@ -15,6 +15,7 @@ type RuntimeMessageListener = (
 
 const mocks = vi.hoisted(() => ({
   onRuntimeMessage: vi.fn(),
+  containsPermissions: vi.fn(),
   applyActionClickBehavior: vi.fn(),
   getCookieHeaderForUrlResult: vi.fn(),
   hasCookieReadPermissionForUrl: vi.fn(),
@@ -49,6 +50,7 @@ const mocks = vi.hoisted(() => ({
 }))
 
 vi.mock("~/utils/browser/browserApi", () => ({
+  containsPermissions: mocks.containsPermissions,
   onRuntimeMessage: mocks.onRuntimeMessage,
 }))
 
@@ -182,11 +184,8 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     mocks.hasCookieReadPermissionForUrl.mockResolvedValue(true)
     mocks.setupContextMenus.mockResolvedValue(undefined)
     mocks.trackCookieInterceptorUrl.mockResolvedValue(undefined)
-    ;(globalThis as any).browser = {
-      permissions: {
-        contains: vi.fn().mockResolvedValue(true),
-      },
-    }
+    mocks.containsPermissions.mockResolvedValue(true)
+    ;(globalThis as any).browser = {}
   })
 
   afterEach(() => {
@@ -243,8 +242,6 @@ describe("setupRuntimeMessageListeners additional routing", () => {
   }
 
   it("handles permission checks for both success and failure responses", async () => {
-    const permissionsContains = (globalThis as any).browser.permissions
-      .contains as ReturnType<typeof vi.fn>
     const listener = await loadListener()
 
     const sendResponse = vi.fn()
@@ -262,7 +259,9 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     await waitForAsyncResponse()
     expect(sendResponse).toHaveBeenCalledWith({ hasPermission: true })
 
-    permissionsContains.mockRejectedValueOnce(new Error("permission boom"))
+    mocks.containsPermissions.mockRejectedValueOnce(
+      new Error("permission boom"),
+    )
     const failedResponse = vi.fn()
 
     expect(

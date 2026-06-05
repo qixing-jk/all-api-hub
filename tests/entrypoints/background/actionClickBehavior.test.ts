@@ -14,9 +14,9 @@ describe("background applyActionClickBehavior", () => {
   let addActionClickListener: ReturnType<typeof vi.fn>
   let removeActionClickListener: ReturnType<typeof vi.fn>
   let setActionPopup: ReturnType<typeof vi.fn>
+  let disableNativeSidePanelActionClick: ReturnType<typeof vi.fn>
   let getSidePanelSupport: ReturnType<typeof vi.fn>
   let openSidePanelWithFallback: ReturnType<typeof vi.fn>
-  let setPanelBehavior: ReturnType<typeof vi.fn>
   let startProductAnalyticsAction: ReturnType<typeof vi.fn>
   let trackerComplete: ReturnType<typeof vi.fn>
 
@@ -24,23 +24,19 @@ describe("background applyActionClickBehavior", () => {
     addActionClickListener = vi.fn()
     removeActionClickListener = vi.fn()
     setActionPopup = vi.fn().mockResolvedValue(undefined)
+    disableNativeSidePanelActionClick = vi.fn().mockResolvedValue(undefined)
     getSidePanelSupport = vi.fn()
     openSidePanelWithFallback = vi.fn().mockResolvedValue(undefined)
-    setPanelBehavior = vi.fn().mockResolvedValue(undefined)
     trackerComplete = vi.fn().mockResolvedValue(undefined)
     startProductAnalyticsAction = vi.fn().mockReturnValue({
       complete: trackerComplete,
     })
-    ;(globalThis as any).chrome = {
-      sidePanel: {
-        setPanelBehavior,
-      },
-    }
 
     vi.resetModules()
 
     vi.doMock("~/utils/browser/browserApi", () => ({
       addActionClickListener,
+      disableNativeSidePanelActionClick,
       getSidePanelSupport,
       removeActionClickListener,
       setActionPopup,
@@ -56,7 +52,6 @@ describe("background applyActionClickBehavior", () => {
   })
 
   afterEach(() => {
-    ;(globalThis as any).chrome = undefined
     vi.doUnmock("~/utils/browser/browserApi")
     vi.doUnmock("~/utils/navigation")
     vi.doUnmock("~/services/productAnalytics/actions")
@@ -78,9 +73,7 @@ describe("background applyActionClickBehavior", () => {
     await applyActionClickBehavior("sidepanel")
 
     expect(removeActionClickListener).toHaveBeenCalledTimes(1)
-    expect(setPanelBehavior).toHaveBeenCalledWith({
-      openPanelOnActionClick: false,
-    })
+    expect(disableNativeSidePanelActionClick).toHaveBeenCalledTimes(1)
     expect(setActionPopup).toHaveBeenCalledWith(POPUP_PAGE_PATH)
     expect(addActionClickListener).not.toHaveBeenCalled()
   })
@@ -98,9 +91,7 @@ describe("background applyActionClickBehavior", () => {
     await applyActionClickBehavior("sidepanel")
 
     expect(removeActionClickListener).toHaveBeenCalledTimes(1)
-    expect(setPanelBehavior).toHaveBeenCalledWith({
-      openPanelOnActionClick: false,
-    })
+    expect(disableNativeSidePanelActionClick).toHaveBeenCalledTimes(1)
     expect(setActionPopup).toHaveBeenCalledWith("")
     expect(addActionClickListener).toHaveBeenCalledTimes(1)
   })
@@ -118,9 +109,7 @@ describe("background applyActionClickBehavior", () => {
     await applyActionClickBehavior("sidepanel")
 
     expect(removeActionClickListener).toHaveBeenCalledTimes(1)
-    expect(setPanelBehavior).toHaveBeenCalledWith({
-      openPanelOnActionClick: false,
-    })
+    expect(disableNativeSidePanelActionClick).toHaveBeenCalledTimes(1)
     expect(setActionPopup).toHaveBeenCalledWith("")
     expect(addActionClickListener).toHaveBeenCalledTimes(1)
   })

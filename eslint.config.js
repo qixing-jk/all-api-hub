@@ -171,6 +171,45 @@ export default defineConfig([
       "no-console": "off",
     },
   },
+  // Guardrails: keep version-sensitive extension API access inside browser adapter modules.
+  {
+    files: [srcJsFamilyFilePattern],
+    ignores: [
+      "src/utils/browser/**/*.{js,cjs,mjs,jsx,ts,tsx}",
+      "src/utils/core/logger.{js,cjs,mjs,jsx,ts,tsx}",
+    ],
+    rules: {
+      "no-restricted-globals": [
+        "error",
+        {
+          name: "chrome",
+          message:
+            "Do not access the global Chrome extension API directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+        },
+      ],
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            "MemberExpression[object.name=/^(globalThis|window)$/][property.name='chrome']",
+          message:
+            "Do not access the global Chrome extension API directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+        },
+        {
+          selector:
+            "MemberExpression[object.type='TSAsExpression'][object.expression.name='globalThis'][property.name='chrome']",
+          message:
+            "Do not access the global Chrome extension API directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+        },
+        {
+          selector:
+            "MemberExpression[object.name='browser'][property.name=/^(action|browserAction|sidebarAction|permissions)$/]",
+          message:
+            "Do not access version-sensitive `browser.*` extension APIs directly in app code. Add a guarded wrapper in `~/utils/browser/browserApi` or another `~/utils/browser/**` adapter.",
+        },
+      ],
+    },
+  },
   // Guardrails: prevent non-entrypoint code from depending on options page internals.
   //
   // Transition plan:

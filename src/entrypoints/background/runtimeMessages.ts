@@ -22,7 +22,10 @@ import { setupSiteAnnouncementsMessagingListeners } from "~/services/siteAnnounc
 import { setupReleaseUpdateMessagingListeners } from "~/services/updates/releaseUpdateService"
 import { setupWebAiApiCheckMessagingListeners } from "~/services/verification/webAiApiCheck/background"
 import { setupWebdavAutoSyncMessagingListeners } from "~/services/webdav/webdavAutoSyncService"
-import { onRuntimeMessage } from "~/utils/browser/browserApi"
+import {
+  containsPermissions,
+  onRuntimeMessage,
+} from "~/utils/browser/browserApi"
 import {
   getCookieHeaderForUrlResult,
   hasCookieReadPermissionForUrl,
@@ -112,8 +115,7 @@ export function setupRuntimeMessageListeners() {
   onRuntimeMessage((request, sender, sendResponse) => {
     try {
       if (request.action === RuntimeActionIds.PermissionsCheck) {
-        void browser.permissions
-          .contains(request.permissions)
+        void containsPermissions(request.permissions)
           .then((hasPermission) => {
             sendResponse({ hasPermission })
           })

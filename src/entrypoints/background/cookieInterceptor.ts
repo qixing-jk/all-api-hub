@@ -5,6 +5,10 @@ import {
 import { AccountStorageConfig, type SiteAccount } from "~/types"
 import { isSameStringSet } from "~/utils"
 import {
+  onPermissionsAdded,
+  onPermissionsRemoved,
+} from "~/utils/browser/browserApi"
+import {
   checkCookieInterceptorRequirement,
   registerWebRequestInterceptor,
   setupWebRequestInterceptor,
@@ -248,6 +252,6 @@ export function setupCookieInterceptorListeners() {
   browser.storage.onChanged.addListener(handleStorageChanged)
 
   // Listen for permission additions and removals
-  chrome.permissions.onAdded.addListener(updateCookieInterceptor)
-  chrome.permissions.onRemoved.addListener(updateCookieInterceptor)
+  onPermissionsAdded(updateCookieInterceptor)
+  onPermissionsRemoved(updateCookieInterceptor)
 }

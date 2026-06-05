@@ -7,12 +7,16 @@ const {
   mockCheckCookieInterceptorRequirement,
   mockRegisterWebRequestInterceptor,
   mockSetupWebRequestInterceptor,
+  mockOnPermissionsAdded,
+  mockOnPermissionsRemoved,
   mockLogger,
 } = vi.hoisted(() => ({
   mockGetAllAccounts: vi.fn(),
   mockCheckCookieInterceptorRequirement: vi.fn(),
   mockRegisterWebRequestInterceptor: vi.fn(),
   mockSetupWebRequestInterceptor: vi.fn(),
+  mockOnPermissionsAdded: vi.fn(),
+  mockOnPermissionsRemoved: vi.fn(),
   mockLogger: {
     warn: vi.fn(),
     debug: vi.fn(),
@@ -39,6 +43,17 @@ vi.mock("~/utils/browser/cookieHelper", () => ({
   registerWebRequestInterceptor: mockRegisterWebRequestInterceptor,
   setupWebRequestInterceptor: mockSetupWebRequestInterceptor,
 }))
+
+vi.mock("~/utils/browser/browserApi", async (importOriginal) => {
+  const actual =
+    (await importOriginal()) as typeof import("~/utils/browser/browserApi")
+
+  return {
+    ...actual,
+    onPermissionsAdded: mockOnPermissionsAdded,
+    onPermissionsRemoved: mockOnPermissionsRemoved,
+  }
+})
 
 vi.mock("~/utils/core/logger", () => ({
   createLogger: vi.fn(() => mockLogger),
@@ -70,27 +85,20 @@ describe("cookieInterceptor", () => {
 
     mockCheckCookieInterceptorRequirement.mockResolvedValue(true)
     mockGetAllAccounts.mockResolvedValue([])
+    mockOnPermissionsAdded.mockImplementation((listener) => {
+      permissionAddedListeners.push(listener)
+      return vi.fn()
+    })
+    mockOnPermissionsRemoved.mockImplementation((listener) => {
+      permissionRemovedListeners.push(listener)
+      return vi.fn()
+    })
 
     vi.stubGlobal("browser", {
       storage: {
         onChanged: {
           addListener: vi.fn((listener) => {
             storageChangeListeners.push(listener)
-          }),
-        },
-      },
-    })
-
-    vi.stubGlobal("chrome", {
-      permissions: {
-        onAdded: {
-          addListener: vi.fn((listener) => {
-            permissionAddedListeners.push(listener)
-          }),
-        },
-        onRemoved: {
-          addListener: vi.fn((listener) => {
-            permissionRemovedListeners.push(listener)
           }),
         },
       },

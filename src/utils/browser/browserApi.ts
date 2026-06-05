@@ -730,6 +730,29 @@ export const openSidePanel = async (targetTab?: browser.tabs.Tab | null) => {
 }
 
 /**
+ * Keeps Chromium toolbar action clicks on the extension-managed listener path
+ * so fallback behavior can run when side panel opening is unavailable.
+ */
+export async function disableNativeSidePanelActionClick(): Promise<void> {
+  const setPanelBehavior = (globalThis as any).chrome?.sidePanel
+    ?.setPanelBehavior
+
+  if (typeof setPanelBehavior !== "function") {
+    return
+  }
+
+  try {
+    await setPanelBehavior({
+      openPanelOnActionClick: false,
+    })
+  } catch (error) {
+    logger.warn(
+      `sidePanel.setPanelBehavior not available:\n${getErrorMessage(error)}`,
+    )
+  }
+}
+
+/**
  * 检查是否支持 alarms API
  */
 export function hasAlarmsAPI(): boolean {

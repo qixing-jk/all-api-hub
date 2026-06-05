@@ -10,6 +10,7 @@ import {
 } from "~/services/productAnalytics/events"
 import {
   addActionClickListener,
+  disableNativeSidePanelActionClick,
   getSidePanelSupport,
   removeActionClickListener,
   setActionPopup,
@@ -69,18 +70,7 @@ export async function applyActionClickBehavior(
   // 清理旧的点击监听
   removeActionClickListener(handleActionClick)
 
-  // Keep Chromium on the extension-managed click path so runtime fallback always runs.
-  if (typeof (chrome as any)?.sidePanel?.setPanelBehavior === "function") {
-    try {
-      await chrome.sidePanel.setPanelBehavior({
-        openPanelOnActionClick: false,
-      })
-    } catch (error) {
-      logger.warn(
-        `sidePanel.setPanelBehavior not available:\n${getErrorMessage(error)}`,
-      )
-    }
-  }
+  await disableNativeSidePanelActionClick()
 
   try {
     await setActionPopup(isSidePanel ? "" : POPUP_PAGE_PATH)
