@@ -13,6 +13,7 @@ import { LanguageSwitcher } from "~/components/LanguageSwitcher"
 import { Heading5, IconButton } from "~/components/ui"
 import { VersionBadge } from "~/components/VersionBadge"
 import { Z_INDEX } from "~/constants/designTokens"
+import { ProductAnnouncementButton } from "~/features/ProductAnnouncements/ProductAnnouncementButton"
 import { useIsMobile } from "~/hooks/useMediaQuery"
 import { cn } from "~/lib/utils"
 import { getRepository } from "~/utils/navigation/packageMeta"
@@ -206,6 +207,7 @@ function Header({
               showMobileExpandedSearch && "hidden md:flex",
             )}
           >
+            <ProductAnnouncementButton surface="options-header" />
             <HeaderThemeSwitcher />
             <FeedbackDropdownMenu language={i18n.language} />
             <LanguageSwitcher variant="icon-dropdown" />

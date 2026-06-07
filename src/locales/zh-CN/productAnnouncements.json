@@ -1,0 +1,32 @@
+{
+  "actions": {
+    "close": "关闭产品公告",
+    "dismiss": "不再显示",
+    "dismissFor": "不再显示：{{title}}",
+    "open": "产品公告",
+    "openWithRiskCount": "产品公告，{{riskCount}} 条风险公告待处理",
+    "restore": "恢复显示",
+    "restoreFor": "恢复显示：{{title}}",
+    "viewAll": "查看全部"
+  },
+  "empty": {
+    "active": "暂无产品公告",
+    "dismissed": "暂无已关闭公告"
+  },
+  "filters": {
+    "active": "当前公告",
+    "dismissed": "已关闭"
+  },
+  "labels": {
+    "critical": "严重",
+    "info": "信息",
+    "unread": "未读",
+    "warning": "提醒"
+  },
+  "loading": "正在加载产品公告...",
+  "summary": {
+    "additional_one": "还有 {{riskCount}} 条风险公告",
+    "additional_other": "还有 {{riskCount}} 条风险公告"
+  },
+  "title": "产品公告"
+}

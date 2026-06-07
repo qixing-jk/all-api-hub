@@ -1,0 +1,32 @@
+{
+  "actions": {
+    "close": "Đóng thông báo sản phẩm",
+    "dismiss": "Không hiển thị nữa",
+    "dismissFor": "Không hiển thị {{title}} nữa",
+    "open": "Thông báo sản phẩm",
+    "openWithRiskCount": "Thông báo sản phẩm, {{riskCount}} thông báo rủi ro cần xử lý",
+    "restore": "Hiển thị lại",
+    "restoreFor": "Hiển thị lại {{title}}",
+    "viewAll": "Xem tất cả"
+  },
+  "empty": {
+    "active": "Chưa có thông báo sản phẩm",
+    "dismissed": "Chưa có thông báo đã đóng"
+  },
+  "filters": {
+    "active": "Thông báo hiện tại",
+    "dismissed": "Đã đóng"
+  },
+  "labels": {
+    "critical": "Nghiêm trọng",
+    "info": "Thông tin",
+    "unread": "Chưa đọc",
+    "warning": "Nhắc nhở"
+  },
+  "loading": "Đang tải thông báo sản phẩm...",
+  "summary": {
+    "additional_one": "Còn {{riskCount}} thông báo rủi ro khác",
+    "additional_other": "Còn {{riskCount}} thông báo rủi ro khác"
+  },
+  "title": "Thông báo sản phẩm"
+}

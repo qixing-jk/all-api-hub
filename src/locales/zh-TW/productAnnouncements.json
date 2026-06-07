@@ -1,0 +1,32 @@
+{
+  "actions": {
+    "close": "關閉產品公告",
+    "dismiss": "不再顯示",
+    "dismissFor": "不再顯示：{{title}}",
+    "open": "產品公告",
+    "openWithRiskCount": "產品公告，{{riskCount}} 則風險公告待處理",
+    "restore": "恢復顯示",
+    "restoreFor": "恢復顯示：{{title}}",
+    "viewAll": "查看全部"
+  },
+  "empty": {
+    "active": "暫無產品公告",
+    "dismissed": "暫無已關閉公告"
+  },
+  "filters": {
+    "active": "目前公告",
+    "dismissed": "已關閉"
+  },
+  "labels": {
+    "critical": "嚴重",
+    "info": "資訊",
+    "unread": "未讀",
+    "warning": "提醒"
+  },
+  "loading": "正在載入產品公告...",
+  "summary": {
+    "additional_one": "還有 {{riskCount}} 則風險公告",
+    "additional_other": "還有 {{riskCount}} 則風險公告"
+  },
+  "title": "產品公告"
+}

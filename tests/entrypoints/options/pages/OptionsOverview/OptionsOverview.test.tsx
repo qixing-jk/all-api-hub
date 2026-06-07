@@ -26,16 +26,25 @@ const {
   setLastSeenOptionalPermissionsMock,
   trackProductAnalyticsEventMock,
   useOptionsOverviewDataMock,
+  useProductAnnouncementsMock,
 } = vi.hoisted(() => ({
   pushWithinOptionsPageMock: vi.fn(),
   setLastSeenOptionalPermissionsMock: vi.fn(),
   trackProductAnalyticsEventMock: vi.fn(),
   useOptionsOverviewDataMock: vi.fn(),
+  useProductAnnouncementsMock: vi.fn(),
 }))
 
 vi.mock("~/features/OptionsOverview/useOptionsOverviewData", () => ({
   useOptionsOverviewData: useOptionsOverviewDataMock,
 }))
+
+vi.mock(
+  "~/features/ProductAnnouncements/hooks/useProductAnnouncements",
+  () => ({
+    useProductAnnouncements: useProductAnnouncementsMock,
+  }),
+)
 
 vi.mock("~/services/permissions/optionalPermissionState", () => ({
   setLastSeenOptionalPermissions: setLastSeenOptionalPermissionsMock,
@@ -331,6 +340,21 @@ describe("OptionsOverview", () => {
     vi.clearAllMocks()
     setLastSeenOptionalPermissionsMock.mockResolvedValue(undefined)
     trackProductAnalyticsEventMock.mockResolvedValue(true)
+    useProductAnnouncementsMock.mockReturnValue({
+      state: {
+        view: {
+          notices: [],
+          activeNotices: [],
+          dismissedNotices: [],
+          primaryRiskNotice: null,
+          unseenActiveCount: 0,
+        },
+      },
+      isLoading: false,
+      reload: vi.fn(),
+      markSeen: vi.fn().mockResolvedValue(true),
+      dismiss: vi.fn(),
+    })
     window.history.replaceState(null, "", "/")
   })
 

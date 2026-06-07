@@ -1,0 +1,32 @@
+{
+  "actions": {
+    "close": "Close product announcements",
+    "dismiss": "Dismiss",
+    "dismissFor": "Dismiss {{title}}",
+    "open": "Product announcements",
+    "openWithRiskCount": "Product announcements, {{riskCount}} active risk notices",
+    "restore": "Restore",
+    "restoreFor": "Restore {{title}}",
+    "viewAll": "View all"
+  },
+  "empty": {
+    "active": "No product announcements",
+    "dismissed": "No dismissed announcements"
+  },
+  "filters": {
+    "active": "Active",
+    "dismissed": "Dismissed"
+  },
+  "labels": {
+    "critical": "Critical",
+    "info": "Info",
+    "unread": "Unread",
+    "warning": "Warning"
+  },
+  "loading": "Loading product announcements...",
+  "summary": {
+    "additional_one": "{{riskCount}} more risk notice",
+    "additional_other": "{{riskCount}} more risk notices"
+  },
+  "title": "Product announcements"
+}

@@ -1,0 +1,32 @@
+{
+  "actions": {
+    "close": "製品のお知らせを閉じる",
+    "dismiss": "表示しない",
+    "dismissFor": "{{title}}を表示しない",
+    "open": "製品のお知らせ",
+    "openWithRiskCount": "製品のお知らせ、対応が必要なリスク通知{{riskCount}}件",
+    "restore": "再表示",
+    "restoreFor": "{{title}}を再表示",
+    "viewAll": "すべて表示"
+  },
+  "empty": {
+    "active": "製品のお知らせはありません",
+    "dismissed": "閉じたお知らせはありません"
+  },
+  "filters": {
+    "active": "現在のお知らせ",
+    "dismissed": "閉じたもの"
+  },
+  "labels": {
+    "critical": "重大",
+    "info": "情報",
+    "unread": "未読",
+    "warning": "注意"
+  },
+  "loading": "製品のお知らせを読み込んでいます...",
+  "summary": {
+    "additional_one": "他に {{riskCount}} 件のリスク通知",
+    "additional_other": "他に {{riskCount}} 件のリスク通知"
+  },
+  "title": "製品のお知らせ"
+}

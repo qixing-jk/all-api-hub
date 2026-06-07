@@ -6,6 +6,9 @@ import { PageHeader } from "~/components/PageHeader"
 import { Alert, Button, Spinner } from "~/components/ui"
 import { MENU_ITEM_IDS } from "~/constants/optionsMenuIds"
 import { PermissionOnboardingDialog } from "~/features/OptionsOverview/components/dialogs/PermissionOnboardingDialog"
+import { requestProductAnnouncementPopoverOpen } from "~/features/ProductAnnouncements/events"
+import { useProductAnnouncements } from "~/features/ProductAnnouncements/hooks/useProductAnnouncements"
+import { ProductAnnouncementBanner } from "~/features/ProductAnnouncements/ProductAnnouncementBanner"
 import { setLastSeenOptionalPermissions } from "~/services/permissions/optionalPermissionState"
 import {
   PRODUCT_ANALYTICS_ACTION_IDS,
@@ -17,6 +20,7 @@ import {
   PRODUCT_ANALYTICS_TARGET_KINDS,
   trackProductAnalyticsEvent,
 } from "~/services/productAnalytics/events"
+import { PRODUCT_ANNOUNCEMENT_SEVERITIES } from "~/services/productAnnouncements/constants"
 import { pushWithinOptionsPage } from "~/utils/navigation"
 
 import { OptionsOverviewGrid } from "./components/OptionsOverviewGrid"
@@ -57,9 +61,24 @@ export function getPermissionsOnboardingReasonFromUrl(): string | null {
 export default function OptionsOverview() {
   const { t } = useTranslation(["optionsOverview", "common"])
   const { isLoading, error, viewModel, reload } = useOptionsOverviewData()
+  const {
+    state: productAnnouncementState,
+    dismiss: dismissProductAnnouncement,
+  } = useProductAnnouncements()
   const [permissionsOnboardingReason, setPermissionsOnboardingReason] =
     useState<string | null>(() => getPermissionsOnboardingReasonFromUrl())
   const showPermissionsOnboarding = permissionsOnboardingReason !== null
+  const primaryRiskNotice =
+    productAnnouncementState.view.primaryRiskNotice ?? null
+  const additionalRiskNoticeCount = primaryRiskNotice
+    ? productAnnouncementState.view.activeNotices.filter(
+        (notice) =>
+          notice.id !== primaryRiskNotice.id &&
+          !notice.dismissed &&
+          (notice.severity === PRODUCT_ANNOUNCEMENT_SEVERITIES.Critical ||
+            notice.severity === PRODUCT_ANNOUNCEMENT_SEVERITIES.Warning),
+      ).length
+    : 0
 
   useEffect(() => {
     const applyUrlState = () => {
@@ -121,6 +140,10 @@ export default function OptionsOverview() {
     pushWithinOptionsPage(`#${target.menuItemId}`, target.params ?? {})
   }
 
+  const handleViewAllProductAnnouncements = () => {
+    requestProductAnnouncementPopoverOpen("options-header")
+  }
+
   return (
     <div className="space-y-6 p-6" data-testid={OPTIONS_OVERVIEW_TEST_IDS.page}>
       <PageHeader
@@ -159,11 +182,21 @@ export default function OptionsOverview() {
       ) : null}
 
       {viewModel ? (
-        <OptionsOverviewGrid
-          viewModel={viewModel}
-          t={t}
-          onNavigate={handleNavigate}
-        />
+        <>
+          {primaryRiskNotice ? (
+            <ProductAnnouncementBanner
+              notice={primaryRiskNotice}
+              additionalCount={additionalRiskNoticeCount}
+              onViewAll={handleViewAllProductAnnouncements}
+              onDismiss={dismissProductAnnouncement}
+            />
+          ) : null}
+          <OptionsOverviewGrid
+            viewModel={viewModel}
+            t={t}
+            onNavigate={handleNavigate}
+          />
+        </>
       ) : null}
 
       <PermissionOnboardingDialog

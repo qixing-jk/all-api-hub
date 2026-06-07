@@ -17,6 +17,7 @@ import { VersionBadge } from "~/components/VersionBadge"
 import { COLORS } from "~/constants/designTokens"
 import { ProductAnalyticsScope } from "~/contexts/ProductAnalyticsScopeContext"
 import { useAccountDataContext } from "~/features/AccountManagement/hooks/AccountDataContext"
+import { ProductAnnouncementButton } from "~/features/ProductAnnouncements/ProductAnnouncementButton"
 import { buildAccountRefreshDiagnostics } from "~/services/productAnalytics/accountRefresh"
 import { startProductAnalyticsAction } from "~/services/productAnalytics/actions"
 import {
@@ -207,6 +208,7 @@ export default function HeaderSection({
       {/* Action Buttons Section */}
       <ProductAnalyticsScope entrypoint={entrypoint} surfaceId={headerSurface}>
         <div className="flex shrink-0 items-center gap-1 sm:gap-2">
+          <ProductAnnouncementButton surface="popup-header" onlyWhenRisk />
           <CompactThemeToggle />
           <FeedbackDropdownMenu language={i18n.language} />
 
