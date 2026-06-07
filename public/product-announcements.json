@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "defaultLocale": "zh-CN",
+  "announcements": [],
+  "_examples": {
+    "devAnnouncements": [
+      {
+        "id": "dev-critical-product-risk",
+        "revision": 1,
+        "severity": "critical",
+        "priority": 100,
+        "affectedVersions": "*",
+        "startsAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "content": {
+          "zh-CN": {
+            "title": "[DEV] 严重风险公告",
+            "message": "用于测试 Overview 风险横幅、弹窗未读计数和 Popup 风险入口。",
+            "cta": {
+              "label": "查看发布说明",
+              "url": "https://github.com/qixing-jk/all-api-hub/releases"
+            }
+          },
+          "en": {
+            "title": "[DEV] Critical risk announcement",
+            "message": "Exercises the Overview risk banner, unread popover count, and Popup risk entry.",
+            "cta": {
+              "label": "View release notes",
+              "url": "https://github.com/qixing-jk/all-api-hub/releases"
+            }
+          }
+        }
+      },
+      {
+        "id": "dev-warning-product-risk",
+        "revision": 1,
+        "severity": "warning",
+        "priority": 80,
+        "affectedVersions": "*",
+        "startsAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "content": {
+          "zh-CN": {
+            "title": "[DEV] 提醒公告",
+            "message": "用于测试多个风险公告排序和 dismiss 后的风险横幅降级。"
+          },
+          "en": {
+            "title": "[DEV] Warning announcement",
+            "message": "Exercises multi-risk sorting and banner fallback after dismissing the critical notice."
+          }
+        }
+      },
+      {
+        "id": "dev-info-product-announcement",
+        "revision": 1,
+        "severity": "info",
+        "priority": 10,
+        "affectedVersions": "*",
+        "startsAt": "2026-01-01T00:00:00.000Z",
+        "expiresAt": "2099-01-01T00:00:00.000Z",
+        "content": {
+          "en": {
+            "title": "[DEV] Info announcement",
+            "message": "Exercises locale fallback and the non-risk announcement list item."
+          }
+        }
+      }
+    ]
+  }
+}

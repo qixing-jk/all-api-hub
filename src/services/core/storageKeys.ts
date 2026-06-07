@@ -68,6 +68,11 @@ export const STORAGE_LOCKS = {
    */
   SITE_ANNOUNCEMENTS: "all-api-hub:site-announcements",
   /**
+   * Exclusive lock used for read-modify-write sequences touching product
+   * announcement state and cached feed data.
+   */
+  PRODUCT_ANNOUNCEMENTS: "all-api-hub:product-announcements",
+  /**
    * Exclusive lock used for read-modify-write sequences touching the sponsor
    * recommendation catalog cache.
    */
@@ -127,6 +132,10 @@ const SITE_ANNOUNCEMENTS_STORAGE_KEYS = {
   STORE: "siteAnnouncements_store",
 } as const
 
+const PRODUCT_ANNOUNCEMENTS_STORAGE_KEYS = {
+  STATE: "productAnnouncements_state_v1",
+} as const
+
 const SPONSOR_CATALOG_STORAGE_KEYS = {
   CACHE: "sponsorCatalog_cache_v1",
 } as const
@@ -156,6 +165,7 @@ export const STORAGE_KEYS = {
   RELEASE_UPDATE_STATUS: RELEASE_UPDATE_STORAGE_KEYS.STATUS,
   DAILY_BALANCE_HISTORY_STORE: DAILY_BALANCE_HISTORY_STORAGE_KEYS.STORE,
   SITE_ANNOUNCEMENTS_STORE: SITE_ANNOUNCEMENTS_STORAGE_KEYS.STORE,
+  PRODUCT_ANNOUNCEMENTS_STATE: PRODUCT_ANNOUNCEMENTS_STORAGE_KEYS.STATE,
   SPONSOR_CATALOG_CACHE: SPONSOR_CATALOG_STORAGE_KEYS.CACHE,
   SPONSOR_ADD_ACCOUNT_PENDING_PREFILL:
     SPONSOR_ADD_ACCOUNT_INTENT_STORAGE_KEYS.PENDING_PREFILL,
