@@ -96,6 +96,21 @@ describe("product announcement storage", () => {
     ).resolves.not.toHaveProperty("lastFetchedAt")
   })
 
+  it("drops malformed persisted state maps", async () => {
+    await storage.set(STORAGE_KEYS.PRODUCT_ANNOUNCEMENTS_STATE, {
+      schemaVersion: 1,
+      dismissed: null,
+      seenAt: [],
+      lastShownAt: "not-a-map",
+    })
+
+    await expect(productAnnouncementStorage.getState()).resolves.toMatchObject({
+      dismissed: {},
+      seenAt: {},
+      lastShownAt: {},
+    })
+  })
+
   it("returns an empty state when storage read fails", async () => {
     const getSpy = vi
       .spyOn((productAnnouncementStorage as any).storage, "get")
