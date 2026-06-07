@@ -1,4 +1,4 @@
-import * as CollapsiblePrimitive from "@radix-ui/react-collapsible"
+import { Collapsible as CollapsiblePrimitive } from "radix-ui"
 
 /**
  * Wrapper for the Radix Collapsible root with a stable data slot hook.

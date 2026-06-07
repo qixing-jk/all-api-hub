@@ -1,5 +1,5 @@
-import { Slot, Slottable } from "@radix-ui/react-slot"
 import { cva, type VariantProps } from "class-variance-authority"
+import { Slot } from "radix-ui"
 import * as React from "react"
 
 import { Spinner } from "~/components/ui/spinner"
@@ -79,7 +79,7 @@ function Button({
     spinnerProps?: React.ComponentProps<typeof Spinner>
     analyticsAction?: ProductAnalyticsScopedActionConfig
   }) {
-  const Comp = asChild ? Slot : "button"
+  const Comp = asChild ? Slot.Root : "button"
   const analytics = useProductAnalyticsActionTracking({
     analyticsAction,
     disabled: Boolean(disabled || loading),
@@ -121,7 +121,7 @@ function Button({
       {...props}
     >
       {resolvedLeftIcon && <span>{resolvedLeftIcon}</span>}
-      <Slottable>{children}</Slottable>
+      <Slot.Slottable>{children}</Slot.Slottable>
       {rightIcon && <span>{rightIcon}</span>}
     </Comp>
   )
