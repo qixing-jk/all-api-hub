@@ -32,6 +32,8 @@ import {
   PRODUCT_ANALYTICS_PERMISSION_IDS,
   PRODUCT_ANALYTICS_PERMISSION_OPERATIONS,
   PRODUCT_ANALYTICS_PERMISSION_OUTCOMES,
+  PRODUCT_ANALYTICS_PRODUCT_ANNOUNCEMENT_ACTION_KINDS,
+  PRODUCT_ANALYTICS_PRODUCT_ANNOUNCEMENT_SEVERITIES,
   PRODUCT_ANALYTICS_REQUESTED_AUTH_MODES,
   PRODUCT_ANALYTICS_RESULTS,
   PRODUCT_ANALYTICS_SETTING_IDS,
@@ -127,6 +129,10 @@ const EVENT_ALLOWED_KEYS = {
     "sponsor_support_status",
     "sponsor_supported_count",
     "sponsor_unsupported_count",
+    "product_announcement_id",
+    "product_announcement_severity",
+    "product_announcement_action_kind",
+    "product_announcement_active_count",
     "entrypoint",
   ],
   [PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured]: [
@@ -512,6 +518,12 @@ const FIELD_ALLOWED_VALUES: Record<string, readonly string[]> = {
   sponsor_support_status: Object.values(
     PRODUCT_ANALYTICS_SPONSOR_SUPPORT_STATUSES,
   ),
+  product_announcement_action_kind: Object.values(
+    PRODUCT_ANALYTICS_PRODUCT_ANNOUNCEMENT_ACTION_KINDS,
+  ),
+  product_announcement_severity: Object.values(
+    PRODUCT_ANALYTICS_PRODUCT_ANNOUNCEMENT_SEVERITIES,
+  ),
   status_kind: Object.values(PRODUCT_ANALYTICS_STATUS_KINDS),
   surface_id: Object.values(PRODUCT_ANALYTICS_SURFACE_IDS),
   target_page_id: Object.values(PRODUCT_ANALYTICS_OPTIONS_PAGE_TARGET_IDS),
@@ -542,6 +554,8 @@ const PRIVACY_REVIEWED_ALLOWED_KEYS = new Set([
   "auto_checkin_enabled_accounts",
   "detection_enabled_accounts",
   "provider_available_accounts",
+  "product_announcement_id",
+  "product_announcement_active_count",
   "runnable_accounts",
   "total_accounts",
   "cache_hit",
@@ -611,6 +625,7 @@ const RAW_NUMBER_ALLOWED_KEYS = new Set([
   "min_refresh_interval_seconds",
   "model_count",
   "polling_interval_minutes",
+  "product_announcement_active_count",
   "provider_available_accounts",
   "rate_limit_burst",
   "rate_limit_rpm",
@@ -737,6 +752,10 @@ function isAllowedFieldValue(
   }
 
   if (key === "sponsor_id") {
+    return /^[a-z0-9][a-z0-9-]*$/.test(value)
+  }
+
+  if (key === "product_announcement_id") {
     return /^[a-z0-9][a-z0-9-]*$/.test(value)
   }
 

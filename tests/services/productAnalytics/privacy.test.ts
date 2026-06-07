@@ -176,6 +176,74 @@ describe("product analytics privacy filtering", () => {
     })
   })
 
+  it("keeps safe product announcement fields and drops remote copy", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ProductAnnouncements,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenProductAnnouncements,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsProductAnnouncementsHeader,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        product_announcement_id: "2026-06-risk",
+        product_announcement_severity: "critical",
+        product_announcement_action_kind: "open_list",
+        product_announcement_active_count: 2,
+        product_announcement_title: "Private remote title",
+        product_announcement_message: "Remote body",
+        product_announcement_url:
+          "https://github.com/qixing-jk/all-api-hub/releases/tag/v3.44.1",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ProductAnnouncements,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.OpenProductAnnouncements,
+      surface_id:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsProductAnnouncementsHeader,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      product_announcement_id: "2026-06-risk",
+      product_announcement_severity: "critical",
+      product_announcement_action_kind: "open_list",
+      product_announcement_active_count: 2,
+    })
+  })
+
+  it("keeps safe product announcement restore fields", () => {
+    const sanitized = sanitizeProductAnalyticsEvent(
+      PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,
+      {
+        feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ProductAnnouncements,
+        action_id: PRODUCT_ANALYTICS_ACTION_IDS.RestoreProductAnnouncement,
+        surface_id:
+          PRODUCT_ANALYTICS_SURFACE_IDS.OptionsProductAnnouncementsHeader,
+        entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+        result: PRODUCT_ANALYTICS_RESULTS.Success,
+        product_announcement_id: "2026-06-risk",
+        product_announcement_severity: "warning",
+        product_announcement_action_kind: "restore",
+        product_announcement_active_count: 0,
+        product_announcement_title: "Private remote title",
+        product_announcement_message: "Remote body",
+      },
+    )
+
+    expect(sanitized).toEqual({
+      feature_id: PRODUCT_ANALYTICS_FEATURE_IDS.ProductAnnouncements,
+      action_id: PRODUCT_ANALYTICS_ACTION_IDS.RestoreProductAnnouncement,
+      surface_id:
+        PRODUCT_ANALYTICS_SURFACE_IDS.OptionsProductAnnouncementsHeader,
+      entrypoint: PRODUCT_ANALYTICS_ENTRYPOINTS.Options,
+      result: PRODUCT_ANALYTICS_RESULTS.Success,
+      product_announcement_id: "2026-06-risk",
+      product_announcement_severity: "warning",
+      product_announcement_action_kind: "restore",
+      product_announcement_active_count: 0,
+    })
+  })
+
   it("keeps Key Management action enums without leaking account token details", () => {
     const sanitized = sanitizeProductAnalyticsEvent(
       PRODUCT_ANALYTICS_EVENTS.FeatureActionCompleted,

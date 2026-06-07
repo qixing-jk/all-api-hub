@@ -302,6 +302,7 @@ export const PRODUCT_ANALYTICS_FEATURE_IDS = {
   OptionsOverview: "options_overview",
   PermissionRequest: "permission_request",
   ProductAnalyticsSettings: "product_analytics_settings",
+  ProductAnnouncements: "product_announcements",
   RedemptionAssist: "redemption_assist",
   ShareSnapshots: "share_snapshots",
   ShieldBypassAssist: "shield_bypass_assist",
@@ -376,6 +377,8 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
     "detected_api_credential_check_dismissed",
   DetectedApiCredentialReviewStarted: "detected_api_credential_review_started",
   DismissDetectedApiCredentialCheck: "dismiss_detected_api_credential_check",
+  DismissProductAnnouncement: "dismiss_product_announcement",
+  RestoreProductAnnouncement: "restore_product_announcement",
   AutoFetchApiCredentialModelList: "auto_fetch_api_credential_model_list",
   FetchApiCredentialModelList: "fetch_api_credential_model_list",
   FilterAutoCheckinResults: "filter_auto_checkin_results",
@@ -436,6 +439,8 @@ export const PRODUCT_ANALYTICS_ACTION_IDS = {
   OpenPopupKeyManagement: "open_popup_key_management",
   OpenPopupModelManagement: "open_popup_model_management",
   OpenPopupSettingsPage: "open_popup_settings_page",
+  OpenProductAnnouncementCta: "open_product_announcement_cta",
+  OpenProductAnnouncements: "open_product_announcements",
   OpenSidepanelFromPopup: "open_sidepanel_from_popup",
   OpenSidepanelFromToolbarAction: "open_sidepanel_from_toolbar_action",
   ClearApiCredentialProfileFilters: "clear_api_credential_profile_filters",
@@ -618,6 +623,8 @@ export const PRODUCT_ANALYTICS_SURFACE_IDS = {
   OptionsOverviewAutomationOverview: "options_overview_automation_overview",
   OptionsOverviewRecentUsage: "options_overview_recent_usage",
   OptionsOverviewStatusSummary: "options_overview_status_summary",
+  OptionsProductAnnouncementsBanner: "options_product_announcements_banner",
+  OptionsProductAnnouncementsHeader: "options_product_announcements_header",
   OptionsSiteAnnouncementCard: "options_site_announcement_card",
   OptionsSiteAnnouncementsEmptyState: "options_site_announcements_empty_state",
   OptionsSiteAnnouncementsPage: "options_site_announcements_page",
@@ -640,6 +647,7 @@ export const PRODUCT_ANALYTICS_SURFACE_IDS = {
     "popup_api_credential_profiles_empty_state",
   PopupApiCredentialProfilesStats: "popup_api_credential_profiles_stats",
   PopupHeader: "popup_header",
+  PopupProductAnnouncementsHeader: "popup_product_announcements_header",
   PopupViewTabs: "popup_view_tabs",
   SidepanelActionBar: "sidepanel_action_bar",
   SidepanelHeader: "sidepanel_header",
@@ -794,6 +802,28 @@ export type ProductAnalyticsSponsorSupportStatus =
 
 export type ProductAnalyticsSponsorId = string
 
+export const PRODUCT_ANALYTICS_PRODUCT_ANNOUNCEMENT_ACTION_KINDS = {
+  OpenList: "open_list",
+  Dismiss: "dismiss",
+  Restore: "restore",
+  OpenCta: "open_cta",
+  MarkSeen: "mark_seen",
+} as const
+
+export type ProductAnalyticsProductAnnouncementActionKind =
+  (typeof PRODUCT_ANALYTICS_PRODUCT_ANNOUNCEMENT_ACTION_KINDS)[keyof typeof PRODUCT_ANALYTICS_PRODUCT_ANNOUNCEMENT_ACTION_KINDS]
+
+export const PRODUCT_ANALYTICS_PRODUCT_ANNOUNCEMENT_SEVERITIES = {
+  Critical: "critical",
+  Warning: "warning",
+  Info: "info",
+} as const
+
+export type ProductAnalyticsProductAnnouncementSeverity =
+  (typeof PRODUCT_ANALYTICS_PRODUCT_ANNOUNCEMENT_SEVERITIES)[keyof typeof PRODUCT_ANALYTICS_PRODUCT_ANNOUNCEMENT_SEVERITIES]
+
+export type ProductAnalyticsProductAnnouncementId = string
+
 export const PRODUCT_ANALYTICS_SITE_TYPES = [
   ...new Set([...ACCOUNT_SITE_TYPES, ...MANAGED_SITE_TYPES]),
 ] as ReadonlyArray<(typeof ACCOUNT_SITE_TYPES)[number] | ManagedSiteType>
@@ -915,6 +945,10 @@ export type ProductAnalyticsEventPayloadMap = {
     sponsor_support_status?: ProductAnalyticsSponsorSupportStatus
     sponsor_supported_count?: number
     sponsor_unsupported_count?: number
+    product_announcement_id?: ProductAnalyticsProductAnnouncementId
+    product_announcement_severity?: ProductAnalyticsProductAnnouncementSeverity
+    product_announcement_action_kind?: ProductAnalyticsProductAnnouncementActionKind
+    product_announcement_active_count?: number
     entrypoint: ProductAnalyticsEntrypoint
   }
   [PRODUCT_ANALYTICS_EVENTS.ShieldBypassSummaryCaptured]: {
