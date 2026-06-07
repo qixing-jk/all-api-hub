@@ -46,6 +46,14 @@ export const SiteAnnouncementsMessageTypes = {
   UpdatePreferences: "siteAnnouncements:updatePreferences",
 } as const
 
+export const ProductAnnouncementsMessageTypes = {
+  GetState: "productAnnouncements:getState",
+  Refresh: "productAnnouncements:refresh",
+  MarkSeen: "productAnnouncements:markSeen",
+  Dismiss: "productAnnouncements:dismiss",
+  Restore: "productAnnouncements:restore",
+} as const
+
 export const WebdavAutoSyncMessageTypes = {
   Setup: "webdavAutoSync:setup",
   SyncNow: "webdavAutoSync:syncNow",

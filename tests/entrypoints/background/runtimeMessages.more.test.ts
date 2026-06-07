@@ -32,6 +32,7 @@ const mocks = vi.hoisted(() => ({
   setupDailyBalanceHistoryMessagingListeners: vi.fn(),
   setupTaskNotificationMessagingListeners: vi.fn(),
   setupSiteAnnouncementsMessagingListeners: vi.fn(),
+  setupProductAnnouncementMessagingListeners: vi.fn(),
   setupPreferencesMessagingListeners: vi.fn(),
   setupLdohSiteLookupMessagingListeners: vi.fn(),
   setupWebAiApiCheckMessagingListeners: vi.fn(),
@@ -144,6 +145,11 @@ vi.mock("~/services/siteAnnouncements/scheduler", () => ({
     mocks.setupSiteAnnouncementsMessagingListeners,
 }))
 
+vi.mock("~/services/productAnnouncements/service", () => ({
+  setupProductAnnouncementMessagingListeners:
+    mocks.setupProductAnnouncementMessagingListeners,
+}))
+
 vi.mock("~/services/preferences/runtimePreferencesService", () => ({
   setupPreferencesMessagingListeners: mocks.setupPreferencesMessagingListeners,
 }))
@@ -218,6 +224,9 @@ describe("setupRuntimeMessageListeners additional routing", () => {
     ).toHaveBeenCalledTimes(1)
     expect(
       mocks.setupSiteAnnouncementsMessagingListeners,
+    ).toHaveBeenCalledTimes(1)
+    expect(
+      mocks.setupProductAnnouncementMessagingListeners,
     ).toHaveBeenCalledTimes(1)
     expect(mocks.setupPreferencesMessagingListeners).toHaveBeenCalledTimes(1)
     expect(

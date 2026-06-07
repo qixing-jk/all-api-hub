@@ -17,6 +17,7 @@ import { setupManagedSiteModelSyncMessagingListeners } from "~/services/models/m
 import { setupTaskNotificationMessagingListeners } from "~/services/notifications/taskNotificationService"
 import { setupPreferencesMessagingListeners } from "~/services/preferences/runtimePreferencesService"
 import { setupProductAnalyticsMessagingListeners } from "~/services/productAnalytics/runtime"
+import { setupProductAnnouncementMessagingListeners } from "~/services/productAnnouncements/service"
 import { setupRedemptionAssistMessagingListeners } from "~/services/redemption/redemptionAssist"
 import { setupSiteAnnouncementsMessagingListeners } from "~/services/siteAnnouncements/scheduler"
 import { setupReleaseUpdateMessagingListeners } from "~/services/updates/releaseUpdateService"
@@ -105,6 +106,7 @@ export function setupRuntimeMessageListeners() {
   setupUsageHistoryMessagingListeners()
   setupDailyBalanceHistoryMessagingListeners()
   setupSiteAnnouncementsMessagingListeners()
+  setupProductAnnouncementMessagingListeners()
   setupPreferencesMessagingListeners()
   setupManagedSiteModelSyncMessagingListeners()
   setupAccountKeyRepairMessagingListeners()

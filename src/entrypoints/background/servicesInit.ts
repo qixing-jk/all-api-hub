@@ -5,6 +5,7 @@ import { usageHistoryScheduler } from "~/services/history/usageHistory/scheduler
 import { modelMetadataService } from "~/services/models/modelMetadata"
 import { modelSyncScheduler } from "~/services/models/modelSync"
 import { initializeTaskNotificationService } from "~/services/notifications/taskNotificationService"
+import { productAnnouncementService } from "~/services/productAnnouncements/service"
 import { redemptionAssistService } from "~/services/redemption/redemptionAssist"
 import { siteAnnouncementScheduler } from "~/services/siteAnnouncements/scheduler"
 import { releaseUpdateService } from "~/services/updates/releaseUpdateService"
@@ -58,6 +59,7 @@ export async function initializeServices() {
         autoCheckinScheduler.initialize(),
         dailyBalanceHistoryScheduler.initialize(),
         siteAnnouncementScheduler.initialize(),
+        productAnnouncementService.initialize(),
         releaseUpdateService.initialize(),
       ])
       initializeTaskNotificationService()

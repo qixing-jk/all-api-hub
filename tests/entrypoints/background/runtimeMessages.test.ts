@@ -18,6 +18,7 @@ describe("setupRuntimeMessageListeners routing", () => {
   let originalBrowserCookies: unknown
   let setupManagedSiteModelSyncMessagingListeners: ReturnType<typeof vi.fn>
   let setupPreferencesMessagingListeners: ReturnType<typeof vi.fn>
+  let setupProductAnnouncementMessagingListeners: ReturnType<typeof vi.fn>
   let setupRedemptionAssistMessagingListeners: ReturnType<typeof vi.fn>
   let setupProductAnalyticsMessagingListeners: ReturnType<typeof vi.fn>
 
@@ -28,6 +29,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     originalBrowserCookies = (globalThis as any).browser?.cookies
     setupManagedSiteModelSyncMessagingListeners = vi.fn()
     setupPreferencesMessagingListeners = vi.fn()
+    setupProductAnnouncementMessagingListeners = vi.fn()
     setupRedemptionAssistMessagingListeners = vi.fn()
     setupProductAnalyticsMessagingListeners = vi.fn()
 
@@ -60,6 +62,10 @@ describe("setupRuntimeMessageListeners routing", () => {
 
     vi.doMock("~/services/preferences/runtimePreferencesService", () => ({
       setupPreferencesMessagingListeners,
+    }))
+
+    vi.doMock("~/services/productAnnouncements/service", () => ({
+      setupProductAnnouncementMessagingListeners,
     }))
 
     // runtimeMessages imports these modules; provide minimal stubs to avoid heavy side effects.
@@ -107,6 +113,7 @@ describe("setupRuntimeMessageListeners routing", () => {
     vi.doUnmock("~/utils/browser/cookieHelper")
     vi.doUnmock("~/services/models/modelSync")
     vi.doUnmock("~/services/preferences/runtimePreferencesService")
+    vi.doUnmock("~/services/productAnnouncements/service")
     vi.doUnmock("~/services/checkin/autoCheckin/scheduler")
     vi.doUnmock("~/services/accounts/autoRefreshService")
     vi.doUnmock("~/services/managedSites/channelConfigStorage")
@@ -187,6 +194,16 @@ describe("setupRuntimeMessageListeners routing", () => {
     setupRuntimeMessageListeners()
     expect(runtimeMessageListener).toBeTypeOf("function")
     expect(setupProductAnalyticsMessagingListeners).toHaveBeenCalledTimes(1)
+  })
+
+  it("sets up typed product announcement messaging listeners", async () => {
+    const { setupRuntimeMessageListeners } = await import(
+      "~/entrypoints/background/runtimeMessages"
+    )
+
+    setupRuntimeMessageListeners()
+    expect(runtimeMessageListener).toBeTypeOf("function")
+    expect(setupProductAnnouncementMessagingListeners).toHaveBeenCalledTimes(1)
   })
 
   it("does not route typed-only product analytics actions through the raw listener", async () => {

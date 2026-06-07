@@ -12,6 +12,7 @@ const {
   autoRefreshInitMock,
   redemptionAssistInitMock,
   releaseUpdateInitMock,
+  productAnnouncementInitMock,
   initBackgroundI18nMock,
 } = vi.hoisted(() => ({
   usageInitMock: vi.fn(),
@@ -23,6 +24,7 @@ const {
   autoRefreshInitMock: vi.fn(),
   redemptionAssistInitMock: vi.fn(),
   releaseUpdateInitMock: vi.fn(),
+  productAnnouncementInitMock: vi.fn(),
   initBackgroundI18nMock: vi.fn(),
 }))
 
@@ -62,6 +64,10 @@ vi.mock("~/services/updates/releaseUpdateService", () => ({
   releaseUpdateService: { initialize: releaseUpdateInitMock },
 }))
 
+vi.mock("~/services/productAnnouncements/service", () => ({
+  productAnnouncementService: { initialize: productAnnouncementInitMock },
+}))
+
 vi.mock("~/utils/i18n/background", () => ({
   initBackgroundI18n: initBackgroundI18nMock,
 }))
@@ -84,6 +90,7 @@ describe("initializeServices alarm bootstrap ordering", () => {
       autoCheckin: false,
       dailyBalance: false,
       releaseUpdate: false,
+      productAnnouncement: false,
     }
 
     let i18nObservedAllAlarmInits = false
@@ -110,6 +117,9 @@ describe("initializeServices alarm bootstrap ordering", () => {
     const releaseUpdateInit: InitMock = vi.fn(async () => {
       alarmInitCalled.releaseUpdate = true
     })
+    const productAnnouncementInit: InitMock = vi.fn(async () => {
+      alarmInitCalled.productAnnouncement = true
+    })
 
     const modelMetadataInit: InitMock = vi.fn(async () => {})
     const autoRefreshInit: InitMock = vi.fn(async () => {})
@@ -121,6 +131,7 @@ describe("initializeServices alarm bootstrap ordering", () => {
     autoCheckinInitMock.mockImplementation(autoCheckinInit)
     dailyBalanceInitMock.mockImplementation(dailyBalanceInit)
     releaseUpdateInitMock.mockImplementation(releaseUpdateInit)
+    productAnnouncementInitMock.mockImplementation(productAnnouncementInit)
     modelMetadataInitMock.mockImplementation(modelMetadataInit)
     autoRefreshInitMock.mockImplementation(autoRefreshInit)
     redemptionAssistInitMock.mockImplementation(redemptionAssistInit)
@@ -132,7 +143,8 @@ describe("initializeServices alarm bootstrap ordering", () => {
         alarmInitCalled.modelSync &&
         alarmInitCalled.autoCheckin &&
         alarmInitCalled.dailyBalance &&
-        alarmInitCalled.releaseUpdate
+        alarmInitCalled.releaseUpdate &&
+        alarmInitCalled.productAnnouncement
       return i18nPromise
     })
 
@@ -144,6 +156,7 @@ describe("initializeServices alarm bootstrap ordering", () => {
     expect(autoCheckinInit).toHaveBeenCalledTimes(1)
     expect(dailyBalanceInit).toHaveBeenCalledTimes(1)
     expect(releaseUpdateInit).toHaveBeenCalledTimes(1)
+    expect(productAnnouncementInit).toHaveBeenCalledTimes(1)
     expect(i18nObservedAllAlarmInits).toBe(true)
 
     resolveI18n?.()
@@ -173,6 +186,7 @@ describe("initializeServices alarm bootstrap ordering", () => {
     autoCheckinInitMock.mockResolvedValue(undefined)
     dailyBalanceInitMock.mockResolvedValue(undefined)
     releaseUpdateInitMock.mockResolvedValue(undefined)
+    productAnnouncementInitMock.mockResolvedValue(undefined)
     modelMetadataInitMock.mockResolvedValue(undefined)
     autoRefreshInitMock.mockResolvedValue(undefined)
     redemptionAssistInitMock.mockResolvedValue(undefined)
@@ -186,6 +200,7 @@ describe("initializeServices alarm bootstrap ordering", () => {
     expect(autoCheckinInitMock).toHaveBeenCalledTimes(1)
     expect(dailyBalanceInitMock).toHaveBeenCalledTimes(1)
     expect(releaseUpdateInitMock).toHaveBeenCalledTimes(1)
+    expect(productAnnouncementInitMock).toHaveBeenCalledTimes(1)
     expect(initBackgroundI18nMock).toHaveBeenCalledTimes(1)
 
     resolveI18n?.()
@@ -203,6 +218,7 @@ describe("initializeServices alarm bootstrap ordering", () => {
     expect(autoCheckinInitMock).toHaveBeenCalledTimes(1)
     expect(dailyBalanceInitMock).toHaveBeenCalledTimes(1)
     expect(releaseUpdateInitMock).toHaveBeenCalledTimes(1)
+    expect(productAnnouncementInitMock).toHaveBeenCalledTimes(1)
     expect(initBackgroundI18nMock).toHaveBeenCalledTimes(1)
     expect(modelMetadataInitMock).toHaveBeenCalledTimes(1)
     expect(autoRefreshInitMock).toHaveBeenCalledTimes(1)
@@ -221,6 +237,7 @@ describe("initializeServices alarm bootstrap ordering", () => {
     autoCheckinInitMock.mockResolvedValue(undefined)
     dailyBalanceInitMock.mockResolvedValue(undefined)
     releaseUpdateInitMock.mockResolvedValue(undefined)
+    productAnnouncementInitMock.mockResolvedValue(undefined)
     modelMetadataInitMock.mockResolvedValue(undefined)
     autoRefreshInitMock.mockResolvedValue(undefined)
     redemptionAssistInitMock.mockResolvedValue(undefined)
@@ -233,6 +250,7 @@ describe("initializeServices alarm bootstrap ordering", () => {
     expect(autoCheckinInitMock).toHaveBeenCalledTimes(1)
     expect(dailyBalanceInitMock).toHaveBeenCalledTimes(1)
     expect(releaseUpdateInitMock).toHaveBeenCalledTimes(1)
+    expect(productAnnouncementInitMock).toHaveBeenCalledTimes(1)
     expect(initBackgroundI18nMock).toHaveBeenCalledTimes(1)
     expect(modelMetadataInitMock).toHaveBeenCalledTimes(1)
     expect(autoRefreshInitMock).toHaveBeenCalledTimes(1)
