@@ -72,6 +72,18 @@ export { EmptyState } from "./EmptyState"
 export { Modal } from "./Dialog/Modal"
 export { DestructiveConfirmDialog } from "./Dialog/DestructiveConfirmDialog"
 export { Separator } from "./Separator"
+export {
+  Sheet,
+  SheetClose,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetOverlay,
+  SheetPortal,
+  SheetTitle,
+  SheetTrigger,
+} from "./sheet"
 export { Checkbox } from "./checkbox"
 export {
   Command,
